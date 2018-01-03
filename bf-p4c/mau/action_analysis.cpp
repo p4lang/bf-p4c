@@ -21,10 +21,28 @@ void ActionAnalysis::initialize_phv_field(const IR::Expression *expr) {
 
 void ActionAnalysis::initialize_action_data(const IR::Expression *expr) {
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, expr);
-    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::AttachedOutput>())
-        field_action.reads.back().speciality = ActionParam::ATTACHED_OUTPUT;
+    if (auto *ao = field_action.reads.back().unsliced_expr()->to<IR::MAU::AttachedOutput>())
+        field_action.reads.back().speciality = classify_attached_output(ao);
     if (field_action.reads.back().unsliced_expr()->is<IR::MAU::HashDist>())
         field_action.reads.back().speciality = ActionParam::HASH_DIST;
+}
+
+ActionAnalysis::ActionParam::speciality_t
+ActionAnalysis::classify_attached_output(const IR::MAU::AttachedOutput *ao) {
+    auto *at = ao->attached;
+    if (auto mtr = at->to<IR::MAU::Meter>()) {
+        if (mtr->alu_output())
+            return ActionParam::METER_ALU;
+        else if (mtr->color_output())
+            return ActionParam::METER_COLOR;
+        BUG("%s: Unrecognized implementation %s on meter %s", mtr->srcInfo,
+            mtr->implementation, mtr->name);
+        return ActionParam::NO_SPECIAL;
+    } else if (at->is<IR::MAU::StatefulAlu>()) {
+        return ActionParam::METER_ALU;
+    }
+    BUG("%s: Unrecognizable Attached Output %s being used in an ALU operation",
+        at->srcInfo, at->name);
 }
 
 /** Similar to phv.field, it returns the IR structure that corresponds to actiondata,
@@ -118,7 +136,8 @@ bool ActionAnalysis::preorder(const IR::MAU::HashDist *hd) {
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::AttachedOutput *ao) {
-    field_action.reads.emplace_back(ActionParam::ACTIONDATA, ao, ActionParam::ATTACHED_OUTPUT);
+    auto speciality = classify_attached_output(ao);
+    field_action.reads.emplace_back(ActionParam::ACTIONDATA, ao, speciality);
     return false;
 }
 

@@ -42,7 +42,7 @@ void ActionFormat::ActionContainerInfo::finalize_min_maxes() {
     }
 }
 
-int ActionFormat::ActionContainerInfo::find_maximum_immed() {
+int ActionFormat::ActionContainerInfo::find_maximum_immed(bool meter_color) {
     int max_byte = counts[IMMED][BYTE] > 0
         ? (counts[IMMED][BYTE] - 1) * 8 + minmaxes[NORMAL][BYTE] : 0;
     int max_half = counts[IMMED][HALF] > 0
@@ -52,7 +52,7 @@ int ActionFormat::ActionContainerInfo::find_maximum_immed() {
 
     int maximum = 0;
     if (max_byte > 0 && max_half > 0) {
-        if (max_byte > max_half) {
+        if (max_byte > max_half || meter_color) {
             order = FIRST_8;
             maximum = max_half + 16;
         } else {
@@ -146,6 +146,10 @@ cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
     return ret_name;
 }
 
+/** Meter color reserved in the top byte of immediate */
+bool ActionFormat::Use::is_meter_color(int start_byte, bool immediate) const {
+    return meter_reserved && immediate && start_byte == (IMMEDIATE_BYTES - 1);
+}
 
 /** The allocation scheme for the action data format and immediate format.
  */
@@ -241,9 +245,21 @@ void ActionFormat::create_from_actiondata(ActionDataPlacement &adp,
         field_bit = sl->getL();
     }
     data_location.setrange(container_bit, read.size());
-    auto arg_name = read.unsliced_expr()->to<IR::ActionArg>()->name;
+    cstring arg_name;
+    if (read.speciality == ActionAnalysis::ActionParam::NO_SPECIAL)
+        arg_name = read.unsliced_expr()->to<IR::ActionArg>()->name;
+    else if (read.speciality == ActionAnalysis::ActionParam::METER_COLOR)
+        arg_name = "meter";
+    else
+        BUG("Currently cannot handle the speciality %d in ActionFormat creation",
+            read.speciality);
+
     adp.arg_locs.emplace_back(arg_name, data_location, field_bit,
                               single_loc);
+    adp.arg_locs.back().speciality = read.speciality;
+
+    if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL)
+        adp.specialities |= 1 << read.speciality;
     adp.range |= data_location;
 }
 
@@ -310,7 +326,8 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
                 BUG("Splitting of writes handled incorrectly");
 
             for (auto &read : field_action.reads) {
-                if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL)
+                if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL &&
+                    read.speciality != ActionAnalysis::ActionParam::METER_COLOR)
                     continue;
                 if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
                     create_from_actiondata(adp, read, container_bits.lo);
@@ -374,25 +391,33 @@ void ActionFormat::initialize_action_counts() {
         aci.action = action->name;
         auto &placement_vec = init_format.at(action->name);
         for (auto &placement : placement_vec) {
-            bool odd_container_size = true;
-            for (int i = 0; i < CONTAINER_TYPES; i++) {
-                if (placement.size == CONTAINER_SIZES[i]) {
-                    aci.counts[ADT][i]++;
-                    int bm_type = placement.bitmasked_set ? BITMASKED : NORMAL;
-                    // Double requirements for bitmasked_sets
-                    if (placement.bitmasked_set) {
-                        aci.counts[ADT][i]++;
-                        aci.bitmasked_sets[ADT][i]++;
-                    }
-
-                    aci.minmaxes[bm_type][i] = std::min(aci.minmaxes[bm_type][i],
-                                                        placement.range.max().index() + 1);
-                    odd_container_size = false;
-                    break;
-                }
+            bool valid_container_size = false;
+            for (int i = 0; i < CONTAINER_SIZES[i]; i++) {
+                valid_container_size |= placement.size == CONTAINER_SIZES[i];
             }
-            if (odd_container_size)
-                BUG("What happened here? %d", placement.size);
+            BUG_CHECK(valid_container_size, "Action data packed in slot that is not a valid "
+                                            "size: %d", placement.size);
+            int index = placement.gen_index();
+            if ((placement.specialities & (1 << ActionAnalysis::ActionParam::METER_COLOR)) != 0) {
+                BUG_CHECK(index == BYTE, "Due to complexity in action bus, can only currently "
+                          "handle meter color in an 8 bit ALU operation, and nothing else.");
+                aci.meter_reserved = true;
+                meter_color = true;
+                if (placement.bitmasked_set && placement.arg_locs.size() == 1)
+                P4C_UNIMPLEMENTED("Currently too difficult of an operation on meter color "
+                                  "to handle within the compiler");
+                continue;
+            }
+
+            aci.counts[ADT][index]++;
+            int bm_type = placement.bitmasked_set ? BITMASKED : NORMAL;
+            // Double requirements for bitmasked_sets
+            if (placement.bitmasked_set) {
+                aci.counts[ADT][index]++;
+                aci.bitmasked_sets[ADT][index]++;
+            }
+            aci.minmaxes[bm_type][index] = std::min(aci.minmaxes[bm_type][index],
+                                                placement.range.max().index() + 1);
         }
         aci.finalize_min_maxes();
         init_action_counts.push_back(aci);
@@ -464,6 +489,8 @@ void ActionFormat::setup_use(safe_vector<Use> &uses) {
     use = &(uses.back());
     use->action_data_bytes[ADT] = action_bytes[ADT];
     use->action_data_bytes[IMMED] = action_bytes[IMMED];
+    LOG2("Action data bytes IMMED: " << use->action_data_bytes[IMMED] << " ADT: "
+         << use->action_data_bytes[IMMED]);
     use->constant_locations = renames;
     calculate_maximum();
 }
@@ -490,6 +517,9 @@ bool ActionFormat::new_action_format(bool immediate_allowed, bool &finished) {
     int total_bytes = 0;
     for (auto aci : init_action_counts) {
         total_bytes = std::max(total_bytes, aci.total_action_data_bytes());
+        // FIXME: In order to maintain that there is no overlapping in any actions, even though
+        // only byte is needed, possibly more are reserved if the meter output is used in a
+        // larger ALU.  This needs to be figured out as part of a larger PR
     }
 
     action_data_bytes = total_bytes;
@@ -528,10 +558,16 @@ bool ActionFormat::new_action_format(bool immediate_allowed, bool &finished) {
         action_counts = init_action_counts;
         if (overhead_increase) {
             overhead_attempt++;
-            if (overhead_attempt > IMMEDIATE_BYTES)
-                return false;
             overhead_increase = false;
         }
+
+        // Currently save an upper byte for meter color, if it is required
+        int max_immediate_bytes = IMMEDIATE_BYTES;
+        if (meter_color)
+            max_immediate_bytes--;
+
+        if (overhead_attempt > max_immediate_bytes)
+            return false;
 
         // Shrink each action that has more action data that can fit within the table
         for (auto &aci : action_counts) {
@@ -548,6 +584,9 @@ bool ActionFormat::new_action_format(bool immediate_allowed, bool &finished) {
             if (overhead_increase)
                 break;
         }
+
+        if (overhead_increase)
+            continue;
 
         // Ensure that if a bitmasked-set is required, then the action parameters are either
         // both in immediate, or on the action data table
@@ -588,7 +627,7 @@ void ActionFormat::calculate_maximum() {
 
     for (auto &aci : action_counts) {
         if (aci.total_bytes(IMMED) == 0) continue;
-        max_total.maximum = std::max(aci.find_maximum_immed(), max_total.maximum);
+        max_total.maximum = std::max(aci.find_maximum_immed(meter_color), max_total.maximum);
     }
 }
 
@@ -597,6 +636,7 @@ void ActionFormat::calculate_maximum() {
 void ActionFormat::space_containers() {
     space_all_table_containers();
     space_all_immediate_containers();
+    space_all_meter_color();
 }
 
 /** For non-overlapping action data formats:
@@ -823,11 +863,17 @@ void ActionFormat::space_individ_immed(ActionContainerInfo &aci) {
     if ((aci.layouts[IMMED][BYTE] & aci.layouts[IMMED][HALF]
          & aci.layouts[IMMED][FULL]).popcount() != 0)
         BUG("Erroneous layout of immediate data");
-
-    for (int i = 0; i < CONTAINER_TYPES; i++)
-        use->total_layouts[IMMED][i] |= aci.layouts[IMMED][i];
 }
 
+/** Simply just reserves the upper byte of immediate for meter color. */
+void ActionFormat::space_all_meter_color() {
+    for (auto aci : action_counts) {
+        if (!aci.meter_reserved) continue;
+        aci.layouts[IMMED][BYTE].setbit(IMMEDIATE_BYTES - 1);
+        use->total_layouts[IMMED][BYTE] |= aci.layouts[IMMED][BYTE];
+        use->meter_reserved = true;
+    }
+}
 
 /** Simply find the action data formats for immediate data for every single action */
 void ActionFormat::space_all_immediate_containers() {
@@ -858,7 +904,32 @@ void ActionFormat::space_all_immediate_containers() {
 
     for (auto &aci : action_counts) {
         space_individ_immed(aci);
+        for (int i = 0; i < CONTAINER_TYPES; i++)
+            use->total_layouts[IMMED][i] |= aci.layouts[IMMED][i];
     }
+}
+
+/** Simple placement of the upper byte of immediate for each action tthat requires a meter color.
+ */
+void ActionFormat::reserve_meter_color(ArgFormat &format, ActionContainerInfo &aci,
+                                       bitvec layouts_placed[CONTAINER_TYPES]) {
+    if (!aci.meter_reserved)
+        return;
+    int byte_sz = CONTAINER_SIZES[BYTE];
+    auto &placement_vec = format[aci.action];
+    auto it = placement_vec.begin();
+    while (it != placement_vec.end()) {
+        if (it->specialities & (1 << ActionAnalysis::ActionParam::METER_COLOR)) {
+            it->start = IMMEDIATE_BYTES - 1;
+            it->immediate = true;
+            layouts_placed[BYTE].setrange(IMMEDIATE_BYTES - 1, byte_sz);
+            use->action_data_format.at(aci.action).push_back(*it);
+            it = placement_vec.erase(it);
+            return;
+        }
+        it++;
+    }
+    BUG("Meter color thought to be reserved, but no action operand for the meter color");
 }
 
 /** This is to allocate a section of either immediate or action data table section, and
@@ -985,6 +1056,8 @@ void ActionFormat::align_action_data_layouts() {
             int placed[BITMASKED_TYPES][CONTAINER_TYPES] = {{0, 0, 0}, {0, 0, 0}};
             auto loc = static_cast<location_t>(i);
             bitvec layouts_placed[CONTAINER_TYPES];
+            if (i == IMMED)
+                reserve_meter_color(format, aci, layouts_placed);
             align_section(format, aci, loc, BITMASKED, layouts_placed, placed);
             if (i == IMMED)
                 find_immed_last(format, aci, layouts_placed, placed);
@@ -1070,6 +1143,7 @@ void ActionFormat::calculate_immed_mask() {
     for (auto &placement_vec : Values(use->action_data_format)) {
         for (auto &placement : placement_vec) {
             if (!placement.immediate) continue;
+            if (placement.specialities != 0) continue;
             use->immediate_mask |= (placement.range << (placement.start * 8));
             if (placement.bitmasked_set) {
                 int mask_start = placement.start + placement.size / 8;
@@ -1080,4 +1154,6 @@ void ActionFormat::calculate_immed_mask() {
 
     if (!use->immediate_mask.empty())
         use->immediate_mask.setrange(0, use->immediate_mask.max().index());
+
+    LOG2("Immediate mask " << use->immediate_mask);
 }

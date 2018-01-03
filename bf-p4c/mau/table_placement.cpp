@@ -391,8 +391,8 @@ static bool try_alloc_adb(TablePlacement::Placed *next, const TablePlacement::Pl
         current_adb.update(p->name, p->resources);
         current_adb.update_profile(p->table);
     }
-    if (!current_adb.alloc_action_data_bus(next->table, sue.preferred(),
-                                           sue.preferred_action_format(), *resources)) {
+    if (!current_adb.alloc_action_data_bus(next->table, sue.preferred_action_format(),
+                                           *resources)) {
         resources->action_data_xbar.clear();
         return false;
     }

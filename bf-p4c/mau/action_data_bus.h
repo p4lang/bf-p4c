@@ -162,8 +162,8 @@ struct ActionDataBus {
                          cstring name);
 
  public:
-    bool alloc_action_data_bus(const IR::MAU::Table *tbl, const LayoutOption *lo,
-                               const ActionFormat::Use *use, TableResourceAlloc &alloc);
+    bool alloc_action_data_bus(const IR::MAU::Table *tbl, const ActionFormat::Use *use,
+                               TableResourceAlloc &alloc);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
     void update(cstring name, const Use::ReservedSpace &rs);

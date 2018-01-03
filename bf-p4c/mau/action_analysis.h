@@ -37,7 +37,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     struct ActionParam {
         enum type_t { PHV, ACTIONDATA, CONSTANT, TOTAL_TYPES } type;
         const IR::Expression *expr;
-        enum speciality_t { NO_SPECIAL, HASH_DIST, ATTACHED_OUTPUT } speciality = NO_SPECIAL;
+        enum speciality_t { NO_SPECIAL, HASH_DIST, METER_COLOR, RANDOM, METER_ALU }
+             speciality = NO_SPECIAL;
 
         ActionParam() : expr(nullptr) {}
         ActionParam(type_t t, const IR::Expression *e)
@@ -259,6 +260,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
     void initialize_phv_field(const IR::Expression *expr);
     void initialize_action_data(const IR::Expression *expr);
+    ActionParam::speciality_t classify_attached_output(const IR::MAU::AttachedOutput *);
     bool preorder(const IR::MAU::Action *) override { visitOnce(); return true; }
     bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
     bool preorder(const IR::MAU::TableSeq *) override { visitOnce(); return true; }

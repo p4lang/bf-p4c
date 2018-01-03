@@ -154,9 +154,6 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
     bool partition_found = false;
 
     for (auto ixbar_read : tbl->match_key) {
-        LOG1("Key: " << ixbar_read->expr);
-    }
-    for (auto ixbar_read : tbl->match_key) {
         if (ixbar_read->match_type.name == "selector") continue;
         bitrange bits = { 0, 0 };
         auto *field = phv.field(ixbar_read->expr, &bits);
@@ -169,7 +166,6 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
              * is consistent.  Should fix PHV alloc to not make such bad allocations */
              bool is_partition = false;
              if (layout.atcam) {
-                LOG1("Field name : " << field->name << "partition_index: " << partition_index);
                  if (field->name == partition_index) {
                      multiplier = 0;
                      is_partition = true;
@@ -308,8 +304,8 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_i
         if (pragma_val) {
             pack_val = pragma_val->asInt();
             if (pack_val < MIN_PACK || pack_val > MAX_PACK) {
-                ::warning("%s: The provide pack pragma value for table %s is %d, when Brig "
-                          "only supports pack values between %d and %d", tbl->srcInfo,
+                ::warning("%s: The provide pack pragma value for table %s is %d, when the "
+                          "compiler only supports pack values between %d and %d", tbl->srcInfo,
                           tbl->name, pack_val, MIN_PACK, MAX_PACK);
                 pack_val = 0;
             }
@@ -411,6 +407,7 @@ class VisitAttached : public Inspector {
     bool counter_set = false;
     bool meter_set = false;
     bool register_set = false;
+    bool meter_found = false;
     cstring counter_addr_name;
     cstring meter_addr_name;
 
@@ -457,6 +454,8 @@ class VisitAttached : public Inspector {
     }
 
     bool preorder(const IR::MAU::Meter *mtr) override {
+        ERROR_CHECK(!meter_set, "Currently the compiler is not supporting multiple meters "
+                    "on a single table, as the color will overwrite each other");
         if ((!meter_set && meter_addr_bits_needed > 0) || register_set) {
             BUG("Table cannot have both attached tables %s and %s as they use the same "
                 "address hardware", meter_addr_name, mtr->name);

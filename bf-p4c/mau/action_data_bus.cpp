@@ -159,7 +159,6 @@ bool ActionDataBus::find_immed_upper_location(ActionFormat::cont_type_t type,
             break;
         }
         starter += diff;
-        LOG1("Starter " << starter << " " << output_to_byte(PAIRED_OFFSET, type));
     } while (starter != output_to_byte(OUTPUTS, type));
     start_byte = starter;
     return found;
@@ -653,8 +652,8 @@ bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CON
  *
  *  TODO: When action immediate and action data table can happen simultaneously, change here
  */
-bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const LayoutOption *lo,
-                                          const ActionFormat::Use *use, TableResourceAlloc &alloc) {
+bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const ActionFormat::Use *use,
+                                          TableResourceAlloc &alloc) {
     for (auto at : tbl->attached) {
         auto ad = at->to<IR::MAU::ActionData>();
         if (ad == nullptr) continue;
@@ -668,18 +667,14 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Layou
     LOG1("Allocating action data bus for " << tbl->name);
 
     // Immediate allocation
-    if (lo->layout.action_data_bytes_in_overhead > 0) {
-        bool allocated = alloc_immediate(use->total_layouts[ActionFormat::IMMED],
-                                         ad_xbar, tbl->name);
-        if (!allocated) return false;
-    }
+    bool allocated = alloc_immediate(use->total_layouts[ActionFormat::IMMED],
+                                     ad_xbar, tbl->name);
+    if (!allocated) return false;
 
     // Action data table allocation
-    if (lo->layout.action_data_bytes_in_table > 0) {
-        bool allocated = alloc_ad_table(use->total_layouts[ActionFormat::ADT],
-                                        use->full_layout_bitmasked, ad_xbar, tbl->name);
-        if (!allocated) return false;
-    }
+    allocated = alloc_ad_table(use->total_layouts[ActionFormat::ADT],
+                                    use->full_layout_bitmasked, ad_xbar, tbl->name);
+    if (!allocated) return false;
 
     LOG2("Action data bus for " << tbl->name);
     for (auto &rs : ad_xbar.action_data_locs) {

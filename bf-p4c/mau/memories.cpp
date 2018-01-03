@@ -2145,9 +2145,31 @@ void Memories::fill_color_mapram_use(swbox_fill &candidate, int row, RAM_side_t 
     auto name = candidate.group->get_name();
     auto &alloc = (*candidate.group->ta->memuse)[name];
 
-    alloc.color_mapram.emplace_back(row);
+    int bus = -1;
+    int half = row / (SRAM_ROWS / 2);
+    // FIXME: This is the simple solution for color mapram.  There are cases when the
+    // color mapram cannot use the idletime bus, i.e. when the information comes through
+    // hash distribution or if the table requires meter and idletime
+    for (int i = 0; i < NUM_IDLETIME_BUS; i++) {
+        if (idletime_bus[half][i] == name) {
+            bus = i;
+            break;
+        }
+    }
+
+    for (int i = 0; i < NUM_IDLETIME_BUS && bus < 0; i++) {
+        if (!idletime_bus[half][i])
+            bus = i;
+    }
+
+
+    BUG_CHECK(bus >= 0, "Cannot have a negative color mapram bus.  Should always have a free "
+                        "choice at this point");
+
+    alloc.color_mapram.emplace_back(row, bus);
     unsigned color_mapram_mask = candidate.mapram_mask & ~candidate.mask;
 
+    idletime_bus[half][bus] = name;
     for (int k = 0; k < SRAM_COLUMNS; k++) {
         if (((1 << k) & side_mask(side)) == 0)
             continue;

@@ -335,6 +335,10 @@ class Meter : Synth2Port {
     ID                 implementation = {};  // Normal, LPF, WRED
     const char *kind() const override { return "meter"; }
     const Type *getType() const override { return Type_Meter::get(); }
+    bool alu_output() const { return implementation.name == "lpf"
+                               || implementation.name == "wred"; }
+    bool color_output() const { return implementation.name == "normal"
+                                 || implementation.name.isNull(); }
 #nodbprint
 }
 

@@ -56,7 +56,6 @@ p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   testdata/p4_16_samples/slice-def-use1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   )
 
 # We need a deposit_field instruction, but we fail to select it.
@@ -676,11 +675,21 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "Due to complexity in action bus, can only currently handle meter color in an 8 bit ALU"
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Action bus byte .* used inconsistently for fields immediate and .*"
+  extensions/p4_tests/p4_14/test_config_105_no_phase_0_case_has_side_effect.p4
+)
+
+p4c_add_xfail_reason("tofino"
    "Stage pragma provided to table .* has multiple parameters, while Brig currently"
    extensions/p4_tests/p4_14/test_config_131_placement_with_pragma.p4
-   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
 )
 
 # START: XFAILs with translation

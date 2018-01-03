@@ -89,6 +89,8 @@ struct ActionFormat {
                 constant_value = cv;
             }
 
+            ActionAnalysis::ActionParam::speciality_t speciality
+                = ActionAnalysis::ActionParam::NO_SPECIAL;
             bool operator==(const ArgLoc &a) const;
 
             /** The alias needed for a single action parameter */
@@ -107,6 +109,7 @@ struct ActionFormat {
         int size;          ///< Number of bits needed
         bitvec range;      ///< Total mask
         bool bitmasked_set = false;  ///< If the placement requires a mask as well
+        unsigned specialities = 0;
         bool immediate = false;
 
         bool operator==(const ActionDataPlacement &a) const;
@@ -156,6 +159,7 @@ struct ActionFormat {
         // int bm_minmaxes[CONTAINER_TYPES] = {9, 17, 33};
 
         bitvec layouts[LOCATIONS][CONTAINER_TYPES];
+        bool meter_reserved = false;
 
         int maximum = -1;
         bool offset_constraint = false;
@@ -189,7 +193,7 @@ struct ActionFormat {
 
         cont_type_t best_candidate_to_move(int overhead_bytes);
 
-        int find_maximum_immed();
+        int find_maximum_immed(bool meter_color);
         void finalize_min_maxes();
 
         bool overlaps(int max_bytes, location_t loc) {
@@ -230,6 +234,7 @@ struct ActionFormat {
         bitvec total_layouts_immed[CONTAINER_TYPES];
         */
         bitvec full_layout_bitmasked;
+        bool meter_reserved = false;
 
         void clear() {
             action_data_format.clear();
@@ -238,6 +243,7 @@ struct ActionFormat {
 
         cstring get_format_name(int start_byte, cont_type_t type, bool immediate, bitvec range,
             bool use_range, bool bitmasked_set = false) const;
+        bool is_meter_color(int start_byte, bool immediate) const;
     };
 
     struct failure : public Backtrack::trigger {
@@ -254,6 +260,7 @@ struct ActionFormat {
     const PhvInfo &phv;
     bool alloc_done;
     int max_bytes = 0;
+    bool meter_color = false;
     ActionContainerInfo max_total;
     safe_vector<ActionContainerInfo> init_action_counts;
     safe_vector<ActionContainerInfo> action_counts;
@@ -289,8 +296,11 @@ struct ActionFormat {
     void space_all_immediate_containers();
     void space_individ_immed(ActionContainerInfo &aci);
     void space_32_immed(ActionContainerInfo &aci);
+    void space_all_meter_color();
 
     void align_action_data_layouts();
+    void reserve_meter_color(ArgFormat &format, ActionContainerInfo &aci,
+                             bitvec layouts_placed[CONTAINER_TYPES]);
     void align_section(ArgFormat &format, ActionContainerInfo &aci, location_t loc,
         bitmasked_t bm, bitvec layouts_placed[CONTAINER_TYPES],
         int placed[BITMASKED_TYPES][CONTAINER_TYPES]);

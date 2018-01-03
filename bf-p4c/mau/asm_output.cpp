@@ -73,12 +73,22 @@ class MauAsmOutput::TableMatch {
 void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
     auto &use = tbl->resources->action_format;
-    auto placement_vec = use.action_data_format.at(af->name);
+    auto orig_placement_vec = use.action_data_format.at(af->name);
+
+    safe_vector<ActionFormat::ActionDataPlacement> placement_vec;
+
+    for (auto placement : orig_placement_vec) {
+        if (placement.specialities != 0)
+            continue;
+        placement_vec.push_back(placement);
+    }
 
     out << indent << "- { ";
     size_t index = 0;
     bool last_entry = false;
     for (auto &placement : placement_vec) {
+        if (placement.specialities != 0)
+            continue;
         out << placement.get_action_name();
 
         auto type = static_cast<ActionFormat::cont_type_t>(placement.gen_index());
@@ -898,6 +908,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
     if (max_total == 0)
         return;
 
+
     out << indent << "action_bus: { ";
     size_t total_index = 0;
     for (auto &rs : action_data_xbar.action_data_locs) {
@@ -907,8 +918,18 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         out << rs.location.byte;
         if (byte_sz > 1)
             out << ".." << (rs.location.byte + byte_sz - 1);
-        out << " : " << use.get_format_name(rs.byte_offset, rs.location.type, rs.immediate,
-                                            total_range, false);
+        out << " : ";
+        if (use.is_meter_color(rs.byte_offset, rs.immediate)) {
+            for (auto at : tbl->attached) {
+                auto *mtr = at->to<IR::MAU::Meter>();
+                if (mtr == nullptr) continue;
+                out << tbl->get_use_name(mtr) << " color";
+                break;
+            }
+        } else {
+            out << use.get_format_name(rs.byte_offset, rs.location.type, rs.immediate,
+                                                total_range, false);
+        }
         if (total_index != max_total - 1)
             out << ", ";
         else
@@ -1257,6 +1278,10 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::MAU::AttachedOutput *att) override {
         assert(sep);
         out << sep << table->get_use_name(att->attached);
+        if (auto mtr = att->attached->to<IR::MAU::Meter>()) {
+            if (mtr->color_output())
+                out << " color";
+        }
         sep = ", ";
         return false; }
     bool preorder(const IR::MAU::HashDist *hd) override {
