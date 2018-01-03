@@ -216,26 +216,21 @@ void AttachedTables::write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus
     for (auto &m : meters) {
         if (m.args.empty()) {
             merge.mau_meter_adr_tcam_shiftcount[bus] = m->direct_shiftcount() + tcam_shift;
-            if (self->idletime)
-                merge.mau_idletime_adr_tcam_shiftcount[bus] =
-                    self->idletime->direct_shiftcount() + tcam_shift;
         } else if (m.args[0].type == Table::Call::Arg::Field) {
             merge.mau_meter_adr_tcam_shiftcount[bus] =
                 m.args[0].field()->bits[0].lo + m->indirect_shiftcount();
-            merge.mau_idletime_adr_tcam_shiftcount[bus] = m.args[0].field()->bits[0].lo;
         } else if (auto f = m->get_per_flow_enable_param(self)) {
             merge.mau_meter_adr_tcam_shiftcount[bus] = f->bit(0) + METER_ADDRESS_ZERO_PAD; }
+        if (m->uses_colormaprams()) {
+            merge.mau_idletime_adr_tcam_shiftcount[bus] = 64 + tcam_shift;
+            merge.mau_payload_shifter_enable[1][bus].idletime_adr_payload_shifter_en = 1; }
         break; /* all must be the same, only config once */ }
     for (auto &s : statefuls) {
         if (s.args.size() <= 1) {
             merge.mau_meter_adr_tcam_shiftcount[bus] = s->direct_shiftcount() + tcam_shift;
-            if (self->idletime)
-                merge.mau_idletime_adr_tcam_shiftcount[bus] =
-                    self->idletime->direct_shiftcount() + tcam_shift;
         } else if (s.args[1].type == Table::Call::Arg::Field) {
             merge.mau_meter_adr_tcam_shiftcount[bus] =
                 s.args[1].field()->bits[0].lo + s->indirect_shiftcount();
-            merge.mau_idletime_adr_tcam_shiftcount[bus] = s.args[1].field()->bits[0].lo;
         } else if (auto f = s->get_per_flow_enable_param(self)) {
             merge.mau_meter_adr_tcam_shiftcount[bus] = f->bit(0) + METER_ADDRESS_ZERO_PAD; }
         break; /* all must be the same, only config once */ }

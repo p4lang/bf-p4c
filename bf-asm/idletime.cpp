@@ -51,7 +51,8 @@ void IdletimeTable::write_merge_regs(REGS &regs, int type, int bus) {
         | ((1 << precision_bits[precision]) - 1);
 }
 
-int IdletimeTable::precision_shift() { return precision_bits[precision] + 1; }
+int IdletimeTable::precision_shift() const { return precision_bits[precision] + 1; }
+int IdletimeTable::direct_shiftcount() const { return 67 - precision_bits[precision]; }
 
 template<class REGS>
 void IdletimeTable::write_regs(REGS &regs) {

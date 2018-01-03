@@ -6,7 +6,7 @@
 
 /*
  * Code to handle programming of the Ram Data Bus Horizontal/Vertical Switchbox
- * see section 5.2.4.4 of the MAU uArch docs
+ * see section 6.2.4.4 of the MAU uArch docs
  */
 
 template<class REGS>
@@ -25,7 +25,7 @@ public:
         auto &syn2port_ctl = map_alu_row.i2portctl.synth2port_fabric_ctl[0][side];
         map_alu_row.i2portctl.synth2port_ctl.synth2port_enable = 1;
         while (prev_row != row) {
-            auto &prev_syn2port_ctl=map_alu.row[prev_row].i2portctl.synth2port_fabric_ctl[0];
+            auto &prev_syn2port_ctl = map_alu.row[prev_row].i2portctl.synth2port_fabric_ctl[0];
             if (prev_row == home_row) {
                 swbox[prev_row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_oflo_rd_b_i = 1;
                 swbox[prev_row].ctl.b_oflo_wr_o_mux_select.b_oflo_wr_o_sel_stats_wr_r_i = 1;

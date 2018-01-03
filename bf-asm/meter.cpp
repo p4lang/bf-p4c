@@ -179,6 +179,8 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
         merge.mau_meter_adr_mask[type][bus] |= meter_adr_mask;
 
     if (!per_flow_enable) {
+        // we compute a default per_flow enable bit to be used UNLESS per_flow_enable
+        // was explicitly set to false
         //ptr_bits += METER_LOWER_HUFFMAN_BITS; //When should these be added?
         if (!color_aware)
             per_flow_enable_bit = ptr_bits - 1;
@@ -186,7 +188,8 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
             per_flow_enable_bit = ptr_bits - METER_TYPE_BITS - 1;
         else
             per_flow_enable_bit = ptr_bits - 1; }
-    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit + address_shift();
+    if (per_flow_enable || per_flow_enable_param != "false")
+        merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit + address_shift();
 
     unsigned meter_adr_type = 0;
     if (!color_aware)
@@ -195,7 +198,9 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
         meter_adr_type = ptr_bits - METER_TYPE_BITS + METER_LOWER_HUFFMAN_BITS;
     else meter_adr_type = METER_ADDRESS_BITS - METER_TYPE_BITS;
     merge.mau_meter_adr_type_position[type][bus] = meter_adr_type;
-
+    if (!color_maprams.empty()) {
+        merge.mau_idletime_adr_mask[type][bus] = type ? 0x7fff0 : 0xffff0;
+        merge.mau_idletime_adr_default[type][bus] = per_flow_enable ? 0 : 0x100000; }
 }
 
 template<class REGS>
@@ -216,10 +221,12 @@ void MeterTable::write_regs(REGS &regs) {
         auto vpn = logical_row.vpns.begin();
         auto mapram = logical_row.maprams.begin();
         auto &map_alu_row =  map_alu.row[row];
-        LOG2("# DataSwitchbox.setup(" << row << ") home=" << home->row/2U);
+        LOG2("# DataSwitchbox.setup_row(" << row << ") home=" << home->row/2U);
         swbox.setup_row(row);
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
+            LOG2("# DataSwitchbox.setup_row_col(" << row << ", " << col << ", vpn=" << *vpn <<
+                 ") home=" << home->row/2U);
             swbox.setup_row_col(row, col, *vpn);
             write_mapram_regs(regs, row, *mapram, *vpn, MapRam::METER);
             if (gress)
@@ -289,14 +296,14 @@ void MeterTable::write_regs(REGS &regs) {
     auto &merge = regs.rams.match.merge;
     int color_map_color = color_maprams.empty() ? 0 : (color_maprams[0].row & 2) >> 1;
     for (Layout &row : color_maprams) {
-        if (&row == &color_maprams[0]) { /* color mapram home row */
+        if (row.row == home->row/2U) { /* on the home row */
             if (color_map_color)
                 map_alu.mapram_color_switchbox.row[row.row].ctl.r_color1_mux_select
                     .r_color1_sel_color_r_i = 1;
             else
                 map_alu.mapram_color_switchbox.row[row.row].ctl.r_color0_mux_select
                     .r_color0_sel_color_r_i = 1;
-        } else if (row.row / 4U == color_maprams[0].row / 4U) { /* same half as home */
+        } else if (row.row / 4U == home->row / 8U) { /* same half as home */
             if (color_map_color)
                 map_alu.mapram_color_switchbox.row[row.row].ctl.r_color1_mux_select
                     .r_color1_sel_oflo_color_r_i = 1;
@@ -319,17 +326,24 @@ void MeterTable::write_regs(REGS &regs) {
         auto vpn = row.vpns.begin();
         for (int col : row.cols) {
             auto &mapram_config = map_alu_row.adrmux.mapram_config[col];
-            if (&row == &color_maprams[0])
+            if (row.row == home->row/2U)
                 mapram_config.mapram_color_bus_select = MapRam::ColorBus::COLOR;
             else
                 mapram_config.mapram_color_bus_select = MapRam::ColorBus::OVERFLOW;
             mapram_config.mapram_type = MapRam::COLOR;
             mapram_config.mapram_logical_table = logical_id;
             mapram_config.mapram_vpn = *vpn;
-            mapram_config.mapram_parity_generate = 0;
+            // These two registers must be programmed for meter-color map rams in this way as a
+            // work-around for hardware issue as described in TOF-1944
+            // The basic problem is that software reads of the meter color map ram are only
+            // returning 6-bits of data instead of the necessary 8-bits.  Hardware defaults to
+            // 6 bits, since the meter color map ram case is not explicitly called out.
+            // By setting these bits, all 8-bits will be returned.
+            mapram_config.mapram_parity_generate = 1;
             mapram_config.mapram_parity_check = 0;
-            mapram_config.mapram_ecc_check = 1;
-            mapram_config.mapram_ecc_generate = 1;
+            // glass does not set ecc for color maprams?
+            // mapram_config.mapram_ecc_check = 1;
+            // mapram_config.mapram_ecc_generate = 1;
             if (gress == INGRESS)
                 mapram_config.mapram_ingress = 1;
             else

@@ -431,6 +431,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     /* row,col -> mem unitno mapping -- unitnumbers used in context json */
     virtual int memunit(int r, int c) { return r*12 + c; }
     virtual int unitram_type() { assert(0); return -1; }
+    virtual bool uses_colormaprams() const { return false; }
     virtual bool adr_mux_select_stats() { return false; }
     virtual bool run_at_eop() { return false; }
     template<class REGS> void write_mapram_regs(REGS &regs, int row, int col, int vpn, int type);
@@ -1059,7 +1060,8 @@ public:
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
     int memunit(int r, int c) override { return r*6 + c; }
-    int precision_shift();
+    int precision_shift() const;
+    int direct_shiftcount() const override;
     void pass1() override;
     void pass2() override;
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus);
@@ -1125,6 +1127,7 @@ public:
     bool run_at_eop() override { return type == STANDARD; }
     int unitram_type() override { return UnitRam::METER; }
     int home_row() const override { return layout.at(0).row | 3; }
+    bool uses_colormaprams() const override { return !color_maprams.empty(); }
     void add_cfg_reg(json::vector &cfg_cache, std::string full_name, std::string name, unsigned val, unsigned width);
 )
 
