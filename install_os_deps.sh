@@ -81,21 +81,23 @@ install_linux_packages() {
         sudo ./b2 install --build-type=minimal link=shared runtime-link=shared variant=release || \
         die "failed to install boost"
         cd /tmp && rm -rf boost_${boost_ver}
-
-        # rapidjson is not available on Ubuntu 14.04, so we build from source
-        builddir=$(mktemp --directory -t rjson_XXXXXX)
-        cd $builddir && \
-            git clone --recursive https://github.com/miloyip/rapidjson.git --branch "v1.1.0" && \
-            cd rapidjson && \
-            mkdir build && cd build && \
-            cmake .. && \
-            make -j $nprocs && \
-            $SUDO make install && \
-            cd /tmp && \
-            rm -rf $builddir || die "Failed to install rapidjson"
-    else
-        $SUDO apt-get install -y rapidjson-dev || die "Failed to update rapidjson-dev"
     fi
+
+    # rapidjson is not available on Ubuntu 14.04 and too old on Ubuntu 16.04,
+    # so we build from source
+    if [[ $ubuntu_release =~ "16.04" ]]; then
+        $SUDO apt-get remove -y rapidjson-dev
+    fi
+    builddir=$(mktemp --directory -t rjson_XXXXXX)
+    cd $builddir && \
+        git clone --recursive https://github.com/miloyip/rapidjson.git --branch "v1.1.0" && \
+        cd rapidjson && \
+        mkdir build && cd build && \
+        cmake .. && \
+        make -j $nprocs && \
+        $SUDO make install && \
+        cd /tmp && \
+        rm -rf $builddir || die "Failed to install rapidjson"
 }
 
 install_macos_packages() {

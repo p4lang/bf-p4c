@@ -272,5 +272,5 @@ rm -rf $tmpdir
 
 if [ $(uname -s) == 'Linux' ]; then
     echo "Checking for huge pages"
-    $SUDO $curdir/scripts/ptf_hugepage_setup.sh
+    $SUDO $topdir/$curdir/scripts/ptf_hugepage_setup.sh
 fi
