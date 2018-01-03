@@ -392,7 +392,7 @@ void ActionFormat::initialize_action_counts() {
         auto &placement_vec = init_format.at(action->name);
         for (auto &placement : placement_vec) {
             bool valid_container_size = false;
-            for (int i = 0; i < CONTAINER_SIZES[i]; i++) {
+            for (int i = 0; i < CONTAINER_TYPES; i++) {
                 valid_container_size |= placement.size == CONTAINER_SIZES[i];
             }
             BUG_CHECK(valid_container_size, "Action data packed in slot that is not a valid "
