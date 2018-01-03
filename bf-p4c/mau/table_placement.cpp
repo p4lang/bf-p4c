@@ -487,7 +487,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     int min_entries = 1;
     int set_entries = 512;
     if (t->match_table) {
-        if (auto k = t->layout.pre_classifier)
+        if (t->layout.pre_classifier)
             set_entries = t->layout.pre_classifer_number_entries;
         else if (auto k = t->match_table->getConstantProperty("size"))
             set_entries = k->asInt();
@@ -745,7 +745,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                                   "multi-referenced table");
                         found_match = true;
                         gw_match_grp = g; } } }
-            assert(found_match); }
+            BUG_CHECK(found_match, "Failed to find match table"); }
         for (auto n : Values(pl->table->next)) {
             if (n && n->tables.size() > 0 && !GroupPlace::in_work(work, n)) {
                 bool ready = true;
@@ -1052,7 +1052,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
                     seq->tables.erase(it);
                     found = true;
                     break; }
-            assert(found);
+            BUG_CHECK(found, "failed to find match table");
         } else {
             assert(seq->tables[0] == match);
             seq = 0; }

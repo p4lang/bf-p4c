@@ -148,8 +148,6 @@ struct AutoPushTransition {
     bool isValid;
 };
 
-}  // namespace
-
 class GetTofinoParser {
  public:
     static const IR::BFN::Parser*
@@ -186,6 +184,8 @@ GetTofinoParser::extract(gress_t gress, const IR::P4Parser* parser) {
     auto* startState = getter.getState(getter.p4StateNameToStateName.at("start"));
     return new IR::BFN::Parser(gress, startState);
 }
+
+}  // namespace
 
 ParserInfo extractParser(const IR::BFN::Pipe* pipe,
                          const IR::P4Parser* igParser,

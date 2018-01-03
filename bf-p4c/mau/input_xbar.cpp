@@ -1263,7 +1263,7 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
 
     int group = -1;
     for (int i = 0; i < HASH_INDEX_GROUPS; i++) {
-        if ((hash_index_inuse[group] & hash_table_input) == 0) {
+        if ((hash_index_inuse[i] & hash_table_input) == 0) {
             group = i;
             break;
         }

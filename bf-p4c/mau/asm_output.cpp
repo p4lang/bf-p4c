@@ -262,24 +262,24 @@ void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &
                     int lo = std::max(b.hi - split_byte + 1, b.lo);
                     Slice sl(phv, b.field, lo, b.hi);
                     auto n = sort[b.loc.group + 1].emplace(byte_loc*8 + sl.bytealign() - 4, sl);
-                    assert(n.second);
+                    BUG_CHECK(n.second, "duplicate byte use in ixbar");
                 } else {
                     Slice sl(phv, b.field, b.lo, b.hi);
                     auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
-                    assert(n.second);
+                    BUG_CHECK(n.second, "duplicate byte use in ixbar");
                 }
                 /* Should be the code if the assembly parsing was reasonable
                 if ((sl.container_bit % 8) < split_byte) {
                     int hi = std::min(b.hi, b.lo + split_byte - 1);
                     Slice sl(phv, b.field, b.lo, hi);
                     auto n = sort[b.loc.group].emplace(byte_loc*8 + sl.bytealign(), sl);
-                    assert(n.second);
+                    BUG_CHECK(n.second, "duplicate byte use in ixbar");
                 }
                 if ((sl.container_hi()% 8) >= split_byte) {
                     int lo = std::max(b.hi - split_byte + 1, b.lo);
                     Slice sl(phv, b.field, lo, b.hi);
                     auto n = sort[b.loc.group + 1].emplace(byte_loc*8 + sl.bytealign() - 4, sl);
-                    assert(n.second);
+                    BUG_CHECK(n.second, "duplicate byte use in ixbar");
                 }
                 */
             });
@@ -287,7 +287,7 @@ void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &
         } else {
             Slice sl(phv, b.field, b.lo, b.hi);
             auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
-            assert(n.second);
+            BUG_CHECK(n.second, "duplicate byte use in ixbar");
         }
     }
     for (auto &group : sort) {
@@ -1692,7 +1692,8 @@ gress_t gress) const {
             BUG_CHECK(ad_check, "Action Data Table %s misconfigured", ad->name);
             have_action = true; } }
     assert(have_indirect == (tbl->layout.ternary || tbl->layout.no_match_miss_path()));
-    assert(have_action || tbl->layout.action_data_bytes_in_table == 0);
+    BUG_CHECK(have_action || tbl->layout.action_data_bytes_in_table == 0,
+              "have action data with no action data table?");
 
 
     if (!have_indirect)

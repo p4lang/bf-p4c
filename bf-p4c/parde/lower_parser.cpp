@@ -923,7 +923,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             // XXX(seth): I was asked to remove CLOT support from this patch,
             // but when we reenable support, this is where we'd do it.
             auto* field = phv.field(emit->source->field);
-            if (auto* clot = clotInfo.allocated(field)) {
+            if (/*auto* clot =*/ clotInfo.allocated(field)) {
               BUG("Encountered a CLOT, but CLOT support is currently disabled.");
               // When CLOT support is reenabled, we'd add code here along these
               // lines:

@@ -16,7 +16,7 @@ const IR::Declaration_Instance *P4V1::WREDConverter::convertExternInstance(
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "wred", "Extern %s is not wred type, but %s", ext, ext->type);
     ExpressionConverter conv(structure);
-    const IR::Type *input_type;
+    const IR::Type *input_type = nullptr;
     const IR::Expression *instance_count = nullptr;
     const IR::Expression *drop_value = nullptr;
     const IR::Expression *no_drop_value = nullptr;
@@ -43,6 +43,9 @@ const IR::Declaration_Instance *P4V1::WREDConverter::convertExternInstance(
             continue; }
         if (!val)
             error("%s: %s property is not an expression", prop->name, prop->value->srcInfo); }
+    if (!input_type) {
+        error("No wred_input in wred %s", ext);
+        input_type = IR::Type::Bits::get(8); /* random type to avoid nullptr deref */ }
     if (direct && instance_count)
         error("wred %s specifies both 'direct' and 'instance_count'", ext);
     if (!drop_value)

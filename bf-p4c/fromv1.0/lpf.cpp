@@ -16,7 +16,7 @@ const IR::Declaration_Instance *P4V1::LpfConverter::convertExternInstance(
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "lpf", "Extern %s is not lpf type, but %s", ext, ext->type);
     ExpressionConverter conv(structure);
-    const IR::Type *filt_type;
+    const IR::Type *filt_type = nullptr;
     const IR::Expression *instance_count = nullptr;
     const IR::Expression *table = nullptr;
     bool direct = false;

@@ -101,7 +101,7 @@ void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU:
         layout.partition_count = partition_count;
 }
 
-void TableLayout::check_for_alpm(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
+void TableLayout::check_for_alpm(IR::MAU::Table::Layout &, const IR::MAU::Table *tbl,
                                   cstring &partition_index) {
     auto hdr_instance_name = tbl->name + "__metadata";
     auto pidx_field_name = tbl->name + "_partition_index";
