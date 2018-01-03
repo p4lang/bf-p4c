@@ -295,18 +295,20 @@ class CreateMathUnit : public Inspector {
 
 // FIXME -- this should be a method of IR::IndexedVector, or better yet, have a
 // FIXME -- replace method that doesn't need an iterator.
-IR::IndexedVector<IR::Declaration>::iterator find_in_scope(
-        IR::IndexedVector<IR::Declaration> *scope, cstring name) {
+IR::IndexedVector<IR::Node>::iterator find_in_scope(
+        IR::IndexedVector<IR::Node> *scope, cstring name) {
     for (auto it = scope->begin(); it != scope->end(); ++it) {
-        if ((*it)->name == name)
-            return it; }
+        if (auto decl = (*it)->to<IR::Declaration>()) {
+            if (decl->name == name) {
+                return it; } }
+    }
     BUG_CHECK("%s not in scope", name);
     return scope->end();
 }
 
 P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
         P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext,
-        IR::IndexedVector<IR::Declaration> *scope) {
+        IR::IndexedVector<IR::Node> *scope) {
     reg_info rv;
     if (auto rp = ext->properties.get<IR::Property>("reg")) {
         auto rpv = rp->value->to<IR::ExpressionValue>();
@@ -336,9 +338,16 @@ P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
                     rv.rtype = new IR::Type_Struct(IR::ID(rtype_name), {
                         new IR::StructField("lo", rv.utype),
                         new IR::StructField("hi", rv.utype) });
-                    scope->replace(find_in_scope(scope, structure->registers.get(rv.reg)),
-                        structure->convert(rv.reg, structure->registers.get(rv.reg), rv.rtype));
-                    structure->declarations->push_back(rv.rtype);
+                    auto iter = find_in_scope(scope, structure->registers.get(rv.reg));
+                    if (iter != scope->end()) {
+                        scope->replace(iter, structure->convert(
+                                rv.reg, structure->registers.get(rv.reg), rv.rtype));
+                        scope->insert(iter, rv.rtype);
+                    } else {
+                        scope->pushBackOrAppend(rv.rtype);
+                        scope->pushBackOrAppend(structure->convert(
+                                rv.reg, structure->registers.get(rv.reg), rv.rtype));
+                    }
                 } else {
                     rv.rtype = rv.utype = IR::Type::Bits::get(rv.reg->width, rv.reg->signed_); }
             } else {
@@ -389,7 +398,7 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         auto *rv = new IR::Declaration_Instance(name, satype, ctor_args, block);
         return rv->apply(TypeConverter(structure))->to<IR::Declaration_Instance>();
     }
-    auto info = getRegInfo(structure, ext, scope);
+    auto info = getRegInfo(structure, ext, structure->declarations);
     if (info.utype) {
         LOG2("Creating apply function for register_action " << ext->name);
         auto ratype = new IR::Type_Specialized(new IR::Type_Name("register_action"),
@@ -418,7 +427,7 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
     BUG_CHECK(et && et->name == "stateful_alu",
               "Extern %s is not stateful_alu type, but %s", ext, ext->type);
     auto rtype = getSelectorProfile(structure, ext) ? IR::Type::Bits::get(1)
-                                                    : getRegInfo(structure, ext, nullptr).utype;
+                                           : getRegInfo(structure, ext,  nullptr).utype;
     ExpressionConverter conv(structure);
     const IR::Statement *rv = nullptr;
     IR::BlockStatement *block = nullptr;
