@@ -244,6 +244,26 @@ void MeterTable::write_regs(REGS &regs) {
             meter_sweep_ctl.meter_sweep_remove_hole_pos = 0; // FIXME
             meter_sweep_ctl.meter_sweep_remove_hole_en = 0; // FIXME
             meter_sweep_ctl.meter_sweep_interval = sweep_interval;
+            if (input_xbar) {
+                auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
+                auto &data_ctl = regs.rams.array.row[row].vh_xbar[side].stateful_meter_alu_data_ctl;
+                vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
+                bitmask2bytemask(input_xbar->hash_group_bituse());
+                data_ctl.stateful_meter_alu_data_bytemask = 0xf;
+                data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | input_xbar->match_group(); }
+            if (output_used) {
+                auto &action_ctl = map_alu.meter_alu_group_action_ctl[meter_group_index];
+                action_ctl.right_alu_action_enable = 1;
+                action_ctl.right_alu_action_delay =
+                    stage->group_table_use[gress] & Stage::USE_SELECTOR ? 4 : 0;
+                auto &switch_ctl = regs.rams.array.switchbox.row[row].ctl;
+                switch_ctl.r_action_o_mux_select.r_action_o_sel_action_rd_r_i = 1;
+                // disable action data address huffman decoding, on the assumtion we're not
+                // trying to combine this with an action data table on the same home row.
+                // Otherwise, the huffman decoding will think this is an 8-bit value and
+                // replicate it.
+                regs.rams.array.row[row].action_hv_xbar.action_hv_xbar_disable_ram_adr
+                    .action_hv_xbar_disable_ram_adr_right = 1; }
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
             auto &movereg_meter_ctl = adrdist.movereg_meter_ctl[meter_group_index];
@@ -374,13 +394,17 @@ void MeterTable::write_regs(REGS &regs) {
         movereg_ad_ctl.movereg_ad_meter_shift = 7; */
         meter_color_logical_to_phys(regs, m->logical_id, home->row/4U);
         adrdist.mau_ad_meter_virt_lt[home->row/4U] |= 1 << m->logical_id; }
-    adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_en = 1;
-    adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_thread = gress;
-    if (gress)
-        regs.cfg_regs.mau_cfg_dram_thread |= 0x10 << (home->row/4U);
-    if (push_on_overflow) {
-        adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
-        adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER; }
+    if (run_at_eop()) {
+        adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_en = 1;
+        adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_thread = gress;
+        if (gress)
+            regs.cfg_regs.mau_cfg_dram_thread |= 0x10 << (home->row/4U);
+        if (push_on_overflow)
+            adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
+    } else {
+        adrdist.packet_action_at_headertime[1][home->row/4U] = 1; }
+    if (push_on_overflow)
+        adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;
     for (auto &hd : hash_dist)
         hd.write_regs(regs, this, 1, false);
     if (gress == INGRESS) {

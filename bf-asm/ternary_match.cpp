@@ -185,6 +185,7 @@ void TernaryMatchTable::pass1() {
     alloc_vpns();
     check_next();
     indirect.check();
+    if (action_bus) action_bus->pass1(this);
     if (action.check() && action->set_match_table(this, action.args.size() > 1) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());
     chain_rows = 0;
@@ -252,6 +253,7 @@ void TernaryMatchTable::pass2() {
                 break; }
         if (indirect_bus < 0)
             error(lineno, "No ternary indirect bus available for table %s", name()); }
+    if (action_bus) action_bus->pass2(this);
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();

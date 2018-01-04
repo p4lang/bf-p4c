@@ -193,7 +193,7 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
     if (max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
         merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
         for (auto &act : *actions)
-            if ((act.name != default_action) || !default_only_action) {
+            if ((act.name != result->default_action) || !result->default_only_action) {
                 merge.mau_action_instruction_adr_map_data[type][logical_id][act.code/4]
                     .set_subfield(act.addr + ACTION_INSTRUCTION_ADR_ENABLE,
                                   (act.code%4) * TARGET::ACTION_INSTRUCTION_MAP_WIDTH,
@@ -336,12 +336,14 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
             json::map field;
             if (auto ref = input_xbar->get_hashtable_bit(hash_table_id, bit)) {
                 std::string field_name = ref.name();
+                // FIXME -- if field_name is a raw register name, should lookup in PHV for alias?
                 // Make names compatible with PD Gen API
                 remove_aug_names(field_name);
                 field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
                 // Sanity check to see if field_name is also in p4_param_list.
-                if (!find_p4_param(field_name))
-                    warning(col.second.lineno, "Cannot find field name %s in p4_param_order for table %s", field_name.c_str(), name());
+                if (!find_p4_param(field_name) && !p4_params_list.empty())
+                    warning(col.second.lineno, "Cannot find field name %s in p4_param_order "
+                            "for table %s", field_name.c_str(), name());
                 field["field_name"] = field_name; }
             if (!hash_bit_added)
                 bits_to_xor.push_back(std::move(field));

@@ -227,8 +227,11 @@ void ActionBus::pass1(Table *tbl) {
                     bool ok = false;
                     if (*it->first.name_ref) {
                         Source src(*it->first.name_ref);
-                        if (it->first.type == Source::ColorRef)
+                        if (it->first.type == Source::ColorRef) {
                             src.type = Source::TableColor;
+                            src.table->set_color_used();
+                        } else {
+                            src.table->set_output_used(); }
                         slot.data[src] = it->second;
                         ok = true;
                     } else if (tbl->actions) {
@@ -262,11 +265,18 @@ void ActionBus::pass1(Table *tbl) {
                         error(lineno, "Multiple meter tables attached to %s", tbl->name());
                     else {
                         Source src(att->meters.at(0));
-                        if (it->first.type == Source::ColorRef)
+                        if (it->first.type == Source::ColorRef) {
                             src.type = Source::TableColor;
+                            src.table->set_color_used();
+                        } else {
+                            src.table->set_output_used(); }
                         slot.data[src] = it->second; } }
                 it = slot.data.erase(it);
             } else {
+                if (it->first.type == Source::TableColor)
+                    it->first.table->set_color_used();
+                if (it->first.type == Source::TableOutput)
+                    it->first.table->set_output_used();
                 ++it; } }
         if (error_count > 0) continue;
         auto first = slot.data.begin();
@@ -349,6 +359,7 @@ void ActionBus::need_alloc(Table *tbl, HashDistribution *hd, unsigned off, unsig
 }
 void ActionBus::need_alloc(Table *tbl, Table *attached, unsigned off, unsigned size) {
     LOG3("need_alloc table " << attached->name() << " off=" << off << " size=0x" << hex(size));
+    attached->set_output_used();
     need_place[attached][off] |= size;
     byte_use.setrange(off/8U, size);
 }

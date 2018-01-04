@@ -293,6 +293,19 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
                 delay_ctl.meter_alu_right_group_delay = METER_ALU_GROUP_DATA_DELAY + row/4 + stage->tcam_delay(gress);
                 auto &error_ctl = map_alu.meter_alu_group_error_ctl[meter_group_index];
                 error_ctl.meter_alu_group_ecc_error_enable = 1;
+                if (output_used) {
+                    auto &action_ctl = map_alu.meter_alu_group_action_ctl[meter_group_index];
+                    action_ctl.right_alu_action_enable = 1;
+                    action_ctl.right_alu_action_delay =
+                        stage->group_table_use[gress] & Stage::USE_SELECTOR ? 4 : 0;
+                    auto &switch_ctl = regs.rams.array.switchbox.row[row].ctl;
+                    switch_ctl.r_action_o_mux_select.r_action_o_sel_action_rd_r_i = 1;
+                    // disable action data address huffman decoding, on the assumtion we're not
+                    // trying to combine this with an action data table on the same home row.
+                    // Otherwise, the huffman decoding will think this is an 8-bit value and
+                    // replicate it.
+                    regs.rams.array.row[row].action_hv_xbar.action_hv_xbar_disable_ram_adr
+                        .action_hv_xbar_disable_ram_adr_right = 1; }
             } else {
                 auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
                 if (home->row >= 8 && logical_row.row < 8) {

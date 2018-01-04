@@ -423,6 +423,8 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual MeterTable* get_meter() const { return 0; }
     virtual void set_stateful (StatefulTable *s) { assert(0); }
     virtual StatefulTable *get_stateful() const { return 0; }
+    virtual void set_color_used() { assert(0); }
+    virtual void set_output_used() { assert(0); }
     virtual const Call &get_action() const { return action; }
     virtual Format::Field *find_address_field(AttachedTable *) const { assert(0); return 0; }
     virtual Format::Field *get_per_flow_enable_param(MatchTable *) const { assert(0); return 0; }
@@ -1094,6 +1096,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
     bool                global_binding = false;
+    bool                output_used = false;
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) override;
 public:
     template<class REGS> void write_regs(REGS &regs);
@@ -1136,12 +1139,15 @@ public:
     int address_shift() const override;
     bool                color_aware = false;
     bool                color_aware_per_flow_enable = false;
+    bool                color_used = false;
     bool run_at_eop() override { return type == STANDARD; }
     int unitram_type() override { return UnitRam::METER; }
     int home_row() const override { return layout.at(0).row | 3; }
     bool uses_colormaprams() const override { return !color_maprams.empty(); }
     void add_cfg_reg(json::vector &cfg_cache, std::string full_name, std::string name, unsigned val, unsigned width);
     int default_pfe_adjust() const override { return color_aware ? -METER_TYPE_BITS : 0; }
+    void set_color_used() override { color_used = true; }
+    void set_output_used() override { output_used = true; }
 )
 
 DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
@@ -1172,6 +1178,7 @@ public:
     int get_const(long v);
     bool is_dual_mode() { return dual_mode; }
     int home_row() const override { return layout.at(0).row | 3; }
+    void set_output_used() override { output_used = true; }
 )
 
 #endif /* _tables_h_ */

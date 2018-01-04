@@ -26,6 +26,7 @@ namespace {
 static const int group_size[] = { 32, 32, 32, 32, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16 };
 
 struct operand {
+    static const int ACTIONBUS_OPERAND = 0x20;
     struct Base {
         int     lineno;
         Base(int line) : lineno(line) {}
@@ -138,7 +139,7 @@ struct operand {
             //    error(lineno, "action bus entry %d(%s) misaligned for %d-bit access",
             //          byte_value, name.c_str(), size*8);
             else
-                return 0x20 + byte/size;
+                return ACTIONBUS_OPERAND + byte/size;
             return -1; }
         void pass2(int group) const override {
             unsigned bits = group_size[group];
@@ -194,7 +195,7 @@ struct operand {
                 return index == a->index && offset == a->offset;
             } else return false; }
         RawAction *clone() override { return new RawAction(*this); }
-        int bits(int group) override { return 0x40 + index; }
+        int bits(int group) override { return ACTIONBUS_OPERAND + index; }
         unsigned bitoffset(int group) const override { return offset; }
         void dbprint(std::ostream &out) const override { out << 'A' << index; }
         void gen_prim_cfg(json::map& out) override { /* TODO: what is this */ }
@@ -270,7 +271,7 @@ struct operand {
                 return -1; }
             if (size == 2) byte -= 32;
             if (byte >= 0 || byte < 32*size)
-                return 0x20 + byte/size;
+                return ACTIONBUS_OPERAND + byte/size;
             error(lineno, "action bus entry %d(hash_dist %d) out of range for %d-bit access",
                   size == 2 ? byte+32 : byte, hd->id, size*8);
             return -1; }
