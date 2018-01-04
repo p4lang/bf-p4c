@@ -140,21 +140,19 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
             if (result->action.args.size() >= 1 && result->action.args[0].field()) {
                 merge.mau_action_instruction_adr_mask[type][bus] =
                     ((1U << result->action.args[0].size()) - 1) & ~action_enable;
-                shift_en.action_instruction_adr_payload_shifter_en = 1;
             } else {
                 if (this->to<HashActionTable>() && this->get_gateway())
                     merge.mau_action_instruction_adr_mask[type][bus] = 1;
                 else
                     merge.mau_action_instruction_adr_mask[type][bus] = 0;
-
                 if (actions->count() == 1)
                     default_action = actions->begin()->code;
-                else if (this->to<HashActionTable>() && this->get_gateway())
-                    shift_en.action_instruction_adr_payload_shifter_en = 1;
             }
             if (!result->enable_action_instruction_enable)
                 default_action |= ACTION_INSTRUCTION_ADR_ENABLE;
             merge.mau_action_instruction_adr_default[type][bus] = default_action;
+            // must enable to get the default, even if the shifter itself is unneeded
+            shift_en.action_instruction_adr_payload_shifter_en = 1;
 
             if (action_enable) {
                 if (result->enable_action_instruction_enable)
