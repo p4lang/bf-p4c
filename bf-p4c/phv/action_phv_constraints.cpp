@@ -152,8 +152,9 @@ ActionPhvConstraints::num_container_sources(
 
             ordered_set<PHV::Container> per_source_containers;
             ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(fieldRead, range);
-            for (auto slice : per_source_slices)
-                per_source_containers.insert(slice.container());
+            for (auto source_slice : per_source_slices) {
+                per_source_containers.insert(source_slice.container());
+                LOG5("\t\t\t\t\tSource slice for " << slice << " : " << source_slice); }
             if (per_source_containers.size() == 0) {
                 LOG5("\t\t\t\tSource " << fieldRead->name << " has not been allocated yet.");
                 ++num_unallocated;
@@ -173,6 +174,9 @@ boost::optional<PHV::AllocSlice> ActionPhvConstraints::getSourcePHVSlice(const P
     auto range = slice.field_slice();
     if (write_to_reads_per_action[field][action].size() == 0)
         LOG5("\t\t\t\tField " << field->name << " is not written in action " << action->name);
+    else
+        LOG5("\t\t\t\tField " << field->name << " is written in action "  << action->name <<
+             " using " << write_to_reads_per_action[field][action].size() << " operands");
     size_t i = 0;
     for (auto operand : write_to_reads_per_action[field][action]) {
         if (operand.ad || operand.constant) continue;
@@ -523,6 +527,9 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
                     "action" << action->name);
             return boost::none; }
 
+        // One of the PHV must be aligned for the case with 2 sources
+        phvMustBeAligned[action] = true;
+
         // If sources.num_allocated == 2 and sources.num_unallocated == 0, then packing is valid and
         // no other packing constraints are induced
         if (sources.num_allocated == 2 && sources.num_unallocated == 0)
@@ -531,9 +538,8 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
         // If sources.num_allocated == 2 and sources.num_unallocated > 0, then all unallocated
         // fields have to be packed together with one of the allocated fields
         // xxx(deep): What's the best way to choose which allocated slice to pack with
-        if (sources.num_allocated == 2 && sources.num_unallocated > 0) {
+        if (sources.num_allocated == 2 && sources.num_unallocated > 0)
             pack_slices_together(alloc, container_state, copacking_constraints, action, false);
-        }
 
         // If sources.num_allocated == 1 and sources.num_unallocated > 0, then
         if (sources.num_allocated <= 1 && sources.num_unallocated > 0) {
@@ -550,22 +556,168 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
             }
     }
 
-    LOG5("\t\tChecking rotational alignment");
+    LOG5("\t\t\tChecking rotational alignment");
     for (auto &action : set_of_actions) {
-        for (auto slice : container_state) {
-            LOG5("\t\t\tphvMustBeAligned: " << phvMustBeAligned[action] << " numSourceContainers: "
-                    << numSourceContainers[action] << " action: " << action->name << " slice: " <<
-                    slice);
-            if (phvMustBeAligned[action] && numSourceContainers[action] == 1) {
-                // The single phv source must be aligned
-                boost::optional<PHV::AllocSlice> source = getSourcePHVSlice(alloc, slice, action);
-                if (!source) continue;
-                if (slice.container_slice() != source->container_slice()) {
-                    LOG5("\t\t\t\tContainer alignment for slice and source do not match");
-                    return boost::none; } } } }
+        LOG5("\t\t\tphvMustBeAligned: " << phvMustBeAligned[action] << " numSourceContainers: " <<
+                numSourceContainers[action] << " action: " << action->name);
+        if (phvMustBeAligned[action] && numSourceContainers[action] == 1) {
+            for (auto slice : container_state) {
+                LOG5("\t\t\t\tslice: " << slice);
+                if (phvMustBeAligned[action] && numSourceContainers[action] == 1) {
+                    // The single phv source must be aligned
+                    boost::optional<PHV::AllocSlice> source = getSourcePHVSlice(alloc, slice,
+                            action);
+                    if (!source) continue;
+                    if (slice.container_slice() != source->container_slice()) {
+                        LOG5("\t\t\t\tContainer alignment for slice and source do not match");
+                        return boost::none; } } } }
+
+        if (phvMustBeAligned[action] && numSourceContainers[action] == 2) {
+            boost::optional<ClassifiedSources> classifiedSourceSlices =
+                verify_two_container_alignment(alloc, container_state, action);
+            if (!classifiedSourceSlices)
+                return boost::none;
+            if (LOGGING(5)) {
+                LOG5("\t\t\t\tFirst container source contains " <<
+                        classifiedSourceSlices.get()[1].size() << " slice(s)");
+                for (auto sl : classifiedSourceSlices.get()[1])
+                    LOG5("\t\t\t\t\t" << sl);
+                LOG5("\t\t\t\tSecond container source contains " <<
+                        classifiedSourceSlices.get()[2].size() << " slice(s)");
+                for (auto sl : classifiedSourceSlices.get()[2])
+                    LOG5("\t\t\t\t\t" << sl); } } }
 
     return copacking_constraints;
 }
+
+inline int ActionPhvConstraints::getOffset(le_bitrange a, le_bitrange b, PHV::Container c) const {
+    return ((a.lo - b.lo) % c.size());
+}
+
+/// Steps in verifying alignment of the two PHV sources
+/// 1. Divide the source AllocSlices corresponding to the packing in @container_state into the
+/// respective containers (firstContainerSet and secondContainerSet). All slices in each respective
+/// ContainerSet must be aligned at the same offset with reference to their destination slices.
+/// Also, only one container set can be unaligned with the destination for every instruction.
+/// 2. If both firstContainerAligned and secondContainerAligned are simultaneously false, then
+/// packing is impossible due to alignment constraints on the instructions.
+/// 3. If packing is possible, return the classification of source slices into the respective source
+/// containers (modeled as a ClassifiedSources map).
+boost::optional<ActionPhvConstraints::ClassifiedSources>
+ActionPhvConstraints::verify_two_container_alignment(const PHV::Allocation& alloc, const
+        PHV::Allocation::MutuallyLiveSlices& container_state, const IR::MAU::Action* action) {
+    ClassifiedSources rm;
+    bool firstContainerSet = false;
+    bool secondContainerSet = false;
+    bool firstContainerAligned = true;
+    bool secondContainerAligned = true;
+    int firstOffset = 0;
+    int secondOffset = 0;
+    ordered_map<size_t, PHV::Container> num_to_source_mapping;
+
+    for (auto slice : container_state) {
+        LOG7("\t\t\t\tClassifying source slice for: " << slice);
+        auto *field = slice.field();
+        auto range = slice.field_slice();
+        for (auto operand : write_to_reads_per_action[field][action]) {
+            if (operand.ad || operand.constant) continue;
+            const PHV::Field* fieldRead = operand.phv_used;
+            ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(fieldRead, range);
+            BUG_CHECK(per_source_slices.size() <= 1, "Multiple source slices found in "
+                    "verify_two_container_alignment()");
+
+            // For every source slice, check alignment individually and divide it up as part of
+            // either the first source container or the second source container
+            if (per_source_slices.size() == 0) {
+                LOG5("\t\t\t\t\tNo source slice found");
+                continue; }
+            auto sl = *per_source_slices.begin();
+            if (!firstContainerSet) {
+                // first container encountered
+                num_to_source_mapping[1] = sl.container();
+                LOG7("\t\t\t\t\tFirst container is : " << sl.container() << " from : " << sl);
+                rm[1].insert(sl);
+                if (sl.container_slice() != slice.container_slice()) {
+                    LOG5("\t\t\t\t\tFirst container not aligned");
+                    firstContainerAligned = false;
+                    firstOffset = getOffset(sl.container_slice(), slice.container_slice(),
+                            slice.container()); }
+                    firstContainerSet = true;
+            } else if (!secondContainerSet) {
+                // first container has already been encountered at this point
+                if (num_to_source_mapping[1] == sl.container()) {
+                    LOG7("\t\t\t\t\tFound first container : " << sl.container() << " in : " <<
+                            sl);
+                    rm[1].insert(sl);
+                    // check if the slice is aligned and whether this is the same as the
+                    // previous source slices from this source container
+                    bool sliceAligned = (sl.container_slice() == slice.container_slice());
+                    if (firstContainerAligned != sliceAligned) {
+                        LOG5("\t\t\t\t\tSource slices are both aligned and unaligned");
+                        return boost::optional<ClassifiedSources>{}; }
+                    // if the slices are all unaligned, check if the offset of the source and
+                    // destination slices are uniform across all slices. If not, packing is
+                    // invalid (enforced by setting firstContainerAligned to false).
+                    if (!firstContainerAligned) {
+                        int offset = getOffset(sl.container_slice(), slice.container_slice(),
+                                slice.container());
+                        if (firstOffset != offset) {
+                            LOG5("\t\t\t\t\tSource slices are aligned at different offsets.");
+                            return boost::optional<ClassifiedSources>{}; } }
+                } else {
+                    // at this point, we have encountered the second source container
+                    secondContainerSet = true;
+                    num_to_source_mapping[2] = sl.container();
+                    LOG7("\t\t\t\t\tSecond container is: " << sl.container() << " from : " <<
+                            sl);
+                    rm[2].insert(sl);
+                    // initialize the offset for the first slice in the second source container
+                    if (sl.container_slice() != slice.container_slice()) {
+                        LOG5("\t\t\t\t\tSecond container not aligned");
+                        secondOffset = getOffset(sl.container_slice(), slice.container_slice(),
+                                slice.container());
+                        secondContainerAligned = false; } }
+            } else {
+                // two different containers have already been encountered
+                bool sliceAligned = (sl.container_slice() == slice.container_slice());
+                int refOffset = 0;
+                bool containerAligned;
+                if (num_to_source_mapping[1] == sl.container()) {
+                    LOG7("\t\t\t\t\tFound first container : " << sl.container() << " in : " <<
+                            sl);
+                    containerAligned = firstContainerAligned;
+                    refOffset = firstOffset;
+                    rm[1].insert(sl);
+                } else if (num_to_source_mapping[2] == sl.container()) {
+                    LOG7("\t\t\t\t\tFound second container: " << sl.container() << " in : " <<
+                            sl);
+                    containerAligned = secondContainerAligned;
+                    refOffset = secondOffset;
+                    rm[2].insert(sl);
+                } else {
+                    BUG("Found a third container source"); }
+
+                // If alignment is different for any source slice, either in first or second
+                // source container, then packing is invalid.
+                if (containerAligned != sliceAligned) {
+                    LOG5("\t\t\t\t\tSource slices are both aligned and unaligned.");
+                    return boost::optional<ClassifiedSources>{}; }
+                // If offset is different for any source slice, either in first or second source
+                // container, then packing is invalid.
+                int offset = getOffset(sl.container_slice(), slice.container_slice(),
+                        slice.container());
+                if (refOffset != offset) {
+                    LOG5("\t\t\t\t\tSource slices are aligned at different offsets.");
+                    return  boost::optional<ClassifiedSources>{}; } } } }
+
+    // If both source containers are unaligned, then packing is invalid.
+    if (!firstContainerAligned && !secondContainerAligned) {
+        LOG5("\t\t\t\tBoth source containers cannot be unaligned.");
+        return boost::optional<ClassifiedSources>{}; }
+
+    return rm;
+}
+
 
 boost::optional<ActionPhvConstraints::FieldOperation> ActionPhvConstraints::is_written(const
         IR::MAU::Action *act, const PHV::Field* field) {

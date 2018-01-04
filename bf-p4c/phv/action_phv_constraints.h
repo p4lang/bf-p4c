@@ -18,6 +18,7 @@
  */
 class ActionPhvConstraints : public Inspector {
  private:
+    using ClassifiedSources = ordered_map<size_t, ordered_set<PHV::AllocSlice>>;
     /// Defines a struct for returning number of containers
     struct NumContainers {
         size_t num_allocated;
@@ -156,6 +157,19 @@ class ActionPhvConstraints : public Inspector {
     void pack_slices_together(const PHV::Allocation& alloc, PHV::Allocation::MutuallyLiveSlices&
             container_state, UnionFind<PHV::FieldSlice> &packing_constraints, const
             IR::MAU::Action* action, bool pack_unallocated_only);
+
+    /** Check that at least one container in a two source PHV instruction is aligned with the
+      * destination
+      */
+    boost::optional<ClassifiedSources> verify_two_container_alignment(const PHV::Allocation& alloc,
+            const PHV::Allocation::MutuallyLiveSlices& container_state, const IR::MAU::Action*
+            action);
+
+    /** Returns offset (difference between lo bits) by which slice @a differs from slice @b
+      * offset = (a.lo - b.lo) % b.container().size()
+      * Invariant: Can only be called if @a and @b are assigned to same sized containers
+      */
+    inline int getOffset(le_bitrange a, le_bitrange b, PHV::Container c) const;
 
     /** Print the state of the maps */
     void printMapStates();

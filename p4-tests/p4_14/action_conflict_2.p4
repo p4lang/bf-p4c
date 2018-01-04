@@ -28,7 +28,7 @@ parser parse_pkt {
   return ingress;
 }
 
-action action_0 () {
+action action_3 () {
   modify_field (pkt.f1, pkt.f7);
   modify_field (pkt.f2, pkt.f8);
   modify_field (pkt.f3, pkt.f9);
@@ -49,6 +49,13 @@ action action_2 () {
   modify_field (pkt.f4, pkt.f8);
 }
 
+action action_0 () {
+  modify_field (pkt.f1, pkt.f5);
+  modify_field (pkt.f2, pkt.fa);
+  modify_field (pkt.f3, pkt.f8);
+  modify_field (pkt.f4, pkt.f7);
+}
+
 action setport (port) {
   modify_field (standard_metadata.egress_spec, port);
 }
@@ -64,6 +71,7 @@ table table_0 {
     action_0;
     action_1;
     action_2;
+    action_3;
   }
   size:1024;
 }

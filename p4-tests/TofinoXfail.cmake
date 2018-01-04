@@ -55,7 +55,7 @@ p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   testdata/p4_16_samples/slice-def-use1.p4
-  extensions/p4_tests/p4_14/action_conflict_2.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   )
 
 # We need a deposit_field instruction, but we fail to select it.
@@ -542,7 +542,9 @@ p4c_add_xfail_reason("tofino"
   switch_dc_basic
   testdata/p4_14_samples/port_vlan_mapping.p4
   switch_dc_basic
+# due to action analysis working correctly
   extensions/p4_tests/p4_14/action_conflict_1.p4
+  extensions/p4_tests/p4_14/action_conflict_2.p4
   testdata/p4_14_samples/instruct1.p4
   extensions/p4_tests/p4_14/instruct1.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
