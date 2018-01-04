@@ -1544,6 +1544,8 @@ void Table::get_cjson_source(const std::string &field_name,
         source = "instr";
     else if (field_name == "action_addr")
         source = "adt_ptr";
+    else if ((field_name == "meter_addr") && get_meter())
+        source = "meter_ptr";
     else if ((field_name == "meter_addr") && get_selector())
         source = "sel_ptr";
     else if ((field_name == "meter_addr") && get_stateful())
@@ -1614,26 +1616,36 @@ void Table::output_field_to_pack_format(json::vector &field_list,
     unsigned add_width = 0;
     bool pfe_enable = false;
     auto a = this->get_attached();
-    if (a && a->stats.size() > 0) {
+    if (a) {
         // If field is an attached table address specified by a pfe
         // param, set source to "stats_ptr" and pfe_enable to true
         // Discard pfe bit fields
-        auto s = a->stats[0]->to<Synth2Port>();
-        std::string pfe_param = s->get_per_flow_enable_param();
-        std::string pfe_name = pfe_param.substr(0, pfe_param.find("_pfe"));
-        if (name == (pfe_name + "_pfe"))
-            return; //Do not output per flow enable parameter
-        if (name == (pfe_name + "_addr")) {
-            source = "stats_ptr";
-            // FIXME-DRIVER: Currently driver assumes pfe bit is at the MSB of
-            // address. Hence the fields <field>_addr and
-            // <field>_pfe should be merged in the context json
-            // i.e. field_width should be incremented by 1
-            // Once driver supports a new "source" type for a
-            // separate pfe bit this hack will go away and pfe
-            // fields wont be dropped from the entry format
-            add_width = 1;
-            pfe_enable = true; }
+        Synth2Port *s = nullptr;
+        std::string s_source = source;
+        if (a->stats.size() > 0) {
+            s = a->stats[0]->to<Synth2Port>();
+            s_source = "stats_ptr";
+        }
+        if (a->meters.size() > 0) {
+            s = a->meters[0]->to<Synth2Port>();
+            s_source = "meter_ptr";
+        }
+        if (s) {
+            std::string pfe_param = s->get_per_flow_enable_param();
+            std::string pfe_name = pfe_param.substr(0, pfe_param.find("_pfe"));
+            if (name == (pfe_name + "_pfe"))
+                return; //Do not output per flow enable parameter
+            if (name == (pfe_name + "_addr")) {
+                source = s_source;
+                // FIXME-DRIVER: Currently driver assumes pfe bit is at the MSB of
+                // address. Hence the fields <field>_addr and
+                // <field>_pfe should be merged in the context json
+                // i.e. field_width should be incremented by 1
+                // Once driver supports a new "source" type for a
+                // separate pfe bit this hack will go away and pfe
+                // fields wont be dropped from the entry format
+                add_width = 1;
+                pfe_enable = true; } }
     }
 
     int lobit = 0;

@@ -76,6 +76,12 @@ StatefulTable *AttachedTables::get_stateful(std::string name) const {
             return dynamic_cast<StatefulTable*>((Table *)s); }
     return nullptr; }
 
+MeterTable* AttachedTables::get_meter(std::string name) const {
+    for (auto &s : meters) {
+        if (name == s->name() || name.empty())
+            return dynamic_cast<MeterTable*>((Table *)s); }
+    return nullptr; }
+
 Table::Format::Field *AttachedTables::find_address_field(AttachedTable *tbl) const {
     if (selector == tbl && selector.args.size() > 0)
         return selector.args.at(0).field();

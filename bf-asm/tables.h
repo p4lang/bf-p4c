@@ -31,6 +31,7 @@ class InputXbar;
 class MatchTable;
 class SelectionTable;
 class StatefulTable;
+class MeterTable;
 class Synth2Port;
 class Stage;
 struct Ref;
@@ -419,6 +420,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual const AttachedTables *get_attached() const { return 0; }
     virtual const GatewayTable *get_gateway() const { return 0; }
     virtual SelectionTable *get_selector() const { return 0; }
+    virtual MeterTable* get_meter() const { return 0; }
     virtual void set_stateful (StatefulTable *s) { assert(0); }
     virtual StatefulTable *get_stateful() const { return 0; }
     virtual const Call &get_action() const { return action; }
@@ -571,6 +573,7 @@ struct AttachedTables {
     Table::Call                 selector;
     std::vector<Table::Call>    stats, meters, statefuls;
     SelectionTable *get_selector() const;
+    MeterTable* get_meter(std::string name = "") const;
     StatefulTable *get_stateful(std::string name = "") const;
     Table::Format::Field *find_address_field(AttachedTable *tbl) const;
     void pass1(MatchTable *self);
@@ -720,6 +723,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
 public:
     SelectionTable *get_selector() const override { return attached.get_selector(); }
     StatefulTable *get_stateful() const override { return attached.get_stateful(); }
+    MeterTable* get_meter() const override { return attached.get_meter(); }
     using Table::gen_memory_resource_allocation_tbl_cfg;
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
     int unitram_type() override { return UnitRam::MATCH; }
@@ -813,6 +817,8 @@ public:
         return indirect ? indirect->get_selector() : 0; }
     StatefulTable *get_stateful() const override {
         return indirect ? indirect->get_stateful() : 0; }
+    MeterTable* get_meter() const override {
+        return indirect ? indirect->get_meter() : 0; }
     Format::Field *find_address_field(AttachedTable *tbl) const override {
         return indirect ? indirect->find_address_field(tbl) : attached.find_address_field(tbl); }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
@@ -874,6 +880,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         return rv; }
     SelectionTable *get_selector() const override { return attached.get_selector(); }
     StatefulTable *get_stateful() const override { return attached.get_stateful(); }
+    MeterTable* get_meter() const override { return attached.get_meter(); }
     Format::Field *find_address_field(AttachedTable *tbl) const override {
         return attached.find_address_field(tbl); }
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
@@ -906,6 +913,8 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
     StatefulTable *get_stateful() const override {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_stateful() : 0; }
+    MeterTable* get_meter() const override {
+        return match_tables.size() == 1 ? (*match_tables.begin())->get_meter() : 0; }
     Call &action_call() override {
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
     int memunit(int r, int c) override { return r*6 + c; }
@@ -1011,6 +1020,8 @@ public:
         return match_table ? match_table->get_selector() : 0; }
     StatefulTable *get_stateful() const override {
         return match_table ? match_table->get_stateful() : 0; }
+    MeterTable *get_meter() const override {
+        return match_table ? match_table->get_meter() : 0; }
     bool empty_match() const { return match.empty() && xor_match.empty(); }
     unsigned input_use() const;
 )
