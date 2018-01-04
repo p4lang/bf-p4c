@@ -16,6 +16,7 @@
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
 #include "bf-p4c/phv/analysis/field_interference.h"
 #include "lib/symbitmatrix.h"
+#include "lib/bitvec.h"
 
 /** A set of functions used in PHV allocation.
  */
@@ -69,7 +70,19 @@ class CoreAllocation {
     /// Split @sc into container-sized chunks, prefering the largest container
     /// sizes possible.
     /// @returns a list of sliced SuperClusters, or @sc if no slicing occurred.
-    static std::list<PHV::SuperCluster*> split_super_cluster(PHV::SuperCluster* sc);
+    static boost::optional<std::list<PHV::SuperCluster*>>
+    split_super_cluster(const PHV::SuperCluster* sc);
+
+    /// Split a SuperCluster with slice lists according to @split_schema.
+    static boost::optional<std::list<PHV::SuperCluster*>> split_super_cluster(
+        const PHV::SuperCluster* sc,
+        ordered_map<PHV::SuperCluster::SliceList*, bitvec> split_schemas);
+
+    /// Split the RotationalCluster in a SuperCluster without a slice list
+    /// according to @split_schema.
+    static boost::optional<std::list<PHV::SuperCluster*>> split_super_cluster(
+        const PHV::SuperCluster* sc,
+        bitvec split_schema);
 
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
@@ -82,7 +95,7 @@ class CoreAllocation {
      * @cluster. At present, this is the set of valid starting bit locations
      * for fields of @cluster in containers of @group.
      */
-    bitvec satisfies_constraints(
+    boost::optional<bitvec> satisfies_constraints(
         const PHV::ContainerGroup& group, const PHV::AlignedCluster& cluster) const;
 
     /// @returns true if slice list<-->container constraints are satisfied.

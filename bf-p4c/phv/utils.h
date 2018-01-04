@@ -84,9 +84,14 @@ class FieldSlice {
             LOG5("Adjusting alignment of field " << field << " to " << *alignment_i <<
                  " for slice " << range); }
 
-        // Calculate valid container range for this slice.
-        // XXX(cole): Is this right?
-        validContainerRange_i = field_i->validContainerRange_i;
+        // Calculate valid container range for this slice by shrinking
+        // the valid range of the field by the size of the "tail"
+        // (i.e. the least significant bits) not in this slice.
+        if (field_i->validContainerRange_i == ZeroToMax()) {
+            validContainerRange_i = ZeroToMax();
+        } else {
+            int new_size = field_i->validContainerRange_i.size() - range.lo;
+            validContainerRange_i = field_i->validContainerRange_i.resizedToBits(new_size); }
     }
 
     /// Create a slice that holds the entirety of @field.
@@ -456,6 +461,19 @@ class ClusterStats {
     virtual bool contains(const PHV::FieldSlice& slice) const = 0;
 };
 
+/// The result of slicing a cluster.
+template<typename Cluster>
+struct SliceResult {
+    using OptFieldSlice = boost::optional<PHV::FieldSlice>;
+    /// Associate original field slices with new field slices.  Fields that
+    /// are smaller than the slice point do not generate a hi slice.
+    ordered_map<PHV::FieldSlice, std::pair<PHV::FieldSlice, OptFieldSlice>> slice_map;
+    /// A new cluster containing the lower field slices.
+    Cluster* lo;
+    /// A new cluster containing the higher field slices.
+    Cluster* hi;
+};
+
 /** An AlignedCluster groups slices that are involved in the same MAU
  * operations and, therefore, must be placed at the same alignment in
  * containers in the same MAU container group.
@@ -502,15 +520,12 @@ class AlignedCluster : public ClusterStats {
      * @returns the absolute alignment constraint (if any) for all slices
      * in this cluster, or boost::none if no valid alignment exists.
      */
-    boost::optional<le_bitrange>
-    validContainerStartRange(PHV::Size container_size) const;
+    boost::optional<le_bitrange> validContainerStartRange(PHV::Size container_size) const;
 
-    // XXX(cole): This will replace validContainerStartRange() after cluster
-    // slicing.  This is simpler, in that it returns false if the slice can't
-    // fit in the container at a valid offset, i.e. if any slice in the cluster
-    // is too large for the contianer.
-    boost::optional<le_bitrange>
-    validContainerStartRangeAfterSlicing(PHV::Size container_size) const;
+    /// Find valid container start range for @slice in @container_size containers.
+    static boost::optional<le_bitrange> validContainerStartRange(
+        PHV::FieldSlice slice,
+        PHV::Size container_size);
 
     /// Helper function to set cluster id
     void set_cluster_id();
@@ -560,6 +575,9 @@ class AlignedCluster : public ClusterStats {
      */
     bitvec validContainerStart(PHV::Size container_size) const;
 
+    /// Valid start positions for @slice in @container_size sized containers.
+    static bitvec validContainerStart(PHV::FieldSlice slice, PHV::Size container_size);
+
     /// @returns the slices in this cluster.
     const ordered_set<PHV::FieldSlice>& slices() const { return slices_i; }
 
@@ -589,15 +607,6 @@ class AlignedCluster : public ClusterStats {
     /// @returns true if this cluster contains @slice.
     bool contains(const PHV::FieldSlice& slice) const override;
 
-    struct SliceResult {
-        /// Associate original field slices with new field slices.
-        ordered_map<PHV::FieldSlice, std::pair<PHV::FieldSlice, PHV::FieldSlice>> slice_map;
-        /// A new cluster containing the lower field slices.
-        AlignedCluster* lo;
-        /// A new cluster containing the higher field slices.
-        AlignedCluster* hi;
-    };
-
     /** Slices this cluster at the relative field bit @pos.  For example, if a
      * cluster contains a field slice [3..7] and pos == 2, then `slice` will
      * produce two clusters, one with [3..4] and the other with [5..7].
@@ -611,7 +620,7 @@ class AlignedCluster : public ClusterStats {
      * @returns a pair of (lo, hi) clusters if the cluster can be split at @pos
      *          or boost::none otherwise.
      */
-    boost::optional<SliceResult> slice(int pos) const;
+    boost::optional<SliceResult<AlignedCluster>> slice(int pos) const;
 };
 
 /** A rotational cluster holds groups of clusters that must be placed in the
@@ -668,15 +677,6 @@ class RotationalCluster : public ClusterStats {
     /// @returns true if this cluster contains @slice.
     bool contains(const PHV::FieldSlice& slice) const override;
 
-    struct SliceResult {
-        /// Associate original field slices with new field slices.
-        ordered_map<PHV::FieldSlice, std::pair<PHV::FieldSlice, PHV::FieldSlice>> slice_map;
-        /// A new cluster containing the lower field slices.
-        RotationalCluster* lo;
-        /// A new cluster containing the higher field slices.
-        RotationalCluster* hi;
-    };
-
     /** Slices all AlignedClusters in this cluster at the relative field bit
      * @pos.  For example, if a cluster contains a field slice [3..7] and pos
      * == 2, then `slice` will produce two clusters, one with [3..4] and the
@@ -691,12 +691,33 @@ class RotationalCluster : public ClusterStats {
      * @returns a pair of (lo, hi) clusters if the cluster can be split at @pos
      *          or boost::none otherwise.
      */
-    boost::optional<SliceResult> slice(int pos) const;
+    boost::optional<SliceResult<RotationalCluster>> slice(int pos) const;
 };
 
 
 /** A group of rotational clusters that must be placed in the same MAU group of
  * PHV containers.
+ *
+ * Invariants on membership:
+ *  - every field slice in each slice list exists in exactly one aligned
+ *    cluster, although the same slice may appear in multiple slice lists.
+ *  - every aligned cluster exists in exactly one rotational cluster.
+ *  - every rotational cluster exists in exactly one super cluster.
+ *
+ * Any attempt to place a SuperCluster into a container group will fail if:
+ *  - any slice is wider than the container size.
+ *  - the aggregate width of any slice list is wider than the container size.
+ *
+ * Slicing a SuperCluster can fail if:
+ *  - a field slice would be split but has the `no_split` property.
+ *  - two adjacent slices of the same field in a slice list would be split
+ *    into different slice lists, but the field has the `no_split` property.
+ *
+ * Note that slice lists are formed from lists of header fields (among other
+ * things).  In this case, the order of slices in the slice list is in little
+ * Endian, but headers are often written in big Endian order, and so the order
+ * in the slice list will appear reversed.  @see PHV::MakeSuperClusters in
+ * make_clusters.h for more details.
  */
 class SuperCluster : public ClusterStats {
  public:
@@ -766,6 +787,52 @@ class SuperCluster : public ClusterStats {
     /// @returns true if this cluster contains @slice.
     bool contains(const PHV::FieldSlice& slice) const override;
 };
+
+/** Increment @bv as if it were an unsigned integer of unbounded size. */
+void inc(bitvec& bv);
+
+/** Consider a bitvec where each bit indicates whether a field list should be
+ * sliced at a corresponding 8b boundary.  Eg.
+ *
+ *          bv[0]    bv[1]    bv[2]
+ *   |--------|--------|--------|--------|
+ *
+ * The following bit patterns correspond to slicing stragegies:
+ *  - 000:  32b
+ *  - 001:  24b /  8b               <-- invalid
+ *  - 010:  16b / 16b
+ *  - 011:  16b /  8b / 8b
+ *  - 100:   8b / 24b               <-- invalid
+ *  - 110:   8b /  8b / 16b
+ *  - 111:   8b /  8b /  8b /  8b
+ *
+ * Adjacent 0s indicate how wide a slice will be; container-sized slices
+ * correspond to no 0s, one 0, or three 0s.
+ *
+ * To limit the search space, this method checks the number of contiguous
+ * trailing zeroes when it sets a bit; if there are two 0s, or more than three,
+ * then the least signicant zeroes will be replaced with 1s, effectively
+ * skipping the intervening slicings, which are destined to fail.
+ *
+ * For example, suppose we're incrementing 1111111:
+ *
+ *   after inc:                       10000000
+ *   after enforce_container_sizes:   10001000
+ *
+ * This is the smallest number with groups of zero, one, or three zeroes.
+ *
+ * @param bv the bitvec of slice positions.
+ *
+ * @param sentinel is the size of the entire bitvec, including leading zeroes.
+ * It corresponds to the bit position of a "sentinel" bit that is set to 1 when
+ * all permutations of previous bit positions have been explored.
+ *
+ * @param boundaries marks the boundaries between slice lists.  Sequences of
+ * zeroes need to be counted within (not across) boundaries.
+ *
+ * @warning this mutates @bv by reference.
+ */
+void enforce_container_sizes(bitvec& bv, int sentinel, const bitvec& boundaries);
 
 std::ostream &operator<<(std::ostream &out, const Allocation&);
 std::ostream &operator<<(std::ostream &out, const Allocation*);

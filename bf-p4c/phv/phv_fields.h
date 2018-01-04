@@ -222,7 +222,6 @@ class Field {
     //
     // operations on this field
     //
-    bool            mau_write_i = false;               /// true when field Write in MAU
     safe_vector<std::tuple<bool, cstring, Field_Ops>> operations_i;
                                                        /// all operations performed on field
     //
@@ -264,8 +263,6 @@ class Field {
     //
     // operations on this field
     //
-    bool mau_write() const                                 { return mau_write_i; }
-    void set_mau_write(bool b)                             { mau_write_i = b; }
     safe_vector<std::tuple<bool, cstring, Field_Ops>>&
         operations()                                       { return  operations_i; }
     //

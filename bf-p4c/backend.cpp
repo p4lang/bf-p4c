@@ -179,7 +179,8 @@ Backend::Backend(const BFN_Options& options) :
         // only needed to avoid warnings about otherwise unused ingress/egress_port?
         new CollectPhvInfo(phv),
         new CreateThreadLocalInstances,
-        new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances.
+        new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances, but
+                                     // cannot be run after InstructionSelection.
         new StackPushShims,
         new CollectPhvInfo(phv),  // Needs to be rerun after CreateThreadLocalInstances.
         new HeaderPushPop,
@@ -190,7 +191,7 @@ Backend::Backend(const BFN_Options& options) :
         new CollectPhvInfo(phv),
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
-        new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
+        (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         new CollectPhvInfo(phv),
         &defuse,
         new DumpPipe("Before phv_analysis"),

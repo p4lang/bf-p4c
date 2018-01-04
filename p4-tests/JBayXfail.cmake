@@ -55,7 +55,6 @@ p4c_add_xfail_reason("jbay"
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
   testdata/p4_14_samples/source_routing.p4
-  testdata/p4_14_samples/instruct1.p4
   )
 
 p4c_add_xfail_reason("jbay"
@@ -79,7 +78,6 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "PHV allocation creates a container action impossible within a Tofino ALU"
   testdata/p4_14_samples/action_inline.p4
-  testdata/p4_14_samples/instruct5.p4
   )
 
 p4c_add_xfail_reason("jbay"
@@ -127,7 +125,7 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "Unhandled action bitmask constraint"
+  "error: Invalid slice of .*"
   testdata/p4_14_samples/mac_rewrite.p4
   )
 
@@ -154,27 +152,11 @@ p4c_add_xfail_reason("jbay"
   #testdata/p4_14_samples/gateway2.p4
   #testdata/p4_14_samples/gateway3.p4
   #testdata/p4_14_samples/gateway4.p4
+  testdata/p4_14_samples/action_chain1.p4
   )
 
 p4c_add_xfail_reason("jbay"
   "Floating point exception"
   # These tests start to fail after introducing PHV packing.
-  testdata/p4_14_samples/gateway1.p4
-  testdata/p4_14_samples/gateway2.p4
-  testdata/p4_14_samples/gateway3.p4
-  testdata/p4_14_samples/gateway4.p4
+  testdata/p4_14_samples/instruct5.p4
   )
-
-p4c_add_xfail_reason("jbay"
-  ".* expected packet.* on port .* not seen"
-  # Does not handle
-  # format: { action(0): 0..0, immediate(0): 1..30, version(0): 112..115, match(0): [82..87, 32..79 ] }
-  testdata/p4_14_samples/hash_action_gateway.p4
-  )
-
-# missing support for meter in backend
-p4c_add_xfail_reason("jbay"
-  "the packing is too complicated due to either hash distribution or attached outputs combined with other action data"
-  testdata/p4_14_samples/meter1.p4
-  testdata/p4_14_samples/meter.p4
-)

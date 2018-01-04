@@ -76,6 +76,7 @@ void PHV_Field_Operations::end_apply() {
     for (auto &f : phv)
         for (auto &op : f.operations()) {
             bool is_move_op = std::get<0>(op);
+            bool is_written = std::get<2>(op) == PHV::Field_Ops::W;
             if (is_move_op != true) {
                 // Don't split carry operations.
                 f.set_no_split(true);
@@ -86,7 +87,7 @@ void PHV_Field_Operations::end_apply() {
                                       "32b, but field %1% has %2%b and is involved in '%3%'",
                                       cstring::to_cstring(f), f.size, std::get<1>(op));
 
-                if (f.mau_write())  {
+                if (is_written) {
                     // Don't pack destinations, but we can pack sources.
                     // XXX(cole): but sometimes we can't, and we need to check that.
                     f.set_no_pack(true);

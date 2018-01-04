@@ -43,3 +43,22 @@ void CollectHeaderStackInfo::postorder(IR::BFN::Pipe* pipe) {
     // `IR::BFN::Pipe::headerStackInfo` so other passes can access it.
     pipe->headerStackInfo = stacks;
 }
+
+void ElimUnusedHeaderStackInfo::Find::postorder(const IR::HeaderStack* hs) {
+    used.insert(hs->name);
+}
+
+void ElimUnusedHeaderStackInfo::Find::end_apply() {
+    for (auto& hs : *stacks) {
+        if (used.find(hs.name) == used.end()) {
+            LOG5("ElimUnusedHeaderStackInfo: Found unused stack " << hs.name);
+            self.unused.insert(hs.name);
+        } else {
+            LOG5("ElimUnusedHeaderStackInfo: Found used stack " << hs.name); } }
+}
+
+void ElimUnusedHeaderStackInfo::Elim::postorder(IR::BFN::Pipe* pipe) {
+    for (auto& hs : self.unused) {
+        LOG5("ElimUnusedHeaderStackInfo: Removing stack " << hs);
+        pipe->headerStackInfo->info.erase(hs); }
+}

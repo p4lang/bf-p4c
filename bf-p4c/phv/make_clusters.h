@@ -51,6 +51,89 @@ class Clustering : public PassManager {
     /// group.  Every rotational cluster is in exactly one super cluster.
     std::list<PHV::SuperCluster *> super_clusters_i;
 
+    /// Maps fields to their slices.  Slice lists are ordered from LSB to MSB.
+    ordered_map<const PHV::Field*, std::list<PHV::FieldSlice>> fields_to_slices_i;
+
+    /// Collects validity bits involved in complex instructions, i.e.
+    /// instructions that do anything other than assign a constant to the
+    /// validity bit.
+    ordered_set<const PHV::Field*> complex_validity_bits_i;
+
+    /// Utility method for querying fields_to_slices_i.
+    /// @returns the slices of @field in `fields_to_slices_i` overlapping with @range.
+    std::vector<PHV::FieldSlice> slices(const PHV::Field* field, le_bitrange range) const;
+
+    /** Find validity bits involved in any MAU instruction other than
+     *
+     *   `*.$valid = n`,
+     *
+     * where `n` is a constant.
+     */
+    class FindComplexValidityBits : public Inspector {
+        Clustering& self;
+        PhvInfo& phv_i;
+
+        bool preorder(const IR::MAU::Instruction*) override;
+
+     public:
+        explicit FindComplexValidityBits(Clustering& self) : self(self), phv_i(self.phv_i) { }
+    };
+
+    /** Break each field into slices based on the operations that use it.  For
+     * example if a field f is used in two operations:
+     *
+     *    f1[7:4] = 0xFF;
+     *    f1[5:2] = f2[4:0];
+     *
+     * then the field is split into four slices:
+     *
+     *    f1[7:6], f1[5:4], f1[3:2], f[1:0]
+     *
+     * However, if the field has the `no_split` constraint, then it is always
+     * placed in a single slice the size of the whole field:
+     *
+     *    f1[7:0]
+     *
+     * This makes cluster formation more precise, by only placing field slices
+     * in the same cluster for the bits of the fields actually used in the
+     * operations.
+     */
+    class MakeSlices : public Inspector {
+        Clustering& self;
+        PhvInfo& phv_i;
+
+        /// Sets of sets of slices, where each set of slices must share a
+        /// fine-grained slicing.  (We use a vector because duplicates don't
+        /// affect correctness.)
+        std::vector<ordered_set<PHV::FieldSlice>> equivalences_i;
+
+        /// Start by mapping each field to a single slice the size of the
+        /// field.
+        profile_t init_apply(const IR::Node *root) override;
+
+        /// For each occurrence of a field in a slicing operation, split its
+        /// slices in fields_to_slice_i along the boundary of the new slice.
+        bool preorder(const IR::Expression*) override;
+
+        /// After each operand has been sliced, ensure for each instruction that
+        /// the slice granularity of each operand matches.
+        void postorder(const IR::MAU::Instruction*) override;
+
+        // TODO: Add a check for shrinking casts that fails if any are
+        // detected.
+
+        /// Ensure fields in each UF group share the same fine-grained slicing.
+        void end_apply() override;
+
+        /// Utility method for updating fields_to_slices_i.
+        /// Splits slices for @field at @range.lo and @range.hi + 1.
+        /// @returns true if any new slices were created.
+        bool updateSlices(const PHV::Field* field, le_bitrange range);
+
+     public:
+        explicit MakeSlices(Clustering &self) : self(self), phv_i(self.phv_i) { }
+    };
+
     class MakeAlignedClusters : public Inspector {
         Clustering& self;
         PhvInfo& phv_i;
@@ -112,6 +195,10 @@ class Clustering : public PassManager {
         Clustering& self;
         PhvInfo& phv_i;
 
+        /// Track headers already visited, by tracking the IDs of the first
+        /// fields.
+        ordered_set<int> headers_i;
+
         /// Collection of slice lists, each of which contains slices that must
         /// be placed, in order, in the same container.
         ordered_set<PHV::SuperCluster::SliceList*> slice_lists_i;
@@ -132,9 +219,11 @@ class Clustering : public PassManager {
     Clustering(PhvInfo &p, PhvUse &u)
     : phv_i(p), uses_i(u) {
         addPasses({
-            new MakeAlignedClusters(*this),     // populates aligned_clusters_i
-            new MakeRotationalClusters(*this),  // populates rotational_clusters_i
-            new MakeSuperClusters(*this)        // populates super_clusters_i
+            new FindComplexValidityBits(*this),     // populates complex_validity_bits_i
+            new MakeSlices(*this),                  // populates fields_to_slices_i
+            new MakeAlignedClusters(*this),         // populates aligned_clusters_i
+            new MakeRotationalClusters(*this),      // populates rotational_clusters_i
+            new MakeSuperClusters(*this)            // populates super_clusters_i
         });
     }
 

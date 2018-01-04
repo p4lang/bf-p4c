@@ -3,6 +3,7 @@
 
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/phv/phv.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
@@ -26,19 +27,14 @@ class PhvInfo;
  * @post The operations field of all Field objects in @phv_f will be populated.
  */
 class PHV_Field_Operations : public Inspector {
-    //
-    // define enum INVALID, R, W, RW
-    //
  private:
     PhvInfo &phv;                     // phv object referenced through constructor
     PHV::Field *dst_i = nullptr;  // destination of current statement
     bool preorder(const IR::MAU::Instruction *p) override;
     void end_apply() override;
-    //
+
  public:
-    explicit PHV_Field_Operations(PhvInfo &phv_f) : phv(phv_f) {}
-    //
+    explicit PHV_Field_Operations(PhvInfo &phv_f) : phv(phv_f) { }
 };
-//
-//
+
 #endif /* BF_P4C_PHV_CLUSTER_PHV_OPERATIONS_H_ */

@@ -618,7 +618,6 @@ void PHV::AlignedCluster::initialize_constraints() {
         if (slice.field()->exact_containers())      num_constraints_i++; }
 }
 
-
 boost::optional<le_bitrange>
 PHV::AlignedCluster::validContainerStartRange(PHV::Size container_size) const {
     le_bitrange container_slice = StartLen(0, int(container_size));
@@ -629,48 +628,73 @@ PHV::AlignedCluster::validContainerStartRange(PHV::Size container_size) const {
     // Compute the range of valid alignment of the first bit (low, little
     // Endian) of all cluster fields, which is the intersection of the valid
     // starting bit positions of each field in the cluster.
-    bool has_deparsed_bottom_bits = false;
     le_bitinterval valid_start_interval = ZeroToMax();
     for (auto& slice : slices_i) {
-        // If the field has deparsed bottom bits, then all fields in the cluster
-        // will need to be aligned at zero.
-        has_deparsed_bottom_bits |= slice.field()->deparsed_bottom_bits();
-        if (slice.field()->deparsed_bottom_bits())
-            LOG5("\tField " << slice << " has deparsed bottom bits");
-
-        BUG_CHECK(slice.size() <= int(container_size), "Slice size greater than container size");
-        LOG5("\tField slice " << slice << " to be placed in container size " << container_size <<
-             " slices has " << (slice.validContainerRange() == ZeroToMax() ? "no" :
-                 cstring::to_cstring(slice.validContainerRange())) << " alignment requirement.");
-
-        // Intersect the valid range of this field with the container size.
-        nw_bitrange container_range = StartLen(0, int(container_size));
-        nw_bitinterval valid_interval = container_range.intersectWith(slice.validContainerRange());
-        BUG_CHECK(!valid_interval.empty(), "Bad absolute container range; "
-                  "field slice %1% has valid container range %2%, which has no "
-                  "overlap with container range %3%",
-                  slice.field()->name, slice.validContainerRange(), container_range);
-
-        // ...and converted to little Endian with respect to the coordinate
-        // space formed by the container.
-        le_bitrange valid_range =
-            (*toClosedRange(valid_interval)).toOrder<Endian::Little>(int(container_size));
-
-        // Convert from a range denoting a valid placement of the whole slice
-        // to a range denoting the valid placement of the first (lo, little
-        // Endian) bit of the field in the first slice.
-        //
-        // (We add 1 to reflect that the valid starting range for a field
-        // includes its first bit.)
-        le_bitinterval this_valid_start_interval =
-            valid_range.resizedToBits(valid_range.size() - slice.range().size() + 1)
-                       .intersectWith(container_slice);
+        auto this_valid_start_range = validContainerStartRange(slice, container_size);
+        if (!this_valid_start_range)
+            return boost::none;
 
         LOG5("\tField slice " << slice << " has valid start interval of " <<
-             this_valid_start_interval);
+             *this_valid_start_range);
 
         valid_start_interval =
-            valid_start_interval.intersectWith(this_valid_start_interval); }
+            valid_start_interval.intersectWith(toHalfOpenRange(*this_valid_start_range)); }
+
+    return toClosedRange(valid_start_interval);
+}
+
+/* static */
+boost::optional<le_bitrange> PHV::AlignedCluster::validContainerStartRange(
+        PHV::FieldSlice slice,
+        PHV::Size container_size) {
+    le_bitrange container_slice = StartLen(0, int(container_size));
+    LOG5("Computing valid container start range for cluster " <<
+         " for placement in " << container_slice << " slices of " <<
+         container_size << " containers.");
+
+    // Compute the range of valid alignment of the first bit (low, little
+    // Endian) of all cluster fields, which is the intersection of the valid
+    // starting bit positions of each field in the cluster.
+    bool has_deparsed_bottom_bits = false;
+    le_bitinterval valid_start_interval = ZeroToMax();
+
+    // If the field has deparsed bottom bits, and it includes the LSB for
+    // the field, then all fields in the cluster will need to be aligned at
+    // zero.
+    if (slice.field()->deparsed_bottom_bits() && slice.range().lo == 0) {
+        has_deparsed_bottom_bits = true;
+        LOG5("\tSlice " << slice << " has deparsed bottom bits"); }
+
+    BUG_CHECK(slice.size() <= int(container_size), "Slice size greater than container size");
+    LOG5("\tField slice " << slice << " to be placed in container size " << container_size <<
+         " slices has " << (slice.validContainerRange() == ZeroToMax() ? "no" :
+             cstring::to_cstring(slice.validContainerRange())) << " alignment requirement.");
+
+    // Intersect the valid range of this field with the container size.
+    nw_bitrange container_range = StartLen(0, int(container_size));
+    nw_bitinterval valid_interval = container_range.intersectWith(slice.validContainerRange());
+    BUG_CHECK(!valid_interval.empty(), "Bad absolute container range; "
+              "field slice %1% has valid container range %2%, which has no "
+              "overlap with container range %3%",
+              slice.field()->name, slice.validContainerRange(), container_range);
+
+    // ...and converted to little Endian with respect to the coordinate
+    // space formed by the container.
+    le_bitrange valid_range =
+        (*toClosedRange(valid_interval)).toOrder<Endian::Little>(int(container_size));
+
+    // Convert from a range denoting a valid placement of the whole slice
+    // to a range denoting the valid placement of the first (lo, little
+    // Endian) bit of the field in the first slice.
+    //
+    // (We add 1 to reflect that the valid starting range for a field
+    // includes its first bit.)
+    valid_start_interval =
+        valid_range.resizedToBits(valid_range.size() - slice.range().size() + 1)
+                   .intersectWith(container_slice);
+
+    LOG5("\tField slice " << slice << " has valid start interval of " <<
+         valid_start_interval);
 
     // If any field has this requirement, then all fields must be aligned
     // at (little Endian) 0 in each container.
@@ -680,65 +704,6 @@ PHV::AlignedCluster::validContainerStartRange(PHV::Size container_size) const {
         return boost::none;
     else
         return toClosedRange(valid_start_interval);
-}
-
-boost::optional<le_bitrange>
-PHV::AlignedCluster::validContainerStartRangeAfterSlicing(PHV::Size container_size) const {
-    // Compute the range of valid alignment of the first bit (low, little
-    // Endian) of all cluster fields, which is the intersection of the valid
-    // starting bit positions of each field in the cluster.
-    bool has_deparsed_bottom_bits = false;
-    le_bitinterval cluster_valid_start_interval = ZeroToMax();
-    for (auto& slice : slices_i) {
-        // Return `none` if f is too large to fit in containers of this size.
-        // XXX(cole): Add this in along with slicing.
-        // if (int(container_size) < f->size)
-        //     return boost::none;
-
-        // If the field has deparsed bottom bits, then all fields in the cluster
-        // will need to be aligned at zero.
-        has_deparsed_bottom_bits |= slice.field()->deparsed_bottom_bits();
-        if (slice.field()->deparsed_bottom_bits())
-            LOG5("\tField slice " << slice << " has deparsed bottom bits");
-
-        // Start with the range of the container
-        nw_bitrange nw_container_range(StartLen(0, int(container_size)));
-
-        // ...intersecting with the valid range for this field
-        nw_bitinterval nw_valid_interval =
-            nw_container_range.intersectWith(slice.validContainerRange());
-
-        if (nw_valid_interval.size() < slice.size())
-            return boost::none;
-
-        // ...and converted to little Endian with respect to the coordinate
-        // space formed by the container size.
-        le_bitrange valid_range =
-            (*toClosedRange(nw_valid_interval)).toOrder<Endian::Little>(int(container_size));
-
-        // Convert from a range denoting a valid placement of the whole field
-        // to a range denoting the valid placement of the first (lo, little
-        // Endian) bit of the field.
-        //
-        // (We add 1 to reflect that the valid starting range for a field
-        // includes its first bit.)
-        le_bitinterval valid_start_interval =
-            toHalfOpenRange(valid_range.resizedToBits(valid_range.size() - slice.size() + 1));
-
-        LOG5("\tField slice " << slice << " has valid start interval of " << valid_start_interval);
-
-        cluster_valid_start_interval =
-            cluster_valid_start_interval.intersectWith(valid_start_interval); }
-
-
-    // If any field has this requirement, then all fields must be aligned
-    // at (little Endian) 0 in each container.
-    if (has_deparsed_bottom_bits && cluster_valid_start_interval.contains(0))
-        return le_bitrange(StartLen(0, 1));
-    else if (has_deparsed_bottom_bits)
-        return boost::none;
-    else
-        return toClosedRange(cluster_valid_start_interval);
 }
 
 bool PHV::AlignedCluster::okIn(PHV::Kind kind) const {
@@ -768,6 +733,31 @@ bitvec PHV::AlignedCluster::validContainerStart(PHV::Size container_size) const 
     return rv;
 }
 
+/* static */
+bitvec PHV::AlignedCluster::validContainerStart(PHV::FieldSlice slice, PHV::Size container_size) {
+    boost::optional<le_bitrange> opt_valid_start_range =
+        validContainerStartRange(slice, container_size);
+    if (!opt_valid_start_range)
+        return bitvec();
+    auto valid_start_range = *opt_valid_start_range;
+
+    if (!slice.alignment())
+        return bitvec(valid_start_range.lo, valid_start_range.size());
+
+    // account for relative alignment
+    int align_start = valid_start_range.lo;
+    if (align_start % 8 != int(slice.alignment()->littleEndian)) {
+        bool next_byte = align_start % 8 > int(slice.alignment()->littleEndian);
+        align_start += slice.alignment()->littleEndian + (next_byte ? 8 : 0) - align_start % 8; }
+
+    bitvec rv;
+    while (valid_start_range.contains(align_start)) {
+        rv.setbit(align_start);
+        align_start += 8; }
+
+    return rv;
+}
+
 bool PHV::AlignedCluster::contains(const PHV::Field *f) const {
     for (auto& s : slices_i)
         if (s.field() == f)
@@ -782,16 +772,16 @@ bool PHV::AlignedCluster::contains(const PHV::FieldSlice& s1) const {
     return false;
 }
 
-boost::optional<PHV::AlignedCluster::SliceResult>
-PHV::AlignedCluster::slice(int pos) const {
+boost::optional<PHV::SliceResult<PHV::AlignedCluster>> PHV::AlignedCluster::slice(int pos) const {
     BUG_CHECK(pos >= 0, "Trying to slice cluster at negative position");
-    PHV::AlignedCluster::SliceResult rv;
+    PHV::SliceResult<PHV::AlignedCluster> rv;
     std::vector<PHV::FieldSlice> lo_slices;
     std::vector<PHV::FieldSlice> hi_slices;
     for (auto& slice : slices_i) {
         // Put slice in lo if pos is larger than the slice.
         if (slice.range().size() <= pos) {
             lo_slices.push_back(slice);
+            rv.slice_map.emplace(PHV::FieldSlice(slice), std::make_pair(slice, boost::none));
             continue; }
         // Check whether the field in `slice` can be sliced.
         if (slice.field()->no_split())
@@ -849,10 +839,10 @@ bool PHV::RotationalCluster::contains(const PHV::FieldSlice& slice) const {
 }
 
 
-boost::optional<PHV::RotationalCluster::SliceResult>
+boost::optional<PHV::SliceResult<PHV::RotationalCluster>>
 PHV::RotationalCluster::slice(int pos) const {
     BUG_CHECK(pos >= 0, "Trying to slice cluster at negative position");
-    PHV::RotationalCluster::SliceResult rv;
+    PHV::SliceResult<PHV::RotationalCluster> rv;
     ordered_set<PHV::AlignedCluster*> lo_clusters;
     ordered_set<PHV::AlignedCluster*> hi_clusters;
     for (auto* aligned_cluster : clusters_i) {
@@ -978,6 +968,41 @@ void PHV::Allocation::print_occupancy() const {
 }
 
 namespace PHV {
+
+void enforce_container_sizes(bitvec& bv, int sentinel, const bitvec& boundaries) {
+    // Eagerly break invalid sequences of zeroes, starting at `i` and working
+    // backwards.  See comment in utils.h.
+    int zeroes = 0;
+    for (int i = 0; i <= sentinel; ++i) {
+        if (boundaries[i] || bv[i]) {
+            int j = i;
+            while (zeroes != 3 && zeroes > 1) {
+                int chunk = zeroes > 3 ? 4 : 2;
+                j -= chunk;
+                zeroes -= chunk;
+                bv.setbit(j); }
+            zeroes = 0; }
+        if (!bv[i])
+            zeroes++; }
+}
+
+void inc(bitvec& bv) {
+    if (bv.empty()) {
+        bv.setbit(0);
+        return; }
+
+    int max = *bv.max();
+    int zeroes = 0;
+    int i;
+    for (i = 0; i <= max; ++i) {
+        if (bv.getbit(i)) {
+            zeroes++;
+            bv.clrbit(i);
+        } else {
+            break; } }
+
+    bv.setbit(i);
+}
 
 std::ostream &operator<<(std::ostream &out, const PHV::Allocation& alloc) {
     if (dynamic_cast<const PHV::Transaction *>(&alloc)) {
@@ -1131,13 +1156,12 @@ std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList& list)
     out << "[";
     for (auto& slice : list) {
         if (slice == list.front())
-            out << " " << slice << std::endl;
+            out << " " << slice;
         else
-            out << "          " << slice << std::endl; }
-    if (list.size() > 1)
-        out << "        ]";
-    else
-        out << " ]";
+            out << "          " << slice;
+        if (slice != list.back())
+            out << std::endl; }
+    out << " ]";
     return out;
 }
 

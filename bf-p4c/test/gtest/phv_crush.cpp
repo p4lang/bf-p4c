@@ -12,6 +12,40 @@
 
 namespace Test {
 
+TEST(bitvec, inc) {
+    bitvec bv;
+    EXPECT_EQ(-1, *bv.min());
+    EXPECT_EQ(-1, *bv.max());
+
+    // 1
+    PHV::inc(bv);
+    EXPECT_EQ(0, *bv.min());
+    EXPECT_EQ(1, bv.getbit(0));
+    EXPECT_EQ(0, *bv.max());
+
+    // 10
+    PHV::inc(bv);
+    EXPECT_EQ(1, *bv.min());
+    EXPECT_EQ(0, bv[0]);
+    EXPECT_EQ(1, bv[1]);
+    EXPECT_EQ(1, *bv.max());
+
+    // 11
+    PHV::inc(bv);
+    EXPECT_EQ(0, *bv.min());
+    EXPECT_EQ(1, bv[0]);
+    EXPECT_EQ(1, bv[1]);
+    EXPECT_EQ(1, *bv.max());
+
+    // 100 (special)
+    PHV::inc(bv);
+    EXPECT_EQ(2, *bv.min());
+    EXPECT_EQ(0, bv[0]);
+    EXPECT_EQ(0, bv[1]);
+    EXPECT_EQ(1, bv[2]);
+    EXPECT_EQ(2, *bv.max());
+}
+
 TEST(PHV, clusterAlignment) {
     // XXX(cole): This just tests the first bit of the valid bits, not all
     // valid bits.

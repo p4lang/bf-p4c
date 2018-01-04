@@ -26,17 +26,10 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 
   p4c_add_xfail_reason("tofino"
     "mismatch from expected.*at byte 0x"
-    extensions/p4_tests/p4_16/stack_valid.p4
     extensions/p4_tests/p4_14/adjust_instr5.p4
     testdata/p4_14_samples/bigfield1.p4
+    testdata/p4_14_samples/parser_dc_full.p4
     )
-
-  # Context JSON problem with one table split having action data table and one having
-  # immediate only.  Amresh to look into is this is even possible for assembler
-  p4c_add_xfail_reason("tofino"
-    "action data table .* not in right stage"
-    testdata/p4_14_samples/exact_match3.p4
-  )
 
   p4c_add_xfail_reason("tofino"
     "Floating point exception"
@@ -44,6 +37,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_14/action_default_multiple.p4
     extensions/p4_tests/p4_14/overlay_add_header.p4
     extensions/p4_tests/p4_14/no_match_miss.p4
+    testdata/p4_14_samples/instruct5.p4
   )
 
 endif() # HARLYN_STF_tofino
@@ -63,8 +57,6 @@ p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   extensions/p4_tests/p4_14/15-SetMetadata.p4
   extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  extensions/p4_tests/p4_14/test_config_255_pa_problem_3.p4
   )
 
 # BRIG-104
@@ -72,7 +64,6 @@ p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
   extensions/p4_tests/p4_14/13-IngressEgressConflict.p4
   extensions/p4_tests/p4_16/brig-42.p4
-  testdata/p4_14_samples/mac_rewrite.p4
   )
 
 # Fails due to complex expressions in the parser that our hardware can't support.
@@ -94,6 +85,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/selector0.p4
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue297-bmv2.p4
+  testdata/p4_14_samples/port_vlan_mapping.p4
   )
 
 # BRIG-240
@@ -203,6 +195,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-113
 p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"
+  extensions/p4_tests/p4_14/hash_calculation_multiple.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -268,11 +261,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: int<1>: Signed types cannot be 1-bit wide"
   extensions/p4_tests/p4_14/test_config_160_stateful_single_bit_mode.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Can't combine hash_dist units in 16 bit operation"
-  extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -414,10 +402,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "conflicting memory use between .* and .*"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   # This is an ATCAM failure due to a stage split being in the same stage.  Much more subtle
-  # now fails in PHV allocation
-  # extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -538,16 +524,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  testdata/p4_14_samples/parser_dc_full.p4
   switch_dc_basic
-  testdata/p4_14_samples/port_vlan_mapping.p4
-  switch_dc_basic
+
 # due to action analysis working correctly
   extensions/p4_tests/p4_14/action_conflict_1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
-  testdata/p4_14_samples/instruct1.p4
-  extensions/p4_tests/p4_14/instruct1.p4
-  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -754,7 +735,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
   )
 
-
 # translation bug: smeta
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for smeta"
@@ -791,7 +771,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
     extensions/p4_tests/p4_14/adb_shared2.p4
-    extensions/p4_tests/p4_16/stack_valid.p4
     testdata/p4_14_samples/07-MultiProtocol.p4
     testdata/p4_14_samples/instruct5.p4
     testdata/p4_14_samples/tmvalid.p4
@@ -863,7 +842,6 @@ if (HARLYN_STF_tofino AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino"
     ".* expected packet on port .* not seen"
     extensions/p4_tests/p4_16/multiple_apply1.p4
-    extensions/p4_tests/p4_16/cast_widening_set.p4
     extensions/p4_tests/p4_16/cast_narrowing_set.p4
     extensions/p4_tests/p4_16/container_dependency.p4
     )
@@ -879,16 +857,14 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  extensions/p4_tests/p4_14/action_conflict_3.p4
   switch_dc_basic
-  extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
-  )
 
-#p4c_add_xfail_reason("tofino"
-#  "Extracted range .* with size .* doesn't match destination container .* with size .* was the PHV allocation misaligned or inconsistent"
-#  )
+  # Lack of container packing:
+  extensions/p4_tests/p4_14/15-SetMetadata.p4
+  extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
+  )
 
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated due to either hash distribution or attached outputs"
@@ -909,42 +885,38 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation creates a container action impossible within a Tofino ALU"
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
-  extensions/p4_tests/p4_16/stack_valid.p4
-  testdata/p4_14_samples/instruct5.p4
+  extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
+  extensions/p4_tests/p4_14/test_config_190_modify_with_expr.p4
+  extensions/p4_tests/p4_14/test_config_255_pa_problem_3.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
+  switch_l2
+
+  # Instruction adjustment needs to synthesize a bitmasked-set but does not.
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+  extensions/p4_tests/p4_16/cast_widening_set.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  extensions/p4_tests/p4_16/cast_widening_set.p4
-  testdata/p4_16_samples/flowlet_switching-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error: immediate.* is not on the action bus"
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/test_config_50_action_data_different_size_fields.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated"
   extensions/p4_tests/p4_14/test_config_285_meter_sharing.p4
   )
-
-# XXX(cole): This will be fixed with SuperCluster slice list splitting.
-p4c_add_xfail_reason("tofino"
-  "accumulate too many fields in CCGF"
-  extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
-  extensions/p4_tests/p4_14/test_config_216_phv_aff.p4
-  extensions/p4_tests/p4_14/action_conflict_4.p4
-  extensions/p4_tests/p4_14/test_config_259_large_non_multiple_8_bit.p4
-  extensions/p4_tests/p4_14/action_conflict_3.p4
-  extensions/p4_tests/p4_14/brig-11.p4
-  )
-
 
 p4c_add_xfail_reason("tofino"
   "Operands of arithmetic operations cannot be greater than 32b, but field .* has .*"
@@ -975,16 +947,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue983-bmv2.p4
   )
 
-# XXX(cole): This will be fixed when action analysis is integrated into PHV
-# allocation.
-p4c_add_xfail_reason("tofino"
-  "container is not completely overwritten when the operand is over the entire container"
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "error: hash expression width mismatch"
-  switch_l2
   )
 
 p4c_add_xfail_reason("tofino"
@@ -992,18 +956,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "expected packet on port .* not seen"
-  # XXX(cole): Due to differing sized operands.
-  extensions/p4_tests/p4_16/cast_narrowing_set.p4
-  )
-
 # missing support for meter in backend
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated due to either hash distribution or attached outputs combined with other action data"
-  testdata/p4_14_samples/meter1.p4
-  testdata/p4_14_samples/meter.p4
-  testdata/p4_16_samples/named_meter_bmv2.p4
   )
 
 # missing support for random in extract_maupipe
@@ -1014,18 +969,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_214_full_stats.p4
   )
 
-# Most likely a bug in validContainerRange handling.
-p4c_add_xfail_reason("tofino"
-  "Extract field slice .* into .* resulted in buffer range .* with a negative offset"
-  switch_l2
-  )
-
 #-------- New tests, new failures
-p4c_add_xfail_reason("tofino"
-  "error: Match overhead field .* not in bottom .* bits"
-  extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "error: add_cpu_header: parameter reason_code must be bound"
   extensions/p4_tests/p4_14/p4-tests/programs/knet_mgr_test/knet_mgr_test.p4
@@ -1069,4 +1013,40 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Could not find declaration for key_1"
   extensions/p4_tests/p4_14/c1/BRIG-372/case4346.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Can't find .* and .* in same input xbar group"
+  )
+
+# XXX(cole): The following test appears impossible to compile on Tofino,
+# because it has non-byte aligned header fields (parsed/deparsed) subject to
+# arithmetic operations (no_split/no_pack).
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  extensions/p4_tests/p4_14/brig-11.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: Invalid slice of .*"
+  testdata/p4_14_samples/mac_rewrite.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: Match overhead field immediate.* not in bottom 64 bits"
+  extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "action data table .* not in right stage"
+  testdata/p4_14_samples/exact_match3.p4
+  )
+
+# XXX(cole): Failing in action analysis.
+p4c_add_xfail_reason("tofino"
+  "SIGSEGV"
+  extensions/p4_tests/p4_14/15-SetMetadata.p4
+  extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
   )

@@ -4,16 +4,134 @@
 #include "lib/log.h"
 #include "lib/stringref.h"
 
+bool Clustering::FindComplexValidityBits::preorder(const IR::MAU::Instruction* inst) {
+    bool has_non_val = false;
+    const PHV::Field* dst_validity_bit = nullptr;
+    for (auto* op : inst->operands) {
+        auto* f = phv_i.field(op);
+        if (op == inst->operands[0] && f && f->pov)
+            dst_validity_bit = f;
+        else if (!op->is<IR::Literal>())
+            has_non_val = true; }
+
+    if (dst_validity_bit && has_non_val) {
+        LOG5("Found complex validity bit: " << dst_validity_bit);
+        self.complex_validity_bits_i.insert(dst_validity_bit); }
+
+    return false;
+}
+
+std::vector<PHV::FieldSlice> Clustering::slices(const PHV::Field* field, le_bitrange range) const {
+    BUG_CHECK(fields_to_slices_i.find(field) != fields_to_slices_i.end(),
+              "Clustering::slices: field not found: %1%", cstring::to_cstring(field));
+
+    std::vector<PHV::FieldSlice> rv;
+    for (auto& slice : fields_to_slices_i.at(field))
+        if (slice.range().overlaps(range))
+            rv.push_back(slice);
+    return rv;
+}
+
+bool Clustering::MakeSlices::updateSlices(const PHV::Field* field, le_bitrange range) {
+    BUG_CHECK(self.fields_to_slices_i.find(field) != self.fields_to_slices_i.end(),
+              "Field not in fields_to_slices_i: %1%", cstring::to_cstring(field));
+    bool changed = false;
+    auto& slices = self.fields_to_slices_i.at(field);
+    // Find the slice that contains the low bit of this new range, and split it
+    // if necessary.  Repeat for the high bit.
+    for (auto idx : { range.lo, range.hi + 1 }) {
+        for (auto slice_it = slices.begin(); slice_it != slices.end(); ++slice_it) {
+            // If a slice already exists at the an idx of this range, no additional
+            // slicing is necessary.
+            if (slice_it->range().lo == idx) {
+                break; }
+
+            // Otherwise, if the lo idx is in another slice, split that slice.
+            if (slice_it->range().contains(idx)) {
+                changed = true;
+                auto range_lo = slice_it->range().resizedToBits(idx - slice_it->range().lo);
+                auto range_hi =
+                    slice_it->range().resizedToBits(slice_it->range().size() - range_lo.size())
+                                     .shiftedByBits(idx - slice_it->range().lo);
+                LOG5("Clustering::MakeSlices: breaking " << *slice_it <<
+                     " into " << range_lo << " / " << range_hi);
+                slice_it = slices.erase(slice_it);
+                slice_it = slices.emplace(slice_it, PHV::FieldSlice(field, range_lo));
+                slice_it++;
+                slice_it = slices.emplace(slice_it, PHV::FieldSlice(field, range_hi));
+                break; } } }
+    return changed;
+}
+
+Visitor::profile_t Clustering::MakeSlices::init_apply(const IR::Node *root) {
+    auto rv = Inspector::init_apply(root);
+    // Wrap each field in a slice.
+    for (auto& f : phv_i)
+        self.fields_to_slices_i[&f].push_back(PHV::FieldSlice(&f, StartLen(0, f.size)));
+    return rv;
+}
+
+bool Clustering::MakeSlices::preorder(const IR::Expression *e) {
+    le_bitrange range;
+    PHV::Field* field = phv_i.field(e, &range);
+
+    if (!field)
+        return true;
+
+    updateSlices(field, range);
+    return true;
+}
+
+void Clustering::MakeSlices::postorder(const IR::MAU::Instruction *inst) {
+    LOG5("Clustering::MakeSlices: visiting instruction " << inst);
+    // Find relative combined slice positions.
+    ordered_set<PHV::FieldSlice> equivalence;
+    for (auto* op : inst->operands) {
+        le_bitrange range;
+        PHV::Field* f = phv_i.field(op, &range);
+        if (!f) continue;
+        equivalence.insert(PHV::FieldSlice(f, range)); }
+    equivalences_i.emplace_back(equivalence);
+}
+
+void Clustering::MakeSlices::end_apply() {
+    // Propagate fine-grained slicing until reaching a fixpoint.
+    bool changed;
+    do {
+        changed = false;
+        for (auto& equivalence : equivalences_i) {
+            for (auto& s1 : equivalence) {
+                for (auto& s2 : equivalence) {
+                    for (auto& tiny_slice : self.slices(s2.field(), s2.range())) {
+                        // Shift from s2's coordinate system to s1's.
+                        // Eg. for f1[3:0] = f2[7:4], shift the slice from [7:4] to [3:0].
+                        // and for f1[7:4] = f2[3:0], vice versa.
+                        auto new_slice =
+                            tiny_slice.range().shiftedByBits(s1.range().lo - s2.range().lo);
+                        LOG5("    ...and splitting " << s1.field() << " at " << new_slice);
+                        changed |= updateSlices(s1.field(), new_slice); } } } }
+    } while (changed);
+
+    if (LOGGING(5)) {
+        LOG5("Created fine-grained slices:");
+        for (auto& kv : self.fields_to_slices_i) {
+            std::stringstream ss;
+            for (auto& slice : kv.second)
+                ss << "[" << slice.range().lo << ".." << slice.range().hi << "] ";
+            LOG5("    " << kv.first << ": " << ss.str()); } }
+}
+
 Visitor::profile_t Clustering::MakeAlignedClusters::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
-    // Initialize union_find_i with pointers to all fields in phv_i.
-    for (auto& f : phv_i) {
-        // Skip stack POV fields; these are allocated with stkvalid.
-        if (f.ccgf() && !f.is_ccgf()) {
-            LOG5("Skipping stack POV field " << f);
-            continue; }
-        LOG5("Creating AlignedCluster singleton containing field " << f);
-        union_find_i.insert(std::move(PHV::FieldSlice(&f))); }
+    // Initialize union_find_i with pointers to all field slices.
+    for (auto& by_field : self.fields_to_slices_i) {
+        for (auto& slice : by_field.second) {
+            // Skip stack POV fields; these are allocated with stkvalid.
+            if (slice.field()->ccgf() && !slice.field()->is_ccgf()) {
+                LOG5("Skipping stack POV field slice " << slice);
+                continue; }
+            LOG5("Creating AlignedCluster singleton containing field slice " << slice);
+            union_find_i.insert(slice); } }
     return rv;
 }
 
@@ -23,25 +141,59 @@ Visitor::profile_t Clustering::MakeAlignedClusters::init_apply(const IR::Node *r
 bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst) {
     LOG5("Clustering::MakeAlignedClusters: visiting instruction " << inst);
 
-    // `set` doesn't induce alignment constraints, because the `deposit_field`
-    // ALU instruction can rotate its source.
-    if (inst->name == "set") {
-        LOG5("    ...skipping 'set', because it doesn't induce alignment constraints");
-        return false; }
-
     if (inst->operands.size() == 0) {
         return false; }
+
+    // `set` doesn't induce alignment constraints, because the `deposit_field`
+    // ALU instruction can rotate its source.  This is not true for casting
+    // instructions to a larger size, however, which require the PHV sources to
+    // be aligned.
+    if (inst->name == "set") {
+        le_bitrange src_range;
+        le_bitrange dst_range;
+        auto* src = phv_i.field(inst->operands[1]);
+        auto* dst = phv_i.field(inst->operands[0]);
+
+        // If the entirety of the source is assigned to a piece of the
+        // destination, and the destination is larger than the source, then
+        // another set instruction exists to assign 0 to the rest of the
+        // destination.  In this case, the deposit_field instruction will
+        // require the source and destination to be aligned.
+        bool needs_alignment = src && dst && src->size == dst_range.size() &&
+                                             dst->size != dst_range.size();
+        if (!needs_alignment) {
+            LOG5("    ...skipping 'set', because it doesn't induce alignment constraints");
+            return false; } }
 
     // Union all operands.  Because the union operation is reflexive and
     // transitive, start with the first operand (`dst`) and union it with all
     // operands.
-    PHV::Field* dst = nullptr;
+    std::vector<PHV::FieldSlice> dst_slices;
     for (auto* operand : inst->operands) {
-        PHV::Field* f = phv_i.field(operand);
+        le_bitrange range;
+        PHV::Field* f = phv_i.field(operand, &range);
         LOG5("UNION over instruction " << inst);
         if (!f) continue;
-        if (!dst) dst = f;
-        union_find_i.makeUnion(PHV::FieldSlice(dst), PHV::FieldSlice(f)); }
+        if (!dst_slices.size()) {
+            dst_slices = self.slices(f, range);
+            BUG_CHECK(dst_slices.size(),
+                      "No slices for field %1% in range %2%",
+                      cstring::to_cstring(f), cstring::to_cstring(range)); }
+        auto these_slices = self.slices(f, range);
+
+        // Some instructions naturally take operands of different sizes, eg.
+        // shift, where the shift amount is usually smaller than the value
+        // being shifted.  In that case, the lowest slices will be aligned,
+        // which combines with the `no_split` constraint on non-move
+        // instructions to ensure that the entirety of these fields are aligned
+        // at the lowest bits.
+        auto dst_slices_it = dst_slices.begin();
+        auto these_slices_it = these_slices.begin();
+        while (dst_slices_it != dst_slices.end() && these_slices_it != these_slices.end()) {
+            LOG5("Adding aligned operands: " << *dst_slices_it << ", " << *these_slices_it);
+            union_find_i.makeUnion(*dst_slices_it, *these_slices_it);
+            ++dst_slices_it;
+            ++these_slices_it; } }
 
     return false;
 }
@@ -50,6 +202,10 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Table *tbl) {
     CollectGatewayFields collect_fields(phv_i);
     tbl->apply(collect_fields);
     auto& info_set = collect_fields.info;
+
+    // Union all operands.  Because the union operation is reflexive and
+    // transitive, start with the first operand and union it with all
+    // operands.
     for (auto& field_info : info_set) {
         auto* field = field_info.first;
         auto& info = field_info.second;
@@ -57,7 +213,14 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Table *tbl) {
             // instead of using const_cast, get a mutable pointer from phvInfo.
             auto* field_a = phv_i.field(field->id);
             auto* field_b = phv_i.field(info.xor_with->id);
-            union_find_i.makeUnion(PHV::FieldSlice(field_a), PHV::FieldSlice(field_b)); } }
+            auto slices_a = self.slices(field_a, StartLen(0, field_a->size));
+            auto slices_b = self.slices(field_b, StartLen(0, field_b->size));
+            auto a_it = slices_a.begin();
+            auto b_it = slices_b.begin();
+            while (a_it != slices_a.end() && b_it != slices_b.end()) {
+                union_find_i.makeUnion(*a_it, *b_it);
+                ++a_it;
+                ++b_it; } } }
     return true;
 }
 
@@ -95,24 +258,40 @@ bool Clustering::MakeRotationalClusters::preorder(const IR::MAU::Instruction *in
               "but it has %2%", cstring::to_cstring(inst), inst->operands.size());
 
     // The destination must be a PHV-backed field.
-    PHV::Field* dst_f = phv_i.field(inst->operands[0]);
+    le_bitrange dst_range;
+    PHV::Field* dst_f = phv_i.field(inst->operands[0], &dst_range);
     BUG_CHECK(dst_f, "No PHV field for dst of instruction %1%", cstring::to_cstring(inst));
-    auto dst = PHV::FieldSlice(dst_f);
 
     // The source may be a non-PHV backed value, however.
-    PHV::Field* src_f = phv_i.field(inst->operands[1]);
+    le_bitrange src_range;
+    PHV::Field* src_f = phv_i.field(inst->operands[1], &src_range);
     if (!src_f)
         return false;
-    auto src = PHV::FieldSlice(src_f);
-
     LOG5("Adding set operands from instruction " << inst);
-    BUG_CHECK(slices_to_clusters_i.find(dst) != slices_to_clusters_i.end(),
-              "set dst operand is not present in any aligned cluster: %1%",
-              cstring::to_cstring(dst));
-    BUG_CHECK(slices_to_clusters_i.find(src) != slices_to_clusters_i.end(),
-              "set src operand is not present in any aligned cluster: %1%",
-              cstring::to_cstring(src));
-    union_find_i.makeUnion(slices_to_clusters_i.at(dst), slices_to_clusters_i.at(src));
+
+    auto dst_slices = self.slices(dst_f, dst_range);
+    auto src_slices = self.slices(src_f, src_range);
+    auto dst_slices_it = dst_slices.begin();
+    auto src_slices_it = src_slices.begin();
+    while (dst_slices_it != dst_slices.end() && src_slices_it != src_slices.end()) {
+        auto dst = *dst_slices_it;
+        auto src = *src_slices_it;
+        BUG_CHECK(dst.size() == src.size(),
+                  "set operands of different sizes: %1%, %2%\ninstruction: %3%",
+                  cstring::to_cstring(dst), cstring::to_cstring(src),
+                  cstring::to_cstring(inst));
+        BUG_CHECK(slices_to_clusters_i.find(dst) != slices_to_clusters_i.end(),
+                  "set dst operand is not present in any aligned cluster: %1%",
+                  cstring::to_cstring(dst));
+        BUG_CHECK(slices_to_clusters_i.find(src) != slices_to_clusters_i.end(),
+                  "set src operand is not present in any aligned cluster: %1%",
+                  cstring::to_cstring(src));
+        LOG5("Adding rotationally-equivalent operands: " << *dst_slices_it << ", "
+             << *src_slices_it);
+        union_find_i.makeUnion(slices_to_clusters_i.at(dst), slices_to_clusters_i.at(src));
+        ++dst_slices_it;
+        ++src_slices_it; }
+
     return false;
 }
 
@@ -123,71 +302,74 @@ void Clustering::MakeRotationalClusters::end_apply() {
 
 bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
     LOG5("Visiting HeaderRef " << hr);
-
     const PhvInfo::StructInfo& struct_info = phv_i.struct_info(hr);
 
     // Only analyze headers, not metadata structs.
-    if (struct_info.metadata)
-        return true;
+    if (struct_info.metadata || struct_info.size == 0)
+        return false;
 
-    // Build slice lists.  Use reverse order, because types list fields in
-    // network order, not little Endian order.
-    PHV::SuperCluster::SliceList *accumulator = nullptr;
+    if (headers_i.find(struct_info.first_field_id) != headers_i.end())
+        return false;
+    headers_i.insert(struct_info.first_field_id);
+
+    // Build slice lists.  All slices of the same field go in the same slice
+    // list.  Additionally, non-byte aligned fields are grouped together in the
+    // smallest byte-aligned chink.  Use reverse order, because types list
+    // fields in network order, not little Endian order.
+    PHV::SuperCluster::SliceList *accumulator = new PHV::SuperCluster::SliceList();
     int accumulator_bits = 0;
+    LOG5("Starting new slice list:");
     for (int fid : boost::adaptors::reverse(struct_info.field_ids())) {
         PHV::Field* field = phv_i.field(fid);
+
         BUG_CHECK(field != nullptr, "No PHV info for field in header reference %1%",
                   cstring::to_cstring(hr));
+        BUG_CHECK(self.fields_to_slices_i.find(field) != self.fields_to_slices_i.end(),
+                  "Found field in header but not PHV: %1%",
+                  cstring::to_cstring(field));
 
-        // Begin accumulating at the first non-byte aligned field.
-        if (!accumulator && field->size % int(PHV::Size::b8) == 0)
-            continue;
-
-        // If this is the first non-byte aligned field in this list, initialize
-        // the accumulator.
-        if (!accumulator) {
-            accumulator = new PHV::SuperCluster::SliceList();
-            accumulator_bits = 0; }
-
-        accumulator->push_back(PHV::FieldSlice(field));
+        int field_slice_list_size = 0;
+        for (auto& slice : self.fields_to_slices_i.at(field)) {
+            LOG5("    ...adding " << slice);
+            accumulator->push_back(slice);
+            field_slice_list_size += slice.size(); }
         accumulator_bits += field->size;
 
-        // If we've accumulated fields that, in aggregate, reached byte
-        // alignment, then add this slice list and clear the accumulator.
+        BUG_CHECK(field_slice_list_size == field->size,
+                  "Fine grained slicing of field %1% (size %2%) produced slices adding up to %3%b",
+                  cstring::to_cstring(field), field->size, field_slice_list_size);
+
         if (accumulator_bits % int(PHV::Size::b8) == 0) {
-            bool is_duplicate =
-                std::any_of(slice_lists_i.begin(), slice_lists_i.end(),
-                    [&](const PHV::SuperCluster::SliceList* sl) {
-                        if (sl->size() != accumulator->size())
-                            return false;
-                        auto acc_it = accumulator->begin();
-                        auto sl_it = sl->begin();
-                        while (acc_it != accumulator->end() && sl_it != sl->end()) {
-                            if (*acc_it != *sl_it)
-                                return false;
-                            acc_it++;
-                            sl_it++; }
-                        return true; });
-            if (!is_duplicate) {
-                // XXX(cole): This will need to be removed when we introduce constraint schema.
-                BUG_CHECK(accumulator_bits <= 32,
-                          "Trying to accumulate too many fields in CCGF %1%",
-                          cstring::to_cstring(*accumulator));
-                slice_lists_i.insert(accumulator);
-                LOG5("    ...creating CCGF " << *accumulator);
-            } else {
-                LOG5("    ...skipping duplicate CCGF " << *accumulator);
-            }
-            accumulator = nullptr;
-            accumulator_bits = 0; } }
+            // If we've accumulated a slice list that's a byte multiple, store it
+            // and start a new slice list.
+            slice_lists_i.insert(accumulator);
+            accumulator_bits = 0;
+            accumulator = new PHV::SuperCluster::SliceList(); }
+    }
+
+    if (accumulator->size())
+        slice_lists_i.insert(accumulator);
 
     // Headers are required to be byte aligned, which should have been checked
     // earlier in the compilation process.
-    BUG_CHECK(accumulator == nullptr, "Non-byte aligned header: %1%", cstring::to_cstring(hr));
-    return true;
+    BUG_CHECK(accumulator_bits % int(PHV::Size::b8) == 0,
+              "Non-byte aligned header: %1%", cstring::to_cstring(hr));
+    return false;
 }
 
 void Clustering::MakeSuperClusters::end_apply() {
+    // XXX(cole): This is a temporary hack to try to encourage slices of
+    // metadata fields with alignment constraints to be placed together.
+    for (auto& kv : self.fields_to_slices_i) {
+        bool is_metadata = kv.first->metadata || kv.first->pov;
+        bool has_constraints = kv.first->alignment || kv.first->no_split() || kv.first->no_pack();
+        if (is_metadata && has_constraints) {
+            LOG5("Creating slice list for field " << kv.first);
+            auto* list = new PHV::SuperCluster::SliceList();
+            for (auto& slice : kv.second)
+                list->push_back(slice);
+            slice_lists_i.insert(list); } }
+
     UnionFind<const PHV::RotationalCluster*> cluster_union_find;
     ordered_map<PHV::FieldSlice, PHV::RotationalCluster*> slices_to_clusters;
 
@@ -206,9 +388,21 @@ void Clustering::MakeSuperClusters::end_apply() {
     // restrictive.
     auto* ingress_list = new PHV::SuperCluster::SliceList();
     auto* egress_list = new PHV::SuperCluster::SliceList();
+    int ingress_list_bits = 0;
+    int egress_list_bits = 0;
     for (auto& f : phv_i) {
         // Skip everything but POV valid bits.
-        if (!f.pov || !f.name.endsWith("$valid"))
+        if (!f.pov)
+            continue;
+
+        // Skip valid bits for header stacks, which are allocated with
+        // $stkvalid.
+        if (f.ccgf())
+            continue;
+
+        // Skip valid bits involved in complex instructions, because they have
+        // complicated packing constraints.
+        if (self.complex_validity_bits_i.find(&f) != self.complex_validity_bits_i.end())
             continue;
 
         // If this validity bit is part of a header stack, skip it.
@@ -217,16 +411,18 @@ void Clustering::MakeSuperClusters::end_apply() {
 
         LOG5("Creating POV BIT LIST with " << f);
 
-        PHV::SuperCluster::SliceList *current_list =
-            f.gress == INGRESS ? ingress_list : egress_list;
-
-        BUG_CHECK(f.size == 1, "Expected POV valid bit to have size 1 but is size %1%", f.size);
+        // NB: Use references to mutate the appropriate list/counter.
+        auto& current_list = f.gress == INGRESS ? ingress_list : egress_list;
+        int& current_list_bits = f.gress == INGRESS ? ingress_list_bits : egress_list_bits;
         current_list->push_back(PHV::FieldSlice(&f));
+        current_list_bits += f.size;
 
         // Make a new list after every 8 bits
-        if (current_list->size() == 8) {
+        if (current_list_bits >= 8) {
+            LOG5("Creating new POV slice list: " << current_list);
             slice_lists_i.insert(current_list);
-            current_list = new PHV::SuperCluster::SliceList(); } }
+            current_list = new PHV::SuperCluster::SliceList();
+            current_list_bits = 0; } }
 
     // If the number of headers is not a multiple of 8, then there will be some
     // leftover POV fields.
@@ -247,12 +443,12 @@ void Clustering::MakeSuperClusters::end_apply() {
         // Union the clusters of all fields in the list.  Because union is
         // reflexive and commutative, union all clusters with the first cluster.
         BUG_CHECK(slices_to_clusters.find(slice_list->front()) != slices_to_clusters.end(),
-                  "Created CCGF with field slice not in any cluster: %1%",
+                  "Created slice list with field slice not in any cluster: %1%",
                   cstring::to_cstring(slice_list->front()));
         PHV::RotationalCluster* first_cluster = slices_to_clusters.at(slice_list->front());
         for (auto& slice : *slice_list) {
             BUG_CHECK(slices_to_clusters.find(slice) != slices_to_clusters.end(),
-                      "Created CCGF with field slice not in any cluster: %1%",
+                      "Created slice list with field slice not in any cluster: %1%",
                       cstring::to_cstring(slice));
             cluster_union_find.makeUnion(first_cluster, slices_to_clusters.at(slice)); } }
 
@@ -261,13 +457,31 @@ void Clustering::MakeSuperClusters::end_apply() {
         // Collect slice lists that induced this grouping.
         // XXX(cole): Caching would be much more efficient.
         ordered_set<PHV::SuperCluster::SliceList*> these_lists;
+        ordered_set<PHV::FieldSlice> slices_in_these_lists;
         for (auto* rotational_cluster : *cluster_set)
             for (auto* aligned_cluster : rotational_cluster->clusters() )
                 for (const PHV::FieldSlice& slice : *aligned_cluster)
                     for (auto* slist : slice_lists_i)
                         if (std::find(slist->begin(), slist->end(), slice) != slist->end())
                             these_lists.insert(slist);
+
+        // Put each exact_containers slice in a rotational cluster but not in a
+        // field list into a singelton field list.
+        for (auto* slice_list : these_lists)
+            for (auto& slice_in_list : *slice_list)
+                slices_in_these_lists.insert(slice_in_list);
+        for (auto* rotational_cluster : *cluster_set)
+            for (auto* aligned_cluster : rotational_cluster->clusters())
+                for (auto& slice : *aligned_cluster)
+                    if (slice.field()->exact_containers()
+                        && slices_in_these_lists.find(slice) == slices_in_these_lists.end()) {
+                        auto* new_list = new PHV::SuperCluster::SliceList();
+                        new_list->push_back(slice);
+                        these_lists.insert(new_list);
+                        slices_in_these_lists.insert(slice); }
+
         self.super_clusters_i.emplace_back(new PHV::SuperCluster(*cluster_set, these_lists)); }
+
 
     if (LOGGING(1)) {
         LOG1("--- CLUSTERING RESULTS --------------------------------------------------------");

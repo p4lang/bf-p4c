@@ -4,173 +4,14 @@
 #include <numeric>
 #include "lib/log.h"
 
-/** Implements a dynamic programming algorithm for determining the best way to
- * slice fields in a field list to produce container-sized chunks of the field
- * list.  Prefers (a) minimizing the number of fields split, then (b) using the
- * largest container sizes.
- */
-class SplitSliceList {
-    const PHV::SuperCluster& super_cluster;
-    const PHV::SuperCluster::SliceList& slice_list;
-    int max_split;
-
-    /// For a given slice list, maps a range of bits of the slice list to the
-    /// best bit positions to slice.  An empty bitvec implies slicing is not
-    /// needed, while boost::none implies slicing is necessary but impossible.
-    ordered_map<le_bitrange, boost::optional<bitvec>> best_subslice;
-
-    /// Map the absolute bit position within a slice list to the corresponding
-    /// relative position of the field at that position.
-    ordered_map<int, std::pair<PHV::FieldSlice, int>> absolute_to_relative;
-
-    /// The range of the entire slice list.
-    le_bitrange slice_list_range;
-
-    /// Categorizes the quality of a given split.
-    enum class SplitKind {
-        NONE = 0,       // no split found
-        FIELD = 1,      // found a split, but it splits a field
-        BOUNDARY = 2,   // found a split, and it splits the slice list between
-                        // slices---the best option
-    };
-
-    /// Recursive method that builds `best_subslice`.
-    boost::optional<bitvec> find_best_subslice(le_bitrange range) {
-        // If we have already computed the best subslice for this range,
-        // return.
-        if (best_subslice.find(range) != best_subslice.end())
-            return best_subslice.at(range);
-
-        // Otherwise, try slicing off 8b, 16b, and 32b chunks and recursing.
-        auto chunks = { int(PHV::Size::b32),
-                        int(PHV::Size::b16),
-                        int(PHV::Size::b8) };
-        auto kind = SplitKind::NONE;
-        for (int chunk : chunks) {
-            // We can't create slices larger than max_split.
-            if (max_split < chunk)
-                continue;
-
-            // We can't do better than fitting range exactly in a container.
-            if (range.size() == chunk) {
-                best_subslice[range] = bitvec();
-                return bitvec(); }
-
-            // Ditto for ranges smaller than chunk that don't have any
-            // exact_containers requirements.
-            if (range.size() < chunk) {
-                bool has_exact = false;
-                for (int i = range.lo; i <= range.hi /* closed range */; ++i) {
-                    BUG_CHECK(absolute_to_relative.find(i) != absolute_to_relative.end(),
-                              "Looking for bad slice %1% of slice list %2%",
-                              cstring::to_cstring(range), cstring::to_cstring(slice_list));
-                    if (absolute_to_relative.at(i).first.field()->exact_containers())
-                        has_exact = true; }
-                if (has_exact) {
-                    // Can't put a slice list in a chunk size (i.e. container size) larger
-                    // than the list width if it has an exact_container requirement.
-                    continue;
-                } else {
-                    best_subslice[range] = bitvec();
-                    return bitvec(); } }
-
-            BUG_CHECK(absolute_to_relative.find(chunk) != absolute_to_relative.end(),
-                      "Looking for bad split (%1%) of slice list %2%",
-                      chunk, cstring::to_cstring(slice_list));
-
-            // Otherwise, try slicing of the first chunk of the range.
-            auto& local_info = absolute_to_relative.at(chunk);
-            if (local_info.second == 0) {
-                kind = SplitKind::BOUNDARY;
-            } else {
-                // If the split isn't along a slice boundary, and the cluster
-                // containing the slice to be split can't support the split,
-                // then continue.
-                if (!super_cluster.cluster(local_info.first).slice(chunk))
-                    continue;
-                kind = SplitKind::FIELD;
-            }
-            le_bitrange lo_range = range.resizedToBits(chunk);
-            le_bitrange hi_range = range.shiftedByBits(chunk).resizedToBits(range.size() - chunk);
-            auto lo_res = find_best_subslice(lo_range);
-            auto hi_res = find_best_subslice(hi_range);
-            if (!lo_res || !hi_res) {
-                best_subslice[range] = boost::none;
-            } else if (kind == SplitKind::BOUNDARY) {
-                best_subslice[range] = *lo_res | *hi_res | bitvec(chunk, 1);
-                break;
-            } else if (best_subslice.find(range) != best_subslice.end() &&
-                       best_subslice.at(range)) {
-                // Determine whether this slice is better than previous slices by counting
-                // the number of bits in each bitvec; lower (fewer slices) is better.
-                auto GetSize = [](int acc, int) { return acc + 1; };
-                int count = std::accumulate(lo_res->begin(), lo_res->end(), 0, GetSize)
-                          + std::accumulate(hi_res->begin(), hi_res->end(), 0, GetSize)
-                          + 1;
-                bitvec other = *best_subslice.at(range);
-                int other_count = std::accumulate(other.begin(), other.end(), 0, GetSize);
-                if (count < other_count)
-                    best_subslice[range] = *lo_res | *hi_res | bitvec(chunk, 1);
-            } else {
-                best_subslice[range] = *lo_res | *hi_res | bitvec(chunk, 1);
-            }
-        }
-
-        // If we haven't yet found a best subslice for this range, it means
-        // none exists, eg. because the range includes slices with
-        // exact_container requirements but doesn't match a container width.
-        if (best_subslice.find(range) == best_subslice.end())
-            best_subslice[range] = boost::none;
-
-        return best_subslice.at(range);
-    }
-
- public:
-    explicit SplitSliceList(
-            const PHV::SuperCluster& sc,
-            const PHV::SuperCluster::SliceList& slice_list,
-            int max_split)
-            : super_cluster(sc), slice_list(slice_list), max_split(max_split) {
-        int pos = 0;
-        for (auto& slice : slice_list)
-            for (int i = 0; i < slice.range().size(); ++i, ++pos)
-                absolute_to_relative.emplace(pos, std::make_pair(slice, i));
-        slice_list_range = StartLen(0, pos);
-    }
-
-    // Return the best position to split each field slice.
-    boost::optional<ordered_map<const PHV::FieldSlice, int>> find_best_slicing() {
-        ordered_map<const PHV::FieldSlice, int> rv;
-        auto res = find_best_subslice(slice_list_range);
-        // No valid split locations.
-        if (!res)
-            return boost::none;
-        // No split needed.
-        if (res->empty())
-            return rv;
-
-        int list_offset = 0;
-        auto list_it = slice_list.begin();
-        for (int split_loc : *res) {
-            // Find field at split_loc.
-            while (split_loc >= list_offset + list_it->size()) {
-                list_offset += list_it->size();
-                list_it++;
-                BUG_CHECK(list_it != slice_list.end(), "Bad slice schema"); }
-            int relative_offset = split_loc - list_offset;
-            // If the relative offset is 0, then this split lies on a slice
-            // boundary, and no slice needs to be split.
-            if (relative_offset > 0)
-                rv[*list_it] = relative_offset; }
-        return rv;
-    }
-};
-
 namespace PHV {
+
 // Helper for split_super_cluster;
 using ListClusterPair = std::pair<PHV::SuperCluster::SliceList*, const PHV::RotationalCluster*>;
 std::ostream &operator<<(std::ostream &out, const ListClusterPair& pair) {
-    out << "(" << pair.first << ", " << pair.second << ")";
+    out << std::endl;
+    out << "(    " << pair.first << std::endl;
+    out << ",    " << pair.second << "    )";
     return out;
 }
 std::ostream &operator<<(std::ostream &out, const ListClusterPair* pair) {
@@ -181,164 +22,501 @@ std::ostream &operator<<(std::ostream &out, const ListClusterPair* pair) {
     return out;
 }
 
-}  // namespace PHV
+// Helper function to update internal state of split_super_cluster after
+// splitting a rotational cluster.  Mutates each argument.
+static void update_slices(const RotationalCluster* old,
+    const SliceResult<RotationalCluster>& split_res,
+    ordered_set<const PHV::RotationalCluster*>& new_clusters,
+    ordered_set<PHV::SuperCluster::SliceList*>& slice_lists,
+    ordered_map<PHV::FieldSlice, ordered_set<PHV::SuperCluster::SliceList*>>& slices_to_slice_lists,
+    ordered_map<const PHV::FieldSlice, const PHV::RotationalCluster*>& slices_to_clusters) {
+    // Update the set of live clusters.
+    auto old_it = new_clusters.find(old);
+    if (old_it != new_clusters.end()) {
+        LOG6("    ...erasing old cluster " << old);
+        new_clusters.erase(old); }
+    new_clusters.insert(split_res.lo);
+    LOG6("    ...adding new lo cluster " << split_res.lo);
+    new_clusters.insert(split_res.hi);
+    LOG6("    ...adding new hi cluster " << split_res.hi);
+
+    // Update the slices_to_clusters map.
+    LOG6("    ...updating slices_to_clusters");
+    for (auto& kv : split_res.slice_map) {
+        BUG_CHECK(slices_to_clusters.find(kv.first) != slices_to_clusters.end(),
+                  "Slice not in map: %1%", cstring::to_cstring(kv.first));
+        slices_to_clusters.erase(kv.first);
+        auto& slice_lo = kv.second.first;
+        slices_to_clusters[slice_lo] = split_res.lo;
+        if (auto& slice_hi = kv.second.second)
+            slices_to_clusters[*slice_hi] = split_res.hi; }
+
+    // Replace the old slices with the new, split slices in each slice
+    // list.
+    LOG6("    ...updating slice_lists");
+    for (auto* slice_list : slice_lists) {
+        for (auto slice_it  = slice_list->begin();
+                  slice_it != slice_list->end();
+                  slice_it++) {
+            auto& old_slice = *slice_it;
+            if (split_res.slice_map.find(old_slice) != split_res.slice_map.end()) {
+                auto& slice_lo = split_res.slice_map.at(old_slice).first;
+                auto& slice_hi = split_res.slice_map.at(old_slice).second;
+                slice_it = slice_list->erase(slice_it);
+                slice_it = slice_list->insert(slice_it, slice_lo);
+                if (slice_hi) {
+                    slice_it++;
+                    slice_it = slice_list->insert(slice_it, *slice_hi); } } } }
+
+    // Update the slices_to_slice_lists map.
+    LOG6("    ...updating slices_to_slice_lists");
+    for (auto& kv : split_res.slice_map) {
+        // Slices in RotationalClusters but not in slice lists do not need to
+        // be updated.
+        if (slices_to_slice_lists.find(kv.first) == slices_to_slice_lists.end())
+            continue;
+        slices_to_slice_lists[kv.second.first] = slices_to_slice_lists.at(kv.first);
+        if (kv.second.second)
+            slices_to_slice_lists[*kv.second.second] = slices_to_slice_lists.at(kv.first);
+        slices_to_slice_lists.erase(kv.first); }
+}
+
+/// @returns true if all slices lists and slices are smaller than 32b and no
+/// slice list contains more than one slice per aligned cluster.
+
+/// XXX(cole): Also check that slice lists with exact_container requirements
+/// are all the same size.  We should check this ahead of time, though.
+
+/// XXX(cole): Also check that deparsed bottom bits fields are at the front of
+/// their slice lists.
+static bool is_well_formed(const SuperCluster* sc) {
+    LOG6("Examining sliced SuperCluster: ");
+    LOG6(sc);
+    ordered_set<int> exact_list_sizes;
+    int widest = 0;
+
+    // Check that slice lists do not contain slices from the same
+    // AlignedCluster.
+    for (auto* list : sc->slice_lists()) {
+        ordered_set<const PHV::AlignedCluster*> seen;
+        int size = 0;
+        bool has_exact_containers = false;
+        for (auto& slice : *list) {
+            if (slice.field()->deparsed_bottom_bits() && size != 0)
+                return false;
+            has_exact_containers |= slice.field()->exact_containers();
+            size += slice.size();
+            auto* cluster = &sc->aligned_cluster(slice);
+            if (seen.find(cluster) != seen.end()) {
+                LOG6("    ...but slice list has two slices from the same aligned cluster: ");
+                LOG6("        " << list);
+                return false; }
+            seen.insert(cluster); }
+        widest = std::max(widest, size);
+        if (has_exact_containers)
+            exact_list_sizes.insert(size);
+        if (size > int(PHV::Size::b32)) {
+            LOG6("    ...but 32 < " << list);
+            return false; } }
+
+    // Check the widths of slices in RotationalClusters, which could be wider
+    // than fields in slice lists in the case of non-uniform operand widths.
+    for (auto* rotational : sc->clusters())
+        for (auto* aligned : rotational->clusters())
+            for (auto& slice : *aligned)
+                widest = std::max(widest, slice.size());
+
+    // Check that all slice lists with exact container requirements are the
+    // same size.
+    if (exact_list_sizes.size() > 1) {
+        LOG6("    ...but slice lists with 'exact container' constraints differ in size");
+        return false; }
+
+    // Check that nothing is wider than the widest slice list with exact
+    // container requirements.
+    if (exact_list_sizes.size() > 0 && widest > *exact_list_sizes.begin()) {
+        LOG6("    ...but supercluster contains a slice/slice list wider than a slice list with "
+             "the 'exact container' constraint");
+        return false; }
+
+    for (auto* rotational : sc->clusters())
+        for (auto* aligned : rotational->clusters())
+            for (auto& slice : *aligned)
+                if (slice.size() > int(PHV::Size::b32)) {
+                    LOG6("    ...but 32 < " << slice);
+                    return false; }
+
+    LOG6("    ...and SC is well formed");
+    return true;
+}
+
+}   // namespace PHV
+
 
 /* static */
-std::list<PHV::SuperCluster*> CoreAllocation::split_super_cluster(PHV::SuperCluster* sc) {
-    // XXX(cole): This is a heuristic that splits the SuperCluster into the
-    // largest container-sized slices.  We'll need to do something more
-    // sophisticated in the future.
-
-    LOG5("Trying to slice supercluster with max field slice width of " << sc->max_width() << ":");
+boost::optional<std::list<PHV::SuperCluster*>>
+CoreAllocation::split_super_cluster(const PHV::SuperCluster* sc) {
+    LOG5("Trying to slice SuperCluster:");
     LOG5(sc);
+    // Find first successful slicing of sc, such that no unsplittable fields
+    // are split, and all slices are smaller than containers.
+    if (sc->slice_lists().size()) {
+        // A "slicing schema" is a bitvec where each bit corresponds to a bit
+        // position in a slice list to be split.  Each '1' corresponds to where
+        // the slice list should be split.
+        //
+        // A "compressed slicing schema" encodes combinations of byte-aligned
+        // slices, where bit k of a compressed schema corresponds to bit (k +
+        // 1) * 8 of an (expanded) slicing schema.
+        //
+        // To explore all possible combinations of splitting each slice list at
+        // byte-aligned boundaries, we concatenate a compressed slicing schema
+        // for each slice list, forming one big bitvec with subranges
+        // corresponding to each slice list.  The `ranges` map records these
+        // locations.
+        //
+        // Then, exploring all combinations corresponds to exploring all bit
+        // patterns in the concatenated schema, which we accomplish by treating
+        // the bitvec like an integer, starting at zero, and incrementing by 1
+        // until all combinations have been tried.
+        //
+        // However, we can eagerly prune some invalid bit combinations:
+        //
+        //  - Slices need to be 8b, 16b, or 32b, which implies that sequences
+        //    of '0' in the bitvec need to be exactly zero, one, or three.
+        //
+        //  - The first slice of a field with the `deparsed_bottom_bits`
+        //    constraint must be the first slice in its slice list.  The
+        //    `required_slices` bitvec is a compressed schema with bits that
+        //    must always be 1.
+        ordered_map<PHV::SuperCluster::SliceList*, le_bitrange> ranges;
+        int offset = 0;
+        bitvec required_slices;
+        // Bit set at range.hi + 1 for each range.
+        bitvec boundaries;
+        for (auto* list : sc->slice_lists()) {
+            int size = 0;
+            // Always require a split at the beginning of a slice with deparsed_bottom_bits.
+            for (auto& slice : *list) {
+                if (slice.field()->deparsed_bottom_bits() && slice.range().lo == 0
+                        && offset + size > 0) {
+                    // XXX(cole): 'BUG_CHECK' here might be too strong.
+                    BUG_CHECK(size % 8 == 0, "Can't slice on field %1% in slice list %2% "
+                        "(which has deparsed bottom bits) because it is not byte aligned",
+                        cstring::to_cstring(slice), cstring::to_cstring(list));
+                    required_slices.setbit(offset + (size / 8 - 1)); }
+                size += slice.size(); }
+
+            // (range[list].hi + 1) * 8 is the first split position *beyond the
+            // end* of the slice list.  Note that slice lists 8b or smaller
+            // cannot be sliced, which is reflected in bits_needed == 0.
+            int bits_needed = size / 8 - (1 - bool(size % 8));
+            ranges[list] = StartLen(offset, bits_needed);
+            offset += bits_needed;
+            boundaries.setbit(offset);
+            LOG5("    ...slice list (" << size << "b) with compressed bitvec size "
+                 << bits_needed); }
+
+        // TODO: Consider `no_pack` constraints in required_slices.  If a slice
+        // in a slice list has `no_pack`, then the slice list needs to be
+        // sliced exactly around it.
+
+        // TODO: Add a dual `prohibited_slices`, which are slices that cannot
+        // be considered (i.e. AND -prohibited_slices).  This accounts for
+        // `no_split` constraints and will be necessary for the @pragma
+        // pa_container_size.
+
+        // `offset` holds the size of the entire concatenated slicing schemas.
+        // If this is zero, then no slice list is larger than 8b, and no
+        // slicing is possible or necessary.
+        if (offset == 0) {
+            LOG5("    ...but no slicing needed");
+            return std::list<PHV::SuperCluster*>({
+                new PHV::SuperCluster(sc->clusters(), sc->slice_lists()) }); }
+
+        // When the sentinel_idx bit is set, all bits corresponding to all
+        // split schemas have rolled over to zero.
+        int sentinel_idx = offset;
+        LOG5("    ...there are 2^" << sentinel_idx << " ways to slice");
+        if (LOGGING(5) && !required_slices.empty()) {
+            std::stringstream ss;
+            for (int x : required_slices)
+                ss << ((x + 1) * 8) << " ";
+            LOG5("    ...with fixed slices at " << ss.str()); }
+
+        bitvec compressed_schemas = required_slices;
+        // Start with the smallest number that has sequences of exactly zero,
+        // one, or three zeroes, which corresponds to slices sizes of 8b, 16b,
+        // and 32b.  @see PHV::inc().
+        PHV::enforce_container_sizes(compressed_schemas, sentinel_idx, boundaries);
+
+        ordered_map<PHV::SuperCluster::SliceList*, bitvec> split_schemas;
+        while (!compressed_schemas.getbit(sentinel_idx)) {
+            split_schemas.clear();
+            // Convert the compressed schema for each slice list into an expanded schema.
+            for (auto& kv : ranges) {
+                le_bitrange range = kv.second;
+                bitvec compressed_schema = compressed_schemas.getslice(range.lo, range.size());
+                bitvec expanded_schema;
+                for (int i = 0; i < range.size(); ++i)
+                    if (compressed_schema[i])
+                        expanded_schema.setbit((i + 1) * 8);
+                split_schemas[kv.first] = expanded_schema; }
+
+            // Try slicing using this set of expanded schemas.
+            auto res = split_super_cluster(sc, split_schemas);
+
+            // If we found a good slicing, return it.
+            if (res && std::all_of(res->begin(), res->end(), PHV::is_well_formed)) {
+                LOG5("Found slicing:");
+                for (auto& new_sc : *res)
+                    LOG5(new_sc);
+                return res; }
+
+            // Otherwise, increment the bitvec...
+            PHV::inc(compressed_schemas);
+            // and set the required slices...
+            compressed_schemas |= required_slices;
+            // and set the least significant bits necessary to ensure that
+            // slices correspond to container sizes.
+            PHV::enforce_container_sizes(compressed_schemas, sentinel_idx, boundaries); }
+    } else {
+        // In this case, there are no slice lists, and the SuperCluster
+        // contains a single RotationalCluster.  We will try all slicings of
+        // the RotationalCluster.  We use the same compressed slicing schema
+        // approach as for slice lists, where bit[n] indicates whether index (n
+        // + 1) * 8 should be split.
+        bitvec compressed_split_schema;
+        int max_split_idx = sc->max_width() / 8 - (1 - bool(sc->max_width() % 8));
+        while (!compressed_split_schema[max_split_idx]) {
+            // Expand the compressed schema.
+            bitvec split_schema;
+            for (int i : compressed_split_schema)
+                split_schema.setbit((i + 1) * 8);
+            // Split the supercluster.
+            auto res = split_super_cluster(sc, split_schema);
+            // If successful, return it.
+            if (res && std::all_of(res->begin(), res->end(), PHV::is_well_formed))
+                return res;
+            // Otherwise, try the next slicing combination.
+            PHV::inc(compressed_split_schema);
+            PHV::enforce_container_sizes(compressed_split_schema,
+                                         max_split_idx,
+                                         bitvec(max_split_idx, 1)); } }
+
+    LOG5("No slicing for supercluster:");
+    LOG5(sc);
+    return boost::none;
+}
+
+// Keys of split_schemas must be slice lists in sc.
+/* static */
+boost::optional<std::list<PHV::SuperCluster*>> CoreAllocation::split_super_cluster(
+        const PHV::SuperCluster* sc,
+        ordered_map<PHV::SuperCluster::SliceList*, bitvec> split_schemas) {
+    if (LOGGING(6)) {
+        for (auto& kv : split_schemas) {
+            std::stringstream ss;
+            for (int idx : kv.second)
+                ss << idx << " ";
+            LOG6("Split schema: " << ss.str());
+            LOG6("Slice list:");
+            LOG6("      " << kv.first); }
+        LOG6(""); }
 
     std::list<PHV::SuperCluster*> rv;
-    int max_split = int(PHV::Size::b32);
+    // Deep copy all slice lists, so they can be updated without mutating sc.
+    // Update split_schemas to point to the new slice lists, and build a map
+    // of slices to new slice lists.
     ordered_set<PHV::SuperCluster::SliceList*> slice_lists;
-    for (auto* slice_list : sc->slice_lists()) {
-        slice_lists.insert(slice_list);
-        int size = 0;
-        for (auto& slice : *slice_list)
-            size += slice.size();
-        if (size <= int(PHV::Size::b8))
-            max_split = int(PHV::Size::b8);
-        else if (size <= int(PHV::Size::b16))
-            max_split = std::min(max_split, int(PHV::Size::b16)); }
+    ordered_map<PHV::FieldSlice, ordered_set<PHV::SuperCluster::SliceList*>>
+        slices_to_slice_lists;
 
-    // Find a slice list that needs to be split, if any.
-    boost::optional<ordered_map<const PHV::FieldSlice, int>> split_schema = boost::none;
-    for (auto* slice_list : slice_lists) {
-        LOG5("    ...considering splitting (max chunk " << max_split << ") " << slice_list);
+    for (auto* old_list : sc->slice_lists()) {
+        BUG_CHECK(old_list->size(), "Empty slice list in SuperCluster %1%",
+                  cstring::to_cstring(sc));
+        // Make new list.
+        auto* new_list = new PHV::SuperCluster::SliceList();
+        slice_lists.insert(new_list);
+        // Copy from old to new.
+        new_list->insert(new_list->begin(), old_list->begin(), old_list->end());
+        // Update split_schema.
+        if (split_schemas.find(old_list) != split_schemas.end()) {
+            split_schemas[new_list] = split_schemas.at(old_list);
+            split_schemas.erase(old_list); }
+        // Build map.
+        for (auto& slice : *new_list)
+            slices_to_slice_lists[slice].insert(new_list); }
 
-        // XXX(cole): We don't handle splitting slice lists with multiple slices
-        // from the same rotational cluster yet.
-        ordered_set<const PHV::RotationalCluster*> seen;
-        for (auto& slice : *slice_list) {
-            auto* cluster = &sc->cluster(slice);
-            if (seen.find(cluster) != seen.end()) {
-                LOG5("    ...but cannot split superclusters with slice lists with slices from the "
-                     "same rotational cluster");
-                return { sc }; }
-            seen.insert(cluster); }
+    // Track live RotationalClusters. Clusters that have been split are no
+    // longer live.
+    ordered_set<const PHV::RotationalCluster*> new_clusters;
+    new_clusters.insert(sc->clusters().begin(), sc->clusters().end());
 
-        SplitSliceList splitter(*sc, *slice_list, max_split);
-        split_schema = splitter.find_best_slicing();
-        if (!split_schema) {
-            LOG5("    ...but slice list cannot be split");
+    // Keep a map of slices to clusters (both old and new for this schema).
+    ordered_map<const PHV::FieldSlice, const PHV::RotationalCluster*> slices_to_clusters;
+    for (auto* rotational : new_clusters)
+        for (auto* aligned : rotational->clusters())
+            for (auto& slice : *aligned)
+                slices_to_clusters[slice] = rotational;
+
+    // Split each slice list according to its schema.  If a slice is split,
+    // then split its RotationalCluster.  Produces a new set of slice lists and
+    // rotational clusters.  Fail if a proposed split would violate
+    // constraints, like `no_split`.
+    for (auto& kv : split_schemas) {
+        auto* slice_list = kv.first;
+        bitvec split_schema = kv.second;
+
+        // If there are no bits set in the split schema, then no split has been
+        // requested.
+        if (split_schema.empty())
             continue;
-        } else if (split_schema->empty()) {
-            LOG5("    ...but slice list does not need to be split");
-            continue;
-        } else {
-            break; } }
 
-    bool found_slicing_schema = split_schema && !split_schema->empty();
+        // Remove this list, which will be replaced with new lists.
+        slice_lists.erase(slice_list);
 
-    // If this SuperCluster contains slice lists, but no split could be found,
-    // then return.
-    if (slice_lists.size() && !found_slicing_schema) {
-        LOG5("    ...no slicing schema found");
-        return { sc }; }
+        // Iterate through split positions.
+        int offset = 0;
+        auto* slice_list_lo = new PHV::SuperCluster::SliceList();
+        bitvec::nonconst_bitref next_split = split_schema.begin();
+        BUG_CHECK(*next_split >= 0, "Trying to split slice list at negative index");
+        auto next_slice = slice_list->begin();
 
-    // If there is a split schema, then at least one slice list needs to be
-    // split.  Split all clusters of slices in the split schema, create new
-    // SuperClusters, and invoke this method recursively.
-    if (found_slicing_schema) {
-        // Track live clusters. Clusters that have been split are no longer live.
-        ordered_set<const PHV::RotationalCluster*> new_clusters;
-        new_clusters.insert(sc->clusters().begin(), sc->clusters().end());
+        // This loop stutter-steps both `next_slice` and `next_split`.
+        while (next_slice != slice_list->end()) {
+            auto slice = *next_slice;
+            // After processing the last split, just place all remaining slices
+            // into slice_list_lo.
+            if (next_split == split_schema.end()) {
+                slice_list_lo->push_back(slice);
+                ++next_slice;
+                continue; }
 
-        // Keep a map of slices to clusters (both old and new).
-        ordered_map<const PHV::FieldSlice, const PHV::RotationalCluster*> slices_to_clusters;
-        for (auto* slice_list : slice_lists)
-            for (auto& slice : *slice_list)
-                slices_to_clusters[slice] = &sc->cluster(slice);
+            // Otherwise, process slices up to the next split position, then
+            // advance the split position.
+            if (offset < *next_split && offset + slice.size() <= *next_split) {
+                // Slice is completely before the split position.
+                LOG6("    ...(" << offset << ") adding to slice list: " << slice);
+                slice_list_lo->push_back(slice);
+                ++next_slice;
+                offset += slice.size();
+            } else if (offset == *next_split) {
+                // Split position falls between slices.  Advance next_split BUT
+                // NOT next_slice.
+                LOG6("    ...(" << offset << ") split falls between slices");
 
-        // Slice each field in the split schema.
-        for (auto& kv : *split_schema) {
-            auto& slice = kv.first;
-            int split_pos = kv.second;
-            LOG5("    ...and trying to split slice " << slice << " at bit " << split_pos);
-            BUG_CHECK(slices_to_clusters.find(slice) != slices_to_clusters.end(),
-                      "Slice in split schema but not in slice list");
-            auto rotational = slices_to_clusters.at(slice);
-            auto split_res = rotational->slice(split_pos);
-            BUG_CHECK(split_res, "Bad split schema: failed to slice cluster");
-            BUG_CHECK(split_res->slice_map.find(slice) != split_res->slice_map.end(),
-                      "Bad split schema: slice map does not contain split slice");
+                // Check that this position doesn't split adjacent slices of a
+                // no_split field.
+                if (next_slice != slice_list->begin()) {
+                    auto last_it = next_slice;
+                    last_it--;
+                    if (last_it->field() == next_slice->field()
+                            && next_slice->field()->no_split()) {
+                        LOG6("    ...(" << offset << ") field cannot be split: "
+                             << next_slice->field());
+                        return boost::none; } }
 
-            // Update the set of live clusters.
-            auto old = new_clusters.find(rotational);
-            if (old != new_clusters.end())
-                new_clusters.erase(old);
-            new_clusters.insert(split_res->lo);
-            new_clusters.insert(split_res->hi);
+                // Otherwise, create new slice list and advance the split position.
+                slice_lists.insert(slice_list_lo);
+                slice_list_lo = new PHV::SuperCluster::SliceList();
+                LOG6("    ...(" << offset << ") starting new slice list");
 
-            for (auto& kv : split_res->slice_map) {
-                auto& slice_lo = kv.second.first;
-                auto& slice_hi = kv.second.second;
-                slices_to_clusters[slice_lo] = split_res->lo;
-                slices_to_clusters[slice_hi] = split_res->hi; }
+                // XXX(cole): next_split++ fails to resolve to
+                // next_split.operator++().  Not sure why.
+                next_split.operator++();
+            } else if (offset < *next_split && *next_split < offset + slice.size()) {
+                // The split position falls within a slice and will need to be
+                // split.  Advance next_split and set next_slice to point to the
+                // top half of the post-split subslice.
+                LOG6("    ...(" << offset << ") found slice to split at idx "
+                     << *next_split << ": " << slice);
 
-            // Replace the old slice with the new, split slices in each slice
-            // list.
-            for (auto* slice_list : slice_lists) {
-                for (auto slice_it  = slice_list->begin();
-                          slice_it != slice_list->end();
-                          slice_it++) {
-                    if (split_res->slice_map.find(*slice_it) != split_res->slice_map.end()) {
-                        auto& slice_lo = split_res->slice_map.at(*slice_it).first;
-                        auto& slice_hi = split_res->slice_map.at(*slice_it).second;
-                        slice_it = slice_list->erase(slice_it);
-                        slice_it = slice_list->insert(slice_it, slice_lo);
-                        slice_it++;
-                        slice_it = slice_list->insert(slice_it, slice_hi); } } } }
+                // Split slice.
+                auto* rotational = slices_to_clusters.at(slice);
+                auto split_result = rotational->slice(*next_split - offset);
+                if (!split_result) {
+                    LOG6("    ...(" << offset << ") but split failed");
+                    return boost::none; }
+                BUG_CHECK(split_result->slice_map.find(slice) != split_result->slice_map.end(),
+                          "Bad split schema: slice map does not contain split slice");
 
-        // Create new slice lists by breaking existing slice lists at container
-        // boundaries.
-        ordered_set<PHV::SuperCluster::SliceList*> new_slice_lists;
-        ordered_map<const PHV::FieldSlice, ordered_set<PHV::SuperCluster::SliceList*>>
-            slices_to_lists;
-        for (auto* slice_list : slice_lists) {
-            auto* new_slice_list = new PHV::SuperCluster::SliceList();
-            int list_size = 0;
-            for (auto& slice : *slice_list) {
-                LOG5("    ...adding slice " << slice);
-                new_slice_list->push_back(slice);
-                slices_to_lists[slice].insert(new_slice_list);
-                list_size += slice.size();
-                if (list_size == int(PHV::Size::b8) ||
-                    list_size == int(PHV::Size::b16) ||
-                    list_size == int(PHV::Size::b32)) {
-                    new_slice_lists.insert(new_slice_list);
-                    LOG5("    ...new slice list: " << new_slice_list);
-                    new_slice_list = new PHV::SuperCluster::SliceList();
-                    list_size = 0; } }
-            if (new_slice_list->size() > 0) {
-                LOG5("    ...new slice list: " << new_slice_list);
-                new_slice_lists.insert(new_slice_list); } }
+                // Update this slice list (which has been
+                // removed and is no longer part of slice_lists), taking care to ensure
+                // the next_slice iterator is updated to point to the new *lower* subslice.
+                for (auto it = slice_list->begin(); it != slice_list->end(); ++it) {
+                    auto s = *it;
+                    if (split_result->slice_map.find(s) == split_result->slice_map.end())
+                        continue;
+
+                    bool is_this_slice = it == next_slice;
+                    // Replace s with its two new subslices.
+                    auto& subs = split_result->slice_map.at(s);
+                    it = slice_list->erase(it);
+                    it = slice_list->insert(it, subs.first);
+                    if (is_this_slice)
+                        next_slice = it;
+                    if (subs.second) {
+                        ++it;
+                        it = slice_list->insert(it, *subs.second); } }
+
+                // Advance the iterator to the next slice, which is either the
+                // new upper slice (if it exists).
+                ++next_slice;
+
+                // Update all slices/clusters in new_clusters,
+                // slices_to_clusters, and slice_lists.
+                PHV::update_slices(
+                    rotational, *split_result,
+                    new_clusters, slice_lists, slices_to_slice_lists, slices_to_clusters);
+
+                // Add current list, make new list, advance next_split.
+                auto& new_slices = split_result->slice_map.at(slice);
+                slice_list_lo->push_back(new_slices.first);
+                LOG6("    ...(" << offset << ") adding to slice list: " << slice);
+                slice_lists.insert(slice_list_lo);
+                slice_list_lo = new PHV::SuperCluster::SliceList();
+                LOG6("    ...(" << offset << ") starting new slice list");
+                // XXX(cole): next_split++ fails to resolve to
+                // next_split.operator++().  Not sure why.
+                next_split.operator++();
+                offset += new_slices.first.size();
+            } else {
+                // Adding this to ensure the above logic (which is a bit
+                // complicated) covers all cases.  Note that *next_split < offset
+                // should never be true, as other cases should advance next_split.
+                std::stringstream ss;
+                for (int x : split_schema)
+                    ss << x << " ";
+                BUG("Bad split.\nOffset: %3%\nNext split: %4%\nSplit schema: %1%\nSlice list: %2%",
+                    ss.str(), cstring::to_cstring(slice_list), offset, *next_split); } }
+
+            BUG_CHECK(next_split == split_schema.end(),
+                      "Slicing schema tries to slice at %1% but slice list is %2%b long",
+                      *next_split, offset);
+
+            if (slice_list_lo->size())
+                slice_lists.insert(slice_list_lo); }
 
         // We need to ensure that all the slice lists and clusters that overlap
         // (i.e. share slices) end up in the same SuperCluster.
         UnionFind<PHV::ListClusterPair> uf;
-        ordered_map<PHV::FieldSlice, ordered_set<PHV::SuperCluster::SliceList*>>
-            slices_to_slice_lists;
+        slices_to_slice_lists.clear();
 
         // Populate UF universe.
         auto* empty_slice_list = new PHV::SuperCluster::SliceList();
-        for (auto* slice_list : new_slice_lists) {
+        for (auto* slice_list : slice_lists) {
             for (auto& slice : *slice_list) {
                 BUG_CHECK(slices_to_clusters.find(slice) != slices_to_clusters.end(),
                           "No slice to cluster map for %1%", cstring::to_cstring(slice));
                 auto* cluster = slices_to_clusters.at(slice);
                 uf.insert({ slice_list, cluster });
-                new_clusters.insert(cluster);
                 slices_to_slice_lists[slice].insert(slice_list); } }
         for (auto* rotational : new_clusters)
             uf.insert({ empty_slice_list, rotational });
 
         // Union over slice lists.
-        for (auto* slice_list : new_slice_lists) {
+        for (auto* slice_list : slice_lists) {
             BUG_CHECK(slices_to_clusters.find(slice_list->front()) != slices_to_clusters.end(),
                       "No slice to cluster map for front slice %1%",
                       cstring::to_cstring(slice_list->front()));
@@ -364,75 +542,48 @@ std::list<PHV::SuperCluster*> CoreAllocation::split_super_cluster(PHV::SuperClus
                 if (pair.first->size())
                     slice_lists.insert(pair.first);
                 clusters.insert(pair.second); }
-            auto rec =
-                split_super_cluster(new PHV::SuperCluster(clusters, slice_lists));
-            rv.insert(rv.end(), rec.begin(), rec.end()); }
+            rv.push_back(new PHV::SuperCluster(clusters, slice_lists)); }
 
-        return rv; }
+    return rv;
+}
 
-    // XXX(cole): Clean up this method and break it into smaller methods.
+
+// For splitting a supercluster without any slice lists.  As superclusters
+// only contain rotational clusters with fields in the same slice list, then
+// superclusters with no slice lists can only contain a single rotational
+// cluster.  @split_schema splits it.
+boost::optional<std::list<PHV::SuperCluster*>>
+CoreAllocation::split_super_cluster(const PHV::SuperCluster* sc, bitvec split_schema) {
+    // This method cannot handle super clusters with slice lists.
+    if (sc->slice_lists().size() > 0)
+        return boost::none;
+
+    BUG_CHECK(sc->clusters().size() != 0, "SuperCluster with no RotationalClusters: %1%",
+              cstring::to_cstring(sc));
+    BUG_CHECK(sc->clusters().size() == 1,
+              "SuperCluster with no slice lists but more than one RotationalCluster: %1%",
+              cstring::to_cstring(sc));
+
+    // An empty split schema means no split is necessary.
+    if (split_schema.empty())
+        return std::list<PHV::SuperCluster*>({
+            new PHV::SuperCluster(sc->clusters(), sc->slice_lists()) });
 
     // Otherwise, if this SuperCluster doesn't have any slice lists, then slice
     // the rotational clusters directly.
-    int remaining_width = sc->max_width();
-    ordered_set<const PHV::RotationalCluster*> to_slice;
-    to_slice.insert(sc->clusters().begin(), sc->clusters().end());
+    std::list<PHV::SuperCluster*> rv;
+    auto* remainder = *sc->clusters().begin();
+    int offset = 0;
+    for (int next_split : split_schema) {
+        BUG_CHECK(next_split >= 0, "Trying to split remainder cluster at negative index");
+        auto res = remainder->slice(next_split - offset);
+        if (!res)
+            return boost::none;
+        offset = next_split;
+        rv.push_back(new PHV::SuperCluster({ res->lo }, { }));
+        remainder = res->hi; }
 
-    while (remaining_width > 0) {
-        // Get the remaining bits of the smallest field slice that requires
-        // exact containers and has bits remaining.
-        // XXX(cole): Should cache this.
-        int min_remaining = remaining_width;
-        for (auto* rot : to_slice)
-            for (auto* aln : rot->clusters())
-                for (auto& slice : *aln)
-                    if (slice.field()->exact_containers())
-                        min_remaining = std::min(min_remaining, slice.size());
-
-        // If the widest slice is exactly a container size or smaller than 8b,
-        // then we're done.  Otherwise, decide the next split size.
-        int chunk;
-        if (min_remaining < int(PHV::Size::b16)) {
-            chunk = int(PHV::Size::b8);
-        } else if (min_remaining < int(PHV::Size::b32)) {
-            chunk = int(PHV::Size::b16);
-        } else {
-            chunk = int(PHV::Size::b32);
-        }
-
-        // Slice each rotational cluster.
-        using OptResult = boost::optional<PHV::RotationalCluster::SliceResult>;
-        std::vector<OptResult> results;
-        for (auto* cluster : to_slice)
-            results.push_back(cluster->slice(chunk));
-
-        // If any cluster failed to slice, give up.
-        auto IsNone = [](const OptResult& res) { return res == boost::none; };
-        if (std::any_of(results.begin(), results.end(), IsNone)) {
-            rv.push_back(new PHV::SuperCluster(to_slice, { }));
-            break; }
-
-        // Add the lo clusters, which are now container-sized, to the result
-        // list, and continue slicing the hi clusters.
-        to_slice.clear();
-        ordered_set<const PHV::RotationalCluster*> container_sized_clusters;
-        for (auto& res : results) {
-            container_sized_clusters.insert(res->lo);
-            to_slice.insert(res->hi); }
-        rv.push_back(new PHV::SuperCluster(container_sized_clusters, { }));
-        remaining_width -= chunk; }
-
-    if (LOGGING(5) && rv.size() == 1 && rv.front() == sc) {
-        LOG5("    ...but supercluster was not split");
-    } else if (LOGGING(5)) {
-        std::stringstream ss;
-        for (auto* cl : rv)
-            ss << cl->max_width() << " ";
-        LOG5("    ...and produced new superclusters of sizes " << ss.str() << ":");
-        for (auto* cl : rv)
-            LOG5(cl);
-    }
-
+    rv.push_back(new PHV::SuperCluster({ remainder }, { }));
     return rv;
 }
 
@@ -447,22 +598,17 @@ bool CoreAllocation::can_overlay(
     return true;
 }
 
-bitvec CoreAllocation::satisfies_constraints(
+boost::optional<bitvec> CoreAllocation::satisfies_constraints(
         const PHV::ContainerGroup& group, const PHV::AlignedCluster& cluster) const {
     // Check that these containers support the operations required by fields in
     // this cluster.
     if (!cluster.okIn(group.type().kind())) {
         LOG5("    ...but cluster cannot be placed in " << group.type().kind() << "PHV containers");
-        return bitvec();
-    }
+        return boost::none; }
 
     // Check that a valid start alignment exists for containers of this size.
-    auto valid_start_options = cluster.validContainerStart(group.type().size());
-    if (!valid_start_options)
-        LOG5("    ...but there are no valid starting bit alignments for cluster in containers of "
-             "this size");
-
-    return valid_start_options;
+    // An empty bitvec indicates no valid starting positions.
+    return cluster.validContainerStart(group.type().size());
 }
 
 bool CoreAllocation::satisfies_constraints(
@@ -529,27 +675,24 @@ bool CoreAllocation::satisfies_constraints(std::vector<PHV::AllocSlice> slices) 
             return false; } }
 
     // Check if any fields have the no_pack constraint, which is mutually
-    // unsatisfiable with slice lists, which induce packing.
+    // unsatisfiable with slice lists, which induce packing.  Ignore adjacent slices of the same
+    // field.
     std::vector<PHV::AllocSlice> used;
     for (auto& slice : slices)
         if ((uses_i.is_deparsed(slice.field()) || uses_i.is_used_mau(slice.field()))
                 && !clot_i.allocated(slice.field())) {
             used.push_back(slice); }
-    if (used.size() > 1) {
-        for (auto& slice : used) {
-            if (slice.field()->no_pack()) {
-                std::stringstream ss;
-                for (auto& s : used)
-                    ss << "    " << s.field() << std::endl;
-                // XXX(cole): Is there a way to immediate abort compilation?
-                // Otherwise this error is produced for every slice
-                // list/container group pair.
-                ::error("Field %1% must be "
-                        "placed alone in a PHV container, but the parser must pack it "
-                        "contiguously with its adjacent slices.  This is unsatisfiable.  The "
-                        "list of adjacent slices is:\n%2%", cstring::to_cstring(slice.field()),
-                        ss.str());
-                return false; } } }
+    auto NotAdjacent = [](const PHV::AllocSlice& left, const PHV::AllocSlice& right) {
+            return left.field() != right.field() ||
+                   left.field_slice().hi + 1 != right.field_slice().lo ||
+                   left.container_slice().hi + 1 != right.container_slice().lo;
+        };
+    auto NoPack = [](const PHV::AllocSlice& s) { return s.field()->no_pack(); };
+    bool not_adjacent = std::adjacent_find(used.begin(), used.end(), NotAdjacent) != used.end();
+    bool no_pack = std::find_if(used.begin(), used.end(), NoPack) != used.end();
+    if (not_adjacent && no_pack) {
+        LOG5("    ...but slice list contains multiple fields and one has the 'no pack' constraint");
+        return false; }
 
     return true;
 }
@@ -597,8 +740,9 @@ bool CoreAllocation::satisfies_constraints(
 bool CoreAllocation::satisfies_CCGF_constraints(
         const PHV::Allocation& alloc,
         const PHV::Field *f, PHV::Container c) {
-    if (alloc.gress(c) && *alloc.gress(c) != f->gress)
-        return false;
+    if (alloc.gress(c) && *alloc.gress(c) != f->gress) {
+        LOG5("    ...but CCGF gress does not match container gress");
+        return false; }
     return true;
 }
 
@@ -606,16 +750,20 @@ bool CoreAllocation::satisfies_CCGF_constraints(
 bool
 CoreAllocation::satisfies_constraints(const PHV::ContainerGroup& g, const PHV::SuperCluster& sc) {
     // Check max individual field width.
-    if (int(g.type().size()) < sc.max_width())
-        return false;
+    if (int(g.type().size()) < sc.max_width()) {
+        LOG5("    ...but container size " << g.type().size() <<
+             " is too small for max field width " << sc.max_width());
+        return false; }
 
     // Check max slice list width.
     for (auto* slice_list : sc.slice_lists()) {
         int size = 0;
         for (auto& slice : *slice_list)
             size += slice.size();
-        if (int(g.type().size()) < size)
-            return false; }
+        if (int(g.type().size()) < size) {
+            LOG5("    ...but container size " << g.type().size() <<
+                 " is too small for slice list width " << size);
+            return false; } }
 
     return true;
 }
@@ -629,6 +777,9 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocCCGF(
         return boost::none;
     LOG5("    ...and field is a CCGF");
 
+    BUG_CHECK(f->header_stack_pov_ccgf(), "CCGF is not a header stack POV CCGF: %1%",
+              cstring::to_cstring(f));
+
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
     int container_size = int(group.type().size());
     int ccgf_size = 0;
@@ -636,8 +787,6 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocCCGF(
     // Calculate CCGF size
     for (auto* member : f->ccgf_fields_i)
         ccgf_size += member->size;
-    if (f->header_stack_pov_ccgf())
-        ccgf_size++;
 
     if (container_size < ccgf_size + start) {
         LOG4("    ...but CCGF is " << ccgf_size << "b, which is too big for an " <<
@@ -683,16 +832,6 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocCCGF(
     // candidate container.
     int offset = start;
 
-    // If f is a header stack CCGF, then allocate .stkvalid at `start` and
-    // increment the offset by 1.  The CCGF members (which do not include
-    // .stkvalid) will be overlaid atop .stkvalid[1:end].
-    if (f->header_stack_pov_ccgf()) {
-        alloc_attempt.allocate(
-            PHV::AllocSlice(f, *candidate,
-                            StartLen(0, f->size),         // field range
-                            StartLen(offset, f->size)));  // container range
-        offset++; }
-
     // Walk CCGF and make an AllocSlice for each field in the CCGF, taking care
     // to iterate in reverse.
     for (auto* member : boost::adaptors::reverse(f->ccgf_fields_i)) {
@@ -714,6 +853,10 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocCCGF(
         // allocated or skipped, in order to preserve the alignment of its
         // adjecent members.
         offset += member->size; }
+
+    // Allocate the $stkvalid field, which overlays the CCGF member fields.
+    auto stkvalid = PHV::AllocSlice(f, *candidate, StartLen(0, f->size), StartLen(start, f->size));
+    alloc_attempt.allocate(stkvalid);
 
     return alloc_attempt;
 }
@@ -751,13 +894,26 @@ CoreAllocation::tryAllocSliceList(
     int container_size = int(group.type().size());
 
     // XXX(cole): If the list is entirely comprised of a CCGF, allocate it.
-    if (slices.size() == 1 && slices.front().field()->is_ccgf()) {
-        auto rst = tryAllocCCGF(alloc, group, phv_i.field(slices.front().field()->id),
-                start_positions.at(slices.front()));
+    bool all_ccgf = std::all_of(slices.begin(), slices.end(),
+                        [](const PHV::FieldSlice& s) { return s.field()->is_ccgf(); });
+    if (all_ccgf && slices.size() > 0) {
+        boost::optional<PHV::FieldSlice> acc = boost::none;
+        boost::optional<int> min_start_pos = boost::none;
+        for (auto& slice : slices) {
+            if (!acc) {
+                acc = slice;
+                min_start_pos = start_positions.at(slice);
+                continue; }
+            if (slice.field() != acc->field()) {
+                LOG5("    ...but slice list contains CCGF slices of different fields");
+                return boost::none; }
+            min_start_pos = std::min(*min_start_pos, start_positions.at(slice)); }
+        PHV::Field* acc_field = phv_i.field(acc->field()->id);
+        auto rst = tryAllocCCGF(alloc, group, acc_field, *min_start_pos);
         if (!rst) return boost::none;
         return std::make_pair(*rst, MatchScore(0, 0)); }
 
-    // XXX(cole): Otherwise, fail (for now) if a slice list contains a CCGF
+    // XXX(cole): fail (for now) if a slice list contains a CCGF
     // owner or member.
     for (auto& slice : slices) {
         if (slice.field()->is_ccgf() || slice.field()->ccgf() != nullptr) {
@@ -834,6 +990,7 @@ CoreAllocation::tryAllocSliceList(
             const auto& alloced_slices =
                 alloc_attempt.slices(slice.container(), slice.container_slice());
             if (alloced_slices.size() > 0 && can_overlay(mutex_i, slice.field(), alloced_slices)) {
+                LOG5("    ...and can overlay " << slice.field() << " on " << alloced_slices);
                 score.n_overlays += calc_overlay_length(slice, alloced_slices);
             } else if (alloced_slices.size() > 0) {
                 LOG5("    ...but " << c << " already contains " << alloced_slices);
@@ -854,7 +1011,9 @@ CoreAllocation::tryAllocSliceList(
         // XXX(cole): This ignores the no deadcode elimination compiler flag!
         // It should be fixed when parser/deparser schema are introduced.
         if (uses_i.is_referenced(slice.field()) && !clot_i.allocated(slice.field()))
-            alloc_attempt.allocate(slice); }
+            alloc_attempt.allocate(slice);
+        else
+            LOG5("NOT ALLOCATING unreferenced field: " << slice); }
     return std::make_pair(alloc_attempt, best_score);
 }
 
@@ -886,16 +1045,20 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
         for (auto& slice : *slice_list) {
             const PHV::AlignedCluster& cluster = super_cluster.aligned_cluster(slice);
             auto valid_start_options = satisfies_constraints(container_group, cluster);
-            if (valid_start_options.empty())
+            if (valid_start_options == boost::none)
                 return boost::none;
+
+            if (valid_start_options->empty()) {
+                LOG5("    ...but there are no valid starting positions for " << slice);
+                return boost::none; }
 
             // If this is the first slice, then its starting alignment can be adjusted.
             if (le_offset == 0)
-                le_offset = *valid_start_options.min();
+                le_offset = *valid_start_options->begin();
 
             // Return if the slice 's cluster cannot be placed at the current
             // starting offset.
-            if (!valid_start_options.getbit(le_offset)) {
+            if (!valid_start_options->getbit(le_offset)) {
                 LOG5("    ...but slice list requires slice to start at " << le_offset <<
                      " which its cluster cannot support");
                 return boost::none; }
@@ -943,7 +1106,18 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
             if (cluster_alignment.find(aligned_cluster) != cluster_alignment.end()) {
                 starts = bitvec(cluster_alignment.at(aligned_cluster), 1);
             } else {
-                starts = satisfies_constraints(container_group, *aligned_cluster); }
+                auto optStarts = satisfies_constraints(container_group, *aligned_cluster);
+                if (!optStarts) {
+                    // Other constraints not satisfied, eg. container type mismatch.
+                    return boost::none; }
+                if (optStarts && optStarts->empty()) {
+                    // Other constraints satisfied, but alignment constraints
+                    // cannot be satisfied.
+                    LOG5("    ...but no valid start positions");
+                    return boost::none; }
+                // Constraints satisfied so long as aligned_cluster is placed
+                // starting at a bit position in `starts`.
+                starts = *optStarts; }
 
             // Compute all possible alignments
             // need this because Transaction is non-copyable somehow
@@ -956,8 +1130,8 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
                 alloc_results.emplace_back(alloc_attempt.makeTransaction());
                 auto possible_alloc = std::prev(alloc_results.end());
                 MatchScore score(0, 0);
-                for (const PHV::FieldSlice &slice : slice_list) {
-                // for (const PHV::FieldSlice &slice : aligned_cluster->slices()) {
+                // Try allocating all fields at this alignment.
+                for (const PHV::FieldSlice& slice : slice_list) {
                     // Skip fields that have already been allocated above.
                     if (allocated.find(slice) != allocated.end()) continue;
                     ordered_map<const PHV::FieldSlice, int> start_map = { { slice, start } };
@@ -968,20 +1142,23 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
                         score += (*partial_alloc_result).second;
                     } else {
                         failed = true;
-                        break; }
-                }  // for slices
-                if (failed) continue;
+                        break; } }
+
+                if (failed)
+                    continue;
+
                 if (!best_alloc || best_score < score) {
                     // Since we can't copy/move transaction,
                     // we create a new transaction and commit the best result in.
                     // so, just treat it as best_alloc = possible_alloc.
                     best_alloc = possible_alloc;
-                    best_score = score; }
-            }  // for starts
-            if (!best_alloc) return boost::none;
-            alloc_attempt.commit(*(best_alloc.value()));
-        }  // for aligned_cluster
-    }  // for rotational_cluster
+                    best_score = score; } }
+
+            if (!best_alloc)
+                return boost::none;
+
+            alloc_attempt.commit(*(best_alloc.value())); } }
+
     return alloc_attempt;
 }
 
@@ -1127,8 +1304,10 @@ void AllocatePHV::formatAndThrowError(
 
     if (LOGGING(5)) {
         msg << "Fields successfully allocated: " << std::endl;
-        msg << alloc << std::endl; }
-
+        msg << alloc << std::endl;
+        msg << "SuperClusters unallocated: " << std::endl;
+        for (auto* sc : unallocated)
+            msg << sc; }
     for (auto* super_cluster : unallocated) {
         msg << super_cluster << std::endl;
         for (auto* rotational_cluster : super_cluster->clusters()) {
@@ -1245,9 +1424,12 @@ GreedySortingAllocationStrategy::tryAllocation(
     // Split SuperClusters that don't have slice lists along container
     // boundaries, preferring the largest container size possible.
     std::list<PHV::SuperCluster*> cluster_groups;
-    for (auto* sc : cluster_groups_input)
-        for (auto* new_sc : CoreAllocation::split_super_cluster(sc))
-            cluster_groups.push_back(new_sc);
+    for (auto* sc : cluster_groups_input) {
+        if (auto new_scs = CoreAllocation::split_super_cluster(sc)) {
+            for (auto new_sc : *new_scs)
+                cluster_groups.push_back(new_sc);
+        } else {
+            cluster_groups.push_back(sc); } }
 
     auto rst = alloc.makeTransaction();
     greedySort(rst, cluster_groups, container_groups);
@@ -1398,9 +1580,12 @@ BalancedPickAllocationStrategy::tryAllocation(
 
     // slice the rest unallocated clusters.
     std::list<PHV::SuperCluster*> cluster_groups;
-    for (auto* sc : cluster_groups_input)
-        for (auto* new_sc : CoreAllocation::split_super_cluster(sc))
+    for (auto* sc : cluster_groups_input) {
+        if (auto new_scs = CoreAllocation::split_super_cluster(sc)) {
+            for (auto* new_sc : *new_scs)
                 cluster_groups.push_back(new_sc);
+        } else {
+            cluster_groups.push_back(sc); } }
 
     greedySortClusters(cluster_groups);
     std::list<PHV::SuperCluster*> allocated_clusters =

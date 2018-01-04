@@ -161,8 +161,7 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
         StructInfo info = struct_info(stack.name);
         BUG_CHECK(!info.metadata, "metadata stack?");
         size[info.gress] += stack.size + stack.maxpush + stack.maxpop;
-        stacks_num++;
-        /* FIXME all bits for a stack must end up in one container */ }
+        stacks_num++; }
 
     for (auto &hdr : simple_headers) {
         LOG3("    ...preanalyzing simple header " << hdr.first);
@@ -205,8 +204,8 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
                 }
                 if (stack.maxpop) {
                     size[gress] -= stack.maxpop;
-                    // TODO FIXME should this be stack.maxpop?
-                    add(stack.name + ".$pop", gress, stack.maxpush, size[gress], true, true);
+                    add(stack.name + ".$pop", gress, stack.maxpop, size[gress], true, true);
+                    pov_fields.push_back(&all_fields[stack.name + ".$pop"]);
                 }
                 add(stack.name + ".$stkvalid", gress, stack.size + stack.maxpush + stack.maxpop,
                     size[gress], true, true);
@@ -695,14 +694,6 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
                 fieldListIndex++; } }
     }
 
-    void postorder(const IR::Expression* e) override {
-        PHV::Field* f = phv.field(e);
-        if (f && isWrite()) {
-            f->set_mau_write(true);  // note: this can be a parser write only
-            LOG4(".....MAU_write....." << f);
-        }
-    }
-
     void postorder(const IR::BFN::LoweredParser*) override {
         BUG("Running CollectPhvInfo after the parser IR has been lowered; "
             "this will produce invalid results.");
@@ -975,7 +966,6 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
             << "#" << field.mirror_field_list.field_list
             << "}%";
     if (field.pov) out << " pov";
-    if (field.mau_write()) out << " mau_write";
     if (field.deparsed()) out << " deparsed";
     if (field.mau_phv_no_pack()) out << " mau_phv_no_pack";
     if (field.no_pack()) out << " no_pack";

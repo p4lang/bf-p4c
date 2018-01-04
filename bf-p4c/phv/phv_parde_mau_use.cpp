@@ -55,6 +55,8 @@ bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
         use_i[in_mau][thread][info->id] = true;
         LOG5("dep " << info->name << " in " << thread << (in_dep ? " dep" : ""));
         deparser_i[thread][info->id] = in_dep;
+        if (isWrite() && in_mau)
+            written_i[info->id] = true;
         return false;
     } else if (e->is<IR::Member>()) {  // prevent descent into IR::Member objects
         return false;
@@ -85,6 +87,11 @@ bool Phv_Parde_Mau_Use::is_used_mau(const PHV::Field *f) const {      // use in 
     assert(f);
     bool use_mau = use_i[1][f->gress][f->id];
     return use_mau;
+}
+
+bool Phv_Parde_Mau_Use::is_written_mau(const PHV::Field *f) const {
+    BUG_CHECK(f, "Null field");
+    return written_i[f->id];
 }
 
 bool Phv_Parde_Mau_Use::is_used_parde(const PHV::Field *f) const {    // use in parser/deparser
