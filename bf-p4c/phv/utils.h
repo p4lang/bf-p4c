@@ -789,6 +789,10 @@ class SuperCluster : public ClusterStats {
 
     /// @returns true if this cluster contains @slice.
     bool contains(const PHV::FieldSlice& slice) const override;
+
+    /// @returns true if no structural constraints prevent this super cluster
+    /// from fitting.
+    static bool is_well_formed(const SuperCluster* sc);
 };
 
 /** Increment @bv as if it were an unsigned integer of unbounded size. */
@@ -836,6 +840,53 @@ void inc(bitvec& bv);
  * @warning this mutates @bv by reference.
  */
 void enforce_container_sizes(bitvec& bv, int sentinel, const bitvec& boundaries);
+
+/** A custom forward iterator that walks through all possible slicings of a
+ * SuperCluster.
+ */
+class SlicingIterator {
+    const SuperCluster* sc_i;
+    bool has_slice_lists_i;
+    bitvec compressed_schemas_i;
+    bitvec boundaries_i;
+    bitvec required_slices_i;
+    ordered_map<PHV::SuperCluster::SliceList*, le_bitrange> ranges_i;
+    int sentinel_idx_i;
+    std::list<PHV::SuperCluster*> cached_i;
+
+    /// true when all possible slicings have been exhausted.  Two iterators
+    /// with `done_i` set are always equal.
+    bool done_i;
+
+    /// @return a slicing based on the current value of compressed_schemas_i.
+    boost::optional<std::list<PHV::SuperCluster*>> get_slices() const;
+
+ public:
+    explicit SlicingIterator(const SuperCluster* sc);
+
+    /// @returns a list of possible slices of @sc.
+    std::list<PHV::SuperCluster*> operator*() const;
+
+    /// Increments this iterator to point to the next possible slicing of @sc.
+    SlicingIterator operator++();
+
+    /// @returns true if both iterators are over the same SuperCluster, both
+    /// are done, or both have the same compressed schema value.
+    bool operator==(const SlicingIterator& other) const;
+
+    bool done() const { return done_i; }
+
+    /// Split a SuperCluster with slice lists according to @split_schema.
+    static boost::optional<std::list<PHV::SuperCluster*>> split_super_cluster(
+        const PHV::SuperCluster* sc,
+        ordered_map<PHV::SuperCluster::SliceList*, bitvec> split_schemas);
+
+    /// Split the RotationalCluster in a SuperCluster without a slice list
+    /// according to @split_schema.
+    static boost::optional<std::list<PHV::SuperCluster*>> split_super_cluster(
+        const PHV::SuperCluster* sc,
+        bitvec split_schema);
+};
 
 std::ostream &operator<<(std::ostream &out, const Allocation&);
 std::ostream &operator<<(std::ostream &out, const Allocation*);

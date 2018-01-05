@@ -90,23 +90,6 @@ class CoreAllocation {
         : mutex_i(mutex), clustering_i(clustering), uses_i(uses), clot_i(clot), phv_i(phv),
         actions_i(actions) { }
 
-    /// Split @sc into container-sized chunks, prefering the largest container
-    /// sizes possible.
-    /// @returns a list of sliced SuperClusters, or @sc if no slicing occurred.
-    static boost::optional<std::list<PHV::SuperCluster*>>
-    split_super_cluster(const PHV::SuperCluster* sc);
-
-    /// Split a SuperCluster with slice lists according to @split_schema.
-    static boost::optional<std::list<PHV::SuperCluster*>> split_super_cluster(
-        const PHV::SuperCluster* sc,
-        ordered_map<PHV::SuperCluster::SliceList*, bitvec> split_schemas);
-
-    /// Split the RotationalCluster in a SuperCluster without a slice list
-    /// according to @split_schema.
-    static boost::optional<std::list<PHV::SuperCluster*>> split_super_cluster(
-        const PHV::SuperCluster* sc,
-        bitvec split_schema);
-
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
             SymBitMatrix mutually_exclusive_field_ids,
