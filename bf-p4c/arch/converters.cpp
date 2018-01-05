@@ -863,15 +863,15 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     auto* paramList = new IR::ParameterList;
     ordered_map<cstring, cstring> tnaParams;
 
-    auto* packetIn = params->parameters.at(0);
+    auto* packetIn = params->getParameter(0);
     tnaParams.emplace("pkt", packetIn->name);
     paramList->push_back(packetIn);
 
-    auto* headers = params->parameters.at(1);
+    auto* headers = params->getParameter(1);
     tnaParams.emplace("hdr", headers->name);
     paramList->push_back(headers);
 
-    auto* meta = parser->getApplyParameters()->parameters.at(2);
+    auto* meta = parser->getApplyParameters()->getParameter(2);
     auto* param = new IR::Parameter(meta->name, meta->annotations,
                                     IR::Direction::Out, meta->type);
     tnaParams.emplace("ig_md", meta->name);

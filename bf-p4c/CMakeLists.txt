@@ -288,6 +288,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/portable_switch.cpp
   arch/program_structure.cpp
   arch/remove_set_metadata.cpp
+  arch/resubmit.cpp
   arch/simple_switch.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
@@ -301,6 +302,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/portable_switch.h
   arch/program_structure.h
   arch/remove_set_metadata.h
+  arch/resubmit.h
   arch/simple_switch.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")

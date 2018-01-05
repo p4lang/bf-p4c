@@ -153,10 +153,6 @@ struct ProgramStructure : BFN::ProgramStructure {
     cstring type_m;
     const IR::Parameter *user_metadata;
 
-    /// map from source extern type to dest extern type
-    /// this map is populated by manually by the ReplaceArchitecture pass.
-    ordered_map<cstring, cstring> externNameMap;
-
     void createParsers() override;
     void createControls() override;
     void createMain() override;
@@ -172,6 +168,12 @@ struct ProgramStructure : BFN::ProgramStructure {
     cstring type_im;
     cstring type_eh;
     cstring type_em;
+
+    ordered_map<cstring, TranslationMap>  methodcalls;
+
+    // XXX(hanw): fold this into IR?
+    ordered_map<cstring, cstring> psaParams;
+    ordered_map<cstring, const IR::Type*> psaTypes;
 
     void createParsers() override;
     void createControls() override;

@@ -308,6 +308,19 @@ class StatementConverter : public Transform {
     }
 };
 
+class ExternConverter : public Transform {
+ protected:
+    ProgramStructure* structure;
+
+ public:
+    explicit ExternConverter(ProgramStructure* structure)
+            : structure(structure) { CHECK_NULL(structure); }
+    const IR::Node* convert(const IR::Node* node) {
+        auto conv = node->apply(*this);
+        return conv;
+    }
+};
+
 class ParserConverter : public Transform {
  protected:
     ProgramStructure* structure;

@@ -5,21 +5,16 @@
 
 #include "ir/ir.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "frontends/common/applyOptionsPragmas.h"
 #include "test/gtest/helpers.h"
 
 namespace Test {
 
 class PortableSwitchTest : public TofinoBackendTest {};
 
-void enable_psa_target() {
-    auto& options = BFNContext::get().options();
-    options.target = "tofino-psa-barefoot";
-}
-
 boost::optional<TofinoPipeTestCase> createPSAIngressTest(const std::string& ingressDecl,
                                                          const std::string& ingressApply,
-                                                         const std::string& ingressMeta = ""
-) {
+                                                         const std::string& ingressMeta = "") {
     auto source = P4_SOURCE(P4Headers::PSA, R"(
         typedef bit<48>  EthernetAddress;
 
@@ -165,7 +160,10 @@ boost::optional<TofinoPipeTestCase> createPSAIngressTest(const std::string& ingr
     boost::replace_first(source, "%INGRESS_METADATA%", ingressMeta);
     boost::replace_first(source, "%INGRESS_DECL%", ingressDecl);
     boost::replace_first(source, "%INGRESS_APPLY%", ingressApply);
-    enable_psa_target();
+
+    auto& options = BFNContext::get().options();
+    options.target = "tofino-psa-barefoot";
+
     return TofinoPipeTestCase::create(source);
 }
 
@@ -315,8 +313,8 @@ P4_SOURCE(R"(
     EXPECT_EQ(::diagnosticCount(), 0u);
 }
 
-// ConvertEnum is not supported on MeterColor_t.
-TEST_F(PortableSwitchTest, MeterUnableToConvertEnum) {
+// MeterColor_t is not converted to bit<n>
+TEST_F(PortableSwitchTest, DISABLED_MeterColorIsEnum) {
     auto test = createPSAIngressTest(
 P4_SOURCE(R"(
         Meter<bit<12>>(1024, MeterType_t.PACKETS) meter0;
@@ -339,7 +337,7 @@ P4_SOURCE(R"(
     EXPECT_FALSE(test);
 }
 
-// Casting is not supported on meter.execute() output.
+// Expressions whose type is an enum cannot be cast to or from any other type.
 // Error message is:
 //   cast: Illegal cast from MeterColor_t to bit<16>
 TEST_F(PortableSwitchTest, MeterUnableToCastToBit) {
@@ -365,10 +363,10 @@ P4_SOURCE(R"(
     EXPECT_FALSE(test);
 }
 
-// Comparison is not supported on meter.execute to MeterColor_t
+// Executing meter in the control flow is not supported (should be).
 // Error message is:
-//    ==: not defined on bit<8> and MeterColor_t
-TEST_F(PortableSwitchTest, MeterUnableToCompareToEnum) {
+//    Method Call meter0_0/meter0.execute(0); not apply
+TEST_F(PortableSwitchTest, DISABLED_MeterColorCompareToEnum) {
     auto test = createPSAIngressTest(
 P4_SOURCE(R"(
         Meter<bit<12>>(1024, MeterType_t.PACKETS) meter0;
@@ -790,6 +788,424 @@ P4_SOURCE(R"(
     // FIXME This test case should pass.
     EXPECT_FALSE(test);
 }
+
+boost::optional<TofinoPipeTestCase> createPSAParserTest(const std::string& resubmit_data,
+                                                        const std::string& parser_state,
+                                                        const std::string& deparser_apply) {
+    auto source = P4_SOURCE(P4Headers::PSA, R"(
+        typedef bit<48>  EthernetAddress;
+
+        header ethernet_t {
+            EthernetAddress dstAddr;
+            EthernetAddress srcAddr;
+            bit<16>         etherType;
+        }
+
+        header ipv4_t {
+            bit<4>  version;
+            bit<4>  ihl;
+            bit<8>  diffserv;
+            bit<16> totalLen;
+            bit<16> identification;
+            bit<3>  flags;
+            bit<13> fragOffset;
+            bit<8>  ttl;
+            bit<8>  protocol;
+            bit<16> hdrChecksum;
+            bit<32> srcAddr;
+            bit<32> dstAddr;
+        }
+
+        header data_t {
+            bit<16> h1;
+            bit<16> h2;
+            bit<16> h3;
+        }
+
+        typedef bit<8> clone_i2e_format_t;
+
+        struct fwd_metadata_t {
+            bit<9> output_port;
+        }
+
+        struct resubmit_metadata_t {
+%RESUBMIT_DATA%
+        }
+
+        struct recirculate_metadata_t {
+        }
+
+        struct clone_i2e_metadata_t {
+        }
+
+        struct clone_e2e_metadata_t {
+        }
+
+        struct headers {
+            ethernet_t ethernet;
+            ipv4_t ipv4;
+        }
+
+        struct metadata {
+            resubmit_metadata_t resubmit_meta;
+            fwd_metadata_t fwd_meta;
+        }
+
+        error {
+            UnknownCloneI2EFormatId
+        }
+
+        parser IngressParserImpl(
+            packet_in buffer,
+            out headers parsed_hdr,
+            inout metadata user_meta,
+            in psa_ingress_parser_input_metadata_t istd,
+            in resubmit_metadata_t resub_meta,
+            in recirculate_metadata_t recirc_meta)
+        {
+%PARSER_STATE%
+        }
+
+        parser EgressParserImpl(
+            packet_in buffer,
+            out headers parsed_hdr,
+            inout metadata meta,
+            in psa_egress_parser_input_metadata_t istd,
+            in metadata normal_meta,
+            in clone_i2e_metadata_t clone_i2e_meta,
+            in clone_e2e_metadata_t clone_e2e_meta)
+        {
+            state start {
+                buffer.extract(parsed_hdr.ethernet);
+                buffer.extract(parsed_hdr.ipv4);
+                transition accept;
+            }
+        }
+
+        control ingress(inout headers hdr,
+                        inout metadata meta,
+                        in    psa_ingress_input_metadata_t  istd,
+                        inout psa_ingress_output_metadata_t ostd)
+        {
+            apply { }
+        }
+
+        control egress(inout headers hdr,
+                       inout metadata meta,
+                       in    psa_egress_input_metadata_t  istd,
+                       inout psa_egress_output_metadata_t ostd)
+        {
+            apply { }
+        }
+
+        control IngressDeparserImpl(
+            packet_out packet,
+            out clone_i2e_metadata_t clone_i2e_meta,
+            out resubmit_metadata_t resub_meta,
+            out metadata normal_meta,
+            inout headers hdr,
+            in metadata meta,
+            in psa_ingress_output_metadata_t istd)
+        {
+            apply {
+%DEPARSER_APPLY%
+            }
+        }
+
+        control EgressDeparserImpl(
+            packet_out packet,
+            out clone_e2e_metadata_t clone_e2e_meta,
+            out recirculate_metadata_t recirc_meta,
+            inout headers hdr,
+            in metadata meta,
+            in psa_egress_output_metadata_t istd,
+            in psa_egress_deparser_input_metadata_t edstd)
+        {
+            apply { }
+        }
+
+        IngressPipeline(IngressParserImpl(),
+                        ingress(),
+                        IngressDeparserImpl()) ip;
+
+        EgressPipeline(EgressParserImpl(),
+                       egress(),
+                       EgressDeparserImpl()) ep;
+
+        PSA_Switch(ip, PacketReplicationEngine(), ep, BufferingQueueingEngine()) main;
+    )");
+    boost::replace_first(source, "%RESUBMIT_DATA%", resubmit_data);
+    boost::replace_first(source, "%PARSER_STATE%", parser_state);
+    boost::replace_first(source, "%DEPARSER_APPLY%", deparser_apply);
+
+    auto& options = BFNContext::get().options();
+    options.target = "tofino-psa-barefoot";
+
+    return TofinoPipeTestCase::create(source);
+}
+
+// base implementation of resubmit in psa, direct struct assignment
+TEST_F(PortableSwitchTest, ResubmitHeaderAssignment) {
+    auto test = createPSAParserTest(
+P4_SOURCE(R"()"),
+P4_SOURCE(R"(
+        state start {
+          transition select(istd.packet_path) {
+            PacketPath_t.RESUBMIT: copy_resubmit_meta;
+            PacketPath_t.NORMAL: packet_in_parsing;
+          }
+        }
+        state copy_resubmit_meta {
+          user_meta.resubmit_meta = resub_meta;
+          transition packet_in_parsing;
+        }
+
+        state packet_in_parsing {
+          transition accept;
+        }
+)"),
+P4_SOURCE(R"()"));
+
+    EXPECT_EQ(::errorCount(), 0u);
+}
+
+// user may manually assign fields in resubmit metadata to fields in user metadata.
+TEST_F(PortableSwitchTest, ResubmitFieldAssignment) {
+    auto test = createPSAParserTest(
+P4_SOURCE(R"(
+        bit<8> d1;
+        bit<8> d2;
+)"),
+P4_SOURCE(R"(
+        state start {
+          transition select(istd.packet_path) {
+            PacketPath_t.RESUBMIT: copy_resubmit_meta;
+            PacketPath_t.NORMAL: packet_in_parsing;
+          }
+        }
+        state copy_resubmit_meta {
+          user_meta.resubmit_meta.d1 = resub_meta.d1;
+          user_meta.resubmit_meta.d2 = resub_meta.d2;
+          transition packet_in_parsing;
+        }
+
+        state packet_in_parsing {
+          transition accept;
+        }
+)"),
+    P4_SOURCE(R"()"));
+
+    EXPECT_EQ(::errorCount(), 0u);
+}
+
+// user may NOT reorder fields in resubmit metadata to fields in user metadata.
+TEST_F(PortableSwitchTest, ResubmitReorderdFieldAssignment) {
+    auto test = createPSAParserTest(
+P4_SOURCE(R"(
+        bit<8> d1;
+        bit<8> d2;
+)"),
+P4_SOURCE(R"(
+        state start {
+          transition select(istd.packet_path) {
+            PacketPath_t.RESUBMIT: copy_resubmit_meta;
+            PacketPath_t.NORMAL: packet_in_parsing;
+          }
+        }
+        state copy_resubmit_meta {
+          user_meta.resubmit_meta.d1 = resub_meta.d2;
+          user_meta.resubmit_meta.d2 = resub_meta.d1;
+          transition packet_in_parsing;
+        }
+
+        state packet_in_parsing {
+          transition accept;
+        }
+)"),
+    P4_SOURCE(R"()"));
+
+    EXPECT_EQ(::errorCount(), 0u);
+}
+
+// select on istd.packet_path does not have to be in the first state, but
+// must be the first thing to check in the parse graph.
+TEST_F(PortableSwitchTest, ResubmitEmptyFirstState) {
+    auto test = createPSAParserTest(
+            P4_SOURCE(R"()"),
+            P4_SOURCE(R"(
+        state start {
+          transition __start;
+        }
+
+        state __start {
+          transition select(istd.packet_path) {
+            PacketPath_t.RESUBMIT: copy_resubmit_meta;
+            PacketPath_t.NORMAL: packet_in_parsing;
+          }
+        }
+        state copy_resubmit_meta {
+          user_meta.resubmit_meta = resub_meta;
+          transition packet_in_parsing;
+        }
+
+        state packet_in_parsing {
+          transition accept;
+        }
+)"),
+    P4_SOURCE(R"()"));
+
+    EXPECT_EQ(::errorCount(), 0u);
+}
+
+// however, if an extraction happens before checking the packet_path
+// metadata, that is an program error.
+TEST_F(PortableSwitchTest, ResubmitExtractBeforeCheckPacketPath) {
+    auto test = createPSAParserTest(
+            P4_SOURCE(R"()"),
+            P4_SOURCE(R"(
+        state start {
+          buffer.extract(parsed_hdr.ethernet);
+          transition __start;
+        }
+        state __start {
+          transition select(istd.packet_path) {
+            PacketPath_t.RESUBMIT: copy_resubmit_meta;
+            PacketPath_t.NORMAL: packet_in_parsing;
+          }
+        }
+        state copy_resubmit_meta {
+          user_meta.resubmit_meta = resub_meta;
+          transition packet_in_parsing;
+        }
+        state packet_in_parsing {
+          transition accept;
+        }
+)"),
+    P4_SOURCE(R"()"));
+
+    EXPECT_FALSE(test);
+}
+
+// user can extract resubmit_metadata in multiple parser states.
+TEST_F(PortableSwitchTest, ResubmitMultipleExtractState) {
+     auto test = createPSAParserTest(
+P4_SOURCE(R"(
+        bit<8> d1;
+        bit<8> d2;
+)"),
+P4_SOURCE(R"(
+        state start {
+          transition select(istd.packet_path) {
+            PacketPath_t.RESUBMIT: copy_resubmit_meta_0;
+            PacketPath_t.NORMAL: packet_in_parsing;
+          }
+        }
+        state copy_resubmit_meta_0 {
+          user_meta.resubmit_meta.d1 = resub_meta.d1;
+          transition copy_resubmit_data_1;
+        }
+        state copy_resubmit_data_1 {
+          user_meta.resubmit_meta.d2 = resub_meta.d2;
+          transition packet_in_parsing;
+        }
+
+        state packet_in_parsing {
+          transition accept;
+        }
+)"),
+     P4_SOURCE(R"()"));
+
+    EXPECT_EQ(::errorCount(), 0u);
+}
+
+// user may copy part of the resubmit metadata, select on the copied
+// value and branch to next parse state to continue copying resubmit
+// metadata
+TEST_F(PortableSwitchTest, ResubmitCopyAndSelectOnField) {
+     auto test = createPSAParserTest(
+P4_SOURCE(R"(
+        bit<8> d1;
+        bit<8> d2;
+)"),
+P4_SOURCE(R"(
+        state start {
+          transition select(istd.packet_path) {
+            PacketPath_t.RESUBMIT: copy_resubmit_meta_0;
+            PacketPath_t.NORMAL: packet_in_parsing;
+          }
+        }
+        state copy_resubmit_meta_0 {
+          user_meta.resubmit_meta.d1 = resub_meta.d1;
+          transition select(user_meta.resubmit_meta.d1) {
+             8w0 : resubmit_data_is_0;
+             8w1 : resubmit_data_is_1;
+          }
+        }
+        state resubmit_data_is_0 {
+          user_meta.resubmit_meta.d2 = resub_meta.d2;
+          transition packet_in_parsing;
+        }
+        state resubmit_data_is_1 {
+          user_meta.resubmit_meta.d2 = resub_meta.d2;
+          transition packet_in_parsing;
+        }
+        state packet_in_parsing {
+          transition accept;
+        }
+)"),
+    P4_SOURCE(R"()"));
+
+    EXPECT_EQ(::errorCount(), 0u);
+}
+
+// user may directly select on the resubmit metadata and branch
+// to subsequent parse state.
+TEST_F(PortableSwitchTest, ResubmitSelectOnField) {
+    auto test = createPSAParserTest(
+P4_SOURCE(R"(
+        bit<8> d1;
+        bit<8> d2;
+        bit<8> d3;
+)"),
+P4_SOURCE(R"(
+        state copy_resubmit_meta_0 {
+          transition select(resub_meta.d1) {
+             8w0 : resubmit_data_is_0;
+             8w1 : resubmit_data_is_1;
+          }
+        }
+        state start {
+          transition select(istd.packet_path) {
+            PacketPath_t.RESUBMIT: copy_resubmit_meta_0;
+            PacketPath_t.NORMAL: packet_in_parsing;
+          }
+        }
+        state resubmit_data_is_0 {
+          user_meta.resubmit_meta.d2 = resub_meta.d3;
+          user_meta.resubmit_meta.d3 = resub_meta.d2;
+          transition packet_in_parsing;
+        }
+        state resubmit_data_is_1 {
+          user_meta.resubmit_meta.d2 = resub_meta.d2;
+          user_meta.resubmit_meta.d3 = resub_meta.d3;
+          transition packet_in_parsing;
+        }
+        state packet_in_parsing {
+          transition accept;
+        }
+)"),
+P4_SOURCE(R"(
+        resub_meta = meta.resubmit_meta;
+)"));
+
+    EXPECT_EQ(::errorCount(), 0u);
+}
+
+// user may use a struct to implement a header union with a selector byte
+// to choose sub-field in the struct.
+
+// user may use a header union to support multiple resubmit data type.
+
 
 
 }  // namespace Test

@@ -1,5 +1,8 @@
-#include "portable_switch.h"
+#include <cmath>
+#include "bf-p4c/device.h"
 #include "architecture.h"
+#include "portable_switch.h"
+#include "resubmit.h"
 
 namespace BFN {
 
@@ -78,13 +81,28 @@ class AnalyzeProgram : public Inspector {
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
                 "egress", "ed", ProgramStructure::EGRESS_DEPARSER);
     }
+
+    // 'compiler_generated_metadata_t' is the last struct in the program.
+    void end_apply() override {
+        auto* cgAnnotation = new IR::Annotations({
+             new IR::Annotation(IR::ID("__compiler_generated"), { })});
+        auto cgm = new IR::Type_Struct("compiler_generated_metadata_t", cgAnnotation);
+        auto pktPath = new IR::StructField("packet_path",
+                                           structure->enums.at("PacketPath_t")->getP4Type());
+        cgm->fields.push_back(pktPath);
+        structure->struct_types.emplace("compiler_generated_metadata_t", cgm);
+    }
 };
 
 class ConstructSymbolTable : public Inspector {
     ProgramStructure* structure;
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
 
  public:
-    explicit ConstructSymbolTable(ProgramStructure* structure) : structure(structure) {
+    explicit ConstructSymbolTable(ProgramStructure* structure,
+                                  P4::ReferenceMap *refMap, P4::TypeMap *typeMap)
+            : structure(structure), refMap(refMap), typeMap(typeMap) {
         CHECK_NULL(structure); setName("ConstructPsaSymbolTable");
     }
 
@@ -183,6 +201,37 @@ class ConstructSymbolTable : public Inspector {
             WARNING("Declaration instance " << node << " is not converted");
         }
     }
+
+    void addExternMethodCall(cstring name, const IR::Node* node) {
+        LOG1("extern type " << name);
+        if (structure->methodcalls.count(name) == 0) {
+            TranslationMap m;
+            structure->methodcalls.emplace(name, m);
+        }
+        structure->methodcalls[name].emplace(node, node);
+    }
+
+    void postorder(const IR::MethodCallStatement *node) override {
+        auto mce = node->methodCall->to<IR::MethodCallExpression>();
+        CHECK_NULL(mce);
+        auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
+        if (auto em = mi->to<P4::ExternMethod>()) {
+            cstring name = em->actualExternType->name;
+            addExternMethodCall(name, node);
+        } else if (auto ef = mi->to<P4::ExternFunction>()) {
+            WARNING("extern function translation is not supported");
+        }
+    }
+
+    void postorder(const IR::MethodCallExpression *node) override {
+        auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
+        if (auto em = mi->to<P4::ExternMethod>()) {
+            cstring name = em->actualExternType->name;
+            addExternMethodCall(name, node);
+        } else if (auto ef = mi->to<P4::ExternFunction>()) {
+            WARNING("extern function translation is not supported");
+        }
+    }
 };
 
 class LoadTargetArchitecture : public Inspector {
@@ -227,6 +276,11 @@ class LoadTargetArchitecture : public Inspector {
         add_metadata(EGRESS, "istd", "parser_error",
                      "eg_intr_md_from_prsr", "egress_parser_err", 3);
         add_metadata(EGRESS, "ostd", "drop", "eg_intr_md_for_oport", "drop_ctl", 3);
+
+        add_metadata(INGRESS, "istd", "packet_path",
+                     "compiler_generated_meta", "packet_path", 4);
+        add_metadata(EGRESS, "istd", "packet_path",
+                     "compiler_generated_meta", "packet_path", 4);
     }
 
     void setup_psa_typedef() {
@@ -275,6 +329,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
     addDebugHook(options.getDebugHook());
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto structure = new BFN::PSA::ProgramStructure;
+    auto* findResubmitData = new PSA::FindResubmitData(structure);
     addPasses({
         evaluator,
         new VisitFunctor([structure, evaluator]() {
@@ -283,10 +338,13 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new BFN::PSA::NormalizeProgram(),
         new BFN::PSA::LoadTargetArchitecture(structure),
         new BFN::PSA::AnalyzeProgram(structure),
-        new BFN::PSA::ConstructSymbolTable(structure),
+        findResubmitData,
+        new BFN::PSA::ConstructSymbolTable(structure, refMap, typeMap),
         new BFN::GenerateTofinoProgram(structure),
         new BFN::TranslationLast(),
         new BFN::CastFixup(structure),
+        new BFN::AddIntrinsicMetadata,
+        new BFN::PSA::RewriteResubmitIfPresent(structure),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
     });

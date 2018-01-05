@@ -91,11 +91,6 @@ error {
     // Add more errors here.
 }
 
-@__compiler_generated
-struct compiler_generated_metadata_t {
-    // This struct is intentionally left blank and to be filled by later passes.
-}
-
 // -----------------------------------------------------------------------------
 // INGRESS INTRINSIC METADATA
 // -----------------------------------------------------------------------------
