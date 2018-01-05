@@ -190,6 +190,7 @@ class Allocation {
     using MutuallyLiveSlices = ordered_set<AllocSlice>;
     using ContainerStatus = struct { GressAssignment gress; ordered_set<AllocSlice> slices; };
     using const_iterator = ordered_map<PHV::Container, ContainerStatus>::const_iterator;
+    enum class ContainerAllocStatus { EMPTY, PARTIAL, FULL };
 
  protected:
     using FieldStatus = ordered_set<AllocSlice>;
@@ -198,7 +199,6 @@ class Allocation {
     ordered_map<PHV::Container, ContainerStatus> container_status_i;
     ordered_map<const PHV::Field*, FieldStatus>  field_status_i;
 
-    enum class ContainerAllocStatus { EMPTY, PARTIAL, FULL };
 
  private:
     /// Uniform abstraction for setting container state.  For internal use
@@ -431,6 +431,9 @@ class Transaction : public Allocation {
 
     /// Clears any allocation added to this transaction.
     void clearTransactionStatus() { container_status_i.clear(); }
+
+    /// Returns the allocation that this transaction is based on.
+    const Allocation& getParent() const { return parent_i; }
 };
 
 /// An interface for gathering statistics common across each kind of cluster.

@@ -170,17 +170,18 @@ class WeightedGraphColoringSolver {
             phi_[*v].insert(color);}
     }
 
+    /// @prerequisite: graph_ is not a empty graph.
     /// Find the vertex that has maximum degree.
     Vertex find_max_degree_vertex() {
         VertexItr v, vend;
         DegreeSizeType max_degree = (std::numeric_limits<DegreeSizeType>::min)();
-        Vertex result;
+        boost::optional<Vertex> result;
         for (std::tie(v, vend) = vertices(graph_); v != vend; ++v) {
-            if (degree(*v, graph_) > max_degree) {
+            if (!result || degree(*v, graph_) > max_degree) {
                 max_degree = degree(*v, graph_);
                 result = *v; } }
 
-        return result;
+        return *result;
     }
 
     /** Pick the best color
@@ -214,18 +215,18 @@ class WeightedGraphColoringSolver {
     /// pick the next vertex to color based on func(phi(v))
     Vertex pick_next_vertex() {
         int max_val = (std::numeric_limits<int>::min)();
-        Vertex nxt;
+        boost::optional<Vertex> nxt;
         VertexItr v, vend;
         for (std::tie(v, vend) = vertices(graph_); v != vend; ++v) {
             if (colored_.count(*v)) continue;
             // phi(v) is the number of adjacent different color + 1.
             int p = static_cast<int>(phi_[*v].size()) + 1;
             int val = calc_pick_weight_(p, get(weights_, *v), static_cast<int>(degree(*v, graph_)));
-            if (val > max_val) {
+            if (!nxt || val > max_val) {
                 nxt = *v;
                 max_val = val; } }
 
-        return nxt;
+        return *nxt;
     }
 
     /// The best heuristic we found in performace test.
@@ -267,6 +268,11 @@ class WeightedGraphColoringSolver {
     /// Execute the algorithm.
     void run() {
         VertexItr v, vend;
+        // Do not run it is an empty graph.
+        std::tie(v, vend) = vertices(graph_);
+        if (v == vend) {
+            return; }
+
         ColorType maximum_used_color = 0;
         Vertex current = find_max_degree_vertex();
 

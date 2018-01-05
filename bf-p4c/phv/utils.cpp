@@ -357,13 +357,16 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
 
     std::map<PHV::Container, int> partial_containers_stat;
     int total_unalloacted_bits = 0;
+    int valid_ingress_unallocated_bits = 0;
+    int valid_egress_unallocated_bits = 0;
 
     // Compute status.
     for (auto kv : container_status_i) {
         PHV::Container c = kv.first;
         ContainerAllocStatus status = ContainerAllocStatus::EMPTY;
         bitvec allocatedBits;
-        for (auto slice : kv.second.slices)
+        auto& slices = kv.second.slices;
+        for (auto slice : slices)
             allocatedBits |= bitvec(slice.container_slice().lo, slice.container_slice().size());
         if (allocatedBits == bitvec(0, c.size())) {
             status = ContainerAllocStatus::FULL;
@@ -373,6 +376,12 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
                                        [] (int a, int) { return a + 1; });
             partial_containers_stat[c] = c.size() - used;
             total_unalloacted_bits += partial_containers_stat[c];
+            if (slices.size() > 1
+                || (slices.size() == 1 && !slices.begin()->field()->no_pack())) {
+                if (kv.second.gress == INGRESS) {
+                    valid_ingress_unallocated_bits += partial_containers_stat[c];
+                } else {
+                    valid_egress_unallocated_bits += partial_containers_stat[c]; } }
             status = ContainerAllocStatus::PARTIAL; }
         alloc_status[container_status_i.at(c).gress][c.type()][status]++;
     }
@@ -411,8 +420,7 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
 
     // Compute overlay status.
     std::map<PHV::Container, int> overlay_result;
-    int n_total_tphv_overlay = 0;
-    int n_total_phv_overlay = 0;
+    int overlay_statistics[2][2] = {0};
     for (auto kv : container_status_i) {
         PHV::Container c = kv.first;
         int n_overlay = -c.size();
@@ -425,13 +433,16 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
         if (n_overlay > 0) {
             overlay_result[c] = n_overlay;
             if (c.type().kind() == PHV::Kind::tagalong) {
-                n_total_tphv_overlay += n_overlay;
+                overlay_statistics[*kv.second.gress][0] += n_overlay;
             } else {
-                n_total_phv_overlay += n_overlay; } } }
+                overlay_statistics[*kv.second.gress][1] += n_overlay; } } }
 
     ss << "======== CONTAINER OVERLAY STAT ===========" << std::endl;
-    ss << "TOTAL T-PHV OVERLAY BITS: " << n_total_tphv_overlay << std::endl;
-    ss << "TOTAL PHV OVERLAY BITS: " << n_total_phv_overlay << std::endl;
+    ss << "TOTAL INGRESS T-PHV OVERLAY BITS: " << overlay_statistics[INGRESS][0] << std::endl;
+    ss << "TOTAL INGRESS PHV OVERLAY BITS: "   << overlay_statistics[INGRESS][1] << std::endl;
+    ss << "TOTAL EGRESS T-PHV OVERLAY BITS: "  << overlay_statistics[EGRESS][0] << std::endl;
+    ss << "TOTAL EGRESS PHV OVERLAY BITS: "    << overlay_statistics[EGRESS][1] << std::endl;
+
     for (auto kv : overlay_result) {
         ss << kv.first << " has overlaid: " << kv.second << " bits " << std::endl;
         for (const auto& slice : this->slices(kv.first)) {
@@ -441,6 +452,8 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
     // Output Partial Containers
     ss << "======== PARTIAL CONTAINERS STAT ==========" << std::endl;
     ss << "TOTAL UNALLOCATED BITS: " << total_unalloacted_bits << std::endl;
+    ss << "VALID INGRESS UNALLOCATED BITS: " << valid_ingress_unallocated_bits << std::endl;
+    ss << "VALID EGRESS UNALLOCATED BITS: " << valid_egress_unallocated_bits << std::endl;
     for (const auto& kv : partial_containers_stat) {
         ss << kv.first << " has unallocated bits: " << kv.second << std::endl;
         for (const auto& slice : this->slices(kv.first)) {

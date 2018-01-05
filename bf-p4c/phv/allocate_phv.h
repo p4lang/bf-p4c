@@ -18,6 +18,55 @@
 #include "lib/symbitmatrix.h"
 #include "lib/bitvec.h"
 
+/** The score of an Allocation .
+ *
+ * This score is used in 3 places where decisions have to be made.
+ * From bottom to top, they are:
+ * 1. Inside tryAllocSliceList, we use this score to find
+ *    a best container for a slice list.
+ * 2. Inside tryAlloc, to find the best starting position
+ *    for slices from a aligned_cluster.
+ * 3. Inside BestScoreStrategy, to find the best container_group
+ *    for a SuperCluster.
+ */
+struct AllocScore {
+    using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
+    bool is_tphv;
+    int n_set_gress;
+    int n_overlay_bits;
+    int n_packing_bits;  // how many wasted bits in partial caontainer get used.
+    int n_inc_containers;
+    int n_wasted_bits;  // if no_pack but taking a container larger than it.
+
+    AllocScore()
+        : is_tphv(false)
+        , n_set_gress(0)
+        , n_overlay_bits(0)
+        , n_packing_bits(0)
+        , n_inc_containers(0)
+        , n_wasted_bits(0) { }
+
+    /** Construct a score from a Transaction.
+     *
+     * @p alloc: new allocation
+     * @p group: the container group where allocations were made to.
+     */
+    AllocScore(const PHV::Transaction& alloc,
+               const PHV::ContainerGroup& group);
+
+    bool operator>(const AllocScore& other);
+    static AllocScore make_lowest();
+
+ private:
+    bitvec calcContainerAllocVec(const ordered_set<PHV::AllocSlice>& slices);
+
+    ContainerAllocStatus
+    calcContainerStatus(const PHV::Container& container,
+                        const ordered_set<PHV::AllocSlice>& slices);
+};
+
+std::ostream& operator<<(std::ostream& s, const AllocScore& score);
+
 /** A set of functions used in PHV allocation.
  */
 class CoreAllocation {
@@ -30,32 +79,6 @@ class CoreAllocation {
     // Modified in this pass.
     PhvInfo& phv_i;
     ActionPhvConstraints& actions_i;
-
-    /** The score of a match.
-     * + n_overlays, the number of overlaying bits.
-     * + n_packings, the number of packings
-     *
-     * This score is used in two places,
-     * 1. Inside tryAllocSliceList, we use this score to find
-     *    a best container for a slice list.
-     * 2. Inside tryAlloc, to find the best starting position
-     *    for slices from a aligned_cluster.
-     */
-    struct MatchScore {
-        int n_overlays;
-        int n_packings;
-        bool operator<(const MatchScore &other) {
-            if (n_packings != other.n_packings) {
-                return n_packings < other.n_packings; }
-            return n_overlays < other.n_overlays;
-        }
-        MatchScore& operator+=(const MatchScore &other) {
-            n_overlays += other.n_overlays;
-            n_packings += other.n_packings;
-            return *this; }
-        MatchScore(int o, int p)
-            : n_overlays(o), n_packings(p) { }
-    };
 
  public:
     CoreAllocation(const SymBitMatrix& mutex,
@@ -169,7 +192,7 @@ class CoreAllocation {
      *
      * Uses mutex_i and uses_i.
      */
-    boost::optional<std::pair<PHV::Transaction, MatchScore>> tryAllocSliceList(
+    boost::optional<PHV::Transaction> tryAllocSliceList(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster::SliceList& slices,
@@ -247,6 +270,48 @@ class AllocationStrategy {
             const std::list<PHV::SuperCluster *>& allocated);
 };
 
+class BruteForceAllocationStrategy : public AllocationStrategy {
+ private:
+    const CalcCriticalPathClusters& critical_path_clusters_i;
+    const FieldInterference& field_interference_i;
+    // XXX(yumin): not used right now
+    // Update this everytime after slicing.
+    // FieldInterference::SliceColorMap slice_to_color_i;
+
+ public:
+    BruteForceAllocationStrategy(const CoreAllocation& alloc,
+                                 std::ostream& out,
+                                 const CalcCriticalPathClusters& cpc,
+                                 const FieldInterference& f)
+        : AllocationStrategy(alloc, out)
+        , critical_path_clusters_i(cpc), field_interference_i(f) { }
+
+    AllocResult
+    tryAllocation(const PHV::Allocation &alloc,
+                  const std::list<PHV::SuperCluster*>& cluster_groups_input,
+                  std::list<PHV::ContainerGroup *>& container_groups) override;
+
+ protected:
+    std::list<PHV::SuperCluster*>
+    remove_unreferenced_clusters(
+            const std::list<PHV::SuperCluster*>& cluster_groups_input);
+
+    std::list<PHV::SuperCluster*>
+    crush_clusters(
+            const std::list<PHV::SuperCluster*>& cluster_groups);
+
+    std::list<PHV::SuperCluster*>
+    slice_clusters(
+            const std::list<PHV::SuperCluster*>& cluster_groups);
+
+    void sortClusters(std::list<PHV::SuperCluster*>& cluster_groups);
+
+    std::list<PHV::SuperCluster*>
+    allocLoop(PHV::Transaction& rst,
+              std::list<PHV::SuperCluster*>& cluster_groups,
+              std::list<PHV::ContainerGroup *>& container_groups);
+};
+
 /** The greedy sorting strategy
  */
 class GreedySortingAllocationStrategy : public AllocationStrategy {
@@ -287,8 +352,8 @@ class BalancedPickAllocationStrategy : public AllocationStrategy {
 
  public:
     BalancedPickAllocationStrategy(const CoreAllocation& alloc, std::ostream& out,
-                                    const CalcCriticalPathClusters& cpc,
-                                    const FieldInterference& f)
+                                   const CalcCriticalPathClusters& cpc,
+                                   const FieldInterference& f)
         : AllocationStrategy(alloc, out)
         , critical_path_clusters_i(cpc), field_interference_i(f) { }
 

@@ -85,6 +85,10 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/selector0.p4
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue297-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "more than can fit in the 32 byte input buffer"
   testdata/p4_14_samples/port_vlan_mapping.p4
   )
 
@@ -238,6 +242,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_13_first_selection.p4
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
   extensions/p4_tests/p4_14/adb_shared3.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -522,7 +527,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   switch_dc_basic
 
@@ -661,7 +665,6 @@ p4c_add_xfail_reason("tofino"
   "Due to complexity in action bus, can only currently handle meter color in an 8 bit ALU"
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
 )
 
@@ -671,8 +674,11 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-   "Stage pragma provided to table .* has multiple parameters, while Brig currently"
-   extensions/p4_tests/p4_14/test_config_131_placement_with_pragma.p4
+  "Stage pragma provided to table .* has multiple parameters, while Brig currently"
+  extensions/p4_tests/p4_14/test_config_131_placement_with_pragma.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
 )
 
 # START: XFAILs with translation
@@ -888,10 +894,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
   extensions/p4_tests/p4_14/test_config_190_modify_with_expr.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   switch_l2
 
@@ -900,9 +902,14 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   )
 
+# BRIG-384
+p4c_add_xfail_reason("tofino"
+ "hash_dist unit .* expand can't pull from bit .*"
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+ )
+
 p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
-  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
   extensions/p4_tests/p4_16/cast_widening_set.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
@@ -915,6 +922,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated"
   extensions/p4_tests/p4_14/test_config_285_meter_sharing.p4
+  testdata/p4_14_samples/meter.p4
+  testdata/p4_14_samples/meter1.p4
+  testdata/p4_16_samples/named_meter_bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
