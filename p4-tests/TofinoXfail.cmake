@@ -887,7 +887,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
   extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
   extensions/p4_tests/p4_14/test_config_190_modify_with_expr.p4
-  extensions/p4_tests/p4_14/test_config_255_pa_problem_3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4

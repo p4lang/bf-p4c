@@ -188,10 +188,9 @@ boost::optional<PHV::AllocSlice> ActionPhvConstraints::getSourcePHVSlice(const P
         ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(fieldRead, range);
         LOG5("\t\t\t\t\tNumber of source slices: " << per_source_slices.size());
         if (per_source_slices.size() > 1) {
-            for (auto sl : per_source_slices)
-                LOG5("\t\t\t\t\t" << sl); }
-        BUG_CHECK(per_source_slices.size() <= 1, "Multiple source slices found in "
-                "getSourcePHVSlice");
+            // Adjacent slices of the same field as the multiple sources ok
+            if (!are_adjacent_field_slices(per_source_slices))
+                BUG("Multiple source slices found in getSourcePHVSlice()"); }
         for (auto sl : per_source_slices)
             return sl; }
     return boost::optional<PHV::AllocSlice>{};
@@ -264,7 +263,7 @@ unsigned ActionPhvConstraints::container_operation_type(ordered_set<const IR::MA
 
             LOG5("\t\t\t\tNumber of fields written to by this whole container operation: " <<
                     observed_fields.size());
-            if (observed_fields.size())
+            if (observed_fields.size() == 1)
                 return FieldOperation::WHOLE_CONTAINER_SAME_FIELD;
 
             return FieldOperation::WHOLE_CONTAINER; } }
@@ -272,29 +271,49 @@ unsigned ActionPhvConstraints::container_operation_type(ordered_set<const IR::MA
     return FieldOperation::MOVE;
 }
 
-bool ActionPhvConstraints::are_successive_field_slices(PHV::Allocation::MutuallyLiveSlices
-        container_state) {
-    int last_hi = 0;
-    int last_lo = 0;
+bool ActionPhvConstraints::are_adjacent_field_slices(const PHV::Allocation::MutuallyLiveSlices&
+        container_state) const {
+    le_bitrange last;
     bool firstSlice = true;
     const PHV::Field* field;
     for (auto slice : container_state) {
         auto range = slice.field_slice();
         if (firstSlice) {
+            last = range;
             firstSlice = false;
-            last_hi = range.hi;
-            last_lo = range.lo;
             field = slice.field();
         } else {
-            BUG_CHECK(field == slice.field(), "All field slices must belong to the same field");
-            if (last_hi + 1 != range.lo) {
-                LOG5("\t\t\t\t\tSlices [" << last_lo << ", " << last_hi << "] and [" << range.lo <<
+            if (field != slice.field()) return false;
+            if (last.hi + 1 != range.lo) {
+                LOG5("\t\t\t\t\tSlices [" << last.lo << ", " << last.hi << "] and [" << range.lo <<
                         ", " << range.hi << "] of field " << field->name << " are not adjacent.");
                 return false; }
-            last_hi = range.hi;
-            last_lo = range.lo; }
-    }
+            last = range; } }
     return true;
+}
+
+unsigned ActionPhvConstraints::count_container_holes(const PHV::Allocation::MutuallyLiveSlices&
+        container_state) const {
+    le_bitrange last;
+    bool firstSlice = true;
+    cstring lastField;
+    unsigned numBreaks = 0;
+    for (auto slice : container_state) {
+        le_bitrange range = slice.container_slice();
+        // No checks for the first slice
+        if (firstSlice) {
+            lastField = slice.field()->name;
+            last = range;
+            firstSlice = false;
+            continue; }
+        if (last.hi + 1 != range.lo) {
+            LOG7("\t\t\t\t\tSlices [" << last.lo << ", " << last.hi << "] of field " <<
+                    lastField << " and [" << range.lo << ", " << range.hi << "] of field " <<
+                    slice.field() << " are not adjacent.");
+            numBreaks += 1; }
+        last = range;
+        lastField = slice.field()->name; }
+    return numBreaks;
 }
 
 void ActionPhvConstraints::pack_slices_together(
@@ -444,7 +463,7 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
         return boost::none; }
 
     if (cont_operation == FieldOperation::WHOLE_CONTAINER_SAME_FIELD) {
-        if (!are_successive_field_slices(container_state)) {
+        if (!are_adjacent_field_slices(container_state)) {
             return boost::none;
         } else {
             LOG5("\t\t\t\tMultiple slices involved in whole container operation are adjacent"); } }
@@ -556,21 +575,20 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
             }
     }
 
-    LOG5("\t\t\tChecking rotational alignment");
+    LOG5("\t\t\tChecking rotational alignment corresponding to deposit-field instructions");
     for (auto &action : set_of_actions) {
         LOG5("\t\t\tphvMustBeAligned: " << phvMustBeAligned[action] << " numSourceContainers: " <<
                 numSourceContainers[action] << " action: " << action->name);
         if (phvMustBeAligned[action] && numSourceContainers[action] == 1) {
+            // The single phv source must be aligned
             for (auto slice : container_state) {
                 LOG5("\t\t\t\tslice: " << slice);
-                if (phvMustBeAligned[action] && numSourceContainers[action] == 1) {
-                    // The single phv source must be aligned
-                    boost::optional<PHV::AllocSlice> source = getSourcePHVSlice(alloc, slice,
-                            action);
-                    if (!source) continue;
-                    if (slice.container_slice() != source->container_slice()) {
-                        LOG5("\t\t\t\tContainer alignment for slice and source do not match");
-                        return boost::none; } } } }
+                boost::optional<PHV::AllocSlice> source = getSourcePHVSlice(alloc, slice,
+                        action);
+                if (!source) continue;
+                if (slice.container_slice() != source->container_slice()) {
+                    LOG5("\t\t\t\tContainer alignment for slice and source do not match");
+                    return boost::none; } } }
 
         if (phvMustBeAligned[action] && numSourceContainers[action] == 2) {
             boost::optional<ClassifiedSources> classifiedSourceSlices =
@@ -585,9 +603,56 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
                 LOG5("\t\t\t\tSecond container source contains " <<
                         classifiedSourceSlices.get()[2].size() << " slice(s)");
                 for (auto sl : classifiedSourceSlices.get()[2])
-                    LOG5("\t\t\t\t\t" << sl); } } }
+                    LOG5("\t\t\t\t\t" << sl); }
+            if (!masks_valid(classifiedSourceSlices.get(), c))
+                return boost::none; }
+
+        // If there is no alignment restriction on PHV source, we just need to ensure that the
+        // different slices in the source PHV must be aligned at the same offset with respect to the
+        // destination.
+        if (!phvMustBeAligned[action] && numSourceContainers[action] == 1) {
+            if (are_adjacent_field_slices(container_state)) {
+                // If all fields are adjacent slices of the same field, check if all the sources are
+                // adjacent slices of the same field as well
+                ordered_set<PHV::AllocSlice> sources;
+                for (auto slice : container_state) {
+                    boost::optional<PHV::AllocSlice> source = getSourcePHVSlice(alloc, slice,
+                            action);
+                    if (!source) continue;
+                    if (!sources.count(source.get()))
+                        sources.insert(source.get()); }
+                if (are_adjacent_field_slices(container_state)) {
+                    continue; } }
+
+            bool firstSlice = true;
+            int firstOffset = 0;
+            for (auto slice : container_state) {
+                boost::optional<PHV::AllocSlice> source = getSourcePHVSlice(alloc, slice, action);
+                if (!source) continue;
+                int offset = getOffset(slice.container_slice(), source->container_slice(),
+                        slice.container());
+                LOG6("\t\t\t\t\tOffset found: " << offset);
+                if (firstSlice) {
+                    firstOffset = offset;
+                    firstSlice = false;
+                } else {
+                    if (offset!= firstOffset) {
+                        LOG5("\t\t\t\tSource slices are at different offsets with respect to "
+                                "destination slices");
+                        return boost::none; } } } } }
 
     return copacking_constraints;
+}
+
+bool ActionPhvConstraints::masks_valid(ordered_map<size_t, ordered_set<PHV::AllocSlice>>& sources,
+        const PHV::Container c) const {
+    LOG5("\t\t\tChecking masks valid for container of size: " << c.size());
+    unsigned total_holes = count_container_holes(sources[1]) + count_container_holes(sources[2]);
+    LOG7("\t\t\t\tNumber of holes found in total: " << total_holes);
+    if (total_holes > 1) {
+        LOG5("\t\t\t\tInvalid masks found");
+        return false; }
+    return true;
 }
 
 inline int ActionPhvConstraints::getOffset(le_bitrange a, le_bitrange b, PHV::Container c) const {

@@ -131,10 +131,14 @@ class ActionPhvConstraints : public Inspector {
       */
     int unallocated_bits(PHV::Allocation::MutuallyLiveSlices, const PHV::Container) const;
 
-    /** @returns true if all the alloc slices in the set @container_state together make up
-      * adjacent slices of the same field
+    /** @returns true if all AllocSlices in @state are adjacent FieldSlices of the same field
       */
-    bool are_successive_field_slices(PHV::Allocation::MutuallyLiveSlices container_state);
+    bool are_adjacent_field_slices(const PHV::Allocation::MutuallyLiveSlices& state) const;
+
+    /** @returns the number of holes that must be masked out by a given set of AllocSlices
+      * @state: candidate list of AllocSlices
+      */
+    unsigned count_container_holes(const PHV::Allocation::MutuallyLiveSlices& state) const;
 
     /** @returns the type of operation (FieldOperation::MOVE or FieldOperation::WHOLE_CONTAINER)  
       * if for every action in @actions, the fields in @fields are all written using
@@ -170,6 +174,11 @@ class ActionPhvConstraints : public Inspector {
       * Invariant: Can only be called if @a and @b are assigned to same sized containers
       */
     inline int getOffset(le_bitrange a, le_bitrange b, PHV::Container c) const;
+
+    /** Check that the bitmasks needed to realize a two source PHV instruction are valid
+      */
+    bool masks_valid(ordered_map<size_t, ordered_set<PHV::AllocSlice>>& sources, const
+            PHV::Container c) const;
 
     /** Print the state of the maps */
     void printMapStates();
