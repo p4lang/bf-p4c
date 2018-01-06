@@ -1052,10 +1052,3 @@ p4c_add_xfail_reason("tofino"
   "action data table .* not in right stage"
   testdata/p4_14_samples/exact_match3.p4
   )
-
-# XXX(cole): Failing in action analysis.
-p4c_add_xfail_reason("tofino"
-  "SIGSEGV"
-  extensions/p4_tests/p4_14/15-SetMetadata.p4
-  extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
-  )

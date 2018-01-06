@@ -91,7 +91,7 @@ void ActionPhvConstraints::sort(std::list<const PHV::SuperCluster::SliceList*>& 
         } else if (l_writes > r_writes) {
             return r;
         } else {
-            if (l_reads >= r_reads) {
+            if (l_reads > r_reads) {
                 return l;
             } else {
                 return r; } } };
@@ -109,7 +109,7 @@ void ActionPhvConstraints::sort(std::vector<PHV::FieldSlice>& slice_list) {
 
             if (l_writes != r_writes)
                 return l_writes < r_writes;
-            return l_reads >= r_reads; });
+            return l_reads > r_reads; });
 }
 
 void ActionPhvConstraints::end_apply() {
