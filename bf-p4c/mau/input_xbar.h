@@ -65,6 +65,7 @@ struct IXBar {
     unsigned                                    hash_dist_inuse[HASH_TABLES] = { 0 };
     Alloc2D<cstring, HASH_TABLES, HASH_DIST_SLICES * HASH_DIST_BITS>   hash_dist_bit_use;
     unsigned long                               hash_dist_bit_inuse[HASH_TABLES] = { 0 };
+
     int hash_dist_groups[HASH_DIST_UNITS] = {-1, -1};
     friend class IXBarRealign;
 
@@ -320,7 +321,10 @@ struct IXBar {
                     bool hash_dist = false, unsigned byte_mask = ~0U);
     bool find_original_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
     bool find_ternary_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
-    void calculate_available_groups(safe_vector<big_grp_use> &order, int hash_groups_needed);
+    void calculate_available_groups(safe_vector<big_grp_use> &order, int hash_groups_needed,
+                                    bool hash_dist);
+    void calculate_available_hash_dist_groups(safe_vector<big_grp_use> &order,
+                                              int hash_groups_needed);
     grp_use::type_t is_group_for_hash_dist(int hash_table);
     bool violates_hash_constraints(safe_vector <big_grp_use> &order, bool hash_dist, int group,
                                    int byte);

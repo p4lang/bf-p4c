@@ -273,31 +273,67 @@ struct big_grp_use {
     }
 };
 
+/** This is too constraining than the actual algorithm, but this ensures that the hash
+ *  distribution group has available space for this particular hash distribution section.
+ *  The granularity of this optimization is on 16 bit slices, which are as large as an
+ *  individual hash distribution section, but potentially need to be refactored in order
+ *  to include multiple wide addresses or 8 bit hash distribution sections.
+ */
+void IXBar::calculate_available_hash_dist_groups(safe_vector<big_grp_use> &order,
+                                                 int hash_groups_needed) {
+    for (int i = 0; i < HASH_DIST_UNITS; i++) {
+        if (hash_dist_groups[i] == -1) continue;
+        auto hash_tables = hash_group_use[hash_dist_groups[i]];
+        bitvec slices_used;
+        for (auto &big_grp : order) {
+             for (int hash_slice = 0; hash_slice < HASH_DIST_SLICES; hash_slice++) {
+                 if (!(hash_dist_inuse[hash_slice] & (1 << (2 * big_grp.big_group))))
+                     slices_used.setbit(hash_slice);
+                 if (!(hash_dist_inuse[hash_slice] & (1 << (2 * big_grp.big_group + 1))))
+                     slices_used.setbit(hash_slice);
+             }
+        }
+        if (HASH_DIST_SLICES - slices_used.popcount() >= hash_groups_needed)
+            continue;
+        for (auto bit : bitvec(hash_tables)) {
+            if (bit % 1 == 0)
+                order[bit / 2].first.first_hash_open = false;
+            else
+                order[bit / 2].first.second_hash_open = false;
+        }
+    }
+}
+
 /* Calculates the number of hash ways available in each group.  Currently not including the
    extra 12 hash bits.  Also now separates hash tables from being part of hash distribution
    vs. standard tables and gateways.  */
 void IXBar::calculate_available_groups(safe_vector<big_grp_use> &order,
-                                       int hash_groups_needed) {
+                                       int hash_groups_needed, bool hash_dist) {
     for (auto &big_grp : order) {
         big_grp.first.first_hash_open = true;
         big_grp.first.second_hash_open = true;
     }
 
-    for (auto &big_grp : order) {
-        int first_ways_available = 0; int second_ways_available = 0;
-        for (int hash_group = 0; hash_group < HASH_INDEX_GROUPS; hash_group++) {
-            if (!(hash_index_inuse[hash_group] & (1 << (2 * big_grp.big_group))))
-                first_ways_available++;
-            if (!(hash_index_inuse[hash_group] & (1 << (2 * big_grp.big_group + 1))))
-                second_ways_available++;
-        }
-        if (first_ways_available < hash_groups_needed) {
-            big_grp.first.first_hash_open = false;
-        }
-        if (second_ways_available < hash_groups_needed) {
-            big_grp.first.second_hash_open = false;
+    if (hash_dist) {
+        calculate_available_hash_dist_groups(order, hash_groups_needed);
+    } else {
+        for (auto &big_grp : order) {
+            int first_ways_available = 0; int second_ways_available = 0;
+            for (int hash_group = 0; hash_group < HASH_INDEX_GROUPS; hash_group++) {
+                if (!(hash_index_inuse[hash_group] & (1 << (2 * big_grp.big_group))))
+                    first_ways_available++;
+                if (!(hash_index_inuse[hash_group] & (1 << (2 * big_grp.big_group + 1))))
+                    second_ways_available++;
+            }
+            if (first_ways_available < hash_groups_needed) {
+                big_grp.first.first_hash_open = false;
+            }
+            if (second_ways_available < hash_groups_needed) {
+                big_grp.first.second_hash_open = false;
+            }
         }
     }
+
     for (auto &big_grp : order) {
         big_grp.first.first_hash_dist = is_group_for_hash_dist(2 * big_grp.big_group);
         big_grp.first.second_hash_dist = is_group_for_hash_dist(2 * big_grp.big_group + 1);
@@ -324,23 +360,23 @@ IXBar::grp_use::type_t IXBar::is_group_for_hash_dist(int hash_table) {
 bool IXBar::violates_hash_constraints(safe_vector<big_grp_use> &order,
                                       bool hash_dist, int group, int byte) {
     if (byte / 8 == 0) {
+        if (!order[group].first.first_hash_open) return true;
         if (hash_dist) {
             if (!order[group].first.first_hash_dist_avail())
                 return true;
         } else {
             if (order[group].first.first_hash_dist_only())
                 return true;
-            if (!order[group].first.first_hash_open) return true;
         }
     }
     if (byte / 8 == 1) {
+        if (!order[group].first.second_hash_open) return true;
         if (hash_dist) {
             if (!order[group].first.second_hash_dist_avail())
                 return true;
         } else {
            if (order[group].first.second_hash_dist_only())
                return true;
-           if (!order[group].first.second_hash_open) return true;
         }
     }
     return false;
@@ -844,7 +880,7 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
         unalloced.push_back(&need);
     }
     if (!ternary) {
-        calculate_available_groups(order, hash_groups_needed);
+        calculate_available_groups(order, hash_groups_needed, hash_dist);
     }
 
 
@@ -1622,7 +1658,9 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashD
     fields_needed.clear();
 
     field_management(hd->field_list, alloc, fields_needed, true, name, phv);
-    bool rv = find_alloc(alloc.use, false, second_try, alloced, 0, true);
+    int hash_slices_needed = (hd->bit_width + HASH_DIST_BITS - 1) / hd->bit_width;
+
+    bool rv = find_alloc(alloc.use, false, second_try, alloced, hash_slices_needed, true);
     if (!rv) {
         alloc.use.clear();
         alloced.clear();
@@ -1909,7 +1947,6 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         !allocGateway(tbl, phv, alloc.gateway_ixbar, true)) {
         alloc.clear_ixbar();
         return false; }
-
 
     XBarHashDist xbar_hash_dist(*this, phv, alloc, tbl->name);
     tbl->attached.apply(xbar_hash_dist);
