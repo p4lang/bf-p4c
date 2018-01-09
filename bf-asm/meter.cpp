@@ -180,17 +180,6 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
     } else
         merge.mau_meter_adr_mask[type][bus] |= meter_adr_mask;
 
-    if (!per_flow_enable && per_flow_enable_param != "false") {
-        // we compute a default per_flow enable bit to be used UNLESS per_flow_enable
-        // was explicitly set to false.  FIXME -- do we actually need this?  This seems
-        // redundant with AttachedTable::pass1
-        per_flow_enable = true;
-        if (!color_aware)
-            per_flow_enable_bit = ptr_bits - 1;
-        else if (!color_aware_per_flow_enable)
-            per_flow_enable_bit = ptr_bits - METER_TYPE_BITS - 1;
-        else
-            per_flow_enable_bit = ptr_bits - 1; }
     if (per_flow_enable) {
         merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit + address_shift();
         if (uses_colormaprams())
