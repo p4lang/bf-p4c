@@ -16,6 +16,7 @@ void AttachedTable::pass1() {
     if (per_flow_enable && !per_flow_enable_param.empty()) {
         for (auto m : match_tables) {
             auto addr = m->find_address_field(this);
+            address_bits = addr ? addr->size : 0;
             unsigned pfe_bit = 0;
             if (auto f = m->lookup_field(per_flow_enable_param)) {
                 // Get pfe bit position from format entry

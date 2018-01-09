@@ -1102,38 +1102,43 @@ FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void Table::Actions::write_regs, ma
 static void gen_override(json::map &cfg, Table::Call &att) {
     auto type = att->table_type();
     std::string base;
+    bool override_addr = false;
+    bool override_addr_pfe = false;
+    unsigned override_full_addr = 0;
     switch (type) {
     case Table::COUNTER:  base = "override_stat";     break;
     case Table::METER:    base = "override_meter";    break;
     case Table::STATEFUL: base = "override_stateful"; break;
     default:
         error(att.lineno, "unsupported table type in action call"); }
-    unsigned full_addr = 0;
-    cfg[base + "_addr"] = true;
     if (att->to<AttachedTable>()->has_per_flow_enable()) {
-        cfg[base + "_addr_pfe"] = true;
-        full_addr |= 1U << (type == Table::COUNTER ? STATISTICS_PER_FLOW_ENABLE_START_BIT
-                                                   : METER_PER_FLOW_ENABLE_START_BIT); }
+        override_addr_pfe = true;
+        override_full_addr |= 1U << (type == Table::COUNTER ?
+                STATISTICS_PER_FLOW_ENABLE_START_BIT : METER_PER_FLOW_ENABLE_START_BIT); }
     int idx = -1;
     for (auto &arg : att.args) {
         ++idx;
         if (arg.type == Table::Call::Arg::Name) {
             if (auto *st = att->to<StatefulTable>()) {
                 if (auto *act = st->actions->action(arg.name())) {
-                    full_addr |= 1 << METER_TYPE_START_BIT;
-                    full_addr |= act->code << (METER_TYPE_START_BIT + 1); } }
+                    override_full_addr |= 1 << METER_TYPE_START_BIT;
+                    override_full_addr |= act->code << (METER_TYPE_START_BIT + 1);
+                    override_addr = true; } }
             // FIXME -- else assume its a reference to a format field, so doesn't need to
             // FIXME -- be in the override.  Should check that somewhere, but need access
             // FIXME -- to the match_table to do it here.
         } else if (arg.type == Table::Call::Arg::Const) {
             if (idx == 0 && att.args.size() > 1) {
-                full_addr |= 1 << METER_TYPE_START_BIT;
-                full_addr |= arg.value() << (METER_TYPE_START_BIT + 1);
+                override_full_addr |= 1 << METER_TYPE_START_BIT;
+                override_full_addr |= arg.value() << (METER_TYPE_START_BIT + 1);
             } else {
-                full_addr |= arg.value(); }
+                override_full_addr |= arg.value();
+            override_addr = true; }
         } else {
             error(att.lineno, "argument not a constant"); } }
-    cfg[base + "_full_addr"] = full_addr;
+    cfg[base + "_addr"] = override_addr;
+    cfg[base + "_addr_pfe"] = override_addr ? override_addr_pfe : false;
+    cfg[base + "_full_addr"] = override_addr ? override_full_addr : 0;
 }
 
 void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resources) {
@@ -1498,7 +1503,7 @@ void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) 
         // Dont add ref table if already present in table_refs vector
         for (auto &tref : table_refs) {
             auto tref_name = tref->to<json::map>()["name"];
-            if (!strcmp(tref_name->as_string()->c_str(),t_name)) return; } 
+            if (!strcmp(tref_name->as_string()->c_str(),t_name)) return; }
         json::map table_ref;
         table_ref["how_referenced"] = c->to<AttachedTable>()->is_direct() ? "direct" : "indirect";
         table_ref["handle"] = c->handle();
@@ -1615,6 +1620,8 @@ void Table::output_field_to_pack_format(json::vector &field_list,
 {
     unsigned add_width = 0;
     bool pfe_enable = false;
+    unsigned indirect_addr_start_bit = 0;
+    bool indirect_addr = false;
     auto a = this->get_attached();
     if (a) {
         // If field is an attached table address specified by a pfe
@@ -1624,12 +1631,10 @@ void Table::output_field_to_pack_format(json::vector &field_list,
         std::string s_source = source;
         if (a->stats.size() > 0) {
             s = a->stats[0]->to<Synth2Port>();
-            s_source = "stats_ptr";
-        }
+            s_source = "stats_ptr"; }
         if (a->meters.size() > 0) {
             s = a->meters[0]->to<Synth2Port>();
-            s_source = "meter_ptr";
-        }
+            s_source = "meter_ptr"; }
         if (s) {
             std::string pfe_param = s->get_per_flow_enable_param();
             std::string pfe_name = pfe_param.substr(0, pfe_param.find("_pfe"));
@@ -1645,26 +1650,29 @@ void Table::output_field_to_pack_format(json::vector &field_list,
                 // separate pfe bit this hack will go away and pfe
                 // fields wont be dropped from the entry format
                 add_width = 1;
-                pfe_enable = true; } }
-    }
-
+                pfe_enable = true;
+                indirect_addr = true;
+                indirect_addr_start_bit = s->address_shift(); } } }
     int lobit = 0;
     for (auto &bits : field.bits) {
         json::map field_entry;
-        field_entry["start_bit"] = lobit + start_bit;
-        if (this->to<TernaryIndirectTable>() || this->to<SRamMatchTable>()) {
-            auto selector = get_selector();
-            if (selector && selector->get_per_flow_enable_param() == name)
-                return; // Do not output per flow enable parameter
+        if (indirect_addr) {
             field_entry["enable_pfe"] = pfe_enable;
-            if ((name == "meter_addr") && selector) {
-                field_entry["start_bit"] = SELECTOR_LOWER_HUFFMAN_BITS;
-                field_entry["enable_pfe"] = selector->get_per_flow_enable();
-            }
-            if (name == "action_addr")
-                if (auto adt = action->to<ActionTable>())
-                    field_entry["start_bit"] = std::min(5U, adt->get_log2size() - 2);
-        }
+            field_entry["start_bit"] = indirect_addr_start_bit;
+        } else {
+            field_entry["start_bit"] = lobit + start_bit;
+            if (this->to<TernaryIndirectTable>() || this->to<SRamMatchTable>()) {
+                auto selector = get_selector();
+                if (selector && selector->get_per_flow_enable_param() == name)
+                    return; // Do not output per flow enable parameter
+                field_entry["enable_pfe"] = pfe_enable;
+                if ((name == "meter_addr") && selector) {
+                    field_entry["start_bit"] = SELECTOR_LOWER_HUFFMAN_BITS;
+                    field_entry["enable_pfe"] = selector->get_per_flow_enable();
+                }
+                if (name == "action_addr")
+                    if (auto adt = action->to<ActionTable>())
+                        field_entry["start_bit"] = std::min(5U, adt->get_log2size() - 2); } }
         field_entry["field_width"] = bits.size() + add_width;
         field_entry["lsb_mem_word_idx"] = bits.lo / MEM_WORD_WIDTH;
         field_entry["msb_mem_word_idx"] = bits.hi / MEM_WORD_WIDTH;
@@ -1674,9 +1682,7 @@ void Table::output_field_to_pack_format(json::vector &field_list,
                 json::map {
                     { "dest_start",  json::number(0) },
                     { "value", json::number(value) },
-                    { "dest_width", json::number(bits.size()) }
-                }};
-        }
+                    { "dest_width", json::number(bits.size()) } } }; }
         field_entry["lsb_mem_word_offset"] = basebit + (bits.lo % MEM_WORD_WIDTH);
         field_entry["field_name"] = json::string(name);
         //field_entry["immediate_name"] = json::string(immediate_name);
@@ -1690,9 +1696,7 @@ void Table::output_field_to_pack_format(json::vector &field_list,
             if (name == "version") match_mode = "s1q0";
             field_entry["match_mode"] = match_mode; }
         field_list.push_back(std::move(field_entry));
-        lobit += bits.size();
-    }
-
+        lobit += bits.size(); }
 }
 
 
