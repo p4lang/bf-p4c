@@ -646,6 +646,11 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
         f->set_deparsed_bottom_bits(true);
         f->set_no_split(true);
+        // TODO:
+        // This constraint can be removed by setting digest field to an invalid value
+        // in the parser, instead of using the validity bit of container, which implies
+        // the no_pack here.
+        f->set_no_pack(true);
         LOG1(".....Deparser Constraint " << entry->name << " 'digest' on field..... " << f);
 
         // For learning digests, we're done.

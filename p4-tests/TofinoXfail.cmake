@@ -200,6 +200,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1051,4 +1052,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "action data table .* not in right stage"
   testdata/p4_14_samples/exact_match3.p4
+  )
+
+# BRIG-393
+p4c_add_xfail_reason("tofino"
+  "Gateway xor key .* misaligned within byte"
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   )
