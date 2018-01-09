@@ -2,6 +2,7 @@
 #include <sstream>
 #include <typeinfo>
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "ir/ir.h"
 #include "lib/log.h"
 
@@ -37,7 +38,7 @@ void BuildParserOverlay::postorder(const IR::BFN::Pipe* pipe) {
 
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
-        if (annotation->name.name != "pa_mutually_exclusive")
+        if (annotation->name.name != PHV::pragma::MUTUALLY_EXCLUSIVE)
             continue;
 
         auto& exprs = annotation->expr;

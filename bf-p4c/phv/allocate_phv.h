@@ -8,15 +8,16 @@
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
+#include "bf-p4c/phv/analysis/critical_path_clusters.h"
+#include "bf-p4c/phv/analysis/field_interference.h"
 #include "bf-p4c/phv/make_clusters.h"
+#include "bf-p4c/phv/pragma/pa_container_size.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/utils.h"
-#include "bf-p4c/phv/analysis/critical_path_clusters.h"
-#include "bf-p4c/phv/analysis/field_interference.h"
-#include "lib/symbitmatrix.h"
 #include "lib/bitvec.h"
+#include "lib/symbitmatrix.h"
 
 /** The score of an Allocation .
  *
@@ -75,6 +76,7 @@ class CoreAllocation {
     const Clustering& clustering_i;
     const PhvUse& uses_i;
     const ClotInfo& clot_i;
+    const PragmaContainerSize& pa_container_sizes_i;
 
     // Modified in this pass.
     PhvInfo& phv_i;
@@ -85,10 +87,11 @@ class CoreAllocation {
                    const Clustering& clustering,
                    const PhvUse& uses,
                    const ClotInfo& clot,
+                   const PragmaContainerSize& pa_cs,
                    PhvInfo& phv,
                    ActionPhvConstraints& actions)
-        : mutex_i(mutex), clustering_i(clustering), uses_i(uses), clot_i(clot), phv_i(phv),
-        actions_i(actions) { }
+        : mutex_i(mutex), clustering_i(clustering), uses_i(uses), clot_i(clot),
+          pa_container_sizes_i(pa_cs), phv_i(phv), actions_i(actions) { }
 
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
@@ -192,6 +195,7 @@ class CoreAllocation {
             int start) const;
 
     const PhvUse& uses() const { return uses_i; }
+    const PragmaContainerSize& pa_container_sizes() const { return pa_container_sizes_i; }
 };
 
 // TODO(yumin) extends this to include all possible cases.
@@ -384,6 +388,7 @@ class AllocatePHV : public Inspector {
     const PhvUse& uses_i;
     const Clustering& clustering_i;
     const SymBitMatrix& mutex_i;
+    const PragmaContainerSize& pa_container_sizes_i;
 
     // Used to create strategies, if they need
     ActionPhvConstraints& actions_i;
@@ -428,12 +433,15 @@ class AllocatePHV : public Inspector {
                 const Clustering& clustering,
                 const PhvUse& uses,
                 const ClotInfo& clot,
+                const PragmaContainerSize& pa_cs,
                 PhvInfo& phv,
                 ActionPhvConstraints& actions,
                 const CalcCriticalPathClusters& critical_cluster)
-        : core_alloc_i(mutex, clustering, uses, clot, phv, actions), phv_i(phv), uses_i(uses),
-        clustering_i(clustering), mutex_i(mutex), actions_i(actions),
-      critical_path_clusters_i(critical_cluster) , field_interference_i(mutex, uses) { }
+        : core_alloc_i(mutex, clustering, uses, clot, pa_cs, phv, actions),
+          phv_i(phv), uses_i(uses),
+          clustering_i(clustering), mutex_i(mutex), pa_container_sizes_i(pa_cs),
+          actions_i(actions), critical_path_clusters_i(critical_cluster),
+          field_interference_i(mutex, uses) { }
 };
 
 #endif  /* BF_P4C_PHV_ALLOCATE_PHV_H_ */

@@ -169,6 +169,10 @@ bool CoreAllocation::satisfies_constraints(
 bool CoreAllocation::satisfies_constraints(
         const PHV::ContainerGroup& group,
         const PHV::FieldSlice& slice) const {
+    auto req = pa_container_sizes_i.field_slice_req(slice);
+    if (req && !group.is(*req)) {
+        LOG5("        constraint: @pa_container_size mark that: "
+             << slice << " must go to " << *req << " container "); }
     return satisfies_constraints(group, slice.field());
 }
 
@@ -797,7 +801,7 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
 
 void AllocatePHV::end_apply() {
     LOG1("--- BEGIN PHV ALLOCATION ----------------------------------------------------");
-
+    LOG1(pa_container_sizes_i);
     auto alloc = make_concrete_allocation();
     auto container_groups = makeDeviceContainerGroups();
     std::list<PHV::SuperCluster*> cluster_groups = make_cluster_groups();
@@ -1196,9 +1200,21 @@ BruteForceAllocationStrategy::slice_clusters(
     for (auto* sc : cluster_groups) {
         auto it = PHV::SlicingIterator(sc);
         if (!it.done()) {
+            while (!it.done()) {
+                if (core_alloc_i.pa_container_sizes().satisfies_pragmas(*it)) {
+                    break; }
+                ++it; }
+            if (it.done()) {
+                ::warning("%1% No way to slice to satisfy"
+                          "@pa_container_size, pragma ignored", cstring::to_cstring(sc));
+                it = PHV::SlicingIterator(sc); }
             for (auto* new_sc : *it)
                 rst.push_back(new_sc);
         } else {
+            if (!core_alloc_i.pa_container_sizes().satisfies_pragmas({ sc })) {
+                ::warning("%1% can not be sliced, and it can not satisfy some"
+                          "@pa_container_size, pragma ignored",
+                          cstring::to_cstring(sc)); }
             rst.push_back(sc); } }
 
     return rst;

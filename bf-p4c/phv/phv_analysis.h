@@ -11,6 +11,7 @@
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
 #include "bf-p4c/phv/analysis/field_interference.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
+#include "bf-p4c/phv/pragma/pa_container_size.h"
 #include "lib/symbitmatrix.h"
 
 class ClotInfo;
@@ -22,6 +23,7 @@ class PHV_AnalysisPass : public PassManager {
     CalcParserCriticalPath parser_critical_path;  // parser critical path of both ingress/egress
     CalcCriticalPathClusters critical_path_clusters;  // critical clusters
     ActionPhvConstraints action_constraints;
+    PragmaContainerSize pa_container_sizes;
 
  public:
     PHV_AnalysisPass(const BFN_Options &options, PhvInfo &phv, PhvUse &uses, const ClotInfo &clot,

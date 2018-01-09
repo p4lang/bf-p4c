@@ -1,9 +1,11 @@
 #include "collect_global_pragma.h"
 #include <algorithm>
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 const std::vector<cstring>*
 CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
-    "pa_mutually_exclusive"
+    PHV::pragma::MUTUALLY_EXCLUSIVE,
+    PHV::pragma::CONTAINER_SIZE
 };
 
 bool CollectGlobalPragma::preorder(const IR::Annotation *annotation) {

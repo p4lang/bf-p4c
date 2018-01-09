@@ -1049,6 +1049,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4
   )
 
+# BRIG-394
+p4c_add_xfail_reason("tofino"
+  "error: Invalid slice of .*"
+  extensions/p4_tests/p4_14/test_config_274_diff_size_fields.p4
+  )
+
 p4c_add_xfail_reason("tofino"
   "action data table .* not in right stage"
   testdata/p4_14_samples/exact_match3.p4
