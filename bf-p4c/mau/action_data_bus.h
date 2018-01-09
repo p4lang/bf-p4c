@@ -42,10 +42,11 @@ struct ActionDataBus {
     static constexpr int ADB_BYTES = 128;
     static constexpr int PAIRED_OFFSET = 16;
     static constexpr int BYTES_PER_RAM = 16;
-    static constexpr int ADB_STARTS[3] = {0, 32, 96};
-    static constexpr int IMMED_DIVIDES[3] = {16, 64, 128};
+    static constexpr int ADB_STARTS[ActionFormat::CONTAINER_TYPES] = {0, 32, 96};
+    static constexpr int IMMED_DIVIDES[ActionFormat::CONTAINER_TYPES] = {16, 64, 128};
     static constexpr int IMMED_SECT = 4;
-
+    static constexpr int CSR_RANGE = 16;
+    static constexpr int CSR_SECTION[ActionFormat::CONTAINER_TYPES] = {4, 3, 2};
 
  private:
     Alloc2D<cstring, ActionFormat::CONTAINER_TYPES, OUTPUTS> cont_use;
@@ -60,6 +61,17 @@ struct ActionDataBus {
     std::set<const IR::MAU::ActionData *> shared_action_profiles;
     bool reserved_immed[3] = {false, false, false};
 
+    struct ADB_CSR {
+        safe_vector<bool> reserved;
+        ActionFormat::cont_type_t type;
+
+        explicit ADB_CSR(ActionFormat::cont_type_t t) : type(t) {
+            reserved.resize(ActionDataBus::CSR_SECTION[type], false);
+        }
+    };
+
+    typedef safe_vector<ADB_CSR> ActionIXBar;
+    safe_vector<ActionIXBar> action_ixbars;
 
  public:
     struct Loc {
@@ -110,7 +122,8 @@ struct ActionDataBus {
     };
 
     /** Location Algorithm: For finding an allocation within the correct type region */
-    enum loc_alg_t {FIND_NORMAL, FIND_LOWER, FIND_FULL, FIND_IMMED_UPPER};
+    enum loc_alg_t {FIND_NORMAL, FIND_LOWER, FIND_FULL, FIND_IMMED_UPPER, FIND_FULL_HALF,
+                    FIND_FULL_BYTE };
 
     void clear();
 
@@ -118,15 +131,23 @@ struct ActionDataBus {
     int byte_to_output(int byte, ActionFormat::cont_type_t type);
     int output_to_byte(int output, ActionFormat::cont_type_t type);
     int find_byte_sz(ActionFormat::cont_type_t);
+    int csr_index(int start_byte, ActionFormat::cont_type_t type);
+    bool is_csr_reserved(int start_byte, bitvec adjacent, int byte_offset, bool immed);
+    bool is_adf_csr_reserved(int start_byte, bitvec adjacent, int byte_offset);
+    bool is_immed_csr_reserved(int start_byte);
+
+    void reserve_csr(int start_byte, bitvec adjacent, int byte_offset, bool immed);
+    void reserve_adf_csr(int start_byte, bitvec adjacent, int byte_offset);
+    void reserve_immed_csr(int start_byte);
     bitvec combined(const bitvec bv[ActionFormat::CONTAINER_TYPES]);
 
-    bool find_location(ActionFormat::cont_type_t type, bitvec combined_adjacent, int diff,
-                       int &start_byte);
-    bool find_lower_location(ActionFormat::cont_type_t type, bitvec adjacent,
-                             int diff, int &start_byte);
-    bool find_full_location(bitvec combined_adjacent, int diff, int &output);
-    bool find_immed_upper_location(ActionFormat::cont_type_t, bitvec combined_adjacent,
-                                   int diff, int &output);
+    void initialize_action_ixbar();
+
+    bool find_location(bitvec combined_adjacent, int diff, ActionFormat::cont_type_t init_type,
+                       loc_alg_t loc_alg, bool immed, int byte_offset, int &start_byte);
+    bool find_location(bitvec combined_adjacent, int diff, int initial_adb_byte,
+                       int final_adb_byte, bool reset, ActionFormat::cont_type_t type,
+                       bool immed, int byte_offset, int &start_byte);
 
     void analyze_full_share(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES],
                             FullShare &full_share, int init_byte_offset,

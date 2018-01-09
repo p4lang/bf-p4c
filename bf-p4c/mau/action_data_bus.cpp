@@ -3,6 +3,7 @@
 
 constexpr int ActionDataBus::ADB_STARTS[];
 constexpr int ActionDataBus::IMMED_DIVIDES[];
+constexpr int ActionDataBus::CSR_SECTION[];
 
 /** Clears all of the allocation within the ActionDataBus, for the TableSummary
  */
@@ -42,6 +43,140 @@ inline bitvec ActionDataBus::combined(const bitvec bv[ActionFormat::CONTAINER_TY
      return bv[ActionFormat::BYTE] | bv[ActionFormat::HALF] | bv[ActionFormat::FULL];
 }
 
+/** The input xbar of the action data bus is constrained as described in section 5.2.5.1,
+ *  Action Output HV Xbar Programming.  Each RAM has potentially 16 bytes of RAM word to
+ *  multiplex onto the ADB.  These 16 bytes of RAM word are broken down into smaller
+ *  sections, and these smaller sections are then muxed independently.
+ *
+ *  The size of these sections are dependent on where they go on the action data bus.  The
+ *  action data bus is broken down into 16 byte regions.  Each 16 byte region has it's own
+ *  registers for sections of RAM word to be muxed through.
+ *
+ *  Let's walk through an example, based on the figure in the above section.  For action
+ *  data bus bytes 0-15, there are four sections of RAM word that can be individually muxed
+ *  to different places on the RAM word.  They are:
+ *      RAM word bytes 0-1
+ *      RAM word bytes 2-3
+ *      RAM word bytes 4-7
+ *      RAM word bytes 8-15
+ *
+ *  So let's say we have two bytes of action data at RAM word bytes 4 and 5, and a half
+ *  word of action data at RAM word bytes 6-7.  Remember, this is at bytes 0-15 of the action
+ *  data bus, so only BYTE ALUs can access this region.  When we put bytes 4 and 5 on the
+ *  action data bus, because all 4 bytes between bytes 4-7 are written, we also have to
+ *  reserve space for bytes 6-7, even though they will not be used by any BYTE ALU for this
+ *  action.
+ *
+ *  What is described above are the general constraints of action data bus allocation.  The
+ *  dimensions of the multiplexers are per RAM word section per 16 byte region on the action
+ *  data bus.  The number of multiplexers vary per action data bus regions, as the RAM word
+ *  section sizes vary based on what ALUs can access these particular bytes.  These
+ *  individual multiplexers are referred in the algorithm as CSRs.
+ *
+ *  Furthermore, these CSRs are limited in that they only can be used once per RAM word
+ *  section.  Let's take the following example:  Say for some reason, two bytes of action
+ *  data had been allocated at bytes 0 and 1 of the RAM word, and the algorithm decided
+ *  to allocate these bytes to byte 0-15 on the action data bus.  The algorithm decided to
+ *  put RAM word byte 0 at ADB byte 0, and RAM word byte 1 at ADB byte 3.  This would be
+ *  impossible in Tofino, because the CSR would have to send this 2 byte region to bytes 0-1,
+ *  and bytes 2-3.
+ *
+ *  The previous scenario is fairly ridiculous, as one could just put the bytes at either
+ *  bytes 0-1, or bytes 2-3, save action data bus space, and not break any constraints.
+ *  However, where this comes into play is when the algorithm has to allocate both bytes and
+ *  full words to a regions, and possibly might hit a constraint.  Though this is rare, it
+ *  may come up with things like bitmasked-set.
+ *
+ *  Immediate regions are a little different.  Similar to the action data bus, there are CSRs
+ *  per section.  However, immediate bytes are only 4 bytes maximum, and there is no dimension
+ *  per RAM word section.  Instead, the immediates are always handled in 4 byte sections,
+ *  and potentially masked within their own regions.  There are only 3 ADB regions for immediate,
+ *  unlike for action data tables,  which have 128 bytes / 16 bytes of range = 8.  The
+ *  regions are broken down into bytes 0-15, bytes 16-63, and bytes 64-127.
+ */
+
+/** Given a byte offset within a RAM, and the type of the CSR, which boolean is supposed to
+ *  be checked.
+ */
+int ActionDataBus::csr_index(int byte_offset, ActionFormat::cont_type_t type) {
+    BUG_CHECK(byte_offset >= 0 && byte_offset < 16, "Action Data Bus allocation can only work in "
+              "16 byte chunks");
+    if (type == ActionFormat::BYTE) {
+        return byte_offset == 0 ? 0 : floor_log2(byte_offset);
+    } else if (type == ActionFormat::HALF) {
+        if (byte_offset < 4)
+            return 0;
+        else if (byte_offset < 8)
+            return 1;
+        else
+            return 2;
+    } else {
+        return byte_offset / 8;
+    }
+}
+
+/** Given the description of CSRs, verifies that the CSR is available to be used
+ */
+bool ActionDataBus::is_csr_reserved(int start_byte, bitvec adjacent, int byte_offset,
+                                    bool immed) {
+    if (immed)
+        return is_immed_csr_reserved(start_byte);
+    else
+        return is_adf_csr_reserved(start_byte, adjacent, byte_offset);
+}
+
+bool ActionDataBus::is_adf_csr_reserved(int start_byte, bitvec adjacent, int byte_offset) {
+    auto &action_ixbar = action_ixbars[byte_offset / BYTES_PER_RAM];
+    auto &csr = action_ixbar[start_byte / CSR_RANGE];
+    int index = csr_index(byte_offset % BYTES_PER_RAM, csr.type);
+    if (!csr.reserved[index])
+        return false;
+    if (csr.type == ActionFormat::BYTE && adjacent.max().index() >= 2
+        && (byte_offset % BYTES_PER_RAM) == 0)
+        if (!csr.reserved[index + 1])
+            return false;
+    return true;
+}
+
+bool ActionDataBus::is_immed_csr_reserved(int start_byte) {
+    for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
+        if (start_byte < IMMED_DIVIDES[i]) {
+            return reserved_immed[i];
+        }
+    }
+    return false;
+}
+
+/** Reserves the CSR for the action data bus so that nothing else can be allocated to that
+ *  region
+ */
+void ActionDataBus::reserve_csr(int start_byte, bitvec adjacent, int byte_offset, bool immed) {
+    if (immed)
+        reserve_immed_csr(start_byte);
+    else
+        reserve_adf_csr(start_byte, adjacent, byte_offset);
+}
+
+void ActionDataBus::reserve_adf_csr(int start_byte, bitvec adjacent, int byte_offset) {
+    auto &action_ixbar = action_ixbars[byte_offset / BYTES_PER_RAM];
+    auto &csr = action_ixbar[start_byte / CSR_RANGE];
+    int index = csr_index(byte_offset % BYTES_PER_RAM, csr.type);
+    csr.reserved[index] = true;
+    if (csr.type == ActionFormat::BYTE && adjacent.max().index() >= 2
+        && (byte_offset % BYTES_PER_RAM) == 0)
+        csr.reserved[index + 1] = true;
+}
+
+
+void ActionDataBus::reserve_immed_csr(int start_byte) {
+    for (int i = 0; i < 3; i++) {
+        if (start_byte < IMMED_DIVIDES[i]) {
+            reserved_immed[i] = true;
+            return;
+        }
+    }
+}
+
 /** Allocation of the action data table.  Based on the rules in section 5.2.5.1.  Attempts
  *  the allocate bytes, then halves, then fulls.  Because the bytes and halves have mutually
  *  exclusive regions on the action data bus, if either one fails, then the allocation scheme
@@ -60,14 +195,21 @@ bool ActionDataBus::alloc_ad_table(const bitvec total_layouts[ActionFormat::CONT
     bitvec half_layout = total_layouts[ActionFormat::HALF];
     bitvec full_layout = total_layouts[ActionFormat::FULL];
 
-    int max = byte_layout.max().index();
+    int max = std::max(std::max(byte_layout.max().index(), half_layout.max().index()),
+                       full_layout.max().index());
 
+    for (int i = 0; i <= max; i += BYTES_PER_RAM) {
+        initialize_action_ixbar();
+    }
+
+    max = byte_layout.max().index();
     for (int i = 0; i <= max; i += BYTES_PER_RAM) {
         bitvec layout = (byte_layout.getslice(i, BYTES_PER_RAM));
         bitvec combined_layout = combined(total_layouts).getslice(i, BYTES_PER_RAM);
         bool allocated = alloc_bytes(use, layout, combined_layout, i, name);
         if (!allocated) return false;
     }
+    LOG2("Allocated Byte Section");
 
     max = half_layout.max().index();
 
@@ -77,7 +219,7 @@ bool ActionDataBus::alloc_ad_table(const bitvec total_layouts[ActionFormat::CONT
         bool allocated = alloc_halves(use, layout, combined_layout, i, name);
         if (!allocated) return false;
     }
-
+    LOG2("Allocated Half Section");
 
     max = full_layout.max().index();
 
@@ -90,76 +232,123 @@ bool ActionDataBus::alloc_ad_table(const bitvec total_layouts[ActionFormat::CONT
         bool allocated = alloc_fulls(use, layouts, full_bitmasked, i, name);
         if (!allocated) return false;
     }
+    LOG2("Allocated Full Section");
     return true;
 }
 
-/** Find a location for a particular type within an action data region.  Tested in diff
- *  size chunks.
+/** This function sets up the action data table CSRs.  Because the CSRs are on an action bus
+ *  home row basis, wide action tables each have their own CSRs.  Thus a vector of CSR
+ *  reservations are created sized at how many Action Data RAM rows are needed
  */
-bool ActionDataBus::find_location(ActionFormat::cont_type_t type, bitvec combined_adjacent,
-                                  int diff, int &start_byte) {
-    int starter = output_to_byte(PAIRED_OFFSET, type);
+void ActionDataBus::initialize_action_ixbar() {
+    ActionIXBar action_ixbar;
+    int type_ref = 0;
+    for (int i = 0; i < ADB_BYTES; i += CSR_RANGE) {
+        if (i == IMMED_DIVIDES[type_ref])
+            type_ref++;
+        ActionFormat::cont_type_t type = (ActionFormat::cont_type_t) type_ref;
+        action_ixbar.emplace_back(type);
+    }
+    action_ixbars.push_back(action_ixbar);
+}
+
+/** Based on the algorithm provided to the allocation algorithm, will set up the correct
+ *  pre-requisite values for the search algorithm
+ */
+bool ActionDataBus::find_location(bitvec combined_adjacent, int diff,
+                                  ActionFormat::cont_type_t init_type, loc_alg_t loc_alg,
+                                  bool immed, int byte_offset, int &start_byte) {
+    bool initialized = true;
+    int initial_adb_byte = -1;
+    int final_adb_byte = -1;
+    ActionFormat::cont_type_t type = init_type;
+    bool reset = false;
+    switch (loc_alg) {
+        // Allocating a full word in the half region
+        case FIND_FULL_HALF:
+            type = ActionFormat::HALF;
+            break;
+        // Allocating a full word in the byte region
+        case FIND_FULL_BYTE:
+            type = ActionFormat::BYTE;
+            break;
+        default:
+            break;
+    }
+
+
+    switch (loc_alg) {
+        case FIND_FULL_HALF:
+        case FIND_FULL_BYTE:
+        // Loop through all possible sections of either the BYTE or HALF word, preferring
+        // the upper bytes if possible, as those have to generally be paired off
+        case FIND_NORMAL:
+            initial_adb_byte = output_to_byte(PAIRED_OFFSET, type);
+            final_adb_byte = output_to_byte(PAIRED_OFFSET, type);
+            reset = true;
+            break;
+        // Look in the lower 16 slots of either the BYTE or HALF region
+        case FIND_LOWER:
+            initial_adb_byte = output_to_byte(0, type);
+            final_adb_byte = output_to_byte(PAIRED_OFFSET, type);
+            break;
+        // Look in the region exclusively for FULL WORD OUTPUTS
+        case FIND_FULL:
+            initial_adb_byte = ADB_STARTS[type];
+            final_adb_byte = ADB_BYTES;
+            break;
+        // Look in the upper 16 slots of either the BYTE or HALF region
+        case FIND_IMMED_UPPER:
+            initial_adb_byte = output_to_byte(PAIRED_OFFSET, type);
+            final_adb_byte = output_to_byte(OUTPUTS, type);
+            break;
+        default:
+            initialized = false;
+            break;
+    }
+    BUG_CHECK(initialized, "During the action data bus allocation, somehow initialization of "
+              "the search algorithm was incorrect");
+    return find_location(combined_adjacent, diff, initial_adb_byte, final_adb_byte, reset,
+                         type, immed, byte_offset, start_byte);
+}
+
+/** Unified search algorithm to look in particular regions of the action data bus.  Here is
+ *  the definition of the algorithm:
+ *      combined_adjacent - the bytes to be reserved on the action data bus
+ *      diff - the size of a block to be reserved on the action data bus
+ *      initial_adb_byte - the byte at which to begin the search
+ *      final_adb_byte - the byte at which to end the search
+ *      reset - if the search loops back on itself, i.e. a search starts in the middle, goes
+ *          to a high point, and then reaches a low point
+ *      type - the output region in which the search is conducted, either, the BYTE, HALF,
+ *          or FULL region (full region meaning only bytes that can be used by the FULL bytes)
+ *      byte_offset - the initial byte within the action data format.  Important for checking
+ *          if the csr for this byte has been reserved
+ *      start_byte - if the algorithm is to return true, this is the byte on the action
+ *          data bus to start the reservation process
+ *
+ *  These values are pre-selected based on the search algorithm that the compiler has chosen
+ *  to run for the particular use case
+ */
+bool ActionDataBus::find_location(bitvec combined_adjacent, int diff, int initial_adb_byte,
+                                  int final_adb_byte, bool reset, ActionFormat::cont_type_t type,
+                                  bool immed, int byte_offset, int &start_byte) {
+    int starter = initial_adb_byte;
     bool found = false;
     do {
-        bitvec total_mask = combined_adjacent;
+        if (is_csr_reserved(starter, combined_adjacent, byte_offset, immed)) {
+            starter += CSR_RANGE;
+            continue;
+        }
+
         if ((total_in_use & (combined_adjacent << starter)).popcount() == 0) {
             found = true;
             break;
         }
         starter += diff;
-        if (starter >= output_to_byte(OUTPUTS, type))
+        if (reset && starter >= output_to_byte(OUTPUTS, type))
             starter -= OUTPUTS * find_byte_sz(type);
-    } while (starter != output_to_byte(PAIRED_OFFSET, type));
-    start_byte = starter;
-    return found;
-}
-
-/** An algorithm to find a space in the region below the paired offset region */
-bool ActionDataBus::find_lower_location(ActionFormat::cont_type_t type, bitvec combined_adjacent,
-                                        int diff, int &start_byte) {
-    int starter = ADB_STARTS[type];
-    bool found = false;
-    do {
-        if ((total_in_use & (combined_adjacent << starter)).popcount() == 0) {
-            found = true;
-            break;
-        }
-        starter += diff;
-    } while (starter != output_to_byte(PAIRED_OFFSET, type));
-    start_byte = starter;
-    return found;
-}
-
-/** An algorithm to find a spot within the full region only of the action data bus.  Has
- *  no possible sharing with either the half or byte region
- */
-bool ActionDataBus::find_full_location(bitvec combined_adjacent, int diff, int &start_byte) {
-    int starter = ADB_STARTS[ActionFormat::FULL];
-    bool found = false;
-    do {
-        if ((total_in_use & (combined_adjacent << starter)).popcount() == 0) {
-            found = true;
-            break;
-        }
-        starter += diff;
-    } while (starter < ADB_BYTES);
-    start_byte = starter;
-    return found;
-}
-
-bool ActionDataBus::find_immed_upper_location(ActionFormat::cont_type_t type,
-                                              bitvec combined_adjacent, int diff,
-                                              int &start_byte) {
-    int starter = output_to_byte(PAIRED_OFFSET, type);
-    bool found = false;
-    do {
-        bitvec total_mask = combined_adjacent;
-        if ((total_in_use & (combined_adjacent << starter)).popcount() == 0) {
-            found = true;
-            break;
-        }
-        starter += diff;
-    } while (starter != output_to_byte(OUTPUTS, type));
+    } while (starter != final_adb_byte);
     start_byte = starter;
     return found;
 }
@@ -196,15 +385,7 @@ void ActionDataBus::reserve_space(Use &use, ActionFormat::cont_type_t type, bitv
         cont_in_use[type].setbit(output);
     }
 
-    if (!immed)
-        return;
-
-    for (int i = 0; i < 3; i++) {
-        if (start_byte < IMMED_DIVIDES[i]) {
-            reserved_immed[i] = true;
-            break;
-        }
-    }
+    reserve_csr(start_byte, adjacent, byte_offset, immed);
 }
 
 /** Allocate an individual region of an action data table or immediate.  To clear things up
@@ -222,17 +403,12 @@ void ActionDataBus::reserve_space(Use &use, ActionFormat::cont_type_t type, bitv
 bool ActionDataBus::fit_adf_section(Use &use, bitvec adjacent, bitvec combined_adjacent,
                                     ActionFormat::cont_type_t type, loc_alg_t loc_alg,
                                     int init_byte_offset, int sec_begin, int size, cstring name) {
-    bool found = false;
     int start_byte = 0;
-    if (loc_alg == FIND_NORMAL)
-        found = find_location(type, combined_adjacent, size, start_byte);
-    else if (loc_alg == FIND_LOWER)
-        found = find_lower_location(type, combined_adjacent, size, start_byte);
-    else if (loc_alg == FIND_FULL)
-        found = find_full_location(combined_adjacent, size, start_byte);
+    int byte_offset = init_byte_offset + sec_begin;
+    bool found = find_location(combined_adjacent, size, type, loc_alg, false, byte_offset,
+                               start_byte);
     if (!found) return false;
-    reserve_space(use, type, adjacent, combined_adjacent, start_byte,
-                  init_byte_offset + sec_begin, false, name);
+    reserve_space(use, type, adjacent, combined_adjacent, start_byte, byte_offset, false, name);
     return true;
 }
 
@@ -435,11 +611,15 @@ bool ActionDataBus::alloc_full_sect(Use &use, FullShare full_shares[4], bitvec c
     }
 
     if (unshared_adj.popcount() != 0) {
-        // Obviously have to expand this over the entire xbar region rather than only
-        // the 32 bit section
-        bool found = fit_adf_section(use, unshared_adj, combined_layout, type, FIND_FULL,
-                                     init_byte_offset, begin * byte_sz, 8, name);
-        if (!found) return false;
+        // Try full region, then half region, then byte region
+        bool found = false;
+        for (auto region : { FIND_FULL, FIND_FULL_HALF, FIND_FULL_BYTE }) {
+            found = fit_adf_section(use, unshared_adj, combined_layout, type, region,
+                                    init_byte_offset, begin * byte_sz, 8, name);
+            if (found) break;
+        }
+        if (!found)
+            return false;
     }
     for (int i = begin; i < begin + 2; i++) {
         if (full_shares[i].shared_status == 0) continue;
@@ -504,13 +684,7 @@ bool ActionDataBus::fit_immed_sect(Use &use, bitvec layout, bitvec combined_layo
                                    ActionFormat::cont_type_t type, loc_alg_t loc_alg,
                                    cstring name) {
     int start_byte = 0;
-    bool found = false;
-    if (loc_alg == FIND_IMMED_UPPER)
-        found = find_immed_upper_location(type, combined_layout, IMMED_SECT, start_byte);
-    else if (loc_alg == FIND_LOWER)
-        found = find_lower_location(type, combined_layout, IMMED_SECT, start_byte);
-    else if (loc_alg == FIND_FULL)
-        found = find_full_location(combined_layout, IMMED_SECT, start_byte);
+    bool found = find_location(combined_layout, IMMED_SECT, type, loc_alg, true, 0, start_byte);
     if (!found) return false;
     reserve_space(use, type, layout, combined_layout, start_byte, 0, true, name);
     return true;
@@ -591,15 +765,14 @@ bool ActionDataBus::alloc_shared_immed(Use &use, bitvec layouts[ActionFormat::CO
 
     if (full_share.full_in_use) {
         if (full_share.shared_status == 0) {
-            // FIXME: Again, larger range for full match
-            if (!reserved_immed[ActionFormat::FULL]) {
-                bool found = fit_immed_sect(use, layouts[type], combined_layouts, type, FIND_FULL,
-                                        name);
-                if (!found) return false;
-            } else {
-                BUG("Should be impossible to reach, as either the full word section is "
-                    "unallocated or two half words are already sharing");
+            // Try full section, then half section, then byte section
+            bool found = false;
+            for (auto region : { FIND_FULL, FIND_FULL_HALF, FIND_FULL_BYTE }) {
+                found = fit_immed_sect(use, layouts[type], combined_layouts, type, region, name);
+                if (found) break;
             }
+            if (!found)
+                return false;
         } else {
             int start_byte = -1;
             if ((full_share.shared_status & (1 << ActionFormat::HALF)) != 0)
@@ -629,18 +802,20 @@ bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CON
 
     bool found = alloc_unshared_immed(use, type, layout, combined_layout, name);
     if (!found) return false;
+    LOG2("Allocate Byte Section");
 
     type = ActionFormat::HALF;
     layout = total_layouts[type];
     found = alloc_unshared_immed(use, type, layout, combined_layout, name);
     if (!found) return false;
-
+    LOG2("Allocate Half Section");
 
     bitvec layouts[ActionFormat::CONTAINER_TYPES];
     for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++)
         layouts[i] = total_layouts[i];
     found = alloc_shared_immed(use, layouts, name);
     if (!found) return false;
+    LOG2("Allocate Full Section");
     return true;
 }
 
@@ -661,7 +836,6 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Actio
             return true;
         shared_action_profiles.emplace(ad);
     }
-
 
     auto &ad_xbar = alloc.action_data_xbar;
     LOG1("Allocating action data bus for " << tbl->name);
