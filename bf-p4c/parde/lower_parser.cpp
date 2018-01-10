@@ -185,7 +185,7 @@ struct ExtractSimplifier {
         std::tie(std::ignore, slices) = computeSlices(extract->dest->field, phv);
 
         auto field = phv.field(extract->dest->field);
-        if (auto c = clot.allocated(field)) {
+        if (auto c = clot.clot(field)) {
             clotExtracts[c].push_back(extract);
             if (!c->is_phv_field(field))
                 return;
@@ -775,6 +775,47 @@ lowerUnsplittableField(const PhvInfo& phv,
     return containers.back();
 }
 
+#if HAVE_JBAY
+struct LowerClots : public DeparserTransform {
+    explicit LowerClots(const PhvInfo& phv, const ClotInfo& clot) : phv(phv), clot(clot) {}
+
+ private:
+    const IR::Node* preorder(IR::BFN::Deparser* deparser) override {
+        // replace Emits covered in a CLOT with EmitClot
+
+        IR::Vector<IR::BFN::DeparserPrimitive> newEmits;
+
+        std::map<const Clot*, std::vector<const IR::BFN::DeparserPrimitive*>> clotEmits;
+
+        for (auto e : deparser->emits) {
+           if (auto emit = e->to<IR::BFN::Emit>()) {
+               auto field = phv.field(emit->source->field);
+               if (auto c = clot.clot(field))
+                   clotEmits[c].push_back(e);
+               else
+                   newEmits.pushBackOrAppend(e);
+           } else {
+               newEmits.pushBackOrAppend(e);
+           }
+        }
+
+        for (auto& kv : clotEmits) {
+            auto povBit = kv.second[0]->to<IR::BFN::Emit>()->povBit;
+            auto clotEmit = new IR::BFN::EmitClot(*kv.first, povBit);
+            newEmits.pushBackOrAppend(clotEmit);
+        }
+
+        auto* clone = deparser->clone();
+        clone->emits = newEmits;
+
+        return clone;
+    }
+
+    const PhvInfo& phv;
+    const ClotInfo& clot;
+};
+#endif
+
 /// Generate the lowered deparser IR by splitting references to fields in the
 /// high-level deparser IR into references to containers.
 struct ComputeLoweredDeparserIR : public DeparserInspector {
@@ -814,6 +855,9 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
 
         boost::optional<LastSimpleEmitInfo> lastSimpleEmit;
         std::vector<std::vector<const IR::BFN::DeparserPrimitive*>> groupedEmits;
+#if HAVE_JBAY
+        std::vector<const IR::BFN::DeparserPrimitive*> emitClots;
+#endif
 
         // The deparser contains a sequence of emit-like primitives which we'd
         // like to lower to operate on containers. Each container may contain
@@ -832,12 +876,17 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             // category, but one can imagine that future hardware may introduce
             // others.)
             if (!prim->is<IR::BFN::Emit>()) {
-                BUG_CHECK(!prim->is<IR::BFN::EmitClot>(), "Found an EmitClot, "
-                          "but we haven't lowered the deparser yet?");
-                BUG_CHECK(prim->is<IR::BFN::EmitChecksum>(), "Found a complex "
-                          "emit of an unexpected type: %1%", prim);
-                LOG5(" - Placing complex emit in its own group: " << prim);
-                groupedEmits.emplace_back(1, prim);
+                if (prim->is<IR::BFN::EmitChecksum>()) {
+                    LOG5(" - Placing complex emit in its own group: " << prim);
+                    groupedEmits.emplace_back(1, prim);
+#if HAVE_JBAY
+                } else if (prim->is<IR::BFN::EmitClot>()) {
+                    emitClots.push_back(prim);
+#endif
+                } else {
+                    BUG("Found a complex emit of an unexpected type: %1%", prim);
+                }
+
                 lastSimpleEmit = boost::none;
                 continue;
             }
@@ -873,6 +922,11 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
 
             lastSimpleEmit = LastSimpleEmitInfo{povField->id, povFieldBits, clotTag};
         }
+
+#if HAVE_JBAY
+        for (auto* ec : emitClots)
+            loweredDeparser->emitClots.pushBackOrAppend(ec);
+#endif
 
         // Now we've partitioned the emit primitives into groups which can be
         // lowered independently. Walk over the groups and lower each one.
@@ -1019,6 +1073,9 @@ struct LowerDeparserIR : public PassManager {
     LowerDeparserIR(const PhvInfo& phv, ClotInfo& clot) {
         auto* computeLoweredDeparserIR = new ComputeLoweredDeparserIR(phv, clot);
         addPasses({
+#if HAVE_JBAY
+            new LowerClots(phv, clot),
+#endif
             computeLoweredDeparserIR,
             new ReplaceDeparserIR(computeLoweredDeparserIR->igLoweredDeparser,
                                   computeLoweredDeparserIR->egLoweredDeparser)

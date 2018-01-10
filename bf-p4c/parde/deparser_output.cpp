@@ -50,11 +50,13 @@ std::ostream& outputDebugInfo(std::ostream& out, indent_t indent,
 /// Generate assembly for the deparser dictionary, which controls which
 /// data is written to the output packet.
 struct OutputDictionary : public Inspector {
-    explicit OutputDictionary(std::ostream& out) : out(out), indent(1) { }
+    explicit OutputDictionary(std::ostream& out, const PhvInfo& phv, const ClotInfo& clot) :
+        out(out), phv(phv), clot(clot), indent(1) { }
 
     bool preorder(const IR::BFN::LoweredDeparser* deparser) override {
         out << indent << "dictionary:";
-        if (deparser->emits.empty()) out << " {}";
+        if (deparser->emits.empty() && deparser->emitClots.empty())
+            out << " {}";
         out << std::endl;
         return true;
     }
@@ -90,8 +92,36 @@ struct OutputDictionary : public Inspector {
         return false;
     }
 
+    bool preorder(const IR::BFN::EmitClot* emit) override {
+        AutoIndent autoIndent(indent);
+        out << indent << "clot " << emit->clot.tag << ":" << std::endl;
+
+        auto povBit = phv.field(emit->povBit->field);
+        AutoIndent fieldIndent(indent);
+        out << indent << "pov: " << canon_name(trim_asm_name(povBit->name)) << std::endl;
+
+        std::set<PHV::Container> containers;
+        for (auto f : emit->clot.phv_fields) {
+            f->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
+                containers.insert(alloc.container);
+            });
+        }
+
+        unsigned clot_offset = emit->clot.start;
+        for (auto c : containers) {
+            // TODO(zma) check if c exists
+            auto range = clot.container_range_.at(c);
+            range = range.shiftedByBytes(-clot_offset);
+            out << indent << Range(range.lo, range.hi) << " : " << c << std::endl;
+        }
+
+        return false;
+    }
+
  private:
     std::ostream& out;
+    const PhvInfo& phv;
+    const ClotInfo& clot;
     indent_t indent;
 };
 
@@ -278,8 +308,9 @@ struct OutputDigests : public Inspector {
 }  // namespace
 
 DeparserAsmOutput::DeparserAsmOutput(const IR::BFN::Pipe* pipe,
+                                     const PhvInfo &phv, const ClotInfo &clot,
                                      gress_t gress)
-        : deparser(nullptr) {
+        : phv(phv), clot(clot), deparser(nullptr) {
     auto* abstractDeparser = pipe->thread[gress].deparser;
     BUG_CHECK(abstractDeparser != nullptr, "No deparser?");
     deparser = abstractDeparser->to<IR::BFN::LoweredDeparser>();
@@ -290,7 +321,7 @@ std::ostream&
 operator<<(std::ostream& out, const DeparserAsmOutput& deparserOut) {
     out << "deparser " << deparserOut.deparser->thread() << ":" << std::endl;
 
-    deparserOut.deparser->apply(OutputDictionary(out));
+    deparserOut.deparser->apply(OutputDictionary(out, deparserOut.phv, deparserOut.clot));
     deparserOut.deparser->apply(OutputChecksums(out));
     deparserOut.deparser->apply(OutputParameters(out));
     deparserOut.deparser->apply(OutputDigests(out));

@@ -41,8 +41,7 @@ BFN_Options::BFN_Options() {
 #if HAVE_JBAY
     registerOption("--use-clot", nullptr,
         [this](const char *) {
-            ::warning("CLOTs are currently disabled");
-            use_clot = false;
+            use_clot = true;
             return true;
         }, "use clots in JBay");
 #endif

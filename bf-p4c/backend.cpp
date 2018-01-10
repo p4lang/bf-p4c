@@ -96,9 +96,10 @@ class AsmOutput : public Inspector {
  private:
     std::ostream* out = nullptr;
     const PhvInfo &phv;
+    const ClotInfo &clot;
 
  public:
-    AsmOutput(const PhvInfo &phv, cstring outputFile) : phv(phv) {
+    AsmOutput(const PhvInfo &phv, const ClotInfo &clot, cstring outputFile) : phv(phv), clot(clot) {
         out = &std::cout;
         if (outputFile)
             out = new std::ofstream(outputFile); }
@@ -113,9 +114,9 @@ class AsmOutput : public Inspector {
        *out << "version: 1.0.0" << std::endl
             << PhvAsmOutput(phv)
             << ParserAsmOutput(pipe, INGRESS)
-            << DeparserAsmOutput(pipe, INGRESS)
+            << DeparserAsmOutput(pipe, phv, clot, INGRESS)
             << ParserAsmOutput(pipe, EGRESS)
-            << DeparserAsmOutput(pipe, EGRESS)
+            << DeparserAsmOutput(pipe, phv, clot, EGRESS)
             << mauasm
             << std::flush;
 
@@ -216,7 +217,7 @@ Backend::Backend(const BFN_Options& options) :
 
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),
-        new AsmOutput(phv, options.outputFile)
+        new AsmOutput(phv, clot, options.outputFile)
     });
     setName("Tofino backend");
 

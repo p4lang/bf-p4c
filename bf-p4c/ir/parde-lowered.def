@@ -393,6 +393,7 @@ class LoweredDeparser : AbstractDeparser {
     toString { return gress ? "lowered egress deparser" : "lowered ingress deparser"; }
 
     inline Vector<LoweredEmit> emits;
+    inline Vector<EmitClot> emitClots;
     inline Vector<LoweredDeparserParameter> params;
     inline Vector<LoweredDigest> digests;
     inline Vector<ChecksumUnitConfig> checksums;
