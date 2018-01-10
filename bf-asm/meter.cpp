@@ -106,30 +106,6 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
     assert(args.size() <= 1);
     // color_aware_per_flow_enable implies color_aware
     assert(!color_aware_per_flow_enable || color_aware);
-    //if (args.empty()) { // direct access
-    //    merge.mau_meter_adr_mask[type][bus] =  0x7fff80;
-    //} else if (args[0].type == Call::Arg::Field) {
-    //    // indirect access via overhead field
-    //    int bits = args[0].size() - 3;
-    //    if (per_flow_enable) --bits;
-    //    merge.mau_meter_adr_mask[type][bus] = 0x700000 | (~(~0u << bits) << 7);
-    //} else if (args[0].type == Call::Arg::HashDist) {
-    //    // indirect access via hash_dist
-    //    merge.mau_meter_adr_mask[type][bus] = 0x7fff80; }
-    //if (!color_aware)
-    //    merge.mau_meter_adr_default[type][bus] |= 2 << 24;
-    //else if (!color_aware_per_flow_enable)
-    //    merge.mau_meter_adr_default[type][bus] |= 6 << 24;
-    //if (!per_flow_enable)
-    //    merge.mau_meter_adr_default[type][bus] |= 1 << 23;
-    //if (per_flow_enable)
-    //    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 16;
-    //if (color_aware && color_aware_per_flow_enable)
-    //    merge.mau_meter_adr_type_position[type][bus] = per_flow_enable ? 16 : 17;
-    //else
-    //    merge.mau_meter_adr_type_position[type][bus] = 24;
-    //merge.mau_idletime_adr_mask[type][bus] = type ? 0x7fff0 : 0xffff0;
-    //merge.mau_idletime_adr_default[type][bus] = per_flow_enable ? 0 : 0x100000;
 
     // FIXME - Sets up the meter default regs, need to factor in index
     // constants. Check glass code :
@@ -149,18 +125,32 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
     unsigned base_mask = 0x0;
     unsigned type_mask = (1U << METER_TYPE_BITS) - 1;
     unsigned full_mask = (1U << METER_ADDRESS_BITS) - 1;
+    ptr_bits = METER_ADDRESS_BITS - METER_LOWER_HUFFMAN_BITS;
+    if (!per_flow_enable)
+        ptr_bits -=1;
+    if (!color_aware)
+        ptr_bits -= METER_TYPE_BITS;
     if (args.empty()) { // direct access
-        ptr_bits = METER_ADDRESS_BITS - METER_TYPE_BITS - 1 - METER_LOWER_HUFFMAN_BITS;
-        if (!match->to<ExactMatchTable>())
+        assert(!per_flow_enable);  // can't have pfe on direct meter
+        if (type)
             ptr_bits -= 1; // Ternary tables have one less address bit to consider for meters
+        if (color_aware)
+            ptr_bits -= METER_TYPE_BITS;
+            // FIXME -- these don't come from the direct pointer?  Where do they come from?
+            // FIXME -- the default?
+    } else if (args[0].type == Call::Arg::Field) {
+        if (args[0].size() < ptr_bits)
+            ptr_bits = args[0].size();
+        if (per_flow_enable && per_flow_enable_param != "true")
+            ptr_bits++;
+        // FIXME -- color_aware_per_flow_enable -- where does meter_type come from?  We
+        // currently will extract it from the top 3 bits of this arg; should it be a second arg?
+    } else if (args[0].type == Call::Arg::HashDist) {
+        // nothing else to do here?
     } else {
-        ptr_bits = METER_ADDRESS_BITS - METER_LOWER_HUFFMAN_BITS;
-        if (!per_flow_enable)
-            ptr_bits -=1;
-        if ((!color_aware) || (!color_aware_per_flow_enable))
-            ptr_bits -= METER_TYPE_BITS; }
+        assert(0); }
 
-    if (color_aware && color_aware_per_flow_enable) {
+    if (color_aware_per_flow_enable) {
         base_width = ptr_bits - METER_TYPE_BITS;
         if (per_flow_enable)
             base_width -= 1;
@@ -195,7 +185,7 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
     else meter_adr_type = METER_ADDRESS_BITS - METER_TYPE_BITS;
     merge.mau_meter_adr_type_position[type][bus] = meter_adr_type;
     if (!color_maprams.empty()) {
-        merge.mau_idletime_adr_mask[type][bus] = type ? 0x7fff0 : 0xffff0;
+        merge.mau_idletime_adr_mask[type][bus] = base_mask << IDLETIME_HUFFMAN_BITS;
         merge.mau_idletime_adr_default[type][bus] = per_flow_enable ? 0 : 0x100000; }
 }
 

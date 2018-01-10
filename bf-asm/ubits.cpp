@@ -1,5 +1,6 @@
 #include "ubits.h"
 #include <map>
+#include "hex.h"
 #include "log.h"
 #include <sstream>
 
@@ -51,7 +52,8 @@ void ubits_base::log(const char *op, unsigned long v) const {
         if (!find_regrange(this))
             return;
         LOG1(this << ' ' << op << ' ' << v <<
-             (v != value ?  tmp << " (now " << value << ")", tmp : tmp).str()); } }
+             (v != value ?  tmp << " (now " << value << ")", tmp : tmp).str() <<
+             " (0x" << hex(value) << ")"); } }
 
 void ustring::log() const { LOG1(this << " = \"" << value << "\""); }
 
