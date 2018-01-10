@@ -639,7 +639,8 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         // 301:ingress::$learning<3:0..2>
         // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
         // currently, IR::BFN::Digest node has a string field to distinguish them by name
-        if (entry->name != "learning" && entry->name != "mirror")
+        if (entry->name != "learning" && entry->name != "mirror"
+            && entry->name != "resubmit")
             return;
 
         PHV::Field* f = phv.field(entry->selector->field);
@@ -652,6 +653,11 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         // the no_pack here.
         f->set_no_pack(true);
         LOG1(".....Deparser Constraint " << entry->name << " 'digest' on field..... " << f);
+
+        if (entry->name == "resubmit") {
+            LOG1("\t resubmit field (" << f << ") is set to be "
+                 << "no_pack, no_split and deparsed_bottom_bits");
+            return; }
 
         // For learning digests, we're done.
         if (entry->name == "learning") {

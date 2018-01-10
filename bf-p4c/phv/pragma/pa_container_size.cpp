@@ -168,12 +168,12 @@ std::ostream& operator<<(std::ostream& out, const PragmaContainerSize& pa_cs) {
         for (const auto& sz : container_sizes) {
             logs << sz << " "; }
         logs << " ] " << " container(s)" << std::endl; }
-    logs << " so that " << std::endl;
+
     for (const auto& kv : pa_cs.field_slice_reqs()) {
         auto& fs = kv.first;
         auto& sz = kv.second;
-        logs << fs << " must goto " << sz << std::endl;
-    }
+        logs << fs << " must goto " << sz << std::endl; }
+
     out << logs.str();
     return out;
 }
