@@ -151,3 +151,19 @@ class FabricIPv4UnicastTest(FabricTest):
 
         testutils.send_packet(self, self.port2, str(pkt_2to1))
         testutils.verify_packets(self, exp_pkt_2to1, [self.port1])
+
+class PacketOutTest(FabricTest):
+    def runTest(self):
+        port3 = self.swports(3)
+        port3_hex = stringify(port3, 2)
+        payload = 'a' * 20
+        packet_out = p4runtime_pb2.PacketOut()
+        packet_out.payload = payload
+        egress_physical_port = packet_out.metadata.add()
+        egress_physical_port.metadata_id = 1
+        egress_physical_port.value = port3_hex
+
+        self.send_packet_out(packet_out)
+
+        testutils.verify_packet(self, payload, port3)
+        testutils.verify_no_other_packets(self)
