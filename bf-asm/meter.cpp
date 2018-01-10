@@ -141,48 +141,36 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
     } else if (args[0].type == Call::Arg::Field) {
         if (args[0].size() < ptr_bits)
             ptr_bits = args[0].size();
-        if (per_flow_enable && per_flow_enable_param != "true")
-            ptr_bits++;
-        // FIXME -- color_aware_per_flow_enable -- where does meter_type come from?  We
-        // currently will extract it from the top 3 bits of this arg; should it be a second arg?
     } else if (args[0].type == Call::Arg::HashDist) {
         // nothing else to do here?
     } else {
         assert(0); }
-
-    if (color_aware_per_flow_enable) {
-        base_width = ptr_bits - METER_TYPE_BITS;
-        if (per_flow_enable)
-            base_width -= 1;
-        base_mask = (1U << base_width) - 1;
-        meter_adr_mask = base_mask << METER_LOWER_HUFFMAN_BITS;
-        meter_adr_mask |= (type_mask << METER_TYPE_START_BIT);
-        meter_adr_mask &= full_mask;
-    } else {
-        base_width = ptr_bits;
-        if (per_flow_enable)
-            base_width -= 1;
-        base_mask = (1U << base_width) - 1;
-        meter_adr_mask = base_mask << METER_LOWER_HUFFMAN_BITS;
-        meter_adr_mask &= full_mask; }
+    base_width = ptr_bits;
+    if (color_aware_per_flow_enable)
+        base_width -= METER_TYPE_BITS;
+    if (per_flow_enable)
+        base_width -= 1;
+    base_mask = (1U << base_width) - 1;
+    meter_adr_mask = base_mask << METER_LOWER_HUFFMAN_BITS;
+    if (color_aware_per_flow_enable && options.match_compiler) {
+        // FIXME -- glass sets this but it seems wrong -- type is extracted before
+        // the mask, and should be off in the mask so it does not pollute the vpn
+        // probably irrelevant as these bits are above the vpn bits and are probably
+        // ignored by the hardware.
+        meter_adr_mask |= (type_mask << METER_TYPE_START_BIT); }
+    meter_adr_mask &= full_mask;
     if (match->to<HashActionTable>()) {
         merge.mau_stats_adr_mask[type][bus] = 0;
     } else
         merge.mau_meter_adr_mask[type][bus] |= meter_adr_mask;
-
     if (per_flow_enable) {
         merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit + address_shift();
         if (uses_colormaprams())
             merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus] =
-                per_flow_enable_bit + IDLETIME_HUFFMAN_BITS;
-    }
-
-    unsigned meter_adr_type = 0;
-    if (!color_aware)
-        meter_adr_type = METER_ADDRESS_BITS - METER_TYPE_BITS;
-    else if (color_aware_per_flow_enable)
+                per_flow_enable_bit + IDLETIME_HUFFMAN_BITS; }
+    unsigned meter_adr_type = METER_ADDRESS_BITS - METER_TYPE_BITS;
+    if (color_aware_per_flow_enable)
         meter_adr_type = ptr_bits - METER_TYPE_BITS + METER_LOWER_HUFFMAN_BITS;
-    else meter_adr_type = METER_ADDRESS_BITS - METER_TYPE_BITS;
     merge.mau_meter_adr_type_position[type][bus] = meter_adr_type;
     if (!color_maprams.empty()) {
         merge.mau_idletime_adr_mask[type][bus] = base_mask << IDLETIME_HUFFMAN_BITS;
