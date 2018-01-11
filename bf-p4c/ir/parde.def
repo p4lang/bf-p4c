@@ -332,6 +332,10 @@ class Digest {
     /// The available field lists; the index of each field list in the vector
     /// corresponds to the selector value which chooses it.
     inline Vector<DigestFieldList> fieldLists;
+
+    /// If present, the POV bit controlling whether the contents of the source
+    /// location are valid. Not used on Tofino.
+    NullOK FieldLVal povBit = nullptr;
 }
 
 /// Supertype for all deparser primitives - i.e., actions that can be executed

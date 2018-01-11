@@ -223,7 +223,11 @@ struct OutputDigests : public Inspector {
         out << indent << digest->name << ":" << std::endl;
         AutoIndent digestIndent(indent);
 
-        out << indent << "select: " << digest->selector;
+        out << indent << "select: ";
+        if (digest->povBit) out << "{ ";
+        out << digest->selector;
+        if (digest->povBit) out << ": " << digest->povBit << " }";
+
         outputDebugInfo(out, indent, digest->selector) << std::endl;
 
         int idx = 0;

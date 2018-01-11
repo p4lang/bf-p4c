@@ -32,6 +32,11 @@ class AddJBayMetadataPOV : public Transform {
         param->povBit =
           new IR::BFN::FieldLVal(new IR::TempVar(IR::Type::Bits::get(1), true));
         return param; }
+    IR::BFN::Digest *
+    postorder(IR::BFN::Digest *digest) override {
+        digest->povBit =
+          new IR::BFN::FieldLVal(new IR::TempVar(IR::Type::Bits::get(1), true));
+        return digest; }
     IR::Node *postorder(IR::Primitive *p) override {
         if (p->name == "modify_field") {
             auto *dest = p->operands.at(0);
@@ -39,7 +44,14 @@ class AddJBayMetadataPOV : public Transform {
                 if (equiv(dest, param->source->field)) {
                     return new IR::Vector<IR::Primitive>({ p,
                         new IR::Primitive("modify_field", param->povBit->field,
-                            new IR::Constant(IR::Type::Bits::get(1), 1)) }); } } }
+                            new IR::Constant(IR::Type::Bits::get(1), 1)) }); } } 
+            for (auto& item : dp->digests) {
+                auto* digest = item.second;
+                if (equiv(dest, digest->selector->field)) {
+                    return new IR::Vector<IR::Primitive>({ p,
+                        new IR::Primitive("modify_field", digest->povBit->field,
+                            new IR::Constant(IR::Type::Bits::get(1), 1)) }); } } 
+        }
         return p; }
     IR::Node *postorder(IR::BFN::Extract *e) override {
         for (auto* param : dp->params) {

@@ -1018,6 +1018,9 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             auto* lowered =
               new IR::BFN::LoweredDigest(digest->name, loweredSelector);
 
+              if (digest->povBit)
+                  lowered->povBit = lowerPovBit(phv, digest->povBit);
+
             // Each field list, when lowered, becomes a digest table entry.
             // Learning field lists are used to generate the format for learn
             // quanta, which are exposed to the control plane, so they have a
