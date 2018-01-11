@@ -536,6 +536,19 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     for (auto &intrin : intrinsics)
         intrin.type->setregs(regs, *this, intrin);
 
+    /* resubmit_mode specifies whether this pipe can perform a resubmit operation on
+       a packet. i.e. tell the IPB to resubmit a packet to the MAU pipeline for a second
+       time. If the compiler determines that no resubmit is possible, then it can set this
+       bit, which should lower latency in some circumstances.
+       0 = Resubmit is allowed.  1 = Resubmit is not allowed */
+    regs.dprsrreg.inp.ipp.ingr.resubmit_mode.mode = 1;
+    for (auto &digest : digests) {
+        if (digest.type->name == "resubmit") {
+            regs.dprsrreg.inp.ipp.ingr.resubmit_mode.mode = 0;
+            break;
+        }
+    }
+
     for (auto &digest : digests)
         digest.type->setregs(regs, *this, digest);
 
