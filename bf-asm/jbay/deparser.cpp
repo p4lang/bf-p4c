@@ -541,13 +541,15 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
        time. If the compiler determines that no resubmit is possible, then it can set this
        bit, which should lower latency in some circumstances.
        0 = Resubmit is allowed.  1 = Resubmit is not allowed */
-    regs.dprsrreg.inp.ipp.ingr.resubmit_mode.mode = 1;
+    bool resubmit=false;
     for (auto &digest : digests) {
         if (digest.type->name == "resubmit") {
-            regs.dprsrreg.inp.ipp.ingr.resubmit_mode.mode = 0;
+            resubmit = true;
             break;
         }
     }
+    if (resubmit) regs.dprsrreg.inp.ipp.ingr.resubmit_mode.mode = 0;
+    else regs.dprsrreg.inp.ipp.ingr.resubmit_mode.mode = 1;
 
     for (auto &digest : digests)
         digest.type->setregs(regs, *this, digest);
