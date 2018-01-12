@@ -158,7 +158,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.h.f2 = 8w5;
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w1;
     }
-    @name(".t") table t_0 {
+    @name(".t") table t {
         actions = {
             do_0();
         }
@@ -166,7 +166,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.h.f1 == 8w0) 
-            t_0.apply();
+            t.apply();
     }
 }
 

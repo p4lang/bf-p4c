@@ -163,11 +163,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".stateful_cntr") register<bit<16>>(32w8192) stateful_cntr;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<16> tmp_0;
     @name("NoAction") action NoAction_0() {
     }
-    @name(".stateful_cntr") register<bit<16>>(32w8192) stateful_cntr;
     @name("cntr") register_action<bit<16>, bit<16>>(stateful_cntr) cntr = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;

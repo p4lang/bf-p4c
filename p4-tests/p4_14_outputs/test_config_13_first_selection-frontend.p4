@@ -185,12 +185,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".some_action_profile2") @mode("resilient") action_selector(HashAlgorithm.random, 32w2048, 32w32) some_action_profile2;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
-    tuple<bit<32>, bit<8>, bit<64>> tmp_0;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    bit<8> tmp_1;
+    tuple<bit<32>, bit<8>, bit<64>> tmp_2;
     @name(".action_select") action action_select_0() {
-        tmp_0 = { hdr.ipv4.blah1, hdr.ipv4.blah2, hdr.ipv4.blah3 };
-        hash<bit<8>, bit<32>, tuple<bit<32>, bit<8>, bit<64>>, bit<64>>(tmp, HashAlgorithm.random, 32w0, tmp_0, 64w16384);
-        hdr.ipv4.blah2 = tmp;
+        tmp_2 = { hdr.ipv4.blah1, hdr.ipv4.blah2, hdr.ipv4.blah3 };
+        hash<bit<8>, bit<32>, tuple<bit<32>, bit<8>, bit<64>>, bit<64>>(tmp_1, HashAlgorithm.random, 32w0, tmp_2, 64w16384);
+        hdr.ipv4.blah2 = tmp_1;
     }
     @name(".action_0") action action_2(bit<16> param0) {
         hdr.ipv4.hdrChecksum = param0;
@@ -205,22 +211,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_1") action action_3(bit<16> param1) {
         hdr.ethernet.etherType = param1;
     }
-    @name(".table_group") table table_group_0 {
+    @name(".table_group") table table_group {
         actions = {
             action_select_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ipv4.blah1: ternary @name("ipv4.blah1") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @immediate(0) @selector_max_group_size(121) @name(".test_select") table test_select_0 {
+    @immediate(0) @selector_max_group_size(121) @name(".test_select") table test_select {
         actions = {
             action_2();
             big_action_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.ethernet.etherType: exact @name("ethernet.etherType") ;
@@ -232,12 +238,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 8192;
         implementation = some_action_profile;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".test_select2") table test_select2_0 {
+    @name(".test_select2") table test_select2 {
         actions = {
             action_3();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ethernet.etherType: exact @name("ethernet.etherType") ;
@@ -247,12 +253,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 4096;
         implementation = some_action_profile2;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        test_select_0.apply();
-        test_select2_0.apply();
-        table_group_0.apply();
+        test_select.apply();
+        test_select2.apply();
+        table_group.apply();
     }
 }
 

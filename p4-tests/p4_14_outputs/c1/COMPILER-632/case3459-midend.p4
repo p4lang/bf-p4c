@@ -709,6 +709,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<32> Gresston;
 }
 
+@name(".Spenard") register<bit<1>>(32w294912) Spenard;
+
+@name(".Vesuvius") register<bit<1>>(32w294912) Vesuvius;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -1618,14 +1622,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_64();
     }
-    @name(".Spenard") register<bit<1>>(32w294912) _Spenard_0;
-    @name(".Vesuvius") register<bit<1>>(32w294912) _Vesuvius_0;
-    @name(".Ludowici.Matador") register_action<bit<1>, bit<1>>(_Vesuvius_0) _Ludowici_Matador_0 = {
+    @name(".Ludowici.Matador") register_action<bit<1>, bit<1>>(Vesuvius) _Ludowici_Matador_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Ludowici.Moose") register_action<bit<1>, bit<1>>(_Spenard_0) _Ludowici_Moose_0 = {
+    @name(".Ludowici.Moose") register_action<bit<1>, bit<1>>(Spenard) _Ludowici_Moose_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

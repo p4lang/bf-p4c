@@ -515,6 +515,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".Tabler") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Tabler;
 
+@name(".Jemison") register<bit<1>>(32w262144) Jemison;
+
+@name(".Sprout") register<bit<1>>(32w262144) Sprout;
+
 @name("Monkstown") struct Monkstown {
     bit<8>  Bevington;
     bit<24> Crumstown;
@@ -1009,14 +1013,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_44();
     }
-    @name(".Jemison") register<bit<1>>(32w262144) _Jemison_0;
-    @name(".Sprout") register<bit<1>>(32w262144) _Sprout_0;
-    @name(".Chamois.Millikin") register_action<bit<1>, bit<1>>(_Sprout_0) _Chamois_Millikin_0 = {
+    @name(".Chamois.Millikin") register_action<bit<1>, bit<1>>(Sprout) _Chamois_Millikin_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Chamois.Pierpont") register_action<bit<1>, bit<1>>(_Jemison_0) _Chamois_Pierpont_0 = {
+    @name(".Chamois.Pierpont") register_action<bit<1>, bit<1>>(Jemison) _Chamois_Pierpont_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

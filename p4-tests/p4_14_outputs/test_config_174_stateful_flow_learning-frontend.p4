@@ -224,31 +224,53 @@ struct flow_cache_1_way_1_alu_layout {
     bit<32> hi;
 }
 
+@name(".flow_cache_1_way_1") register<flow_cache_1_way_1_alu_layout>(32w16384) flow_cache_1_way_1;
+
 struct flow_cache_1_way_2_alu_layout {
     bit<32> lo;
     bit<32> hi;
 }
+
+@name(".flow_cache_1_way_2") register<flow_cache_1_way_2_alu_layout>(32w16384) flow_cache_1_way_2;
 
 struct flow_cache_2_way_1_alu_layout {
     bit<16> lo;
     bit<16> hi;
 }
 
+@name(".flow_cache_2_way_1") register<flow_cache_2_way_1_alu_layout>(32w16384) flow_cache_2_way_1;
+
 struct flow_cache_2_way_2_alu_layout {
     bit<16> lo;
     bit<16> hi;
 }
 
+@name(".flow_cache_2_way_2") register<flow_cache_2_way_2_alu_layout>(32w16384) flow_cache_2_way_2;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp;
-    bit<32> tmp_0;
-    bit<16> tmp_1;
-    bit<16> tmp_2;
-    @name(".flow_cache_1_way_1") register<flow_cache_1_way_1_alu_layout>(32w16384) flow_cache_1_way;
-    @name(".flow_cache_1_way_2") register<flow_cache_1_way_2_alu_layout>(32w16384) flow_cache_1_way_0;
-    @name(".flow_cache_2_way_1") register<flow_cache_2_way_1_alu_layout>(32w16384) flow_cache_2_way;
-    @name(".flow_cache_2_way_2") register<flow_cache_2_way_2_alu_layout>(32w16384) flow_cache_2_way_0;
-    @name("flow_cache_1_way_1_alu") register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way) flow_cache_1_way_1_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_10() {
+    }
+    @name("NoAction") action NoAction_11() {
+    }
+    @name("NoAction") action NoAction_12() {
+    }
+    @name("NoAction") action NoAction_13() {
+    }
+    @name("NoAction") action NoAction_14() {
+    }
+    @name("NoAction") action NoAction_15() {
+    }
+    @name("NoAction") action NoAction_16() {
+    }
+    @name("NoAction") action NoAction_17() {
+    }
+    bit<32> tmp_3;
+    bit<32> tmp_4;
+    bit<16> tmp_5;
+    bit<16> tmp_6;
+    @name("flow_cache_1_way_1_alu") register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_alu = {
         void apply(inout flow_cache_1_way_1_alu_layout value, out bit<32> rv) {
             rv = 32w0;
             value.lo = 32w1;
@@ -256,7 +278,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 rv = value.lo;
         }
     };
-    @name("flow_cache_1_way_1_learn_alu") register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way) flow_cache_1_way_1_learn_alu_0 = {
+    @name("flow_cache_1_way_1_learn_alu") register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_learn_alu = {
         void apply(inout flow_cache_1_way_1_alu_layout value, out bit<32> rv) {
             rv = 32w0;
             if (value.lo == 32w0 && value.hi == 32w0) 
@@ -265,7 +287,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 value.lo = hdr.ipv4.dstAddr;
         }
     };
-    @name("flow_cache_1_way_2_alu") register_action<flow_cache_1_way_2_alu_layout, bit<32>>(flow_cache_1_way_0) flow_cache_1_way_2_alu_0 = {
+    @name("flow_cache_1_way_2_alu") register_action<flow_cache_1_way_2_alu_layout, bit<32>>(flow_cache_1_way_2) flow_cache_1_way_2_alu = {
         void apply(inout flow_cache_1_way_2_alu_layout value, out bit<32> rv) {
             rv = 32w0;
             value.lo = 32w1;
@@ -273,7 +295,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 rv = value.lo;
         }
     };
-    @name("flow_cache_2_way_1_alu") register_action<flow_cache_2_way_1_alu_layout, bit<16>>(flow_cache_2_way) flow_cache_2_way_1_alu_0 = {
+    @name("flow_cache_2_way_1_alu") register_action<flow_cache_2_way_1_alu_layout, bit<16>>(flow_cache_2_way_1) flow_cache_2_way_1_alu = {
         void apply(inout flow_cache_2_way_1_alu_layout value, out bit<16> rv) {
             rv = 16w0;
             value.lo = value.lo;
@@ -281,7 +303,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 rv = value.lo;
         }
     };
-    @name("flow_cache_2_way_1_learn_alu") register_action<flow_cache_2_way_1_alu_layout, bit<16>>(flow_cache_2_way) flow_cache_2_way_1_learn_alu_0 = {
+    @name("flow_cache_2_way_1_learn_alu") register_action<flow_cache_2_way_1_alu_layout, bit<16>>(flow_cache_2_way_1) flow_cache_2_way_1_learn_alu = {
         void apply(inout flow_cache_2_way_1_alu_layout value, out bit<16> rv) {
             rv = 16w0;
             if (value.lo == 16w0 && value.hi == 16w0) 
@@ -290,7 +312,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 value.lo = meta.meta.proto_idx_pair1;
         }
     };
-    @name("flow_cache_2_way_2_alu") register_action<flow_cache_2_way_2_alu_layout, bit<16>>(flow_cache_2_way_0) flow_cache_2_way_2_alu_0 = {
+    @name("flow_cache_2_way_2_alu") register_action<flow_cache_2_way_2_alu_layout, bit<16>>(flow_cache_2_way_2) flow_cache_2_way_2_alu = {
         void apply(inout flow_cache_2_way_2_alu_layout value, out bit<16> rv) {
             rv = 16w0;
             value.lo = value.lo;
@@ -299,26 +321,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".do_flow_table_cache_1_1") action do_flow_table_cache_1() {
-        tmp = flow_cache_1_way_1_alu_0.execute();
-        meta.meta.fc_1_1_hit = (bit<1>)tmp;
+        tmp_3 = flow_cache_1_way_1_alu.execute();
+        meta.meta.fc_1_1_hit = (bit<1>)tmp_3;
     }
     @name(".do_flow_table_cache_1_2") action do_flow_table_cache_1_0() {
-        tmp_0 = flow_cache_1_way_2_alu_0.execute();
-        meta.meta.fc_1_1_hit = (bit<1>)tmp_0;
+        tmp_4 = flow_cache_1_way_2_alu.execute();
+        meta.meta.fc_1_1_hit = (bit<1>)tmp_4;
     }
     @name(".do_flow_table_learn_1_1") action do_flow_table_learn_1() {
-        flow_cache_1_way_1_learn_alu_0.execute();
+        flow_cache_1_way_1_learn_alu.execute();
     }
     @name(".do_flow_table_cache_2_1") action do_flow_table_cache_2() {
-        tmp_1 = flow_cache_2_way_1_alu_0.execute();
-        meta.meta.proto_idx_pair1 = tmp_1;
+        tmp_5 = flow_cache_2_way_1_alu.execute();
+        meta.meta.proto_idx_pair1 = tmp_5;
     }
     @name(".do_flow_table_cache_2_2") action do_flow_table_cache_2_0() {
-        tmp_2 = flow_cache_2_way_2_alu_0.execute();
-        meta.meta.proto_idx_pair1 = tmp_2;
+        tmp_6 = flow_cache_2_way_2_alu.execute();
+        meta.meta.proto_idx_pair1 = tmp_6;
     }
     @name(".do_flow_table_learn_2_1") action do_flow_table_learn_2() {
-        flow_cache_2_way_1_learn_alu_0.execute();
+        flow_cache_2_way_1_learn_alu.execute();
     }
     @name(".set_rewrite_idx") action set_rewrite_idx_0(bit<16> rewrite_idx) {
         meta.meta.rewrite_idx = rewrite_idx;
@@ -330,77 +352,79 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name(".flow_table_cache_1_1") table flow_table_cache_1 {
+    @name(".do_nothing") action do_nothing_2() {
+    }
+    @name(".flow_table_cache_1_1") table flow_table_cache {
         actions = {
             do_flow_table_cache_1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.hash_1: exact @name("meta.hash_1") ;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".flow_table_cache_1_2") table flow_table_cache_1_0 {
+    @name(".flow_table_cache_1_2") table flow_table_cache_1_1 {
         actions = {
             do_flow_table_cache_1_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_10();
         }
         key = {
             meta.meta.hash_1: exact @name("meta.hash_1") ;
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_10();
     }
-    @name(".flow_table_cache_1_age") table flow_table_cache_1_age_0 {
+    @name(".flow_table_cache_1_age") table flow_table_cache_1_age {
         actions = {
             do_flow_table_learn_1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_11();
         }
         key = {
             meta.meta.hash_1: exact @name("meta.hash_1") ;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_11();
     }
-    @name(".flow_table_cache_2_1") table flow_table_cache_2 {
+    @name(".flow_table_cache_2_1") table flow_table_cache_0 {
         actions = {
             do_flow_table_cache_2();
-            @defaultonly NoAction();
+            @defaultonly NoAction_12();
         }
         key = {
             meta.meta.hash_2: exact @name("meta.hash_2") ;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_12();
     }
-    @name(".flow_table_cache_2_2") table flow_table_cache_2_0 {
+    @name(".flow_table_cache_2_2") table flow_table_cache_2_1 {
         actions = {
             do_flow_table_cache_2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_13();
         }
         key = {
             meta.meta.hash_2: exact @name("meta.hash_2") ;
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_13();
     }
-    @name(".flow_table_cache_2_age") table flow_table_cache_2_age_0 {
+    @name(".flow_table_cache_2_age") table flow_table_cache_2_age {
         actions = {
             do_flow_table_learn_2();
-            @defaultonly NoAction();
+            @defaultonly NoAction_14();
         }
         key = {
             meta.meta.hash_2: exact @name("meta.hash_2") ;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_14();
     }
-    @name(".flow_table_cpu") table flow_table_cpu_0 {
+    @name(".flow_table_cpu") table flow_table_cpu {
         actions = {
             set_rewrite_idx_0();
             on_miss_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_15();
         }
         key = {
             hdr.ipv4.srcAddr : exact @name("ipv4.srcAddr") ;
@@ -409,49 +433,49 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.ports  : exact @name("meta.ports") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_15();
     }
-    @name(".rewrite_tbl") table rewrite_tbl_0 {
+    @name(".rewrite_tbl") table rewrite_tbl {
         actions = {
             set_dst_port_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_16();
         }
         key = {
             meta.meta.rewrite_idx: exact @name("meta.rewrite_idx") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_16();
     }
-    @name(".slow_path") table slow_path_0 {
+    @name(".slow_path") table slow_path {
         actions = {
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_2();
+            @defaultonly NoAction_17();
         }
         key = {
             hdr.ipv4.totalLen     : exact @name("ipv4.totalLen") ;
             meta.meta.port_numbers: exact @name("meta.port_numbers") ;
         }
         size = 3072;
-        default_action = NoAction();
+        default_action = NoAction_17();
     }
     apply {
-        switch (flow_table_cpu_0.apply().action_run) {
+        switch (flow_table_cpu.apply().action_run) {
             default: {
-                rewrite_tbl_0.apply();
+                rewrite_tbl.apply();
             }
             on_miss_0: {
-                flow_table_cache_1.apply();
-                flow_table_cache_2.apply();
-                flow_table_cache_1_0.apply();
-                flow_table_cache_2_0.apply();
+                flow_table_cache.apply();
+                flow_table_cache_0.apply();
+                flow_table_cache_1_1.apply();
+                flow_table_cache_2_1.apply();
                 if (meta.meta.fc_1_1_hit == 1w1 && meta.meta.same_proto_1 == 8w0 && (meta.meta.proto_idx_pair1 & 16w0xffff) != 16w0) 
-                    flow_table_cache_1_age_0.apply();
+                    flow_table_cache_1_age.apply();
                 else 
                     if (meta.meta.fc_1_2_hit == 1w1 && meta.meta.same_proto_2 == 8w0 && (meta.meta.proto_idx_pair2 & 16w0xffff) != 16w0) 
-                        flow_table_cache_2_age_0.apply();
+                        flow_table_cache_2_age.apply();
                     else 
-                        slow_path_0.apply();
+                        slow_path.apply();
             }
         }
 

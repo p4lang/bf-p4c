@@ -28,6 +28,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".set_b1_3") action_profile(32w1024) set_b1_3;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".setb1") action setb1_0(bit<8> val1) {
         hdr.data.b1 = val1;
     }
@@ -37,22 +39,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".setb3") action setb3_0(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             setb1_0();
             setb2_0();
             setb3_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
         }
         size = 300000;
         implementation = set_b1_3;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        test1_0.apply();
+        test1.apply();
     }
 }
 

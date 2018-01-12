@@ -572,6 +572,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".Salus") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Salus;
 
+@name(".Correo") register<bit<1>>(32w262144) Correo;
+
+@name(".Pierpont") register<bit<1>>(32w262144) Pierpont;
+
 @name("Twinsburg") struct Twinsburg {
     bit<8>  Blueberry;
     bit<24> Crooks;
@@ -1154,14 +1158,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_47();
     }
-    @name(".Correo") register<bit<1>>(32w262144) _Correo_0;
-    @name(".Pierpont") register<bit<1>>(32w262144) _Pierpont_0;
-    @name(".Eastover.Barney") register_action<bit<1>, bit<1>>(_Pierpont_0) _Eastover_Barney_0 = {
+    @name(".Eastover.Barney") register_action<bit<1>, bit<1>>(Pierpont) _Eastover_Barney_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Eastover.Waxhaw") register_action<bit<1>, bit<1>>(_Correo_0) _Eastover_Waxhaw_0 = {
+    @name(".Eastover.Waxhaw") register_action<bit<1>, bit<1>>(Correo) _Eastover_Waxhaw_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

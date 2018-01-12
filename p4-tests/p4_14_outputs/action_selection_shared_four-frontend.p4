@@ -33,21 +33,56 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".set_b1_3") @mode("fair") action_selector(HashAlgorithm.crc16, 32w1024, 32w14) set_b1_3;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
     @name(".setb1") action setb1_0(bit<8> val1) {
+        hdr.data.b1 = val1;
+    }
+    @name(".setb1") action setb1_4(bit<8> val1) {
+        hdr.data.b1 = val1;
+    }
+    @name(".setb1") action setb1_5(bit<8> val1) {
+        hdr.data.b1 = val1;
+    }
+    @name(".setb1") action setb1_6(bit<8> val1) {
         hdr.data.b1 = val1;
     }
     @name(".setb2") action setb2_0(bit<8> val2) {
         hdr.data.b2 = val2;
     }
+    @name(".setb2") action setb2_4(bit<8> val2) {
+        hdr.data.b2 = val2;
+    }
+    @name(".setb2") action setb2_5(bit<8> val2) {
+        hdr.data.b2 = val2;
+    }
+    @name(".setb2") action setb2_6(bit<8> val2) {
+        hdr.data.b2 = val2;
+    }
     @name(".setb3") action setb3_0(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name(".test1") table test1_0 {
+    @name(".setb3") action setb3_4(bit<8> val3) {
+        hdr.data.b3 = val3;
+    }
+    @name(".setb3") action setb3_5(bit<8> val3) {
+        hdr.data.b3 = val3;
+    }
+    @name(".setb3") action setb3_6(bit<8> val3) {
+        hdr.data.b3 = val3;
+    }
+    @name(".test1") table test1 {
         actions = {
             setb1_0();
             setb2_0();
             setb3_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
@@ -57,14 +92,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 10000;
         implementation = set_b1_3;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".test2") table test2_0 {
+    @name(".test2") table test2 {
         actions = {
-            setb1_0();
-            setb2_0();
-            setb3_0();
-            @defaultonly NoAction();
+            setb1_4();
+            setb2_4();
+            setb3_4();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.data.f2: exact @name("data.f2") ;
@@ -74,14 +109,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 5000;
         implementation = set_b1_3;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
-    @name(".test3") table test3_0 {
+    @name(".test3") table test3 {
         actions = {
-            setb1_0();
-            setb2_0();
-            setb3_0();
-            @defaultonly NoAction();
+            setb1_5();
+            setb2_5();
+            setb3_5();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.data.f3: exact @name("data.f3") ;
@@ -91,14 +126,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 2000;
         implementation = set_b1_3;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".test4") table test4_0 {
+    @name(".test4") table test4 {
         actions = {
-            setb1_0();
-            setb2_0();
-            setb3_0();
-            @defaultonly NoAction();
+            setb1_6();
+            setb2_6();
+            setb3_6();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.data.f4: exact @name("data.f4") ;
@@ -108,19 +143,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
         implementation = set_b1_3;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
     apply {
         if (hdr.data.b4 == 8w0 || hdr.data.b4 == 8w2) 
             if (hdr.data.b4 == 8w0) 
-                test1_0.apply();
+                test1.apply();
             else 
-                test2_0.apply();
+                test2.apply();
         else 
             if (hdr.data.b4 == 8w3) 
-                test3_0.apply();
+                test3.apply();
             else 
-                test4_0.apply();
+                test4.apply();
     }
 }
 

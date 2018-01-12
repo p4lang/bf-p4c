@@ -166,7 +166,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".do_egr_mir") action do_egr_mir_0() {
         clone(CloneType.E2E, (bit<32>)meta.md.egr_mir_ses);
     }
-    @name(".egr_mir") table egr_mir_0 {
+    @name(".egr_mir") table egr_mir_1 {
         actions = {
             do_egr_mir_0();
         }
@@ -175,11 +175,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         if (1w1 == meta.md.do_egr_mirroring) 
-            egr_mir_0.apply();
+            egr_mir_1.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".do_ing_mir") action do_ing_mir_0() {
         clone(CloneType.I2E, (bit<32>)meta.md.ing_mir_ses);
     }
@@ -190,29 +192,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.ing_mir_ses = ing_ses;
         meta.md.egr_mir_ses = egr_ses;
     }
-    @name(".ing_mir") table ing_mir_0 {
+    @name(".ing_mir") table ing_mir_1 {
         actions = {
             do_ing_mir_0();
         }
         size = 1;
         default_action = do_ing_mir_0();
     }
-    @name(".p0") table p0_0 {
+    @name(".p0") table p0 {
         actions = {
             set_md_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 
-            p0_0.apply();
+            p0.apply();
         if (1w1 == meta.md.do_ing_mirroring) 
-            ing_mir_0.apply();
+            ing_mir_1.apply();
     }
 }
 

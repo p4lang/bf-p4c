@@ -204,7 +204,7 @@ struct headers {
 #include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
+    bit<8> tmp_2;
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.ethertype) {
@@ -234,8 +234,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".start") state start {
-        tmp = packet.lookahead<bit<8>>();
-        transition select(tmp[7:0]) {
+        tmp_2 = packet.lookahead<bit<8>>();
+        transition select(tmp_2[7:0]) {
             default: parse_ethernet;
         }
     }
@@ -248,11 +248,22 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+@name(".kv_register") register<bit<32>>(32w8192) kv_register;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp_0;
-    bool tmp_1;
-    @name(".kv_register") register<bit<32>>(32w8192) kv_register_0;
-    @name("kv_alu") register_action<bit<32>, bit<32>>(kv_register_0) kv_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
+    bit<32> tmp_3;
+    bool tmp_4;
+    @name("kv_alu") register_action<bit<32>, bit<32>>(kv_register) kv_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = value;
         }
@@ -267,16 +278,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.nh_id = nh;
     }
     @name(".kv_read") action kv_read_0(bit<32> index) {
-        tmp_0 = kv_alu_0.execute(index);
-        hdr.kv.value = tmp_0;
+        tmp_3 = kv_alu.execute(index);
+        hdr.kv.value = tmp_3;
     }
     @name(".set_egr_ifid") action set_egr_ifid_0(bit<16> ifid) {
         meta.md.egr_ifid = ifid;
     }
-    @seletor_num_max_groups(128) @selector_max_group_size(1200) @name(".egr_ifid") table egr_ifid_0 {
+    @seletor_num_max_groups(128) @selector_max_group_size(1200) @name(".egr_ifid") table egr_ifid_1 {
         actions = {
             set_egr_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.md.egr_ifid           : exact @name("md.egr_ifid") ;
@@ -289,62 +300,62 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 16384;
         implementation = lag_ap;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".egr_port") table egr_port_0 {
+    @name(".egr_port") table egr_port {
         actions = {
             set_dest_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_6();
         }
         key = {
             meta.md.egr_ifid: ternary @name("md.egr_ifid") ;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".ipv4_route") table ipv4_route_0 {
+    @name(".ipv4_route") table ipv4_route {
         actions = {
             set_next_hop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ipv4.dip: lpm @name("ipv4.dip") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
-    @name(".kv_process") table kv_process_0 {
+    @name(".kv_process") table kv_process {
         actions = {
             kv_read_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.kv.key: exact @name("kv.key") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_8();
     }
-    @name(".next_hop") table next_hop_0 {
+    @name(".next_hop") table next_hop {
         actions = {
             set_egr_ifid_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_9();
         }
         key = {
             meta.md.nh_id: ternary @name("md.nh_id") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_9();
     }
     apply {
         if (hdr.kv.isValid()) 
-            kv_process_0.apply();
-        ipv4_route_0.apply();
-        next_hop_0.apply();
-        tmp_1 = egr_ifid_0.apply().hit;
-        if (tmp_1) 
+            kv_process.apply();
+        ipv4_route.apply();
+        next_hop.apply();
+        tmp_4 = egr_ifid_1.apply().hit;
+        if (tmp_4) 
             ;
         else 
-            egr_port_0.apply();
+            egr_port.apply();
     }
 }
 

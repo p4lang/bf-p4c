@@ -226,42 +226,59 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_1;
+
+@name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_2;
+
+@name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<1> tmp;
-    bit<1> tmp_0;
-    bit<1> tmp_1;
-    @name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter;
-    @name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_0;
-    @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_4;
-    @name("bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter) bloom_filter_alu = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
+    @name("NoAction") action NoAction_10() {
+    }
+    @name("NoAction") action NoAction_11() {
+    }
+    @name("NoAction") action NoAction_12() {
+    }
+    @name("NoAction") action NoAction_13() {
+    }
+    bit<1> tmp_2;
+    bit<1> tmp_3;
+    bit<1> tmp_4;
+    @name("bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
             rv = ~value;
         }
     };
-    @name("bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_0) bloom_filter_alu_0 = {
+    @name("bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
             rv = ~value;
         }
     };
-    @name("bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_4) bloom_filter_alu_4 = {
+    @name("bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
             rv = ~value;
         }
     };
     @name(".run_bloom_filter_1") action run_bloom_filter() {
-        tmp = bloom_filter_alu.execute((bit<32>)meta.meta.hash_1);
-        meta.meta.is_not_member = tmp;
+        tmp_2 = bloom_filter_alu_1.execute((bit<32>)meta.meta.hash_1);
+        meta.meta.is_not_member = tmp_2;
     }
     @name(".run_bloom_filter_2") action run_bloom_filter_0() {
-        tmp_0 = bloom_filter_alu_0.execute();
-        meta.meta.is_not_member = tmp_0;
+        tmp_3 = bloom_filter_alu_2.execute();
+        meta.meta.is_not_member = tmp_3;
     }
     @name(".run_bloom_filter_3") action run_bloom_filter_4() {
-        tmp_1 = bloom_filter_alu_4.execute();
-        meta.meta.is_not_member = tmp_1;
+        tmp_4 = bloom_filter_alu_3.execute();
+        meta.meta.is_not_member = tmp_4;
     }
     @name(".drop_me") action drop_me_0() {
         mark_to_drop();
@@ -277,79 +294,79 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_hash_3") action set_hash_4() {
         hash<bit<18>, bit<18>, tuple<bit<32>, bit<32>, bit<16>>, bit<36>>(meta.meta.hash_3, HashAlgorithm.identity, 18w0, { hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort }, 36w262144);
     }
-    @name(".bloom_filter_membership_1") table bloom_filter_membership {
+    @name(".bloom_filter_membership_1") table bloom_filter_membership_1 {
         actions = {
             run_bloom_filter();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         size = 262144;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".bloom_filter_membership_2") table bloom_filter_membership_0 {
+    @name(".bloom_filter_membership_2") table bloom_filter_membership_2 {
         actions = {
             run_bloom_filter_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_8();
         }
         key = {
             meta.meta.hash_2: exact @name("meta.hash_2") ;
         }
         size = 262144;
-        default_action = NoAction();
+        default_action = NoAction_8();
     }
-    @name(".bloom_filter_membership_3") table bloom_filter_membership_4 {
+    @name(".bloom_filter_membership_3") table bloom_filter_membership_3 {
         actions = {
             run_bloom_filter_4();
-            @defaultonly NoAction();
+            @defaultonly NoAction_9();
         }
         key = {
             meta.meta.hash_3: exact @name("meta.hash_3") ;
         }
         size = 262144;
-        default_action = NoAction();
+        default_action = NoAction_9();
     }
-    @name(".react") table react_0 {
+    @name(".react") table react {
         actions = {
             drop_me_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_10();
         }
         key = {
             meta.meta.is_not_member: exact @name("meta.is_not_member") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_10();
     }
-    @name(".set_hash_1_tbl") table set_hash_1_tbl_0 {
+    @name(".set_hash_1_tbl") table set_hash_1_tbl {
         actions = {
             set_hash();
-            @defaultonly NoAction();
+            @defaultonly NoAction_11();
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_11();
     }
-    @name(".set_hash_2_tbl") table set_hash_2_tbl_0 {
+    @name(".set_hash_2_tbl") table set_hash_2_tbl {
         actions = {
             set_hash_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_12();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_12();
     }
-    @name(".set_hash_3_tbl") table set_hash_3_tbl_0 {
+    @name(".set_hash_3_tbl") table set_hash_3_tbl {
         actions = {
             set_hash_4();
-            @defaultonly NoAction();
+            @defaultonly NoAction_13();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_13();
     }
     apply {
-        set_hash_1_tbl_0.apply();
-        set_hash_2_tbl_0.apply();
-        set_hash_3_tbl_0.apply();
-        bloom_filter_membership.apply();
-        bloom_filter_membership_0.apply();
-        bloom_filter_membership_4.apply();
-        react_0.apply();
+        set_hash_1_tbl.apply();
+        set_hash_2_tbl.apply();
+        set_hash_3_tbl.apply();
+        bloom_filter_membership_1.apply();
+        bloom_filter_membership_2.apply();
+        bloom_filter_membership_3.apply();
+        react.apply();
     }
 }
 

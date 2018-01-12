@@ -814,6 +814,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".Tecolote") @mode("resilient") action_selector(HashAlgorithm.identity, 32w32768, 32w51) Tecolote;
 
+@name(".Lesley") register<bit<1>>(32w294912) Lesley;
+
+@name(".Norma") register<bit<1>>(32w294912) Norma;
+
 @name("Bairoa") struct Bairoa {
     bit<2>  Hospers;
     bit<24> Jayton;
@@ -829,6 +833,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<24> Cisne;
     bit<32> Rayville;
 }
+
+@name(".Godley") register<bit<1>>(32w294912) Godley;
+
+@name(".Pearce") register<bit<1>>(32w294912) Pearce;
 
 struct tuple_0 {
     bit<9>  field;
@@ -1594,8 +1602,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 1;
         default_action = _HydePark();
     }
-    @name(".Godley") register<bit<1>>(32w294912) _Godley_0;
-    @name(".Gabbs.Lenwood") register_action<bit<1>, bit<1>>(_Godley_0) _Gabbs_Lenwood_0 = {
+    @name(".Gabbs.Lenwood") register_action<bit<1>, bit<1>>(Godley) _Gabbs_Lenwood_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
@@ -1626,8 +1633,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 128;
         default_action = _Caspian(10w0);
     }
-    @name(".Pearce") register<bit<1>>(32w294912) _Pearce_0;
-    @name(".Nevis.Giltner") register_action<bit<1>, bit<1>>(_Pearce_0) _Nevis_Giltner_0 = {
+    @name(".Nevis.Giltner") register_action<bit<1>, bit<1>>(Pearce) _Nevis_Giltner_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
@@ -2116,14 +2122,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_75();
     }
-    @name(".Lesley") register<bit<1>>(32w294912) _Lesley;
-    @name(".Norma") register<bit<1>>(32w294912) _Norma;
-    @name(".Chatcolet.Kenmore") register_action<bit<1>, bit<1>>(_Norma) _Chatcolet_Kenmore = {
+    @name(".Chatcolet.Kenmore") register_action<bit<1>, bit<1>>(Norma) _Chatcolet_Kenmore = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Chatcolet.Spivey") register_action<bit<1>, bit<1>>(_Lesley) _Chatcolet_Spivey = {
+    @name(".Chatcolet.Spivey") register_action<bit<1>, bit<1>>(Lesley) _Chatcolet_Spivey = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

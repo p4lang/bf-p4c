@@ -39,10 +39,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         standard_metadata.egress_spec = port;
     }
     @name(".action_0") action action_0() {
-        hdr.pkt.f1 = hdr.pkt.f7;
-        hdr.pkt.f2 = hdr.pkt.f8;
-        hdr.pkt.f3 = hdr.pkt.f9;
-        hdr.pkt.f4 = hdr.pkt.fa;
+        hdr.pkt.f1 = hdr.pkt.f5;
+        hdr.pkt.f2 = hdr.pkt.fa;
+        hdr.pkt.f3 = hdr.pkt.f8;
+        hdr.pkt.f4 = hdr.pkt.f7;
     }
     @name(".action_1") action action_1() {
         hdr.pkt.f1 = hdr.pkt.f5;
@@ -55,6 +55,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.f2 = hdr.pkt.fa;
         hdr.pkt.f3 = hdr.pkt.f7;
         hdr.pkt.f4 = hdr.pkt.f8;
+    }
+    @name(".action_3") action action_3() {
+        hdr.pkt.f1 = hdr.pkt.f7;
+        hdr.pkt.f2 = hdr.pkt.f8;
+        hdr.pkt.f3 = hdr.pkt.f9;
+        hdr.pkt.f4 = hdr.pkt.fa;
     }
     @name(".setting_port") table setting_port {
         actions = {
@@ -71,6 +77,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_0();
             action_1();
             action_2();
+            action_3();
             @defaultonly NoAction();
         }
         key = {

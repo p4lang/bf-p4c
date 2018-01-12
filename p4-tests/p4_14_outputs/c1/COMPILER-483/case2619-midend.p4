@@ -580,6 +580,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<16> Readsboro;
 }
 
+@name(".Alcalde") register<bit<1>>(32w262144) Alcalde;
+
+@name(".NewSite") register<bit<1>>(32w262144) NewSite;
+
 @name("Montour") struct Montour {
     bit<8>  SeaCliff;
     bit<16> Maybell;
@@ -1154,14 +1158,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = _Diomede();
     }
-    @name(".Alcalde") register<bit<1>>(32w262144) _Alcalde_0;
-    @name(".NewSite") register<bit<1>>(32w262144) _NewSite_0;
-    @name(".Tahuya.Goldsmith") register_action<bit<1>, bit<1>>(_Alcalde_0) _Tahuya_Goldsmith_0 = {
+    @name(".Tahuya.Goldsmith") register_action<bit<1>, bit<1>>(Alcalde) _Tahuya_Goldsmith_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Tahuya.Mizpah") register_action<bit<1>, bit<1>>(_NewSite_0) _Tahuya_Mizpah_0 = {
+    @name(".Tahuya.Mizpah") register_action<bit<1>, bit<1>>(NewSite) _Tahuya_Mizpah_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

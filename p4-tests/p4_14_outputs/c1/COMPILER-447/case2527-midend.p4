@@ -560,6 +560,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<32> Satolah;
 }
 
+@name(".Hulbert") register<bit<1>>(32w262144) Hulbert;
+
+@name(".Noyack") register<bit<1>>(32w262144) Noyack;
+
 @name("TenSleep") struct TenSleep {
     bit<8>  Ferndale;
     bit<24> Cantwell;
@@ -1089,14 +1093,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_44();
     }
-    @name(".Hulbert") register<bit<1>>(32w262144) _Hulbert_0;
-    @name(".Noyack") register<bit<1>>(32w262144) _Noyack_0;
-    @name(".Tiverton.Cedonia") register_action<bit<1>, bit<1>>(_Hulbert_0) _Tiverton_Cedonia_0 = {
+    @name(".Tiverton.Cedonia") register_action<bit<1>, bit<1>>(Hulbert) _Tiverton_Cedonia_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Tiverton.Riverlea") register_action<bit<1>, bit<1>>(_Noyack_0) _Tiverton_Riverlea_0 = {
+    @name(".Tiverton.Riverlea") register_action<bit<1>, bit<1>>(Noyack) _Tiverton_Riverlea_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

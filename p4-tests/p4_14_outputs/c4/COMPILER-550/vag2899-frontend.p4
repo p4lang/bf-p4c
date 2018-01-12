@@ -171,6 +171,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".init_meta") action init_meta_0() {
         meta.meta.lb_type = 2w0;
         meta.meta.zero_fill = 1w0;
@@ -191,48 +197,48 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.lb_port = meta.meta.lb_port;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".t0") table t0_0 {
+    @name(".t0") table t0 {
         actions = {
             init_meta_0();
         }
         size = 1;
         default_action = init_meta_0();
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             set_lb_group_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t2") table t2_0 {
+    @name(".t2") table t2 {
         actions = {
             set_lb_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".t3") table t3_0 {
+    @name(".t3") table t3 {
         actions = {
             re_encap_and_send_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ethernet.etherType: ternary @name("ethernet.etherType") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        t0_0.apply();
-        t1_0.apply();
-        t2_0.apply();
-        t3_0.apply();
+        t0.apply();
+        t1.apply();
+        t2.apply();
+        t3.apply();
     }
 }
 

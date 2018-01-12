@@ -170,6 +170,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".flow_cnt") register<bit<8>>(32w0) flow_cnt;
+
+@name(".stateful_cntr_1") register<bit<16>>(32w0) stateful_cntr_1;
+
+@name(".stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_2;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<16> tmp_1;
     bit<8> tmp_2;
@@ -179,9 +185,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name(".flow_cnt") register<bit<8>>(32w0) flow_cnt;
-    @name(".stateful_cntr_1") register<bit<16>>(32w0) stateful_cntr_1;
-    @name(".stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_2;
     @name("cntr_1") register_action<bit<16>, bit<16>>(stateful_cntr_1) cntr_1 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;

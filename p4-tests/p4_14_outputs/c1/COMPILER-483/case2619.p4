@@ -2006,9 +2006,11 @@ control Robbins(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 }
 
+@name(".Alcalde") register<bit<1>>(32w262144) Alcalde;
+
+@name(".NewSite") register<bit<1>>(32w262144) NewSite;
+
 control Tahuya(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Alcalde") register<bit<1>>(32w262144) Alcalde;
-    @name(".NewSite") register<bit<1>>(32w262144) NewSite;
     register_action<bit<1>, bit<1>>(Alcalde) Goldsmith = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

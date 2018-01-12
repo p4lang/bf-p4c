@@ -170,60 +170,66 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_1() {
+    }
     @name(".do_change_eth_src") action do_change_eth_src_0() {
         hdr.ethernet.srcAddr = 48w0xaaaaaaaaaaaa;
     }
     @name(".e2e_mirror") action e2e_mirror_0(bit<32> mirror_id) {
         clone(CloneType.E2E, mirror_id);
     }
-    @name(".change_eth_src") table change_eth_src_0 {
+    @name(".change_eth_src") table change_eth_src {
         actions = {
             do_change_eth_src_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".egress_mirror") table egress_mirror_0 {
+    @name(".egress_mirror") table egress_mirror {
         actions = {
             e2e_mirror_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.vlan_tag.isValid(): exact @name("vlan_tag.$valid$") ;
             hdr.vlan_tag.vid      : exact @name("vlan_tag.vid") ;
         }
         size = 16;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
         if (hdr.eg_intr_md_from_parser_aux.clone_src == 4w0) 
-            egress_mirror_0.apply();
+            egress_mirror.apply();
         if (!hdr.vlan_tag.isValid()) 
-            change_eth_src_0.apply();
+            change_eth_src.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".set_egr") action set_egr_0(bit<9> egress_spec) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_spec;
     }
     @name(".nop") action nop_0() {
     }
-    @name(".forward") table forward_0 {
+    @name(".forward") table forward {
         actions = {
             set_egr_0();
             nop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        forward_0.apply();
+        forward.apply();
     }
 }
 

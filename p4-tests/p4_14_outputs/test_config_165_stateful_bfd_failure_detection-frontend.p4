@@ -186,64 +186,69 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".bfd_cnt") register<bit<8>>(32w1024) bfd_cnt;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
-    @name(".bfd_cnt") register<bit<8>>(32w1024) bfd_cnt_0;
-    @name("bfd_cnt_rx_alu") register_action<bit<8>, bit<8>>(bfd_cnt_0) bfd_cnt_rx_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    bit<8> tmp_0;
+    @name("bfd_cnt_rx_alu") register_action<bit<8>, bit<8>>(bfd_cnt) bfd_cnt_rx_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
             rv = 8w0;
             value = 8w0;
         }
     };
-    @name("bfd_cnt_tx_alu") register_action<bit<8>, bit<8>>(bfd_cnt_0) bfd_cnt_tx_alu_0 = {
+    @name("bfd_cnt_tx_alu") register_action<bit<8>, bit<8>>(bfd_cnt) bfd_cnt_tx_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
-            bit<8> alu_hi_0;
+            bit<8> alu_hi;
             rv = 8w0;
-            alu_hi_0 = 8w1;
+            alu_hi = 8w1;
             value = value + 8w1;
             if (value > 8w3) 
-                rv = alu_hi_0;
+                rv = alu_hi;
         }
     };
     @name(".bfd_rx") action bfd_rx_0(bit<32> idx) {
-        bfd_cnt_rx_alu_0.execute(idx);
+        bfd_cnt_rx_alu.execute(idx);
     }
     @name(".bfd_tx") action bfd_tx_0(bit<32> idx) {
-        tmp = bfd_cnt_tx_alu_0.execute(idx);
-        meta.meta.bfd_timeout_detected = tmp;
+        tmp_0 = bfd_cnt_tx_alu.execute(idx);
+        meta.meta.bfd_timeout_detected = tmp_0;
     }
     @name(".drop_me") action drop_me_0() {
         mark_to_drop();
     }
     @name(".on_miss") action on_miss_0() {
     }
-    @name(".bfd") table bfd_0 {
+    @name(".bfd") table bfd {
         actions = {
             bfd_rx_0();
             bfd_tx_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.bfd_tx_or_rx     : exact @name("meta.bfd_tx_or_rx") ;
             meta.meta.bfd_discriminator: exact @name("meta.bfd_discriminator") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".check_needs") table check_needs_0 {
+    @name(".check_needs") table check_needs {
         actions = {
             drop_me_0();
             on_miss_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             meta.meta.bfd_timeout_detected: exact @name("meta.bfd_timeout_detected") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        bfd_0.apply();
-        check_needs_0.apply();
+        bfd.apply();
+        check_needs.apply();
     }
 }
 

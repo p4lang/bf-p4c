@@ -185,6 +185,16 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
     @name(".do_new_cfi") action do_new_cfi_0() {
         hdr.vlan_tag.cfi = meta.meta.new_cfi;
     }
@@ -207,55 +217,55 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.new_vid = new_vid;
         meta.meta.new_vid_en = new_vid_en;
     }
-    @name(".new_cfi") table new_cfi_0 {
+    @name(".new_cfi") table new_cfi_1 {
         actions = {
             do_new_cfi_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".new_pri") table new_pri_0 {
+    @name(".new_pri") table new_pri_1 {
         actions = {
             do_new_pri_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_6();
         }
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".new_tpid") table new_tpid_0 {
+    @name(".new_tpid") table new_tpid_1 {
         actions = {
             do_new_tpid_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_7();
         }
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
-    @name(".new_vid") table new_vid_0 {
+    @name(".new_vid") table new_vid_1 {
         actions = {
             do_new_vid_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_8();
         }
-        default_action = NoAction();
+        default_action = NoAction_8();
     }
-    @name(".vlan_xlate") table vlan_xlate_0 {
+    @name(".vlan_xlate") table vlan_xlate {
         actions = {
             rewrite_tag_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_9();
         }
         key = {
             hdr.vlan_tag.vid: exact @name("vlan_tag.vid") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_9();
     }
     apply {
-        switch (vlan_xlate_0.apply().action_run) {
+        switch (vlan_xlate.apply().action_run) {
             rewrite_tag_0: {
                 if (meta.meta.new_tpid_en == 1w1) 
-                    new_tpid_0.apply();
+                    new_tpid_1.apply();
                 if (meta.meta.new_pri_en == 1w1) 
-                    new_pri_0.apply();
+                    new_pri_1.apply();
                 if (meta.meta.new_cfi_en == 1w1) 
-                    new_cfi_0.apply();
+                    new_cfi_1.apply();
                 if (meta.meta.new_vid_en == 1w1) 
-                    new_vid_0.apply();
+                    new_vid_1.apply();
             }
         }
 

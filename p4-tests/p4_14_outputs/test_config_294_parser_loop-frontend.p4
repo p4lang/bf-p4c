@@ -525,201 +525,25 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".lag_action_profile") @mode("fair") action_selector(HashAlgorithm.crc16, 32w0, 32w14) lag_action_profile;
 
-control process_srv6_decap(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".pop_ipv6_srh") action pop_ipv6_srh_0() {
-        hdr.ipv6_srh.setInvalid();
-        hdr.ipv6_srh_seg_list[0].setInvalid();
-        hdr.ipv6_srh_seg_list[1].setInvalid();
-        hdr.ipv6_srh_seg_list[2].setInvalid();
-        hdr.ipv6_srh_seg_list[3].setInvalid();
-        hdr.ipv6_srh_seg_list[4].setInvalid();
-    }
-    @name(".decap_inner_non_ip") action decap_inner_non_ip_0() {
-        hdr.ethernet = hdr.inner_ethernet;
-        hdr.inner_ethernet.setInvalid();
-        hdr.ipv6.setInvalid();
-        pop_ipv6_srh_0();
-    }
-    @name(".decap_inner_ipv4") action decap_inner_ipv4_0() {
-        hdr.ethernet.etherType = 16w0x800;
-        hdr.ipv4 = hdr.inner_ipv4;
-        hdr.inner_ipv4.setInvalid();
-        hdr.ipv6.setInvalid();
-        pop_ipv6_srh_0();
-    }
-    @name(".decap_inner_ipv6") action decap_inner_ipv6_0() {
-        hdr.ethernet.etherType = 16w0x86dd;
-        hdr.ipv6 = hdr.inner_ipv6;
-        hdr.inner_ipv6.setInvalid();
-        pop_ipv6_srh_0();
-    }
-    @name(".srv6_decap") table srv6_decap_0 {
-        actions = {
-            decap_inner_non_ip_0();
-            decap_inner_ipv4_0();
-            decap_inner_ipv6_0();
-            pop_ipv6_srh_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.sr_metadata.action_: exact @name("sr_metadata.action_") ;
-            hdr.inner_ipv4.isValid(): exact @name("inner_ipv4.$valid$") ;
-            hdr.inner_ipv6.isValid(): exact @name("inner_ipv6.$valid$") ;
-        }
-        default_action = NoAction();
-    }
-    apply {
-        srv6_decap_0.apply();
-    }
-}
-
-control process_rewrite(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".smac_rewrite") action smac_rewrite_0(bit<48> smac) {
-        hdr.ethernet.srcAddr = smac;
-    }
-    @name(".ipv4_rewrite") action ipv4_rewrite_0() {
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
-    }
-    @name(".ipv6_rewrite") action ipv6_rewrite_0() {
-        hdr.ipv6.hopLimit = hdr.ipv6.hopLimit + 8w255;
-    }
-    @name(".l2_rewrite") table l2_rewrite_0 {
-        actions = {
-            smac_rewrite_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.l2_metadata.bd: exact @name("l2_metadata.bd") ;
-        }
-        default_action = NoAction();
-    }
-    @name(".l3_rewrite") table l3_rewrite_0 {
-        actions = {
-            ipv4_rewrite_0();
-            ipv6_rewrite_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            hdr.ipv4.isValid(): exact @name("ipv4.$valid$") ;
-            hdr.ipv6.isValid(): exact @name("ipv6.$valid$") ;
-        }
-        default_action = NoAction();
-    }
-    apply {
-        l2_rewrite_0.apply();
-        l3_rewrite_0.apply();
-    }
-}
-
-control process_srv6_encap(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".insert_ipv6_header") action insert_ipv6_header_0(bit<8> proto_0) {
-        hdr.ipv6.setValid();
-        hdr.ipv6.version = 4w0x6;
-        hdr.ipv6.nextHdr = proto_0;
-        hdr.ipv6.hopLimit = 8w64;
-    }
-    @name(".insert_ipv6_srh") action insert_ipv6_srh_0(bit<8> proto_1) {
-        hdr.ipv6_srh.setValid();
-        hdr.ipv6_srh.nextHdr = proto_1;
-        hdr.ipv6_srh.routingType = 8w0x4;
-    }
-    @name(".srv6_rewrite_1") action srv6_rewrite_0() {
-        insert_ipv6_header_0(8w43);
-        insert_ipv6_srh_0(meta.sr_metadata.proto);
-        hdr.ipv6_srh_seg_list.push_front(1);
-        hdr.ethernet.etherType = 16w0x86dd;
-        hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w24;
-    }
-    @name(".srv6_rewrite_2") action srv6_rewrite_5() {
-        insert_ipv6_header_0(8w43);
-        insert_ipv6_srh_0(meta.sr_metadata.proto);
-        hdr.ipv6_srh_seg_list.push_front(2);
-        hdr.ethernet.etherType = 16w0x86dd;
-        hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w40;
-    }
-    @name(".srv6_rewrite_3") action srv6_rewrite_6() {
-        insert_ipv6_header_0(8w43);
-        insert_ipv6_srh_0(meta.sr_metadata.proto);
-        hdr.ipv6_srh_seg_list.push_front(3);
-        hdr.ethernet.etherType = 16w0x86dd;
-        hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w56;
-    }
-    @name(".srv6_rewrite_4") action srv6_rewrite_7() {
-        insert_ipv6_header_0(8w43);
-        insert_ipv6_srh_0(meta.sr_metadata.proto);
-        hdr.ipv6_srh_seg_list.push_front(4);
-        hdr.ethernet.etherType = 16w0x86dd;
-        hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w72;
-    }
-    @name(".set_srh_rewrite") action set_srh_rewrite_0(bit<8> srh_len_0, bit<8> seg_left_0) {
-        hdr.ipv6_srh.hdrExtLen = srh_len_0;
-        hdr.ipv6_srh.segLeft = seg_left_0;
-        hdr.ipv6_srh.firstSeg = seg_left_0;
-    }
-    @name(".set_srv6_seg_list_rewrite") action set_srv6_seg_list_rewrite_0(bit<8> srh_len, bit<8> seg_left, bit<128> sid0, bit<128> sid1, bit<128> sid2) {
-        set_srh_rewrite_0(srh_len, seg_left);
-        hdr.ipv6_srh_seg_list[0].sid = sid0;
-        hdr.ipv6_srh_seg_list[1].sid = sid1;
-        hdr.ipv6_srh_seg_list[2].sid = sid2;
-    }
-    @name(".inner_ipv4_rewrite") action inner_ipv4_rewrite_0() {
-        hdr.inner_ipv4 = hdr.ipv4;
-        hdr.ipv4.setInvalid();
-        meta.egress_metadata.payload_length = hdr.ipv4.totalLen;
-    }
-    @name(".inner_ipv6_rewrite") action inner_ipv6_rewrite_0() {
-        hdr.inner_ipv6 = hdr.ipv6;
-        hdr.ipv6.setInvalid();
-        meta.egress_metadata.payload_length = hdr.ipv6.payloadLen + 16w40;
-    }
-    @name(".inner_non_ip_rewrite") action inner_non_ip_rewrite_0() {
-        hdr.inner_ethernet = hdr.ethernet;
-        meta.egress_metadata.payload_length = hdr.eg_intr_md.pkt_length + 16w65522;
-    }
-    @name(".srv6_encap") table srv6_encap_0 {
-        actions = {
-            srv6_rewrite_0();
-            srv6_rewrite_5();
-            srv6_rewrite_6();
-            srv6_rewrite_7();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.tunnel_metadata.index: exact @name("tunnel_metadata.index") ;
-        }
-        default_action = NoAction();
-    }
-    @name(".srv6_rewrite") table srv6_rewrite_8 {
-        actions = {
-            set_srv6_seg_list_rewrite_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.tunnel_metadata.index: exact @name("tunnel_metadata.index") ;
-        }
-        default_action = NoAction();
-    }
-    @name(".tunnel_encap_process_inner") table tunnel_encap_process_inner_0 {
-        actions = {
-            inner_ipv4_rewrite_0();
-            inner_ipv6_rewrite_0();
-            inner_non_ip_rewrite_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            hdr.ipv4.isValid(): exact @name("ipv4.$valid$") ;
-            hdr.ipv6.isValid(): exact @name("ipv6.$valid$") ;
-        }
-        default_action = NoAction();
-    }
-    apply {
-        tunnel_encap_process_inner_0.apply();
-        srv6_encap_0.apply();
-        srv6_rewrite_8.apply();
-    }
-}
-
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_1() {
+    }
+    @name("NoAction") action NoAction_26() {
+    }
+    @name("NoAction") action NoAction_27() {
+    }
+    @name("NoAction") action NoAction_28() {
+    }
+    @name("NoAction") action NoAction_29() {
+    }
+    @name("NoAction") action NoAction_30() {
+    }
+    @name("NoAction") action NoAction_31() {
+    }
+    @name("NoAction") action NoAction_32() {
+    }
     @name(".set_egress_ifindex") action set_egress_ifindex_0(bit<16> ifindex) {
         meta.egress_metadata.ifindex = ifindex;
     }
@@ -749,407 +573,279 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.vlan_tag[0].setInvalid();
         hdr.vlan_tag[1].setInvalid();
     }
-    @name(".egress_port_mapping") table egress_port_mapping_0 {
+    @name(".egress_port_mapping") table egress_port_mapping {
         actions = {
             set_egress_ifindex_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.eg_intr_md.egress_port: exact @name("eg_intr_md.egress_port") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".egress_vlan_xlate") table egress_vlan_xlate_0 {
+    @name(".egress_vlan_xlate") table egress_vlan_xlate {
         actions = {
             set_egress_packet_vlan_untagged_0();
             set_egress_packet_vlan_tagged_0();
             set_egress_packet_vlan_double_tagged_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             meta.egress_metadata.ifindex: exact @name("egress_metadata.ifindex") ;
             meta.l2_metadata.bd         : exact @name("l2_metadata.bd") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
-    @name(".vlan_decap") table vlan_decap_0 {
+    @name(".vlan_decap") table vlan_decap {
         actions = {
             remove_vlan_single_tagged_0();
             remove_vlan_double_tagged_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_26();
         }
         key = {
             hdr.vlan_tag[0].isValid(): ternary @name("vlan_tag[0].$valid$") ;
             hdr.vlan_tag[1].isValid(): ternary @name("vlan_tag[1].$valid$") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_26();
     }
-    @name(".process_srv6_decap") process_srv6_decap() process_srv6_decap_1;
-    @name(".process_rewrite") process_rewrite() process_rewrite_1;
-    @name(".process_srv6_encap") process_srv6_encap() process_srv6_encap_1;
-    apply {
-        egress_port_mapping_0.apply();
-        vlan_decap_0.apply();
-        process_srv6_decap_1.apply(hdr, meta, standard_metadata);
-        process_rewrite_1.apply(hdr, meta, standard_metadata);
-        process_srv6_encap_1.apply(hdr, meta, standard_metadata);
-        egress_vlan_xlate_0.apply();
+    @name(".pop_ipv6_srh") action _pop_ipv6_srh() {
+        hdr.ipv6_srh.setInvalid();
+        hdr.ipv6_srh_seg_list[0].setInvalid();
+        hdr.ipv6_srh_seg_list[1].setInvalid();
+        hdr.ipv6_srh_seg_list[2].setInvalid();
+        hdr.ipv6_srh_seg_list[3].setInvalid();
+        hdr.ipv6_srh_seg_list[4].setInvalid();
     }
-}
-
-control process_ingress_port_mapping(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".set_ifindex") action set_ifindex_0(bit<16> ifindex) {
-        meta.ingress_metadata.ifindex = ifindex;
+    @name(".decap_inner_non_ip") action _decap_inner_non_ip() {
+        hdr.ethernet = hdr.inner_ethernet;
+        hdr.inner_ethernet.setInvalid();
+        hdr.ipv6.setInvalid();
+        hdr.ipv6_srh.setInvalid();
+        hdr.ipv6_srh_seg_list[0].setInvalid();
+        hdr.ipv6_srh_seg_list[1].setInvalid();
+        hdr.ipv6_srh_seg_list[2].setInvalid();
+        hdr.ipv6_srh_seg_list[3].setInvalid();
+        hdr.ipv6_srh_seg_list[4].setInvalid();
     }
-    @name(".set_ingress_port_properties") action set_ingress_port_properties_0() {
+    @name(".decap_inner_ipv4") action _decap_inner_ipv4() {
+        hdr.ethernet.etherType = 16w0x800;
+        hdr.ipv4 = hdr.inner_ipv4;
+        hdr.inner_ipv4.setInvalid();
+        hdr.ipv6.setInvalid();
+        hdr.ipv6_srh.setInvalid();
+        hdr.ipv6_srh_seg_list[0].setInvalid();
+        hdr.ipv6_srh_seg_list[1].setInvalid();
+        hdr.ipv6_srh_seg_list[2].setInvalid();
+        hdr.ipv6_srh_seg_list[3].setInvalid();
+        hdr.ipv6_srh_seg_list[4].setInvalid();
     }
-    @name(".set_bd_properties") action set_bd_properties_0(bit<16> bd, bit<16> vrf) {
-        meta.l3_metadata.vrf = vrf;
-        meta.l2_metadata.bd = bd;
+    @name(".decap_inner_ipv6") action _decap_inner_ipv6() {
+        hdr.ethernet.etherType = 16w0x86dd;
+        hdr.ipv6 = hdr.inner_ipv6;
+        hdr.inner_ipv6.setInvalid();
+        hdr.ipv6_srh.setInvalid();
+        hdr.ipv6_srh_seg_list[0].setInvalid();
+        hdr.ipv6_srh_seg_list[1].setInvalid();
+        hdr.ipv6_srh_seg_list[2].setInvalid();
+        hdr.ipv6_srh_seg_list[3].setInvalid();
+        hdr.ipv6_srh_seg_list[4].setInvalid();
     }
-    @name(".ingress_port_mapping") table ingress_port_mapping_0 {
+    @name(".srv6_decap") table _srv6_decap_0 {
         actions = {
-            set_ifindex_0();
-            @defaultonly NoAction();
+            _decap_inner_non_ip();
+            _decap_inner_ipv4();
+            _decap_inner_ipv6();
+            _pop_ipv6_srh();
+            @defaultonly NoAction_27();
         }
         key = {
-            hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
+            meta.sr_metadata.action_: exact @name("sr_metadata.action_") ;
+            hdr.inner_ipv4.isValid(): exact @name("inner_ipv4.$valid$") ;
+            hdr.inner_ipv6.isValid(): exact @name("inner_ipv6.$valid$") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_27();
     }
-    @name(".ingress_port_properties") table ingress_port_properties_0 {
+    @name(".smac_rewrite") action _smac_rewrite(bit<48> smac) {
+        hdr.ethernet.srcAddr = smac;
+    }
+    @name(".ipv4_rewrite") action _ipv4_rewrite() {
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+    }
+    @name(".ipv6_rewrite") action _ipv6_rewrite() {
+        hdr.ipv6.hopLimit = hdr.ipv6.hopLimit + 8w255;
+    }
+    @name(".l2_rewrite") table _l2_rewrite_0 {
         actions = {
-            set_ingress_port_properties_0();
-            @defaultonly NoAction();
+            _smac_rewrite();
+            @defaultonly NoAction_28();
         }
         key = {
-            hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
+            meta.l2_metadata.bd: exact @name("l2_metadata.bd") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_28();
     }
-    @name(".port_vlan_mapping") table port_vlan_mapping_0 {
+    @name(".l3_rewrite") table _l3_rewrite_0 {
         actions = {
-            set_bd_properties_0();
-            @defaultonly NoAction();
+            _ipv4_rewrite();
+            _ipv6_rewrite();
+            @defaultonly NoAction_29();
         }
         key = {
-            meta.ingress_metadata.ifindex: exact @name("ingress_metadata.ifindex") ;
-            hdr.vlan_tag[0].isValid()    : exact @name("vlan_tag[0].$valid$") ;
-            hdr.vlan_tag[0].vid          : exact @name("vlan_tag[0].vid") ;
-            hdr.vlan_tag[1].isValid()    : exact @name("vlan_tag[1].$valid$") ;
-            hdr.vlan_tag[1].vid          : exact @name("vlan_tag[1].vid") ;
+            hdr.ipv4.isValid(): exact @name("ipv4.$valid$") ;
+            hdr.ipv6.isValid(): exact @name("ipv6.$valid$") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_29();
     }
-    apply {
-        ingress_port_mapping_0.apply();
-        ingress_port_properties_0.apply();
-        port_vlan_mapping_0.apply();
+    @name(".srv6_rewrite_1") action _srv6_rewrite() {
+        hdr.ipv6.setValid();
+        hdr.ipv6.version = 4w0x6;
+        hdr.ipv6.nextHdr = 8w43;
+        hdr.ipv6.hopLimit = 8w64;
+        hdr.ipv6_srh.setValid();
+        hdr.ipv6_srh.nextHdr = meta.sr_metadata.proto;
+        hdr.ipv6_srh.routingType = 8w0x4;
+        hdr.ipv6_srh_seg_list.push_front(1);
+        hdr.ethernet.etherType = 16w0x86dd;
+        hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w24;
     }
-}
-
-control process_validate_packet(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
+    @name(".srv6_rewrite_2") action _srv6_rewrite_0() {
+        hdr.ipv6.setValid();
+        hdr.ipv6.version = 4w0x6;
+        hdr.ipv6.nextHdr = 8w43;
+        hdr.ipv6.hopLimit = 8w64;
+        hdr.ipv6_srh.setValid();
+        hdr.ipv6_srh.nextHdr = meta.sr_metadata.proto;
+        hdr.ipv6_srh.routingType = 8w0x4;
+        hdr.ipv6_srh_seg_list.push_front(2);
+        hdr.ethernet.etherType = 16w0x86dd;
+        hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w40;
     }
-}
-
-control process_srv6(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".drop_") action drop_0() {
-        mark_to_drop();
+    @name(".srv6_rewrite_3") action _srv6_rewrite_1() {
+        hdr.ipv6.setValid();
+        hdr.ipv6.version = 4w0x6;
+        hdr.ipv6.nextHdr = 8w43;
+        hdr.ipv6.hopLimit = 8w64;
+        hdr.ipv6_srh.setValid();
+        hdr.ipv6_srh.nextHdr = meta.sr_metadata.proto;
+        hdr.ipv6_srh.routingType = 8w0x4;
+        hdr.ipv6_srh_seg_list.push_front(3);
+        hdr.ethernet.etherType = 16w0x86dd;
+        hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w56;
     }
-    @name(".transit") action transit_0() {
+    @name(".srv6_rewrite_4") action _srv6_rewrite_2() {
+        hdr.ipv6.setValid();
+        hdr.ipv6.version = 4w0x6;
+        hdr.ipv6.nextHdr = 8w43;
+        hdr.ipv6.hopLimit = 8w64;
+        hdr.ipv6_srh.setValid();
+        hdr.ipv6_srh.nextHdr = meta.sr_metadata.proto;
+        hdr.ipv6_srh.routingType = 8w0x4;
+        hdr.ipv6_srh_seg_list.push_front(4);
+        hdr.ethernet.etherType = 16w0x86dd;
+        hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w72;
     }
-    @name(".set_l2_fields") action set_l2_fields_0(bit<48> srcAddr_0, bit<48> dstAddr_0) {
-        meta.l2_metadata.mac_sa = srcAddr_0;
-        meta.l2_metadata.mac_da = dstAddr_0;
+    @name(".set_srv6_seg_list_rewrite") action _set_srv6_seg_list_rewrite(bit<8> srh_len, bit<8> seg_left, bit<128> sid0, bit<128> sid1, bit<128> sid2) {
+        hdr.ipv6_srh.hdrExtLen = srh_len;
+        hdr.ipv6_srh.segLeft = seg_left;
+        hdr.ipv6_srh.firstSeg = seg_left;
+        hdr.ipv6_srh_seg_list[0].sid = sid0;
+        hdr.ipv6_srh_seg_list[1].sid = sid1;
+        hdr.ipv6_srh_seg_list[2].sid = sid2;
     }
-    @name(".set_l3_fields") action set_l3_fields_0(bit<128> srcAddr_1, bit<128> dstAddr_1, bit<8> proto_2, bit<20> flowLabel_0) {
-        meta.l3_metadata.ipv6_sa = srcAddr_1;
-        meta.l3_metadata.ipv6_da = dstAddr_1;
-        meta.l3_metadata.proto = proto_2;
-        meta.l3_metadata.flow_label = (bit<16>)flowLabel_0;
+    @name(".inner_ipv4_rewrite") action _inner_ipv4_rewrite() {
+        hdr.inner_ipv4 = hdr.ipv4;
+        hdr.ipv4.setInvalid();
+        meta.egress_metadata.payload_length = hdr.ipv4.totalLen;
     }
-    @name(".end") action end_0() {
-        set_l2_fields_0(hdr.ethernet.srcAddr, hdr.ethernet.dstAddr);
-        set_l3_fields_0(hdr.ipv6.srcAddr, meta.sr_metadata.sid, hdr.ipv6.nextHdr, hdr.ipv6.flowLabel);
-        hdr.ipv6_srh.segLeft = hdr.ipv6_srh.segLeft + 8w255;
-        hdr.ipv6.dstAddr = meta.sr_metadata.sid;
+    @name(".inner_ipv6_rewrite") action _inner_ipv6_rewrite() {
+        hdr.inner_ipv6 = hdr.ipv6;
+        hdr.ipv6.setInvalid();
+        meta.egress_metadata.payload_length = hdr.ipv6.payloadLen + 16w40;
     }
-    @name(".end_x") action end_x_0(bit<16> nexthop) {
-        meta.l3_metadata.nexthop = nexthop;
-        meta.ingress_metadata.bypass = 4w0x2;
-        hdr.ipv6_srh.segLeft = hdr.ipv6_srh.segLeft + 8w255;
-        hdr.ipv6.dstAddr = meta.sr_metadata.sid;
+    @name(".inner_non_ip_rewrite") action _inner_non_ip_rewrite() {
+        hdr.inner_ethernet = hdr.ethernet;
+        meta.egress_metadata.payload_length = hdr.eg_intr_md.pkt_length + 16w65522;
     }
-    @name(".end_t") action end_t_0() {
-    }
-    @name(".end_dx2") action end_dx2_0(bit<16> ifindex) {
-        meta.sr_metadata.action_ = 4w0x1;
-        meta.ingress_metadata.egress_ifindex = ifindex;
-        meta.ingress_metadata.bypass = 4w0xf;
-    }
-    @name(".end_dx4") action end_dx4_0(bit<16> nexthop) {
-        meta.sr_metadata.action_ = 4w0x1;
-        meta.l3_metadata.nexthop = nexthop;
-        meta.ingress_metadata.bypass = 4w0x2;
-    }
-    @name(".end_dx6") action end_dx6_0(bit<16> nexthop) {
-        meta.sr_metadata.action_ = 4w0x1;
-        meta.l3_metadata.nexthop = nexthop;
-        meta.ingress_metadata.bypass = 4w0x2;
-    }
-    @name(".end_dt2") action end_dt2_0(bit<16> bd) {
-        meta.sr_metadata.action_ = 4w0x1;
-        meta.l2_metadata.bd = bd;
-        set_l2_fields_0(hdr.inner_ethernet.srcAddr, hdr.inner_ethernet.dstAddr);
-    }
-    @name(".end_dt4") action end_dt4_0(bit<16> vrf) {
-        meta.sr_metadata.action_ = 4w0x1;
-        meta.l3_metadata.vrf = vrf;
-        set_l2_fields_0(hdr.ethernet.srcAddr, hdr.ethernet.dstAddr);
-        meta.l3_metadata.ipv4_sa = hdr.inner_ipv4.srcAddr;
-        meta.l3_metadata.ipv4_da = hdr.inner_ipv4.dstAddr;
-        meta.l3_metadata.proto = hdr.inner_ipv4.protocol;
-    }
-    @name(".end_dt6") action end_dt6_0(bit<16> vrf) {
-        meta.sr_metadata.action_ = 4w0x1;
-        meta.l3_metadata.vrf = vrf;
-        set_l2_fields_0(hdr.ethernet.srcAddr, hdr.ethernet.dstAddr);
-        set_l3_fields_0(hdr.inner_ipv6.srcAddr, hdr.inner_ipv6.dstAddr, hdr.inner_ipv6.nextHdr, hdr.inner_ipv6.flowLabel);
-    }
-    @name(".end_b6") action end_b6_0(bit<128> sid) {
-        meta.sr_metadata.action_ = 4w0x4;
-        set_l2_fields_0(hdr.ethernet.srcAddr, hdr.ethernet.dstAddr);
-        set_l3_fields_0(hdr.ipv6.srcAddr, sid, hdr.ipv6.nextHdr, hdr.ipv6.flowLabel);
-        hdr.ipv6.dstAddr = sid;
-    }
-    @name(".end_b6_encaps") action end_b6_encaps_0(bit<128> sid) {
-        meta.sr_metadata.action_ = 4w0x8;
-        set_l2_fields_0(hdr.ethernet.srcAddr, hdr.ethernet.dstAddr);
-        set_l3_fields_0(hdr.ipv6.srcAddr, sid, hdr.ipv6.nextHdr, hdr.ipv6.flowLabel);
-        hdr.ipv6_srh.segLeft = hdr.ipv6_srh.segLeft + 8w255;
-        hdr.ipv6.dstAddr = meta.sr_metadata.sid;
-    }
-    @name(".t") action t_0() {
-        set_l2_fields_0(hdr.ethernet.srcAddr, hdr.ethernet.dstAddr);
-        set_l3_fields_0(hdr.ipv6.srcAddr, hdr.ipv6.dstAddr, hdr.ipv6.nextHdr, hdr.ipv6.flowLabel);
-    }
-    @name(".t_insert") action t_insert_0(bit<128> sid) {
-        meta.sr_metadata.action_ = 4w0x4;
-        set_l2_fields_0(hdr.ethernet.srcAddr, hdr.ethernet.dstAddr);
-        set_l3_fields_0(hdr.ipv6.srcAddr, sid, hdr.ipv6.nextHdr, hdr.ipv6.flowLabel);
-    }
-    @name(".t_encaps") action t_encaps_0(bit<128> srcAddr, bit<128> dstAddr, bit<20> flowLabel) {
-        meta.sr_metadata.action_ = 4w0x8;
-        set_l2_fields_0(hdr.ethernet.srcAddr, hdr.ethernet.dstAddr);
-        set_l3_fields_0(srcAddr, dstAddr, 8w43, flowLabel);
-    }
-    @name(".srv6_local_sid") table srv6_local_sid_0 {
+    @name(".srv6_encap") table _srv6_encap_0 {
         actions = {
-            drop_0();
-            transit_0();
-            end_0();
-            end_x_0();
-            end_t_0();
-            end_dx2_0();
-            end_dx4_0();
-            end_dx6_0();
-            end_dt2_0();
-            end_dt4_0();
-            end_dt6_0();
-            end_b6_0();
-            end_b6_encaps_0();
-            @defaultonly NoAction();
+            _srv6_rewrite();
+            _srv6_rewrite_0();
+            _srv6_rewrite_1();
+            _srv6_rewrite_2();
+            @defaultonly NoAction_30();
         }
         key = {
-            hdr.ipv6.dstAddr      : lpm @name("ipv6.dstAddr") ;
-            hdr.ipv6_srh.isValid(): ternary @name("ipv6_srh.$valid$") ;
-            hdr.ipv6_srh.segLeft  : ternary @name("ipv6_srh.segLeft") ;
-            hdr.ipv6_srh.nextHdr  : ternary @name("ipv6_srh.nextHdr") ;
+            meta.tunnel_metadata.index: exact @name("tunnel_metadata.index") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_30();
     }
-    @name(".srv6_transit") table srv6_transit_0 {
+    @name(".srv6_rewrite") table _srv6_rewrite_8 {
         actions = {
-            t_0();
-            t_insert_0();
-            t_encaps_0();
-            @defaultonly NoAction();
+            _set_srv6_seg_list_rewrite();
+            @defaultonly NoAction_31();
         }
         key = {
-            hdr.ipv6.dstAddr: lpm @name("ipv6.dstAddr") ;
+            meta.tunnel_metadata.index: exact @name("tunnel_metadata.index") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_31();
+    }
+    @name(".tunnel_encap_process_inner") table _tunnel_encap_process_inner_0 {
+        actions = {
+            _inner_ipv4_rewrite();
+            _inner_ipv6_rewrite();
+            _inner_non_ip_rewrite();
+            @defaultonly NoAction_32();
+        }
+        key = {
+            hdr.ipv4.isValid(): exact @name("ipv4.$valid$") ;
+            hdr.ipv6.isValid(): exact @name("ipv6.$valid$") ;
+        }
+        default_action = NoAction_32();
     }
     apply {
-        if (hdr.ipv6.isValid()) 
-            switch (srv6_local_sid_0.apply().action_run) {
-                transit_0: {
-                    srv6_transit_0.apply();
-                }
-            }
-
-    }
-}
-
-control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".miss_") action miss() {
-    }
-    @name(".set_nexthop_index") action set_nexthop_index_0(bit<16> index) {
-        meta.l3_metadata.nexthop = index;
-    }
-    @name(".ipv4_fib") table ipv4_fib_0 {
-        actions = {
-            miss();
-            set_nexthop_index_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.l3_metadata.vrf    : exact @name("l3_metadata.vrf") ;
-            meta.l3_metadata.ipv4_da: exact @name("l3_metadata.ipv4_da") ;
-        }
-        default_action = NoAction();
-    }
-    @name(".ipv4_fib_lpm") table ipv4_fib_lpm_0 {
-        actions = {
-            set_nexthop_index_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.l3_metadata.vrf    : exact @name("l3_metadata.vrf") ;
-            meta.l3_metadata.ipv4_da: lpm @name("l3_metadata.ipv4_da") ;
-        }
-        default_action = NoAction();
-    }
-    apply {
-        switch (ipv4_fib_0.apply().action_run) {
-            miss: {
-                ipv4_fib_lpm_0.apply();
-            }
-        }
-
-    }
-}
-
-control process_ipv6_fib(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".miss_") action miss_0() {
-    }
-    @name(".set_nexthop_index") action set_nexthop_index_1(bit<16> index) {
-        meta.l3_metadata.nexthop = index;
-    }
-    @name(".ipv6_fib") table ipv6_fib_0 {
-        actions = {
-            miss_0();
-            set_nexthop_index_1();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.l3_metadata.vrf    : exact @name("l3_metadata.vrf") ;
-            meta.l3_metadata.ipv6_da: exact @name("l3_metadata.ipv6_da") ;
-        }
-        default_action = NoAction();
-    }
-    @name(".ipv6_fib_lpm") table ipv6_fib_lpm_0 {
-        actions = {
-            set_nexthop_index_1();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.l3_metadata.vrf    : exact @name("l3_metadata.vrf") ;
-            meta.l3_metadata.ipv6_da: lpm @name("l3_metadata.ipv6_da") ;
-        }
-        default_action = NoAction();
-    }
-    apply {
-        switch (ipv6_fib_0.apply().action_run) {
-            miss_0: {
-                ipv6_fib_lpm_0.apply();
-            }
-        }
-
-    }
-}
-
-control process_l3_forwarding(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".compute_ipv4_hash") action compute_ipv4_hash_0() {
-        hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>, bit<8>, bit<16>, bit<16>>, bit<32>>(meta.l3_metadata.hash, HashAlgorithm.crc16, 16w0, { meta.l3_metadata.ipv4_da, meta.l3_metadata.ipv4_sa, meta.l3_metadata.proto, meta.l3_metadata.l4_sport, meta.l3_metadata.l4_dport }, 32w65536);
-    }
-    @name(".compute_ipv6_hash") action compute_ipv6_hash_0() {
-        hash<bit<16>, bit<16>, tuple<bit<128>, bit<128>, bit<8>, bit<16>, bit<16>, bit<16>>, bit<32>>(meta.l3_metadata.hash, HashAlgorithm.crc16, 16w0, { meta.l3_metadata.ipv6_da, meta.l3_metadata.ipv6_sa, meta.l3_metadata.proto, meta.l3_metadata.flow_label, meta.l3_metadata.l4_sport, meta.l3_metadata.l4_dport }, 32w65536);
-    }
-    @name(".compute_hash") table compute_hash_0 {
-        actions = {
-            compute_ipv4_hash_0();
-            compute_ipv6_hash_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.l3_metadata.version: exact @name("l3_metadata.version") ;
-            hdr.ethernet.isValid()  : exact @name("ethernet.$valid$") ;
-        }
-        default_action = NoAction();
-    }
-    @name(".process_ipv4_fib") process_ipv4_fib() process_ipv4_fib_1;
-    @name(".process_ipv6_fib") process_ipv6_fib() process_ipv6_fib_1;
-    apply {
-        compute_hash_0.apply();
-        if (meta.l3_metadata.version == 4w4) 
-            process_ipv4_fib_1.apply(hdr, meta, standard_metadata);
-        else 
-            if (meta.l3_metadata.version == 4w6) 
-                process_ipv6_fib_1.apply(hdr, meta, standard_metadata);
-    }
-}
-
-control process_l2_forwarding(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".dmac_hit") action dmac_hit_0(bit<16> ifindex) {
-        meta.ingress_metadata.egress_ifindex = ifindex;
-    }
-    @name(".dmac_miss") action dmac_miss_0() {
-    }
-    @name(".dmac_redirect") action dmac_redirect_0(bit<8> index) {
-    }
-    @name(".dmac_drop") action dmac_drop_0() {
-        mark_to_drop();
-    }
-    @name(".smac_miss") action smac_miss_0() {
-    }
-    @name(".smac_hit") action smac_hit_0() {
-    }
-    @name(".dmac") table dmac_0 {
-        support_timeout = true;
-        actions = {
-            dmac_hit_0();
-            dmac_miss_0();
-            dmac_redirect_0();
-            dmac_drop_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.l2_metadata.bd    : exact @name("l2_metadata.bd") ;
-            meta.l2_metadata.mac_da: exact @name("l2_metadata.mac_da") ;
-        }
-        default_action = NoAction();
-    }
-    @name(".smac") table smac_0 {
-        actions = {
-            smac_miss_0();
-            smac_hit_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.l2_metadata.bd    : exact @name("l2_metadata.bd") ;
-            meta.l2_metadata.mac_sa: exact @name("l2_metadata.mac_sa") ;
-        }
-        default_action = NoAction();
-    }
-    apply {
-        smac_0.apply();
-        dmac_0.apply();
+        egress_port_mapping.apply();
+        vlan_decap.apply();
+        _srv6_decap_0.apply();
+        _l2_rewrite_0.apply();
+        _l3_rewrite_0.apply();
+        _tunnel_encap_process_inner_0.apply();
+        _srv6_encap_0.apply();
+        _srv6_rewrite_8.apply();
+        egress_vlan_xlate.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_33() {
+    }
+    @name("NoAction") action NoAction_34() {
+    }
+    @name("NoAction") action NoAction_35() {
+    }
+    @name("NoAction") action NoAction_36() {
+    }
+    @name("NoAction") action NoAction_37() {
+    }
+    @name("NoAction") action NoAction_38() {
+    }
+    @name("NoAction") action NoAction_39() {
+    }
+    @name("NoAction") action NoAction_40() {
+    }
+    @name("NoAction") action NoAction_41() {
+    }
+    @name("NoAction") action NoAction_42() {
+    }
+    @name("NoAction") action NoAction_43() {
+    }
+    @name("NoAction") action NoAction_44() {
+    }
+    @name("NoAction") action NoAction_45() {
+    }
+    @name("NoAction") action NoAction_46() {
+    }
+    @name("NoAction") action NoAction_47() {
+    }
     @name(".set_lag_miss") action set_lag_miss_0() {
     }
     @name(".set_lag_port") action set_lag_port_0(bit<9> port) {
@@ -1170,11 +866,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".rmac_miss") action rmac_miss_0() {
     }
-    @name(".lag_group") table lag_group_0 {
+    @name(".lag_group") table lag_group {
         actions = {
             set_lag_miss_0();
             set_lag_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_33();
         }
         key = {
             meta.ingress_metadata.egress_ifindex: exact @name("ingress_metadata.egress_ifindex") ;
@@ -1182,52 +878,383 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.l2_metadata.mac_da             : selector @name("l2_metadata.mac_da") ;
         }
         implementation = lag_action_profile;
-        default_action = NoAction();
+        default_action = NoAction_33();
     }
-    @name(".nexthop") table nexthop_0 {
+    @name(".nexthop") table nexthop_1 {
         actions = {
             set_nexthop_info_0();
             set_tunnel_info_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_34();
         }
         key = {
             meta.l3_metadata.nexthop: exact @name("l3_metadata.nexthop") ;
             meta.l3_metadata.hash   : selector @name("l3_metadata.hash") ;
         }
         implementation = l3_action_profile;
-        default_action = NoAction();
+        default_action = NoAction_34();
     }
-    @name(".rmac") table rmac_0 {
+    @name(".rmac") table rmac {
         actions = {
             rmac_hit_0();
             rmac_miss_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_35();
         }
         key = {
             meta.l2_metadata.mac_da: exact @name("l2_metadata.mac_da") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_35();
     }
-    @name(".process_ingress_port_mapping") process_ingress_port_mapping() process_ingress_port_mapping_1;
-    @name(".process_validate_packet") process_validate_packet() process_validate_packet_1;
-    @name(".process_srv6") process_srv6() process_srv6_1;
-    @name(".process_l3_forwarding") process_l3_forwarding() process_l3_forwarding_1;
-    @name(".process_l2_forwarding") process_l2_forwarding() process_l2_forwarding_1;
+    @name(".set_ifindex") action _set_ifindex(bit<16> ifindex) {
+        meta.ingress_metadata.ifindex = ifindex;
+    }
+    @name(".set_ingress_port_properties") action _set_ingress_port_properties() {
+    }
+    @name(".set_bd_properties") action _set_bd_properties(bit<16> bd, bit<16> vrf) {
+        meta.l3_metadata.vrf = vrf;
+        meta.l2_metadata.bd = bd;
+    }
+    @name(".ingress_port_mapping") table _ingress_port_mapping_0 {
+        actions = {
+            _set_ifindex();
+            @defaultonly NoAction_36();
+        }
+        key = {
+            hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
+        }
+        default_action = NoAction_36();
+    }
+    @name(".ingress_port_properties") table _ingress_port_properties_0 {
+        actions = {
+            _set_ingress_port_properties();
+            @defaultonly NoAction_37();
+        }
+        key = {
+            hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
+        }
+        default_action = NoAction_37();
+    }
+    @name(".port_vlan_mapping") table _port_vlan_mapping_0 {
+        actions = {
+            _set_bd_properties();
+            @defaultonly NoAction_38();
+        }
+        key = {
+            meta.ingress_metadata.ifindex: exact @name("ingress_metadata.ifindex") ;
+            hdr.vlan_tag[0].isValid()    : exact @name("vlan_tag[0].$valid$") ;
+            hdr.vlan_tag[0].vid          : exact @name("vlan_tag[0].vid") ;
+            hdr.vlan_tag[1].isValid()    : exact @name("vlan_tag[1].$valid$") ;
+            hdr.vlan_tag[1].vid          : exact @name("vlan_tag[1].vid") ;
+        }
+        default_action = NoAction_38();
+    }
+    @name(".drop_") action _drop() {
+        mark_to_drop();
+    }
+    @name(".transit") action _transit() {
+    }
+    @name(".end") action _end() {
+        meta.l2_metadata.mac_sa = hdr.ethernet.srcAddr;
+        meta.l2_metadata.mac_da = hdr.ethernet.dstAddr;
+        meta.l3_metadata.ipv6_sa = hdr.ipv6.srcAddr;
+        meta.l3_metadata.ipv6_da = meta.sr_metadata.sid;
+        meta.l3_metadata.proto = hdr.ipv6.nextHdr;
+        meta.l3_metadata.flow_label = (bit<16>)hdr.ipv6.flowLabel;
+        hdr.ipv6_srh.segLeft = hdr.ipv6_srh.segLeft + 8w255;
+        hdr.ipv6.dstAddr = meta.sr_metadata.sid;
+    }
+    @name(".end_x") action _end_x(bit<16> nexthop) {
+        meta.l3_metadata.nexthop = nexthop;
+        meta.ingress_metadata.bypass = 4w0x2;
+        hdr.ipv6_srh.segLeft = hdr.ipv6_srh.segLeft + 8w255;
+        hdr.ipv6.dstAddr = meta.sr_metadata.sid;
+    }
+    @name(".end_t") action _end_t() {
+    }
+    @name(".end_dx2") action _end_dx2(bit<16> ifindex) {
+        meta.sr_metadata.action_ = 4w0x1;
+        meta.ingress_metadata.egress_ifindex = ifindex;
+        meta.ingress_metadata.bypass = 4w0xf;
+    }
+    @name(".end_dx4") action _end_dx4(bit<16> nexthop) {
+        meta.sr_metadata.action_ = 4w0x1;
+        meta.l3_metadata.nexthop = nexthop;
+        meta.ingress_metadata.bypass = 4w0x2;
+    }
+    @name(".end_dx6") action _end_dx6(bit<16> nexthop) {
+        meta.sr_metadata.action_ = 4w0x1;
+        meta.l3_metadata.nexthop = nexthop;
+        meta.ingress_metadata.bypass = 4w0x2;
+    }
+    @name(".end_dt2") action _end_dt2(bit<16> bd) {
+        meta.sr_metadata.action_ = 4w0x1;
+        meta.l2_metadata.bd = bd;
+        meta.l2_metadata.mac_sa = hdr.inner_ethernet.srcAddr;
+        meta.l2_metadata.mac_da = hdr.inner_ethernet.dstAddr;
+    }
+    @name(".end_dt4") action _end_dt4(bit<16> vrf) {
+        meta.sr_metadata.action_ = 4w0x1;
+        meta.l3_metadata.vrf = vrf;
+        meta.l2_metadata.mac_sa = hdr.ethernet.srcAddr;
+        meta.l2_metadata.mac_da = hdr.ethernet.dstAddr;
+        meta.l3_metadata.ipv4_sa = hdr.inner_ipv4.srcAddr;
+        meta.l3_metadata.ipv4_da = hdr.inner_ipv4.dstAddr;
+        meta.l3_metadata.proto = hdr.inner_ipv4.protocol;
+    }
+    @name(".end_dt6") action _end_dt6(bit<16> vrf) {
+        meta.sr_metadata.action_ = 4w0x1;
+        meta.l3_metadata.vrf = vrf;
+        meta.l2_metadata.mac_sa = hdr.ethernet.srcAddr;
+        meta.l2_metadata.mac_da = hdr.ethernet.dstAddr;
+        meta.l3_metadata.ipv6_sa = hdr.inner_ipv6.srcAddr;
+        meta.l3_metadata.ipv6_da = hdr.inner_ipv6.dstAddr;
+        meta.l3_metadata.proto = hdr.inner_ipv6.nextHdr;
+        meta.l3_metadata.flow_label = (bit<16>)hdr.inner_ipv6.flowLabel;
+    }
+    @name(".end_b6") action _end_b6(bit<128> sid) {
+        meta.sr_metadata.action_ = 4w0x4;
+        meta.l2_metadata.mac_sa = hdr.ethernet.srcAddr;
+        meta.l2_metadata.mac_da = hdr.ethernet.dstAddr;
+        meta.l3_metadata.ipv6_sa = hdr.ipv6.srcAddr;
+        meta.l3_metadata.ipv6_da = sid;
+        meta.l3_metadata.proto = hdr.ipv6.nextHdr;
+        meta.l3_metadata.flow_label = (bit<16>)hdr.ipv6.flowLabel;
+        hdr.ipv6.dstAddr = sid;
+    }
+    @name(".end_b6_encaps") action _end_b6_encaps(bit<128> sid) {
+        meta.sr_metadata.action_ = 4w0x8;
+        meta.l2_metadata.mac_sa = hdr.ethernet.srcAddr;
+        meta.l2_metadata.mac_da = hdr.ethernet.dstAddr;
+        meta.l3_metadata.ipv6_sa = hdr.ipv6.srcAddr;
+        meta.l3_metadata.ipv6_da = sid;
+        meta.l3_metadata.proto = hdr.ipv6.nextHdr;
+        meta.l3_metadata.flow_label = (bit<16>)hdr.ipv6.flowLabel;
+        hdr.ipv6_srh.segLeft = hdr.ipv6_srh.segLeft + 8w255;
+        hdr.ipv6.dstAddr = meta.sr_metadata.sid;
+    }
+    @name(".t") action _t() {
+        meta.l2_metadata.mac_sa = hdr.ethernet.srcAddr;
+        meta.l2_metadata.mac_da = hdr.ethernet.dstAddr;
+        meta.l3_metadata.ipv6_sa = hdr.ipv6.srcAddr;
+        meta.l3_metadata.ipv6_da = hdr.ipv6.dstAddr;
+        meta.l3_metadata.proto = hdr.ipv6.nextHdr;
+        meta.l3_metadata.flow_label = (bit<16>)hdr.ipv6.flowLabel;
+    }
+    @name(".t_insert") action _t_insert(bit<128> sid) {
+        meta.sr_metadata.action_ = 4w0x4;
+        meta.l2_metadata.mac_sa = hdr.ethernet.srcAddr;
+        meta.l2_metadata.mac_da = hdr.ethernet.dstAddr;
+        meta.l3_metadata.ipv6_sa = hdr.ipv6.srcAddr;
+        meta.l3_metadata.ipv6_da = sid;
+        meta.l3_metadata.proto = hdr.ipv6.nextHdr;
+        meta.l3_metadata.flow_label = (bit<16>)hdr.ipv6.flowLabel;
+    }
+    @name(".t_encaps") action _t_encaps(bit<128> srcAddr, bit<128> dstAddr, bit<20> flowLabel) {
+        meta.sr_metadata.action_ = 4w0x8;
+        meta.l2_metadata.mac_sa = hdr.ethernet.srcAddr;
+        meta.l2_metadata.mac_da = hdr.ethernet.dstAddr;
+        meta.l3_metadata.ipv6_sa = srcAddr;
+        meta.l3_metadata.ipv6_da = dstAddr;
+        meta.l3_metadata.proto = 8w43;
+        meta.l3_metadata.flow_label = (bit<16>)flowLabel;
+    }
+    @name(".srv6_local_sid") table _srv6_local_sid_0 {
+        actions = {
+            _drop();
+            _transit();
+            _end();
+            _end_x();
+            _end_t();
+            _end_dx2();
+            _end_dx4();
+            _end_dx6();
+            _end_dt2();
+            _end_dt4();
+            _end_dt6();
+            _end_b6();
+            _end_b6_encaps();
+            @defaultonly NoAction_39();
+        }
+        key = {
+            hdr.ipv6.dstAddr      : lpm @name("ipv6.dstAddr") ;
+            hdr.ipv6_srh.isValid(): ternary @name("ipv6_srh.$valid$") ;
+            hdr.ipv6_srh.segLeft  : ternary @name("ipv6_srh.segLeft") ;
+            hdr.ipv6_srh.nextHdr  : ternary @name("ipv6_srh.nextHdr") ;
+        }
+        default_action = NoAction_39();
+    }
+    @name(".srv6_transit") table _srv6_transit_0 {
+        actions = {
+            _t();
+            _t_insert();
+            _t_encaps();
+            @defaultonly NoAction_40();
+        }
+        key = {
+            hdr.ipv6.dstAddr: lpm @name("ipv6.dstAddr") ;
+        }
+        default_action = NoAction_40();
+    }
+    @name(".compute_ipv4_hash") action _compute_ipv4_hash() {
+        hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>, bit<8>, bit<16>, bit<16>>, bit<32>>(meta.l3_metadata.hash, HashAlgorithm.crc16, 16w0, { meta.l3_metadata.ipv4_da, meta.l3_metadata.ipv4_sa, meta.l3_metadata.proto, meta.l3_metadata.l4_sport, meta.l3_metadata.l4_dport }, 32w65536);
+    }
+    @name(".compute_ipv6_hash") action _compute_ipv6_hash() {
+        hash<bit<16>, bit<16>, tuple<bit<128>, bit<128>, bit<8>, bit<16>, bit<16>, bit<16>>, bit<32>>(meta.l3_metadata.hash, HashAlgorithm.crc16, 16w0, { meta.l3_metadata.ipv6_da, meta.l3_metadata.ipv6_sa, meta.l3_metadata.proto, meta.l3_metadata.flow_label, meta.l3_metadata.l4_sport, meta.l3_metadata.l4_dport }, 32w65536);
+    }
+    @name(".compute_hash") table _compute_hash_0 {
+        actions = {
+            _compute_ipv4_hash();
+            _compute_ipv6_hash();
+            @defaultonly NoAction_41();
+        }
+        key = {
+            meta.l3_metadata.version: exact @name("l3_metadata.version") ;
+            hdr.ethernet.isValid()  : exact @name("ethernet.$valid$") ;
+        }
+        default_action = NoAction_41();
+    }
+    @name(".miss_") action _miss_1() {
+    }
+    @name(".set_nexthop_index") action _set_nexthop_index_1(bit<16> index) {
+        meta.l3_metadata.nexthop = index;
+    }
+    @name(".set_nexthop_index") action _set_nexthop_index_2(bit<16> index) {
+        meta.l3_metadata.nexthop = index;
+    }
+    @name(".ipv4_fib") table _ipv4_fib {
+        actions = {
+            _miss_1();
+            _set_nexthop_index_1();
+            @defaultonly NoAction_42();
+        }
+        key = {
+            meta.l3_metadata.vrf    : exact @name("l3_metadata.vrf") ;
+            meta.l3_metadata.ipv4_da: exact @name("l3_metadata.ipv4_da") ;
+        }
+        default_action = NoAction_42();
+    }
+    @name(".ipv4_fib_lpm") table _ipv4_fib_lpm {
+        actions = {
+            _set_nexthop_index_2();
+            @defaultonly NoAction_43();
+        }
+        key = {
+            meta.l3_metadata.vrf    : exact @name("l3_metadata.vrf") ;
+            meta.l3_metadata.ipv4_da: lpm @name("l3_metadata.ipv4_da") ;
+        }
+        default_action = NoAction_43();
+    }
+    @name(".miss_") action _miss_2() {
+    }
+    @name(".set_nexthop_index") action _set_nexthop_index_5(bit<16> index) {
+        meta.l3_metadata.nexthop = index;
+    }
+    @name(".set_nexthop_index") action _set_nexthop_index_6(bit<16> index) {
+        meta.l3_metadata.nexthop = index;
+    }
+    @name(".ipv6_fib") table _ipv6_fib {
+        actions = {
+            _miss_2();
+            _set_nexthop_index_5();
+            @defaultonly NoAction_44();
+        }
+        key = {
+            meta.l3_metadata.vrf    : exact @name("l3_metadata.vrf") ;
+            meta.l3_metadata.ipv6_da: exact @name("l3_metadata.ipv6_da") ;
+        }
+        default_action = NoAction_44();
+    }
+    @name(".ipv6_fib_lpm") table _ipv6_fib_lpm {
+        actions = {
+            _set_nexthop_index_6();
+            @defaultonly NoAction_45();
+        }
+        key = {
+            meta.l3_metadata.vrf    : exact @name("l3_metadata.vrf") ;
+            meta.l3_metadata.ipv6_da: lpm @name("l3_metadata.ipv6_da") ;
+        }
+        default_action = NoAction_45();
+    }
+    @name(".dmac_hit") action _dmac_hit(bit<16> ifindex) {
+        meta.ingress_metadata.egress_ifindex = ifindex;
+    }
+    @name(".dmac_miss") action _dmac_miss() {
+    }
+    @name(".dmac_redirect") action _dmac_redirect(bit<8> index) {
+    }
+    @name(".dmac_drop") action _dmac_drop() {
+        mark_to_drop();
+    }
+    @name(".smac_miss") action _smac_miss() {
+    }
+    @name(".smac_hit") action _smac_hit() {
+    }
+    @name(".dmac") table _dmac_0 {
+        support_timeout = true;
+        actions = {
+            _dmac_hit();
+            _dmac_miss();
+            _dmac_redirect();
+            _dmac_drop();
+            @defaultonly NoAction_46();
+        }
+        key = {
+            meta.l2_metadata.bd    : exact @name("l2_metadata.bd") ;
+            meta.l2_metadata.mac_da: exact @name("l2_metadata.mac_da") ;
+        }
+        default_action = NoAction_46();
+    }
+    @name(".smac") table _smac_0 {
+        actions = {
+            _smac_miss();
+            _smac_hit();
+            @defaultonly NoAction_47();
+        }
+        key = {
+            meta.l2_metadata.bd    : exact @name("l2_metadata.bd") ;
+            meta.l2_metadata.mac_sa: exact @name("l2_metadata.mac_sa") ;
+        }
+        default_action = NoAction_47();
+    }
     apply {
-        process_ingress_port_mapping_1.apply(hdr, meta, standard_metadata);
-        process_validate_packet_1.apply(hdr, meta, standard_metadata);
-        process_srv6_1.apply(hdr, meta, standard_metadata);
-        switch (rmac_0.apply().action_run) {
+        _ingress_port_mapping_0.apply();
+        _ingress_port_properties_0.apply();
+        _port_vlan_mapping_0.apply();
+        if (hdr.ipv6.isValid()) 
+            switch (_srv6_local_sid_0.apply().action_run) {
+                _transit: {
+                    _srv6_transit_0.apply();
+                }
+            }
+
+        switch (rmac.apply().action_run) {
             rmac_hit_0: {
-                if ((meta.ingress_metadata.bypass & 4w0x2) == 4w0) 
-                    process_l3_forwarding_1.apply(hdr, meta, standard_metadata);
+                if ((meta.ingress_metadata.bypass & 4w0x2) == 4w0) {
+                    _compute_hash_0.apply();
+                    if (meta.l3_metadata.version == 4w4) 
+                        switch (_ipv4_fib.apply().action_run) {
+                            _miss_1: {
+                                _ipv4_fib_lpm.apply();
+                            }
+                        }
+
+                    else 
+                        if (meta.l3_metadata.version == 4w6) 
+                            switch (_ipv6_fib.apply().action_run) {
+                                _miss_2: {
+                                    _ipv6_fib_lpm.apply();
+                                }
+                            }
+
+                }
             }
         }
 
-        nexthop_0.apply();
-        if ((meta.ingress_metadata.bypass & 4w0x1) == 4w0) 
-            process_l2_forwarding_1.apply(hdr, meta, standard_metadata);
-        lag_group_0.apply();
+        nexthop_1.apply();
+        if ((meta.ingress_metadata.bypass & 4w0x1) == 4w0) {
+            _smac_0.apply();
+            _dmac_0.apply();
+        }
+        lag_group.apply();
     }
 }
 

@@ -721,6 +721,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<32> Haines;
 }
 
+@name(".Servia") register<bit<1>>(32w262144) Servia;
+
+@name(".Verdery") register<bit<1>>(32w262144) Verdery;
+
 @name("Flippen") struct Flippen {
     bit<8>  Accomac;
     bit<24> Tillamook;
@@ -1421,14 +1425,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_65();
     }
-    @name(".Servia") register<bit<1>>(32w262144) _Servia_0;
-    @name(".Verdery") register<bit<1>>(32w262144) _Verdery_0;
-    @name(".Howland.FulksRun") register_action<bit<1>, bit<1>>(_Servia_0) _Howland_FulksRun_0 = {
+    @name(".Howland.FulksRun") register_action<bit<1>, bit<1>>(Servia) _Howland_FulksRun_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Howland.Oilmont") register_action<bit<1>, bit<1>>(_Verdery_0) _Howland_Oilmont_0 = {
+    @name(".Howland.Oilmont") register_action<bit<1>, bit<1>>(Verdery) _Howland_Oilmont_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

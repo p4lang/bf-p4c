@@ -595,9 +595,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue887.p4
 )
 
-# Extracting '_' - i.e., `p.extract<Header>(_)`.
 p4c_add_xfail_reason("tofino"
-  "Extracting something other than a header"
+  "expected packet on port .* not seen"
   testdata/p4_16_samples/issue774-4-bmv2.p4
 )
 
@@ -1064,4 +1063,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Gateway xor key .* misaligned within byte"
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  )
+
+# BRIG-400
+p4c_add_xfail_reason("tofino"
+  "non-header in *"
+  testdata/p4_16_samples/issue1127-bmv2.p4
   )

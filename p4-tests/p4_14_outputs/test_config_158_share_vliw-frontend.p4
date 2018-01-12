@@ -163,47 +163,61 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".action_0") action action_2() {
         hdr.pkt.field_a_32 = hdr.pkt.field_b_32 + hdr.pkt.field_c_32;
         hdr.pkt.field_j_8 = 8w3;
     }
-    @name(".action_1") action action_3() {
+    @name(".action_0") action action_3() {
+        hdr.pkt.field_a_32 = hdr.pkt.field_b_32 + hdr.pkt.field_c_32;
+        hdr.pkt.field_j_8 = 8w3;
+    }
+    @name(".action_1") action action_6() {
+        hdr.pkt.field_a_32 = hdr.pkt.field_b_32 - hdr.pkt.field_c_32;
+        hdr.pkt.field_e_16 = hdr.pkt.field_e_16 << 5;
+    }
+    @name(".action_1") action action_7() {
         hdr.pkt.field_a_32 = hdr.pkt.field_b_32 - hdr.pkt.field_c_32;
         hdr.pkt.field_e_16 = hdr.pkt.field_e_16 << 5;
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name(".table_0") table table_2 {
+    @name(".do_nothing") action do_nothing_2() {
+    }
+    @name(".table_0") table table_0 {
         actions = {
             action_2();
-            action_3();
+            action_6();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_b_32: ternary @name("pkt.field_b_32") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_3 {
+    @name(".table_1") table table_1 {
         actions = {
-            action_2();
             action_3();
-            do_nothing_0();
-            @defaultonly NoAction();
+            action_7();
+            do_nothing_2();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.pkt.field_c_32: ternary @name("pkt.field_c_32") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.pkt.field_i_8 == 8w1) 
-            table_2.apply();
+            table_0.apply();
         else 
-            table_3.apply();
+            table_1.apply();
     }
 }
 

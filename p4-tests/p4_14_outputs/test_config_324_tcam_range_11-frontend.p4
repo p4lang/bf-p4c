@@ -167,7 +167,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".do_nothing") action do_nothing_0() {
+    }
+    @name(".do_nothing") action do_nothing_2() {
     }
     @name(".action_0") action action_2() {
         hdr.pkt.field_g_16 = 16w1;
@@ -175,35 +181,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_1") action action_3() {
         hdr.pkt.field_h_16 = 16w1;
     }
-    @name(".table_0") table table_2 {
+    @name(".table_0") table table_0 {
         actions = {
             do_nothing_0();
             action_2();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_o_21: range @name("pkt.field_o_21") ;
             hdr.pkt.field_f_16: exact @name("pkt.field_f_16") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_3 {
+    @name(".table_1") table table_1 {
         actions = {
-            do_nothing_0();
+            do_nothing_2();
             action_3();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.pkt.field_p_11: range @name("pkt.field_p_11") ;
             hdr.pkt.field_f_16: exact @name("pkt.field_f_16") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        table_2.apply();
-        table_3.apply();
+        table_0.apply();
+        table_1.apply();
     }
 }
 

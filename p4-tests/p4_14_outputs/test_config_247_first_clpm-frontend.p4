@@ -55,27 +55,29 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".set_dst_addr") action set_dst_addr_0(bit<32> dst) {
         hdr.ipv4.dstAddr = dst;
     }
-    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(8) @clpm_prefix_length(16) @clpm_prefix_length(24) @clpm_prefix_length(32) @name(".clpm_table") table clpm_table_0 {
+    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(8) @clpm_prefix_length(16) @clpm_prefix_length(24) @clpm_prefix_length(32) @name(".clpm_table") table clpm_table {
         actions = {
             do_nothing_0();
             set_dst_addr_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
             hdr.ipv4.ttl    : exact @name("ipv4.ttl") ;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (hdr.ethernet.isValid() && hdr.ipv4.isValid()) 
-            clpm_table_0.apply();
+            clpm_table.apply();
     }
 }
 

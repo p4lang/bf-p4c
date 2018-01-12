@@ -709,6 +709,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".Ganado") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Ganado;
 
 @name(".Ranburne") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Ranburne;
+
+@name(".Lowes") register<bit<1>>(32w294912) Lowes;
+
+@name(".Simla") register<bit<1>>(32w294912) Simla;
 #include <tofino/p4_14_prim.p4>
 
 @name("Wimberley") struct Wimberley {
@@ -1486,14 +1490,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = _Othello();
     }
-    @name(".Lowes") register<bit<1>>(32w294912) _Lowes_0;
-    @name(".Simla") register<bit<1>>(32w294912) _Simla_0;
-    @name(".Calabasas.Olene") register_action<bit<1>, bit<1>>(_Lowes_0) _Calabasas_Olene_0 = {
+    @name(".Calabasas.Olene") register_action<bit<1>, bit<1>>(Lowes) _Calabasas_Olene_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Calabasas.Portal") register_action<bit<1>, bit<1>>(_Simla_0) _Calabasas_Portal_0 = {
+    @name(".Calabasas.Portal") register_action<bit<1>, bit<1>>(Simla) _Calabasas_Portal_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

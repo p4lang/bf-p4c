@@ -571,6 +571,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<32> Biehle;
 }
 
+@name(".Illmo") register<bit<1>>(32w262144) Illmo;
+
+@name(".Merrill") register<bit<1>>(32w262144) Merrill;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -1106,14 +1110,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = _Weatherby();
     }
-    @name(".Illmo") register<bit<1>>(32w262144) _Illmo_0;
-    @name(".Merrill") register<bit<1>>(32w262144) _Merrill_0;
-    @name(".Victoria.Kekoskee") register_action<bit<1>, bit<1>>(_Merrill_0) _Victoria_Kekoskee_0 = {
+    @name(".Victoria.Kekoskee") register_action<bit<1>, bit<1>>(Merrill) _Victoria_Kekoskee_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Victoria.Woodsboro") register_action<bit<1>, bit<1>>(_Illmo_0) _Victoria_Woodsboro_0 = {
+    @name(".Victoria.Woodsboro") register_action<bit<1>, bit<1>>(Illmo) _Victoria_Woodsboro_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

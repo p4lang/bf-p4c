@@ -170,6 +170,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".set_meta") action set_meta_0() {
         meta.meta.x_12 = 12w7;
         meta.meta.y_4 = 4w15;
@@ -177,40 +181,42 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_0() {
     }
+    @name(".do_nothing") action do_nothing_2() {
+    }
     @name(".add_2") action add() {
         hdr.pkt.c = hdr.pkt.c + (bit<16>)meta.meta.x_12;
     }
     @name(".sub_2") action sub() {
         hdr.pkt.c = hdr.pkt.d + (bit<16>)meta.meta.x_12;
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             set_meta_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.a: exact @name("pkt.a") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t2") table t2_0 {
+    @name(".t2") table t2 {
         actions = {
             add();
             sub();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_2();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.pkt.b: exact @name("pkt.b") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        t1_0.apply();
-        t2_0.apply();
+        t1.apply();
+        t2.apply();
     }
 }
 

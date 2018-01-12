@@ -160,24 +160,32 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".nop") action nop_0() {
     }
-    @name(".e_t1") table e_t1_0 {
+    @name(".e_t1") table e_t1 {
         actions = {
             nop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        e_t1_0.apply();
+        e_t1.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_1() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
     @name(".nop") action nop_1() {
     }
     @name(".set_egress_port") action set_egress_port_0(bit<9> egress_port) {
@@ -189,47 +197,47 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".ing_drop") action ing_drop_0() {
         meta.ing_metadata.drop = 1w1;
     }
-    @name(".dmac") table dmac_0 {
+    @name(".dmac") table dmac {
         actions = {
             nop_1();
             set_egress_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
             meta.ing_metadata.bd: exact @name("ing_metadata.bd") ;
         }
         size = 131072;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
-    @name(".port_bd") table port_bd_0 {
+    @name(".port_bd") table port_bd {
         actions = {
             set_bd_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".port_drop") table port_drop_0 {
+    @name(".port_drop") table port_drop {
         actions = {
             ing_drop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {
-            port_bd_0.apply();
-            port_drop_0.apply();
+            port_bd.apply();
+            port_drop.apply();
         }
-        dmac_0.apply();
+        dmac.apply();
     }
 }
 

@@ -189,8 +189,9 @@ struct counter_alu_layout {
     bit<32> hi;
 }
 
+@name(".cntr") register<counter_alu_layout>(32w8192) cntr;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".cntr") register<counter_alu_layout>(32w8192) cntr;
     register_action<counter_alu_layout, bit<32>>(cntr) counter_alu = {
         void apply(inout counter_alu_layout value, out bit<32> rv) {
             rv = 32w0;

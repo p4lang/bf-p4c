@@ -178,18 +178,22 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".do_remove_fabric") action do_remove_fabric_0() {
         hdr.bff.setInvalid();
     }
-    @name(".remove_fabric") table remove_fabric_0 {
+    @name(".remove_fabric") table remove_fabric {
         actions = {
             do_remove_fabric_0();
         }
         default_action = do_remove_fabric_0();
     }
     apply {
-        remove_fabric_0.apply();
+        remove_fabric.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".do_ethernet_forward") action do_ethernet_forward_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
@@ -199,40 +203,40 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_port_properties") action set_port_properties_0(bit<1> port_type) {
         meta.m.port_type = port_type;
     }
-    @name(".ethernet_forward") table ethernet_forward_0 {
+    @name(".ethernet_forward") table ethernet_forward {
         actions = {
             do_ethernet_forward_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".fabric_forward") table fabric_forward_0 {
+    @name(".fabric_forward") table fabric_forward {
         actions = {
             do_fabric_forward_0();
         }
         default_action = do_fabric_forward_0();
     }
-    @name(".ingress_port") table ingress_port_0 {
+    @name(".ingress_port") table ingress_port_1 {
         actions = {
             set_port_properties_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 
-            ingress_port_0.apply();
+            ingress_port_1.apply();
         if (hdr.bff.isValid()) 
-            fabric_forward_0.apply();
+            fabric_forward.apply();
         else 
-            ethernet_forward_0.apply();
+            ethernet_forward.apply();
     }
 }
 

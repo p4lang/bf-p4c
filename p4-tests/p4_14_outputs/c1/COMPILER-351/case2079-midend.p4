@@ -545,6 +545,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".Masontown") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Masontown;
 
+@name(".Jefferson") register<bit<1>>(32w262144) Jefferson;
+
+@name(".Shidler") register<bit<1>>(32w262144) Shidler;
+
 @name("Neponset") struct Neponset {
     bit<8>  Stowe;
     bit<16> Montegut;
@@ -1053,14 +1057,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = _Thach();
     }
-    @name(".Jefferson") register<bit<1>>(32w262144) _Jefferson_0;
-    @name(".Shidler") register<bit<1>>(32w262144) _Shidler_0;
-    @name(".Amber.Moxley") register_action<bit<1>, bit<1>>(_Shidler_0) _Amber_Moxley_0 = {
+    @name(".Amber.Moxley") register_action<bit<1>, bit<1>>(Shidler) _Amber_Moxley_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Amber.Shorter") register_action<bit<1>, bit<1>>(_Jefferson_0) _Amber_Shorter_0 = {
+    @name(".Amber.Shorter") register_action<bit<1>, bit<1>>(Jefferson) _Amber_Shorter_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

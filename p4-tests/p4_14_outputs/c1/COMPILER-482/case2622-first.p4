@@ -1941,9 +1941,11 @@ control Millstadt(inout headers hdr, inout metadata meta, inout standard_metadat
     }
 }
 
+@name(".Bloomdale") register<bit<1>>(32w262144) Bloomdale;
+
+@name(".Helotes") register<bit<1>>(32w262144) Helotes;
+
 control Montegut(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Bloomdale") register<bit<1>>(32w262144) Bloomdale;
-    @name(".Helotes") register<bit<1>>(32w262144) Helotes;
     register_action<bit<1>, bit<1>>(Helotes) Leoma = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

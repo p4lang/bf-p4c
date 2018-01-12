@@ -332,10 +332,34 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".next_hop_ecmp_ap") @mode("fair") action_selector(HashAlgorithm.crc32, 32w4096, 32w29) next_hop_ecmp_ap;
 
+@name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_1;
+
+@name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_2;
+
+@name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
+
+@name(".next_hop_ecmp_reg") register<bit<1>>(32w131072) next_hop_ecmp_reg;
+
+@name(".lag_reg") register<bit<1>>(32w131072) lag_reg;
+
+@name(".ifid_cntr") register<bit<16>>(32w0) ifid_cntr;
+
+@name(".ob1") register<bit<1>>(32w1000) ob1;
+
+@name(".ob2") register<bit<1>>(32w1000) ob2;
+
 struct counter_alu_layout {
     int<32> lo;
     int<32> hi;
 }
+
+@name(".port_cntr") register<counter_alu_layout>(32w0) port_cntr;
+
+@name(".sampling_cntr") register<bit<32>>(32w143360) sampling_cntr;
+
+@name(".scratch") register<bit<16>>(32w4096) scratch;
+
+@name(".two_instr_no_idx_reg") register<bit<8>>(32w512) two_instr_no_idx_reg;
 
 struct tuple_0 {
     bit<8>  field;
@@ -410,29 +434,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_39() {
     }
-    @name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter;
-    @name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_0;
-    @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_1;
-    @name(".ifid_cntr") register<bit<16>>(32w0) ifid_cntr;
-    @name(".ob1") register<bit<1>>(32w1000) ob1;
-    @name(".ob2") register<bit<1>>(32w1000) ob2;
-    @name(".port_cntr") register<counter_alu_layout>(32w0) port_cntr;
-    @name(".sampling_cntr") register<bit<32>>(32w143360) sampling_cntr;
-    @name(".scratch") register<bit<16>>(32w4096) scratch;
-    @name(".two_instr_no_idx_reg") register<bit<8>>(32w512) two_instr_no_idx_reg;
-    @name("bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter) bloom_filter_alu_1 = {
+    @name("bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
             rv = 1w0;
         }
     };
-    @name("bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_0) bloom_filter_alu_2 = {
+    @name("bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
             rv = 1w0;
         }
     };
-    @name("bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_3 = {
+    @name("bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
             rv = 1w0;
@@ -624,7 +638,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_0();
     }
-    @stage(1) @name(".bloom_filter_2") table bloom_filter_2 {
+    @stage(1) @name(".bloom_filter_2") table bloom_filter_2_0 {
         actions = {
             check_bloom_filter_0();
             @defaultonly NoAction_21();
@@ -632,7 +646,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_21();
     }
-    @stage(1) @name(".bloom_filter_3") table bloom_filter_3 {
+    @stage(1) @name(".bloom_filter_3") table bloom_filter_3_0 {
         actions = {
             check_bloom_filter_4();
             @defaultonly NoAction_22();
@@ -799,23 +813,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = do_undrop_0();
     }
-    @name(".bloom_filter_1") register<bit<1>>(32w262144) _bloom_filter_2;
-    @name(".bloom_filter_2") register<bit<1>>(32w262144) _bloom_filter_3;
-    @name(".bloom_filter_3") register<bit<1>>(32w262144) _bloom_filter_4;
-    @name(".next_hop_ecmp_reg") register<bit<1>>(32w131072) _next_hop_ecmp_reg_0;
-    @name(".pgen_pass_1_ctrl_flow.clr_bloom_filter_alu_1") register_action<bit<1>, bit<1>>(_bloom_filter_2) _pgen_pass_1_ctrl_flow_clr_bloom_filter_alu_2 = {
+    @name(".pgen_pass_1_ctrl_flow.clr_bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter_1) _pgen_pass_1_ctrl_flow_clr_bloom_filter_alu_2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w0;
         }
     };
-    @name(".pgen_pass_1_ctrl_flow.clr_bloom_filter_alu_2") register_action<bit<1>, bit<1>>(_bloom_filter_3) _pgen_pass_1_ctrl_flow_clr_bloom_filter_alu_3 = {
+    @name(".pgen_pass_1_ctrl_flow.clr_bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_2) _pgen_pass_1_ctrl_flow_clr_bloom_filter_alu_3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w0;
         }
     };
-    @name(".pgen_pass_1_ctrl_flow.clr_bloom_filter_alu_3") register_action<bit<1>, bit<1>>(_bloom_filter_4) _pgen_pass_1_ctrl_flow_clr_bloom_filter_alu_4 = {
+    @name(".pgen_pass_1_ctrl_flow.clr_bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_3) _pgen_pass_1_ctrl_flow_clr_bloom_filter_alu_4 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w0;
@@ -911,7 +921,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 7;
         default_action = NoAction_38();
     }
-    @name(".lag_reg") register<bit<1>>(32w131072) _lag_reg_0;
     @name(".pgen_pass_2_ctrl_flow.lag_alu") selector_action(lag_ap) _pgen_pass_2_ctrl_flow_lag_alu_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
@@ -974,8 +983,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             switch (ifid_1.apply().action_run) {
                 default: {
                     bloom_filter_1_0.apply();
-                    bloom_filter_2.apply();
-                    bloom_filter_3.apply();
+                    bloom_filter_2_0.apply();
+                    bloom_filter_3_0.apply();
                     if (meta.md.bf_tmp_1 != 1w0 || meta.md.bf_tmp_2 != 1w0 || meta.md.bf_tmp_3 != 1w0) 
                         bloom_filter_sample.apply();
                     sip_sampler.apply();

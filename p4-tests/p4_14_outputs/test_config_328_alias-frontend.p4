@@ -194,10 +194,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_0() {
     }
+    @name(".do_nothing") action do_nothing_2() {
+    }
     @name(".set_p") action set_p_0(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @command_line("--no-dead-code-elimination") @name(".table_0") table table_2 {
+    @command_line("--no-dead-code-elimination") @name(".table_0") table table_0 {
         actions = {
             action_1();
             do_nothing_0();
@@ -208,10 +210,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = action_1(8w5);
     }
-    @name(".table_1") table table_3 {
+    @name(".table_1") table table_1 {
         actions = {
             set_p_0();
-            do_nothing_0();
+            do_nothing_2();
         }
         key = {
             meta.meta.mac_da: exact @name("meta.mac_da") ;
@@ -222,8 +224,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ethernet.isValid()) {
-            table_2.apply();
-            table_3.apply();
+            table_0.apply();
+            table_1.apply();
         }
     }
 }

@@ -164,19 +164,21 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".cntr_0") counter(32w500, CounterType.packets) cntr;
-    @name(".action_0") action action_1() {
-        cntr.count((bit<32>)hdr.pkt.field_i_8);
+    @name("NoAction") action NoAction_0() {
     }
-    @name(".table_0") table table_1 {
+    @name(".cntr_0") counter(32w500, CounterType.packets) cntr_0;
+    @name(".action_0") action action_1() {
+        cntr_0.count((bit<32>)hdr.pkt.field_i_8);
+    }
+    @name(".table_0") table table_0 {
         actions = {
             action_1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        table_1.apply();
+        table_0.apply();
     }
 }
 

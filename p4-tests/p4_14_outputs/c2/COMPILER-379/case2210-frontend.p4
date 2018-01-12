@@ -24,14 +24,14 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    hdr_t_1 tmp_hdr_1;
-    hdr_t_2 tmp_hdr_2;
+    hdr_t_1 tmp_hdr;
+    hdr_t_2 tmp_hdr_0;
     @name(".start") state start {
-        packet.extract<hdr_t_1>(tmp_hdr_1);
-        packet.extract<hdr_t_2>(tmp_hdr_2, (tmp_hdr_1.useless << 1 << 3) + 32w4294967264);
+        packet.extract<hdr_t_1>(tmp_hdr);
+        packet.extract<hdr_t_2>(tmp_hdr_0, (tmp_hdr.useless << 1 << 3) + 32w4294967264);
         hdr.hdr.setValid();
-        hdr.hdr.useless = tmp_hdr_1.useless;
-        hdr.hdr.opts = tmp_hdr_2.opts;
+        hdr.hdr.useless = tmp_hdr.useless;
+        hdr.hdr.opts = tmp_hdr_0.opts;
         transition accept;
     }
 }
@@ -42,20 +42,22 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name("._nop") action _nop_0() {
     }
-    @name(".tlpm") table tlpm_0 {
+    @name(".tlpm") table tlpm {
         actions = {
             _nop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr.useless: lpm @name("hdr.useless") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        tlpm_0.apply();
+        tlpm.apply();
     }
 }
 

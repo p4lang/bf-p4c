@@ -173,60 +173,68 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".ExactOne_counter") direct_counter(CounterType.packets) ExactOne_counter_0;
-    @name(".CounterA") counter(32w1024, CounterType.packets) CounterA_0;
-    @name(".CounterB") counter(32w64, CounterType.packets) CounterB_0;
-    @name(".ExactOne_meter") direct_meter<bit<8>>(MeterType.bytes) ExactOne_meter_0;
-    @name(".MeterA") meter(32w1024, MeterType.packets) MeterA_0;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    @name(".ExactOne_counter") direct_counter(CounterType.packets) ExactOne_counter;
+    @name(".CounterA") counter(32w1024, CounterType.packets) CounterA;
+    @name(".CounterB") counter(32w64, CounterType.packets) CounterB;
+    @name(".ExactOne_meter") direct_meter<bit<8>>(MeterType.bytes) ExactOne_meter;
+    @name(".MeterA") meter(32w1024, MeterType.packets) MeterA;
     @name(".indirectAction") action indirectAction_0(bit<32> idx, bit<9> port) {
-        CounterB_0.count(idx);
+        CounterB.count(idx);
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
     @name("._CounterAAction1") action _CounterAAction1_0(bit<32> idx) {
-        CounterA_0.count(idx);
+        CounterA.count(idx);
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w3;
     }
     @name("._CounterAAction2") action _CounterAAction2_0() {
-        CounterA_0.count(32w37);
+        CounterA.count(32w37);
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w3;
     }
     @name("._MeterAAction") action _MeterAAction_0() {
-        MeterA_0.execute_meter<bit<8>>(32w16, meta.meta.f8);
+        MeterA.execute_meter<bit<8>>(32w16, meta.meta.f8);
     }
     @name(".actionA") action actionA(bit<32> param, bit<9> port) {
-        ExactOne_meter_0.read(meta.meta.f8);
-        ExactOne_counter_0.count();
+        ExactOne_meter.read(meta.meta.f8);
+        ExactOne_counter.count();
         meta.meta.f32 = param;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
     @name(".actionB") action actionB(bit<9> port) {
-        ExactOne_meter_0.read(meta.meta.f8);
-        ExactOne_counter_0.count();
+        ExactOne_meter.read(meta.meta.f8);
+        ExactOne_counter.count();
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
     @name(".no_op") action no_op() {
-        ExactOne_meter_0.read(meta.meta.f8);
-        ExactOne_counter_0.count();
+        ExactOne_meter.read(meta.meta.f8);
+        ExactOne_counter.count();
     }
-    @name(".ExactOne") table ExactOne_0 {
+    @name(".ExactOne") table ExactOne {
         actions = {
             actionA();
             actionB();
             no_op();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 512;
-        counters = ExactOne_counter_0;
-        meters = ExactOne_meter_0;
-        default_action = NoAction();
+        counters = ExactOne_counter;
+        meters = ExactOne_meter;
+        default_action = NoAction_0();
     }
-    @name(".IndirectTable") table IndirectTable_0 {
+    @name(".IndirectTable") table IndirectTable {
         actions = {
             indirectAction_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
@@ -234,36 +242,36 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
         implementation = ActionProf;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
-    @name("._CounterATable") table _CounterATable_0 {
+    @name("._CounterATable") table _CounterATable {
         actions = {
             _CounterAAction1_0();
             _CounterAAction2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name("._MeterATable") table _MeterATable_0 {
+    @name("._MeterATable") table _MeterATable {
         actions = {
             _MeterAAction_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
     apply {
-        ExactOne_0.apply();
-        _MeterATable_0.apply();
-        _CounterATable_0.apply();
-        IndirectTable_0.apply();
+        ExactOne.apply();
+        _MeterATable.apply();
+        _CounterATable.apply();
+        IndirectTable.apply();
     }
 }
 

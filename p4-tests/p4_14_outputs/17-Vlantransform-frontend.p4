@@ -196,6 +196,24 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_10() {
+    }
+    @name("NoAction") action NoAction_11() {
+    }
+    @name("NoAction") action NoAction_12() {
+    }
+    @name("NoAction") action NoAction_13() {
+    }
+    @name("NoAction") action NoAction_14() {
+    }
+    @name("NoAction") action NoAction_15() {
+    }
+    @name("NoAction") action NoAction_16() {
+    }
+    @name("NoAction") action NoAction_17() {
+    }
     @name(".do_new_inner_cfi") action do_new_inner_cfi_0() {
         hdr.vlan_tag[1].cfi = meta.meta.new_inner_cfi;
     }
@@ -240,67 +258,67 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.new_inner_vid = new_inner_vid;
         meta.meta.new_inner_vid_en = new_inner_vid_en;
     }
-    @name(".new_inner_cfi") table new_inner_cfi_0 {
+    @name(".new_inner_cfi") table new_inner_cfi_1 {
         actions = {
             do_new_inner_cfi_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".new_inner_pri") table new_inner_pri_0 {
+    @name(".new_inner_pri") table new_inner_pri_1 {
         actions = {
             do_new_inner_pri_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_10();
         }
-        default_action = NoAction();
+        default_action = NoAction_10();
     }
-    @name(".new_inner_tpid") table new_inner_tpid_0 {
+    @name(".new_inner_tpid") table new_inner_tpid_1 {
         actions = {
             do_new_inner_tpid_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_11();
         }
-        default_action = NoAction();
+        default_action = NoAction_11();
     }
-    @name(".new_inner_vid") table new_inner_vid_0 {
+    @name(".new_inner_vid") table new_inner_vid_1 {
         actions = {
             do_new_inner_vid_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_12();
         }
-        default_action = NoAction();
+        default_action = NoAction_12();
     }
-    @name(".new_outer_cfi") table new_outer_cfi_0 {
+    @name(".new_outer_cfi") table new_outer_cfi_1 {
         actions = {
             do_new_outer_cfi_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_13();
         }
-        default_action = NoAction();
+        default_action = NoAction_13();
     }
-    @name(".new_outer_pri") table new_outer_pri_0 {
+    @name(".new_outer_pri") table new_outer_pri_1 {
         actions = {
             do_new_outer_pri_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_14();
         }
-        default_action = NoAction();
+        default_action = NoAction_14();
     }
-    @name(".new_outer_tpid") table new_outer_tpid_0 {
+    @name(".new_outer_tpid") table new_outer_tpid_1 {
         actions = {
             do_new_outer_tpid_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_15();
         }
-        default_action = NoAction();
+        default_action = NoAction_15();
     }
-    @name(".new_outer_vid") table new_outer_vid_0 {
+    @name(".new_outer_vid") table new_outer_vid_1 {
         actions = {
             do_new_outer_vid_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_16();
         }
-        default_action = NoAction();
+        default_action = NoAction_16();
     }
-    @name(".vlan_xlate") table vlan_xlate_0 {
+    @name(".vlan_xlate") table vlan_xlate {
         actions = {
             nop_0();
             rewrite_tags_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_17();
         }
         key = {
             hdr.vlan_tag[0].isValid(): exact @name("vlan_tag[0].$valid$") ;
@@ -308,26 +326,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.vlan_tag[1].isValid(): exact @name("vlan_tag[1].$valid$") ;
             hdr.vlan_tag[1].vid      : exact @name("vlan_tag[1].vid") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_17();
     }
     apply {
-        vlan_xlate_0.apply();
+        vlan_xlate.apply();
         if (meta.meta.new_outer_tpid_en == 1w1) 
-            new_outer_tpid_0.apply();
+            new_outer_tpid_1.apply();
         if (meta.meta.new_outer_pri_en == 1w1) 
-            new_outer_pri_0.apply();
+            new_outer_pri_1.apply();
         if (meta.meta.new_outer_cfi_en == 1w1) 
-            new_outer_cfi_0.apply();
+            new_outer_cfi_1.apply();
         if (meta.meta.new_outer_vid_en == 1w1) 
-            new_outer_vid_0.apply();
+            new_outer_vid_1.apply();
         if (meta.meta.new_inner_tpid_en == 1w1) 
-            new_inner_tpid_0.apply();
+            new_inner_tpid_1.apply();
         if (meta.meta.new_inner_pri_en == 1w1) 
-            new_inner_pri_0.apply();
+            new_inner_pri_1.apply();
         if (meta.meta.new_inner_cfi_en == 1w1) 
-            new_inner_cfi_0.apply();
+            new_inner_cfi_1.apply();
         if (meta.meta.new_inner_vid_en == 1w1) 
-            new_inner_vid_0.apply();
+            new_inner_vid_1.apply();
     }
 }
 

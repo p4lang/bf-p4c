@@ -530,6 +530,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<16> Tascosa;
 }
 
+@name(".Buenos") register<bit<1>>(32w262144) Buenos;
+
+@name(".Tryon") register<bit<1>>(32w262144) Tryon;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -1006,14 +1010,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = _Richvale();
     }
-    @name(".Buenos") register<bit<1>>(32w262144) _Buenos_0;
-    @name(".Tryon") register<bit<1>>(32w262144) _Tryon_0;
-    @name(".Sitka.Klondike") register_action<bit<1>, bit<1>>(_Buenos_0) _Sitka_Klondike_0 = {
+    @name(".Sitka.Klondike") register_action<bit<1>, bit<1>>(Buenos) _Sitka_Klondike_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Sitka.Theba") register_action<bit<1>, bit<1>>(_Tryon_0) _Sitka_Theba_0 = {
+    @name(".Sitka.Theba") register_action<bit<1>, bit<1>>(Tryon) _Sitka_Theba_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

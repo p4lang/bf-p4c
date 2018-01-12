@@ -170,29 +170,41 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".qos_hit_e2e_mirror") action qos_hit_e2e_mirror_0(bit<32> mirror_id) {
         clone(CloneType.E2E, mirror_id);
     }
-    @name(".egress_qos") table egress_qos_0 {
+    @name(".egress_qos") table egress_qos {
         actions = {
             qos_hit_e2e_mirror_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.vlan_tag_.isValid(): exact @name("vlan_tag_.$valid$") ;
             hdr.vlan_tag_.vid      : exact @name("vlan_tag_.vid") ;
         }
         size = 8192;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (hdr.eg_intr_md_from_parser_aux.clone_src == 4w0) 
-            egress_qos_0.apply();
+            egress_qos.apply();
     }
 }
 #include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_1() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
+    @name("NoAction") action NoAction_10() {
+    }
+    @name("NoAction") action NoAction_11() {
+    }
     @name(".do_deflect_on_drop") action do_deflect_on_drop_0() {
         hdr.ig_intr_md_for_tm.deflect_on_drop = 1w1;
     }
@@ -241,71 +253,71 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_resubmit") action do_resubmit_0() {
         resubmit<tuple<>>({  });
     }
-    @name(".deflect_on_drop_tbl") table deflect_on_drop_tbl_0 {
+    @name(".deflect_on_drop_tbl") table deflect_on_drop_tbl {
         actions = {
             do_deflect_on_drop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
-    @name(".dmac") table dmac_0 {
+    @name(".dmac") table dmac {
         actions = {
             dmac_miss_0();
             dmac_unicast_hit_0();
             dmac_multicast_hit_0();
             dmac_uc_mc_hit_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_8();
     }
-    @name(".ingress_qos") table ingress_qos_0 {
+    @name(".ingress_qos") table ingress_qos {
         actions = {
             qos_miss_0();
             qos_hit_eg_bypass_i2e_mirror_0();
             qos_hit_eg_bypass_no_mirror_0();
             qos_hit_no_eg_bypass_no_mirror_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_9();
         }
         key = {
             hdr.vlan_tag_.isValid(): exact @name("vlan_tag_.$valid$") ;
             hdr.vlan_tag_.vid      : exact @name("vlan_tag_.vid") ;
         }
         size = 8192;
-        default_action = NoAction();
+        default_action = NoAction_9();
     }
-    @name(".recirc_tbl") table recirc_tbl_0 {
+    @name(".recirc_tbl") table recirc_tbl {
         actions = {
             do_recirc_0();
             noop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_10();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_10();
     }
-    @name(".resubmit_tbl") table resubmit_tbl_0 {
+    @name(".resubmit_tbl") table resubmit_tbl {
         actions = {
             do_resubmit_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_11();
         }
-        default_action = NoAction();
+        default_action = NoAction_11();
     }
     apply {
-        dmac_0.apply();
-        ingress_qos_0.apply();
+        dmac.apply();
+        ingress_qos.apply();
         if (1w0 == hdr.ig_intr_md.resubmit_flag && 3w1 == hdr.vlan_tag_.pcp) 
-            resubmit_tbl_0.apply();
+            resubmit_tbl.apply();
         else 
             if (3w2 == hdr.vlan_tag_.pcp) 
-                deflect_on_drop_tbl_0.apply();
+                deflect_on_drop_tbl.apply();
             else 
                 if (3w3 == hdr.vlan_tag_.pcp) 
-                    recirc_tbl_0.apply();
+                    recirc_tbl.apply();
     }
 }
 

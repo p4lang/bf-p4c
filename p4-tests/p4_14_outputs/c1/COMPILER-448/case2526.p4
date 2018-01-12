@@ -588,9 +588,11 @@ control Arthur(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+@name(".Hobucken") register<bit<1>>(32w262144) Hobucken;
+
+@name(".Noyack") register<bit<1>>(32w262144) Noyack;
+
 control Bagwell(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Hobucken") register<bit<1>>(32w262144) Hobucken;
-    @name(".Noyack") register<bit<1>>(32w262144) Noyack;
     register_action<bit<1>, bit<1>>(Noyack) Goodwin = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

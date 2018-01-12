@@ -1065,9 +1065,11 @@ control Blairsden(inout headers hdr, inout metadata meta, inout standard_metadat
     }
 }
 
+@name(".Allen") register<bit<1>>(32w294912) Allen;
+
+@name(".Traverse") register<bit<1>>(32w294912) Traverse;
+
 control Bonner(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Allen") register<bit<1>>(32w294912) Allen;
-    @name(".Traverse") register<bit<1>>(32w294912) Traverse;
     register_action<bit<1>, bit<1>>(Traverse) Penalosa = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

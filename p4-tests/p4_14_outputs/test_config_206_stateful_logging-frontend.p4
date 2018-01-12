@@ -164,9 +164,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".logging_reg") register<bit<16>>(32w16384) logging_reg;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".logging_reg") register<bit<16>>(32w16384) logging_reg_0;
-    @name("logging_alu") register_action<bit<16>, bit<16>>(logging_reg_0) logging_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("logging_alu") register_action<bit<16>, bit<16>>(logging_reg) logging_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             value = hdr.ethernet.blah;
@@ -174,24 +177,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".action_0") action action_2() {
         mark_to_drop();
-        logging_alu_0.execute_log();
+        logging_alu.execute_log();
     }
     @name(".action_1") action action_3() {
     }
-    @name(".table_0") table table_1 {
+    @name(".table_0") table table_0 {
         actions = {
             action_2();
             action_3();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        table_1.apply();
+        table_0.apply();
     }
 }
 

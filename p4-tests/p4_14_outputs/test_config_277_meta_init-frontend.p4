@@ -169,10 +169,28 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
     @name(".a0") action a0_0(bit<8> x) {
         meta.meta.x_8 = x;
     }
     @name(".do_nothing") action do_nothing_0() {
+    }
+    @name(".do_nothing") action do_nothing_5() {
+    }
+    @name(".do_nothing") action do_nothing_6() {
+    }
+    @name(".do_nothing") action do_nothing_7() {
+    }
+    @name(".do_nothing") action do_nothing_8() {
     }
     @name(".a1") action a1_0() {
         hdr.hdr1.c_8 = 8w2;
@@ -181,92 +199,90 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".a2") action a2_0(bit<8> x2) {
         meta.meta.x_8 = x2;
     }
-    @name(".inside") action inside_0(bit<8> y_0) {
-        hdr.hdr1.c_8 = 8w1;
-        meta.meta.y_8 = y_0;
-    }
     @name(".a3") action a3_0(bit<8> p, bit<8> y) {
         hdr.hdr1.a_8 = p;
-        inside_0(8w10);
+        hdr.hdr1.c_8 = 8w1;
+        meta.meta.y_8 = 8w10;
     }
     @name(".a4") action a4_0(bit<8> y2) {
         hdr.hdr1.a_8 = 8w1;
-        inside_0(8w20);
+        hdr.hdr1.c_8 = 8w1;
+        meta.meta.y_8 = 8w20;
     }
     @name(".blah") action blah_0(bit<8> x) {
         hdr.hdr1.d_8 = x;
     }
-    @name(".t0") table t0_0 {
+    @name(".t0") table t0 {
         actions = {
             a0_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr1.a_8: ternary @name("hdr1.a_8") ;
             hdr.hdr1.d_8: ternary @name("hdr1.d_8") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             a1_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_5();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.hdr1.b_16: ternary @name("hdr1.b_16") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".t2") table t2_0 {
+    @name(".t2") table t2 {
         actions = {
             a2_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_6();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.hdr1.c_8: ternary @name("hdr1.c_8") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
-    @name(".t3") table t3_0 {
+    @name(".t3") table t3 {
         actions = {
             a3_0();
             a4_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_7();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.hdr1.d_8 : ternary @name("hdr1.d_8") ;
             meta.meta.x_8: exact @name("meta.x_8") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_8();
     }
-    @command_line("--metadata-overlay", "True") @name(".tm1") table tm1_0 {
+    @command_line("--metadata-overlay", "True") @name(".tm1") table tm1 {
         actions = {
             blah_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_8();
+            @defaultonly NoAction_9();
         }
         key = {
             meta.meta.z_8: ternary @name("meta.z_8") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_9();
     }
     apply {
-        tm1_0.apply();
+        tm1.apply();
         if (hdr.hdr1.isValid()) 
-            t0_0.apply();
+            t0.apply();
         else 
-            t1_0.apply();
-        t2_0.apply();
-        t3_0.apply();
+            t1.apply();
+        t2.apply();
+        t3.apply();
     }
 }
 

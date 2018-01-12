@@ -178,10 +178,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".set_copy_to_cpu") action set_copy_to_cpu_0() {
         hdr.ig_intr_md_for_tm.copy_to_cpu = 1w1;
     }
     @name(".do_nothing") action do_nothing_0() {
+    }
+    @name(".do_nothing") action do_nothing_2() {
     }
     @name(".set_p") action set_p_0(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
@@ -189,29 +195,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".clear_copy_to_cpu") action clear_copy_to_cpu_0() {
         hdr.ig_intr_md_for_tm.copy_to_cpu = 1w0;
     }
-    @name(".table_1") table table_0 {
+    @name(".table_1") table table_1 {
         actions = {
             set_copy_to_cpu_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_2") table table_4 {
+    @name(".table_2") table table_2 {
         actions = {
             set_p_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_2();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.ig_intr_md_for_tm.copy_to_cpu: ternary @name("ig_intr_md_for_tm.copy_to_cpu") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
-    @name(".table_3") table table_5 {
+    @name(".table_3") table table_3 {
         actions = {
             clear_copy_to_cpu_0();
         }
@@ -219,9 +225,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ipv4.isValid()) {
-            table_0.apply();
-            table_4.apply();
-            table_5.apply();
+            table_1.apply();
+            table_2.apply();
+            table_3.apply();
         }
     }
 }

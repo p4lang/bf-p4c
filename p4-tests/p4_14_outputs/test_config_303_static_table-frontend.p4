@@ -223,10 +223,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_1() {
+    }
     @name(".set_pkt") action set_pkt_0(bit<8> p) {
         hdr.ethernet.dstAddr = 48w0xffffffffffff;
     }
     @name(".do_nothing") action do_nothing_0() {
+    }
+    @name(".do_nothing") action do_nothing_1() {
     }
     @name(".ec0") action ec0_0() {
         meta.meta.e2e_0 = 8w0;
@@ -260,20 +266,20 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         meta.meta.e2e_7 = 128w7;
         clone3<tuple<bit<128>>>(CloneType.E2E, 32w7, { meta.meta.e2e_7 });
     }
-    @name(".et0") table et0_0 {
+    @name(".et0") table et0 {
         actions = {
             set_pkt_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.bm_0: exact @name("meta.bm_0") ;
             meta.meta.bm_1: exact @name("meta.bm_1") ;
         }
         size = 2048;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".et1") table et1_0 {
+    @name(".et1") table et1 {
         actions = {
             ec0_0();
             ec1_0();
@@ -283,8 +289,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             ec5_0();
             ec6_0();
             ec7_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_1();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.eg_intr_md_from_parser_aux.clone_src: exact @name("eg_intr_md_from_parser_aux.clone_src") ;
@@ -292,22 +298,28 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.ethernet.etherType                  : exact @name("ethernet.etherType") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
         if (hdr.eg_intr_md_from_parser_aux.clone_src == 4w0) 
-            et0_0.apply();
-        et1_0.apply();
+            et0.apply();
+        et1.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
     @name(".set_bm") action set_bm_0(bit<8> a, bit<8> b, bit<9> p) {
         meta.meta.bm_0 = a;
         meta.meta.bm_1 = b;
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @name(".do_nothing") action do_nothing_1() {
+    @name(".do_nothing") action do_nothing_5() {
+    }
+    @name(".do_nothing") action do_nothing_6() {
     }
     @name(".ic0") action ic0_0() {
         meta.meta.i2e_0 = 8w0;
@@ -341,19 +353,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.i2e_7 = 128w7;
         clone3<tuple<bit<128>>>(CloneType.I2E, 32w7, { meta.meta.i2e_7 });
     }
-    @name(".it0") table it0_0 {
+    @name(".it0") table it0 {
         actions = {
             set_bm_0();
-            do_nothing_1();
-            @defaultonly NoAction();
+            do_nothing_5();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.ethernet.etherType[7:0]: exact @name("ethernet.etherType[7:0]") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".it1") table it1_0 {
+    @name(".it1") table it1 {
         actions = {
             ic0_0();
             ic1_0();
@@ -363,18 +375,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             ic5_0();
             ic6_0();
             ic7_0();
-            do_nothing_1();
-            @defaultonly NoAction();
+            do_nothing_6();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ethernet.etherType[7:0]: exact @name("ethernet.etherType[7:0]") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
     apply {
-        it0_0.apply();
-        it1_0.apply();
+        it0.apply();
+        it1.apply();
     }
 }
 

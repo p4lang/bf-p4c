@@ -684,6 +684,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<16> DewyRose;
     bit<16> Blossom;
 }
+
+@name(".Bennet") register<bit<1>>(32w294912) Bennet;
+
+@name(".OldMinto") register<bit<1>>(32w294912) OldMinto;
 #include <tofino/p4_14_prim.p4>
 
 @name("Petrolia") struct Petrolia {
@@ -1455,14 +1459,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_67();
     }
-    @name(".Bennet") register<bit<1>>(32w294912) _Bennet_0;
-    @name(".OldMinto") register<bit<1>>(32w294912) _OldMinto_0;
-    @name(".Giltner.Bramwell") register_action<bit<1>, bit<1>>(_Bennet_0) _Giltner_Bramwell_0 = {
+    @name(".Giltner.Bramwell") register_action<bit<1>, bit<1>>(Bennet) _Giltner_Bramwell_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Giltner.Colonias") register_action<bit<1>, bit<1>>(_OldMinto_0) _Giltner_Colonias_0 = {
+    @name(".Giltner.Colonias") register_action<bit<1>, bit<1>>(OldMinto) _Giltner_Colonias_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

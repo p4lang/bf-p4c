@@ -163,38 +163,41 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".r_test") register<bit<8>>(32w0) r_test;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
-    @name(".r_test") register<bit<8>>(32w0) r_test_0;
-    @name("b_test") register_action<bit<8>, bit<8>>(r_test_0) b_test_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    bit<8> tmp_0;
+    @name("b_test") register_action<bit<8>, bit<8>>(r_test) b_test = {
         void apply(inout bit<8> value, out bit<8> rv) {
-            bit<8> alu_hi_0;
+            bit<8> alu_hi;
             if (value == 8w1) 
-                alu_hi_0 = 8w1;
+                alu_hi = 8w1;
             if (value == 8w0x0) 
-                alu_hi_0 = 8w2;
+                alu_hi = 8w2;
             if (value != 8w0x0) 
                 value = value + 8w255;
-            rv = alu_hi_0;
+            rv = alu_hi;
         }
     };
     @name(".a_test") action a_test_0() {
-        tmp = b_test_0.execute();
-        hdr.pkt.field_k_8 = tmp;
+        tmp_0 = b_test.execute();
+        hdr.pkt.field_k_8 = tmp_0;
     }
-    @name(".t_test") table t_test_0 {
+    @name(".t_test") table t_test {
         actions = {
             a_test_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32: exact @name("pkt.field_a_32") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        t_test_0.apply();
+        t_test.apply();
     }
 }
 

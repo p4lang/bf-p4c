@@ -158,46 +158,51 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".sampling_cntr") register<bit<32>>(32w8192) sampling_cntr;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp;
-    @name(".sampling_cntr") register<bit<32>>(32w8192) sampling_cntr_0;
-    @name("sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr_0) sampling_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    bit<32> tmp_0;
+    @name("sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             value = value + 32w1;
             rv = value;
         }
     };
     @name(".action_0") action action_2() {
-        tmp = sampling_alu_0.execute(32w8191);
-        hdr.ethernet.x = tmp;
+        tmp_0 = sampling_alu.execute(32w8191);
+        hdr.ethernet.x = tmp_0;
     }
     @name(".action_1") action action_3() {
     }
-    @ways(1) @name(".table_0") table table_2 {
+    @ways(1) @name(".table_0") table table_0 {
         actions = {
             action_2();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.blah: exact @name("ethernet.blah") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_3 {
+    @name(".table_1") table table_1 {
         actions = {
             action_3();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.ethernet.blah: ternary @name("ethernet.blah") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        table_2.apply();
-        table_3.apply();
+        table_0.apply();
+        table_1.apply();
     }
 }
 

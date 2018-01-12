@@ -665,6 +665,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<16> Edler;
 }
 
+@name(".Bloomdale") register<bit<1>>(32w262144) Bloomdale;
+
+@name(".Helotes") register<bit<1>>(32w262144) Helotes;
+
 @name("RedCliff") struct RedCliff {
     bit<8>  Scherr;
     bit<16> Ivanhoe;
@@ -1246,14 +1250,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_50();
     }
-    @name(".Bloomdale") register<bit<1>>(32w262144) _Bloomdale_0;
-    @name(".Helotes") register<bit<1>>(32w262144) _Helotes_0;
-    @name(".Montegut.Leoma") register_action<bit<1>, bit<1>>(_Helotes_0) _Montegut_Leoma_0 = {
+    @name(".Montegut.Leoma") register_action<bit<1>, bit<1>>(Helotes) _Montegut_Leoma_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Montegut.Rodessa") register_action<bit<1>, bit<1>>(_Bloomdale_0) _Montegut_Rodessa_0 = {
+    @name(".Montegut.Rodessa") register_action<bit<1>, bit<1>>(Bloomdale) _Montegut_Rodessa_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

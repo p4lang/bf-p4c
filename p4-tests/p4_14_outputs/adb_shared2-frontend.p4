@@ -46,6 +46,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".setport") action setport_0(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
@@ -69,42 +75,42 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.second_hdr.f3 = full1;
         hdr.second_hdr.f4 = full2;
     }
-    @name(".setting_port") table setting_port_0 {
+    @name(".setting_port") table setting_port {
         actions = {
             setport_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.first_hdr.f1: exact @name("first_hdr.f1") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             first_hdr1_0();
             first_hdr2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.first_hdr.f1: exact @name("first_hdr.f1") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".test2") table test2_0 {
+    @name(".test2") table test2 {
         actions = {
             second_hdr1_0();
             second_hdr2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.second_hdr.f1: exact @name("second_hdr.f1") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        test1_0.apply();
-        test2_0.apply();
-        setting_port_0.apply();
+        test1.apply();
+        test2.apply();
+        setting_port.apply();
     }
 }
 

@@ -212,9 +212,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".lag_action_profile") action_selector(HashAlgorithm.crc16, 32w1024, 32w14) lag_action_profile;
 
+@name(".lag_mbrs") register<bit<1>>(32w1) lag_mbrs;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".lag_mbrs") register<bit<1>>(32w1) lag_mbrs_0;
-    @name("port_status_alu") selector_action(lag_action_profile) port_status_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    @name("port_status_alu") selector_action(lag_action_profile) port_status_alu = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w0;
@@ -224,15 +229,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
     @name(".set_mbr_down") action set_mbr_down_0() {
-        port_status_alu_0.execute();
+        port_status_alu.execute();
     }
     @name(".drop_packet") action drop_packet_0() {
         mark_to_drop();
     }
-    @name(".lag_group") table lag_group_0 {
+    @name(".lag_group") table lag_group {
         actions = {
             set_lag_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.egress_ifindex: exact @name("meta.egress_ifindex") ;
@@ -245,25 +250,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort         : selector @name("tcp.dstPort") ;
         }
         implementation = lag_action_profile;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".lag_group_fast_update") table lag_group_fast_update_0 {
+    @name(".lag_group_fast_update") table lag_group_fast_update {
         actions = {
             set_mbr_down_0();
             drop_packet_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             meta.meta.down_port  : exact @name("meta.down_port") ;
             meta.meta.instance_id: exact @name("meta.instance_id") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (meta.meta.from_packet_generator == 1w0) 
-            lag_group_0.apply();
+            lag_group.apply();
         else 
-            lag_group_fast_update_0.apply();
+            lag_group_fast_update.apply();
     }
 }
 

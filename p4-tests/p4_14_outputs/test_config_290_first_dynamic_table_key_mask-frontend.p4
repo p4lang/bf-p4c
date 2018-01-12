@@ -163,16 +163,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".action1") action action1_0(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @pack(3) @dynamic_table_key_masks(1) @name(".table1") table table1_0 {
+    @pack(3) @dynamic_table_key_masks(1) @name(".table1") table table1 {
         actions = {
             action1_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.srcAddr[7:0]: exact @name("pkt.srcAddr[7:0]") ;
@@ -180,11 +182,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.protocol    : exact @name("pkt.protocol") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (hdr.pkt.isValid()) 
-            table1_0.apply();
+            table1.apply();
     }
 }
 

@@ -179,6 +179,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".a1") action a1_0(bit<3> p1, bit<12> p2) {
         meta.vtag.pri = p1;
         meta.vtag.cfi = 1w1;
@@ -189,23 +193,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.vlan_tag.cfi = meta.vtag.cfi;
         hdr.vlan_tag.vid = meta.vtag.vid;
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             a1_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t2") table t2_0 {
+    @name(".t2") table t2 {
         actions = {
             a2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        t1_0.apply();
-        t2_0.apply();
+        t1.apply();
+        t2.apply();
     }
 }
 

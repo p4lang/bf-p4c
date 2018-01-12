@@ -254,6 +254,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+@name(".kv_register") register<bit<32>>(32w8192) kv_register;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<32> tmp_3;
     bool tmp_4;
@@ -267,7 +269,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_9() {
     }
-    @name(".kv_register") register<bit<32>>(32w8192) kv_register;
     @name("kv_alu") register_action<bit<32>, bit<32>>(kv_register) kv_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = value;

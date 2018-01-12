@@ -3547,9 +3547,11 @@ control process_egress_bfd_tx_timers(inout headers hdr, inout metadata meta, ino
     }
 }
 
+@name(".flowlet_id") register<bit<16>>(32w8192) flowlet_id;
+
+@name(".flowlet_lastseen") register<bit<32>>(32w8192) flowlet_lastseen;
+
 control process_flowlet(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".flowlet_id") register<bit<16>>(32w8192) flowlet_id;
-    @name(".flowlet_lastseen") register<bit<32>>(32w8192) flowlet_lastseen;
     @name(".flowlet_lookup") action flowlet_lookup() {
         hash(meta.flowlet_metadata.map_index, HashAlgorithm.identity, (bit<13>)0, { meta.hash_metadata.hash1 }, (bit<26>)8192);
         meta.flowlet_metadata.inter_packet_gap = meta.intrinsic_metadata.ingress_global_timestamp;

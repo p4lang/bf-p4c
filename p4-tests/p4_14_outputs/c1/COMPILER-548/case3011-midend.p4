@@ -755,6 +755,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<16> Hiwassee;
 }
 
+@name(".Bosworth") register<bit<1>>(32w262144) Bosworth;
+
+@name(".Tuttle") register<bit<1>>(32w262144) Tuttle;
+
 @name("Cloverly") struct Cloverly {
     bit<8>  Bonduel;
     bit<16> Almont;
@@ -1490,14 +1494,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_71();
     }
-    @name(".Bosworth") register<bit<1>>(32w262144) _Bosworth_0;
-    @name(".Tuttle") register<bit<1>>(32w262144) _Tuttle_0;
-    @name(".Snowflake.ShadeGap") register_action<bit<1>, bit<1>>(_Bosworth_0) _Snowflake_ShadeGap_0 = {
+    @name(".Snowflake.ShadeGap") register_action<bit<1>, bit<1>>(Bosworth) _Snowflake_ShadeGap_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Snowflake.ShowLow") register_action<bit<1>, bit<1>>(_Tuttle_0) _Snowflake_ShowLow_0 = {
+    @name(".Snowflake.ShowLow") register_action<bit<1>, bit<1>>(Tuttle) _Snowflake_ShowLow_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

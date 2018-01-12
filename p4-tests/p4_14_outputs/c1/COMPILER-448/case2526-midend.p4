@@ -552,6 +552,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".Nichols") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Nichols;
 
+@name(".Hobucken") register<bit<1>>(32w262144) Hobucken;
+
+@name(".Noyack") register<bit<1>>(32w262144) Noyack;
+
 @name("Panola") struct Panola {
     bit<8>  Ferndale;
     bit<24> Cantwell;
@@ -1089,14 +1093,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_44();
     }
-    @name(".Hobucken") register<bit<1>>(32w262144) _Hobucken_0;
-    @name(".Noyack") register<bit<1>>(32w262144) _Noyack_0;
-    @name(".Bagwell.Goodwin") register_action<bit<1>, bit<1>>(_Noyack_0) _Bagwell_Goodwin_0 = {
+    @name(".Bagwell.Goodwin") register_action<bit<1>, bit<1>>(Noyack) _Bagwell_Goodwin_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Bagwell.Hulbert") register_action<bit<1>, bit<1>>(_Hobucken_0) _Bagwell_Hulbert_0 = {
+    @name(".Bagwell.Hulbert") register_action<bit<1>, bit<1>>(Hobucken) _Bagwell_Hulbert_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

@@ -1415,9 +1415,11 @@ control Millstadt(inout headers hdr, inout metadata meta, inout standard_metadat
     }
 }
 
+@name(".Arnold") register<bit<1>>(32w262144) Arnold;
+
+@name(".Redfield") register<bit<1>>(32w262144) Redfield;
+
 control OjoFeliz(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Arnold") register<bit<1>>(32w262144) Arnold;
-    @name(".Redfield") register<bit<1>>(32w262144) Redfield;
     register_action<bit<1>, bit<1>>(Arnold) LaConner = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

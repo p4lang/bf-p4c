@@ -237,22 +237,24 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".set_egress_port") action set_egress_port_0(bit<9> eg_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = eg_port;
     }
-    @name(".snake_test") table snake_test_0 {
+    @name(".snake_test") table snake_test {
         actions = {
             set_egress_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        snake_test_0.apply();
+        snake_test.apply();
     }
 }
 

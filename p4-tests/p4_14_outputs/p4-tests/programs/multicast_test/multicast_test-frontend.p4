@@ -206,24 +206,34 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".do_egr_encode") action do_egr_encode_0() {
         hdr.ipv4.identification = hdr.eg_intr_md.egress_rid;
         hdr.ipv4.diffserv = (bit<8>)hdr.eg_intr_md.egress_rid_first;
     }
-    @name(".egr_encode") table egr_encode_0 {
+    @name(".egr_encode") table egr_encode {
         actions = {
             do_egr_encode_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (hdr.ipv4.isValid()) 
-            egr_encode_0.apply();
+            egr_encode.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_1() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
     @name(".flood") action flood_0() {
         hdr.ig_intr_md_for_tm.mcast_grp_a = meta.ing_md.brid;
     }
@@ -251,59 +261,59 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.level1_mcast_hash = h1;
         hdr.ig_intr_md_for_tm.level2_mcast_hash = h2;
     }
-    @name(".ing_dmac") table ing_dmac_0 {
+    @name(".ing_dmac") table ing_dmac {
         actions = {
             flood_0();
             switch_1();
             route_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             meta.ing_md.brid    : exact @name("ing_md.brid") ;
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
-    @name(".ing_ipv4_mcast") table ing_ipv4_mcast_0 {
+    @name(".ing_ipv4_mcast") table ing_ipv4_mcast {
         actions = {
             mcast_route_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_7();
         }
         key = {
             meta.ing_md.vrf : exact @name("ing_md.vrf") ;
             hdr.ipv4.srcAddr: ternary @name("ipv4.srcAddr") ;
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
-    @name(".ing_port") table ing_port_0 {
+    @name(".ing_port") table ing_port {
         actions = {
             set_ifid_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
             hdr.vlan_tag.isValid()     : exact @name("vlan_tag.$valid$") ;
             hdr.vlan_tag.vlan_id       : exact @name("vlan_tag.vlan_id") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_8();
     }
-    @name(".ing_src_ifid") table ing_src_ifid_0 {
+    @name(".ing_src_ifid") table ing_src_ifid {
         actions = {
             set_src_ifid_md_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_9();
         }
         key = {
             meta.ing_md.ifid: exact @name("ing_md.ifid") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_9();
     }
     apply {
-        ing_port_0.apply();
-        ing_src_ifid_0.apply();
-        ing_dmac_0.apply();
+        ing_port.apply();
+        ing_src_ifid.apply();
+        ing_dmac.apply();
         if (meta.ing_md.l3 == 1w1) 
-            ing_ipv4_mcast_0.apply();
+            ing_ipv4_mcast.apply();
     }
 }
 

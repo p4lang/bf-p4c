@@ -184,20 +184,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".flow_cnt") register<bit<8>>(32w0) flow_cnt;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
-    @name(".flow_cnt") register<bit<8>>(32w0) flow_cnt_0;
-    @name("sampler_alu") register_action<bit<8>, bit<8>>(flow_cnt_0) sampler_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    bit<8> tmp_0;
+    @name("sampler_alu") register_action<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
-            bit<8> alu_hi_0;
+            bit<8> alu_hi;
             rv = 8w0;
-            alu_hi_0 = 8w1;
+            alu_hi = 8w1;
             if (value == 8w100) 
                 value = 8w0;
             if (value != 8w100) 
                 value = value + 8w1;
             if (value == 8w100) 
-                rv = alu_hi_0;
+                rv = alu_hi;
         }
     };
     @name(".drop_me") action drop_me_0() {
@@ -205,35 +208,37 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".on_miss") action on_miss_0() {
     }
-    @name(".ipv4_fib_hit") action ipv4_fib_hit_0() {
-        tmp = sampler_alu_0.execute();
-        meta.meta.needs_sampling = tmp;
+    @name(".on_miss") action on_miss_2() {
     }
-    @name(".check_needs") table check_needs_0 {
+    @name(".ipv4_fib_hit") action ipv4_fib_hit_0() {
+        tmp_0 = sampler_alu.execute();
+        meta.meta.needs_sampling = tmp_0;
+    }
+    @name(".check_needs") table check_needs {
         actions = {
             drop_me_0();
             on_miss_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.needs_sampling: exact @name("meta.needs_sampling") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".ipv4_fib") table ipv4_fib_0 {
+    @name(".ipv4_fib") table ipv4_fib {
         actions = {
             ipv4_fib_hit_0();
-            @defaultonly on_miss_0();
+            @defaultonly on_miss_2();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 1024;
-        default_action = on_miss_0();
+        default_action = on_miss_2();
     }
     apply {
-        ipv4_fib_0.apply();
-        check_needs_0.apply();
+        ipv4_fib.apply();
+        check_needs.apply();
     }
 }
 

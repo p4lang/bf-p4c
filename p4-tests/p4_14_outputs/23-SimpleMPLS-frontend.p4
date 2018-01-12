@@ -192,6 +192,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".forward_mpls") action forward_mpls_0(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
         hdr.outer_ethernet.dstAddr = new_mac_da;
         hdr.outer_ethernet.srcAddr = new_mac_sa;
@@ -199,18 +201,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
         hdr.mpls.ttl = hdr.mpls.ttl + 8w255;
     }
-    @name(".mpls_forward") table mpls_forward_0 {
+    @name(".mpls_forward") table mpls_forward {
         actions = {
             forward_mpls_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.mpls.label: exact @name("mpls.label") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        mpls_forward_0.apply();
+        mpls_forward.apply();
     }
 }
 

@@ -201,6 +201,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".do_copy_hopCount_from_m") action do_copy_hopCount_from_m_0() {
         hdr.trill.hopCount = meta.m.hopCount;
     }
@@ -214,34 +220,34 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
         meta.m.hopCount = meta.m.hopCount + 6w63;
     }
-    @name(".copy_hopCount_from_m") table copy_hopCount_from_m_0 {
+    @name(".copy_hopCount_from_m") table copy_hopCount_from_m {
         actions = {
             do_copy_hopCount_from_m_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".copy_hopCount_to_m") table copy_hopCount_to_m_0 {
+    @name(".copy_hopCount_to_m") table copy_hopCount_to_m {
         actions = {
             do_copy_hopCount_to_m_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".trill_forward") table trill_forward_0 {
+    @name(".trill_forward") table trill_forward {
         actions = {
             forward_trill_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.trill.egressRbridge: exact @name("trill.egressRbridge") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        copy_hopCount_to_m_0.apply();
-        trill_forward_0.apply();
-        copy_hopCount_from_m_0.apply();
+        copy_hopCount_to_m.apply();
+        trill_forward.apply();
+        copy_hopCount_from_m.apply();
     }
 }
 

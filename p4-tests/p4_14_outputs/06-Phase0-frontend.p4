@@ -165,25 +165,27 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".set_ingress_port_props") action set_ingress_port_props_0(bit<8> f1, bit<16> f2, bit<32> f3) {
         meta.ing_metadata.f1 = f1;
         meta.ing_metadata.f2 = f2;
         meta.ing_metadata.f3 = f3;
     }
-    @name(".ingress_port_map") table ingress_port_map_0 {
+    @name(".ingress_port_map") table ingress_port_map {
         actions = {
             set_ingress_port_props_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 
-            ingress_port_map_0.apply();
+            ingress_port_map.apply();
     }
 }
 

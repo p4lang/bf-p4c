@@ -1545,9 +1545,11 @@ control Gibsland(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
+@name(".Bennet") register<bit<1>>(32w294912) Bennet;
+
+@name(".OldMinto") register<bit<1>>(32w294912) OldMinto;
+
 control Giltner(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Bennet") register<bit<1>>(32w294912) Bennet;
-    @name(".OldMinto") register<bit<1>>(32w294912) OldMinto;
     register_action<bit<1>, bit<1>>(Bennet) Bramwell = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

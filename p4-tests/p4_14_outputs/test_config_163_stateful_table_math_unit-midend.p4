@@ -175,6 +175,8 @@ struct cntr_1_layout {
     bit<16> hi;
 }
 
+@name(".stateful_cntr_1") register<cntr_1_layout>(32w0) stateful_cntr_1;
+
 struct tuple_0 {
     bit<16> field;
     bit<16> field_0;
@@ -200,8 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<16> tmp_2;
     @name("NoAction") action NoAction_0() {
     }
-    @name(".stateful_cntr_1") register<cntr_1_layout>(32w0) stateful_cntr_0;
-    @name("cntr_1") register_action<cntr_1_layout, bit<16>>(stateful_cntr_0, cntr_1_math_unit) cntr_0 = {
+    @name("cntr_1") register_action<cntr_1_layout, bit<16>>(stateful_cntr_1, cntr_1_math_unit) cntr_0 = {
         void apply(inout cntr_1_layout value, out bit<16> rv) {
             bit<16> tmp_3;
             rv = 16w0;

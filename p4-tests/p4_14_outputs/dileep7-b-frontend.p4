@@ -243,31 +243,34 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".nop") action nop_0() {
+    @name("NoAction") action NoAction_0() {
     }
-    @name(".hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
-        ttl_0 = ttl_0 + 8w255;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
+    @name(".nop") action nop_0() {
     }
     @name(".custom_action_3") action custom_action(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_0 = hdr.ipv4.ttl;
+            ttl_0 = ttl_0 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_0;
+        }
     }
-    @pack(1) @ways(5) @name(".exm_5ways_1Entries_stage_2") table exm_5ways_1Entries_stage {
+    @pack(1) @ways(5) @name(".exm_5ways_1Entries_stage_2") table exm_5ways_1Entries_stage_0 {
         actions = {
             nop_0();
             custom_action();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
             hdr.tcp.srcPort     : exact @name("tcp.srcPort") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        exm_5ways_1Entries_stage.apply();
+        exm_5ways_1Entries_stage_0.apply();
     }
 }
 

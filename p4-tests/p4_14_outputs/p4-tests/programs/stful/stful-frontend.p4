@@ -261,7 +261,7 @@ struct headers {
 #include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
+    bit<8> tmp_7;
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.ethertype) {
@@ -311,8 +311,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         transition accept;
     }
     @name(".start") state start {
-        tmp = packet.lookahead<bit<8>>();
-        transition select(tmp[7:0]) {
+        tmp_7 = packet.lookahead<bit<8>>();
+        transition select(tmp_7[7:0]) {
             8w0x1 &&& 8w0xe7: parse_pkt_gen_port_down;
             8w0x2 &&& 8w0xe7: parse_pkt_gen_recirc;
             8w0x3 &&& 8w0xe7: parse_pkt_gen_hw_clr;
@@ -326,240 +326,105 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".next_hop_ecmp_ap") @mode("fair") action_selector(HashAlgorithm.crc32, 32w4096, 32w29) next_hop_ecmp_ap;
 
-control pgen_pass_1_ctrl_flow(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<18> temp_7;
-    bit<18> temp_8;
-    bit<18> temp_9;
-    bit<17> temp_10;
-    @name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter;
-    @name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_0;
-    @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_4;
-    @name(".next_hop_ecmp_reg") register<bit<1>>(32w131072) next_hop_ecmp_reg_0;
-    @name("clr_bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter) clr_bloom_filter_alu = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
-            value = 1w0;
-        }
-    };
-    @name("clr_bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_0) clr_bloom_filter_alu_0 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
-            value = 1w0;
-        }
-    };
-    @name("clr_bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_4) clr_bloom_filter_alu_4 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
-            value = 1w0;
-        }
-    };
-    @name("next_hop_ecmp_alu") selector_action(next_hop_ecmp_ap) next_hop_ecmp_alu_0 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
-            value = 1w0;
-        }
-    };
-    @name(".clear_bloom_filter_1") action clear_bloom_filter() {
-        hash<bit<18>, bit<18>, tuple<bit<16>, bit<16>>, bit<19>>(temp_7, HashAlgorithm.identity, 18w0, { hdr.pktgen_generic.batch_id, hdr.pktgen_generic.packet_id }, 19w262144);
-        clr_bloom_filter_alu.execute((bit<32>)temp_7);
-    }
-    @name(".clear_bloom_filter_2") action clear_bloom_filter_0() {
-        hash<bit<18>, bit<18>, tuple<bit<16>, bit<16>>, bit<19>>(temp_8, HashAlgorithm.identity, 18w0, { hdr.pktgen_generic.batch_id, hdr.pktgen_generic.packet_id }, 19w262144);
-        clr_bloom_filter_alu_0.execute((bit<32>)temp_8);
-    }
-    @name(".clear_bloom_filter_3") action clear_bloom_filter_4() {
-        hash<bit<18>, bit<18>, tuple<bit<16>, bit<16>>, bit<19>>(temp_9, HashAlgorithm.identity, 18w0, { hdr.pktgen_generic.batch_id, hdr.pktgen_generic.packet_id }, 19w262144);
-        clr_bloom_filter_alu_4.execute((bit<32>)temp_9);
-    }
-    @name(".set_ecmp_fast_update_key") action set_ecmp_fast_update_key_0(bit<17> key) {
-        meta.md.ecmp_tbl_bit_index = key;
-    }
-    @name(".drop_ecmp_update_pkt") action drop_ecmp_update_pkt_0() {
-        mark_to_drop();
-    }
-    @name(".set_mbr_down") action set_mbr_down_0() {
-        hash<bit<17>, bit<17>, tuple<bit<17>>, bit<18>>(temp_10, HashAlgorithm.identity, 17w0, { meta.md.ecmp_tbl_bit_index }, 18w131072);
-        next_hop_ecmp_alu_0.execute((bit<32>)temp_10);
-        mark_to_drop();
-    }
-    @name(".prepare_for_recirc") action prepare_for_recirc_1(bit<4> rtype, bit<16> mgid) {
-        hdr.recirc_hdr.setValid();
-        hdr.recirc_hdr.tag = 4w0xf;
-        hdr.recirc_hdr.rtype = rtype;
-        hdr.ig_intr_md_for_tm.mcast_grp_b = mgid;
-    }
-    @stage(0) @name(".clr_bloom_filter_1") table clr_bloom_filter {
-        actions = {
-            clear_bloom_filter();
-            @defaultonly NoAction();
-        }
-        size = 1;
-        default_action = NoAction();
-    }
-    @stage(1) @name(".clr_bloom_filter_2") table clr_bloom_filter_0 {
-        actions = {
-            clear_bloom_filter_0();
-            @defaultonly NoAction();
-        }
-        size = 1;
-        default_action = NoAction();
-    }
-    @stage(1) @name(".clr_bloom_filter_3") table clr_bloom_filter_4 {
-        actions = {
-            clear_bloom_filter_4();
-            @defaultonly NoAction();
-        }
-        size = 1;
-        default_action = NoAction();
-    }
-    @stage(5) @name(".make_key_ecmp_fast_update") table make_key_ecmp_fast_update_0 {
-        actions = {
-            set_ecmp_fast_update_key_0();
-            drop_ecmp_update_pkt_0();
-        }
-        key = {
-            hdr.pktgen_recirc.key[15:0]: exact @name("pktgen_recirc.key[15:0]") ;
-            hdr.pktgen_recirc.packet_id: exact @name("pktgen_recirc.packet_id") ;
-        }
-        size = 16384;
-        default_action = drop_ecmp_update_pkt_0();
-    }
-    @stage(6) @name(".next_hop_ecmp_fast_update") table next_hop_ecmp_fast_update_0 {
-        actions = {
-            set_mbr_down_0();
-            @defaultonly NoAction();
-        }
-        size = 1;
-        default_action = NoAction();
-    }
-    @stage(8) @name(".prepare_for_recirc") table prepare_for_recirc_2 {
-        actions = {
-            prepare_for_recirc_1();
-            @defaultonly NoAction();
-        }
-        key = {
-            hdr.pktgen_port_down.app_id: exact @name("pktgen_port_down.app_id") ;
-        }
-        size = 7;
-        default_action = NoAction();
-    }
-    apply {
-        if (hdr.pktgen_generic.isValid()) {
-            clr_bloom_filter.apply();
-            clr_bloom_filter_0.apply();
-            clr_bloom_filter_4.apply();
-        }
-        else 
-            if (hdr.pktgen_recirc.isValid()) {
-                make_key_ecmp_fast_update_0.apply();
-                next_hop_ecmp_fast_update_0.apply();
-            }
-            else 
-                prepare_for_recirc_2.apply();
-    }
-}
+@name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_1;
 
-control recirc_trigger_pkt_ctrl_flow(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
+@name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_2;
 
-control pgen_pass_2_ctrl_flow(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<17> temp_11;
-    @name(".lag_reg") register<bit<1>>(32w131072) lag_reg_0;
-    @name("lag_alu") selector_action(lag_ap) lag_alu_0 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
-            value = 1w0;
-        }
-    };
-    @name(".set_lag_mbr_down") action set_lag_mbr_down_0() {
-        hash<bit<17>, bit<17>, tuple<bit<17>>, bit<18>>(temp_11, HashAlgorithm.identity, 17w0, { meta.md.lag_tbl_bit_index }, 18w131072);
-        lag_alu_0.execute((bit<32>)temp_11);
-        mark_to_drop();
-    }
-    @name(".set_lag_fast_update_key") action set_lag_fast_update_key_0(bit<17> key) {
-        meta.md.lag_tbl_bit_index = key;
-    }
-    @name(".drop_ifid_update_pkt") action drop_ifid_update_pkt_0() {
-        mark_to_drop();
-    }
-    @stage(8) @name(".egr_ifid_fast_update") table egr_ifid_fast_update_0 {
-        actions = {
-            set_lag_mbr_down_0();
-            @defaultonly NoAction();
-        }
-        size = 1;
-        default_action = NoAction();
-    }
-    @stage(7) @name(".egr_ifid_fast_update_make_key") table egr_ifid_fast_update_make_key_0 {
-        actions = {
-            set_lag_fast_update_key_0();
-            drop_ifid_update_pkt_0();
-        }
-        key = {
-            hdr.pktgen_port_down.port_num : exact @name("pktgen_port_down.port_num") ;
-            hdr.pktgen_port_down.packet_id: exact @name("pktgen_port_down.packet_id") ;
-        }
-        size = 16384;
-        default_action = drop_ifid_update_pkt_0();
-    }
-    apply {
-        if (hdr.recirc_hdr.rtype == 4w2) 
-            ;
-        else 
-            if (hdr.recirc_hdr.rtype == 4w1) {
-                egr_ifid_fast_update_make_key_0.apply();
-                egr_ifid_fast_update_0.apply();
-            }
-    }
-}
+@name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
+
+@name(".next_hop_ecmp_reg") register<bit<1>>(32w131072) next_hop_ecmp_reg;
+
+@name(".lag_reg") register<bit<1>>(32w131072) lag_reg;
+
+@name(".ifid_cntr") register<bit<16>>(32w0) ifid_cntr;
+
+@name(".ob1") register<bit<1>>(32w1000) ob1;
+
+@name(".ob2") register<bit<1>>(32w1000) ob2;
 
 struct counter_alu_layout {
     int<32> lo;
     int<32> hi;
 }
 
+@name(".port_cntr") register<counter_alu_layout>(32w0) port_cntr;
+
+@name(".sampling_cntr") register<bit<32>>(32w143360) sampling_cntr;
+
+@name(".scratch") register<bit<16>>(32w4096) scratch;
+
+@name(".two_instr_no_idx_reg") register<bit<8>>(32w512) two_instr_no_idx_reg;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<18> temp_12;
-    bit<18> temp_13;
-    bit<18> temp_14;
-    bit<1> tmp_0;
-    bit<1> tmp_1;
-    bit<1> tmp_2;
-    bit<1> tmp_3;
-    bit<1> tmp_4;
-    bit<32> tmp_5;
-    bool tmp_6;
-    @name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_5;
-    @name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_6;
-    @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_7;
-    @name(".ifid_cntr") register<bit<16>>(32w0) ifid_cntr_0;
-    @name(".ob1") register<bit<1>>(32w1000) ob1_0;
-    @name(".ob2") register<bit<1>>(32w1000) ob2_0;
-    @name(".port_cntr") register<counter_alu_layout>(32w0) port_cntr_0;
-    @name(".sampling_cntr") register<bit<32>>(32w143360) sampling_cntr_0;
-    @name(".scratch") register<bit<16>>(32w4096) scratch_0;
-    @name(".two_instr_no_idx_reg") register<bit<8>>(32w512) two_instr_no_idx_reg_0;
-    @name("bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter_5) bloom_filter_alu = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_21() {
+    }
+    @name("NoAction") action NoAction_22() {
+    }
+    @name("NoAction") action NoAction_23() {
+    }
+    @name("NoAction") action NoAction_24() {
+    }
+    @name("NoAction") action NoAction_25() {
+    }
+    @name("NoAction") action NoAction_26() {
+    }
+    @name("NoAction") action NoAction_27() {
+    }
+    @name("NoAction") action NoAction_28() {
+    }
+    @name("NoAction") action NoAction_29() {
+    }
+    @name("NoAction") action NoAction_30() {
+    }
+    @name("NoAction") action NoAction_31() {
+    }
+    @name("NoAction") action NoAction_32() {
+    }
+    @name("NoAction") action NoAction_33() {
+    }
+    @name("NoAction") action NoAction_34() {
+    }
+    @name("NoAction") action NoAction_35() {
+    }
+    @name("NoAction") action NoAction_36() {
+    }
+    @name("NoAction") action NoAction_37() {
+    }
+    @name("NoAction") action NoAction_38() {
+    }
+    @name("NoAction") action NoAction_39() {
+    }
+    bit<18> temp;
+    bit<18> temp_0;
+    bit<18> temp_1;
+    bit<1> tmp_8;
+    bit<1> tmp_9;
+    bit<1> tmp_10;
+    bit<1> tmp_11;
+    bit<1> tmp_12;
+    bit<32> tmp_13;
+    bool tmp_14;
+    @name("bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
             rv = ~value;
         }
     };
-    @name("bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_6) bloom_filter_alu_0 = {
+    @name("bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
             rv = ~value;
         }
     };
-    @name("bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_7) bloom_filter_alu_4 = {
+    @name("bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
             rv = ~value;
         }
     };
-    @name("counter_alu") register_action<counter_alu_layout, int<32>>(port_cntr_0) counter_alu_0 = {
+    @name("counter_alu") register_action<counter_alu_layout, int<32>>(port_cntr) counter_alu = {
         void apply(inout counter_alu_layout value, out int<32> rv) {
             rv = 32s0;
             if (value.lo < 32s0 && value.lo + meta.md.offset >= 32s0) 
@@ -569,86 +434,86 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value.lo = value.lo + meta.md.offset;
         }
     };
-    @name("ifid_cntr_alu") register_action<int<16>, int<16>>(ifid_cntr_0) ifid_cntr_alu_0 = {
+    @name("ifid_cntr_alu") register_action<int<16>, int<16>>(ifid_cntr) ifid_cntr_alu = {
         void apply(inout int<16> value, out int<16> rv) {
             rv = 16s0;
             value = value + (int<16>)(bit<16>)hdr.ipv4.ttl;
         }
     };
-    @name("one_bit_alu_1") register_action<bit<1>, bit<1>>(ob1_0) one_bit_alu = {
+    @name("one_bit_alu_1") register_action<bit<1>, bit<1>>(ob1) one_bit_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name("one_bit_alu_2") register_action<bit<1>, bit<1>>(ob2_0) one_bit_alu_0 = {
+    @name("one_bit_alu_2") register_action<bit<1>, bit<1>>(ob2) one_bit_alu_2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
             rv = value;
         }
     };
-    @name("sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr_0) sampling_alu_0 = {
+    @name("sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> alu_hi_0;
+            bit<32> alu_hi;
             rv = 32w0;
-            alu_hi_0 = 32w1;
+            alu_hi = 32w1;
             if (value >= 32w10) 
                 value = 32w1;
             if (value < 32w10) 
                 value = value + 32w1;
             if (value >= 32w10 || hdr.ig_intr_md_for_tm.copy_to_cpu != 1w0) 
-                rv = alu_hi_0;
+                rv = alu_hi;
         }
     };
-    @name("scratch_alu_add") register_action<bit<16>, bit<16>>(scratch_0) scratch_alu_add_0 = {
+    @name("scratch_alu_add") register_action<bit<16>, bit<16>>(scratch) scratch_alu_add = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             value = value + meta.md.nh_id;
         }
     };
-    @name("scratch_alu_invert") register_action<bit<16>, bit<16>>(scratch_0) scratch_alu_invert_0 = {
+    @name("scratch_alu_invert") register_action<bit<16>, bit<16>>(scratch) scratch_alu_invert = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             value = ~value;
         }
     };
-    @name("scratch_alu_sub") register_action<bit<16>, bit<16>>(scratch_0) scratch_alu_sub_0 = {
+    @name("scratch_alu_sub") register_action<bit<16>, bit<16>>(scratch) scratch_alu_sub = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             value = meta.md.nh_id - value;
         }
     };
-    @name("scratch_alu_zero") register_action<bit<16>, bit<16>>(scratch_0) scratch_alu_zero_0 = {
+    @name("scratch_alu_zero") register_action<bit<16>, bit<16>>(scratch) scratch_alu_zero = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             value = 16w0;
         }
     };
-    @name("two_instr_no_idx_alu_1") register_action<bit<8>, bit<8>>(two_instr_no_idx_reg_0) two_instr_no_idx_alu = {
+    @name("two_instr_no_idx_alu_1") register_action<bit<8>, bit<8>>(two_instr_no_idx_reg) two_instr_no_idx_alu_1 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             rv = 8w0;
             value = value + 8w9;
         }
     };
-    @name("two_instr_no_idx_alu_2") register_action<bit<8>, bit<8>>(two_instr_no_idx_reg_0) two_instr_no_idx_alu_0 = {
+    @name("two_instr_no_idx_alu_2") register_action<bit<8>, bit<8>>(two_instr_no_idx_reg) two_instr_no_idx_alu_2 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             rv = 8w0;
             value = 8w17 - value;
         }
     };
     @name(".check_bloom_filter_1") action check_bloom_filter() {
-        hash<bit<18>, bit<18>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<19>>(temp_12, HashAlgorithm.random, 18w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 19w262144);
-        tmp_0 = bloom_filter_alu.execute((bit<32>)temp_12);
-        meta.md.bf_tmp_1 = tmp_0;
+        hash<bit<18>, bit<18>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<19>>(temp, HashAlgorithm.random, 18w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 19w262144);
+        tmp_8 = bloom_filter_alu_1.execute((bit<32>)temp);
+        meta.md.bf_tmp_1 = tmp_8;
     }
     @name(".check_bloom_filter_2") action check_bloom_filter_0() {
-        hash<bit<18>, bit<18>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<19>>(temp_13, HashAlgorithm.random, 18w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 19w262144);
-        tmp_1 = bloom_filter_alu_0.execute((bit<32>)temp_13);
-        meta.md.bf_tmp_2 = tmp_1;
+        hash<bit<18>, bit<18>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<19>>(temp_0, HashAlgorithm.random, 18w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 19w262144);
+        tmp_9 = bloom_filter_alu_2.execute((bit<32>)temp_0);
+        meta.md.bf_tmp_2 = tmp_9;
     }
     @name(".check_bloom_filter_3") action check_bloom_filter_4() {
-        hash<bit<18>, bit<18>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<19>>(temp_14, HashAlgorithm.random, 18w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 19w262144);
-        tmp_2 = bloom_filter_alu_4.execute((bit<32>)temp_14);
-        meta.md.bf_tmp_3 = tmp_2;
+        hash<bit<18>, bit<18>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<19>>(temp_1, HashAlgorithm.random, 18w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 19w262144);
+        tmp_10 = bloom_filter_alu_3.execute((bit<32>)temp_1);
+        meta.md.bf_tmp_3 = tmp_10;
     }
     @name(".bloom_filter_mark_sample") action bloom_filter_mark_sample_0() {
         hdr.ig_intr_md_for_tm.copy_to_cpu = 1w1;
@@ -658,28 +523,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".set_dest") action set_dest_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
-        counter_alu_0.execute();
+        counter_alu.execute();
     }
     @name(".set_flowlet_hash_and_ts") action set_flowlet_hash_and_ts_0() {
         hash<bit<15>, bit<15>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<30>>(meta.md.flowlet_temp, HashAlgorithm.crc16, 15w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 30w32768);
         meta.md.flowlet_ts = (bit<32>)meta.md.timestamp;
     }
-    @name(".run_ifid_cntr") action run_ifid_cntr_0() {
-        ifid_cntr_alu_0.execute();
-    }
     @name(".set_ifid_based_params") action set_ifid_based_params_0(bit<48> ts, int<32> offset) {
-        run_ifid_cntr_0();
+        ifid_cntr_alu.execute();
         meta.md.timestamp = ts;
         meta.md.offset = offset;
     }
     @name(".drop_it") action drop_it_0() {
-        run_ifid_cntr_0();
+        ifid_cntr_alu.execute();
         mark_to_drop();
     }
     @name(".set_ifid") action set_ifid_0(bit<16> ifid) {
         meta.md.ifid = ifid;
     }
     @name(".set_next_hop") action set_next_hop_0(bit<16> nh) {
+        meta.md.nh_id = nh;
+    }
+    @name(".set_next_hop") action set_next_hop_2(bit<16> nh) {
         meta.md.nh_id = nh;
     }
     @name(".set_ecmp") action set_ecmp_0(bit<16> ecmp_id) {
@@ -689,20 +554,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.egr_ifid = ifid;
     }
     @name(".scratch_add") action scratch_add_0(bit<32> index, bit<16> ifid) {
-        set_egr_ifid_0(ifid);
-        scratch_alu_add_0.execute(index);
+        meta.md.egr_ifid = ifid;
+        scratch_alu_add.execute(index);
     }
     @name(".scratch_sub") action scratch_sub_0(bit<32> index, bit<16> ifid) {
-        set_egr_ifid_0(ifid);
-        scratch_alu_sub_0.execute(index);
+        meta.md.egr_ifid = ifid;
+        scratch_alu_sub.execute(index);
     }
     @name(".scratch_zero") action scratch_zero_0(bit<32> index, bit<16> ifid) {
-        set_egr_ifid_0(ifid);
-        scratch_alu_zero_0.execute(index);
+        meta.md.egr_ifid = ifid;
+        scratch_alu_zero.execute(index);
     }
     @name(".scratch_invert") action scratch_invert_0(bit<32> index, bit<16> ifid) {
-        set_egr_ifid_0(ifid);
-        scratch_alu_invert_0.execute(index);
+        meta.md.egr_ifid = ifid;
+        scratch_alu_invert.execute(index);
     }
     @name(".next_hop_down") action next_hop_down_0(bit<16> mgid) {
         hdr.recirc_hdr.setValid();
@@ -713,26 +578,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.mcast_grp_b = mgid;
     }
     @name(".run_one_bit_read_1") action run_one_bit_read() {
-        tmp_3 = one_bit_alu.execute(32w1);
-        meta.md.one_bit_val_1 = tmp_3;
+        tmp_11 = one_bit_alu_1.execute(32w1);
+        meta.md.one_bit_val_1 = tmp_11;
     }
     @name(".run_one_bit_read_2") action run_one_bit_read_0() {
-        tmp_4 = one_bit_alu_0.execute(32w2);
-        meta.md.one_bit_val_2 = tmp_4;
+        tmp_12 = one_bit_alu_2.execute(32w2);
+        meta.md.one_bit_val_2 = tmp_12;
     }
     @name(".sample") action sample_0(bit<32> index) {
-        tmp_5 = sampling_alu_0.execute(index);
-        hdr.ig_intr_md_for_tm.copy_to_cpu = (bit<1>)tmp_5;
+        tmp_13 = sampling_alu.execute(index);
+        hdr.ig_intr_md_for_tm.copy_to_cpu = (bit<1>)tmp_13;
     }
     @name(".no_sample") action no_sample_0() {
     }
     @name(".add_9") action add() {
-        two_instr_no_idx_alu.execute((bit<32>)hdr.ig_intr_md.ingress_port);
+        two_instr_no_idx_alu_1.execute((bit<32>)hdr.ig_intr_md.ingress_port);
         hdr.ig_intr_md_for_tm.drop_ctl = 3w0;
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
     }
     @name(".rsub_17") action rsub() {
-        two_instr_no_idx_alu_0.execute((bit<32>)hdr.ig_intr_md.ingress_port);
+        two_instr_no_idx_alu_2.execute((bit<32>)hdr.ig_intr_md.ingress_port);
         hdr.ig_intr_md_for_tm.drop_ctl = 3w0;
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
     }
@@ -740,42 +605,42 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.drop_ctl = 3w0;
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
     }
-    @stage(0) @name(".bloom_filter_1") table bloom_filter_1_1 {
+    @stage(0) @name(".bloom_filter_1") table bloom_filter_1_0 {
         actions = {
             check_bloom_filter();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @stage(1) @name(".bloom_filter_2") table bloom_filter_2_1 {
+    @stage(1) @name(".bloom_filter_2") table bloom_filter_2_0 {
         actions = {
             check_bloom_filter_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_21();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_21();
     }
-    @stage(1) @name(".bloom_filter_3") table bloom_filter_3_1 {
+    @stage(1) @name(".bloom_filter_3") table bloom_filter_3_0 {
         actions = {
             check_bloom_filter_4();
-            @defaultonly NoAction();
+            @defaultonly NoAction_22();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_22();
     }
-    @name(".bloom_filter_sample") table bloom_filter_sample_0 {
+    @name(".bloom_filter_sample") table bloom_filter_sample {
         actions = {
             bloom_filter_mark_sample_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_23();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_23();
     }
-    @seletor_num_max_groups(128) @selector_max_group_size(1200) @name(".egr_ifid") table egr_ifid_0 {
+    @seletor_num_max_groups(128) @selector_max_group_size(1200) @name(".egr_ifid") table egr_ifid_1 {
         actions = {
             set_egr_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_24();
         }
         key = {
             meta.md.egr_ifid           : exact @name("md.egr_ifid") ;
@@ -788,63 +653,63 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 16384;
         implementation = lag_ap;
-        default_action = NoAction();
+        default_action = NoAction_24();
     }
-    @name(".egr_port") table egr_port_0 {
+    @name(".egr_port") table egr_port {
         actions = {
             set_dest_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_25();
         }
         key = {
             meta.md.egr_ifid: ternary @name("md.egr_ifid") ;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_25();
     }
-    @name(".flowlet_prepare") table flowlet_prepare_0 {
+    @name(".flowlet_prepare") table flowlet_prepare {
         actions = {
             set_flowlet_hash_and_ts_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_26();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_26();
     }
-    @name(".ifid") table ifid_0 {
+    @name(".ifid") table ifid_1 {
         actions = {
             set_ifid_based_params_0();
             drop_it_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_27();
         }
         key = {
             meta.md.ifid: exact @name("md.ifid") ;
         }
         size = 25000;
-        default_action = NoAction();
+        default_action = NoAction_27();
     }
-    @pragma("--metadata-overlay", "False") @name(".ing_port") table ing_port_0 {
+    @pragma("--metadata-overlay", "False") @name(".ing_port") table ing_port {
         actions = {
             set_ifid_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_28();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = NoAction_28();
     }
-    @name(".ipv4_route") table ipv4_route_0 {
+    @name(".ipv4_route") table ipv4_route {
         actions = {
             set_next_hop_0();
             set_ecmp_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_29();
         }
         key = {
             hdr.ipv4.dip: lpm @name("ipv4.dip") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_29();
     }
-    @name(".next_hop") table next_hop_0 {
+    @name(".next_hop") table next_hop {
         actions = {
             set_egr_ifid_0();
             scratch_add_0();
@@ -852,18 +717,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             scratch_zero_0();
             scratch_invert_0();
             next_hop_down_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_30();
         }
         key = {
             meta.md.nh_id: ternary @name("md.nh_id") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_30();
     }
-    @stage(6) @selector_max_group_size(200) @name(".next_hop_ecmp") table next_hop_ecmp_0 {
+    @stage(6) @selector_max_group_size(200) @name(".next_hop_ecmp") table next_hop_ecmp {
         actions = {
-            set_next_hop_0();
-            @defaultonly NoAction();
+            set_next_hop_2();
+            @defaultonly NoAction_31();
         }
         key = {
             meta.md.nh_id             : exact @name("md.nh_id") ;
@@ -876,100 +741,264 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 4096;
         implementation = next_hop_ecmp_ap;
-        default_action = NoAction();
+        default_action = NoAction_31();
     }
-    @name(".one_bit_read_1") table one_bit_read {
+    @name(".one_bit_read_1") table one_bit_read_1 {
         actions = {
             run_one_bit_read();
         }
         size = 1;
         default_action = run_one_bit_read();
     }
-    @name(".one_bit_read_2") table one_bit_read_0 {
+    @name(".one_bit_read_2") table one_bit_read_2 {
         actions = {
             run_one_bit_read_0();
         }
         size = 1;
         default_action = run_one_bit_read_0();
     }
-    @name(".sip_sampler") table sip_sampler_0 {
+    @name(".sip_sampler") table sip_sampler {
         actions = {
             sample_0();
             no_sample_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_32();
         }
         key = {
             hdr.ipv4.sip: exact @name("ipv4.sip") ;
         }
         size = 85000;
-        default_action = NoAction();
+        default_action = NoAction_32();
     }
-    @name(".two_instr_no_idx") table two_instr_no_idx_0 {
+    @name(".two_instr_no_idx") table two_instr_no_idx {
         actions = {
             add();
             rsub();
-            @defaultonly NoAction();
+            @defaultonly NoAction_33();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 17;
-        default_action = NoAction();
+        default_action = NoAction_33();
     }
-    @name(".undrop") table undrop_0 {
+    @name(".undrop") table undrop {
         actions = {
             do_undrop_0();
         }
         size = 1;
         default_action = do_undrop_0();
     }
-    @name(".pgen_pass_1_ctrl_flow") pgen_pass_1_ctrl_flow() pgen_pass_1_ctrl_flow_1;
-    @name(".recirc_trigger_pkt_ctrl_flow") recirc_trigger_pkt_ctrl_flow() recirc_trigger_pkt_ctrl_flow_1;
-    @name(".pgen_pass_2_ctrl_flow") pgen_pass_2_ctrl_flow() pgen_pass_2_ctrl_flow_1;
+    bit<18> _pgen_pass_1_ctrl_flow_temp_3;
+    bit<18> _pgen_pass_1_ctrl_flow_temp_4;
+    bit<18> _pgen_pass_1_ctrl_flow_temp_5;
+    bit<17> _pgen_pass_1_ctrl_flow_temp_6;
+    @name(".pgen_pass_1_ctrl_flow.clr_bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter_1) _pgen_pass_1_ctrl_flow_clr_bloom_filter_alu_2 = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
+            value = 1w0;
+        }
+    };
+    @name(".pgen_pass_1_ctrl_flow.clr_bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_2) _pgen_pass_1_ctrl_flow_clr_bloom_filter_alu_3 = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
+            value = 1w0;
+        }
+    };
+    @name(".pgen_pass_1_ctrl_flow.clr_bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_3) _pgen_pass_1_ctrl_flow_clr_bloom_filter_alu_4 = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
+            value = 1w0;
+        }
+    };
+    @name(".pgen_pass_1_ctrl_flow.next_hop_ecmp_alu") selector_action(next_hop_ecmp_ap) _pgen_pass_1_ctrl_flow_next_hop_ecmp_alu_0 = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
+            value = 1w0;
+        }
+    };
+    @name(".clear_bloom_filter_1") action _clear_bloom_filter() {
+        hash<bit<18>, bit<18>, tuple<bit<16>, bit<16>>, bit<19>>(_pgen_pass_1_ctrl_flow_temp_3, HashAlgorithm.identity, 18w0, { hdr.pktgen_generic.batch_id, hdr.pktgen_generic.packet_id }, 19w262144);
+        _pgen_pass_1_ctrl_flow_clr_bloom_filter_alu_2.execute((bit<32>)_pgen_pass_1_ctrl_flow_temp_3);
+    }
+    @name(".clear_bloom_filter_2") action _clear_bloom_filter_0() {
+        hash<bit<18>, bit<18>, tuple<bit<16>, bit<16>>, bit<19>>(_pgen_pass_1_ctrl_flow_temp_4, HashAlgorithm.identity, 18w0, { hdr.pktgen_generic.batch_id, hdr.pktgen_generic.packet_id }, 19w262144);
+        _pgen_pass_1_ctrl_flow_clr_bloom_filter_alu_3.execute((bit<32>)_pgen_pass_1_ctrl_flow_temp_4);
+    }
+    @name(".clear_bloom_filter_3") action _clear_bloom_filter_1() {
+        hash<bit<18>, bit<18>, tuple<bit<16>, bit<16>>, bit<19>>(_pgen_pass_1_ctrl_flow_temp_5, HashAlgorithm.identity, 18w0, { hdr.pktgen_generic.batch_id, hdr.pktgen_generic.packet_id }, 19w262144);
+        _pgen_pass_1_ctrl_flow_clr_bloom_filter_alu_4.execute((bit<32>)_pgen_pass_1_ctrl_flow_temp_5);
+    }
+    @name(".set_ecmp_fast_update_key") action _set_ecmp_fast_update_key(bit<17> key) {
+        meta.md.ecmp_tbl_bit_index = key;
+    }
+    @name(".drop_ecmp_update_pkt") action _drop_ecmp_update_pkt() {
+        mark_to_drop();
+    }
+    @name(".set_mbr_down") action _set_mbr_down() {
+        hash<bit<17>, bit<17>, tuple<bit<17>>, bit<18>>(_pgen_pass_1_ctrl_flow_temp_6, HashAlgorithm.identity, 17w0, { meta.md.ecmp_tbl_bit_index }, 18w131072);
+        _pgen_pass_1_ctrl_flow_next_hop_ecmp_alu_0.execute((bit<32>)_pgen_pass_1_ctrl_flow_temp_6);
+        mark_to_drop();
+    }
+    @name(".prepare_for_recirc") action _prepare_for_recirc(bit<4> rtype, bit<16> mgid) {
+        hdr.recirc_hdr.setValid();
+        hdr.recirc_hdr.tag = 4w0xf;
+        hdr.recirc_hdr.rtype = rtype;
+        hdr.ig_intr_md_for_tm.mcast_grp_b = mgid;
+    }
+    @stage(0) @name(".clr_bloom_filter_1") table _clr_bloom_filter_2 {
+        actions = {
+            _clear_bloom_filter();
+            @defaultonly NoAction_34();
+        }
+        size = 1;
+        default_action = NoAction_34();
+    }
+    @stage(1) @name(".clr_bloom_filter_2") table _clr_bloom_filter_3 {
+        actions = {
+            _clear_bloom_filter_0();
+            @defaultonly NoAction_35();
+        }
+        size = 1;
+        default_action = NoAction_35();
+    }
+    @stage(1) @name(".clr_bloom_filter_3") table _clr_bloom_filter_4 {
+        actions = {
+            _clear_bloom_filter_1();
+            @defaultonly NoAction_36();
+        }
+        size = 1;
+        default_action = NoAction_36();
+    }
+    @stage(5) @name(".make_key_ecmp_fast_update") table _make_key_ecmp_fast_update_0 {
+        actions = {
+            _set_ecmp_fast_update_key();
+            _drop_ecmp_update_pkt();
+        }
+        key = {
+            hdr.pktgen_recirc.key[15:0]: exact @name("pktgen_recirc.key[15:0]") ;
+            hdr.pktgen_recirc.packet_id: exact @name("pktgen_recirc.packet_id") ;
+        }
+        size = 16384;
+        default_action = _drop_ecmp_update_pkt();
+    }
+    @stage(6) @name(".next_hop_ecmp_fast_update") table _next_hop_ecmp_fast_update_0 {
+        actions = {
+            _set_mbr_down();
+            @defaultonly NoAction_37();
+        }
+        size = 1;
+        default_action = NoAction_37();
+    }
+    @stage(8) @name(".prepare_for_recirc") table _prepare_for_recirc_2 {
+        actions = {
+            _prepare_for_recirc();
+            @defaultonly NoAction_38();
+        }
+        key = {
+            hdr.pktgen_port_down.app_id: exact @name("pktgen_port_down.app_id") ;
+        }
+        size = 7;
+        default_action = NoAction_38();
+    }
+    bit<17> _pgen_pass_2_ctrl_flow_temp_0;
+    @name(".pgen_pass_2_ctrl_flow.lag_alu") selector_action(lag_ap) _pgen_pass_2_ctrl_flow_lag_alu_0 = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
+            value = 1w0;
+        }
+    };
+    @name(".set_lag_mbr_down") action _set_lag_mbr_down() {
+        hash<bit<17>, bit<17>, tuple<bit<17>>, bit<18>>(_pgen_pass_2_ctrl_flow_temp_0, HashAlgorithm.identity, 17w0, { meta.md.lag_tbl_bit_index }, 18w131072);
+        _pgen_pass_2_ctrl_flow_lag_alu_0.execute((bit<32>)_pgen_pass_2_ctrl_flow_temp_0);
+        mark_to_drop();
+    }
+    @name(".set_lag_fast_update_key") action _set_lag_fast_update_key(bit<17> key) {
+        meta.md.lag_tbl_bit_index = key;
+    }
+    @name(".drop_ifid_update_pkt") action _drop_ifid_update_pkt() {
+        mark_to_drop();
+    }
+    @stage(8) @name(".egr_ifid_fast_update") table _egr_ifid_fast_update_0 {
+        actions = {
+            _set_lag_mbr_down();
+            @defaultonly NoAction_39();
+        }
+        size = 1;
+        default_action = NoAction_39();
+    }
+    @stage(7) @name(".egr_ifid_fast_update_make_key") table _egr_ifid_fast_update_make_key_0 {
+        actions = {
+            _set_lag_fast_update_key();
+            _drop_ifid_update_pkt();
+        }
+        key = {
+            hdr.pktgen_port_down.port_num : exact @name("pktgen_port_down.port_num") ;
+            hdr.pktgen_port_down.packet_id: exact @name("pktgen_port_down.packet_id") ;
+        }
+        size = 16384;
+        default_action = _drop_ifid_update_pkt();
+    }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 
-            ing_port_0.apply();
+            ing_port.apply();
         if (1w0 == meta.md.recirc_pkt && 1w0 == meta.md.pkt_gen_pkt) 
-            switch (ifid_0.apply().action_run) {
+            switch (ifid_1.apply().action_run) {
                 default: {
-                    bloom_filter_1_1.apply();
-                    bloom_filter_2_1.apply();
-                    bloom_filter_3_1.apply();
+                    bloom_filter_1_0.apply();
+                    bloom_filter_2_0.apply();
+                    bloom_filter_3_0.apply();
                     if (meta.md.bf_tmp_1 != 1w0 || meta.md.bf_tmp_2 != 1w0 || meta.md.bf_tmp_3 != 1w0) 
-                        bloom_filter_sample_0.apply();
-                    sip_sampler_0.apply();
-                    flowlet_prepare_0.apply();
-                    switch (ipv4_route_0.apply().action_run) {
+                        bloom_filter_sample.apply();
+                    sip_sampler.apply();
+                    flowlet_prepare.apply();
+                    switch (ipv4_route.apply().action_run) {
                         set_ecmp_0: {
-                            next_hop_ecmp_0.apply();
+                            next_hop_ecmp.apply();
                         }
                     }
 
-                    next_hop_0.apply();
-                    tmp_6 = egr_ifid_0.apply().hit;
-                    if (tmp_6) 
+                    next_hop.apply();
+                    tmp_14 = egr_ifid_1.apply().hit;
+                    if (tmp_14) 
                         ;
                     else 
-                        egr_port_0.apply();
+                        egr_port.apply();
                 }
                 drop_it_0: {
-                    one_bit_read.apply();
-                    one_bit_read_0.apply();
+                    one_bit_read_1.apply();
+                    one_bit_read_2.apply();
                     if (meta.md.one_bit_val_1 == 1w1 && meta.md.one_bit_val_2 == 1w1) 
-                        undrop_0.apply();
-                    two_instr_no_idx_0.apply();
+                        undrop.apply();
+                    two_instr_no_idx.apply();
                 }
             }
 
         else 
             if (1w0 == meta.md.recirc_pkt && 1w1 == meta.md.pkt_gen_pkt) 
-                pgen_pass_1_ctrl_flow_1.apply(hdr, meta, standard_metadata);
+                if (hdr.pktgen_generic.isValid()) {
+                    _clr_bloom_filter_2.apply();
+                    _clr_bloom_filter_3.apply();
+                    _clr_bloom_filter_4.apply();
+                }
+                else 
+                    if (hdr.pktgen_recirc.isValid()) {
+                        _make_key_ecmp_fast_update_0.apply();
+                        _next_hop_ecmp_fast_update_0.apply();
+                    }
+                    else 
+                        _prepare_for_recirc_2.apply();
             else 
                 if (1w1 == meta.md.recirc_pkt && 1w0 == meta.md.pkt_gen_pkt) 
-                    recirc_trigger_pkt_ctrl_flow_1.apply(hdr, meta, standard_metadata);
+                    ;
                 else 
                     if (1w1 == meta.md.recirc_pkt && 1w1 == meta.md.pkt_gen_pkt) 
-                        pgen_pass_2_ctrl_flow_1.apply(hdr, meta, standard_metadata);
+                        if (hdr.recirc_hdr.rtype == 4w2) 
+                            ;
+                        else 
+                            if (hdr.recirc_hdr.rtype == 4w1) {
+                                _egr_ifid_fast_update_make_key_0.apply();
+                                _egr_ifid_fast_update_0.apply();
+                            }
     }
 }
 

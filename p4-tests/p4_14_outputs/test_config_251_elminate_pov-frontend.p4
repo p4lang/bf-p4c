@@ -215,21 +215,23 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name(".t0") table t0_0 {
+    @name(".t0") table t0 {
         actions = {
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.srcAddr[31:0]: ternary @name("ethernet.srcAddr[31:0]") ;
         }
         size = 147456;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        t0_0.apply();
+        t0.apply();
     }
 }
 

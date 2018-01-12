@@ -448,6 +448,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<32> nEWzFM;
 }
 
+@name(".QUINJI") register<bit<1>>(32w65536) QUINJI;
+
+@name(".GBdGiH") register<bit<1>>(32w262144) GBdGiH;
+
+@name(".yevXhQ") register<bit<1>>(32w262144) yevXhQ;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -839,14 +845,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_24();
     }
-    @name(".GBdGiH") register<bit<1>>(32w262144) _GBdGiH_0;
-    @name(".yevXhQ") register<bit<1>>(32w262144) _yevXhQ_0;
-    @name(".TDPRYG.fcVprY") register_action<bit<1>, bit<1>>(_GBdGiH_0) _TDPRYG_fcVprY_0 = {
+    @name(".TDPRYG.fcVprY") register_action<bit<1>, bit<1>>(GBdGiH) _TDPRYG_fcVprY_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".TDPRYG.vOaDPT") register_action<bit<1>, bit<1>>(_yevXhQ_0) _TDPRYG_vOaDPT_0 = {
+    @name(".TDPRYG.vOaDPT") register_action<bit<1>, bit<1>>(yevXhQ) _TDPRYG_vOaDPT_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -913,8 +917,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = _EAmgXn();
     }
-    @name(".QUINJI") register<bit<1>>(32w65536) _QUINJI_0;
-    @name(".IFycyA.tOUEnP") register_action<bit<1>, bit<1>>(_QUINJI_0) _IFycyA_tOUEnP_0 = {
+    @name(".IFycyA.tOUEnP") register_action<bit<1>, bit<1>>(QUINJI) _IFycyA_tOUEnP_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;

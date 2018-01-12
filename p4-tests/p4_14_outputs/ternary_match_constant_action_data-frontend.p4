@@ -162,7 +162,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.h.n1 = 4w0xa;
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w3;
     }
-    @name(".t") table t_0 {
+    @name(".t") table t {
         actions = {
             nop_0();
             do_0();
@@ -173,7 +173,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = nop_0();
     }
     apply {
-        t_0.apply();
+        t.apply();
     }
 }
 

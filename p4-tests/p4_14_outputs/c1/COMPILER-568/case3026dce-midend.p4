@@ -708,6 +708,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".Honuapo") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Honuapo;
 #include <tofino/p4_14_prim.p4>
 
+@name(".Ontonagon") register<bit<1>>(32w262144) Ontonagon;
+
+@name(".Parkline") register<bit<1>>(32w262144) Parkline;
+
 @name("Chewalla") struct Chewalla {
     bit<8>  Millett;
     bit<16> Perrine;
@@ -1506,14 +1510,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_67();
     }
-    @name(".Ontonagon") register<bit<1>>(32w262144) _Ontonagon_0;
-    @name(".Parkline") register<bit<1>>(32w262144) _Parkline_0;
-    @name(".Lacona.Masardis") register_action<bit<1>, bit<1>>(_Parkline_0) _Lacona_Masardis_0 = {
+    @name(".Lacona.Masardis") register_action<bit<1>, bit<1>>(Parkline) _Lacona_Masardis_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Lacona.Woodcrest") register_action<bit<1>, bit<1>>(_Ontonagon_0) _Lacona_Woodcrest_0 = {
+    @name(".Lacona.Woodcrest") register_action<bit<1>, bit<1>>(Ontonagon) _Lacona_Woodcrest_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

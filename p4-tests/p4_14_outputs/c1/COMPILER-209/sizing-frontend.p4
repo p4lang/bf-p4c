@@ -85,6 +85,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".setBar") action setBar_0() {
         meta.ing_md.barHit = 1w1;
     }
@@ -94,10 +100,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_partition_index") action set_partition_index_0(bit<11> index) {
         meta.ing_md.partition_index = index;
     }
-    @name(".bar1") table bar1_0 {
+    @name(".bar1") table bar1 {
         actions = {
             setBar_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.ing_md.field1: exact @name("ing_md.field1") ;
@@ -106,12 +112,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ing_md.field4: exact @name("ing_md.field4") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @atcam_partition_index("ing_md.partition_index") @ways(5) @name(".fib") table fib_0 {
+    @atcam_partition_index("ing_md.partition_index") @ways(5) @name(".fib") table fib {
         actions = {
             set_fib_result_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             meta.ing_md.partition_index: exact @name("ing_md.partition_index") ;
@@ -119,24 +125,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr           : lpm @name("ipv4.dstAddr") ;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".partition") table partition_0 {
+    @name(".partition") table partition {
         actions = {
             set_partition_index_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             meta.ing_md.vrf       : exact @name("ing_md.vrf") ;
             hdr.ipv4.dstAddr[31:8]: lpm @name("ipv4.dstAddr[31:8]") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        partition_0.apply();
-        bar1_0.apply();
-        fib_0.apply();
+        partition.apply();
+        bar1.apply();
+        fib.apply();
     }
 }
 

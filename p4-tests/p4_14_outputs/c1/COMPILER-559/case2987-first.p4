@@ -2564,9 +2564,11 @@ control Vanoss(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+@name(".Dillsboro") register<bit<1>>(32w262144) Dillsboro;
+
+@name(".Honuapo") register<bit<1>>(32w262144) Honuapo;
+
 control Walcott(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Dillsboro") register<bit<1>>(32w262144) Dillsboro;
-    @name(".Honuapo") register<bit<1>>(32w262144) Honuapo;
     register_action<bit<1>, bit<1>>(Dillsboro) Montegut = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

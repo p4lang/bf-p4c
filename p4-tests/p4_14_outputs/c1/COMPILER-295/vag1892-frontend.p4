@@ -166,36 +166,43 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".set_port") action set_port_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".port_based_egress") table port_based_egress_0 {
+    @name(".set_port") action set_port_2(bit<9> port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = port;
+    }
+    @name(".port_based_egress") table port_based_egress {
         actions = {
             set_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".vid_based_egress") table vid_based_egress_0 {
+    @name(".vid_based_egress") table vid_based_egress {
         actions = {
-            set_port_0();
-            @defaultonly NoAction();
+            set_port_2();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.vlan_tag.vid: exact @name("vlan_tag.vid") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 
-            port_based_egress_0.apply();
+            port_based_egress.apply();
         if (hdr.vlan_tag.isValid()) 
-            vid_based_egress_0.apply();
+            vid_based_egress.apply();
     }
 }
 

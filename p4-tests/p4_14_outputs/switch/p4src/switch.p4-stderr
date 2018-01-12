@@ -1,24 +1,11 @@
-switch.p4:44:0:
-headers.p4:808:0: warning: "CPU_REASON_CODE_SFLOW" redefined
- #define CPU_REASON_CODE_SFLOW       0x106 /* must match switch_hostif.h reson_code */
- ^
-switch.p4:41:0:
-cpu_reason_codes.h:31:0: note: this is the location of the previous definition
- #define CPU_REASON_CODE_SFLOW            0x4
- ^
-switch.p4:45:0:
-parser.p4:797:6: warning: missing terminating ' character
-     8'0;
-      ^
-parser.p4:829:6: warning: missing terminating ' character
-     8'0;
-      ^
-parser.p4:891:6: warning: missing terminating ' character
-     8'0;
-      ^
-parser.p4:1208:6: warning: missing terminating ' character
-     8'0;
-      ^
+switch.p4:44:
+headers.p4:808:9: warning: 'CPU_REASON_CODE_SFLOW' macro redefined [-Wmacro-redefined]
+#define CPU_REASON_CODE_SFLOW       0x106 /* must match switch_hostif.h reson_code */
+        ^
+cpu_reason_codes.h:31:9: note: previous definition is here
+#define CPU_REASON_CODE_SFLOW            0x4
+        ^
+1 warning generated.
 l3.p4(212): warning: -1: negative value with unsigned type
     add_to_field(ipv4.ttl, -1);
                             ^

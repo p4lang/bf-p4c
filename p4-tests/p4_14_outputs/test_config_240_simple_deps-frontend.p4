@@ -194,55 +194,71 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".do_nothing") action do_nothing_0() {
+    }
+    @name(".do_nothing") action do_nothing_3() {
+    }
+    @name(".do_nothing") action do_nothing_4() {
     }
     @name(".action_0") action action_1(bit<8> p) {
         hdr.hdr0.b = p;
     }
-    @name(".table_i0") table table_i0_0 {
+    @name(".action_0") action action_4(bit<8> p) {
+        hdr.hdr0.b = p;
+    }
+    @name(".action_0") action action_5(bit<8> p) {
+        hdr.hdr0.b = p;
+    }
+    @name(".table_i0") table table_i0 {
         actions = {
             do_nothing_0();
             action_1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr0.a: ternary @name("hdr0.a") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_i1") table table_i1_0 {
+    @name(".table_i1") table table_i1 {
         actions = {
-            do_nothing_0();
-            action_1();
-            @defaultonly NoAction();
+            do_nothing_3();
+            action_4();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.hdr0.b: ternary @name("hdr0.b") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".table_i2") table table_i2_0 {
+    @name(".table_i2") table table_i2 {
         actions = {
-            do_nothing_0();
-            action_1();
-            @defaultonly NoAction();
+            do_nothing_4();
+            action_5();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.hdr0.a: exact @name("hdr0.a") ;
             hdr.hdr0.b: ternary @name("hdr0.b") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
         if (hdr.hdr1.isValid()) 
-            table_i0_0.apply();
+            table_i0.apply();
         if (hdr.hdr0.isValid()) 
-            table_i1_0.apply();
+            table_i1.apply();
         if (hdr.hdr1.isValid()) 
-            table_i2_0.apply();
+            table_i2.apply();
     }
 }
 

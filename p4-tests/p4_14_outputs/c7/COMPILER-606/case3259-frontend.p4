@@ -165,21 +165,23 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".a") action a_0(bit<8> port) {
         meta.meta.field1 = meta.meta.field1 + meta.meta.field2;
         hdr.ethernet.etherType = meta.meta.field1;
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
     }
-    @name(".t") table t_0 {
+    @name(".t") table t {
         actions = {
             a_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        t_0.apply();
+        t.apply();
     }
 }
 

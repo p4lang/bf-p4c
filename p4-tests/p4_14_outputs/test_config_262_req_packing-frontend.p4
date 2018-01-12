@@ -190,6 +190,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".set_a") action set_a_0() {
         meta.meta.x = hdr.pkt_a.a;
         meta.meta.y = hdr.pkt_a.b;
@@ -197,26 +201,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_0() {
     }
+    @name(".do_nothing") action do_nothing_2() {
+    }
     @name(".set_blah") action set_blah_0(bit<16> x) {
         hdr.eth.etype = x;
     }
-    @name(".t_a") table t_a_0 {
+    @name(".t_a") table t_a {
         actions = {
             set_a_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt_a.a: exact @name("pkt_a.a") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t_last") table t_last_0 {
+    @name(".t_last") table t_last {
         actions = {
             set_blah_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_2();
+            @defaultonly NoAction_3();
         }
         key = {
             meta.meta.x: ternary @name("meta.x") ;
@@ -224,12 +230,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.z: exact @name("meta.z") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.pkt_a.isValid()) 
-            t_a_0.apply();
-        t_last_0.apply();
+            t_a.apply();
+        t_last.apply();
     }
 }
 

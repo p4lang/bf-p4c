@@ -559,6 +559,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<32> Shirley;
 }
 
+@name(".BigWells") register<bit<1>>(32w262144) BigWells;
+
+@name(".Skillman") register<bit<1>>(32w262144) Skillman;
+
 @name("Palco") struct Palco {
     bit<8>  Angwin;
     bit<24> Paradis;
@@ -1095,14 +1099,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_47();
     }
-    @name(".BigWells") register<bit<1>>(32w262144) _BigWells_0;
-    @name(".Skillman") register<bit<1>>(32w262144) _Skillman_0;
-    @name(".Parnell.Gonzalez") register_action<bit<1>, bit<1>>(_BigWells_0) _Parnell_Gonzalez_0 = {
+    @name(".Parnell.Gonzalez") register_action<bit<1>, bit<1>>(BigWells) _Parnell_Gonzalez_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Parnell.Tillatoba") register_action<bit<1>, bit<1>>(_Skillman_0) _Parnell_Tillatoba_0 = {
+    @name(".Parnell.Tillatoba") register_action<bit<1>, bit<1>>(Skillman) _Parnell_Tillatoba_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

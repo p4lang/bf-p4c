@@ -237,109 +237,144 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".exm_cntr1") direct_counter(CounterType.packets) exm_cntr1_0;
-    @name(".tcam_cntr1") direct_counter(CounterType.packets) tcam_cntr1_0;
-    @name(".exm_cntr2") counter(32w500, CounterType.packets) exm_cntr2_0;
-    @name(".exm_cntr3") counter(32w500, CounterType.packets) exm_cntr3_0;
-    @name(".tcam_cntr2") counter(32w500, CounterType.packets) tcam_cntr2_0;
-    @name(".tcam_cntr3") counter(32w500, CounterType.packets) tcam_cntr3_0;
-    @name(".exm_meter2") direct_meter<bit<8>>(MeterType.bytes) exm_meter2_0;
-    @name(".tcam_meter2") direct_meter<bit<8>>(MeterType.bytes) tcam_meter2_0;
-    @name(".exm_meter1") meter(32w500, MeterType.bytes) exm_meter1_0;
-    @name(".exm_meter3") meter(32w500, MeterType.bytes) exm_meter3_0;
-    @name(".tcam_meter1") meter(32w500, MeterType.bytes) tcam_meter1_0;
-    @name(".tcam_meter3") meter(32w500, MeterType.bytes) tcam_meter3_0;
-    @name(".hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
-        ttl_0 = ttl_0 + 8w255;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
-    }
+    @name(".exm_cntr1") direct_counter(CounterType.packets) exm_cntr1;
+    @name(".tcam_cntr1") direct_counter(CounterType.packets) tcam_cntr1;
+    @name(".exm_cntr2") counter(32w500, CounterType.packets) exm_cntr2;
+    @name(".exm_cntr3") counter(32w500, CounterType.packets) exm_cntr3;
+    @name(".tcam_cntr2") counter(32w500, CounterType.packets) tcam_cntr2;
+    @name(".tcam_cntr3") counter(32w500, CounterType.packets) tcam_cntr3;
+    @name(".exm_meter2") direct_meter<bit<8>>(MeterType.bytes) exm_meter2;
+    @name(".tcam_meter2") direct_meter<bit<8>>(MeterType.bytes) tcam_meter2;
+    @name(".exm_meter1") meter(32w500, MeterType.bytes) exm_meter1;
+    @name(".exm_meter3") meter(32w500, MeterType.bytes) exm_meter3;
+    @name(".tcam_meter1") meter(32w500, MeterType.bytes) tcam_meter1;
+    @name(".tcam_meter3") meter(32w500, MeterType.bytes) tcam_meter3;
     @name(".next_hop_ipv4") action next_hop_ipv4_4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_0 = hdr.ipv4.ttl;
+            ttl_0 = ttl_0 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_0;
+        }
+        hdr.ethernet.srcAddr = srcmac;
+        hdr.ethernet.dstAddr = dstmac;
+    }
+    @name(".next_hop_ipv4") action next_hop_ipv4_5(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+        {
+            bit<8> ttl_16 = hdr.ipv4.ttl;
+            ttl_16 = ttl_16 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_16;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
     @name(".nop") action nop_0() {
     }
+    @name(".nop") action nop_6() {
+    }
+    @name(".nop") action nop_7() {
+    }
+    @name(".nop") action nop_8() {
+    }
+    @name(".nop") action nop_9() {
+    }
+    @name(".nop") action nop_10() {
+    }
     @name(".next_hop_ipv4_stats_meters_3") action next_hop_ipv4_stats_meters(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> meter_idx, bit<32> stat_idx) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_17 = hdr.ipv4.ttl;
+            ttl_17 = ttl_17 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_17;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        exm_cntr3_0.count(stat_idx);
-        exm_meter3_0.execute_meter<bit<8>>(meter_idx, hdr.ipv4.diffserv);
+        exm_cntr3.count(stat_idx);
+        exm_meter3.execute_meter<bit<8>>(meter_idx, hdr.ipv4.diffserv);
     }
     @name(".next_hop_ipv4_stats_3") action next_hop_ipv4_stats(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> stat_idx) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_18 = hdr.ipv4.ttl;
+            ttl_18 = ttl_18 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_18;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        exm_cntr3_0.count(stat_idx);
+        exm_cntr3.count(stat_idx);
     }
     @name(".next_hop_ipv4_meters_3") action next_hop_ipv4_meters(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> meter_idx) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_19 = hdr.ipv4.ttl;
+            ttl_19 = ttl_19 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_19;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        exm_meter3_0.execute_meter<bit<8>>(meter_idx, hdr.ipv4.diffserv);
+        exm_meter3.execute_meter<bit<8>>(meter_idx, hdr.ipv4.diffserv);
     }
     @name(".tcam_next_hop_ipv4_stats_meters_3") action tcam_next_hop_ipv4_stats_meters(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> meter_idx, bit<32> stat_idx) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_20 = hdr.ipv4.ttl;
+            ttl_20 = ttl_20 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_20;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        tcam_cntr3_0.count(stat_idx);
-        tcam_meter3_0.execute_meter<bit<8>>(meter_idx, hdr.ipv4.diffserv);
+        tcam_cntr3.count(stat_idx);
+        tcam_meter3.execute_meter<bit<8>>(meter_idx, hdr.ipv4.diffserv);
     }
     @name(".tcam_next_hop_ipv4_stats_3") action tcam_next_hop_ipv4_stats(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> stat_idx) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_21 = hdr.ipv4.ttl;
+            ttl_21 = ttl_21 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_21;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        tcam_cntr3_0.count(stat_idx);
+        tcam_cntr3.count(stat_idx);
     }
     @name(".tcam_next_hop_ipv4_meters_3") action tcam_next_hop_ipv4_meters(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> meter_idx) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_22 = hdr.ipv4.ttl;
+            ttl_22 = ttl_22 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_22;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        tcam_meter3_0.execute_meter<bit<8>>(meter_idx, hdr.ipv4.diffserv);
+        tcam_meter3.execute_meter<bit<8>>(meter_idx, hdr.ipv4.diffserv);
     }
     @name(".next_hop_ipv4_meters_1") action next_hop_ipv4_meters_1(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> meter_idx) {
-        exm_cntr1_0.count();
-        hop_0(hdr.ipv4.ttl, egress_port);
-        hdr.ethernet.srcAddr = srcmac;
-        hdr.ethernet.dstAddr = dstmac;
-        exm_meter1_0.execute_meter<bit<8>>(meter_idx, hdr.ipv4.diffserv);
-    }
-    @name(".next_hop_ipv4") action next_hop_ipv4_5(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        exm_cntr1_0.count();
-        hop_0(hdr.ipv4.ttl, egress_port);
-        hdr.ethernet.srcAddr = srcmac;
-        hdr.ethernet.dstAddr = dstmac;
-    }
-    @name(".exm_tbl_act_spec_format_1") table exm_tbl_act_spec_format {
-        actions = {
-            next_hop_ipv4_meters_1();
-            next_hop_ipv4_5();
-            @defaultonly nop_0();
+        exm_cntr1.count();
+        {
+            bit<8> ttl_23 = hdr.ipv4.ttl;
+            ttl_23 = ttl_23 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_23;
         }
-        key = {
-            hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
-            hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
-        }
-        default_action = nop_0();
-        counters = exm_cntr1_0;
-    }
-    @name(".next_hop_ipv4_stats_2") action next_hop_ipv4_stats_2(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> stat_idx) {
-        exm_meter2_0.read(hdr.ipv4.diffserv);
-        hop_0(hdr.ipv4.ttl, egress_port);
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        exm_cntr2_0.count(stat_idx);
+        exm_meter1.execute_meter<bit<8>>(meter_idx, hdr.ipv4.diffserv);
     }
     @name(".next_hop_ipv4") action next_hop_ipv4_6(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        exm_meter2_0.read(hdr.ipv4.diffserv);
-        hop_0(hdr.ipv4.ttl, egress_port);
+        exm_cntr1.count();
+        {
+            bit<8> ttl_24 = hdr.ipv4.ttl;
+            ttl_24 = ttl_24 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_24;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @name(".exm_tbl_act_spec_format_2") table exm_tbl_act_spec_format_0 {
+    @name(".exm_tbl_act_spec_format_1") table exm_tbl_act_spec_format_1 {
         actions = {
-            next_hop_ipv4_stats_2();
+            next_hop_ipv4_meters_1();
             next_hop_ipv4_6();
             @defaultonly nop_0();
         }
@@ -348,95 +383,151 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         default_action = nop_0();
-        meters = exm_meter2_0;
+        counters = exm_cntr1;
     }
-    @name(".exm_tbl_act_spec_format_3") table exm_tbl_act_spec_format_4 {
+    @name(".next_hop_ipv4_stats_2") action next_hop_ipv4_stats_2(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> stat_idx) {
+        exm_meter2.read(hdr.ipv4.diffserv);
+        {
+            bit<8> ttl_25 = hdr.ipv4.ttl;
+            ttl_25 = ttl_25 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_25;
+        }
+        hdr.ethernet.srcAddr = srcmac;
+        hdr.ethernet.dstAddr = dstmac;
+        exm_cntr2.count(stat_idx);
+    }
+    @name(".next_hop_ipv4") action next_hop_ipv4_7(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+        exm_meter2.read(hdr.ipv4.diffserv);
+        {
+            bit<8> ttl_26 = hdr.ipv4.ttl;
+            ttl_26 = ttl_26 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_26;
+        }
+        hdr.ethernet.srcAddr = srcmac;
+        hdr.ethernet.dstAddr = dstmac;
+    }
+    @name(".exm_tbl_act_spec_format_2") table exm_tbl_act_spec_format_2 {
         actions = {
-            next_hop_ipv4_stats_meters();
-            next_hop_ipv4_stats();
-            next_hop_ipv4_meters();
-            next_hop_ipv4_4();
-            @defaultonly nop_0();
+            next_hop_ipv4_stats_2();
+            next_hop_ipv4_7();
+            @defaultonly nop_6();
         }
         key = {
             hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
-        default_action = nop_0();
+        default_action = nop_6();
+        meters = exm_meter2;
+    }
+    @name(".exm_tbl_act_spec_format_3") table exm_tbl_act_spec_format_3 {
+        actions = {
+            next_hop_ipv4_stats_meters();
+            next_hop_ipv4_stats();
+            next_hop_ipv4_meters();
+            next_hop_ipv4_4();
+            @defaultonly nop_7();
+        }
+        key = {
+            hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
+            hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
+        }
+        default_action = nop_7();
     }
     @name(".tcam_next_hop_ipv4_meters_1") action tcam_next_hop_ipv4_meters_1(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> meter_idx) {
-        tcam_cntr1_0.count();
-        hop_0(hdr.ipv4.ttl, egress_port);
-        hdr.ethernet.srcAddr = srcmac;
-        hdr.ethernet.dstAddr = dstmac;
-        tcam_meter1_0.execute_meter<bit<8>>(meter_idx, hdr.ipv4.diffserv);
-    }
-    @name(".next_hop_ipv4") action next_hop_ipv4_7(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        tcam_cntr1_0.count();
-        hop_0(hdr.ipv4.ttl, egress_port);
-        hdr.ethernet.srcAddr = srcmac;
-        hdr.ethernet.dstAddr = dstmac;
-    }
-    @name(".tcam_tbl_act_spec_format_1") table tcam_tbl_act_spec_format {
-        actions = {
-            tcam_next_hop_ipv4_meters_1();
-            next_hop_ipv4_7();
-            @defaultonly nop_0();
+        tcam_cntr1.count();
+        {
+            bit<8> ttl_27 = hdr.ipv4.ttl;
+            ttl_27 = ttl_27 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_27;
         }
-        key = {
-            hdr.ipv4.srcAddr: lpm @name("ipv4.srcAddr") ;
-            hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
-        }
-        default_action = nop_0();
-        counters = tcam_cntr1_0;
-    }
-    @name(".tcam_next_hop_ipv4_stats_2") action tcam_next_hop_ipv4_stats_2(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> stat_idx) {
-        tcam_meter2_0.read(hdr.ipv4.diffserv);
-        hop_0(hdr.ipv4.ttl, egress_port);
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        tcam_cntr2_0.count(stat_idx);
+        tcam_meter1.execute_meter<bit<8>>(meter_idx, hdr.ipv4.diffserv);
     }
     @name(".next_hop_ipv4") action next_hop_ipv4_8(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        tcam_meter2_0.read(hdr.ipv4.diffserv);
-        hop_0(hdr.ipv4.ttl, egress_port);
+        tcam_cntr1.count();
+        {
+            bit<8> ttl_28 = hdr.ipv4.ttl;
+            ttl_28 = ttl_28 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_28;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @name(".tcam_tbl_act_spec_format_2") table tcam_tbl_act_spec_format_0 {
+    @name(".tcam_tbl_act_spec_format_1") table tcam_tbl_act_spec_format_1 {
         actions = {
-            tcam_next_hop_ipv4_stats_2();
+            tcam_next_hop_ipv4_meters_1();
             next_hop_ipv4_8();
-            @defaultonly nop_0();
+            @defaultonly nop_8();
         }
         key = {
             hdr.ipv4.srcAddr: lpm @name("ipv4.srcAddr") ;
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
-        default_action = nop_0();
-        meters = tcam_meter2_0;
+        default_action = nop_8();
+        counters = tcam_cntr1;
     }
-    @name(".tcam_tbl_act_spec_format_3") table tcam_tbl_act_spec_format_4 {
+    @name(".tcam_next_hop_ipv4_stats_2") action tcam_next_hop_ipv4_stats_2(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> stat_idx) {
+        tcam_meter2.read(hdr.ipv4.diffserv);
+        {
+            bit<8> ttl_29 = hdr.ipv4.ttl;
+            ttl_29 = ttl_29 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_29;
+        }
+        hdr.ethernet.srcAddr = srcmac;
+        hdr.ethernet.dstAddr = dstmac;
+        tcam_cntr2.count(stat_idx);
+    }
+    @name(".next_hop_ipv4") action next_hop_ipv4_10(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+        tcam_meter2.read(hdr.ipv4.diffserv);
+        {
+            bit<8> ttl_30 = hdr.ipv4.ttl;
+            ttl_30 = ttl_30 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_30;
+        }
+        hdr.ethernet.srcAddr = srcmac;
+        hdr.ethernet.dstAddr = dstmac;
+    }
+    @name(".tcam_tbl_act_spec_format_2") table tcam_tbl_act_spec_format_2 {
+        actions = {
+            tcam_next_hop_ipv4_stats_2();
+            next_hop_ipv4_10();
+            @defaultonly nop_9();
+        }
+        key = {
+            hdr.ipv4.srcAddr: lpm @name("ipv4.srcAddr") ;
+            hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
+        }
+        default_action = nop_9();
+        meters = tcam_meter2;
+    }
+    @name(".tcam_tbl_act_spec_format_3") table tcam_tbl_act_spec_format_3 {
         actions = {
             tcam_next_hop_ipv4_stats_meters();
             tcam_next_hop_ipv4_stats();
             tcam_next_hop_ipv4_meters();
-            next_hop_ipv4_4();
-            @defaultonly nop_0();
+            next_hop_ipv4_5();
+            @defaultonly nop_10();
         }
         key = {
             hdr.ipv4.srcAddr: lpm @name("ipv4.srcAddr") ;
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
-        default_action = nop_0();
+        default_action = nop_10();
     }
     apply {
-        exm_tbl_act_spec_format_0.apply();
-        tcam_tbl_act_spec_format_0.apply();
-        exm_tbl_act_spec_format.apply();
-        exm_tbl_act_spec_format_4.apply();
-        tcam_tbl_act_spec_format.apply();
-        tcam_tbl_act_spec_format_4.apply();
+        exm_tbl_act_spec_format_2.apply();
+        tcam_tbl_act_spec_format_2.apply();
+        exm_tbl_act_spec_format_1.apply();
+        exm_tbl_act_spec_format_3.apply();
+        tcam_tbl_act_spec_format_1.apply();
+        tcam_tbl_act_spec_format_3.apply();
     }
 }
 

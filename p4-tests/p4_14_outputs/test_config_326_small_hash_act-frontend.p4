@@ -155,7 +155,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_0") action action_1(bit<8> p) {
         hdr.one.x = p;
     }
-    @name(".table_0") table table_1 {
+    @name(".table_0") table table_0 {
         actions = {
             action_1();
         }
@@ -166,7 +166,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = action_1(8w5);
     }
     apply {
-        table_1.apply();
+        table_0.apply();
     }
 }
 

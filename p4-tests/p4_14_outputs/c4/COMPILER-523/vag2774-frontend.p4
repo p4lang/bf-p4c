@@ -169,7 +169,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<4> tmp;
+    bit<4> tmp_1;
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
@@ -189,8 +189,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".parse_mpls_bos") state parse_mpls_bos {
-        tmp = packet.lookahead<bit<4>>();
-        transition select(tmp[3:0]) {
+        tmp_1 = packet.lookahead<bit<4>>();
+        transition select(tmp_1[3:0]) {
             4w0x0: parse_mpls_pw_ctrl;
             4w0x4: parse_mpls_inner_ipv4;
             4w0x6: parse_mpls_inner_ipv6;
@@ -229,10 +229,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bool tmp_0;
-    @name(".set_egr") action set_egr_0(bit<9> egress_spec_0) {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_spec_0;
+    @name("NoAction") action NoAction_0() {
     }
+    @name("NoAction") action NoAction_3() {
+    }
+    bool tmp_2;
     @name(".mpls_strip") action mpls_strip_0() {
         hdr.mpls[0].setInvalid();
         hdr.mpls[1].setInvalid();
@@ -242,10 +243,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.mpls[5].setInvalid();
         hdr.mpls[6].setInvalid();
         hdr.mpls[7].setInvalid();
-        set_egr_0(9w2);
+        hdr.ig_intr_md_for_tm.ucast_egress_port = 9w2;
     }
     @name(".nop") action nop_0() {
-        set_egr_0(9w2);
+        hdr.ig_intr_md_for_tm.ucast_egress_port = 9w2;
+    }
+    @name(".nop") action nop_2() {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = 9w2;
     }
     @name(".rewrite_outer_ethtype") action rewrite_outer_ethtype_0() {
         hdr.ethernet.etherType = meta.meta.mpls_tunnel_type;
@@ -256,11 +260,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".rewrite_vlan1_ethtype") action rewrite_vlan1_ethtype_0() {
         hdr.vlan_tag_[1].etherType = meta.meta.mpls_tunnel_type;
     }
-    @name(".mpls_tbl") table mpls_tbl_0 {
+    @name(".mpls_tbl") table mpls_tbl {
         actions = {
             mpls_strip_0();
             nop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.mpls[0].isValid()         : exact @name("mpls[0].$valid$") ;
@@ -268,27 +272,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.mpls_tunnel_type    : exact @name("meta.mpls_tunnel_type") ;
         }
         max_size = 3;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".rewrite_tbl") table rewrite_tbl_0 {
+    @name(".rewrite_tbl") table rewrite_tbl {
         actions = {
             rewrite_outer_ethtype_0();
             rewrite_vlan0_ethtype_0();
             rewrite_vlan1_ethtype_0();
-            nop_0();
-            @defaultonly NoAction();
+            nop_2();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.vlan_tag_[0].isValid(): exact @name("vlan_tag_[0].$valid$") ;
             hdr.vlan_tag_[1].isValid(): exact @name("vlan_tag_[1].$valid$") ;
         }
         max_size = 3;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        tmp_0 = mpls_tbl_0.apply().hit;
-        if (tmp_0) 
-            rewrite_tbl_0.apply();
+        tmp_2 = mpls_tbl.apply().hit;
+        if (tmp_2) 
+            rewrite_tbl.apply();
     }
 }
 

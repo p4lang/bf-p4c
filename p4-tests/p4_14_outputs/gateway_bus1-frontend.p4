@@ -32,6 +32,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".setb2_5") action setb2(bit<8> val2, bit<8> val3, bit<8> val4, bit<8> val5, bit<8> val6) {
         hdr.data.b2 = val2;
         hdr.data.b3 = val3;
@@ -41,15 +45,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".noop") action noop_0() {
     }
+    @name(".noop") action noop_2() {
+    }
     @name(".setb1") action setb1_0(bit<8> val1, bit<9> port) {
         hdr.data.b1 = val1;
         standard_metadata.egress_spec = port;
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             setb2();
             noop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
@@ -57,23 +63,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f3: exact @name("data.f3") ;
             hdr.data.b7: exact @name("data.b7") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".test2") table test2_0 {
+    @name(".test2") table test2 {
         actions = {
             setb1_0();
-            noop_0();
-            @defaultonly NoAction();
+            noop_2();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.data.f4 == 32w0x1) 
-            test1_0.apply();
-        test2_0.apply();
+            test1.apply();
+        test2.apply();
     }
 }
 

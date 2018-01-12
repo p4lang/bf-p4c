@@ -1373,9 +1373,11 @@ control Gonzales(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
+@name(".Hobucken") register<bit<1>>(32w262144) Hobucken;
+
+@name(".Tarnov") register<bit<1>>(32w262144) Tarnov;
+
 control Hiawassee(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Hobucken") register<bit<1>>(32w262144) Hobucken;
-    @name(".Tarnov") register<bit<1>>(32w262144) Tarnov;
     register_action<bit<1>, bit<1>>(Hobucken) Kasilof = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

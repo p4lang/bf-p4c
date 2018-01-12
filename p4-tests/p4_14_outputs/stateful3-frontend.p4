@@ -43,10 +43,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".accum") register<pair32_t>(32w65536) accum;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp_0;
-    @name(".accum") register<pair32_t>(32w65536) accum_0;
-    @name("sful") register_action<pair32_t, bit<32>>(accum_0) sful_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    bit<32> tmp_1;
+    @name("sful") register_action<pair32_t, bit<32>>(accum) sful = {
         void apply(inout pair32_t value, out bit<32> rv) {
             rv = value.lo;
             value.hi = value.hi + 32w1;
@@ -58,21 +61,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".act1") action act1_0(bit<9> port) {
         standard_metadata.egress_spec = port;
-        tmp_0 = sful_0.execute((bit<32>)hdr.data.h1);
-        hdr.data.f4 = tmp_0;
+        tmp_1 = sful.execute((bit<32>)hdr.data.h1);
+        hdr.data.f4 = tmp_1;
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             act1_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        test1_0.apply();
+        test1.apply();
     }
 }
 

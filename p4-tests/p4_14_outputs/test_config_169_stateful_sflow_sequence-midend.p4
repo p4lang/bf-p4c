@@ -216,6 +216,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".sflow_state_exp_seq_num") register<bit<32>>(32w0) sflow_state_exp_seq_num;
+
+@name(".sflow_state_seq_num") register<bit<32>>(32w0) sflow_state_seq_num;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<32> tmp_1;
     bit<32> tmp_2;
@@ -227,8 +231,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_7() {
     }
-    @name(".sflow_state_exp_seq_num") register<bit<32>>(32w0) sflow_state_exp_seq_num;
-    @name(".sflow_state_seq_num") register<bit<32>>(32w0) sflow_state_seq_num;
     @name("seq_num_gen") register_action<bit<32>, bit<32>>(sflow_state_seq_num) seq_num_gen = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> alu_hi;

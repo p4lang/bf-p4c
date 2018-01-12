@@ -150,14 +150,14 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<1> tmp;
+    bit<1> tmp_0;
     @name(".abc") state abc {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition accept;
     }
     @name(".start") state start {
-        tmp = packet.lookahead<bit<1>>();
-        transition select(tmp[0:0]) {
+        tmp_0 = packet.lookahead<bit<1>>();
+        transition select(tmp_0[0:0]) {
             default: abc;
             default: accept;
         }
@@ -165,50 +165,54 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".egr_action") action egr_action_0() {
         clone3<tuple<bit<8>>>(CloneType.E2E, 32w7, { meta.m.foo });
     }
     @name(".egr_action2") action egr_action2_0() {
         clone(CloneType.E2E, 32w8);
     }
-    @name(".egr_null_table") table egr_null_table_0 {
+    @name(".egr_null_table") table egr_null_table {
         actions = {
             egr_action_0();
             egr_action2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.eg_intr_md_from_parser_aux.egress_parser_err: exact @name("eg_intr_md_from_parser_aux.egress_parser_err") ;
             hdr.ethernet.dstAddr                            : exact @name("ethernet.dstAddr") ;
             meta.m.foo                                      : exact @name("m.foo") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        egr_null_table_0.apply();
+        egr_null_table.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_1() {
+    }
     @name(".ingr_action") action ingr_action_0() {
         clone3<tuple<bit<8>>>(CloneType.I2E, 32w5, { meta.m.foo });
     }
     @name(".ingr_action2") action ingr_action2_0() {
         clone(CloneType.I2E, 32w6);
     }
-    @name(".ingr_null_table") table ingr_null_table_0 {
+    @name(".ingr_null_table") table ingr_null_table {
         actions = {
             ingr_action_0();
             ingr_action2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ig_intr_md_from_parser_aux.ingress_parser_err: exact @name("ig_intr_md_from_parser_aux.ingress_parser_err") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
-        ingr_null_table_0.apply();
+        ingr_null_table.apply();
     }
 }
 

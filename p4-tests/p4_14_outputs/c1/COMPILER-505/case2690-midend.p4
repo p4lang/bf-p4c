@@ -596,6 +596,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<32> Sedan;
 }
 
+@name(".Argentine") register<bit<1>>(32w262144) Argentine;
+
+@name(".Gregory") register<bit<1>>(32w262144) Gregory;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -1218,14 +1222,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_52();
     }
-    @name(".Argentine") register<bit<1>>(32w262144) _Argentine_0;
-    @name(".Gregory") register<bit<1>>(32w262144) _Gregory_0;
-    @name(".Oakford.Saluda") register_action<bit<1>, bit<1>>(_Gregory_0) _Oakford_Saluda_0 = {
+    @name(".Oakford.Saluda") register_action<bit<1>, bit<1>>(Gregory) _Oakford_Saluda_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Oakford.SomesBar") register_action<bit<1>, bit<1>>(_Argentine_0) _Oakford_SomesBar_0 = {
+    @name(".Oakford.SomesBar") register_action<bit<1>, bit<1>>(Argentine) _Oakford_SomesBar_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

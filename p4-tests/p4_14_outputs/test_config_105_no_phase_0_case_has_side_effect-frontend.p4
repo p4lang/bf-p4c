@@ -177,12 +177,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".meter_0") direct_meter<bit<8>>(MeterType.bytes) meter_1;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    @name(".meter_0") direct_meter<bit<8>>(MeterType.bytes) meter_0;
     @name(".action_1") action action_0(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
     @name(".action_0") action action_0_1(bit<1> param0, bit<1> param1, bit<4> param2, bit<4> param3, bit<1> param4, bit<1> param5) {
-        meter_1.read(hdr.pkt.color_0);
+        meter_0.read(hdr.pkt.color_0);
         hdr.pkt.field_a0_1 = 1w0;
         hdr.pkt.field_a1_1 = param0;
         hdr.pkt.field_a2_1 = 1w1;
@@ -198,34 +202,34 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_h2_1 = param5;
         hdr.pkt.field_h3_1 = 1w1;
     }
-    @name(".table_0") table table_2 {
+    @name(".table_0") table table_0 {
         actions = {
             action_0_1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 1024;
-        meters = meter_1;
-        default_action = NoAction();
+        meters = meter_0;
+        default_action = NoAction_0();
     }
-    @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".table_1") table table_3 {
+    @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".table_1") table table_1 {
         actions = {
             action_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.pkt.field_g_16: exact @name("pkt.field_g_16") ;
             hdr.pkt.color_0   : exact @name("pkt.color_0") ;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) {
-            table_2.apply();
-            table_3.apply();
+            table_0.apply();
+            table_1.apply();
         }
     }
 }

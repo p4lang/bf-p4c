@@ -552,9 +552,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".Canjilon") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Canjilon;
 
+@name(".Hernandez") register<bit<1>>(32w262144) Hernandez;
+
+@name(".Mayday") register<bit<1>>(32w262144) Mayday;
+
 control Addison(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Hernandez") register<bit<1>>(32w262144) Hernandez;
-    @name(".Mayday") register<bit<1>>(32w262144) Mayday;
     register_action<bit<1>, bit<1>>(Hernandez) Kewanee = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

@@ -168,7 +168,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".upd") action upd_0(bit<9> p) {
         meta.md.port = p;
     }
-    @name(".forward") table forward_0 {
+    @name(".forward") table forward {
         actions = {
             fwd_0();
         }
@@ -178,7 +178,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 128;
         default_action = fwd_0();
     }
-    @name(".update") table update_0 {
+    @name(".update") table update {
         actions = {
             upd_0();
         }
@@ -190,8 +190,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ethernet.isValid()) 
-            update_0.apply();
-        forward_0.apply();
+            update.apply();
+        forward.apply();
     }
 }
 

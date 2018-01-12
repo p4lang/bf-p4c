@@ -46,6 +46,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".set_r1_10") @mode("fair") action_selector(HashAlgorithm.crc16, 32w18000, 32w14) set_r1_10;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".setr1_5") action setr1(bit<32> val1, bit<32> val2, bit<32> val3, bit<32> val4, bit<32> val5) {
         hdr.data.r1 = val1;
         hdr.data.r2 = val2;
@@ -69,11 +73,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".setb3") action setb3_0(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             setr1();
             setr6();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
@@ -83,14 +87,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 10000;
         implementation = set_r1_10;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".test2") table test2_0 {
+    @name(".test2") table test2 {
         actions = {
             setb1_0();
             setb2_0();
             setb3_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.data.f2: exact @name("data.f2") ;
@@ -100,11 +104,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
         implementation = set_b1_3;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        test1_0.apply();
-        test2_0.apply();
+        test1.apply();
+        test2.apply();
     }
 }
 

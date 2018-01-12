@@ -211,7 +211,25 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
     @name(".do_nothing") action do_nothing_0() {
+    }
+    @name(".do_nothing") action do_nothing_5() {
+    }
+    @name(".do_nothing") action do_nothing_6() {
+    }
+    @name(".do_nothing") action do_nothing_7() {
+    }
+    @name(".do_nothing") action do_nothing_8() {
     }
     @name(".set_m") action set_m_0() {
         meta.m.p = 3w7;
@@ -238,59 +256,59 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.m.v = meta.m2.v;
         meta.m.t = meta.m2.t;
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             do_nothing_0();
             set_m_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary @name("ethernet.srcAddr[15:0]") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t2") table t2_0 {
+    @name(".t2") table t2 {
         actions = {
-            do_nothing_0();
+            do_nothing_5();
             add_vlan_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary @name("ethernet.srcAddr[15:0]") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".t3") table t3_0 {
+    @name(".t3") table t3 {
         actions = {
-            do_nothing_0();
+            do_nothing_6();
             set_m2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary @name("ethernet.srcAddr[15:0]") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
-    @name(".t4") table t4_0 {
+    @name(".t4") table t4 {
         actions = {
-            do_nothing_0();
+            do_nothing_7();
             set_m_again_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary @name("ethernet.srcAddr[15:0]") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_8();
     }
-    @name(".t5") table t5_0 {
+    @name(".t5") table t5 {
         support_timeout = true;
         actions = {
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_8();
+            @defaultonly NoAction_9();
         }
         key = {
             meta.m.p : exact @name("m.p") ;
@@ -303,14 +321,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m2.t: exact @name("m2.t") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_9();
     }
     apply {
-        t1_0.apply();
-        t2_0.apply();
-        t3_0.apply();
-        t4_0.apply();
-        t5_0.apply();
+        t1.apply();
+        t2.apply();
+        t3.apply();
+        t4.apply();
+        t5.apply();
     }
 }
 

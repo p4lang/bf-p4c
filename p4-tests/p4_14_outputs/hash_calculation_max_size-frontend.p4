@@ -38,28 +38,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action3") action action3_0() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result3, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field5, hdr.packet.hash_field6 }, 32w8);
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             action1_0();
         }
         default_action = action1_0();
     }
-    @name(".test2") table test2_0 {
+    @name(".test2") table test2 {
         actions = {
             action2_0();
         }
         default_action = action2_0();
     }
-    @name(".test3") table test3_0 {
+    @name(".test3") table test3 {
         actions = {
             action3_0();
         }
         default_action = action3_0();
     }
     apply {
-        test1_0.apply();
-        test2_0.apply();
-        test3_0.apply();
+        test1.apply();
+        test2.apply();
+        test3.apply();
     }
 }
 

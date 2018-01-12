@@ -178,49 +178,53 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".counter_egress") direct_counter(CounterType.packets) counter_egress_0;
-    @name(".egress_action") action egress_action(bit<8> idx) {
-        counter_egress_0.count();
+    @name("NoAction") action NoAction_0() {
     }
-    @use_hash_action(1) @name(".simple_table_egress") table simple_table_egress_0 {
+    @name(".counter_egress") direct_counter(CounterType.packets) counter_egress;
+    @name(".egress_action") action egress_action(bit<8> idx) {
+        counter_egress.count();
+    }
+    @use_hash_action(1) @name(".simple_table_egress") table simple_table_egress {
         actions = {
             egress_action();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr[8:0]: exact @name("ethernet.dstAddr[8:0]") ;
         }
         size = 512;
-        counters = counter_egress_0;
-        default_action = NoAction();
+        counters = counter_egress;
+        default_action = NoAction_0();
     }
     apply {
-        simple_table_egress_0.apply();
+        simple_table_egress.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".counter_0") counter(32w512, CounterType.packets) counter_1;
+    @name("NoAction") action NoAction_1() {
+    }
+    @name(".counter_0") counter(32w512, CounterType.packets) counter_0;
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".set_dst_addr") action set_dst_addr_0(bit<32> idx) {
-        counter_1.count(idx);
+        counter_0.count(idx);
     }
-    @use_identity_hash(1) @immediate(0) @name(".simple_table") table simple_table_0 {
+    @use_identity_hash(1) @immediate(0) @name(".simple_table") table simple_table {
         actions = {
             do_nothing_0();
             set_dst_addr_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
         if (hdr.ethernet.isValid() && hdr.ipv4.isValid()) 
-            simple_table_0.apply();
+            simple_table.apply();
     }
 }
 

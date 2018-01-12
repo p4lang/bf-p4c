@@ -156,21 +156,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".noop") action noop_0() {
     }
-    @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".test1") table test1_0 {
+    @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".test1") table test1 {
         support_timeout = true;
         actions = {
             noop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        test1_0.apply();
+        test1.apply();
     }
 }
 

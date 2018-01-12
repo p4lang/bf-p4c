@@ -31,13 +31,17 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".sel_profile") @mode("fair") action_selector(HashAlgorithm.crc16, 32w1024, 32w16) sel_profile;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("port_down") selector_action(sel_profile) port_down_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    @name("port_down") selector_action(sel_profile) port_down = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;
         }
     };
-    @name("port_up") selector_action(sel_profile) port_up_0 = {
+    @name("port_up") selector_action(sel_profile) port_up = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w0;
@@ -47,17 +51,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         standard_metadata.egress_spec = port;
     }
     @name(".set_port_up") action set_port_up_0() {
-        port_up_0.execute((bit<32>)hdr.data.b4);
+        port_up.execute((bit<32>)hdr.data.b4);
         standard_metadata.egress_spec = 9w0;
     }
     @name(".set_port_down") action set_port_down_0() {
-        port_down_0.execute((bit<32>)hdr.data.b4);
+        port_down.execute((bit<32>)hdr.data.b4);
         standard_metadata.egress_spec = 9w0;
     }
-    @name(".select_output") table select_output_0 {
+    @name(".select_output") table select_output {
         actions = {
             set_output_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.b1: exact @name("data.b1") ;
@@ -68,25 +72,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
         implementation = sel_profile;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".update_output") table update_output_0 {
+    @name(".update_output") table update_output {
         actions = {
             set_port_up_0();
             set_port_down_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.data.b3: exact @name("data.b3") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.data.b2 == 8w1) 
-            update_output_0.apply();
+            update_output.apply();
         else 
-            select_output_0.apply();
+            select_output.apply();
     }
 }
 

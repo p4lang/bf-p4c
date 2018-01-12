@@ -536,6 +536,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".Canjilon") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Canjilon;
 
+@name(".Hernandez") register<bit<1>>(32w262144) Hernandez;
+
+@name(".Mayday") register<bit<1>>(32w262144) Mayday;
+
 @name("Oklee") struct Oklee {
     bit<8>  Eclectic;
     bit<24> Sandstone;
@@ -1110,14 +1114,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_47();
     }
-    @name(".Hernandez") register<bit<1>>(32w262144) _Hernandez_0;
-    @name(".Mayday") register<bit<1>>(32w262144) _Mayday_0;
-    @name(".Addison.Kewanee") register_action<bit<1>, bit<1>>(_Hernandez_0) _Addison_Kewanee_0 = {
+    @name(".Addison.Kewanee") register_action<bit<1>, bit<1>>(Hernandez) _Addison_Kewanee_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Addison.Valdosta") register_action<bit<1>, bit<1>>(_Mayday_0) _Addison_Valdosta_0 = {
+    @name(".Addison.Valdosta") register_action<bit<1>, bit<1>>(Mayday) _Addison_Valdosta_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

@@ -204,6 +204,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".b") action b_0() {
         meta.h1.f1 = 14w1;
     }
@@ -213,28 +219,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".a") action a_0(bit<12> data) {
         meta.h1.f2 = data;
     }
-    @name(".f") table f_0 {
+    @name(".f") table f {
         actions = {
             b_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".forward") table forward_0 {
+    @name(".forward") table forward {
         actions = {
             do_forward_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             meta.h1.f2: ternary @name("h1.f2") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @atcam_partition_index("h1.f1") @atcam_number_partitions(16384) @name(".t") table t_0 {
+    @atcam_partition_index("h1.f1") @atcam_number_partitions(16384) @name(".t") table t {
         actions = {
             a_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             meta.h1.f1            : exact @name("h1.f1") ;
@@ -242,12 +248,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethHdr.dmac[23:0] : lpm @name("ethHdr.dmac[23:0]") ;
         }
         size = 131072;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        f_0.apply();
-        t_0.apply();
-        forward_0.apply();
+        f.apply();
+        t.apply();
+        forward.apply();
     }
 }
 

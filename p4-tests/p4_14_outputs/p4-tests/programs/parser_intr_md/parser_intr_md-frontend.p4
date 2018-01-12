@@ -193,6 +193,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".fwd_to_fabric") action fwd_to_fabric_0(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
@@ -202,22 +204,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".fwd_drop") action fwd_drop_0() {
         mark_to_drop();
     }
-    @name(".fwd_packet") table fwd_packet_0 {
+    @name(".fwd_packet") table fwd_packet {
         actions = {
             fwd_to_fabric_0();
             fwd_to_server_0();
             fwd_drop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ipv4.isValid()         : exact @name("ipv4.$valid$") ;
             hdr.fabric_header.isValid(): exact @name("fabric_header.$valid$") ;
         }
         size = 4;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        fwd_packet_0.apply();
+        fwd_packet.apply();
     }
 }
 

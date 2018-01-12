@@ -728,6 +728,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<16> Munday;
 }
 
+@name(".Flaxton") register<bit<1>>(32w262144) Flaxton;
+
+@name(".Proctor") register<bit<1>>(32w262144) Proctor;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -1488,14 +1492,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = _FulksRun();
     }
-    @name(".Flaxton") register<bit<1>>(32w262144) _Flaxton_0;
-    @name(".Proctor") register<bit<1>>(32w262144) _Proctor_0;
-    @name(".Shickley.Baskett") register_action<bit<1>, bit<1>>(_Flaxton_0) _Shickley_Baskett_0 = {
+    @name(".Shickley.Baskett") register_action<bit<1>, bit<1>>(Flaxton) _Shickley_Baskett_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Shickley.Sunrise") register_action<bit<1>, bit<1>>(_Proctor_0) _Shickley_Sunrise_0 = {
+    @name(".Shickley.Sunrise") register_action<bit<1>, bit<1>>(Proctor) _Shickley_Sunrise_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

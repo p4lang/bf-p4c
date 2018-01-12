@@ -196,26 +196,28 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".vlan_miss") action vlan_miss_0(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
     @name(".vlan_hit") action vlan_hit_0(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name(".vlan") table vlan_0 {
+    @name(".vlan") table vlan {
         actions = {
             vlan_miss_0();
             vlan_hit_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.vlan_tag_.vid: exact @name("vlan_tag_.vid") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        vlan_0.apply();
+        vlan.apply();
     }
 }
 

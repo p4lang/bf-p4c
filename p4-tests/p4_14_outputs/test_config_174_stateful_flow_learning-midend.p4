@@ -224,20 +224,28 @@ struct flow_cache_1_way_1_alu_layout {
     bit<32> hi;
 }
 
+@name(".flow_cache_1_way_1") register<flow_cache_1_way_1_alu_layout>(32w16384) flow_cache_1_way_1;
+
 struct flow_cache_1_way_2_alu_layout {
     bit<32> lo;
     bit<32> hi;
 }
+
+@name(".flow_cache_1_way_2") register<flow_cache_1_way_2_alu_layout>(32w16384) flow_cache_1_way_2;
 
 struct flow_cache_2_way_1_alu_layout {
     bit<16> lo;
     bit<16> hi;
 }
 
+@name(".flow_cache_2_way_1") register<flow_cache_2_way_1_alu_layout>(32w16384) flow_cache_2_way_1;
+
 struct flow_cache_2_way_2_alu_layout {
     bit<16> lo;
     bit<16> hi;
 }
+
+@name(".flow_cache_2_way_2") register<flow_cache_2_way_2_alu_layout>(32w16384) flow_cache_2_way_2;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<32> tmp_3;
@@ -262,10 +270,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_17() {
     }
-    @name(".flow_cache_1_way_1") register<flow_cache_1_way_1_alu_layout>(32w16384) flow_cache_1_way_1;
-    @name(".flow_cache_1_way_2") register<flow_cache_1_way_2_alu_layout>(32w16384) flow_cache_1_way_2;
-    @name(".flow_cache_2_way_1") register<flow_cache_2_way_1_alu_layout>(32w16384) flow_cache_2_way_1;
-    @name(".flow_cache_2_way_2") register<flow_cache_2_way_2_alu_layout>(32w16384) flow_cache_2_way_2;
     @name("flow_cache_1_way_1_alu") register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_alu = {
         void apply(inout flow_cache_1_way_1_alu_layout value, out bit<32> rv) {
             rv = 32w0;

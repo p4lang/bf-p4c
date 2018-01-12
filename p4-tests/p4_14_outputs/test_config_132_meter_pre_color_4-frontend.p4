@@ -175,50 +175,58 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 #include <tofino/p4_14_prim.p4>
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @meter_per_flow_enable(1) @meter_pre_color_aware_per_flow_enable(1) @name(".meter_1") meter(32w500, MeterType.bytes) meter_4;
+    @name("NoAction") action NoAction_0() {
+    }
+    @meter_per_flow_enable(1) @meter_pre_color_aware_per_flow_enable(1) @name(".meter_1") meter(32w500, MeterType.bytes) meter_0;
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".action_1") action action_2(bit<8> param0) {
-        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_4, 32w7, hdr.pkt.color_1, hdr.pkt.pre_color_1);
+        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_0, 32w7, hdr.pkt.color_1, hdr.pkt.pre_color_1);
     }
-    @idletime_two_way_notification(1) @include_stash(1) @name(".table_1") table table_4 {
+    @idletime_two_way_notification(1) @include_stash(1) @name(".table_1") table table_0 {
         actions = {
             do_nothing_0();
             action_2();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_e_16: exact @name("pkt.field_e_16") ;
         }
         size = 32768;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        table_4.apply();
+        table_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
-    bit<8> tmp_0;
-    @meter_per_flow_enable(1) @name(".meter_0") meter(32w500, MeterType.bytes) meter_5;
-    @name("meter_2") wred<bit<8>>(8w63, 8w127) meter_6;
-    @name("meter_3") lpf<bit<8>>() meter_7;
+    @name("NoAction") action NoAction_1() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    bit<8> tmp_1;
+    bit<8> tmp_2;
+    @meter_per_flow_enable(1) @name(".meter_0") meter(32w500, MeterType.bytes) meter_1;
+    @name("meter_2") wred<bit<8>>(8w63, 8w127) meter_2;
+    @name("meter_3") lpf<bit<8>>() meter_3;
     @name(".action_0") action action_3(bit<8> param0) {
-        execute_meter_with_color<meter, bit<32>, bit<4>>(meter_5, 32w7, hdr.pkt.color_0, hdr.pkt.pre_color_0);
+        execute_meter_with_color<meter, bit<32>, bit<4>>(meter_1, 32w7, hdr.pkt.color_0, hdr.pkt.pre_color_0);
     }
     @name(".do_nothing_2") action do_nothing_1() {
-        tmp = meter_6.execute(hdr.pkt.pre_color_2);
-        hdr.pkt.pre_color_2 = tmp;
+        tmp_1 = meter_2.execute(hdr.pkt.pre_color_2);
+        hdr.pkt.pre_color_2 = tmp_1;
     }
     @name(".do_nothing_3") action do_nothing_4() {
-        tmp_0 = meter_7.execute(hdr.pkt.pre_color_3);
-        hdr.pkt.color_3 = tmp_0;
+        tmp_2 = meter_3.execute(hdr.pkt.pre_color_3);
+        hdr.pkt.color_3 = tmp_2;
     }
-    @include_stash(1) @name(".table_0") table table_5 {
+    @include_stash(1) @name(".table_0") table table_1 {
         actions = {
             action_3();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.pkt.field_e_16 : ternary @name("pkt.field_e_16") ;
@@ -232,34 +240,34 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.pre_color_3: exact @name("pkt.pre_color_3") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
-    @name(".table_2") table table_6 {
+    @name(".table_2") table table_2 {
         actions = {
             do_nothing_1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.pkt.field_e_16: ternary @name("pkt.field_e_16") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".table_3") table table_7 {
+    @name(".table_3") table table_3 {
         actions = {
             do_nothing_4();
-            @defaultonly NoAction();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.pkt.field_e_16: ternary @name("pkt.field_e_16") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
     apply {
-        table_5.apply();
-        table_6.apply();
-        table_7.apply();
+        table_1.apply();
+        table_2.apply();
+        table_3.apply();
     }
 }
 

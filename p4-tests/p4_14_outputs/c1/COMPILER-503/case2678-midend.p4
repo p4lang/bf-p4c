@@ -585,6 +585,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<16> Mantee;
 }
 
+@name(".Elmdale") register<bit<1>>(32w262144) Elmdale;
+
+@name(".Ilwaco") register<bit<1>>(32w262144) Ilwaco;
+
 @name("Grottoes") struct Grottoes {
     bit<8>  Pinecreek;
     bit<16> Eucha;
@@ -1215,14 +1219,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = _Embarrass();
     }
-    @name(".Elmdale") register<bit<1>>(32w262144) _Elmdale_0;
-    @name(".Ilwaco") register<bit<1>>(32w262144) _Ilwaco_0;
-    @name(".Devore.Gerlach") register_action<bit<1>, bit<1>>(_Ilwaco_0) _Devore_Gerlach_0 = {
+    @name(".Devore.Gerlach") register_action<bit<1>, bit<1>>(Ilwaco) _Devore_Gerlach_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Devore.Vinita") register_action<bit<1>, bit<1>>(_Elmdale_0) _Devore_Vinita_0 = {
+    @name(".Devore.Vinita") register_action<bit<1>, bit<1>>(Elmdale) _Devore_Vinita_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

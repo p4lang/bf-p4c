@@ -211,13 +211,36 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bool tmp;
-    bool tmp_0;
-    bool tmp_1;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    bool tmp_2;
+    bool tmp_3;
+    bool tmp_4;
     @name(".do_forward") action do_forward_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
     @name(".assign_vlan") action assign_vlan_0(bit<3> prio, bit<1> cfi, bit<12> vid) {
+        meta.m.prio = prio;
+        meta.m.cfi = cfi;
+        meta.m.vid = vid;
+    }
+    @name(".assign_vlan") action assign_vlan_4(bit<3> prio, bit<1> cfi, bit<12> vid) {
+        meta.m.prio = prio;
+        meta.m.cfi = cfi;
+        meta.m.vid = vid;
+    }
+    @name(".assign_vlan") action assign_vlan_5(bit<3> prio, bit<1> cfi, bit<12> vid) {
+        meta.m.prio = prio;
+        meta.m.cfi = cfi;
+        meta.m.vid = vid;
+    }
+    @name(".assign_vlan") action assign_vlan_6(bit<3> prio, bit<1> cfi, bit<12> vid) {
         meta.m.prio = prio;
         meta.m.cfi = cfi;
         meta.m.vid = vid;
@@ -232,99 +255,99 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.vlan_tag.vid = meta.m.vid;
         hdr.vlan_tag.etherType = meta.m.etherType;
     }
-    @name(".forward") table forward_0 {
+    @name(".forward") table forward {
         actions = {
             do_forward_0();
         }
         size = 1;
         default_action = do_forward_0(9w1);
     }
-    @name(".mac_based_vlan") table mac_based_vlan_0 {
+    @name(".mac_based_vlan") table mac_based_vlan {
         actions = {
             assign_vlan_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 16384;
         implementation = vlan_profile;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".port_based_vlan") table port_based_vlan_0 {
+    @name(".port_based_vlan") table port_based_vlan {
         actions = {
-            assign_vlan_0();
-            @defaultonly NoAction();
+            assign_vlan_4();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 512;
         implementation = vlan_profile;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
-    @name(".protocol_based_vlan") table protocol_based_vlan_0 {
+    @name(".protocol_based_vlan") table protocol_based_vlan {
         actions = {
-            assign_vlan_0();
-            @defaultonly NoAction();
+            assign_vlan_5();
+            @defaultonly NoAction_6();
         }
         key = {
             meta.m.etherType: exact @name("m.etherType") ;
         }
         size = 1024;
         implementation = vlan_profile;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".set_vid") table set_vid_0 {
+    @name(".set_vid") table set_vid {
         actions = {
             do_set_vid_0();
         }
         size = 1;
         default_action = do_set_vid_0();
     }
-    @name(".set_vlan_tag") table set_vlan_tag_0 {
+    @name(".set_vlan_tag") table set_vlan_tag {
         actions = {
             do_set_vlan_tag_0();
         }
         size = 1;
         default_action = do_set_vlan_tag_0();
     }
-    @name(".subnet_based_vlan") table subnet_based_vlan_0 {
+    @name(".subnet_based_vlan") table subnet_based_vlan {
         actions = {
-            assign_vlan_0();
-            @defaultonly NoAction();
+            assign_vlan_6();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ipv4.srcAddr: lpm @name("ipv4.srcAddr") ;
         }
         size = 4096;
         implementation = vlan_profile;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
     apply {
         if (!hdr.vlan_tag.isValid() || hdr.vlan_tag.vid == 12w0) {
-            tmp_1 = subnet_based_vlan_0.apply().hit;
-            if (tmp_1) 
+            tmp_4 = subnet_based_vlan.apply().hit;
+            if (tmp_4) 
                 ;
             else {
-                tmp_0 = mac_based_vlan_0.apply().hit;
-                if (tmp_0) 
+                tmp_3 = mac_based_vlan.apply().hit;
+                if (tmp_3) 
                     ;
                 else {
-                    tmp = protocol_based_vlan_0.apply().hit;
-                    if (tmp) 
+                    tmp_2 = protocol_based_vlan.apply().hit;
+                    if (tmp_2) 
                         ;
                     else 
-                        port_based_vlan_0.apply();
+                        port_based_vlan.apply();
                 }
             }
         }
         if (!hdr.vlan_tag.isValid()) 
-            set_vlan_tag_0.apply();
+            set_vlan_tag.apply();
         else 
             if (hdr.vlan_tag.vid == 12w0) 
-                set_vid_0.apply();
-        forward_0.apply();
+                set_vid.apply();
+        forward.apply();
     }
 }
 

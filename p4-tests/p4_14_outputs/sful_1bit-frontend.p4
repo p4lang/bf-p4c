@@ -29,31 +29,34 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".reg") register<bit<1>>(32w1000) reg;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<1> tmp;
-    bit<1> tmp_0;
-    bit<1> tmp_1;
-    bit<1> tmp_2;
-    @name(".reg") register<bit<1>>(32w1000) reg_0;
-    @name("sful1") register_action<bit<1>, bit<1>>(reg_0) sful1_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    bit<1> tmp_3;
+    bit<1> tmp_4;
+    bit<1> tmp_5;
+    bit<1> tmp_6;
+    @name("sful1") register_action<bit<1>, bit<1>>(reg) sful1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
             value = 1w1;
         }
     };
-    @name("sful2") register_action<bit<1>, bit<1>>(reg_0) sful2_0 = {
+    @name("sful2") register_action<bit<1>, bit<1>>(reg) sful2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
             value = 1w0;
         }
     };
-    @name("sful3") register_action<bit<1>, bit<1>>(reg_0) sful3_0 = {
+    @name("sful3") register_action<bit<1>, bit<1>>(reg) sful3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
             value = value;
         }
     };
-    @name("sful4") register_action<bit<1>, bit<1>>(reg_0) sful4_0 = {
+    @name("sful4") register_action<bit<1>, bit<1>>(reg) sful4 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
             value = value;
@@ -63,34 +66,34 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         standard_metadata.egress_spec = port;
     }
     @name(".set") action set_1() {
-        tmp = sful1_0.execute(32w1);
-        hdr.data.bit1 = tmp;
+        tmp_3 = sful1.execute(32w1);
+        hdr.data.bit1 = tmp_3;
     }
     @name(".clr") action clr_0() {
-        tmp_0 = sful2_0.execute(32w1);
-        hdr.data.bit1 = tmp_0;
+        tmp_4 = sful2.execute(32w1);
+        hdr.data.bit1 = tmp_4;
     }
     @name(".read") action read_0() {
-        tmp_1 = sful3_0.execute(32w1);
-        hdr.data.bit1 = tmp_1;
+        tmp_5 = sful3.execute(32w1);
+        hdr.data.bit1 = tmp_5;
     }
     @name(".readc") action readc_0() {
-        tmp_2 = sful4_0.execute(32w1);
-        hdr.data.bit1 = tmp_2;
+        tmp_6 = sful4.execute(32w1);
+        hdr.data.bit1 = tmp_6;
     }
     @name(".noop") action noop_0() {
     }
-    @name(".do_out") table do_out_0 {
+    @name(".do_out") table do_out {
         actions = {
             output_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             set_1();
             clr_0();
@@ -104,8 +107,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = noop_0();
     }
     apply {
-        test1_0.apply();
-        do_out_0.apply();
+        test1.apply();
+        do_out.apply();
     }
 }
 

@@ -307,6 +307,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".nop") action nop_0() {
     }
     @name(".fib_hit_nexthop") action fib_hit_nexthop_0(bit<16> nexthop_index) {
@@ -319,22 +321,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.l3_metadata.fib_nexthop = ecmp_index;
         meta.l3_metadata.fib_nexthop_type = 1w1;
     }
-    @command_line("--no-dead-code-elimination") @name(".perf_exm_immediate_action") table perf_exm_immediate_action_0 {
+    @command_line("--no-dead-code-elimination") @name(".perf_exm_immediate_action") table perf_exm_immediate_action {
         actions = {
             nop_0();
             fib_hit_nexthop_0();
             fib_hit_ecmp_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.l3_metadata.vrf: exact @name("l3_metadata.vrf") ;
             hdr.ipv4.dstAddr    : exact @name("ipv4.dstAddr") ;
         }
         size = 1000000;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        perf_exm_immediate_action_0.apply();
+        perf_exm_immediate_action.apply();
     }
 }
 

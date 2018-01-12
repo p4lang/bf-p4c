@@ -212,8 +212,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".lag_action_profile") action_selector(HashAlgorithm.crc16, 32w1024, 32w14) lag_action_profile;
 
+@name(".lag_mbrs") register<bit<1>>(32w1) lag_mbrs;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".lag_mbrs") register<bit<1>>(32w1) lag_mbrs;
     selector_action(lag_action_profile) port_status_alu = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

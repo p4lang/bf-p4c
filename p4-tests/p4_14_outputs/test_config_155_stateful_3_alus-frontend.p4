@@ -170,25 +170,34 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".flow_cnt") register<bit<8>>(32w0) flow_cnt;
+
+@name(".stateful_cntr_1") register<bit<16>>(32w0) stateful_cntr_1;
+
+@name(".stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_2;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp;
-    bit<8> tmp_0;
-    @name(".flow_cnt") register<bit<8>>(32w0) flow_cnt_0;
-    @name(".stateful_cntr_1") register<bit<16>>(32w0) stateful_cntr;
-    @name(".stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_0;
-    @name("cntr_1") register_action<bit<16>, bit<16>>(stateful_cntr) cntr = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    bit<16> tmp_1;
+    bit<8> tmp_2;
+    @name("cntr_1") register_action<bit<16>, bit<16>>(stateful_cntr_1) cntr_1 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             value = value + 16w1;
         }
     };
-    @name("cntr_2") register_action<bit<16>, bit<16>>(stateful_cntr_0) cntr_0 = {
+    @name("cntr_2") register_action<bit<16>, bit<16>>(stateful_cntr_2) cntr_2 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w1;
             rv = value;
         }
     };
-    @name("sampler_alu") register_action<bit<8>, bit<8>>(flow_cnt_0) sampler_alu_0 = {
+    @name("sampler_alu") register_action<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
             rv = 8w0;
             if (value == 8w10) 
@@ -200,31 +209,31 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".cnt_1") action cnt() {
-        cntr.execute();
+        cntr_1.execute();
     }
     @name(".cnt_2") action cnt_0() {
-        tmp = cntr_0.execute();
-        meta.meta.count_value = tmp;
+        tmp_1 = cntr_2.execute();
+        meta.meta.count_value = tmp_1;
     }
     @name(".sample") action sample_0() {
-        tmp_0 = sampler_alu_0.execute();
-        meta.meta.needs_sampling = tmp_0;
+        tmp_2 = sampler_alu.execute();
+        meta.meta.needs_sampling = tmp_2;
     }
-    @table_counter("disabled") @name(".match_cntr_1") table match_cntr {
+    @table_counter("disabled") @name(".match_cntr_1") table match_cntr_1 {
         actions = {
             cnt();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32: exact @name("pkt.field_a_32") ;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".match_cntr_2") table match_cntr_0 {
+    @name(".match_cntr_2") table match_cntr_2 {
         actions = {
             cnt_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.pkt.field_a_32   : exact @name("pkt.field_a_32") ;
@@ -232,24 +241,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.count_value: exact @name("meta.count_value") ;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".match_flow") table match_flow_0 {
+    @name(".match_flow") table match_flow {
         actions = {
             sample_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.pkt.field_a_32      : ternary @name("pkt.field_a_32") ;
             meta.meta.needs_sampling: exact @name("meta.needs_sampling") ;
         }
         size = 8192;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        match_cntr.apply();
-        match_cntr_0.apply();
-        match_flow_0.apply();
+        match_cntr_1.apply();
+        match_cntr_2.apply();
+        match_flow.apply();
     }
 }
 

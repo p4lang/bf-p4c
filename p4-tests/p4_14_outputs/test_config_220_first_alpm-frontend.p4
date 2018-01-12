@@ -208,6 +208,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".ipv4_lpm_hit") action ipv4_lpm_hit_0() {
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
@@ -217,43 +223,45 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @alpm(1) @alpm_partitions(2048) @alpm_subtrees_per_partition(1) @name(".ipv4_alpm") table ipv4_alpm_0 {
+    @name(".do_nothing") action do_nothing_2() {
+    }
+    @alpm(1) @alpm_partitions(2048) @alpm_subtrees_per_partition(1) @name(".ipv4_alpm") table ipv4_alpm {
         actions = {
             ipv4_lpm_hit_0();
             lpm_miss_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.vrf   : exact @name("meta.vrf") ;
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_0") table table_2 {
+    @name(".table_0") table table_0 {
         actions = {
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".table_1") table table_3 {
+    @name(".table_1") table table_1 {
         actions = {
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_2();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        table_2.apply();
-        ipv4_alpm_0.apply();
-        table_3.apply();
+        table_0.apply();
+        ipv4_alpm.apply();
+        table_1.apply();
     }
 }
 

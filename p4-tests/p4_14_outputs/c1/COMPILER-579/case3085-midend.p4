@@ -699,6 +699,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 #include <tofino/p4_14_prim.p4>
 
+@name(".Oxford") register<bit<1>>(32w294912) Oxford;
+
+@name(".Sagamore") register<bit<1>>(32w294912) Sagamore;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -1472,14 +1476,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = _Millstadt_4();
     }
-    @name(".Oxford") register<bit<1>>(32w294912) _Oxford_0;
-    @name(".Sagamore") register<bit<1>>(32w294912) _Sagamore_0;
-    @name(".Ranchito.Fittstown") register_action<bit<1>, bit<1>>(_Sagamore_0) _Ranchito_Fittstown_0 = {
+    @name(".Ranchito.Fittstown") register_action<bit<1>, bit<1>>(Sagamore) _Ranchito_Fittstown_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Ranchito.Wheaton") register_action<bit<1>, bit<1>>(_Oxford_0) _Ranchito_Wheaton_0 = {
+    @name(".Ranchito.Wheaton") register_action<bit<1>, bit<1>>(Oxford) _Ranchito_Wheaton_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

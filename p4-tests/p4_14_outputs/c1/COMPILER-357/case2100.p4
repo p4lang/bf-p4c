@@ -751,9 +751,11 @@ control Brothers(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
+@name(".Jemison") register<bit<1>>(32w262144) Jemison;
+
+@name(".Sprout") register<bit<1>>(32w262144) Sprout;
+
 control Chamois(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Jemison") register<bit<1>>(32w262144) Jemison;
-    @name(".Sprout") register<bit<1>>(32w262144) Sprout;
     register_action<bit<1>, bit<1>>(Sprout) Millikin = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

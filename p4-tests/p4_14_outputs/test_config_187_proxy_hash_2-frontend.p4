@@ -33,16 +33,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".nop") action nop_0() {
     }
     @name(".set_dip") action set_dip_0() {
         hdr.pkt.blah = 16w8;
     }
-    @proxy_hash_width(24) @name(".exm_proxy_hash") table exm_proxy_hash_0 {
+    @proxy_hash_width(24) @name(".exm_proxy_hash") table exm_proxy_hash {
         actions = {
             nop_0();
             set_dip_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.srcAddr : exact @name("pkt.srcAddr") ;
@@ -52,10 +54,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.dstPort : exact @name("pkt.dstPort") ;
         }
         size = 400000;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        exm_proxy_hash_0.apply();
+        exm_proxy_hash.apply();
     }
 }
 

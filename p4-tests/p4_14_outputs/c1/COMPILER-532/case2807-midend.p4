@@ -701,6 +701,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".Loris") @mode("resilient") action_selector(HashAlgorithm.identity, 32w4096, 32w66) Loris;
 
 @name(".Quivero") @mode("resilient") action_selector(HashAlgorithm.identity, 32w512, 32w51) Quivero;
+
+@name(".Longwood") register<bit<1>>(32w262144) Longwood;
+
+@name(".Willshire") register<bit<1>>(32w262144) Willshire;
 #include <tofino/p4_14_prim.p4>
 
 @name("Mendocino") struct Mendocino {
@@ -1411,14 +1415,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3071;
         default_action = _Ekron();
     }
-    @name(".Longwood") register<bit<1>>(32w262144) _Longwood_0;
-    @name(".Willshire") register<bit<1>>(32w262144) _Willshire_0;
-    @name(".Ashburn.Mattapex") register_action<bit<1>, bit<1>>(_Willshire_0) _Ashburn_Mattapex_0 = {
+    @name(".Ashburn.Mattapex") register_action<bit<1>, bit<1>>(Willshire) _Ashburn_Mattapex_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Ashburn.RioPecos") register_action<bit<1>, bit<1>>(_Longwood_0) _Ashburn_RioPecos_0 = {
+    @name(".Ashburn.RioPecos") register_action<bit<1>, bit<1>>(Longwood) _Ashburn_RioPecos_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

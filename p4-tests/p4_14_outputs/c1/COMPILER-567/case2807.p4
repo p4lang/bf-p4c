@@ -922,9 +922,11 @@ control Arnett(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+@name(".Longwood") register<bit<1>>(32w262144) Longwood;
+
+@name(".Willshire") register<bit<1>>(32w262144) Willshire;
+
 control Ashburn(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Longwood") register<bit<1>>(32w262144) Longwood;
-    @name(".Willshire") register<bit<1>>(32w262144) Willshire;
     register_action<bit<1>, bit<1>>(Willshire) Mattapex = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

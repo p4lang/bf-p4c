@@ -35,43 +35,54 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".setport") action setport_0(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".action_0") action action_3() {
-        hdr.pkt.f1 = hdr.pkt.f7;
-        hdr.pkt.f2 = hdr.pkt.f8;
-        hdr.pkt.f3 = hdr.pkt.f9;
-        hdr.pkt.f4 = hdr.pkt.fa;
+    @name(".action_0") action action_4() {
+        hdr.pkt.f1 = hdr.pkt.f5;
+        hdr.pkt.f2 = hdr.pkt.fa;
+        hdr.pkt.f3 = hdr.pkt.f8;
+        hdr.pkt.f4 = hdr.pkt.f7;
     }
-    @name(".action_1") action action_4() {
+    @name(".action_1") action action_5() {
         hdr.pkt.f1 = hdr.pkt.f5;
         hdr.pkt.f2 = hdr.pkt.fa;
         hdr.pkt.f3 = hdr.pkt.f7;
         hdr.pkt.f4 = hdr.pkt.fc;
     }
-    @name(".action_2") action action_5() {
+    @name(".action_2") action action_6() {
         hdr.pkt.f1 = hdr.pkt.f5;
         hdr.pkt.f2 = hdr.pkt.fa;
         hdr.pkt.f3 = hdr.pkt.f7;
         hdr.pkt.f4 = hdr.pkt.f8;
     }
-    @name(".setting_port") table setting_port_0 {
+    @name(".action_3") action action_7() {
+        hdr.pkt.f1 = hdr.pkt.f7;
+        hdr.pkt.f2 = hdr.pkt.f8;
+        hdr.pkt.f3 = hdr.pkt.f9;
+        hdr.pkt.f4 = hdr.pkt.fa;
+    }
+    @name(".setting_port") table setting_port {
         actions = {
             setport_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.fc: exact @name("pkt.fc") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_0") table table_1 {
+    @name(".table_0") table table_0 {
         actions = {
-            action_3();
             action_4();
             action_5();
-            @defaultonly NoAction();
+            action_6();
+            action_7();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.pkt.f3: exact @name("pkt.f3") ;
@@ -80,11 +91,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.f7: exact @name("pkt.f7") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        table_1.apply();
-        setting_port_0.apply();
+        table_0.apply();
+        setting_port.apply();
     }
 }
 

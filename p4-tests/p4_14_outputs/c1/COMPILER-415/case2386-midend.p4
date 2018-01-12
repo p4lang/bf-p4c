@@ -565,6 +565,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".Toluca") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Toluca;
 
+@name(".Abraham") register<bit<1>>(32w262144) Abraham;
+
+@name(".Kennedale") register<bit<1>>(32w262144) Kennedale;
+
 @name("Reidland") struct Reidland {
     bit<8>  Romney;
     bit<16> Syria;
@@ -1109,14 +1113,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_46();
     }
-    @name(".Abraham") register<bit<1>>(32w262144) _Abraham_0;
-    @name(".Kennedale") register<bit<1>>(32w262144) _Kennedale_0;
-    @name(".Carrizozo.Silco") register_action<bit<1>, bit<1>>(_Abraham_0) _Carrizozo_Silco_0 = {
+    @name(".Carrizozo.Silco") register_action<bit<1>, bit<1>>(Abraham) _Carrizozo_Silco_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Carrizozo.Skene") register_action<bit<1>, bit<1>>(_Kennedale_0) _Carrizozo_Skene_0 = {
+    @name(".Carrizozo.Skene") register_action<bit<1>, bit<1>>(Kennedale) _Carrizozo_Skene_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

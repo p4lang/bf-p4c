@@ -185,9 +185,20 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+@name(".reg0") register<bit<16>>(32w512) reg0;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".reg0") register<bit<16>>(32w512) reg0_0;
-    @name("salu0") register_action<bit<16>, bit<16>>(reg0_0) salu0_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
+    @name("salu0") register_action<bit<16>, bit<16>>(reg0) salu0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             value = value + 16w1;
@@ -196,82 +207,103 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".lpm_hit") action lpm_hit_0(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
+    @name(".lpm_hit") action lpm_hit_5(bit<9> egress_port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+    }
+    @name(".lpm_hit") action lpm_hit_6(bit<9> egress_port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+    }
+    @name(".lpm_hit") action lpm_hit_7(bit<9> egress_port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+    }
+    @name(".lpm_hit") action lpm_hit_8(bit<9> egress_port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+    }
     @name(".lpm_hit_stful") action lpm_hit_stful_0(bit<9> egress_port, bit<32> index) {
-        salu0_0.execute(index);
+        salu0.execute(index);
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
     @name(".lpm_miss") action lpm_miss_0() {
         mark_to_drop();
     }
-    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(1, 7, 512) @clpm_prefix_length(8, 1024) @clpm_prefix_length(9, 15, 512) @clpm_prefix_length(16, 2048) @clpm_prefix_length(17, 23, 512) @clpm_prefix_length(24, 2048) @clpm_prefix_length(25, 31, 512) @clpm_prefix_length(32, 1024) @name(".ipv4_lpm") table ipv4_lpm_0 {
+    @name(".lpm_miss") action lpm_miss_4() {
+        mark_to_drop();
+    }
+    @name(".lpm_miss") action lpm_miss_5() {
+        mark_to_drop();
+    }
+    @name(".lpm_miss") action lpm_miss_6() {
+        mark_to_drop();
+    }
+    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(1, 7, 512) @clpm_prefix_length(8, 1024) @clpm_prefix_length(9, 15, 512) @clpm_prefix_length(16, 2048) @clpm_prefix_length(17, 23, 512) @clpm_prefix_length(24, 2048) @clpm_prefix_length(25, 31, 512) @clpm_prefix_length(32, 1024) @name(".ipv4_lpm") table ipv4_lpm {
         actions = {
             lpm_hit_0();
             lpm_hit_stful_0();
             lpm_miss_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         size = 8192;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(1, 7, 512) @clpm_prefix_length(8, 2048) @clpm_prefix_length(9, 23, 512) @clpm_prefix_length(24, 2048) @clpm_prefix_length(25, 32, 512) @name(".ipv4_lpm_adt") table ipv4_lpm_adt_0 {
+    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(1, 7, 512) @clpm_prefix_length(8, 2048) @clpm_prefix_length(9, 23, 512) @clpm_prefix_length(24, 2048) @clpm_prefix_length(25, 32, 512) @name(".ipv4_lpm_adt") table ipv4_lpm_adt {
         actions = {
-            lpm_hit_0();
-            lpm_miss_0();
-            @defaultonly NoAction();
+            lpm_hit_5();
+            lpm_miss_4();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         size = 5632;
         implementation = lpm_actions;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(1, 7, 512) @clpm_prefix_length(8, 2048) @clpm_prefix_length(9, 23, 512) @clpm_prefix_length(24, 2048) @clpm_prefix_length(25, 32, 512) @name(".ipv4_lpm_idle") table ipv4_lpm_idle_0 {
+    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(1, 7, 512) @clpm_prefix_length(8, 2048) @clpm_prefix_length(9, 23, 512) @clpm_prefix_length(24, 2048) @clpm_prefix_length(25, 32, 512) @name(".ipv4_lpm_idle") table ipv4_lpm_idle {
         support_timeout = true;
         actions = {
-            lpm_hit_0();
-            lpm_miss_0();
-            @defaultonly NoAction();
+            lpm_hit_6();
+            lpm_miss_5();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         size = 5632;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
-    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(1, 15, 8192) @clpm_prefix_length(16, 131072) @clpm_prefix_length(17, 23, 8192) @clpm_prefix_length(24, 131072) @clpm_prefix_length(25, 31, 8192) @clpm_prefix_length(32, 131072) @name(".ipv4_lpm_large") table ipv4_lpm_large_0 {
+    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(1, 15, 8192) @clpm_prefix_length(16, 131072) @clpm_prefix_length(17, 23, 8192) @clpm_prefix_length(24, 131072) @clpm_prefix_length(25, 31, 8192) @clpm_prefix_length(32, 131072) @name(".ipv4_lpm_large") table ipv4_lpm_large {
         actions = {
-            lpm_hit_0();
-            lpm_miss_0();
-            @defaultonly NoAction();
+            lpm_hit_7();
+            lpm_miss_6();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.ipv4.dstAddr : lpm @name("ipv4.dstAddr") ;
             hdr.ipv4.protocol: exact @name("ipv4.protocol") ;
         }
         size = 417792;
-        default_action = NoAction();
+        default_action = NoAction_8();
     }
-    @name(".non_ipv4") table non_ipv4_0 {
+    @name(".non_ipv4") table non_ipv4 {
         actions = {
-            lpm_hit_0();
-            @defaultonly NoAction();
+            lpm_hit_8();
+            @defaultonly NoAction_9();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_9();
     }
     apply {
         if (hdr.ethernet.isValid() && hdr.ipv4.isValid()) {
-            ipv4_lpm_0.apply();
-            ipv4_lpm_large_0.apply();
-            ipv4_lpm_adt_0.apply();
-            ipv4_lpm_idle_0.apply();
+            ipv4_lpm.apply();
+            ipv4_lpm_large.apply();
+            ipv4_lpm_adt.apply();
+            ipv4_lpm_idle.apply();
         }
         else 
-            non_ipv4_0.apply();
+            non_ipv4.apply();
     }
 }
 

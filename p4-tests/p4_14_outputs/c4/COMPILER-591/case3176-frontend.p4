@@ -422,12 +422,12 @@ struct headers {
 #include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<112> tmp;
-    bit<4> tmp_0;
-    bit<4> tmp_1;
+    bit<112> tmp_3;
+    bit<4> tmp_4;
+    bit<4> tmp_5;
     @name(".lookahead_etherType") state lookahead_etherType {
-        tmp = packet.lookahead<bit<112>>();
-        transition select(tmp[3:0]) {
+        tmp_3 = packet.lookahead<bit<112>>();
+        transition select(tmp_3[3:0]) {
             4w0x6: parse_vntag;
             4w0x3: parse_fabricpath;
             default: parse_outer_ethernet;
@@ -472,8 +472,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         transition accept;
     }
     @name(".parse_gtp_payload") state parse_gtp_payload {
-        tmp_0 = packet.lookahead<bit<4>>();
-        transition select(tmp_0[3:0]) {
+        tmp_4 = packet.lookahead<bit<4>>();
+        transition select(tmp_4[3:0]) {
             4w4: parse_gtp_inner_ipv4;
             4w6: parse_gtp_inner_ipv6;
             default: parse_gtp_inner_non_ip;
@@ -528,8 +528,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".parse_mpls_bos") state parse_mpls_bos {
-        tmp_1 = packet.lookahead<bit<4>>();
-        transition select(tmp_1[3:0]) {
+        tmp_5 = packet.lookahead<bit<4>>();
+        transition select(tmp_5[3:0]) {
             4w0x0: parse_mpls_pw_ctrl;
             4w0x4: parse_mpls_inner_ipv4;
             4w0x6: parse_mpls_inner_ipv6;
@@ -630,6 +630,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".nop") action nop_0() {
     }
+    @name(".nop") action nop_1() {
+    }
+    @name(".nop") action nop_10() {
+    }
     @name(".l2gre_encap") action l2gre_encap_0(bit<48> smac, bit<48> dmac, bit<32> sip, bit<32> dip) {
         hdr.inner_eth.dstAddr = hdr.outer_macs.dstAddr;
         hdr.inner_eth.srcAddr = hdr.outer_macs.srcAddr;
@@ -670,7 +674,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".rewrite_vlan1_ethtype") action rewrite_vlan1_ethtype_0(bit<16> etherType) {
         hdr.vlan_tag_[1].etherType = etherType;
     }
-    @name(".gtp_tbl") table gtp_tbl_0 {
+    @name(".gtp_tbl") table gtp_tbl {
         actions = {
             gtp_strip_0();
             nop_0();
@@ -682,23 +686,23 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         max_size = 256;
         default_action = nop_0();
     }
-    @name(".l2gre_encap_tbl") table l2gre_encap_tbl_0 {
+    @name(".l2gre_encap_tbl") table l2gre_encap_tbl {
         actions = {
             l2gre_encap_0();
-            nop_0();
+            nop_1();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         max_size = 256;
-        default_action = nop_0();
+        default_action = nop_1();
     }
-    @name(".rewrite_tbl") table rewrite_tbl_0 {
+    @name(".rewrite_tbl") table rewrite_tbl {
         actions = {
             rewrite_outer_ethtype_0();
             rewrite_vlan0_ethtype_0();
             rewrite_vlan1_ethtype_0();
-            nop_0();
+            nop_10();
         }
         key = {
             hdr.vlan_tag_[0].isValid() : exact @name("vlan_tag_[0].$valid$") ;
@@ -707,19 +711,39 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.meta.inner_tunnel_type: ternary @name("meta.inner_tunnel_type") ;
         }
         max_size = 16;
-        default_action = nop_0();
+        default_action = nop_10();
     }
     apply {
         if (meta.meta.lb_type == 2w3) 
-            gtp_tbl_0.apply();
-        rewrite_tbl_0.apply();
-        l2gre_encap_tbl_0.apply();
+            gtp_tbl.apply();
+        rewrite_tbl.apply();
+        l2gre_encap_tbl.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bool tmp_2;
-    @name(".nop") action nop_1() {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
+    bool tmp_6;
+    @name(".nop") action nop_11() {
+    }
+    @name(".nop") action nop_12() {
+    }
+    @name(".nop") action nop_13() {
+    }
+    @name(".nop") action nop_14() {
+    }
+    @name(".nop") action nop_15() {
+    }
+    @name(".nop") action nop_16() {
     }
     @name(".acl_deny") action acl_deny_0() {
         mark_to_drop();
@@ -728,7 +752,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_spec;
     }
     @name(".acl_permit") action acl_permit_0(bit<9> egress_spec) {
-        set_egr_0(egress_spec);
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_spec;
     }
     @name(".set_lb_hashed_index_ipv4") action set_lb_hashed_index_ipv4_0() {
         hash<bit<10>, bit<10>, tuple<bit<32>, bit<32>>, bit<20>>(meta.meta.lb_hash, HashAlgorithm.crc16, 10w0, { hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr }, 20w1024);
@@ -759,6 +783,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_lb_group") action set_lb_group_0(bit<3> group_num) {
         meta.meta.lb_port_group = group_num;
     }
+    @name(".set_lb_group") action set_lb_group_2(bit<3> group_num) {
+        meta.meta.lb_port_group = group_num;
+    }
     @name(".set_hashed_lb_port") action set_hashed_lb_port_0(bit<48> lb_port) {
         hdr.outer_macs.dstAddr[39:32] = lb_port[39:32];
     }
@@ -778,9 +805,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".vntag_strip") action vntag_strip_0() {
         hdr.vntag.setInvalid();
     }
-    @name(".acl_tbl") table acl_tbl_0 {
+    @name(".acl_tbl") table acl_tbl {
         actions = {
-            nop_1();
+            nop_11();
             acl_deny_0();
             acl_permit_0();
         }
@@ -797,108 +824,108 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.l3_metadata.lkp_ip_ttl   : ternary @name("l3_metadata.lkp_ip_ttl") ;
         }
         size = 1024;
-        default_action = nop_1();
+        default_action = nop_11();
     }
-    @name(".compute_inner_ip_hash_tbl_ipv4") table compute_inner_ip_hash_tbl_ipv4_0 {
+    @name(".compute_inner_ip_hash_tbl_ipv4") table compute_inner_ip_hash_tbl_ipv4 {
         actions = {
             set_lb_hashed_index_ipv4_0();
         }
         size = 1;
         default_action = set_lb_hashed_index_ipv4_0();
     }
-    @name(".compute_inner_ip_hash_tbl_ipv6") table compute_inner_ip_hash_tbl_ipv6_0 {
+    @name(".compute_inner_ip_hash_tbl_ipv6") table compute_inner_ip_hash_tbl_ipv6 {
         actions = {
             set_lb_hashed_index_ipv6_0();
         }
         size = 1;
         default_action = set_lb_hashed_index_ipv6_0();
     }
-    @name(".fp_tbl") table fp_tbl_0 {
+    @name(".fp_tbl") table fp_tbl {
         actions = {
             fp_strip_0();
-            nop_1();
+            nop_12();
         }
         key = {
             hdr.fp_hdr.isValid()       : exact @name("fp_hdr.$valid$") ;
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         max_size = 256;
-        default_action = nop_1();
+        default_action = nop_12();
     }
-    @name(".fwd_tbl") table fwd_tbl_0 {
+    @name(".fwd_tbl") table fwd_tbl {
         actions = {
             set_egr_0();
             _drop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         max_size = 16;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".geneve_tbl") table geneve_tbl_0 {
+    @name(".geneve_tbl") table geneve_tbl {
         actions = {
             geneve_strip_0();
-            nop_1();
+            nop_13();
         }
         key = {
             hdr.geneve_hdr.isValid()   : exact @name("geneve_hdr.$valid$") ;
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         max_size = 256;
-        default_action = nop_1();
+        default_action = nop_13();
     }
-    @name(".l2gre_decap_tbl") table l2gre_decap_tbl_0 {
+    @name(".l2gre_decap_tbl") table l2gre_decap_tbl {
         actions = {
             l2gre_decap_0();
-            nop_1();
+            nop_14();
         }
         key = {
             hdr.gre.isValid()          : exact @name("gre.$valid$") ;
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         max_size = 256;
-        default_action = nop_1();
+        default_action = nop_14();
     }
-    @name(".lb_group_tbl_ipv4") table lb_group_tbl_ipv4_0 {
+    @name(".lb_group_tbl_ipv4") table lb_group_tbl_ipv4 {
         actions = {
             set_lb_group_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.outer_ipv4.srcAddr: ternary @name("outer_ipv4.srcAddr") ;
         }
         max_size = 16;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".lb_group_tbl_ipv6") table lb_group_tbl_ipv6_0 {
+    @name(".lb_group_tbl_ipv6") table lb_group_tbl_ipv6 {
         actions = {
-            set_lb_group_0();
-            @defaultonly NoAction();
+            set_lb_group_2();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.outer_ipv6.srcAddr: ternary @name("outer_ipv6.srcAddr") ;
         }
         max_size = 16;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
-    @name(".lb_weight_tbl") table lb_weight_tbl_0 {
+    @name(".lb_weight_tbl") table lb_weight_tbl {
         actions = {
             set_hashed_lb_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.gtpv1_hdr.isValid(): exact @name("gtpv1_hdr.$valid$") ;
             meta.meta.lb_hash      : exact @name("meta.lb_hash") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_8();
     }
-    @name(".mpls_tbl") table mpls_tbl_0 {
+    @name(".mpls_tbl") table mpls_tbl {
         actions = {
             mpls_strip_0();
-            nop_1();
+            nop_15();
         }
         key = {
             hdr.ig_intr_md.ingress_port   : exact @name("ig_intr_md.ingress_port") ;
@@ -907,12 +934,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.mpls_tunnel_type    : exact @name("meta.mpls_tunnel_type") ;
         }
         max_size = 16;
-        default_action = nop_1();
+        default_action = nop_15();
     }
-    @name(".rewrite_dmac_tbl") table rewrite_dmac_tbl_0 {
+    @name(".rewrite_dmac_tbl") table rewrite_dmac_tbl {
         actions = {
             rewrite_outer_dmac_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_9();
         }
         key = {
             hdr.gtpv1_hdr.isValid()    : exact @name("gtpv1_hdr.$valid$") ;
@@ -921,42 +948,42 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.lb_port_group    : exact @name("meta.lb_port_group") ;
         }
         max_size = 64;
-        default_action = NoAction();
+        default_action = NoAction_9();
     }
-    @name(".vntag_tbl") table vntag_tbl_0 {
+    @name(".vntag_tbl") table vntag_tbl {
         actions = {
             vntag_strip_0();
-            nop_1();
+            nop_16();
         }
         key = {
             hdr.vntag.isValid()        : exact @name("vntag.$valid$") ;
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         max_size = 256;
-        default_action = nop_1();
+        default_action = nop_16();
     }
     apply {
         if (meta.meta.inner_tunnel_type == 3w2) 
-            compute_inner_ip_hash_tbl_ipv4_0.apply();
+            compute_inner_ip_hash_tbl_ipv4.apply();
         else 
             if (meta.meta.inner_tunnel_type == 3w3) 
-                compute_inner_ip_hash_tbl_ipv6_0.apply();
-        fp_tbl_0.apply();
-        vntag_tbl_0.apply();
-        lb_weight_tbl_0.apply();
+                compute_inner_ip_hash_tbl_ipv6.apply();
+        fp_tbl.apply();
+        vntag_tbl.apply();
+        lb_weight_tbl.apply();
         if (hdr.outer_ipv4.isValid()) 
-            lb_group_tbl_ipv4_0.apply();
+            lb_group_tbl_ipv4.apply();
         if (hdr.outer_ipv6.isValid()) 
-            lb_group_tbl_ipv6_0.apply();
-        mpls_tbl_0.apply();
-        geneve_tbl_0.apply();
-        l2gre_decap_tbl_0.apply();
-        rewrite_dmac_tbl_0.apply();
-        tmp_2 = acl_tbl_0.apply().hit;
-        if (tmp_2) 
+            lb_group_tbl_ipv6.apply();
+        mpls_tbl.apply();
+        geneve_tbl.apply();
+        l2gre_decap_tbl.apply();
+        rewrite_dmac_tbl.apply();
+        tmp_6 = acl_tbl.apply().hit;
+        if (tmp_6) 
             ;
         else 
-            fwd_tbl_0.apply();
+            fwd_tbl.apply();
     }
 }
 

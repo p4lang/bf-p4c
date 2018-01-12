@@ -170,6 +170,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".reg_0") register<bit<8>>(32w131072) reg_0;
+
+@name(".reg_1") register<bit<8>>(32w131072) reg_1;
+
 struct tuple_0 {
     bit<32> field;
     bit<32> field_0;
@@ -190,8 +194,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name(".reg_0") register<bit<8>>(32w131072) reg_0;
-    @name(".reg_1") register<bit<8>>(32w131072) reg_1;
     @name("alu_0") register_action<bit<8>, bit<8>>(reg_0) alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = 8w15;

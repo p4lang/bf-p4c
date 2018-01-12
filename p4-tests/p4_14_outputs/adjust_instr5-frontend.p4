@@ -25,6 +25,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".set_port") action set_port_0(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
@@ -43,41 +49,41 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.n2 = param1;
         hdr.data.b1 = 8w0xab;
     }
-    @name(".port_setter") table port_setter_0 {
+    @name(".port_setter") table port_setter {
         actions = {
             set_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.read: exact @name("data.read") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             constant_conversion_adt_0();
             constant_conversion_adt2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.data.read: exact @name("data.read") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".test2") table test2_0 {
+    @name(".test2") table test2 {
         actions = {
             constant_conversion_immed_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.data.read: exact @name("data.read") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        test1_0.apply();
-        test2_0.apply();
-        port_setter_0.apply();
+        test1.apply();
+        test2.apply();
+        port_setter.apply();
     }
 }
 

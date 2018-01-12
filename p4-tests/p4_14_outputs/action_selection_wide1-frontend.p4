@@ -37,6 +37,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".set_r1_10") @mode("fair") action_selector(HashAlgorithm.crc16, 32w1024, 32w14) set_r1_10;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".setr1_5") action setr1(bit<32> val1, bit<32> val2, bit<32> val3, bit<32> val4, bit<32> val5) {
         hdr.data.r1 = val1;
         hdr.data.r2 = val2;
@@ -51,11 +53,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.r9 = val9;
         hdr.data.r10 = val10;
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             setr1();
             setr6();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
@@ -65,10 +67,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 10000;
         implementation = set_r1_10;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        test1_0.apply();
+        test1.apply();
     }
 }
 

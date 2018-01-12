@@ -164,50 +164,59 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 #include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".action_0") action action_3() {
         bypass_egress();
     }
-    @name(".action_1") action action_4() {
+    @name(".action_0") action action_4() {
+        bypass_egress();
+    }
+    @name(".action_1") action action_5() {
         mark_to_drop();
     }
-    @name(".action_2") action action_5() {
+    @name(".action_2") action action_7() {
     }
-    @name(".table_0") table table_3 {
+    @name(".table_0") table table_0 {
         actions = {
             action_3();
-            action_4();
-            @defaultonly NoAction();
+            action_5();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_4 {
+    @name(".table_1") table table_1 {
         actions = {
-            action_5();
-            @defaultonly NoAction();
+            action_7();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".table_2") table table_5 {
+    @name(".table_2") table table_2 {
         actions = {
-            action_3();
-            @defaultonly NoAction();
+            action_4();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        table_3.apply();
-        table_4.apply();
-        table_5.apply();
+        table_0.apply();
+        table_1.apply();
+        table_2.apply();
     }
 }
 

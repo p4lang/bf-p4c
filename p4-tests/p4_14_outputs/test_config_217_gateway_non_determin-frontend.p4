@@ -202,6 +202,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".set_all") action set_all_0(bit<32> p0, bit<4> p2, bit<16> p3) {
         meta.meta.a = p0;
         meta.meta.c = p2;
@@ -220,34 +226,36 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name(".table_i0") table table_i0_0 {
+    @name(".do_nothing") action do_nothing_2() {
+    }
+    @name(".table_i0") table table_i0 {
         actions = {
             set_all_0();
             action_2();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr_0.b: ternary @name("hdr_0.b") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_i1") table table_i1_0 {
+    @name(".table_i1") table table_i1 {
         actions = {
             action_3();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.hdr_1.c: ternary @name("hdr_1.c") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".table_i2") table table_i2_0 {
+    @name(".table_i2") table table_i2 {
         actions = {
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_2();
+            @defaultonly NoAction_5();
         }
         key = {
             meta.meta.a: exact @name("meta.a") ;
@@ -256,17 +264,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.d: exact @name("meta.d") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
         if (hdr.hdr_0.isValid()) 
             if (hdr.first.a == 8w1 && hdr.first.b == 8w3) 
-                table_i0_0.apply();
+                table_i0.apply();
         else 
             if (hdr.first.d == 8w8 && meta.meta.b == 4w5 && meta.meta.c == 4w0) 
-                table_i1_0.apply();
+                table_i1.apply();
         if (hdr.hdr_1.isValid()) 
-            table_i2_0.apply();
+            table_i2.apply();
     }
 }
 

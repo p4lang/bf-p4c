@@ -273,7 +273,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".egress_port") action egress_port_0(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @use_hash_action(1) @name(".hash_action_ha_exm") table hash_action_ha_exm_0 {
+    @use_hash_action(1) @name(".hash_action_ha_exm") table hash_action_ha_exm {
         actions = {
             hash_action_ha_0();
         }
@@ -286,7 +286,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 8192;
         default_action = hash_action_ha_0(12w1947, 3w5, 8w45);
     }
-    @name(".set_eg_port") table set_eg_port_0 {
+    @name(".set_eg_port") table set_eg_port {
         actions = {
             egress_port_0();
         }
@@ -297,9 +297,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = egress_port_0(9w2);
     }
     apply {
-        set_eg_port_0.apply();
+        set_eg_port.apply();
         if (hdr.tcp.srcPort == 16w9000) 
-            hash_action_ha_exm_0.apply();
+            hash_action_ha_exm.apply();
     }
 }
 

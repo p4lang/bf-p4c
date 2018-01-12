@@ -165,6 +165,14 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
     @name(".assign_egress1_action") action assign_egress1_action_0() {
         meta.ing_metadata.egress_port1 = meta.ing_metadata.tmp;
     }
@@ -177,49 +185,49 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_ingress_port_props") action set_ingress_port_props_0(bit<1> port_type) {
         meta.ing_metadata.flag = port_type;
     }
-    @name(".assign_egress1") table assign_egress1_0 {
+    @name(".assign_egress1") table assign_egress1 {
         actions = {
             assign_egress1_action_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".assign_egress2") table assign_egress2_0 {
+    @name(".assign_egress2") table assign_egress2 {
         actions = {
             assign_egress2_action_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
-    @name(".dmac") table dmac_0 {
+    @name(".dmac") table dmac {
         actions = {
             assign_egress_interfaces_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".ingress_port_map") table ingress_port_map_0 {
+    @name(".ingress_port_map") table ingress_port_map {
         actions = {
             set_ingress_port_props_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {
-            ingress_port_map_0.apply();
-            dmac_0.apply();
+            ingress_port_map.apply();
+            dmac.apply();
             if (meta.ing_metadata.flag == 1w1) 
-                assign_egress1_0.apply();
+                assign_egress1.apply();
             else 
-                assign_egress2_0.apply();
+                assign_egress2.apply();
         }
     }
 }

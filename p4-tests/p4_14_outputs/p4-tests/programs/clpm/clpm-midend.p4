@@ -185,6 +185,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+@name(".reg0") register<bit<16>>(32w512) reg0;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -196,7 +198,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_9() {
     }
-    @name(".reg0") register<bit<16>>(32w512) reg0;
     @name("salu0") register_action<bit<16>, bit<16>>(reg0) salu0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;

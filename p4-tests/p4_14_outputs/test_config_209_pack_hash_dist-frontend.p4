@@ -170,60 +170,66 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".reg_0") register<bit<8>>(32w131072) reg_0;
+
+@name(".reg_1") register<bit<8>>(32w131072) reg_1;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<17> temp_1;
-    bit<17> temp_2;
-    bit<8> tmp;
-    bit<8> tmp_0;
-    @name(".reg_0") register<bit<8>>(32w131072) reg_2;
-    @name(".reg_1") register<bit<8>>(32w131072) reg_3;
-    @name("alu_0") register_action<bit<8>, bit<8>>(reg_2) alu = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    bit<17> temp;
+    bit<17> temp_0;
+    bit<8> tmp_1;
+    bit<8> tmp_2;
+    @name("alu_0") register_action<bit<8>, bit<8>>(reg_0) alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = 8w15;
             rv = value;
         }
     };
-    @name("alu_1") register_action<bit<8>, bit<8>>(reg_3) alu_2 = {
+    @name("alu_1") register_action<bit<8>, bit<8>>(reg_1) alu_1 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = 8w0x30;
             rv = value;
         }
     };
     @name(".action_0") action action_2() {
-        hash<bit<17>, bit<17>, tuple<bit<32>, bit<32>>, bit<18>>(temp_1, HashAlgorithm.random, 17w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 18w131072);
-        tmp = alu.execute((bit<32>)temp_1);
-        meta.meta.result_8 = tmp;
+        hash<bit<17>, bit<17>, tuple<bit<32>, bit<32>>, bit<18>>(temp, HashAlgorithm.random, 17w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 18w131072);
+        tmp_1 = alu_0.execute((bit<32>)temp);
+        meta.meta.result_8 = tmp_1;
     }
     @name(".action_1") action action_3() {
-        hash<bit<17>, bit<17>, tuple<bit<32>, bit<32>, bit<16>>, bit<18>>(temp_2, HashAlgorithm.random, 17w0, { hdr.pkt.field_c_32, hdr.pkt.field_d_32, hdr.pkt.field_e_16 }, 18w131072);
-        tmp_0 = alu_2.execute((bit<32>)temp_2);
-        meta.meta.result_8 = tmp_0;
+        hash<bit<17>, bit<17>, tuple<bit<32>, bit<32>, bit<16>>, bit<18>>(temp_0, HashAlgorithm.random, 17w0, { hdr.pkt.field_c_32, hdr.pkt.field_d_32, hdr.pkt.field_e_16 }, 18w131072);
+        tmp_2 = alu_1.execute((bit<32>)temp_0);
+        meta.meta.result_8 = tmp_2;
     }
-    @name(".table_0") table table_2 {
+    @name(".table_0") table table_0 {
         actions = {
             action_2();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32: lpm @name("pkt.field_a_32") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_3 {
+    @name(".table_1") table table_1 {
         actions = {
             action_3();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.pkt.field_b_32: lpm @name("pkt.field_b_32") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        table_2.apply();
-        table_3.apply();
+        table_0.apply();
+        table_1.apply();
     }
 }
 

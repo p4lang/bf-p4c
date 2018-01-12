@@ -37,6 +37,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 #include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".nop") action nop_0() {
     }
     @name(".action_0") action action_2() {
@@ -45,22 +47,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_1") action action_3() {
         invalidate<bit<32>>(hdr.pkt.a);
     }
-    @name(".table_0") table table_1 {
+    @name(".table_0") table table_0 {
         actions = {
             nop_0();
             action_2();
             action_3();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.srcPort: exact @name("pkt.srcPort") ;
             hdr.pkt.dstPort: ternary @name("pkt.dstPort") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        table_1.apply();
+        table_0.apply();
     }
 }
 

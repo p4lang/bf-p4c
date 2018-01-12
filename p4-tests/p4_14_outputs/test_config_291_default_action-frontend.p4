@@ -155,6 +155,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".a0") action a0_0(bit<16> x) {
         hdr.hdr1.a = x;
     }
@@ -166,13 +172,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_0() {
     }
+    @name(".do_nothing") action do_nothing_4() {
+    }
+    @name(".do_nothing") action do_nothing_5() {
+    }
+    @name(".do_nothing") action do_nothing_6() {
+    }
     @name(".a3") action a3_0(bit<16> x) {
+        hdr.hdr1.c = x;
+    }
+    @name(".a3") action a3_2(bit<16> x) {
         hdr.hdr1.c = x;
     }
     @name(".a4") action a4_0(bit<16> x) {
         hdr.hdr1.d = x;
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             a0_0();
             a1_0();
@@ -185,51 +200,51 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = a0_0(16w1);
     }
-    @name(".t2") table t2_0 {
+    @name(".t2") table t2 {
         actions = {
             a3_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_4();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr1.a: ternary @name("hdr1.a") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t3") table t3_0 {
+    @name(".t3") table t3 {
         actions = {
             a4_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_5();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.hdr1.a: ternary @name("hdr1.a") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".t4") table t4_0 {
+    @name(".t4") table t4 {
         actions = {
-            a3_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            a3_2();
+            do_nothing_6();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.hdr1.a: ternary @name("hdr1.a") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        switch (t1_0.apply().action_run) {
+        switch (t1.apply().action_run) {
             a0_0: {
-                t2_0.apply();
-                t3_0.apply();
+                t2.apply();
+                t3.apply();
             }
         }
 
-        t4_0.apply();
+        t4.apply();
     }
 }
 

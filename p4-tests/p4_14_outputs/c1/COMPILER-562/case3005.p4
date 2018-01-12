@@ -2313,9 +2313,11 @@ control Hollymead(inout headers hdr, inout metadata meta, inout standard_metadat
     }
 }
 
+@name(".Servia") register<bit<1>>(32w262144) Servia;
+
+@name(".Verdery") register<bit<1>>(32w262144) Verdery;
+
 control Howland(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Servia") register<bit<1>>(32w262144) Servia;
-    @name(".Verdery") register<bit<1>>(32w262144) Verdery;
     register_action<bit<1>, bit<1>>(Servia) FulksRun = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

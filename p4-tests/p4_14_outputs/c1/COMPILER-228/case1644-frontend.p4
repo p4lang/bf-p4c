@@ -41,139 +41,130 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
-control c1(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".a1") action a1_0() {
+control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
+    @name("NoAction") action NoAction_10() {
+    }
+    @name("NoAction") action NoAction_11() {
+    }
+    @name(".a1") action _a1() {
         meta.m2.f13 = meta.m1.f4;
         meta.m2.f14 = meta.m1.f5;
         meta.m2.f11 = meta.m1.f1;
     }
-    @name(".T1") table T1_0 {
+    @name(".T1") table _T1_0 {
         actions = {
-            a1_0();
-            @defaultonly NoAction();
+            _a1();
+            @defaultonly NoAction_0();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    apply {
-        T1_0.apply();
-    }
-}
-
-control c2(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".a2") action a2_0() {
+    @name(".a2") action _a2() {
         meta.m2.f17 = 1w1;
         meta.m2.f15 = 1w1;
         meta.m2.f16 = (bit<13>)meta.m2.f11;
     }
-    @name(".a3") action a3_0() {
+    @name(".a3") action _a3() {
     }
-    @name(".a6") action a6_0() {
+    @name(".a6") action _a6() {
         meta.m2.f20 = 1w1;
         meta.m2.f16 = (bit<13>)meta.m2.f11;
     }
-    @name(".a7") action a7_0(bit<12> f12) {
+    @name(".a7") action _a7(bit<12> f12) {
         meta.m2.f19 = 1w1;
         meta.m2.f12 = f12;
     }
-    @name(".a8") action a8_0(bit<13> f16) {
+    @name(".a8") action _a8(bit<13> f16) {
         meta.m2.f18 = 1w1;
         meta.m2.f16 = f16;
     }
-    @name(".a9") action a9_0() {
+    @name(".a9") action _a9() {
     }
-    @name(".a4") action a4_0() {
+    @name(".a4") action _a4() {
         meta.m2.f18 = 1w1;
         meta.m2.f21 = 1w1;
         meta.m2.f16 = (bit<13>)meta.m2.f11 + 13w0x1;
     }
-    @ways(1) @name(".T2") table T2_0 {
+    @ways(1) @name(".T2") table _T2_0 {
         actions = {
-            a2_0();
-            a3_0();
-            @defaultonly NoAction();
+            _a2();
+            _a3();
+            @defaultonly NoAction_7();
         }
         key = {
             meta.m1.f4: exact @name("m1.f4") ;
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
-    @name(".T3") table T3_0 {
+    @name(".T3") table _T3_0 {
         actions = {
-            a6_0();
-            @defaultonly NoAction();
+            _a6();
+            @defaultonly NoAction_8();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_8();
     }
-    @name(".T4") table T4_0 {
+    @name(".T4") table _T4_0 {
         actions = {
-            a7_0();
-            a8_0();
-            a9_0();
-            @defaultonly NoAction();
+            _a7();
+            _a8();
+            _a9();
+            @defaultonly NoAction_9();
         }
         key = {
             meta.m1.f4: exact @name("m1.f4") ;
             meta.m1.f1: exact @name("m1.f1") ;
         }
         size = 64;
-        default_action = NoAction();
+        default_action = NoAction_9();
     }
-    @name(".T6") table T6_0 {
+    @name(".T6") table _T6_0 {
         actions = {
-            a4_0();
-            @defaultonly NoAction();
+            _a4();
+            @defaultonly NoAction_10();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_10();
+    }
+    @name(".a10") action _a10() {
+    }
+    @name(".T5") table _T5_0 {
+        actions = {
+            _a10();
+            @defaultonly NoAction_11();
+        }
+        key = {
+            meta.m2.f16: exact @name("m2.f16") ;
+        }
+        size = 1;
+        default_action = NoAction_11();
     }
     apply {
-        switch (T4_0.apply().action_run) {
-            a9_0: {
-                switch (T2_0.apply().action_run) {
-                    a3_0: {
+        _T1_0.apply();
+        switch (_T4_0.apply().action_run) {
+            _a9: {
+                switch (_T2_0.apply().action_run) {
+                    _a3: {
                         if (meta.m1.f7 == 5w0x0) 
-                            T6_0.apply();
+                            _T6_0.apply();
                         else 
-                            T3_0.apply();
+                            _T3_0.apply();
                     }
                 }
 
             }
         }
 
-    }
-}
-
-control c3(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".a10") action a10_0() {
-    }
-    @name(".T5") table T5_0 {
-        actions = {
-            a10_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.m2.f16: exact @name("m2.f16") ;
-        }
-        size = 1;
-        default_action = NoAction();
-    }
-    apply {
-        T5_0.apply();
-    }
-}
-
-control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".c1") c1() c1_1;
-    @name(".c2") c2() c2_1;
-    @name(".c3") c3() c3_1;
-    apply {
-        c1_1.apply(hdr, meta, standard_metadata);
-        c2_1.apply(hdr, meta, standard_metadata);
-        c3_1.apply(hdr, meta, standard_metadata);
+        _T5_0.apply();
     }
 }
 

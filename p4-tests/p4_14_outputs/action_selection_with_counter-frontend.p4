@@ -40,7 +40,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".set_b4_6") @mode("fair") action_selector(HashAlgorithm.random, 32w1024, 32w14) set_b4_6;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".test3_counter") counter(32w4000, CounterType.packets) test3_counter_0;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    @name(".test3_counter") counter(32w4000, CounterType.packets) test3_counter;
     @name(".setb1") action setb1_0(bit<8> val1) {
         hdr.data.b1 = val1;
     }
@@ -60,14 +66,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.b6 = val6;
     }
     @name(".my_count") action my_count_0(bit<32> idx) {
-        test3_counter_0.count(idx);
+        test3_counter.count(idx);
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             setb1_0();
             setb2_0();
             setb3_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
@@ -77,14 +83,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 10000;
         implementation = set_b1_3;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".test2") table test2_0 {
+    @name(".test2") table test2 {
         actions = {
             setb4_0();
             setb5_0();
             setb6_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.data.f2: exact @name("data.f2") ;
@@ -94,23 +100,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 5000;
         implementation = set_b4_6;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".test3") table test3_0 {
+    @name(".test3") table test3 {
         actions = {
             my_count_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.data.f3: exact @name("data.f3") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        test1_0.apply();
-        test2_0.apply();
-        test3_0.apply();
+        test1.apply();
+        test2.apply();
+        test3.apply();
     }
 }
 

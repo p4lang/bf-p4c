@@ -195,42 +195,51 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name("._nop") action _nop_0() {
+    }
+    @name("._nop") action _nop_2() {
     }
     @name(".set_ecmp_nexthop") action set_ecmp_nexthop_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".ecmp_group") table ecmp_group_0 {
+    @name(".set_ecmp_nexthop") action set_ecmp_nexthop_2(bit<9> port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = port;
+    }
+    @name(".ecmp_group") table ecmp_group {
         actions = {
             _nop_0();
             set_ecmp_nexthop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 1024;
         implementation = ecmp_action_profile;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".ecmp_group2") table ecmp_group2_0 {
+    @name(".ecmp_group2") table ecmp_group2 {
         actions = {
-            _nop_0();
-            set_ecmp_nexthop_0();
-            @defaultonly NoAction();
+            _nop_2();
+            set_ecmp_nexthop_2();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
         }
         size = 1024;
         implementation = ecmp_action_profile;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.ipv4.isValid()) 
-            ecmp_group_0.apply();
+            ecmp_group.apply();
         else 
-            ecmp_group2_0.apply();
+            ecmp_group2.apply();
     }
 }
 

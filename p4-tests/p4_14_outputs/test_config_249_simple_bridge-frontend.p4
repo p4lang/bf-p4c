@@ -202,16 +202,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".set_port") action set_port_0(bit<9> p0) {
         hdr.eg_intr_md.egress_port = p0;
     }
-    @name(".te0") table te0_0 {
+    @name(".te0") table te0 {
         actions = {
             do_nothing_0();
             set_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.m.w    : ternary @name("m.w") ;
@@ -221,15 +223,21 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.ipv4.ttl: exact @name("ipv4.ttl") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        te0_0.apply();
+        te0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_1() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".do_nothing") action do_nothing_1() {
+    }
+    @name(".do_nothing") action do_nothing_4() {
     }
     @name(".i0") action i0_0(bit<8> px, bit<16> py, bit<64> pz) {
         meta.m.w = 6w4;
@@ -237,32 +245,32 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.m.y = py;
         meta.m.z = pz;
     }
-    @name(".t0") table t0_0 {
+    @name(".t0") table t0 {
         actions = {
             do_nothing_1();
             i0_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary @name("ethernet.srcAddr[15:0]") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
-            do_nothing_1();
-            @defaultonly NoAction();
+            do_nothing_4();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary @name("ethernet.srcAddr[15:0]") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        t0_0.apply();
-        t1_0.apply();
+        t0.apply();
+        t1.apply();
     }
 }
 

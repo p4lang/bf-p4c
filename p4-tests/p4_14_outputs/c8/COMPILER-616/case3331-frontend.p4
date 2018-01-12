@@ -225,7 +225,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<4> tmp;
+    bit<4> tmp_0;
     @name(".parse_ethernet_inner") state parse_ethernet_inner {
         packet.extract<ethernet_t>(hdr.ethernet_inner);
         transition select(hdr.ethernet_inner.etherType) {
@@ -241,8 +241,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".parse_ip") state parse_ip {
-        tmp = packet.lookahead<bit<4>>();
-        transition select(tmp[3:0]) {
+        tmp_0 = packet.lookahead<bit<4>>();
+        transition select(tmp_0[3:0]) {
             4w4: parse_ipv4;
             4w6: parse_ipv6;
             default: accept;
@@ -303,6 +303,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_1() {
+    }
     @name("._drop") action _drop_0() {
         meta.ingress_md.usds = 2w0x2;
         mark_to_drop();
@@ -317,45 +321,111 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".a_us_srcmac") action a_us_srcmac_0(bit<48> src_mac) {
         hdr.ethernet_outer.srcAddr = src_mac;
     }
-    @name(".t_ds_srcmac") table t_ds_srcmac_0 {
+    @name(".t_ds_srcmac") table t_ds_srcmac {
         actions = {
             _drop_0();
             a_ds_srcmac_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md_for_tm.ucast_egress_port: exact @name("ig_intr_md_for_tm.ucast_egress_port") ;
             hdr.mpls0.label                        : exact @name("mpls0.label") ;
         }
         max_size = 256;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t_us_srcmac") table t_us_srcmac_0 {
+    @name(".t_us_srcmac") table t_us_srcmac {
         actions = {
             _nop_0();
             a_us_srcmac_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ig_intr_md_for_tm.ucast_egress_port: exact @name("ig_intr_md_for_tm.ucast_egress_port") ;
             hdr.mpls0.label                        : exact @name("mpls0.label") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
         if (meta.ingress_md.cp == 1w0) 
             if (meta.ingress_md.usds == 2w0x1) 
-                t_us_srcmac_0.apply();
+                t_us_srcmac.apply();
             else 
-                t_ds_srcmac_0.apply();
+                t_ds_srcmac.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".ctr_ds_subsc") counter(32w4096, CounterType.packets) ctr_ds_subsc_0;
-    @name(".ctr_us_subsc") counter(32w4096, CounterType.packets) ctr_us_subsc_0;
-    @name(".mtr_ds_subsc") meter(32w4096, MeterType.bytes) mtr_ds_subsc_0;
+    @name("NoAction") action NoAction_17() {
+    }
+    @name("NoAction") action NoAction_18() {
+    }
+    @name("NoAction") action NoAction_19() {
+    }
+    @name("NoAction") action NoAction_20() {
+    }
+    @name("NoAction") action NoAction_21() {
+    }
+    @name("NoAction") action NoAction_22() {
+    }
+    @name("NoAction") action NoAction_23() {
+    }
+    @name("NoAction") action NoAction_24() {
+    }
+    @name("NoAction") action NoAction_25() {
+    }
+    @name("NoAction") action NoAction_26() {
+    }
+    @name("NoAction") action NoAction_27() {
+    }
+    @name("NoAction") action NoAction_28() {
+    }
+    @name("NoAction") action NoAction_29() {
+    }
+    @name(".ctr_ds_subsc") counter(32w4096, CounterType.packets) ctr_ds_subsc;
+    @name(".ctr_us_subsc") counter(32w4096, CounterType.packets) ctr_us_subsc;
+    @name(".mtr_ds_subsc") meter(32w4096, MeterType.bytes) mtr_ds_subsc;
     @name("._drop") action _drop_1() {
+        meta.ingress_md.usds = 2w0x2;
+        mark_to_drop();
+    }
+    @name("._drop") action _drop_13() {
+        meta.ingress_md.usds = 2w0x2;
+        mark_to_drop();
+    }
+    @name("._drop") action _drop_14() {
+        meta.ingress_md.usds = 2w0x2;
+        mark_to_drop();
+    }
+    @name("._drop") action _drop_15() {
+        meta.ingress_md.usds = 2w0x2;
+        mark_to_drop();
+    }
+    @name("._drop") action _drop_16() {
+        meta.ingress_md.usds = 2w0x2;
+        mark_to_drop();
+    }
+    @name("._drop") action _drop_17() {
+        meta.ingress_md.usds = 2w0x2;
+        mark_to_drop();
+    }
+    @name("._drop") action _drop_18() {
+        meta.ingress_md.usds = 2w0x2;
+        mark_to_drop();
+    }
+    @name("._drop") action _drop_19() {
+        meta.ingress_md.usds = 2w0x2;
+        mark_to_drop();
+    }
+    @name("._drop") action _drop_20() {
+        meta.ingress_md.usds = 2w0x2;
+        mark_to_drop();
+    }
+    @name("._drop") action _drop_21() {
+        meta.ingress_md.usds = 2w0x2;
+        mark_to_drop();
+    }
+    @name("._drop") action _drop_22() {
         meta.ingress_md.usds = 2w0x2;
         mark_to_drop();
     }
@@ -365,9 +435,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet_inner.setInvalid();
         hdr.mpls1.setInvalid();
     }
+    @name(".a_antispoof_ipv4v6_pass") action a_antispoof_ipv4v6_pass_2() {
+        hdr.pppoe.setInvalid();
+        hdr.vlan_subsc.setInvalid();
+        hdr.ethernet_inner.setInvalid();
+        hdr.mpls1.setInvalid();
+    }
     @name(".a_antispoof_mac_pass") action a_antispoof_mac_pass_0(bit<8> subsc_id, bit<8> lawf_int, bit<32> ctr_bucket) {
         meta.ingress_md.subsc_id = subsc_id;
-        ctr_us_subsc_0.count(ctr_bucket);
+        ctr_us_subsc.count(ctr_bucket);
     }
     @name(".a_ds_pppoe_aftermath_v4") action a_ds_pppoe_aftermath_v4_0() {
         hdr.pppoe.protocol = 16w0x21;
@@ -404,8 +480,38 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pppoe.totalLength = meta.ingress_md.pppoe_ip_packet_len;
         hdr.pppoe.sessionID = pppoe_session_id;
         hdr.ig_intr_md_for_tm.ucast_egress_port = out_port;
-        ctr_ds_subsc_0.count(ctr_bucket);
-        mtr_ds_subsc_0.execute_meter<bit<2>>(ctr_bucket, meta.ingress_md.meter_result);
+        ctr_ds_subsc.count(ctr_bucket);
+        mtr_ds_subsc.execute_meter<bit<2>>(ctr_bucket, meta.ingress_md.meter_result);
+    }
+    @name(".a_ds_route_pushstack") action a_ds_route_pushstack_2(bit<20> mpls0_label, bit<20> mpls1_label, bit<16> subsc_vid, bit<16> service_vid, bit<16> pppoe_session_id, bit<9> out_port, bit<48> inner_cpe_mac, bit<8> lawf_int, bit<32> ctr_bucket) {
+        hdr.mpls0.label = mpls0_label;
+        hdr.mpls0.s = 1w0;
+        hdr.mpls0.tc = 3w0;
+        hdr.mpls0.ttl = 8w0;
+        hdr.mpls1.setValid();
+        hdr.mpls1.label = mpls1_label;
+        hdr.mpls1.s = 1w1;
+        hdr.mpls1.tc = 3w0;
+        hdr.mpls1.ttl = 8w0;
+        hdr.ethernet_inner.setValid();
+        hdr.ethernet_inner.dstAddr = inner_cpe_mac;
+        hdr.ethernet_inner.etherType = 16w0x8100;
+        hdr.vlan_subsc.setValid();
+        hdr.vlan_subsc.vlanID = subsc_vid;
+        hdr.vlan_subsc.etherType = 16w0x8100;
+        hdr.vlan_service.setValid();
+        hdr.vlan_service.vlanID = service_vid;
+        hdr.vlan_service.etherType = 16w0x8864;
+        hdr.pppoe.setValid();
+        hdr.pppoe.version = 4w1;
+        hdr.pppoe.typeID = 4w1;
+        hdr.pppoe.code = 8w0;
+        hdr.pppoe.protocol = 16w0;
+        hdr.pppoe.totalLength = meta.ingress_md.pppoe_ip_packet_len;
+        hdr.pppoe.sessionID = pppoe_session_id;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = out_port;
+        ctr_ds_subsc.count(ctr_bucket);
+        mtr_ds_subsc.execute_meter<bit<2>>(ctr_bucket, meta.ingress_md.meter_result);
     }
     @name(".a_line_map_pass") action a_line_map_pass_0(bit<32> line_id, bit<8> lawf_int) {
         meta.ingress_md.line_id = line_id;
@@ -425,17 +531,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.mpls0.s = 1w1;
         hdr.ethernet_outer.dstAddr = via_hwaddr;
     }
+    @name(".a_us_routev4v6") action a_us_routev4v6_2(bit<9> out_port, bit<20> mpls_label, bit<48> via_hwaddr) {
+        hdr.vlan_service.setInvalid();
+        hdr.ig_intr_md_for_tm.ucast_egress_port = out_port;
+        hdr.mpls0.label = mpls_label;
+        hdr.mpls0.s = 1w1;
+        hdr.ethernet_outer.dstAddr = via_hwaddr;
+    }
     @name(".a_usds_handle_ds") action a_usds_handle_ds_0() {
         meta.ingress_md.usds = 2w0x0;
     }
     @name(".a_usds_handle_us") action a_usds_handle_us_0() {
         meta.ingress_md.usds = 2w0x1;
     }
-    @name(".t_antispoof_ipv4") table t_antispoof_ipv4_0 {
+    @name(".t_antispoof_ipv4") table t_antispoof_ipv4 {
         actions = {
             _drop_1();
             a_antispoof_ipv4v6_pass_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_17();
         }
         key = {
             meta.ingress_md.line_id : exact @name("ingress_md.line_id") ;
@@ -443,13 +556,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.srcAddr        : lpm @name("ipv4.srcAddr") ;
         }
         max_size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_17();
     }
-    @name(".t_antispoof_ipv6") table t_antispoof_ipv6_0 {
+    @name(".t_antispoof_ipv6") table t_antispoof_ipv6 {
         actions = {
-            _drop_1();
-            a_antispoof_ipv4v6_pass_0();
-            @defaultonly NoAction();
+            _drop_13();
+            a_antispoof_ipv4v6_pass_2();
+            @defaultonly NoAction_18();
         }
         key = {
             meta.ingress_md.line_id : exact @name("ingress_md.line_id") ;
@@ -457,13 +570,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv6.srcAddr        : lpm @name("ipv6.srcAddr") ;
         }
         max_size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_18();
     }
-    @name(".t_antispoof_mac") table t_antispoof_mac_0 {
+    @name(".t_antispoof_mac") table t_antispoof_mac {
         actions = {
-            _drop_1();
+            _drop_14();
             a_antispoof_mac_pass_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_19();
         }
         key = {
             meta.ingress_md.line_id   : exact @name("ingress_md.line_id") ;
@@ -472,51 +585,51 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pppoe.sessionID       : exact @name("pppoe.sessionID") ;
         }
         max_size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_19();
     }
-    @name(".t_ds_pppoe_aftermath_v4") table t_ds_pppoe_aftermath_v4_0 {
+    @name(".t_ds_pppoe_aftermath_v4") table t_ds_pppoe_aftermath_v4 {
         actions = {
             a_ds_pppoe_aftermath_v4_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_20();
         }
-        default_action = NoAction();
+        default_action = NoAction_20();
     }
-    @name(".t_ds_pppoe_aftermath_v6") table t_ds_pppoe_aftermath_v6_0 {
+    @name(".t_ds_pppoe_aftermath_v6") table t_ds_pppoe_aftermath_v6 {
         actions = {
             a_ds_pppoe_aftermath_v6_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_21();
         }
-        default_action = NoAction();
+        default_action = NoAction_21();
     }
-    @name(".t_ds_routev4") table t_ds_routev4_0 {
+    @name(".t_ds_routev4") table t_ds_routev4 {
         actions = {
-            _drop_1();
+            _drop_15();
             a_ds_route_pushstack_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_22();
         }
         key = {
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         max_size = 256;
-        default_action = NoAction();
+        default_action = NoAction_22();
     }
-    @name(".t_ds_routev6") table t_ds_routev6_0 {
+    @name(".t_ds_routev6") table t_ds_routev6 {
         actions = {
-            _drop_1();
-            a_ds_route_pushstack_0();
-            @defaultonly NoAction();
+            _drop_16();
+            a_ds_route_pushstack_2();
+            @defaultonly NoAction_23();
         }
         key = {
             hdr.ipv6.dstAddr: lpm @name("ipv6.dstAddr") ;
         }
         max_size = 256;
-        default_action = NoAction();
+        default_action = NoAction_23();
     }
-    @name(".t_line_map") table t_line_map_0 {
+    @name(".t_line_map") table t_line_map {
         actions = {
-            _drop_1();
+            _drop_17();
             a_line_map_pass_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_24();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
@@ -525,26 +638,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.vlan_subsc.vlanID      : exact @name("vlan_subsc.vlanID") ;
         }
         max_size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_24();
     }
-    @name(".t_meter_action") table t_meter_action_0 {
+    @name(".t_meter_action") table t_meter_action {
         actions = {
-            _drop_1();
+            _drop_18();
             a_meter_action_pass_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_25();
         }
         key = {
             meta.ingress_md.meter_result: exact @name("ingress_md.meter_result") ;
         }
         max_size = 16;
-        default_action = NoAction();
+        default_action = NoAction_25();
     }
-    @name(".t_pppoe_cpdp") table t_pppoe_cpdp_0 {
+    @name(".t_pppoe_cpdp") table t_pppoe_cpdp {
         actions = {
-            _drop_1();
+            _drop_19();
             a_pppoe_cpdp_to_cp_0();
             a_pppoe_cpdp_pass_ip_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_26();
         }
         key = {
             hdr.ethernet_inner.dstAddr: exact @name("ethernet_inner.dstAddr") ;
@@ -552,40 +665,40 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pppoe.protocol        : exact @name("pppoe.protocol") ;
         }
         max_size = 16;
-        default_action = NoAction();
+        default_action = NoAction_26();
     }
-    @name(".t_us_routev4") table t_us_routev4_0 {
+    @name(".t_us_routev4") table t_us_routev4 {
         actions = {
-            _drop_1();
+            _drop_20();
             a_us_routev4v6_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_27();
         }
         key = {
             hdr.vlan_service.vlanID: exact @name("vlan_service.vlanID") ;
             hdr.ipv4.dstAddr       : lpm @name("ipv4.dstAddr") ;
         }
         max_size = 256;
-        default_action = NoAction();
+        default_action = NoAction_27();
     }
-    @name(".t_us_routev6") table t_us_routev6_0 {
+    @name(".t_us_routev6") table t_us_routev6 {
         actions = {
-            _drop_1();
-            a_us_routev4v6_0();
-            @defaultonly NoAction();
+            _drop_21();
+            a_us_routev4v6_2();
+            @defaultonly NoAction_28();
         }
         key = {
             hdr.vlan_service.vlanID: exact @name("vlan_service.vlanID") ;
             hdr.ipv6.dstAddr       : lpm @name("ipv6.dstAddr") ;
         }
         max_size = 256;
-        default_action = NoAction();
+        default_action = NoAction_28();
     }
-    @name(".t_usds") table t_usds_0 {
+    @name(".t_usds") table t_usds {
         actions = {
             a_usds_handle_ds_0();
             a_usds_handle_us_0();
-            _drop_1();
-            @defaultonly NoAction();
+            _drop_22();
+            @defaultonly NoAction_29();
         }
         key = {
             hdr.ethernet_outer.dstAddr : exact @name("ethernet_outer.dstAddr") ;
@@ -593,38 +706,38 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.mpls0.label            : exact @name("mpls0.label") ;
         }
         max_size = 256;
-        default_action = NoAction();
+        default_action = NoAction_29();
     }
     apply {
-        t_usds_0.apply();
+        t_usds.apply();
         if (meta.ingress_md.usds == 2w0x1 && hdr.pppoe.isValid()) {
-            t_line_map_0.apply();
-            t_pppoe_cpdp_0.apply();
+            t_line_map.apply();
+            t_pppoe_cpdp.apply();
             if (meta.ingress_md.cp == 1w0) {
-                t_antispoof_mac_0.apply();
+                t_antispoof_mac.apply();
                 if (hdr.ipv4.isValid()) {
-                    t_antispoof_ipv4_0.apply();
-                    t_us_routev4_0.apply();
+                    t_antispoof_ipv4.apply();
+                    t_us_routev4.apply();
                 }
                 else 
                     if (hdr.ipv6.isValid()) {
-                        t_antispoof_ipv6_0.apply();
-                        t_us_routev6_0.apply();
+                        t_antispoof_ipv6.apply();
+                        t_us_routev6.apply();
                     }
             }
         }
         else 
             if (meta.ingress_md.usds == 2w0x0) {
                 if (hdr.ipv4.isValid()) {
-                    t_ds_routev4_0.apply();
-                    t_ds_pppoe_aftermath_v4_0.apply();
+                    t_ds_routev4.apply();
+                    t_ds_pppoe_aftermath_v4.apply();
                 }
                 else 
                     if (hdr.ipv6.isValid()) {
-                        t_ds_routev6_0.apply();
-                        t_ds_pppoe_aftermath_v6_0.apply();
+                        t_ds_routev6.apply();
+                        t_ds_pppoe_aftermath_v6.apply();
                     }
-                t_meter_action_0.apply();
+                t_meter_action.apply();
             }
     }
 }

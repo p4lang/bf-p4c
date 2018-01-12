@@ -24,24 +24,26 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".set_stuff") action set_stuff_0(bit<4> param1, bit<4> param2, bit<32> param3, bit<9> port) {
         hdr.data.n1 = param1;
         hdr.data.n2 = param2;
         hdr.data.f2 = param3;
         standard_metadata.egress_spec = port;
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             set_stuff_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        test1_0.apply();
+        test1.apply();
     }
 }
 

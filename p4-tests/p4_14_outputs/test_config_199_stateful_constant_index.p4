@@ -158,8 +158,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".sampling_cntr") register<bit<32>>(32w8192) sampling_cntr;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".sampling_cntr") register<bit<32>>(32w8192) sampling_cntr;
     register_action<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;

@@ -187,10 +187,20 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".set_a") action set_a_0() {
         meta.meta.x = hdr.pkt_a.b;
     }
     @name(".do_nothing") action do_nothing_0() {
+    }
+    @name(".do_nothing") action do_nothing_3() {
+    }
+    @name(".do_nothing") action do_nothing_4() {
     }
     @name(".set_b") action set_b_0() {
         meta.meta.x = hdr.pkt_b.b;
@@ -202,50 +212,50 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_hash") action set_hash_0() {
         hash<bit<32>, bit<32>, tuple<bit<8>>, bit<64>>(hdr.eth.blah1, HashAlgorithm.crc32, 32w0, { meta.meta.x }, 64w4294967296);
     }
-    @name(".t_a") table t_a_0 {
+    @name(".t_a") table t_a {
         actions = {
             set_a_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt_a.a: exact @name("pkt_a.a") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t_b") table t_b_0 {
+    @name(".t_b") table t_b {
         actions = {
             set_b_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_3();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.pkt_b.a: exact @name("pkt_b.a") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".t_last") table t_last_0 {
+    @name(".t_last") table t_last {
         actions = {
             set_blah_0();
             set_hash_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_4();
+            @defaultonly NoAction_5();
         }
         key = {
             meta.meta.x: ternary @name("meta.x") ;
             meta.meta.y: exact @name("meta.y") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
         if (hdr.pkt_a.isValid()) 
-            t_a_0.apply();
+            t_a.apply();
         else 
-            t_b_0.apply();
-        t_last_0.apply();
+            t_b.apply();
+        t_last.apply();
     }
 }
 

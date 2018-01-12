@@ -246,16 +246,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".indirect_action_profile") action_profile(32w1500) indirect_action_profile;
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".nop") action nop_0() {
     }
     @name(".udp_set_src") action udp_set_src_0(bit<16> port) {
         hdr.udp.srcPort = port;
     }
-    @immediate(1) @stage(0) @name(".eg_udp") table eg_udp_0 {
+    @immediate(1) @stage(0) @name(".eg_udp") table eg_udp {
         actions = {
             nop_0();
             udp_set_src_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.isValid(): exact @name("ethernet.$valid$") ;
@@ -263,38 +265,41 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.udp.isValid()     : exact @name("udp.$valid$") ;
             hdr.udp.srcPort       : exact @name("udp.srcPort") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        eg_udp_0.apply();
+        eg_udp.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_1() {
+    }
     @name(".nop") action nop_1() {
     }
-    @name(".hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
-        ttl_0 = ttl_0 + 8w255;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
-    }
     @name(".hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_0 = hdr.ipv4.ttl;
+            ttl_0 = ttl_0 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_0;
+        }
     }
-    @stage(5) @name(".tcam_range") table tcam_range_0 {
+    @stage(5) @name(".tcam_range") table tcam_range {
         actions = {
             nop_1();
             hop_ipv4_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
             hdr.tcp.dstPort : range @name("tcp.dstPort") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
-        tcam_range_0.apply();
+        tcam_range.apply();
     }
 }
 

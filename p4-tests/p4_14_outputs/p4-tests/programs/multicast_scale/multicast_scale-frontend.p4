@@ -151,10 +151,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".log") register<bit<16>>(32w0) log;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".cntr") @min_width(64) counter(32w2, CounterType.packets) cntr_0;
-    @name(".log") register<bit<16>>(32w0) log_0;
-    @name("salu") register_action<bit<16>, bit<16>>(log_0) salu_0 = {
+    @name(".cntr") @min_width(64) counter(32w2, CounterType.packets) cntr;
+    @name("salu") register_action<bit<16>, bit<16>>(log) salu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             if (hdr.eg_intr_md.egress_rid_first == 1w1) 
@@ -164,15 +165,15 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
     };
     @name(".log_only") action log_only_0() {
-        salu_0.execute();
-        cntr_0.count(32w0);
+        salu.execute();
+        cntr.count(32w0);
         mark_to_drop();
     }
     @name(".on_miss") action on_miss_0() {
-        cntr_0.count(32w1);
+        cntr.count(32w1);
         mark_to_drop();
     }
-    @name(".egr") table egr_0 {
+    @name(".egr") table egr {
         actions = {
             log_only_0();
             @defaultonly on_miss_0();
@@ -185,47 +186,54 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = on_miss_0();
     }
     apply {
-        egr_0.apply();
+        egr.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".set_general_md") action set_general_md_0(bit<16> rid_0, bit<16> xid_0, bit<9> yid_0, bit<13> h1_0, bit<13> h2_0) {
-        hdr.ig_intr_md_for_tm.rid = rid_0;
-        hdr.ig_intr_md_for_tm.level1_exclusion_id = xid_0;
-        hdr.ig_intr_md_for_tm.level2_exclusion_id = yid_0;
-        hdr.ig_intr_md_for_tm.level1_mcast_hash = h1_0;
-        hdr.ig_intr_md_for_tm.level2_mcast_hash = h2_0;
+    @name("NoAction") action NoAction_0() {
     }
     @name(".mcast_1") action mcast(bit<16> mgid, bit<16> rid, bit<16> xid, bit<9> yid, bit<13> h1, bit<13> h2) {
         hdr.ig_intr_md_for_tm.mcast_grp_a = mgid;
-        set_general_md_0(rid, xid, yid, h1, h2);
+        hdr.ig_intr_md_for_tm.rid = rid;
+        hdr.ig_intr_md_for_tm.level1_exclusion_id = xid;
+        hdr.ig_intr_md_for_tm.level2_exclusion_id = yid;
+        hdr.ig_intr_md_for_tm.level1_mcast_hash = h1;
+        hdr.ig_intr_md_for_tm.level2_mcast_hash = h2;
     }
     @name(".mcast_2") action mcast_0(bit<16> mgid, bit<16> rid, bit<16> xid, bit<9> yid, bit<13> h1, bit<13> h2) {
         hdr.ig_intr_md_for_tm.mcast_grp_b = mgid;
-        set_general_md_0(rid, xid, yid, h1, h2);
+        hdr.ig_intr_md_for_tm.rid = rid;
+        hdr.ig_intr_md_for_tm.level1_exclusion_id = xid;
+        hdr.ig_intr_md_for_tm.level2_exclusion_id = yid;
+        hdr.ig_intr_md_for_tm.level1_mcast_hash = h1;
+        hdr.ig_intr_md_for_tm.level2_mcast_hash = h2;
     }
     @name(".mcast_both") action mcast_both_0(bit<16> mgid1, bit<16> mgid2, bit<16> rid, bit<16> xid, bit<9> yid, bit<13> h1, bit<13> h2) {
         hdr.ig_intr_md_for_tm.mcast_grp_a = mgid1;
         hdr.ig_intr_md_for_tm.mcast_grp_b = mgid2;
-        set_general_md_0(rid, xid, yid, h1, h2);
+        hdr.ig_intr_md_for_tm.rid = rid;
+        hdr.ig_intr_md_for_tm.level1_exclusion_id = xid;
+        hdr.ig_intr_md_for_tm.level2_exclusion_id = yid;
+        hdr.ig_intr_md_for_tm.level1_mcast_hash = h1;
+        hdr.ig_intr_md_for_tm.level2_mcast_hash = h2;
     }
-    @name(".ing") table ing_0 {
+    @name(".ing") table ing {
         actions = {
             mcast();
             mcast_0();
             mcast_both_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port[6:0]") ;
             hdr.ethernet.dmac               : exact @name("ethernet.dmac") ;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        ing_0.apply();
+        ing.apply();
     }
 }
 

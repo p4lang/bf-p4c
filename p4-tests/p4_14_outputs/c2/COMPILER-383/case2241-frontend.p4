@@ -197,21 +197,23 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".superaction") action superaction_0() {
         hdr.h.setValid();
     }
-    @name(".supertable") table supertable_0 {
+    @name(".supertable") table supertable {
         actions = {
             superaction_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        supertable_0.apply();
+        supertable.apply();
     }
 }
 

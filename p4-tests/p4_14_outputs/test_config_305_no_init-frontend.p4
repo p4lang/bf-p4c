@@ -162,13 +162,38 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
+    @name("NoAction") action NoAction_10() {
+    }
+    @name("NoAction") action NoAction_11() {
+    }
     @name(".set_type") action set_type_0(bit<16> t, bit<16> x) {
         hdr.ethernet.etherType = t;
         meta.meta.x = x;
     }
     @name(".do_nothing") action do_nothing_0() {
     }
+    @name(".do_nothing") action do_nothing_6() {
+    }
+    @name(".do_nothing") action do_nothing_7() {
+    }
+    @name(".do_nothing") action do_nothing_8() {
+    }
+    @name(".do_nothing") action do_nothing_9() {
+    }
+    @name(".do_nothing") action do_nothing_10() {
+    }
     @name(".set_mac_da") action set_mac_da_0(bit<48> d) {
+        hdr.ethernet.dstAddr = d;
+    }
+    @name(".set_mac_da") action set_mac_da_2(bit<48> d) {
         hdr.ethernet.dstAddr = d;
     }
     @name(".set_port") action set_port_0(bit<9> p) {
@@ -181,89 +206,89 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_z") action set_z_0() {
         meta.meta.z = 16w3;
     }
-    @name(".t0") table t0_0 {
+    @name(".t0") table t0 {
         actions = {
             set_type_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.etherType: ternary @name("ethernet.etherType") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             set_mac_da_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_6();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ethernet.etherType: ternary @name("ethernet.etherType") ;
             meta.meta.x           : ternary @name("meta.x") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
-    @name(".t2") table t2_0 {
+    @name(".t2") table t2 {
         actions = {
-            set_mac_da_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            set_mac_da_2();
+            do_nothing_7();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.ethernet.dstAddr: ternary @name("ethernet.dstAddr") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_8();
     }
-    @name(".t_last") table t_last_0 {
+    @name(".t_last") table t_last {
         actions = {
             set_port_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_8();
+            @defaultonly NoAction_9();
         }
         key = {
             meta.meta.y         : ternary @name("meta.y") ;
             hdr.ethernet.dstAddr: ternary @name("ethernet.dstAddr") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_9();
     }
-    @name(".t_y") table t_y_0 {
+    @name(".t_y") table t_y {
         actions = {
             set_y_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_9();
+            @defaultonly NoAction_10();
         }
         key = {
             hdr.ethernet.dstAddr: ternary @name("ethernet.dstAddr") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_10();
     }
-    @name(".t_z") table t_z_0 {
+    @name(".t_z") table t_z {
         actions = {
             set_z_0();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_10();
+            @defaultonly NoAction_11();
         }
         key = {
             hdr.ethernet.dstAddr: ternary @name("ethernet.dstAddr") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_11();
     }
     apply {
-        t0_0.apply();
-        t1_0.apply();
-        t2_0.apply();
+        t0.apply();
+        t1.apply();
+        t2.apply();
         if (hdr.ethernet.isValid()) 
-            t_y_0.apply();
+            t_y.apply();
         else 
-            t_z_0.apply();
-        t_last_0.apply();
+            t_z.apply();
+        t_last.apply();
     }
 }
 

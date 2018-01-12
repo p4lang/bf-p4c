@@ -12,9 +12,7 @@
 #include "frontends/p4/strengthReduction.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/typeMap.h"
-#include "frontends/p4/uniqueNames.h"
 #include "frontends/p4/unusedDeclarations.h"
-#include "midend/actionsInlining.h"
 #include "midend/actionSynthesis.h"
 #include "midend/compileTimeOps.h"
 #include "midend/convertEnums.h"
@@ -22,13 +20,11 @@
 #include "midend/eliminateTuples.h"
 #include "midend/expandLookahead.h"
 #include "midend/local_copyprop.h"
-#include "midend/localizeActions.h"
-#include "midend/moveConstructors.h"
 #include "midend/nestedStructs.h"
 #include "midend/predication.h"
 #include "midend/removeLeftSlices.h"
 #include "midend/removeParameters.h"
-#include "midend/removeReturns.h"
+#include "midend/removeExits.h"
 #include "midend/simplifyKey.h"
 #include "midend/simplifySelectCases.h"
 #include "midend/simplifySelectList.h"
@@ -98,23 +94,12 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::TypeChecking(&refMap, &typeMap, true),
         new BFN::CheckHeaderAlignment(&typeMap),
         new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
-        new P4::RemoveReturns(&refMap),
-        new P4::MoveConstructors(&refMap),
-        new P4::RemoveAllUnusedDeclarations(&refMap),
-        new P4::ClearTypeMap(&typeMap),
-        evaluator,
-        new P4::Inline(&refMap, &typeMap, evaluator),
-        new P4::InlineActions(&refMap, &typeMap),
-        new P4::LocalizeAllActions(&refMap),
-        new P4::UniqueNames(&refMap),
-        new P4::UniqueParameters(&refMap, &typeMap),
-        new P4::SimplifyControlFlow(&refMap, &typeMap),
+        new P4::RemoveActionParameters(&refMap, &typeMap),
         (options.arch == "v1model") ?
             new BFN::SimpleSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
         (options.arch == "native") ?
             new BFN::NormalizeNativeProgram(&refMap, &typeMap, options /*map*/) : nullptr,
         new P4::SimplifyControlFlow(&refMap, &typeMap),
-        new P4::RemoveActionParameters(&refMap, &typeMap),
         new P4::SimplifyKey(&refMap, &typeMap,
                             new P4::OrPolicy(
                                 new P4::IsValid(&refMap, &typeMap),

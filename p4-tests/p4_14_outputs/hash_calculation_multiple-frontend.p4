@@ -55,56 +55,56 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action6") action action6_0() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result6, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field7 }, 32w65536);
     }
-    @name(".port") table port_0 {
+    @name(".port") table port {
         actions = {
             set_port_0();
         }
         default_action = set_port_0();
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             action1_0();
         }
         default_action = action1_0();
     }
-    @name(".test2") table test2_0 {
+    @name(".test2") table test2 {
         actions = {
             action2_0();
         }
         default_action = action2_0();
     }
-    @name(".test3") table test3_0 {
+    @name(".test3") table test3 {
         actions = {
             action3_0();
         }
         default_action = action3_0();
     }
-    @name(".test4") table test4_0 {
+    @name(".test4") table test4 {
         actions = {
             action4_0();
         }
         default_action = action4_0();
     }
-    @name(".test5") table test5_0 {
+    @name(".test5") table test5 {
         actions = {
             action5_0();
         }
         default_action = action5_0();
     }
-    @name(".test6") table test6_0 {
+    @name(".test6") table test6 {
         actions = {
             action6_0();
         }
         default_action = action6_0();
     }
     apply {
-        test1_0.apply();
-        test2_0.apply();
-        test3_0.apply();
-        test4_0.apply();
-        test5_0.apply();
-        test6_0.apply();
-        port_0.apply();
+        test1.apply();
+        test2.apply();
+        test3.apply();
+        test4.apply();
+        test5.apply();
+        test6.apply();
+        port.apply();
     }
 }
 

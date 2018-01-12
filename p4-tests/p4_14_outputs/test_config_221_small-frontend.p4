@@ -24,22 +24,24 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".action_0") action action_1() {
         hdr.one.a = hdr.one.a + 8w1;
     }
-    @name(".table_i0") table table_i0_0 {
+    @name(".table_i0") table table_i0 {
         actions = {
             action_1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.one.a: ternary @name("one.a") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        table_i0_0.apply();
+        table_i0.apply();
     }
 }
 

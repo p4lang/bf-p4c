@@ -562,6 +562,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<32> Satolah;
 }
 
+@name(".Hobucken") register<bit<1>>(32w262144) Hobucken;
+
+@name(".Tarnov") register<bit<1>>(32w262144) Tarnov;
+
 @name("Allison") struct Allison {
     bit<8>  Ferndale;
     bit<24> Cantwell;
@@ -1096,14 +1100,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_45();
     }
-    @name(".Hobucken") register<bit<1>>(32w262144) _Hobucken_0;
-    @name(".Tarnov") register<bit<1>>(32w262144) _Tarnov_0;
-    @name(".Hiawassee.Kasilof") register_action<bit<1>, bit<1>>(_Hobucken_0) _Hiawassee_Kasilof_0 = {
+    @name(".Hiawassee.Kasilof") register_action<bit<1>, bit<1>>(Hobucken) _Hiawassee_Kasilof_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Hiawassee.Noyack") register_action<bit<1>, bit<1>>(_Tarnov_0) _Hiawassee_Noyack_0 = {
+    @name(".Hiawassee.Noyack") register_action<bit<1>, bit<1>>(Tarnov) _Hiawassee_Noyack_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

@@ -165,7 +165,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".fwd") action fwd_0() {
         standard_metadata.egress_spec = meta.md.port;
     }
-    @name(".forward") table forward_0 {
+    @name(".forward") table forward {
         actions = {
             fwd_0();
         }
@@ -176,7 +176,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = fwd_0();
     }
     apply {
-        forward_0.apply();
+        forward.apply();
     }
 }
 

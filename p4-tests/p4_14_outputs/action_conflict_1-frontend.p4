@@ -35,6 +35,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".setport") action setport_0(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
@@ -54,23 +58,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.f3 = hdr.pkt.fb;
         hdr.pkt.f4 = hdr.pkt.fc;
     }
-    @name(".setting_port") table setting_port_0 {
+    @name(".setting_port") table setting_port {
         actions = {
             setport_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.fc: exact @name("pkt.fc") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_0") table table_1 {
+    @name(".table_0") table table_0 {
         actions = {
             action_4();
             action_5();
             action_6();
             action_7();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.pkt.f3: exact @name("pkt.f3") ;
@@ -79,11 +83,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.f7: exact @name("pkt.f7") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        table_1.apply();
-        setting_port_0.apply();
+        table_0.apply();
+        setting_port.apply();
     }
 }
 

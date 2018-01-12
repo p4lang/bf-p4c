@@ -696,6 +696,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".Kensal") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Kensal;
 
 @name(".Phelps") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Phelps;
+
+@name(".Frontier") register<bit<1>>(32w294912) Frontier;
+
+@name(".Hibernia") register<bit<1>>(32w294912) Hibernia;
 #include <tofino/p4_14_prim.p4>
 
 @name("Duncombe") struct Duncombe {
@@ -1615,14 +1619,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_71();
     }
-    @name(".Frontier") register<bit<1>>(32w294912) _Frontier_0;
-    @name(".Hibernia") register<bit<1>>(32w294912) _Hibernia_0;
-    @name(".Netarts.Campton") register_action<bit<1>, bit<1>>(_Hibernia_0) _Netarts_Campton_0 = {
+    @name(".Netarts.Campton") register_action<bit<1>, bit<1>>(Hibernia) _Netarts_Campton_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Netarts.Panaca") register_action<bit<1>, bit<1>>(_Frontier_0) _Netarts_Panaca_0 = {
+    @name(".Netarts.Panaca") register_action<bit<1>, bit<1>>(Frontier) _Netarts_Panaca_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

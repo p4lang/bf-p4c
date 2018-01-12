@@ -42,23 +42,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".setport") action setport_0(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".action_0") action action_3() {
-        hdr.pkt.f1 = hdr.pkt.f7;
-        hdr.pkt.f2 = hdr.pkt.f8;
-        hdr.pkt.f3 = hdr.pkt.f9;
-        hdr.pkt.f4 = hdr.pkt.fa;
+    @name(".action_0") action action_4() {
+        hdr.pkt.f1 = hdr.pkt.f5;
+        hdr.pkt.f2 = hdr.pkt.fa;
+        hdr.pkt.f3 = hdr.pkt.f8;
+        hdr.pkt.f4 = hdr.pkt.f7;
     }
-    @name(".action_1") action action_4() {
+    @name(".action_1") action action_5() {
         hdr.pkt.f1 = hdr.pkt.f5;
         hdr.pkt.f2 = hdr.pkt.fa;
         hdr.pkt.f3 = hdr.pkt.f7;
         hdr.pkt.f4 = hdr.pkt.fc;
     }
-    @name(".action_2") action action_5() {
+    @name(".action_2") action action_6() {
         hdr.pkt.f1 = hdr.pkt.f5;
         hdr.pkt.f2 = hdr.pkt.fa;
         hdr.pkt.f3 = hdr.pkt.f7;
         hdr.pkt.f4 = hdr.pkt.f8;
+    }
+    @name(".action_3") action action_7() {
+        hdr.pkt.f1 = hdr.pkt.f7;
+        hdr.pkt.f2 = hdr.pkt.f8;
+        hdr.pkt.f3 = hdr.pkt.f9;
+        hdr.pkt.f4 = hdr.pkt.fa;
     }
     @name(".setting_port") table setting_port {
         actions = {
@@ -72,9 +78,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".table_0") table table_0 {
         actions = {
-            action_3();
             action_4();
             action_5();
+            action_6();
+            action_7();
             @defaultonly NoAction_3();
         }
         key = {

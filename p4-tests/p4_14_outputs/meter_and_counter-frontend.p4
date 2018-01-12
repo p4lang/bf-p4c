@@ -29,46 +29,50 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".counter2") direct_counter(CounterType.packets) counter2_0;
-    @name(".meter1") meter(32w32000, MeterType.bytes) meter1_0;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    @name(".counter2") direct_counter(CounterType.packets) counter2;
+    @name(".meter1") meter(32w32000, MeterType.bytes) meter1;
     @name(".h1_3") action h1_0(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
         hdr.data.h3 = val3;
-        meter1_0.execute_meter<bit<8>>(32w7, hdr.data.color_1);
+        meter1.execute_meter<bit<8>>(32w7, hdr.data.color_1);
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             h1_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
         }
         size = 32000;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".h4_6") action h4_6(bit<16> val4, bit<16> val5, bit<16> val6) {
-        counter2_0.count();
+    @name(".h4_6") action h4_1(bit<16> val4, bit<16> val5, bit<16> val6) {
+        counter2.count();
         hdr.data.h4 = val4;
         hdr.data.h5 = val5;
         hdr.data.h6 = val6;
     }
-    @name(".test2") table test2_0 {
+    @name(".test2") table test2 {
         actions = {
-            h4_6();
-            @defaultonly NoAction();
+            h4_1();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.data.f2: exact @name("data.f2") ;
         }
         size = 2048;
-        counters = counter2_0;
-        default_action = NoAction();
+        counters = counter2;
+        default_action = NoAction_3();
     }
     apply {
-        test1_0.apply();
-        test2_0.apply();
+        test1.apply();
+        test2.apply();
     }
 }
 

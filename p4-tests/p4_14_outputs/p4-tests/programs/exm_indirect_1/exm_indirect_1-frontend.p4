@@ -322,8 +322,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".next_hop_profile") action_profile(32w4096) next_hop_profile;
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".egr_cntDum1") direct_counter(CounterType.packets) egr_cntDum1_0;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_1() {
+    }
+    @name("NoAction") action NoAction_24() {
+    }
+    @name("NoAction") action NoAction_25() {
+    }
+    @name(".egr_cntDum1") direct_counter(CounterType.packets) egr_cntDum1;
     @name(".nop") action nop_0() {
+    }
+    @name(".nop") action nop_1() {
     }
     @name(".fib_hit_nexthop") action fib_hit_nexthop_0(bit<16> nexthop_index) {
         meta.l3_metadata.fib_hit = 1w1;
@@ -341,25 +351,25 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".action1") action action1_0() {
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name(".duplicate_check_exm_immediate_action") table duplicate_check_exm_immediate_action_0 {
+    @name(".duplicate_check_exm_immediate_action") table duplicate_check_exm_immediate_action {
         actions = {
             nop_0();
             fib_hit_nexthop_0();
             fib_hit_ecmp_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.l3_metadata.vrf: exact @name("l3_metadata.vrf") ;
             hdr.ipv4.dstAddr    : exact @name("ipv4.dstAddr") ;
         }
         size = 2048;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @proxy_hash_width(24) @name(".exm_proxy_hash") table exm_proxy_hash_0 {
+    @proxy_hash_width(24) @name(".exm_proxy_hash") table exm_proxy_hash {
         actions = {
-            nop_0();
+            nop_1();
             set_dip_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ipv4.srcAddr : exact @name("ipv4.srcAddr") ;
@@ -369,60 +379,125 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.tcp.dstPort  : exact @name("tcp.dstPort") ;
         }
         size = 102400;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
-    @name(".exm_txn_test1") table exm_txn_test1_0 {
+    @name(".exm_txn_test1") table exm_txn_test1 {
         actions = {
             action1_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_24();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_24();
     }
     @name(".egr_act1") action egr_act1(bit<16> tcp_sport) {
-        egr_cntDum1_0.count();
+        egr_cntDum1.count();
         hdr.tcp.srcPort = tcp_sport;
     }
-    @name(".stat_tcam_direct_pkt_64bit") table stat_tcam_direct_pkt_64bit_0 {
+    @name(".stat_tcam_direct_pkt_64bit") table stat_tcam_direct_pkt_64bit {
         actions = {
             egr_act1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_25();
         }
         key = {
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         size = 2048;
-        counters = egr_cntDum1_0;
-        default_action = NoAction();
+        counters = egr_cntDum1;
+        default_action = NoAction_25();
     }
     apply {
-        stat_tcam_direct_pkt_64bit_0.apply();
-        duplicate_check_exm_immediate_action_0.apply();
-        exm_txn_test1_0.apply();
-        exm_proxy_hash_0.apply();
+        stat_tcam_direct_pkt_64bit.apply();
+        duplicate_check_exm_immediate_action.apply();
+        exm_txn_test1.apply();
+        exm_proxy_hash.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".cntDum1") direct_counter(CounterType.packets) cntDum1_0;
-    @name(".cntDum2") direct_counter(CounterType.packets) cntDum2_0;
-    @name(".cntDum4") direct_counter(CounterType.packets_and_bytes) cntDum4_0;
-    @name(".cntDum5") direct_counter(CounterType.packets_and_bytes) cntDum5_0;
-    @name(".cntDum") counter(32w256, CounterType.packets) cntDum_0;
-    @name(".cntDum3") counter(32w256, CounterType.packets) cntDum3_0;
-    @name(".cntDum6") counter(32w256, CounterType.packets_and_bytes) cntDum6_0;
-    @name(".keyless_cntr") counter(32w512, CounterType.packets) keyless_cntr_0;
-    @name(".nop") action nop_1() {
+    @name("NoAction") action NoAction_26() {
     }
-    @name(".hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_1) {
-        ttl_0 = ttl_0 + 8w255;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port_1;
+    @name("NoAction") action NoAction_27() {
+    }
+    @name("NoAction") action NoAction_28() {
+    }
+    @name("NoAction") action NoAction_29() {
+    }
+    @name("NoAction") action NoAction_30() {
+    }
+    @name("NoAction") action NoAction_31() {
+    }
+    @name("NoAction") action NoAction_32() {
+    }
+    @name("NoAction") action NoAction_33() {
+    }
+    @name("NoAction") action NoAction_34() {
+    }
+    @name("NoAction") action NoAction_35() {
+    }
+    @name("NoAction") action NoAction_36() {
+    }
+    @name("NoAction") action NoAction_37() {
+    }
+    @name("NoAction") action NoAction_38() {
+    }
+    @name("NoAction") action NoAction_39() {
+    }
+    @name("NoAction") action NoAction_40() {
+    }
+    @name("NoAction") action NoAction_41() {
+    }
+    @name("NoAction") action NoAction_42() {
+    }
+    @name("NoAction") action NoAction_43() {
+    }
+    @name(".cntDum1") direct_counter(CounterType.packets) cntDum1;
+    @name(".cntDum2") direct_counter(CounterType.packets) cntDum2;
+    @name(".cntDum4") direct_counter(CounterType.packets_and_bytes) cntDum4;
+    @name(".cntDum5") direct_counter(CounterType.packets_and_bytes) cntDum5;
+    @name(".cntDum") counter(32w256, CounterType.packets) cntDum;
+    @name(".cntDum3") counter(32w256, CounterType.packets) cntDum3;
+    @name(".cntDum6") counter(32w256, CounterType.packets_and_bytes) cntDum6;
+    @name(".keyless_cntr") counter(32w512, CounterType.packets) keyless_cntr;
+    @name(".nop") action nop_13() {
+    }
+    @name(".nop") action nop_14() {
+    }
+    @name(".nop") action nop_15() {
+    }
+    @name(".nop") action nop_16() {
+    }
+    @name(".nop") action nop_17() {
+    }
+    @name(".nop") action nop_18() {
+    }
+    @name(".nop") action nop_19() {
+    }
+    @name(".nop") action nop_20() {
+    }
+    @name(".nop") action nop_21() {
+    }
+    @name(".nop") action nop_22() {
     }
     @name(".next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_0 = hdr.ipv4.ttl;
+            ttl_0 = ttl_0 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_0;
+        }
+        hdr.ethernet.srcAddr = srcmac;
+        hdr.ethernet.dstAddr = dstmac;
+    }
+    @name(".next_hop_ipv4") action next_hop_ipv4_2(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+        {
+            bit<8> ttl_5 = hdr.ipv4.ttl;
+            ttl_5 = ttl_5 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_5;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
@@ -439,7 +514,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".custom_action_3") action custom_action_0(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_6 = hdr.ipv4.ttl;
+            ttl_6 = ttl_6 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_6;
+        }
     }
     @name(".egress_port") action egress_port_0(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
@@ -447,7 +527,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".custom_action_2") action custom_action_4(bit<9> egress_port, bit<32> ipAddr, bit<16> tcpPort) {
         hdr.ipv4.srcAddr = ipAddr;
         hdr.tcp.dstPort = tcpPort;
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_7 = hdr.ipv4.ttl;
+            ttl_7 = ttl_7 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_7;
+        }
     }
     @name(".mod_mac_addr") action mod_mac_addr_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
@@ -455,7 +540,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.dstAddr = dstmac;
     }
     @name(".nhop_set") action nhop_set_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_8 = hdr.ipv4.ttl;
+            ttl_8 = ttl_8 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_8;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
@@ -471,40 +561,43 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nhop_set_1") action nhop_set_2(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
+    @name(".nhop_set_1") action nhop_set_4(bit<9> port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = port;
+    }
     @name(".keyless_action") action keyless_action_0() {
         hdr.ipv4.identification = 16w320;
-        keyless_cntr_0.count(32w350);
+        keyless_cntr.count(32w350);
     }
     @name(".act2") action act2_0(bit<32> idx, bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        cntDum3_0.count(idx);
+        cntDum3.count(idx);
     }
     @name(".act") action act_0(bit<32> idx, bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        cntDum_0.count(idx);
+        cntDum.count(idx);
     }
     @name(".act5") action act5_0(bit<32> idx, bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        cntDum6_0.count(idx);
+        cntDum6.count(idx);
     }
-    @stage(5) @pack(7) @ways(3) @name(".exm_3ways_7Entries") table exm_3ways_7Entries_0 {
+    @stage(5) @pack(7) @ways(3) @name(".exm_3ways_7Entries") table exm_3ways_7Entries {
         actions = {
-            nop_1();
+            nop_13();
             next_hop_ipv4_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_26();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 21504;
         implementation = next_hop_ipv4_1_profile;
-        default_action = NoAction();
+        default_action = NoAction_26();
     }
-    @stage(2) @pack(6) @ways(4) @name(".exm_4ways_6Entries") table exm_4ways_6Entries_0 {
+    @stage(2) @pack(6) @ways(4) @name(".exm_4ways_6Entries") table exm_4ways_6Entries {
         actions = {
-            nop_1();
+            nop_14();
             custom_action();
-            @defaultonly NoAction();
+            @defaultonly NoAction_27();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
@@ -512,13 +605,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 24576;
         implementation = custom_action_1_profile;
-        default_action = NoAction();
+        default_action = NoAction_27();
     }
-    @stage(6) @pack(8) @ways(4) @name(".exm_4ways_8Entries") table exm_4ways_8Entries_0 {
+    @stage(6) @pack(8) @ways(4) @name(".exm_4ways_8Entries") table exm_4ways_8Entries {
         actions = {
-            nop_1();
+            nop_15();
             modify_tcp_dst_port();
-            @defaultonly NoAction();
+            @defaultonly NoAction_28();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
@@ -526,14 +619,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 32768;
         implementation = modify_tcp_dst_port_1_profile;
-        default_action = NoAction();
+        default_action = NoAction_28();
     }
-    @command_line("--placement", "pragma") @command_line("--no-dead-code-elimination") @stage(0) @pack(5) @ways(5) @name(".exm_5ways_5Entries") table exm_5ways_5Entries_0 {
+    @command_line("--placement", "pragma") @command_line("--no-dead-code-elimination") @stage(0) @pack(5) @ways(5) @name(".exm_5ways_5Entries") table exm_5ways_5Entries {
         actions = {
-            nop_1();
+            nop_16();
             custom_action_0();
             egress_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_29();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
@@ -542,26 +635,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 25600;
         implementation = custom_action_3_profile;
-        default_action = NoAction();
+        default_action = NoAction_29();
     }
-    @stage(3) @pack(6) @ways(5) @name(".exm_5ways_6Entries") table exm_5ways_6Entries_0 {
+    @stage(3) @pack(6) @ways(5) @name(".exm_5ways_6Entries") table exm_5ways_6Entries {
         actions = {
-            nop_1();
+            nop_17();
             custom_action_4();
-            @defaultonly NoAction();
+            @defaultonly NoAction_30();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 30720;
         implementation = custom_action_2_profile;
-        default_action = NoAction();
+        default_action = NoAction_30();
     }
-    @stage(1) @pack(5) @ways(6) @name(".exm_6ways_5Entries") table exm_6ways_5Entries_0 {
+    @stage(1) @pack(5) @ways(6) @name(".exm_6ways_5Entries") table exm_6ways_5Entries {
         actions = {
-            nop_1();
-            next_hop_ipv4_0();
-            @defaultonly NoAction();
+            nop_18();
+            next_hop_ipv4_2();
+            @defaultonly NoAction_31();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
@@ -570,13 +663,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 30720;
         implementation = next_hop_ipv4_profile;
-        default_action = NoAction();
+        default_action = NoAction_31();
     }
-    @stage(4) @pack(6) @ways(6) @name(".exm_6ways_6Entries") table exm_6ways_6Entries_0 {
+    @stage(4) @pack(6) @ways(6) @name(".exm_6ways_6Entries") table exm_6ways_6Entries {
         actions = {
-            nop_1();
+            nop_19();
             mod_mac_addr_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_32();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
@@ -584,13 +677,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 36864;
         implementation = mod_mac_addr_profile;
-        default_action = NoAction();
+        default_action = NoAction_32();
     }
-    @stage(7) @name(".exm_ipv4_routing") table exm_ipv4_routing_0 {
+    @stage(7) @name(".exm_ipv4_routing") table exm_ipv4_routing {
         actions = {
             nhop_set_0();
-            nop_1();
-            @defaultonly NoAction();
+            nop_20();
+            @defaultonly NoAction_33();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
@@ -600,20 +693,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 32768;
         implementation = next_hop_profile;
-        default_action = NoAction();
+        default_action = NoAction_33();
     }
-    @stage(11) @name(".exm_txn_test") table exm_txn_test_0 {
+    @stage(11) @name(".exm_txn_test") table exm_txn_test {
         actions = {
             set_ucast_dest_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_34();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_34();
     }
-    @stage(11) @name(".hash_action2_exm") table hash_action2_exm_0 {
+    @stage(11) @name(".hash_action2_exm") table hash_action2_exm {
         actions = {
             hash_action2_0();
         }
@@ -624,7 +717,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32768;
         default_action = hash_action2_0(3w1);
     }
-    @stage(11) @name(".hash_action_exm") table hash_action_exm_0 {
+    @stage(11) @name(".hash_action_exm") table hash_action_exm {
         actions = {
             hash_action_0();
         }
@@ -635,11 +728,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = hash_action_0(8w33);
     }
-    @stage(8) @name(".ipv4_routing_select") table ipv4_routing_select_0 {
+    @stage(8) @name(".ipv4_routing_select") table ipv4_routing_select {
         actions = {
-            nop_1();
+            nop_21();
             nhop_set_2();
-            @defaultonly NoAction();
+            @defaultonly NoAction_35();
         }
         key = {
             hdr.ipv4.dstAddr       : exact @name("ipv4.dstAddr") ;
@@ -649,13 +742,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector @name("ipv4.protocol") ;
         }
         implementation = ecmp_action_profile;
-        default_action = NoAction();
+        default_action = NoAction_35();
     }
-    @stage(8) @name(".ipv4_routing_select_iter") table ipv4_routing_select_iter_0 {
+    @stage(8) @name(".ipv4_routing_select_iter") table ipv4_routing_select_iter {
         actions = {
-            nop_1();
-            nhop_set_2();
-            @defaultonly NoAction();
+            nop_22();
+            nhop_set_4();
+            @defaultonly NoAction_36();
         }
         key = {
             hdr.ipv4.dstAddr       : exact @name("ipv4.dstAddr") ;
@@ -665,143 +758,143 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector @name("ipv4.protocol") ;
         }
         implementation = ecmp_action_profile_iter;
-        default_action = NoAction();
+        default_action = NoAction_36();
     }
-    @stage(8) @name(".keyless_table") table keyless_table_0 {
+    @stage(8) @name(".keyless_table") table keyless_table {
         actions = {
             keyless_action_0();
         }
         default_action = keyless_action_0();
     }
     @name(".act4") action act4(bit<9> egress_port) {
-        cntDum2_0.count();
+        cntDum2.count();
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @stage(10) @name(".stat_tbl_direct_pkt_32bit") table stat_tbl_direct_pkt_32bit_0 {
+    @stage(10) @name(".stat_tbl_direct_pkt_32bit") table stat_tbl_direct_pkt_32bit {
         actions = {
             act4();
-            @defaultonly NoAction();
+            @defaultonly NoAction_37();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 2048;
-        counters = cntDum2_0;
-        default_action = NoAction();
+        counters = cntDum2;
+        default_action = NoAction_37();
     }
     @name(".act1") action act1(bit<9> egress_port) {
-        cntDum1_0.count();
+        cntDum1.count();
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @stage(10) @name(".stat_tbl_direct_pkt_64bit") table stat_tbl_direct_pkt_64bit_0 {
+    @stage(10) @name(".stat_tbl_direct_pkt_64bit") table stat_tbl_direct_pkt_64bit {
         actions = {
             act1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_38();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 2048;
-        counters = cntDum1_0;
-        default_action = NoAction();
+        counters = cntDum1;
+        default_action = NoAction_38();
     }
     @name(".act1") action act1_3(bit<9> egress_port) {
-        cntDum5_0.count();
+        cntDum5.count();
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @stage(11) @name(".stat_tbl_direct_pkt_byte_32bit") table stat_tbl_direct_pkt_byte_32bit_0 {
+    @stage(11) @name(".stat_tbl_direct_pkt_byte_32bit") table stat_tbl_direct_pkt_byte_32bit {
         actions = {
             act1_3();
-            @defaultonly NoAction();
+            @defaultonly NoAction_39();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 2048;
-        counters = cntDum5_0;
-        default_action = NoAction();
+        counters = cntDum5;
+        default_action = NoAction_39();
     }
     @name(".act1") action act1_4(bit<9> egress_port) {
-        cntDum4_0.count();
+        cntDum4.count();
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @stage(11) @name(".stat_tbl_direct_pkt_byte_64bit") table stat_tbl_direct_pkt_byte_64bit_0 {
+    @stage(11) @name(".stat_tbl_direct_pkt_byte_64bit") table stat_tbl_direct_pkt_byte_64bit {
         actions = {
             act1_4();
-            @defaultonly NoAction();
+            @defaultonly NoAction_40();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 2048;
-        counters = cntDum4_0;
-        default_action = NoAction();
+        counters = cntDum4;
+        default_action = NoAction_40();
     }
-    @stage(9) @name(".stat_tbl_indirect_pkt_32bit") table stat_tbl_indirect_pkt_32bit_0 {
+    @stage(9) @name(".stat_tbl_indirect_pkt_32bit") table stat_tbl_indirect_pkt_32bit {
         actions = {
             act2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_41();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 2048;
-        default_action = NoAction();
+        default_action = NoAction_41();
     }
-    @stage(9) @name(".stat_tbl_indirect_pkt_64bit") table stat_tbl_indirect_pkt_64bit_0 {
+    @stage(9) @name(".stat_tbl_indirect_pkt_64bit") table stat_tbl_indirect_pkt_64bit {
         actions = {
             act_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_42();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 2048;
-        default_action = NoAction();
+        default_action = NoAction_42();
     }
-    @stage(9) @name(".stat_tbl_indirect_pkt_byte_64bit") table stat_tbl_indirect_pkt_byte_64bit_0 {
+    @stage(9) @name(".stat_tbl_indirect_pkt_byte_64bit") table stat_tbl_indirect_pkt_byte_64bit {
         actions = {
             act5_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_43();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 2048;
-        default_action = NoAction();
+        default_action = NoAction_43();
     }
     apply {
-        exm_5ways_5Entries_0.apply();
-        exm_6ways_5Entries_0.apply();
-        exm_4ways_6Entries_0.apply();
-        exm_5ways_6Entries_0.apply();
-        exm_6ways_6Entries_0.apply();
-        exm_3ways_7Entries_0.apply();
-        exm_4ways_8Entries_0.apply();
-        exm_ipv4_routing_0.apply();
-        ipv4_routing_select_0.apply();
-        ipv4_routing_select_iter_0.apply();
+        exm_5ways_5Entries.apply();
+        exm_6ways_5Entries.apply();
+        exm_4ways_6Entries.apply();
+        exm_5ways_6Entries.apply();
+        exm_6ways_6Entries.apply();
+        exm_3ways_7Entries.apply();
+        exm_4ways_8Entries.apply();
+        exm_ipv4_routing.apply();
+        ipv4_routing_select.apply();
+        ipv4_routing_select_iter.apply();
         if (hdr.tcp.srcPort == 16w9001) 
-            keyless_table_0.apply();
-        stat_tbl_indirect_pkt_64bit_0.apply();
-        stat_tbl_indirect_pkt_32bit_0.apply();
-        stat_tbl_indirect_pkt_byte_64bit_0.apply();
-        stat_tbl_direct_pkt_64bit_0.apply();
-        stat_tbl_direct_pkt_32bit_0.apply();
-        stat_tbl_direct_pkt_byte_64bit_0.apply();
-        stat_tbl_direct_pkt_byte_32bit_0.apply();
+            keyless_table.apply();
+        stat_tbl_indirect_pkt_64bit.apply();
+        stat_tbl_indirect_pkt_32bit.apply();
+        stat_tbl_indirect_pkt_byte_64bit.apply();
+        stat_tbl_direct_pkt_64bit.apply();
+        stat_tbl_direct_pkt_32bit.apply();
+        stat_tbl_direct_pkt_byte_64bit.apply();
+        stat_tbl_direct_pkt_byte_32bit.apply();
         if (hdr.tcp.srcPort == 16w9000) {
-            hash_action_exm_0.apply();
-            hash_action2_exm_0.apply();
+            hash_action_exm.apply();
+            hash_action2_exm.apply();
         }
-        exm_txn_test_0.apply();
+        exm_txn_test.apply();
     }
 }
 

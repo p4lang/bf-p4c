@@ -160,24 +160,26 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".a2") action a2_0() {
         hdr.w0.w = 32w2;
     }
-    @name(".et1") table et1_0 {
+    @name(".et1") table et1 {
         actions = {
             do_nothing_0();
             a2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        et1_0.apply();
+        et1.apply();
     }
 }
 
@@ -187,7 +189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_p") action set_p_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w1;
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             do_nothing_1();
             set_p_0();
@@ -198,7 +200,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = set_p_0();
     }
     apply {
-        t1_0.apply();
+        t1.apply();
     }
 }
 

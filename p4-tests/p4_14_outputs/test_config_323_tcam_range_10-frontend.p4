@@ -173,38 +173,42 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".meter_0") direct_meter<bit<8>>(MeterType.bytes) meter_1;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    @name(".meter_0") direct_meter<bit<8>>(MeterType.bytes) meter_0;
     @name(".do_nothing") action do_nothing_1() {
     }
     @name(".action_1") action action_0() {
         hdr.pkt.field_h_16 = 16w1;
     }
     @name(".do_nothing") action do_nothing_2() {
-        meter_1.read(meta.meta.color);
+        meter_0.read(meta.meta.color);
     }
     @name(".action_0") action action_0_1() {
-        meter_1.read(meta.meta.color);
+        meter_0.read(meta.meta.color);
         hdr.pkt.field_g_16 = 16w1;
     }
-    @name(".table_0") table table_2 {
+    @name(".table_0") table table_0 {
         actions = {
             do_nothing_2();
             action_0_1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_o_17: range @name("pkt.field_o_17") ;
             hdr.pkt.field_f_16: exact @name("pkt.field_f_16") ;
         }
         size = 1024;
-        meters = meter_1;
-        default_action = NoAction();
+        meters = meter_0;
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_3 {
+    @name(".table_1") table table_1 {
         actions = {
             do_nothing_1();
             action_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.pkt.field_p_15: range @name("pkt.field_p_15") ;
@@ -212,11 +216,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.color   : exact @name("meta.color") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        table_2.apply();
-        table_3.apply();
+        table_0.apply();
+        table_1.apply();
     }
 }
 

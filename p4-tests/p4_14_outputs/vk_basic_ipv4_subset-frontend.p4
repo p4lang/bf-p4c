@@ -240,6 +240,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".indirect_action_profile") action_profile(32w2048) indirect_action_profile;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".nop") action nop_0() {
     }
     @name(".modify_ip_id") action modify_ip_id_0(bit<9> port, bit<16> id, bit<48> srcAddr, bit<48> dstAddr) {
@@ -248,11 +250,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.srcAddr = srcAddr;
         hdr.ethernet.dstAddr = dstAddr;
     }
-    @stage(10) @name(".tcam_indirect_action") table tcam_indirect_action_0 {
+    @stage(10) @name(".tcam_indirect_action") table tcam_indirect_action {
         actions = {
             nop_0();
             modify_ip_id_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.srcAddr  : ternary @name("ethernet.srcAddr") ;
@@ -265,11 +267,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 2048;
         implementation = indirect_action_profile;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (hdr.ipv4.isValid()) 
-            tcam_indirect_action_0.apply();
+            tcam_indirect_action.apply();
     }
 }
 

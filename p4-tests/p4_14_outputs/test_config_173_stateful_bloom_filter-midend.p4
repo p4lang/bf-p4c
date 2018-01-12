@@ -226,6 +226,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_1;
+
+@name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_2;
+
+@name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
+
 struct tuple_0 {
     bit<32> field;
     bit<32> field_0;
@@ -250,9 +256,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_13() {
     }
-    @name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_1;
-    @name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_2;
-    @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
     @name("bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;

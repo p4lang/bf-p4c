@@ -170,6 +170,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".reg_0") register<bit<8>>(32w1024) reg_0;
+
+@name(".reg_1") register<bit<8>>(32w1024) reg_1;
+
+@name(".reg_2") register<bit<8>>(32w1024) reg_2;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<8> tmp_2;
     bit<8> tmp_3;
@@ -180,9 +186,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name(".reg_0") register<bit<8>>(32w1024) reg_0;
-    @name(".reg_1") register<bit<8>>(32w1024) reg_1;
-    @name(".reg_2") register<bit<8>>(32w1024) reg_2;
     @name("alu_0") register_action<bit<8>, bit<8>>(reg_0) alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = 8w15;

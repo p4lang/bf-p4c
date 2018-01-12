@@ -215,7 +215,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
+    bit<8> tmp_0;
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
@@ -247,8 +247,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         transition parse_ipv4_options;
     }
     @name(".parse_ipv4_options") state parse_ipv4_options {
-        tmp = packet.lookahead<bit<8>>();
-        transition select(hdr.ig_prsr_ctrl.parser_counter, tmp[7:0]) {
+        tmp_0 = packet.lookahead<bit<8>>();
+        transition select(hdr.ig_prsr_ctrl.parser_counter, tmp_0[7:0]) {
             (8w0x0 &&& 8w0xff, 8w0x0 &&& 8w0x0): accept;
             (8w0x0 &&& 8w0x0, 8w0x0 &&& 8w0xff): parse_ipv4_option_eol;
             (8w0x0 &&& 8w0x0, 8w0x1 &&& 8w0xff): parse_ipv4_option_nop;
@@ -292,6 +292,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".set_egress_port") action set_egress_port_0(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
@@ -299,30 +303,30 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ipv6.dstAddr = hdr.active_segment.sid;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name(".ipv4_option_lookup") table ipv4_option_lookup_0 {
+    @name(".ipv4_option_lookup") table ipv4_option_lookup {
         actions = {
             set_egress_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ipv4_option_NOP.isValid()     : exact @name("ipv4_option_NOP.$valid$") ;
             hdr.ipv4_option_EOL.isValid()     : exact @name("ipv4_option_EOL.$valid$") ;
             hdr.ipv4_option_addr_ext.isValid(): exact @name("ipv4_option_addr_ext.$valid$") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".sr_lookup") table sr_lookup_0 {
+    @name(".sr_lookup") table sr_lookup {
         actions = {
             rewrite_ipv6_and_set_egress_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.ipv6_srh.isValid()) 
-            sr_lookup_0.apply();
+            sr_lookup.apply();
         if (hdr.ipv4.isValid()) 
-            ipv4_option_lookup_0.apply();
+            ipv4_option_lookup.apply();
     }
 }
 

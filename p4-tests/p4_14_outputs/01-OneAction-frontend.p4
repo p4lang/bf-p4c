@@ -156,6 +156,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".nop") action nop_0() {
     }
     @name(".ing_drop") action ing_drop_0() {
@@ -164,21 +166,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_egress_port") action set_egress_port_0(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name(".dmac") table dmac_0 {
+    @name(".dmac") table dmac {
         actions = {
             nop_0();
             ing_drop_0();
             set_egress_port_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 131072;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        dmac_0.apply();
+        dmac.apply();
     }
 }
 

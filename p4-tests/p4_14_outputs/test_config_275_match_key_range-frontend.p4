@@ -191,16 +191,18 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".a0") action a0_0(bit<24> b) {
         hdr.begin.blah = b;
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name(".t0") table t0_0 {
+    @name(".t0") table t0 {
         actions = {
             a0_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.x_32[31:24]: ternary @name("meta.x_32[31:24]") ;
@@ -209,10 +211,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.z_32       : exact @name("meta.z_32") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        t0_0.apply();
+        t0.apply();
     }
 }
 

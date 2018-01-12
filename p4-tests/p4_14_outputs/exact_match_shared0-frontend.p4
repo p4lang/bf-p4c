@@ -33,12 +33,26 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
     @name(".noop") action noop_0() {
     }
-    @name(".test1") table test1_0 {
+    @name(".noop") action noop_4() {
+    }
+    @name(".noop") action noop_5() {
+    }
+    @name(".noop") action noop_6() {
+    }
+    @name(".test1") table test1 {
         actions = {
             noop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
@@ -46,23 +60,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.b2: exact @name("data.b2") ;
             hdr.data.b3: exact @name("data.b3") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".test2") table test2_0 {
+    @name(".test2") table test2 {
         actions = {
-            noop_0();
-            @defaultonly NoAction();
+            noop_4();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
             hdr.data.f3: exact @name("data.f3") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
-    @name(".test3") table test3_0 {
+    @name(".test3") table test3 {
         actions = {
-            noop_0();
-            @defaultonly NoAction();
+            noop_5();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.data.f3: exact @name("data.f3") ;
@@ -70,25 +84,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.b2: exact @name("data.b2") ;
             hdr.data.b4: exact @name("data.b4") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".test4") table test4_0 {
+    @name(".test4") table test4 {
         actions = {
-            noop_0();
-            @defaultonly NoAction();
+            noop_6();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
             hdr.data.b2: exact @name("data.b2") ;
             hdr.data.b3: exact @name("data.b3") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
     apply {
-        test1_0.apply();
-        test2_0.apply();
-        test3_0.apply();
-        test4_0.apply();
+        test1.apply();
+        test2.apply();
+        test3.apply();
+        test4.apply();
     }
 }
 

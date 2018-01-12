@@ -324,11 +324,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".next_hop_ecmp_ap") @mode("fair") action_selector(HashAlgorithm.crc32, 32w4096, 32w29) next_hop_ecmp_ap;
 
+@name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_1;
+
+@name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_2;
+
+@name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
+
+@name(".next_hop_ecmp_reg") register<bit<1>>(32w131072) next_hop_ecmp_reg;
+
 control pgen_pass_1_ctrl_flow(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_1;
-    @name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_2;
-    @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
-    @name(".next_hop_ecmp_reg") register<bit<1>>(32w131072) next_hop_ecmp_reg;
     register_action<bit<1>, bit<1>>(bloom_filter_1) clr_bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
@@ -462,8 +466,9 @@ control recirc_trigger_pkt_ctrl_flow(inout headers hdr, inout metadata meta, ino
     }
 }
 
+@name(".lag_reg") register<bit<1>>(32w131072) lag_reg;
+
 control pgen_pass_2_ctrl_flow(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".lag_reg") register<bit<1>>(32w131072) lag_reg;
     selector_action(lag_ap) lag_alu = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
@@ -514,22 +519,26 @@ control pgen_pass_2_ctrl_flow(inout headers hdr, inout metadata meta, inout stan
     }
 }
 
+@name(".ifid_cntr") register<bit<16>>(32w0) ifid_cntr;
+
+@name(".ob1") register<bit<1>>(32w1000) ob1;
+
+@name(".ob2") register<bit<1>>(32w1000) ob2;
+
 struct counter_alu_layout {
     int<32> lo;
     int<32> hi;
 }
 
+@name(".port_cntr") register<counter_alu_layout>(32w0) port_cntr;
+
+@name(".sampling_cntr") register<bit<32>>(32w143360) sampling_cntr;
+
+@name(".scratch") register<bit<16>>(32w4096) scratch;
+
+@name(".two_instr_no_idx_reg") register<bit<8>>(32w512) two_instr_no_idx_reg;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_1;
-    @name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_2;
-    @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
-    @name(".ifid_cntr") register<bit<16>>(32w0) ifid_cntr;
-    @name(".ob1") register<bit<1>>(32w1000) ob1;
-    @name(".ob2") register<bit<1>>(32w1000) ob2;
-    @name(".port_cntr") register<counter_alu_layout>(32w0) port_cntr;
-    @name(".sampling_cntr") register<bit<32>>(32w143360) sampling_cntr;
-    @name(".scratch") register<bit<16>>(32w4096) scratch;
-    @name(".two_instr_no_idx_reg") register<bit<8>>(32w512) two_instr_no_idx_reg;
     register_action<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

@@ -32,17 +32,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".setb_out") action setb_out_0(bit<8> val, bit<9> port) {
         hdr.data.b_out = val;
         standard_metadata.egress_spec = port;
     }
     @name(".noop") action noop_0() {
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
             setb_out_0();
             noop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.n1: exact @name("data.n1") ;
@@ -51,10 +53,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.b1: exact @name("data.b1") ;
             hdr.data.b2: exact @name("data.b2") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        test1_0.apply();
+        test1.apply();
     }
 }
 

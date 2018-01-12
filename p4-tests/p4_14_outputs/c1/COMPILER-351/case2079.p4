@@ -591,9 +591,11 @@ control Algonquin(inout headers hdr, inout metadata meta, inout standard_metadat
     }
 }
 
+@name(".Jefferson") register<bit<1>>(32w262144) Jefferson;
+
+@name(".Shidler") register<bit<1>>(32w262144) Shidler;
+
 control Amber(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Jefferson") register<bit<1>>(32w262144) Jefferson;
-    @name(".Shidler") register<bit<1>>(32w262144) Shidler;
     register_action<bit<1>, bit<1>>(Shidler) Moxley = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

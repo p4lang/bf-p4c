@@ -178,10 +178,22 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
     @name(".action_0") action action_4() {
         hdr.ipv4.diffserv = 8w1;
     }
     @name(".do_nothing") action do_nothing_0() {
+    }
+    @name(".do_nothing") action do_nothing_3() {
+    }
+    @name(".do_nothing") action do_nothing_4() {
     }
     @name(".action_1") action action_5() {
         hdr.ipv4.totalLen = 16w2;
@@ -192,62 +204,62 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_3") action action_7() {
         hdr.ipv4.identification = 16w4;
     }
-    @name(".table_0") table table_4 {
+    @name(".table_0") table table_0 {
         actions = {
             action_4();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.etherType: lpm @name("ethernet.etherType") ;
             hdr.ipv4.diffserv     : exact @name("ipv4.diffserv") ;
         }
         max_size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_5 {
+    @name(".table_1") table table_1 {
         actions = {
             action_5();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_3();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         max_size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
-    @name(".table_2") table table_6 {
+    @name(".table_2") table table_2 {
         actions = {
             action_6();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_4();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.ipv4.srcAddr : exact @name("ipv4.srcAddr") ;
             hdr.ipv4.totalLen: exact @name("ipv4.totalLen") ;
         }
         max_size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".table_3") table table_7 {
+    @name(".table_3") table table_3 {
         actions = {
             action_7();
-            @defaultonly NoAction();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
         }
         max_size = 2048;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
     apply {
-        table_4.apply();
-        table_5.apply();
+        table_0.apply();
+        table_1.apply();
         if (hdr.ipv4.isValid()) 
-            table_6.apply();
-        table_7.apply();
+            table_2.apply();
+        table_3.apply();
     }
 }
 

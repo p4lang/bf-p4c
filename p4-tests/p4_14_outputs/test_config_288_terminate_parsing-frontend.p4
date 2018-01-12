@@ -39,25 +39,27 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".action1") action action1_0() {
         hdr.pkt.srcAddr = 32w1;
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name(".table1") table table1_0 {
+    @name(".table1") table table1 {
         actions = {
             action1_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.srcPort: ternary @name("pkt.srcPort") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (hdr.pkt.isValid()) 
-            table1_0.apply();
+            table1.apply();
     }
 }
 

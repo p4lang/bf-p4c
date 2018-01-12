@@ -267,6 +267,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".tcp_sport_modify") action tcp_sport_modify_0(bit<16> sPort, bit<9> port) {
         hdr.tcp.srcPort = sPort;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
@@ -291,7 +293,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ipv4.ttl = ttl;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".match_tbl") table match_tbl_0 {
+    @name(".match_tbl") table match_tbl {
         actions = {
             tcp_sport_modify_0();
             tcp_dport_modify_0();
@@ -299,17 +301,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             ipda_modify_0();
             ipds_modify_0();
             ipttl_modify_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
         }
         size = 10000;
         implementation = selector_profile;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        match_tbl_0.apply();
+        match_tbl.apply();
     }
 }
 

@@ -164,25 +164,27 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 #include <tofino/p4_14_prim.p4>
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".action_0") action action_2() {
         sample3(CloneType.E2E, 32w1, 32w7);
     }
     @name(".action_1") action action_3() {
     }
-    @name(".table_0") table table_1 {
+    @name(".table_0") table table_0 {
         actions = {
             action_2();
             action_3();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        table_1.apply();
+        table_0.apply();
     }
 }
 

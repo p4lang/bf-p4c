@@ -418,7 +418,7 @@ struct headers {
 #include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<112> tmp;
+    bit<112> tmp_0;
     @name(".Aguilar") state Aguilar {
         packet.extract<Moylan>(hdr.Linden[0]);
         meta.Selby.Wentworth = hdr.Linden[0].Sallisaw;
@@ -517,223 +517,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         transition accept;
     }
     @name(".start") state start {
-        tmp = packet.lookahead<bit<112>>();
-        transition select(tmp[15:0]) {
+        tmp_0 = packet.lookahead<bit<112>>();
+        transition select(tmp_0[15:0]) {
             16w0xbf00: Bellville;
             default: Fallis;
         }
-    }
-}
-
-control Garrison(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Wamego") action Wamego_0(bit<16> Elkton) {
-        meta.Woodston.Cleta = Elkton;
-    }
-    @name(".Goessel") action Goessel_0(bit<11> IowaCity) {
-        meta.Woodston.Paisley = IowaCity;
-    }
-    @name(".Fillmore") action Fillmore_0() {
-        meta.Blanding.Unionvale = 1w1;
-        meta.Blanding.Edgemont = 8w9;
-    }
-    @name(".Roosville") action Roosville_0(bit<16> Dedham, bit<16> Joyce) {
-        meta.Cantwell.BarNunn = Dedham;
-        meta.Woodston.Cleta = Joyce;
-    }
-    @name(".Lueders") action Lueders_0() {
-    }
-    @name(".Calcasieu") action Calcasieu_0(bit<13> BirchBay, bit<16> Nanson) {
-        meta.Hitterdal.Dixie = BirchBay;
-        meta.Woodston.Cleta = Nanson;
-    }
-    @name(".Garwood") action Garwood_0(bit<11> Stanwood, bit<16> Salamatof) {
-        meta.Hitterdal.Lenoir = Stanwood;
-        meta.Woodston.Cleta = Salamatof;
-    }
-    @action_default_only("Fillmore") @idletime_precision(1) @name(".Boquet") table Boquet_0 {
-        support_timeout = true;
-        actions = {
-            Wamego_0();
-            Goessel_0();
-            Fillmore_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.Bieber.Coverdale: exact @name("Bieber.Coverdale") ;
-            meta.Cantwell.Colona : lpm @name("Cantwell.Colona") ;
-        }
-        size = 1024;
-        default_action = NoAction();
-    }
-    @action_default_only("Lueders") @name(".Grampian") table Grampian_0 {
-        actions = {
-            Roosville_0();
-            Lueders_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.Bieber.Coverdale: exact @name("Bieber.Coverdale") ;
-            meta.Cantwell.Colona : lpm @name("Cantwell.Colona") ;
-        }
-        size = 16384;
-        default_action = NoAction();
-    }
-    @atcam_partition_index("Hitterdal.Dixie") @atcam_number_partitions(8192) @name(".KeyWest") table KeyWest_0 {
-        actions = {
-            Wamego_0();
-            Goessel_0();
-            Lueders_0();
-        }
-        key = {
-            meta.Hitterdal.Dixie           : exact @name("Hitterdal.Dixie") ;
-            meta.Hitterdal.Danville[106:64]: lpm @name("Hitterdal.Danville[106:64]") ;
-        }
-        size = 65536;
-        default_action = Lueders_0();
-    }
-    @atcam_partition_index("Hitterdal.Lenoir") @atcam_number_partitions(2048) @name(".Minoa") table Minoa_0 {
-        actions = {
-            Wamego_0();
-            Goessel_0();
-            Lueders_0();
-        }
-        key = {
-            meta.Hitterdal.Lenoir        : exact @name("Hitterdal.Lenoir") ;
-            meta.Hitterdal.Danville[63:0]: lpm @name("Hitterdal.Danville[63:0]") ;
-        }
-        size = 16384;
-        default_action = Lueders_0();
-    }
-    @idletime_precision(1) @name(".Neches") table Neches_0 {
-        support_timeout = true;
-        actions = {
-            Wamego_0();
-            Goessel_0();
-            Lueders_0();
-        }
-        key = {
-            meta.Bieber.Coverdale: exact @name("Bieber.Coverdale") ;
-            meta.Cantwell.Colona : exact @name("Cantwell.Colona") ;
-        }
-        size = 65536;
-        default_action = Lueders_0();
-    }
-    @command_line("--no-dead-code-elimination") @action_default_only("Fillmore") @name(".Nuyaka") table Nuyaka_0 {
-        actions = {
-            Calcasieu_0();
-            Fillmore_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.Bieber.Coverdale          : exact @name("Bieber.Coverdale") ;
-            meta.Hitterdal.Danville[127:64]: lpm @name("Hitterdal.Danville[127:64]") ;
-        }
-        size = 8192;
-        default_action = NoAction();
-    }
-    @idletime_precision(1) @name(".Saragosa") table Saragosa_0 {
-        support_timeout = true;
-        actions = {
-            Wamego_0();
-            Goessel_0();
-            Lueders_0();
-        }
-        key = {
-            meta.Bieber.Coverdale  : exact @name("Bieber.Coverdale") ;
-            meta.Hitterdal.Danville: exact @name("Hitterdal.Danville") ;
-        }
-        size = 65536;
-        default_action = Lueders_0();
-    }
-    @action_default_only("Lueders") @name(".Valeene") table Valeene_0 {
-        actions = {
-            Garwood_0();
-            Lueders_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.Bieber.Coverdale  : exact @name("Bieber.Coverdale") ;
-            meta.Hitterdal.Danville: lpm @name("Hitterdal.Danville") ;
-        }
-        size = 2048;
-        default_action = NoAction();
-    }
-    @ways(2) @atcam_partition_index("Cantwell.BarNunn") @atcam_number_partitions(16384) @name(".Waretown") table Waretown_0 {
-        actions = {
-            Wamego_0();
-            Goessel_0();
-            Lueders_0();
-        }
-        key = {
-            meta.Cantwell.BarNunn     : exact @name("Cantwell.BarNunn") ;
-            meta.Cantwell.Colona[19:0]: lpm @name("Cantwell.Colona[19:0]") ;
-        }
-        size = 131072;
-        default_action = Lueders_0();
-    }
-    apply {
-        if (meta.Selby.Yukon == 1w0 && meta.Bieber.Sequim == 1w1) 
-            if (meta.Bieber.Lathrop == 1w1 && meta.Selby.Malabar == 1w1) 
-                switch (Neches_0.apply().action_run) {
-                    Lueders_0: {
-                        switch (Grampian_0.apply().action_run) {
-                            Lueders_0: {
-                                Boquet_0.apply();
-                            }
-                            Roosville_0: {
-                                Waretown_0.apply();
-                            }
-                        }
-
-                    }
-                }
-
-            else 
-                if (meta.Bieber.Mosinee == 1w1 && meta.Selby.Lewiston == 1w1) 
-                    switch (Saragosa_0.apply().action_run) {
-                        Lueders_0: {
-                            switch (Valeene_0.apply().action_run) {
-                                Garwood_0: {
-                                    Minoa_0.apply();
-                                }
-                                Lueders_0: {
-                                    switch (Nuyaka_0.apply().action_run) {
-                                        Calcasieu_0: {
-                                            KeyWest_0.apply();
-                                        }
-                                    }
-
-                                }
-                            }
-
-                        }
-                    }
-
-    }
-}
-
-control Taopi(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp_0;
-    @name(".Angus") action Angus_0(bit<32> Rohwer) {
-        if (meta.Washoe.Minburn >= Rohwer) 
-            tmp_0 = meta.Washoe.Minburn;
-        else 
-            tmp_0 = Rohwer;
-        meta.Washoe.Minburn = tmp_0;
-    }
-    @name(".Meyers") table Meyers_0 {
-        actions = {
-            Angus_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.Brainard.JaneLew: exact @name("Brainard.JaneLew") ;
-        }
-        size = 256;
-        default_action = NoAction();
-    }
-    apply {
-        Meyers_0.apply();
     }
 }
 
@@ -743,11 +531,265 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Garrison") Garrison() Garrison_1;
-    @name(".Taopi") Taopi() Taopi_1;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
+    @name(".Wamego") action _Wamego(bit<16> Elkton) {
+        meta.Woodston.Cleta = Elkton;
+    }
+    @name(".Wamego") action _Wamego_6(bit<16> Elkton) {
+        meta.Woodston.Cleta = Elkton;
+    }
+    @name(".Wamego") action _Wamego_7(bit<16> Elkton) {
+        meta.Woodston.Cleta = Elkton;
+    }
+    @name(".Wamego") action _Wamego_8(bit<16> Elkton) {
+        meta.Woodston.Cleta = Elkton;
+    }
+    @name(".Wamego") action _Wamego_9(bit<16> Elkton) {
+        meta.Woodston.Cleta = Elkton;
+    }
+    @name(".Wamego") action _Wamego_10(bit<16> Elkton) {
+        meta.Woodston.Cleta = Elkton;
+    }
+    @name(".Goessel") action _Goessel(bit<11> IowaCity) {
+        meta.Woodston.Paisley = IowaCity;
+    }
+    @name(".Goessel") action _Goessel_6(bit<11> IowaCity) {
+        meta.Woodston.Paisley = IowaCity;
+    }
+    @name(".Goessel") action _Goessel_7(bit<11> IowaCity) {
+        meta.Woodston.Paisley = IowaCity;
+    }
+    @name(".Goessel") action _Goessel_8(bit<11> IowaCity) {
+        meta.Woodston.Paisley = IowaCity;
+    }
+    @name(".Goessel") action _Goessel_9(bit<11> IowaCity) {
+        meta.Woodston.Paisley = IowaCity;
+    }
+    @name(".Goessel") action _Goessel_10(bit<11> IowaCity) {
+        meta.Woodston.Paisley = IowaCity;
+    }
+    @name(".Fillmore") action _Fillmore() {
+        meta.Blanding.Unionvale = 1w1;
+        meta.Blanding.Edgemont = 8w9;
+    }
+    @name(".Fillmore") action _Fillmore_2() {
+        meta.Blanding.Unionvale = 1w1;
+        meta.Blanding.Edgemont = 8w9;
+    }
+    @name(".Roosville") action _Roosville(bit<16> Dedham, bit<16> Joyce) {
+        meta.Cantwell.BarNunn = Dedham;
+        meta.Woodston.Cleta = Joyce;
+    }
+    @name(".Lueders") action _Lueders() {
+    }
+    @name(".Lueders") action _Lueders_7() {
+    }
+    @name(".Lueders") action _Lueders_8() {
+    }
+    @name(".Lueders") action _Lueders_9() {
+    }
+    @name(".Lueders") action _Lueders_10() {
+    }
+    @name(".Lueders") action _Lueders_11() {
+    }
+    @name(".Lueders") action _Lueders_12() {
+    }
+    @name(".Calcasieu") action _Calcasieu(bit<13> BirchBay, bit<16> Nanson) {
+        meta.Hitterdal.Dixie = BirchBay;
+        meta.Woodston.Cleta = Nanson;
+    }
+    @name(".Garwood") action _Garwood(bit<11> Stanwood, bit<16> Salamatof) {
+        meta.Hitterdal.Lenoir = Stanwood;
+        meta.Woodston.Cleta = Salamatof;
+    }
+    @action_default_only("Fillmore") @idletime_precision(1) @name(".Boquet") table _Boquet_0 {
+        support_timeout = true;
+        actions = {
+            _Wamego();
+            _Goessel();
+            _Fillmore();
+            @defaultonly NoAction_0();
+        }
+        key = {
+            meta.Bieber.Coverdale: exact @name("Bieber.Coverdale") ;
+            meta.Cantwell.Colona : lpm @name("Cantwell.Colona") ;
+        }
+        size = 1024;
+        default_action = NoAction_0();
+    }
+    @action_default_only("Lueders") @name(".Grampian") table _Grampian_0 {
+        actions = {
+            _Roosville();
+            _Lueders();
+            @defaultonly NoAction_6();
+        }
+        key = {
+            meta.Bieber.Coverdale: exact @name("Bieber.Coverdale") ;
+            meta.Cantwell.Colona : lpm @name("Cantwell.Colona") ;
+        }
+        size = 16384;
+        default_action = NoAction_6();
+    }
+    @atcam_partition_index("Hitterdal.Dixie") @atcam_number_partitions(8192) @name(".KeyWest") table _KeyWest_0 {
+        actions = {
+            _Wamego_6();
+            _Goessel_6();
+            _Lueders_7();
+        }
+        key = {
+            meta.Hitterdal.Dixie           : exact @name("Hitterdal.Dixie") ;
+            meta.Hitterdal.Danville[106:64]: lpm @name("Hitterdal.Danville[106:64]") ;
+        }
+        size = 65536;
+        default_action = _Lueders_7();
+    }
+    @atcam_partition_index("Hitterdal.Lenoir") @atcam_number_partitions(2048) @name(".Minoa") table _Minoa_0 {
+        actions = {
+            _Wamego_7();
+            _Goessel_7();
+            _Lueders_8();
+        }
+        key = {
+            meta.Hitterdal.Lenoir        : exact @name("Hitterdal.Lenoir") ;
+            meta.Hitterdal.Danville[63:0]: lpm @name("Hitterdal.Danville[63:0]") ;
+        }
+        size = 16384;
+        default_action = _Lueders_8();
+    }
+    @idletime_precision(1) @name(".Neches") table _Neches_0 {
+        support_timeout = true;
+        actions = {
+            _Wamego_8();
+            _Goessel_8();
+            _Lueders_9();
+        }
+        key = {
+            meta.Bieber.Coverdale: exact @name("Bieber.Coverdale") ;
+            meta.Cantwell.Colona : exact @name("Cantwell.Colona") ;
+        }
+        size = 65536;
+        default_action = _Lueders_9();
+    }
+    @command_line("--no-dead-code-elimination") @action_default_only("Fillmore") @name(".Nuyaka") table _Nuyaka_0 {
+        actions = {
+            _Calcasieu();
+            _Fillmore_2();
+            @defaultonly NoAction_7();
+        }
+        key = {
+            meta.Bieber.Coverdale          : exact @name("Bieber.Coverdale") ;
+            meta.Hitterdal.Danville[127:64]: lpm @name("Hitterdal.Danville[127:64]") ;
+        }
+        size = 8192;
+        default_action = NoAction_7();
+    }
+    @idletime_precision(1) @name(".Saragosa") table _Saragosa_0 {
+        support_timeout = true;
+        actions = {
+            _Wamego_9();
+            _Goessel_9();
+            _Lueders_10();
+        }
+        key = {
+            meta.Bieber.Coverdale  : exact @name("Bieber.Coverdale") ;
+            meta.Hitterdal.Danville: exact @name("Hitterdal.Danville") ;
+        }
+        size = 65536;
+        default_action = _Lueders_10();
+    }
+    @action_default_only("Lueders") @name(".Valeene") table _Valeene_0 {
+        actions = {
+            _Garwood();
+            _Lueders_11();
+            @defaultonly NoAction_8();
+        }
+        key = {
+            meta.Bieber.Coverdale  : exact @name("Bieber.Coverdale") ;
+            meta.Hitterdal.Danville: lpm @name("Hitterdal.Danville") ;
+        }
+        size = 2048;
+        default_action = NoAction_8();
+    }
+    @ways(2) @atcam_partition_index("Cantwell.BarNunn") @atcam_number_partitions(16384) @name(".Waretown") table _Waretown_0 {
+        actions = {
+            _Wamego_10();
+            _Goessel_10();
+            _Lueders_12();
+        }
+        key = {
+            meta.Cantwell.BarNunn     : exact @name("Cantwell.BarNunn") ;
+            meta.Cantwell.Colona[19:0]: lpm @name("Cantwell.Colona[19:0]") ;
+        }
+        size = 131072;
+        default_action = _Lueders_12();
+    }
+    bit<32> _Taopi_tmp_0;
+    @name(".Angus") action _Angus(bit<32> Rohwer) {
+        if (meta.Washoe.Minburn >= Rohwer) 
+            _Taopi_tmp_0 = meta.Washoe.Minburn;
+        else 
+            _Taopi_tmp_0 = Rohwer;
+        meta.Washoe.Minburn = _Taopi_tmp_0;
+    }
+    @name(".Meyers") table _Meyers_0 {
+        actions = {
+            _Angus();
+            @defaultonly NoAction_9();
+        }
+        key = {
+            meta.Brainard.JaneLew: exact @name("Brainard.JaneLew") ;
+        }
+        size = 256;
+        default_action = NoAction_9();
+    }
     apply {
-        Garrison_1.apply(hdr, meta, standard_metadata);
-        Taopi_1.apply(hdr, meta, standard_metadata);
+        if (meta.Selby.Yukon == 1w0 && meta.Bieber.Sequim == 1w1) 
+            if (meta.Bieber.Lathrop == 1w1 && meta.Selby.Malabar == 1w1) 
+                switch (_Neches_0.apply().action_run) {
+                    _Lueders_9: {
+                        switch (_Grampian_0.apply().action_run) {
+                            _Lueders: {
+                                _Boquet_0.apply();
+                            }
+                            _Roosville: {
+                                _Waretown_0.apply();
+                            }
+                        }
+
+                    }
+                }
+
+            else 
+                if (meta.Bieber.Mosinee == 1w1 && meta.Selby.Lewiston == 1w1) 
+                    switch (_Saragosa_0.apply().action_run) {
+                        _Lueders_10: {
+                            switch (_Valeene_0.apply().action_run) {
+                                _Garwood: {
+                                    _Minoa_0.apply();
+                                }
+                                _Lueders_11: {
+                                    switch (_Nuyaka_0.apply().action_run) {
+                                        _Calcasieu: {
+                                            _KeyWest_0.apply();
+                                        }
+                                    }
+
+                                }
+                            }
+
+                        }
+                    }
+
+        _Meyers_0.apply();
     }
 }
 

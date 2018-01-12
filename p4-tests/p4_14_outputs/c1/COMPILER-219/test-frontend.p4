@@ -55,19 +55,21 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingressProcessing(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".a1") action a1_0() {
     }
-    @name(".T1") table T1_0 {
+    @name(".T1") table T1 {
         actions = {
             a1_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (meta.m.a == 1w0 && hdr.ipv4.ttl > 8w0) 
-            T1_0.apply();
+            T1.apply();
     }
 }
 

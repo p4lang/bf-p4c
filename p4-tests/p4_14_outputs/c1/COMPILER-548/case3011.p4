@@ -3567,9 +3567,11 @@ control Simnasho(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
+@name(".Bosworth") register<bit<1>>(32w262144) Bosworth;
+
+@name(".Tuttle") register<bit<1>>(32w262144) Tuttle;
+
 control Snowflake(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Bosworth") register<bit<1>>(32w262144) Bosworth;
-    @name(".Tuttle") register<bit<1>>(32w262144) Tuttle;
     register_action<bit<1>, bit<1>>(Bosworth) ShadeGap = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

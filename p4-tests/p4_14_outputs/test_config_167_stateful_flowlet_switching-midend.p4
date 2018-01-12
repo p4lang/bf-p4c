@@ -212,11 +212,12 @@ struct flowlet_state_alu_layout {
     bit<32> hi;
 }
 
+@name(".flowlet_state") register<flowlet_state_alu_layout>(32w65536) flowlet_state;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<32> tmp_0;
     @name("NoAction") action NoAction_0() {
     }
-    @name(".flowlet_state") register<flowlet_state_alu_layout>(32w65536) flowlet_state;
     @name("flowlet_state_alu") register_action<flowlet_state_alu_layout, bit<32>>(flowlet_state) flowlet_state_alu = {
         void apply(inout flowlet_state_alu_layout value, out bit<32> rv) {
             value.lo = meta.meta.tstamp;

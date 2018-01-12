@@ -444,6 +444,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<32> Bassett;
 }
 
+@name(".Buenos") register<bit<1>>(32w262144) Buenos;
+
+@name(".Chaffey") register<bit<1>>(32w262144) Chaffey;
+
+@name(".Ingleside") register<bit<1>>(32w65536) Ingleside;
+
 @name("ElPrado") struct ElPrado {
     bit<8>  Wyatte;
     bit<24> Salus;
@@ -806,14 +812,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction_26();
     }
-    @name(".Buenos") register<bit<1>>(32w262144) _Buenos_0;
-    @name(".Chaffey") register<bit<1>>(32w262144) _Chaffey_0;
-    @name(".KentPark.Sherack") register_action<bit<1>, bit<1>>(_Chaffey_0) _KentPark_Sherack_0 = {
+    @name(".KentPark.Sherack") register_action<bit<1>, bit<1>>(Chaffey) _KentPark_Sherack_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".KentPark.Spiro") register_action<bit<1>, bit<1>>(_Buenos_0) _KentPark_Spiro_0 = {
+    @name(".KentPark.Spiro") register_action<bit<1>, bit<1>>(Buenos) _KentPark_Spiro_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -880,8 +884,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_29();
     }
-    @name(".Ingleside") register<bit<1>>(32w65536) _Ingleside_0;
-    @name(".Laneburg.Powderly") register_action<bit<1>, bit<1>>(_Ingleside_0) _Laneburg_Powderly_0 = {
+    @name(".Laneburg.Powderly") register_action<bit<1>, bit<1>>(Ingleside) _Laneburg_Powderly_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;

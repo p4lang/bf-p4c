@@ -163,6 +163,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".do_forward") action do_forward_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
@@ -172,41 +178,41 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".a2") action a2_0() {
         meta.m.f2 = meta.m.f1;
     }
-    @name(".forward") table forward_0 {
+    @name(".forward") table forward {
         actions = {
             do_forward_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.m.f1: ternary @name("m.f1") ;
             meta.m.f2: ternary @name("m.f2") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             a1_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".t2") table t2_0 {
+    @name(".t2") table t2 {
         actions = {
             a2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        t1_0.apply();
-        t2_0.apply();
-        forward_0.apply();
+        t1.apply();
+        t2.apply();
+        forward.apply();
     }
 }
 

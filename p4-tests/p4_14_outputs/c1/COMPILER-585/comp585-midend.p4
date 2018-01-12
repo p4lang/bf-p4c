@@ -698,6 +698,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".Luzerne") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Luzerne;
 
+@name(".Allen") register<bit<1>>(32w294912) Allen;
+
+@name(".Traverse") register<bit<1>>(32w294912) Traverse;
+
 @name("CityView") struct CityView {
     bit<8>  Daguao;
     bit<16> LaVale;
@@ -1474,14 +1478,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_67();
     }
-    @name(".Allen") register<bit<1>>(32w294912) _Allen_0;
-    @name(".Traverse") register<bit<1>>(32w294912) _Traverse_0;
-    @name(".Bonner.Penalosa") register_action<bit<1>, bit<1>>(_Traverse_0) _Bonner_Penalosa_0 = {
+    @name(".Bonner.Penalosa") register_action<bit<1>, bit<1>>(Traverse) _Bonner_Penalosa_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Bonner.Rosburg") register_action<bit<1>, bit<1>>(_Allen_0) _Bonner_Rosburg_0 = {
+    @name(".Bonner.Rosburg") register_action<bit<1>, bit<1>>(Allen) _Bonner_Rosburg_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

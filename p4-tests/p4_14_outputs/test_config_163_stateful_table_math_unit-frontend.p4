@@ -175,35 +175,38 @@ struct cntr_1_layout {
     bit<16> hi;
 }
 
+@name(".stateful_cntr_1") register<cntr_1_layout>(32w0) stateful_cntr_1;
+
 math_unit<bit<16>, tuple<bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>>>(true, -2s1, 6s4, { 16w0xf, 16w14, 16w13, 16w0xc, 16w0xb, 16w10, 16w9, 16w8, 16w7, 16w6, 16w5, 16w4, 16w3, 16w2, 16w1, 16w0 }) cntr_1_math_unit;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp_1;
-    @name(".stateful_cntr_1") register<cntr_1_layout>(32w0) stateful_cntr;
-    @name("cntr_1") register_action<cntr_1_layout, bit<16>>(stateful_cntr, cntr_1_math_unit) cntr = {
+    @name("NoAction") action NoAction_0() {
+    }
+    bit<16> tmp_2;
+    @name("cntr_1") register_action<cntr_1_layout, bit<16>>(stateful_cntr_1, cntr_1_math_unit) cntr_0 = {
         void apply(inout cntr_1_layout value, out bit<16> rv) {
-            bit<16> tmp;
-            bit<16> tmp_0;
+            bit<16> tmp_3;
+            bit<16> tmp_4;
             rv = 16w0;
             if (hdr.pkt.field_e_16 == 16w7) 
                 value.lo = value.lo + 16w1;
             if (hdr.pkt.field_e_16 != 16w7) {
-                tmp = cntr_1_math_unit.execute(hdr.pkt.field_f_16);
-                tmp_0 = value.hi ^ tmp;
-                value.lo = tmp_0;
+                tmp_3 = cntr_1_math_unit.execute(hdr.pkt.field_f_16);
+                tmp_4 = value.hi ^ tmp_3;
+                value.lo = tmp_4;
             }
             if (hdr.pkt.field_e_16 == 16w7) 
                 rv = value.lo;
         }
     };
     @name(".cnt_1") action cnt() {
-        tmp_1 = cntr.execute();
-        meta.meta.needs_sampling = (bit<8>)tmp_1;
+        tmp_2 = cntr_0.execute();
+        meta.meta.needs_sampling = (bit<8>)tmp_2;
     }
-    @name(".match_cntr_1") table match_cntr {
+    @name(".match_cntr_1") table match_cntr_0 {
         actions = {
             cnt();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32      : exact @name("pkt.field_a_32") ;
@@ -212,10 +215,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.needs_sampling: exact @name("meta.needs_sampling") ;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        match_cntr.apply();
+        match_cntr_0.apply();
     }
 }
 

@@ -379,6 +379,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_1() {
+    }
     @name(".eopPLX") action eopPLX_0() {
     }
     @name(".haXkca") action haXkca_0() {
@@ -392,33 +396,33 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         meta.ZIrQiH.JnbdSz = cIrAyj;
         hdr.aGCwBy.setInvalid();
     }
-    @name(".YNslee") table YNslee_0 {
+    @name(".YNslee") table YNslee {
         actions = {
             eopPLX_0();
             haXkca_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.ZIrQiH.JnbdSz: exact @name("ZIrQiH.JnbdSz") ;
             meta.ZIrQiH.CgjKAP: exact @name("ZIrQiH.CgjKAP") ;
         }
         size = 64;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".oTQXQB") table oTQXQB_0 {
+    @name(".oTQXQB") table oTQXQB {
         actions = {
             IuhFrg_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             meta.ZIrQiH.HrAWno: exact @name("ZIrQiH.HrAWno") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
-        oTQXQB_0.apply();
-        YNslee_0.apply();
+        oTQXQB.apply();
+        YNslee.apply();
     }
 }
 
@@ -439,6 +443,50 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_26() {
+    }
+    @name("NoAction") action NoAction_27() {
+    }
+    @name("NoAction") action NoAction_28() {
+    }
+    @name("NoAction") action NoAction_29() {
+    }
+    @name("NoAction") action NoAction_30() {
+    }
+    @name("NoAction") action NoAction_31() {
+    }
+    @name("NoAction") action NoAction_32() {
+    }
+    @name("NoAction") action NoAction_33() {
+    }
+    @name("NoAction") action NoAction_34() {
+    }
+    @name("NoAction") action NoAction_35() {
+    }
+    @name("NoAction") action NoAction_36() {
+    }
+    @name("NoAction") action NoAction_37() {
+    }
+    @name("NoAction") action NoAction_38() {
+    }
+    @name("NoAction") action NoAction_39() {
+    }
+    @name("NoAction") action NoAction_40() {
+    }
+    @name("NoAction") action NoAction_41() {
+    }
+    @name("NoAction") action NoAction_42() {
+    }
+    @name("NoAction") action NoAction_43() {
+    }
+    @name("NoAction") action NoAction_44() {
+    }
+    @name("NoAction") action NoAction_45() {
+    }
+    @name("NoAction") action NoAction_46() {
+    }
+    @name("NoAction") action NoAction_47() {
+    }
     @name(".pTLwNz") action pTLwNz_0(bit<16> cIrAyj, bit<8> TOekST, bit<1> mBHiec, bit<1> guaLer, bit<1> IOiVJT, bit<1> yTbavB, bit<1> zxSZXI) {
         meta.jSqpae.pOIqxO = cIrAyj;
         meta.jSqpae.hlnpSR = zxSZXI;
@@ -511,7 +559,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".fJutPM") action fJutPM_0(bit<16> BVCYuv) {
         meta.qJwTfB.cmcuBX = BVCYuv;
     }
+    @name(".fJutPM") action fJutPM_2(bit<16> BVCYuv) {
+        meta.qJwTfB.cmcuBX = BVCYuv;
+    }
     @name(".QOnsao") action QOnsao_0() {
+    }
+    @name(".QOnsao") action QOnsao_2() {
     }
     @name(".bbczIf") action bbczIf_0(bit<16> EwkUfT) {
         meta.jSqpae.VvPTXS = EwkUfT;
@@ -589,23 +642,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.jSqpae.tqPJuF = 1w0x1;
         meta.vsoyDU.zZzaZs = 8w0x0;
     }
-    @name(".CvmGZq") table CvmGZq_0 {
+    @name(".CvmGZq") table CvmGZq {
         actions = {
             pTLwNz_0();
             ZXuFbP_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_26();
         }
         key = {
             hdr.gtGekT.qtDvuq: exact @name("gtGekT.qtDvuq") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_26();
     }
-    @name(".MewBbN") table MewBbN_0 {
+    @name(".MewBbN") table MewBbN {
         actions = {
             GawuMf_0();
             HyMSUz_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_27();
         }
         key = {
             hdr.KqUoHB.HPeQML : exact @name("KqUoHB.HPeQML") ;
@@ -614,22 +667,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.jSqpae.eKzYkG: exact @name("jSqpae.eKzYkG") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_27();
     }
-    @name(".NEINGI") table NEINGI_0 {
+    @name(".NEINGI") table NEINGI {
         actions = {
             fJLGnG_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_28();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_28();
     }
-    @name(".SHvAeR") table SHvAeR_0 {
+    @name(".SHvAeR") table SHvAeR {
         actions = {
             WSYgPX_0();
             qvpIRb_0();
             AwCFNy_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_29();
         }
         key = {
             meta.ZcGoCa.JazWSq  : ternary @name("ZcGoCa.JazWSq") ;
@@ -637,78 +690,78 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.aGCwBy.cdQtGK   : ternary @name("aGCwBy.cdQtGK") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_29();
     }
-    @name(".XwcVlN") table XwcVlN_0 {
+    @name(".XwcVlN") table XwcVlN {
         actions = {
             bkYzOb_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_30();
         }
         key = {
             hdr.KqUoHB.HPeQML: exact @name("KqUoHB.HPeQML") ;
             hdr.KqUoHB.bltEbn: exact @name("KqUoHB.bltEbn") ;
         }
         size = 64;
-        default_action = NoAction();
+        default_action = NoAction_30();
     }
-    @name(".cOGuiM") table cOGuiM_0 {
+    @name(".cOGuiM") table cOGuiM {
         actions = {
             wDCdba_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_31();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_31();
     }
-    @name(".dqtyNX") table dqtyNX_0 {
+    @name(".dqtyNX") table dqtyNX {
         actions = {
             WhpXrV_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_32();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_32();
     }
-    @name(".fNqUti") table fNqUti_0 {
+    @name(".fNqUti") table fNqUti {
         actions = {
             ntiWZD_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_33();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = NoAction_33();
     }
-    @name(".gfrjtK") table gfrjtK_0 {
+    @name(".gfrjtK") table gfrjtK {
         actions = {
             fJutPM_0();
             QOnsao_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_34();
         }
         key = {
             meta.wYDlac.zqANcB: exact @name("wYDlac.zqANcB") ;
             meta.Jmvzsq.NGhnfL: exact @name("Jmvzsq.NGhnfL") ;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_34();
     }
-    @name(".jKqWQQ") table jKqWQQ_0 {
+    @name(".jKqWQQ") table jKqWQQ {
         actions = {
             bbczIf_0();
             rPlvuz_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_35();
         }
         key = {
             hdr.sULdSu.Ihpezt: exact @name("sULdSu.Ihpezt") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_35();
     }
-    @name(".jqIVUQ") table jqIVUQ_0 {
+    @name(".jqIVUQ") table jqIVUQ {
         actions = {
             ZOcmCh_0();
             jjUIKR_0();
             LFyINr_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_36();
         }
         key = {
             meta.ZIrQiH.UkUtwO: exact @name("ZIrQiH.UkUtwO") ;
@@ -716,12 +769,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ZIrQiH.HrAWno: exact @name("ZIrQiH.HrAWno") ;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_36();
     }
-    @name(".lXhPjS") table lXhPjS_0 {
+    @name(".lXhPjS") table lXhPjS {
         actions = {
             cJcUfL_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_37();
         }
         key = {
             meta.jSqpae.DZNMIg: ternary @name("jSqpae.DZNMIg") ;
@@ -729,109 +782,109 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.jSqpae.wykVGD: exact @name("jSqpae.wykVGD") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_37();
     }
-    @atcam_partition_index("Jmvzsq.MyzObD") @atcam_number_partitions(16384) @name(".pUwXgw") table pUwXgw_0 {
+    @atcam_partition_index("Jmvzsq.MyzObD") @atcam_number_partitions(16384) @name(".pUwXgw") table pUwXgw {
         actions = {
-            fJutPM_0();
-            @defaultonly NoAction();
+            fJutPM_2();
+            @defaultonly NoAction_38();
         }
         key = {
             meta.Jmvzsq.MyzObD: exact @name("Jmvzsq.MyzObD") ;
             meta.Jmvzsq.NGhnfL: lpm @name("Jmvzsq.NGhnfL") ;
         }
         size = 147456;
-        default_action = NoAction();
+        default_action = NoAction_38();
     }
-    @name(".qBOLVQ") table qBOLVQ_0 {
+    @name(".qBOLVQ") table qBOLVQ {
         actions = {
             jqspBM_0();
             SXIJHU_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_39();
         }
         key = {
             meta.jSqpae.RPhPiY: exact @name("jSqpae.RPhPiY") ;
             meta.jSqpae.wykVGD: exact @name("jSqpae.wykVGD") ;
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_39();
     }
-    @name(".qmELlF") table qmELlF_0 {
+    @name(".qmELlF") table qmELlF {
         actions = {
             lCwymN_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_40();
         }
         key = {
             hdr.aGCwBy.cdQtGK: exact @name("aGCwBy.cdQtGK") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_40();
     }
-    @name(".ulGhkC") table ulGhkC_0 {
+    @name(".ulGhkC") table ulGhkC {
         actions = {
             QrzRAL_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_41();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_41();
     }
-    @name(".uvLcwz") table uvLcwz_0 {
+    @name(".uvLcwz") table uvLcwz {
         actions = {
             hnaYfv_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_42();
         }
         key = {
             meta.wYDlac.zqANcB: exact @name("wYDlac.zqANcB") ;
             meta.Jmvzsq.NGhnfL: lpm @name("Jmvzsq.NGhnfL") ;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_42();
     }
-    @name(".uwXElH") table uwXElH_0 {
+    @name(".uwXElH") table uwXElH {
         actions = {
             DHnNTK_0();
-            QOnsao_0();
-            @defaultonly NoAction();
+            QOnsao_2();
+            @defaultonly NoAction_43();
         }
         key = {
             meta.ZcGoCa.JazWSq: exact @name("ZcGoCa.JazWSq") ;
             hdr.aGCwBy.cdQtGK : exact @name("aGCwBy.cdQtGK") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_43();
     }
-    @name(".wHpjxc") table wHpjxc_0 {
+    @name(".wHpjxc") table wHpjxc {
         actions = {
             RzTKNQ_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_44();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_44();
     }
-    @name(".wIHiQR") table wIHiQR_0 {
+    @name(".wIHiQR") table wIHiQR {
         actions = {
             yeJxkf_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_45();
         }
         key = {
             meta.ZcGoCa.mdnlIN: exact @name("ZcGoCa.mdnlIN") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_45();
     }
-    @name(".xUkjnn") table xUkjnn_0 {
+    @name(".xUkjnn") table xUkjnn {
         actions = {
             fLlqqK_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_46();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_46();
     }
-    @name(".zvUaRN") table zvUaRN_0 {
+    @name(".zvUaRN") table zvUaRN {
         actions = {
             HrLvrR_0();
             pSPAke_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_47();
         }
         key = {
             meta.jSqpae.MkajiY: exact @name("jSqpae.MkajiY") ;
@@ -840,55 +893,55 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.jSqpae.VvPTXS: exact @name("jSqpae.VvPTXS") ;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_47();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0x0) 
-            fNqUti_0.apply();
-        XwcVlN_0.apply();
-        switch (MewBbN_0.apply().action_run) {
+            fNqUti.apply();
+        XwcVlN.apply();
+        switch (MewBbN.apply().action_run) {
             GawuMf_0: {
-                jKqWQQ_0.apply();
-                CvmGZq_0.apply();
+                jKqWQQ.apply();
+                CvmGZq.apply();
             }
             HyMSUz_0: {
                 if (meta.ZcGoCa.UztNiv == 1w0x1) 
-                    SHvAeR_0.apply();
+                    SHvAeR.apply();
                 if (hdr.aGCwBy.isValid()) 
-                    switch (uwXElH_0.apply().action_run) {
-                        QOnsao_0: {
-                            qmELlF_0.apply();
+                    switch (uwXElH.apply().action_run) {
+                        QOnsao_2: {
+                            qmELlF.apply();
                         }
                     }
 
-                wIHiQR_0.apply();
+                wIHiQR.apply();
             }
         }
 
         if (meta.ZcGoCa.zBlBAY == 1w0x0 && meta.jSqpae.elVjeb == 1w0x0) 
-            zvUaRN_0.apply();
+            zvUaRN.apply();
         if (meta.jSqpae.QwTCXn == 1w0x0 && meta.jSqpae.EcLQpV == 1w0x0) 
-            lXhPjS_0.apply();
+            lXhPjS.apply();
         if (meta.bOswHr.gzYNJt == 1w0x0 && meta.bOswHr.jmskSs == 1w0x0 && meta.jSqpae.QwTCXn == 1w0x0 && meta.wYDlac.zfujpg == 1w0x1) 
             if (meta.wYDlac.xTcoWx == 1w0x1 && (meta.jSqpae.eKzYkG == 2w0x0 && hdr.sULdSu.isValid() || meta.jSqpae.eKzYkG != 2w0x0 && hdr.yEOPPV.isValid())) 
-                switch (gfrjtK_0.apply().action_run) {
+                switch (gfrjtK.apply().action_run) {
                     QOnsao_0: {
-                        uvLcwz_0.apply();
+                        uvLcwz.apply();
                         if (meta.Jmvzsq.MyzObD != 16w0x0) 
-                            pUwXgw_0.apply();
+                            pUwXgw.apply();
                     }
                 }
 
         if (meta.wYDlac.zfujpg == 1w0x0) 
-            cOGuiM_0.apply();
+            cOGuiM.apply();
         if (meta.jSqpae.QwTCXn == 1w0x0) 
-            switch (jqIVUQ_0.apply().action_run) {
+            switch (jqIVUQ.apply().action_run) {
                 LFyINr_0: {
-                    switch (qBOLVQ_0.apply().action_run) {
+                    switch (qBOLVQ.apply().action_run) {
                         SXIJHU_0: {
                             if ((meta.ZIrQiH.UkUtwO & 24w0x10000) == 24w0x10000) 
-                                NEINGI_0.apply();
-                            dqtyNX_0.apply();
+                                NEINGI.apply();
+                            dqtyNX.apply();
                         }
                     }
 
@@ -896,11 +949,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             }
 
         if (meta.jSqpae.elVjeb == 1w0x1) 
-            wHpjxc_0.apply();
+            wHpjxc.apply();
         if (meta.jSqpae.tqPJuF == 1w0x1) 
-            ulGhkC_0.apply();
+            ulGhkC.apply();
         if (hdr.aGCwBy.isValid()) 
-            xUkjnn_0.apply();
+            xUkjnn.apply();
     }
 }
 

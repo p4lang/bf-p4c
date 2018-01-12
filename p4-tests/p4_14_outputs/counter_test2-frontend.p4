@@ -32,68 +32,74 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".cnt") direct_counter(CounterType.packets) cnt_0;
-    @name(".cnt2") direct_counter(CounterType.packets) cnt2_0;
-    @name(".cnt3") direct_counter(CounterType.packets) cnt3_0;
-    @name(".c1_3") action c1_3(bit<16> val1, bit<16> val2, bit<16> val3) {
-        cnt_0.count();
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    @name(".cnt") direct_counter(CounterType.packets) cnt;
+    @name(".cnt2") direct_counter(CounterType.packets) cnt2;
+    @name(".cnt3") direct_counter(CounterType.packets) cnt3;
+    @name(".c1_3") action c1_1(bit<16> val1, bit<16> val2, bit<16> val3) {
+        cnt.count();
         hdr.data.c1 = val1;
         hdr.data.c2 = val2;
         hdr.data.c3 = val3;
     }
-    @name(".test1") table test1_0 {
+    @name(".test1") table test1 {
         actions = {
-            c1_3();
-            @defaultonly NoAction();
+            c1_1();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
         }
         size = 16384;
-        counters = cnt_0;
-        default_action = NoAction();
+        counters = cnt;
+        default_action = NoAction_0();
     }
-    @name(".c4_6") action c4_6(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
-        cnt2_0.count();
+    @name(".c4_6") action c4_1(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
+        cnt2.count();
         hdr.data.c4 = val4;
         hdr.data.c5 = val5;
         hdr.data.c6 = val6;
         standard_metadata.egress_spec = port;
     }
-    @name(".test2") table test2_0 {
+    @name(".test2") table test2 {
         actions = {
-            c4_6();
-            @defaultonly NoAction();
+            c4_1();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.data.f2: exact @name("data.f2") ;
         }
         size = 16384;
-        counters = cnt2_0;
-        default_action = NoAction();
+        counters = cnt2;
+        default_action = NoAction_4();
     }
-    @name(".c7_9") action c7_9(bit<16> val7, bit<16> val8, bit<16> val9) {
-        cnt3_0.count();
+    @name(".c7_9") action c7_1(bit<16> val7, bit<16> val8, bit<16> val9) {
+        cnt3.count();
         hdr.data.c7 = val7;
         hdr.data.c8 = val8;
         hdr.data.c9 = val9;
     }
-    @name(".test3") table test3_0 {
+    @name(".test3") table test3 {
         actions = {
-            c7_9();
-            @defaultonly NoAction();
+            c7_1();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.data.f3: exact @name("data.f3") ;
         }
         size = 1024;
-        counters = cnt3_0;
-        default_action = NoAction();
+        counters = cnt3;
+        default_action = NoAction_5();
     }
     apply {
-        test1_0.apply();
-        test2_0.apply();
-        test3_0.apply();
+        test1.apply();
+        test2.apply();
+        test3.apply();
     }
 }
 

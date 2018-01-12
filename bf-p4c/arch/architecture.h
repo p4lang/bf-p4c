@@ -14,8 +14,6 @@
 #include "frontends/p4/uniqueNames.h"
 #include "frontends/p4/sideEffects.h"
 #include "frontends/p4/methodInstance.h"
-#include "midend/actionsInlining.h"
-#include "midend/localizeActions.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/device.h"

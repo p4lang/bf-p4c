@@ -300,86 +300,131 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 #include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp;
-    bit<32> tmp_0;
-    bit<32> tmp_1;
-    bit<32> tmp_2;
-    bit<8> tmp_3;
-    bit<8> tmp_4;
-    @name(".colorCntr") counter(32w100, CounterType.packets) colorCntr_0;
-    @name(".meter_1") direct_meter<bit<8>>(MeterType.bytes) meter_4;
-    @name(".meter_3") direct_meter<bit<8>>(MeterType.bytes) meter_5;
-    @name(".meter_0") meter(32w500, MeterType.bytes) meter_6;
-    @meter_pre_color_aware_per_flow_enable(1) @name(".meter_2") meter(32w500, MeterType.bytes) meter_7;
-    @name("meter_lpf") lpf<bit<32>>(32w500) meter_lpf_0;
-    @name("meter_lpf_direct") lpf<bit<32>>() meter_lpf_direct_0;
-    @name("meter_lpf_tcam") lpf<bit<32>>(32w500) meter_lpf_tcam_0;
-    @name("meter_lpf_tcam_direct") lpf<bit<32>>() meter_lpf_tcam_direct_0;
-    @name(".count_color") action count_color_0(bit<32> color_idx) {
-        colorCntr_0.count(color_idx);
+    @name("NoAction") action NoAction_0() {
     }
-    @name(".hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
-        ttl_0 = ttl_0 + 8w255;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
+    @name("NoAction") action NoAction_5() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    bit<32> tmp_5;
+    bit<32> tmp_6;
+    bit<32> tmp_7;
+    bit<32> tmp_8;
+    bit<8> tmp_9;
+    bit<8> tmp_10;
+    @name(".colorCntr") counter(32w100, CounterType.packets) colorCntr;
+    @name(".meter_1") direct_meter<bit<8>>(MeterType.bytes) meter_0;
+    @name(".meter_3") direct_meter<bit<8>>(MeterType.bytes) meter_1;
+    @name(".meter_0") meter(32w500, MeterType.bytes) meter_2;
+    @meter_pre_color_aware_per_flow_enable(1) @name(".meter_2") meter(32w500, MeterType.bytes) meter_3;
+    @name("meter_lpf") lpf<bit<32>>(32w500) meter_lpf;
+    @name("meter_lpf_direct") lpf<bit<32>>() meter_lpf_direct;
+    @name("meter_lpf_tcam") lpf<bit<32>>(32w500) meter_lpf_tcam;
+    @name("meter_lpf_tcam_direct") lpf<bit<32>>() meter_lpf_tcam_direct;
+    @name(".count_color") action count_color_0(bit<32> color_idx) {
+        colorCntr.count(color_idx);
     }
     @name(".next_hop_ipv4_lpf") action next_hop_ipv4_lpf_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> lpf_idx) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_0 = hdr.ipv4.ttl;
+            ttl_0 = ttl_0 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_0;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        tmp = meter_lpf_0.execute(hdr.ipv4.srcAddr, lpf_idx);
-        hdr.ipv4.srcAddr = tmp;
+        tmp_5 = meter_lpf.execute(hdr.ipv4.srcAddr, lpf_idx);
+        hdr.ipv4.srcAddr = tmp_5;
     }
     @name(".nop") action nop_1() {
     }
+    @name(".nop") action nop_2() {
+    }
+    @name(".nop") action nop_9() {
+    }
+    @name(".nop") action nop_10() {
+    }
+    @name(".nop") action nop_11() {
+    }
+    @name(".nop") action nop_12() {
+    }
+    @name(".nop") action nop_13() {
+    }
     @name(".next_hop_ipv4_direct_lpf") action next_hop_ipv4_direct_lpf_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_8 = hdr.ipv4.ttl;
+            ttl_8 = ttl_8 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_8;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        tmp_0 = meter_lpf_direct_0.execute(hdr.ipv4.srcAddr);
-        hdr.ipv4.srcAddr = tmp_0;
+        tmp_6 = meter_lpf_direct.execute(hdr.ipv4.srcAddr);
+        hdr.ipv4.srcAddr = tmp_6;
     }
     @name(".next_hop_ipv4_lpf_tcam") action next_hop_ipv4_lpf_tcam_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> lpf_idx) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_9 = hdr.ipv4.ttl;
+            ttl_9 = ttl_9 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_9;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        tmp_1 = meter_lpf_tcam_0.execute(hdr.ipv4.srcAddr, lpf_idx);
-        hdr.ipv4.srcAddr = tmp_1;
+        tmp_7 = meter_lpf_tcam.execute(hdr.ipv4.srcAddr, lpf_idx);
+        hdr.ipv4.srcAddr = tmp_7;
     }
     @name(".next_hop_ipv4_lpf_direct_tcam") action next_hop_ipv4_lpf_direct_tcam_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_10 = hdr.ipv4.ttl;
+            ttl_10 = ttl_10 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_10;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        tmp_2 = meter_lpf_tcam_direct_0.execute(hdr.ipv4.srcAddr);
-        hdr.ipv4.srcAddr = tmp_2;
-    }
-    @name(".next_hop_ipv4") action next_hop_ipv4_2(bit<9> egress_port_1, bit<48> srcmac_0, bit<48> dstmac_0) {
-        hop_0(hdr.ipv4.ttl, egress_port_1);
-        hdr.ethernet.srcAddr = srcmac_0;
-        hdr.ethernet.dstAddr = dstmac_0;
+        tmp_8 = meter_lpf_tcam_direct.execute(hdr.ipv4.srcAddr);
+        hdr.ipv4.srcAddr = tmp_8;
     }
     @name(".meter_action") action meter_action_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> idx) {
-        next_hop_ipv4_2(egress_port, srcmac, dstmac);
-        meter_6.execute_meter<bit<8>>(idx, hdr.ipv4.diffserv);
+        {
+            bit<8> ttl_11 = hdr.ipv4.ttl;
+            ttl_11 = ttl_11 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_11;
+        }
+        hdr.ethernet.srcAddr = srcmac;
+        hdr.ethernet.dstAddr = dstmac;
+        meter_2.execute_meter<bit<8>>(idx, hdr.ipv4.diffserv);
     }
     @name(".meter_action_color_aware") action meter_action_color_aware_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> idx) {
-        next_hop_ipv4_2(egress_port, srcmac, dstmac);
-        tmp_4 = hdr.ipv4.diffserv;
-        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_7, idx, tmp_3, tmp_4);
-        hdr.ipv4.diffserv = tmp_3;
+        {
+            bit<8> ttl_12 = hdr.ipv4.ttl;
+            ttl_12 = ttl_12 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_12;
+        }
+        hdr.ethernet.srcAddr = srcmac;
+        hdr.ethernet.dstAddr = dstmac;
+        tmp_10 = hdr.ipv4.diffserv;
+        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_3, idx, tmp_9, tmp_10);
+        hdr.ipv4.diffserv = tmp_9;
     }
-    @stage(11) @name(".color_match") table color_match_0 {
+    @stage(11) @name(".color_match") table color_match {
         actions = {
             count_color_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
             hdr.ipv4.diffserv   : exact @name("ipv4.diffserv") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @stage(4) @name(".match_tbl_lpf") table match_tbl_lpf_0 {
+    @stage(4) @name(".match_tbl_lpf") table match_tbl_lpf {
         actions = {
             next_hop_ipv4_lpf_0();
             @defaultonly nop_1();
@@ -390,112 +435,122 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = nop_1();
     }
-    @stage(5) @name(".match_tbl_lpf_direct") table match_tbl_lpf_direct_0 {
+    @stage(5) @name(".match_tbl_lpf_direct") table match_tbl_lpf_direct {
         actions = {
             next_hop_ipv4_direct_lpf_0();
-            @defaultonly nop_1();
+            @defaultonly nop_2();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
             hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
         }
-        default_action = nop_1();
+        default_action = nop_2();
     }
-    @stage(4) @name(".match_tbl_tcam_lpf") table match_tbl_tcam_lpf_0 {
+    @stage(4) @name(".match_tbl_tcam_lpf") table match_tbl_tcam_lpf {
         actions = {
             next_hop_ipv4_lpf_tcam_0();
-            @defaultonly nop_1();
+            @defaultonly nop_9();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
             hdr.ipv4.srcAddr: ternary @name("ipv4.srcAddr") ;
         }
-        default_action = nop_1();
+        default_action = nop_9();
     }
-    @stage(5) @name(".match_tbl_tcam_lpf_direct") table match_tbl_tcam_lpf_direct_0 {
+    @stage(5) @name(".match_tbl_tcam_lpf_direct") table match_tbl_tcam_lpf_direct {
         actions = {
             next_hop_ipv4_lpf_direct_tcam_0();
-            @defaultonly nop_1();
+            @defaultonly nop_10();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
             hdr.ipv4.srcAddr: ternary @name("ipv4.srcAddr") ;
         }
-        default_action = nop_1();
+        default_action = nop_10();
     }
-    @command_line("--placement", "pragma") @command_line("--no-dead-code-elimination") @stage(1) @name(".meter_tbl") table meter_tbl_0 {
+    @command_line("--placement", "pragma") @command_line("--no-dead-code-elimination") @stage(1) @name(".meter_tbl") table meter_tbl {
         actions = {
-            nop_1();
+            nop_11();
             meter_action_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
-    @name(".next_hop_ipv4") action next_hop_ipv4_3(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        meter_5.read(hdr.ipv4.diffserv);
-        hop_0(hdr.ipv4.ttl, egress_port);
+    @name(".next_hop_ipv4") action next_hop_ipv4_1(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+        meter_1.read(hdr.ipv4.diffserv);
+        {
+            bit<8> ttl_13 = hdr.ipv4.ttl;
+            ttl_13 = ttl_13 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_13;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @stage(3) @name(".meter_tbl_color_aware_direct") table meter_tbl_color_aware_direct_0 {
+    @stage(3) @name(".meter_tbl_color_aware_direct") table meter_tbl_color_aware_direct {
         actions = {
-            next_hop_ipv4_3();
-            @defaultonly nop_1();
+            next_hop_ipv4_1();
+            @defaultonly nop_12();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
             hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
         }
-        default_action = nop_1();
-        meters = meter_5;
+        default_action = nop_12();
+        meters = meter_1;
     }
-    @stage(2) @name(".meter_tbl_color_aware_indirect") table meter_tbl_color_aware_indirect_0 {
+    @stage(2) @name(".meter_tbl_color_aware_indirect") table meter_tbl_color_aware_indirect {
         actions = {
-            nop_1();
+            nop_13();
             meter_action_color_aware_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
             hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".nop") action nop_2() {
-        meter_4.read(hdr.ipv4.diffserv);
+    @name(".nop") action nop_14() {
+        meter_0.read(hdr.ipv4.diffserv);
     }
-    @name(".next_hop_ipv4") action next_hop_ipv4_4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        meter_4.read(hdr.ipv4.diffserv);
-        hop_0(hdr.ipv4.ttl, egress_port);
+    @name(".next_hop_ipv4") action next_hop_ipv4_2(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+        meter_0.read(hdr.ipv4.diffserv);
+        {
+            bit<8> ttl_14 = hdr.ipv4.ttl;
+            ttl_14 = ttl_14 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_14;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @stage(0) @name(".meter_tbl_direct") table meter_tbl_direct_0 {
+    @stage(0) @name(".meter_tbl_direct") table meter_tbl_direct {
         actions = {
-            nop_2();
-            next_hop_ipv4_4();
-            @defaultonly NoAction();
+            nop_14();
+            next_hop_ipv4_2();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
             hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
         }
-        meters = meter_4;
-        default_action = NoAction();
+        meters = meter_0;
+        default_action = NoAction_7();
     }
     apply {
-        meter_tbl_direct_0.apply();
-        meter_tbl_0.apply();
-        meter_tbl_color_aware_indirect_0.apply();
-        meter_tbl_color_aware_direct_0.apply();
-        match_tbl_lpf_0.apply();
-        match_tbl_tcam_lpf_0.apply();
-        match_tbl_lpf_direct_0.apply();
-        match_tbl_tcam_lpf_direct_0.apply();
-        color_match_0.apply();
+        meter_tbl_direct.apply();
+        meter_tbl.apply();
+        meter_tbl_color_aware_indirect.apply();
+        meter_tbl_color_aware_direct.apply();
+        match_tbl_lpf.apply();
+        match_tbl_tcam_lpf.apply();
+        match_tbl_lpf_direct.apply();
+        match_tbl_tcam_lpf_direct.apply();
+        color_match.apply();
     }
 }
 

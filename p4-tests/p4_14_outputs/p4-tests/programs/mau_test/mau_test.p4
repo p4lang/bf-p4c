@@ -230,40 +230,56 @@ struct e1_alu_layout {
     int<32> hi;
 }
 
+@name(".e1_reg") register<e1_alu_layout>(32w0) e1_reg;
+
 struct e2_alu_layout {
     bit<16> lo;
     bit<16> hi;
 }
+
+@name(".e2_reg") register<e2_alu_layout>(32w0) e2_reg;
 
 struct t1_alu_layout {
     int<32> lo;
     int<32> hi;
 }
 
+@name(".t1_reg") register<t1_alu_layout>(32w0) t1_reg;
+
 struct t2_alu_layout {
     bit<16> lo;
     bit<16> hi;
 }
+
+@name(".t2_reg") register<t2_alu_layout>(32w0) t2_reg;
 
 struct vp5_alu_layout {
     bit<32> lo;
     bit<32> hi;
 }
 
+@name(".vp5_reg") register<vp5_alu_layout>(32w0) vp5_reg;
+
 struct vp6_alu_layout {
     bit<32> lo;
     bit<32> hi;
 }
+
+@name(".vp6_reg") register<vp6_alu_layout>(32w0) vp6_reg;
 
 struct vpp5_alu_layout {
     bit<32> lo;
     bit<32> hi;
 }
 
+@name(".vpp5_reg") register<vpp5_alu_layout>(32w0) vpp5_reg;
+
 struct vpp6_alu_layout {
     bit<32> lo;
     bit<32> hi;
 }
+
+@name(".vpp6_reg") register<vpp6_alu_layout>(32w0) vpp6_reg;
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @lrt_enable(0) @lrt_scale(154) @name(".e1_cntr") direct_counter(CounterType.packets) e1_cntr;
@@ -290,14 +306,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @meter_sweep_interval(0) @name(".e4_meter") direct_meter<bit<8>>(MeterType.packets) e4_meter;
     @meter_sweep_interval(0) @name(".t3_meter") direct_meter<bit<8>>(MeterType.bytes) t3_meter;
     @meter_sweep_interval(0) @name(".t4_meter") direct_meter<bit<8>>(MeterType.packets) t4_meter;
-    @name(".e1_reg") register<e1_alu_layout>(32w0) e1_reg;
-    @name(".e2_reg") register<e2_alu_layout>(32w0) e2_reg;
-    @name(".t1_reg") register<t1_alu_layout>(32w0) t1_reg;
-    @name(".t2_reg") register<t2_alu_layout>(32w0) t2_reg;
-    @name(".vp5_reg") register<vp5_alu_layout>(32w0) vp5_reg;
-    @name(".vp6_reg") register<vp6_alu_layout>(32w0) vp6_reg;
-    @name(".vpp5_reg") register<vpp5_alu_layout>(32w0) vpp5_reg;
-    @name(".vpp6_reg") register<vpp6_alu_layout>(32w0) vpp6_reg;
     register_action<e1_alu_layout, int<32>>(e1_reg) e1_alu = {
         void apply(inout e1_alu_layout value, out int<32> rv) {
             rv = 32s0;
@@ -863,10 +871,20 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+@name(".mrk_hi_reg") register<bit<16>>(32w1024) mrk_hi_reg;
+
+@name(".mrk_lo_reg") register<bit<16>>(32w1024) mrk_lo_reg;
+
+@name(".sel_res_reg") register<bit<16>>(32w64) sel_res_reg;
+
+@name(".sel_tbl_reg") register<bit<1>>(32w131072) sel_tbl_reg;
+
 struct stats_key_alu1_layout {
     bit<32> lo;
     bit<32> hi;
 }
+
+@name(".stats_key_reg") register<stats_key_alu1_layout>(32w2048) stats_key_reg;
 #include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
@@ -876,11 +894,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".ig_cntr_3") counter(32w16384, CounterType.packets_and_bytes) ig_cntr_3;
     @name(".ig_cntr_4") counter(32w2048, CounterType.packets) ig_cntr_4;
     @meter_per_flow_enable(1) @meter_pre_color_aware_per_flow_enable(1) @meter_sweep_interval(0) @name(".m1") meter(32w20480, MeterType.bytes) m1;
-    @name(".mrk_hi_reg") register<bit<16>>(32w1024) mrk_hi_reg;
-    @name(".mrk_lo_reg") register<bit<16>>(32w1024) mrk_lo_reg;
-    @name(".sel_res_reg") register<bit<16>>(32w64) sel_res_reg;
-    @name(".sel_tbl_reg") register<bit<1>>(32w131072) sel_tbl_reg;
-    @name(".stats_key_reg") register<stats_key_alu1_layout>(32w2048) stats_key_reg;
     register_action<bit<16>, bit<16>>(sel_res_reg) sel_res_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;

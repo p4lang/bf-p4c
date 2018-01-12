@@ -164,53 +164,58 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".sampling_cntr") register<bit<32>>(32w139264) sampling_cntr;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp;
-    @name(".sampling_cntr") register<bit<32>>(32w139264) sampling_cntr_0;
-    @name("sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr_0) sampling_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    bit<32> tmp_0;
+    @name("sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> alu_hi_0;
+            bit<32> alu_hi;
             rv = 32w0;
-            alu_hi_0 = 32w1;
+            alu_hi = 32w1;
             if (value >= 32w10) 
                 value = 32w1;
             if (value < 32w10) 
                 value = value + 32w1;
             if (value >= 32w10 || hdr.ig_intr_md_for_tm.copy_to_cpu != 1w0) 
-                rv = alu_hi_0;
+                rv = alu_hi;
         }
     };
     @name(".action_0") action action_2(bit<32> idx) {
-        tmp = sampling_alu_0.execute(idx);
-        hdr.ig_intr_md_for_tm.copy_to_cpu = (bit<1>)tmp;
+        tmp_0 = sampling_alu.execute(idx);
+        hdr.ig_intr_md_for_tm.copy_to_cpu = (bit<1>)tmp_0;
     }
     @name(".action_1") action action_3() {
     }
     @name(".action_7") action action_4() {
         hash<bit<16>, bit<16>, tuple<bit<48>, bit<16>>, bit<32>>(hdr.ethernet.blah, HashAlgorithm.random, 16w0, { hdr.ethernet.dstAddr, hdr.ethernet.etherType }, 32w262144);
     }
-    @name(".table_0") table table_2 {
+    @name(".table_0") table table_0 {
         actions = {
             action_2();
             action_3();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_3 {
+    @name(".table_1") table table_1 {
         actions = {
             action_4();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        table_2.apply();
-        table_3.apply();
+        table_0.apply();
+        table_1.apply();
     }
 }
 

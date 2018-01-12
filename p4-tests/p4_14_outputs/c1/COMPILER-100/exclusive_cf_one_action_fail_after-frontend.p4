@@ -151,30 +151,36 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".a1") action a1_0() {
     }
-    @name(".table1") table table1_0 {
-        actions = {
-            a1_0();
-            @defaultonly NoAction();
-        }
-        default_action = NoAction();
+    @name(".a1") action a1_2() {
     }
-    @name(".table2") table table2_0 {
+    @name(".table1") table table1 {
         actions = {
             a1_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
+    }
+    @name(".table2") table table2 {
+        actions = {
+            a1_2();
+            @defaultonly NoAction_3();
+        }
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.ether.etherType == 16w0x800) {
-            table1_0.apply();
-            table2_0.apply();
+            table1.apply();
+            table2.apply();
         }
         else 
-            table1_0.apply();
-        table1_0.apply();
+            table1.apply();
+        table1.apply();
     }
 }
 

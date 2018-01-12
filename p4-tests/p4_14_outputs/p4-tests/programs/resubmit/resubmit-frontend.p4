@@ -164,7 +164,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".nop") action nop_0() {
+    }
+    @name(".nop") action nop_2() {
     }
     @name(".nhop_set") action nhop_set_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
@@ -180,37 +186,37 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.test_metadata.field_C = 16w0x1234;
         resubmit<tuple<bit<8>, bit<16>>>({ meta.test_metadata.field_A, meta.test_metadata.field_C });
     }
-    @name(".l2_nhop") table l2_nhop_0 {
+    @name(".l2_nhop") table l2_nhop {
         actions = {
             nop_0();
             nhop_set_0();
             nhop_set_with_type_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".l2_resubmit") table l2_resubmit_0 {
+    @name(".l2_resubmit") table l2_resubmit {
         actions = {
-            nop_0();
+            nop_2();
             do_resubmit_0();
             do_resubmit_with_fields_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 
-            l2_resubmit_0.apply();
+            l2_resubmit.apply();
         else 
-            l2_nhop_0.apply();
+            l2_nhop.apply();
     }
 }
 

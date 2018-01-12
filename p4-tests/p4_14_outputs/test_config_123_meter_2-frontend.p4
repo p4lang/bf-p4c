@@ -168,20 +168,24 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".meter_0") direct_meter<bit<8>>(MeterType.bytes) meter_2;
-    @name(".meter_1") meter(32w4097, MeterType.bytes) meter_3;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    @name(".meter_0") direct_meter<bit<8>>(MeterType.bytes) meter_0;
+    @name(".meter_1") meter(32w4097, MeterType.bytes) meter_1;
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".action_1") action action_0(bit<8> param0) {
-        meter_3.execute_meter<bit<8>>(32w7, hdr.pkt.color_1);
+        meter_1.execute_meter<bit<8>>(32w7, hdr.pkt.color_1);
     }
     @name(".action_0") action action_0_1(bit<8> param0) {
-        meter_2.read(hdr.pkt.color_0);
+        meter_0.read(hdr.pkt.color_0);
     }
-    @pa_solitare("meter_result.color_0", "meter_result.color_1") @include_stash(1) @action_default_only("do_nothing") @name(".table_0") table table_2 {
+    @pa_solitare("meter_result.color_0", "meter_result.color_1") @include_stash(1) @action_default_only("do_nothing") @name(".table_0") table table_0 {
         actions = {
             action_0_1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_e_16: ternary @name("pkt.field_e_16") ;
@@ -190,24 +194,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.lpf       : exact @name("pkt.lpf") ;
         }
         size = 6000;
-        meters = meter_2;
-        default_action = NoAction();
+        meters = meter_0;
+        default_action = NoAction_0();
     }
-    @idletime_two_way_notification(1) @include_stash(1) @name(".table_1") table table_3 {
+    @idletime_two_way_notification(1) @include_stash(1) @name(".table_1") table table_1 {
         actions = {
             do_nothing_0();
             action_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.pkt.field_e_16: exact @name("pkt.field_e_16") ;
         }
         size = 32768;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        table_2.apply();
-        table_3.apply();
+        table_0.apply();
+        table_1.apply();
     }
 }
 

@@ -158,6 +158,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".branch") action branch_0() {
         meta.md.direction[0:0] = ((bit<1>)hdr.ether.dstAddr)[0:0];
     }
@@ -180,74 +182,83 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".forward") action forward_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.port;
     }
-    @name(".t0") table t0_0 {
+    @name(".forward") action forward_4() {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.port;
+    }
+    @name(".forward") action forward_5() {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.port;
+    }
+    @name(".forward") action forward_6() {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.port;
+    }
+    @name(".t0") table t0 {
         actions = {
             branch_0();
         }
         size = 1;
         default_action = branch_0();
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             a1_0();
             a2_0();
             a3_0();
             a4_0();
             a5_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ether.dstAddr: exact @name("ether.dstAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t2") table t2_0 {
+    @name(".t2") table t2 {
         actions = {
             forward_0();
         }
         size = 1;
         default_action = forward_0();
     }
-    @name(".t3") table t3_0 {
+    @name(".t3") table t3 {
         actions = {
-            forward_0();
+            forward_4();
         }
         size = 1;
-        default_action = forward_0();
+        default_action = forward_4();
     }
-    @name(".t4") table t4_0 {
+    @name(".t4") table t4 {
         actions = {
-            forward_0();
+            forward_5();
         }
         size = 1;
-        default_action = forward_0();
+        default_action = forward_5();
     }
-    @name(".t5") table t5_0 {
+    @name(".t5") table t5 {
         actions = {
-            forward_0();
+            forward_6();
         }
         size = 1;
-        default_action = forward_0();
+        default_action = forward_6();
     }
     apply {
-        t0_0.apply();
+        t0.apply();
         if (meta.md.direction == 1w1) 
-            switch (t1_0.apply().action_run) {
+            switch (t1.apply().action_run) {
                 a2_0: {
-                    t2_0.apply();
+                    t2.apply();
                 }
                 a3_0: {
-                    t3_0.apply();
+                    t3.apply();
                 }
             }
 
         else 
-            switch (t1_0.apply().action_run) {
+            switch (t1.apply().action_run) {
                 a4_0: {
-                    t4_0.apply();
+                    t4.apply();
                 }
                 a5_0: {
-                    t5_0.apply();
+                    t5.apply();
                 }
             }
 

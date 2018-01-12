@@ -32,36 +32,40 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".stats1") counter(32w64, CounterType.packets_and_bytes) stats1_0;
-    @name(".stats2") counter(32w64, CounterType.packets_and_bytes) stats2_0;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    @name(".stats1") counter(32w64, CounterType.packets_and_bytes) stats1;
+    @name(".stats2") counter(32w64, CounterType.packets_and_bytes) stats2;
     @name(".action1") action action1_0() {
-        stats1_0.count(32w1);
+        stats1.count(32w1);
     }
     @name(".action2") action action2_0() {
-        stats2_0.count(32w1);
+        stats2.count(32w1);
     }
-    @name(".table1") table table1_0 {
+    @name(".table1") table table1 {
         actions = {
             action1_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table2") table table2_0 {
+    @name(".table2") table table2 {
         actions = {
             action2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.pkt.b: exact @name("pkt.b") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.pkt.isValid()) 
-            table1_0.apply();
+            table1.apply();
         if (hdr.pkt.isValid()) 
-            table2_0.apply();
+            table2.apply();
     }
 }
 

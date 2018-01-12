@@ -1260,9 +1260,11 @@ control Burket(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+@name(".Lowes") register<bit<1>>(32w294912) Lowes;
+
+@name(".Simla") register<bit<1>>(32w294912) Simla;
+
 control Calabasas(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Lowes") register<bit<1>>(32w294912) Lowes;
-    @name(".Simla") register<bit<1>>(32w294912) Simla;
     register_action<bit<1>, bit<1>>(Lowes) Olene = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

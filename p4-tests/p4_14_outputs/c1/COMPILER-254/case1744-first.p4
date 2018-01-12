@@ -382,6 +382,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+@name(".uVMcgg") register<bit<1>>(32w65536) uVMcgg;
+
 @name("zMykuY") struct zMykuY {
     bit<8>  sHAGWj;
     bit<24> PypKpF;
@@ -399,7 +401,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".uVMcgg") register<bit<1>>(32w65536) uVMcgg;
     register_action<bit<1>, bit<1>>(uVMcgg) abcAlu1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

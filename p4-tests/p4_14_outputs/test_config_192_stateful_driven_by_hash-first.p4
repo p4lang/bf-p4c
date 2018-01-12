@@ -163,13 +163,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".r_em_direct") register<bit<16>>(32w2048) r_em_direct;
+
+@name(".r_em_indirect") register<bit<16>>(32w8192) r_em_indirect;
+
+@name(".r_hash_act") register<bit<8>>(32w256) r_hash_act;
+
+@name(".r_no_key") register<bit<16>>(32w1024) r_no_key;
+
+@name(".r_t_direct") register<bit<16>>(32w3072) r_t_direct;
+
+@name(".r_t_indirect") register<bit<16>>(32w8192) r_t_indirect;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".r_em_direct") register<bit<16>>(32w2048) r_em_direct;
-    @name(".r_em_indirect") register<bit<16>>(32w8192) r_em_indirect;
-    @name(".r_hash_act") register<bit<8>>(32w256) r_hash_act;
-    @name(".r_no_key") register<bit<16>>(32w1024) r_no_key;
-    @name(".r_t_direct") register<bit<16>>(32w3072) r_t_direct;
-    @name(".r_t_indirect") register<bit<16>>(32w8192) r_t_indirect;
     register_action<bit<16>, bit<16>>(r_em_direct) b_em_direct = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;

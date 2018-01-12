@@ -177,6 +177,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".action_0") action action_2(bit<1> param0, bit<1> param1, bit<4> param2, bit<4> param3, bit<1> param4, bit<1> param5) {
         hdr.pkt.field_a0_1 = 1w0;
         hdr.pkt.field_a1_1 = param0;
@@ -193,41 +195,43 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.pkt.field_h2_1 = param5;
         hdr.pkt.field_h3_1 = 1w1;
     }
-    @name(".table_0") table table_2 {
+    @name(".table_0") table table_0 {
         actions = {
             action_2();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_i_8: exact @name("pkt.field_i_8") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (8w0 == hdr.pkt.color_0) 
-            table_2.apply();
+            table_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_1() {
+    }
     @name(".action_1") action action_3(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".table_1") table table_3 {
+    @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".table_1") table table_1 {
         actions = {
             action_3();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.pkt.field_g_16: exact @name("pkt.field_g_16") ;
             hdr.pkt.color_0   : exact @name("pkt.color_0") ;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
-        table_3.apply();
+        table_1.apply();
     }
 }
 

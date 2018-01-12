@@ -166,57 +166,67 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".action_0") action action_2(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
     @name(".do_nothing") action do_nothing_0() {
     }
+    @name(".do_nothing") action do_nothing_3() {
+    }
+    @name(".do_nothing") action do_nothing_4() {
+    }
     @name(".action_1") action action_3(bit<16> param0) {
         hdr.pkt.field_g_16 = param0;
     }
-    @name(".table_0") table table_3 {
+    @name(".table_0") table table_0 {
         actions = {
             action_2();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_e_16: ternary @name("pkt.field_e_16") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_4 {
+    @name(".table_1") table table_1 {
         actions = {
             action_3();
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_3();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.pkt.field_e_16      : exact @name("pkt.field_e_16") ;
             hdr.pkt.field_f_16[15:2]: exact @name("pkt.field_f_16[15:2]") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".table_2") table table_5 {
+    @name(".table_2") table table_2 {
         actions = {
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_4();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.pkt.field_i_8: ternary @name("pkt.field_i_8") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
         if (hdr.pkt.isValid()) 
-            table_3.apply();
+            table_0.apply();
         else 
-            switch (table_4.apply().action_run) {
+            switch (table_1.apply().action_run) {
                 action_3: {
-                    table_5.apply();
+                    table_2.apply();
                 }
             }
 

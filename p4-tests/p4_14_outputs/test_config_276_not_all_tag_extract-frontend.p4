@@ -160,25 +160,27 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".a1") action a1_0() {
         hdr.hdr1[0].a_8 = 8w1;
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             a1_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr1[0].a_8: exact @name("hdr1[0].a_8") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        t1_0.apply();
+        t1.apply();
     }
 }
 

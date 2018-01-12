@@ -162,19 +162,21 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".ing_drop") action ing_drop_0() {
         mark_to_drop();
     }
-    @name(".bad_mac_drop") table bad_mac_drop_0 {
+    @name(".bad_mac_drop") table bad_mac_drop {
         actions = {
             ing_drop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (hdr.ethernet.srcAddr == hdr.ethernet.dstAddr) 
-            bad_mac_drop_0.apply();
+            bad_mac_drop.apply();
     }
 }
 

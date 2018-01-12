@@ -530,6 +530,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<16> Dietrich;
 }
 
+@name(".Arnold") register<bit<1>>(32w262144) Arnold;
+
+@name(".Redfield") register<bit<1>>(32w262144) Redfield;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -1006,14 +1010,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_44();
     }
-    @name(".Arnold") register<bit<1>>(32w262144) _Arnold_0;
-    @name(".Redfield") register<bit<1>>(32w262144) _Redfield_0;
-    @name(".OjoFeliz.LaConner") register_action<bit<1>, bit<1>>(_Arnold_0) _OjoFeliz_LaConner_0 = {
+    @name(".OjoFeliz.LaConner") register_action<bit<1>, bit<1>>(Arnold) _OjoFeliz_LaConner_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".OjoFeliz.ShowLow") register_action<bit<1>, bit<1>>(_Redfield_0) _OjoFeliz_ShowLow_0 = {
+    @name(".OjoFeliz.ShowLow") register_action<bit<1>, bit<1>>(Redfield) _OjoFeliz_ShowLow_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

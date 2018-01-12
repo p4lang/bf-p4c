@@ -5,15 +5,10 @@
 #include "ir/ir.h"
 #include "frontends/common/options.h"
 #include "frontends/p4/evaluator/evaluator.h"
-#include "midend/actionsInlining.h"
-#include "midend/inlining.h"
 
 namespace BFN {
 
 class MidEnd : public PassManager {
-    P4::InlineWorkList controlsToInline;
-    P4::ActionsInlineList actionsToInline;
-
  public:
     // These will be accurate when the mid-end completes evaluation
     P4::ReferenceMap    refMap;

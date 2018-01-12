@@ -166,10 +166,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".action_0") action action_3(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
     @name(".do_nothing") action do_nothing_0() {
+    }
+    @name(".do_nothing") action do_nothing_3() {
+    }
+    @name(".do_nothing") action do_nothing_4() {
     }
     @name(".action_1") action action_4(bit<16> param0) {
         hdr.pkt.field_g_16 = param0;
@@ -177,21 +183,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_2") action action_5(bit<16> param0) {
         hdr.pkt.field_h_16 = param0;
     }
-    @name(".table_0") table table_3 {
+    @name(".table_0") table table_0 {
         actions = {
             action_3();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_e_16: ternary @name("pkt.field_e_16") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_4 {
+    @name(".table_1") table table_1 {
         actions = {
-            do_nothing_0();
+            do_nothing_3();
             @defaultonly action_4();
         }
         key = {
@@ -201,24 +207,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = action_4(16w0xf);
     }
-    @name(".table_2") table table_5 {
+    @name(".table_2") table table_2 {
         actions = {
             action_5();
-            do_nothing_0();
+            do_nothing_4();
         }
         key = {
             hdr.pkt.field_i_8: ternary @name("pkt.field_i_8") ;
         }
         size = 256;
-        default_action = do_nothing_0();
+        default_action = do_nothing_4();
     }
     apply {
         if (hdr.pkt.isValid()) 
-            table_3.apply();
+            table_0.apply();
         else 
-            switch (table_4.apply().action_run) {
-                do_nothing_0: {
-                    table_5.apply();
+            switch (table_1.apply().action_run) {
+                do_nothing_3: {
+                    table_2.apply();
                 }
             }
 

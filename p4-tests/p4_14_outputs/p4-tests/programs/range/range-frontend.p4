@@ -261,37 +261,41 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".set_egress") action set_egress_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
     @name(".set_val") action set_val_0(bit<9> val) {
         meta.bit9.tartly = val;
     }
-    @name(".bit9_match") table bit9_match_0 {
+    @name(".bit9_match") table bit9_match {
         actions = {
             set_egress_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.bit9.gauche: ternary @name("bit9.gauche") ;
             meta.bit9.tartly: range @name("bit9.tartly") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".range_set") table range_set_0 {
+    @name(".range_set") table range_set {
         actions = {
             set_val_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        range_set_0.apply();
-        bit9_match_0.apply();
+        range_set.apply();
+        bit9_match.apply();
     }
 }
 

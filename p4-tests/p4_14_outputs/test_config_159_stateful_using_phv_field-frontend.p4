@@ -169,12 +169,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@stateful_table_counter("table_hit") @name(".flow_cnt") register<bit<32>>(32w0) flow_cnt;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp;
-    @stateful_table_counter("table_hit") @name(".flow_cnt") register<bit<32>>(32w0) flow_cnt_0;
-    @name("sampler_alu") register_action<bit<32>, bit<32>>(flow_cnt_0) sampler_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    bit<32> tmp_0;
+    @name("sampler_alu") register_action<bit<32>, bit<32>>(flow_cnt) sampler_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> alu_hi_0;
+            bit<32> alu_hi;
             rv = 32w0;
             if (value == 32w10) 
                 value = 32w1;
@@ -185,13 +188,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".sample") action sample_0() {
-        tmp = sampler_alu_0.execute();
-        meta.meta.needs_sampling = (int<16>)(bit<16>)tmp;
+        tmp_0 = sampler_alu.execute();
+        meta.meta.needs_sampling = (int<16>)(bit<16>)tmp_0;
     }
-    @name(".match_tbl") table match_tbl_0 {
+    @name(".match_tbl") table match_tbl {
         actions = {
             sample_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32      : ternary @name("pkt.field_a_32") ;
@@ -200,10 +203,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.needs_sampling: exact @name("meta.needs_sampling") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        match_tbl_0.apply();
+        match_tbl.apply();
     }
 }
 

@@ -261,28 +261,67 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     apply {
     }
 }
+
+@name(".r1") register<bit<32>>(32w500) r1;
+
+@name(".r2") register<bit<32>>(32w500) r2;
+
+@name(".r3") register<bit<32>>(32w500) r3;
 #include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".c1") counter(32w500, CounterType.packets) c1_0;
-    @name(".c2") counter(32w500, CounterType.packets) c2_0;
-    @name(".c3") counter(32w500, CounterType.packets) c3_0;
-    @name(".r1") register<bit<32>>(32w500) r1_0;
-    @name(".r2") register<bit<32>>(32w500) r2_0;
-    @name(".r3") register<bit<32>>(32w500) r3_0;
-    @name("alu1") register_action<bit<32>, bit<32>>(r1_0) alu1_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_19() {
+    }
+    @name("NoAction") action NoAction_20() {
+    }
+    @name("NoAction") action NoAction_21() {
+    }
+    @name("NoAction") action NoAction_22() {
+    }
+    @name("NoAction") action NoAction_23() {
+    }
+    @name("NoAction") action NoAction_24() {
+    }
+    @name("NoAction") action NoAction_25() {
+    }
+    @name("NoAction") action NoAction_26() {
+    }
+    @name("NoAction") action NoAction_27() {
+    }
+    @name("NoAction") action NoAction_28() {
+    }
+    @name("NoAction") action NoAction_29() {
+    }
+    @name("NoAction") action NoAction_30() {
+    }
+    @name("NoAction") action NoAction_31() {
+    }
+    @name("NoAction") action NoAction_32() {
+    }
+    @name("NoAction") action NoAction_33() {
+    }
+    @name("NoAction") action NoAction_34() {
+    }
+    @name("NoAction") action NoAction_35() {
+    }
+    @name(".c1") counter(32w500, CounterType.packets) c1;
+    @name(".c2") counter(32w500, CounterType.packets) c2;
+    @name(".c3") counter(32w500, CounterType.packets) c3;
+    @name("alu1") register_action<bit<32>, bit<32>>(r1) alu1 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
         }
     };
-    @name("alu2") register_action<bit<32>, bit<32>>(r2_0) alu2_0 = {
+    @name("alu2") register_action<bit<32>, bit<32>>(r2) alu2 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
         }
     };
-    @name("alu3") register_action<bit<32>, bit<32>>(r3_0) alu3_0 = {
+    @name("alu3") register_action<bit<32>, bit<32>>(r3) alu3 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
@@ -293,26 +332,66 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".a1") action a1_0() {
     }
+    @name(".a1") action a1_12() {
+    }
+    @name(".a1") action a1_13() {
+    }
+    @name(".a1") action a1_14() {
+    }
+    @name(".a1") action a1_15() {
+    }
+    @name(".a1") action a1_16() {
+    }
+    @name(".a1") action a1_17() {
+    }
+    @name(".a1") action a1_18() {
+    }
+    @name(".a1") action a1_19() {
+    }
+    @name(".a1") action a1_20() {
+    }
+    @name(".a1") action a1_21() {
+    }
+    @name(".a1") action a1_22() {
+    }
     @name(".a2") action a2_0(bit<32> cntr_index) {
-        c1_0.count(cntr_index);
+        c1.count(cntr_index);
+    }
+    @name(".a2") action a2_2(bit<32> cntr_index) {
+        c1.count(cntr_index);
     }
     @name(".a3") action a3_0() {
-        c2_0.count((bit<32>)hdr.ig_intr_md.ingress_port);
+        c2.count((bit<32>)hdr.ig_intr_md.ingress_port);
+    }
+    @name(".a3") action a3_2() {
+        c2.count((bit<32>)hdr.ig_intr_md.ingress_port);
     }
     @name(".a3b") action a3b_0(bit<32> idx) {
-        c2_0.count(idx);
+        c2.count(idx);
     }
     @name(".a4") action a4_0() {
-        c3_0.count(32w12);
+        c3.count(32w12);
+    }
+    @name(".a4") action a4_2() {
+        c3.count(32w12);
     }
     @name(".a5") action a5_0(bit<32> stful_index) {
-        alu1_0.execute(stful_index);
+        alu1.execute(stful_index);
+    }
+    @name(".a5") action a5_2(bit<32> stful_index) {
+        alu1.execute(stful_index);
     }
     @name(".a6") action a6_0() {
-        alu2_0.execute((bit<32>)hdr.ig_intr_md.ingress_port);
+        alu2.execute((bit<32>)hdr.ig_intr_md.ingress_port);
+    }
+    @name(".a6") action a6_2() {
+        alu2.execute((bit<32>)hdr.ig_intr_md.ingress_port);
     }
     @name(".a7") action a7_0() {
-        alu3_0.execute(32w12);
+        alu3.execute(32w12);
+    }
+    @name(".a7") action a7_2() {
+        alu3.execute(32w12);
     }
     @name(".do_tcam") action do_tcam_0() {
     }
@@ -342,249 +421,249 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.mcast_grp_b = mgid2;
         meta.ig_md.pfe_override_test = pfe;
     }
-    @name(".do_local_recirc") table do_local_recirc_0 {
+    @name(".do_local_recirc") table do_local_recirc {
         actions = {
             local_recirc_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".e1") table e1_0 {
+    @name(".e1") table e1 {
         actions = {
             a1_0();
             a2_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_19();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 5;
-        default_action = NoAction();
+        default_action = NoAction_19();
     }
-    @name(".e2") table e2_0 {
+    @name(".e2") table e2 {
         actions = {
-            a1_0();
+            a1_12();
             a3_0();
             a3b_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_20();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 5;
-        default_action = NoAction();
+        default_action = NoAction_20();
     }
-    @name(".e3") table e3_0 {
+    @name(".e3") table e3 {
         actions = {
-            a1_0();
+            a1_13();
             a4_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_21();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 5;
-        default_action = NoAction();
+        default_action = NoAction_21();
     }
-    @name(".e4") table e4_0 {
+    @name(".e4") table e4 {
         actions = {
-            a1_0();
+            a1_14();
             a5_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_22();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 5;
-        default_action = NoAction();
+        default_action = NoAction_22();
     }
-    @name(".e5") table e5_0 {
+    @name(".e5") table e5 {
         actions = {
-            a1_0();
+            a1_15();
             a6_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_23();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 5;
-        default_action = NoAction();
+        default_action = NoAction_23();
     }
-    @name(".e6") table e6_0 {
+    @name(".e6") table e6 {
         actions = {
-            a1_0();
+            a1_16();
             a7_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_24();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 5;
-        default_action = NoAction();
+        default_action = NoAction_24();
     }
-    @name(".eg_tcam_or_exm") table eg_tcam_or_exm_0 {
+    @name(".eg_tcam_or_exm") table eg_tcam_or_exm {
         actions = {
             do_tcam_0();
             do_exm_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_25();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 2;
-        default_action = NoAction();
+        default_action = NoAction_25();
     }
-    @name(".pg_verify_port_down") table pg_verify_port_down_0 {
+    @name(".pg_verify_port_down") table pg_verify_port_down {
         actions = {
             port_down_ok_0();
             port_down_nok_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_26();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_26();
     }
-    @name(".pg_verify_recirc") table pg_verify_recirc_0 {
+    @name(".pg_verify_recirc") table pg_verify_recirc {
         actions = {
             recirc_ok_0();
             recirc_nok_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_27();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_27();
     }
-    @name(".pg_verify_timer") table pg_verify_timer_0 {
+    @name(".pg_verify_timer") table pg_verify_timer {
         actions = {
             timer_ok_0();
             timer_nok_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_28();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_28();
     }
-    @name(".port_tbl") table port_tbl_0 {
+    @name(".port_tbl") table port_tbl {
         actions = {
             set_md_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_29();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = NoAction_29();
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
-            a1_0();
-            a2_0();
-            @defaultonly NoAction();
+            a1_17();
+            a2_2();
+            @defaultonly NoAction_30();
         }
         key = {
             hdr.ig_intr_md.ingress_port: ternary @name("ig_intr_md.ingress_port") ;
         }
         size = 5;
-        default_action = NoAction();
+        default_action = NoAction_30();
     }
-    @name(".t2") table t2_0 {
+    @name(".t2") table t2 {
         actions = {
-            a1_0();
-            a3_0();
-            @defaultonly NoAction();
+            a1_18();
+            a3_2();
+            @defaultonly NoAction_31();
         }
         key = {
             hdr.ig_intr_md.ingress_port: ternary @name("ig_intr_md.ingress_port") ;
         }
         size = 5;
-        default_action = NoAction();
+        default_action = NoAction_31();
     }
-    @name(".t3") table t3_0 {
+    @name(".t3") table t3 {
         actions = {
-            a1_0();
-            a4_0();
-            @defaultonly NoAction();
+            a1_19();
+            a4_2();
+            @defaultonly NoAction_32();
         }
         key = {
             hdr.ig_intr_md.ingress_port: ternary @name("ig_intr_md.ingress_port") ;
         }
         size = 5;
-        default_action = NoAction();
+        default_action = NoAction_32();
     }
-    @name(".t4") table t4_0 {
+    @name(".t4") table t4 {
         actions = {
-            a1_0();
-            a5_0();
-            @defaultonly NoAction();
+            a1_20();
+            a5_2();
+            @defaultonly NoAction_33();
         }
         key = {
             hdr.ig_intr_md.ingress_port: ternary @name("ig_intr_md.ingress_port") ;
         }
         size = 5;
-        default_action = NoAction();
+        default_action = NoAction_33();
     }
-    @name(".t5") table t5_0 {
+    @name(".t5") table t5 {
         actions = {
-            a1_0();
-            a6_0();
-            @defaultonly NoAction();
+            a1_21();
+            a6_2();
+            @defaultonly NoAction_34();
         }
         key = {
             hdr.ig_intr_md.ingress_port: ternary @name("ig_intr_md.ingress_port") ;
         }
         size = 5;
-        default_action = NoAction();
+        default_action = NoAction_34();
     }
-    @name(".t6") table t6_0 {
+    @name(".t6") table t6 {
         actions = {
-            a1_0();
-            a7_0();
-            @defaultonly NoAction();
+            a1_22();
+            a7_2();
+            @defaultonly NoAction_35();
         }
         key = {
             hdr.ig_intr_md.ingress_port: ternary @name("ig_intr_md.ingress_port") ;
         }
         size = 5;
-        default_action = NoAction();
+        default_action = NoAction_35();
     }
     apply {
-        port_tbl_0.apply();
+        port_tbl.apply();
         if (meta.ig_md.skip_lkups == 1w0) {
             if (meta.ig_md.pktgen_port == 1w1) {
                 if (meta.ig_md.pktgen_type == 2w0) 
-                    pg_verify_timer_0.apply();
+                    pg_verify_timer.apply();
                 if (meta.ig_md.pktgen_type == 2w2) 
-                    pg_verify_port_down_0.apply();
+                    pg_verify_port_down.apply();
                 if (meta.ig_md.pktgen_type == 2w3) 
-                    pg_verify_recirc_0.apply();
+                    pg_verify_recirc.apply();
             }
             if (meta.ig_md.pfe_override_test == 1w1) 
-                switch (eg_tcam_or_exm_0.apply().action_run) {
+                switch (eg_tcam_or_exm.apply().action_run) {
                     do_exm_0: {
-                        e1_0.apply();
-                        e2_0.apply();
-                        e3_0.apply();
-                        e4_0.apply();
-                        e5_0.apply();
-                        e6_0.apply();
+                        e1.apply();
+                        e2.apply();
+                        e3.apply();
+                        e4.apply();
+                        e5.apply();
+                        e6.apply();
                     }
                     do_tcam_0: {
-                        t1_0.apply();
-                        t2_0.apply();
-                        t3_0.apply();
-                        t4_0.apply();
-                        t5_0.apply();
-                        t6_0.apply();
+                        t1.apply();
+                        t2.apply();
+                        t3.apply();
+                        t4.apply();
+                        t5.apply();
+                        t6.apply();
                     }
                 }
 
         }
         else 
             if (meta.ig_md.test_recirc == 1w1) 
-                do_local_recirc_0.apply();
+                do_local_recirc.apply();
     }
 }
 

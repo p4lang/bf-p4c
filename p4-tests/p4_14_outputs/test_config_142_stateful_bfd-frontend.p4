@@ -175,16 +175,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".bfd_cnt") register<sample_t>(32w0) bfd_cnt;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
-    @name(".bfd_cnt") register<sample_t>(32w0) bfd_cnt_0;
-    @name("bfd_cnt_rx_alu") register_action<sample_t, bit<8>>(bfd_cnt_0) bfd_cnt_rx_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    bit<8> tmp_0;
+    @name("bfd_cnt_rx_alu") register_action<sample_t, bit<8>>(bfd_cnt) bfd_cnt_rx_alu = {
         void apply(inout sample_t value, out bit<8> rv) {
             rv = 8w0;
             value.a = 8w0;
         }
     };
-    @name("bfd_cnt_tx_alu") register_action<sample_t, bit<8>>(bfd_cnt_0) bfd_cnt_tx_alu_0 = {
+    @name("bfd_cnt_tx_alu") register_action<sample_t, bit<8>>(bfd_cnt) bfd_cnt_tx_alu = {
         void apply(inout sample_t value, out bit<8> rv) {
             rv = 8w0;
             value.b = 8w1;
@@ -194,27 +197,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".bfd_rx") action bfd_rx_0() {
-        bfd_cnt_rx_alu_0.execute();
+        bfd_cnt_rx_alu.execute();
     }
     @name(".bfd_tx") action bfd_tx_0() {
-        tmp = bfd_cnt_tx_alu_0.execute();
-        hdr.pkt.field_i_8 = tmp;
+        tmp_0 = bfd_cnt_tx_alu.execute();
+        hdr.pkt.field_i_8 = tmp_0;
     }
-    @name(".bfd") table bfd_0 {
+    @name(".bfd") table bfd {
         actions = {
             bfd_rx_0();
             bfd_tx_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.bfd_md.bfd_tx_or_rx     : exact @name("bfd_md.bfd_tx_or_rx") ;
             meta.bfd_md.bfd_discriminator: exact @name("bfd_md.bfd_discriminator") ;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        bfd_0.apply();
+        bfd.apply();
     }
 }
 

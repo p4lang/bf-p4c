@@ -1173,9 +1173,11 @@ control Challis(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 }
 
+@name(".Lesley") register<bit<1>>(32w294912) Lesley;
+
+@name(".Norma") register<bit<1>>(32w294912) Norma;
+
 control Chatcolet(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Lesley") register<bit<1>>(32w294912) Lesley;
-    @name(".Norma") register<bit<1>>(32w294912) Norma;
     register_action<bit<1>, bit<1>>(Norma) Kenmore = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
@@ -1689,8 +1691,9 @@ control Frederika(inout headers hdr, inout metadata meta, inout standard_metadat
     }
 }
 
+@name(".Godley") register<bit<1>>(32w294912) Godley;
+
 control Gabbs(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Godley") register<bit<1>>(32w294912) Godley;
     register_action<bit<1>, bit<1>>(Godley) Lenwood = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
@@ -2981,8 +2984,9 @@ control Nettleton(inout headers hdr, inout metadata meta, inout standard_metadat
     }
 }
 
+@name(".Pearce") register<bit<1>>(32w294912) Pearce;
+
 control Nevis(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pearce") register<bit<1>>(32w294912) Pearce;
     register_action<bit<1>, bit<1>>(Pearce) Giltner = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

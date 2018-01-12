@@ -180,6 +180,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".prof") @mode("fair") action_selector(HashAlgorithm.random, 32w4096, 32w64) prof;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".sel_action_0") action sel_action(bit<16> p0, bit<8> p1) {
         hdr.ethernet.etherType = p0;
         hdr.ipv4.diffserv = p1;
@@ -191,15 +195,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_0() {
     }
+    @name(".do_nothing") action do_nothing_2() {
+    }
     @name(".set_p") action set_p_0(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @selector_max_group_size(121) @name(".t0") table t0_0 {
+    @selector_max_group_size(121) @name(".t0") table t0 {
         actions = {
             sel_action();
             sel_action_2();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.etherType : exact @name("ethernet.etherType") ;
@@ -212,23 +218,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 8192;
         implementation = prof;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
-            do_nothing_0();
+            do_nothing_2();
             set_p_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.ipv4.diffserv: ternary @name("ipv4.diffserv") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        t0_0.apply();
-        t1_0.apply();
+        t0.apply();
+        t1.apply();
     }
 }
 

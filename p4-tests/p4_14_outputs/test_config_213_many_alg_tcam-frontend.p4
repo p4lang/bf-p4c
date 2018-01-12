@@ -210,6 +210,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".ap") action_profile(32w65536) ap;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".ipv4_lpm_hit") action ipv4_lpm_hit_0() {
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
@@ -220,11 +224,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_partition_index") action set_partition_index_0(bit<10> idx) {
         meta.meta.partition_index = idx;
     }
-    @pack(1) @ways(4) @atcam_partition_index("meta.partition_index") @name(".ipv4_alg_tcam") table ipv4_alg_tcam_0 {
+    @pack(1) @ways(4) @atcam_partition_index("meta.partition_index") @name(".ipv4_alg_tcam") table ipv4_alg_tcam {
         actions = {
             ipv4_lpm_hit_0();
             lpm_miss_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.partition_index: exact @name("meta.partition_index") ;
@@ -233,23 +237,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 65536;
         implementation = ap;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".ipv4_lpm_partition") table ipv4_lpm_partition_0 {
+    @name(".ipv4_lpm_partition") table ipv4_lpm_partition {
         actions = {
             set_partition_index_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             meta.meta.vrf   : exact @name("meta.vrf") ;
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        ipv4_lpm_partition_0.apply();
-        ipv4_alg_tcam_0.apply();
+        ipv4_lpm_partition.apply();
+        ipv4_alg_tcam.apply();
     }
 }
 

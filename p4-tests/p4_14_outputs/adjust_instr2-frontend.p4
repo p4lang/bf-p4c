@@ -38,6 +38,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".set_fields") action set_fields_0(bit<32> big_field, bit<2> half_nibble1, bit<2> half_nibble2) {
         hdr.hdr.f4 = big_field;
         hdr.hdr.hn1 = half_nibble1;
@@ -51,40 +57,40 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.nibble_meta.hn1 = hdr.hdr.hn1;
         meta.nibble_meta.hn2 = hdr.hdr.hn2;
     }
-    @name(".set_all") table set_all_0 {
+    @name(".set_all") table set_all {
         actions = {
             set_fields_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr.f1: exact @name("hdr.f1") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".set_back") table set_back_0 {
+    @name(".set_back") table set_back {
         actions = {
             back_to_hdr_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.hdr.f3: exact @name("hdr.f3") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".set_nibbles") table set_nibbles_0 {
+    @name(".set_nibbles") table set_nibbles {
         actions = {
             set_nibble_meta_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.hdr.f2: exact @name("hdr.f2") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        set_all_0.apply();
-        set_nibbles_0.apply();
-        set_back_0.apply();
+        set_all.apply();
+        set_nibbles.apply();
+        set_back.apply();
     }
 }
 

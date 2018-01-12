@@ -45,7 +45,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.f3 = param1;
         hdr.data.f4 = param2;
     }
-    @name(".set_port") table set_port_0 {
+    @name(".set_port") table set_port {
         actions = {
             set_port_act_0();
             noop_0();
@@ -55,30 +55,30 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = noop_0();
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             a1_0();
             a2_0();
         }
         default_action = a1_0();
     }
-    @name(".t2") table t2_0 {
+    @name(".t2") table t2 {
         actions = {
             a3_0();
         }
         default_action = a3_0(16w0x6789);
     }
-    @name(".t3") table t3_0 {
+    @name(".t3") table t3 {
         actions = {
             a4_0();
         }
         default_action = a4_0(32w0x12345678, 32w0x76543210);
     }
     apply {
-        t1_0.apply();
-        t2_0.apply();
-        t3_0.apply();
-        set_port_0.apply();
+        t1.apply();
+        t2.apply();
+        t3.apply();
+        set_port.apply();
     }
 }
 

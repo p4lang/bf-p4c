@@ -43,8 +43,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".accum") register<pair32_t>(32w2048) accum;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".accum") register<pair32_t>(32w2048) accum;
     register_action<pair32_t, bit<32>>(accum) sful = {
         void apply(inout pair32_t value, out bit<32> rv) {
             rv = 32w0;

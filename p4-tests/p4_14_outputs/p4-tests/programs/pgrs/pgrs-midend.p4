@@ -261,6 +261,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     apply {
     }
 }
+
+@name(".r1") register<bit<32>>(32w500) r1;
+
+@name(".r2") register<bit<32>>(32w500) r2;
 #include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
@@ -294,8 +298,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".c1") counter(32w500, CounterType.packets) c1;
     @name(".c2") counter(32w500, CounterType.packets) c2;
-    @name(".r1") register<bit<32>>(32w500) r1;
-    @name(".r2") register<bit<32>>(32w500) r2;
     @name("alu1") register_action<bit<32>, bit<32>>(r1) alu1 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;

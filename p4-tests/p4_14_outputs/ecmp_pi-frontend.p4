@@ -209,31 +209,40 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".ecmp_action_profile") action_selector(HashAlgorithm.crc16, 32w16384, 32w16) ecmp_action_profile;
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".rewrite_mac") action rewrite_mac_0(bit<48> smac) {
         hdr.ethernet.srcAddr = smac;
     }
     @name("._drop") action _drop_0() {
         mark_to_drop();
     }
-    @name(".send_frame") table send_frame_0 {
+    @name(".send_frame") table send_frame {
         actions = {
             rewrite_mac_0();
             _drop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.eg_intr_md.egress_port: exact @name("eg_intr_md.egress_port") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        send_frame_0.apply();
+        send_frame.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_1() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name("._drop") action _drop_1() {
+        mark_to_drop();
+    }
+    @name("._drop") action _drop_4() {
         mark_to_drop();
     }
     @name(".set_nhop") action set_nhop_0(bit<32> nhop_ipv4, bit<9> port) {
@@ -244,11 +253,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_dmac") action set_dmac_0(bit<48> dmac) {
         hdr.ethernet.dstAddr = dmac;
     }
-    @name(".ecmp_group") table ecmp_group_0 {
+    @name(".ecmp_group") table ecmp_group {
         actions = {
             _drop_1();
             set_nhop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ipv4.dstAddr : lpm @name("ipv4.dstAddr") ;
@@ -260,24 +269,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
         implementation = ecmp_action_profile;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
-    @name(".forward") table forward_0 {
+    @name(".forward") table forward {
         actions = {
             set_dmac_0();
-            _drop_1();
-            @defaultonly NoAction();
+            _drop_4();
+            @defaultonly NoAction_5();
         }
         key = {
             meta.routing_metadata.nhop_ipv4: exact @name("routing_metadata.nhop_ipv4") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
         if (hdr.ipv4.isValid() && hdr.ipv4.ttl != 8w0) {
-            ecmp_group_0.apply();
-            forward_0.apply();
+            ecmp_group.apply();
+            forward.apply();
         }
     }
 }

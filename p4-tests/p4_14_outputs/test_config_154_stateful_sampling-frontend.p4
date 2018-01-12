@@ -169,10 +169,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".flow_cnt") register<bit<8>>(32w0) flow_cnt;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
-    @name(".flow_cnt") register<bit<8>>(32w0) flow_cnt_0;
-    @name("sampler_alu") register_action<bit<8>, bit<8>>(flow_cnt_0) sampler_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    bit<8> tmp_0;
+    @name("sampler_alu") register_action<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
             rv = 8w0;
             if (value == 8w10) 
@@ -184,23 +187,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".sample") action sample_0() {
-        tmp = sampler_alu_0.execute();
-        meta.meta.needs_sampling = (int<8>)tmp;
+        tmp_0 = sampler_alu.execute();
+        meta.meta.needs_sampling = (int<8>)tmp_0;
     }
-    @name(".match_tbl") table match_tbl_0 {
+    @name(".match_tbl") table match_tbl {
         actions = {
             sample_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32      : ternary @name("pkt.field_a_32") ;
             meta.meta.needs_sampling: exact @name("meta.needs_sampling") ;
         }
         size = 8192;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        match_tbl_0.apply();
+        match_tbl.apply();
     }
 }
 

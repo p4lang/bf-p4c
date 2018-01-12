@@ -216,91 +216,101 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".sflow_state_exp_seq_num") register<bit<32>>(32w0) sflow_state_exp_seq_num;
+
+@name(".sflow_state_seq_num") register<bit<32>>(32w0) sflow_state_seq_num;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp;
-    bit<32> tmp_0;
-    @name(".sflow_state_exp_seq_num") register<bit<32>>(32w0) sflow_state_exp_seq_num_0;
-    @name(".sflow_state_seq_num") register<bit<32>>(32w0) sflow_state_seq_num_0;
-    @name("seq_num_gen") register_action<bit<32>, bit<32>>(sflow_state_seq_num_0) seq_num_gen_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    bit<32> tmp_1;
+    bit<32> tmp_2;
+    @name("seq_num_gen") register_action<bit<32>, bit<32>>(sflow_state_seq_num) seq_num_gen = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> alu_hi_0;
-            alu_hi_0 = value;
+            bit<32> alu_hi;
+            alu_hi = value;
             value = value + 32w1;
-            rv = alu_hi_0;
+            rv = alu_hi;
         }
     };
-    @name("sflow_exp_seq_num") register_action<bit<32>, bit<32>>(sflow_state_exp_seq_num_0) sflow_exp_seq_num_0 = {
+    @name("sflow_exp_seq_num") register_action<bit<32>, bit<32>>(sflow_state_exp_seq_num) sflow_exp_seq_num = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> alu_hi_1;
-            alu_hi_1 = (bit<32>)meta.sflowHdr.seq_num - value;
+            bit<32> alu_hi_2;
+            alu_hi_2 = (bit<32>)meta.sflowHdr.seq_num - value;
             value = (bit<32>)meta.sflowHdr.temp;
-            rv = alu_hi_1;
+            rv = alu_hi_2;
         }
     };
     @name(".get_sflow_seq_num") action get_sflow_seq_num_0() {
-        tmp = seq_num_gen_0.execute();
-        meta.meta.sflow_sample_seq_no = tmp;
+        tmp_1 = seq_num_gen.execute();
+        meta.meta.sflow_sample_seq_no = tmp_1;
     }
     @name(".calc_next_seq_num") action calc_next_seq_num_0() {
         meta.sflowHdr.temp = meta.sflowHdr.seq_num + meta.sflowHdr.num_samples;
     }
     @name(".chk_sflow_seq_num") action chk_sflow_seq_num_0() {
-        tmp_0 = sflow_exp_seq_num_0.execute();
-        meta.sflowHdr.drops = (bit<16>)tmp_0;
+        tmp_2 = sflow_exp_seq_num.execute();
+        meta.sflowHdr.drops = (bit<16>)tmp_2;
     }
     @name(".drop_me") action drop_me_0() {
         mark_to_drop();
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name(".sflow_seq_num") table sflow_seq_num_0 {
+    @name(".sflow_seq_num") table sflow_seq_num {
         actions = {
             get_sflow_seq_num_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.sflow_src          : exact @name("meta.sflow_src") ;
             meta.meta.sflow_sample_seq_no: exact @name("meta.sflow_sample_seq_no") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".sflow_verify_seq_no_step_1") table sflow_verify_seq_no_step {
+    @name(".sflow_verify_seq_no_step_1") table sflow_verify_seq_no_step_1 {
         actions = {
             calc_next_seq_num_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
-    @stage(1) @name(".sflow_verify_seq_no_step_2") table sflow_verify_seq_no_step_0 {
+    @stage(1) @name(".sflow_verify_seq_no_step_2") table sflow_verify_seq_no_step_2 {
         actions = {
             chk_sflow_seq_num_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_6();
         }
         key = {
             meta.meta.sflow_src: exact @name("meta.sflow_src") ;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @name(".sflow_verify_seq_no_step_3") table sflow_verify_seq_no_step_4 {
+    @name(".sflow_verify_seq_no_step_3") table sflow_verify_seq_no_step_3 {
         actions = {
             drop_me_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_7();
         }
         key = {
             meta.sflowHdr.drops: ternary @name("sflowHdr.drops") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
     apply {
-        sflow_seq_num_0.apply();
-        sflow_verify_seq_no_step.apply();
-        sflow_verify_seq_no_step_0.apply();
-        sflow_verify_seq_no_step_4.apply();
+        sflow_seq_num.apply();
+        sflow_verify_seq_no_step_1.apply();
+        sflow_verify_seq_no_step_2.apply();
+        sflow_verify_seq_no_step_3.apply();
     }
 }
 

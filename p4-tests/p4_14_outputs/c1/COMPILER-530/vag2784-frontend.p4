@@ -156,44 +156,60 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".noop") action noop_0() {
+    }
+    @name(".noop") action noop_3() {
+    }
+    @name(".noop") action noop_4() {
     }
     @name(".set_egr") action set_egr_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".t1") table t1_0 {
-        actions = {
-            noop_0();
-            set_egr_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType[11:0]") ;
-            hdr.ethernet.dstAddr        : exact @name("ethernet.dstAddr") ;
-            hdr.ethernet.srcAddr        : exact @name("ethernet.srcAddr") ;
-        }
-        size = 4096;
-        default_action = NoAction();
+    @name(".set_egr") action set_egr_3(bit<9> port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".t2") table t2_0 {
-        actions = {
-            noop_0();
-            set_egr_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            hdr.ethernet.dstAddr        : exact @name("ethernet.dstAddr") ;
-            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType[11:0]") ;
-            hdr.ethernet.srcAddr        : exact @name("ethernet.srcAddr") ;
-        }
-        size = 4096;
-        default_action = NoAction();
+    @name(".set_egr") action set_egr_4(bit<9> port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".t3") table t3_0 {
+    @name(".t1") table t1 {
         actions = {
             noop_0();
             set_egr_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
+        }
+        key = {
+            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType[11:0]") ;
+            hdr.ethernet.dstAddr        : exact @name("ethernet.dstAddr") ;
+            hdr.ethernet.srcAddr        : exact @name("ethernet.srcAddr") ;
+        }
+        size = 4096;
+        default_action = NoAction_0();
+    }
+    @name(".t2") table t2 {
+        actions = {
+            noop_3();
+            set_egr_3();
+            @defaultonly NoAction_4();
+        }
+        key = {
+            hdr.ethernet.dstAddr        : exact @name("ethernet.dstAddr") ;
+            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType[11:0]") ;
+            hdr.ethernet.srcAddr        : exact @name("ethernet.srcAddr") ;
+        }
+        size = 4096;
+        default_action = NoAction_4();
+    }
+    @name(".t3") table t3 {
+        actions = {
+            noop_4();
+            set_egr_4();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ethernet.dstAddr        : exact @name("ethernet.dstAddr") ;
@@ -201,12 +217,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType[11:0]") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        t1_0.apply();
-        t2_0.apply();
-        t3_0.apply();
+        t1.apply();
+        t2.apply();
+        t3.apply();
     }
 }
 

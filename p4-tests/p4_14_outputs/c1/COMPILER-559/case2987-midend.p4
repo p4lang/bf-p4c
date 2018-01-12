@@ -672,6 +672,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<16> Laramie;
 }
 
+@name(".Dillsboro") register<bit<1>>(32w262144) Dillsboro;
+
+@name(".Honuapo") register<bit<1>>(32w262144) Honuapo;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -1421,14 +1425,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = _Lafourche();
     }
-    @name(".Dillsboro") register<bit<1>>(32w262144) _Dillsboro_0;
-    @name(".Honuapo") register<bit<1>>(32w262144) _Honuapo_0;
-    @name(".Walcott.Montegut") register_action<bit<1>, bit<1>>(_Dillsboro_0) _Walcott_Montegut_0 = {
+    @name(".Walcott.Montegut") register_action<bit<1>, bit<1>>(Dillsboro) _Walcott_Montegut_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Walcott.Plains") register_action<bit<1>, bit<1>>(_Honuapo_0) _Walcott_Plains_0 = {
+    @name(".Walcott.Plains") register_action<bit<1>, bit<1>>(Honuapo) _Walcott_Plains_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

@@ -207,68 +207,103 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
-        ttl_0 = ttl_0 + 8w255;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
     }
     @name(".ipv4_lpm_hit") action ipv4_lpm_hit_0(bit<9> egress_port) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_0 = hdr.ipv4.ttl;
+            ttl_0 = ttl_0 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_0;
+        }
+    }
+    @name(".ipv4_lpm_hit") action ipv4_lpm_hit_3(bit<9> egress_port) {
+        {
+            bit<8> ttl_3 = hdr.ipv4.ttl;
+            ttl_3 = ttl_3 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_3;
+        }
+    }
+    @name(".ipv4_lpm_hit") action ipv4_lpm_hit_4(bit<9> egress_port) {
+        {
+            bit<8> ttl_4 = hdr.ipv4.ttl;
+            ttl_4 = ttl_4 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_4;
+        }
     }
     @name(".ipv4_lpm_hit_change_dmac") action ipv4_lpm_hit_change_dmac_0(bit<9> egress_port, bit<48> dstmac) {
-        hop_0(hdr.ipv4.ttl, egress_port);
+        {
+            bit<8> ttl_5 = hdr.ipv4.ttl;
+            ttl_5 = ttl_5 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_5;
+        }
         hdr.ethernet.dstAddr = dstmac;
     }
     @name(".lpm_miss") action lpm_miss_0() {
         mark_to_drop();
     }
+    @name(".lpm_miss") action lpm_miss_2() {
+        mark_to_drop();
+    }
     @name(".nop") action nop_0() {
     }
-    @alpm(1) @name(".ipv4_alpm") table ipv4_alpm_0 {
+    @name(".nop") action nop_3() {
+    }
+    @name(".nop") action nop_4() {
+    }
+    @alpm(1) @name(".ipv4_alpm") table ipv4_alpm {
         actions = {
             ipv4_lpm_hit_0();
             ipv4_lpm_hit_change_dmac_0();
             lpm_miss_0();
             nop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.vrf   : exact @name("meta.vrf") ;
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         size = 8192;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @alpm(1) @name(".ipv4_alpm_idle") table ipv4_alpm_idle_0 {
+    @alpm(1) @name(".ipv4_alpm_idle") table ipv4_alpm_idle {
         support_timeout = true;
         actions = {
-            ipv4_lpm_hit_0();
-            nop_0();
-            @defaultonly NoAction();
+            ipv4_lpm_hit_3();
+            nop_3();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         size = 8192;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @alpm(1) @alpm_partitions(1024) @alpm_subtrees_per_partition(4) @name(".ipv4_alpm_large") table ipv4_alpm_large_0 {
+    @alpm(1) @alpm_partitions(1024) @alpm_subtrees_per_partition(4) @name(".ipv4_alpm_large") table ipv4_alpm_large {
         actions = {
-            ipv4_lpm_hit_0();
-            lpm_miss_0();
-            nop_0();
-            @defaultonly NoAction();
+            ipv4_lpm_hit_4();
+            lpm_miss_2();
+            nop_4();
+            @defaultonly NoAction_5();
         }
         key = {
             meta.meta.vrf   : exact @name("meta.vrf") ;
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         size = 200000;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        ipv4_alpm_0.apply();
-        ipv4_alpm_large_0.apply();
-        ipv4_alpm_idle_0.apply();
+        ipv4_alpm.apply();
+        ipv4_alpm_large.apply();
+        ipv4_alpm_idle.apply();
     }
 }
 

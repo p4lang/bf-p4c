@@ -221,17 +221,22 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".conga_state") register<conga_state_layout>(32w256) conga_state;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
-    bit<8> tmp_0;
-    @name(".conga_state") register<conga_state_layout>(32w256) conga_state_0;
-    @name("conga_alu") register_action<conga_state_layout, bit<8>>(conga_state_0) conga_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    bit<8> tmp_1;
+    bit<8> tmp_2;
+    @name("conga_alu") register_action<conga_state_layout, bit<8>>(conga_state) conga_alu = {
         void apply(inout conga_state_layout value, out bit<8> rv) {
             value.next_hop = value.utilization;
             rv = value.next_hop;
         }
     };
-    @name("conga_update_alu") register_action<conga_state_layout, bit<8>>(conga_state_0) conga_update_alu_0 = {
+    @name("conga_update_alu") register_action<conga_state_layout, bit<8>>(conga_state) conga_update_alu = {
         void apply(inout conga_state_layout value, out bit<8> rv) {
             if (value.next_hop > meta.conga_meta.util) 
                 value.utilization = meta.conga_meta.next_hop;
@@ -241,28 +246,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".get_preferred_next_hop") action get_preferred_next_hop_0() {
-        tmp = conga_alu_0.execute();
-        meta.meta.next_hop = tmp;
+        tmp_1 = conga_alu.execute();
+        meta.meta.next_hop = tmp_1;
     }
     @name(".update_preferred_next_hop") action update_preferred_next_hop_0() {
-        tmp_0 = conga_update_alu_0.execute();
-        meta.meta.next_hop = tmp_0;
+        tmp_2 = conga_update_alu.execute();
+        meta.meta.next_hop = tmp_2;
     }
-    @name(".conga_rd_next_hop_table") table conga_rd_next_hop_table_0 {
+    @name(".conga_rd_next_hop_table") table conga_rd_next_hop_table {
         actions = {
             get_preferred_next_hop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.dst_tor_id: exact @name("meta.dst_tor_id") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".conga_wr_next_hop_table") table conga_wr_next_hop_table_0 {
+    @name(".conga_wr_next_hop_table") table conga_wr_next_hop_table {
         actions = {
             update_preferred_next_hop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             meta.meta.dst_tor_id    : exact @name("meta.dst_tor_id") ;
@@ -271,13 +276,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.conga_meta.util    : exact @name("conga_meta.util") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (meta.meta.is_conga_packet == 1w1) 
-            conga_wr_next_hop_table_0.apply();
+            conga_wr_next_hop_table.apply();
         else 
-            conga_rd_next_hop_table_0.apply();
+            conga_rd_next_hop_table.apply();
     }
 }
 

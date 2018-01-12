@@ -36,6 +36,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".adjust_first") action adjust_first_0() {
         hdr.hdr.x1 = meta.offset_meta.x1;
         hdr.hdr.x2 = meta.offset_meta.x2;
@@ -55,48 +61,48 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".setport") action setport_0(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".adjust1") table adjust1_0 {
+    @name(".adjust1") table adjust1 {
         actions = {
             adjust_first_0();
             adjust_first_ad_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr.f2: exact @name("hdr.f2") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".adjust2") table adjust2_0 {
+    @name(".adjust2") table adjust2 {
         actions = {
             adjust_second_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.hdr.f3: exact @name("hdr.f3") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".offset") table offset_0 {
+    @name(".offset") table offset {
         actions = {
             set_offset_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.hdr.f1: exact @name("hdr.f1") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
-    @name(".setting_port") table setting_port_0 {
+    @name(".setting_port") table setting_port {
         actions = {
             setport_0();
         }
         default_action = setport_0(9w1);
     }
     apply {
-        offset_0.apply();
-        adjust1_0.apply();
-        adjust2_0.apply();
-        setting_port_0.apply();
+        offset.apply();
+        adjust1.apply();
+        adjust2.apply();
+        setting_port.apply();
     }
 }
 

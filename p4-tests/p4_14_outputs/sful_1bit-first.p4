@@ -29,8 +29,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".reg") register<bit<1>>(32w1000) reg;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".reg") register<bit<1>>(32w1000) reg;
     register_action<bit<1>, bit<1>>(reg) sful1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;

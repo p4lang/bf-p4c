@@ -42,24 +42,26 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".action_0") action action_1() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(meta.meta.hash_1, HashAlgorithm.crc16, 16w0, { hdr.pkt.field_c_32, hdr.pkt.field_d_32 }, 32w16777216);
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name(".table_0") table table_1 {
+    @name(".table_0") table table_0 {
         actions = {
             action_1();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_g_16: ternary @name("pkt.field_g_16") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        table_1.apply();
+        table_0.apply();
     }
 }
 

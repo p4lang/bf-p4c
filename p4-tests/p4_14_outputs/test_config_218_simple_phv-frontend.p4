@@ -185,6 +185,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
     @name(".action_0") action action_2(bit<8> p0, bit<8> p1) {
         hdr.hdr_0.e = p0;
         mark_to_drop();
@@ -194,34 +198,34 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name(".table_i0") table table_i0_0 {
+    @name(".table_i0") table table_i0 {
         actions = {
             action_2();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr_0.b: ternary @name("hdr_0.b") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_i1") table table_i1_0 {
+    @name(".table_i1") table table_i1 {
         actions = {
             action_3();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.hdr_0.c: ternary @name("hdr_0.c") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.hdr_0.isValid()) 
-            table_i0_0.apply();
+            table_i0.apply();
         else 
-            table_i1_0.apply();
+            table_i1.apply();
     }
 }
 

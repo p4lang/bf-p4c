@@ -36,7 +36,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".meter_0") direct_meter<bit<8>>(MeterType.packets) meter_1;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    @name(".meter_0") direct_meter<bit<8>>(MeterType.packets) meter_0;
     @name(".action_2") action action_0() {
         hdr.hdr0.a = 16w1;
         meta.meta.a = 8w0;
@@ -44,42 +48,42 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".action_0") action action_0_1() {
-        meter_1.read(meta.meta.x);
+        meter_0.read(meta.meta.x);
         meta.meta.y = 8w1;
     }
     @name(".action_1") action action_1() {
-        meter_1.read(meta.meta.x);
+        meter_0.read(meta.meta.x);
         meta.meta.z = 8w0;
     }
-    @name(".table_0") table table_2 {
+    @name(".table_0") table table_0 {
         actions = {
             action_0_1();
             action_1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr0.a: ternary @name("hdr0.a") ;
         }
         size = 512;
-        meters = meter_1;
-        default_action = NoAction();
+        meters = meter_0;
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_3 {
+    @name(".table_1") table table_1 {
         actions = {
             action_0();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.hdr0.a: ternary @name("hdr0.a") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        table_2.apply();
+        table_0.apply();
         if (hdr.hdr0.isValid()) 
-            table_3.apply();
+            table_1.apply();
     }
 }
 

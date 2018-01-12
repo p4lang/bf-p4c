@@ -22,7 +22,6 @@
 #include "frontends/common/parseInput.h"
 #include "common/extract_maupipe.h"
 #include "midend.h"
-#include "midend/actionsInlining.h"
 #include "bf-p4c-options.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
 #include "arch/simple_switch.h"

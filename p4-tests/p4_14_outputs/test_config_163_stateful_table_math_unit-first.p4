@@ -175,10 +175,11 @@ struct cntr_1_layout {
     bit<16> hi;
 }
 
+@name(".stateful_cntr_1") register<cntr_1_layout>(32w0) stateful_cntr_1;
+
 math_unit<bit<16>, tuple<bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>>>(true, -2s1, 6s4, { 16w0xf, 16w14, 16w13, 16w0xc, 16w0xb, 16w10, 16w9, 16w8, 16w7, 16w6, 16w5, 16w4, 16w3, 16w2, 16w1, 16w0 }) cntr_1_math_unit;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".stateful_cntr_1") register<cntr_1_layout>(32w0) stateful_cntr_1;
     register_action<cntr_1_layout, bit<16>>(stateful_cntr_1, cntr_1_math_unit) cntr_1 = {
         void apply(inout cntr_1_layout value, out bit<16> rv) {
             rv = 16w0;

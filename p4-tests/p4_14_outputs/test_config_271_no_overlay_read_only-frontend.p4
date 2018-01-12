@@ -177,6 +177,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_0() {
     }
+    @name(".do_nothing") action do_nothing_3() {
+    }
+    @name(".do_nothing") action do_nothing_4() {
+    }
     @name(".a1") action a1_0() {
         hdr.hdr1.a = 16w2;
         meta.meta.y = 1w1;
@@ -184,7 +188,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".a2") action a2_0() {
         hdr.hdr1.a = 16w2;
     }
-    @name(".t0") table t0_0 {
+    @name(".t0") table t0 {
         actions = {
             a0_0();
             do_nothing_0();
@@ -195,34 +199,34 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = do_nothing_0();
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
             a1_0();
-            do_nothing_0();
+            do_nothing_3();
         }
         key = {
             hdr.hdr1.a : ternary @name("hdr1.a") ;
             meta.meta.x: exact @name("meta.x") ;
         }
         size = 512;
-        default_action = do_nothing_0();
+        default_action = do_nothing_3();
     }
-    @name(".t2") table t2_0 {
+    @name(".t2") table t2 {
         actions = {
             a2_0();
-            do_nothing_0();
+            do_nothing_4();
         }
         key = {
             hdr.hdr1.b : ternary @name("hdr1.b") ;
             meta.meta.w: exact @name("meta.w") ;
         }
         size = 512;
-        default_action = do_nothing_0();
+        default_action = do_nothing_4();
     }
     apply {
-        t0_0.apply();
-        t1_0.apply();
-        t2_0.apply();
+        t0.apply();
+        t1.apply();
+        t2.apply();
     }
 }
 

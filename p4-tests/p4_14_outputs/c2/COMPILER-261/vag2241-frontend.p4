@@ -142,20 +142,22 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name(".a") action a_0() {
     }
-    @name(".t") table t_0 {
+    @name(".t") table t {
         actions = {
             a_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        t_0.apply();
+        t.apply();
     }
 }
 

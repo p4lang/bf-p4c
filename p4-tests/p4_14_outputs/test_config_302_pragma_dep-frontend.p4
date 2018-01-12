@@ -181,9 +181,33 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_6() {
+    }
+    @name("NoAction") action NoAction_7() {
+    }
+    @name("NoAction") action NoAction_8() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
     @name(".do_nothing") action do_nothing_0() {
     }
+    @name(".do_nothing") action do_nothing_5() {
+    }
+    @name(".do_nothing") action do_nothing_6() {
+    }
+    @name(".do_nothing") action do_nothing_7() {
+    }
+    @name(".do_nothing") action do_nothing_8() {
+    }
     @name(".set_w0") action set_w0_0(bit<32> p) {
+        hdr.w0.w = p;
+    }
+    @name(".set_w0") action set_w0_3(bit<32> p) {
+        hdr.w0.w = p;
+    }
+    @name(".set_w0") action set_w0_4(bit<32> p) {
         hdr.w0.w = p;
     }
     @name(".set_p") action set_p_0() {
@@ -193,69 +217,69 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_w1") action set_w1_0() {
         hdr.w1.w = 32w2;
     }
-    @name(".t0") table t0_0 {
+    @name(".t0") table t0 {
         actions = {
             do_nothing_0();
             set_w0_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.w0.w: ternary @name("w0.w") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".t1") table t1_0 {
+    @name(".t1") table t1 {
         actions = {
-            do_nothing_0();
-            set_w0_0();
-            @defaultonly NoAction();
+            do_nothing_5();
+            set_w0_3();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.w0.w: ternary @name("w0.w") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_6();
     }
-    @ignore_table_dependency("t1") @name(".t2") table t2_0 {
+    @ignore_table_dependency("t1") @name(".t2") table t2 {
         actions = {
-            do_nothing_0();
-            set_w0_0();
-            @defaultonly NoAction();
+            do_nothing_6();
+            set_w0_4();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.w0.w: ternary @name("w0.w") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_7();
     }
-    @name(".t3") table t3_0 {
+    @name(".t3") table t3 {
         actions = {
-            do_nothing_0();
+            do_nothing_7();
             set_p_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.w0.w: ternary @name("w0.w") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_8();
     }
-    @force_table_dependency("t3") @name(".t4") table t4_0 {
+    @force_table_dependency("t3") @name(".t4") table t4 {
         actions = {
-            do_nothing_0();
+            do_nothing_8();
             set_w1_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_9();
         }
         key = {
             hdr.w2.w: ternary @name("w2.w") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_9();
     }
     apply {
-        t0_0.apply();
+        t0.apply();
         if (hdr.w2.isValid()) 
-            t1_0.apply();
-        t2_0.apply();
+            t1.apply();
+        t2.apply();
         if (hdr.w1.isValid()) 
-            t3_0.apply();
-        t4_0.apply();
+            t3.apply();
+        t4.apply();
     }
 }
 

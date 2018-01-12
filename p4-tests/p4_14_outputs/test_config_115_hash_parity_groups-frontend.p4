@@ -165,12 +165,22 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name(".table_0") table table_3 {
+    @name(".do_nothing") action do_nothing_3() {
+    }
+    @name(".do_nothing") action do_nothing_4() {
+    }
+    @name(".table_0") table table_0 {
         actions = {
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32: exact @name("pkt.field_a_32") ;
@@ -180,12 +190,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_e_16: exact @name("pkt.field_e_16") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_4 {
+    @name(".table_1") table table_1 {
         actions = {
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_3();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.pkt.field_i_8: exact @name("pkt.field_i_8") ;
@@ -193,12 +203,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_k_8: exact @name("pkt.field_k_8") ;
         }
         size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".table_2") table table_5 {
+    @name(".table_2") table table_2 {
         actions = {
-            do_nothing_0();
-            @defaultonly NoAction();
+            do_nothing_4();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.pkt.field_a_32: exact @name("pkt.field_a_32") ;
@@ -208,13 +218,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_e_16: exact @name("pkt.field_e_16") ;
             hdr.pkt.field_j_8 : exact @name("pkt.field_j_8") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
         if (hdr.pkt.isValid()) {
-            table_3.apply();
-            table_4.apply();
-            table_5.apply();
+            table_0.apply();
+            table_1.apply();
+            table_2.apply();
         }
     }
 }

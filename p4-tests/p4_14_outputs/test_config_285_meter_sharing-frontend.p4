@@ -186,7 +186,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".my_meter") direct_meter<bit<2>>(MeterType.bytes) my_meter_0;
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    @name(".my_meter") direct_meter<bit<2>>(MeterType.bytes) my_meter;
     @name(".action_1") action action_0(bit<4> x) {
         meta.meta.x = x;
     }
@@ -196,38 +202,38 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".action_0") action action_0_1(bit<2> y) {
-        my_meter_0.read(meta.meta.color);
+        my_meter.read(meta.meta.color);
         hdr.ipv4.diffserv = 8w5;
         meta.meta.y = y;
     }
-    @name(".table_0") table table_3 {
+    @name(".table_0") table table_0 {
         actions = {
             action_0_1();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ipv4.srcAddr: lpm @name("ipv4.srcAddr") ;
         }
         size = 512;
-        meters = my_meter_0;
-        default_action = NoAction();
+        meters = my_meter;
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_4 {
+    @name(".table_1") table table_1 {
         actions = {
             action_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.ipv4.diffserv: exact @name("ipv4.diffserv") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".table_2") table table_5 {
+    @name(".table_2") table table_2 {
         actions = {
             action_3();
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             meta.meta.color: exact @name("meta.color") ;
@@ -235,12 +241,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.y    : exact @name("meta.y") ;
         }
         size = 16;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        table_3.apply();
-        table_4.apply();
-        table_5.apply();
+        table_0.apply();
+        table_1.apply();
+        table_2.apply();
     }
 }
 

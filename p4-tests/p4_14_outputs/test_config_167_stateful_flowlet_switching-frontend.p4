@@ -212,10 +212,13 @@ struct flowlet_state_alu_layout {
     bit<32> hi;
 }
 
+@name(".flowlet_state") register<flowlet_state_alu_layout>(32w65536) flowlet_state;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp;
-    @name(".flowlet_state") register<flowlet_state_alu_layout>(32w65536) flowlet_state_0;
-    @name("flowlet_state_alu") register_action<flowlet_state_alu_layout, bit<32>>(flowlet_state_0) flowlet_state_alu_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    bit<32> tmp_0;
+    @name("flowlet_state_alu") register_action<flowlet_state_alu_layout, bit<32>>(flowlet_state) flowlet_state_alu = {
         void apply(inout flowlet_state_alu_layout value, out bit<32> rv) {
             if (meta.meta.tstamp - value.lo > 32w20000) 
                 value.hi = value.hi;
@@ -224,23 +227,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".get_flowlet_next_hop") action get_flowlet_next_hop_0(bit<32> idx) {
-        tmp = flowlet_state_alu_0.execute(idx);
-        meta.meta.next_hop = (bit<16>)tmp;
+        tmp_0 = flowlet_state_alu.execute(idx);
+        meta.meta.next_hop = (bit<16>)tmp_0;
     }
-    @name(".flowlet_next_hop") table flowlet_next_hop_0 {
+    @name(".flowlet_next_hop") table flowlet_next_hop {
         actions = {
             get_flowlet_next_hop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.next_hop: ternary @name("meta.next_hop") ;
             meta.meta.tstamp  : exact @name("meta.tstamp") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
-        flowlet_next_hop_0.apply();
+        flowlet_next_hop.apply();
     }
 }
 

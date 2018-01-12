@@ -169,10 +169,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".stateful_cntr") register<bit<16>>(32w0) stateful_cntr;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp;
-    @name(".stateful_cntr") register<bit<16>>(32w0) stateful_cntr_0;
-    @name("cntr") register_action<bit<16>, bit<16>>(stateful_cntr_0) cntr_0 = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_3() {
+    }
+    bit<16> tmp_0;
+    @name("cntr") register_action<bit<16>, bit<16>>(stateful_cntr) cntr = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w1;
             rv = value;
@@ -181,33 +186,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".cnt") action cnt_0() {
-        tmp = cntr_0.execute();
-        meta.meta.count_value = tmp;
+        tmp_0 = cntr.execute();
+        meta.meta.count_value = tmp_0;
     }
-    @name(".dummy") table dummy_0 {
+    @name(".dummy") table dummy {
         actions = {
             do_nothing_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.count_value: exact @name("meta.count_value") ;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".match_cntr") table match_cntr_0 {
+    @name(".match_cntr") table match_cntr {
         actions = {
             cnt_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.pkt.field_a_32: exact @name("pkt.field_a_32") ;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_3();
     }
     apply {
-        match_cntr_0.apply();
-        dummy_0.apply();
+        match_cntr.apply();
+        dummy.apply();
     }
 }
 

@@ -349,42 +349,50 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
-control encap_process(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".encap_udp") action encap_udp_0() {
+control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_1() {
+    }
+    @name("NoAction") action NoAction_16() {
+    }
+    @name("NoAction") action NoAction_17() {
+    }
+    @name("NoAction") action NoAction_18() {
+    }
+    @name("NoAction") action NoAction_19() {
+    }
+    @name("NoAction") action NoAction_20() {
+    }
+    @name(".encap_udp") action _encap_udp_0() {
         hdr.inner_udp = hdr.udp;
         hdr.udp.setInvalid();
     }
-    @name(".encap_tcp") action encap_tcp_0() {
+    @name(".encap_tcp") action _encap_tcp_0() {
         hdr.inner_tcp = hdr.tcp;
         hdr.tcp.setInvalid();
     }
-    @name(".encap_icmp") action encap_icmp_0() {
+    @name(".encap_icmp") action _encap_icmp_0() {
         hdr.inner_icmp = hdr.icmp;
         hdr.icmp.setInvalid();
     }
-    @name(".insert_vxlan_header") action insert_vxlan_header_0(bit<24> vni_0) {
-        hdr.vxlan.setValid();
-        hdr.vxlan.flags = 8w0x8;
-        hdr.vxlan.reserved = 24w0;
-        hdr.vxlan.vni = vni_0;
-        hdr.vxlan.reserved2 = 8w0;
-    }
-    @name(".insert_udp_header") action insert_udp_header_0(int proto_0) {
-        hdr.udp.setValid();
-        hdr.udp.srcPort = meta.hash_metadata.entropy_hash;
-        hdr.udp.dstPort = 16w4789;
-        hdr.udp.checksum = 16w0x0;
-    }
-    @name(".encap_process_inner_common") action encap_process_inner_common_0() {
+    @name(".encap_process_inner_common") action _encap_process_inner_common_0() {
         meta.egress_metadata.payload_length = hdr.ipv4.totalLen + 16w30;
         hdr.inner_ethernet = hdr.ethernet;
         hdr.inner_ipv4 = hdr.ipv4;
         hdr.ipv4.setInvalid();
-        insert_vxlan_header_0(meta.tunnel_metadata.tunnel_vni);
-        insert_udp_header_0(4789);
+        hdr.vxlan.setValid();
+        hdr.vxlan.flags = 8w0x8;
+        hdr.vxlan.reserved = 24w0;
+        hdr.vxlan.vni = meta.tunnel_metadata.tunnel_vni;
+        hdr.vxlan.reserved2 = 8w0;
+        hdr.udp.setValid();
+        hdr.udp.srcPort = meta.hash_metadata.entropy_hash;
+        hdr.udp.dstPort = 16w4789;
+        hdr.udp.checksum = 16w0x0;
         hdr.udp.length_ = hdr.ipv4.totalLen + 16w30;
     }
-    @name(".insert_ipv6_header") action insert_ipv6_header_0() {
+    @name(".insert_ipv6_header") action _insert_ipv6_header_0() {
         hdr.ethernet.etherType = 16w0x86dd;
         hdr.ipv6.setValid();
         hdr.ipv6.version = 4w0x6;
@@ -394,29 +402,29 @@ control encap_process(inout headers hdr, inout metadata meta, inout standard_met
         hdr.ipv6.dstAddr_zeroes = 32w0x0;
         hdr.ipv6.srcAddr = 128w0x1aa12aa23aa34aa45aa56aa67aa78aa8;
     }
-    @name(".encap_write_outer") action encap_write_outer_1(bit<16> dst_datacenter_index, bit<16> dst_tor_index, bit<16> dst_server_index, bit<24> vni) {
+    @name(".encap_write_outer") action _encap_write_outer_0(bit<16> dst_datacenter_index, bit<16> dst_tor_index, bit<16> dst_server_index, bit<24> vni) {
         meta.tunnel_metadata.dst_datacenter_index = dst_datacenter_index;
         meta.tunnel_metadata.dst_tor_index = dst_tor_index;
         meta.tunnel_metadata.dst_server_index = dst_server_index;
         meta.tunnel_metadata.tunnel_vni = vni;
     }
-    @name(".set_dst_datacenter") action set_dst_datacenter_0(bit<32> dst_datacenter_id_32, bit<32> dst_datacenter_id_4) {
+    @name(".set_dst_datacenter") action _set_dst_datacenter_0(bit<32> dst_datacenter_id_32, bit<32> dst_datacenter_id_4) {
         hdr.ipv6.dstAddr_first32 = dst_datacenter_id_32;
         hdr.ipv6.dstAddr_second32 = dst_datacenter_id_4;
     }
-    @name(".set_dst_server") action set_dst_server_0(bit<32> dst_server_ip) {
+    @name(".set_dst_server") action _set_dst_server_0(bit<32> dst_server_ip) {
         hdr.ipv6.dstAddr_server = dst_server_ip;
         hdr.ipv6.dstAddr_second32 = hdr.ipv6.dstAddr_second32 << 28;
     }
-    @name(".set_dst_tor") action set_dst_tor_0(bit<32> dst_tor_id) {
+    @name(".set_dst_tor") action _set_dst_tor_0(bit<32> dst_tor_id) {
         hdr.ipv6.dstAddr_second32 = hdr.ipv6.dstAddr_second32 + dst_tor_id;
     }
-    @name(".encap_inner") table encap_inner_0 {
+    @name(".encap_inner") table _encap_inner {
         actions = {
-            encap_udp_0();
-            encap_tcp_0();
-            encap_icmp_0();
-            @defaultonly NoAction();
+            _encap_udp_0();
+            _encap_tcp_0();
+            _encap_icmp_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.udp.isValid() : exact @name("udp.$valid$") ;
@@ -424,190 +432,97 @@ control encap_process(inout headers hdr, inout metadata meta, inout standard_met
             hdr.icmp.isValid(): exact @name("icmp.$valid$") ;
         }
         size = 3;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".encap_inner2") table encap_inner2_0 {
+    @name(".encap_inner2") table _encap_inner2 {
         actions = {
-            encap_process_inner_common_0();
-            @defaultonly NoAction();
+            _encap_process_inner_common_0();
+            @defaultonly NoAction_1();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
-    @name(".encap_inner3") table encap_inner3_0 {
+    @name(".encap_inner3") table _encap_inner3 {
         actions = {
-            insert_ipv6_header_0();
-            @defaultonly NoAction();
+            _insert_ipv6_header_0();
+            @defaultonly NoAction_16();
         }
         size = 1;
-        default_action = NoAction();
+        default_action = NoAction_16();
     }
-    @name(".encap_write_outer") table encap_write_outer_2 {
+    @name(".encap_write_outer") table _encap_write_outer_1 {
         actions = {
-            encap_write_outer_1();
-            @defaultonly NoAction();
+            _encap_write_outer_0();
+            @defaultonly NoAction_17();
         }
         key = {
             meta.tunnel_metadata.tunnel_index: exact @name("tunnel_metadata.tunnel_index") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_17();
     }
-    @ternary(1) @name(".tunnel_dst_datacenter_rewrite") table tunnel_dst_datacenter_rewrite_0 {
+    @ternary(1) @name(".tunnel_dst_datacenter_rewrite") table _tunnel_dst_datacenter_rewrite {
         actions = {
-            set_dst_datacenter_0();
-            @defaultonly NoAction();
+            _set_dst_datacenter_0();
+            @defaultonly NoAction_18();
         }
         key = {
             meta.tunnel_metadata.dst_datacenter_index: exact @name("tunnel_metadata.dst_datacenter_index") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_18();
     }
-    @ternary(1) @name(".tunnel_dst_server_rewrite") table tunnel_dst_server_rewrite_0 {
+    @ternary(1) @name(".tunnel_dst_server_rewrite") table _tunnel_dst_server_rewrite {
         actions = {
-            set_dst_server_0();
-            @defaultonly NoAction();
+            _set_dst_server_0();
+            @defaultonly NoAction_19();
         }
         key = {
             meta.tunnel_metadata.dst_server_index: exact @name("tunnel_metadata.dst_server_index") ;
         }
         size = 2048;
-        default_action = NoAction();
+        default_action = NoAction_19();
     }
-    @ternary(1) @name(".tunnel_dst_tor_rewrite") table tunnel_dst_tor_rewrite_0 {
+    @ternary(1) @name(".tunnel_dst_tor_rewrite") table _tunnel_dst_tor_rewrite {
         actions = {
-            set_dst_tor_0();
-            @defaultonly NoAction();
+            _set_dst_tor_0();
+            @defaultonly NoAction_20();
         }
         key = {
             meta.tunnel_metadata.dst_tor_index: exact @name("tunnel_metadata.dst_tor_index") ;
         }
         size = 2048;
-        default_action = NoAction();
+        default_action = NoAction_20();
     }
     apply {
-        encap_inner_0.apply();
-        encap_inner2_0.apply();
-        encap_inner3_0.apply();
-        encap_write_outer_2.apply();
-        tunnel_dst_datacenter_rewrite_0.apply();
-        tunnel_dst_server_rewrite_0.apply();
-        tunnel_dst_tor_rewrite_0.apply();
-    }
-}
-
-control process_tunnel_encap(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".encap_process") encap_process() encap_process_1;
-    apply {
-        if (meta.tunnel_metadata.tunnel_index != 24w0) 
-            encap_process_1.apply(hdr, meta, standard_metadata);
-    }
-}
-
-control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".process_tunnel_encap") process_tunnel_encap() process_tunnel_encap_1;
-    apply {
-        process_tunnel_encap_1.apply(hdr, meta, standard_metadata);
-    }
-}
-
-control process_tunnel(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".decap_udp") action decap_udp_0() {
-        hdr.udp = hdr.inner_udp;
-        hdr.inner_udp.setInvalid();
-    }
-    @name(".decap_tcp") action decap_tcp_0() {
-        hdr.udp.setInvalid();
-        hdr.tcp = hdr.inner_tcp;
-        hdr.inner_tcp.setInvalid();
-    }
-    @name(".decap_icmp") action decap_icmp_0() {
-        hdr.udp.setInvalid();
-        hdr.icmp = hdr.inner_icmp;
-        hdr.inner_icmp.setInvalid();
-    }
-    @name(".decap_unparsed_l4") action decap_unparsed_l4_0() {
-        hdr.udp.setInvalid();
-    }
-    @name(".decap_common") action decap_common_0() {
-        hdr.ethernet = hdr.inner_ethernet;
-        hdr.inner_ethernet.setInvalid();
-        hdr.ipv4 = hdr.inner_ipv4;
-        hdr.inner_ipv4.setInvalid();
-        hdr.vxlan.setInvalid();
-        hdr.ipv6.setInvalid();
-    }
-    @name(".tunnel_check_passed") action tunnel_check_passed_0() {
-    }
-    @name(".on_miss") action on_miss_0() {
-    }
-    @name(".set_vrf") action set_vrf_0(bit<24> vrf) {
-        meta.l3_metadata.vrf = vrf;
-    }
-    @name(".decap_inner") table decap_inner_0 {
-        actions = {
-            decap_udp_0();
-            decap_tcp_0();
-            decap_icmp_0();
-            decap_unparsed_l4_0();
-            @defaultonly NoAction();
+        if (meta.tunnel_metadata.tunnel_index != 24w0) {
+            _encap_inner.apply();
+            _encap_inner2.apply();
+            _encap_inner3.apply();
+            _encap_write_outer_1.apply();
+            _tunnel_dst_datacenter_rewrite.apply();
+            _tunnel_dst_server_rewrite.apply();
+            _tunnel_dst_tor_rewrite.apply();
         }
-        key = {
-            hdr.udp.isValid() : exact @name("udp.$valid$") ;
-            hdr.tcp.isValid() : exact @name("tcp.$valid$") ;
-            hdr.icmp.isValid(): exact @name("icmp.$valid$") ;
-        }
-        size = 4;
-        default_action = NoAction();
-    }
-    @name(".decap_outer") table decap_outer_0 {
-        actions = {
-            decap_common_0();
-            @defaultonly NoAction();
-        }
-        size = 1;
-        default_action = NoAction();
-    }
-    @name(".tunnel_check") table tunnel_check_0 {
-        actions = {
-            tunnel_check_passed_0();
-            on_miss_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            hdr.vxlan.isValid()      : exact @name("vxlan.$valid$") ;
-            hdr.ipv6.dstAddr_first32 : exact @name("ipv6.dstAddr_first32") ;
-            hdr.ipv6.dstAddr_second32: exact @name("ipv6.dstAddr_second32") ;
-        }
-        size = 2;
-        default_action = NoAction();
-    }
-    @name(".vni_to_vrf") table vni_to_vrf_0 {
-        actions = {
-            set_vrf_0();
-            @defaultonly NoAction();
-        }
-        key = {
-            hdr.vxlan.vni: exact @name("vxlan.vni") ;
-        }
-        size = 1024;
-        default_action = NoAction();
-    }
-    apply {
-        switch (tunnel_check_0.apply().action_run) {
-            tunnel_check_passed_0: {
-                vni_to_vrf_0.apply();
-                decap_inner_0.apply();
-                decap_outer_0.apply();
-            }
-        }
-
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".assign_vrf") action assign_vrf_1(bit<24> vrf) {
+    @name("NoAction") action NoAction_21() {
+    }
+    @name("NoAction") action NoAction_22() {
+    }
+    @name("NoAction") action NoAction_23() {
+    }
+    @name("NoAction") action NoAction_24() {
+    }
+    @name("NoAction") action NoAction_25() {
+    }
+    @name("NoAction") action NoAction_26() {
+    }
+    @name("NoAction") action NoAction_27() {
+    }
+    @name(".assign_vrf") action assign_vrf_0(bit<24> vrf) {
         meta.l3_metadata.vrf = vrf;
     }
     @name(".set_dmac") action set_dmac_0(bit<48> dmac, bit<9> port) {
@@ -617,6 +532,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("._drop") action _drop_0() {
         mark_to_drop();
     }
+    @name("._drop") action _drop_2() {
+        mark_to_drop();
+    }
     @name(".set_nhop_index") action set_nhop_index_0(bit<24> nexthop_index) {
         meta.l3_metadata.nexthop_index = nexthop_index;
     }
@@ -624,52 +542,139 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.l3_metadata.nexthop_index = nexthop_index;
         meta.tunnel_metadata.tunnel_index = tunnel_index;
     }
-    @name(".assign_vrf") table assign_vrf_2 {
+    @name(".assign_vrf") table assign_vrf_1 {
         actions = {
-            assign_vrf_1();
-            @defaultonly NoAction();
+            assign_vrf_0();
+            @defaultonly NoAction_21();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_21();
     }
-    @name(".forward") table forward_0 {
+    @name(".forward") table forward {
         actions = {
             set_dmac_0();
             _drop_0();
-            @defaultonly NoAction();
+            @defaultonly NoAction_22();
         }
         key = {
             meta.l3_metadata.nexthop_index: exact @name("l3_metadata.nexthop_index") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_22();
     }
-    @name(".nhop_lookup") table nhop_lookup_0 {
+    @name(".nhop_lookup") table nhop_lookup {
         actions = {
             set_nhop_index_0();
             set_nhop_index_with_tunnel_0();
-            _drop_0();
-            @defaultonly NoAction();
+            _drop_2();
+            @defaultonly NoAction_23();
         }
         key = {
             hdr.ipv4.dstAddr    : lpm @name("ipv4.dstAddr") ;
             meta.l3_metadata.vrf: exact @name("l3_metadata.vrf") ;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_23();
     }
-    @name(".process_tunnel") process_tunnel() process_tunnel_1;
+    @name(".decap_udp") action _decap_udp() {
+        hdr.udp = hdr.inner_udp;
+        hdr.inner_udp.setInvalid();
+    }
+    @name(".decap_tcp") action _decap_tcp() {
+        hdr.udp.setInvalid();
+        hdr.tcp = hdr.inner_tcp;
+        hdr.inner_tcp.setInvalid();
+    }
+    @name(".decap_icmp") action _decap_icmp() {
+        hdr.udp.setInvalid();
+        hdr.icmp = hdr.inner_icmp;
+        hdr.inner_icmp.setInvalid();
+    }
+    @name(".decap_unparsed_l4") action _decap_unparsed_l4() {
+        hdr.udp.setInvalid();
+    }
+    @name(".decap_common") action _decap_common() {
+        hdr.ethernet = hdr.inner_ethernet;
+        hdr.inner_ethernet.setInvalid();
+        hdr.ipv4 = hdr.inner_ipv4;
+        hdr.inner_ipv4.setInvalid();
+        hdr.vxlan.setInvalid();
+        hdr.ipv6.setInvalid();
+    }
+    @name(".tunnel_check_passed") action _tunnel_check_passed() {
+    }
+    @name(".on_miss") action _on_miss() {
+    }
+    @name(".set_vrf") action _set_vrf(bit<24> vrf) {
+        meta.l3_metadata.vrf = vrf;
+    }
+    @name(".decap_inner") table _decap_inner_0 {
+        actions = {
+            _decap_udp();
+            _decap_tcp();
+            _decap_icmp();
+            _decap_unparsed_l4();
+            @defaultonly NoAction_24();
+        }
+        key = {
+            hdr.udp.isValid() : exact @name("udp.$valid$") ;
+            hdr.tcp.isValid() : exact @name("tcp.$valid$") ;
+            hdr.icmp.isValid(): exact @name("icmp.$valid$") ;
+        }
+        size = 4;
+        default_action = NoAction_24();
+    }
+    @name(".decap_outer") table _decap_outer_0 {
+        actions = {
+            _decap_common();
+            @defaultonly NoAction_25();
+        }
+        size = 1;
+        default_action = NoAction_25();
+    }
+    @name(".tunnel_check") table _tunnel_check_0 {
+        actions = {
+            _tunnel_check_passed();
+            _on_miss();
+            @defaultonly NoAction_26();
+        }
+        key = {
+            hdr.vxlan.isValid()      : exact @name("vxlan.$valid$") ;
+            hdr.ipv6.dstAddr_first32 : exact @name("ipv6.dstAddr_first32") ;
+            hdr.ipv6.dstAddr_second32: exact @name("ipv6.dstAddr_second32") ;
+        }
+        size = 2;
+        default_action = NoAction_26();
+    }
+    @name(".vni_to_vrf") table _vni_to_vrf_0 {
+        actions = {
+            _set_vrf();
+            @defaultonly NoAction_27();
+        }
+        key = {
+            hdr.vxlan.vni: exact @name("vxlan.vni") ;
+        }
+        size = 1024;
+        default_action = NoAction_27();
+    }
     apply {
         if (hdr.ipv4.isValid()) 
-            assign_vrf_2.apply();
+            assign_vrf_1.apply();
         else 
             if (hdr.vxlan.isValid()) 
-                process_tunnel_1.apply(hdr, meta, standard_metadata);
-        nhop_lookup_0.apply();
-        forward_0.apply();
+                switch (_tunnel_check_0.apply().action_run) {
+                    _tunnel_check_passed: {
+                        _vni_to_vrf_0.apply();
+                        _decap_inner_0.apply();
+                        _decap_outer_0.apply();
+                    }
+                }
+
+        nhop_lookup.apply();
+        forward.apply();
     }
 }
 

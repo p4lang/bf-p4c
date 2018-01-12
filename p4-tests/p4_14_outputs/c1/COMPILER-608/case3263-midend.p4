@@ -686,6 +686,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".KawCity") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) KawCity;
 
+@name(".Kapaa") register<bit<1>>(32w294912) Kapaa;
+
+@name(".Pathfork") register<bit<1>>(32w294912) Pathfork;
+
 @name("Hampton") struct Hampton {
     bit<8>  Goodyear;
     bit<16> Lofgreen;
@@ -1405,14 +1409,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_64();
     }
-    @name(".Kapaa") register<bit<1>>(32w294912) _Kapaa_0;
-    @name(".Pathfork") register<bit<1>>(32w294912) _Pathfork_0;
-    @name(".Bogota.Booth") register_action<bit<1>, bit<1>>(_Kapaa_0) _Bogota_Booth_0 = {
+    @name(".Bogota.Booth") register_action<bit<1>, bit<1>>(Kapaa) _Bogota_Booth_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Bogota.Union") register_action<bit<1>, bit<1>>(_Pathfork_0) _Bogota_Union_0 = {
+    @name(".Bogota.Union") register_action<bit<1>, bit<1>>(Pathfork) _Bogota_Union_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

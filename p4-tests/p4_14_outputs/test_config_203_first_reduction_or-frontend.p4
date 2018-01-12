@@ -170,80 +170,89 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".reg_0") register<bit<8>>(32w1024) reg_0;
+
+@name(".reg_1") register<bit<8>>(32w1024) reg_1;
+
+@name(".reg_2") register<bit<8>>(32w1024) reg_2;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
-    bit<8> tmp_0;
-    bit<8> tmp_1;
-    @name(".reg_0") register<bit<8>>(32w1024) reg_3;
-    @name(".reg_1") register<bit<8>>(32w1024) reg_4;
-    @name(".reg_2") register<bit<8>>(32w1024) reg_5;
-    @name("alu_0") register_action<bit<8>, bit<8>>(reg_3) alu = {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
+    }
+    bit<8> tmp_2;
+    bit<8> tmp_3;
+    bit<8> tmp_4;
+    @name("alu_0") register_action<bit<8>, bit<8>>(reg_0) alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = 8w15;
             rv = value;
         }
     };
-    @name("alu_1") register_action<bit<8>, bit<8>>(reg_4) alu_3 = {
+    @name("alu_1") register_action<bit<8>, bit<8>>(reg_1) alu_1 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = 8w0x30;
             rv = value;
         }
     };
-    @name("alu_2") register_action<bit<8>, bit<8>>(reg_5) alu_4 = {
+    @name("alu_2") register_action<bit<8>, bit<8>>(reg_2) alu_2 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = 8w0xc0;
             rv = value;
         }
     };
     @name(".action_0") action action_3(bit<32> idx) {
-        tmp = alu.execute(idx);
-        meta.meta.result_8 = tmp;
+        tmp_2 = alu_0.execute(idx);
+        meta.meta.result_8 = tmp_2;
     }
     @name(".action_1") action action_4(bit<32> idx) {
-        tmp_0 = alu_3.execute(idx);
-        meta.meta.result_8 = tmp_0;
+        tmp_3 = alu_1.execute(idx);
+        meta.meta.result_8 = tmp_3;
     }
     @name(".action_2") action action_5(bit<32> idx) {
-        tmp_1 = alu_4.execute(idx);
-        meta.meta.result_8 = tmp_1;
+        tmp_4 = alu_2.execute(idx);
+        meta.meta.result_8 = tmp_4;
     }
-    @name(".table_0") table table_3 {
+    @name(".table_0") table table_0 {
         actions = {
             action_3();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32: lpm @name("pkt.field_a_32") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
-    @name(".table_1") table table_4 {
+    @name(".table_1") table table_1 {
         actions = {
             action_4();
-            @defaultonly NoAction();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.pkt.field_b_32: lpm @name("pkt.field_b_32") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_4();
     }
-    @name(".table_2") table table_5 {
+    @name(".table_2") table table_2 {
         actions = {
             action_5();
-            @defaultonly NoAction();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.pkt.field_c_32: lpm @name("pkt.field_c_32") ;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_5();
     }
     apply {
-        table_3.apply();
-        table_4.apply();
-        table_5.apply();
+        table_0.apply();
+        table_1.apply();
+        table_2.apply();
     }
 }
 

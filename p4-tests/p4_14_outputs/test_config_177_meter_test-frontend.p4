@@ -174,22 +174,24 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @meter_sweep_interval(1) @name(".meter_0") direct_meter<bit<8>>(MeterType.bytes) meter_1;
+    @name("NoAction") action NoAction_0() {
+    }
+    @meter_sweep_interval(1) @name(".meter_0") direct_meter<bit<8>>(MeterType.bytes) meter_0;
     @name(".action_0") action action_0(bit<8> param0) {
-        meter_1.read(hdr.pkt.color_0);
+        meter_0.read(hdr.pkt.color_0);
     }
     @name(".action_1") action action_1(bit<8> param0) {
-        meter_1.read(hdr.pkt.color_0);
+        meter_0.read(hdr.pkt.color_0);
     }
     @name(".do_nothing") action do_nothing() {
-        meter_1.read(hdr.pkt.color_0);
+        meter_0.read(hdr.pkt.color_0);
     }
-    @name(".table_0") table table_1 {
+    @name(".table_0") table table_0 {
         actions = {
             action_0();
             action_1();
             do_nothing();
-            @defaultonly NoAction();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_e_16: ternary @name("pkt.field_e_16") ;
@@ -197,11 +199,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.color_1   : exact @name("pkt.color_1") ;
         }
         size = 6000;
-        meters = meter_1;
-        default_action = NoAction();
+        meters = meter_0;
+        default_action = NoAction_0();
     }
     apply {
-        table_1.apply();
+        table_0.apply();
     }
 }
 
