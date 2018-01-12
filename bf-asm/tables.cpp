@@ -1223,11 +1223,21 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
     /* FIXME -- this is mostly a hack, since the actions need not map 1-to-1 to the
      * hit_next entries.  Need a way of speicfying next table in the actual action */
     //if (table->hit_next.size() <= 1) return;
-    unsigned hit_index = 0;
+    // If a table has both an attached gateway and a per-action next table map,
+    // the compiler reserves action code 0 for the gateway's action so it will
+    // never be used in the table. The compiler sticks END in the hit_map for
+    // code 0, as a 'never used' placeholder, which we want to skip when
+    // generating the next table info for the context json.
+    //
+    // This creates a coupling between the compiler's encoding of per-action
+    // next tables and this code in the assembler, so if the compiler is
+    // changed, the assembler will also need updating. This suggests we should
+    // come up with a better way of decoupling this.
+    unsigned hit_index = (table->get_gateway() && (table->hit_next.size() > 1)) ? 1 : 0;
     bool hit_index_inc = true;
     // If hit and miss tables are same, set next table for all actions
-    if (table->hit_next.size() == 1)
-        if (table->hit_next[0] == table->miss_next)
+    if (table->hit_next.size() == (hit_index + 1))
+        if (table->hit_next[hit_index] == table->miss_next)
             hit_index_inc = false;
     // If miss table not in any hit tables, set next table to miss table for all actions
     // This is the default action next table or miss table which runtime updates
@@ -1243,10 +1253,10 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
         auto next = hit_index < table->hit_next.size() ? table->hit_next[hit_index] : Table::Ref();
         if (set_miss_table) next = table->miss_next;
         if(next && next->name_ == "END") next = Table::Ref();
-        if (hit_index_inc) hit_index++;
         std::string next_table_name = next ? next->name() : "--END_OF_PIPELINE--";
         unsigned next_table = next ? hit_index : 0;
         unsigned next_table_full = next ? next->table_id() : 0xff;
+        if (hit_index_inc) hit_index++;
         action_format_per_action["action_name"] = act.name;
         action_format_per_action["action_handle"] = act.handle;
         action_format_per_action["table_name"] = next_table_name;

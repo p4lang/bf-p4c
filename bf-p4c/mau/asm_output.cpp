@@ -1729,6 +1729,10 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     if (need_next_hit_map) {
         out << indent << "hit: [ ";
         const char *sep = "";
+        if (tbl->uses_gateway()) {
+            out << "END";
+            sep = ", ";
+        }
         for (auto act : Values(tbl->actions)) {
             out << sep << next_for(tbl, act->name, default_next);
             sep = ", ";

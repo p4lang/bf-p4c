@@ -555,6 +555,8 @@ stage <constant> <thread>:
         bus: <vector>
         hash_dist: <hash_distribution>
             # see hash_action hash_dist
+        initial_value : { lo : <int> , hi : <int> }
+            # Specify initial value for register, assumed 0 otherwise
         actions: 
             <action name> : 
                 - <instruction>

@@ -733,6 +733,7 @@ public:
             if (way.group == grp) return true;
         return false; }
     void add_hash_functions(json::map &stage_tbl) override;
+    Actions *get_actions() override { return actions ? actions : (action ? action->actions : nullptr); }
 )
 
 DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
@@ -1093,7 +1094,6 @@ DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
     bool                global_binding = false;
-    json::map *base_tbl_cfg(json::vector &out, const char *type, int size) override;
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) override;
 public:
     template<class REGS> void write_regs(REGS &regs);
@@ -1159,6 +1159,8 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
         void check();
     }                   math_table;
     bool dual_mode = false;
+    unsigned initial_value_lo = 0;
+    unsigned initial_value_hi = 0;
 public:
     Ref                 bound_selector;
     unsigned phv_byte_mask = 0;

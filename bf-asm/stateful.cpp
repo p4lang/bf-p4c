@@ -14,6 +14,15 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data, true)) {
         if (common_setup(kv, data, P4Table::Stateful)) {
+        } else if (kv.key == "initial_value") {
+            if (CHECKTYPE(kv.value, tMAP)) {
+                for (auto &v : kv.value.map) {
+                    if (v.key == "lo") {
+                        if (CHECKTYPE(v.value, tINT))
+                                initial_value_lo = v.value.i; }
+                    if (v.key == "hi") {
+                        if (CHECKTYPE(v.value, tINT))
+                                initial_value_lo = v.value.i; } } }
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
                 input_xbar = new InputXbar(this, false, kv.value.map);
@@ -331,8 +340,19 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) {
     // FIXME -- factor common Synth2Port stuff
     int size = (layout_size() - 1) * 1024 * (128U/format->size);
     json::map &tbl = *base_tbl_cfg(out, "stateful", size);
-    /*json::map &stage_tbl = */add_stage_tbl_cfg(tbl, "stateful", size);
-    tbl["alu_width"] = format->size/(dual_mode ? 2 : 1);
+    unsigned alu_width = format->size/(dual_mode ? 2 : 1);
+    tbl["alu_width"] = alu_width;
+    // FIXME: For a single bit stateful register, the driver assumes set/clr
+    // instructions are present even if the p4 program does not specify them.
+    // This is the way for control plane to set/clr these registers directly.
+    // Used in p4factory - stful.p4 - TestOneBit
+    // Here, we set these values explicitly -  which is a hack - allowing them
+    // to be overwritten if the instructions are present in the p4 program.
+    // Proper way to do this is to have an additional pass in the compiler to
+    // output these instructions in assembly - BRIG-397
+    if (alu_width == 1) {
+        tbl["set_instr"] = 1;
+        tbl["clr_instr"] = 2; }
     tbl["dual_width_mode"] = dual_mode;
     json::vector &act_to_sful_instr_slot = tbl["action_to_stateful_instruction_slot"];
     if (actions) {
@@ -345,16 +365,31 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) {
                 if (i->name() == "clr_bit_at")
                     tbl["clr_instr_at"] = a.code;
                 if (i->name() == "clr_bit")
-                    tbl["clr_instr"] = a.code; }
-		json::map instr_slot;
-		instr_slot["action_handle"] = a.handle;
-		instr_slot["instruction_slot"] = a.code;
-		act_to_sful_instr_slot.push_back(std::move(instr_slot));}
-        actions->gen_tbl_cfg((tbl["actions"] = json::vector())); }
+                    tbl["clr_instr"] = a.code; } } }
+    // Add action handle and instr slot for action which references stateful
+    for (auto *m : get_match_tables()) {
+        if (auto *acts = m->get_actions()) {
+            for (auto &a : *acts) {
+                bool act_present = false;
+                // Do not add handle if already present, if stateful spans
+                // multiple stages this will get called again
+                for (auto &s: act_to_sful_instr_slot) {
+                    auto s_handle = s->to<json::map>()["action_handle"];
+                    if (*s_handle->as_number() == a.handle) {
+                        act_present = true; break; } }
+                if (act_present) continue;
+		        json::map instr_slot;
+		        instr_slot["action_handle"] = a.handle;
+		        instr_slot["instruction_slot"] = a.code;
+		        act_to_sful_instr_slot.push_back(std::move(instr_slot)); } } }
     if (bound_selector)
         tbl["bound_to_selection_table_handle"] = bound_selector->handle();
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "stateful", size);
     add_alu_index(stage_tbl, "meter_alu_index");
+    if (initial_value_lo > 0)
+        tbl["initial_value_lo"] = initial_value_lo;
+    if (initial_value_hi > 0)
+        tbl["initial_value_hi"] = initial_value_hi;
     if (context_json)
         stage_tbl.merge(*context_json);
 }
