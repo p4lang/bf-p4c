@@ -23,6 +23,7 @@ class LayoutOption {
         maprams = 0;
         tcams = 0;
         entries = 0;
+        select_bus_split = -1;
         way_sizes.clear();
         partition_sizes.clear();
     }

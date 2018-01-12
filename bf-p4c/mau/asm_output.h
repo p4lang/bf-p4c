@@ -67,7 +67,7 @@ class MauAsmOutput : public MauInspector {
             std::map<int, std::map<int, Slice>> &sort) const;
     void emit_ixbar_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
             safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
-            int &ident_bits_prev_alloc) const;
+            int &ident_bits_prev_alloc, const IR::Expression *hd_expr) const;
     void emit_ixbar_hash_exact(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
             safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
             int &ident_bits_prev_alloc) const;
@@ -77,8 +77,11 @@ class MauAsmOutput : public MauInspector {
            Slice *ghost, const IXBar::Use *use, int hash_group, int start_bit, int end_bit) const;
     void emit_ixbar_hash_way_select(std::ostream &out, indent_t indent,
             safe_vector<Slice> &match_data, Slice *ghost, int start_bit, int end_bit) const;
+    void emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
+            safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
+             const IR::Expression *hd_expr) const;
     void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
-            const TableMatch *fmt) const;
+            const TableMatch *fmt, const IR::Expression *hd_expr = nullptr) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;
     void emit_gateway(std::ostream &out, indent_t gw_indent, const IR::MAU::Table *tbl,
              bool hash_action, cstring next_hit, cstring &gw_miss) const;
@@ -100,6 +103,8 @@ class MauAsmOutput : public MauInspector {
                               bool immediate) const;
     bool emit_idletime(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
                        const IR::MAU::IdleTime *id) const;
+    cstring find_attached_name(const IR::MAU::Table *tbl,
+           const IR::MAU::BackendAttached *ba) const;
     class EmitAction;
     class EmitAttached;
     class UnattachedName;

@@ -85,6 +85,14 @@ p4c_add_xfail_reason("jbay"
   testdata/p4_14_samples/axon.p4
   )
 
+
+p4c_add_xfail_reason("jbay"
+# Fail on purpose due to indirect tables not being mutually exclusive
+  "Tables .* and .* are not mutually exclusive"
+  testdata/p4_14_samples/12-Counters.p4
+  testdata/p4_14_samples/13-Counters1and2.p4
+  )
+
 p4c_add_xfail_reason("jbay"
   "condition too complex"
   testdata/p4_14_samples/issue894.p4

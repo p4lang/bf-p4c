@@ -202,10 +202,8 @@ struct FormatHash {
     safe_vector<Slice> match_data;
     const Slice *ghost;
     cstring alg;
-    const int sliceindex;
-    FormatHash(const safe_vector<Slice>& md, const Slice *g,
-               cstring a, int idx = 0)
-        : match_data(md), ghost(g), alg(a), sliceindex(idx) {}
+    FormatHash(const safe_vector<Slice>& md, const Slice *g, cstring a)
+        : match_data(md), ghost(g), alg(a) {}
 };
 
 // FIXME: This is a simple function for crc polynomial.  Probably needs to be expanded for
@@ -237,9 +235,9 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
     } else if (checkEqual(hash.alg, "crc32")) {
         out << "stripe(crc(" << crc_poly(32) << ", " << emit_vector(hash.match_data, ", ") << "))";
     } else if (checkEqual(hash.alg, "identity")) {
-        out << "stripe(" << hash.match_data[hash.sliceindex] << ")";
+        out << hash.match_data[0];
     } else if (checkEqual(hash.alg, "selector_identity")) {
-        out << "stripe(" << hash.match_data[hash.sliceindex] << ")";
+        out << "stripe(" << emit_vector(hash.match_data) << ")";
     } else {
         BUG("Hashing Algorithm is not recognized");
     }
@@ -597,25 +595,91 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
     }
 }
 
+/** Given a bitrange to allocate into the ixbar hash matrix, as well as a list of fields to
+ *  be the identity, this coordinates the field slice to a portion of the bit range.  This
+ *  really only applies for identity matches.
+ */
+void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
+        safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
+        const IR::Expression *hd_expr) const {
+    for (auto &sl : match_data) {
+        int slice_bits_seen = 0;
+        if (auto le = hd_expr->to<IR::ListExpression>()) {
+            for (auto expr : le->components) {
+                auto field = phv.field(expr);
+                if (field == sl.get_field()) {
+                    break;
+                }
+                slice_bits_seen += field->size;
+            }
+        }
+        int sl_lo = sl.get_lo() + slice_bits_seen;
+        int sl_hi = sl.get_hi() + slice_bits_seen;
+        int bits_seen = 0;
+        auto bv = bitvec(hdh.bit_mask);
+        int start_bit = bv.ffs();
+        while (start_bit >= 0) {
+            int end_bit = bv.ffz(start_bit);
+            int br_lo = start_bit;
+            int br_hi = end_bit - 1;
+            int br_width = br_hi - br_lo + 1;
+            // Is slice outside of the bitrange
+            if (bits_seen + br_width - 1 < sl_lo) {
+                bits_seen += br_width;
+                start_bit = bv.ffs(end_bit);
+                continue;
+            }
+            if (bits_seen > sl_hi) {
+                bits_seen += br_width;
+                start_bit = bv.ffs(end_bit);
+                continue;
+            }
+
+            // Shrink slice and bitrange until they are the same size
+            auto adapted_sl = sl;
+            if (sl_lo < bits_seen)
+                adapted_sl.shrink_lo(bits_seen - sl_lo);
+            else
+                br_lo += (sl_lo - bits_seen);
+            if (sl_hi > bits_seen + br_width - 1)
+                adapted_sl.shrink_hi(sl_hi - (bits_seen + br_width - 1));
+            else
+                br_hi -= (bits_seen + br_width - 1) - sl_hi;
+
+            safe_vector<Slice> ident_slice;
+            ident_slice.push_back(adapted_sl);
+
+            out << indent << br_lo << ".." << br_hi;
+            out << ": " << FormatHash(ident_slice, nullptr, "identity") << std::endl;
+            bits_seen += br_width;
+            start_bit = bv.ffs(end_bit);
+        }
+    }
+}
+
 /* Generate asm for the hash of a table, specifically either a match, gateway, or selector
    table.  Not used for hash distribution hash */
 void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
                                    safe_vector<Slice> &match_data,
                                    safe_vector<Slice> &ghost,
                                    const IXBar::Use *use, int hash_group,
-                                   int &ident_bits_prev_alloc) const {
+                                   int &ident_bits_prev_alloc,
+                                   const IR::Expression *hd_expr) const {
     if (!use->way_use.empty()) {
         emit_ixbar_hash_exact(out, indent, match_data, ghost, use, hash_group,
                               ident_bits_prev_alloc);
     }
 
     for (auto &select : use->select_use) {
+        auto alg = select.algorithm;
+        if (checkEqual(alg, "identity"))
+            alg = "selector_identity";
         if (select.mode == "resilient")
             out << indent << "0..50: "
-                << FormatHash(match_data, nullptr, select.algorithm) << std::endl;
+                << FormatHash(match_data, nullptr, alg) << std::endl;
         else if (select.mode == "fair")
             out << indent << "0..13: "
-                << FormatHash(match_data, nullptr, select.algorithm) << std::endl;
+                << FormatHash(match_data, nullptr, alg) << std::endl;
         else
             BUG("Unrecognized mode of the action selector");
     }
@@ -649,6 +713,11 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
 
     if (use->hash_dist_hash.allocated) {
         auto &hdh = use->hash_dist_hash;
+        if (checkEqual(hdh.algorithm, "identity")) {
+            emit_ixbar_hash_dist_ident(out, indent, match_data, hdh, hd_expr);
+            return;
+        }
+
         for (int i = 0, sliceIdx = 0; i < IXBar::HASH_DIST_SLICES; i++) {
             if (((1 << i) & hdh.slice) == 0) continue;
             int first_bit = -1;
@@ -674,14 +743,14 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
             if (last_bit == -1)
                 last_bit = (i + 1) * IXBar::HASH_DIST_BITS - 1;
             out << indent << first_bit << ".." << last_bit;
-            out << ": " << FormatHash(match_data, nullptr, hdh.algorithm, sliceIdx) << std::endl;
+            out << ": " << FormatHash(match_data, nullptr, hdh.algorithm) << std::endl;
             sliceIdx++;
         }
     }
 }
 
 void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
-        const TableMatch *fmt) const {
+        const TableMatch *fmt, const IR::Expression *hd_expr) const {
     std::map<int, std::map<int, Slice>> sort;
     emit_ixbar_gather_bytes(use->use, sort, use->ternary);
     cstring group_type = use->ternary ? "ternary" : "exact";
@@ -704,7 +773,7 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
                 // FIXME: This is obviously an issue for larger selector tables,
                 //  whole function needs to be replaced
                 emit_ixbar_hash(out, indent, match_data, ghost, use, hash_group,
-                                ident_bits_prev_alloc);
+                                ident_bits_prev_alloc, hd_expr);
                 --indent;
             }
             out << indent++ << "hash group " << hash_group << ":" << std::endl;
@@ -735,7 +804,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
 
     if (hash_dist_use) {
         for (auto &hash_dist : *hash_dist_use) {
-            emit_single_ixbar(out, indent, &(hash_dist.use), nullptr);
+            emit_single_ixbar(out, indent, &(hash_dist.use), nullptr, hash_dist.field_list);
         }
     }
 }
@@ -1105,10 +1174,11 @@ class MauAsmOutput::EmitAction : public Inspector {
             alias.clear(); }
         act->action.visit_children(*this);
         for (auto prim : act->stateful) {
-            auto *at = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::Attached>();
+            auto *at = prim->operands.at(0)->to<IR::GlobalRef>()
+                           ->obj->to<IR::MAU::BackendAttached>();
             auto *salu = at->to<IR::MAU::StatefulAlu>();
             if (prim->operands.size() < 2 && (!salu || salu->instruction.size() <= 1)) continue;
-            out << indent << "- " << table->get_use_name(at) << '(';
+            out << indent << "- " << self.find_attached_name(table, at) << '(';
             const char *sep = "";
             if (salu) {
                 out << salu->action_map.at(act->name);
@@ -1277,7 +1347,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         return false; }
     bool preorder(const IR::MAU::AttachedOutput *att) override {
         assert(sep);
-        out << sep << table->get_use_name(att->attached);
+        out << sep << self.find_attached_name(table, att->attached);
         if (auto mtr = att->attached->to<IR::MAU::Meter>()) {
             if (mtr->color_output())
                 out << " color";
@@ -1579,7 +1649,7 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
 }
 
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage,
-gress_t gress) const {
+       gress_t gress) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
     TableMatch fmt(*this, phv, tbl);
     const char *tbl_type = "gateway";
@@ -1775,12 +1845,24 @@ std::string MauAsmOutput::find_indirect_index(const IR::Attached *at, bool index
     return "";
 }
 
+
+cstring MauAsmOutput::find_attached_name(const IR::MAU::Table *tbl,
+        const IR::MAU::BackendAttached *at) const {
+    auto match_name = tbl->get_use_name();
+    auto &memuse = tbl->resources->memuse.at(match_name);
+    auto at_name = tbl->get_use_name(at);
+
+    if (memuse.unattached_tables.count(at_name) > 0) {
+        UnattachedName unattached(tbl, memuse.unattached_tables.at(at_name), at);
+        pipe->apply(unattached);
+        at_name = unattached.name();
+    }
+    return at_name;
+}
+
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
                                     const IR::MAU::Table *tbl) const {
     bool have_action = false;
-    auto match_name = tbl->get_use_name();
-    if (tbl->layout.atcam)
-        match_name = tbl->get_use_name();
     for (auto at : tbl->attached) {
         if (at->is<IR::MAU::TernaryIndirect>()) continue;
         if (at->is<IR::MAU::IdleTime>()) continue;  // XXX(zma) idletime is inlined
@@ -1788,15 +1870,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             have_action = true;
         }
         out << indent << at->kind() << ": ";
-        auto &memuse = tbl->resources->memuse.at(match_name);
-        auto at_name = tbl->get_use_name(at);
-        auto unattached_loc = memuse.unattached_tables.find(at_name);
-        if (unattached_loc != memuse.unattached_tables.end()) {
-            UnattachedName unattached(tbl, memuse.unattached_tables.at(at_name), at);
-            pipe->apply(unattached);
-            at_name = unattached.name();
-        }
-        out << at_name;
+        out << find_attached_name(tbl, at);
         if (at->indexed())
             out << '(' << find_indirect_index(at, false) << ')';
         out << std::endl;

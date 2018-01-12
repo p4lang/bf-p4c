@@ -519,7 +519,7 @@ class ActionDataConstant : Expression {
 
 /// A use of an attached table output; an operand of an instruction
 class AttachedOutput : Expression {
-    Attached    attached;
+    BackendAttached    attached;
     dbprint { out << attached->name; }
 }
 

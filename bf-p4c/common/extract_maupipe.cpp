@@ -24,8 +24,6 @@
 #include "lib/error.h"
 #include "lib/safe_vector.h"
 
-namespace {
-
 class ActionArgSetup : public MauTransform {
     /* FIXME -- use ParameterSubstitution for this somehow? */
     std::map<cstring, const IR::Expression *>    args;
@@ -75,10 +73,6 @@ class ConvertMethodCall : public MauTransform {
         for (auto arg : *mc->arguments)
             prim->operands.push_back(arg);
         // if method call returns a value
-        auto action = findContext<IR::MAU::Action>();
-        if (action) {
-            LOG1("in " << action);
-        }
         return prim;
     }
 
@@ -292,7 +286,6 @@ void setupParam(IR::MAU::Synth2Port* rv, const IR::Vector<IR::Expression>* args)
     } else {
         BUG("cannot have more than %d arguments", args->size());
     }
-    LOG1("type is " << rv->type);
 }
 
 const IR::Type* getBaseType(const IR::Type* type) {
@@ -317,23 +310,13 @@ cstring getTypeName(const IR::Type* type) {
     return tname;
 }
 
-static IR::MAU::BackendAttached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo,
+static IR::MAU::BackendAttached *createAttached(Util::SourceInfo srcInfo,
         cstring name, const IR::Type *type, const IR::Vector<IR::Expression> *args,
-        const IR::Annotations *annot, std::map<cstring, IR::MAU::ActionData *> *shared_ap,
-        std::map<cstring, IR::MAU::Selector*> *shared_as) {
+        const IR::Annotations *annot, const IR::MAU::BackendAttached **created_ap = nullptr) {
     auto baseType = getBaseType(type);
     auto tname = getTypeName(baseType);
 
     if (tname == "action_selector") {
-        if (shared_as == nullptr || shared_ap == nullptr)
-            BUG("Action Selector %s used in an impossible manner", name);
-        if (shared_as->find(name) != shared_as->end()) {
-            if (shared_ap->find(name) == shared_ap->end())
-                BUG("Shared Action Selector with no corresponding Action Profile");
-            if (tt)
-                 tt->attached.push_back(shared_ap->at(name));
-            return shared_as->at(name);
-        }
         auto sel = new IR::MAU::Selector(srcInfo, name, annot);
         if (annot->getSingle("mode")) {
             auto sel_mode = getAnnotID(annot, "mode");
@@ -361,20 +344,11 @@ static IR::MAU::BackendAttached *createAttached(IR::MAU::Table *tt, Util::Source
         ap->direct = false;
         ap->size = args->at(1)->as<IR::Constant>().asInt();
         // FIXME Need to reconstruct the field list from the table key?
-        (*shared_ap)[name] = ap;
-        (*shared_as)[name] = sel;
-        if (tt)
-            tt->attached.push_back(ap);
+        *created_ap = ap;
         return sel;
     } else if (tname == "action_profile") {
-        if (shared_as == nullptr || shared_ap == nullptr)
-            BUG("Action Profile %s used in an impossible manner", name);
-        if (shared_ap->find(name) != shared_ap->end()) {
-            return shared_ap->at(name);
-        }
         auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
         ap->size = args->at(0)->as<IR::Constant>().asInt();
-        (*shared_ap)[name] = ap;
         return ap;
     } else if (tname == "Counter" || tname == "DirectCounter") {
         auto ctr = new IR::MAU::Counter(srcInfo, name, annot);
@@ -421,57 +395,14 @@ static IR::MAU::BackendAttached *createAttached(IR::MAU::Table *tt, Util::Source
     return nullptr;
 }
 
-static void updateAttachedSalu(const P4::ReferenceMap *refMap, IR::MAU::StatefulAlu *&salu,
-                               const IR::Declaration_Instance *ext,
-                               std::map<cstring, IR::MAU::Selector *> *shared_as) {
-    auto reg_arg = ext->arguments->size() > 0 ? ext->arguments->at(0) : nullptr;
-    if (!reg_arg) {
-        if (auto regprop = ext->properties["reg"]) {
-            if (auto rpv = regprop->value->to<IR::ExpressionValue>())
-                reg_arg = rpv->expression;
-            else
-                BUG("reg property %s is not an ExpressionValue", regprop);
-        } else {
-            error("%s: no reg property in stateful_alu %s", ext->srcInfo, ext->name);
-            return; } }
-    auto pe = reg_arg->to<IR::PathExpression>();
-    auto d = pe ? refMap->getDeclaration(pe->path, true) : nullptr;
-    auto reg = d ? d->to<IR::Declaration_Instance>() : nullptr;
-    auto regtype = reg ? reg->type->to<IR::Type_Specialized>() : nullptr;
-    auto seltype = reg ? reg->type->to<IR::Type_Extern>() : nullptr;
-    if ((!regtype || regtype->baseType->toString() != "register") &&
-        (!seltype || seltype->name != "action_selector")) {
-        error("%s: is not a register or action_selector", reg_arg->srcInfo);
-        return; }
-    if (!salu) {
-        LOG3("Creating new StatefulAlu for " <<
-             (regtype ? regtype->toString() : seltype->toString()) << " " << reg->name);
-        salu = new IR::MAU::StatefulAlu(reg->srcInfo, reg->externalName(), reg->annotations, reg);
-        if (seltype) {
-            salu->direct = false;
-            salu->selector = shared_as->at(reg->externalName());
-            // FIXME -- how are selector table sizes set?  It seems to be lost in P4_16
-            salu->size = 120*1024;  // one ram?
-        } else if (auto size = reg->arguments->at(0)->to<IR::Constant>()->asInt()) {
-            salu->direct = false;
-            salu->size = size;
-        } else {
-            salu->direct = true; }
-        salu->width = regtype ? regtype->arguments->at(0)->width_bits() : 1;
-    } else if (salu->reg != reg) {
-        // FIXME -- allow multiple stateful alus in one table?  Must use the same index.
-        error("%s: register actions in the same table must use the same underlying regster,"
-              "trying to use %s", salu->srcInfo, reg); }
-    LOG3("Adding " << ext->name << " to StatefulAlu " << reg->name);
-    ext->apply(CreateSaluInstruction(salu));
-}
+
 
 class FixP4Table : public Inspector {
     const P4::ReferenceMap *refMap;
     IR::MAU::Table *tt;
     std::set<cstring> &unique_names;
-    std::map<cstring, IR::MAU::ActionData *> *shared_ap;
-    std::map<cstring, IR::MAU::Selector *> *shared_as;
+    DeclarationConversions &converted;
+    DeclarationConversions &assoc_profiles;
 
     bool preorder(const IR::P4Table *tc) override {
         visit(tc->properties);  // just visiting properties
@@ -482,25 +413,43 @@ class FixP4Table : public Inspector {
         if (prop->name == "counters" || prop->name == "meters" ||
                    prop->name == "implementation") {
             auto pval = ev->expression;
-            IR::MAU::BackendAttached *obj = nullptr;
+            const IR::MAU::BackendAttached *obj = nullptr;
+            const IR::MAU::BackendAttached *side_obj = nullptr;
             if (auto cc = pval->to<IR::ConstructorCallExpression>()) {
                 auto baseType = getBaseType(cc->type);
                 auto tname = getTypeName(baseType);
                 unique_names.insert(tname);   // don't use the type name directly
                 tname = cstring::make_unique(unique_names, tname);
                 unique_names.insert(tname);
-                obj = createAttached(tt, cc->srcInfo, prop->externalName(tname),
+                obj = createAttached(cc->srcInfo, prop->externalName(tname),
                                      baseType, cc->arguments, prop->annotations,
-                                     shared_ap, shared_as);
-                LOG3("Created " << obj->node_type_name() << ' ' << obj->name << " (pt 1)");
+                                     &side_obj);
             } else if (auto pe = pval->to<IR::PathExpression>()) {
                 auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
-                obj = createAttached(tt, d.srcInfo, d.externalName(), d.type,
-                                     d.arguments, d.annotations, shared_ap, shared_as);
+                // The algorithm saves action selectors in the large map, rather than the action
+                // profile, because no action_profile will appear as a declaration within an
+                // action.  Action selector will show up in a register selector_action
+                if (converted.count(&d) == 0) {
+                    LOG3("Create attached " << d.externalName());
+                    obj = createAttached(d.srcInfo, d.externalName(), d.type,
+                                         d.arguments, d.annotations, &side_obj);
+                    converted[&d] = obj;
+                    if (side_obj)
+                        assoc_profiles[&d] = side_obj;
+                } else {
+                    // Action Selectors and Action Profiles are implemented in the same property
+                    LOG3("Found relative attached " << d.externalName() << " "
+                         << assoc_profiles.size());
+                    obj = converted.at(&d);
+                    if (assoc_profiles.count(&d))
+                        side_obj = assoc_profiles.at(&d);
+                }
                 LOG3("Created " << obj->node_type_name() << ' ' << obj->name << " (pt 2)"); }
             BUG_CHECK(obj, "not valid for %s: %s", prop->name, pval);
             LOG3("attaching " << obj->name << " to " << tt->name);
             tt->attached.push_back(obj);
+            if (side_obj)
+                tt->attached.push_back(side_obj);
         } else if (prop->name == "support_timeout") {
             auto bool_lit = ev->expression->to<IR::BoolLiteral>();
             if (bool_lit == nullptr || bool_lit->value == false)
@@ -515,73 +464,180 @@ class FixP4Table : public Inspector {
 
  public:
     FixP4Table(const P4::ReferenceMap *r, IR::MAU::Table *tt, std::set<cstring> &u,
-               std::map<cstring, IR::MAU::ActionData *> *ap,
-               std::map<cstring, IR::MAU::Selector *> *as)
-    : refMap(r), tt(tt), unique_names(u), shared_ap(ap), shared_as(as) {}
+               DeclarationConversions &con, DeclarationConversions &ap)
+    : refMap(r), tt(tt), unique_names(u), converted(con), assoc_profiles(ap) {}
 };
 
-struct AttachTables : public Modifier {
-    const P4::ReferenceMap                                  *refMap;
-    std::map<cstring, safe_vector<const IR::MAU::BackendAttached *>>  attached;
-    std::map<cstring, IR::MAU::StatefulAlu *>                    all_salu;
-    std::map<const IR::Declaration_Instance *, const IR::MAU::BackendAttached *> converted;
-    std::map<cstring, IR::MAU::Selector *> *shared_as;
+/** Determine stateful ALU Declaration_Instance underneath the register action, as well
+ *  as typing information
+ */
+bool AttachTables::findSaluDeclarations(const IR::Declaration_Instance *ext,
+        const IR::Declaration_Instance **reg_ptr, const IR::Type_Specialized **regtype_ptr,
+        const IR::Type_Extern **seltype_ptr) {
+    auto reg_arg = ext->arguments->size() > 0 ? ext->arguments->at(0) : nullptr;
+    if (!reg_arg) {
+        if (auto regprop = ext->properties["reg"]) {
+            if (auto rpv = regprop->value->to<IR::ExpressionValue>())
+                reg_arg = rpv->expression;
+            else
+                BUG("reg property %s is not an ExpressionValue", regprop);
+        } else {
+            error("%s: no reg property in stateful_alu %s", ext->srcInfo, ext->name);
+            return false; } }
+    auto pe = reg_arg->to<IR::PathExpression>();
+    auto d = pe ? refMap->getDeclaration(pe->path, true) : nullptr;
+    auto reg = d ? d->to<IR::Declaration_Instance>() : nullptr;
+    auto regtype = reg ? reg->type->to<IR::Type_Specialized>() : nullptr;
+    auto seltype = reg ? reg->type->to<IR::Type_Extern>() : nullptr;
+    if ((!regtype || regtype->baseType->toString() != "register") &&
+        (!seltype || seltype->name != "action_selector")) {
+        error("%s: is not a register or action_selector", reg_arg->srcInfo);
+        return false;
+    }
+    *reg_ptr = reg;
+    if (regtype_ptr)
+        *regtype_ptr = regtype;
+    if (seltype_ptr)
+        *seltype_ptr = seltype;
+    return true;
+}
 
+/** Converts the Declaration_Instance of the register action into a StatefulAlu object.  Checks
+ *  to see if a stateful ALU has already been created, and will also create the SALU Instructions
+ *  if the register action is new
+ */
+void AttachTables::InitializeStatefulAlus
+        ::updateAttachedSalu(const IR::Declaration_Instance *ext,
+                             const IR::GlobalRef *gref) {
+    const IR::Declaration_Instance *reg = nullptr;
+    const IR::Type_Specialized *regtype = nullptr;
+    const IR::Type_Extern *seltype = nullptr;
+    bool found = self.findSaluDeclarations(ext, &reg, &regtype, &seltype);
+    if (!found) return;
 
-    bool preorder(IR::MAU::Table *tbl) override {
-        LOG3("AttachTables visiting table " << tbl->name);
-        return true; }
-    bool preorder(IR::MAU::Action *act) override {
-        LOG3("AttachTables visiting action " << act->name);
-        return true; }
-    void postorder(IR::MAU::Table *tbl) override {
-        for (auto a : attached[tbl->name]) {
-            if (contains(tbl->attached, a)) {
-                LOG3(a->name << " already attached to " << tbl->name);
-            } else {
-                LOG3("attaching " << a->name << " to " << tbl->name);
-                tbl->attached.push_back(a); } }
-        if (auto salu = all_salu[tbl->name]) {
-            if (contains(tbl->attached, salu)) {
-                LOG3(salu->name << " already attached to " << tbl->name);
-            } else {
-                LOG3("attaching " << salu->name << " to " << tbl->name);
-                tbl->attached.push_back(salu); } } }
+    IR::MAU::StatefulAlu *salu = nullptr;
+    if (salu_inits.count(reg)) {
+        salu = salu_inits.at(reg);
+    } else {
+        // Stateful ALU has not been seen yet
+        LOG3("Creating new StatefulAlu for " <<
+             (regtype ? regtype->toString() : seltype->toString()) << " " << reg->name);
+        salu = new IR::MAU::StatefulAlu(reg->srcInfo, reg->externalName(), reg->annotations, reg);
+        if (seltype) {
+            salu->direct = false;
+            auto sel = self.converted.at(reg)->to<IR::MAU::Selector>();
+            ERROR_CHECK(sel, "%s: Could not find the associated selector within the stateful "
+                        "ALU %s, even though a selector is specified", gref->srcInfo,
+                         salu->name);
+            salu->selector = sel;
+            // FIXME -- how are selector table sizes set?  It seems to be lost in P4_16
+            salu->size = 120*1024;  // one ram?
+        } else if (auto size = reg->arguments->at(0)->to<IR::Constant>()->asInt()) {
+            salu->direct = false;
+            salu->size = size;
+        } else {
+            salu->direct = true; }
+        salu->width = regtype ? regtype->arguments->at(0)->width_bits() : 1;
+        salu_inits[reg] = salu;
+    }
+
+    // If the register action hasn't been seen before, this creates an SALU Instruction
+    if (register_actions.count(ext) == 0) {
+        LOG3("Adding " << ext->name << " to StatefulAlu " << reg->name);
+        register_actions.insert(ext);
+        ext->apply(CreateSaluInstruction(salu));
+    }
+
+    auto act = findContext<IR::MAU::Action>();
+    if (!salu->action_map.emplace(act->name, ext->name).second)
+        error("%s: multiple calls to execute in action %s", gref->srcInfo, act->name);
+}
+
+void AttachTables::InitializeStatefulAlus::postorder(const IR::GlobalRef *gref) {
+    visitAgain();
+    if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
+        if (di->type->toString().startsWith("register_action<") ||
+            di->type->toString() == "selector_action") {
+            updateAttachedSalu(di, gref);
+        }
+    }
+}
+
+/** Convert these Stateful ALUs to constant pointers.  This was necessary to maintain const
+ *  pointers for a later pass.
+ */ 
+void AttachTables::InitializeStatefulAlus::end_apply() {
+    self.all_salus.insert(salu_inits.begin(), salu_inits.end());
+}
+
+const IR::MAU::StatefulAlu *AttachTables::DefineGlobalRefs
+        ::findAttachedSalu(const IR::Declaration_Instance *ext) {
+    const IR::Declaration_Instance *reg = nullptr;
+    bool found = self.findSaluDeclarations(ext, &reg);
+    if (!found) return nullptr;
+
+    auto salu = self.all_salus.at(reg)->to<IR::MAU::StatefulAlu>();
+    BUG_CHECK(salu, "Stateful Alu cannot be found, and should have been initialized within "
+              "the previous pass");
+    return salu;
+}
+
+bool AttachTables::DefineGlobalRefs::preorder(IR::MAU::Table *tbl) {
+    LOG3("AttachTables visiting table " << tbl->name);
+    return true;
+}
+
+bool AttachTables::DefineGlobalRefs::preorder(IR::MAU::Action *act) {
+    LOG3("AttachTables visiting action " << act->name);
+    return true;
+}
+
+void AttachTables::DefineGlobalRefs::postorder(IR::MAU::Table *tbl) {
+    for (auto a : attached[tbl->name]) {
+        if (contains(tbl->attached, a)) {
+            LOG3(a->name << " already attached to " << tbl->name);
+        } else {
+            LOG3("attaching " << a->name << " to " << tbl->name);
+            tbl->attached.push_back(a);
+        }
+    }
+}
+
+void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
     // expressions might be in two actions (due to inlining), which need to
     // be visited independently
-    void postorder(IR::Expression *) override { visitAgain(); }
-    void postorder(IR::GlobalRef *gref) override {
-        visitAgain();
-        if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
-            auto tt = findContext<IR::MAU::Table>();
-            BUG_CHECK(tt, "GlobalRef not in a table");
-            auto &salu = all_salu[tt->name];
-            for (auto att : tt->attached) {
-                if (att->name == di->externalName()) {
-                    gref->obj = converted[di] = att;
-                    break; } }
-            if (converted.count(di)) {
-                gref->obj = converted.at(di);
-                if (!contains(attached[tt->name], converted.at(di)))
-                    attached[tt->name].push_back(converted.at(di));
-            } else if (auto att = createAttached(nullptr, di->srcInfo, di->externalName(),
-                                                 di->type, di->arguments, di->annotations,
-                                                 nullptr, nullptr)) {
-                LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
-                gref->obj = converted[di] = att;
-                attached[tt->name].push_back(att);
-            } else if (di->type->toString().startsWith("register_action<") ||
-                       di->type->toString() == "selector_action") {
-                updateAttachedSalu(refMap, salu, di, shared_as);
-                gref->obj = converted[di] = salu; }
-            if (salu == gref->obj) {
-                auto act = findContext<IR::MAU::Action>();
-                if (!salu->action_map.emplace(act->name, di->name).second) {
-                    error("%s: multiple calls to execute in action %s",
-                          gref->srcInfo, act->name); } } } }
-    AttachTables(const P4::ReferenceMap *refMap, std::map<cstring, IR::MAU::Selector *> *as)
-    : refMap(refMap), shared_as(as) {}
-};
+    visitAgain();
+    if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
+        auto tt = findContext<IR::MAU::Table>();
+        BUG_CHECK(tt, "GlobalRef not in a table");
+        // Check to see if the attached table has already been created in FixP4Table
+        for (auto att : tt->attached) {
+            if (att->name == di->externalName()) {
+                gref->obj = self.converted[di] = att;
+                break; } }
+        if (self.converted.count(di)) {
+            gref->obj = self.converted.at(di);
+            if (!contains(attached[tt->name], self.converted.at(di)))
+                attached[tt->name].push_back(self.converted.at(di));
+        } else if (auto att = createAttached(di->srcInfo, di->externalName(),
+                                             di->type, di->arguments, di->annotations,
+                                             nullptr)) {
+            LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
+            gref->obj = self.converted[di] = att;
+            attached[tt->name].push_back(att);
+        } else if (di->type->toString().startsWith("register_action<") ||
+                   di->type->toString() == "selector_action") {
+            auto salu = findAttachedSalu(di);
+            // Could be because an earlier pass errored out, and we do not stop_on_error
+            // In a non-error case, this should always be non-null, and is checked in a BUG
+            if (salu == nullptr)
+                return;
+            gref->obj = salu;
+            if (!contains(attached[tt->name], salu))
+                attached[tt->name].push_back(salu);
+        }
+    }
+}
 
 static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool *lnot = 0) {
     if (auto *n = e->to<IR::LNot>()) {
@@ -603,11 +659,11 @@ class GetTofinoTables : public Inspector {
     P4::TypeMap                                 *typeMap;
     gress_t                                     gress;
     IR::BFN::Pipe                            *pipe;
+    DeclarationConversions                     &converted;
+    DeclarationConversions                     assoc_profiles;
     std::set<cstring>                                unique_names;
     std::map<const IR::Node *, IR::MAU::Table *>     tables;
     std::map<const IR::Node *, IR::MAU::TableSeq *>  seqs;
-    std::map<cstring, IR::MAU::ActionData *> shared_ap;
-    std::map<cstring, IR::MAU::Selector *> *shared_as;
     IR::MAU::TableSeq *getseq(const IR::Node *n) {
         if (!seqs.count(n) && tables.count(n))
             seqs[n] = new IR::MAU::TableSeq(tables.at(n));
@@ -616,8 +672,9 @@ class GetTofinoTables : public Inspector {
  public:
     GetTofinoTables(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                     gress_t gr, IR::BFN::Pipe *p,
-                    std::map<cstring, IR::MAU::Selector *> *as)
-    : refMap(refMap), typeMap(typeMap), gress(gr), pipe(p), shared_as(as) {}
+                    std::map<const IR::Declaration_Instance *,
+                             const IR::MAU::BackendAttached *> &con)
+    : refMap(refMap), typeMap(typeMap), gress(gr), pipe(p), converted(con) {}
 
  private:
     void setup_match_mask(IR::MAU::Table *tt, const IR::Mask *mask, IR::ID match_id,
@@ -709,8 +766,8 @@ class GetTofinoTables : public Inspector {
                 new IR::MAU::Table(cstring::make_unique(unique_names, table->name), gress, table);
             unique_names.insert(tt->name);
             tt->match_table = table =
-                table->apply(FixP4Table(refMap, tt, unique_names,
-                                        &shared_ap, shared_as))->to<IR::P4Table>();
+                table->apply(FixP4Table(refMap, tt, unique_names, converted,
+                                        assoc_profiles))->to<IR::P4Table>();
             setup_tt_match(tt, table);
             setup_actions(tt, table);
         } else {
@@ -779,7 +836,7 @@ class TnaPipe {
     const IR::P4Parser *parser;
     const IR::P4Control *mau;
     const IR::P4Control *deparser;
-    std::map<cstring, IR::MAU::Selector *> shared_as;
+    std::map<const IR::Declaration_Instance *, const IR::MAU::BackendAttached *> converted;
 
     TnaPipe(const IR::PackageBlock* main, gress_t gress,
             P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
@@ -888,11 +945,11 @@ class TnaPipe {
     }
 
     void extractTable(IR::BFN::Pipe* rv, gress_t gress) {
-        mau->apply(GetTofinoTables(refMap, typeMap, gress, rv, &shared_as));
+        mau->apply(GetTofinoTables(refMap, typeMap, gress, rv, converted));
     }
 
     void extractAttached(IR::BFN::Pipe* rv, gress_t gress) {
-        AttachTables toAttach(refMap, &shared_as);
+        AttachTables toAttach(refMap, converted);
         rv->thread[gress].mau = rv->thread[gress].mau->apply(toAttach);
     }
 
@@ -942,6 +999,7 @@ const IR::BFN::Pipe* extract_tna_arch(P4::ReferenceMap* refMap, P4::TypeMap* typ
         pipes[gress]->extractAttached(rv /* out */, gress);
     }
 
+
     auto parserInfo = BFN::extractParser(rv, pipes[INGRESS]->parser, pipes[INGRESS]->deparser,
                                          pipes[EGRESS]->parser, pipes[EGRESS]->deparser, useTna);
     for (auto gress : { INGRESS, EGRESS }) {
@@ -969,8 +1027,6 @@ const IR::BFN::Pipe* extract_tna_arch(P4::ReferenceMap* refMap, P4::TypeMap* typ
 
     return rv->apply(finalSimplifications);
 }
-
-}  // anonymous namespace
 
 const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, bool useTna) {
     P4::ReferenceMap  refMap;

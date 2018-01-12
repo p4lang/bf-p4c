@@ -77,19 +77,21 @@ void TablesMutuallyExclusive::postorder(const IR::BFN::Pipe *pipe) {
                     mutex[t] |= other;
 }
 
-bool SharedIndirectActionAnalysis::preorder(const IR::MAU::Table *t) {
-    const IR::MAU::ActionData *ad = nullptr;
-    for (auto at : t->attached) {
-        if ((ad = at->to<IR::MAU::ActionData>()) != nullptr)
-            break;
-    }
-    if (ad == nullptr || ad->direct) return true;
-    for (auto *check_tbl : ad_users[ad]) {
-        if (!mutex(t, check_tbl) && !mutex.action(t, check_tbl)) {
-            error("Tables %s and %s are not mutually exclusive, yet share action profile %s",
-                  t->name, check_tbl->name, ad->name);
+bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::Action *) {
+    return false;
+}
+
+bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::BackendAttached *ba) {
+    visitAgain();
+    if (ba->direct)
+        return false;
+    auto *tbl = findContext<IR::MAU::Table>();
+    for (auto *check_tbl : backend_users[ba]) {
+        if (!mutex(tbl, check_tbl) && !mutex.action(tbl, check_tbl)) {
+            error("Tables %s and %s are not mutually exclusive, yet share %s",
+                  tbl->name, check_tbl->name, ba->name);
         }
     }
-    ad_users[ad].push_back(t);
-    return true;
+    backend_users[ba].push_back(tbl);
+    return false;
 }

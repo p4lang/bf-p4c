@@ -77,7 +77,6 @@ void Memories::clear_table_vectors() {
     tind_groups.clear();
     action_tables.clear();
     indirect_action_tables.clear();
-    action_profiles.clear();
     selector_tables.clear();
     stats_tables.clear();
     meter_tables.clear();
@@ -223,34 +222,15 @@ class SetupAttachedTables : public MauInspector {
         BUG_CHECK(!ad->direct, "No direct action data tables before table placement");
         auto name = ta->table->get_use_name(ad);
         auto table_name = ta->table->get_use_name();
-        bool selector_first = false;
-        /* This is a check to see if the table has already been placed due to it being in
-           the profile of a separate table */
-        Memories::profile_info *linked_pi = nullptr;
-        for (auto *pi : mem.action_profiles) {
-            if (pi->ad == ad) {
-                linked_pi = pi;
-                break;
-            }
-            if (pi->linked_ta == ta) {
-                selector_first = true;
-                linked_pi = pi;
-                break;
-            }
-        }
-        if (selector_first) {
-            linked_pi->ad = ad;
-            (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
-            mem.indirect_action_tables.push_back(ta);
-        } else if (linked_pi == nullptr) {
-            mem.indirect_action_tables.push_back(ta);
-            mem.action_profiles.push_back(new Memories::profile_info(ad, ta));
-            (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
-        } else {
-            auto linked_name = linked_pi->linked_ta->table->get_use_name();
+        (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
+        if (mem.shared_attached.count(ad)) {
+            auto linked_name = mem.shared_attached.at(ad)->table->get_use_name();
             (*ta->memuse)[table_name].unattached_tables.emplace(name, linked_name);
             return false;
         }
+
+        mem.indirect_action_tables.push_back(ta);
+        mem.shared_attached[ad] = ta;
         mi.action_tables++;
         int width = 1;
         int per_row = ActionDataPerWord(&ta->table->layout, &width);
@@ -261,48 +241,78 @@ class SetupAttachedTables : public MauInspector {
 
     bool preorder(const IR::MAU::Meter *mtr) {
         auto name = ta->table->get_use_name(mtr);
+        auto table_name = ta->table->get_use_name();
         (*ta->memuse)[name].type = Memories::Use::METER;
-        if (!meter_pushed) {
-            mem.meter_tables.push_back(ta);
-            meter_pushed = true;
+
+        if (mem.shared_attached.count(mtr)) {
+            auto linked_name = mem.shared_attached.at(mtr)->table->get_use_name();
+            (*ta->memuse)[table_name].unattached_tables.emplace(name, linked_name);
+            return false;
         }
+
         mi.meter_tables++;
+        mem.shared_attached[mtr] = ta;
         if (mtr->direct)
             mi.meter_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, 1, true);
         else
             mi.meter_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, 1, true);
+
+        if (!meter_pushed) {
+            mem.meter_tables.push_back(ta);
+            meter_pushed = true;
+        }
         return false;
     }
 
     bool preorder(const IR::MAU::Counter *cnt) {
         auto name = ta->table->get_use_name(cnt);
+        auto table_name = ta->table->get_use_name();
         (*ta->memuse)[name].type = Memories::Use::COUNTER;
-        if (!stats_pushed) {
-            mem.stats_tables.push_back(ta);
-            stats_pushed = true;
+
+        if (mem.shared_attached.count(cnt)) {
+            auto linked_name = mem.shared_attached.at(cnt)->table->get_use_name();
+            (*ta->memuse)[table_name].unattached_tables.emplace(name, linked_name);
+            return false;
         }
+
         mi.stats_tables++;
+        mem.shared_attached[cnt] = ta;
         int per_row = CounterPerWord(cnt);
         if (cnt->direct)
             mi.stats_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row, true);
         else
             mi.stats_RAMs += mem.mems_needed(cnt->size, Memories::SRAM_DEPTH, per_row, true);
+
+        if (!stats_pushed) {
+            mem.stats_tables.push_back(ta);
+            stats_pushed = true;
+        }
         return false;
     }
 
     bool preorder(const IR::MAU::StatefulAlu *salu) {
         auto name = ta->table->get_use_name(salu);
+        auto table_name = ta->table->get_use_name();
         (*ta->memuse)[name].type = Memories::Use::STATEFUL;
-        if (!stateful_pushed) {
-            mem.stateful_tables.push_back(ta);
-            stateful_pushed = true;
+
+        if (mem.shared_attached.count(salu)) {
+            auto linked_name = mem.shared_attached.at(salu)->table->get_use_name();
+            (*ta->memuse)[table_name].unattached_tables.emplace(name, linked_name);
+            return false;
         }
+
         mi.stateful_tables++;
+        mem.shared_attached[salu] = ta;
         int per_row = RegisterPerWord(salu);
         if (salu->direct)
             mi.stateful_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row, true);
         else
             mi.stateful_RAMs += mem.mems_needed(salu->size, Memories::SRAM_DEPTH, per_row, true);
+
+        if (!stateful_pushed) {
+            mem.stateful_tables.push_back(ta);
+            stateful_pushed = true;
+        }
         return false;
     }
 
@@ -313,36 +323,16 @@ class SetupAttachedTables : public MauInspector {
     bool preorder(const IR::MAU::Selector *as) {
         auto name = ta->table->get_use_name(as);
         auto table_name = ta->table->get_use_name();
-        bool profile_first = false;
-        Memories::profile_info *linked_pi = nullptr;
-        /* This checks to see if the selector is being shared between separate tables in the
-           same stage.  Only needs to be allocated once if shared between two logical tables */
-        for (auto *pi : mem.action_profiles) {
-            if (pi->as == as) {
-                linked_pi = pi;
-                break;
-            }
-            if (pi->linked_ta == ta) {
-                profile_first = true;
-                linked_pi = pi;
-                break;
-            }
-        }
-        if (profile_first) {
-            linked_pi->as = as;
-            (*ta->memuse)[name].type = Memories::Use::SELECTOR;
-            mem.selector_tables.push_back(ta);
-        } else if (linked_pi == nullptr) {
-            (*ta->memuse)[name].type = Memories::Use::SELECTOR;
-            mem.selector_tables.push_back(ta);
-            mem.action_profiles.push_back(new Memories::profile_info(as, ta));
-        } else {
-            auto linked_name = linked_pi->linked_ta->table->get_use_name();
-            if (linked_pi->linked_ta->table->layout.atcam)
-                linked_name = linked_pi->linked_ta->table->get_use_name(nullptr, false, 0, 0);
+        (*ta->memuse)[name].type = Memories::Use::SELECTOR;
+
+        if (mem.shared_attached.count(as)) {
+            auto linked_name = mem.shared_attached.at(as)->table->get_use_name();
             (*ta->memuse)[table_name].unattached_tables.emplace(name, linked_name);
             return false;
         }
+
+        mem.selector_tables.push_back(ta);
+        mem.shared_attached[as] = ta;
         mi.selector_RAMs += 2;
         return false;
     }
@@ -2730,6 +2720,7 @@ bool Memories::allocate_all_no_match_miss() {
                 if (payload_use[i][j]) continue;
                 if (tind_bus[i][j]) continue;
                 alloc.row.emplace_back(i, j);
+                tind_bus[i][j] = name;
                 found = true;
                 break;
             }
@@ -2739,11 +2730,12 @@ bool Memories::allocate_all_no_match_miss() {
         if (!found)
             break;
         else
-            no_match_tables_allocated = true;
+            no_match_tables_allocated++;
     }
 
     if (no_match_tables_allocated != no_match_miss_tables.size())
         return false;
+
     return true;
 }
 

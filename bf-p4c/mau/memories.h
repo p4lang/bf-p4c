@@ -114,7 +114,8 @@ struct Memories {
         }
 
         int left_side_RAMs() const { return tind_RAMs; }
-        int right_side_RAMs() const { return meter_RAMs + stats_RAMs + selector_RAMs; }
+        int right_side_RAMs() const { return meter_RAMs + stats_RAMs + selector_RAMs
+                                             + stateful_RAMs; }
         int non_SRAM_RAMs() const { return left_side_RAMs() + right_side_RAMs() + action_RAMs; }
         int columns(int RAMs) const { return (RAMs + SRAM_COLUMNS - 1) / SRAM_COLUMNS; }
         bool constraint_check() const;
@@ -342,12 +343,9 @@ struct Memories {
         void clear_masks() {mask = 0; mapram_mask = 0; }
     };
 
-    struct profile_info {
-        const IR::MAU::ActionData *ad;
-        const IR::MAU::Selector *as;
+    struct shared_attached {
+        const IR::MAU::BackendAttached *ba;
         table_alloc *linked_ta;
-        explicit profile_info(const IR::MAU::ActionData *a, table_alloc *t) : ad(a), linked_ta(t) {}
-        explicit profile_info(const IR::MAU::Selector *a, table_alloc *t) : as(a), linked_ta(t) {}
     };
 
     // Used for array indices in allocate_all_action
@@ -364,7 +362,6 @@ struct Memories {
     safe_vector<SRAM_group *>        tind_groups;
     safe_vector<table_alloc *>       action_tables;
     safe_vector<table_alloc *>       indirect_action_tables;
-    safe_vector<profile_info *>      action_profiles;
     safe_vector<table_alloc *>       selector_tables;
     safe_vector<table_alloc *>       stats_tables;
     safe_vector<table_alloc *>       meter_tables;
@@ -379,6 +376,8 @@ struct Memories {
     safe_vector<table_alloc *>       no_match_gws;
     safe_vector<table_alloc *>       idletime_tables;
     safe_vector<SRAM_group *>        idletime_groups;
+
+    ordered_map<const IR::MAU::BackendAttached *, table_alloc *> shared_attached;
 
     unsigned side_mask(RAM_side_t side);
     unsigned partition_mask(RAM_side_t side);

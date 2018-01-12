@@ -1467,8 +1467,6 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     alloc.select_use.emplace_back(hash_group);
     alloc.select_use.back().algorithm = as->algorithm.name;
     alloc.select_use.back().mode = as->mode.name;
-    if (as->algorithm.name == "identity")
-        alloc.select_use.back().algorithm = "selector_identity";
     for (int i = 0; i < HASH_TABLES; i++) {
         if ((1U << i) & hash_table_input) {
             for (int j = 0; j < HASH_INDEX_GROUPS; j++) {
@@ -1504,9 +1502,11 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
         if (salu->dual) extra_align--;
         BUG_CHECK(extra_align <= 2, "Bad SatefulAlu width"); }
     salu->apply(FindFieldsToAlloc(phv, alloc, fields_needed, extra_align));
+    LOG1("Extra_align " << extra_align);
     unsigned width = salu->width/8U;
     if (!salu->dual) width *= 2;
     unsigned byte_mask = ((1U << width) - 1) << 8;
+    LOG1("Extra_align " << extra_align << " 0x" << hex(byte_mask));
     if (alloc.use.size() == 0) return true;
     if (alloc.use.size() > width) {
         // can't possibly fit
@@ -1753,7 +1753,8 @@ class XBarHashDist : MauInspector {
                 if (!(hd_use.pre_slices.size() == 2
                     || (hd_use.pre_slices[1] % IXBar::HASH_DIST_SLICES) == 2))
                     BUG("Wide hash distribution address doesn't fit in the table");
-                hd_use.expand.emplace(hd_use.pre_slices[0], 7*hd_use.pre_slices[0]);
+                hd_use.expand.emplace(hd_use.pre_slices[0],
+                                      (7 * (hd_use.pre_slices[0] % IXBar::HASH_DIST_SLICES)));
                 hd_use.slices.push_back(hd_use.pre_slices[0]);
                 slices_set = true;
             }

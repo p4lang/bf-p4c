@@ -200,16 +200,17 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   )
 
 p4c_add_xfail_reason("tofino"
-# Fail on purpose due to action profiles not being mutually exclusive
+# Fail on purpose due to indirect tables not being mutually exclusive
   "Tables .* and .* are not mutually exclusive"
   extensions/p4_tests/p4_14/action_profile_not_shared.p4
   extensions/p4_tests/p4_14/action_profile_next_stage.p4
   testdata/p4_16_samples/action_selector_shared-bmv2.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
+  testdata/p4_14_samples/12-Counters.p4
+  testdata/p4_14_samples/13-Counters1and2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -960,7 +961,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Ways from supposedly different hash groups have same group?"
+  "SALU Selector Table not found?"
   extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
   )
 
@@ -984,7 +985,8 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: hash_dist 0 not defined in table"
+  "Null egParser"
+  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
   extensions/p4_tests/p4_14/p4-tests/programs/pgrs/pgrs.p4
   )
 
