@@ -11949,12 +11949,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 }
 
-@name("mac_learn_digest") struct mac_learn_digest {
-    bit<16> bd;
-    bit<48> lkp_mac_sa;
-    bit<16> ifindex;
-}
-
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit<ethernet_t>(hdr.ethernet);

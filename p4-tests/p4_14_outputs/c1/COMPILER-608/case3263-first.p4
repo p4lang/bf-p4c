@@ -1154,33 +1154,6 @@ control Campbell(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
-control Canalou(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".LaPlata") action LaPlata(bit<16> Rockdell, bit<16> HillCity, bit<16> Lecanto, bit<16> Pelican, bit<8> Silva, bit<6> Kaufman, bit<8> Satus, bit<8> Newborn, bit<1> Salamatof) {
-        meta.Frankfort.Victoria = meta.Ruthsburg.Victoria & Rockdell;
-        meta.Frankfort.Cutler = meta.Ruthsburg.Cutler & HillCity;
-        meta.Frankfort.Volens = meta.Ruthsburg.Volens & Lecanto;
-        meta.Frankfort.Gullett = meta.Ruthsburg.Gullett & Pelican;
-        meta.Frankfort.NorthRim = meta.Ruthsburg.NorthRim & Silva;
-        meta.Frankfort.Strasburg = meta.Ruthsburg.Strasburg & Kaufman;
-        meta.Frankfort.Harriet = meta.Ruthsburg.Harriet & Satus;
-        meta.Frankfort.Twodot = meta.Ruthsburg.Twodot & Newborn;
-        meta.Frankfort.Chamois = meta.Ruthsburg.Chamois & Salamatof;
-    }
-    @name(".Minto") table Minto {
-        actions = {
-            LaPlata();
-        }
-        key = {
-            meta.Ruthsburg.Ridgeview: exact @name("Ruthsburg.Ridgeview") ;
-        }
-        size = 256;
-        default_action = LaPlata(16w0xffff, 16w0xffff, 16w0xffff, 16w0xffff, 8w0xff, 6w0x3f, 8w0xff, 8w0xff, 1w1);
-    }
-    apply {
-        Minto.apply();
-    }
-}
-
 control Cathcart(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Cabery") action Cabery() {
         meta.Ranburne.Columbus = 3w2;
@@ -1215,35 +1188,6 @@ control Cathcart(inout headers hdr, inout metadata meta, inout standard_metadata
     }
     apply {
         Heppner.apply();
-    }
-}
-
-control Chehalis(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Elcho") action Elcho(bit<32> Parkway) {
-        meta.Brinkman.Notus = (meta.Brinkman.Notus >= Parkway ? meta.Brinkman.Notus : Parkway);
-    }
-    @ways(1) @name(".Goodwater") table Goodwater {
-        actions = {
-            Elcho();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.Ruthsburg.Ridgeview: exact @name("Ruthsburg.Ridgeview") ;
-            meta.Ruthsburg.Victoria : exact @name("Ruthsburg.Victoria") ;
-            meta.Ruthsburg.Cutler   : exact @name("Ruthsburg.Cutler") ;
-            meta.Ruthsburg.Volens   : exact @name("Ruthsburg.Volens") ;
-            meta.Ruthsburg.Gullett  : exact @name("Ruthsburg.Gullett") ;
-            meta.Ruthsburg.NorthRim : exact @name("Ruthsburg.NorthRim") ;
-            meta.Ruthsburg.Strasburg: exact @name("Ruthsburg.Strasburg") ;
-            meta.Ruthsburg.Harriet  : exact @name("Ruthsburg.Harriet") ;
-            meta.Ruthsburg.Twodot   : exact @name("Ruthsburg.Twodot") ;
-            meta.Ruthsburg.Chamois  : exact @name("Ruthsburg.Chamois") ;
-        }
-        size = 4096;
-        default_action = NoAction();
-    }
-    apply {
-        Goodwater.apply();
     }
 }
 
@@ -1975,33 +1919,6 @@ control Freeny(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
-control Geistown(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Kinards") action Kinards(bit<16> Theba, bit<16> Elkville, bit<16> Dasher, bit<16> Timken, bit<8> Gonzalez, bit<6> Cowpens, bit<8> Antimony, bit<8> Cheyenne, bit<1> Aguilar) {
-        meta.Frankfort.Victoria = meta.Ruthsburg.Victoria & Theba;
-        meta.Frankfort.Cutler = meta.Ruthsburg.Cutler & Elkville;
-        meta.Frankfort.Volens = meta.Ruthsburg.Volens & Dasher;
-        meta.Frankfort.Gullett = meta.Ruthsburg.Gullett & Timken;
-        meta.Frankfort.NorthRim = meta.Ruthsburg.NorthRim & Gonzalez;
-        meta.Frankfort.Strasburg = meta.Ruthsburg.Strasburg & Cowpens;
-        meta.Frankfort.Harriet = meta.Ruthsburg.Harriet & Antimony;
-        meta.Frankfort.Twodot = meta.Ruthsburg.Twodot & Cheyenne;
-        meta.Frankfort.Chamois = meta.Ruthsburg.Chamois & Aguilar;
-    }
-    @name(".Cliffs") table Cliffs {
-        actions = {
-            Kinards();
-        }
-        key = {
-            meta.Ruthsburg.Ridgeview: exact @name("Ruthsburg.Ridgeview") ;
-        }
-        size = 256;
-        default_action = Kinards(16w0xffff, 16w0xffff, 16w0xffff, 16w0xffff, 8w0xff, 6w0x3f, 8w0xff, 8w0xff, 1w1);
-    }
-    apply {
-        Cliffs.apply();
-    }
-}
-
 control Grantfork(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".BigRock") action BigRock(bit<16> Hollyhill, bit<16> Clinchco, bit<16> Ridgeland, bit<16> RedCliff, bit<8> BeeCave, bit<6> Paxico, bit<8> McKibben, bit<8> LongPine, bit<1> Trona) {
         meta.Frankfort.Victoria = meta.Ruthsburg.Victoria & Hollyhill;
@@ -2316,35 +2233,6 @@ control Karlsruhe(inout headers hdr, inout metadata meta, inout standard_metadat
     }
 }
 
-control Kennedale(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Elcho") action Elcho(bit<32> Parkway) {
-        meta.Brinkman.Notus = (meta.Brinkman.Notus >= Parkway ? meta.Brinkman.Notus : Parkway);
-    }
-    @ways(1) @name(".Nerstrand") table Nerstrand {
-        actions = {
-            Elcho();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.Ruthsburg.Ridgeview: exact @name("Ruthsburg.Ridgeview") ;
-            meta.Frankfort.Victoria : exact @name("Frankfort.Victoria") ;
-            meta.Frankfort.Cutler   : exact @name("Frankfort.Cutler") ;
-            meta.Frankfort.Volens   : exact @name("Frankfort.Volens") ;
-            meta.Frankfort.Gullett  : exact @name("Frankfort.Gullett") ;
-            meta.Frankfort.NorthRim : exact @name("Frankfort.NorthRim") ;
-            meta.Frankfort.Strasburg: exact @name("Frankfort.Strasburg") ;
-            meta.Frankfort.Harriet  : exact @name("Frankfort.Harriet") ;
-            meta.Frankfort.Twodot   : exact @name("Frankfort.Twodot") ;
-            meta.Frankfort.Chamois  : exact @name("Frankfort.Chamois") ;
-        }
-        size = 4096;
-        default_action = NoAction();
-    }
-    apply {
-        Nerstrand.apply();
-    }
-}
-
 control Kranzburg(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Knollwood") @min_width(128) counter(32w1024, CounterType.packets_and_bytes) Knollwood;
     @name(".Dellslow") action Dellslow(bit<32> Admire) {
@@ -2645,35 +2533,6 @@ control Pierre(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 }
             }
 
-    }
-}
-
-control Pinecrest(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Elcho") action Elcho(bit<32> Parkway) {
-        meta.Brinkman.Notus = (meta.Brinkman.Notus >= Parkway ? meta.Brinkman.Notus : Parkway);
-    }
-    @ways(1) @name(".Pierson") table Pierson {
-        actions = {
-            Elcho();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.Ruthsburg.Ridgeview: exact @name("Ruthsburg.Ridgeview") ;
-            meta.Frankfort.Victoria : exact @name("Frankfort.Victoria") ;
-            meta.Frankfort.Cutler   : exact @name("Frankfort.Cutler") ;
-            meta.Frankfort.Volens   : exact @name("Frankfort.Volens") ;
-            meta.Frankfort.Gullett  : exact @name("Frankfort.Gullett") ;
-            meta.Frankfort.NorthRim : exact @name("Frankfort.NorthRim") ;
-            meta.Frankfort.Strasburg: exact @name("Frankfort.Strasburg") ;
-            meta.Frankfort.Harriet  : exact @name("Frankfort.Harriet") ;
-            meta.Frankfort.Twodot   : exact @name("Frankfort.Twodot") ;
-            meta.Frankfort.Chamois  : exact @name("Frankfort.Chamois") ;
-        }
-        size = 4096;
-        default_action = NoAction();
-    }
-    apply {
-        Pierson.apply();
     }
 }
 

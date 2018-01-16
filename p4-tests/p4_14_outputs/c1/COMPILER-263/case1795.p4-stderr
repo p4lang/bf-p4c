@@ -1,0 +1,18 @@
+case1795.p4(1807): warning: -1: negative value with unsigned type
+   add_to_field(Switzer.Robinette, -1);
+                                    ^
+case1795.p4(1812): warning: -1: negative value with unsigned type
+   add_to_field(Baidland.Silesia, -1);
+                                   ^
+case1795.p4(1231): warning: Could not infer type for Abernathy, using bit<8>
+action Fentress(Abernathy) {
+                ^^^^^^^^^
+case1795.p4(920): warning: 2: value does not fit in 1 bits
+   default_action : Kamas(0, 1, 2, 3, 4);
+                                ^
+case1795.p4(920): warning: 3: value does not fit in 1 bits
+   default_action : Kamas(0, 1, 2, 3, 4);
+                                   ^
+case1795.p4(920): warning: 4: value does not fit in 1 bits
+   default_action : Kamas(0, 1, 2, 3, 4);
+                                      ^

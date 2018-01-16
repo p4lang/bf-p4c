@@ -5146,55 +5146,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 }
 
-struct flowlet_alu_layout {
-    bit<32> lo;
-    bit<32> hi;
-}
-
-@name(".flowlet_state") register<flowlet_alu_layout>(32w8192) flowlet_state;
-
-control process_flowlet(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    register_action<flowlet_alu_layout, bit<32>>(flowlet_state) flowlet_alu = {
-        void apply(inout flowlet_alu_layout value, out bit<32> rv) {
-            rv = 32w0;
-            if (meta.i2e_metadata.ingress_tstamp - value.lo > 32w1) 
-                value.hi = value.hi + 32w1;
-            if (!(meta.i2e_metadata.ingress_tstamp - value.lo > 32w1)) 
-                value.hi = value.hi;
-            value.lo = meta.i2e_metadata.ingress_tstamp;
-            rv = value.hi;
-        }
-    };
-    @name(".flowlet_lookup") action flowlet_lookup() {
-        {
-            bit<13> temp;
-            hash(temp, HashAlgorithm.identity, 13w0, { meta.hash_metadata.hash1 }, 14w8192);
-            meta.flowlet_metadata.id = (bit<16>)flowlet_alu.execute((bit<32>)temp);
-        }
-    }
-    @name(".flowlet") table flowlet {
-        actions = {
-            flowlet_lookup;
-        }
-        size = 1;
-    }
-    apply {
-        if (meta.flowlet_metadata.inactive_timeout != 32w0) {
-            flowlet.apply();
-        }
-    }
-}
-
-control process_int_insertion(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
-control process_plt_insertion(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);

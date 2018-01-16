@@ -424,12 +424,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
-control egressProcessing(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
-control ingressProcessing(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".tNoIui") action tNoIui(bit<8> tDVDRX, bit<1> CzrSAo, bit<1> jKuAKM, bit<1> zvrvfA, bit<1> XKAzdx) {
         meta.zOxPzX.EzUaHZ = tDVDRX;
         meta.zOxPzX.uGjozA = CzrSAo;
@@ -673,5 +668,5 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
     }
 }
 
-V1Switch(ParserImpl(), verifyChecksum(), ingressProcessing(), egress(), computeChecksum(), DeparserImpl()) main;
+V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
 

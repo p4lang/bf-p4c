@@ -1,0 +1,9 @@
+case1844.p4(1453): warning: Could not infer type for Cecilton, using bit<8>
+action Callao(Cecilton) {
+              ^^^^^^^^
+case1844.p4(2008): warning: -1: negative value with unsigned type
+   add_to_field(Dixfield.Rains, -1);
+                                 ^
+case1844.p4(2013): warning: -1: negative value with unsigned type
+   add_to_field(Achille.Arion, -1);
+                                ^

@@ -270,7 +270,7 @@ parser GCpcTj {
 		0x0800 : ZBfdXg;
 		0x86dd : HwAhMc;
 		0x0806 : ihhcZZ;
-		default : ingressProcessing;
+		default : ingress;
 	}
 }
 
@@ -280,7 +280,7 @@ parser kERnnN {
 		0x0800 : ZBfdXg;
 		0x86dd : HwAhMc;
 		0x0806 : ihhcZZ;
-		default : ingressProcessing;
+		default : ingress;
 	}
 }
 
@@ -288,25 +288,25 @@ parser ZBfdXg {
 	extract(XKlCuY );
 	return select( XKlCuY.YyzswN, XKlCuY.AhYRHs, XKlCuY.BHthJN ) {
 		0x00000511 : IEpHDt;
-		default : ingressProcessing;
+		default : ingress;
 	}
 }
 
 parser HwAhMc { 
 	extract(KkUuiN );
-	return ingressProcessing;
+	return ingress;
 }
 
 parser ihhcZZ { 
 	extract(jxruBM );
-	return ingressProcessing;
+	return ingress;
 }
 
 parser IEpHDt { 
 	extract(mJKpnm );
 	return select( mJKpnm.DdLLJa ) {
 		0x12b5 : WEpwHS;
-		default : ingressProcessing;
+		default : ingress;
 	}
 }
 
@@ -320,7 +320,7 @@ parser WEpwHS {
 
 parser sNXzVW { 
 	extract(vQBhIB );
-	return ingressProcessing;
+	return ingress;
 }
 
 #endif // PARSER_H4
@@ -541,7 +541,7 @@ table whxSrZ {
 	size : 1;
 }
 
-control ingressProcessing { 
+control ingress { 
 	if (ig_intr_md.resubmit_flag == 0x0) { 
 		apply( INOSeK );
 

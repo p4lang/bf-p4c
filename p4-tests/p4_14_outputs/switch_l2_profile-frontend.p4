@@ -3096,10 +3096,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 }
 
-@name(".flowlet_id") register<bit<16>>(32w8192) flowlet_id;
-
-@name(".flowlet_lastseen") register<bit<32>>(32w8192) flowlet_lastseen;
-
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit<ethernet_t>(hdr.ethernet);

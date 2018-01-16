@@ -1,0 +1,9 @@
+case1832.p4(1493): warning: Could not infer type for Manilla, using bit<8>
+action Traskwood(Manilla) {
+                 ^^^^^^^
+case1832.p4(2133): warning: -1: negative value with unsigned type
+   add_to_field(Pensaukee.Guadalupe, -1);
+                                      ^
+case1832.p4(2138): warning: -1: negative value with unsigned type
+   add_to_field(Abbyville.TiePlant, -1);
+                                     ^

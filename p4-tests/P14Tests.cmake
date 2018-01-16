@@ -13,18 +13,10 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
   extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
   extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-263/case1795.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-264/case1822.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-271/case1834.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-273/case1832.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-275/case1841.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-276/case1844.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-282/case1864.p4
   extensions/p4_tests/p4_14/c1/COMPILER-347/switch_bug.p4
   extensions/p4_tests/p4_14/c1/COMPILER-352/netchain_one.p4
   extensions/p4_tests/p4_14/c1/COMPILER-355/netchain_two.p4
   extensions/p4_tests/p4_14/c1/COMPILER-385/case2247.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-499/case2560_min_2.p4
   extensions/p4_tests/p4_14/c2/COMPILER-392/case2266.p4
   extensions/p4_tests/p4_14/c2/COMPILER-400/case2314.p4
   extensions/p4_tests/p4_14/c2/COMPILER-401/case2308_bugged.p4

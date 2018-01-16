@@ -25,7 +25,10 @@ control ingress(inout packet_t hdrs, inout user_metadata_t m, inout standard_met
     @name("set_port") action set_port_0(bit<9> port) {
         meta.egress_spec = port;
     }
-    @name("t") table t_0 {
+    @name("set_port") action set_port_2(bit<9> port_0) {
+        meta.egress_spec = port_0;
+    }
+    @name("t") table t {
         key = {
             hdrs.data[0].f: exact @name("hdrs.data[0].f") ;
         }
@@ -40,7 +43,7 @@ control ingress(inout packet_t hdrs, inout user_metadata_t m, inout standard_met
     @name("do_pop") action do_pop_0() {
         hdrs.data.pop_front(1);
     }
-    @name("push") table push_0 {
+    @name("push") table push {
         key = {
         }
         actions = {
@@ -48,7 +51,7 @@ control ingress(inout packet_t hdrs, inout user_metadata_t m, inout standard_met
         }
         default_action = do_push_0();
     }
-    @name("pop") table pop_0 {
+    @name("pop") table pop {
         key = {
         }
         actions = {
@@ -57,12 +60,12 @@ control ingress(inout packet_t hdrs, inout user_metadata_t m, inout standard_met
         default_action = do_pop_0();
     }
     apply {
-        push_0.apply();
-        pop_0.apply();
+        push.apply();
+        pop.apply();
         if (!hdrs.data[1].isValid()) 
-            t_0.apply();
+            t.apply();
         else 
-            set_port_0(9w2);
+            set_port_2(9w2);
     }
 }
 

@@ -241,12 +241,12 @@ parser NMcrYB {
 
 parser tVedlz { 
 	extract(hPpXZx );
-	return ingressProcessing;
+	return ingress;
 }
 
 parser EsYZnM { 
 	extract(SozCdH );
-	return ingressProcessing;
+	return ingress;
 }
 
 parser kZlWYj { 
@@ -260,7 +260,7 @@ parser kZlWYj {
 		0x0800 : MeKmKm;
 		0x86dd : EsYZnM;
 		0x0806 : tVedlz;
-		default : ingressProcessing;
+		default : ingress;
 	}
 }
 
@@ -268,7 +268,7 @@ parser DdKsiI {
 	extract(hSwWXC );
 	return select( hSwWXC.XLXjTX ) {
 		0x12b5 : NMcrYB;
-		default : ingressProcessing;
+		default : ingress;
 	}
 }
 
@@ -278,7 +278,7 @@ parser start {
 
 parser lGxehP { 
 	extract(oPHKWO );
-	return ingressProcessing;
+	return ingress;
 }
 
 parser SMkqkv { 
@@ -287,7 +287,7 @@ parser SMkqkv {
 		0x0800 : MeKmKm;
 		0x86dd : EsYZnM;
 		0x0806 : tVedlz;
-		default : ingressProcessing;
+		default : ingress;
 	}
 }
 
@@ -295,7 +295,7 @@ parser MeKmKm {
 	extract(ujAsAs );
 	return select( ujAsAs.GsFpGp, ujAsAs.fwqSQU, ujAsAs.TyQxJQ ) {
 		0x00000511 : DdKsiI;
-		default : ingressProcessing;
+		default : ingress;
 	}
 }
 
@@ -730,7 +730,7 @@ table RFvNXO {
 	size : 65536;
 }
 
-control ingressProcessing { 
+control ingress { 
 	if (ig_intr_md.resubmit_flag == 0x0) { 
 		apply( fMlLMk );
 

@@ -26,52 +26,73 @@ parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intr
     }
 }
 
-control inner_multiple(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     bool tmp;
-    @name("noop") action noop_0() {
+    bool inner_multiple_tmp_1;
+    @name("inner_multiple.noop") action inner_multiple_noop() {
     }
-    @name("t2_act") action t2_act_0(bit<8> b4) {
+    @name("inner_multiple.noop") action inner_multiple_noop_0() {
+    }
+    @name("inner_multiple.t2_act") action inner_multiple_t2_act(bit<8> b4) {
         hdr.data.b4 = b4;
     }
-    @name("t3_act") action t3_act_0(bit<8> b5) {
+    @name("inner_multiple.t3_act") action inner_multiple_t3_act(bit<8> b5) {
         hdr.data.b5 = b5;
     }
-    @name("t2") table t2_0 {
+    @name("inner_multiple.t2") table inner_multiple_t2_1 {
         actions = {
-            t2_act_0();
-            noop_0();
+            inner_multiple_t2_act();
+            inner_multiple_noop();
         }
         key = {
             hdr.data.h2: exact @name("hdr.data.h2") ;
         }
-        default_action = noop_0();
+        default_action = inner_multiple_noop();
     }
-    @name("t3") table t3_0 {
+    @name("inner_multiple.t3") table inner_multiple_t3_1 {
         actions = {
-            t3_act_0();
-            noop_0();
+            inner_multiple_t3_act();
+            inner_multiple_noop_0();
         }
         key = {
             hdr.data.h2: exact @name("hdr.data.h2") ;
         }
-        default_action = noop_0();
+        default_action = inner_multiple_noop_0();
     }
-    apply {
-        if (hdr.data.b2 == 8w0) {
-            tmp = t2_0.apply().hit;
-            if (!tmp) 
-                t3_0.apply();
+    bool inner_multiple_tmp_2;
+    @name("inner_multiple.noop") action inner_multiple_noop_5() {
+    }
+    @name("inner_multiple.noop") action inner_multiple_noop_6() {
+    }
+    @name("inner_multiple.t2_act") action inner_multiple_t2_act_0(bit<8> b4) {
+        hdr.data.b4 = b4;
+    }
+    @name("inner_multiple.t3_act") action inner_multiple_t3_act_0(bit<8> b5) {
+        hdr.data.b5 = b5;
+    }
+    @name("inner_multiple.t2") table inner_multiple_t2_2 {
+        actions = {
+            inner_multiple_t2_act_0();
+            inner_multiple_noop_5();
         }
-        else 
-            t3_0.apply();
+        key = {
+            hdr.data.h2: exact @name("hdr.data.h2") ;
+        }
+        default_action = inner_multiple_noop_5();
     }
-}
-
-control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    bool tmp_0;
-    @name("inner_multiple") inner_multiple() inner_multiple_inst_1;
-    @name("inner_multiple") inner_multiple() inner_multiple_inst_2;
+    @name("inner_multiple.t3") table inner_multiple_t3_2 {
+        actions = {
+            inner_multiple_t3_act_0();
+            inner_multiple_noop_6();
+        }
+        key = {
+            hdr.data.h2: exact @name("hdr.data.h2") ;
+        }
+        default_action = inner_multiple_noop_6();
+    }
     @name("noop") action noop_1() {
+    }
+    @name("noop") action noop_2() {
     }
     @name("set_port") action set_port_0(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
@@ -79,7 +100,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
     @name("t1_act") action t1_act_0(bit<8> b3) {
         hdr.data.b3 = b3;
     }
-    @name("t1") table t1_0 {
+    @name("t1") table t1 {
         actions = {
             t1_act_0();
             noop_1();
@@ -89,26 +110,38 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_1();
     }
-    @name("port_setter") table port_setter_0 {
+    @name("port_setter") table port_setter {
         actions = {
             set_port_0();
-            noop_1();
+            noop_2();
         }
         key = {
             hdr.data.h1: exact @name("hdr.data.h1") ;
             hdr.data.h2: exact @name("hdr.data.h2") ;
         }
-        default_action = noop_1();
+        default_action = noop_2();
     }
     apply {
         if (hdr.data.b1 == 8w0) {
-            tmp_0 = t1_0.apply().hit;
-            if (!tmp_0) 
-                inner_multiple_inst_1.apply(hdr, meta, ig_intr_md, ig_intr_prsr_md, ig_intr_tm_md);
+            tmp = t1.apply().hit;
+            if (!tmp) 
+                if (hdr.data.b2 == 8w0) {
+                    inner_multiple_tmp_1 = inner_multiple_t2_1.apply().hit;
+                    if (!inner_multiple_tmp_1) 
+                        inner_multiple_t3_1.apply();
+                }
+                else 
+                    inner_multiple_t3_1.apply();
         }
         else 
-            inner_multiple_inst_2.apply(hdr, meta, ig_intr_md, ig_intr_prsr_md, ig_intr_tm_md);
-        port_setter_0.apply();
+            if (hdr.data.b2 == 8w0) {
+                inner_multiple_tmp_2 = inner_multiple_t2_2.apply().hit;
+                if (!inner_multiple_tmp_2) 
+                    inner_multiple_t3_2.apply();
+            }
+            else 
+                inner_multiple_t3_2.apply();
+        port_setter.apply();
     }
 }
 

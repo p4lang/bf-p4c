@@ -1166,30 +1166,6 @@ control IttaBena(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
-control Kahua(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Rotterdam") action Rotterdam(bit<3> Furman, bit<5> Bettles) {
-        hdr.ig_intr_md_for_tm.ingress_cos = Furman;
-        hdr.ig_intr_md_for_tm.qid = Bettles;
-    }
-    @stage(10) @name(".Jenera") table Jenera {
-        actions = {
-            Rotterdam();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.Norridge.Lindsborg: exact @name("Norridge.Lindsborg") ;
-            meta.Norridge.Mendon   : ternary @name("Norridge.Mendon") ;
-            meta.Egypt.Helotes     : ternary @name("Egypt.Helotes") ;
-            meta.Egypt.Vining      : ternary @name("Egypt.Vining") ;
-        }
-        size = 80;
-        default_action = NoAction();
-    }
-    apply {
-        Jenera.apply();
-    }
-}
-
 control Lushton(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Higganum") action Higganum(bit<8> Craigtown) {
         meta.DuBois.MontIda = 1w1;

@@ -28,7 +28,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         ig_intr_tm_md.ucast_egress_port = port;
         hdr.data.b1 = (bit<8>)hdr.data.f1;
     }
-    @name("test") table test_0 {
+    @name("test") table test {
         actions = {
             act_0();
         }
@@ -38,7 +38,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         default_action = act_0(9w1);
     }
     apply {
-        test_0.apply();
+        test.apply();
     }
 }
 

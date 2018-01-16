@@ -1,0 +1,9 @@
+case1841.p4(2163): warning: -1: negative value with unsigned type
+   add_to_field(Arapahoe.Rockfield, -1);
+                                     ^
+case1841.p4(2168): warning: -1: negative value with unsigned type
+   add_to_field(Sargent.Broadmoor, -1);
+                                    ^
+case1841.p4(1507): warning: Could not infer type for Quarry, using bit<8>
+action Lemhi(Quarry) {
+             ^^^^^^

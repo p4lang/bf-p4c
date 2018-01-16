@@ -853,33 +853,6 @@ control Burden(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
-control Cadwell(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @ways(1) @name(".Oronogo") table Oronogo {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : exact;
-            meta.Atlas.Dubbs    : exact;
-            meta.Atlas.Cornell  : exact;
-            meta.Atlas.Sitka    : exact;
-            meta.Atlas.Havana   : exact;
-            meta.Atlas.ElkRidge : exact;
-            meta.Atlas.Quamba   : exact;
-            meta.Atlas.Hiwassee : exact;
-            meta.Atlas.Greenlawn: exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Oronogo.apply();
-    }
-}
-
 control Campo(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
         meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
@@ -904,87 +877,6 @@ control Campo(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     }
     apply {
         Tahuya.apply();
-    }
-}
-
-control Caplis(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @ways(1) @name(".Jones") table Jones {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore   : exact;
-            meta.Coolin.Covina   : exact;
-            meta.Coolin.Dubbs    : exact;
-            meta.Coolin.Cornell  : exact;
-            meta.Coolin.Sitka    : exact;
-            meta.Coolin.Havana   : exact;
-            meta.Coolin.ElkRidge : exact;
-            meta.Coolin.Quamba   : exact;
-            meta.Coolin.Hiwassee : exact;
-            meta.Coolin.Greenlawn: exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Jones.apply();
-    }
-}
-
-control Claiborne(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Yerington") action Yerington(bit<16> Francisco, bit<16> Cadott, bit<16> Onycha, bit<16> Desdemona, bit<8> LaUnion, bit<6> DoeRun, bit<8> Spivey, bit<8> Penitas, bit<1> PineHill) {
-        meta.Coolin.Covina = meta.Atlas.Covina & Francisco;
-        meta.Coolin.Dubbs = meta.Atlas.Dubbs & Cadott;
-        meta.Coolin.Cornell = meta.Atlas.Cornell & Onycha;
-        meta.Coolin.Sitka = meta.Atlas.Sitka & Desdemona;
-        meta.Coolin.Havana = meta.Atlas.Havana & LaUnion;
-        meta.Coolin.ElkRidge = meta.Atlas.ElkRidge & DoeRun;
-        meta.Coolin.Quamba = meta.Atlas.Quamba & Spivey;
-        meta.Coolin.Hiwassee = meta.Atlas.Hiwassee & Penitas;
-        meta.Coolin.Greenlawn = meta.Atlas.Greenlawn & PineHill;
-    }
-    @name(".Knierim") table Knierim {
-        actions = {
-            Yerington;
-        }
-        key = {
-            meta.Atlas.Dunmore: exact;
-        }
-        size = 256;
-        default_action = Yerington(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Knierim.apply();
-    }
-}
-
-control Corder(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @name(".Montalba") table Montalba {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : ternary;
-            meta.Atlas.Dubbs    : ternary;
-            meta.Atlas.Cornell  : ternary;
-            meta.Atlas.Sitka    : ternary;
-            meta.Atlas.Havana   : ternary;
-            meta.Atlas.ElkRidge : ternary;
-            meta.Atlas.Quamba   : ternary;
-            meta.Atlas.Hiwassee : ternary;
-            meta.Atlas.Greenlawn: ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Montalba.apply();
     }
 }
 
@@ -1231,33 +1123,6 @@ control Diana(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     }
 }
 
-control Dixmont(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Bernice") action Bernice(bit<16> Lenoir, bit<16> Odebolt, bit<16> Mattoon, bit<16> Lutts, bit<8> Bodcaw, bit<6> Ardara, bit<8> Langtry, bit<8> Ballville, bit<1> Barnsdall) {
-        meta.Coolin.Covina = meta.Atlas.Covina & Lenoir;
-        meta.Coolin.Dubbs = meta.Atlas.Dubbs & Odebolt;
-        meta.Coolin.Cornell = meta.Atlas.Cornell & Mattoon;
-        meta.Coolin.Sitka = meta.Atlas.Sitka & Lutts;
-        meta.Coolin.Havana = meta.Atlas.Havana & Bodcaw;
-        meta.Coolin.ElkRidge = meta.Atlas.ElkRidge & Ardara;
-        meta.Coolin.Quamba = meta.Atlas.Quamba & Langtry;
-        meta.Coolin.Hiwassee = meta.Atlas.Hiwassee & Ballville;
-        meta.Coolin.Greenlawn = meta.Atlas.Greenlawn & Barnsdall;
-    }
-    @name(".Ardsley") table Ardsley {
-        actions = {
-            Bernice;
-        }
-        key = {
-            meta.Atlas.Dunmore: exact;
-        }
-        size = 256;
-        default_action = Bernice(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Ardsley.apply();
-    }
-}
-
 control Dolliver(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Paxico") direct_counter(CounterType.packets_and_bytes) Paxico;
     @name(".Crannell") action Crannell(bit<8> Johnstown, bit<1> Cahokia) {
@@ -1372,33 +1237,6 @@ control Dutton(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         Broadwell.apply();
-    }
-}
-
-control ElmGrove(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @name(".Burket") table Burket {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : ternary;
-            meta.Atlas.Dubbs    : ternary;
-            meta.Atlas.Cornell  : ternary;
-            meta.Atlas.Sitka    : ternary;
-            meta.Atlas.Havana   : ternary;
-            meta.Atlas.ElkRidge : ternary;
-            meta.Atlas.Quamba   : ternary;
-            meta.Atlas.Hiwassee : ternary;
-            meta.Atlas.Greenlawn: ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Burket.apply();
     }
 }
 
@@ -1529,33 +1367,6 @@ control Elvaston(inout headers hdr, inout metadata meta, inout standard_metadata
                 }
             }
         }
-    }
-}
-
-control Equality(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @name(".RiceLake") table RiceLake {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : ternary;
-            meta.Atlas.Dubbs    : ternary;
-            meta.Atlas.Cornell  : ternary;
-            meta.Atlas.Sitka    : ternary;
-            meta.Atlas.Havana   : ternary;
-            meta.Atlas.ElkRidge : ternary;
-            meta.Atlas.Quamba   : ternary;
-            meta.Atlas.Hiwassee : ternary;
-            meta.Atlas.Greenlawn: ternary;
-        }
-        size = 512;
-    }
-    apply {
-        RiceLake.apply();
     }
 }
 
@@ -1878,33 +1689,6 @@ control Gratiot(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     }
 }
-
-control Halbur(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @name(".Pinebluff") table Pinebluff {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : ternary;
-            meta.Atlas.Dubbs    : ternary;
-            meta.Atlas.Cornell  : ternary;
-            meta.Atlas.Sitka    : ternary;
-            meta.Atlas.Havana   : ternary;
-            meta.Atlas.ElkRidge : ternary;
-            meta.Atlas.Quamba   : ternary;
-            meta.Atlas.Hiwassee : ternary;
-            meta.Atlas.Greenlawn: ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Pinebluff.apply();
-    }
-}
 #include <tofino/p4_14_prim.p4>
 
 control Hargis(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
@@ -1925,33 +1709,6 @@ control Hargis(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         Delavan.apply();
-    }
-}
-
-control Haven(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Malaga") action Malaga(bit<16> Hewitt, bit<16> Emlenton, bit<16> Ranburne, bit<16> Petrey, bit<8> Cogar, bit<6> Browndell, bit<8> Yemassee, bit<8> Natalbany, bit<1> Gasport) {
-        meta.Coolin.Covina = meta.Atlas.Covina & Hewitt;
-        meta.Coolin.Dubbs = meta.Atlas.Dubbs & Emlenton;
-        meta.Coolin.Cornell = meta.Atlas.Cornell & Ranburne;
-        meta.Coolin.Sitka = meta.Atlas.Sitka & Petrey;
-        meta.Coolin.Havana = meta.Atlas.Havana & Cogar;
-        meta.Coolin.ElkRidge = meta.Atlas.ElkRidge & Browndell;
-        meta.Coolin.Quamba = meta.Atlas.Quamba & Yemassee;
-        meta.Coolin.Hiwassee = meta.Atlas.Hiwassee & Natalbany;
-        meta.Coolin.Greenlawn = meta.Atlas.Greenlawn & Gasport;
-    }
-    @name(".Melmore") table Melmore {
-        actions = {
-            Malaga;
-        }
-        key = {
-            meta.Atlas.Dunmore: exact;
-        }
-        size = 256;
-        default_action = Malaga(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Melmore.apply();
     }
 }
 
@@ -2307,60 +2064,6 @@ control Lacona(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
-control Lapeer(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @ways(1) @name(".Pearl") table Pearl {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore   : exact;
-            meta.Wenden.Covina   : exact;
-            meta.Wenden.Dubbs    : exact;
-            meta.Wenden.Cornell  : exact;
-            meta.Wenden.Sitka    : exact;
-            meta.Wenden.Havana   : exact;
-            meta.Wenden.ElkRidge : exact;
-            meta.Wenden.Quamba   : exact;
-            meta.Wenden.Hiwassee : exact;
-            meta.Wenden.Greenlawn: exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Pearl.apply();
-    }
-}
-
-control LeaHill(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @name(".DelRosa") table DelRosa {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : ternary;
-            meta.Atlas.Dubbs    : ternary;
-            meta.Atlas.Cornell  : ternary;
-            meta.Atlas.Sitka    : ternary;
-            meta.Atlas.Havana   : ternary;
-            meta.Atlas.ElkRidge : ternary;
-            meta.Atlas.Quamba   : ternary;
-            meta.Atlas.Hiwassee : ternary;
-            meta.Atlas.Greenlawn: ternary;
-        }
-        size = 512;
-    }
-    apply {
-        DelRosa.apply();
-    }
-}
-
 control Litroe(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Balfour") action Balfour(bit<16> Gillette, bit<16> Frontier, bit<16> Asher, bit<16> Riverland, bit<8> Mather, bit<6> Kalkaska, bit<8> Glenolden, bit<8> Frankston, bit<1> Roachdale) {
         meta.Wenden.Covina = meta.Atlas.Covina & Gillette;
@@ -2385,33 +2088,6 @@ control Litroe(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         Alameda.apply();
-    }
-}
-
-control Macedonia(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @name(".Hotevilla") table Hotevilla {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : ternary;
-            meta.Atlas.Dubbs    : ternary;
-            meta.Atlas.Cornell  : ternary;
-            meta.Atlas.Sitka    : ternary;
-            meta.Atlas.Havana   : ternary;
-            meta.Atlas.ElkRidge : ternary;
-            meta.Atlas.Quamba   : ternary;
-            meta.Atlas.Hiwassee : ternary;
-            meta.Atlas.Greenlawn: ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Hotevilla.apply();
     }
 }
 
@@ -2443,33 +2119,6 @@ control Macksburg(inout headers hdr, inout metadata meta, inout standard_metadat
                 Purdon.apply();
             }
         }
-    }
-}
-
-control Milam(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @name(".Range") table Range {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : ternary;
-            meta.Atlas.Dubbs    : ternary;
-            meta.Atlas.Cornell  : ternary;
-            meta.Atlas.Sitka    : ternary;
-            meta.Atlas.Havana   : ternary;
-            meta.Atlas.ElkRidge : ternary;
-            meta.Atlas.Quamba   : ternary;
-            meta.Atlas.Hiwassee : ternary;
-            meta.Atlas.Greenlawn: ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Range.apply();
     }
 }
 
@@ -2521,87 +2170,6 @@ control Newland(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         Pelland.apply();
-    }
-}
-
-control Noorvik(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @name(".Caborn") table Caborn {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : ternary;
-            meta.Atlas.Dubbs    : ternary;
-            meta.Atlas.Cornell  : ternary;
-            meta.Atlas.Sitka    : ternary;
-            meta.Atlas.Havana   : ternary;
-            meta.Atlas.ElkRidge : ternary;
-            meta.Atlas.Quamba   : ternary;
-            meta.Atlas.Hiwassee : ternary;
-            meta.Atlas.Greenlawn: ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Caborn.apply();
-    }
-}
-
-control Normangee(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @name(".Venturia") table Venturia {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : ternary;
-            meta.Atlas.Dubbs    : ternary;
-            meta.Atlas.Cornell  : ternary;
-            meta.Atlas.Sitka    : ternary;
-            meta.Atlas.Havana   : ternary;
-            meta.Atlas.ElkRidge : ternary;
-            meta.Atlas.Quamba   : ternary;
-            meta.Atlas.Hiwassee : ternary;
-            meta.Atlas.Greenlawn: ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Venturia.apply();
-    }
-}
-
-control Ocilla(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Steprock") action Steprock(bit<16> Pierson, bit<16> Offerle, bit<16> Wimberley, bit<16> Newburgh, bit<8> Cutler, bit<6> Moweaqua, bit<8> Caguas, bit<8> Alsen, bit<1> Williams) {
-        meta.Wenden.Covina = meta.Atlas.Covina & Pierson;
-        meta.Wenden.Dubbs = meta.Atlas.Dubbs & Offerle;
-        meta.Wenden.Cornell = meta.Atlas.Cornell & Wimberley;
-        meta.Wenden.Sitka = meta.Atlas.Sitka & Newburgh;
-        meta.Wenden.Havana = meta.Atlas.Havana & Cutler;
-        meta.Wenden.ElkRidge = meta.Atlas.ElkRidge & Moweaqua;
-        meta.Wenden.Quamba = meta.Atlas.Quamba & Caguas;
-        meta.Wenden.Hiwassee = meta.Atlas.Hiwassee & Alsen;
-        meta.Wenden.Greenlawn = meta.Atlas.Greenlawn & Williams;
-    }
-    @name(".Poneto") table Poneto {
-        actions = {
-            Steprock;
-        }
-        key = {
-            meta.Atlas.Dunmore: exact;
-        }
-        size = 256;
-        default_action = Steprock(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Poneto.apply();
     }
 }
 
@@ -2791,33 +2359,6 @@ control Pickering(inout headers hdr, inout metadata meta, inout standard_metadat
     }
 }
 
-control Pickett(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @name(".Anselmo") table Anselmo {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : ternary;
-            meta.Atlas.Dubbs    : ternary;
-            meta.Atlas.Cornell  : ternary;
-            meta.Atlas.Sitka    : ternary;
-            meta.Atlas.Havana   : ternary;
-            meta.Atlas.ElkRidge : ternary;
-            meta.Atlas.Quamba   : ternary;
-            meta.Atlas.Hiwassee : ternary;
-            meta.Atlas.Greenlawn: ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Anselmo.apply();
-    }
-}
-
 @name("Wailuku") struct Wailuku {
     bit<8>  Millett;
     bit<24> Natalia;
@@ -2977,60 +2518,6 @@ control Ranchito(inout headers hdr, inout metadata meta, inout standard_metadata
     apply {
         Gresston.apply();
         Elkland.apply();
-    }
-}
-
-control Redmon(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @ways(1) @name(".Joyce") table Joyce {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore   : exact;
-            meta.Coolin.Covina   : exact;
-            meta.Coolin.Dubbs    : exact;
-            meta.Coolin.Cornell  : exact;
-            meta.Coolin.Sitka    : exact;
-            meta.Coolin.Havana   : exact;
-            meta.Coolin.ElkRidge : exact;
-            meta.Coolin.Quamba   : exact;
-            meta.Coolin.Hiwassee : exact;
-            meta.Coolin.Greenlawn: exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Joyce.apply();
-    }
-}
-
-control Ridgetop(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @ways(1) @name(".Rhodell") table Rhodell {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore   : exact;
-            meta.Coolin.Covina   : exact;
-            meta.Coolin.Dubbs    : exact;
-            meta.Coolin.Cornell  : exact;
-            meta.Coolin.Sitka    : exact;
-            meta.Coolin.Havana   : exact;
-            meta.Coolin.ElkRidge : exact;
-            meta.Coolin.Quamba   : exact;
-            meta.Coolin.Hiwassee : exact;
-            meta.Coolin.Greenlawn: exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Rhodell.apply();
     }
 }
 
@@ -3490,114 +2977,6 @@ control Wauregan(inout headers hdr, inout metadata meta, inout standard_metadata
             }
         }
 
-    }
-}
-
-control Wheaton(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @name(".Rippon") table Rippon {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : ternary;
-            meta.Atlas.Dubbs    : ternary;
-            meta.Atlas.Cornell  : ternary;
-            meta.Atlas.Sitka    : ternary;
-            meta.Atlas.Havana   : ternary;
-            meta.Atlas.ElkRidge : ternary;
-            meta.Atlas.Quamba   : ternary;
-            meta.Atlas.Hiwassee : ternary;
-            meta.Atlas.Greenlawn: ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Rippon.apply();
-    }
-}
-
-control Wheeler(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Navarro") action Navarro(bit<16> August, bit<16> Watters, bit<16> Gerster, bit<16> Suttle, bit<8> Klukwan, bit<6> Compton, bit<8> Leoma, bit<8> Tchula, bit<1> Antoine) {
-        meta.Coolin.Covina = meta.Atlas.Covina & August;
-        meta.Coolin.Dubbs = meta.Atlas.Dubbs & Watters;
-        meta.Coolin.Cornell = meta.Atlas.Cornell & Gerster;
-        meta.Coolin.Sitka = meta.Atlas.Sitka & Suttle;
-        meta.Coolin.Havana = meta.Atlas.Havana & Klukwan;
-        meta.Coolin.ElkRidge = meta.Atlas.ElkRidge & Compton;
-        meta.Coolin.Quamba = meta.Atlas.Quamba & Leoma;
-        meta.Coolin.Hiwassee = meta.Atlas.Hiwassee & Tchula;
-        meta.Coolin.Greenlawn = meta.Atlas.Greenlawn & Antoine;
-    }
-    @name(".Hagewood") table Hagewood {
-        actions = {
-            Navarro;
-        }
-        key = {
-            meta.Atlas.Dunmore: exact;
-        }
-        size = 256;
-        default_action = Navarro(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Hagewood.apply();
-    }
-}
-
-control Whigham(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @name(".Ashtola") table Ashtola {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore  : exact;
-            meta.Atlas.Covina   : ternary;
-            meta.Atlas.Dubbs    : ternary;
-            meta.Atlas.Cornell  : ternary;
-            meta.Atlas.Sitka    : ternary;
-            meta.Atlas.Havana   : ternary;
-            meta.Atlas.ElkRidge : ternary;
-            meta.Atlas.Quamba   : ternary;
-            meta.Atlas.Hiwassee : ternary;
-            meta.Atlas.Greenlawn: ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Ashtola.apply();
-    }
-}
-
-control Wisdom(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".WindLake") action WindLake(bit<32> Kaluaaha) {
-        meta.Sagamore.RichHill = (meta.Sagamore.RichHill >= Kaluaaha ? meta.Sagamore.RichHill : Kaluaaha);
-    }
-    @ways(1) @name(".Edroy") table Edroy {
-        actions = {
-            WindLake;
-        }
-        key = {
-            meta.Atlas.Dunmore   : exact;
-            meta.Coolin.Covina   : exact;
-            meta.Coolin.Dubbs    : exact;
-            meta.Coolin.Cornell  : exact;
-            meta.Coolin.Sitka    : exact;
-            meta.Coolin.Havana   : exact;
-            meta.Coolin.ElkRidge : exact;
-            meta.Coolin.Quamba   : exact;
-            meta.Coolin.Hiwassee : exact;
-            meta.Coolin.Greenlawn: exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Edroy.apply();
     }
 }
 

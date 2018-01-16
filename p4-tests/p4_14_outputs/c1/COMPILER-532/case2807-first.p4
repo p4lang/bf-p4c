@@ -796,36 +796,6 @@ control Alamosa4(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
-control Alamosa5(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Alstown") action Alstown(bit<24> Ericsburg) {
-        meta.Allgood.Tavistock = (meta.Allgood.Tavistock >= Ericsburg ? meta.Allgood.Tavistock : Ericsburg);
-    }
-    @ways(1) @name(".Catskill5") table Catskill5 {
-        actions = {
-            Alstown();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.Keyes.Hollymead    : exact @name("Keyes.Hollymead") ;
-            meta.Barksdale.Brownson : exact @name("Barksdale.Brownson") ;
-            meta.Barksdale.Alakanuk : exact @name("Barksdale.Alakanuk") ;
-            meta.Barksdale.Arvana   : exact @name("Barksdale.Arvana") ;
-            meta.Barksdale.RushCity : exact @name("Barksdale.RushCity") ;
-            meta.Barksdale.Adamstown: exact @name("Barksdale.Adamstown") ;
-            meta.Barksdale.Callao   : exact @name("Barksdale.Callao") ;
-            meta.Barksdale.Rankin   : exact @name("Barksdale.Rankin") ;
-            meta.Barksdale.Ashtola  : exact @name("Barksdale.Ashtola") ;
-            meta.Barksdale.Ravinia  : exact @name("Barksdale.Ravinia") ;
-            meta.Barksdale.Yakutat  : exact @name("Barksdale.Yakutat") ;
-        }
-        size = 4096;
-        default_action = NoAction();
-    }
-    apply {
-        Catskill5.apply();
-    }
-}
-
 control Almedia(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Fairmount") action Fairmount(bit<14> Fordyce, bit<1> RioLinda, bit<1> Kaanapali) {
         meta.Pinta.Roberta = Fordyce;
@@ -2016,22 +1986,6 @@ control Kinston(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 }
 
-control Louviers(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Dobbins") action Dobbins() {
-        meta.Allgood.Tavistock = (meta.Fairborn.Tavistock >= meta.Allgood.Tavistock ? meta.Fairborn.Tavistock : meta.Allgood.Tavistock);
-    }
-    @name(".Fabens") table Fabens {
-        actions = {
-            Dobbins();
-        }
-        size = 1;
-        default_action = Dobbins();
-    }
-    apply {
-        Fabens.apply();
-    }
-}
-
 control Loysburg(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Sallisaw") action Sallisaw() {
     }
@@ -2144,35 +2098,6 @@ control Lubec4(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         Domingo4.apply();
-    }
-}
-
-control Lubec5(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Onslow") action Onslow(bit<16> Enfield, bit<16> Coventry, bit<16> Bloomburg, bit<16> SantaAna, bit<8> Mayview, bit<6> Monaca, bit<8> Resaca, bit<8> Samantha, bit<1> McBrides, bit<25> Henry) {
-        meta.Barksdale.Brownson = meta.Keyes.Brownson & Enfield;
-        meta.Barksdale.Alakanuk = meta.Keyes.Alakanuk & Coventry;
-        meta.Barksdale.Arvana = meta.Keyes.Arvana & Bloomburg;
-        meta.Barksdale.RushCity = meta.Keyes.RushCity & SantaAna;
-        meta.Barksdale.Adamstown = meta.Keyes.Adamstown & Mayview;
-        meta.Barksdale.Callao = meta.Keyes.Callao & Monaca;
-        meta.Barksdale.Rankin = meta.Keyes.Rankin & Resaca;
-        meta.Barksdale.Ashtola = meta.Keyes.Ashtola & Samantha;
-        meta.Barksdale.Ravinia = meta.Keyes.Ravinia & McBrides;
-        meta.Barksdale.Yakutat = meta.Keyes.Yakutat & Henry;
-    }
-    @name(".Domingo5") table Domingo5 {
-        actions = {
-            Onslow();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.Keyes.Hollymead: exact @name("Keyes.Hollymead") ;
-        }
-        size = 256;
-        default_action = NoAction();
-    }
-    apply {
-        Domingo5.apply();
     }
 }
 
@@ -2990,36 +2915,6 @@ control Weimar(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Catawba.apply();
             else 
                 Wrenshall_0.apply(hdr, meta, standard_metadata);
-    }
-}
-
-control Woodsboro1(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Emajagua") action Emajagua(bit<24> Hershey) {
-        meta.Fairborn.Tavistock = (meta.Fairborn.Tavistock >= Hershey ? meta.Fairborn.Tavistock : Hershey);
-    }
-    @name(".Goulds1") table Goulds1 {
-        actions = {
-            Emajagua();
-            @defaultonly NoAction();
-        }
-        key = {
-            meta.Keyes.Hollymead: exact @name("Keyes.Hollymead") ;
-            meta.Keyes.Brownson : ternary @name("Keyes.Brownson") ;
-            meta.Keyes.Alakanuk : ternary @name("Keyes.Alakanuk") ;
-            meta.Keyes.Arvana   : ternary @name("Keyes.Arvana") ;
-            meta.Keyes.RushCity : ternary @name("Keyes.RushCity") ;
-            meta.Keyes.Adamstown: ternary @name("Keyes.Adamstown") ;
-            meta.Keyes.Callao   : ternary @name("Keyes.Callao") ;
-            meta.Keyes.Rankin   : ternary @name("Keyes.Rankin") ;
-            meta.Keyes.Ashtola  : ternary @name("Keyes.Ashtola") ;
-            meta.Keyes.Ravinia  : ternary @name("Keyes.Ravinia") ;
-            meta.Keyes.Yakutat  : ternary @name("Keyes.Yakutat") ;
-        }
-        size = 4096;
-        default_action = NoAction();
-    }
-    apply {
-        Goulds1.apply();
     }
 }
 

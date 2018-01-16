@@ -46,8 +46,8 @@ control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
 }
 
 control c(inout packet_t hdrs, inout standard_metadata meta) {
-    @name("a") action a_0(bit<32> arg_0) {
-        meta.egress_spec = (bit<9>)arg_0;
+    @name("a") action a_0(bit<32> arg) {
+        meta.egress_spec = (bit<9>)arg;
     }
     apply {
         a_0(32w3);

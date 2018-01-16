@@ -25,8 +25,12 @@ parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intr
 }
 
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    bool tmp;
+    bool tmp_0;
     @name("noop") action noop_0() {
+    }
+    @name("noop") action noop_3() {
+    }
+    @name("noop") action noop_4() {
     }
     @name("set_port") action set_port_0(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
@@ -37,7 +41,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
     @name("t2_act") action t2_act_0(bit<8> b4) {
         hdr.data.b4 = b4;
     }
-    @name("t1") table t1_0 {
+    @name("t1") table t1 {
         actions = {
             t1_act_0();
             noop_0();
@@ -47,36 +51,36 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_0();
     }
-    @name("t2") table t2_0 {
+    @name("t2") table t2 {
         actions = {
             t2_act_0();
-            noop_0();
+            noop_3();
         }
         key = {
             hdr.data.h2: exact @name("hdr.data.h2") ;
         }
-        default_action = noop_0();
+        default_action = noop_3();
     }
-    @name("port_setter") table port_setter_0 {
+    @name("port_setter") table port_setter {
         actions = {
             set_port_0();
-            noop_0();
+            noop_4();
         }
         key = {
             hdr.data.h1: exact @name("hdr.data.h1") ;
             hdr.data.h2: exact @name("hdr.data.h2") ;
         }
-        default_action = noop_0();
+        default_action = noop_4();
     }
     apply {
         if (hdr.data.b1 == 8w0) {
-            tmp = t1_0.apply().hit;
-            if (!tmp) 
-                t2_0.apply();
+            tmp_0 = t1.apply().hit;
+            if (!tmp_0) 
+                t2.apply();
         }
         else 
-            t2_0.apply();
-        port_setter_0.apply();
+            t2.apply();
+        port_setter.apply();
     }
 }
 

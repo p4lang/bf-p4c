@@ -1,0 +1,9 @@
+case1834.p4(1523): warning: Could not infer type for Davant, using bit<8>
+action Jamesport(Davant) {
+                 ^^^^^^
+case1834.p4(2087): warning: -1: negative value with unsigned type
+   add_to_field(Sardinia.Decherd, -1);
+                                   ^
+case1834.p4(2092): warning: -1: negative value with unsigned type
+   add_to_field(Atlas.Somis, -1);
+                              ^

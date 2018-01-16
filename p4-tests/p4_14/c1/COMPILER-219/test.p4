@@ -50,7 +50,7 @@ parser parseEthernet {
 
 parser parse_ipv4 { 
     extract(ipv4); 
-    return ingressProcessing; 
+    return ingress; 
 }
 
 action a1() {}
@@ -62,7 +62,7 @@ table T1 {
     size : 1; 
 }
 
-control ingressProcessing { 
+control ingress { 
     if ( m.a==0 and ipv4.ttl > 0 ) { 
         apply( T1 ); 
     } 

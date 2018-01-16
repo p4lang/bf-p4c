@@ -29,7 +29,7 @@ control ingress(inout packet_t hdrs, inout user_metadata_t m, inout standard_met
     }
     @name("noop") action noop_0() {
     }
-    @name("test1") table test1_0 {
+    @name("test1") table test1 {
         key = {
             hdrs.meta: ternary @name("hdrs.meta") ;
         }
@@ -40,7 +40,7 @@ control ingress(inout packet_t hdrs, inout user_metadata_t m, inout standard_met
         default_action = set_0(9w2, 32w0);
     }
     apply {
-        test1_0.apply();
+        test1.apply();
     }
 }
 

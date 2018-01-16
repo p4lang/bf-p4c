@@ -26,4 +26,3 @@ switch_config.p4(5): warning: Could not infer type for enable_flowlet, using bit
 action set_config_parameters(enable_dod, enable_flowlet) {
                                          ^^^^^^^^^^^^^^
 warning: The order of headers in deparser is not uniquely determined by parser!
-warning: .flowlet_state: unused instance

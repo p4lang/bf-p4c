@@ -763,33 +763,6 @@ control Accord(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
-control Alamota(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Magoun") action Magoun(bit<16> Shellman, bit<16> Munger, bit<16> Matador, bit<16> Tusayan, bit<8> Tahlequah, bit<6> Ohiowa, bit<8> Roodhouse, bit<8> Bendavis, bit<1> Komatke) {
-        meta.Edwards.Glenpool = meta.Burrel.Glenpool & Shellman;
-        meta.Edwards.Hotchkiss = meta.Burrel.Hotchkiss & Munger;
-        meta.Edwards.Bellmore = meta.Burrel.Bellmore & Matador;
-        meta.Edwards.Lubec = meta.Burrel.Lubec & Tusayan;
-        meta.Edwards.Ashwood = meta.Burrel.Ashwood & Tahlequah;
-        meta.Edwards.BigBar = meta.Burrel.BigBar & Ohiowa;
-        meta.Edwards.Catlin = meta.Burrel.Catlin & Roodhouse;
-        meta.Edwards.Veneta = meta.Burrel.Veneta & Bendavis;
-        meta.Edwards.Armijo = meta.Burrel.Armijo & Komatke;
-    }
-    @name(".Aynor") table Aynor {
-        actions = {
-            Magoun;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-        }
-        size = 256;
-        default_action = Magoun(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Aynor.apply();
-    }
-}
-
 control Amber(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Linganore") action Linganore(bit<9> Maytown) {
         hdr.ig_intr_md_for_tm.level2_mcast_hash = (bit<13>)meta.Maloy.Mocane;
@@ -862,87 +835,6 @@ control Anchorage(inout headers hdr, inout metadata meta, inout standard_metadat
     }
 }
 
-control Armstrong(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Waterflow") action Waterflow(bit<16> Paullina, bit<16> Ellisburg, bit<16> Rendon, bit<16> Weissert, bit<8> Cedonia, bit<6> Grottoes, bit<8> Gully, bit<8> Assinippi, bit<1> Burgdorf) {
-        meta.Vandling.Glenpool = meta.Burrel.Glenpool & Paullina;
-        meta.Vandling.Hotchkiss = meta.Burrel.Hotchkiss & Ellisburg;
-        meta.Vandling.Bellmore = meta.Burrel.Bellmore & Rendon;
-        meta.Vandling.Lubec = meta.Burrel.Lubec & Weissert;
-        meta.Vandling.Ashwood = meta.Burrel.Ashwood & Cedonia;
-        meta.Vandling.BigBar = meta.Burrel.BigBar & Grottoes;
-        meta.Vandling.Catlin = meta.Burrel.Catlin & Gully;
-        meta.Vandling.Veneta = meta.Burrel.Veneta & Assinippi;
-        meta.Vandling.Armijo = meta.Burrel.Armijo & Burgdorf;
-    }
-    @name(".DeLancey") table DeLancey {
-        actions = {
-            Waterflow;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-        }
-        size = 256;
-        default_action = Waterflow(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        DeLancey.apply();
-    }
-}
-
-control Arnold(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Bryan") action Bryan(bit<16> Bagwell, bit<16> Ossipee, bit<16> MoonRun, bit<16> Boyes, bit<8> Falmouth, bit<6> Gurley, bit<8> Minburn, bit<8> Petrey, bit<1> Honalo) {
-        meta.Vandling.Glenpool = meta.Burrel.Glenpool & Bagwell;
-        meta.Vandling.Hotchkiss = meta.Burrel.Hotchkiss & Ossipee;
-        meta.Vandling.Bellmore = meta.Burrel.Bellmore & MoonRun;
-        meta.Vandling.Lubec = meta.Burrel.Lubec & Boyes;
-        meta.Vandling.Ashwood = meta.Burrel.Ashwood & Falmouth;
-        meta.Vandling.BigBar = meta.Burrel.BigBar & Gurley;
-        meta.Vandling.Catlin = meta.Burrel.Catlin & Minburn;
-        meta.Vandling.Veneta = meta.Burrel.Veneta & Petrey;
-        meta.Vandling.Armijo = meta.Burrel.Armijo & Honalo;
-    }
-    @name(".Jamesport") table Jamesport {
-        actions = {
-            Bryan;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-        }
-        size = 256;
-        default_action = Bryan(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Jamesport.apply();
-    }
-}
-
-control Arvonia(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pathfork") action Pathfork(bit<32> Pettry) {
-        meta.Sargent.Tulsa = (meta.Sargent.Tulsa >= Pettry ? meta.Sargent.Tulsa : Pettry);
-    }
-    @ways(4) @name(".Menomonie") table Menomonie {
-        actions = {
-            Pathfork;
-        }
-        key = {
-            meta.Burrel.Shobonier : exact;
-            meta.Edwards.Glenpool : exact;
-            meta.Edwards.Hotchkiss: exact;
-            meta.Edwards.Bellmore : exact;
-            meta.Edwards.Lubec    : exact;
-            meta.Edwards.Ashwood  : exact;
-            meta.Edwards.BigBar   : exact;
-            meta.Edwards.Catlin   : exact;
-            meta.Edwards.Veneta   : exact;
-            meta.Edwards.Armijo   : exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Menomonie.apply();
-    }
-}
-
 control AukeBay(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Twisp") action Twisp(bit<9> Edler) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = Edler;
@@ -966,60 +858,6 @@ control AukeBay(inout headers hdr, inout metadata meta, inout standard_metadata_
         if ((meta.Holliston.Gilman & 16w0x2000) == 16w0x2000) {
             Haley.apply();
         }
-    }
-}
-
-control Barclay(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @ways(4) @name(".WestBay") table WestBay {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier  : exact;
-            meta.Vandling.Glenpool : exact;
-            meta.Vandling.Hotchkiss: exact;
-            meta.Vandling.Bellmore : exact;
-            meta.Vandling.Lubec    : exact;
-            meta.Vandling.Ashwood  : exact;
-            meta.Vandling.BigBar   : exact;
-            meta.Vandling.Catlin   : exact;
-            meta.Vandling.Veneta   : exact;
-            meta.Vandling.Armijo   : exact;
-        }
-        size = 4096;
-    }
-    apply {
-        WestBay.apply();
-    }
-}
-
-control BayPort(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @ways(4) @name(".Pinta") table Pinta {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier  : exact;
-            meta.Vandling.Glenpool : exact;
-            meta.Vandling.Hotchkiss: exact;
-            meta.Vandling.Bellmore : exact;
-            meta.Vandling.Lubec    : exact;
-            meta.Vandling.Ashwood  : exact;
-            meta.Vandling.BigBar   : exact;
-            meta.Vandling.Catlin   : exact;
-            meta.Vandling.Veneta   : exact;
-            meta.Vandling.Armijo   : exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Pinta.apply();
     }
 }
 
@@ -1673,33 +1511,6 @@ control Chatanika(inout headers hdr, inout metadata meta, inout standard_metadat
         }
     }
 }
-
-control Chloride(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @name(".Ardara") table Ardara {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Ardara.apply();
-    }
-}
 #include <tofino/p4_14_prim.p4>
 
 control Chouteau(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
@@ -1720,60 +1531,6 @@ control Chouteau(inout headers hdr, inout metadata meta, inout standard_metadata
     }
     apply {
         Provencal.apply();
-    }
-}
-
-control Clearco(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Unity") action Unity(bit<16> Wymore, bit<16> Kotzebue, bit<16> Marlton, bit<16> Halaula, bit<8> Hobson, bit<6> Eolia, bit<8> Aldan, bit<8> Fosters, bit<1> Copley) {
-        meta.Vandling.Glenpool = meta.Burrel.Glenpool & Wymore;
-        meta.Vandling.Hotchkiss = meta.Burrel.Hotchkiss & Kotzebue;
-        meta.Vandling.Bellmore = meta.Burrel.Bellmore & Marlton;
-        meta.Vandling.Lubec = meta.Burrel.Lubec & Halaula;
-        meta.Vandling.Ashwood = meta.Burrel.Ashwood & Hobson;
-        meta.Vandling.BigBar = meta.Burrel.BigBar & Eolia;
-        meta.Vandling.Catlin = meta.Burrel.Catlin & Aldan;
-        meta.Vandling.Veneta = meta.Burrel.Veneta & Fosters;
-        meta.Vandling.Armijo = meta.Burrel.Armijo & Copley;
-    }
-    @name(".Sylva") table Sylva {
-        actions = {
-            Unity;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-        }
-        size = 256;
-        default_action = Unity(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Sylva.apply();
-    }
-}
-
-control Coachella(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pathfork") action Pathfork(bit<32> Pettry) {
-        meta.Sargent.Tulsa = (meta.Sargent.Tulsa >= Pettry ? meta.Sargent.Tulsa : Pettry);
-    }
-    @name(".Brighton") table Brighton {
-        actions = {
-            Pathfork;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Brighton.apply();
     }
 }
 
@@ -1833,60 +1590,6 @@ control Cowen(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     }
     apply {
         Horsehead.apply();
-    }
-}
-
-control Crowheart(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @ways(4) @name(".RedLake") table RedLake {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier  : exact;
-            meta.Vandling.Glenpool : exact;
-            meta.Vandling.Hotchkiss: exact;
-            meta.Vandling.Bellmore : exact;
-            meta.Vandling.Lubec    : exact;
-            meta.Vandling.Ashwood  : exact;
-            meta.Vandling.BigBar   : exact;
-            meta.Vandling.Catlin   : exact;
-            meta.Vandling.Veneta   : exact;
-            meta.Vandling.Armijo   : exact;
-        }
-        size = 4096;
-    }
-    apply {
-        RedLake.apply();
-    }
-}
-
-control Cullen(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @name(".Lochbuie") table Lochbuie {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Lochbuie.apply();
     }
 }
 
@@ -2092,33 +1795,6 @@ control Emlenton(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
-control Faulkner(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pathfork") action Pathfork(bit<32> Pettry) {
-        meta.Sargent.Tulsa = (meta.Sargent.Tulsa >= Pettry ? meta.Sargent.Tulsa : Pettry);
-    }
-    @name(".Cortland") table Cortland {
-        actions = {
-            Pathfork;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Cortland.apply();
-    }
-}
-
 control Fiftysix(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".ViewPark") action ViewPark() {
         hash(meta.Sherando.Poland, HashAlgorithm.crc32, (bit<32>)0, { hdr.Dixboro.Hueytown, hdr.Dixboro.Scottdale, hdr.Dixboro.Larose, hdr.Dixboro.Topmost, hdr.Dixboro.Montegut }, (bit<64>)4294967296);
@@ -2131,60 +1807,6 @@ control Fiftysix(inout headers hdr, inout metadata meta, inout standard_metadata
     }
     apply {
         Gallion.apply();
-    }
-}
-
-control Gakona(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pathfork") action Pathfork(bit<32> Pettry) {
-        meta.Sargent.Tulsa = (meta.Sargent.Tulsa >= Pettry ? meta.Sargent.Tulsa : Pettry);
-    }
-    @name(".Bixby") table Bixby {
-        actions = {
-            Pathfork;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Bixby.apply();
-    }
-}
-
-control Gordon(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @ways(4) @name(".Wailuku") table Wailuku {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier  : exact;
-            meta.Vandling.Glenpool : exact;
-            meta.Vandling.Hotchkiss: exact;
-            meta.Vandling.Bellmore : exact;
-            meta.Vandling.Lubec    : exact;
-            meta.Vandling.Ashwood  : exact;
-            meta.Vandling.BigBar   : exact;
-            meta.Vandling.Catlin   : exact;
-            meta.Vandling.Veneta   : exact;
-            meta.Vandling.Armijo   : exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Wailuku.apply();
     }
 }
 
@@ -2212,33 +1834,6 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     }
     apply {
         Rockport.apply();
-    }
-}
-
-control Hampton(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @name(".Vallecito") table Vallecito {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Vallecito.apply();
     }
 }
 
@@ -2509,33 +2104,6 @@ control Homeland(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
-control Irvine(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @ways(4) @name(".Fitler") table Fitler {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier  : exact;
-            meta.Vandling.Glenpool : exact;
-            meta.Vandling.Hotchkiss: exact;
-            meta.Vandling.Bellmore : exact;
-            meta.Vandling.Lubec    : exact;
-            meta.Vandling.Ashwood  : exact;
-            meta.Vandling.BigBar   : exact;
-            meta.Vandling.Catlin   : exact;
-            meta.Vandling.Veneta   : exact;
-            meta.Vandling.Armijo   : exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Fitler.apply();
-    }
-}
-
 control Jenison(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Tiburon") action Tiburon(bit<14> Bazine, bit<1> ElMirage, bit<1> Giltner) {
         meta.Scotland.Dresden = Bazine;
@@ -2683,33 +2251,6 @@ control Joslin(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 }
             }
         }
-    }
-}
-
-control Killen(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Lamison") action Lamison(bit<16> Ovilla, bit<16> Cockrum, bit<16> Floral, bit<16> Urbanette, bit<8> Newsome, bit<6> Donegal, bit<8> Quinault, bit<8> Makawao, bit<1> Micco) {
-        meta.Edwards.Glenpool = meta.Burrel.Glenpool & Ovilla;
-        meta.Edwards.Hotchkiss = meta.Burrel.Hotchkiss & Cockrum;
-        meta.Edwards.Bellmore = meta.Burrel.Bellmore & Floral;
-        meta.Edwards.Lubec = meta.Burrel.Lubec & Urbanette;
-        meta.Edwards.Ashwood = meta.Burrel.Ashwood & Newsome;
-        meta.Edwards.BigBar = meta.Burrel.BigBar & Donegal;
-        meta.Edwards.Catlin = meta.Burrel.Catlin & Quinault;
-        meta.Edwards.Veneta = meta.Burrel.Veneta & Makawao;
-        meta.Edwards.Armijo = meta.Burrel.Armijo & Micco;
-    }
-    @name(".Bosler") table Bosler {
-        actions = {
-            Lamison;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-        }
-        size = 256;
-        default_action = Lamison(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Bosler.apply();
     }
 }
 
@@ -2934,33 +2475,6 @@ control McKee(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     }
 }
 
-control McLaurin(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @name(".Puryear") table Puryear {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Puryear.apply();
-    }
-}
-
 @name("Honuapo") struct Honuapo {
     bit<8>  RedBay;
     bit<24> Mariemont;
@@ -3015,33 +2529,6 @@ control Millican(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
-control Molson(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @name(".Lakin") table Lakin {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Lakin.apply();
-    }
-}
-
 control Montello(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Rockdell") action Rockdell() {
         meta.Saragosa.Seaford = meta.Realitos.Karluk;
@@ -3087,60 +2574,6 @@ control Montello(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
-control Montross(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pathfork") action Pathfork(bit<32> Pettry) {
-        meta.Sargent.Tulsa = (meta.Sargent.Tulsa >= Pettry ? meta.Sargent.Tulsa : Pettry);
-    }
-    @name(".Oskawalik") table Oskawalik {
-        actions = {
-            Pathfork;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Oskawalik.apply();
-    }
-}
-
-control Moorcroft(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @ways(4) @name(".Sequim") table Sequim {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier  : exact;
-            meta.Vandling.Glenpool : exact;
-            meta.Vandling.Hotchkiss: exact;
-            meta.Vandling.Bellmore : exact;
-            meta.Vandling.Lubec    : exact;
-            meta.Vandling.Ashwood  : exact;
-            meta.Vandling.BigBar   : exact;
-            meta.Vandling.Catlin   : exact;
-            meta.Vandling.Veneta   : exact;
-            meta.Vandling.Armijo   : exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Sequim.apply();
-    }
-}
-
 control Nankin(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Shipman") @min_width(128) counter(32w1024, CounterType.packets_and_bytes) Shipman;
     @name(".Lydia") action Lydia(bit<32> Yorkshire) {
@@ -3158,114 +2591,6 @@ control Nankin(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         Laurie.apply();
-    }
-}
-
-control Nickerson(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pathfork") action Pathfork(bit<32> Pettry) {
-        meta.Sargent.Tulsa = (meta.Sargent.Tulsa >= Pettry ? meta.Sargent.Tulsa : Pettry);
-    }
-    @name(".WyeMills") table WyeMills {
-        actions = {
-            Pathfork;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        WyeMills.apply();
-    }
-}
-
-control Norcatur(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Umkumiut") action Umkumiut(bit<16> Sunman, bit<16> Tingley, bit<16> Lantana, bit<16> Angeles, bit<8> RichHill, bit<6> Slick, bit<8> Bruce, bit<8> Overlea, bit<1> Goodwater) {
-        meta.Vandling.Glenpool = meta.Burrel.Glenpool & Sunman;
-        meta.Vandling.Hotchkiss = meta.Burrel.Hotchkiss & Tingley;
-        meta.Vandling.Bellmore = meta.Burrel.Bellmore & Lantana;
-        meta.Vandling.Lubec = meta.Burrel.Lubec & Angeles;
-        meta.Vandling.Ashwood = meta.Burrel.Ashwood & RichHill;
-        meta.Vandling.BigBar = meta.Burrel.BigBar & Slick;
-        meta.Vandling.Catlin = meta.Burrel.Catlin & Bruce;
-        meta.Vandling.Veneta = meta.Burrel.Veneta & Overlea;
-        meta.Vandling.Armijo = meta.Burrel.Armijo & Goodwater;
-    }
-    @name(".Fragaria") table Fragaria {
-        actions = {
-            Umkumiut;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-        }
-        size = 256;
-        default_action = Umkumiut(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Fragaria.apply();
-    }
-}
-
-control Norco(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @name(".Hildale") table Hildale {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Hildale.apply();
-    }
-}
-
-control Oakridge(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pathfork") action Pathfork(bit<32> Pettry) {
-        meta.Sargent.Tulsa = (meta.Sargent.Tulsa >= Pettry ? meta.Sargent.Tulsa : Pettry);
-    }
-    @ways(4) @name(".Rushton") table Rushton {
-        actions = {
-            Pathfork;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : exact;
-            meta.Burrel.Hotchkiss: exact;
-            meta.Burrel.Bellmore : exact;
-            meta.Burrel.Lubec    : exact;
-            meta.Burrel.Ashwood  : exact;
-            meta.Burrel.BigBar   : exact;
-            meta.Burrel.Catlin   : exact;
-            meta.Burrel.Veneta   : exact;
-            meta.Burrel.Armijo   : exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Rushton.apply();
     }
 }
 
@@ -3352,33 +2677,6 @@ control Ogunquit(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
-control Oregon(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Bayard") action Bayard(bit<16> Sawmills, bit<16> Pease, bit<16> Barron, bit<16> Kaufman, bit<8> Baudette, bit<6> Paulding, bit<8> FortHunt, bit<8> Moorman, bit<1> Marbleton) {
-        meta.Vandling.Glenpool = meta.Burrel.Glenpool & Sawmills;
-        meta.Vandling.Hotchkiss = meta.Burrel.Hotchkiss & Pease;
-        meta.Vandling.Bellmore = meta.Burrel.Bellmore & Barron;
-        meta.Vandling.Lubec = meta.Burrel.Lubec & Kaufman;
-        meta.Vandling.Ashwood = meta.Burrel.Ashwood & Baudette;
-        meta.Vandling.BigBar = meta.Burrel.BigBar & Paulding;
-        meta.Vandling.Catlin = meta.Burrel.Catlin & FortHunt;
-        meta.Vandling.Veneta = meta.Burrel.Veneta & Moorman;
-        meta.Vandling.Armijo = meta.Burrel.Armijo & Marbleton;
-    }
-    @name(".Keener") table Keener {
-        actions = {
-            Bayard;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-        }
-        size = 256;
-        default_action = Bayard(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Keener.apply();
-    }
-}
-
 control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Bellville") action Bellville(bit<14> Mynard, bit<1> Truro, bit<12> Maury, bit<1> Denby, bit<1> Mabelle, bit<2> Hilburn, bit<3> Bluewater, bit<6> Kealia) {
         meta.Realitos.Creston = Mynard;
@@ -3403,33 +2701,6 @@ control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {
             Lostwood.apply();
         }
-    }
-}
-
-control Palatka(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pathfork") action Pathfork(bit<32> Pettry) {
-        meta.Sargent.Tulsa = (meta.Sargent.Tulsa >= Pettry ? meta.Sargent.Tulsa : Pettry);
-    }
-    @name(".Blencoe") table Blencoe {
-        actions = {
-            Pathfork;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Blencoe.apply();
     }
 }
 
@@ -3542,87 +2813,6 @@ control Pricedale(inout headers hdr, inout metadata meta, inout standard_metadat
     }
 }
 
-control Protem(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pathfork") action Pathfork(bit<32> Pettry) {
-        meta.Sargent.Tulsa = (meta.Sargent.Tulsa >= Pettry ? meta.Sargent.Tulsa : Pettry);
-    }
-    @name(".Hotevilla") table Hotevilla {
-        actions = {
-            Pathfork;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Hotevilla.apply();
-    }
-}
-
-control Ririe(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @ways(4) @name(".Cornish") table Cornish {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : exact;
-            meta.Burrel.Hotchkiss: exact;
-            meta.Burrel.Bellmore : exact;
-            meta.Burrel.Lubec    : exact;
-            meta.Burrel.Ashwood  : exact;
-            meta.Burrel.BigBar   : exact;
-            meta.Burrel.Catlin   : exact;
-            meta.Burrel.Veneta   : exact;
-            meta.Burrel.Armijo   : exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Cornish.apply();
-    }
-}
-
-control Selby(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pathfork") action Pathfork(bit<32> Pettry) {
-        meta.Sargent.Tulsa = (meta.Sargent.Tulsa >= Pettry ? meta.Sargent.Tulsa : Pettry);
-    }
-    @ways(4) @name(".Caldwell") table Caldwell {
-        actions = {
-            Pathfork;
-        }
-        key = {
-            meta.Burrel.Shobonier : exact;
-            meta.Edwards.Glenpool : exact;
-            meta.Edwards.Hotchkiss: exact;
-            meta.Edwards.Bellmore : exact;
-            meta.Edwards.Lubec    : exact;
-            meta.Edwards.Ashwood  : exact;
-            meta.Edwards.BigBar   : exact;
-            meta.Edwards.Catlin   : exact;
-            meta.Edwards.Veneta   : exact;
-            meta.Edwards.Armijo   : exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Caldwell.apply();
-    }
-}
-
 control Shawmut(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Garlin") action Garlin() {
         ;
@@ -3649,33 +2839,6 @@ control Shawmut(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         Qulin.apply();
-    }
-}
-
-control Shirley(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @ways(4) @name(".Alvordton") table Alvordton {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier  : exact;
-            meta.Vandling.Glenpool : exact;
-            meta.Vandling.Hotchkiss: exact;
-            meta.Vandling.Bellmore : exact;
-            meta.Vandling.Lubec    : exact;
-            meta.Vandling.Ashwood  : exact;
-            meta.Vandling.BigBar   : exact;
-            meta.Vandling.Catlin   : exact;
-            meta.Vandling.Veneta   : exact;
-            meta.Vandling.Armijo   : exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Alvordton.apply();
     }
 }
 
@@ -3706,33 +2869,6 @@ control Simnasho(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
-control Skyline(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pathfork") action Pathfork(bit<32> Pettry) {
-        meta.Sargent.Tulsa = (meta.Sargent.Tulsa >= Pettry ? meta.Sargent.Tulsa : Pettry);
-    }
-    @name(".Minneiska") table Minneiska {
-        actions = {
-            Pathfork;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        Minneiska.apply();
-    }
-}
-
 control Speed(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Ankeny") action Ankeny(bit<16> PaloAlto, bit<16> Amboy, bit<16> Keltys, bit<16> Academy, bit<8> Waialua, bit<6> Yorklyn, bit<8> Broadwell, bit<8> Willard, bit<1> Linville) {
         meta.Edwards.Glenpool = meta.Burrel.Glenpool & PaloAlto;
@@ -3757,33 +2893,6 @@ control Speed(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     }
     apply {
         Bouton.apply();
-    }
-}
-
-control Summit(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Madison") action Madison(bit<32> Suamico) {
-        meta.Timbo.Tulsa = (meta.Timbo.Tulsa >= Suamico ? meta.Timbo.Tulsa : Suamico);
-    }
-    @name(".DuQuoin") table DuQuoin {
-        actions = {
-            Madison;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-            meta.Burrel.Glenpool : ternary;
-            meta.Burrel.Hotchkiss: ternary;
-            meta.Burrel.Bellmore : ternary;
-            meta.Burrel.Lubec    : ternary;
-            meta.Burrel.Ashwood  : ternary;
-            meta.Burrel.BigBar   : ternary;
-            meta.Burrel.Catlin   : ternary;
-            meta.Burrel.Veneta   : ternary;
-            meta.Burrel.Armijo   : ternary;
-        }
-        size = 512;
-    }
-    apply {
-        DuQuoin.apply();
     }
 }
 
@@ -3854,60 +2963,6 @@ control TonkaBay(inout headers hdr, inout metadata meta, inout standard_metadata
     }
     apply {
         Eaton.apply();
-    }
-}
-
-control Wenatchee(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Buckfield") action Buckfield(bit<16> Carmel, bit<16> WindLake, bit<16> Kenyon, bit<16> Destin, bit<8> Ruston, bit<6> Mondovi, bit<8> Rotterdam, bit<8> DeSmet, bit<1> Minneota) {
-        meta.Vandling.Glenpool = meta.Burrel.Glenpool & Carmel;
-        meta.Vandling.Hotchkiss = meta.Burrel.Hotchkiss & WindLake;
-        meta.Vandling.Bellmore = meta.Burrel.Bellmore & Kenyon;
-        meta.Vandling.Lubec = meta.Burrel.Lubec & Destin;
-        meta.Vandling.Ashwood = meta.Burrel.Ashwood & Ruston;
-        meta.Vandling.BigBar = meta.Burrel.BigBar & Mondovi;
-        meta.Vandling.Catlin = meta.Burrel.Catlin & Rotterdam;
-        meta.Vandling.Veneta = meta.Burrel.Veneta & DeSmet;
-        meta.Vandling.Armijo = meta.Burrel.Armijo & Minneota;
-    }
-    @name(".Diomede") table Diomede {
-        actions = {
-            Buckfield;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-        }
-        size = 256;
-        default_action = Buckfield(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Diomede.apply();
-    }
-}
-
-control WhiteOwl(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Phelps") action Phelps(bit<16> Hospers, bit<16> Mackeys, bit<16> Coupland, bit<16> Langston, bit<8> Hiwassee, bit<6> Wyatte, bit<8> Shade, bit<8> Atlas, bit<1> Pearce) {
-        meta.Vandling.Glenpool = meta.Burrel.Glenpool & Hospers;
-        meta.Vandling.Hotchkiss = meta.Burrel.Hotchkiss & Mackeys;
-        meta.Vandling.Bellmore = meta.Burrel.Bellmore & Coupland;
-        meta.Vandling.Lubec = meta.Burrel.Lubec & Langston;
-        meta.Vandling.Ashwood = meta.Burrel.Ashwood & Hiwassee;
-        meta.Vandling.BigBar = meta.Burrel.BigBar & Wyatte;
-        meta.Vandling.Catlin = meta.Burrel.Catlin & Shade;
-        meta.Vandling.Veneta = meta.Burrel.Veneta & Atlas;
-        meta.Vandling.Armijo = meta.Burrel.Armijo & Pearce;
-    }
-    @name(".Savery") table Savery {
-        actions = {
-            Phelps;
-        }
-        key = {
-            meta.Burrel.Shobonier: exact;
-        }
-        size = 256;
-        default_action = Phelps(0xffff, 0xffff, 0xffff, 0xffff, 0xff, 0x3f, 0xff, 0xff, 1);
-    }
-    apply {
-        Savery.apply();
     }
 }
 

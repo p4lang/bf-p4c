@@ -1,0 +1,15 @@
+case1864.p4(2228): warning: -1: negative value with unsigned type
+   add_to_field(Uhland.Chitina, -1);
+                                 ^
+case1864.p4(2234): warning: -1: negative value with unsigned type
+   add_to_field(Maloy.Switzer, -1);
+                                ^
+case1864.p4(2320): warning: Could not infer type for Vesuvius, using bit<8>
+action Atlantic( Vesuvius, Chalco ) {
+                 ^^^^^^^^
+case1864.p4(2320): warning: Could not infer type for Chalco, using bit<8>
+action Atlantic( Vesuvius, Chalco ) {
+                           ^^^^^^
+case1864.p4(1571): warning: Could not infer type for Everett, using bit<8>
+action Perkasie(Everett) {
+                ^^^^^^^

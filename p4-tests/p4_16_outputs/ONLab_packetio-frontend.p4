@@ -51,7 +51,7 @@ control ingress(inout headers_t hdr, inout metadata_t meta, inout standard_metad
     @name("set_egress_port") action set_egress_port_0(PortId_t port) {
         standard_metadata.egress_spec = port;
     }
-    @name("table0") table table0_0 {
+    @name("table0") table table0 {
         support_timeout = false;
         key = {
             standard_metadata.ingress_port: ternary @name("standard_metadata.ingress_port") ;
@@ -69,24 +69,17 @@ control ingress(inout headers_t hdr, inout metadata_t meta, inout standard_metad
         if (hdr.packet_out.isValid()) 
             standard_metadata.egress_spec = hdr.packet_out.egress_port;
         else 
-            table0_0.apply();
+            table0.apply();
     }
 }
 
-control PacketIoEgressControl(inout headers_t hdr, inout standard_metadata_t standard_metadata) {
+control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metadata_t standard_metadata) {
     apply {
         hdr.packet_out.setInvalid();
         if (standard_metadata.egress_port == 9w320) {
             hdr.packet_in.setValid();
             hdr.packet_in.ingress_port = standard_metadata.ingress_port;
         }
-    }
-}
-
-control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metadata_t standard_metadata) {
-    @name("packet_io_egress_control") PacketIoEgressControl() packet_io_egress_control_0;
-    apply {
-        packet_io_egress_control_0.apply(hdr, standard_metadata);
     }
 }
 

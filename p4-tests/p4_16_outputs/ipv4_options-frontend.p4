@@ -30,7 +30,7 @@ struct user_metadata_t {
 }
 
 parser TopParser(packet_in b, out packet_t p, inout user_metadata_t m, inout standard_metadata_t meta) {
-    @name("ck") Checksum16() ck_0;
+    @name("ck") Checksum16() ck_1;
     state start {
         b.extract<ipv4_t>(p.ipv4);
         verify(p.ipv4.version == 4w4, error.IPv4IncorrectVersion);

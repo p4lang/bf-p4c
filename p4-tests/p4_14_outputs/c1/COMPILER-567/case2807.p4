@@ -790,34 +790,6 @@ control Alamosa4(inout headers hdr, inout metadata meta, inout standard_metadata
     }
 }
 
-control Alamosa5(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Alstown") action Alstown(bit<24> Ericsburg) {
-        meta.Allgood.Tavistock = (meta.Allgood.Tavistock >= Ericsburg ? meta.Allgood.Tavistock : Ericsburg);
-    }
-    @ways(1) @name(".Catskill5") table Catskill5 {
-        actions = {
-            Alstown;
-        }
-        key = {
-            meta.Keyes.Hollymead    : exact;
-            meta.Barksdale.Brownson : exact;
-            meta.Barksdale.Alakanuk : exact;
-            meta.Barksdale.Arvana   : exact;
-            meta.Barksdale.RushCity : exact;
-            meta.Barksdale.Adamstown: exact;
-            meta.Barksdale.Callao   : exact;
-            meta.Barksdale.Rankin   : exact;
-            meta.Barksdale.Ashtola  : exact;
-            meta.Barksdale.Ravinia  : exact;
-            meta.Barksdale.Yakutat  : exact;
-        }
-        size = 4096;
-    }
-    apply {
-        Catskill5.apply();
-    }
-}
-
 control Almedia(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Fairmount") action Fairmount(bit<14> Fordyce, bit<1> RioLinda, bit<1> Kaanapali) {
         meta.Pinta.Roberta = Fordyce;
@@ -1965,22 +1937,6 @@ control Kinston(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 }
 
-control Louviers(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Dobbins") action Dobbins() {
-        meta.Allgood.Tavistock = (meta.Fairborn.Tavistock >= meta.Allgood.Tavistock ? meta.Fairborn.Tavistock : meta.Allgood.Tavistock);
-    }
-    @name(".Fabens") table Fabens {
-        actions = {
-            Dobbins;
-        }
-        size = 1;
-        default_action = Dobbins();
-    }
-    apply {
-        Fabens.apply();
-    }
-}
-
 control Loysburg(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Sallisaw") action Sallisaw() {
         ;
@@ -2088,33 +2044,6 @@ control Lubec4(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         Domingo4.apply();
-    }
-}
-
-control Lubec5(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Onslow") action Onslow(bit<16> Enfield, bit<16> Coventry, bit<16> Bloomburg, bit<16> SantaAna, bit<8> Mayview, bit<6> Monaca, bit<8> Resaca, bit<8> Samantha, bit<1> McBrides, bit<25> Henry) {
-        meta.Barksdale.Brownson = meta.Keyes.Brownson & Enfield;
-        meta.Barksdale.Alakanuk = meta.Keyes.Alakanuk & Coventry;
-        meta.Barksdale.Arvana = meta.Keyes.Arvana & Bloomburg;
-        meta.Barksdale.RushCity = meta.Keyes.RushCity & SantaAna;
-        meta.Barksdale.Adamstown = meta.Keyes.Adamstown & Mayview;
-        meta.Barksdale.Callao = meta.Keyes.Callao & Monaca;
-        meta.Barksdale.Rankin = meta.Keyes.Rankin & Resaca;
-        meta.Barksdale.Ashtola = meta.Keyes.Ashtola & Samantha;
-        meta.Barksdale.Ravinia = meta.Keyes.Ravinia & McBrides;
-        meta.Barksdale.Yakutat = meta.Keyes.Yakutat & Henry;
-    }
-    @name(".Domingo5") table Domingo5 {
-        actions = {
-            Onslow;
-        }
-        key = {
-            meta.Keyes.Hollymead: exact;
-        }
-        size = 256;
-    }
-    apply {
-        Domingo5.apply();
     }
 }
 
@@ -2922,34 +2851,6 @@ control Weimar(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Wrenshall_0.apply(hdr, meta, standard_metadata);
             }
         }
-    }
-}
-
-control Woodsboro1(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Emajagua") action Emajagua(bit<24> Hershey) {
-        meta.Fairborn.Tavistock = (meta.Fairborn.Tavistock >= Hershey ? meta.Fairborn.Tavistock : Hershey);
-    }
-    @name(".Goulds1") table Goulds1 {
-        actions = {
-            Emajagua;
-        }
-        key = {
-            meta.Keyes.Hollymead: exact;
-            meta.Keyes.Brownson : ternary;
-            meta.Keyes.Alakanuk : ternary;
-            meta.Keyes.Arvana   : ternary;
-            meta.Keyes.RushCity : ternary;
-            meta.Keyes.Adamstown: ternary;
-            meta.Keyes.Callao   : ternary;
-            meta.Keyes.Rankin   : ternary;
-            meta.Keyes.Ashtola  : ternary;
-            meta.Keyes.Ravinia  : ternary;
-            meta.Keyes.Yakutat  : ternary;
-        }
-        size = 4096;
-    }
-    apply {
-        Goulds1.apply();
     }
 }
 

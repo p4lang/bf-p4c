@@ -38,9 +38,19 @@ control MyVerifyChecksum(inout my_packet hdr, inout my_metadata meta) {
 }
 
 control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadata_t s) {
-    bit<8> v1_0;
-    bit<8> v2_0;
+    bit<8> v1;
+    bit<8> v2;
     @name("nop") action nop_0() {
+    }
+    @name("nop") action nop_6() {
+    }
+    @name("nop") action nop_7() {
+    }
+    @name("nop") action nop_8() {
+    }
+    @name("nop") action nop_9() {
+    }
+    @name("nop") action nop_10() {
     }
     @name("do_push") action do_push_0() {
         p.data.push_front(1);
@@ -49,16 +59,96 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
         p.instr.pop_front(1);
         s.egress_spec = 9w2;
     }
-    @name("do_add") action do_add_0() {
-        v1_0 = p.data[0].data_value;
-        v2_0 = p.data[1].data_value;
-        p.data.pop_front(1);
+    @name("do_push") action do_push_6() {
+        p.data.push_front(1);
         p.data[0].data_eof = 8w1;
-        p.data[0].data_value = v1_0 + v2_0;
+        p.data[0].data_value = p.instr[0].instr_value;
         p.instr.pop_front(1);
         s.egress_spec = 9w2;
     }
-    @name("t1") table t1_0 {
+    @name("do_push") action do_push_7() {
+        p.data.push_front(1);
+        p.data[0].data_eof = 8w1;
+        p.data[0].data_value = p.instr[0].instr_value;
+        p.instr.pop_front(1);
+        s.egress_spec = 9w2;
+    }
+    @name("do_push") action do_push_8() {
+        p.data.push_front(1);
+        p.data[0].data_eof = 8w1;
+        p.data[0].data_value = p.instr[0].instr_value;
+        p.instr.pop_front(1);
+        s.egress_spec = 9w2;
+    }
+    @name("do_push") action do_push_9() {
+        p.data.push_front(1);
+        p.data[0].data_eof = 8w1;
+        p.data[0].data_value = p.instr[0].instr_value;
+        p.instr.pop_front(1);
+        s.egress_spec = 9w2;
+    }
+    @name("do_push") action do_push_10() {
+        p.data.push_front(1);
+        p.data[0].data_eof = 8w1;
+        p.data[0].data_value = p.instr[0].instr_value;
+        p.instr.pop_front(1);
+        s.egress_spec = 9w2;
+    }
+    @name("do_add") action do_add_0() {
+        v1 = p.data[0].data_value;
+        v2 = p.data[1].data_value;
+        p.data.pop_front(1);
+        p.data[0].data_eof = 8w1;
+        p.data[0].data_value = v1 + v2;
+        p.instr.pop_front(1);
+        s.egress_spec = 9w2;
+    }
+    @name("do_add") action do_add_6() {
+        v1 = p.data[0].data_value;
+        v2 = p.data[1].data_value;
+        p.data.pop_front(1);
+        p.data[0].data_eof = 8w1;
+        p.data[0].data_value = v1 + v2;
+        p.instr.pop_front(1);
+        s.egress_spec = 9w2;
+    }
+    @name("do_add") action do_add_7() {
+        v1 = p.data[0].data_value;
+        v2 = p.data[1].data_value;
+        p.data.pop_front(1);
+        p.data[0].data_eof = 8w1;
+        p.data[0].data_value = v1 + v2;
+        p.instr.pop_front(1);
+        s.egress_spec = 9w2;
+    }
+    @name("do_add") action do_add_8() {
+        v1 = p.data[0].data_value;
+        v2 = p.data[1].data_value;
+        p.data.pop_front(1);
+        p.data[0].data_eof = 8w1;
+        p.data[0].data_value = v1 + v2;
+        p.instr.pop_front(1);
+        s.egress_spec = 9w2;
+    }
+    @name("do_add") action do_add_9() {
+        v1 = p.data[0].data_value;
+        v2 = p.data[1].data_value;
+        p.data.pop_front(1);
+        p.data[0].data_eof = 8w1;
+        p.data[0].data_value = v1 + v2;
+        p.instr.pop_front(1);
+        s.egress_spec = 9w2;
+    }
+    @name("do_add") action do_add_10() {
+        v1 = p.data[0].data_value;
+        v2 = p.data[1].data_value;
+        p.data.pop_front(1);
+        p.data[0].data_eof = 8w1;
+        p.data[0].data_value = v1 + v2;
+        p.instr.pop_front(1);
+        s.egress_spec = 9w2;
+    }
+    @name("t1") table t1 {
         key = {
             p.instr[0].instr_code: exact @name("p.instr[0].instr_code") ;
         }
@@ -69,74 +159,74 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
         }
         default_action = nop_0();
     }
-    @name("t2") table t2_0 {
+    @name("t2") table t2 {
         key = {
             p.instr[0].instr_code: exact @name("p.instr[0].instr_code") ;
         }
         actions = {
-            nop_0();
-            do_push_0();
-            do_add_0();
+            nop_6();
+            do_push_6();
+            do_add_6();
         }
-        default_action = nop_0();
+        default_action = nop_6();
     }
-    @name("t3") table t3_0 {
+    @name("t3") table t3 {
         key = {
             p.instr[0].instr_code: exact @name("p.instr[0].instr_code") ;
         }
         actions = {
-            nop_0();
-            do_push_0();
-            do_add_0();
+            nop_7();
+            do_push_7();
+            do_add_7();
         }
-        default_action = nop_0();
+        default_action = nop_7();
     }
-    @name("t4") table t4_0 {
+    @name("t4") table t4 {
         key = {
             p.instr[0].instr_code: exact @name("p.instr[0].instr_code") ;
         }
         actions = {
-            nop_0();
-            do_push_0();
-            do_add_0();
+            nop_8();
+            do_push_8();
+            do_add_8();
         }
-        default_action = nop_0();
+        default_action = nop_8();
     }
-    @name("t5") table t5_0 {
+    @name("t5") table t5 {
         key = {
             p.instr[0].instr_code: exact @name("p.instr[0].instr_code") ;
         }
         actions = {
-            nop_0();
-            do_push_0();
-            do_add_0();
+            nop_9();
+            do_push_9();
+            do_add_9();
         }
-        default_action = nop_0();
+        default_action = nop_9();
     }
-    @name("t6") table t6_0 {
+    @name("t6") table t6 {
         key = {
             p.instr[0].instr_code: exact @name("p.instr[0].instr_code") ;
         }
         actions = {
-            nop_0();
-            do_push_0();
-            do_add_0();
+            nop_10();
+            do_push_10();
+            do_add_10();
         }
-        default_action = nop_0();
+        default_action = nop_10();
     }
     apply {
         if (p.instr[0].isValid()) 
-            t1_0.apply();
+            t1.apply();
         if (p.instr[0].isValid()) 
-            t2_0.apply();
+            t2.apply();
         if (p.instr[0].isValid()) 
-            t3_0.apply();
+            t3.apply();
         if (p.instr[0].isValid()) 
-            t4_0.apply();
+            t4.apply();
         if (p.instr[0].isValid()) 
-            t5_0.apply();
+            t5.apply();
         if (p.instr[0].isValid()) 
-            t6_0.apply();
+            t6.apply();
     }
 }
 

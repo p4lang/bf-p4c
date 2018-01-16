@@ -25,64 +25,6 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
-control burnouses(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".banneker_defections") action banneker_defections() {
-        hdr.banneker.reissues = hdr.banneker.reissues + 31w38;
-        hdr.banneker.banneker_padding = hdr.banneker.banneker_padding - 2w3;
-    }
-    @name(".banneker_hamlets") action banneker_hamlets() {
-        hdr.banneker.reissues = hdr.banneker.reissues + 31w59;
-        hdr.banneker.downbeat = 23w56;
-    }
-    @name(".banneker_monicker") action banneker_monicker() {
-        hdr.banneker.reissues = hdr.banneker.reissues - 31w48;
-    }
-    @name(".banneker_charisma") action banneker_charisma() {
-        hdr.banneker.banneker_padding = 2w0;
-        hdr.banneker.reissues = hdr.banneker.reissues + 31w31;
-    }
-    @name(".larding") table larding {
-        actions = {
-            banneker_defections;
-            banneker_hamlets;
-        }
-        key = {
-            hdr.banneker.downbeat        : ternary;
-            hdr.banneker.banneker_padding: range;
-            hdr.banneker.reissues        : lpm;
-        }
-        size = 6;
-    }
-    @name(".personnels") table personnels {
-        actions = {
-            banneker_monicker;
-        }
-        key = {
-            hdr.banneker.downbeat: range;
-            hdr.banneker.reissues: ternary;
-        }
-        size = 2;
-    }
-    @name(".raconteurs") table raconteurs {
-        actions = {
-            banneker_defections;
-            banneker_charisma;
-            banneker_monicker;
-        }
-        key = {
-            hdr.banneker.downbeat        : lpm;
-            hdr.banneker.reissues        : ternary;
-            hdr.banneker.banneker_padding: exact;
-        }
-        size = 2;
-    }
-    apply {
-        larding.apply();
-        raconteurs.apply();
-        personnels.apply();
-    }
-}
-
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".banneker_charisma") action banneker_charisma() {
         hdr.banneker.banneker_padding = 2w0;

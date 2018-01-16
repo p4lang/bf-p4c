@@ -1,0 +1,9 @@
+case1822.p4(1816): warning: -1: negative value with unsigned type
+   add_to_field(McQueen.Raytown, -1);
+                                  ^
+case1822.p4(1821): warning: -1: negative value with unsigned type
+   add_to_field(Lampasas.WestLawn, -1);
+                                    ^
+case1822.p4(1234): warning: Could not infer type for Tahuya, using bit<8>
+action Lawai(Tahuya) {
+             ^^^^^^

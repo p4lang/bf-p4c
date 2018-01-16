@@ -32,6 +32,8 @@ parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intr
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     @name("noop") action noop_0() {
     }
+    @name("noop") action noop_2() {
+    }
     @name("init_index") action init_index_0(bit<11> p_index, bit<9> port) {
         meta.partition.partition_index = p_index;
         ig_intr_tm_md.ucast_egress_port = port;
@@ -40,7 +42,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         hdr.data.f2 = f2;
         hdr.data.h2 = h2;
     }
-    @name("set_partition") table set_partition_0 {
+    @name("set_partition") table set_partition {
         actions = {
             init_index_0();
             noop_0();
@@ -51,21 +53,21 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_0();
     }
-    @atcam_partition_index("partition.partition_index") @atcam_number_partitions(2048) @name("atcam_match") table atcam_match_0 {
+    @atcam_partition_index("partition.partition_index") @atcam_number_partitions(2048) @name("atcam_match") table atcam_match {
         actions = {
             first_0();
-            noop_0();
+            noop_2();
         }
         key = {
             hdr.data.h1                   : ternary @name("hdr.data.h1") ;
             meta.partition.partition_index: exact @name("meta.partition.partition_index") ;
         }
-        default_action = noop_0();
+        default_action = noop_2();
         size = 32768;
     }
     apply {
-        set_partition_0.apply();
-        atcam_match_0.apply();
+        set_partition.apply();
+        atcam_match.apply();
     }
 }
 

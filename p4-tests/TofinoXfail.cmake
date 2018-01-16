@@ -343,18 +343,6 @@ p4c_add_xfail_reason("tofino"
   "constant value .* out of range for immediate"
   extensions/p4_tests/p4_14/c1/COMPILER-402/case2318.p4
   )
-#
-p4c_add_xfail_reason("tofino"
-  "Table .* invoked from two different controls"
-  extensions/p4_tests/p4_14/c1/COMPILER-263/case1795.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-264/case1822.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-271/case1834.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-273/case1832.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-275/case1841.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-276/case1844.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-282/case1864.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-499/case2560_min_2.p4
-  )
 
 # BRIG-138
 p4c_add_xfail_reason("tofino"
@@ -387,6 +375,13 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
   extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
   extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-271/case1834.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-263/case1795.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-264/case1822.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-273/case1832.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-275/case1841.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-276/case1844.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-282/case1864.p4
   )
 
 # BRIG-186: per_flow_enable
@@ -409,6 +404,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   # This is an ATCAM failure due to a stage split being in the same stage.  Much more subtle
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-499/case2560_min_2.p4
   )
 
 p4c_add_xfail_reason("tofino"

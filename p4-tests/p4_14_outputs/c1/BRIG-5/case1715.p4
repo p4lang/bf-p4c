@@ -397,11 +397,6 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
-control egressProcessing(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
 @name("uajPdr") struct uajPdr {
     bit<8>  JiMzUK;
     bit<24> kLfTIU;
@@ -418,7 +413,7 @@ control egressProcessing(inout headers hdr, inout metadata meta, inout standard_
     bit<32> tqMJMA;
 }
 
-control ingressProcessing(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".fUXSVp") action fUXSVp() {
         meta.jtDeHH.nsfmlu = 1w0x1;
     }
@@ -864,5 +859,5 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
     }
 }
 
-V1Switch(ParserImpl(), verifyChecksum(), ingressProcessing(), egress(), computeChecksum(), DeparserImpl()) main;
+V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
 

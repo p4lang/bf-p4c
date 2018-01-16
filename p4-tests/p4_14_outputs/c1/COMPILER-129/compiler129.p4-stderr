@@ -25,9 +25,6 @@ port.p4(454): warning: -1: negative value with unsigned type
 port.p4(487): warning: -4: negative value with unsigned type
     add_to_field(l2_metadata.field_59 , -4);
                                          ^
-security.p4(49): warning: Could not infer type for meter_idx, using bit<8>
-action set_storm_control_meter(meter_idx) {
-                               ^^^^^^^^^
 warning: The order of headers in deparser is not uniquely determined by parser!
 warning: .bd_action_profile: unused instance
 warning: .ecmp_action_profile: unused instance

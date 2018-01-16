@@ -5069,13 +5069,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 }
 
-struct flowlet_alu_layout {
-    bit<32> lo;
-    bit<32> hi;
-}
-
-@name(".flowlet_state") register<flowlet_alu_layout>(32w8192) flowlet_state;
-
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit<ethernet_t>(hdr.ethernet);

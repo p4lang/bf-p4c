@@ -5559,58 +5559,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 }
 
-control process_bfd_tx_packet(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
-control process_egress_bfd_tx_timers(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
-control process_erspan_rewrite(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
-control process_ingress_port_mirroring(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".set_ingress_port_mirror_index") action set_ingress_port_mirror_index(bit<32> session_id) {
-        meta.i2e_metadata.mirror_session_id = (bit<10>)session_id;
-        clone3(CloneType.I2E, (bit<32>)session_id, { meta.i2e_metadata.ingress_tstamp, meta.i2e_metadata.mirror_session_id });
-    }
-    @name(".nop") action nop() {
-    }
-    @name(".ingress_port_mirror") table ingress_port_mirror {
-        actions = {
-            set_ingress_port_mirror_index;
-            nop;
-        }
-        key = {
-            hdr.ig_intr_md.ingress_port: exact;
-        }
-        size = 288;
-    }
-    apply {
-        ingress_port_mirror.apply();
-    }
-}
-
-control process_pktgen(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
-control process_pktgen_nhop_down(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
-control process_pktgen_port_down(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
