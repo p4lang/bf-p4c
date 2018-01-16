@@ -157,6 +157,10 @@ class Field {
 
     safe_vector<alloc_slice> alloc_i;  // sorted MSB (field) first
 
+    /// Update the alignment requirement for this field. Reports an error if
+    /// conflicting requirements render the alignment unsatisfiable.
+    void updateAlignment(const FieldAlignment& newAlignment);
+
  private:  // class Field
     void foreach_alloc(
         int lo,
@@ -164,9 +168,6 @@ class Field {
         std::function<void(const alloc_slice &)> fn) const;
     void foreach_byte(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
 
-    /// Update the alignment requirement for this field. Reports an error if
-    /// conflicting requirements render the alignment unsatisfiable.
-    void updateAlignment(const FieldAlignment& newAlignment);
 
     /**
      * Update the valid range of container positions for this field.

@@ -660,7 +660,7 @@ p4c_add_xfail_reason("tofino"
   "Due to complexity in action bus, can only currently handle meter color in an 8 bit ALU"
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -900,7 +900,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-384
 p4c_add_xfail_reason("tofino"
  "hash_dist unit .* expand can't pull from bit .*"
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
  )
 
 p4c_add_xfail_reason("tofino"
@@ -1058,7 +1058,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-393
 p4c_add_xfail_reason("tofino"
   "Gateway xor key .* misaligned within byte"
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   )
 
 # BRIG-400

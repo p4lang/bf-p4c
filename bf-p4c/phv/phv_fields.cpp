@@ -659,8 +659,18 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
                  << "no_pack, no_split and deparsed_bottom_bits");
             return; }
 
-        // For learning digests, we're done.
         if (entry->name == "learning") {
+            // Add byte-aligned constraint to metadata field in learning field_list
+            // TODO(yumin): This constraint can be relaxed to be no_pack in a same byte.
+            for (auto* fieldList : entry->fieldLists) {
+                for (auto* fieldListEntry : fieldList->sources) {
+                    auto* fieldInfo = phv.field(fieldListEntry->field);
+                    if (fieldInfo->metadata) {
+                        fieldInfo->updateAlignment(
+                                FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
+                        LOG1(fieldInfo << " is marked to be byte_aligned "
+                             "because it's in a field_list and digested."); } } }
+
             // Logging...
             for (auto* fieldList : entry->fieldLists) {
                 LOG1("\t.....learning field list..... ");
