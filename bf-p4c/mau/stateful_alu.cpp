@@ -56,7 +56,7 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
     return true;
 }
 void CreateSaluInstruction::postorder(const IR::Function *func) {
-    BUG_CHECK(params == func->type->parameters, "recursion fasilure");
+    BUG_CHECK(params == func->type->parameters, "recursion failure");
     params = nullptr;
 }
 bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {

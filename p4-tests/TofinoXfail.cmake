@@ -268,11 +268,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_160_stateful_single_bit_mode.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "Unrecognized AttribLocal combined_predicate"
-  extensions/p4_tests/p4_14/test_config_195_stateful_predicate_output.p4
-  )
-
 # conflict between blackbox meter and builtin meter
 p4c_add_xfail_reason("tofino"
   "P4_14 extern type not fully supported"
