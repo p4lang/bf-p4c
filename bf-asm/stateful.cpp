@@ -319,12 +319,17 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
     if (actions)
         actions->write_regs(regs, this);
     unsigned meter_group = home->row/4U;
-    for (MatchTable *m : match_tables) {
-        adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] = 1 << meter_group;
+    for (MatchTable *m : match_tables)
         adrdist.mau_ad_meter_virt_lt[meter_group] |= 1U << m->logical_id;
-        adrdist.movereg_ad_meter_alu_to_logical_xbar_ctl[m->logical_id/8U].set_subfield(
-            4 | meter_group, 3*(m->logical_id % 8U), 3); }
     if (!bound_selector) {
+        for (MatchTable *m : match_tables) {
+            adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] = 1 << meter_group;
+            adrdist.movereg_ad_meter_alu_to_logical_xbar_ctl[m->logical_id/8U].set_subfield(
+                4 | meter_group, 3*(m->logical_id % 8U), 3);
+            adrdist.movereg_meter_ctl[meter_group].movereg_meter_ctl_lt = m->logical_id;
+            if (direct) {
+                adrdist.movereg_meter_ctl[meter_group].movereg_meter_ctl_direct = 1;
+                adrdist.movereg_ad_direct[MoveReg::METER] |= 1U << m->logical_id; } }
         adrdist.movereg_meter_ctl[meter_group].movereg_ad_meter_shift = format->log2size;
         if (push_on_overflow)
             adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;
