@@ -598,8 +598,10 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     fill_out_write_multi_operand(cont_action, dst_mo);
     dst = dst_mo;
     if (!cont_action.partial_overwrite() && src1_writebits.popcount()
-                                          != static_cast<int>(container.size()))
+                                          != static_cast<int>(container.size())) {
         dst = MakeSlice(dst, src1_writebits.min().index(), src1_writebits.max().index());
+        src1 = MakeSlice(src1, src1_writebits.min().index(), src1_writebits.max().index());
+    }
 
     cstring instr_name = cont_action.name;
     if (cont_action.to_bitmasked_set)
