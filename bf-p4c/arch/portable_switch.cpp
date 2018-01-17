@@ -46,11 +46,11 @@ class AnalyzeProgram : public Inspector {
     void postorder(const IR::Type_Action* node) override
     { structure->action_types.push_back(node); }
     void postorder(const IR::Type_Struct* node) override
-    { structure->struct_types.emplace(node->name, node); }
+    { structure->type_declarations.emplace(node->name, node); }
     void postorder(const IR::Type_Header* node) override
-    { structure->header_types.emplace(node->name, node); }
+    { structure->type_declarations.emplace(node->name, node); }
     void postorder(const IR::Type_HeaderUnion* node) override
-    { structure->header_union_types.emplace(node->name, node); }
+    { structure->type_declarations.emplace(node->name, node); }
     void postorder(const IR::Type_Typedef* node) override {
         if (node->name == "PortId_t"         ||
             node->name == "MulticastGroup_t" ||
@@ -59,7 +59,7 @@ class AnalyzeProgram : public Inspector {
             node->name == "Timestamp_t"      ||
             node->name == "EgressInstance_t") return;
 
-        structure->typedef_types.emplace(node->name, node);
+        structure->type_declarations.emplace(node->name, node);
     }
     void postorder(const IR::Type_Enum* node) override
     { structure->enums.emplace(node->name, node); }
@@ -90,7 +90,7 @@ class AnalyzeProgram : public Inspector {
         auto pktPath = new IR::StructField("packet_path",
                                            structure->enums.at("PacketPath_t")->getP4Type());
         cgm->fields.push_back(pktPath);
-        structure->struct_types.emplace("compiler_generated_metadata_t", cgm);
+        structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
     }
 };
 
@@ -284,21 +284,21 @@ class LoadTargetArchitecture : public Inspector {
     }
 
     void setup_psa_typedef() {
-        structure->typedef_types.emplace(
+        structure->type_declarations.emplace(
                 "PortId_t", new IR::Type_Typedef("PortId_t", IR::Type_Bits::get(9)));
-        structure->typedef_types.emplace(
+        structure->type_declarations.emplace(
                 "MulticastGroup_t",
                 new IR::Type_Typedef("MulticastGroup_t", IR::Type_Bits::get(16)));
-        structure->typedef_types.emplace(
+        structure->type_declarations.emplace(
                 "ClassOfService_t",
                 new IR::Type_Typedef("ClassOfService_t", IR::Type_Bits::get(3)));
-        structure->typedef_types.emplace(
+        structure->type_declarations.emplace(
                 "PacketLength_t",
                 new IR::Type_Typedef("PacketLength_t", IR::Type_Bits::get(14)));
-        structure->typedef_types.emplace(
+        structure->type_declarations.emplace(
                 "Timestamp_t",
                 new IR::Type_Typedef("Timestamp_t", IR::Type_Bits::get(48)));
-        structure->typedef_types.emplace(
+        structure->type_declarations.emplace(
                 "EgressInstance_t",
                 new IR::Type_Typedef("EgressInstance_t", IR::Type_Bits::get(16)));
     }

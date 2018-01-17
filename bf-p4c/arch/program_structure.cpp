@@ -99,17 +99,8 @@ void ProgramStructure::createErrors() {
 }
 
 void ProgramStructure::createTypes() {
-    for (auto t : typedef_types) {
-        declarations.push_back(t.second);
-    }
-    for (auto h : header_types) {
+    for (auto h : type_declarations) {
         declarations.push_back(h.second);
-    }
-    for (auto h : header_union_types) {
-        declarations.push_back(h.second);
-    }
-    for (auto s : struct_types) {
-        declarations.push_back(s.second);
     }
 }
 

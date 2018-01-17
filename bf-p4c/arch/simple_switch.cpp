@@ -494,19 +494,19 @@ class AnalyzeProgram : public Inspector {
 
     // typeDeclarations
     void postorder(const IR::Type_Struct *node) override {
-        structure->struct_types.emplace(node->name, node);
+        structure->type_declarations.emplace(node->name, node);
     }
 
     void postorder(const IR::Type_Header *node) override {
-        structure->header_types.emplace(node->name, node);
+        structure->type_declarations.emplace(node->name, node);
     }
 
     void postorder(const IR::Type_HeaderUnion *node) override {
-        structure->header_union_types.emplace(node->name, node);
+        structure->type_declarations.emplace(node->name, node);
     }
 
     void postorder(const IR::Type_Typedef *node) override {
-        structure->typedef_types.emplace(node->name, node);
+        structure->type_declarations.emplace(node->name, node);
     }
 
     void postorder(const IR::Type_Enum *node) override {
@@ -576,7 +576,7 @@ class AnalyzeProgram : public Inspector {
     void end_apply() override {
         // add 'compiler_generated_metadata_t'
         auto cgm = new IR::Type_Struct("compiler_generated_metadata_t");
-        structure->struct_types.emplace("compiler_generated_metadata_t", cgm);
+        structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
     }
 };
 

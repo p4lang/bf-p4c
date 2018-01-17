@@ -73,10 +73,7 @@ struct ProgramStructure {
     /// maintain program declarations to reprint a valid P16 program
     ordered_map<cstring, const IR::P4Control*>   controls;
     ordered_map<cstring, const IR::P4Parser*>    parsers;
-    ordered_map<cstring, const IR::Type_Header*> header_types;
-    ordered_map<cstring, const IR::Type_Struct*> struct_types;
-    ordered_map<cstring, const IR::Type_HeaderUnion*> header_union_types;
-    ordered_map<cstring, const IR::Type_Typedef*> typedef_types;
+    ordered_map<cstring, const IR::Type_Declaration*> type_declarations;
     ordered_map<cstring, const IR::Declaration_Instance*> global_instances;
     std::vector<const IR::Type_Action*>          action_types;
 
