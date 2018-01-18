@@ -183,10 +183,29 @@ class ActionPhvConstraints : public Inspector {
     /** Print the state of the maps */
     void printMapStates();
 
+    /// (xxx)Deep [HACK WARNING]: Right now action bus allocation requires any destination written
+    /// by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
+    /// destinations. To be removed when Evan lands his patch relaxing the above requirement.
+    ordered_set<const PHV::Field*> meter_color_destinations;
+
  public:
     explicit ActionPhvConstraints(const PhvInfo &p) : phv(p) {}
 
     const PhvInfo &phv;
+
+    /// (xxx)Deep [HACK WARNING]: Right now action bus allocation requires any destination written
+    /// by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
+    /// destinations. To be removed when Evan lands his patch relaxing the above requirement.
+    bool is_meter_color_destination(const PHV::Field* f) {
+        if (meter_color_destinations.count(f))
+            return true;
+        else
+            return false;
+    }
+
+    ordered_set<const PHV::Field*>& meter_color_dests() {
+        return meter_color_destinations;
+    }
 
     /** Checks whether packing @fields into a container will violate MAU action constraints.
       * @returns a boost::optional<UnionFind<PHV::FieldSlice>> object, which is interpreted as

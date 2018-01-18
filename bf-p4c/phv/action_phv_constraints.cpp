@@ -44,6 +44,9 @@ bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
             } else {
                 BUG("Read must either be of a PHV, action data, or constant."); }
 
+            if (read.speciality == ActionAnalysis::ActionParam::METER_ALU)
+                meter_color_destinations.insert(write);
+
             if (field_action.reads.size() > 1)
                 fr.flags |= FieldOperation::ANOTHER_OPERAND;
             if (field_action.name == "set")
