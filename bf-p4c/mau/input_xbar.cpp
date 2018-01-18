@@ -386,6 +386,9 @@ bool IXBar::violates_hash_constraints(safe_vector<big_grp_use> &order,
 void IXBar::calculate_found(safe_vector<IXBar::Use::Byte *> unalloced,
                             safe_vector<big_grp_use> &order,
                             bool ternary, bool hash_dist, unsigned byte_mask) {
+    if (byte_mask != ~0U)
+        return;
+
     auto &use = this->use(ternary);
     auto &fields = this->fields(ternary);
     for (size_t i = 0; i < order.size(); i++) {
@@ -440,6 +443,27 @@ void IXBar::calculate_ternary_free(safe_vector<big_grp_use> &order,
 void IXBar::calculate_exact_free(safe_vector<big_grp_use> &order, int big_groups,
                                  int bytes_per_big_group, bool hash_dist, unsigned byte_mask) {
     auto &use = this->use(false);
+    // FIXME: This is a way too tight constraint in order to get stful.p4 to correctly compile
+    // There needs to be some coordination with what is actually needed vs. what is actually
+    // available.  One doesn't need the whole byte_mask to be free, in order to allocate it.
+    if (byte_mask != ~0U) {
+        for (int grp = 0; grp < big_groups; grp++) {
+            bool whole_section_free = true;
+            for (int byte = 0; byte < bytes_per_big_group; byte++) {
+                if (!(byte_mask & (1U << byte)))
+                    continue;
+                if (use[grp][byte].first)
+                    whole_section_free = false;
+            }
+            for (int byte = 0; byte < bytes_per_big_group && whole_section_free; byte++) {
+                if (!(byte_mask & (1U << byte)))
+                    continue;
+                order[grp].first.free[byte] = true;
+            }
+        }
+        return;
+    }
+
     for (int grp = 0; grp < big_groups; grp++) {
         for (int byte = 0; byte < bytes_per_big_group; byte++) {
             if (violates_hash_constraints(order, hash_dist, grp, byte))
@@ -856,7 +880,7 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
             order[i].second.group = 2*i+1;
         } else {
             order[i].first.group = i;
-           order[i].second.group = i;
+            order[i].second.group = i;
         }
         order[i].mid_byte_found = false;
         order[i].mid_byte_free = false;
