@@ -65,10 +65,12 @@ class StatefulHashDistSetup : public PassManager {
     const PhvInfo &phv;
     const IR::TempVar *saved_tempvar;
     const IR::MAU::HashDist *saved_hashdist;
+    typedef std::pair<const IR::MAU::AttachedMemory *, const IR::MAU::Table *> HashDistKey;
     ordered_set<cstring> remove_tempvars;
     ordered_set<const IR::Node *> remove_instr;
     ordered_map<cstring, const IR::MAU::HashDist *> stateful_alu_from_hash_dists;
-    ordered_map<const IR::Node *, const IR::MAU::HashDist *> update_hd;
+    ordered_map<HashDistKey, const IR::MAU::HashDist *> update_hd;
+
     profile_t init_apply(const IR::Node *root) override {
         remove_tempvars.clear();
         remove_instr.clear();
@@ -88,8 +90,10 @@ class StatefulHashDistSetup : public PassManager {
     };
     class Update : public MauTransform {
         StatefulHashDistSetup &self;
+        const IR::MAU::Table *orig_tbl = nullptr;
+        const IR::MAU::Table *preorder(IR::MAU::Table *) override;
         const IR::MAU::Table *postorder(IR::MAU::Table *) override;
-        const IR::MAU::Synth2Port *preorder(IR::MAU::Synth2Port *sp) override;
+        const IR::MAU::BackendAttached *preorder(IR::MAU::BackendAttached *ba) override;
         const IR::MAU::Instruction *preorder(IR::MAU::Instruction *sp) override;
      public:
         explicit Update(StatefulHashDistSetup &self) : self(self) {}

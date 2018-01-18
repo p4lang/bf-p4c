@@ -829,7 +829,8 @@ bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CON
  */
 bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const ActionFormat::Use *use,
                                           TableResourceAlloc &alloc) {
-    for (auto at : tbl->attached) {
+    for (auto back_at : tbl->attached) {
+        auto at = back_at->attached;
         auto ad = at->to<IR::MAU::ActionData>();
         if (ad == nullptr) continue;
         if (shared_action_profiles.count(ad))
@@ -892,7 +893,8 @@ void ActionDataBus::update(cstring name, const TableResourceAlloc *alloc) {
 }
 
 void ActionDataBus::update_profile(const IR::MAU::Table *tbl) {
-    for (auto at : tbl->attached) {
+    for (auto back_at : tbl->attached) {
+        auto at = back_at->attached;
         auto ad = at->to<IR::MAU::ActionData>();
         if (ad == nullptr) continue;
         if (shared_action_profiles.count(ad))

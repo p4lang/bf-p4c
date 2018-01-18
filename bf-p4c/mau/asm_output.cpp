@@ -18,7 +18,7 @@ class MauAsmOutput::EmitAttached : public Inspector {
     const IR::MAU::Table        *tbl;
     int                         stage;
     gress_t                     gress;
-    bool is_unattached(const IR::MAU::BackendAttached *at);
+    bool is_unattached(const IR::MAU::AttachedMemory *at);
     bool preorder(const IR::MAU::Counter *) override;
     bool preorder(const IR::MAU::Meter *) override;
     bool preorder(const IR::MAU::Selector *) override;
@@ -989,7 +989,8 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
             out << ".." << (rs.location.byte + byte_sz - 1);
         out << " : ";
         if (use.is_meter_color(rs.byte_offset, rs.immediate)) {
-            for (auto at : tbl->attached) {
+            for (auto back_at : tbl->attached) {
+                auto at = back_at->attached;
                 auto *mtr = at->to<IR::MAU::Meter>();
                 if (mtr == nullptr) continue;
                 out << tbl->get_use_name(mtr) << " color";
@@ -1152,10 +1153,11 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::MAU::Action *act) override {
         act_name = act->name;
         for (auto prim : act->stateful) {
-            auto *at = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::Attached>();
+            auto *at = prim->operands.at(0)->to<IR::GlobalRef>()->obj
+                       ->to<IR::MAU::AttachedMemory>();
             if (prim->operands.size() < 2) continue;
             if (auto aa = prim->operands.at(1)->to<IR::ActionArg>()) {
-                alias[aa->name] = self.find_indirect_index(at, true); } }
+                alias[aa->name] = self.find_indirect_index(at, true, nullptr); } }
         out << indent << canon_name(act->name) << ":" << std::endl;
         action_context_json(act);
         out << indent << "- default_action: { "
@@ -1175,7 +1177,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         act->action.visit_children(*this);
         for (auto prim : act->stateful) {
             auto *at = prim->operands.at(0)->to<IR::GlobalRef>()
-                           ->obj->to<IR::MAU::BackendAttached>();
+                           ->obj->to<IR::MAU::AttachedMemory>();
             auto *salu = at->to<IR::MAU::StatefulAlu>();
             if (prim->operands.size() < 2 && (!salu || salu->instruction.size() <= 1)) continue;
             out << indent << "- " << self.find_attached_name(table, at) << '(';
@@ -1755,7 +1757,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
 
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
-    for (auto at : tbl->attached) {
+    for (auto back_at : tbl->attached) {
+        auto at = back_at->attached;
         if (auto *ti = at->to<IR::MAU::TernaryIndirect>()) {
             have_indirect = true;
             cstring name = tbl->get_use_name(ti);
@@ -1791,11 +1794,12 @@ class MauAsmOutput::UnattachedName : public MauInspector {
     const IR::MAU::Table *comp_table;
     cstring comparison_name;
     cstring return_name;
-    const IR::Attached *unattached;
+    const IR::MAU::AttachedMemory *unattached;
     bool setting = false;
 
 
     bool preorder(const IR::MAU::Table *tbl) {
+        LOG1("Table name " << tbl->name);
         auto p = tbl->name.findlast('.');
         if (tbl->name == comparison_name ||
             (p != nullptr && tbl->name.before(p) == comparison_name)) {
@@ -1815,8 +1819,9 @@ class MauAsmOutput::UnattachedName : public MauInspector {
     }
 
  public:
-    explicit UnattachedName(const IR::MAU::Table* ct, cstring cn, const IR::Attached *at) :
-        comp_table(ct), comparison_name(cn), unattached(at) {}
+    explicit UnattachedName(const IR::MAU::Table* ct, cstring cn,
+                            const IR::MAU::AttachedMemory *at)
+        : comp_table(ct), comparison_name(cn), unattached(at) {}
     cstring name() { return return_name; }
 };
 
@@ -1824,40 +1829,40 @@ class MauAsmOutput::UnattachedName : public MauInspector {
  *  indirect table (counter, meter, stateful, action data) and return its asm name.  Contained
  *  now within the actual IR for Hash Distribution
  */
-std::string MauAsmOutput::find_indirect_index(const IR::Attached *at, bool index_only) const {
+std::string MauAsmOutput::find_indirect_index(const IR::MAU::AttachedMemory *at_mem,
+        bool index_only, const IR::MAU::HashDist *hd) const {
     cstring index_name;
-    if (auto hdat = at->to<IR::MAU::HashDistAttached>()) {
-        if (auto hash_dist = hdat->hash_dist) {
-            return "hash_dist " + std::to_string(hash_dist->units[0]);
-        }
+    if (hd != nullptr) {
+        return "hash_dist " + std::to_string(hd->units[0]);
     }
 
-    if (at->is<IR::MAU::Counter>()) {
+    if (at_mem->is<IR::MAU::Counter>()) {
         return "counter_addr";
-    } else if (at->is<IR::MAU::Meter>() || at->is<IR::MAU::Selector>()) {
+    } else if (at_mem->is<IR::MAU::Meter>() || at_mem->is<IR::MAU::Selector>()) {
         return "meter_addr";
-    } else if (auto salu = at->to<IR::MAU::StatefulAlu>()) {
+    } else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
         if (salu->instruction.size() > 1 && !index_only)
             return "meter_type, meter_addr";
         else
             return "meter_addr";
-    } else if (at->is<IR::MAU::ActionData>()) {
+    } else if (at_mem->is<IR::MAU::ActionData>()) {
         return index_only ? "action_addr" : "action, action_addr";
     } else {
-        BUG("unsupported attached table type in find_indirect_index: %s", at);
+        BUG("unsupported attached table type in find_indirect_index: %s", at_mem);
     }
     return "";
 }
 
 
 cstring MauAsmOutput::find_attached_name(const IR::MAU::Table *tbl,
-        const IR::MAU::BackendAttached *at) const {
+        const IR::MAU::AttachedMemory *at) const {
     auto match_name = tbl->get_use_name();
     auto &memuse = tbl->resources->memuse.at(match_name);
     auto at_name = tbl->get_use_name(at);
 
     if (memuse.unattached_tables.count(at_name) > 0) {
         UnattachedName unattached(tbl, memuse.unattached_tables.at(at_name), at);
+        LOG1("At_name " << at_name);
         pipe->apply(unattached);
         at_name = unattached.name();
     }
@@ -1867,16 +1872,17 @@ cstring MauAsmOutput::find_attached_name(const IR::MAU::Table *tbl,
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
                                     const IR::MAU::Table *tbl) const {
     bool have_action = false;
-    for (auto at : tbl->attached) {
-        if (at->is<IR::MAU::TernaryIndirect>()) continue;
-        if (at->is<IR::MAU::IdleTime>()) continue;  // XXX(zma) idletime is inlined
-        if (at->is<IR::MAU::ActionData>()) {
+    for (auto back_at : tbl->attached) {
+        auto at_mem = back_at->attached;
+        if (at_mem->is<IR::MAU::TernaryIndirect>()) continue;
+        if (at_mem->is<IR::MAU::IdleTime>()) continue;  // XXX(zma) idletime is inlined
+        if (at_mem->is<IR::MAU::ActionData>()) {
             have_action = true;
         }
-        out << indent << at->kind() << ": ";
-        out << find_attached_name(tbl, at);
-        if (at->indexed())
-            out << '(' << find_indirect_index(at, false) << ')';
+        out << indent << at_mem->kind() << ": ";
+        out << find_attached_name(tbl, at_mem);
+        if (at_mem->indexed())
+            out << '(' << find_indirect_index(at_mem, false, back_at->hash_dist) << ')';
         out << std::endl;
     }
 
@@ -1956,7 +1962,7 @@ static void counter_format(std::ostream &out, const IR::MAU::DataAggregation typ
 /** This ensures that the attached table is output one time, as the memory allocation is stored
  *  with one table alone.
  */
-bool MauAsmOutput::EmitAttached::is_unattached(const IR::MAU::BackendAttached *at) {
+bool MauAsmOutput::EmitAttached::is_unattached(const IR::MAU::AttachedMemory *at) {
     auto match_name = tbl->get_use_name();
     auto &memuse = tbl->resources->memuse.at(match_name);
     auto at_name = tbl->get_use_name(at);
@@ -2116,7 +2122,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         if (ti != self.by_stage.end()) {
             for (auto itbl : ti->second) {
                 for (auto at : itbl.tableInfo->attached) {
-                    if (at == sel) {
+                    auto at_mem = at->attached;
+                    if (at_mem == sel) {
                         seltbl = itbl.tableInfo;
                         break;
                     }

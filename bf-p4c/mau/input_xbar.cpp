@@ -1502,11 +1502,9 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
         if (salu->dual) extra_align--;
         BUG_CHECK(extra_align <= 2, "Bad SatefulAlu width"); }
     salu->apply(FindFieldsToAlloc(phv, alloc, fields_needed, extra_align));
-    LOG1("Extra_align " << extra_align);
     unsigned width = salu->width/8U;
     if (!salu->dual) width *= 2;
     unsigned byte_mask = ((1U << width) - 1) << 8;
-    LOG1("Extra_align " << extra_align << " 0x" << hex(byte_mask));
     if (alloc.use.size() == 0) return true;
     if (alloc.use.size() > width) {
         // can't possibly fit
@@ -1769,20 +1767,22 @@ class XBarHashDist : MauInspector {
         /* Sets up the mask and shift portion of hash distribution.  Unlike every other part of
            match central, hash distribution is mask then shift, rather than shift then mask
            (of course it is) */
+
+        auto *back_at = findContext<IR::MAU::BackendAttached>();
         if (hdt == IXBar::HashDistUse::COUNTER_ADR) {
-            auto *counter = findContext<IR::MAU::Counter>();
+            auto *counter = back_at->attached->to<IR::MAU::Counter>();
             int per_word = CounterPerWord(counter);
             int shift = 3 - ceil_log2(per_word);
             bitvec mask(0, hd->bit_width);
             hd_use.shifts[hd_use.slices[0]] = shift;
             hd_use.masks[hd_use.slices[0]] = mask;
         } else if (hdt == IXBar::HashDistUse::METER_ADR) {
-            if (findContext<IR::MAU::Meter>()) {
+            if (back_at->attached->is<IR::MAU::Meter>()) {
                 int shift = 7;
                 bitvec mask(0, hd->bit_width);
                 hd_use.shifts[hd_use.slices[0]] = shift;
                 hd_use.masks[hd_use.slices[0]] = mask;
-            } else if (auto *salu = findContext<IR::MAU::StatefulAlu>()) {
+            } else if (auto *salu = back_at->attached->to<IR::MAU::StatefulAlu>()) {
                 int per_word = RegisterPerWord(salu);
                 int shift = 7 - ceil_log2(per_word);
                 bitvec mask(0, hd->bit_width);
@@ -1813,10 +1813,11 @@ class XBarHashDist : MauInspector {
         IXBar::HashDistUse::HashDistType hdt = IXBar::HashDistUse::UNKNOWN;
         if (findContext<IR::MAU::Instruction>()) {
             hdt = IXBar::HashDistUse::IMMEDIATE;
-        } else if (auto at = findContext<IR::MAU::HashDistAttached>()) {
-            if (at->is<IR::MAU::Counter>())
+        } else if (auto back_at = findContext<IR::MAU::BackendAttached>()) {
+            auto at_mem = back_at->attached;
+            if (at_mem->is<IR::MAU::Counter>())
                 hdt = IXBar::HashDistUse::COUNTER_ADR;
-            else if (at->is<IR::MAU::Meter>() || at->is<IR::MAU::StatefulAlu>())
+            else if (at_mem->is<IR::MAU::Meter>() || at_mem->is<IR::MAU::StatefulAlu>())
                 hdt = IXBar::HashDistUse::METER_ADR;
         }
 
@@ -1930,14 +1931,15 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         }
     }
 
-    for (auto at : tbl->attached) {
-        if (auto as = at->to<IR::MAU::Selector>()) {
+    for (auto back_at : tbl->attached) {
+        auto at_mem = back_at->attached;
+        if (auto as = at_mem->to<IR::MAU::Selector>()) {
             if (!attached_tables.count(as) &&
                 !allocSelector(as, tbl, phv, alloc.selector_ixbar, false, tbl->name) &&
                 !allocSelector(as, tbl, phv, alloc.selector_ixbar, true, tbl->name)) {
                 alloc.clear_ixbar();
                 return false; } }
-        if (auto salu = at->to<IR::MAU::StatefulAlu>()) {
+        if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
             if (!attached_tables.count(salu) &&
                 !allocStateful(salu, phv, alloc.salu_ixbar, false) &&
                 !allocStateful(salu, phv, alloc.salu_ixbar, true)) {

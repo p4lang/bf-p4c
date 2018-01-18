@@ -18,7 +18,8 @@ TableResourceAlloc *TableResourceAlloc::clone_atcam(const IR::MAU::Table *tbl,
     rv->memuse.emplace(atcam_name, memuse.at(orig_atcam_name));
     auto &atcam_alloc = rv->memuse[atcam_name];
 
-    for (auto at : tbl->attached) {
+    for (auto back_at : tbl->attached) {
+        auto at = back_at->attached;
         auto orig_at_use_name = tbl->get_use_name(at);
         if (at->direct)
             orig_at_use_name = tbl->get_use_name(at, false, 0, logical_table);

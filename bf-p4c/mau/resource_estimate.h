@@ -16,7 +16,7 @@ struct StageUseEstimate {
     int ternary_ixbar_groups = 0;
     safe_vector<LayoutOption> layout_options;
     safe_vector<ActionFormat::Use> action_formats;
-    ordered_set<const IR::MAU::ActionData *> shared_action_data;
+    ordered_set<const IR::MAU::AttachedMemory *> shared_attached;
     int preferred_index;
     StageUseEstimate() {}
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
@@ -28,8 +28,8 @@ struct StageUseEstimate {
         ternary_ixbar_groups += a.ternary_ixbar_groups;
         return *this; }
     StageUseEstimate(const IR::MAU::Table *, int &, const LayoutChoices *lc,
-                     ordered_set<const IR::MAU::ActionData *> sad
-                         = ordered_set<const IR::MAU::ActionData *>(),
+                     ordered_set<const IR::MAU::AttachedMemory *> sad
+                         = ordered_set<const IR::MAU::AttachedMemory *>(),
                      bool table_placement = false);
 
     StageUseEstimate operator+(const StageUseEstimate &a) const {
@@ -49,7 +49,7 @@ struct StageUseEstimate {
     void clear() {
         logical_ids = 0; srams = 0; tcams = 0; maprams = 0;
         exact_ixbar_bytes = 0; ternary_ixbar_groups = 0;
-        shared_action_data.clear();
+        shared_attached.clear();
     }
     void options_to_ways(const IR::MAU::Table *tbl, int &entries);
     void options_to_rams(const IR::MAU::Table *tbl, bool table_placement);

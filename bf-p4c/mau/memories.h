@@ -194,7 +194,7 @@ struct Memories {
         int hash_group = -1;  // Which hash group the exact match way is using
         int logical_table = 0;  // For ATCAM tables, which logical table this partition is based
         bool direct = false;  // Whether the attached table is directly or indirectly addressed
-        const IR::Attached *attached = nullptr;
+        const IR::MAU::AttachedMemory *attached = nullptr;
         int recent_home_row = -1;  // For swbox users, most recent row to oflow to
         enum type_t { EXACT, ACTION, STATS, METER, REGISTER, SELECTOR, TIND, IDLETIME, ATCAM } type;
 
@@ -377,7 +377,7 @@ struct Memories {
     safe_vector<table_alloc *>       idletime_tables;
     safe_vector<SRAM_group *>        idletime_groups;
 
-    ordered_map<const IR::MAU::BackendAttached *, table_alloc *> shared_attached;
+    ordered_map<const IR::MAU::AttachedMemory *, table_alloc *> shared_attached;
 
     unsigned side_mask(RAM_side_t side);
     unsigned partition_mask(RAM_side_t side);

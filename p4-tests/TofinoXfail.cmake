@@ -955,7 +955,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "SALU Selector Table not found?"
+  "Multiple tables claim to be attached table"
   extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
   )
 

@@ -241,10 +241,9 @@ static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl) 
         stage = pl->stage;
         for (; pl && pl->stage == stage; pl = pl->prev) {
             rv += pl->use;
-            for (auto at : pl->table->attached) {
-                if (auto ad = at->to<IR::MAU::ActionData>()) {
-                    rv.shared_action_data.insert(ad);
-                }
+            for (auto back_at : pl->table->attached) {
+                auto at = back_at->attached;
+                rv.shared_attached.insert(at);
             }
         }
     }
@@ -425,7 +424,8 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
             j++;
             continue;
         }
-        for (auto at : p->table->attached) {
+        for (auto back_at : p->table->attached) {
+            auto at = back_at->attached;
             if ((p_as = at->to<IR::MAU::Selector>()) != nullptr)
                 break;
         }
@@ -458,7 +458,8 @@ static void coord_action_data_xbar(const TablePlacement::Placed *curr,
             j++;
             continue;
         }
-        for (auto at : p->table->attached) {
+        for (auto back_at : p->table->attached) {
+            auto at = back_at->attached;
             if ((p_ad = at->to<IR::MAU::ActionData>()) != nullptr)
                 break;
         }
@@ -521,7 +522,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     // According to the driver team, different stage tables can have different action
     // data allocations, so the algorithm doesn't have to prefer this allocation across
     // stages
-    StageUseEstimate min_use(t, min_entries, &lc, stage_current.shared_action_data);
+    StageUseEstimate min_use(t, min_entries, &lc, stage_current.shared_attached);
 
     bool allocated = false;
     bool ixbar_allocation_bug = false;
@@ -548,7 +549,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
-        rv->use = StageUseEstimate(t, rv->entries, &lc, stage_current.shared_action_data);
+        rv->use = StageUseEstimate(t, rv->entries, &lc, stage_current.shared_attached);
         is_gw = rv->entries == 0;
         // FIXME: This is not the appropriate way to check if a table is a single gateway
 
@@ -962,14 +963,14 @@ static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_
         || layout_option->layout.no_match_miss_path()) {
         LOG3("  Adding Ternary Indirect table to " << tbl->name);
         auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
-        tbl->attached.push_back(tern_indir);
+        tbl->attached.push_back(new IR::MAU::BackendAttached(tern_indir->srcInfo, tern_indir));
     }
     if (layout_option->layout.direct_ad_required()) {
         LOG3("  Adding Action Data Table to " << tbl->name);
         cstring ad_name = tbl->name + "$action";
         auto *act_data = new IR::MAU::ActionData(IR::ID(ad_name));
         act_data->direct = true;
-        tbl->attached.push_back(act_data);
+        tbl->attached.push_back(new IR::MAU::BackendAttached(act_data->srcInfo, act_data));
     }
 }
 
@@ -1086,7 +1087,6 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             if (gw_layout_used)
                 tbl->layout += gw_layout;
         }
-        LOG1("Table layout " << tbl->layout.no_match_miss_path() << " " << tbl->name);
         if (tbl->layout.atcam)
             return break_up_atcam(tbl, it->second);
         else
@@ -1154,14 +1154,17 @@ IR::Expression *TablePlacement::preorder(IR::MAU::HashDist *hd) {
     auto hash_dists = tbl->resources->hash_dists;
 
     IXBar::HashDistUse::HashDistType type = IXBar::HashDistUse::UNKNOWN;
-    if (findContext<IR::MAU::Counter>())
-        type = IXBar::HashDistUse::COUNTER_ADR;
-    else if (findContext<IR::MAU::Meter>())
-        type = IXBar::HashDistUse::METER_ADR;
-    else if (findContext<IR::MAU::StatefulAlu>())
-        type = IXBar::HashDistUse::METER_ADR;
-    else if (findContext<IR::MAU::Action>())
+
+    if (auto back_at = findContext<IR::MAU::BackendAttached>()) {
+        if (back_at->attached->is<IR::MAU::Counter>())
+            type = IXBar::HashDistUse::COUNTER_ADR;
+        else if (back_at->attached->is<IR::MAU::Meter>())
+            type = IXBar::HashDistUse::METER_ADR;
+        else if (back_at->attached->is<IR::MAU::StatefulAlu>())
+            type = IXBar::HashDistUse::METER_ADR;
+    } else if (findContext<IR::MAU::Action>()) {
         type = IXBar::HashDistUse::IMMEDIATE;
+    }
 
     for (auto hash_dist : hash_dists) {
         if (hash_dist.type != type) continue;

@@ -62,7 +62,7 @@ class TablesMutuallyExclusive : public MauInspector {
 };
 
 class SharedIndirectAttachedAnalysis : public MauInspector {
-    std::map<const IR::MAU::BackendAttached *,
+    std::map<const IR::MAU::AttachedMemory *,
              safe_vector<const IR::MAU::Table *>> backend_users;
     const TablesMutuallyExclusive &mutex;
 
@@ -71,15 +71,15 @@ class SharedIndirectAttachedAnalysis : public MauInspector {
         backend_users.clear();
         return rv;
     }
-    bool preorder(const IR::MAU::BackendAttached *ba) override;
+    bool preorder(const IR::MAU::AttachedMemory *ba) override;
     bool preorder(const IR::MAU::Action *) override;
  public:
     safe_vector<const IR::MAU::Table *>
-    all_shared_tables(const IR::MAU::BackendAttached *ba) const {
+    all_shared_tables(const IR::MAU::AttachedMemory *am) const {
         safe_vector<const IR::MAU::Table *> empty;
-        if (ba == nullptr || backend_users.count(ba) == 0)
+        if (am == nullptr || backend_users.count(am) == 0)
             return empty;
-        return backend_users.at(ba);
+        return backend_users.at(am);
     }
     explicit SharedIndirectAttachedAnalysis(const TablesMutuallyExclusive &m) : mutex(m) {}
 };

@@ -194,8 +194,8 @@ class Table : BFN::Unit {
     static constexpr int TIND_NAME = 1;
     static constexpr int AD_NAME = 2;
 #end
-    cstring get_use_name(const IR::Attached *at = nullptr, bool is_gw = false, int type = 0,
-                         int logical_table = -1) const;
+    cstring get_use_name(const IR::MAU::AttachedMemory *at = nullptr, bool is_gw = false,
+                         int type = 0, int logical_table = -1) const;
 
 #noconstructor
     Table(cstring n, gress_t gr) : name(n), gress(gr) {}
@@ -290,23 +290,22 @@ class Table : BFN::Unit {
 #apply
 }
 
-abstract BackendAttached : Attached {
+
+class BackendAttached {
+    NullOK HashDist hash_dist = nullptr;
+    AttachedMemory attached;
+#nodbprint
+}
+
+abstract AttachedMemory : Attached {
     bool direct = false;
     int size = 0;
     virtual bool indexed() const override { return !direct; }
 }
 
-/** Specifically, Action Data, Counters, Meters, and Stateful can be addressed by hash
- *  distribution, as indicated directly from a P4 program. 
- *  FIXME: No support yet for Action Data tables with this linkage
- */
-abstract HashDistAttached : BackendAttached {
-    NullOK HashDist hash_dist = nullptr;
-}
-
 /** Any attached table that has a keeps stateful information about flows.
  */
-abstract Synth2Port : HashDistAttached {
+abstract Synth2Port : AttachedMemory {
     ID table = {};
     bool saturating = false;
     int width = 0;
@@ -373,7 +372,7 @@ class StatefulAlu : Synth2Port {
     const Type *getType() const override { return Type_Register::get(); }
 }
 
-class Selector : BackendAttached {
+class Selector : AttachedMemory {
     ID type = {};
     ID mode = {};
     ID algorithm = {};
@@ -388,7 +387,7 @@ class Selector : BackendAttached {
 
 /** Ternary indirect table used to hold overhead (adressing pointers and next table info)
  * of ternary match tables */
-class TernaryIndirect : BackendAttached {
+class TernaryIndirect : AttachedMemory {
 #noconstructor
 #nodbprint
     TernaryIndirect(cstring tbl_name) { name = IR::ID(tbl_name + "$tind"); direct = true; }
@@ -396,14 +395,14 @@ class TernaryIndirect : BackendAttached {
 }
 
 /** Action data table used to hold action parameters */
-class ActionData : HashDistAttached {
+class ActionData : AttachedMemory {
 #nodbprint
     const char *kind() const override { return "action"; }
     bool indexed() const override { return !direct; }
 }
 
 /** Idletime table **/
-class IdleTime : BackendAttached {
+class IdleTime : AttachedMemory {
     int precision = 3;
     int interval = 7;
     cstring two_way_notification = "enable";
@@ -519,7 +518,7 @@ class ActionDataConstant : Expression {
 
 /// A use of an attached table output; an operand of an instruction
 class AttachedOutput : Expression {
-    BackendAttached    attached;
+    AttachedMemory     attached;
     dbprint { out << attached->name; }
 }
 

@@ -287,12 +287,15 @@ void StageUseEstimate::options_to_atcam_entries(const IR::MAU::Table *tbl, int &
 void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
                                                LayoutOption *lo,
                                                bool table_placement) {
-    for (auto at : tbl->attached) {
+    for (auto back_at : tbl->attached) {
+        auto at = back_at->attached;
         int per_word = 0;
         int width = 1;
         int attached_entries = lo->entries;
         bool need_srams = true;
         bool need_maprams = false;
+        if (shared_attached.count(at) > 0)
+            continue;
         if (auto *ctr = at->to<IR::MAU::Counter>()) {
             per_word = CounterPerWord(ctr);
             if (!ctr->direct) attached_entries = ctr->size;
@@ -310,8 +313,6 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
             // as that is decided after the table layout is picked
             if (!table_placement && ad->direct)
                 BUG("Direct Action Data table exists before table placement occurs");
-            if (shared_action_data.find(ad) != shared_action_data.end())
-                continue;
             width = 1;
             per_word = ActionDataPerWord(&lo->layout, &width);
             if (!ad->direct)
@@ -457,9 +458,9 @@ void StageUseEstimate::fill_estimate_from_option(int &entries) {
 /* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
 StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
                                    const LayoutChoices *lc,
-                                   ordered_set<const IR::MAU::ActionData *> sad /* Defaulted */,
+                                   ordered_set<const IR::MAU::AttachedMemory *> sa /* Defaulted */,
                                    bool table_placement)
-    : shared_action_data(sad) {
+    : shared_attached(sa) {
     // Because the table is const, the layout options must be copied into the Object
     logical_ids = 1;
     layout_options.clear();
@@ -538,7 +539,10 @@ void StageUseEstimate::calculate_for_leftover_atcams(const IR::MAU::Table *tbl, 
    of the size of table, such as indirect counters, action profiles, etc.*/
 void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
                                           LayoutOption *lo) {
-    for (auto at : tbl->attached) {
+    for (auto back_at : tbl->attached) {
+         auto at = back_at->attached;
+         if (shared_attached.count(at) > 0)
+             continue;
          int attached_entries = 0;
          int per_word = 0;
          int width = 1;
@@ -561,7 +565,6 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
         } else if (auto *ad = at->to<IR::MAU::ActionData>()) {
             // Because this is called before and after table placement
             if (ad->direct) continue;
-            if (shared_action_data.find(ad) != shared_action_data.end()) continue;
             per_word = ActionDataPerWord(&lo->layout, &width);
             attached_entries = ad->size;
         } else if (at->is<IR::MAU::Selector>()) {
@@ -590,7 +593,10 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
 void StageUseEstimate::calculate_per_row_vector(safe_vector<RAM_counter> &per_word_and_width,
                                                 const IR::MAU::Table *tbl,
                                                 LayoutOption *lo) {
-    for (auto at : tbl->attached) {
+    for (auto back_at : tbl->attached) {
+         auto at = back_at->attached;
+         if (shared_attached.count(at) > 0)
+             continue;
          int per_word = 0;
          int width = 1;
          bool need_srams = true;

@@ -233,7 +233,7 @@ static IR::ID getAnnotID(const IR::Annotations *annot, cstring name) {
     return IR::ID();
 }
 
-static IR::MAU::BackendAttached *createIdleTime(cstring name, const IR::Annotations *annot) {
+static IR::MAU::AttachedMemory *createIdleTime(cstring name, const IR::Annotations *annot) {
     auto idletime = new IR::MAU::IdleTime(name);
 
     if (auto s = annot->getSingle("idletime_precision")) {
@@ -310,9 +310,9 @@ cstring getTypeName(const IR::Type* type) {
     return tname;
 }
 
-static IR::MAU::BackendAttached *createAttached(Util::SourceInfo srcInfo,
+static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         cstring name, const IR::Type *type, const IR::Vector<IR::Expression> *args,
-        const IR::Annotations *annot, const IR::MAU::BackendAttached **created_ap = nullptr) {
+        const IR::Annotations *annot, const IR::MAU::AttachedMemory **created_ap = nullptr) {
     auto baseType = getBaseType(type);
     auto tname = getTypeName(baseType);
 
@@ -413,8 +413,8 @@ class FixP4Table : public Inspector {
         if (prop->name == "counters" || prop->name == "meters" ||
                    prop->name == "implementation") {
             auto pval = ev->expression;
-            const IR::MAU::BackendAttached *obj = nullptr;
-            const IR::MAU::BackendAttached *side_obj = nullptr;
+            const IR::MAU::AttachedMemory *obj = nullptr;
+            const IR::MAU::AttachedMemory *side_obj = nullptr;
             if (auto cc = pval->to<IR::ConstructorCallExpression>()) {
                 auto baseType = getBaseType(cc->type);
                 auto tname = getTypeName(baseType);
@@ -447,9 +447,9 @@ class FixP4Table : public Inspector {
                 LOG3("Created " << obj->node_type_name() << ' ' << obj->name << " (pt 2)"); }
             BUG_CHECK(obj, "not valid for %s: %s", prop->name, pval);
             LOG3("attaching " << obj->name << " to " << tt->name);
-            tt->attached.push_back(obj);
+            tt->attached.push_back(new IR::MAU::BackendAttached(obj->srcInfo, obj));
             if (side_obj)
-                tt->attached.push_back(side_obj);
+                tt->attached.push_back(new IR::MAU::BackendAttached(side_obj->srcInfo, side_obj));
         } else if (prop->name == "support_timeout") {
             auto bool_lit = ev->expression->to<IR::BoolLiteral>();
             if (bool_lit == nullptr || bool_lit->value == false)
@@ -457,7 +457,7 @@ class FixP4Table : public Inspector {
             auto table = findContext<IR::P4Table>();
             auto annot = table->getAnnotations();
             auto it = createIdleTime(table->name, annot);
-            tt->attached.push_back(it);
+            tt->attached.push_back(new IR::MAU::BackendAttached(it->srcInfo, it));
         }
         return false;
     }
@@ -594,10 +594,17 @@ bool AttachTables::DefineGlobalRefs::preorder(IR::MAU::Action *act) {
 
 void AttachTables::DefineGlobalRefs::postorder(IR::MAU::Table *tbl) {
     for (auto a : attached[tbl->name]) {
-        if (contains(tbl->attached, a)) {
-            LOG3(a->name << " already attached to " << tbl->name);
+        bool already_attached = false;
+        for (auto al_a : tbl->attached) {
+            if (a->attached == al_a->attached) {
+                already_attached = true;
+                break;
+            }
+        }
+        if (already_attached) {
+            LOG3(a->attached->name << " already attached to " << tbl->name);
         } else {
-            LOG3("attaching " << a->name << " to " << tbl->name);
+            LOG3("attaching " << a->attached->name << " to " << tbl->name);
             tbl->attached.push_back(a);
         }
     }
@@ -610,21 +617,16 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
     if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
         auto tt = findContext<IR::MAU::Table>();
         BUG_CHECK(tt, "GlobalRef not in a table");
-        // Check to see if the attached table has already been created in FixP4Table
-        for (auto att : tt->attached) {
-            if (att->name == di->externalName()) {
-                gref->obj = self.converted[di] = att;
-                break; } }
+        const IR::MAU::AttachedMemory *obj = nullptr;
         if (self.converted.count(di)) {
-            gref->obj = self.converted.at(di);
-            if (!contains(attached[tt->name], self.converted.at(di)))
-                attached[tt->name].push_back(self.converted.at(di));
+            obj = self.converted.at(di);
+            gref->obj = obj;
         } else if (auto att = createAttached(di->srcInfo, di->externalName(),
                                              di->type, di->arguments, di->annotations,
                                              nullptr)) {
             LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
             gref->obj = self.converted[di] = att;
-            attached[tt->name].push_back(att);
+            obj = att;
         } else if (di->type->toString().startsWith("register_action<") ||
                    di->type->toString() == "selector_action") {
             auto salu = findAttachedSalu(di);
@@ -633,8 +635,20 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
             if (salu == nullptr)
                 return;
             gref->obj = salu;
-            if (!contains(attached[tt->name], salu))
-                attached[tt->name].push_back(salu);
+            obj = salu;
+        }
+
+        if (obj) {
+            bool already_attached = false;
+            for (auto at : attached[tt->name]) {
+                if (at->attached == obj) {
+                    already_attached = true;
+                    break;
+                }
+            }
+            if (!already_attached) {
+                attached[tt->name].push_back(new IR::MAU::BackendAttached(obj->srcInfo, obj));
+            }
         }
     }
 }
@@ -671,9 +685,7 @@ class GetTofinoTables : public Inspector {
 
  public:
     GetTofinoTables(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                    gress_t gr, IR::BFN::Pipe *p,
-                    std::map<const IR::Declaration_Instance *,
-                             const IR::MAU::BackendAttached *> &con)
+                    gress_t gr, IR::BFN::Pipe *p, DeclarationConversions &con)
     : refMap(refMap), typeMap(typeMap), gress(gr), pipe(p), converted(con) {}
 
  private:
@@ -836,7 +848,7 @@ class TnaPipe {
     const IR::P4Parser *parser;
     const IR::P4Control *mau;
     const IR::P4Control *deparser;
-    std::map<const IR::Declaration_Instance *, const IR::MAU::BackendAttached *> converted;
+    DeclarationConversions converted;
 
     TnaPipe(const IR::PackageBlock* main, gress_t gress,
             P4::ReferenceMap* refMap, P4::TypeMap* typeMap)

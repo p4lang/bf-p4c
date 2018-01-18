@@ -58,7 +58,7 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
  *  headaches in debugging when trying to add a new table.  If anyone has a better solution
  *  to this, then I'm all ears.
  */
-cstring IR::MAU::Table::get_use_name(const IR::Attached *at, bool is_gw, int type,
+cstring IR::MAU::Table::get_use_name(const IR::MAU::AttachedMemory *at, bool is_gw, int type,
                                      int logical_table) const {
     cstring rv = name;
     // After table placement, the atcam partition is actually part of the table name

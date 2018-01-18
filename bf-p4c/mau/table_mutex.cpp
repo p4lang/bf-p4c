@@ -81,17 +81,17 @@ bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::Action *) {
     return false;
 }
 
-bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::BackendAttached *ba) {
+bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::AttachedMemory *am) {
     visitAgain();
-    if (ba->direct)
+    if (am->direct)
         return false;
     auto *tbl = findContext<IR::MAU::Table>();
-    for (auto *check_tbl : backend_users[ba]) {
+    for (auto *check_tbl : backend_users[am]) {
         if (!mutex(tbl, check_tbl) && !mutex.action(tbl, check_tbl)) {
             error("Tables %s and %s are not mutually exclusive, yet share %s",
-                  tbl->name, check_tbl->name, ba->name);
+                  tbl->name, check_tbl->name, am->name);
         }
     }
-    backend_users[ba].push_back(tbl);
+    backend_users[am].push_back(tbl);
     return false;
 }

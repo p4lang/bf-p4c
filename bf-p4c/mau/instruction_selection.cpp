@@ -504,8 +504,10 @@ void StatefulHashDistSetup::Scan::postorder(const IR::MAU::Table *tbl) {
             }
 
             if (prim->operands.size() >= index_operand(prim) + 1) {
-                if (auto hd = self.find_hash_dist(prim->operands[index_operand(prim)], prim))
-                    self.update_hd[synth2port] = hd;
+                if (auto hd = self.find_hash_dist(prim->operands[index_operand(prim)], prim)) {
+                    HashDistKey hdk = std::make_pair(synth2port, tbl);
+                    self.update_hd[hdk] = hd;
+                }
             }
         }
     }
@@ -516,22 +518,36 @@ const IR::MAU::Table *StatefulHashDistSetup::Update::postorder(IR::MAU::Table *t
         for (auto prim : act->stateful) {
             auto gref = prim->operands[0]->to<IR::GlobalRef>();
             auto synth2port = gref->obj->to<IR::MAU::Synth2Port>();
-            if (!contains(tbl->attached, synth2port)) {
-                // FIXME -- Needed because extract_maupipe does not correctly attach tables to
-                // multiple match tables.
-                // BUG("%s not attached to %s", stateful->name, tbl->name);
-                tbl->attached.push_back(synth2port);
+            bool already_attached = false;
+            for (auto back_at : tbl->attached) {
+                if (synth2port == back_at->attached) {
+                    already_attached = true;
+                    break;
+                }
+            }
+
+            if (!already_attached) {
+                BUG("%s not attached to %s", synth2port->name, tbl->name);
+                // tbl->attached.push_back(synth2port);
             }
         }
     }
     return tbl;
 }
 
-const IR::MAU::Synth2Port *StatefulHashDistSetup::Update::preorder(IR::MAU::Synth2Port *sp) {
-    if (auto hd = ::get(self.update_hd, getOriginal()))
-        sp->hash_dist = hd;
+const IR::MAU::Table *StatefulHashDistSetup::Update::preorder(IR::MAU::Table *tbl) {
+    orig_tbl = getOriginal()->to<IR::MAU::Table>();
+    return tbl;
+}
+
+const IR::MAU::BackendAttached *
+        StatefulHashDistSetup::Update::preorder(IR::MAU::BackendAttached *ba) {
+    HashDistKey hdk = std::make_pair(ba->attached, orig_tbl);
+    if (auto hd = ::get(self.update_hd, hdk)) {
+        ba->hash_dist = hd;
+    }
     prune();
-    return sp;
+    return ba;
 }
 
 const IR::MAU::Instruction *StatefulHashDistSetup::Update::preorder(IR::MAU::Instruction *inst) {

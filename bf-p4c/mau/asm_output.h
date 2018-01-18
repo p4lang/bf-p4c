@@ -93,7 +93,8 @@ class MauAsmOutput : public MauInspector {
     void emit_ternary_match(std::ostream &out, indent_t, const TableFormat::Use &use) const;
     void emit_atcam_match(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage, gress_t gress) const;
-    std::string find_indirect_index(const IR::Attached *at, bool index_only) const;
+    std::string find_indirect_index(const IR::MAU::AttachedMemory *am, bool index_only,
+            const IR::MAU::HashDist *hd) const;
     void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     void emit_action_data_format(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
             const IR::MAU::Action *af) const;
@@ -104,7 +105,7 @@ class MauAsmOutput : public MauInspector {
     bool emit_idletime(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
                        const IR::MAU::IdleTime *id) const;
     cstring find_attached_name(const IR::MAU::Table *tbl,
-           const IR::MAU::BackendAttached *ba) const;
+           const IR::MAU::AttachedMemory *am) const;
     class EmitAction;
     class EmitAttached;
     class UnattachedName;

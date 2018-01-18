@@ -1330,7 +1330,8 @@ bool Memories::allocate_all_tind() {
    Selectors must be done before indirect actions */
 void Memories::swbox_bus_selectors_indirects() {
     for (auto *ta : selector_tables) {
-        for (auto at : ta->table->attached) {
+        for (auto back_at : ta->table->attached) {
+            auto at = back_at->attached;
             // FIXME: need to adjust if the action selector is larger than 2 RAMs, based
             // on the pragmas provided to the compiler
             const IR::MAU::Selector *as = nullptr;
@@ -1343,7 +1344,8 @@ void Memories::swbox_bus_selectors_indirects() {
     }
 
     for (auto *ta : indirect_action_tables) {
-        for (auto at : ta->table->attached) {
+        for (auto back_at : ta->table->attached) {
+            auto at = back_at->attached;
             const IR::MAU::ActionData *ad = nullptr;
             if ((ad = at->to<IR::MAU::ActionData>()) == nullptr)
                 continue;
@@ -1375,7 +1377,8 @@ void Memories::swbox_bus_selectors_indirects() {
    the stage */
 void Memories::swbox_bus_meters_counters() {
     for (auto *ta : stats_tables) {
-        for (auto at : ta->table->attached) {
+        for (auto back_at : ta->table->attached) {
+            auto at = back_at->attached;
             const IR::MAU::Counter *stats = nullptr;
             if ((stats = at->to<IR::MAU::Counter>()) == nullptr)
                 continue;
@@ -1397,7 +1400,8 @@ void Memories::swbox_bus_meters_counters() {
 
     for (auto *ta : meter_tables) {
         const IR::MAU::Meter *meter = nullptr;
-        for (auto at : ta->table->attached) {
+        for (auto back_at : ta->table->attached) {
+            auto at = back_at->attached;
             if ((meter = at->to<IR::MAU::Meter>()) == nullptr)
                 continue;
             int depth;
@@ -1424,7 +1428,8 @@ void Memories::swbox_bus_meters_counters() {
 
     for (auto *ta : stateful_tables) {
         const IR::MAU::StatefulAlu *salu = nullptr;
-        for (auto at : ta->table->attached) {
+        for (auto back_at : ta->table->attached) {
+            auto at = back_at->attached;
             if ((salu = at->to<IR::MAU::StatefulAlu>()) == nullptr)
                 continue;
             if (salu->selector)
@@ -2843,7 +2848,8 @@ bool Memories::allocate_idletime(SRAM_group* idletime_group) {
 
 bool Memories::allocate_all_idletime() {
     for (auto *ta : idletime_tables) {
-        for (auto at : ta->table->attached) {
+        for (auto back_at : ta->table->attached) {
+            auto at = back_at->attached;
             const IR::MAU::IdleTime *id = nullptr;
             if ((id = at->to<IR::MAU::IdleTime>()) == nullptr)
                 continue;

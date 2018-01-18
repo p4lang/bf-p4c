@@ -46,7 +46,8 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
         out << endl;
     const char *sep = ": ";
     for (auto &a : attached) {
-        out << sep << a->kind() << ' ' << a->name;
+        auto a_mem = a->attached;
+        out << sep << a_mem->kind() << ' ' << a_mem->name;
         sep = ", "; }
     if (!(dbgetflags(out) & TableNoActions))
         for (auto &a : attached)

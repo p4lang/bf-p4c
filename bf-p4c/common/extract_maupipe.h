@@ -27,7 +27,7 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *, bool useTna);
  *  expanded at somepoint.
  */
 typedef std::map<const IR::Declaration_Instance *,
-                 const IR::MAU::BackendAttached *> DeclarationConversions;
+                 const IR::MAU::AttachedMemory *> DeclarationConversions;
 
 class AttachTables : public PassManager {
     const P4::ReferenceMap *refMap;
