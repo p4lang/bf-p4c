@@ -802,6 +802,12 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
 
 void AllocatePHV::end_apply() {
     LOG1("--- BEGIN PHV ALLOCATION ----------------------------------------------------");
+    // HACK WARNING:
+    // The meter hack, all destination of meter color go to 8-bit container.
+    // TODO(yumin): remove this once this hack is removed in mau.
+    for (const auto* f : actions_i.meter_color_dests()) {
+        pa_container_sizes_i.add_constraint(f, { PHV::Size::b8 }); }
+
     LOG1(pa_container_sizes_i);
     auto alloc = make_concrete_allocation();
     auto container_groups = makeDeviceContainerGroups();
