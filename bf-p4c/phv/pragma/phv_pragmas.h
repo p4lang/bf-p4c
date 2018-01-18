@@ -5,7 +5,8 @@ namespace PHV {
 namespace pragma {
 
 constexpr const char* MUTUALLY_EXCLUSIVE = "pa_mutually_exclusive";
-constexpr const char* CONTAINER_SIZE = "pa_container_size";
+constexpr const char* CONTAINER_SIZE     = "pa_container_size";
+constexpr const char* SOLITARY           = "pa_solitary";
 
 }
 }

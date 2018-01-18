@@ -11,7 +11,8 @@
  *
  * This pass will gathering all pa_container_size prama and generate:
  * 1. pa_container_sizes_i: map specified fields to specified sizes;
- * 2. field_slice_req_i: if enforcing a pragma, the fieldslices it must be splitted to.
+ * 2. field_slice_req_i: if enforcing a pragma, the fieldslices it must be splitted to,
+ *    and the size of container that that fieldslice must be allocated to.
  *
  * Use satisfies_pragmas() on a set of sliced super_cluster to check whether this slice
  * satisfies pragmas, when slicing.
@@ -25,7 +26,7 @@ class PragmaContainerSize : public Inspector {
 
     /** Get global pragma pa_container_size.
      */
-    void postorder(const IR::BFN::Pipe* pipe) override;
+    bool preorder(const IR::BFN::Pipe* pipe) override;
 
     /** Populate field_slice_req_i based on pa_container_sizes_i.
      */
@@ -33,6 +34,9 @@ class PragmaContainerSize : public Inspector {
 
     boost::optional<PHV::Size>
     convert_to_phv_size(const IR::Constant* ir);
+
+    void update_field_slice_req(const PHV::Field* field,
+                                const std::vector<PHV::Size>& sizes);
 
  public:
     explicit PragmaContainerSize(const PhvInfo& phv) : phv_i(phv) { }
@@ -54,10 +58,24 @@ class PragmaContainerSize : public Inspector {
      */
     boost::optional<PHV::Size> field_slice_req(const PHV::FieldSlice& fs) const;
 
-    /** Require: Forall field showed in @p sliced, all FieldSlices of that field
-       exists in @p sliced.
+    /** For a result of slicing a supercluster, a list of supercluster, return
+     * a set of fields that is sliced in the way that pragma can not be satisfied.
+     *
+     *  Require: Forall field showed in @p sliced, all FieldSlices of that field
+     *  exists in @p sliced.
      */
-    bool satisfies_pragmas(std::list<PHV::SuperCluster*> sliced) const;
+    std::set<const PHV::Field*>
+    unsatisfiable_fields(const std::list<PHV::SuperCluster*>& sliced) const;
+
+    /** Ignore unsatisfiable fields related pragma.
+     */
+    void ignore_fields(const std::set<const PHV::Field*>& fields);
+
+    /** Add ad-lib constraint.
+     *
+     *  In phv allocation, use this at the begging.
+     */
+    void add_constraint(const PHV::Field* field, std::vector<PHV::Size> sizes);
 };
 
 std::ostream& operator<<(std::ostream& out, const PragmaContainerSize& pa_cs);

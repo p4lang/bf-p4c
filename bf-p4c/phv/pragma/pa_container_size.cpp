@@ -14,7 +14,7 @@ PragmaContainerSize::convert_to_phv_size(const IR::Constant* ir) {
     return boost::make_optional(static_cast<PHV::Size>(rst));
 }
 
-void PragmaContainerSize::postorder(const IR::BFN::Pipe* pipe) {
+bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             // We only have stringLiteral in IR, no IntLiteral.
@@ -80,38 +80,45 @@ void PragmaContainerSize::postorder(const IR::BFN::Pipe* pipe) {
             continue; }
     }
     LOG1(*this);
+    return true;
 }
 
 void PragmaContainerSize::end_apply() {
     for (const auto& kv : pa_container_sizes_i) {
         auto& field = kv.first;
         auto& sizes = kv.second;
-        int rest_width = field->size;
-        int offset = 0;
-        if (sizes.size() == 1) {
-            PHV::Size sz = sizes.front();
+        update_field_slice_req(field, sizes); }
+}
+
+void PragmaContainerSize::update_field_slice_req(
+        const PHV::Field* field,
+        const std::vector<PHV::Size>& sizes) {
+    int rest_width = field->size;
+    int offset = 0;
+    if (sizes.size() == 1) {
+        PHV::Size sz = sizes.front();
+        int sz_int = static_cast<int>(sz);
+        while (rest_width > 0) {
+            int end = std::min(field->size - 1, offset + sz_int - 1);
+            PHV::FieldSlice slice(field, FromTo(offset, end));
+            offset += end + 1;
+            rest_width -= sz_int;
+            field_slice_req_i[slice] = sz;
+        }
+    } else {
+        for (const auto& sz : sizes) {
             int sz_int = static_cast<int>(sz);
-            while (rest_width > 0) {
-                int end = std::min(field->size - 1, offset + sz_int - 1);
-                PHV::FieldSlice slice(field, FromTo(offset, end));
-                offset += end + 1;
-                rest_width -= sz_int;
-                field_slice_req_i[slice] = sz;
-            }
-        } else {
-            for (const auto& sz : sizes) {
-                int sz_int = static_cast<int>(sz);
-                int end = std::min(field->size - 1, offset + sz_int - 1);
-                PHV::FieldSlice slice(field, FromTo(offset, end));
-                offset = end + 1;
-                rest_width -= sz_int;
-                field_slice_req_i[slice] = sz;
-            }
-            if (rest_width > 0) {
-                ::warning("%1% has a pa_container_size pragma that "
-                          "sum of sizes are less than field size",
-                          cstring::to_cstring(field)); }
-        } }
+            int end = std::min(field->size - 1, offset + sz_int - 1);
+            PHV::FieldSlice slice(field, FromTo(offset, end));
+            offset = end + 1;
+            rest_width -= sz_int;
+            field_slice_req_i[slice] = sz;
+        }
+        if (rest_width > 0) {
+            ::warning("%1% has a pa_container_size pragma that "
+                      "sum of sizes are less than field size",
+                      cstring::to_cstring(field)); }
+    }
 }
 
 boost::optional<PHV::Size>
@@ -122,9 +129,10 @@ PragmaContainerSize::field_slice_req(const PHV::FieldSlice& fs) const {
         return boost::none; }
 }
 
-bool PragmaContainerSize::satisfies_pragmas(
-        std::list<PHV::SuperCluster*> sliced) const {
-    // std::set<PHV::Field*> specified = specified_fields(previous);
+std::set<const PHV::Field*>
+PragmaContainerSize::unsatisfiable_fields(
+        const std::list<PHV::SuperCluster*>& sliced) const {
+    std::set<const PHV::Field*> rst;
     // field is not sliced in the way specified.
     for (const auto* sup_cluster : sliced) {
         for (const auto* slice_list : sup_cluster->slice_lists()) {
@@ -133,6 +141,12 @@ bool PragmaContainerSize::satisfies_pragmas(
                             [] (const PHV::FieldSlice& fs) {
                                 return fs.field()->exact_containers(); });
             // This check only applies to slice list that has exact_container requirement.
+            // Pragma enforced requirements on non-exact-container fields are checked later
+            // in the satisfies_constraints().
+            // The logic is that, we generate a map that mapping a fieldslice to the required sizes.
+            // This mapping, i.e. field_slice_req_i is used in the satisfies_constraints().
+            // Here, we are trying our best to make this pragma possible by slicing the
+            // in the desired way.
             if (!need_exact_container) continue;
 
             int slice_list_size =
@@ -143,19 +157,37 @@ bool PragmaContainerSize::satisfies_pragmas(
                 // not a specified field
                 if (!is_specified(slice.field())) continue;
                 // not a specified slicing
-                if (!field_slice_req_i.count(slice)) return false;
+                if (!field_slice_req_i.count(slice)) {
+                    rst.insert(slice.field());
+                    continue; }
                 // not possible because of the form of slice list.
-                if (static_cast<int>(field_slice_req_i.at(slice)) != slice_list_size)
-                    return false; }
+                if (int(field_slice_req_i.at(slice)) != slice_list_size) {
+                    rst.insert(slice.field()); }
+                }
         }
         for (const auto* rot_cluster : sup_cluster->clusters()) {
             for (const auto* ali_cluster : rot_cluster->clusters()) {
                 for (const auto& slice : ali_cluster->slices()) {
                     if (!is_specified(slice.field())) continue;
                     // not a specified slicing
-                    if (!field_slice_req_i.count(slice)) return false;
+                    if (!field_slice_req_i.count(slice)) {
+                        rst.insert(slice.field()); }
                 } } } }
-    return true;
+    return rst;
+}
+
+void
+PragmaContainerSize::ignore_fields(const std::set<const PHV::Field*>& fields) {
+    for (const auto* f : fields) {
+        pa_container_sizes_i.erase(f);
+        ::warning("@pragma pa_container_size: field %1% related pragmas are ignored",
+                  cstring::to_cstring(f)); }
+    for (auto it = field_slice_req_i.cbegin(); it != field_slice_req_i.cend(); ) {
+        if (fields.count(it->first.field()))
+            it = field_slice_req_i.erase(it);
+        else
+            ++it;
+    }
 }
 
 std::ostream& operator<<(std::ostream& out, const PragmaContainerSize& pa_cs) {
@@ -176,4 +208,13 @@ std::ostream& operator<<(std::ostream& out, const PragmaContainerSize& pa_cs) {
 
     out << logs.str();
     return out;
+}
+
+void PragmaContainerSize::add_constraint(
+        const PHV::Field* field, std::vector<PHV::Size> sizes) {
+    if (pa_container_sizes_i.count(field)) {
+        ::warning("@pragma pa_container_size: field %1% is overriding by ad-lib adding: ",
+                  cstring::to_cstring(field)); }
+    pa_container_sizes_i[field] = sizes;
+    update_field_slice_req(field, sizes);
 }

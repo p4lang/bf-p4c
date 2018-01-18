@@ -246,6 +246,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/field_alignment.cpp
   phv/make_clusters.cpp
   phv/pragma/pa_container_size.cpp
+  phv/pragma/pa_solitary.cpp
   phv/phv_analysis.cpp
   phv/phv_fields.cpp
   phv/phv_parde_mau_use.cpp
@@ -275,6 +276,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/phv_parde_mau_use.h
   phv/phv_spec.h
   phv/pragma/pa_container_size.h
+  phv/pragma/pa_solitary.h
   phv/pragma/phv_pragmas.h
   phv/trivial_alloc.h
   phv/utils.h
@@ -439,6 +441,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_mutually_exclusive_pragma.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_size.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_solitary.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_constraints.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp

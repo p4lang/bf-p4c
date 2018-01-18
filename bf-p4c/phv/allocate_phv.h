@@ -76,22 +76,22 @@ class CoreAllocation {
     const Clustering& clustering_i;
     const PhvUse& uses_i;
     const ClotInfo& clot_i;
-    const PragmaContainerSize& pa_container_sizes_i;
 
     // Modified in this pass.
     PhvInfo& phv_i;
     ActionPhvConstraints& actions_i;
+    PragmaContainerSize& pa_container_sizes_i;  // Some might not be satisfied.
 
  public:
     CoreAllocation(const SymBitMatrix& mutex,
                    const Clustering& clustering,
                    const PhvUse& uses,
                    const ClotInfo& clot,
-                   const PragmaContainerSize& pa_cs,
+                   PragmaContainerSize& pa_cs,
                    PhvInfo& phv,
                    ActionPhvConstraints& actions)
         : mutex_i(mutex), clustering_i(clustering), uses_i(uses), clot_i(clot),
-          pa_container_sizes_i(pa_cs), phv_i(phv), actions_i(actions) { }
+          phv_i(phv), actions_i(actions), pa_container_sizes_i(pa_cs) { }
 
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
@@ -195,7 +195,7 @@ class CoreAllocation {
             int start) const;
 
     const PhvUse& uses() const { return uses_i; }
-    const PragmaContainerSize& pa_container_sizes() const { return pa_container_sizes_i; }
+    PragmaContainerSize& pa_container_sizes() const { return pa_container_sizes_i; }
 };
 
 // TODO(yumin) extends this to include all possible cases.
@@ -388,7 +388,7 @@ class AllocatePHV : public Inspector {
     const PhvUse& uses_i;
     const Clustering& clustering_i;
     const SymBitMatrix& mutex_i;
-    const PragmaContainerSize& pa_container_sizes_i;
+    PragmaContainerSize& pa_container_sizes_i;
 
     // Used to create strategies, if they need
     ActionPhvConstraints& actions_i;
@@ -433,7 +433,7 @@ class AllocatePHV : public Inspector {
                 const Clustering& clustering,
                 const PhvUse& uses,
                 const ClotInfo& clot,
-                const PragmaContainerSize& pa_cs,
+                PragmaContainerSize& pa_cs,
                 PhvInfo& phv,
                 ActionPhvConstraints& actions,
                 const CalcCriticalPathClusters& critical_cluster)

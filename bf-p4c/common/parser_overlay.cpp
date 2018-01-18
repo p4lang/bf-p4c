@@ -30,6 +30,8 @@ void BuildParserOverlay::flow_merge(Visitor& other_) {
 }
 
 void BuildParserOverlay::postorder(const IR::BFN::Pipe* pipe) {
+    // TODO(yumin): Code Duplication and this logic should be moved
+    // to phv/pragma, instead of hooked up with parser overlay.
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             ::warning("%1%", "@pragma pa_mutually_exclusive's arguments must be strings, skipped");

@@ -172,7 +172,8 @@ bool CoreAllocation::satisfies_constraints(
     auto req = pa_container_sizes_i.field_slice_req(slice);
     if (req && !group.is(*req)) {
         LOG5("        constraint: @pa_container_size mark that: "
-             << slice << " must go to " << *req << " container "); }
+             << slice << " must go to " << *req << " container ");
+        return false; }
     return satisfies_constraints(group, slice.field());
 }
 
@@ -1199,24 +1200,36 @@ BruteForceAllocationStrategy::slice_clusters(
     std::list<PHV::SuperCluster*> rst;
     for (auto* sc : cluster_groups) {
         auto it = PHV::SlicingIterator(sc);
+        std::set<const PHV::Field*> unsatisfiable_fields;
+        auto& pa_container_sizes = core_alloc_i.pa_container_sizes();
         if (!it.done()) {
+            // Try find a slice that make pragma possible.
             while (!it.done()) {
-                if (core_alloc_i.pa_container_sizes().satisfies_pragmas(*it)) {
+                unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it);
+                if (unsatisfiable_fields.size() == 0) {
                     break; }
                 ++it; }
+            // If failed to find it, use the first slicing as pre-slicing.
             if (it.done()) {
-                ::warning("%1% No way to slice to satisfy"
-                          "@pa_container_size, pragma ignored", cstring::to_cstring(sc));
-                it = PHV::SlicingIterator(sc); }
+                ::warning("%1% No way to slice to satisfy "
+                          "@pa_container_size",
+                          cstring::to_cstring(sc));
+                it = PHV::SlicingIterator(sc);
+                unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it); }
+
             for (auto* new_sc : *it)
                 rst.push_back(new_sc);
-        } else {
-            if (!core_alloc_i.pa_container_sizes().satisfies_pragmas({ sc })) {
-                ::warning("%1% can not be sliced, and it can not satisfy some"
-                          "@pa_container_size, pragma ignored",
-                          cstring::to_cstring(sc)); }
-            rst.push_back(sc); } }
 
+        } else {
+            unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields({ sc });
+            if (unsatisfiable_fields.size() > 0) {
+                ::warning("%1% can not be sliced, and it can not satisfy "
+                          "@pa_container_size",
+                          cstring::to_cstring(sc)); }
+
+            rst.push_back(sc); }
+        pa_container_sizes.ignore_fields(unsatisfiable_fields);
+    }
     return rst;
 }
 
