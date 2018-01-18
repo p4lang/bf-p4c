@@ -2894,7 +2894,7 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
         bus = &mem.action_data_bus;
         break;
     case IDLETIME:
-        use = &mem.mapram_use;
+        mapuse = &mem.mapram_use;
         break;
     default:
         BUG("Unhandled memory use type %d in Memories::Use::visit", type); }
@@ -2903,8 +2903,9 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
             fn((*bus)[r.row][r.bus]); }
         /*if (type == TWOPORT)
             fn(mem.stateful_bus[r.row]);*/
-        for (auto col : r.col) {
-            fn((*use)[r.row][col]); }
+        if (use)
+            for (auto col : r.col) {
+                fn((*use)[r.row][col]); }
         if (mapuse) {
             for (auto col : r.mapcol) {
                 fn((*mapuse)[r.row][col]); } } }

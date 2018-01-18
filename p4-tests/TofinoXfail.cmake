@@ -396,10 +396,14 @@ p4c_add_xfail_reason("tofino"
 # BRIG-243
 p4c_add_xfail_reason("tofino"
   "conflicting memory use between .* and .*"
-  extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   # This is an ATCAM failure due to a stage split being in the same stage.  Much more subtle
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   extensions/p4_tests/p4_14/c1/COMPILER-499/case2560_min_2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Multiple synth2port require overflow"
+  extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   )
 
 p4c_add_xfail_reason("tofino"
