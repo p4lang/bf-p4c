@@ -96,19 +96,24 @@ class STF2ptf(P4RuntimeTest, STFRunner):
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(table)
         table_size = self.get_table_size(table)
-        if priority is None:
-            priority = table_size/2
-        else:
-            priority = int(priority, base=10)
-        # STF defines priorities as higher numbers mean higher priorities.
-        # However, the current bf-driver implementation interprets lower
-        # numbers as higher priorities.
-        table_entry.priority = table_size - priority
+        needs_priority = self.table_has_ternary_match(table)
+        # The P4Runtime server will complain if a non-zero (i.e. non-default)
+        # priority value is provided for non-ternary match tables (i.e. a match
+        # table with no Ternary or Range match fields)
+        table_entry.priority = 0
+        if needs_priority and priority is not None:
+            table_entry.priority = int(priority, base=10)
+            # STF defines priorities as higher numbers mean higher priorities.
+            # However, the current bf-driver implementation interprets lower
+            # numbers as higher priorities.
+            table_entry.priority = table_size - priority
+        elif (not needs_priority) and (priority is not None):
+            self._logger.warning("Priority value provided for non-ternary table will be discarded")
         self.set_match_key(table_entry, table, self.genMatchKey(table, match_list))
         self.set_action_entry(table_entry, action,
                               self.genActionParamList(action, action_params))
         # self._logger.debug("req: %s", str(req))
-        reply = self.stub.Write(req)
+        reply = self._write(req)
         self._requests.append(req)
 
         # bookeeping for aliases (mainly used to name counters)
@@ -157,7 +162,7 @@ class STF2ptf(P4RuntimeTest, STFRunner):
         self.set_action(table_entry.action.action, action,
                         self.genActionParamList(action, action_params))
         table_entry.is_default_action = True
-        reply = self.stub.Write(req)
+        reply = self._write(req)
         # resetting default actions is not supported in P4Runtime
         # self._requests.append(req)
 
@@ -389,6 +394,15 @@ class STF2ptf(P4RuntimeTest, STFRunner):
             if t.preamble.name == table_name:
                 return int(t.size)
         return 1024
+
+    def table_has_ternary_match(self, table_name):
+        for t in self.p4info.tables:
+            if t.preamble.name == table_name:
+                for mf in t.match_fields:
+                    if mf.match_type in {MatchType.TERNARY, MatchType.RANGE}:
+                        return True
+                return False
+        return False
 
     def get_mf_match_type(self, table_name, field):
         for t in self.p4info.tables:
