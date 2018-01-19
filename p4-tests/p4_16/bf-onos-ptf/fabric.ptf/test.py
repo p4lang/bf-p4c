@@ -17,6 +17,7 @@ FORWARDING_TYPE_UNICAST_IPV4 = 2
 SWITCH_MAC = "00:00:00:00:aa:01"
 HOST1_MAC = "00:00:00:00:00:01"
 HOST2_MAC = "00:00:00:00:00:02"
+HOST3_MAC = "00:00:00:00:00:03"
 HOST1_IPV4 = "10.0.1.1"
 HOST2_IPV4 = "10.0.2.1"
 
@@ -25,6 +26,7 @@ class FabricTest(P4RuntimeTest):
         super(FabricTest, self).setUp()
         self.port1 = self.swports(1)
         self.port2 = self.swports(2)
+        self.port3 = self.swports(3)
 
     def set_internal_vlan(self, ingress_port, vlan_valid = False,
                           vlan_id = 0, vlan_id_mask = 0,
@@ -95,6 +97,26 @@ class FabricTest(P4RuntimeTest):
             "next.l3_routing",
             [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_)])
 
+    # next_hops is a dictionary mapping mbr_id to (egress_port, smac, dmac)
+    # we can break this method into several ones (group creation, etc.) if there
+    # is a need when adding new tests in the future
+    def add_next_hop_L3_group(self, next_id, grp_id, next_hops = {}):
+        next_id_ = stringify(next_id, 4)
+        for mbr_id, params in next_hops.items():
+            egress_port, smac, dmac = params
+            egress_port_ = stringify(egress_port, 2)
+            smac_ = mac_to_binary(smac)
+            dmac_ = mac_to_binary(dmac)
+            self.send_request_add_member(
+                "next.ecmp_selector", mbr_id, "next.l3_routing",
+                [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_)])
+        self.send_request_add_group("next.ecmp_selector", grp_id,
+                                    grp_size=32, mbr_ids=next_hops.keys())
+        self.send_request_add_entry_to_group(
+            "next.hashed",
+            [self.Exact("fabric_metadata.next_id", next_id_)],
+            grp_id)
+
 class FabricL2UnicastTest(FabricTest):
     @autocleanup
     def runTest(self):
@@ -151,6 +173,36 @@ class FabricIPv4UnicastTest(FabricTest):
 
         testutils.send_packet(self, self.port2, str(pkt_2to1))
         testutils.verify_packets(self, exp_pkt_2to1, [self.port1])
+
+@testutils.disabled
+class FabricIPv4UnicastGroupTest(FabricTest):
+    @autocleanup
+    def runTest(self):
+        vlan_id = 10
+        self.set_internal_vlan(self.port1, False, 0, 0, vlan_id)
+        self.set_forwarding_type(self.port1, SWITCH_MAC, 0x800,
+                                 FORWARDING_TYPE_UNICAST_IPV4)
+        self.add_forwarding_unicast_v4_entry(HOST2_IPV4, 24, 300)
+        grp_id = 66
+        mbrs = {
+            2 : (self.port2, SWITCH_MAC, HOST2_MAC),
+            3 : (self.port3, SWITCH_MAC, HOST3_MAC),
+        }
+        self.add_next_hop_L3_group(300, grp_id, mbrs)
+
+        pkt_from1 = testutils.simple_tcp_packet(
+            eth_src = HOST1_MAC, eth_dst = SWITCH_MAC,
+            ip_src = HOST1_IPV4, ip_dst = HOST2_IPV4, ip_ttl = 64)
+        exp_pkt_to2 = testutils.simple_tcp_packet(
+            eth_src = SWITCH_MAC, eth_dst = HOST2_MAC,
+            ip_src = HOST1_IPV4, ip_dst = HOST2_IPV4, ip_ttl = 63)
+        exp_pkt_to3 = testutils.simple_tcp_packet(
+            eth_src = SWITCH_MAC, eth_dst = HOST3_MAC,
+            ip_src = HOST1_IPV4, ip_dst = HOST2_IPV4, ip_ttl = 63)
+
+        testutils.send_packet(self, self.port1, str(pkt_from1))
+        port_index, _ = testutils.verify_any_packet_any_port(
+            self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
 
 class PacketOutTest(FabricTest):
     def runTest(self):
