@@ -119,7 +119,7 @@ class STF2ptf(P4RuntimeTest, STFRunner):
         # bookeeping for aliases (mainly used to name counters)
         if entry[5] is not None:
             match_name, match, mask, hasMask = self.match2spec(table, match_list[0][0], match_list[0][1])
-            self._namedEntries[entry[5]] = STFNamedEntry(table, match_name, match, mask, priority)
+            self._namedEntries[entry[5]] = STFNamedEntry(table, match_name, match, mask, table_entry.priority)
 
     def genMatchKey(self, table, match_list):
         """
@@ -231,8 +231,6 @@ class STF2ptf(P4RuntimeTest, STFRunner):
         counterId = None
         if isDirect:
             counter_entry = reqCounter.direct_counter_entry
-            counterId = self.get_direct_counter_id(counterName)
-            counter_entry.counter_id = counterId
             counter_entry.table_entry.table_id = self.get_table_id(table)
             self.set_match_key(counter_entry.table_entry, table,
                                [self.get_mf_match(table,
@@ -252,8 +250,7 @@ class STF2ptf(P4RuntimeTest, STFRunner):
                     counter = None
                     if isDirect:
                         counter = entity.direct_counter_entry
-                        if counter.counter_id != counterId or \
-                           counter.table_entry.SerializeToString() != counter_entry.table_entry.SerializeToString():
+                        if counter.table_entry.SerializeToString() != counter_entry.table_entry.SerializeToString():
                             continue
                     else:
                         counter = entity.counter_entry
