@@ -44,6 +44,11 @@ BFN_Options::BFN_Options() {
             use_clot = true;
             return true;
         }, "use clots in JBay");
+    registerOption("--jbay-phv-analysis", nullptr,
+        [this](const char *) {
+            jbay_analysis = true;
+            return true;
+        }, "perform JBay mocha and dark analysis");
 #endif
     registerOption("--virtual-phvs", nullptr,
         [this](const char *) { virtual_phvs = true; return true; },

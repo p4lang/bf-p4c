@@ -256,6 +256,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/validate_allocation.cpp
   phv/analysis/field_interference.cpp
   phv/analysis/critical_path_clusters.cpp
+  phv/analysis/jbay_phv_analysis.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_SRCS}")
 build_unified(BF_P4C_BACKEND_PHV_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -283,6 +284,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/validate_allocation.h
   phv/analysis/field_interference.h
   phv/analysis/critical_path_clusters.h
+  phv/analysis/jbay_phv_analysis.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_HDRS}")
 

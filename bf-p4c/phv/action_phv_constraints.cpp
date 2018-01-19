@@ -36,6 +36,7 @@ bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
             if (read.type == ActionAnalysis::ActionParam::PHV) {
                 fr.phv_used = phv.field(read.expr);
                 read_to_writes_per_action[fr.phv_used][act].insert(write);
+                action_to_reads[act].insert(fr.phv_used);
             } else if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
                 fr.ad = true;
             } else if (read.type == ActionAnalysis::ActionParam::CONSTANT) {
@@ -804,6 +805,28 @@ boost::optional<ActionPhvConstraints::FieldOperation> ActionPhvConstraints::is_w
                 ss << " by a WHOLE_CONTAINER operation.";
             LOG5(ss.str()); }
         return *location; }
+}
+
+ordered_set<const PHV::Field*> ActionPhvConstraints::actionReads(const IR::MAU::Action* act) {
+    return action_to_reads[act];
+}
+
+ordered_set<const PHV::Field*> ActionPhvConstraints::actionWrites(const IR::MAU::Action* act) {
+    ordered_set<const PHV::Field*> rv;
+    for (auto fw : action_to_writes[act]) {
+        if (fw.phv_used != nullptr)
+            rv.insert(fw.phv_used); }
+    return rv;
+}
+
+bool ActionPhvConstraints::is_field_used_in_alu(const PHV::Field* f) const {
+    if (field_writes_to_actions.count(f))
+        return true;
+    if (write_to_reads_per_action.count(f))
+        return true;
+    if (read_to_writes_per_action.count(f))
+        return true;
+    return false;
 }
 
 void ActionPhvConstraints::printMapStates() {

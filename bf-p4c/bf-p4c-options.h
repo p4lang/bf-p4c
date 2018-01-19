@@ -21,6 +21,7 @@ class BFN_Options : public CompilerOptions {
     bool no_deadcode_elimination = false;
     bool forced_placement = false;
     bool use_clot = false;
+    bool jbay_analysis = false;
     bool virtual_phvs = false;
 
     BFN_Options();

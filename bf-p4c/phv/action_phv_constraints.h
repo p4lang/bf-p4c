@@ -87,6 +87,7 @@ class ActionPhvConstraints : public Inspector {
     /// Any FieldOperation (Field) within the set will have been written in the
     /// key action
     ordered_map<const IR::MAU::Action *, ordered_set<FieldOperation>> action_to_writes;
+    ordered_map<const IR::MAU::Action *, ordered_set<const PHV::Field*>> action_to_reads;
 
     /// Any FieldOperation in the std::vector will use the following as an operand in
     /// action where the key is the field written in that action
@@ -261,6 +262,13 @@ class ActionPhvConstraints : public Inspector {
       * sources are considered for allocation before destination-only FieldSlices
       */
     void sort(std::vector<PHV::FieldSlice>& slice_list);
+
+    /** @returns true if @f is used in any ALU operation
+      */
+    bool is_field_used_in_alu(const PHV::Field* f) const;
+
+    ordered_set<const PHV::Field*> actionReads(const IR::MAU::Action* act);
+    ordered_set<const PHV::Field*> actionWrites(const IR::MAU::Action* act);
 
     /** For GTest function.
       * Checks if the field_writes_to_actions ordered_map entry is valid or not

@@ -7,6 +7,7 @@
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/phv/analysis/field_interference.h"
+#include "bf-p4c/phv/analysis/jbay_phv_analysis.h"
 
 class PhvInfo;
 
@@ -40,12 +41,14 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                                    // in the same stage
             new PHV_Field_Operations(phv),  // PHV field operations analysis
             &clustering,           // cluster analysis
-            &action_constraints,   // collect constraints imposed by actions
             new PhvInfo::DumpPhvFields(phv, uses),
             &critical_path_clusters,
             &action_constraints,
             &pa_container_sizes,
-
+#if HAVE_JBAY
+            options.jbay_analysis ? new JbayPhvAnalysis(phv, uses, deps, defuse, action_constraints)
+                : nullptr,
+#endif      // HAVE_JBAY
             new AllocatePHV(mutually_exclusive_field_ids, clustering, uses, clot,
                             pa_container_sizes, phv,
                             action_constraints, critical_path_clusters),
