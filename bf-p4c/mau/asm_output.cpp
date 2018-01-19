@@ -1610,10 +1610,12 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         out << ", size: " << k->asInt();
     if (tbl->layout.pre_classifier || tbl->layout.alpm)
         out << ", match_type: alpm";
-    for (auto at : tbl->attached)
+    for (auto back_at : tbl->attached) {
+        auto at = back_at->attached;
         if (auto ap = at->to<IR::MAU::ActionData>())
             if (!ap->direct)
                 out << ", action_profile: " << canon_name(ap->name);
+    }
     out << " }" << std::endl;
 
     if (tbl->match_key.empty())
@@ -1777,7 +1779,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         emit_table_indir(out, indent, tbl);
 
     const IR::MAU::IdleTime* idletime = nullptr;
-    for (auto at : tbl->attached) {
+    for (auto back_at : tbl->attached) {
+        auto at = back_at->attached;
         if (auto *id = at->to<IR::MAU::IdleTime>()) {
             idletime = id;
             break;
@@ -1786,8 +1789,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     if (idletime)
         emit_idletime(out, indent, tbl, idletime);
 
-    for (auto at : tbl->attached)
-        at->apply(EmitAttached(*this, out, tbl, stage, gress));
+    for (auto back_at : tbl->attached)
+        back_at->apply(EmitAttached(*this, out, tbl, stage, gress));
 }
 
 class MauAsmOutput::UnattachedName : public MauInspector {

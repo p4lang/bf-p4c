@@ -521,10 +521,8 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
         setup_match_layout(tbl->layout, tbl);
     if ((tbl->layout.gateway = tbl->uses_gateway()))
         setup_gateway_layout(tbl->layout, tbl);
-    VisitAttached attached(&tbl->layout);
-    for (auto at : tbl->attached) {
-        at->apply(attached);
-    }
+    VisitAttached visit_attached(&tbl->layout);
+    tbl->attached.apply(visit_attached);
     setup_action_layout(tbl);
     if (tbl->layout.gateway)
         return true;
