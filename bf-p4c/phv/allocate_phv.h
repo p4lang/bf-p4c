@@ -11,7 +11,7 @@
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
 #include "bf-p4c/phv/analysis/field_interference.h"
 #include "bf-p4c/phv/make_clusters.h"
-#include "bf-p4c/phv/pragma/pa_container_size.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -80,18 +80,18 @@ class CoreAllocation {
     // Modified in this pass.
     PhvInfo& phv_i;
     ActionPhvConstraints& actions_i;
-    PragmaContainerSize& pa_container_sizes_i;  // Some might not be satisfied.
+    PHV::Pragmas& pragmas_i;  // Some might not be satisfied.
 
  public:
     CoreAllocation(const SymBitMatrix& mutex,
                    const Clustering& clustering,
                    const PhvUse& uses,
                    const ClotInfo& clot,
-                   PragmaContainerSize& pa_cs,
+                   PHV::Pragmas& pragmas,
                    PhvInfo& phv,
                    ActionPhvConstraints& actions)
         : mutex_i(mutex), clustering_i(clustering), uses_i(uses), clot_i(clot),
-          phv_i(phv), actions_i(actions), pa_container_sizes_i(pa_cs) { }
+          phv_i(phv), actions_i(actions), pragmas_i(pragmas) { }
 
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
@@ -195,7 +195,7 @@ class CoreAllocation {
             int start) const;
 
     const PhvUse& uses() const { return uses_i; }
-    PragmaContainerSize& pa_container_sizes() const { return pa_container_sizes_i; }
+    PHV::Pragmas& pragmas() const { return pragmas_i; }
 };
 
 // TODO(yumin) extends this to include all possible cases.
@@ -388,7 +388,7 @@ class AllocatePHV : public Inspector {
     const PhvUse& uses_i;
     const Clustering& clustering_i;
     const SymBitMatrix& mutex_i;
-    PragmaContainerSize& pa_container_sizes_i;
+    PHV::Pragmas& pragmas_i;
 
     // Used to create strategies, if they need
     ActionPhvConstraints& actions_i;
@@ -433,13 +433,13 @@ class AllocatePHV : public Inspector {
                 const Clustering& clustering,
                 const PhvUse& uses,
                 const ClotInfo& clot,
-                PragmaContainerSize& pa_cs,
+                PHV::Pragmas& pragmas,
                 PhvInfo& phv,
                 ActionPhvConstraints& actions,
                 const CalcCriticalPathClusters& critical_cluster)
-        : core_alloc_i(mutex, clustering, uses, clot, pa_cs, phv, actions),
+        : core_alloc_i(mutex, clustering, uses, clot, pragmas, phv, actions),
           phv_i(phv), uses_i(uses),
-          clustering_i(clustering), mutex_i(mutex), pa_container_sizes_i(pa_cs),
+          clustering_i(clustering), mutex_i(mutex), pragmas_i(pragmas),
           actions_i(actions), critical_path_clusters_i(critical_cluster),
           field_interference_i(mutex, uses) { }
 };

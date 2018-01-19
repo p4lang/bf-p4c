@@ -169,7 +169,7 @@ bool CoreAllocation::satisfies_constraints(
 bool CoreAllocation::satisfies_constraints(
         const PHV::ContainerGroup& group,
         const PHV::FieldSlice& slice) const {
-    auto req = pa_container_sizes_i.field_slice_req(slice);
+    auto req = pragmas_i.pa_container_sizes().field_slice_req(slice);
     if (req && !group.is(*req)) {
         LOG5("        constraint: @pa_container_size mark that: "
              << slice << " must go to " << *req << " container ");
@@ -806,9 +806,9 @@ void AllocatePHV::end_apply() {
     // The meter hack, all destination of meter color go to 8-bit container.
     // TODO(yumin): remove this once this hack is removed in mau.
     for (const auto* f : actions_i.meter_color_dests()) {
-        pa_container_sizes_i.add_constraint(f, { PHV::Size::b8 }); }
+        pragmas_i.pa_container_sizes().add_constraint(f, { PHV::Size::b8 }); }
 
-    LOG1(pa_container_sizes_i);
+    LOG1(pragmas_i.pa_container_sizes());
     auto alloc = make_concrete_allocation();
     auto container_groups = makeDeviceContainerGroups();
     std::list<PHV::SuperCluster*> cluster_groups = make_cluster_groups();
@@ -1207,7 +1207,7 @@ BruteForceAllocationStrategy::slice_clusters(
     for (auto* sc : cluster_groups) {
         auto it = PHV::SlicingIterator(sc);
         std::set<const PHV::Field*> unsatisfiable_fields;
-        auto& pa_container_sizes = core_alloc_i.pa_container_sizes();
+        auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
         if (!it.done()) {
             // Try find a slice that make pragma possible.
             while (!it.done()) {

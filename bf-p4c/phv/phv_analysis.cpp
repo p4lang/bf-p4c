@@ -18,7 +18,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
     : clustering(phv, uses),
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
-      action_constraints(phv), pa_container_sizes(phv) {
+      action_constraints(phv),
+      pragmas(phv) {
     if (options.trivial_phvalloc) {
         addPasses({
             new PHV::TrivialAlloc(phv)});
@@ -44,13 +45,13 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new PhvInfo::DumpPhvFields(phv, uses),
             &critical_path_clusters,
             &action_constraints,
-            &pa_container_sizes,
 #if HAVE_JBAY
             options.jbay_analysis ? new JbayPhvAnalysis(phv, uses, deps, defuse, action_constraints)
                 : nullptr,
 #endif      // HAVE_JBAY
+            &pragmas,
             new AllocatePHV(mutually_exclusive_field_ids, clustering, uses, clot,
-                            pa_container_sizes, phv,
+                            pragmas, phv,
                             action_constraints, critical_path_clusters),
 
             new PHV::ValidateAllocation(phv, clot, mutually_exclusive_field_ids),
