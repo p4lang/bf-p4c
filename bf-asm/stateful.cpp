@@ -388,9 +388,37 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) {
     for (auto *m : get_match_tables()) {
         if (auto *acts = m->get_actions()) {
             for (auto &a : *acts) {
+                // Check for action args to determine which stateful action is
+                // called. If no args are present skip as the action does not
+                // invoke stateful
+                bool action_invokes_stateful = false;
+                Actions::Action * stful_action = nullptr;
+                if (indirect) {
+                    for (auto att : a.attached) {
+                        for (auto arg : att.args) {
+                            if (arg.type == Call::Arg::Name) {
+                                // Check if stateful has this called action
+                                stful_action = actions->action(arg.name());
+                                if (stful_action) {
+                                    action_invokes_stateful = true;
+                                    break; } } } }
+                } else {
+                    // If stateful is direct, all user defined actions will
+                    // invoke stateful except for the miss action. This is
+                    // defined as 'default_only' in p4, if not the compiler
+                    // generates a default_only action and adds it
+                    // FIXME: Brig should add these generated actions as
+                    // default_only in assembly
+                    if (!((a.name == m->default_action) && m->default_only_action)) {
+                        // Direct has only one action
+                        if (actions)
+                            stful_action = &*actions->begin();
+                        action_invokes_stateful = true; } }
+                if (!action_invokes_stateful) continue;
                 bool act_present = false;
                 // Do not add handle if already present, if stateful spans
-                // multiple stages this will get called again
+                // multiple stages this can happen as action handles are unique
+                // and this code will get called again
                 for (auto &s: act_to_sful_instr_slot) {
                     auto s_handle = s->to<json::map>()["action_handle"];
                     if (*s_handle->as_number() == a.handle) {
@@ -398,7 +426,7 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) {
                 if (act_present) continue;
 		        json::map instr_slot;
 		        instr_slot["action_handle"] = a.handle;
-		        instr_slot["instruction_slot"] = a.code;
+		        instr_slot["instruction_slot"] = stful_action ? stful_action->code : -1;
 		        act_to_sful_instr_slot.push_back(std::move(instr_slot)); } } }
     if (bound_selector)
         tbl["bound_to_selection_table_handle"] = bound_selector->handle();
