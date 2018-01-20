@@ -30,7 +30,7 @@ class PragmaContainerSize : public Inspector {
 
     /** Populate field_slice_req_i based on pa_container_sizes_i.
      */
-    void end_apply();
+    void end_apply() override;
 
     boost::optional<PHV::Size>
     convert_to_phv_size(const IR::Constant* ir);

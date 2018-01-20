@@ -1034,6 +1034,14 @@ std::ostream &operator<<(std::ostream &out, const ordered_set<PHV::Field *>& fie
     return out;
 }
 
+// ordered_set const Field*
+std::ostream &operator<<(std::ostream &out, const ordered_set<const PHV::Field *>& field_set) {
+    for (auto &f : field_set) {
+        out << f << std::endl;
+    }
+    return out;
+}
+
 std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
     out << "++++++++++ All Fields name[size]{range} (" << phv.num_fields() << ") ++++++++++"
         << std::endl

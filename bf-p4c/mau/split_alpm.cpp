@@ -1,7 +1,8 @@
 #include <cmath>
 #include "ir/ir.h"
-#include "split_alpm.h"
+#include "lib/bitops.h"
 #include "lib/log.h"
+#include "split_alpm.h"
 
 const std::set<unsigned> SplitAlpm::valid_partition_values = {1024, 2048, 4096, 8192};
 const cstring SplitAlpm::ALGORITHMIC_LPM_PARTITIONS  = "alpm_partitions";
@@ -106,7 +107,7 @@ const IR::Node* SplitAlpm::postorder(IR::MAU::Table* tbl) {
         }
     }
 
-    auto partition_index_bits = ceil_log2(number_partitions);
+    auto partition_index_bits = ::ceil_log2(number_partitions);
     auto pre_classifer_number_entries = number_partitions * number_subtrees_per_partition;
 
     auto lpm_cnt = 0;

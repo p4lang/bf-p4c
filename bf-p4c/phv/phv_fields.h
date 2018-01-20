@@ -30,6 +30,7 @@ class TofinoPHVManualAlloc;
 }  // namespace Test
 
 class ActionPhvConstraints;
+class AllocSlice;
 class Clustering;
 struct CollectPhvFields;
 struct ComputeFieldAlignments;
@@ -380,6 +381,7 @@ class Field {
 std::ostream &operator<<(std::ostream &out, const Field &);
 std::ostream &operator<<(std::ostream &out, const Field *);
 std::ostream &operator<<(std::ostream &, const Field::alloc_slice &);
+std::ostream &operator<<(std::ostream &, const AllocSlice &);
 
 }  // namespace PHV
 
@@ -585,6 +587,7 @@ void dump(const PHV::Field *);
 
 std::ostream &operator<<(std::ostream &, const safe_vector<PHV::Field::alloc_slice> &);
 std::ostream &operator<<(std::ostream &, const ordered_set<PHV::Field *>&);
+std::ostream &operator<<(std::ostream &, const ordered_set<const PHV::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);
 std::ostream &operator<<(std::ostream &, const PHV::Field_Ops &);
 

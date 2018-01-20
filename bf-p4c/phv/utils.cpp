@@ -421,7 +421,7 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
 
     // Compute overlay status.
     std::map<PHV::Container, int> overlay_result;
-    int overlay_statistics[2][2] = {0};
+    int overlay_statistics[2][2] = {{0}};
     for (auto kv : container_status_i) {
         PHV::Container c = kv.first;
         int n_overlay = -c.size();

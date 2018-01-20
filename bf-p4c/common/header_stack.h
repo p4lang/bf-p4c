@@ -89,7 +89,7 @@ struct HeaderStackInfo {
 
  private:
     friend struct ::CollectHeaderStackInfo;
-    friend struct ::ElimUnusedHeaderStackInfo;
+    friend class ::ElimUnusedHeaderStackInfo;
     std::map<cstring, Info> info;
 
  public:

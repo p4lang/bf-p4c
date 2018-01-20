@@ -234,7 +234,7 @@ Cluster_Interference::mutually_exclusive(PHV::AlignedCluster *cl1, PHV::AlignedC
     int o_fields_to_map = cl_overlay->slices().size();
     for (auto& slice : cl_overlay->slices()) {
         const PHV::Field* f_o = slice.field();
-        const PHV::Field* remove_field;
+        const PHV::Field* remove_field = nullptr;
         for (auto* f_s : substratum_fs) {
             // f_o mutually exclusive with f_s
             // f_o container occupation <= f_s
