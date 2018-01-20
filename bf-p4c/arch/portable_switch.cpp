@@ -45,11 +45,7 @@ class AnalyzeProgram : public Inspector {
 
     void postorder(const IR::Type_Action* node) override
     { structure->action_types.push_back(node); }
-    void postorder(const IR::Type_Struct* node) override
-    { structure->type_declarations.emplace(node->name, node); }
-    void postorder(const IR::Type_Header* node) override
-    { structure->type_declarations.emplace(node->name, node); }
-    void postorder(const IR::Type_HeaderUnion* node) override
+    void postorder(const IR::Type_StructLike* node) override
     { structure->type_declarations.emplace(node->name, node); }
     void postorder(const IR::Type_Typedef* node) override {
         if (node->name == "PortId_t"         ||

@@ -960,6 +960,14 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field::alloc_slice &
     return out;
 }
 
+std::ostream &PHV::operator<<(std::ostream &out,
+                         const std::vector<PHV::Field::alloc_slice> &sl_vec) {
+    for (auto &sl : sl_vec) {
+        out << sl << ';';
+    }
+    return out;
+}
+
 std::ostream &operator<<(std::ostream &out,
                          const safe_vector<PHV::Field::alloc_slice> &sl_vec) {
     for (auto &sl : sl_vec) {

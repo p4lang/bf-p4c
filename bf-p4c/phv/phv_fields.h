@@ -382,6 +382,7 @@ std::ostream &operator<<(std::ostream &out, const Field &);
 std::ostream &operator<<(std::ostream &out, const Field *);
 std::ostream &operator<<(std::ostream &, const Field::alloc_slice &);
 std::ostream &operator<<(std::ostream &, const AllocSlice &);
+std::ostream &operator<<(std::ostream &, const std::vector<Field::alloc_slice> &);
 
 }  // namespace PHV
 

@@ -88,12 +88,17 @@ class CreateSaluApplyFunction : public Inspector {
                 auto *mu = new IR::PathExpression(IR::ID(attr->srcInfo, self.math_unit_name));
                 return new IR::MethodCallExpression(attr->srcInfo,
                         new IR::Member(mu, "execute"), { self.math_input });
-            } else if (attr->name == "predicate" || "combined_predicate") {
+            } else if (attr->name == "predicate") {
                 // combined_predicate is an 1-bit output equals to condition_lo | condition_hi
                 // if any of the condition_lo/hi is true, then the output is 1,
                 // otherwise, the output is 0. Therefore, when translating to P4-16 salu externs,
                 // the output of the stateful rv is translated to constant one when the condition
                 // is true, and zero if not.
+                return new IR::Constant(self.utype, 1);
+            } else if (attr->name == "combined_predicate") {
+                WARN_CHECK(true, "combined_predicate is implemented as a 1-bit "
+                        "encoding of condition_hi || condition lo, check uarch documentation "
+                        "to verify the correctness");
                 return new IR::Constant(self.utype, 1);
             } else {
                 BUG("Unrecognized AttribLocal %s", attr);
