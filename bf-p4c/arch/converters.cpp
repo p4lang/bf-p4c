@@ -557,11 +557,6 @@ const IR::Node* TypeNameExpressionConverter::postorder(IR::Member *node) {
     return node;
 }
 
-const IR::Node* MemberExpressionConverter::postorder(IR::Member *node) {
-    // XXX(hanw) TBD
-    return node;
-}
-
 /// map path expression
 const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
     auto membername = node->member.name;
@@ -585,18 +580,58 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
     auto& otherMap = thread == INGRESS ? structure->egressMetadataNameMap
                                        : structure->ingressMetadataNameMap;
     BUG_CHECK(!nameMap.empty(), "metadata translation map cannot be empty");
-    auto it = nameMap.find(MetadataField{pathname, membername});
-    if (it != nameMap.end()) {
-        auto expr = new IR::PathExpression(it->second.structName);
-        auto result = new IR::Member(node->srcInfo, expr, it->second.fieldName);
-        const unsigned bitWidth = structure->metadataTypeMap.at(it->second);
-        result->type = IR::Type::Bits::get(bitWidth);
-        LOG3("Translating " << node << " to " << result);
-        return result;
+
+    if (auto type = node->type->to<IR::Type_Bits>()) {
+        auto it = nameMap.find(MetadataField{pathname, membername, type->size});
+        if (it != nameMap.end()) {
+            auto expr = new IR::PathExpression(it->second.structName);
+            auto result = new IR::Member(node->srcInfo, expr, it->second.fieldName);
+            result->type = IR::Type::Bits::get(it->second.width);
+            if (it->first.width != it->second.width && findOrigCtxt<IR::Operation>()) {
+                return new IR::Cast(IR::Type::Bits::get(it->first.width), result);
+            }
+            LOG3("Translating " << node << " to " << result);
+            return result;
+        }
+        if (otherMap.count(MetadataField{pathname, membername, type->size}))
+            error("%s is not accessible in the %s pipe", node, toString(thread));
     }
-    if (otherMap.count(MetadataField{pathname, membername}))
-        error("%s is not accessible in the %s pipe", node, toString(thread));
     LOG4("No translation found for " << node);
+    return node;
+}
+
+/// The translation pass only renames intrinsic metadata. If the width of the
+/// metadata is also changed after the translation, then this pass will insert
+/// appropriate cast to the RHS of the assignment.
+const IR::Node*
+PathExpressionConverter::postorder(IR::AssignmentStatement* node) {
+    auto left = node->left;
+    auto right = node->right;
+
+    if (auto mem = left->to<IR::Member>()) {
+        auto type = mem->type->to<IR::Type_Bits>();
+        if (!type)
+            return node;
+        if (auto path = mem->expr->to<IR::PathExpression>()) {
+            MetadataField field{path->path->name, mem->member.name, type->size};
+            auto it = structure->targetMetadataSet.find(field);
+            if (it != structure->targetMetadataSet.end()) {
+                auto type = IR::Type::Bits::get(it->width);
+                if (type != right->type) {
+                    if (right->type->is<IR::Type_Boolean>()) {
+                        if (right->to<IR::BoolLiteral>()->value == true) {
+                            right = new IR::Constant(type, 1);
+                        } else {
+                            right = new IR::Constant(type, 0);
+                        }
+                    } else {
+                        right = new IR::Cast(type, right);
+                    }
+                    return new IR::AssignmentStatement(node->srcInfo, left, right);
+                }
+            }
+        }
+    }
     return node;
 }
 
@@ -1311,11 +1346,6 @@ const IR::Node* EgressDeparserConverter::preorder(IR::P4Control* node) {
     return result;
 }
 
-const IR::Node* MemberExpressionConverter::postorder(IR::Member *node) {
-    // XXX(hanw) TBD
-    return node;
-}
-
 /// map path expression
 const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
     auto membername = node->member.name;
@@ -1336,15 +1366,19 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
 
     auto& nameMap = thread == INGRESS ? structure->ingressMetadataNameMap
                                       : structure->egressMetadataNameMap;
-    BUG_CHECK(!nameMap.empty(), "metadata translation map cannot be empty");
-    auto it = nameMap.find(MetadataField{pathname, membername});
-    if (it != nameMap.end()) {
-        auto expr = new IR::PathExpression(it->second.structName);
-        auto result = new IR::Member(node->srcInfo, expr, it->second.fieldName);
-        const unsigned bitWidth = structure->metadataTypeMap.at(it->second);
-        result->type = IR::Type::Bits::get(bitWidth);
-        LOG3("Translating " << node << " to " << result);
-        return result;
+    if (auto type = node->type->to<IR::Type_Bits>()) {
+        BUG_CHECK(!nameMap.empty(), "metadata translation map cannot be empty");
+        auto it = nameMap.find(MetadataField{pathname, membername, type->size});
+        if (it != nameMap.end()) {
+            auto expr = new IR::PathExpression(it->second.structName);
+            auto result = new IR::Member(node->srcInfo, expr, it->second.fieldName);
+            result->type = IR::Type::Bits::get(it->second.width);
+            if (it->first.width != it->second.width) {
+                return new IR::Cast(IR::Type::Bits::get(it->first.width), result);
+            }
+            LOG3("Translating " << node << " to " << result);
+            return result;
+        }
     }
     LOG4("No translation found for " << node);
     return node;

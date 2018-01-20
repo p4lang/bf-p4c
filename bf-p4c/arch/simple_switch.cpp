@@ -1,6 +1,10 @@
 #include <algorithm>
 #include <initializer_list>
 #include <set>
+#include "frontends/common/resolveReferences/resolveReferences.h"
+#include "frontends/p4/strengthReduction.h"
+#include "frontends/p4/uselessCasts.h"
+#include "frontends/p4/typeChecking/typeChecker.h"
 #include "bf-p4c/arch/phase0.h"
 #include "bf-p4c/arch/remove_set_metadata.h"
 #include "bf-p4c/device.h"
@@ -22,48 +26,45 @@ class LoadTargetArchitecture : public Inspector {
         CHECK_NULL(structure);
     }
 
-    void addMetadata(gress_t gress, cstring ss, cstring sf,
-                     cstring ds, cstring df, unsigned w) {
-        auto &nameMap = gress == INGRESS ? structure->ingressMetadataNameMap
-                                         : structure->egressMetadataNameMap;
-        nameMap.emplace(MetadataField{ss, sf}, MetadataField{ds, df});
-        structure->metadataTypeMap.emplace(MetadataField{ds, df}, w);
-    }
-
-    void addMetadata(cstring ss, cstring sf, cstring ds, cstring df, unsigned w) {
-        addMetadata(INGRESS, ss, sf, ds, df, w);
-        addMetadata(EGRESS, ss, sf, ds, df, w);
-    }
-
     void setupMetadataRenameMap() {
-        addMetadata(INGRESS, "standard_metadata", "egress_spec",
-                    "ig_intr_md_for_tm", "ucast_egress_port", 9);
-        addMetadata(EGRESS, "standard_metadata", "egress_spec",
-                    "eg_intr_md", "egress_port", 9);
+        structure->addMetadata(INGRESS,
+                               MetadataField{"standard_metadata", "egress_spec", 9},
+                               MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", 9});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"standard_metadata", "egress_spec", 9},
+                               MetadataField{"eg_intr_md", "egress_port", 9});
 
-        addMetadata(INGRESS, "standard_metadata", "egress_port",
-                    "ig_intr_md_for_tm", "ucast_egress_port", 9);
-        addMetadata(EGRESS, "standard_metadata", "egress_port",
-                    "eg_intr_md", "egress_port", 9);
+        structure->addMetadata(INGRESS,
+                               MetadataField{"standard_metadata", "egress_port", 9},
+                               MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", 9});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"standard_metadata", "egress_port", 9},
+                               MetadataField{"eg_intr_md", "egress_port", 9});
 
-        addMetadata("standard_metadata", "ingress_port",
-                    "ig_intr_md", "ingress_port", 9);
+        structure->addMetadata(MetadataField{"standard_metadata", "ingress_port", 9},
+                               MetadataField{"ig_intr_md", "ingress_port", 9});
 
-        addMetadata(EGRESS, "standard_metadata", "packet_length", "eg_intr_md", "pkt_length", 16);
+        structure->addMetadata(EGRESS,
+                               MetadataField{"standard_metadata", "packet_length", 32},
+                               MetadataField{"eg_intr_md", "pkt_length", 16});
 
-        addMetadata(INGRESS, "standard_metadata", "clone_spec",
-                    "ig_intr_md_for_mb", "mirror_id", 10);
-        addMetadata(EGRESS, "standard_metadata", "clone_spec",
-                    "eg_intr_md_for_mb", "mirror_id", 10);
+        structure->addMetadata(INGRESS,
+                               MetadataField{"standard_metadata", "clone_spec", 32},
+                               MetadataField{"ig_intr_md_for_mb", "mirror_id", 10});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"standard_metadata", "clone_spec", 32},
+                               MetadataField{"eg_intr_md_for_mb", "mirror_id", 10});
 
-        addMetadata("standard_metadata", "drop", "ig_intr_md_for_tm", "drop_ctl", 3);
+        structure->addMetadata(MetadataField{"standard_metadata", "drop", 1},
+                               MetadataField{"ig_intr_md_for_tm", "drop_ctl", 3});
 
         // XXX(hanw): standard_metadata.mcast_grp does not have a mapping tofino.
         // we default to ig_intr_md_for_tm.mcast_grp_a just to pass the translation.
-        addMetadata(INGRESS, "standard_metadata", "mcast_grp",
-                    "ig_intr_md_for_tm", "mcast_grp_a", 16);
+        structure->addMetadata(INGRESS,
+                               MetadataField{"standard_metadata", "mcast_grp", 16},
+                               MetadataField{"ig_intr_md_for_tm", "mcast_grp_a", 16});
         // XXX(seth): We need to figure out what to map this to.
-        // addMetadata("standard_metadata", "instance_type",
+        // structure->addMetadata("standard_metadata", "instance_type",
         //             "eg_intr_md", "instance_type", 32);
     }
 
@@ -731,8 +732,10 @@ class ConstructSymbolTable : public Inspector {
                       "No mirror session id specified: %1%", mce);
             auto *mirrorId = new IR::Member(mirrorBufferMetadataPath, "mirror_id");
             auto *mirrorIdValue = mce->arguments->at(1);
+            /// v1model mirror_id is 32bit, cast to bit<10>
+            auto *castedMirrorIdValue = new IR::Cast(IR::Type::Bits::get(10), mirrorIdValue);
             block->components.push_back(new IR::AssignmentStatement(mirrorId,
-                                                                    mirrorIdValue));
+                                                                    castedMirrorIdValue));
 
             structure->cloneCalls.emplace(node, block);
         }
@@ -1212,7 +1215,6 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new BFN::V1::ConstructSymbolTable(structure, refMap, typeMap),
         new BFN::GenerateTofinoProgram(structure),
         new BFN::TranslationLast(),
-        new BFN::CastFixup(structure),
         new BFN::AddIntrinsicMetadata,
         new P4::ClonePathExpressions,
         new P4::ClearTypeMap(typeMap),

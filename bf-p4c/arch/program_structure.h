@@ -23,6 +23,7 @@ using ChecksumSourceMap = ordered_map<const IR::Member*,
 struct MetadataField {
     cstring structName;
     cstring fieldName;
+    int width;
 
     bool operator<(const MetadataField& other) const {
         if (structName != other.structName)
@@ -107,8 +108,20 @@ struct ProgramStructure {
     /// fields. The mapping may be different for each thread.
     std::map<MetadataField, MetadataField> ingressMetadataNameMap;
     std::map<MetadataField, MetadataField> egressMetadataNameMap;
-    /// Map from metadata fields to their types, specified as a width in bits.
-    std::map<MetadataField, unsigned> metadataTypeMap;
+    std::set<MetadataField> targetMetadataSet;
+
+    void addMetadata(gress_t gress, MetadataField src, MetadataField dst) {
+        auto &nameMap = (gress == gress_t::INGRESS) ?
+                        ingressMetadataNameMap : egressMetadataNameMap;
+        nameMap.emplace(src, dst);
+        targetMetadataSet.insert(dst);
+        std::cout << dst.structName << "." << dst.fieldName << std::endl;
+    }
+
+    void addMetadata(MetadataField src, MetadataField dst) {
+        addMetadata(gress_t::INGRESS, src, dst);
+        addMetadata(gress_t::EGRESS, src, dst);
+    }
 
     void createErrors();
     void createTofinoArch();

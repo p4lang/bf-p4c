@@ -243,44 +243,51 @@ class LoadTargetArchitecture : public Inspector {
         CHECK_NULL(structure);
     }
 
-    void add_metadata(gress_t gress, cstring ss, cstring sf,
-                     cstring ds, cstring df, unsigned w) {
-        auto& nameMap = gress == INGRESS ? structure->ingressMetadataNameMap
-                                         : structure->egressMetadataNameMap;
-        nameMap.emplace(MetadataField{ss, sf}, MetadataField{ds, df});
-        structure->metadataTypeMap.emplace(MetadataField{ds, df}, w);
-    }
-
-    void add_metadata(cstring ss, cstring sf, cstring ds, cstring df, unsigned w) {
-        add_metadata(INGRESS, ss, sf, ds, df, w);
-        add_metadata(EGRESS, ss, sf, ds, df, w);
-    }
-
     void setup_metadata_map() {
-        add_metadata(INGRESS, "istd", "ingress_port",
-                     "ig_intr_md", "ingress_port", 9);
-        add_metadata(EGRESS, "istd", "ingress_port",
-                     "eg_intr_md", "ingress_port", 9);
+        structure->addMetadata(INGRESS,
+                               MetadataField{"istd", "ingress_port", 9},
+                               MetadataField{"ig_intr_md", "ingress_port", 9});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"istd", "ingress_port", 9},
+                               MetadataField{"eg_intr_md", "ingress_port", 9});
 
-        add_metadata(INGRESS, "istd", "ingress_timestamp", "ig_intr_md", "ingress_mac_tstamp", 48);
-        add_metadata(INGRESS, "istd", "parser_error",
-                     "ig_intr_md_from_prsr", "ingress_parser_err", 16);
-        add_metadata(INGRESS, "ostd", "class_of_service", "ig_intr_md_for_tm", "ingress_cos", 3);
-        add_metadata(INGRESS, "ostd", "drop", "ig_intr_md_for_tm", "drop_ctl", 3);
-        add_metadata(INGRESS, "ostd", "multicast_group", "ig_intr_md_for_tm", "mcast_grp_a", 16);
-        add_metadata(INGRESS, "ostd", "egress_port", "ig_intr_md_for_tm", "ucast_egress_port", 9);
+        structure->addMetadata(INGRESS,
+                               MetadataField{"istd", "ingress_timestamp", 48},
+                               MetadataField{"ig_intr_md", "ingress_mac_tstamp", 48});
+        structure->addMetadata(INGRESS,
+                               MetadataField{"istd", "parser_error", 16},
+                               MetadataField{"ig_intr_md_from_prsr", "ingress_parser_err", 16});
+        structure->addMetadata(INGRESS,
+                               MetadataField{"ostd", "class_of_service", 3},
+                               MetadataField{"ig_intr_md_for_tm", "ingress_cos", 3});
+        structure->addMetadata(INGRESS,
+                               MetadataField{"ostd", "drop", 3},
+                               MetadataField{"ig_intr_md_for_tm", "drop_ctl", 3});
+        structure->addMetadata(INGRESS, MetadataField{"ostd", "multicast_group", 16},
+                               MetadataField{"ig_intr_md_for_tm", "mcast_grp_a", 16});
+        structure->addMetadata(INGRESS,
+                               MetadataField{"ostd", "egress_port", 9},
+                               MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", 9});
 
-        add_metadata(EGRESS, "istd", "egress_port", "eg_intr_md", "egress_port", 9);
-        add_metadata(EGRESS, "istd", "egress_timestamp",
-                     "eg_intr_md_for_dprsr", "egress_global_tstamp", 48);
-        add_metadata(EGRESS, "istd", "parser_error",
-                     "eg_intr_md_from_prsr", "egress_parser_err", 3);
-        add_metadata(EGRESS, "ostd", "drop", "eg_intr_md_for_oport", "drop_ctl", 3);
+        structure->addMetadata(EGRESS,
+                               MetadataField{"istd", "egress_port", 9},
+                               MetadataField{"eg_intr_md", "egress_port", 9});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"istd", "egress_timestamp", 48},
+                               MetadataField{"eg_intr_md_for_dprsr", "egress_global_tstamp", 48});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"istd", "parser_error", 3},
+                               MetadataField{"eg_intr_md_from_prsr", "egress_parser_err", 3});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"ostd", "drop", 3},
+                               MetadataField{"eg_intr_md_for_oport", "drop_ctl", 3});
 
-        add_metadata(INGRESS, "istd", "packet_path",
-                     "compiler_generated_meta", "packet_path", 4);
-        add_metadata(EGRESS, "istd", "packet_path",
-                     "compiler_generated_meta", "packet_path", 4);
+        structure->addMetadata(INGRESS,
+                               MetadataField{"istd", "packet_path", 4},
+                               MetadataField{"compiler_generated_meta", "packet_path", 4});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"istd", "packet_path", 4},
+                               MetadataField{"compiler_generated_meta", "packet_path", 4});
     }
 
     void setup_psa_typedef() {
@@ -342,7 +349,6 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new BFN::PSA::ConstructSymbolTable(structure, refMap, typeMap),
         new BFN::GenerateTofinoProgram(structure),
         new BFN::TranslationLast(),
-        new BFN::CastFixup(structure),
         new BFN::AddIntrinsicMetadata,
         new BFN::PSA::RewriteResubmitIfPresent(structure),
         new P4::ClearTypeMap(typeMap),

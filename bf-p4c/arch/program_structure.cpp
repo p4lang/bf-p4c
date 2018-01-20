@@ -214,7 +214,6 @@ void ProgramStructure::createMain() {
 struct ConvertNames : public PassManager {
     explicit ConvertNames(ProgramStructure *structure) {
         addPasses({new BFN::V1::PathExpressionConverter(structure),
-                   new BFN::V1::MemberExpressionConverter(structure),
                    new BFN::V1::TypeNameExpressionConverter(structure)});
     }
 };
@@ -339,8 +338,7 @@ void ProgramStructure::createMain() {
 /// specified in the given ProgramStructure.
 struct ConvertPsaNames : public PassManager {
     explicit ConvertPsaNames(ProgramStructure *structure) {
-        addPasses({new BFN::PSA::PathExpressionConverter(structure),
-                   new BFN::PSA::MemberExpressionConverter(structure)});
+        addPasses({new BFN::PSA::PathExpressionConverter(structure)});
     }
 };
 

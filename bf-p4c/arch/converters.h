@@ -232,18 +232,12 @@ class TypeNameExpressionConverter : public ExpressionConverter {
     const IR::Node* postorder(IR::Member* node) override;
 };
 
-class MemberExpressionConverter : public ExpressionConverter {
- public:
-    explicit MemberExpressionConverter(ProgramStructure* structure)
-    : ExpressionConverter(structure) { CHECK_NULL(structure); }
-    const IR::Node* postorder(IR::Member* node) override;
-};
-
 class PathExpressionConverter : public ExpressionConverter {
  public:
     explicit PathExpressionConverter(ProgramStructure* structure)
     : ExpressionConverter(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::Member* node) override;
+    const IR::Node* postorder(IR::AssignmentStatement* node) override;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -397,12 +391,6 @@ class EgressDeparserConverter : public ControlConverter {
     const IR::Node* preorder(IR::P4Control* node) override;
 };
 
-class MemberExpressionConverter : public ExpressionConverter {
- public:
-    explicit MemberExpressionConverter(ProgramStructure* structure)
-            : ExpressionConverter(structure) { CHECK_NULL(structure); }
-    const IR::Node* postorder(IR::Member* node) override;
-};
 
 class PathExpressionConverter : public ExpressionConverter {
  public:

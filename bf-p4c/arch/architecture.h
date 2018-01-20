@@ -56,44 +56,6 @@ struct RemoveExternMethodCallsExcludedByAnnotation : public Transform {
     }
 };
 
-/// The translation pass only renames intrinsic metadata. If the width of the
-/// metadata is also changed after the translation, then this pass will insert
-/// appropriate cast to the RHS of the assignment.
-class CastFixup : public Transform {
-    ProgramStructure* structure;
-
- public:
-    explicit CastFixup(ProgramStructure* structure)
-            : structure(structure) { CHECK_NULL(structure); setName("CastFixup"); }
-    const IR::AssignmentStatement* postorder(IR::AssignmentStatement* node) override {
-        auto left = node->left;
-        auto right = node->right;
-
-        if (auto mem = left->to<IR::Member>()) {
-            if (auto path = mem->expr->to<IR::PathExpression>()) {
-                MetadataField field{path->path->name, mem->member.name};
-                auto it = structure->metadataTypeMap.find(field);
-                if (it != structure->metadataTypeMap.end()) {
-                    auto type = IR::Type::Bits::get(it->second);
-                    if (type != right->type) {
-                        if (right->type->is<IR::Type_Boolean>()) {
-                            if (right->to<IR::BoolLiteral>()->value == true) {
-                                right = new IR::Constant(type, 1);
-                            } else {
-                                right = new IR::Constant(type, 0);
-                            }
-                        } else {
-                            right = new IR::Cast(type, right);
-                        }
-                        return new IR::AssignmentStatement(node->srcInfo, left, right);
-                    }
-                }
-            }
-        }
-        return node;
-    }
-};
-
 class GenerateTofinoProgram : public Transform {
     ProgramStructure* structure;
  public:
