@@ -45,8 +45,17 @@ bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
             } else {
                 BUG("Read must either be of a PHV, action data, or constant."); }
 
-            if (read.speciality == ActionAnalysis::ActionParam::METER_ALU)
+            // xxx(Deep): This condition is to satisfy the current table placement requirement that
+            // any destination written by meter colors must be allocated to an 8-bit PHV
+            if (read.speciality == ActionAnalysis::ActionParam::METER_COLOR)
                 meter_color_destinations.insert(write);
+
+            // xxx(Deep): This condition is to satisfy the current table placement requirement that
+            // any destination written by METER_ALU, METER_COLOR, HASH_DIST, or RANDOM must not be
+            // packed with other fields written in the same action. To enable this, maintain a list
+            // of all actions where such writes happen for the given field.
+            if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL)
+                special_no_pack[write].insert(act);
 
             if (field_action.reads.size() > 1)
                 fr.flags |= FieldOperation::ANOTHER_OPERAND;
@@ -58,6 +67,29 @@ bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
             write_to_reads_per_action[write][act].push_back(fr); } }
 
     current_action++;
+    return true;
+}
+
+bool ActionPhvConstraints::checkSpecialityPacking(ordered_set<const PHV::Field*>& fields) {
+    ordered_set<const PHV::Field*> special_writes;
+    // Detect all the speciality writes in the container
+    for (const PHV::Field* f : fields) {
+        if (special_no_pack.count(f))
+            special_writes.insert(f); }
+
+    // If no special writes, detected return true
+    if (special_writes.size() == 0) return true;
+
+    // If special writes present, check against all other actions
+    for (const PHV::Field* f : special_writes) {
+        for (const IR::MAU::Action* act : special_no_pack[f]) {
+            for (auto& fo_wr : action_to_writes[act]) {
+                if (fo_wr.phv_used == nullptr) continue;
+                const PHV::Field* f_wr = fo_wr.phv_used;
+                if (f_wr == f) continue;
+                if (fields.count(f_wr))
+                    return false; } } }
+
     return true;
 }
 
@@ -475,6 +507,14 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
     if (cont_operation == FieldOperation::MIXED) {
         LOG5("\t\t\tCannot pack because of a mixture of whole container and move operations.");
         return boost::none; }
+
+    // xxx(Deep): This function checks if any field that gets its value from METER_ALU, HASH_DIST,
+    // RANDOM, or METER_COLOR is being packed with other fields written in the same action.
+    ordered_set<const PHV::Field*> uniqueFields;
+    for (auto* f : fields)
+        uniqueFields.insert(f);
+    if (!checkSpecialityPacking(uniqueFields))
+        return boost::none;
 
     // Perform analysis related to number of sources for every action
     // Only MOVE operations get here

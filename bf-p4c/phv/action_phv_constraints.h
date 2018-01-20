@@ -184,10 +184,20 @@ class ActionPhvConstraints : public Inspector {
     /** Print the state of the maps */
     void printMapStates();
 
-    /// (xxx)Deep [HACK WARNING]: Right now action bus allocation requires any destination written
-    /// by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
+    /// (xxx)Deep [Artificial Constraint]: Right now action bus allocation requires any destination
+    /// written by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
     /// destinations. To be removed when Evan lands his patch relaxing the above requirement.
     ordered_set<const PHV::Field*> meter_color_destinations;
+
+    /// (xxx)Deep [Artificial Constraint]: Right now, table placement requires that any field that
+    /// gets its value from METER_ALU, HASH_DIST, RANDOM, or METER_COLOR, then it cannot be packed
+    /// with other fields written in the same action
+    ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> special_no_pack;
+
+    /// (xxx)Deep [Artificial Constraint]: @returns false if there is a field in @container_state
+    /// written by METER_ALU, HASH_DIST, RANDOM, or METER_COLOR, and another field in
+    /// @container_state is written by the same action
+    bool checkSpecialityPacking(ordered_set<const PHV::Field*>& fields);
 
  public:
     explicit ActionPhvConstraints(const PhvInfo &p) : phv(p) {}
@@ -198,10 +208,7 @@ class ActionPhvConstraints : public Inspector {
     /// by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
     /// destinations. To be removed when Evan lands his patch relaxing the above requirement.
     bool is_meter_color_destination(const PHV::Field* f) {
-        if (meter_color_destinations.count(f))
-            return true;
-        else
-            return false;
+        return meter_color_destinations.count(f) > 0;
     }
 
     ordered_set<const PHV::Field*>& meter_color_dests() {

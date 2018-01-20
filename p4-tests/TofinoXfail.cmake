@@ -915,7 +915,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated"
-  extensions/p4_tests/p4_14/test_config_285_meter_sharing.p4
   testdata/p4_14_samples/meter.p4
   testdata/p4_14_samples/meter1.p4
   testdata/p4_16_samples/named_meter_bmv2.p4
