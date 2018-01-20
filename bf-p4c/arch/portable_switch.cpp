@@ -2,7 +2,7 @@
 #include "bf-p4c/device.h"
 #include "architecture.h"
 #include "portable_switch.h"
-#include "resubmit.h"
+#include "rewrite_packet_path.h"
 
 namespace BFN {
 
@@ -22,8 +22,6 @@ class NormalizeProgram : public Transform {
 };
 
 class AnalyzeProgram : public Inspector {
-    ProgramStructure* structure;
-
     template<class P4Type, class BlockType>
     void analyzeArchBlock(cstring gressName, cstring blockName, cstring type) {
         auto main = structure->toplevel->getMain();
@@ -36,13 +34,27 @@ class AnalyzeProgram : public Inspector {
         auto blockType = block->to<BlockType>();
         CHECK_NULL(blockType);
         structure->blockNames.emplace(type, blockType->container->name);
-        LOG1(blockType);
     }
 
  public:
     explicit AnalyzeProgram(ProgramStructure* structure) : structure(structure)
     { CHECK_NULL(structure); setName("AnalyzePsaProgram"); }
 
+    bool preorder(const IR::P4Program*) override {
+        analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
+            "ingress", "ip", ProgramStructure::INGRESS_PARSER);
+        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
+            "ingress", "ig", ProgramStructure::INGRESS);
+        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
+            "ingress", "id", ProgramStructure::INGRESS_DEPARSER);
+        analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
+            "egress", "ep", ProgramStructure::EGRESS_PARSER);
+        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
+            "egress", "eg", ProgramStructure::EGRESS);
+        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
+            "egress", "ed", ProgramStructure::EGRESS_DEPARSER);
+        return true;
+    }
     void postorder(const IR::Type_Action* node) override
     { structure->action_types.push_back(node); }
     void postorder(const IR::Type_StructLike* node) override
@@ -59,23 +71,15 @@ class AnalyzeProgram : public Inspector {
     }
     void postorder(const IR::Type_Enum* node) override
     { structure->enums.emplace(node->name, node); }
-    void postorder(const IR::P4Parser* node) override
-    { structure->parsers.emplace(node->name, node); }
-    void postorder(const IR::P4Control* node) override
-    { structure->controls.emplace(node->name, node); }
-    void postorder(const IR::P4Program*) override {
-        analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
-                "ingress", "ip", ProgramStructure::INGRESS_PARSER);
-        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-                "ingress", "ig", ProgramStructure::INGRESS);
-        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-                "ingress", "id", ProgramStructure::INGRESS_DEPARSER);
-        analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
-                "egress", "ep", ProgramStructure::EGRESS_PARSER);
-        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-                "egress", "eg", ProgramStructure::EGRESS);
-        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-                "egress", "ed", ProgramStructure::EGRESS_DEPARSER);
+    void postorder(const IR::P4Parser* node) override {
+        LOG1("process parser " << node);
+        structure->parsers.emplace(node->name, node);
+        process_packet_path_params(node);
+    }
+    void postorder(const IR::P4Control* node) override {
+        LOG1("process control " << node);
+        structure->controls.emplace(node->name, node);
+        process_packet_path_params(node);
     }
 
     // 'compiler_generated_metadata_t' is the last struct in the program.
@@ -88,6 +92,41 @@ class AnalyzeProgram : public Inspector {
         cgm->fields.push_back(pktPath);
         structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
     }
+
+    void process_packet_path_params(const IR::P4Parser* node) {
+        if (node->name == structure->getBlockName(ProgramStructure::INGRESS_PARSER)) {
+            LOG1("create parser resubmit metadata");
+            auto param = node->getApplyParameters()->getParameter(4);
+            structure->psaPacketPathNames.emplace("parser::resubmit_md", param->name);
+            structure->psaPacketPathTypes.emplace("parser::resubmit_md", param->type);
+            param = node->getApplyParameters()->getParameter(5);
+            structure->psaPacketPathNames.emplace("parser::recirc_md", param->name);
+            structure->psaPacketPathTypes.emplace("parser::recirc_md", param->type);
+        }
+    }
+
+    void process_packet_path_params(const IR::P4Control* node) {
+        if (node->name == structure->getBlockName(ProgramStructure::EGRESS_DEPARSER)) {
+            LOG1("create egress parser recirc metadata");
+            auto param = node->getApplyParameters()->getParameter(1);
+            structure->psaPacketPathNames.emplace("deparser::clone_e2e_md", param->name);
+            structure->psaPacketPathTypes.emplace("deparser::clone_e2e_md", param->type);
+            param = node->getApplyParameters()->getParameter(2);
+            structure->psaPacketPathNames.emplace("deparser::recirc_md", param->name);
+            structure->psaPacketPathTypes.emplace("deparser::recirc_md", param->type);
+        } else if (node->name == structure->getBlockName(ProgramStructure::INGRESS_DEPARSER)) {
+            LOG1("create egress parser resubmit metadata");
+            auto param = node->getApplyParameters()->getParameter(1);
+            structure->psaPacketPathNames.emplace("deparser::clone_i2e_md", param->name);
+            structure->psaPacketPathTypes.emplace("deparser::clone_i2e_md", param->type);
+            param = node->getApplyParameters()->getParameter(2);
+            structure->psaPacketPathNames.emplace("deparser::resubmit_md", param->name);
+            structure->psaPacketPathTypes.emplace("deparser::resubmit_md", param->type);
+        }
+    }
+
+ private:
+    ProgramStructure* structure;
 };
 
 class ConstructSymbolTable : public Inspector {
@@ -332,8 +371,8 @@ PortableSwitchTranslation::PortableSwitchTranslation(
     addDebugHook(options.getDebugHook());
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto structure = new BFN::PSA::ProgramStructure;
-    auto* findResubmitData = new PSA::FindResubmitData(structure);
     addPasses({
+        new P4::TypeChecking(refMap, typeMap, true),
         evaluator,
         new VisitFunctor([structure, evaluator]() {
             structure->toplevel = evaluator->getToplevelBlock(); }),
@@ -341,12 +380,11 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new BFN::PSA::NormalizeProgram(),
         new BFN::PSA::LoadTargetArchitecture(structure),
         new BFN::PSA::AnalyzeProgram(structure),
-        findResubmitData,
         new BFN::PSA::ConstructSymbolTable(structure, refMap, typeMap),
         new BFN::GenerateTofinoProgram(structure),
         new BFN::TranslationLast(),
         new BFN::AddIntrinsicMetadata,
-        new BFN::PSA::RewriteResubmitIfPresent(structure),
+        new BFN::PSA::TranslatePacketPath(refMap, typeMap, structure),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
     });

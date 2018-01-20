@@ -20,6 +20,9 @@ class TranslatedP4Control : P4Control {
 
     /// The thread this control is associated with.
     gress_t thread;
+
+    /// Whether this control is a deparser.
+    bool isDeparser = false;
 }
 
 /// A P4Parser produced by TNA translation; contains some additional useful

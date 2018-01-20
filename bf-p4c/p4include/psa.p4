@@ -599,6 +599,7 @@ package EgressPipeline<EH, EM, NM, CI2EM, CE2EM, RECIRCM>(
     Egress<EH, EM> eg,
     EgressDeparser<EH, EM, CE2EM, RECIRCM> ed);
 
+@bf_p4c_compiler_option("--target", "tofino-psa-barefoot")
 package PSA_Switch<IH, IM, EH, EM, NM, CI2EM, CE2EM, RESUBM, RECIRCM> (
     IngressPipeline<IH, IM, NM, CI2EM, RESUBM, RECIRCM> ingress,
     PacketReplicationEngine pre,

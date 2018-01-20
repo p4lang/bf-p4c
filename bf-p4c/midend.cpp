@@ -100,6 +100,8 @@ MidEnd::MidEnd(BFN_Options& options) {
             new BFN::SimpleSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
         (options.arch == "native") ?
             new BFN::NormalizeNativeProgram(&refMap, &typeMap, options /*map*/) : nullptr,
+        (options.arch == "psa") ?
+        new BFN::PortableSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::SimplifyKey(&refMap, &typeMap,
                             new P4::OrPolicy(
@@ -123,8 +125,6 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
         new P4::MoveDeclarations(),
-        (options.arch == "psa") ?
-            new BFN::PortableSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
         (options.arch == "psa") ?
             new P4::ValidateTableProperties({"implementation", "size", "psa_direct_counters",
                                          "psa_direct_meters", "support_timeout"}) : nullptr,
