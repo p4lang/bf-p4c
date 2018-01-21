@@ -59,7 +59,7 @@ void MeterTable::pass1() {
     else p4_table->check(this);
     alloc_vpns();
     alloc_maprams();
-    if (color_maprams.empty())
+    if (color_maprams.empty() && type != LPF && type != RED)
         error(lineno, "Missing color_maprams in meter table %s", name());
     if (!no_vpns && !color_maprams.empty() && color_maprams[0].vpns.empty())
         setup_vpns(color_maprams, 0);
