@@ -191,8 +191,9 @@ class PacketOutTestCheckSkipIngress(P4RuntimeTest):
             [self.Ternary("standard_metadata.egress_spec", port3_hex, mask)],
             "punt.set_queue_and_send_to_cpu", [("queue_id", "\x01")])
 
-        self.send_packet_out(packet_out)
-        testutils.verify_packet(self, payload, port3)
+        for i in xrange(3):
+            self.send_packet_out(packet_out)
+            testutils.verify_packet(self, payload, port3)
         testutils.verify_no_other_packets(self)
 
 class PacketInTest(P4RuntimeTest):
@@ -209,12 +210,13 @@ class PacketInTest(P4RuntimeTest):
             "punt.set_queue_and_send_to_cpu", [("queue_id", "\x01")])
 
         payload = 'a' * 64 
-        testutils.send_packet(self, port3, payload)
-        packet_in = self.get_packet_in()
-        self.assertEqual(packet_in.payload, payload)
-        ingress_physical_port = None
-        for metadata in packet_in.metadata:
-            if metadata.metadata_id == 1:
-                ingress_physical_port = metadata.value
-                break
-        self.assertEqual(ingress_physical_port, port3_hex)
+        for i in xrange(3):
+            testutils.send_packet(self, port3, payload)
+            packet_in = self.get_packet_in()
+            self.assertEqual(packet_in.payload, payload)
+            ingress_physical_port = None
+            for metadata in packet_in.metadata:
+                if metadata.metadata_id == 1:
+                    ingress_physical_port = metadata.value
+                    break
+            self.assertEqual(ingress_physical_port, port3_hex)
