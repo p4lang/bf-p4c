@@ -115,7 +115,6 @@ struct ProgramStructure {
                         ingressMetadataNameMap : egressMetadataNameMap;
         nameMap.emplace(src, dst);
         targetMetadataSet.insert(dst);
-        std::cout << dst.structName << "." << dst.fieldName << std::endl;
     }
 
     void addMetadata(MetadataField src, MetadataField dst) {

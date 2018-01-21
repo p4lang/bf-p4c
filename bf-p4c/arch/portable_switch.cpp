@@ -317,12 +317,13 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"ostd", "drop", 3},
                                MetadataField{"eg_intr_md_for_oport", "drop_ctl", 3});
 
+        /// XXX(hanw): fix enum translation
         structure->addMetadata(INGRESS,
-                               MetadataField{"istd", "packet_path", 4},
-                               MetadataField{"compiler_generated_meta", "packet_path", 4});
+                               MetadataField{"istd", "packet_path", 0},
+                               MetadataField{"compiler_generated_meta", "packet_path", 0});
         structure->addMetadata(EGRESS,
-                               MetadataField{"istd", "packet_path", 4},
-                               MetadataField{"compiler_generated_meta", "packet_path", 4});
+                               MetadataField{"istd", "packet_path", 0},
+                               MetadataField{"compiler_generated_meta", "packet_path", 0});
     }
 
     void setup_psa_typedef() {

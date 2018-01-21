@@ -1379,6 +1379,14 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
             LOG3("Translating " << node << " to " << result);
             return result;
         }
+    } else if (node->type->to<IR::Type_Enum>()) {
+        auto it = nameMap.find(MetadataField{pathname, membername, 0});
+        if (it != nameMap.end()) {
+            auto expr = new IR::PathExpression(it->second.structName);
+            auto result = new IR::Member(node->srcInfo, expr, it->second.fieldName);
+            LOG3("Translating " << node << " to " << result);
+            return result;
+        }
     }
     LOG4("No translation found for " << node);
     return node;
