@@ -256,8 +256,12 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/validate_allocation.cpp
   phv/analysis/field_interference.cpp
   phv/analysis/critical_path_clusters.cpp
-  phv/analysis/jbay_phv_analysis.cpp
   )
+if (ENABLE_JBAY)
+  list (APPEND BF_P4C_BACKEND_PHV_SRCS
+    phv/analysis/jbay_phv_analysis.cpp)
+endif()
+
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_SRCS}")
 build_unified(BF_P4C_BACKEND_PHV_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
