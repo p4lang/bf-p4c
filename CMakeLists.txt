@@ -70,8 +70,7 @@ set (CPACK_RESOURCE_FILE_README "${BFN_P4C_SOURCE_DIR}/README")
 install (FILES ${CPACK_RESOURCE_FILE_LICENSE} ${CPACK_RESOURCE_FILE_README}
   DESTINATION ${CMAKE_INSTALL_PREFIX}/share/p4c)
 
-#set (CPACK_GENERATOR "DEB;RPM")
-set (CPACK_GENERATOR "DEB")
+set (CPACK_GENERATOR "DEB;RPM")
 set (CPACK_PACKAGE_NAME "p4c-compilers")
 set (CPACK_PACKAGE_VERSION_MAJOR ${BFN_P4C_VERSION_MAJOR})
 set (CPACK_PACKAGE_VERSION_MINOR ${BFN_P4C_VERSION_MINOR})
@@ -82,7 +81,6 @@ set (CPACK_PACKAGE_VENDOR "Barefoot Networks, Inc.")
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "P4C compilers for P4_14 and P4_16")
 set (CPACK_PACKAGE_DESCRIPTION "P4C compilers for the Barefoot Networks Tofino architecture")
 
-set (CPACK_DEBIAN_PACKAGE_DEBUG ON)
 # Debian packages
 execute_process (COMMAND uname -m OUTPUT_VARIABLE __machine_arch
   OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -102,6 +100,3 @@ set (CPACK_RPM_PACKAGE_REQUIRES "python > 2.7, cpp >= 4.8")
 set (CPACK_RPM_PACKAGE_GROUP "develop")
 # set (CPACK_RPM_PACKAGE_RELOCATABLE ON)
 include (CPack)
-
-# this must be the last subdirectory added and must be post install
-add_subdirectory(scripts)
