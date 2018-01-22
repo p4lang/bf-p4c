@@ -23,6 +23,7 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
     ternary |= a.ternary;
     hash_action |= a.hash_action;
     atcam |= a.atcam;
+    has_range |= a.has_range;
     ixbar_bytes += a.ixbar_bytes;
     match_width_bits += a.match_width_bits;
     if (a.action_data_bytes > action_data_bytes)

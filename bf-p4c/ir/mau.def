@@ -94,6 +94,7 @@ class Table : BFN::Unit {
         bool            hash_action = false;
         bool            atcam = false;
         bool            alpm = false;
+        bool            has_range = false;
         int             ixbar_bytes = 0;
         int             match_bytes = 0;
         int             match_width_bits = 0;

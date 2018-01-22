@@ -399,6 +399,8 @@ void IXBar::calculate_found(safe_vector<IXBar::Use::Byte *> unalloced,
     for (auto &need : unalloced) {
         for (auto &p : Values(fields.equal_range(need->field))) {
             if (ternary && p.byte == 5) {
+                if (need->is_range())
+                    continue;
                 if (byte_group_use[p.group/2].second == need->lo) {
                     order[p.group/2].mid_byte_found = true;
                 }
@@ -531,6 +533,8 @@ void IXBar::found_bytes_big_group(big_grp_use *grp, safe_vector<IXBar::Use::Byte
         BUG_CHECK(!need.atcam_double, "Cannot place ATCAM resources on the ternary crossbar");
         for (auto &p : Values(fields.equal_range(need.field))) {
             if (p.byte == 5) {
+                if (need.is_range())
+                    continue;
                 if ((grp->big_group == p.group/2)
                     && (byte_group_use[p.group/2].second == need.lo)) {
                     allocate_byte(nullptr, unalloced, nullptr, need, p.group, p.byte, i,
@@ -687,7 +691,7 @@ void IXBar::free_bytes_big_group(big_grp_use *grp,
             continue;
 
         /* Allocate middle bytes of the ternary big group */
-        if (grp->mid_byte_free) {
+        if (grp->mid_byte_free && !(need.is_range())) {
             if (align_flags[(TERNARY_BYTES_PER_GROUP + align) & 3] & need.flags) continue;
             allocate_byte(nullptr, unalloced, &alloced, need, grp->big_group * 2, 5, i, free_bytes,
                           ixbar_bytes_placed, match_bytes_placed, search_bus);
@@ -961,7 +965,8 @@ int need_align_flags[4][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
 
 /* Add the pre-allocated bytes to the Use structure */
 static void add_use(IXBar::Use &alloc, const PHV::Field *field,
-                    const bitrange *bits = nullptr, int flags = 0, int partition_multiplier = 1,
+                    const bitrange *bits = nullptr, int flags = 0,
+                    IXBar::byte_type_t byte_type = IXBar::NO_BYTE_TYPE,
                     unsigned extra_align = 0) {
     bool ok = false;
     int index = 0;
@@ -972,11 +977,23 @@ static void add_use(IXBar::Use &alloc, const PHV::Field *field,
         byte.flags =
             flags | need_align_flags[sl.container.log2sz()][(sl.container_bit/8U) & 3]
                   | need_align_flags[extra_align][index & 3];
-        if (partition_multiplier == 0)
-            byte.atcam_index = true;
-        else if (partition_multiplier == 2)
+        if (byte_type == IXBar::ATCAM) {
             byte.atcam_double = true;
-        alloc.use.push_back(byte);
+        } else if (byte_type == IXBar::PARTITION_INDEX) {
+            byte.atcam_index = true;
+        }
+
+        if (byte_type == IXBar::RANGE) {
+            if (sl.container_bit < 4) {
+                alloc.use.push_back(byte);
+                alloc.use.back().range_lo = true;
+            } else {
+                alloc.use.push_back(byte);
+                alloc.use.back().range_hi = true;
+            }
+        } else {
+            alloc.use.push_back(byte);
+        }
         index++;
     });
     if (!ok)
@@ -1015,16 +1032,19 @@ void IXBar::field_management(const IR::Expression *field, IXBar::Use &alloc,
     }
     if (field->is<IR::Mask>())
         BUG("Masks should have been converted to Slices before input xbar allocation");
-    int partition_multiplier = 1;
+
+    byte_type_t byte_type = NO_BYTE_TYPE;
     if (auto read = field->to<IR::MAU::InputXBarRead>()) {
         if (is_atcam) {
             if (partition != read->partition_index)
                 return;
             else if (read->partition_index)
-                partition_multiplier = 0;
+                byte_type = PARTITION_INDEX;
             else if (read->match_type.name == "ternary" || read->match_type.name == "lpm")
-                partition_multiplier = 2;
+                byte_type = ATCAM;
         }
+        if (read->match_type.name == "range")
+            byte_type = RANGE;
         field = read->expr;
     }
 
@@ -1041,7 +1061,7 @@ void IXBar::field_management(const IR::Expression *field, IXBar::Use &alloc,
     } else {
          fields_needed[finfo->name] = field_bits;
     }
-    add_use(alloc, finfo, &bits, 0, partition_multiplier);
+    add_use(alloc, finfo, &bits, 0, byte_type);
 }
 
 /* This visitor is used by stateful tables to find the fields needed and add them to the
@@ -1059,7 +1079,7 @@ class FindFieldsToAlloc : public Inspector {
         if (auto *finfo = phv.field(e, &bits)) {
             if (!fields_needed.count(finfo->name)) {
                 fields_needed.insert(finfo->name);
-                add_use(alloc, finfo, &bits, 0, 1, extra_align); }
+                add_use(alloc, finfo, &bits, 0, IXBar::NO_BYTE_TYPE, extra_align); }
             return false; }
         return true; }
     bool preorder(const IR::MAU::HashDist *) override {
@@ -1392,7 +1412,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             alloc.gw_search_bus = true;
             alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
         }
-        add_use(alloc, info.first, &info.second.bits, flags); }
+        add_use(alloc, info.first, &info.second.bits, flags, NO_BYTE_TYPE); }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;
     if (!find_alloc(alloc.use, false, second_try, xbar_alloced, 0)) {
         alloc.clear();

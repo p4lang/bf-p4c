@@ -128,6 +128,13 @@ void TableLayout::check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MA
                 break;
             }
         }
+        for (auto ixbar_read : tbl->match_key) {
+            if (ixbar_read->match_type == "range") {
+                layout.ternary = true;
+                layout.has_range = true;
+                break;
+            }
+        }
     }
 }
 
@@ -158,7 +165,8 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
         bitrange bits = { 0, 0 };
         auto *field = phv.field(ixbar_read->expr, &bits);
         int bytes = 0;
-        int multiplier = 1;
+        int match_multiplier = 1;
+        int ixbar_multiplier = 1;
         if (field) {
             /* FIXME -- if a field is allocated to non-contiguous bits of a byte,
              * this will count that byte twice, when it is only needed once.  The
@@ -167,15 +175,20 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
              bool is_partition = false;
              if (layout.atcam) {
                  if (field->name == partition_index) {
-                     multiplier = 0;
+                     match_multiplier = 0;
                      is_partition = true;
                      partition_found = true;
                      ERROR_CHECK(ixbar_read->match_type.name == "exact", "%s: The partition index "
                                  "of algorithmic TCAM table %s must be an exact field");
                  } else if (ixbar_read->match_type.name == "ternary" ||
                             ixbar_read->match_type.name == "lpm") {
-                     multiplier = 2;
+                     match_multiplier = 2;
                  }
+             }
+
+             if (ixbar_read->match_type.name == "range") {
+                 ixbar_multiplier = 2;
+                 match_multiplier = 2;
              }
 
 
@@ -187,9 +200,9 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
             if (bytes == 0)  // FIXME: Better sanity check needed?
                 ERROR("Field " << field->name << " allocated to tagalong but used in MAU pipe");
 
-            layout.ixbar_bytes += bytes;
-            layout.match_bytes += bytes * multiplier;
-            layout.match_width_bits += bits.size() * multiplier;
+            layout.ixbar_bytes += bytes * ixbar_multiplier;
+            layout.match_bytes += bytes * match_multiplier;
+            layout.match_width_bits += bits.size() * match_multiplier;
             if (is_partition) {
                 layout.partition_bits = bits.size();
                 // If partition count is set and requires less bits than

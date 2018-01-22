@@ -493,7 +493,13 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         else if (auto k = t->match_table->getConstantProperty("size"))
             set_entries = k->asInt();
         else if (auto k = t->match_table->getConstantProperty("min_size"))
-            set_entries = k->asInt(); }
+            set_entries = k->asInt();
+        if (t->layout.has_range) {
+            RangeEntries re(phv, set_entries);
+            t->apply(re);
+            set_entries = re.TCAM_lines();
+        }
+    }
     for (auto *p = done; p; p = p->prev) {
         if (p->name == rv->name) {
             if (p->need_more == false) {

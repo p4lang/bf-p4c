@@ -1037,6 +1037,62 @@ bool TableFormat::allocate_match() {
     return true;
 }
 
+/** As specified in the uArch document in section 6.3.6 TCAM Search Data Format, a TCAM search
+ *  data/match data can be encoded in 4 ways:
+ *
+ *  0 - tcam_normal
+ *  1 - dirtcam_2b
+ *  2 - dirtcam_4b_lo 
+ *  3 - dirtcam_4b_hi
+ *
+ *  TCAM values have two search words and two match words.  These two words give the ability to
+ *  do all 0, 1, and don't care matches.
+ *
+ *  The encoding for TCAM normal is described in section 6.3.1 TCAM Data Representation
+ *
+ *  2b/4b encoding is a translation of all possible matches through a Karnaugh map.  The
+ *  following table is a map of 2b encoding
+ *
+ *  __Desired_Match__|____Encoding____
+ *         00        |  word0[0] = 1
+ *         01        |  word0[1] = 1
+ *         10        |  word1[0] = 1
+ *         11        |  word1[1] = 1
+ *
+ *  Thus one can calculate all 0 1 and * patterns, i.e if the match was *0, word0 would be 01
+ *  and word1 would be 01
+ *
+ *  4b encoding has a similar table:
+ *
+ *  __Desired_Match__|____Encoding____
+ *       0000        |  word0[0] = 1
+ *       ....        |  ............
+ *       0111        |  word0[7] = 1
+ *       1000        |  word1[0] = 1
+ *       ....        |  ............
+ *       1111        |  word1[7] = 1
+ * 
+ *  One can surmise that ranges are now possible, as each individual number translates to a
+ *  particular byte in either word0 or word1.  Notice also that it takes a full byte to match
+ *  on the range of a nibble.  Thus the reason for 4b_lo and 4b_hi, as the encoding will match
+ *  on the lower or higher nibble respectively.
+ *
+ *  The encodings for Barefoot are the following:
+ *     - TCAM normal for version/valid matching
+ *     - 2b encoding for standard match data, as this apparently saves power when compared to
+ *       TCAM normal encoding
+ *     - Each full byte of range match will need a 4b_lo and a 4b_hi 
+ */
+void TableFormat::initialize_dirtcam_value(bitvec &dirtcam, const IXBar::Use::Byte &byte) {
+    if (byte.range_lo) {
+        dirtcam.setbit(byte.loc.byte * 2 + 1);  // 4b_lo encoding
+    } else if (byte.range_hi) {
+        dirtcam.setrange(byte.loc.byte * 2, 2);  // 4b_hi_encoding
+    } else {
+        dirtcam.setbit(byte.loc.byte * 2);  // 2b_encoding
+    }
+}
+
 bool TableFormat::allocate_all_ternary_match() {
     bitvec used_groups;
     bitvec used_midbyte;
@@ -1051,18 +1107,18 @@ bool TableFormat::allocate_all_ternary_match() {
                 used_groups.setbit(group_used);
                 used_midbyte.setbit(group_used);
                 byte_config[group_used] = MID_BYTE_LO;
-                dirtcam[group_used].setbit(byte.loc.byte * 2);
+                initialize_dirtcam_value(dirtcam[group_used], byte);
             }
             if (byte.bit_use.max().index() >= 4) {
                 int group_used = byte.loc.group + 1;
                 used_groups.setbit(group_used);
                 used_midbyte.setbit(group_used);
                 byte_config[group_used] = MID_BYTE_HI;
-                dirtcam[group_used].setbit(byte.loc.byte * 2);
+                initialize_dirtcam_value(dirtcam[group_used], byte);
             }
         } else {
             used_groups.setbit(byte.loc.group);
-            dirtcam[byte.loc.group].setbit(byte.loc.byte * 2);
+            initialize_dirtcam_value(dirtcam[byte.loc.group], byte);
         }
     }
 
@@ -1087,44 +1143,6 @@ bool TableFormat::allocate_all_ternary_match() {
     }
     return true;
 }
-
-/* Specifically allocates one version for a byte.  Only looks in the upper 4 nibbles of the RAM
-   This isn't what I want to do, but it's a first draft so I can test the other pieces */
-/*
-bool TableFormat::allocate_one_version(int starting_byte, int group) {
-    bool allocated = false;
-    int version_check = starting_byte + VERSION_BYTES;
-    for (int i = 0; i < VERSION_NIBBLES; i++) {
-        int version_index = version_check * 8 + i * VERSION_BITS;
-        if (total_use.getrange(version_index, VERSION_BITS)) continue;
-        bitvec vers_mask(0, VERSION_BITS);
-        vers_mask <<= version_index;
-        use->match_groups[group].mask[VERS] |= vers_mask;
-        total_use |= vers_mask;
-        byte_use[version_check + i / 2] |= vers_mask;
-        allocated = true;
-        break;
-    }
-    return allocated;
-}
-*/
-
-/* Allocates the version for all match groups.  Again, this is a relatively simpler version */
-/*
-bool TableFormat::allocate_all_version() {
-    for (size_t i = 0; i < match_group_info.size(); i++) {
-        bool allocated = false;
-        for (size_t j = 0; j < match_group_info[i].size(); j++) {
-            int starting_byte = match_group_info[i][j] * SINGLE_RAM_BYTES;
-            if (allocate_one_version(starting_byte, i)) {
-                allocated = true; break;
-            }
-        }
-        if (!allocated) return false;
-    }
-    return true;
-}
-*/
 
 /* This is a verification pass that guarantees that we don't have overlap.  More constraints can
    be checked as well.  */

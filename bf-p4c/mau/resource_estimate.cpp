@@ -2,6 +2,9 @@
 #include "memories.h"
 #include "lib/bitops.h"
 
+constexpr int RangeEntries::MULTIRANGE_DISTRIBUTION_LIMIT;
+constexpr int RangeEntries::RANGE_ENTRY_PERCENTAGE;
+
 int CounterPerWord(const IR::MAU::Counter *ctr) {
     switch (ctr->type) {
     case IR::MAU::DataAggregation::PACKETS:
@@ -853,3 +856,95 @@ void StageUseEstimate::tcams_left_best_option() {
     }
 }
 
+/** This pass calculates the number of lines an individual range match will take.  In order
+ *  to perform a range match in Tofino, multiple lines of a TCAM may be necessary.  This is
+ *  described in section 6.3.12 DirtCAM Example.  Essentially a larger range is broken into
+ *  several smaller ranges that the hardware is capable of matching, which occur in factors
+ *  of 16, as ranges are matched on a nibble by nibble basis, and 2^4 = 16.
+ *
+ *  The maximum number of rows that could be required by a range match is 2 * (nibbles involved
+ *  in range match) - 1.  Let's look at a 12 bit range example 2 <= x <= 600
+ *
+ *  _____small_range_____|__nib_11_8__|__nib_7_4__|__nib_3_0__
+ *      2 <= x <= 15     |      0     |     0     |  [2:15]
+ *     16 <= x <= 255    |      0     |   [1:15]  |    X  
+ *    256 <= x <= 511    |      1     |     X     |    X
+ *    512 <= x <= 591    |      2     |   [1:4]   |    X
+ *    592 <= x <= 600    |      2     |     5     |  [1:8]
+ *
+ *  Calculations for these smaller ranges are done based on the factors within these
+ *  individual ranges for nibbles.  The 4b_encoding provides a way to match a nibble to any
+ *  combination of numbers between 0-15.  However, note that not all range need all rows.
+ *
+ *  The hardware to provide matching across TCAM rows is called the Multirange Distributor,
+ *  described in section 6.3.9.2 of the uArch.  The distribution can combine the match signals,
+ *  of nearby rows, in a 3 step process.  The first step can combine a signal in either the
+ *  higher or lower row, the seocnd step can combine a row 2 rows away, and the third can combine
+ *  a signal from 4 rows away, for a maximum distribution limit of 8 rows.  Thus the total rows
+ *  is the max of the previous formula and 8.
+ */
+bool RangeEntries::preorder(const IR::MAU::InputXBarRead *ixbar_read) {
+    if (ixbar_read->match_type.name != "range")
+        return false;
+
+    bitrange bits = { 0, 0 };
+    auto field = phv.field(ixbar_read->expr, &bits);
+
+    int range_nibbles = 0;
+    field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
+        if (sl.container_bit < 4)
+            range_nibbles++;
+        if (sl.container_hi() > 3)
+            range_nibbles++;
+    });
+
+    auto tbl = findContext<IR::MAU::Table>();
+
+    // FIXME: This is a limitation from Glass where glass requires all range matches to be on an
+    // individual TCAM.  After looking at the hardware requirements and talking to the driver
+    // team, I'm not sure if this constraint actually exists.  Will have to be verified by
+    // packet testing.  Currently the input xbar algorithm ignores this constraint
+    ERROR_CHECK(range_nibbles <= IXBar::TERNARY_BYTES_PER_GROUP, "%s: Currently in p4c, the table "
+                "%s cannot perform a range match on key %s as the key does not fit in under 5 "
+                "PHV nibbles", ixbar_read->srcInfo, tbl->name, field->name);
+    int range_lines_needed = 2 * range_nibbles - 1;
+    range_lines_needed = std::min(MULTIRANGE_DISTRIBUTION_LIMIT, range_lines_needed);
+    max_entry_TCAM_lines = std::max(range_lines_needed, max_entry_TCAM_lines);
+    return false;
+}
+
+/** Because a range entry requires a lot of extra TCAM rows, and either not every range requires
+ *  the maximum number of rows, or no range match at all, the programmer can provide a pragma
+ *  to limit the number of rows.
+ */
+void RangeEntries::postorder(const IR::MAU::Table *tbl) {
+    auto annot = tbl->match_table->getAnnotations();
+    int range_entries = -1;
+    if (auto s = annot->getSingle("entries_with_ranges")) {
+        const IR::Constant *pragma_val = nullptr;
+        if (s->expr.size() == 0) {
+            ::error("%s: entries_with_ranges pragma on table %s has no value", s->srcInfo,
+                    tbl->name);
+        } else {
+            pragma_val = s->expr.at(0)->to<IR::Constant>();
+            ERROR_CHECK(pragma_val != nullptr, "%s: the value for the entries_with_ranges "
+                        "pragma on table %s is not a constant", s->srcInfo, tbl->name);
+        }
+        if (pragma_val) {
+            int pragma_range_entries = pragma_val->asInt();
+            WARN_CHECK(pragma_range_entries > 0, "%s: The value for pragma entries_with_ranges "
+                       "on table %s is %d, which is invalid and will be ignored", s->srcInfo,
+                        tbl->name, pragma_range_entries);
+            WARN_CHECK(pragma_range_entries <= table_entries, "%s: The value for pragma "
+                       "entries_with_ranges on table %s is %d, which is greater than the "
+                       "entries provided for the table %d, and thus will be shrunk to that size",
+                       s->srcInfo, tbl->name, pragma_range_entries, table_entries);
+            if (pragma_range_entries > 0)
+                range_entries = std::min(pragma_range_entries, table_entries);
+        }
+    }
+    if (range_entries < 0) {
+        range_entries = table_entries * (RANGE_ENTRY_PERCENTAGE / 100);
+    }
+    total_TCAM_lines = range_entries * max_entry_TCAM_lines + (table_entries - range_entries);
+}

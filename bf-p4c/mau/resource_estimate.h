@@ -112,4 +112,25 @@ int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width);
 int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl);
 int IdleTimePerWord(const IR::MAU::IdleTime *idletime);
 
+class RangeEntries : public MauInspector {
+    static constexpr int MULTIRANGE_DISTRIBUTION_LIMIT = 8;
+    static constexpr int RANGE_ENTRY_PERCENTAGE = 25;
+
+ private:
+    const PhvInfo &phv;
+    int table_entries;
+    int total_TCAM_lines = 0;
+    int max_entry_TCAM_lines = 1;
+
+    bool preorder(const IR::MAU::TableSeq *) override { return false; }
+    bool preorder(const IR::MAU::Action *) override { return false; }
+    bool preorder(const IR::MAU::BackendAttached *) override { return false; }
+    bool preorder(const IR::MAU::InputXBarRead *) override;
+    void postorder(const IR::MAU::Table *) override;
+
+ public:
+    int TCAM_lines() { return total_TCAM_lines; }
+    RangeEntries(const PhvInfo &p, int te) : phv(p), table_entries(te) {}
+};
+
 #endif /* BF_P4C_MAU_RESOURCE_ESTIMATE_H_ */

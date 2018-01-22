@@ -141,6 +141,7 @@ struct TableFormat {
     bool allocate_match();
 
     bool allocate_all_ternary_match();
+    void initialize_dirtcam_value(bitvec &dirtcam, const IXBar::Use::Byte &byte);
 
     bool analyze_layout_option();
     bool analyze_skinny_layout_option(int per_RAM, safe_vector<std::pair<int, int>> &sizes);
@@ -166,25 +167,6 @@ struct TableFormat {
     bool attempt_allocate_shares();
     bool allocate_shares();
     void allocate_full_fits(int width_sect);
-
-    /*
-    bool allocate_all_match();
-
-    void determine_byte_types(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes);
-    bool allocate_easy_bytes(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes,
-        int &easy_size);
-    bool allocate_difficult_bytes(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes,
-        int easy_size);
-    void determine_difficult_vectors(safe_vector<ByteInfo> &unaligned_match,
-        safe_vector<ByteInfo> &unaligned_ghost, bitvec &unaligned_bits,
-        bitvec &chosen_ghost_bits, int ghosted_group);
-    bool allocate_byte_vector(safe_vector<ByteInfo> &bytes, int prev_allocated);
-    void easy_byte_fill(int RAM, int group, ByteInfo &byte, int &starting_byte,
-        bool protect);
-    int determine_next_group(int current_group, int RAM);
-    bool allocate_one_version(int starting_byte, int group);
-    bool allocate_all_version();
-    */
 
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IR::MAU::Table *t,

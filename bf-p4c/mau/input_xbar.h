@@ -74,6 +74,7 @@ struct IXBar {
      * they might be attached to more than one match table, and we only want to account
      * for them once. */
     std::unordered_set<const IR::Attached *>                attached_tables;
+    enum byte_type_t { NO_BYTE_TYPE, ATCAM, PARTITION_INDEX, RANGE };
 
     /** IXbar::Use tracks the input xbar use of a single table */
     struct Use {
@@ -96,15 +97,23 @@ struct IXBar {
             bitvec      bit_use;
             // flags describing alignment and gateway use/requirements
             int         flags = 0;
+
             // If the byte has to appear twice in the match format for atcam as it is a ternary
             bool        atcam_double = false;
             // If the byte is part of the partition index of an atcam table
             bool        atcam_index = false;
+
+            // If the byte is to be a range match, with the lo nibble used
+            bool        range_lo = false;
+            // If the byte is to be a range match, with the hi nibble used
+            bool        range_hi = false;
+
             // Which search bus this byte belongs to.  Used rather than groups in table format
             // as the Byte can appear once on the input xbar
             int         search_bus = -1;
             // Given a byte appearing multiple times within the match format, which one it is
             int         match_index = 0;
+
             Byte(cstring f, int l, int h) : field(f), lo(l), hi(h) {}
             Byte(cstring f, int l, int h, int g, int gb) : field(f), lo(l), hi(h), loc(g, gb) {}
             operator std::pair<cstring, int>() const { return std::make_pair(field, lo); }
@@ -119,6 +128,7 @@ struct IXBar {
                 if (hi != b.hi) return hi < b.hi;
                 return match_index < b.match_index;
             }
+            bool is_range() { return range_lo || range_hi; }
         };
         safe_vector<Byte>    use;
 
