@@ -9,10 +9,13 @@
 #include "bf-p4c/phv/utils.h"
 #include "lib/bitvec.h"
 #include "test/gtest/helpers.h"
+#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
 
-TEST(bitvec, inc) {
+class TofinoBitvec : public TofinoBackendTest {};
+
+TEST_F(TofinoBitvec, inc) {
     bitvec bv;
     EXPECT_EQ(-1, *bv.min());
     EXPECT_EQ(-1, *bv.max());
@@ -46,7 +49,9 @@ TEST(bitvec, inc) {
     EXPECT_EQ(2, *bv.max());
 }
 
-TEST(PHV, clusterAlignment) {
+class TofinoPhvCrush : public TofinoBackendTest {};
+
+TEST_F(TofinoPhvCrush, clusterAlignment) {
     // XXX(cole): This just tests the first bit of the valid bits, not all
     // valid bits.
     using FieldData = struct {
@@ -130,8 +135,7 @@ TEST(PHV, clusterAlignment) {
 
 }
 
-TEST(PHV_TOFINO, makeDeviceAllocation) {
-    Device::init("tofino");
+TEST_F(TofinoPhvCrush, makeDeviceAllocation) {
     const PhvSpec& phvSpec = Device::phvSpec();
     auto alloc = PHV::ConcreteAllocation(SymBitMatrix());
 
@@ -154,8 +158,7 @@ TEST(PHV_TOFINO, makeDeviceAllocation) {
         EXPECT_EQ(EGRESS, alloc.gress(c)); }
 }
 
-TEST(PHV_TOFINO, Transaction) {
-    Device::init("tofino");
+TEST_F(TofinoPhvCrush, Transaction) {
     const PhvSpec& phvSpec = Device::phvSpec();
     auto alloc = PHV::ConcreteAllocation(SymBitMatrix());
 
@@ -286,8 +289,7 @@ TEST(PHV_TOFINO, Transaction) {
 }
 
 
-TEST(PHV_TOFINO, slicesByLiveness) {
-    Device::init("tofino");
+TEST_F(TofinoPhvCrush, slicesByLiveness) {
     const PhvSpec& phvSpec = Device::phvSpec();
 
     SymBitMatrix mutex;
@@ -330,8 +332,9 @@ TEST(PHV_TOFINO, slicesByLiveness) {
               alloc.slicesByLiveness(c1));
 }
 
-TEST(PHV_JBAY, makeDeviceAllocation) {
-    Device::init("jbay");
+class JBayPhvCrush : public JBayBackendTest {};
+
+TEST_F(JBayPhvCrush, makeDeviceAllocation) {
     const PhvSpec& phvSpec = Device::phvSpec();
     auto alloc = PHV::ConcreteAllocation(SymBitMatrix());
 
