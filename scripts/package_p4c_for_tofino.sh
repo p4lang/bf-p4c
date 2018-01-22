@@ -10,7 +10,7 @@ $topdir/bootstrap_bfn_compilers.sh --no-ptf  --build-dir $builddir \
                                    -DCMAKE_INSTALL_PREFIX=/usr/local \
                                    -DENABLE_JBAY=OFF -DENABLE_BMV2=OFF \
                                    -DENABLE_EBPF=OFF -DENABLE_P4TEST=OFF \
-                                   -DENABLE_P4GRAPHS=ON
+                                   -DENABLE_P4C_GRAPHS=ON
 cd $builddir
 make -j $parallel_make package
 
