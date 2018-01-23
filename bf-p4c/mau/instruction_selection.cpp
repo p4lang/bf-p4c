@@ -405,6 +405,13 @@ size_t index_operand(const IR::Primitive *prim) {
     return 1;
 }
 
+size_t input_operand(const IR::Primitive *prim) {
+    if (prim->name.startsWith("lpf") || prim->name.startsWith("wred"))
+        return 1;
+    else
+        return -1;
+}
+
 bool StatefulHashDistSetup::Scan::preorder(const IR::MAU::Action *act) {
     self.remove_tempvars.clear();
     if (act->stateful.empty())
@@ -555,6 +562,60 @@ const IR::MAU::Instruction *StatefulHashDistSetup::Update::preorder(IR::MAU::Ins
     return inst;
 }
 
+bool LPFSetup::Scan::preorder(const IR::MAU::Instruction *) {
+    return false;
+}
+
+/** Linking the input for an LPF found in the action call with the IR node.  The Scan pass finds
+ *  the PHV field, and the Update pass updates the AttachedMemory object
+ */
+bool LPFSetup::Scan::preorder(const IR::Primitive *prim) {
+    int input_index = input_operand(prim);
+    if (input_index == -1)
+        return false;
+
+    auto gref = prim->operands[0]->to<IR::GlobalRef>();
+    // typechecking should catch this too
+    BUG_CHECK(gref, "No object named %s", prim->operands[0]);
+    auto mtr = gref->obj->to<IR::MAU::Meter>();
+    BUG_CHECK(mtr, "%s: Operand in LPF execute is not a meter", prim->srcInfo);
+    auto input = prim->operands[input_index];
+    auto *field = self.phv.field(input);
+    BUG_CHECK(field, "%s: Not a phv field in the lpf execute: %s", prim->srcInfo, field->name);
+
+    if (self.update_lpfs.count(mtr) == 0) {
+        self.update_lpfs[mtr] = input;
+        return false;
+    }
+
+    auto *act = findContext<IR::MAU::Action>();
+    auto *tbl = findContext<IR::MAU::Table>();
+    auto *other_field = self.phv.field(self.update_lpfs.at(mtr));
+
+    ERROR_CHECK(field == other_field, "%s: The call of this lpf.execute in action %s has "
+                "a different input %s than another lpf.execute on %s in the same table %s. "
+                "The other input is %s.", prim->srcInfo, act->name, field->name, mtr->name,
+                tbl->name, other_field->name);
+    return false;
+}
+
+bool LPFSetup::Update::preorder(IR::MAU::Meter *mtr) {
+    auto orig_meter = getOriginal()->to<IR::MAU::Meter>();
+    bool should_have_input = mtr->implementation.name == "lpf" ||
+                             mtr->implementation.name == "wred";
+    bool has_input = self.update_lpfs.count(orig_meter) > 0;
+    if (has_input != should_have_input) {
+        ERROR_CHECK(should_have_input && !has_input, "%s: %s meter %s never provided an input "
+                    "through an action", mtr->srcInfo, mtr->implementation.name, mtr->name);
+        ERROR_CHECK(has_input && !should_have_input, "%s: meter %s does not require an input, "
+                    "but is provided one through an action", mtr->srcInfo, mtr->name);
+    }
+    if (!(has_input && should_have_input))
+        return false;
+    mtr->input = self.update_lpfs.at(orig_meter);
+    return false;
+}
+
 const IR::MAU::Instruction *ConvertCastToSlice::preorder(IR::MAU::Instruction *instr) {
     BUG_CHECK(findContext<IR::MAU::Instruction>() == nullptr, "nested instructions");
     contains_cast = false;
@@ -666,6 +727,7 @@ DoInstructionSelection::DoInstructionSelection(PhvInfo &phv) : PassManager {
     new InstructionSelection(phv),
     new ConvertCastToSlice,
     new StatefulHashDistSetup(phv),
+    new LPFSetup(phv),
     new CollectPhvInfo(phv),
     new PHV::ValidateActions(phv, false, false, false)
 } {}

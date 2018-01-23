@@ -896,13 +896,18 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
     }
     safe_vector<IXBar::Use::Byte *> unalloced;
 
-    /* Try to place most constrained to least constrained bytes */
-    std::sort(alloc_use.begin(), alloc_use.end(), [=](const Use::Byte &a, const Use::Byte &b) {
-        int t;
-        if ((t = static_cast<size_t>(a.flags) - static_cast<size_t>(b.flags)) != 0)
-            return t > 0;
-        return a < b;
-    });
+    /* Try to place most constrained to least constrained bytes, unless the ordering of the bytes
+     * matters, as in the case of any bytes headed to the meter ALU and cannot be swizzled
+     */
+    if (byte_mask == ~0U) {
+        std::sort(alloc_use.begin(), alloc_use.end(),
+                  [=](const Use::Byte &a, const Use::Byte &b) {
+            int t;
+            if ((t = static_cast<size_t>(a.flags) - static_cast<size_t>(b.flags)) != 0)
+                return t > 0;
+            return a < b;
+        });
+    }
 
     for (auto &need : alloc_use) {
         unalloced.push_back(&need);
@@ -1532,6 +1537,33 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     return rv;
 }
 
+/** Allocation of the meter input xbar if it is an LPF or WRED.  Specifically have to reserve
+ *  bytes 8-11 of a specific input xbar group currently
+ */
+bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const PhvInfo &phv, Use &alloc, bool second_try) {
+    if (!mtr->alu_output())
+        return true;
+    if (mtr->input == nullptr)
+        return true;
+
+    safe_vector<IXBar::Use::Byte *> alloced;
+    std::set<cstring> fields_needed;
+    unsigned byte_mask = ((1U << LPF_INPUT_BYTES) - 1) << METER_ALU_BYTE_OFFSET;
+    bitrange bits;
+    if (auto *finfo = phv.field(mtr->input, &bits)) {
+        if (!fields_needed.count(finfo->name)) {
+            fields_needed.insert(finfo->name);
+            add_use(alloc, finfo, &bits, 0, IXBar::NO_BYTE_TYPE);
+        }
+    }
+    if (!find_alloc(alloc.use, false, second_try, alloced, 0, false, byte_mask)) {
+        alloc.clear();
+        return false;
+    }
+    fill_out_use(alloced, false);
+    return true;
+}
+
 bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
                           const PhvInfo &phv, Use &alloc, bool second_try) {
     std::set <cstring> fields_needed;
@@ -1549,7 +1581,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
     salu->apply(FindFieldsToAlloc(phv, alloc, fields_needed, extra_align));
     unsigned width = salu->width/8U;
     if (!salu->dual) width *= 2;
-    unsigned byte_mask = ((1U << width) - 1) << 8;
+    unsigned byte_mask = ((1U << width) - 1) << METER_ALU_BYTE_OFFSET;
     if (alloc.use.size() == 0) return true;
     if (alloc.use.size() > width) {
         // can't possibly fit
@@ -1984,6 +2016,14 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
                 !allocSelector(as, tbl, phv, alloc.selector_ixbar, true, tbl->name)) {
                 alloc.clear_ixbar();
                 return false; } }
+        if (auto mtr = at_mem->to<IR::MAU::Meter>()) {
+            if (!attached_tables.count(mtr) &&
+                !allocMeter(mtr, phv, alloc.meter_ixbar, false) &&
+                !allocMeter(mtr, phv, alloc.meter_ixbar, true)) {
+                alloc.clear_ixbar();
+                return false;
+            }
+        }
         if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
             if (!attached_tables.count(salu) &&
                 !allocStateful(salu, phv, alloc.salu_ixbar, false) &&

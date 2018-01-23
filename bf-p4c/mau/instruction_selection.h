@@ -107,6 +107,30 @@ class StatefulHashDistSetup : public PassManager {
         addPasses({ new Scan(*this), new Update(*this) }); }
 };
 
+class LPFSetup : public PassManager {
+    ordered_map<const IR::MAU::Meter *, const IR::Expression *> update_lpfs;
+    const PhvInfo &phv;
+
+    class Scan : public MauInspector {
+        LPFSetup &self;
+        bool preorder(const IR::MAU::Instruction *) override;
+        bool preorder(const IR::Primitive *) override;
+     public:
+        explicit Scan(LPFSetup &self) : self(self) {}
+    };
+
+    class Update : public MauModifier {
+        LPFSetup &self;
+        bool preorder(IR::MAU::Meter *) override;
+     public:
+        explicit Update(LPFSetup &self) : self(self) {}
+    };
+
+ public:
+    explicit LPFSetup(const PhvInfo &p) : phv(p) {
+        addPasses({ new Scan(*this), new Update(*this) }); }
+};
+
 class ConvertCastToSlice : public MauTransform, P4WriteContext {
     bool contains_cast = false;
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;

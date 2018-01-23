@@ -332,6 +332,7 @@ class Meter : Synth2Port {
                                              // as it should be contained in AttachedOutput
     NullOK Expression  pre_color = nullptr;  // Field to pre-color the meter.  Eventually
                                              // brought through hash distribution
+    NullOK Expression  input = nullptr;      // LPF and WRED have 32 bit inputs
     ID                 implementation = {};  // Normal, LPF, WRED
     const char *kind() const override { return "meter"; }
     const Type *getType() const override { return Type_Meter::get(); }

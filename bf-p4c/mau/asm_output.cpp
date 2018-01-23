@@ -1802,7 +1802,6 @@ class MauAsmOutput::UnattachedName : public MauInspector {
 
 
     bool preorder(const IR::MAU::Table *tbl) {
-        LOG1("Table name " << tbl->name);
         auto p = tbl->name.findlast('.');
         if (tbl->name == comparison_name ||
             (p != nullptr && tbl->name.before(p) == comparison_name)) {
@@ -1865,7 +1864,6 @@ cstring MauAsmOutput::find_attached_name(const IR::MAU::Table *tbl,
 
     if (memuse.unattached_tables.count(at_name) > 0) {
         UnattachedName unattached(tbl, memuse.unattached_tables.at(at_name), at);
-        LOG1("At_name " << at_name);
         pipe->apply(unattached);
         at_name = unattached.name();
     }
@@ -2013,6 +2011,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     auto name = tbl->get_use_name(meter);
     out << indent++ << "meter " << name << ":" << std::endl;
     out << indent << "p4: { name: " << canon_name(meter->name) << " }" << std::endl;
+    if (meter->input)
+        self.emit_ixbar(out, indent, &tbl->resources->meter_ixbar, nullptr, nullptr, nullptr,
+                        false);
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     cstring imp_type;
     if (!meter->implementation.name)

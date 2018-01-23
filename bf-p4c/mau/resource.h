@@ -11,7 +11,7 @@
 
 struct TableResourceAlloc {
     IXBar::Use                          match_ixbar, gateway_ixbar, selector_ixbar,
-                                        salu_ixbar;
+                                        salu_ixbar, meter_ixbar;
     safe_vector<IXBar::HashDistUse>     hash_dists;
     TableFormat::Use                    table_format;
     std::map<cstring, Memories::Use>    memuse;
@@ -23,6 +23,7 @@ struct TableResourceAlloc {
         rv->gateway_ixbar = gateway_ixbar;
         rv->selector_ixbar = selector_ixbar;
         rv->salu_ixbar = salu_ixbar;
+        rv->meter_ixbar = meter_ixbar;
         rv->table_format = table_format;
         // NOT cloning memuse
         rv->action_format = action_format;
@@ -59,6 +60,7 @@ struct TableResourceAlloc {
         gateway_ixbar.clear();
         selector_ixbar.clear();
         salu_ixbar.clear();
+        meter_ixbar.clear();
         hash_dists.clear();
     }
     void clear() {

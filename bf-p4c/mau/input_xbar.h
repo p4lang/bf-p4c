@@ -22,6 +22,8 @@ struct IXBar {
     static constexpr int HASH_DIST_SLICES = 3;
     static constexpr int HASH_DIST_BITS = 16;
     static constexpr int HASH_DIST_UNITS = 2;
+    static constexpr int METER_ALU_BYTE_OFFSET = 8;
+    static constexpr int LPF_INPUT_BYTES = 4;
     static constexpr int TERNARY_GROUPS = StageUse::MAX_TERNARY_GROUPS;
     static constexpr int BYTE_GROUPS = StageUse::MAX_TERNARY_GROUPS/2;
     static constexpr int TERNARY_BYTES_PER_GROUP = 5;
@@ -309,6 +311,7 @@ struct IXBar {
     bool allocSelector(const IR::MAU::Selector *, const IR::MAU::Table *, const PhvInfo &phv,
                        Use &alloc, bool second_try, cstring name);
     bool allocStateful(const IR::MAU::StatefulAlu *, const PhvInfo &phv, Use &alloc, bool);
+    bool allocMeter(const IR::MAU::Meter *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashDistType hdt,
                        const PhvInfo &phv, IXBar::Use &alloc, bool second_try, cstring name);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,

@@ -1413,13 +1413,16 @@ void Memories::swbox_bus_meters_counters() {
             auto *meter_group = new SRAM_group(ta, depth, 0, SRAM_group::METER);
 
             meter_group->attached = meter;
-            if (meter->direct)
-                meter_group->cm.needed = mems_needed(ta->calculated_entries, SRAM_DEPTH,
-                                                     COLOR_MAPRAM_PER_ROW, false);
-            else
-                meter_group->cm.needed = mems_needed(meter->size, SRAM_DEPTH,
-                                                     COLOR_MAPRAM_PER_ROW, false);
-            if (meter->implementation.name == "lpf" || meter->implementation.name == "wred") {
+            bool cm_needed = meter->implementation.name != "lpf" &&
+                             meter->implementation.name != "wred";
+            if (cm_needed) {
+                if (meter->direct)
+                    meter_group->cm.needed = mems_needed(ta->calculated_entries, SRAM_DEPTH,
+                                                         COLOR_MAPRAM_PER_ROW, false);
+                else
+                    meter_group->cm.needed = mems_needed(meter->size, SRAM_DEPTH,
+                                                         COLOR_MAPRAM_PER_ROW, false);
+            } else {
                 meter_group->requires_ab = true;
             }
             synth_bus_users.insert(meter_group);
@@ -1946,9 +1949,7 @@ void Memories::color_mapram_candidates(swbox_fill candidates[SWBOX_TYPES], RAM_s
                   "Oflow candidate does not have any maprams placed");
     }
 
-    if (candidates[SYNTH] && candidates[SYNTH].group->type == SRAM_group::METER) {
-        BUG_CHECK(!candidates[SYNTH].group->cm.all_placed(), "Synth2port candidate has all "
-                                                             "color maprams placed");
+    if (candidates[SYNTH] && !candidates[SYNTH].group->cm.all_placed()) {
         set_color_maprams(candidates[SYNTH], avail_maprams);
         // FIXME: Could have a similar algorithm to set_up_RAM_counts for color mapram,
         // instead of having separate color mapram information known throughout function.
