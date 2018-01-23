@@ -8,7 +8,7 @@ parallel_make=4
 $topdir/bootstrap_bfn_compilers.sh --no-ptf  --build-dir $builddir \
                                    -DCMAKE_BUILD_TYPE=RELEASE \
                                    -DCMAKE_INSTALL_PREFIX=/usr/local \
-                                   -DENABLE_JBAY=OFF -DENABLE_BMV2=OFF \
+                                   -DENABLE_JBAY=OFF -DENABLE_BMV2=ON \
                                    -DENABLE_EBPF=OFF -DENABLE_P4TEST=OFF \
                                    -DENABLE_P4C_GRAPHS=ON
 cd $builddir
@@ -16,7 +16,7 @@ make -j $parallel_make package
 
 # verify that the package has no JBay references
 pushd _CPack_Packages/Linux/DEB/p4c-compilers-*
-jbay_refs=$(strings usr/local/bin/p4c-barefoot | grep -i jbay | c++filt)
+jbay_refs=$(strings usr/local/bin/p4c-barefoot | c++filt | grep -i jbay)
 if [ $? == 0 ] ; then
     echo "Need to remove all JBay references from bf-p4c sources"
     echo $jbay_refs
