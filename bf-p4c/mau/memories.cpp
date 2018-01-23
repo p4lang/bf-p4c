@@ -1350,7 +1350,7 @@ void Memories::swbox_bus_selectors_indirects() {
             if ((ad = at->to<IR::MAU::ActionData>()) == nullptr)
                 continue;
             int width = 1;
-            int per_row = ActionDataPerWord(&ta->table->layout, &width);
+            int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
             int depth = mems_needed(ad->size, SRAM_DEPTH, per_row, false);
             SRAM_group *selector = nullptr;
 

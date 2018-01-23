@@ -379,14 +379,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-282/case1864.p4
   )
 
-# BRIG-186: per_flow_enable
-p4c_add_xfail_reason("tofino"
-  "Field .* overlaps with .*"
-  extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/action_spec_format/action_spec_format.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/stats_pi/stats_pi.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "Action for .* has some unbound arguments"
   # requires pragma action_default_only
@@ -1068,4 +1060,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit"
   extensions/p4_tests/p4_14/test_config_324_tcam_range_11.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "No format field or table named .*"
+  extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
   )

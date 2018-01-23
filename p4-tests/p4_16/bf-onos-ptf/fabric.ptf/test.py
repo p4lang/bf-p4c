@@ -174,7 +174,6 @@ class FabricIPv4UnicastTest(FabricTest):
         testutils.send_packet(self, self.port2, str(pkt_2to1))
         testutils.verify_packets(self, exp_pkt_2to1, [self.port1])
 
-@testutils.disabled
 class FabricIPv4UnicastGroupTest(FabricTest):
     @autocleanup
     def runTest(self):
@@ -201,7 +200,7 @@ class FabricIPv4UnicastGroupTest(FabricTest):
             ip_src = HOST1_IPV4, ip_dst = HOST2_IPV4, ip_ttl = 63)
 
         testutils.send_packet(self, self.port1, str(pkt_from1))
-        port_index, _ = testutils.verify_any_packet_any_port(
+        port_index = testutils.verify_any_packet_any_port(
             self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
 
 class PacketOutTest(FabricTest):

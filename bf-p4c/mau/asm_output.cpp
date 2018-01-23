@@ -1024,6 +1024,7 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
         for (type = TableFormat::ACTION; type <= TableFormat::INDIRECT_ACTION; type++) {
             if (match_group.mask[type].popcount() == 0) continue;
             bits.clear();
+            pfe_bits.clear();
             int start = match_group.mask[type].ffs();
             while (start >= 0) {
                 int end = match_group.mask[type].ffz(start);
