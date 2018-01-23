@@ -128,7 +128,7 @@ struct IXBar {
                 if (hi != b.hi) return hi < b.hi;
                 return match_index < b.match_index;
             }
-            bool is_range() { return range_lo || range_hi; }
+            bool is_range() const { return range_lo || range_hi; }
         };
         safe_vector<Byte>    use;
 

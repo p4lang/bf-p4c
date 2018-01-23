@@ -892,9 +892,9 @@ bool RangeEntries::preorder(const IR::MAU::InputXBarRead *ixbar_read) {
 
     int range_nibbles = 0;
     field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
-        if (sl.container_bit < 4)
+        if ((sl.container_bit % 8) < 4)
             range_nibbles++;
-        if (sl.container_hi() > 3)
+        if ((sl.container_hi() % 8) > 3)
             range_nibbles++;
     });
 

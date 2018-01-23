@@ -984,10 +984,11 @@ static void add_use(IXBar::Use &alloc, const PHV::Field *field,
         }
 
         if (byte_type == IXBar::RANGE) {
-            if (sl.container_bit < 4) {
+            if ((sl.container_bit % 8) < 4) {
                 alloc.use.push_back(byte);
                 alloc.use.back().range_lo = true;
-            } else {
+            }
+            if ((sl.container_hi() % 8) > 3) {
                 alloc.use.push_back(byte);
                 alloc.use.back().range_hi = true;
             }
