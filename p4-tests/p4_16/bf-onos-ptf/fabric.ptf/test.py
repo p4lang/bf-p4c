@@ -11,8 +11,10 @@ import google.protobuf.text_format
 from base_test import P4RuntimeTest, autocleanup
 from base_test import stringify, ipv4_to_binary, mac_to_binary 
 
-FORWARDING_TYPE_BRIDGING = 2
+# constants from fabric.p4
+FORWARDING_TYPE_BRIDGING = 0
 FORWARDING_TYPE_UNICAST_IPV4 = 2
+DEFAULT_MPLS_TTL = 64
 
 SWITCH_MAC = "00:00:00:00:aa:01"
 HOST1_MAC = "00:00:00:00:00:01"
@@ -117,6 +119,40 @@ class FabricTest(P4RuntimeTest):
             [self.Exact("fabric_metadata.next_id", next_id_)],
             grp_id)
 
+    def add_next_hop_mpls_v4(self, next_id, egress_port, smac, dmac, label):
+        next_id_ = stringify(next_id, 4)
+        egress_port_ = stringify(egress_port, 2)
+        smac_ = mac_to_binary(smac)
+        dmac_ = mac_to_binary(dmac)
+        label_ = stringify(label, 3)
+        self.send_request_add_entry_to_action(
+            "next.simple",
+            [self.Exact("fabric_metadata.next_id", next_id_)],
+            "next.mpls_routing_v4",
+            [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_),
+             ("label", label_)])
+
+    # next_hops is a dictionary mapping mbr_id to (egress_port, smac, dmac,
+    # label)
+    def add_next_hop_mpls_v4_group(self, next_id, grp_id, next_hops = {}):
+        next_id_ = stringify(next_id, 4)
+        for mbr_id, params in next_hops.items():
+            egress_port, smac, dmac, label = params
+            egress_port_ = stringify(egress_port, 2)
+            smac_ = mac_to_binary(smac)
+            dmac_ = mac_to_binary(dmac)
+            label_ = stringify(label, 3)
+            self.send_request_add_member(
+                "next.ecmp_selector", mbr_id, "next.mpls_routing_v4",
+                [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_),
+                 ("label", label_)])
+        self.send_request_add_group("next.ecmp_selector", grp_id,
+                                    grp_size=32, mbr_ids=next_hops.keys())
+        self.send_request_add_entry_to_group(
+            "next.hashed",
+            [self.Exact("fabric_metadata.next_id", next_id_)],
+            grp_id)
+
 class FabricL2UnicastTest(FabricTest):
     @autocleanup
     def runTest(self):
@@ -202,6 +238,61 @@ class FabricIPv4UnicastGroupTest(FabricTest):
         testutils.send_packet(self, self.port1, str(pkt_from1))
         port_index = testutils.verify_any_packet_any_port(
             self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
+
+class FabricIPv4MPLSTest(FabricTest):
+    @autocleanup
+    def runTest(self):
+        vlan_id = 10
+        self.set_internal_vlan(self.port1, False, 0, 0, vlan_id)
+        self.set_forwarding_type(self.port1, SWITCH_MAC, 0x800,
+                                 FORWARDING_TYPE_UNICAST_IPV4)
+        self.add_forwarding_unicast_v4_entry(HOST2_IPV4, 24, 400)
+        mpls_label = 0xaba
+        self.add_next_hop_mpls_v4(
+            400, self.port2, SWITCH_MAC, HOST2_MAC, mpls_label)
+
+        pkt_1to2 = testutils.simple_tcp_packet(
+            eth_src = HOST1_MAC, eth_dst = SWITCH_MAC,
+            ip_src = HOST1_IPV4, ip_dst = HOST2_IPV4, ip_ttl = 64)
+        exp_pkt_1to2 = testutils.simple_mpls_packet(
+            eth_src = SWITCH_MAC, eth_dst = HOST2_MAC,
+            mpls_tags = [{
+                "label": mpls_label,
+                "tc": 0,
+                "s": 1,
+                "ttl": DEFAULT_MPLS_TTL}],
+            inner_frame = pkt_1to2[IP:])
+
+        testutils.send_packet(self, self.port1, str(pkt_1to2))
+        testutils.verify_packets(self, exp_pkt_1to2, [self.port2])
+
+class FabricIPv4MPLSGroupTest(FabricTest):
+    @autocleanup
+    def runTest(self):
+        vlan_id = 10
+        self.set_internal_vlan(self.port1, False, 0, 0, vlan_id)
+        self.set_forwarding_type(self.port1, SWITCH_MAC, 0x800,
+                                 FORWARDING_TYPE_UNICAST_IPV4)
+        self.add_forwarding_unicast_v4_entry(HOST2_IPV4, 24, 500)
+        grp_id = 77
+        mpls_label = 0xaba
+        mbrs = { 2 : (self.port2, SWITCH_MAC, HOST2_MAC, mpls_label) }
+        self.add_next_hop_mpls_v4_group(500, grp_id, mbrs)
+
+        pkt_1to2 = testutils.simple_tcp_packet(
+            eth_src = HOST1_MAC, eth_dst = SWITCH_MAC,
+            ip_src = HOST1_IPV4, ip_dst = HOST2_IPV4, ip_ttl = 64)
+        exp_pkt_1to2 = testutils.simple_mpls_packet(
+            eth_src = SWITCH_MAC, eth_dst = HOST2_MAC,
+            mpls_tags = [{
+                "label": mpls_label,
+                "tc": 0,
+                "s": 1,
+                "ttl": DEFAULT_MPLS_TTL}],
+            inner_frame = pkt_1to2[IP:])
+
+        testutils.send_packet(self, self.port1, str(pkt_1to2))
+        testutils.verify_packets(self, exp_pkt_1to2, [self.port2])
 
 class PacketOutTest(FabricTest):
     def runTest(self):
