@@ -28,13 +28,22 @@ set (CHIP_SCHEMA_FILES
   ${BFASM_SOURCE_DIR}/jbay/chip.schema
   )
 
-add_custom_command (OUTPUT ${WALLE_BINARY_DIR}/walle
-  COMMAND ${PYINSTALLER} --distpath ${WALLE_BINARY_DIR} --onefile --strip ${WALLE_SRC}
-  --add-data '${BFASM_SOURCE_DIR}/tofino/chip.schema:lib/tofino'
-  --add-data '${BFASM_SOURCE_DIR}/jbay/chip.schema:lib/jbay'
-  --log-level=WARN
-  DEPENDS ${WALLE_SRCS} ${CHIP_SCHEMA_FILES}
-  COMMENT "Generating walle binary")
+if (ENABLE_JBAY)
+  add_custom_command (OUTPUT ${WALLE_BINARY_DIR}/walle
+    COMMAND ${PYINSTALLER} --distpath ${WALLE_BINARY_DIR} --onefile --strip ${WALLE_SRC}
+    --add-data '${BFASM_SOURCE_DIR}/tofino/chip.schema:lib/tofino'
+    --add-data '${BFASM_SOURCE_DIR}/jbay/chip.schema:lib/jbay'
+    --log-level=WARN
+    DEPENDS ${WALLE_SRCS} ${CHIP_SCHEMA_FILES}
+    COMMENT "Generating walle binary")
+else()
+  add_custom_command (OUTPUT ${WALLE_BINARY_DIR}/walle
+    COMMAND ${PYINSTALLER} --distpath ${WALLE_BINARY_DIR} --onefile --strip ${WALLE_SRC}
+    --add-data '${BFASM_SOURCE_DIR}/tofino/chip.schema:lib/tofino'
+    --log-level=WARN
+    DEPENDS ${WALLE_SRCS} ${CHIP_SCHEMA_FILES}
+    COMMENT "Generating walle binary")
+endif()
 
 add_custom_target (walle ALL
   DEPENDS ${WALLE_BINARY_DIR}/walle)
