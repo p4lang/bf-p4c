@@ -808,6 +808,7 @@ void AllocatePHV::end_apply() {
     for (const auto* f : actions_i.meter_color_dests()) {
         pragmas_i.pa_container_sizes().add_constraint(f, { PHV::Size::b8 }); }
 
+#if HAVE_JBAY
     // HACK WARNING
     // There might be an assumption in the Jbay parde generation
     // part that all pov bits are allocated to 8-bit containers.
@@ -816,6 +817,7 @@ void AllocatePHV::end_apply() {
             if (f.pov) {
                 pragmas_i.pa_container_sizes().add_constraint(&f, { PHV::Size::b8 }); } }
     }
+#endif  // HAVE_JBAY
 
     LOG1(pragmas_i.pa_container_sizes());
     auto alloc = make_concrete_allocation();

@@ -395,6 +395,7 @@ void Clustering::MakeSuperClusters::end_apply() {
         if (!f.pov)
             continue;
 
+#if HAVE_JBAY
         // HACK WARNING
         // There might be an assumption in the Jbay parde generation
         // part that all pov bits are allocated to 8-bit containers.
@@ -404,6 +405,7 @@ void Clustering::MakeSuperClusters::end_apply() {
             // stkvalid skipped to form slice list less or equal to 8bit slice list.
             if (f.size > 1) continue;
         }
+#endif  // HAVE_JBAY
 
         // Skip valid bits for header stacks, which are allocated with
         // $stkvalid.
