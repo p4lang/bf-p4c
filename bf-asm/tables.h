@@ -428,6 +428,8 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual const Call &get_action() const { return action; }
     virtual Format::Field *find_address_field(AttachedTable *) const { assert(0); return 0; }
     virtual Format::Field *get_per_flow_enable_param(MatchTable *) const { assert(0); return 0; }
+    virtual Format::Field *get_meter_address_param(MatchTable *) const { assert(0); return 0; }
+    virtual Format::Field *get_meter_type_param(MatchTable *) const { assert(0); return 0; }
     virtual int direct_shiftcount() const { assert(0); return -1; }
     virtual int indirect_shiftcount() const { assert(0); return -1; }
     virtual int address_shift() const { assert(0); return -1; }
@@ -938,6 +940,12 @@ public:
     std::string get_per_flow_enable_param() { return per_flow_enable_param; }
     Format::Field *get_per_flow_enable_param(MatchTable *m) const override {
         return per_flow_enable ? m->lookup_field(per_flow_enable_param) : nullptr; }
+    Format::Field *get_meter_address_param(MatchTable *m) const override {
+        std::string pfe_name = per_flow_enable_param.substr(0, per_flow_enable_param.find("_pfe"));
+        return per_flow_enable ? m->lookup_field(pfe_name + "_addr") : nullptr; }
+    Format::Field *get_meter_type_param(MatchTable *m) const override {
+        std::string pfe_name = per_flow_enable_param.substr(0, per_flow_enable_param.find("_pfe"));
+        return per_flow_enable ? m->lookup_field(pfe_name + "_type") : nullptr; }
     bool get_per_flow_enable() { return per_flow_enable; }
     bool is_direct() const { return direct; }
     virtual int default_pfe_adjust() const { return 0; }
