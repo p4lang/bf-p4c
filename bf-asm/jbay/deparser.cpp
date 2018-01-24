@@ -3,18 +3,20 @@
 #define YES(X)  X
 #define NO(X)
 
+#define JBAY_POV(GRESS, VAL, REG)                                                               \
+    if (VAL.pov) REG.pov = deparser.pov[GRESS].at(&VAL.pov->reg) + VAL.pov->lo;                 \
+    else error(VAL.val.lineno, "POV bit required for jbay");
+
 #define JBAY_SIMPLE_INTRINSIC(GRESS, VAL, REG, IFSHIFT)                                         \
     REG.phv = VAL.val->reg.deparser_id();                                                       \
-    if (VAL.pov) REG.pov = deparser.pov[GRESS].at(&VAL.pov->reg) + VAL.pov->lo;                 \
-    else error(VAL.val.lineno, "POV bit required for jbay");                                    \
+    JBAY_POV(GRESS, VAL, REG)                                                                   \
     IFSHIFT(REG.shft = intrin.vals[0].val->lo;)
 
 #define JBAY_ARRAY_INTRINSIC(GRESS, VAL, ARRAY, REG, POV, IFSHIFT)                              \
     for (auto &r : ARRAY) {                                                                     \
         r.REG.phv = VAL.val->reg.deparser_id();                                                 \
         IFSHIFT(r.REG.shft = intrin.vals[0].val->lo;) }                                         \
-    if (VAL.pov) POV.pov = deparser.pov[GRESS].at(&VAL.pov->reg) + VAL.pov->lo;                 \
-    else error(VAL.val.lineno, "POV bit required for jbay");
+    JBAY_POV(GRESS, VAL, POV)
 
 #define EI_INTRINSIC(NAME, IFSHIFT)                                                             \
     DEPARSER_INTRINSIC(JBay, EGRESS, NAME, 1) {                                                 \
@@ -115,14 +117,16 @@ DEPARSER_INTRINSIC(JBay, INGRESS, xid, 2) {
 
 #define JBAY_SIMPLE_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT)                            \
     DEPARSER_DIGEST(JBay, GRESS, NAME, CNT, can_shift = true; ) {                       \
-        SEL.phv = data.select->reg.deparser_id();                                       \
+        SEL.phv = data.select.val->reg.deparser_id();                                   \
+        JBAY_POV(GRESS, data.select, SEL)                                               \
         SEL.shft = data.shift + data.select->lo;                                        \
         SEL.disable_ = 0;                                                               \
         JBAY_DIGEST_TABLE(GRESS, TBL, IFID, YES, CNT) }
 
 #define JBAY_ARRAY_DIGEST(GRESS, NAME, ARRAY, TBL, SEL, IFID, CNT)                      \
     DEPARSER_DIGEST(JBay, GRESS, NAME, CNT, can_shift = true; ) {                       \
-        SEL.phv = data.select->reg.deparser_id();                                       \
+        SEL.phv = data.select.val->reg.deparser_id();                                   \
+        JBAY_POV(GRESS, data.select, SEL)                                               \
         SEL.shft = data.shift + data.select->lo;                                        \
         SEL.disable_ = 0;                                                               \
         for (auto &r : ARRAY) {                                                         \

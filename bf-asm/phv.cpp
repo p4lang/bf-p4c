@@ -235,7 +235,7 @@ void Phv::output(json::map &ctxt_json) {
         json::vector &phv_alloc_stage_ingress = phv_alloc_stage["ingress"] = json::vector();
         json::vector &phv_alloc_stage_egress = phv_alloc_stage["egress"] = json::vector();
         for (auto &slot : phv.user_defined) {
-            unsigned phv_number = slot.first->parser_id();
+            unsigned phv_number = slot.first->deparser_id();
             unsigned phv_container_size = slot.first->size;
             gress_t gress = slot.second.first;
             json::map phv_container;
