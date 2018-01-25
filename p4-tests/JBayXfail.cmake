@@ -174,18 +174,6 @@ p4c_add_xfail_reason("jbay"
 # "mismatch from expected.* at byte"
 # testdata/p4_14_samples/07-MultiProtocol.p4
 
-# BRIG-149
-p4c_add_xfail_reason("jbay"
-  "Syntax error, expecting identifier or operation"
-  testdata/p4_14_samples/issue1013.p4
-  )
-
-# BRIG-420
-p4c_add_xfail_reason("jbay"
-  "Syntax error, expecting identifier or operation"
-  testdata/p4_14_samples/exact_match8.p4
-  )
-
 # BRIG-421
 p4c_add_xfail_reason("jbay"
   "PHV allocation creates a container action impossible within a Tofino ALU"

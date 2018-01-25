@@ -151,7 +151,7 @@ int parse_num(YYSTYPE *val, const char *s, int base) {
     s--;
     while (*++s) {
         if (*s == '_') continue;
-        if (rv == INT && val->i > INT_MAX/base) {
+        if (rv == INT && val->i > LONG_MAX/base) {
             int v = val->i;
             VECTOR_init1(val->bigi, v);
             rv = BIGINT; }
@@ -180,7 +180,15 @@ int parse_num(YYSTYPE *val, const char *s, int base) {
                 val->i += *s - 'A' + 10;
             break;
         default:
-            assert(0); } }
+            assert(0); }
+        if (rv == INT && val->i > 0xffffffff) {
+            // We limit INT tokens to what will fit in 32 bits (unsigned) even though
+            // we use a long (generally 64 bits) to hold them, as most parts of the
+            // compiler can't deal with larger constants.  The few places that can
+            // deal with >32bit values handle BIGINTs
+            int v = val->i;
+            VECTOR_init1(val->bigi, v);
+            rv = BIGINT; } }
     return rv;
 }
 

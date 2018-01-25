@@ -62,7 +62,7 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
                 if (auto hd = tbl->find_hash_dist(val[i][1].i))
                     args.emplace_back(hd);
                 else
-                    error(val[i].lineno, "hash_dist %d not defined in table %s", val[i][1].i,
+                    error(val[i].lineno, "hash_dist %ld not defined in table %s", val[i][1].i,
                           tbl->name()); }
         } else if (!CHECKTYPE(val[i], tSTR)) {
             ;  // syntax error message emit by CHEKCTYPE
@@ -215,7 +215,7 @@ void Table::setup_maprams(VECTOR(value_t) *rams) {
         for (auto mapcol : *maprow_rams)
             if (CHECKTYPE(mapcol, tINT)) {
                 if (mapcol.i < 0 || mapcol.i >= MAPRAM_UNITS_PER_ROW)
-                    error(mapcol.lineno, "Invalid mapram column %d", mapcol.i);
+                    error(mapcol.lineno, "Invalid mapram column %ld", mapcol.i);
                 else
                     row.maprams.push_back(mapcol.i); } }
 }
@@ -608,8 +608,7 @@ Table::Format::Format(Table *t, const VECTOR(pair_t) &data, bool may_overlap) : 
         f->group = idx;
         if (kv.value.type == tINT) {
             if (kv.value.i <= 0)
-                error(kv.value.lineno, "invalid size %d for format field %s",
-                      kv.value.i, name.s);
+                error(kv.value.lineno, "invalid size %ld for format field %s", kv.value.i, name.s);
             f->size = kv.value.i;
             append_bits(f->bits, nextbit, nextbit+f->size-1);
         } else if (kv.value.type == tRANGE) {
@@ -821,8 +820,8 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
         name = kv.key.s;
     for (auto &i : kv.value.vec) {
         if (i.type == tINT && instr.empty()) {
-            if ((addr = i.i) >= ACTION_IMEM_ADDR_MAX)
-                error(i.lineno, "Invalid instruction address %d", i.i);
+            if ((addr = i.i) < 0 || i.i >= ACTION_IMEM_ADDR_MAX)
+                error(i.lineno, "Invalid instruction address %ld", i.i);
         } else if (i.type == tMAP) {
             for (auto &a : i.map)
                 if (CHECKTYPE(a.key, tSTR)) {

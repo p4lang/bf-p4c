@@ -611,7 +611,7 @@ struct LoadConst : VLIWInstruction {
     };
     Phv::Ref    dest;
     int         src;
-    LoadConst(Table *tbl, const Table::Actions::Action *act, const value_t &d, int&s)
+    LoadConst(Table *tbl, const Table::Actions::Action *act, const value_t &d, int s)
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(s) {}
     LoadConst(int line, Phv::Ref &d, int v) : VLIWInstruction(line), dest(d), src(v) {}
     std::string name() { return ""; };

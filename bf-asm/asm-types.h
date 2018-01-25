@@ -51,7 +51,7 @@ struct value_t {
     enum value_type             type;
     int                         lineno;
     union {
-        int                     i;
+        long                     i;
         VECTOR(uintptr_t)       bigi;
         struct {
             int                 lo;

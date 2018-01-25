@@ -134,7 +134,7 @@ const char *value_type_desc[] = {
 const char *value_desc(const value_t *p) {
     static char buffer[32];
     switch(p->type) {
-    case tINT: sprintf(buffer, "%d", p->i); return buffer;
+    case tINT: sprintf(buffer, "%ld", p->i); return buffer;
     case tBIGINT: return "<bigint>";
     case tRANGE: sprintf(buffer, "%d..%d", p->lo, p->hi); return buffer;
     case tMATCH: return "<pattern>";

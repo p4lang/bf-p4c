@@ -321,10 +321,12 @@ void SRamMatchTable::common_sram_setup(pair_t &kv, const VECTOR(pair_t) &data) {
         if (!CHECKTYPE(kv.value, tVEC)) return;
         for (auto &w : kv.value.vec) {
             if (!CHECKTYPE(w, tVEC)) return;
-            if (w.vec.size < 3 || w[0].type != tINT || w[1].type != tINT || w[2].type != tINT) {
+            if (w.vec.size < 3 || w[0].type != tINT || w[1].type != tINT || w[2].type != tINT ||
+                w[0].i < 0 || w[1].i < 0 || w[2].i < 0 || w[0].i >= EXACT_HASH_GROUPS ||
+                w[1].i >= EXACT_HASH_ADR_GROUPS || w[2].i >= (1 << EXACT_HASH_SELECT_BITS)) {
                 error(w.lineno, "invalid way descriptor");
                 continue; }
-            ways.emplace_back(Way{w.lineno, w[0].i, w[1].i, w[2].i});
+            ways.emplace_back(Way{w.lineno, (int)w[0].i, (int)w[1].i, (int)w[2].i});
             if (w.vec.size > 3) {
                 for (int i = 3; i < w.vec.size; i++) {
                     if (!CHECKTYPE(w[i], tVEC)) return;

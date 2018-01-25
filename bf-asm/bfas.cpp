@@ -257,11 +257,11 @@ class Version : public Section {
         if (!CHECKTYPE2(data, tINT, tVEC)) return;
         if (data.type == tINT) {
             if (data.i != MAJOR_VERSION)
-                error(data.lineno, "Version %d not supported", data.i);
+                error(data.lineno, "Version %ld not supported", data.i);
         } else if (data.vec.size >= 2) {
             if (CHECKTYPE(data[0], tINT) && CHECKTYPE(data[1], tINT) &&
                 (data[0].i != MAJOR_VERSION || data[1].i > MINOR_VERSION))
-                error(data.lineno, "Version %d.%d not supported", data[0].i, data[1].i);
+                error(data.lineno, "Version %ld.%ld not supported", data[0].i, data[1].i);
         } else
             error(data.lineno, "Version not understood");
     }

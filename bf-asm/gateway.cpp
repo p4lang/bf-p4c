@@ -67,19 +67,19 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
         if (CHECKTYPE(*v, tINT)) {
             if (v->i == 2) range_match = DC_2BIT;
             if (v->i == 4) range_match = DC_4BIT;
-            else error(v->lineno, "Unknown range match size %d bits", v->i); } }
+            else error(v->lineno, "Unknown range match size %ld bits", v->i); } }
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "row") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 7)
-                error(kv.value.lineno, "row %d out of range", kv.value.i);
+                error(kv.value.lineno, "row %ld out of range", kv.value.i);
             if (layout.empty()) layout.resize(1);
             layout[0].row = kv.value.i;
             layout[0].lineno = kv.value.lineno;
         } else if (kv.key == "bus") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 1)
-                error(kv.value.lineno, "bus %d out of range", kv.value.i);
+                error(kv.value.lineno, "bus %ld out of range", kv.value.i);
             if (layout.empty()) layout.resize(1);
             layout[0].bus = kv.value.i;
             if (layout[0].lineno < 0)
@@ -87,14 +87,14 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "payload_row") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 7)
-                error(kv.value.lineno, "row %d out of range", kv.value.i);
+                error(kv.value.lineno, "row %ld out of range", kv.value.i);
             if (layout.size() < 2) layout.resize(2);
             layout[1].row = kv.value.i;
             layout[1].lineno = kv.value.lineno;
         } else if (kv.key == "payload_bus") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 1)
-                error(kv.value.lineno, "bus %d out of range", kv.value.i);
+                error(kv.value.lineno, "bus %ld out of range", kv.value.i);
             if (layout.size() < 2) layout.resize(2);
             layout[1].bus = kv.value.i;
             if (layout[1].lineno < 0)
@@ -102,7 +102,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "gateway_unit" || kv.key == "unit") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 1)
-                error(kv.value.lineno, "gateway unit %d out of range", kv.value.i);
+                error(kv.value.lineno, "gateway unit %ld out of range", kv.value.i);
             gw_unit = kv.value.i;
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))

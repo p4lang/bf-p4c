@@ -28,6 +28,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_14/adjust_instr5.p4
     testdata/p4_14_samples/bigfield1.p4
     testdata/p4_14_samples/parser_dc_full.p4
+    extensions/p4_tests/p4_14/adjust_instr7.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -247,23 +248,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/dileep8.p4
 )
 
-# BRIG-149
 p4c_add_xfail_reason("tofino"
-  "Syntax error, expecting identifier or operation or integer"
-  extensions/p4_tests/p4_14/adjust_instr7.p4
-)
-
-# BRIG-420
-p4c_add_xfail_reason("tofino"
-  "Syntax error, expecting identifier or operation or integer"
-  testdata/p4_14_samples/exact_match8.p4
-  extensions/p4_tests/p4_14/test_config_78_tcam_with_220_bits_high_nibble_and_version.p4
+  "error: No format field or table named"
   extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Syntax error, expecting identifier or operation"
-  testdata/p4_14_samples/issue1013.p4
   )
 
 # various stateful

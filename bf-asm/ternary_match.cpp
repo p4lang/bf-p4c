@@ -48,10 +48,10 @@ TernaryMatchTable::Match::Match(const value_t &v) {
             return; }
         if (!CHECKTYPE(v[0], tINT) || !CHECKTYPE(v[v.vec.size-1], tINT)) return;
         if ((word_group = v[0].i) < 0 || v[0].i >= TCAM_XBAR_GROUPS)
-            error(v[0].lineno, "Invalid input xbar group %d", v[0].i);
+            error(v[0].lineno, "Invalid input xbar group %ld", v[0].i);
         if (v.vec.size == 3 && CHECKTYPE(v[1], tINT)) {
             if ((byte_group = v[1].i) < 0 || v[1].i >= TCAM_XBAR_GROUPS/2)
-                error(v[1].lineno, "Invalid input xbar group %d", v[1].i);
+                error(v[1].lineno, "Invalid input xbar group %ld", v[1].i);
         } else
             byte_group = -1;
         if ((byte_config = v[v.vec.size-1].i) < 0 || byte_config >= 4)

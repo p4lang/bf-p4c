@@ -40,7 +40,7 @@ struct Deparser::FDEntry {
         Checksum(gress_t gr, const value_t &v) : gress(gr) {
             if (CHECKTYPE(v, tINT)) {
                 if ((unit = v.i) < 0 || v.i >= Target::DEPARSER_CHECKSUM_UNITS())
-                    error(v.lineno, "Invalid deparser checksum unit %d", v.i); } }
+                    error(v.lineno, "Invalid deparser checksum unit %ld", v.i); } }
         void check(bitvec &phv_use) override { }
         template<class TARGET> unsigned encode();
         unsigned encode() override;
@@ -71,7 +71,7 @@ struct Deparser::FDEntry {
                             error(kv.value.lineno, "Invalid clot length");
                     } else if (kv.key.type == tINT) {
                         if (replace.count(kv.key.i))
-                            error(kv.value.lineno, "Duplicate value at offset %d", kv.key.i);
+                            error(kv.value.lineno, "Duplicate value at offset %ld", kv.key.i);
                         replace.emplace(kv.key.i, ::Phv::Ref(gress, kv.value)); } }
             } else {
                 pov = ::Phv::Ref(gress, data); } }
@@ -181,7 +181,7 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data)
         } else if (!CHECKTYPE(l.key, tINT))
             continue;
         else if (l.key.i < 0 || l.key.i >= t->count)
-            error(l.key.lineno, "%s index %d out of range", t->name.c_str(), l.key.i);
+            error(l.key.lineno, "%s index %ld out of range", t->name.c_str(), l.key.i);
         else if (l.value.type != tVEC)
             layout[l.key.i].emplace_back(t->gress, l.value);
         else {
