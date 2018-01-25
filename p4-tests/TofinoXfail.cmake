@@ -50,6 +50,7 @@ p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   testdata/p4_16_samples/slice-def-use1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   )
 
 # We need a deposit_field instruction, but we fail to select it.
@@ -60,11 +61,10 @@ p4c_add_xfail_reason("tofino"
   )
 
 # BRIG-104
-p4c_add_xfail_reason("tofino"
-  "Unhandled action bitmask constraint"
-  extensions/p4_tests/p4_14/13-IngressEgressConflict.p4
-  extensions/p4_tests/p4_16/brig-42.p4
-  )
+#p4c_add_xfail_reason("tofino"
+#  "Unhandled action bitmask constraint"
+#  extensions/p4_tests/p4_14/13-IngressEgressConflict.p4
+#  )
 
 # Fails due to complex expressions in the parser that our hardware can't support.
 p4c_add_xfail_reason("tofino"
@@ -630,6 +630,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/gateway2.p4
   testdata/p4_14_samples/gateway3.p4
   testdata/p4_14_samples/gateway4.p4
+  extensions/p4_tests/p4_16/cast_widening_set.p4
   )
 
 #END: XFAILS that match glass XFAILS
@@ -881,11 +882,15 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_190_modify_with_expr.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   switch_l2
 
   # Instruction adjustment needs to synthesize a bitmasked-set but does not.
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   )
 
 # BRIG-384
@@ -895,14 +900,12 @@ p4c_add_xfail_reason("tofino"
  )
 
 p4c_add_xfail_reason("tofino"
-  "Unhandled action bitmask constraint"
-  extensions/p4_tests/p4_16/cast_widening_set.p4
+  "Brig currently only supports one parameter"
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  extensions/p4_tests/p4_14/test_config_50_action_data_different_size_fields.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1027,6 +1030,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/mac_rewrite.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
+  extensions/p4_tests/p4_16/brig-42.p4
   )
 
 p4c_add_xfail_reason("tofino"

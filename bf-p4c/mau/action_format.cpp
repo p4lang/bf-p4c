@@ -754,9 +754,6 @@ void ActionFormat::space_8_and_16_containers(int max_small_bytes) {
             aci.layouts[ADT][HALF].setrange(aci.offset_full_word * 4 + 2, 2);
         }
 
-        LOG3("Aci layouts for action " << aci.action << " BYTE: "
-             << aci.layouts[ADT][BYTE] << " HALF: " << aci.layouts[ADT][HALF]);
-
         if ((aci.layouts[ADT][BYTE] & aci.layouts[ADT][HALF]).popcount() != 0)
             BUG("Collision between bytes and half word on action data format");
 
@@ -779,7 +776,7 @@ int ActionFormat::check_full_bitmasked(ActionContainerInfo &aci, int max_small_b
         return max_small_bytes;
 
     int small_sizes_needed = aci.counts[ADT][BYTE] + aci.counts[ADT][HALF] * 2;
-    return (small_sizes_needed - 1) / 4;
+    return (small_sizes_needed + 3) & ~(0x3);
 }
 
 /** This function just fills in all of the 32 bit holes for each individual action.  Because

@@ -199,8 +199,6 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
             split = false;
         if (split_count == 0)
             ERROR("PHV not allocated for this field");
-        if (split_count > 1 && field_action.write.expr->is<IR::Slice>())
-            BUG("Unhandled action bitmask constraint");
 
         field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
             auto container = alloc.container;
@@ -214,13 +212,14 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
                 FieldAction field_action_split;
                 field_action_split.name = field_action.name;
                 field_action_split.requires_split = true;
-                auto *write_slice = MakeSlice(field_action.write.expr, alloc.field_bit,
+                auto *write_slice = MakeSliceDestination(field_action.write.expr, alloc.field_bit,
                                               alloc.field_hi());
                 ActionParam write_split(field_action.write.type, write_slice,
                                         field_action.write.speciality);
                 field_action_split.setWrite(write_split);
                 for (auto &read : field_action.reads) {
-                    auto read_slice = MakeSlice(read.expr, alloc.field_bit, alloc.field_hi());
+                    auto read_slice = MakeSliceSource(read.expr, alloc.field_bit, alloc.field_hi(),
+                            field_action.write.expr);
                     field_action_split.reads.emplace_back(read.type, read_slice, read.speciality);
                 }
                 (*container_actions_map)[container].field_actions.push_back(field_action_split);
@@ -369,9 +368,9 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
         read_container = alloc.container;
     });
 
-    if (count != 1) {
-        error_message += "an individual read phv is contained within multiple containers, and"
-                         " is considered impossible";
+    if (count > MAX_PHV_SOURCES) {
+        error_message += "an individual read phv is contained within more than 2 containers, and"
+                         "is considered impossible";
         return false;
     }
 

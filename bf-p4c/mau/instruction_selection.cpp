@@ -704,15 +704,16 @@ const IR::Node *ConvertCastToSlice::postorder(IR::MAU::Instruction *instr) {
         converted_instrs->push_back(s1);
     } else if (write->type->width_bits() < read->type->width_bits()) {
         auto s1 = new IR::MAU::Instruction(instr->srcInfo, instr->name, write,
-                                           MakeSlice(read, 0, write->type->width_bits() - 1));
+                                           MakeSliceSource(read, 0, write->type->width_bits() - 1,
+                                               write));
         converted_instrs->push_back(s1);
     } else {
         auto difference = write->type->width_bits() - read->type->width_bits();
         auto s1 = new IR::MAU::Instruction(instr->srcInfo, instr->name,
-                                           MakeSlice(write, 0, read->type->width_bits() - 1),
-                                           read);
+                                           MakeSliceDestination(write, 0, read->type->width_bits() -
+                                           1), read);
         auto s2 = new IR::MAU::Instruction(instr->srcInfo, instr->name,
-                                           MakeSlice(write, read->type->width_bits(),
+                                           MakeSliceDestination(write, read->type->width_bits(),
                                                      write->type->width_bits() - 1),
                                            new IR::Constant(IR::Type::Bits::get(difference), 0));
         converted_instrs->push_back(s1);
