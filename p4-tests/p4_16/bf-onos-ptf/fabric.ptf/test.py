@@ -1,15 +1,9 @@
-import ptf
-import os
-from ptf import config
 import ptf.testutils as testutils
 
 from p4 import p4runtime_pb2
-from p4.tmp import p4config_pb2
-from p4.config import p4info_pb2
-import google.protobuf.text_format
 
 from base_test import P4RuntimeTest, autocleanup
-from base_test import stringify, ipv4_to_binary, mac_to_binary 
+from base_test import stringify, ipv4_to_binary, mac_to_binary
 
 # constants from fabric.p4
 FORWARDING_TYPE_BRIDGING = 0
