@@ -364,7 +364,7 @@ void JbayPhvAnalysis::printFieldLiveness(int maxStages) {
         else
             ss << " " << i << " |"; }
     ss << " Field";
-    LOG4(ss);
+    LOG4(ss.str());
     for (auto f : fieldUses) {
         ++numFields;
         fieldsSize += f.first->size;
@@ -386,7 +386,7 @@ void JbayPhvAnalysis::printFieldLiveness(int maxStages) {
                 ssRow << " |";
         }
         ssRow << " " << f.first->name;
-        LOG4(ssRow); }
+        LOG4(ssRow.str()); }
     LOG4("Number of Fields: " << numFields);
     LOG4("Number of field bits: " << fieldsSize);
 }
@@ -501,7 +501,7 @@ void JbayPhvAnalysis::printCandidacy(int maxStages) {
         else
             ss << " " << i << " |"; }
     ss << " Size | Field";
-    LOG4(ss);
+    LOG4(ss.str());
     for (auto f : candidateTypes) {
         if (phvMap[f.first] == TPHV) continue;
         ++numFields;
@@ -528,7 +528,7 @@ void JbayPhvAnalysis::printCandidacy(int maxStages) {
             } else {
                 ::warning("Don't see an allocation for this field"); } }
         ssRow << " " << (boost::format("%3d") % f.first->size) << "b |\t" << f.first->name;
-        LOG4(ssRow); }
+        LOG4(ssRow.str()); }
     LOG4("Number of Fields: " << numFields);
     LOG4("Number of field bits: " << fieldsSize);
 }
@@ -545,7 +545,7 @@ void JbayPhvAnalysis::printStagewiseStats(int maxStages) {
         ss << (boost::format("%6d") % i) << "|" << (boost::format("%5d") % normal) << "|" <<
             (boost::format("%5d") % mocha) << "|" << (boost::format("%5d") % dark) << "|" <<
             (boost::format("%5d") % either) << "|" << (boost::format("%5d") % total);
-        LOG4(ss); }
+        LOG4(ss.str()); }
 }
 
 int JbayPhvAnalysis::longestDependenceChain() const {

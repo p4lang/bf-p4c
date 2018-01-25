@@ -394,7 +394,7 @@ void ActionPhvConstraints::pack_slices_together(
         std::stringstream ss;
         for (auto slice : pack_together)
             ss << slice;
-        LOG5("\t\t\t\t\tPack together: " << ss); }
+        LOG5("\t\t\t\t\tPack together: " << ss.str()); }
 
     PHV::FieldSlice *firstSlice = nullptr;
     for (auto slice : pack_together) {
