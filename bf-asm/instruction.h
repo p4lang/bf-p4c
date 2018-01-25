@@ -30,6 +30,7 @@ struct Instruction {
     enum instruction_set_t { VLIW_ALU=0, STATEFUL_ALU=1, NUM_SETS=2 };
     struct Decode {
         static std::map<std::string, const Decode *> opcode[NUM_SETS];
+        static void init_vliw_opcodes();
         bool    type_suffix;
         Decode(const char *name, int set = VLIW_ALU, bool ts = false) : type_suffix(ts) {
             opcode[set][name] = this; }

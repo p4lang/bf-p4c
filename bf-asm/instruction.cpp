@@ -12,6 +12,8 @@ std::map<std::string, const Instruction::Decode *>
 
 Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
                                  const VECTOR(value_t) &op) {
+    Instruction::Decode::init_vliw_opcodes();
+
     if (auto *d = ::get(Instruction::Decode::opcode[tbl->instruction_set()], op[0].s))
         return d->decode(tbl, act, op);
     if (auto p = strchr(op[0].s, '.')) {
@@ -22,7 +24,7 @@ Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
     return 0;
 }
 
-namespace {
+namespace VLIW {
 static const int group_size[] = { 32, 32, 32, 32, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16 };
 
 struct operand {
@@ -509,22 +511,6 @@ struct AluOP3Src : AluOP {
     void pass2(Table *tbl, Table::Actions::Action *);
 };
 
-static AluOP::Decode opADD("add", 0x23e, true), opADDC("addc", 0x2be, true),
-                     opSUB("sub", 0x33e), opSUBC("subc", 0x3be),
-                     opSADDU("saddu", 0x03e), opSADDS("sadds", 0x07e),
-                     opSSUBU("ssubu", 0x0be), opSSUBS("ssubs", 0x0fe),
-                     opMINU("minu", 0x13e, true), opMINS("mins", 0x17e, true),
-                     opMAXU("maxu", 0x1be, true), opMAXS("maxs", 0x1fe, true),
-                     opSETZ("setz", 0x01e, true), opNOR("nor", 0x05e, true),
-                     opANDCA("andca", 0x09e), opNOTA("nota", 0x0de),
-                     opANDCB("andcb", 0x11e, &opANDCA), opNOTB("notb", 0x15e, &opNOTA, "not"),
-                     opXOR("xor", 0x19e, true), opNAND("nand", 0x19e, true),
-                     opAND("and", 0x21e, true), opXNOR("xnor", 0x25e, true),
-                     opB("alu_b", 0x29e), opORCA("orca", 0x29e),
-                     opA("alu_a", 0x31e, &opB), opORCB("orcb", 0x35e, &opORCA),
-                     opOR("or", 0x39e, true), opSETHI("sethi", 0x39e, true);
-static AluOP3Src::Decode opBMSET("bitmasked-set", 0x2e);
-
 Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                    const VECTOR(value_t) &op) const {
     AluOP *rv;
@@ -647,8 +633,6 @@ struct LoadConst : VLIWInstruction {
 
 };
 
-static LoadConst::Decode opLoadConst("load-const");
-
 Instruction *LoadConst::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                        const VECTOR(value_t) &op) const {
     if (op.size != 3) {
@@ -735,9 +719,6 @@ struct CondMoveMux : VLIWInstruction {
     void dbprint(std::ostream &out) const {
         out << "INSTR: cmov " << dest << ", " << src1 << ", " << src2; }
 };
-
-static CondMoveMux::Decode opCondMove("cmov", 0x16, true, 5, "conditional-move"),
-                           opCondMux("cmux", 0x6, false, 2, "conditional-mux");
 
 Instruction *CondMoveMux::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                          const VECTOR(value_t) &op) const {
@@ -834,8 +815,6 @@ struct DepositField : VLIWInstruction {
         out << "INSTR: deposit_field " << dest << ", " << src1 << ", " << src2; }
 };
 
-static DepositField::Decode opDepositField;
-
 Instruction *DepositField::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                           const VECTOR(value_t) &op) const {
     if (op.size != 4 && op.size != 3) {
@@ -909,6 +888,7 @@ struct Set : VLIWInstruction {
     };
     Phv::Ref    dest;
     operand     src;
+    static AluOP::Decode *opA;
     Set(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
     std::string name() { return "set"; };
@@ -930,10 +910,10 @@ struct Set : VLIWInstruction {
 
 };
 
+AluOP::Decode* Set::opA = nullptr;
+
 DepositField::DepositField(const Set &s)
 : VLIWInstruction(s), dest(s.dest), src1(s.src), src2(s.dest->reg) {}
-
-static Set::Decode opSet("set");
 
 Instruction *Set::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                  const VECTOR(value_t) &op) const {
@@ -968,11 +948,12 @@ Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
     src.mark_use(tbl);
     return this;
 }
+
 int Set::encode() {
     int rv = src.bits(slot/Phv::mau_groupsize());
     switch (dest->reg.type) {
     case Phv::Register::NORMAL:
-        rv = (opA.opcode << 10) | (rv << 4);
+        rv = (opA->opcode << 10) | (rv << 4);
         if (options.target == JBAY) rv <<= 1;
         rv |= (slot & 0xf);
         break;
@@ -986,6 +967,7 @@ int Set::encode() {
         assert(0); }
     return rv;
 }
+
 bool Set::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<Set *>(a_)) {
         return dest == a->dest && src == a->src;
@@ -1018,8 +1000,6 @@ struct NulOP : VLIWInstruction {
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name << " " << dest; }
 };
-
-static NulOP::Decode opInvalidate("invalidate", 0x3800), opNoop("noop", 0);
 
 Instruction *NulOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                    const VECTOR(value_t) &op) const {
@@ -1095,9 +1075,6 @@ struct ShiftOP : VLIWInstruction {
         out << "INSTR: " << opc->name << ' ' << dest << ", " << src1 << ", " << shift; }
 };
 
-static ShiftOP::Decode opSHL("shl", 0x0c, false), opSHRS("shrs", 0x1c, false),
-                       opSHRU("shru", 0x14, false), opFUNSHIFT("funnel-shift", 0x04, true);
-
 Instruction *ShiftOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                      const VECTOR(value_t) &op) const {
     if (op.size != (use_src1 ? 5 : 4)) {
@@ -1149,4 +1126,70 @@ bool ShiftOP::equiv(Instruction *a_) {
         return false;
 }
 
-}  // end anonymous namespace
+static void init_vliw_opcodes() {
+    // lifted from MAU uArch 15.1.6
+
+    static AluOP::Decode        opADD         ("add",           0x23e, true),
+                                opADDC        ("addc",          0x2be, true),
+                                opSUB         ("sub",           0x33e),
+                                opSUBC        ("subc",          0x3be),
+                                opSADDU       ("saddu",         0x03e),
+                                opSADDS       ("sadds",         0x07e),
+                                opSSUBU       ("ssubu",         0x0be),
+                                opSSUBS       ("ssubs",         0x0fe),
+                                opMINU        ("minu",          0x13e, true),
+                                opMINS        ("mins",          0x17e, true),
+                                opMAXU        ("maxu",          0x1be, true),
+                                opMAXS        ("maxs",          0x1fe, true),
+                                opSETZ        ("setz",          0x01e, true),
+                                opNOR         ("nor",           0x05e, true),
+                                opANDCA       ("andca",         0x09e),
+                                opNOTA        ("nota",          0x0de),
+                                opANDCB       ("andcb",         0x11e, &opANDCA),
+                                opNOTB        ("notb",          0x15e, &opNOTA, "not"),
+                                opXOR         ("xor",           0x19e, true),
+                                opNAND        ("nand",          0x19e, true),
+                                opAND         ("and",           0x21e, true),
+                                opXNOR        ("xnor",          0x25e, true),
+                                opB           ("alu_b",         0x29e),
+                                opORCA        ("orca",          0x29e),
+                                opA           ("alu_a",         0x31e, &opB),
+                                opORCB        ("orcb",          0x35e, &opORCA),
+                                opOR          ("or",            0x39e, true),
+                                opSETHI       ("sethi",         0x39e, true);
+    static LoadConst::Decode    opLoadConst   ("load-const");
+    static Set::Decode          opSet         ("set");
+    static NulOP::Decode        opInvalidate  ("invalidate",    0x3800),
+                                opNoop        ("noop",          0x0);
+    static ShiftOP::Decode      opSHL         ("shl",           0x0c, false),
+                                opSHRS        ("shrs",          0x1c, false),
+                                opSHRU        ("shru",          0x14, false),
+                                opFUNSHIFT    ("funnel-shift",  0x04, true);
+    static DepositField::Decode opDepositField;
+
+    Set::opA = &opA;
+
+    if (options.target == TOFINO) {
+        static AluOP3Src::Decode    opBMSET       ("bitmasked-set", 0x2e);
+        static CondMoveMux::Decode  opCondMove    ("cmov",          0x16, true,  5, "conditional-move");
+        static CondMoveMux::Decode  opCondMux     ("cmux",          0x6,  false, 2, "conditional-mux");
+#if HAVE_JBAY
+    } else if (options.target == JBAY) {
+        static AluOP3Src::Decode    opBMSET       ("bitmasked-set", 0x0e);
+        static CondMoveMux::Decode  opCondMove    ("cmov",          0x6, true,  5, "conditional-move");
+
+        // TODO add new jbay instructions, alu_gtequ, alu_geqs ...
+#endif // HAVE_JBAY
+    }
+
+}
+
+}  // end namespace VLIW
+
+/* static */
+void Instruction::Decode::init_vliw_opcodes() {
+    if (!Instruction::Decode::opcode[VLIW_ALU].empty())
+        return;
+
+    VLIW::init_vliw_opcodes();
+}
