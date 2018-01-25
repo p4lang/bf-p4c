@@ -78,6 +78,51 @@ class SkipControls : public P4::ActionSynthesisPolicy {
     }
 };
 
+/**
+ * This function implements a policy suitable for the LocalCopyPropagation pass.
+ * The policy is: do not local copy propagate for assignment statement
+ * setting the output param of a register action.
+ * This function returns true if the localCopyPropagation should be enabled;
+ * It returns false if the localCopyPropagation should be disabled for the current statement.
+ */
+template <class T> inline const T *findContext(const Visitor::Context *c) {
+    while ((c = c->parent))
+        if (auto *rv = dynamic_cast<const T *>(c->node)) return rv;
+    return nullptr; }
+
+bool skipRegisterActionOutput(const Visitor::Context *ctxt, const IR::Expression *) {
+    auto c = findContext<IR::Declaration_Instance>(ctxt);
+    if (!c) return true;
+
+    auto type = c->type->to<IR::Type_Specialized>();
+    if (!type) return true;
+
+    auto name = type->baseType->to<IR::Type_Name>();
+    if (name->path->name != "register_action") return true;
+
+    auto f = findContext<IR::Function>(ctxt);
+    if (!f) return true;
+
+    auto method = f->type->to<IR::Type_Method>();
+    if (!method) return true;
+
+    auto params = method->parameters->to<IR::ParameterList>();
+    if (!params) return true;
+
+    ERROR_CHECK(params->size() == 2, "Expecting 2 parameters in extern method %1%", method);
+    auto param = params->parameters.at(1)->to<IR::Parameter>();
+    if (!param) return true;
+
+    if (auto *rv = dynamic_cast<const IR::AssignmentStatement*>(ctxt->parent->node)) {
+        if (auto path = rv->left->to<IR::PathExpression>()) {
+            if (path->path->name == param->name) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 class MidEndLast : public PassManager {
  public:
     MidEndLast() { setName("MidEndLast"); }
@@ -121,7 +166,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::Predication(&refMap),
         new P4::MoveDeclarations(),  // more may have been introduced
         new P4::ConstantFolding(&refMap, &typeMap),
-        new P4::LocalCopyPropagation(&refMap, &typeMap),
+        new P4::LocalCopyPropagation(&refMap, &typeMap, skipRegisterActionOutput),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
         new P4::MoveDeclarations(),
@@ -159,7 +204,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         (options.arch == "native") ? nullptr : new FillFromBlockMap(&refMap, &typeMap),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
-        new MidEndLast
+        new MidEndLast,
     });
 }
 

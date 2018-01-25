@@ -741,7 +741,7 @@ p4c_add_xfail_reason("tofino"
   "does not have a PHV allocation though it is used in an action"
   )
 p4c_add_xfail_reason("tofino"
-  "expression too complex for stateful alu"
+  "Due to complexity in action bus, can only currently handle meter color in an 8 bit ALU operation"
   extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4
   )
 # missing support for stateful logging
