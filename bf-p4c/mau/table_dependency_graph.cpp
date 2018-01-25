@@ -267,151 +267,104 @@ void FindDependencyGraph::flow_merge(Visitor &v) {
     }
 }
 
-// Should be applied to a reversed graph, so that it populates happens_before_map
-// starting at the leaves.
-class bfs_happens_before_visitor : public boost::default_bfs_visitor {
-  // happens_before_map[t1] = {t2, t3} means t1 happens strictly before t2 and t3.
-  std::map<const IR::MAU::Table*,
-           std::set<const IR::MAU::Table*>>& happens_before_map;
+/** Topological Sorting Algorithm, but
+ *  return a vector of set of vertices, where,
+ *  the index of the vector represent the min_stage of vertices in that set.
+ *  i.e., generations of vertices sorted by the stage#.
+ *
+ *  Example:
+ *  rst[0] = {A, B}
+ *  rst[1] = {C, D}
+ *  means that A, B could be in stage#0 and C, B could be in at least state#1.
+ */
+std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
+FindDependencyGraph::calc_topological_stage() {
+    typename DependencyGraph::Graph::vertex_iterator v, v_end;
+    typename DependencyGraph::Graph::edge_iterator out, out_end;
 
-  // happens_not_after[t1] = {t2, t3} means t1 and t2 and/or t3 may happen in
-  // the same stage, or t1 may happen first, but neither t2 nor t3 can happen
-  // before t1.
-  std::map<const IR::MAU::Table*,
-           std::set<const IR::MAU::Table*>> happens_not_after;
+    // Current in-degress of vertices
+    std::map<DependencyGraph::Graph::vertex_descriptor, int> n_depending_on;
 
- public:
-    bfs_happens_before_visitor(
-        std::map<const IR::MAU::Table*,
-             std::set<const IR::MAU::Table*>>& happens_before_map)
-        : happens_before_map(happens_before_map)
-    { }
+    // Build initial n_depending_on, and happens_after_map
+    const auto& dep_graph = dg.g;
+    std::map<const IR::MAU::Table*,
+             std::set<const IR::MAU::Table*>> happens_after_map;
+    auto& happens_before_map = dg.happens_before_map;
+    for (boost::tie(v, v_end) = boost::vertices(dep_graph);
+         v != v_end;
+         ++v) {
+        n_depending_on[*v] = 0;
+        happens_after_map[dep_graph[*v]] = {};
+        happens_before_map[dep_graph[*v]] = {}; }
 
-    template <typename Vertex, typename Graph>
-    void discover_vertex(Vertex v, const Graph &g) {
-        // Ensure that every table gets entered into the happens-before map.
-        const IR::MAU::Table* label = g[v];
+    for (boost::tie(out, out_end) = boost::edges(dep_graph);
+         out != out_end;
+         ++out) {
+        if (dep_graph[*out] != DependencyGraph::ANTI
+            && dep_graph[*out] != DependencyGraph::CONTROL) {
+            auto dst = boost::target(*out, dep_graph);
+            n_depending_on[dst]++; } }
 
-        if (happens_before_map[label].size() == 0)
-            happens_before_map[label] = std::set<const IR::MAU::Table*>();
-        if (happens_not_after[label].size() == 0)
-            happens_not_after[label] = std::set<const IR::MAU::Table*>();
+    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>> rst;
+    std::set<DependencyGraph::Graph::vertex_descriptor> processed;
+    while (processed.size() < num_vertices(dep_graph)) {
+        std::set<DependencyGraph::Graph::vertex_descriptor> this_generation;
+        // Select vertices of those current in-degree is 0 as members of this_generation.
+        // as long as they have not been processed yet.
+        for (auto& kv : n_depending_on) {
+            if (!processed.count(kv.first) && kv.second == 0)
+                this_generation.insert(kv.first); }
+        // There are remaining vertices, so it must be a loop.
+        if (this_generation.size() == 0) {
+            ::error("There is a loop in the table dependency graph.");
+            break; }
+        // Remove out-edge destination of these vertices.
+        for (auto& v : this_generation) {
+            auto out_edge_itr_pair = out_edges(v, dep_graph);
+            auto& out = out_edge_itr_pair.first;
+            auto& out_end = out_edge_itr_pair.second;
+            const auto* table = dep_graph[v];
+            for (; out != out_end; ++out) {
+                if (dep_graph[*out] != DependencyGraph::ANTI
+                    && dep_graph[*out] != DependencyGraph::CONTROL) {
+                    auto vertex_later = boost::target(*out, dep_graph);
+                    auto table_later = dep_graph[vertex_later];
+                    happens_after_map[table_later].insert(table);
+                    happens_after_map[table_later].insert(happens_after_map[table].begin(),
+                                                          happens_after_map[table].end());
+                    n_depending_on[vertex_later]--; } } }
+
+        processed.insert(this_generation.begin(), this_generation.end());
+        rst.emplace_back(std::move(this_generation));
     }
 
-    template <typename Edge, typename Graph>
-    void examine_edge(Edge e, const Graph &g) {
-        const IR::MAU::Table* src = g[boost::source(e, g)];
-        const IR::MAU::Table* dst = g[boost::target(e, g)];
+    for (const auto& kv : happens_after_map) {
+        auto* table = kv.first;
+        for (const auto* prev : kv.second) {
+            happens_before_map[prev].insert(table); } }
 
-        happens_not_after[dst] |= happens_not_after[src];
-        happens_not_after[dst].insert(src);
-
-        happens_before_map[dst] |= happens_before_map[src];
-        if (g[e] != DependencyGraph::ANTI &&
-            g[e] != DependencyGraph::CONTROL) {
-            happens_before_map[dst].insert(src);
-        }
-    }
-};
-
-class bfs_depth_visitor : public boost::default_bfs_visitor {
-  std::map<DependencyGraph::Graph::vertex_descriptor, int>& counts;
- public:
-    bfs_depth_visitor(
-        std::map<DependencyGraph::Graph::vertex_descriptor, int>& counts)
-        : counts(counts) { }
-
-    void examine_edge(
-        DependencyGraph::Graph::edge_descriptor e,
-        const DependencyGraph::Graph& g) {
-        DependencyGraph::Graph::vertex_descriptor src, dst;
-        src = boost::source(e, g);
-        dst = boost::target(e, g);
-
-        // Tables with anti-dependencies (write-after-read) and control
-        // dependencies can be placed in the same stage, so don't increment the
-        // min stage in that case.
-        int count = counts[src];
-        if (g[e] != DependencyGraph::ANTI && g[e] != DependencyGraph::CONTROL)
-            count++;
-
-        counts[dst] = std::max(count, counts[dst]);
-    }
-};
+    return rst;
+}
 
 void FindDependencyGraph::finalize_dependence_graph(void) {
     typename DependencyGraph::Graph::vertex_iterator v, v_end;
     typename DependencyGraph::Graph::edge_iterator out, out_end;
-    std::set<typename DependencyGraph::Graph::vertex_descriptor> roots;
 
-    // Some operations need to be performed on the reversed graph.
-    DependencyGraph::Graph rev_g = dg.g;
-    boost::tie(out, out_end) = boost::edges(rev_g);
-    while (out != out_end) {
-        boost::remove_edge(*out, rev_g);
-        boost::tie(out, out_end) = boost::edges(rev_g);
-    }
-    for (boost::tie(out, out_end) = boost::edges(dg.g);
-         out != out_end;
-         ++out) {
-        DependencyGraph::Graph::vertex_descriptor src, dst;
-        dst = boost::target(*out, dg.g);
-        src = boost::source(*out, dg.g);
+    // Topological sort
+    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
+        topo_rst = calc_topological_stage();
 
-        auto p = boost::add_edge(dst, src, rev_g);
-        rev_g[p.first] = dg.g[*out];
-        rev_g[dst] = dg.g[dst];
-        rev_g[src] = dg.g[src];
-     }
+    if (LOGGING(3)) {
+        for (size_t i = 0; i < topo_rst.size(); ++i) {
+            LOG3(">>> Stage#" << i << ":");
+            for (const auto& vertex : topo_rst[i]) {
+                LOG3("Tabel:  " << vertex << ", " << dg.g[vertex]->name); } } }
 
-    // Build the happens_before_map relation, and for each table, calculate the
-    // length of the longest chain of tables that depend on it and must be
-    // placed in later stages.
-
-    std::map< DependencyGraph::Graph::vertex_descriptor, int > post_chains;
-    bfs_depth_visitor back_vis(post_chains);
-    bfs_happens_before_visitor hb_vis(dg.happens_before_map);
-
-    roots.clear();
-    for (boost::tie(v, v_end) = boost::vertices(rev_g); v != v_end; ++v) {
-        post_chains[*v] = 0;
-        roots.insert(*v); }
-
-    for (boost::tie(out, out_end) = boost::edges(rev_g); out != out_end; ++out)
-        roots.erase(boost::target(*out, rev_g));
-
-    for (auto root : roots) {
-        boost::breadth_first_search(rev_g, root, boost::visitor(hb_vis));
-        boost::breadth_first_search(rev_g, root, boost::visitor(back_vis));
-    }
-
-    for (auto &kv : post_chains) {
-        const IR::MAU::Table* table = rev_g[kv.first];
-        dg.stage_info[table].dep_stages = kv.second;
-    }
-
-    // For each table, calculate the minimum stage in which it can be placed.
-    // This is its depth in the dependence graph.
-    std::map<DependencyGraph::Graph::vertex_descriptor, int> pre_chains;
-    boost::tie(v, v_end) = boost::vertices(dg.g);
-    for (; v != v_end; ++v) pre_chains[*v] = 0;
-    bfs_depth_visitor vis(pre_chains);
-
-    roots.clear();
-    boost::tie(v, v_end) = boost::vertices(dg.g);
-    roots.insert(v, v_end);
-
-    for (boost::tie(out, out_end) = boost::edges(dg.g); out != out_end; ++out)
-        roots.erase(boost::target(*out, dg.g));
-
-    for (auto root : roots) {
-        boost::breadth_first_search(dg.g, root, boost::visitor(vis));
-    }
-
-    for (auto &kv : pre_chains) {
-        const IR::MAU::Table* table = dg.g[kv.first];
-        dg.stage_info[table].min_stage = kv.second;
-    }
+    // Build min_stage
+    for (size_t i = 0; i < topo_rst.size(); ++i) {
+        for (const auto& vertex : topo_rst[i]) {
+            const IR::MAU::Table* table = dg.g[vertex];
+            dg.stage_info[table].min_stage = i; } }
 
     verify_dependence_graph();
     dg.finalized = true;
@@ -424,6 +377,7 @@ void FindDependencyGraph::verify_dependence_graph() {
          ++out) {
         const IR::MAU::Table *t1 = dg.g[boost::source(*out, dg.g)];
         const IR::MAU::Table *t2 = dg.g[boost::target(*out, dg.g)];
-        if (t1->gress == EGRESS && t2->gress == INGRESS)
+        if ((t1->gress == EGRESS && t2->gress == INGRESS)
+            || (t1->gress == INGRESS && t2->gress == EGRESS))
             BUG("Ingress table '%s' depends on egress table '%s'.", t1->name, t2->name); }
 }

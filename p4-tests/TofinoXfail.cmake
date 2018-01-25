@@ -389,8 +389,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "conflicting memory use between .* and .*"
   # This is an ATCAM failure due to a stage split being in the same stage.  Much more subtle
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-499/case2560_min_2.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-499/case2560_min_2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1069,4 +1069,17 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "No format field or table named .*"
   extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Conflicting hash distribution bit allocation"
+  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   )

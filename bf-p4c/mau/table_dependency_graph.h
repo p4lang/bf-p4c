@@ -10,6 +10,9 @@
 
 class PhvInfo;
 
+// TODO(yumin)
+// 1. change bidirectionalS to directedS
+
 /* The DependencyGraph data structure is a directed graph in which tables are
  * vertices and edges are dependencies.  An edge from t1 to t2 means that t2
  * depends on t1.
@@ -107,12 +110,21 @@ struct DependencyGraph {
 
     DependencyGraph(void) { finalized = false; }
 
+    void clear() {
+        container_conflicts.clear();
+        g.clear();
+        finalized = false;
+        happens_before_map.clear();
+        labelToVertex.clear();
+        stage_info.clear();
+    }
+
     /* If a vertex with this label already exists, return it.  Otherwise,
-     * create a new vertex with this label. */ 
+     * create a new vertex with this label. */
     typename Graph::vertex_descriptor add_vertex(const IR::MAU::Table* label) {
-        try {
-            return labelToVertex.at(label); }
-        catch (std::out_of_range& oor) {
+        if (labelToVertex.count(label)) {
+            return labelToVertex.at(label);
+        } else {
             auto v = boost::add_vertex(g);
             g[v] = label;
             labelToVertex[label] = v;
@@ -158,10 +170,9 @@ struct DependencyGraph {
     bool happens_before(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
-        try {
-            auto downstream = happens_before_map.at(t1);
-            return downstream.find(t2) != downstream.end(); }
-        catch (std::out_of_range& oor) {
+        if (happens_before_map.count(t1)) {
+            return happens_before_map.at(t1).count(t2);
+        } else {
             return false; }
     }
 
@@ -200,6 +211,9 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     std::map<cstring, access_t>                           access;
     std::map<PHV::Container, cont_write_t>                cont_write;
 
+    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
+    calc_topological_stage();
+
     void finalize_dependence_graph(void);
 
     /** Check that no ingress table ever depends on an egress table happening
@@ -210,6 +224,15 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     bool preorder(const IR::MAU::Table *) override;
     bool preorder(const IR::MAU::Action *) override;
     bool preorder(const IR::MAU::InputXBarRead *) override;
+
+    Visitor::profile_t init_apply(const IR::Node* node) override {
+        auto rv = Inspector::init_apply(node);
+        dg.clear();
+        access.clear();
+        cont_write.clear();
+        return rv;
+    }
+
     void end_apply() override {
         finalize_dependence_graph();
         if (Log::verbose())
