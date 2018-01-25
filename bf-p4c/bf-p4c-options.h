@@ -23,6 +23,7 @@ class BFN_Options : public CompilerOptions {
     bool use_clot = false;
     bool jbay_analysis = false;
     bool virtual_phvs = false;
+    bool use_pa_solitary = false;
 
     BFN_Options();
 

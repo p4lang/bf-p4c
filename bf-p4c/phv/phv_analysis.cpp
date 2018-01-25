@@ -19,7 +19,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
       action_constraints(phv),
-      pragmas(phv) {
+      pragmas(phv, options) {
     if (options.trivial_phvalloc) {
         addPasses({
             new PHV::TrivialAlloc(phv)});

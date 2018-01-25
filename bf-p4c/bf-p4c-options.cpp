@@ -53,6 +53,9 @@ BFN_Options::BFN_Options() {
     registerOption("--virtual-phvs", nullptr,
         [this](const char *) { virtual_phvs = true; return true; },
         "allow virtual phvs");
+    registerOption("--use-pa-solitary", nullptr,
+        [this](const char *) { use_pa_solitary = true; return true; },
+        "use phv solitary pragma");
 }
 
 std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {

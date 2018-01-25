@@ -1,8 +1,9 @@
 #ifndef EXTENSIONS_BF_P4C_PHV_PRAGMA_PHV_PRAGMAS_H_
 #define EXTENSIONS_BF_P4C_PHV_PRAGMA_PHV_PRAGMAS_H_
 
-#include "pa_solitary.h"
-#include "pa_container_size.h"
+#include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/phv/pragma/pa_container_size.h"
+#include "bf-p4c/phv/pragma/pa_solitary.h"
 
 namespace PHV {
 namespace pragma {
@@ -22,11 +23,11 @@ class Pragmas : public PassManager {
     PragmaContainerSize& pa_container_sizes() { return pa_container_sizes_i; }
     PragmaSolitary& pa_solitary() { return pa_solitary_i; }
 
-    explicit Pragmas(PhvInfo& phv) : pa_container_sizes_i(phv),
-                                     pa_solitary_i(phv) {
+    explicit Pragmas(PhvInfo& phv, const BFN_Options &options) : pa_container_sizes_i(phv),
+                                                                 pa_solitary_i(phv) {
         addPasses({
             &pa_container_sizes_i,
-            &pa_solitary_i
+            options.use_pa_solitary ? &pa_solitary_i : nullptr,
         });
     }
 };
