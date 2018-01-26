@@ -82,6 +82,7 @@ class TableLayout : public MauModifier, Backtrack {
     void check_for_alpm(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
                          cstring &partition_index);
     void check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
+    void setup_instr_and_next(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
     void setup_match_layout(IR::MAU::Table::Layout &, const IR::MAU::Table *);
     void setup_gateway_layout(IR::MAU::Table::Layout &, IR::MAU::Table *);
     void setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_in_table,

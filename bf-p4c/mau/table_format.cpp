@@ -273,41 +273,79 @@ bool TableFormat::allocate_overhead() {
     return true;
 }
 
+int TableFormat::hit_actions() {
+    int _hit_actions = 0;
+    for (auto act : Values(tbl->actions)) {
+        if (!act->miss_action_only)
+            _hit_actions++;
+    }
+    int extra_action_needed = gw_linked ? 1 : 0;
+    return _hit_actions + extra_action_needed;
+}
+
 /* Bits for selecting the next table from an action chain table must be in the lower part
    of the overhead.  This is specifically to handle this corner case.  If this is run,
    then instruction selection does not necessarily need to be run.  This information has
    to be placed very specifically, according to section 6.4.1.3.2 Next Table Bits */
-bool TableFormat::allocate_next_table() {
-    /** FIXME: Currently moving instruction address first, just to make life easier.  This
-               still needs to be done, but the current implementation is not doing anything
-               different than allocate_all_instr_selection.  Thus keeping the function for now.
-    int group = 0;
 
-    for (auto &next : tbl->next) {
-        if (next.first[0] != '$')
-            next_table = true;
+/** This algorithm is to allocate next table bits in the match overhead when necessary
+ *  A table has multiple potential next tables for the following reasons:
+ *     - A gateway has a true or false branch
+ *     - The table has different behavior on hit and miss
+ *     - Based on which actions ran, the table can choose different next pathways
+ *
+ *  The first two pathways do not require next table information stored in match overhead,
+ *  as the next table is stored elsewhere.  Only when the next table is chained from different
+ *  actions would the next table have to come from match overhead.
+ *
+ *  Next table bits, as 12 Stages * 16 = 196 next tables, may have to be up to
+ *  ceil(log2(196)) = 8 bits.  On JBay, 20 stages actually leads to 9 bits, though only
+ *  8 bits are able to be pulled in the next table extractor.  In order to save bits,
+ *  match central has an 8 entry table called next_table_map_data per each logical table,
+ *  described in section 6.4.3.3 Next Table Processing.  Thus if <= 8 next tables are not
+ *  needed, one just needs to save the ceil_log2(next tables), as this map_data table can
+ *  translate up to 3 bit address into an 8 bit next table.
+ *
+ *  The placement of next table bits are described in section 6.4.1.3.2 Next Table Bits of uArch.
+ *  Up to 5 overhead entries exist for exact match.  The next tables bits must be within bits
+ *  0 through (Entry # + 1) * 8 - 1, i.e. Entry 0 can be within bits 0-7, and Entry 4 can be
+ *  within bits 0-39.  Thus when placing next tables within the entries, the algorithm always
+ *  places next table first.
+ *
+ *  Brig takes advantage of an optimization.  Similar to next tables, instruction memory has
+ *  a map_data table similar to next table.  If the number of instructions is under 8, then the
+ *  same up to 3 bit pointer can be used for both the instruction selection and next table.  Only
+ *  when this optimization cannot be used is this function called.
+ */
+bool TableFormat::allocate_next_table() {
+    if (!tbl->action_chain() || hit_actions() <= NEXT_MAP_TABLE_ENTRIES) {
+        return true;
     }
 
-    if (!next_table)
-        return true;
+    int next_tables = tbl->action_next_paths();
+    // If no default path is provided, then the default next table has to be included
+    if (!tbl->has_default_path())
+        next_tables++;
 
-    LOG1("Next table will be done here?");
-    int next_table_bits = ceil_log2(tbl->actions.size());
-    if (next_table_bits == 0)
-        next_table_bits++;
+    int next_table_bits;
+    if (next_tables <= NEXT_MAP_TABLE_ENTRIES) {
+        next_table_bits = ceil_log2(next_tables);
+    } else {
+        next_table_bits = FULL_NEXT_TABLE_BITS;
+    }
 
+    int group = 0;
     for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
         for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
             size_t start = total_use.ffz(i * SINGLE_RAM_BITS);
             if (start + next_table_bits >= OVERHEAD_BITS + i * SINGLE_RAM_BITS)
                 return false;
             bitvec ptr_mask(start, next_table_bits);
-            use->match_groups[group].mask[ACTION] |= ptr_mask;
+            use->match_groups[group].mask[NEXT] |= ptr_mask;
             total_use |= ptr_mask;
             group++;
         }
     }
-    */
     return true;
 }
 
@@ -383,24 +421,27 @@ bool TableFormat::allocate_all_immediate() {
     return true;
 }
 
-/* Algorithm to find space for the instruction selection bits required.  Try to pack this
-   information into spaces of the immediate.  Otherwise just push to the lowest part of
-   the result bus.  FIXME: This could be combined with the calculation of ghost bits. */
+/** This algorithm allocates the pointer to the instruction memory per table entry.  Because
+ *  match central has 8 entry map_data table, described in section 6.4.3.5.5 Map Indirection
+ *  Table, if the table only has at most 8 hit actions, an up to 3 bit address needs to be
+ *  saved, rather than a full instruction memory address.
+ *
+ *  The full address is 6 bits, 5 for instruction memory line and 1 for color.  The bit for
+ *  gress does not have to be saved, as it is added by match central.  This is described within
+ *  the uArch in section 6.1.10.3 Action Instruction Memory.
+ *
+ *  Also, due to the optimization described over the allocate_all_next_table algorithm, it may
+ *  be crucial that these action instruction comes first, if next table is not already allocated
+ */
 bool TableFormat::allocate_all_instr_selection() {
-    if (next_table)
-        return true;
-
     // Because a gateway requires the 0 position in the action instruction 8 entry matrix, one must
-    // add an extra action to a table if linked with a gateway
-    int hit_actions = 0;
-    for (auto act : Values(tbl->actions)) {
-        if (!act->miss_action_only)
-            hit_actions++;
-    }
+    // add an extra action to a table if linked with a gateway.
 
-    int extra_action_needed = gw_linked ? 1 : 0;
-
-    int instr_select = ceil_log2(hit_actions + extra_action_needed);
+    int instr_select = 0;
+    if (hit_actions() > 0 && hit_actions() <= IMEM_MAP_TABLE_ENTRIES)
+        instr_select = ceil_log2(hit_actions());
+    else
+       instr_select = FULL_IMEM_ADDRESS_BITS;
 
     // If no action instruction bit is required return unless the table is
     // ternary in which case always a ternary indirect is used to specify
@@ -416,8 +457,8 @@ bool TableFormat::allocate_all_instr_selection() {
        anywhere in the IMEM and will need entire imem bits. The assembler decides
        based on color scheme allocations. Assembler will flag an error if it fails
        to fit the action code in the given bits. */
-
-    if (instr_select > Memories::IMEM_LOOKUP_BITS) instr_select = Memories::IMEM_ADDRESS_BITS;
+    if (instr_select == 0)
+        return true;
 
     bitvec instr_mask;
     instr_mask.setrange(0, instr_select);

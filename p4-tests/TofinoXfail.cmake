@@ -1077,3 +1077,8 @@ p4c_add_xfail_reason("tofino"
   "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
   extensions/p4_tests/p4_14/test_config_324_tcam_range_11.p4
   )
+
+p4c_add_xfail_reason("tofino"
+  "More than 8 hit entries not supported"
+  extensions/p4_tests/p4_14/action_chain_limits.p4
+  )

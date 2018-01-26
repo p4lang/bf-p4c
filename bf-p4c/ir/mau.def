@@ -190,6 +190,9 @@ class Table : BFN::Unit {
     safe_vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
     bool is_placed() const { return resources != nullptr; }
+    bool action_chain() const;
+    bool has_default_path() const;
+    int action_next_paths() const;
 
 #emit
     static constexpr int TIND_NAME = 1;

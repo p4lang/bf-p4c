@@ -525,11 +525,32 @@ class VisitAttached : public Inspector {
 };
 }  // namespace
 
+void TableLayout::setup_instr_and_next(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
+    int action_count = get_hit_actions(tbl);
+    if (get_hit_actions(tbl) > 0) {
+        if (get_hit_actions(tbl) <= TableFormat::IMEM_MAP_TABLE_ENTRIES)
+            layout.overhead_bits += ceil_log2(action_count);
+        else
+            layout.overhead_bits += TableFormat::FULL_IMEM_ADDRESS_BITS;
+    }
+
+    if (tbl->action_chain() && get_hit_actions(tbl) > TableFormat::NEXT_MAP_TABLE_ENTRIES) {
+        int next_tables = tbl->action_next_paths();
+        if (!tbl->has_default_path())
+            next_tables++;
+        if (next_tables <= TableFormat::NEXT_MAP_TABLE_ENTRIES) {
+            layout.overhead_bits += ceil_log2(next_tables);
+        } else {
+            layout.overhead_bits += TableFormat::FULL_NEXT_TABLE_BITS;
+        }
+    }
+}
+
 bool TableLayout::preorder(IR::MAU::Table *tbl) {
     LOG1("## layout table " << tbl->name);
     tbl->layout.ixbar_bytes = tbl->layout.match_bytes = tbl->layout.match_width_bits =
     tbl->layout.action_data_bytes = tbl->layout.overhead_bits = 0;
-    tbl->layout.overhead_bits += std::max(ceil_log2(get_hit_actions(tbl)), 0);
+    setup_instr_and_next(tbl->layout, tbl);
     if (tbl->match_table)
         setup_match_layout(tbl->layout, tbl);
     if ((tbl->layout.gateway = tbl->uses_gateway()))

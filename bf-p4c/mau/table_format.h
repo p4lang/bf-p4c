@@ -40,8 +40,12 @@ struct TableFormat {
     static constexpr int MID_BYTE_VERS = 3;
     static constexpr int MAX_SHARED_GROUPS = 2;
     static constexpr int MAX_GROUPS_PER_RAM = 5;
+    static constexpr int FULL_IMEM_ADDRESS_BITS = 6;
+    static constexpr int FULL_NEXT_TABLE_BITS = 8;
+    static constexpr int NEXT_MAP_TABLE_ENTRIES = 8;
+    static constexpr int IMEM_MAP_TABLE_ENTRIES = 8;
 
-    enum type_t { MATCH, ACTION, IMMEDIATE, VERS, COUNTER, METER, METER_TYPE,
+    enum type_t { MATCH, NEXT, ACTION, IMMEDIATE, VERS, COUNTER, METER, METER_TYPE,
                   INDIRECT_ACTION, ENTRY_TYPES };
 
 
@@ -130,7 +134,6 @@ struct TableFormat {
     // safe_vector<safe_vector<int>> match_group_info;
 
     int ghost_bits_count = 0;
-    bool next_table = false;
     const bitvec immediate_mask;
     bool gw_linked;
     // bitvec ghost_start;
@@ -146,6 +149,8 @@ struct TableFormat {
     bool analyze_layout_option();
     bool analyze_skinny_layout_option(int per_RAM, safe_vector<std::pair<int, int>> &sizes);
     bool analyze_wide_layout_option(safe_vector<std::pair<int, int>> &sizes);
+
+    int hit_actions();
     bool allocate_next_table();
     bool allocate_indirect_ptr(int total, type_t type, int group, int RAM);
 

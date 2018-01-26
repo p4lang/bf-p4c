@@ -940,6 +940,8 @@ struct fmt_state {
 cstring format_name(int type, bool pfe_bit = false) {
     if (type == TableFormat::MATCH)
         return "match";
+    if (type == TableFormat::NEXT)
+        return "next";
     if (type == TableFormat::ACTION)
         return "action";
     if (type == TableFormat::IMMEDIATE)
@@ -1021,7 +1023,7 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
         safe_vector<std::pair<int, int>> bits;
         safe_vector<std::pair<int, int>> pfe_bits;
         // For table objects that are not match
-        for (type = TableFormat::ACTION; type <= TableFormat::INDIRECT_ACTION; type++) {
+        for (type = TableFormat::NEXT; type <= TableFormat::INDIRECT_ACTION; type++) {
             if (match_group.mask[type].popcount() == 0) continue;
             bits.clear();
             pfe_bits.clear();
@@ -1663,6 +1665,7 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage,
        gress_t gress) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
+    LOG1("Emitting table " << tbl->name);
     TableMatch fmt(*this, phv, tbl);
     const char *tbl_type = "gateway";
     indent_t    indent(1);

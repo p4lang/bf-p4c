@@ -101,3 +101,29 @@ cstring IR::MAU::Table::get_use_name(const IR::MAU::AttachedMemory *at, bool is_
     }
     return rv;
 }
+
+bool IR::MAU::Table::action_chain() const {
+    for (auto &n : next) {
+        if (n.first[0] != '$') {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool IR::MAU::Table::has_default_path() const {
+    for (auto &n : next) {
+        if (n.first == "$default")
+            return true;
+    }
+    return false;
+}
+
+int IR::MAU::Table::action_next_paths() const {
+    int action_paths = 0;
+    for (auto &n : next) {
+        if (n.first == "$default" || n.first[0] != '$')
+            action_paths++;
+    }
+    return action_paths;
+}
