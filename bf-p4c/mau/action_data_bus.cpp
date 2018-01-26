@@ -448,7 +448,11 @@ bool ActionDataBus::alloc_bytes(Use &use, bitvec layout, bitvec combined_layout,
         // Put the lower 2 bits as a separate section
         bool found = fit_adf_section(use, small_adj, combined_small_adj, type, FIND_LOWER,
                                     init_byte_offset, 0, 2, name);
-        if (!found) return false;
+        if (found) return true;
+        // Couldn't fit within the lower BYTE section, try upper half
+        found = fit_adf_section(use, adjacent, combined_adjacent, type, FIND_NORMAL,
+                                    init_byte_offset, 0, 4, name);
+        return found;
     } else if (adjacent.popcount() > 0) {
         // Attempt to put together as a 4 bit section
         bool found = fit_adf_section(use, adjacent, combined_adjacent, type, FIND_NORMAL,
@@ -491,11 +495,19 @@ bool ActionDataBus::alloc_halves(Use &use, bitvec layout, bitvec combined_layout
     } else if (adj_hi.popcount() > 0) {
         bool found = fit_adf_section(use, adj_hi, comb_adj_hi, type, FIND_LOWER,
                                      init_byte_offset, 4, 4, name);
-        if (!found) return false;
+        // Couldn't fit within the lower HALF section, try the upper half
+        if (found) return true;
+        found = fit_adf_section(use, adjacent, combined_adjacent, type, FIND_NORMAL,
+                                init_byte_offset, 0, 8, name);
+        return found;
     } else if (adj_lo.popcount() > 0) {
         bool found = fit_adf_section(use, adj_lo, comb_adj_lo, type, FIND_LOWER,
                                      init_byte_offset, 0, 4, name);
-        if (!found) return false;
+        if (found) return true;
+        // Couldn't fit within the lower HALF section, try the upper half
+        found = fit_adf_section(use, adjacent, combined_adjacent, type, FIND_NORMAL,
+                                init_byte_offset, 0, 8, name);
+        return found;
     }
     return true;
 }
@@ -837,9 +849,13 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Actio
             return true;
         shared_action_profiles.emplace(ad);
     }
+    LOG1("Allocating action data bus for " << tbl->name);
+
+    LOG2("Initial Action Data Bus");
+    LOG2(hex(total_in_use.getrange(96, 32)) << "|" << hex(total_in_use.getrange(64, 32)) << "|"
+         << hex(total_in_use.getrange(32, 32)) << "|" << hex(total_in_use.getrange(0, 32)));
 
     auto &ad_xbar = alloc.action_data_xbar;
-    LOG1("Allocating action data bus for " << tbl->name);
 
     // Immediate allocation
     bool allocated = alloc_immediate(use->total_layouts[ActionFormat::IMMED],

@@ -44,7 +44,8 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
     void addDeps(ordered_set<const IR::MAU::Table *> tables, const IR::MAU::Table* tbl,
             DependencyGraph::dependencies_t dep) {
         for (auto upstream_t : tables) {
-            if (ignoreDep.count(upstream_t->name)) {
+            if (upstream_t->match_table
+                && ignoreDep.count(upstream_t->match_table->externalName())) {
                 LOG3("Ignoring dependency from " << upstream_t->name << " to " << tbl->name);
                 continue; }
             self.dg.add_edge(upstream_t, table, dep); }
@@ -204,10 +205,15 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
     if (t->match_table) {
         auto annot = t->match_table->getAnnotations();
         for (auto ann : annot->annotations) {
+            if (ann->name.name != "ignore_table_dependency") continue;
             if (ann->expr.size() != 1) continue;
             auto tbl_name = ann->expr.at(0)->to<IR::StringLiteral>();
             if (!tbl_name) continue;
-            ignore_tables.insert(tbl_name->value);
+            // Due to P4_14 global name space, a dot is added to the initial table name
+            auto value = tbl_name->value;
+            ignore_tables.insert(value);
+            value = "." + value;
+            ignore_tables.insert(value);
         }
     }
 
