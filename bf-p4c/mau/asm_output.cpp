@@ -1186,11 +1186,18 @@ class MauAsmOutput::EmitAction : public Inspector {
             if (salu) {
                 out << salu->action_map.at(act->name);
                 sep = ", "; }
-            if (prim->operands.size() > 1) {
-                if (auto *k = prim->operands.at(1)->to<IR::Constant>())
+            for (size_t i = 1; i < prim->operands.size(); ++i) {
+                // FIXME -- some execute primitives for attached tables have additional
+                // FIXME -- arguments that we generally want to ignore here.  Should have removed
+                // FIXME -- them earlier when we did whatever we needed to do for them, but for
+                // FIXME -- now we just ignore ones that make no sense
+                if (auto *k = prim->operands.at(i)->to<IR::Constant>())
                     out << sep << k->value;
-                else if (auto *a = prim->operands.at(1)->to<IR::ActionArg>())
-                    out << sep << a->name; }
+                else if (auto *a = prim->operands.at(i)->to<IR::ActionArg>())
+                    out << sep << a->name;
+                else
+                    continue;
+                sep = ", "; }
             out << ')' << std::endl;
             is_empty = false; }
         if (is_empty)
