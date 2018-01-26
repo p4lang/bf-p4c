@@ -10,9 +10,6 @@
 
 class PhvInfo;
 
-// TODO(yumin)
-// 1. change bidirectionalS to directedS
-
 /* The DependencyGraph data structure is a directed graph in which tables are
  * vertices and edges are dependencies.  An edge from t1 to t2 means that t2
  * depends on t1.
@@ -43,7 +40,7 @@ struct DependencyGraph {
     typedef boost::adjacency_list<
         boost::vecS,
         boost::vecS,
-        boost::bidirectionalS,   // Directed edges.
+        boost::directedS,   // Directed edges.
         const IR::MAU::Table*,   // Vertex labels.
         dependencies_t     // Edge labels.
         > Graph;

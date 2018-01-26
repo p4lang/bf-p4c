@@ -3,6 +3,7 @@
 #include <boost/graph/breadth_first_search.hpp>
 #include <boost/optional.hpp>
 #include <algorithm>
+#include <numeric>
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
@@ -365,6 +366,17 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         for (const auto& vertex : topo_rst[i]) {
             const IR::MAU::Table* table = dg.g[vertex];
             dg.stage_info[table].min_stage = i; } }
+
+    // Build dep_stages
+    for (int i = int(topo_rst.size()) - 1; i >= 0; --i) {
+        for (const auto& vertex : topo_rst[i]) {
+            const IR::MAU::Table* table = dg.g[vertex];
+            auto& happens_later = dg.happens_before_map[table];
+            dg.stage_info[table].dep_stages =
+                std::accumulate(happens_later.begin(), happens_later.end(), 0,
+                                [this] (int sz, const IR::MAU::Table* later) {
+                                    return std::max(sz, dg.stage_info[later].dep_stages + 1); });
+        } }
 
     verify_dependence_graph();
     dg.finalized = true;
