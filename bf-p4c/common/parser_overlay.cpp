@@ -111,6 +111,8 @@ bool FindAddedHeaderFields::preorder(const IR::Primitive* prim) {
             if (auto* hr = m->expr->to<IR::HeaderRef>()) {
                 // then add all fields of the header (not including $valid) to
                 // the set of fields that are part of added headers
+                LOG1("Found added header.  Conservatively assuming it is not "
+                     "mutually exclusive with any other header:" << hr);
                 PhvInfo::StructInfo info = phv.struct_info(hr);
                 for (int id : info.field_ids()) {
                     rv[id] = true; } } } }

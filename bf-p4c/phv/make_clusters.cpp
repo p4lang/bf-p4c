@@ -318,6 +318,8 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
     // fields in network order, not little Endian order.
     PHV::SuperCluster::SliceList *accumulator = new PHV::SuperCluster::SliceList();
     int accumulator_bits = 0;
+    // TODO(yumin): optional<bool> is not good.
+    boost::optional<bool> prev_is_tphv = boost::none;
     LOG5("Starting new slice list:");
     for (int fid : boost::adaptors::reverse(struct_info.field_ids())) {
         PHV::Field* field = phv_i.field(fid);
@@ -328,32 +330,69 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
                   "Found field in header but not PHV: %1%",
                   cstring::to_cstring(field));
 
+        bool is_tphv = field->is_tphv_candidate(self.uses_i);
+
+        // constraint.
+        if (accumulator_bits && (field->no_pack())) {
+            // Break off the existing slice list if this field has a no_pack
+            // Break at bottom as well
+            slice_lists_i.insert(accumulator);
+            accumulator_bits = 0;
+            prev_is_tphv = boost::none;
+            accumulator = new PHV::SuperCluster::SliceList();
+        } else if (accumulator_bits % int(PHV::Size::b8) == 0 && prev_is_tphv
+            && prev_is_tphv.value() != is_tphv) {
+            // Break off, if previous one is phv/tphv but this one is not the same.
+            slice_lists_i.insert(accumulator);
+            accumulator_bits = 0;
+            prev_is_tphv = boost::none;
+            accumulator = new PHV::SuperCluster::SliceList();
+        } else if (accumulator_bits % int(PHV::Size::b8) == 0
+                   && accumulator_bits + field->size > int(PHV::Size::b32)) {
+            // Break off, if this field is a large field.
+            slice_lists_i.insert(accumulator);
+            accumulator_bits = 0;
+            prev_is_tphv = boost::none;
+            accumulator = new PHV::SuperCluster::SliceList();
+        } else if (accumulator_bits % int(PHV::Size::b8) == 0
+                   && !self.uses_i.is_referenced(field)) {
+            // Break off, on unreferenced/referenced boundary.
+            // Break at bottom as well
+            slice_lists_i.insert(accumulator);
+            accumulator_bits = 0;
+            prev_is_tphv = boost::none;
+            accumulator = new PHV::SuperCluster::SliceList();
+        }
+
+
         int field_slice_list_size = 0;
         for (auto& slice : self.fields_to_slices_i.at(field)) {
             LOG5("    ...adding " << slice);
             accumulator->push_back(slice);
             field_slice_list_size += slice.size(); }
         accumulator_bits += field->size;
+        prev_is_tphv = is_tphv;
 
         BUG_CHECK(field_slice_list_size == field->size,
                   "Fine grained slicing of field %1% (size %2%) produced slices adding up to %3%b",
                   cstring::to_cstring(field), field->size, field_slice_list_size);
 
-        if (accumulator_bits % int(PHV::Size::b8) == 0) {
-            // If we've accumulated a slice list that's a byte multiple, store it
-            // and start a new slice list.
+        // Break off the slice list holding this field if it has a no_pack
+        // constraint, or if the list has reached a byte multiple of at least
+        // 32b.
+        bool is_multiple = accumulator_bits % int(PHV::Size::b8) == 0 && accumulator_bits >= 32;
+        if (field->no_pack() || is_multiple
+            || (accumulator_bits % int(PHV::Size::b8) == 0
+                && !self.uses_i.is_referenced(field))) {
             slice_lists_i.insert(accumulator);
             accumulator_bits = 0;
+            prev_is_tphv = boost::none;
             accumulator = new PHV::SuperCluster::SliceList(); }
     }
 
     if (accumulator->size())
         slice_lists_i.insert(accumulator);
 
-    // Headers are required to be byte aligned, which should have been checked
-    // earlier in the compilation process.
-    BUG_CHECK(accumulator_bits % int(PHV::Size::b8) == 0,
-              "Non-byte aligned header: %1%", cstring::to_cstring(hr));
     return false;
 }
 

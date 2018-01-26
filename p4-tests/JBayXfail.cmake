@@ -44,14 +44,10 @@ p4c_add_xfail_reason("jbay"
 
 p4c_add_xfail_reason("jbay"
   "PHV allocation was not successful"
-  testdata/p4_14_samples/01-BigMatch.p4
-  testdata/p4_14_samples/02-FullPHV1.p4
-  testdata/p4_14_samples/03-FullPHV2.p4
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
-  testdata/p4_14_samples/action_bus1.p4
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
   testdata/p4_14_samples/source_routing.p4
@@ -94,11 +90,6 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "condition too complex"
-  testdata/p4_14_samples/issue894.p4
-  )
-
-p4c_add_xfail_reason("jbay"
   "error: standard_metadata.packet_length is not accessible in the ingress pipe"
   testdata/p4_14_samples/queueing.p4
   )
@@ -120,11 +111,6 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "error: : The hash offset must be a power of 2 in a hash calculation"
   testdata/p4_14_samples/flowlet_switching.p4
-  )
-
-p4c_add_xfail_reason("jbay"
-  "error: Syntax error,"
-  testdata/p4_14_samples/issue1013.p4
   )
 
 p4c_add_xfail_reason("jbay"
@@ -163,18 +149,13 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
- "mismatch from expected.* at byte"
- testdata/p4_14_samples/bridge1.p4
- )
-
-p4c_add_xfail_reason("jbay"
   "Floating point exception"
   # These tests start to fail after introducing PHV packing.
   testdata/p4_14_samples/instruct5.p4
   )
 
 p4c_add_xfail_reason("jbay"
- "can only currently handle meter color in an 8 bit ALU operation"
+ "packing is too complicated due to either hash distribution or attached outputs combined with other action data"
  testdata/p4_14_samples/meter.p4
  testdata/p4_14_samples/meter1.p4
  )
@@ -192,3 +173,21 @@ p4c_add_xfail_reason("jbay"
 # testdata/p4_14_samples/hash_action_basic.p4
 # "mismatch from expected.* at byte"
 # testdata/p4_14_samples/07-MultiProtocol.p4
+
+# BRIG-149
+p4c_add_xfail_reason("jbay"
+  "Syntax error, expecting identifier or operation"
+  testdata/p4_14_samples/issue1013.p4
+  )
+
+# BRIG-420
+p4c_add_xfail_reason("jbay"
+  "Syntax error, expecting identifier or operation"
+  testdata/p4_14_samples/exact_match8.p4
+  )
+
+# BRIG-421
+p4c_add_xfail_reason("jbay"
+  "PHV allocation creates a container action impossible within a Tofino ALU"
+  testdata/p4_14_samples/issue894.p4
+  )

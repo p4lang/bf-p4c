@@ -923,8 +923,9 @@ class MarkDeparsedFields : public Inspector {
         BUG_CHECK(src_field, "Deparser Emit with a non-PHV source: %1%",
                   cstring::to_cstring(emit));
         // XXX(cole): These two constraints will be subsumed by deparser schema.
-        src_field->set_exact_containers(true);
         src_field->set_deparsed(true);
+        if (!src_field->bridged)
+            src_field->set_exact_containers(true);
         return false;
     }
 

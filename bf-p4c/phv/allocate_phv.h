@@ -32,30 +32,31 @@
  */
 struct AllocScore {
     using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
-    bool is_tphv;
-    int n_set_gress;
-    int n_overlay_bits;
-    int n_packing_bits;  // how many wasted bits in partial caontainer get used.
-    int n_inc_containers;
-    int n_wasted_bits;  // if no_pack but taking a container larger than it.
+    struct ScoreByKind {
+        int n_set_gress;
+        int n_overlay_bits;
+        int n_packing_bits;  // how many wasted bits in partial container get used.
+        int n_inc_containers;
+        int n_wasted_bits;  // if no_pack but taking a container larger than it.
 
-    AllocScore()
-        : is_tphv(false)
-        , n_set_gress(0)
-        , n_overlay_bits(0)
-        , n_packing_bits(0)
-        , n_inc_containers(0)
-        , n_wasted_bits(0) { }
+        // The difference in the number of PHV containers available by size.
+        // Lower is better, as it indicates that roughly the same number of 8b,
+        // 16b, and 32b containers remain.
+        int container_imbalance;
+    };
+    int n_tphv_on_phv_bits;
+    ordered_map<PHV::Kind, ScoreByKind> score;
+
+    AllocScore() { }
 
     /** Construct a score from a Transaction.
      *
      * @p alloc: new allocation
      * @p group: the container group where allocations were made to.
      */
-    AllocScore(const PHV::Transaction& alloc,
-               const PHV::ContainerGroup& group);
+    AllocScore(const PHV::Transaction& alloc, const PhvUse& uses);
 
-    bool operator>(const AllocScore& other);
+    bool operator>(const AllocScore& other) const;
     static AllocScore make_lowest();
 
  private:

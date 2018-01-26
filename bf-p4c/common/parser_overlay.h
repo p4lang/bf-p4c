@@ -99,7 +99,7 @@ class ParserOverlay : public PassManager {
  public:
     ParserOverlay(PhvInfo& phv, SymBitMatrix& rv) {
         addPasses({
-            new FindAddedHeaderFields(phv, addedHeaderFields),
+            // new FindAddedHeaderFields(phv, addedHeaderFields),
             new BuildParserOverlay(phv, addedHeaderFields, rv) });
     }
 };

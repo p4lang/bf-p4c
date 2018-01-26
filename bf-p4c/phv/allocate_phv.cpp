@@ -14,19 +14,71 @@ using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
  * 5. use new container.
  * 6. set gress.
  */
-bool AllocScore::operator>(const AllocScore& other) {
-    if (is_tphv && !other.is_tphv) return true;
-    if (!is_tphv && other.is_tphv) return false;
-    if (n_wasted_bits != other.n_wasted_bits) {
-        return n_wasted_bits < other.n_wasted_bits; }
-    if (n_packing_bits != other.n_packing_bits) {
-        return n_packing_bits > other.n_packing_bits; }
-    if (n_overlay_bits != other.n_overlay_bits) {
-        return n_overlay_bits > other.n_overlay_bits; }
-    if (n_inc_containers != other.n_inc_containers) {
-        return n_inc_containers < other.n_inc_containers; }
-    if (n_set_gress != other.n_set_gress) {
-        return n_set_gress < other.n_set_gress; }
+bool AllocScore::operator>(const AllocScore& other) const {
+    // Less TPHV over PHV
+    // This is not redundent even if we have weight_factor for TPHV/PHV score,
+    // because we want to avoid the case that placing TPHV candidates to PHV containers
+    // so that the score is higher, because scores are calculated based on
+    // container type, not field type.
+    if (n_tphv_on_phv_bits != other.n_tphv_on_phv_bits) {
+        return n_tphv_on_phv_bits < other.n_tphv_on_phv_bits; }
+
+    int weight_factor = 2;
+    int delta_wasted_bits = 0;
+    int delta_packing_bits = 0;
+    int delta_overlay_bits = 0;
+    int delta_inc_containers = 0;
+    int delta_set_gress = 0;
+    int delta_container_imbalance = 0;
+
+    for (auto kind : { PHV::Kind::normal, PHV::Kind::tagalong }) {
+        int penalty = kind == PHV::Kind::normal ? weight_factor : 1;
+        int bonus = kind == PHV::Kind::tagalong ? weight_factor : 1;
+
+        // Add this score.
+        if (score.find(kind) != score.end()) {
+            delta_wasted_bits += penalty * score.at(kind).n_wasted_bits;
+            delta_packing_bits += bonus * score.at(kind).n_packing_bits;
+            delta_overlay_bits += bonus * score.at(kind).n_overlay_bits;
+            delta_inc_containers += penalty * score.at(kind).n_inc_containers;
+            delta_set_gress += penalty * score.at(kind).n_set_gress;
+            delta_container_imbalance += penalty * score.at(kind).container_imbalance; }
+
+        // Subtract other score.
+        if (other.score.find(kind) != other.score.end()) {
+            delta_wasted_bits -= penalty * other.score.at(kind).n_wasted_bits;
+            delta_packing_bits -= bonus * other.score.at(kind).n_packing_bits;
+            delta_overlay_bits -= bonus * other.score.at(kind).n_overlay_bits;
+            delta_inc_containers -= penalty * other.score.at(kind).n_inc_containers;
+            delta_set_gress -= penalty * other.score.at(kind).n_set_gress;
+            delta_container_imbalance -=
+                penalty * other.score.at(kind).container_imbalance; }
+    }
+
+    // A AllocScore has several metrics, some are positive while some are negative.
+    // The delta is `others - mine`, so that:
+    // if delta == 0, then the metic are the same.
+    // if delta >  0, then the metic is higher than other's.
+    // if delta <  0, then the metric is lower than other's.
+    // For positive metrics (overlay_bits, packing_bits...), the higher is better.
+    // For negative metrics (wasted_bits, inc_container...), the lower is better.
+    // Operator> return true if this score is better.
+    if (delta_wasted_bits != 0) {
+        // This score has less wasted bits.
+        return delta_wasted_bits < 0; }
+    if (delta_overlay_bits != 0) {
+        // This score has more overlay bits.
+        return delta_overlay_bits > 0; }
+    if (delta_packing_bits != 0) {
+        // This score has more packing bits.
+        return delta_packing_bits > 0; }
+    if (delta_inc_containers != 0) {
+        // This score requires more new containers.
+        return delta_inc_containers < 0; }
+    if (delta_set_gress != 0) {
+        // This score pins less containers to a new gress.
+        return delta_set_gress < 0; }
+
     return false;
 }
 
@@ -44,20 +96,20 @@ AllocScore AllocScore::make_lowest() {
  * + n_packing_bits: use bits that ContainerAllocStatus is PARTIAL in parent.
  * + n_inc_containers: the number of container used that was EMPTY.
  * + n_wasted_bits: if field is no_pack, container.size() - slice.width().
+ * + container_imbalance: the sum of the difference between free 8b, 16b, and 32b containers.
  */
-AllocScore::AllocScore(
-    const PHV::Transaction& alloc,
-    const PHV::ContainerGroup& group) : AllocScore() {
-    // tagalong
-    if (group.is(PHV::Kind::tagalong)) is_tphv = true;
+AllocScore::AllocScore(const PHV::Transaction& alloc,
+                       const PhvUse& uses) : AllocScore() {
+    const auto* parent = alloc.getParent();
+    n_tphv_on_phv_bits = 0;
 
-    const auto& parent = alloc.getParent();
     // Forall allocated slices group by container.
     for (const auto kv : alloc.getTransactionStatus()) {
         const auto& container = kv.first;
+        const auto kind = container.type().kind();
         const auto& gress = kv.second.gress;
         const auto& slices = kv.second.slices;
-        bitvec parent_alloc_vec = calcContainerAllocVec(parent.slices(container));
+        bitvec parent_alloc_vec = calcContainerAllocVec(parent->slices(container));
 
         // skip, if there is no allocated slices.
         if (slices.size() == 0) {
@@ -66,16 +118,19 @@ AllocScore::AllocScore(
         // calc n_wasted_bits
         for (const auto& slice : slices) {
             if (slice.field()->no_pack()) {
-                n_wasted_bits += (container.size() - slice.width()); } }
+                score[kind].n_wasted_bits += (container.size() - slice.width()); } }
+
+        for (const auto& slice : slices) {
+            if (slice.field()->is_tphv_candidate(uses)
+                && kind == PHV::Kind::normal) {
+                n_tphv_on_phv_bits += (slice.width()); } }
 
         // calc_n_inc_containers
-        ContainerAllocStatus merged_status =
-                calcContainerStatus(container, alloc.slices(container));
-        ContainerAllocStatus parent_status =
-                calcContainerStatus(container, parent.slices(container));
+        ContainerAllocStatus merged_status = alloc.alloc_status(container);
+        ContainerAllocStatus parent_status = parent->alloc_status(container);
         if (parent_status == ContainerAllocStatus::EMPTY
             && merged_status != ContainerAllocStatus::EMPTY) {
-            n_inc_containers++; }
+            score[kind].n_inc_containers++; }
 
         // calc n_packing_bits
         if (parent_status == ContainerAllocStatus::PARTIAL) {
@@ -83,7 +138,7 @@ AllocScore::AllocScore(
                 if (parent_alloc_vec[i]) continue;
                 for (const auto& slice : slices) {
                     if (slice.container_slice().contains(i)) {
-                        n_packing_bits++;
+                        score[kind].n_packing_bits++;
                         break; }
                 } } }
 
@@ -91,11 +146,21 @@ AllocScore::AllocScore(
         for (const int i : parent_alloc_vec) {
             for (const auto slice : slices) {
                 if (slice.container_slice().contains(i)) {
-                    n_overlay_bits++; } } }
+                    score[kind].n_overlay_bits++; } } }
 
         // gress
-        if (!parent.gress(container) && gress) {
-            n_set_gress++; }
+        if (!parent->gress(container) && gress) {
+            score[kind].n_set_gress++; }
+
+        // container imbalance
+        // XXX(cole): This currently weights packing into 32b containers
+        // highest, followed by 16b, and then 8b.
+        auto count8  = alloc.empty_containers(PHV::Size::b8) * 4;
+        auto count16 = alloc.empty_containers(PHV::Size::b16) * 2;
+        auto count32 = alloc.empty_containers(PHV::Size::b32);
+        score[kind].container_imbalance =
+            std::abs(count8 - count16) +
+            std::abs(count16 - count32);
     }
 }
 
@@ -121,13 +186,24 @@ AllocScore::calcContainerStatus(const PHV::Container& container,
 }
 
 std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
-    s << "[";
-    s << "tphv: " << score.is_tphv << ", ";
-    s << "set_gress: " << score.n_set_gress << ", ";
-    s << "overlay_bits: " << score.n_overlay_bits << ", ";
-    s << "packing_bits: " << score.n_packing_bits << ", ";
-    s << "inc_containers: " << score.n_inc_containers << ", ";
-    s << "]";
+    bool any_positive_score = false;
+    for (auto kind : { PHV::Kind::tagalong, PHV::Kind::normal }) {
+        if (score.score.find(kind) == score.score.end())
+            continue;
+        any_positive_score = true;
+        s << "[";
+        s << "tphv: " << (kind == PHV::Kind::tagalong) << ", ";
+        s << "wasted_bits: " << score.score.at(kind).n_wasted_bits << ", ";
+        s << "overlay_bits: " << score.score.at(kind).n_overlay_bits << ", ";
+        s << "packing_bits: " << score.score.at(kind).n_packing_bits << ", ";
+        s << "inc_containers: " << score.score.at(kind).n_inc_containers << ", ";
+        s << "set_gress: " << score.score.at(kind).n_set_gress << ", ";
+        s << "free container imbalance: " << score.score.at(kind).container_imbalance;
+        s << "]"; }
+
+    if (!any_positive_score)
+        s << "[ score: 0 ]";
+
     return s;
 }
 
@@ -254,15 +330,14 @@ bool CoreAllocation::satisfies_constraints(
 
     // Check gress.
     if (alloc.gress(c) && *alloc.gress(c) != f->gress) {
-        LOG5("        constraint: container is " << *alloc.gress(c) <<
+        LOG5("        constraint: container " << c << " is " << *alloc.gress(c) <<
                     " but slice needs " << f->gress);
         return false; }
 
     // Check no pack for this field.
     const auto& slices = alloc.slices(c);
     if (slices.size() > 0 && slice.field()->no_pack()) {
-        LOG5("        constraint: slice has no_pack constraint but container has slices " <<
-                      slices);
+        LOG5("        constraint: slice has no_pack constraint but container has slices ");
         return false; }
 
     // Check no pack for any other fields already in the container.
@@ -277,10 +352,8 @@ bool CoreAllocation::satisfies_constraints(
     if (slices.size() > 0) {
         boost::optional<UnionFind<PHV::FieldSlice>> rv = actions_i.can_pack(alloc, slice);
         if (!rv) {
-            LOG5("        ...action constraint: cannot pack into container " << c);
-            return false;
-        } else {
-            LOG5("        ...action constraint: can pack into container " << c); } }
+            LOG5("        ...action constraint: cannot pack " << slice << " into container " << c);
+            return false; } }
 
     return true;
 }
@@ -371,7 +444,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocCCGF(
             LOG5("    ...and container is empty");
             candidate = c;
         } else {
-            LOG5("    ...but " << c << " already contains " << alloc_attempt.slices(c)); } }
+            LOG5("    ...but " << c << " already contains slices at this position"); } }
 
     if (!candidate) {
         LOG5("    ...but there is no free container for (non-special) CCGF field");
@@ -426,12 +499,12 @@ CoreAllocation::tryAllocSliceList(
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster::SliceList& slices,
         const ordered_map<const PHV::FieldSlice, int>& start_positions) const {
-    LOG4("trying to allocate slices at container indices: ");
+    LOG5("trying to allocate slices at container indices: ");
     for (auto& slice : slices) {
         BUG_CHECK(start_positions.find(slice) != start_positions.end(),
                   "Trying to place slice list with no container index for slice %1%",
                   cstring::to_cstring(slice));
-        LOG4("  " << start_positions.at(slice) << ": " << slice); }
+        LOG5("  " << start_positions.at(slice) << ": " << slice); }
 
     // Check FIELD<-->GROUP constraints for each field.
     for (auto& slice : slices) {
@@ -511,9 +584,7 @@ CoreAllocation::tryAllocSliceList(
                     candidate_slices);
             if (!rv) {
                 LOG5("        ...action constraint: cannot pack into container " << c);
-                continue;
-            } else {
-                LOG5("        ...action constraint: can pack into container " << c); } }
+                continue; } }
 
         // Check that there's space.
         bool can_place = true;
@@ -523,7 +594,7 @@ CoreAllocation::tryAllocSliceList(
             if (alloced_slices.size() > 0 && can_overlay(mutex_i, slice.field(), alloced_slices)) {
                 LOG5("    ...and can overlay " << slice.field() << " on " << alloced_slices);
             } else if (alloced_slices.size() > 0) {
-                LOG5("    ...but " << c << " already contains " << alloced_slices);
+                LOG5("    ...but " << c << " already contains slices at this position");
                 can_place = false;
                 break; } }
         if (!can_place) continue;  // try next container
@@ -535,7 +606,9 @@ CoreAllocation::tryAllocSliceList(
                 && !clot_i.allocated(slice.field()))
             this_alloc.allocate(slice); }
 
-        auto score = AllocScore(this_alloc, group);
+        auto score = AllocScore(this_alloc, uses_i);
+        LOG5("    ...score: " << score);
+
         // update the best
         if ((!best_candidate || score > best_score)) {
             best_score = score;
@@ -683,7 +756,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
                 }  // for slices
 
                 if (failed) continue;
-                auto score = AllocScore(*possible_alloc, container_group);
+                auto score = AllocScore(*possible_alloc, uses_i);
                 if (!best_alloc || score > best_score) {
                     // Since we can't copy/move transaction,
                     // we create a new transaction and commit the best result in.
@@ -993,8 +1066,6 @@ GreedySortingAllocationStrategy::tryAllocation(
     std::list<PHV::SuperCluster*> to_remove;
     for (PHV::SuperCluster* cluster_group : cluster_groups) {
         for (PHV::ContainerGroup* container_group : container_groups) {
-            LOG4("TRY CLUSTER/GROUP pair:");
-            LOG4(cluster_group);
             LOG4(container_group);
             if (auto partial_alloc = core_alloc_i.tryAlloc(rst, *container_group, *cluster_group)) {
                 rst.commit(*partial_alloc);
@@ -1112,8 +1183,6 @@ BalancedPickAllocationStrategy::allocLoop(PHV::Transaction& rst,
     for (PHV::SuperCluster* cluster_group : cluster_groups) {
         this->sortContainerBy(rst, container_groups, cluster_group);
         for (PHV::ContainerGroup* container_group : container_groups) {
-            LOG4("TRY CLUSTER/GROUP pair:");
-            LOG4(cluster_group);
             LOG4(container_group);
             if (auto partial_alloc = core_alloc_i.tryAlloc(rst, *container_group, *cluster_group)) {
                 rst.commit(*partial_alloc);
@@ -1163,15 +1232,22 @@ BruteForceAllocationStrategy::remove_unreferenced_clusters(
         const std::list<PHV::SuperCluster*>& cluster_groups_input) {
     std::set<PHV::SuperCluster*> un_ref_singleton;
     for (auto* super_cluster : cluster_groups_input) {
-        bool has_in_slist = false;
+        bool should_skip = false;
         for (const auto* slice_list : super_cluster->slice_lists()) {
+            bool has_referenced = false;
+            bool has_unreferenced = false;
             for (const auto& slice : *slice_list) {
-                if (!core_alloc_i.uses().is_referenced(slice.field())) {
-                    LOG4("Unreferenced slice in slice_list" << slice);
-                    has_in_slist = true;
-                    break; } }
-            if (has_in_slist) break; }
-        if (has_in_slist) continue;
+                if (core_alloc_i.uses().is_referenced(slice.field())) {
+                    has_referenced = true;
+                } else {
+                    has_unreferenced = true; } }
+
+            if (has_referenced && has_unreferenced) {
+                LOG4("Unreferenced slice in slice_list as padding: " << slice_list);
+                should_skip = true;
+                break; } }
+        // skip if unreferenced slice is used as padding in non-byte-aligned field.
+        if (should_skip) continue;
 
         for (const auto* rot : super_cluster->clusters()) {
             for (const auto* ali : rot->clusters()) {
@@ -1214,13 +1290,15 @@ BruteForceAllocationStrategy::crush_clusters(
 std::list<PHV::SuperCluster*>
 BruteForceAllocationStrategy::slice_clusters(
         const std::list<PHV::SuperCluster*>& cluster_groups) {
+    LOG5("===================  Pre-Slicing ===================");
     std::list<PHV::SuperCluster*> rst;
     for (auto* sc : cluster_groups) {
+        LOG5("PRESLICING " << sc);
         auto it = PHV::SlicingIterator(sc);
         std::set<const PHV::Field*> unsatisfiable_fields;
         auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
         if (!it.done()) {
-            // Try find a slice that make pragma possible.
+            // Try until we find one satisfies pa_container_size pragmas.
             while (!it.done()) {
                 unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it);
                 if (unsatisfiable_fields.size() == 0) {
@@ -1234,18 +1312,48 @@ BruteForceAllocationStrategy::slice_clusters(
                 it = PHV::SlicingIterator(sc);
                 unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it); }
 
-            for (auto* new_sc : *it)
-                rst.push_back(new_sc);
-
+            LOG5("--- into new slices -->");
+            for (auto* new_sc : *it) {
+                LOG5(new_sc);
+                rst.push_back(new_sc); }
         } else {
             unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields({ sc });
             if (unsatisfiable_fields.size() > 0) {
                 ::warning("%1% can not be sliced, and it can not satisfy "
                           "@pa_container_size",
                           cstring::to_cstring(sc)); }
-
+            LOG5("    ...but preslicing failed");
             rst.push_back(sc); }
-        pa_container_sizes.ignore_fields(unsatisfiable_fields);
+        pa_container_sizes.ignore_fields(unsatisfiable_fields); }
+    return rst;
+}
+
+std::list<PHV::SuperCluster*>
+remove_singleton_slicelist_metadata(const std::list<PHV::SuperCluster*>& cluster_groups) {
+    std::list<PHV::SuperCluster*> rst;
+    for (auto* super_cluster : cluster_groups) {
+        // Supercluster has more than one slice list.
+        if (super_cluster->slice_lists().size() != 1) {
+            rst.push_back(super_cluster);
+            continue; }
+        auto* slice_list = *super_cluster->slice_lists().begin();
+        // The slice list has more than one fieldslice.
+        if (slice_list->size() != 1) {
+            rst.push_back(super_cluster);
+            continue; }
+        // The fieldslice is pov, or not metadata. Nor does supercluster is singleton.
+        auto fs = slice_list->front();
+        if (fs.size() != int(super_cluster->aggregate_size())
+            || !fs.field()->metadata
+            || fs.field()->pov) {
+            rst.push_back(super_cluster);
+            continue; }
+
+        ordered_set<PHV::SuperCluster::SliceList*> empty;
+        PHV::SuperCluster* new_cluster =
+            new PHV::SuperCluster(super_cluster->clusters(), empty);
+        rst.push_back(new_cluster);
+        LOG5("Replacing singleton " << super_cluster << " with " << new_cluster);
     }
     return rst;
 }
@@ -1258,6 +1366,9 @@ BruteForceAllocationStrategy::tryAllocation(
     // remove singleton un_referenced fields
     std::list<PHV::SuperCluster*> cluster_groups =
         remove_unreferenced_clusters(cluster_groups_input);
+
+    // remove singleton metadata slice list
+    cluster_groups = remove_singleton_slicelist_metadata(cluster_groups);
 
     // slice and then sort clusters.
     cluster_groups = slice_clusters(cluster_groups);
@@ -1290,19 +1401,20 @@ BruteForceAllocationStrategy::tryAllocation(
 
 void
 BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluster_groups) {
-    auto critical_clusters = critical_path_clusters_i.calc_critical_clusters(cluster_groups);
-    std::set<const PHV::SuperCluster*> need_align;
+    // Critical Path result are not used.
+    // auto critical_clusters = critical_path_clusters_i.calc_critical_clusters(cluster_groups);
     std::set<const PHV::SuperCluster*> has_no_pack;
     std::set<const PHV::SuperCluster*> has_no_split;
     std::map<const PHV::SuperCluster*, int> n_valid_starts;
+    std::map<const PHV::SuperCluster*, int> n_required_length;
     std::set<const PHV::SuperCluster*> pounder_clusters;
+    std::set<const PHV::SuperCluster*> non_slicable;
 
+    // calc no_pack and no_split.
     for (const auto* super_cluster : cluster_groups) {
         n_valid_starts[super_cluster] = (std::numeric_limits<int>::max)();
         for (const auto* rot : super_cluster->clusters()) {
             for (const auto* ali : rot->clusters()) {
-                if (ali->alignment()) need_align.insert(super_cluster);
-
                 bitvec starts = ali->validContainerStart(PHV::Size::b32);
                 int n_starts = std::accumulate(starts.begin(), starts.end(), 0,
                                                [] (int a, int) { return a + 1; });
@@ -1313,75 +1425,198 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
                     if (slice.field()->no_pack()) {
                         has_no_pack.insert(super_cluster); }
                     if (slice.field()->no_split()) {
-                        has_no_split.insert(super_cluster); }
-                } } }
-    }
+                        has_no_split.insert(super_cluster); } }
+            } } }
+
+    // calc pounder-able clusters.
     for (const auto* super_cluster : cluster_groups) {
         if (has_no_split.count(super_cluster) || has_no_pack.count(super_cluster)) continue;
-        if (n_valid_starts[super_cluster] < 10) continue;
-        if (super_cluster->slice_lists().size() >= 1) continue;
-        if (super_cluster->aggregate_size() <= 4) continue;
+        if (super_cluster->exact_containers()) continue;
+        if (n_valid_starts[super_cluster] <= 4) continue;
+        if (super_cluster->slice_lists().size() > 1) continue;
+        bool is_candidate = true;
+        for (const auto* slice_list : super_cluster->slice_lists()) {
+            bool has_pov = false;
+            for (const auto& fs : *slice_list) {
+                if (fs.field()->pov) {
+                    has_pov = true;
+                    break; } }
+
+            if (has_pov) is_candidate = false;
+            if (slice_list->size() > 1) is_candidate = false;
+        }
+        if (!is_candidate) continue;
         pounder_clusters.insert(super_cluster);
     }
 
+    // calc non_slicable clusters
+    // i.e. 8-bit and exact container required.
+    for (const auto* super_cluster : cluster_groups) {
+        for (const auto* slice_list : super_cluster->slice_lists()) {
+            BUG_CHECK(slice_list->size() > 0, "empty slice list");
+            int length = std::accumulate(
+                    slice_list->begin(), slice_list->end(), 0,
+                    [] (int a, const PHV::FieldSlice& b) { return a + b.size(); });
+            if (slice_list->front().field()->exact_containers()
+                && length == 8) {
+                non_slicable.insert(super_cluster);
+                break; }
+        } }
+
+    // calc required_length, i.e. max(max{fieldslice.size()}, {slicelist.size()}).
+    for (const auto* super_cluster : cluster_groups) {
+        n_required_length[super_cluster] = super_cluster->max_width();
+        for (const auto* slice_list : super_cluster->slice_lists()) {
+            BUG_CHECK(slice_list->size() > 0, "empty slice list");
+            int length = std::accumulate(
+                    slice_list->begin(), slice_list->end(), 0,
+                    [] (int a, const PHV::FieldSlice& b) { return a + b.size(); });
+            n_required_length[super_cluster] =
+                std::max(n_required_length[super_cluster], length);
+        } }
+
     auto ClusterGroupComparator = [&] (PHV::SuperCluster* l, PHV::SuperCluster* r) {
-        if (pounder_clusters.count(l) != pounder_clusters.count(r)) {
-            return pounder_clusters.count(l) < pounder_clusters.count(r); }
-        if (n_valid_starts.at(l) != n_valid_starts.at(r)) {
-            return n_valid_starts.at(l) < n_valid_starts.at(r); }
         if (has_no_pack.count(l) != has_no_pack.count(r)) {
             return has_no_pack.count(l) > has_no_pack.count(r); }
         if (has_no_split.count(l) != has_no_split.count(r)) {
             return has_no_split.count(l) > has_no_split.count(r); }
-        // if (need_align.count(l) != need_align.count(r)) {
-        //     return need_align.count(l) > need_align.count(r); }
+        if (non_slicable.count(l) != non_slicable.count(r)) {
+            return non_slicable.count(l) > non_slicable.count(r); }
+        if (pounder_clusters.count(l) != pounder_clusters.count(r)) {
+            return pounder_clusters.count(l) < pounder_clusters.count(r); }
+        if (bool(l->exact_containers()) != bool(r->exact_containers())) {
+            return bool(l->exact_containers()) > bool(r->exact_containers()); }
+        // if it's header fields
+        if (bool(l->exact_containers())) {
+            if (n_required_length[l] != n_required_length[r]) {
+                return n_required_length[l] < n_required_length[r]; }
+            if (l->slice_lists().size() != r->slice_lists().size()) {
+                return l->slice_lists().size() > r->slice_lists().size(); }
+        } else {
+            // for non header field, aggregate size matters
+            if (n_valid_starts.at(l) != n_valid_starts.at(r)) {
+                return n_valid_starts.at(l) < n_valid_starts.at(r); }
+            if (l->aggregate_size() != r->aggregate_size()) {
+                return l->aggregate_size() > r->aggregate_size(); }
+            if (n_required_length[l] != n_required_length[r]) {
+                return n_required_length[l] < n_required_length[r]; }
+        }
         // if (critical_clusters.count(l) != critical_clusters.count(r)) {
         //     return critical_clusters.count(l) > critical_clusters.count(r); }
-        // if (l->slice_lists().size() != r->slice_lists().size()) {
-        //     return l->slice_lists().size() > r->slice_lists().size(); }
         if (l->num_constraints() != r->num_constraints()) {
             return l->num_constraints() > r->num_constraints(); }
-        if (l->max_width() != r->max_width()) {
-            return l->max_width() > r->max_width(); }
-        if (l->aggregate_size() != r->aggregate_size()) {
-            return l->aggregate_size() > r->aggregate_size(); }
+        // if (l->max_width() != r->max_width()) {
+        //     return l->max_width() > r->max_width(); }
         return false;
     };
     cluster_groups.sort(ClusterGroupComparator);
 
-    LOG5("============ Sorted SuperClusters ===============");
-    for (const auto& v : cluster_groups) {
-        LOG5(v); }
-    LOG5("========== end Sorted SuperClusters =============");
+    if (LOGGING(5)) {
+        LOG5("============ Sorted SuperClusters ===============");
+        int i = 0;
+        std::stringstream logs;
+        for (const auto& v : cluster_groups) {
+            ++i;
+            logs << i << "th "<< " [";
+            logs << "is_no_pack: "             << has_no_pack.count(v) << ", ";
+            logs << "is_no_split: "            << has_no_split.count(v) << ", ";
+            logs << "is_non_slicable: "       << non_slicable.count(v) << ", ";
+            logs << "is_exact_container: "    << v->exact_containers() << ", ";
+            logs << "is_pounderable: "        << pounder_clusters.count(v) << ", ";
+            logs << "required_length: "       << n_required_length[v] << ", ";
+            logs << "n_valid_starts: "        << n_valid_starts[v] << ", ";
+            logs << "]" << std::endl; }
+        LOG5(logs.str());
+        LOG5("========== end Sorted SuperClusters ============="); }
 }
 
 std::list<PHV::SuperCluster*>
 BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                                         std::list<PHV::SuperCluster*>& cluster_groups,
                                         std::list<PHV::ContainerGroup *>& container_groups) {
+    const int MAX_SLICING_TRY = 65535;
+    std::stringstream alloc_history;
     std::list<PHV::SuperCluster*> allocated;
     for (PHV::SuperCluster* cluster_group : cluster_groups) {
+        alloc_history << "TRYING to allocate " << cluster_group;
+        LOG5("TRYING to allocate " << cluster_group);
         auto best_score = AllocScore::make_lowest();
-        boost::optional<PHV::ContainerGroup*> best_group = boost::none;
-        for (PHV::ContainerGroup* container_group : container_groups) {
-            LOG4("TRY CLUSTER/GROUP pair:");
-            LOG4(cluster_group);
-            LOG4(container_group);
-            if (auto partial_alloc = core_alloc_i.tryAlloc(rst, *container_group, *cluster_group)) {
-                AllocScore score = AllocScore(*partial_alloc, *container_group);
-                LOG4("score: " << score);
-                if (!best_group || score > best_score) {
-                    best_score = score;
-                    best_group = container_group; } } }
-        if (best_group) {
-            auto partial_alloc = core_alloc_i.tryAlloc(rst, *(best_group.value()), *cluster_group);
-            rst.commit(*partial_alloc);
-            allocated.push_back(cluster_group); }
-    }
+        boost::optional<PHV::Transaction> best_alloc = boost::none;
+        boost::optional<std::list<PHV::SuperCluster*>> best_slicing = boost::none;
+
+        // Try all possible slicings.
+        auto slice_it = PHV::SlicingIterator(cluster_group);
+        int n_tried = 0;
+        if (slice_it.done())
+            LOG4("    ...but there are no valid slicings");
+        while (!slice_it.done()) {
+            auto slicing_alloc = rst.makeTransaction();
+            // Place all slices, then get score for that placement.
+            bool succeeded = true;
+            for (auto* sc : *slice_it) {
+                // Find best container group for this slice.
+                auto best_slice_score = AllocScore::make_lowest();
+                boost::optional<PHV::Transaction> best_slice_alloc = boost::none;
+                for (PHV::ContainerGroup* container_group : container_groups) {
+                    LOG4(container_group);
+                    if (auto partial_alloc =
+                            core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc)) {
+                        AllocScore score = AllocScore(*partial_alloc, core_alloc_i.uses());
+                        LOG4("    ...score: " << score);
+                        if (!best_slice_alloc || score > best_slice_score) {
+                            best_slice_score = score;
+                            best_slice_alloc = partial_alloc; } } }
+
+                // Break if this slice couldn't be placed.
+                if (best_slice_alloc == boost::none) {
+                    succeeded = false;
+                    break; }
+
+                // Otherwise, update the score.
+                slicing_alloc.commit(*best_slice_alloc); }
+
+            // If allocation succeeded, check the score.
+            auto slicing_score = AllocScore(slicing_alloc, core_alloc_i.uses());
+            LOG4("score: " << slicing_score);
+            if (succeeded && (!best_alloc || slicing_score > best_score)) {
+                best_score = slicing_score;
+                best_alloc = slicing_alloc;
+                best_slicing = *slice_it;
+            }
+
+            // Try the next slice.
+            ++slice_it;
+            ++n_tried;
+            if (n_tried >= MAX_SLICING_TRY) {
+                break; }
+        }
+
+        // If any allocation was found, commit it.
+        if (best_alloc) {
+            if (LOGGING(4)) {
+                LOG4("SUCCESSFULLY allocated " << cluster_group);
+                LOG4("by slicing it into the following superclusters:");
+                for (auto* sc : *best_slicing)
+                    LOG5(sc);
+                LOG4("SCORE: " << best_score); }
+            rst.commit(*best_alloc);
+            allocated.push_back(cluster_group);
+            alloc_history << "SUCCESSFULLY" << std::endl;
+            alloc_history << rst.getTransactionSummary() << std::endl;
+        } else {
+            LOG4("FAILED to allocate " << cluster_group);
+            LOG4("when the things are like: ");
+            LOG4(rst.getTransactionSummary());
+            alloc_history << "FAILED" << std::endl;
+            alloc_history << rst.getTransactionSummary() << std::endl;
+        } }
+
 
     // XXX(cole): There must be a better way to remove elements from a list
     // while iterating, but `it = clusters_i.erase(it)` skips elements.
     for (auto cluster_group : allocated)
-    cluster_groups.remove(cluster_group);
+        cluster_groups.remove(cluster_group);
+    LOG5("Allocation History");
+    LOG5(alloc_history.str());
     return allocated;
 }

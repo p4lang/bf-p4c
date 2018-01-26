@@ -188,9 +188,13 @@ class Allocation {
  public:
     using GressAssignment = boost::optional<gress_t>;
     using MutuallyLiveSlices = ordered_set<AllocSlice>;
-    using ContainerStatus = struct { GressAssignment gress; ordered_set<AllocSlice> slices; };
-    using const_iterator = ordered_map<PHV::Container, ContainerStatus>::const_iterator;
     enum class ContainerAllocStatus { EMPTY, PARTIAL, FULL };
+    struct ContainerStatus {
+        GressAssignment gress;
+        ordered_set<AllocSlice> slices;
+        ContainerAllocStatus alloc_status;
+    };
+    using const_iterator = ordered_map<PHV::Container, ContainerStatus>::const_iterator;
 
  protected:
     using FieldStatus = ordered_set<AllocSlice>;
@@ -198,7 +202,7 @@ class Allocation {
     SymBitMatrix mutex_i;
     ordered_map<PHV::Container, ContainerStatus> container_status_i;
     ordered_map<const PHV::Field*, FieldStatus>  field_status_i;
-
+    ordered_map<PHV::Size, ordered_map<ContainerAllocStatus, int>> count_by_status_i;
 
  private:
     /// Uniform abstraction for setting container state.  For internal use
@@ -212,6 +216,8 @@ class Allocation {
     /// Uniform abstraction for setting container state.  For internal use
     /// only.  @c must exist in this Allocation.
     virtual void setGress(PHV::Container c, GressAssignment gress);
+
+    friend class Transaction;
 
  public:
     /// Iterate through container-->allocation slices.
@@ -295,6 +301,12 @@ class Allocation {
     /// @returns the container status of @c and fails if @c is not present.
     virtual GressAssignment gress(PHV::Container c) const = 0;
 
+    /// @returns the allocation status of @c and fails if @c is not present.
+    virtual ContainerAllocStatus alloc_status(PHV::Container c) const = 0;
+
+    /// @returns the number of empty containers of size @size.
+    int empty_containers(PHV::Size size) const;
+
     /** Assign @slice to @slice.container, updating the gress information of
      * the container and its MAU group if necessary.  Fails if the gress of
      * @slice.field does not match any gress in the MAU group.
@@ -365,6 +377,9 @@ class ConcreteAllocation : public PHV::Allocation {
     /// @returns the container status of @c and fails if @c is not present.
     GressAssignment gress(PHV::Container c) const override;
 
+    /// @returns the allocation status of @c and fails if @c is not present.
+    ContainerAllocStatus alloc_status(PHV::Container c) const override;
+
     /// @returns a summary of the status of each container by type and gress.
     cstring getSummary(const PhvUse& uses) const override;
 };
@@ -382,11 +397,16 @@ class ConcreteAllocation : public PHV::Allocation {
  * allocation but rather add to it.
  */
 class Transaction : public Allocation {
-    const Allocation& parent_i;
+    const Allocation* parent_i;
 
  public:
-    Transaction(SymBitMatrix mutex, const Allocation& parent)
-    : parent_i(parent) { this->mutex_i = mutex; }
+    /// Constructor.  @parent cannot be null.
+    Transaction(SymBitMatrix mutex, const Allocation* parent)
+    : parent_i(parent) {
+        BUG_CHECK(parent != nullptr, "Creating transaction with null parent");
+        this->mutex_i = mutex;
+        this->count_by_status_i = parent_i->count_by_status_i;
+    }
 
     /// Iterate through container-->allocation slices.
     /// @warning not yet implemented.
@@ -397,10 +417,10 @@ class Transaction : public Allocation {
     const_iterator end() const override;
 
     /// @returns number of containers owned by this allocation.
-    size_t size() const override { return parent_i.size(); }
+    size_t size() const override { return parent_i->size(); }
 
     /// @returns true if this allocation owns @c.
-    bool contains(PHV::Container c) const override { return parent_i.contains(c); }
+    bool contains(PHV::Container c) const override { return parent_i->contains(c); }
 
     /// @returns all the slices allocated to @c.
     ordered_set<AllocSlice> slices(PHV::Container c) const override;
@@ -417,6 +437,9 @@ class Transaction : public Allocation {
     /// @returns the container status of @c and fails if @c is not present.
     GressAssignment gress(PHV::Container c) const override;
 
+    /// @returns the allocation status of @c and fails if @c is not present.
+    ContainerAllocStatus alloc_status(PHV::Container c) const override;
+
     /// @returns a summary of the status of each container by type and gress.
     /// @warning not yet implemented.
     cstring getSummary(const PhvUse& uses) const override;
@@ -430,10 +453,13 @@ class Transaction : public Allocation {
     }
 
     /// Clears any allocation added to this transaction.
-    void clearTransactionStatus() { container_status_i.clear(); }
+    void clearTransactionStatus() {
+        container_status_i.clear();
+        count_by_status_i = parent_i->count_by_status_i;
+    }
 
     /// Returns the allocation that this transaction is based on.
-    const Allocation& getParent() const { return parent_i; }
+    const Allocation* getParent() const { return parent_i; }
 };
 
 /// An interface for gathering statistics common across each kind of cluster.
@@ -546,6 +572,10 @@ class AlignedCluster : public ClusterStats {
         initialize_constraints();
     }
 
+    /// Two aligned clusters are equivalent if they contain the same slices and
+    /// can be assigned to the same kind of PHV containers.
+    bool operator==(const AlignedCluster& other) const;
+
     /// @returns id of this cluster
     int id() const  { return id_i; }
 
@@ -646,6 +676,9 @@ class RotationalCluster : public ClusterStats {
  public:
     explicit RotationalCluster(ordered_set<PHV::AlignedCluster*> clusters);
 
+    /// Semantic equality.
+    bool operator==(const RotationalCluster& other) const;
+
     /// @returns the aligned clusters in this group.
     const ordered_set<AlignedCluster*>& clusters() const { return clusters_i; }
 
@@ -743,6 +776,9 @@ class SuperCluster : public ClusterStats {
         ordered_set<const PHV::RotationalCluster*> clusters,
         ordered_set<SliceList*> slice_lists);
 
+    /// Semantic equality.
+    bool operator==(const SuperCluster& other) const;
+
     /// @returns the aligned clusters in this group.
     const ordered_set<const RotationalCluster*>& clusters() const { return clusters_i; }
 
@@ -837,9 +873,15 @@ void inc(bitvec& bv);
  * @param boundaries marks the boundaries between slice lists.  Sequences of
  * zeroes need to be counted within (not across) boundaries.
  *
+ * @param required marks required slices, i.e. bits that cannot be zero.
+ *
  * @warning this mutates @bv by reference.
  */
-void enforce_container_sizes(bitvec& bv, int sentinel, const bitvec& boundaries);
+void enforce_container_sizes(
+    bitvec& bv,
+    int sentinel,
+    const bitvec& boundaries,
+    const bitvec& required);
 
 /** A custom forward iterator that walks through all possible slicings of a
  * SuperCluster.
@@ -939,5 +981,11 @@ template <typename T>
 bool operator!=(const ordered_set<T>& left, const ordered_set<T>& right) {
     return !(left == right);
 }
+
+/// Partial order for allocation status.
+bool operator<(PHV::Allocation::ContainerAllocStatus, PHV::Allocation::ContainerAllocStatus);
+bool operator<=(PHV::Allocation::ContainerAllocStatus, PHV::Allocation::ContainerAllocStatus);
+bool operator>(PHV::Allocation::ContainerAllocStatus, PHV::Allocation::ContainerAllocStatus);
+bool operator>=(PHV::Allocation::ContainerAllocStatus, PHV::Allocation::ContainerAllocStatus);
 
 #endif  /* BF_P4C_PHV_UTILS_H_ */

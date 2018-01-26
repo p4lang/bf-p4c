@@ -7,8 +7,7 @@
 # FlexCounter, action_profile use a non-standard Algorithm
 # TwoReferences invokes a table twice - maybe it should become a negative test?
 # *range* match type is not supported by BMv2 (used also in error_detection*.p4)
-set (TOFINO_XFAIL_TESTS
-  # this is intentionally empty because xfails should be added with a reason.
+set (TOFINO_XFAIL_TESTS # this is intentionally empty because xfails should be added with a reason.
   # look for the failure message in this file and add to an existing ticket
   # or open a new one.
   )
@@ -48,7 +47,6 @@ p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 # BRIG-103
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
-  testdata/p4_16_samples/slice-def-use1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   )
@@ -77,18 +75,17 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-ether-wire.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "more than can fit in the 32 byte input buffer"
+  testdata/p4_14_samples/port_vlan_mapping.p4
+  )
+
 # BRIG-108
 p4c_add_xfail_reason("tofino"
   "No format in action table"
-  testdata/p4_14_samples/02-FullPHV1.p4
-  testdata/p4_14_samples/03-FullPHV2.p4
   testdata/p4_14_samples/selector0.p4
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue297-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "more than can fit in the 32 byte input buffer"
   testdata/p4_14_samples/port_vlan_mapping.p4
   )
 
@@ -254,6 +251,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Syntax error, expecting identifier or operation or integer"
   extensions/p4_tests/p4_14/adjust_instr7.p4
+)
+
+# BRIG-420
+p4c_add_xfail_reason("tofino"
+  "Syntax error, expecting identifier or operation or integer"
+  testdata/p4_14_samples/exact_match8.p4
+  extensions/p4_tests/p4_14/test_config_78_tcam_with_220_bits_high_nibble_and_version.p4
+  extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -509,13 +514,9 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
-  testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
-  testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  switch_dc_basic
 
 # due to action analysis working correctly
   extensions/p4_tests/p4_14/action_conflict_1.p4
@@ -652,12 +653,6 @@ p4c_add_xfail_reason("tofino"
   "Due to complexity in action bus, can only currently handle meter color in an 8 bit ALU"
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  # extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Action bus byte .* used inconsistently for fields immediate and .*"
-  extensions/p4_tests/p4_14/test_config_105_no_phase_0_case_has_side_effect.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -845,14 +840,10 @@ endif()  # STF FAILURE IN TNA
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   testdata/p4_14_samples/source_routing.p4
-  testdata/p4_14_samples/03-FullPHV2.p4
-  testdata/p4_14_samples/02-FullPHV1.p4
   extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
-  extensions/p4_tests/p4_14/action_conflict_3.p4
-  switch_dc_basic
 
   # Lack of container packing:
   extensions/p4_tests/p4_14/15-SetMetadata.p4
@@ -862,6 +853,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated due to either hash distribution or attached outputs"
   extensions/p4_tests/p4_14/test_config_96_hash_data.p4
+  testdata/p4_14_samples/meter1.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -886,18 +878,31 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   switch_l2
 
   # Instruction adjustment needs to synthesize a bitmasked-set but does not.
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/test_config_50_action_data_different_size_fields.p4
+
+  # Action analysis failures.
+  extensions/p4_tests/p4_14/overlay_add_header.p4
+  extensions/p4_tests/p4_14/adjust_instr2.p4
+  extensions/p4_tests/p4_14/test_config_252_pa_required_packing.p4
+  extensions/p4_tests/p4_14/test_config_256_pa_problem_4.p4
+  extensions/p4_tests/p4_14/test_config_257_pa_problem_5.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
+  switch_dc_basic
   )
 
-# BRIG-384
+# BRIG-426, and maybe BRIG-421
 p4c_add_xfail_reason("tofino"
- "hash_dist unit .* expand can't pull from bit .*"
-  # extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
- )
+  "No phv record"
+  extensions/p4_tests/p4_14/action_conflict_3.p4
+  )
 
 p4c_add_xfail_reason("tofino"
   "Brig currently only supports one parameter"
@@ -911,7 +916,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated"
   testdata/p4_14_samples/meter.p4
-  testdata/p4_14_samples/meter1.p4
   testdata/p4_16_samples/named_meter_bmv2.p4
   )
 
@@ -950,6 +954,12 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Multiple tables claim to be attached table"
+  extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
+  )
+
+# BRIG-421
+p4c_add_xfail_reason("tofino"
+  "PHV allocation creates a container action impossible within a Tofino ALU"
   extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
   )
 
@@ -1015,6 +1025,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Can't find .* and .* in same input xbar group"
+  extensions/p4_tests/p4_14/test_config_129_various_exact_match_keys.p4
   )
 
 # XXX(cole): The following test appears impossible to compile on Tofino,
@@ -1049,26 +1060,22 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/exact_match3.p4
   )
 
-# BRIG-393
-p4c_add_xfail_reason("tofino"
-  "Gateway xor key .* misaligned within byte"
-  # extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  )
-
 # BRIG-400
 p4c_add_xfail_reason("tofino"
   "non-header in *"
   testdata/p4_16_samples/issue1127-bmv2.p4
   )
 
+# BRIG-411
+# STF test bug, passed on stf2ptf
 p4c_add_xfail_reason("tofino"
-  "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit"
-  extensions/p4_tests/p4_14/test_config_324_tcam_range_11.p4
+  ".* expected packet.* on port .* not seen"
+  testdata/p4_14_samples/basic_routing.p4
   )
 
 p4c_add_xfail_reason("tofino"
-  "No format field or table named .*"
-  extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
+  "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
+  extensions/p4_tests/p4_14/test_config_324_tcam_range_11.p4
   )
 
 p4c_add_xfail_reason("tofino"

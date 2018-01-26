@@ -98,11 +98,58 @@ void PHV::Allocation::addStatus(PHV::Container c, const ContainerStatus& status)
     // Update field status.
     for (auto& slice : status.slices)
         field_status_i[slice.field()].insert(slice);
+
+    // Recalculate container allocation status for updated fields.  It's
+    // necessary to recalculate, rather that copy the child's count wholesale,
+    // because the parent may have merged other children since creating this
+    // child.
+    PHV::Allocation::ContainerAllocStatus old_status = this_status.alloc_status;
+    bitvec allocated_bits;
+    for (auto& slice : this_status.slices)
+        allocated_bits |= bitvec(slice.container_slice().lo, slice.width());
+    if (allocated_bits == bitvec())
+        this_status.alloc_status = PHV::Allocation::ContainerAllocStatus::EMPTY;
+    else if (allocated_bits == bitvec(0, c.size()))
+        this_status.alloc_status = PHV::Allocation::ContainerAllocStatus::FULL;
+    else
+        this_status.alloc_status = PHV::Allocation::ContainerAllocStatus::PARTIAL;
+
+    BUG_CHECK(this_status.alloc_status != PHV::Allocation::ContainerAllocStatus::EMPTY ||
+              (this_status.alloc_status == PHV::Allocation::ContainerAllocStatus::EMPTY &&
+               this_status.alloc_status == old_status),
+              "Changing allocation status from FULL or PARTIAL to EMPTY");
+
+    if (this_status.alloc_status != old_status) {
+        --count_by_status_i[c.type().size()][old_status];
+        ++count_by_status_i[c.type().size()][this_status.alloc_status]; }
 }
 
 void PHV::Allocation::addSlice(PHV::Container c, AllocSlice slice) {
-    container_status_i[c].slices.insert(slice);
     field_status_i[slice.field()].insert(slice);
+    container_status_i[c].slices.insert(slice);
+
+    // Update the allocation status of the container.
+    if (container_status_i[c].alloc_status != PHV::Allocation::ContainerAllocStatus::FULL) {
+        PHV::Allocation::ContainerAllocStatus old_status = container_status_i[c].alloc_status;
+        bitvec allocated_bits;
+        for (auto slice : container_status_i[c].slices)
+            allocated_bits |= bitvec(slice.container_slice().lo, slice.width());
+        if (allocated_bits == bitvec())
+            container_status_i[c].alloc_status = PHV::Allocation::ContainerAllocStatus::EMPTY;
+        else if (allocated_bits == bitvec(0, c.size()))
+            container_status_i[c].alloc_status = PHV::Allocation::ContainerAllocStatus::FULL;
+        else
+            container_status_i[c].alloc_status = PHV::Allocation::ContainerAllocStatus::PARTIAL;
+
+        BUG_CHECK(
+            container_status_i[c].alloc_status != PHV::Allocation::ContainerAllocStatus::EMPTY ||
+            (container_status_i[c].alloc_status == PHV::Allocation::ContainerAllocStatus::EMPTY &&
+            container_status_i[c].alloc_status == old_status),
+            "Changing allocation status from FULL or PARTIAL to EMPTY");
+
+        if (old_status != container_status_i[c].alloc_status) {
+            --count_by_status_i[c.type().size()][old_status];
+            ++count_by_status_i[c.type().size()][container_status_i[c].alloc_status]; } }
 }
 
 void PHV::Allocation::setGress(PHV::Container c, GressAssignment gress) {
@@ -185,6 +232,15 @@ PHV::Allocation::slicesByLiveness(PHV::Container c) const {
     return rv;
 }
 
+int PHV::Allocation::empty_containers(PHV::Size size) const {
+    auto status = PHV::Allocation::ContainerAllocStatus::EMPTY;
+    if (count_by_status_i.find(size) == count_by_status_i.end())
+        return 0;
+    if (count_by_status_i.at(size).find(status) == count_by_status_i.at(size).end())
+        return 0;
+    return count_by_status_i.at(size).at(status);
+}
+
 /** Assign @slice to @slice.container, updating the gress information of
  * the container and its MAU group if necessary.  Fails if the gress of
  * @slice.field does not match any gress in the MAU group.
@@ -247,7 +303,7 @@ void PHV::Allocation::commit(Transaction& view) {
 }
 
 PHV::Transaction PHV::Allocation::makeTransaction() const {
-    return Transaction(mutex_i, *this);
+    return Transaction(mutex_i, this);
 }
 
 /// @returns a pretty-printed representation of this Allocation.
@@ -297,7 +353,7 @@ PHV::ConcreteAllocation::ConcreteAllocation(const SymBitMatrix& mutex, bitvec co
             gress = INGRESS;
         else if (phvSpec.egressOnly()[phvSpec.containerToId(c)])
             gress = EGRESS;
-        container_status_i[c] = { gress, { } }; }
+        container_status_i[c] = { gress, { }, PHV::Allocation::ContainerAllocStatus::EMPTY }; }
 }
 
 PHV::ConcreteAllocation::ConcreteAllocation(const SymBitMatrix& mutex)
@@ -347,6 +403,14 @@ PHV::Allocation::GressAssignment PHV::ConcreteAllocation::gress(PHV::Container c
               "Trying to get gress for container %1% not in Allocation",
               cstring::to_cstring(c));
     return container_status_i.at(c).gress;
+}
+
+PHV::Allocation::ContainerAllocStatus
+PHV::ConcreteAllocation::alloc_status(PHV::Container c) const {
+    BUG_CHECK(container_status_i.find(c) != container_status_i.end(),
+              "Trying to get allocation status for container %1% not in Allocation",
+              cstring::to_cstring(c));
+    return container_status_i.at(c).alloc_status;
 }
 
 /// @returns a summary of the status of each container by type and gress.
@@ -504,7 +568,7 @@ ordered_set<PHV::AllocSlice> PHV::Transaction::slices(PHV::Container c, le_bitra
     ordered_set<PHV::AllocSlice> rv;
 
     // Copy in any parent slices first, as they were allocated first.
-    rv = parent_i.slices(c, range);
+    rv = parent_i->slices(c, range);
 
     // Then insert any transaction slices.
     if (container_status_i.find(c) != container_status_i.end()) {
@@ -518,7 +582,13 @@ ordered_set<PHV::AllocSlice> PHV::Transaction::slices(PHV::Container c, le_bitra
 PHV::Allocation::GressAssignment PHV::Transaction::gress(PHV::Container c) const {
     if (container_status_i.find(c) != container_status_i.end())
         return container_status_i.at(c).gress;
-    return parent_i.gress(c);
+    return parent_i->gress(c);
+}
+
+PHV::Allocation::ContainerAllocStatus PHV::Transaction::alloc_status(PHV::Container c) const {
+    if (container_status_i.find(c) != container_status_i.end())
+        return container_status_i.at(c).alloc_status;
+    return parent_i->alloc_status(c);
 }
 
 ordered_set<PHV::AllocSlice>
@@ -526,7 +596,7 @@ PHV::Transaction::slices(const PHV::Field* f, le_bitrange range) const {
     ordered_set<PHV::AllocSlice> rv;
 
     // Copy in parent slices first, as they were allocated first.
-    rv = parent_i.slices(f, range);
+    rv = parent_i->slices(f, range);
 
     // Then insert any transaction slices.
     if (field_status_i.find(f) != field_status_i.end()) {
@@ -593,6 +663,10 @@ cstring PHV::Transaction::getTransactionSummary() const {
 
 cstring PHV::Transaction::getSummary(const PhvUse& /* uses */) const {
     P4C_UNIMPLEMENTED("Transaction::getSummary()");
+}
+
+bool PHV::AlignedCluster::operator==(const PHV::AlignedCluster& other) const {
+    return kind_i == other.kind_i && slices_i == other.slices_i;
 }
 
 void PHV::AlignedCluster::set_cluster_id() {
@@ -837,6 +911,22 @@ PHV::RotationalCluster::RotationalCluster(ordered_set<PHV::AlignedCluster*> clus
         aggregate_size_i += cluster->aggregate_size(); }
 }
 
+bool PHV::RotationalCluster::operator==(const PHV::RotationalCluster& other) const {
+    if (clusters_i.size() != other.clusters_i.size())
+        return false;
+
+    for (auto* cluster : clusters_i) {
+        bool found = false;
+        for (auto* cluster2 : other.clusters_i) {
+            if (*cluster == *cluster2) {
+                found = true;
+                break; } }
+        if (!found)
+            return false; }
+
+    return true;
+}
+
 bool PHV::RotationalCluster::okIn(PHV::Kind kind) const {
     return kind_i <= kind;
 }
@@ -907,6 +997,32 @@ PHV::SuperCluster::SuperCluster(
         max_width_i = std::max(max_width_i, cluster->max_width());
         num_constraints_i += cluster->num_constraints();
         aggregate_size_i += cluster->aggregate_size(); }
+}
+
+bool PHV::SuperCluster::operator==(const PHV::SuperCluster& other) const {
+    if (clusters_i.size() != other.clusters_i.size() ||
+            slice_lists_i.size() != other.slice_lists_i.size()) {
+        return false; }
+
+    for (auto* cluster : clusters_i) {
+        bool found = false;
+        for (auto* cluster2 : other.clusters_i) {
+            if (*cluster == *cluster2) {
+                found = true;
+                break; } }
+        if (!found)
+            return false; }
+
+    for (auto* list : slice_lists_i) {
+        bool found = false;
+        for (auto* list2 : other.slice_lists_i) {
+            if (*list == *list2) {
+                found = true;
+                break; } }
+        if (!found)
+            return false; }
+
+    return true;
 }
 
 bool PHV::SuperCluster::okIn(PHV::Kind kind) const {
@@ -1003,8 +1119,10 @@ bool PHV::SuperCluster::is_well_formed(const SuperCluster* sc) {
         int size = 0;
         bool has_exact_containers = false;
         for (auto& slice : *list) {
-            if (slice.field()->deparsed_bottom_bits() && size != 0)
-                return false;
+            if (slice.field()->deparsed_bottom_bits() && slice.range().lo == 0 && size != 0) {
+                LOG6("    ...but slice at offset " << size << " has deparsed_bottom_bits: "
+                     << slice);
+                return false; }
             has_exact_containers |= slice.field()->exact_containers();
             size += slice.size();
             auto* cluster = &sc->aligned_cluster(slice);
@@ -1090,12 +1208,13 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
             int size = 0;
             // Always require a split at the beginning of a slice with deparsed_bottom_bits.
             for (auto& slice : *list) {
-                if (slice.field()->deparsed_bottom_bits() && slice.range().lo == 0
-                        && offset + size > 0) {
+                if (slice.field()->deparsed_bottom_bits() && slice.range().lo == 0 && size > 0) {
                     // XXX(cole): 'BUG_CHECK' here might be too strong.
                     BUG_CHECK(size % 8 == 0, "Can't slice on field %1% in slice list %2% "
                         "(which has deparsed bottom bits) because it is not byte aligned",
                         cstring::to_cstring(slice), cstring::to_cstring(list));
+                    LOG6("Required slice at " << offset + (size / 8 - 1)
+                         << " for field slice " << slice);
                     required_slices_i.setbit(offset + (size / 8 - 1)); }
                 size += slice.size(); }
             BUG_CHECK(size > 0, "Empty slice list");
@@ -1120,17 +1239,22 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
         // pa_container_size.
 
         // `offset` holds the size of the entire concatenated slicing schemas.
-        // If this is zero, then no slice list is larger than 8b, and no
-        // slicing is possible or necessary.
+        // If this is zero, then no slice list is larger than 8b, and
+        // the only possible slicing is no slicing at all.
         if (offset <= 0) {
             LOG5("    ...but no slicing needed");
-            done_i = true;
+            auto new_sc = new PHV::SuperCluster(sc->clusters(), sc->slice_lists());
+            if (PHV::SuperCluster::is_well_formed(new_sc)) {
+                sentinel_idx_i = 0;
+                cached_i = { new_sc };
+            } else {
+                done_i = true;
+            }
             return; }
 
         // When the sentinel_idx bit is set, all bits corresponding to all
         // split schemas have rolled over to zero.
         sentinel_idx_i = offset;
-        LOG5("    ...there are 2^" << sentinel_idx_i << " ways to slice");
         if (LOGGING(5) && !required_slices_i.empty()) {
             std::stringstream ss;
             for (int x : required_slices_i)
@@ -1141,7 +1265,10 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
         // Start with the smallest number that has sequences of exactly zero,
         // one, or three zeroes, which corresponds to slices sizes of 8b, 16b,
         // and 32b.  @see PHV::inc().
-        PHV::enforce_container_sizes(compressed_schemas_i, sentinel_idx_i, boundaries_i);
+        PHV::enforce_container_sizes(compressed_schemas_i,
+                                     sentinel_idx_i,
+                                     boundaries_i,
+                                     required_slices_i);
     } else {
         // In this case, there are no slice lists, and the SuperCluster
         // contains a single RotationalCluster.  We will try all slicings of
@@ -1151,10 +1278,22 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
         sentinel_idx_i = sc->max_width() / 8 - (1 - bool(sc->max_width() % 8));
         if (sentinel_idx_i <= 0) {
             LOG5("    ...but no slicing needed");
-            done_i = true;
+            auto new_sc = new PHV::SuperCluster(sc->clusters(), sc->slice_lists());
+            if (PHV::SuperCluster::is_well_formed(new_sc)) {
+                sentinel_idx_i = 0;
+                cached_i = { new_sc };
+            } else {
+                done_i = true;
+            }
             return; } }
 
     BUG_CHECK(sentinel_idx_i > 0, "Bad compressed schema sentinel: %1%", sentinel_idx_i);
+    LOG3("    ...there are 2^" << sentinel_idx_i << " ways to slice");
+    if (LOGGING(6)) {
+        std::stringstream ss;
+        for (int i = 0; i < sentinel_idx_i; ++i)
+            ss << (compressed_schemas_i[i] ? "1" : "-");
+        LOG6("Initial compressed schemas: " << ss.str()); }
 
     // Look for the first valid slicing.
     if (auto res = get_slices())
@@ -1204,11 +1343,14 @@ static void update_slices(const RotationalCluster* old,
     for (auto& kv : split_res.slice_map) {
         BUG_CHECK(slices_to_clusters.find(kv.first) != slices_to_clusters.end(),
                   "Slice not in map: %1%", cstring::to_cstring(kv.first));
+        LOG6("        - erasing " << kv.first);
         slices_to_clusters.erase(kv.first);
         auto& slice_lo = kv.second.first;
+        LOG6("        - adding " << slice_lo);
         slices_to_clusters[slice_lo] = split_res.lo;
-        if (auto& slice_hi = kv.second.second)
-            slices_to_clusters[*slice_hi] = split_res.hi; }
+        if (auto& slice_hi = kv.second.second) {
+            LOG6("        - adding " << *slice_hi);
+            slices_to_clusters[*slice_hi] = split_res.hi; } }
 
     // Replace the old slices with the new, split slices in each slice
     // list.
@@ -1222,10 +1364,13 @@ static void update_slices(const RotationalCluster* old,
                 auto& slice_lo = split_res.slice_map.at(old_slice).first;
                 auto& slice_hi = split_res.slice_map.at(old_slice).second;
                 slice_it = slice_list->erase(slice_it);
+                LOG6("        - erasing " << old_slice);
                 slice_it = slice_list->insert(slice_it, slice_lo);
+                LOG6("        - adding " << slice_lo);
                 if (slice_hi) {
                     slice_it++;
-                    slice_it = slice_list->insert(slice_it, *slice_hi); } } } }
+                    slice_it = slice_list->insert(slice_it, *slice_hi);
+                    LOG6("        - adding " << *slice_hi); } } } }
 
     // Update the slices_to_slice_lists map.
     LOG6("    ...updating slices_to_slice_lists");
@@ -1249,13 +1394,16 @@ boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::split_super
         const PHV::SuperCluster* sc,
         ordered_map<PHV::SuperCluster::SliceList*, bitvec> split_schemas) {
     if (LOGGING(6)) {
+        LOG6("Split schema:");
         for (auto& kv : split_schemas) {
+            int size = 0;
+            for (auto slice : *kv.first)
+                size += slice.size();
             std::stringstream ss;
-            for (int idx : kv.second)
-                ss << idx << " ";
-            LOG6("Split schema: " << ss.str());
-            LOG6("Slice list:");
-            LOG6("      " << kv.first); }
+            for (int idx = 0; idx < size; ++idx)
+                ss << (kv.second[idx] ? "1" : "-");
+            LOG6("    " << ss.str());
+            LOG6("    " << kv.first); }
         LOG6(""); }
 
     std::list<PHV::SuperCluster*> rv;
@@ -1382,27 +1530,23 @@ boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::split_super
                     auto s = *it;
                     if (split_result->slice_map.find(s) == split_result->slice_map.end())
                         continue;
-
                     bool is_this_slice = it == next_slice;
                     // Replace s with its two new subslices.
                     auto& subs = split_result->slice_map.at(s);
                     it = slice_list->erase(it);
+                    LOG6("    ...erasing " << s << " in this slice list");
                     it = slice_list->insert(it, subs.first);
+                    LOG6("    ...adding " << subs.first << " in this slice list");
                     if (is_this_slice)
                         next_slice = it;
                     if (subs.second) {
                         ++it;
-                        it = slice_list->insert(it, *subs.second); } }
+                        it = slice_list->insert(it, *subs.second);
+                        LOG6("    ...adding " << *subs.second << " in this slice list"); } }
 
                 // Advance the iterator to the next slice, which is either the
                 // new upper slice (if it exists).
                 ++next_slice;
-
-                // Update all slices/clusters in new_clusters,
-                // slices_to_clusters, and slice_lists.
-                PHV::update_slices(
-                    rotational, *split_result,
-                    new_clusters, slice_lists, slices_to_slice_lists, slices_to_clusters);
 
                 // Add current list, make new list, advance next_split.
                 auto& new_slices = split_result->slice_map.at(slice);
@@ -1415,6 +1559,12 @@ boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::split_super
                 // next_split.operator++().  Not sure why.
                 next_split.operator++();
                 offset += new_slices.first.size();
+
+                // Update all slices/clusters in new_clusters,
+                // slices_to_clusters, and slice_lists.
+                PHV::update_slices(
+                    rotational, *split_result,
+                    new_clusters, slice_lists, slices_to_slice_lists, slices_to_clusters);
             } else {
                 // Adding this to ensure the above logic (which is a bit
                 // complicated) covers all cases.  Note that *next_split < offset
@@ -1579,7 +1729,10 @@ PHV::SlicingIterator PHV::SlicingIterator::operator++() {
         compressed_schemas_i |= required_slices_i;
         // and set the least significant bits necessary to ensure that
         // slices correspond to container sizes.
-        PHV::enforce_container_sizes(compressed_schemas_i, sentinel_idx_i, boundaries_i);
+        PHV::enforce_container_sizes(compressed_schemas_i,
+                                     sentinel_idx_i,
+                                     boundaries_i,
+                                     required_slices_i);
 
         // Stop if we find a valid slicing.
         if (auto res = get_slices()) {
@@ -1600,21 +1753,57 @@ bool PHV::SlicingIterator::operator==(const SlicingIterator& other) const {
 
 namespace PHV {
 
-void enforce_container_sizes(bitvec& bv, int sentinel, const bitvec& boundaries) {
-    // Eagerly break invalid sequences of zeroes, starting at `i` and working
-    // backwards.  See comment in utils.h.
+// Assumes required_bits are set beforehand and ensures they remain set.
+inline void enforce_container_sizes(
+        bitvec& bv,
+        int sentinel,
+        const bitvec& boundaries,
+        const bitvec& required) {
+    // Eagerly break invalid sequences of zeroes.  See comment in utils.h.
+    // NB: Because we're walking backwards, boundaries[i] is true for the last
+    // bit of each range, eg. boundaries[i] implies that the *next* bit (i-1)
+    // crosses a boundary.
+    enum state_t { COUNTING, SETTING };
+    state_t state = COUNTING;
     int zeroes = 0;
-    for (int i = 0; i <= sentinel; ++i) {
-        if (boundaries[i] || bv[i] || i == sentinel) {
-            int j = i;
-            while (zeroes != 3 && zeroes > 1) {
-                int chunk = zeroes > 3 ? 4 : 2;
-                j -= chunk;
-                zeroes -= chunk;
-                bv.setbit(j); }
-            zeroes = 0; }
-        if (!bv[i])
-            zeroes++; }
+    for (int i = sentinel - 1; i >= 0; --i) {
+        if (state == COUNTING) {
+            // If this is a break point and we're not setting, reset the count.
+            if (bv[i])
+                zeroes = 0;
+            else
+                ++zeroes;
+
+            // Look ahead to see if the next bit is a breaking point.
+            bool break_next = i == 0 || boundaries[i] || bv[i-1];
+
+            if ((break_next && zeroes == 2) || zeroes > 3) {
+                state = SETTING;
+                zeroes = 0;
+                bv.setbit(i); }
+
+            if (boundaries[i])
+                zeroes = 0;
+        } else {
+            // state == SETTING.
+            if (bv[i])
+                bv.clrbit(i);
+            ++zeroes;
+
+            if (required[i]) {
+                bv.setbit(i);
+                zeroes = 0; }
+
+            bool at_last_bit = i == 0 || boundaries[i];
+            if (zeroes > 3 || (zeroes == 2 && at_last_bit)) {
+                bv.setbit(i);
+                zeroes = 0; }
+
+            if (boundaries[i]) {
+                state = COUNTING;
+                zeroes = 0; }
+        }
+    }
 }
 
 void inc(bitvec& bv) {
@@ -1674,7 +1863,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation* alloc) {
 
 std::ostream &operator<<(std::ostream &out, const PHV::AllocSlice& slice) {
     out << slice.container() << slice.container_slice() << "<--"
-        << slice.field()->name << slice.field_slice();
+        << PHV::FieldSlice(slice.field(), slice.field_slice());
     return out;
 }
 
@@ -1804,10 +1993,32 @@ std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList* list)
 }
 
 std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
-    if (fs.field() == nullptr)
-        out << "-null-field-slice ";
-    else
-        out << fs.field()->name << " [" << fs.range().lo << "," << fs.range().hi << "] ";
+    if (fs.field() == nullptr) {
+        out << "-field-slice-of-null-field-ptr-";
+        return out; }
+
+    auto& field = *fs.field();
+    out << field.name << "<" << field.size << ">";
+    if (fs.alignment())
+        out << " ^" << fs.alignment()->littleEndian;
+    if (fs.validContainerRange() != ZeroToMax())
+        out << " ^" << fs.validContainerRange();
+    if (field.bridged) out << " bridge";
+    if (field.metadata) out << " meta";
+    if (field.mirror_field_list.member_field)
+        out << " mirror%{"
+            << field.mirror_field_list.member_field->id
+            << ":" << field.mirror_field_list.member_field->name
+            << "#" << field.mirror_field_list.field_list
+            << "}%";
+    if (field.pov) out << " pov";
+    if (field.deparsed()) out << " deparsed";
+    if (field.no_pack()) out << " no_pack";
+    if (field.no_split()) out << " no_split";
+    if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
+    if (field.deparsed_to_tm()) out << " deparsed_to_tm";
+    if (field.exact_containers()) out << " exact_containers";
+    out << " [" << fs.range().lo << ":" << fs.range().hi << "]";
     return out;
 }
 
@@ -1817,6 +2028,39 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice* fs) {
     else
         out << "-null-field-slice ";
     return out;
+}
+
+/// Partial order for allocation status.
+bool operator<(
+        PHV::Allocation::ContainerAllocStatus left,
+        PHV::Allocation::ContainerAllocStatus right) {
+    if (left == right)
+        return false;
+    else if (right == PHV::Allocation::ContainerAllocStatus::EMPTY)
+        return false;
+    else if (right == PHV::Allocation::ContainerAllocStatus::PARTIAL &&
+             left == PHV::Allocation::ContainerAllocStatus::FULL)
+        return false;
+    else
+        return true;
+}
+
+bool operator<=(
+        PHV::Allocation::ContainerAllocStatus left,
+        PHV::Allocation::ContainerAllocStatus right) {
+    return left < right || left == right;
+}
+
+bool operator>(
+        PHV::Allocation::ContainerAllocStatus left,
+        PHV::Allocation::ContainerAllocStatus right) {
+    return !(left <= right);
+}
+
+bool operator>=(
+        PHV::Allocation::ContainerAllocStatus left,
+        PHV::Allocation::ContainerAllocStatus right) {
+    return !(left < right);
 }
 
 }  // namespace PHV

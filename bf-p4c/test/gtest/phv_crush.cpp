@@ -51,6 +51,149 @@ TEST_F(TofinoBitvec, inc) {
 
 class TofinoPhvCrush : public TofinoBackendTest {};
 
+TEST_F(TofinoPhvCrush, enforce_container_sizes) {
+    bitvec bv;
+    bitvec rv;
+
+    // 0 --> 0
+    rv = bitvec();
+    PHV::enforce_container_sizes(rv, 1, bitvec(), bitvec());
+    EXPECT_EQ(rv, bitvec());
+
+    // 00 --> 01
+    rv = bitvec();
+    PHV::enforce_container_sizes(rv, 2, bitvec(), bitvec());
+    EXPECT_EQ(rv, bitvec(0, 1));
+
+    // 01 --> 01
+    rv = bitvec(0, 1);
+    PHV::enforce_container_sizes(rv, 2, bitvec(), bitvec());
+    EXPECT_EQ(rv, bitvec(0, 1));
+
+    // 001 --> 010
+    rv = bitvec(0, 1);
+    PHV::enforce_container_sizes(rv, 3, bitvec(), bitvec());
+    EXPECT_EQ(rv, bitvec(1, 1));
+
+    // 001 | 001 --> 010 | 010
+    rv = bitvec();
+    rv.setbit(0);
+    rv.setbit(3);
+    PHV::enforce_container_sizes(rv, 6, bitvec(3,1), bitvec());
+
+    bv = bitvec();
+    bv.setbit(1);
+    bv.setbit(4);
+    EXPECT_EQ(rv, bv);
+
+    // 00R --> 01R
+    rv = bitvec(0, 1);
+    PHV::enforce_container_sizes(rv, 3, bitvec(), bitvec(0, 1));
+    EXPECT_EQ(rv, bitvec(0, 2));
+
+    // 00R | 00R --> 01R | 01R
+    rv = bitvec();
+    rv.setbit(0);
+    rv.setbit(3);
+    auto req = bitvec();
+    req.setbit(0);
+    req.setbit(3);
+    PHV::enforce_container_sizes(rv, 6, bitvec(3,1), req);
+
+    bv = bitvec();
+    bv.setbit(0);
+    bv.setbit(1);
+    bv.setbit(3);
+    bv.setbit(4);
+    EXPECT_EQ(rv, bv);
+}
+
+/// Make a SuperCluster with slice lists (@lists), with each slice in each
+/// list in its own RotationalCluster.
+static PHV::SuperCluster* make_sc(ordered_set<PHV::SuperCluster::SliceList*> lists) {
+    ordered_set<const PHV::RotationalCluster*> clusters;
+    for (auto* list : lists) {
+        for (auto slice : *list) {
+            auto aligned = new PHV::AlignedCluster(PHV::Kind::normal,
+                                                   std::vector<PHV::FieldSlice>({ slice }));
+            auto rotational =
+                new PHV::RotationalCluster(ordered_set<PHV::AlignedCluster*>({ aligned }));
+            clusters.insert(rotational); } }
+    return new PHV::SuperCluster(clusters, lists);
+}
+
+/// Make a SuperCluster with a single slice list (@list), with each slice in
+/// @list in its own RotationalCluster.
+static PHV::SuperCluster* make_sc(PHV::SuperCluster::SliceList* slices) {
+    return make_sc(ordered_set<PHV::SuperCluster::SliceList*>({ slices }));
+}
+
+/// Make a SuperCluster with a single slice list holding @slice and a single
+/// RotationalCluster holding @slice.
+static PHV::SuperCluster* make_sc(PHV::FieldSlice slice) {
+    return make_sc(new PHV::SuperCluster::SliceList({ slice }));
+}
+
+TEST_F(TofinoPhvCrush, sliceSuperCluster) {
+    ordered_map<int, const PHV::FieldSlice*> slices_by_size;
+    for (int i : { 7, 8, 9, 16, 24 }) {
+        auto* f = new PHV::Field();
+        std::stringstream ss;
+        f->id = i;
+        f->size = i;
+        ss << "f" << f->id;
+        f->name = ss.str();
+        f->gress = INGRESS;
+        f->offset = 0;
+        f->metadata = false;
+        f->bridged = false;
+        f->pov = false;
+        f->validContainerRange_i = ZeroToMax();
+        f->alignment = boost::none;
+        f->set_exact_containers(true);
+        slices_by_size[i] = new PHV::FieldSlice(f, StartLen(0, f->size)); }
+    auto* f16 = slices_by_size.at(16)->field();
+    auto* f24 = slices_by_size.at(24)->field();
+
+    ordered_map<PHV::SuperCluster::SliceList*, bitvec> schemas;
+    auto* list = new PHV::SuperCluster::SliceList({ *slices_by_size.at(16) });
+
+    // Test SuperCluster equality.
+    auto* list2 = new PHV::SuperCluster::SliceList({ *slices_by_size.at(16) });
+    EXPECT_EQ(*make_sc(list), *make_sc(list2));
+
+    // Test 16b -> 8b, 8b slicing.
+    schemas.clear();
+    schemas[list] = bitvec(8, 1);
+    auto res = PHV::SlicingIterator::split_super_cluster(make_sc(list), schemas);
+    EXPECT_NE(boost::none, res);
+    EXPECT_EQ(2U, res->size());
+    EXPECT_EQ(*res->front(), *make_sc(PHV::FieldSlice(f16, StartLen(0, 8))));
+    EXPECT_EQ(*res->back(), *make_sc(PHV::FieldSlice(f16, StartLen(8, 8))));
+
+    // Test 24b -> 16b, 8b slicing.
+    schemas.clear();
+    list = new PHV::SuperCluster::SliceList({ *slices_by_size.at(24) });
+    schemas[list] = bitvec(16, 1);
+    res = PHV::SlicingIterator::split_super_cluster(make_sc(list), schemas);
+    EXPECT_NE(boost::none, res);
+    EXPECT_EQ(2U, res->size());
+    EXPECT_EQ(*res->front(), *make_sc(PHV::FieldSlice(f24, StartLen(0, 16))));
+    EXPECT_EQ(*res->back(), *make_sc(PHV::FieldSlice(f24, StartLen(16, 8))));
+
+    // Test 24b, 16b -> 8b x 5
+    schemas.clear();
+    schemas[list] = bitvec();
+    schemas[list].setbit(8);
+    schemas[list].setbit(16);
+    schemas[list2] = bitvec(8,1);
+    res = PHV::SlicingIterator::split_super_cluster(make_sc({ list, list2 }), schemas);
+    EXPECT_NE(boost::none, res);
+    EXPECT_EQ(5U, res->size());
+    EXPECT_EQ(*res->front(), *make_sc(PHV::FieldSlice(f24, StartLen(0, 8))));
+    EXPECT_EQ(*res->back(), *make_sc(PHV::FieldSlice(f16, StartLen(8, 8))));
+}
+
 TEST_F(TofinoPhvCrush, clusterAlignment) {
     // XXX(cole): This just tests the first bit of the valid bits, not all
     // valid bits.
