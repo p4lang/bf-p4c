@@ -72,8 +72,14 @@ struct ParserAsmSerializer : public ParserInspector {
             // Generate the assembly that actually implements the select.
             out << indent << "match: ";
             const char *sep = "[ ";
-            for (auto* select : state->select) {
-                out << sep << Range(select->range.lo, select->range.hi);
+            // merge all common bytes
+            auto prev = Range(-1, -1);
+            for (auto *select : state->select) {
+                auto curr = Range(select->range.lo, select->range.hi);
+                // skip the byte used by multiple select tuple elements
+                if (curr == prev) continue;
+                out << sep << curr;
+                prev = curr;
                 sep = ", ";
             }
             out << " ]" << std::endl;
