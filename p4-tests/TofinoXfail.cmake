@@ -662,7 +662,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for standard_metadata"
   extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
-  extensions/p4_tests/p4_14/switch_l2_profile.p4
   testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/packet_redirect.p4
   testdata/p4_14_samples/simple_nat.p4

@@ -8,7 +8,6 @@ set (BMV2_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_144_recirculate.p4
   extensions/p4_tests/p4_14/exclusive_cf_one_action_fail_after.p4
   extensions/p4_tests/p4_14/exclusive_cf_one_action_fail_before.p4
-  extensions/p4_tests/p4_14/case1770.p4
   extensions/p4_tests/p4_16/ipv4_options.p4
   extensions/p4_tests/p4_14/test_config_185_first_lpf.p4
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
