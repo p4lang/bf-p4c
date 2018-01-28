@@ -140,6 +140,8 @@ Visitor::profile_t Clustering::MakeAlignedClusters::init_apply(const IR::Node *r
 // but we don't care about those here.)
 bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst) {
     LOG5("Clustering::MakeAlignedClusters: visiting instruction " << inst);
+    if (findContext<IR::MAU::SaluAction>())
+        LOG5("    ...found SALU instruction " << inst);
 
     if (inst->operands.size() == 0) {
         return false; }
@@ -161,6 +163,16 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst)
         // require the source and destination to be aligned.
         bool needs_alignment = src && dst && src->size == dst_range.size() &&
                                              dst->size != dst_range.size();
+
+        // XXX(cole) [Artificial Constraint]: Right now, SALU operands require
+        // bit-in-byte alignment, which we don't yet support.  In the meantime,
+        // require their absolute alignment.  Eventually, better input crossbar
+        // packing + allocating hash table space will allow for arbitrary bit
+        // reswizzling.
+        if (findContext<IR::MAU::SaluAction>()) {
+            LOG5("    ...inducing alignment for set operands of SALU instruction " << inst);
+            needs_alignment = true; }
+
         if (!needs_alignment) {
             LOG5("    ...skipping 'set', because it doesn't induce alignment constraints");
             return false; } }
@@ -329,6 +341,16 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
         BUG_CHECK(self.fields_to_slices_i.find(field) != self.fields_to_slices_i.end(),
                   "Found field in header but not PHV: %1%",
                   cstring::to_cstring(field));
+
+        // XXX(cole): HACK to deal with intrinsic metadata padding.  Some
+        // intrinsic metadata is not deparsed and also marked as no-pack.  To
+        // avoid prepending its padding to the next slice list, we don't
+        // include unreferenced fields as the first fields in slice lists.  The
+        // longer-term solution is to replace slice lists with
+        // finer-granularity constraints.
+        if (accumulator_bits == 0 && !self.uses_i.is_referenced(field)) {
+            LOG5("    ...skipping unreferenced field at the beginning of a slice list: " << field);
+            continue; }
 
         bool is_tphv = field->is_tphv_candidate(self.uses_i);
 

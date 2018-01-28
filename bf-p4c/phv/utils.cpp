@@ -249,34 +249,20 @@ void PHV::Allocation::allocate(PHV::AllocSlice slice) {
     auto& phvSpec = Device::phvSpec();
     unsigned slice_cid = phvSpec.containerToId(slice.container());
 
-    BUG_CHECK(contains(slice.container()),
-              "Trying to allocate slice %1% to an allocation that does not include container %2%",
-              cstring::to_cstring(slice), slice.container());
-
-    // Fail if any part of this field slice has already been allocated.
-    const auto& existing_alloc = this->slices(slice.field(), slice.field_slice());
-    BUG_CHECK(existing_alloc.size() == 0, "Trying to allocate slice %1%, but other overlapping "
-              "slices of this field have already been allocated: %2%",
-              cstring::to_cstring(slice), cstring::to_cstring(existing_alloc));
-
-    LOG4("tentatively allocating " << slice.container() <<
-         "(" << this->gress(slice.container()) << ") " << slice.container_slice() <<
-         " <-- " << slice.field() << "(" << slice.field()->gress << ") " << slice.field_slice());
-
     // Check and update gress for all containers in this deparser group.
     if (!this->gress(slice.container())) {
         for (unsigned cid : phvSpec.deparserGroup(slice_cid)) {
             auto c = phvSpec.idToContainer(cid);
-            BUG_CHECK(!this->gress(c) ||
-                      *this->gress(c) == slice.field()->gress,
+            auto opt_gress = this->gress(c);
+            BUG_CHECK(!opt_gress || *opt_gress == slice.field()->gress,
                 "Trying to allocate field %1% with gress %2% to container %3% with gress %4%",
                 slice.field()->name, slice.field()->gress, slice.container(),
                 this->gress(c));
             LOG5("    ...maybe assigning " << c << " to " << slice.field()->gress);
             this->setGress(c, slice.field()->gress); } }
 
-    BUG_CHECK(this->gress(slice.container()) &&
-              *this->gress(slice.container()) == slice.field()->gress,
+    auto gress = this->gress(slice.container());
+    BUG_CHECK(gress && *gress == slice.field()->gress,
         "Trying to allocate field %1% with gress %2% to container %3% with gress %4%",
         slice.field()->name, slice.field()->gress, slice.container(),
         this->gress(slice.container()));
@@ -297,8 +283,17 @@ void PHV::Allocation::commit(Transaction& view) {
     // came from this Allocation.
 
     for (auto kv : view.getTransactionStatus()) {
-        this->addStatus(kv.first, kv.second);
-    }
+        // Fail if any part of this field slice has already been allocated.
+        for (auto& slice : kv.second.slices) {
+            const auto& existing_alloc = slices(slice.field(), slice.field_slice());
+            BUG_CHECK(existing_alloc.size() == 0, "Trying to allocate slice %1%, but other "
+                      "overlapping slices of this field have already been allocated: %2%",
+                      cstring::to_cstring(slice), cstring::to_cstring(existing_alloc)); }
+
+        // Merge the status from the view.
+        this->addStatus(kv.first, kv.second); }
+
+    // Clear the view.
     view.clearTransactionStatus();
 }
 

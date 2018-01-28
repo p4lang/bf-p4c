@@ -35,6 +35,12 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
     };
     bool is_move_op = move_based_ops.count(inst->name);
 
+    // SALU operands have special constraints.
+    bool has_reg_operand = false;
+    for (auto* operand : inst->operands)
+        if (operand->is<IR::MAU::SaluReg>())
+            has_reg_operand = true;
+
     dst_i = nullptr;
     // get pointer to inst
     if (!inst->operands.empty()) {
@@ -56,6 +62,13 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
                     // insert operation in field.operations with tuple3
                     auto op = std::make_tuple(is_move_op, inst->name, PHV::Field_Ops::R);
                     field->operations().push_back(op);
+
+                    // XXX(cole) [Artificial Constraint]: Require SALU operands
+                    // to be placed in the bottom bits of their PHV containers.
+                    // In the future, this can be removed with better input
+                    // crossbar allocation.
+                    if (has_reg_operand)
+                        field->set_deparsed_bottom_bits(true);
                 }
             }
         }
@@ -76,7 +89,6 @@ void PHV_Field_Operations::end_apply() {
     for (auto &f : phv)
         for (auto &op : f.operations()) {
             bool is_move_op = std::get<0>(op);
-            bool is_written = std::get<2>(op) == PHV::Field_Ops::W;
             if (is_move_op != true) {
                 // Don't split carry operations.
                 f.set_no_split(true);
@@ -87,10 +99,7 @@ void PHV_Field_Operations::end_apply() {
                                       "32b, but field %1% has %2%b and is involved in '%3%'",
                                       cstring::to_cstring(f), f.size, std::get<1>(op));
 
-                if (is_written) {
-                    // Don't pack destinations, but we can pack sources.
-                    // XXX(cole): but sometimes we can't, and we need to check that.
-                    f.set_no_pack(true);
-                    break; } } }
+                f.set_no_pack(true);
+                break; } }
     LOG3("..........End PHV_Field_Operations..........");
 }  // end_apply()
