@@ -45,12 +45,12 @@ endif() # HARLYN_STF_tofino
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 
-# BRIG-103
-p4c_add_xfail_reason("tofino"
-  "instruction slot [0-9]+ used multiple times in action"
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  )
+# # BRIG-103
+# p4c_add_xfail_reason("tofino"
+#   "instruction slot [0-9]+ used multiple times in action"
+#   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+#   )
 
 # We need a deposit_field instruction, but we fail to select it.
 p4c_add_xfail_reason("tofino"
@@ -133,11 +133,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-5-bmv2.p4
   )
 
-# BRIG-112
-p4c_add_xfail_reason("tofino"
-  "ALU ops cannot operate on slices"
-  extensions/p4_tests/p4_14/c1/COMPILER-228/case1644.p4
-  )
+# # BRIG-112
+# p4c_add_xfail_reason("tofino"
+#   "ALU ops cannot operate on slices"
+#   extensions/p4_tests/p4_14/c1/COMPILER-228/case1644.p4
+#   )
 
 p4c_add_xfail_reason("tofino"
   "Too much data for parse matcher"
@@ -158,7 +158,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-141
 p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*: parser counter translation is not implemented"
-  extensions/p4_tests/p4_14/c1/COMPILER-384/case2240.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-384/case2240.p4
   extensions/p4_tests/p4_14/p4-tests/programs/pctr/pctr.p4
   )
 
@@ -206,7 +206,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/action_profile_not_shared.p4
   extensions/p4_tests/p4_14/action_profile_next_stage.p4
   testdata/p4_16_samples/action_selector_shared-bmv2.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/13-Counters1and2.p4
   )
@@ -248,10 +248,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/dileep8.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "error: No format field or table named"
-  extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
-  )
+# p4c_add_xfail_reason("tofino"
+#   "error: No format field or table named"
+#    extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
+#   )
 
 # various stateful
 # Signed 1-bit field not allowed in P4_16 (and really makes no sense?)
@@ -267,35 +267,35 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
   )
 
-# COMPILER-329
-p4c_add_xfail_reason("tofino"
-  "error: : Width cannot be negative or zero"
-  extensions/p4_tests/p4_14/c1/COMPILER-347/switch_bug.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-352/netchain_one.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-355/netchain_two.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-385/case2247.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-392/case2266.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-400/case2314.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-401/case2308_bugged.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-408/case2364.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-420/case2433.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-421/case2434.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-426/case2475.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-443/case2514.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-466/case2563_with_nop.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-466/case2563_without_nop.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-475/case2600.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-502/case2675.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-510/case2682.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-514/balancer_one.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
-  extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
-  extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
-  )
+# # COMPILER-329
+# p4c_add_xfail_reason("tofino"
+#   "error: : Width cannot be negative or zero"
+#   extensions/p4_tests/p4_14/c1/COMPILER-347/switch_bug.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-352/netchain_one.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-355/netchain_two.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-385/case2247.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-392/case2266.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-400/case2314.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-401/case2308_bugged.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-408/case2364.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-420/case2433.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-421/case2434.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-426/case2475.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-443/case2514.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-466/case2563_with_nop.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-466/case2563_without_nop.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-475/case2600.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-502/case2675.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-510/case2682.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-514/balancer_one.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
+#   extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
+#   extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
+#   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
+#   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
+#   extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
+#   )
 
 # COMPILER-540
 p4c_add_xfail_reason("tofino"
@@ -303,10 +303,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_171_stateful_conga.p4
   extensions/p4_tests/p4_14/test_config_173_stateful_bloom_filter.p4
   extensions/p4_tests/p4_14/test_config_174_stateful_flow_learning.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-254/case1744.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-260/case1799.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-260/case1799_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-262/case1804.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-254/case1744.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-260/case1799.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-260/case1799_1.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-262/case1804.p4
   )
 
 # BRIG-271
@@ -326,64 +326,64 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_314_sym_hash.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "constant value .* out of range for immediate"
-  extensions/p4_tests/p4_14/c1/COMPILER-402/case2318.p4
-  )
+# p4c_add_xfail_reason("tofino"
+#   "constant value .* out of range for immediate"
+#   extensions/p4_tests/p4_14/c1/COMPILER-402/case2318.p4
+#   )
 
 # BRIG-138
 p4c_add_xfail_reason("tofino"
   "error: : action .* appears multiple times in table"
-  extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-448/case2526.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-451/case2537.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-477/case2602.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-482/case2622.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-483/case2619.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-548/case3011.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-562/case3005.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-567/case2807.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-568/case3026.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-568/case3026dce.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-575/case3041.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-576/case3042.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-577/comp577.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-579/case3085.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-585/comp585.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-588/comp588.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-588/comp588dce.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-589/comp589.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-593/case3011.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-608/case3263.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
-  extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-448/case2526.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-451/case2537.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-477/case2602.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-482/case2622.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-483/case2619.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-548/case3011.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-562/case3005.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-567/case2807.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-568/case3026.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-568/case3026dce.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-575/case3041.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-576/case3042.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-577/comp577.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-579/case3085.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-585/comp585.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-588/comp588.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-588/comp588dce.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-589/comp589.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-593/case3011.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-608/case3263.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
+  # extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
   extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-271/case1834.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-263/case1795.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-264/case1822.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-273/case1832.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-275/case1841.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-276/case1844.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-282/case1864.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-271/case1834.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-263/case1795.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-264/case1822.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-273/case1832.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-275/case1841.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-276/case1844.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-282/case1864.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "Action for .* has some unbound arguments"
-  # requires pragma action_default_only
-  extensions/p4_tests/p4_14/c1/COMPILER-548/case2895.p4
-  )
+# p4c_add_xfail_reason("tofino"
+#   "Action for .* has some unbound arguments"
+#   # requires pragma action_default_only
+#   extensions/p4_tests/p4_14/c1/COMPILER-548/case2895.p4
+#   )
 
-# BRIG-243
-p4c_add_xfail_reason("tofino"
-  "conflicting memory use between .* and .*"
-  # This is an ATCAM failure due to a stage split being in the same stage.  Much more subtle
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-499/case2560_min_2.p4
-  )
+# # BRIG-243
+# p4c_add_xfail_reason("tofino"
+#   "conflicting memory use between .* and .*"
+#   # This is an ATCAM failure due to a stage split being in the same stage.  Much more subtle
+#   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-499/case2560_min_2.p4
+#   )
 
 p4c_add_xfail_reason("tofino"
   "Multiple synth2port require overflow"
@@ -433,8 +433,8 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"
-  extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
   # Same Name Conversion Bug
   extensions/p4_tests/p4_14/shared_names.p4
   )
@@ -555,7 +555,7 @@ p4c_add_xfail_reason("tofino"
   "Wrong number of arguments for method call: packet.extract"
   testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
   testdata/p4_14_samples/issue781.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
+  # extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
   )
 
 # Also incorrect P4_14->16 conversion for varbit extract, but a different
@@ -595,19 +595,19 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "Not all applies of table .* are mutually exclusive"
-  extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action_fail_after.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action_fail_before.p4
-  )
+# p4c_add_xfail_reason("tofino"
+#   "Not all applies of table .* are mutually exclusive"
+#   extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action_fail_after.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action_fail_before.p4
+#   )
 
 p4c_add_xfail_reason("tofino"
   "Table .* is applied multiple times, and the next table information cannot correctly propagate"
-  extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_multiple_actions.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_fail_next_ptr.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_multiple_actions.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_fail_next_ptr.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action.p4
   testdata/p4_14_samples/16-TwoReferences.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-125/16-TwoReferences.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-125/16-TwoReferences.p4
   testdata/p4_16_samples/issue986-bmv2.p4
   )
 
@@ -625,7 +625,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Table .* is applied multiple times, but the gateway conditionals determining"
-  extensions/p4_tests/p4_14/c1/COMPILER-100/eth_addr_cmp.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-100/eth_addr_cmp.p4
   extensions/p4_tests/p4_14/eth_addr_cmp.p4
   )
 
@@ -636,18 +636,18 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Due to complexity in action bus, can only currently handle meter color in an 8 bit ALU"
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-)
+# p4c_add_xfail_reason("tofino"
+#   "Due to complexity in action bus, can only currently handle meter color in an 8 bit ALU"
+#   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+# )
 
 p4c_add_xfail_reason("tofino"
   "Stage pragma provided to table .* has multiple parameters, while Brig currently"
   extensions/p4_tests/p4_14/test_config_131_placement_with_pragma.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
 )
 
 # START: XFAILs with translation
@@ -661,7 +661,7 @@ p4c_add_xfail_reason("tofino"
 # We fail to translate `standard_metadata.instance_type`.
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for standard_metadata"
-  extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
   testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/packet_redirect.p4
   testdata/p4_14_samples/simple_nat.p4
@@ -689,11 +689,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/sai_p4.p4
   )
 
-# BRIG-109
-p4c_add_xfail_reason("tofino"
-  "resolve computed"
-  extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
-  )
+# # BRIG-109
+# p4c_add_xfail_reason("tofino"
+#   "resolve computed"
+#   extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
+#   )
 p4c_add_xfail_reason("tofino"
   "hash offset must be a power of 2 in a hash calculation hash.get_hash"
   testdata/p4_14_samples/flowlet_switching.p4
@@ -829,7 +829,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
 
   # Lack of container packing:
   extensions/p4_tests/p4_14/15-SetMetadata.p4
@@ -858,16 +858,16 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
   extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
   extensions/p4_tests/p4_14/test_config_190_modify_with_expr.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  # extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   switch_l2
 
   # Instruction adjustment needs to synthesize a bitmasked-set but does not.
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_14/test_config_50_action_data_different_size_fields.p4
 
   # Action analysis failures.
@@ -876,10 +876,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_252_pa_required_packing.p4
   extensions/p4_tests/p4_14/test_config_256_pa_problem_4.p4
   extensions/p4_tests/p4_14/test_config_257_pa_problem_5.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
   switch_dc_basic
   )
@@ -890,14 +890,14 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/action_conflict_3.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "Brig currently only supports one parameter"
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-  )
+# p4c_add_xfail_reason("tofino"
+#   "Brig currently only supports one parameter"
+#   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+#   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+#   )
 
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated"
@@ -914,7 +914,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Inferred incompatible alignments for field"
-  extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
   extensions/p4_tests/p4_14/p4-tests/programs/parser_intr_md/parser_intr_md.p4
   )
 
@@ -958,7 +958,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "source of modify_field invalid"
   extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/test_config_214_full_stats.p4
   )
 
@@ -1003,11 +1003,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1097-2-bmv2.p4
   )
 
-# BRIG-372
-p4c_add_xfail_reason("tofino"
-  "error: Could not find declaration for key_1"
-  extensions/p4_tests/p4_14/c1/BRIG-372/case4346.p4
-  )
+# # BRIG-372
+# p4c_add_xfail_reason("tofino"
+#   "error: Could not find declaration for key_1"
+#   extensions/p4_tests/p4_14/c1/BRIG-372/case4346.p4
+#   )
 
 p4c_add_xfail_reason("tofino"
   "Can't find .* and .* in same input xbar group"
@@ -1025,8 +1025,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Invalid slice of .*"
   testdata/p4_14_samples/mac_rewrite.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
+  # extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
+  # extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_16/brig-42.p4
   )
 
