@@ -44,10 +44,10 @@ struct AllocScore {
         // 16b, and 32b containers remain.
         int container_imbalance;
     };
-    int n_tphv_on_phv_bits;
     ordered_map<PHV::Kind, ScoreByKind> score;
+    int n_tphv_on_phv_bits;
 
-    AllocScore() { }
+    AllocScore() : n_tphv_on_phv_bits(0) { }
 
     /** Construct a score from a Transaction.
      *
@@ -292,80 +292,12 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     slice_clusters(
             const std::list<PHV::SuperCluster*>& cluster_groups);
 
+    std::list<PHV::SuperCluster*>
+    remove_singleton_slicelist_metadata(
+            const std::list<PHV::SuperCluster*>& cluster_groups);
+
     void sortClusters(std::list<PHV::SuperCluster*>& cluster_groups);
 
-    std::list<PHV::SuperCluster*>
-    allocLoop(PHV::Transaction& rst,
-              std::list<PHV::SuperCluster*>& cluster_groups,
-              std::list<PHV::ContainerGroup *>& container_groups);
-};
-
-/** The greedy sorting strategy
- */
-class GreedySortingAllocationStrategy : public AllocationStrategy {
- public:
-    GreedySortingAllocationStrategy(const CoreAllocation& alloc, std::ostream& out)
-        : AllocationStrategy(alloc, out) {}
-
-    AllocResult
-    tryAllocation(const PHV::Allocation &alloc,
-                  const std::list<PHV::SuperCluster*>& cluster_groups_input,
-                  std::list<PHV::ContainerGroup *>& container_groups) override;
-
- protected:
-    /** Waterfall allocation ordering:
-     *
-     *  - PHV clusters > 4 bits  --> PHV                (smallest to largest)
-     *  - TPHV fields  > 4 bits  --> TPHV               (smallest to largest)
-     *  - TPHV fields  > 4 bits  --> PHV                (smallest to largest)
-     *  - POV fields             --> PHV
-     *  - PHV fields  <= 4 bits  --> PHV
-     *  - TPHV fields <= 4 bits  --> TPHV
-     *  - TPHV fields <= 4 bits  --> PHV
-     */
-    void greedySort(
-        const PHV::Allocation& alloc,
-        std::list<PHV::SuperCluster*>& cluster_groups,
-        std::list<PHV::ContainerGroup*>& container_groups);
-};
-
-/** Pick the container group that has the largest number of possible container for a cluster.
- * This strategy sort the container_groups, when allocating a SuperCluster,
- * by how many containers that may hold the this SuperCluster left.
- */
-class BalancedPickAllocationStrategy : public AllocationStrategy {
- protected:
-    const CalcCriticalPathClusters& critical_path_clusters_i;
-    const FieldInterference& field_interference_i;
-
- public:
-    BalancedPickAllocationStrategy(const CoreAllocation& alloc, std::ostream& out,
-                                   const CalcCriticalPathClusters& cpc,
-                                   const FieldInterference& f)
-        : AllocationStrategy(alloc, out)
-        , critical_path_clusters_i(cpc), field_interference_i(f) { }
-
-    AllocResult
-    tryAllocation(const PHV::Allocation &alloc,
-                  const std::list<PHV::SuperCluster*>& cluster_groups_input,
-                  std::list<PHV::ContainerGroup *>& container_groups) override;
-
- protected:
-    /** Sorting SuperClusters
-     * This order will guide the allocation.
-     */
-    virtual void greedySortClusters(std::list<PHV::SuperCluster*>& cluster_groups);
-
-    /** Sort @p container_groups by how many containers that could
-     * possibly hold @p cluster exists, decreasingly.
-     */
-    virtual void sortContainerBy(
-        const PHV::Allocation& alloc,
-        std::list<PHV::ContainerGroup *>& container_groups,
-        const PHV::SuperCluster* cluster);
-
-    /** The main O(n^2) loop.
-     */
     std::list<PHV::SuperCluster*>
     allocLoop(PHV::Transaction& rst,
               std::list<PHV::SuperCluster*>& cluster_groups,
