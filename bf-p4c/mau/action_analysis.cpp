@@ -759,11 +759,13 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(PHV::Container containe
  *  be used without being converted to action data
  */
 bool ActionAnalysis::tofino_instruction_constant(int value, int max_shift, int container_size) {
-    int max_value = (1 << max_shift);
-    int complement = (1 << (container_size - 1));
+    unsigned u_value = static_cast<unsigned>(value);
+    if (value < 0)
+        u_value >>= (sizeof(unsigned) * 8 - container_size);
+    unsigned max_value = (1U << max_shift);
+    unsigned complement = (0xffffffffU) >> (sizeof(unsigned) * 8 - container_size);
 
-    if ((value <= max_value - 1 && value >= -max_value)
-        || value >= complement - max_value || value <= -complement + max_value - 1)
+    if ((u_value < max_value) || (u_value >= complement - max_value && u_value <= complement))
         return true;
     return false;
 }

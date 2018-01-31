@@ -1068,10 +1068,3 @@ p4c_add_xfail_reason("tofino"
   "More than 8 hit entries not supported"
   extensions/p4_tests/p4_14/action_chain_limits.p4
   )
-
-# BRIG-432
-# "too large for immediate"
-p4c_add_xfail_reason("tofino"
-  "constant value 65504 out of range for immediate"
-  extensions/p4_tests/p4_16/adata_constant_out_of_range_for_immediate.p4
-  )

@@ -8,7 +8,7 @@ from base_test import stringify
 class PacketUpdateTest(P4RuntimeTest):
     def runTest(self):
         port1 = self.swports(1)
-        inputV = 65536
+        inputV = 65535
         outputV = inputV - 32
         pkt = stringify(inputV, 2) + "\xab" * 64
         exp_pkt = stringify(outputV, 2) + "\xab" * 64
