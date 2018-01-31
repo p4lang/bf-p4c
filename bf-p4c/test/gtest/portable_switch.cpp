@@ -18,8 +18,11 @@ struct TestArgs {
     std::string ingressMeta = "";
     std::string resubMeta = "";
     std::string recircMeta = "";
-    std::string parserDecl = "";
-    std::string deparserApply = "";
+    std::string mirrorIngressMeta = "";
+    std::string mirrorEgressMeta = "";
+    std::string ingressParserDecl = "";
+    std::string egressParserDecl = "";
+    std::string ingressDeparserApply = "";
     std::string egressDeparserApply = "";
     std::string userDefinedStruct = "";
 };
@@ -76,9 +79,11 @@ createPSATest(TestArgs& args) {
         }
 
         struct clone_i2e_metadata_t {
+%CLONE_I2E_DATA%
         }
 
         struct clone_e2e_metadata_t {
+%CLONE_E2E_DATA%
         }
 
         struct headers {
@@ -90,6 +95,8 @@ createPSATest(TestArgs& args) {
             data_t data;
             resubmit_metadata_t resubmit_meta;
             recirculate_metadata_t recirc_meta;
+            clone_i2e_metadata_t clone_i2e_meta;
+            clone_e2e_metadata_t clone_e2e_meta;
             fwd_metadata_t fwd_meta;
         }
 
@@ -105,7 +112,7 @@ createPSATest(TestArgs& args) {
             in resubmit_metadata_t resub_meta,
             in recirculate_metadata_t recirc_meta)
         {
-%PARSER_STATE%
+%INGRESS_PARSER%
         }
 
         parser EgressParserImpl(
@@ -117,11 +124,7 @@ createPSATest(TestArgs& args) {
             in clone_i2e_metadata_t clone_i2e_meta,
             in clone_e2e_metadata_t clone_e2e_meta)
         {
-            state start {
-                buffer.extract(parsed_hdr.ethernet);
-                buffer.extract(parsed_hdr.ipv4);
-                transition accept;
-            }
+%EGRESS_PARSER%
         }
 
         control ingress(inout headers hdr,
@@ -153,7 +156,7 @@ createPSATest(TestArgs& args) {
             in psa_ingress_output_metadata_t istd)
         {
             apply {
-%DEPARSER_APPLY%
+%INGRESS_DEPARSER_APPLY%
             }
         }
 
@@ -186,10 +189,14 @@ createPSATest(TestArgs& args) {
     boost::replace_first(source, "%INGRESS_APPLY%", args.ingressApply);
     boost::replace_first(source, "%RESUBMIT_DATA%", args.resubMeta);
     boost::replace_first(source, "%RECIRC_DATA%", args.recircMeta);
-    boost::replace_first(source, "%PARSER_STATE%", args.parserDecl);
-    boost::replace_first(source, "%DEPARSER_APPLY%", args.deparserApply);
+    boost::replace_first(source, "%CLONE_I2E_DATA%", args.mirrorIngressMeta);
+    boost::replace_first(source, "%CLONE_E2E_DATA%", args.mirrorEgressMeta);
+    boost::replace_first(source, "%INGRESS_PARSER%", args.ingressParserDecl);
+    boost::replace_first(source, "%EGRESS_PARSER%", args.egressParserDecl);
+    boost::replace_first(source, "%INGRESS_DEPARSER_APPLY%", args.ingressDeparserApply);
     boost::replace_first(source, "%EGRESS_DEPARSER_APPLY%", args.egressDeparserApply);
     boost::replace_first(source, "%USER_DEFINED_DATA%", args.userDefinedStruct);
+
 
     auto& options = BFNContext::get().options();
     options.target = "tofino-psa-barefoot";
@@ -205,12 +212,16 @@ createPSAIngressTest(const std::string& ingressDecl,
     args.ingressMeta = ingressMeta;
     args.ingressDecl = ingressDecl;
     args.ingressApply = ingressApply;
-    args.parserDecl = P4_SOURCE(R"(
+    args.ingressParserDecl = P4_SOURCE(R"(
             state start {
                 buffer.extract(parsed_hdr.ethernet);
                 buffer.extract(parsed_hdr.ipv4);
                 transition accept;
             })");
+    args.egressParserDecl= R"(
+            state start {
+                transition accept;
+            })";
     return createPSATest<TofinoPipeTestCase>(args);
 }
 
@@ -843,8 +854,12 @@ createPSAResubmitTest(const std::string &resubMeta,
                       const std::string &deparserApply) {
     TestArgs args;
     args.resubMeta = resubMeta;
-    args.parserDecl = parserDecl;
-    args.deparserApply = deparserApply;
+    args.ingressParserDecl = parserDecl;
+    args.ingressDeparserApply = deparserApply;
+    args.egressParserDecl= R"(
+            state start {
+                transition accept;
+            })";
     return createPSATest<MidendTestCase>(args);
 }
 
@@ -1120,7 +1135,11 @@ createPSARecircTest(const std::string &recircMeta,
                     const std::string &userDefinedStruct="") {
     TestArgs args;
     args.recircMeta = recircMeta;
-    args.parserDecl = parserDecl;
+    args.ingressParserDecl = parserDecl;
+    args.egressParserDecl = R"(
+            state start {
+                transition accept;
+            })";
     args.egressDeparserApply = deparserApply;
     args.userDefinedStruct = userDefinedStruct;
     return createPSATest<MidendTestCase>(args);
@@ -1350,6 +1369,269 @@ TEST_F(PortableSwitchTest, RecirculateReadPartialHeader) {
         P4_SOURCE(R"(
     recirc_meta.d1 = meta.recirc_meta.d1;
     )"));
+    EXPECT_TRUE(test);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
+/// Test PSA translation till the end of midend.
+/// TODO: change to TofinoPipeTestCase after support in extract_parser.cpp is complete
+boost::optional<MidendTestCase>
+createPSACloneI2eTest(const std::string &mirrorMeta,
+                   const std::string &egressParserDecl,
+                   const std::string &deparserApply) {
+    TestArgs args;
+    args.mirrorIngressMeta = mirrorMeta;
+    args.ingressParserDecl = R"(state start { transition accept; })";
+    args.egressParserDecl = egressParserDecl;
+    args.ingressDeparserApply = deparserApply;
+    args.userDefinedStruct = R"()";
+    return createPSATest<MidendTestCase>(args);
+}
+
+TEST_F(PortableSwitchTest, CloneAssignHeader) {
+    auto test = createPSACloneI2eTest(
+        P4_SOURCE(R"(
+    bit<8> d1;
+    bit<8> d2;
+        )"),
+        P4_SOURCE(R"(
+    state start {
+      transition select(istd.packet_path) {
+        PacketPath_t.CLONE_I2E: copy_clone_meta;
+        PacketPath_t.NORMAL: packet_in_parsing;
+      }
+    }
+    state copy_clone_meta {
+      meta.clone_i2e_meta = clone_i2e_meta;
+      transition packet_in_parsing;
+    }
+    state packet_in_parsing {
+      transition accept;
+    }
+        )"),
+        P4_SOURCE(R"(
+    clone_i2e_meta = meta.clone_i2e_meta;
+        )"));
+    EXPECT_TRUE(test);
+}
+
+TEST_F(PortableSwitchTest, CloneAssignFields) {
+    auto test = createPSACloneI2eTest(
+        P4_SOURCE(R"(
+    bit<8> d1;
+    bit<8> d2;
+)"),
+        P4_SOURCE(R"(
+    state start {
+      transition select(istd.packet_path) {
+        PacketPath_t.CLONE_I2E: copy_clone_meta;
+        PacketPath_t.NORMAL: packet_in_parsing;
+      }
+    }
+    state copy_clone_meta {
+      meta.clone_i2e_meta.d1 = clone_i2e_meta.d1;
+      meta.clone_i2e_meta.d2 = clone_i2e_meta.d2;
+      transition packet_in_parsing;
+    }
+    state packet_in_parsing {
+      transition accept;
+    }
+)"),
+        P4_SOURCE(R"(
+    clone_i2e_meta = meta.clone_i2e_meta;
+)")
+    );
+    EXPECT_TRUE(test);
+}
+
+TEST_F(PortableSwitchTest, CloneReorderFields) {
+    auto test = createPSACloneI2eTest(
+        P4_SOURCE(R"(
+    bit<8> d1;
+    bit<8> d2;
+)"),
+        P4_SOURCE(R"(
+    state start {
+      transition select(istd.packet_path) {
+        PacketPath_t.CLONE_I2E: copy_clone_meta;
+        PacketPath_t.NORMAL: packet_in_parsing;
+      }
+    }
+    state copy_clone_meta {
+      meta.clone_i2e_meta.d1 = clone_i2e_meta.d2;
+      meta.clone_i2e_meta.d2 = clone_i2e_meta.d1;
+      transition packet_in_parsing;
+    }
+    state packet_in_parsing {
+      transition accept;
+    }
+)"),
+        P4_SOURCE(R"(
+    clone_i2e_meta = meta.clone_i2e_meta;
+)")
+    );
+    EXPECT_TRUE(test);
+}
+
+TEST_F(PortableSwitchTest, CloneEmptyFirstState) {
+    auto test = createPSACloneI2eTest(
+        P4_SOURCE(R"()"),
+        P4_SOURCE(R"(
+    state start {
+      transition __start;
+    }
+    state __start {
+      transition select(istd.packet_path) {
+        PacketPath_t.CLONE_I2E: copy_clone_meta;
+        PacketPath_t.NORMAL: packet_in_parsing;
+      }
+    }
+    state copy_clone_meta {
+      meta.clone_i2e_meta = clone_i2e_meta;
+      transition packet_in_parsing;
+    }
+    state packet_in_parsing {
+      transition accept;
+    }
+)"),
+        P4_SOURCE(R"(
+    clone_i2e_meta = meta.clone_i2e_meta;
+)")
+    );
+    EXPECT_TRUE(test);
+}
+
+TEST_F(PortableSwitchTest, DISABLED_CloneExtractBeforeCheckPacketPath) {
+    auto test = createPSACloneI2eTest(
+        P4_SOURCE(R"()"),
+        P4_SOURCE(R"(
+        state start {
+          buffer.extract(parsed_hdr.ethernet);
+          transition __start;
+        }
+        state __start {
+          transition select(istd.packet_path) {
+            PacketPath_t.CLONE_I2E: copy_clone_meta;
+            PacketPath_t.NORMAL: packet_in_parsing;
+          }
+        }
+        state copy_clone_meta {
+          meta.clone_i2e_meta = clone_i2e_meta;
+          transition packet_in_parsing;
+        }
+        state packet_in_parsing {
+          transition accept;
+        }
+)"),
+        P4_SOURCE(R"()"));
+    EXPECT_TRUE(test);
+}
+
+TEST_F(PortableSwitchTest, CloneMultipleExtractState) {
+    auto test = createPSACloneI2eTest(
+        P4_SOURCE(R"(
+        bit<8> d1;
+        bit<8> d2;
+)"),
+        P4_SOURCE(R"(
+        state start {
+          transition select(istd.packet_path) {
+            PacketPath_t.CLONE_I2E: copy_clone_meta_0;
+            PacketPath_t.NORMAL: packet_in_parsing;
+          }
+        }
+        state copy_clone_meta_0 {
+          meta.clone_i2e_meta.d1 = clone_i2e_meta.d1;
+          transition copy_clone_meta_1;
+        }
+        state copy_clone_meta_1 {
+          meta.clone_i2e_meta.d2 = clone_i2e_meta.d2;
+          transition packet_in_parsing;
+        }
+
+        state packet_in_parsing {
+          transition accept;
+        }
+)"),
+        P4_SOURCE(R"()"));
+
+    EXPECT_TRUE(test);
+}
+
+TEST_F(PortableSwitchTest, CloneCopyAndSelectOnField) {
+    auto test = createPSACloneI2eTest(
+        P4_SOURCE(R"(
+        bit<8> d1;
+        bit<8> d2;
+)"),
+        P4_SOURCE(R"(
+        state start {
+          transition select(istd.packet_path) {
+            PacketPath_t.CLONE_I2E: copy_clone_meta_0;
+            PacketPath_t.NORMAL: packet_in_parsing;
+          }
+        }
+        state copy_clone_meta_0 {
+          meta.clone_i2e_meta.d1 = clone_i2e_meta.d1;
+          transition select(meta.clone_i2e_meta.d1) {
+             8w0 : clone_data_is_0;
+             8w1 : clone_data_is_1;
+          }
+        }
+        state clone_data_is_0 {
+          meta.clone_i2e_meta.d2 = clone_i2e_meta.d2;
+          transition packet_in_parsing;
+        }
+        state clone_data_is_1 {
+          meta.clone_i2e_meta.d2 = clone_i2e_meta.d2;
+          transition packet_in_parsing;
+        }
+        state packet_in_parsing {
+          transition accept;
+        }
+)"),
+        P4_SOURCE(R"()"));
+
+    EXPECT_TRUE(test);
+}
+
+TEST_F(PortableSwitchTest, CloneSelectOnField) {
+    auto test = createPSACloneI2eTest(
+        P4_SOURCE(R"(
+        bit<8> d1;
+        bit<8> d2;
+        bit<8> d3;
+        )"),
+        P4_SOURCE(R"(
+        state copy_clone_meta_0 {
+          transition select(clone_i2e_meta.d1) {
+             8w0 : clone_data_is_0;
+             8w1 : clone_data_is_1;
+          }
+        }
+        state start {
+          transition select(istd.packet_path) {
+            PacketPath_t.CLONE_I2E: copy_clone_meta_0;
+            PacketPath_t.NORMAL: packet_in_parsing;
+          }
+        }
+        state clone_data_is_0 {
+          meta.clone_i2e_meta.d2 = clone_i2e_meta.d3;
+          meta.clone_i2e_meta.d3 = clone_i2e_meta.d2;
+          transition packet_in_parsing;
+        }
+        state clone_data_is_1 {
+          meta.clone_i2e_meta.d2 = clone_i2e_meta.d2;
+          meta.clone_i2e_meta.d3 = clone_i2e_meta.d3;
+          transition packet_in_parsing;
+        }
+        state packet_in_parsing {
+          transition accept;
+        }
+        )"),
+        P4_SOURCE(R"()"));
+
     EXPECT_TRUE(test);
 }
 

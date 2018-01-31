@@ -74,6 +74,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/stack_complex-bmv2.p4
   testdata/p4_16_samples/issue737-bmv2.p4
   testdata/p4_16_samples/psa-ether-wire.p4
+  testdata/p4_16_samples/array-copy-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1068,3 +1069,14 @@ p4c_add_xfail_reason("tofino"
   "More than 8 hit entries not supported"
   extensions/p4_tests/p4_14/action_chain_limits.p4
   )
+
+p4c_add_xfail_reason("tofino"
+  "metadata arrays not handled in InstanceRef::InstanceRef"
+  testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "In the ALU operation over container .*in action .*"
+  testdata/p4_16_samples/named_meter_1-bmv2.p4
+  )
+

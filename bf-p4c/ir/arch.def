@@ -20,9 +20,23 @@ class TranslatedP4Control : P4Control {
 
     /// The thread this control is associated with.
     gress_t thread;
+}
 
-    /// Whether this control is a deparser.
-    bool isDeparser = false;
+/// A P4Deparser produced by TNA translation; contains some additional useful
+/// metadata.
+class TranslatedP4Deparser : P4Control {
+    toString { return P4Control::toString() + " on " + cstring::to_cstring(thread); }
+    dbprint { out << toString(); }
+
+    /// A map from standard TNA parameter names to the names actually used in
+    /// the P4 program. For example, a TNA control prototype may include a
+    /// parameter "inout M ig_md", but the user program instantiating the
+    /// control may use "inout M user_metadata"; this map would include a
+    /// mapping from "ig_md" to "user_metadata".
+    ordered_map<cstring, cstring> tnaParams;
+
+    /// The thread this control is associated with.
+    gress_t thread;
 }
 
 /// A P4Parser produced by TNA translation; contains some additional useful

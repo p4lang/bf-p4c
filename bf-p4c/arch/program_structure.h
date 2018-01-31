@@ -82,7 +82,7 @@ struct ProgramStructure {
     const IR::ToplevelBlock*                     toplevel;
 
     /// all unique names in the program
-    std::set<cstring>                            unique_names;
+    std::set<cstring>                            unique_names = {"checksum", "hash", "random"};
 
     /// map standard parser and control block name to
     /// arbitrary name assigned by user.

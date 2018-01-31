@@ -3,11 +3,25 @@
 #include "architecture.h"
 #include "portable_switch.h"
 #include "rewrite_packet_path.h"
+#include "lib/bitops.h"
+#include "midend/convertEnums.h"
 
 namespace BFN {
 
 namespace PSA {
 //////////////////////////////////////////////////////////////////////////////////////////////
+
+class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
+    bool convert(const IR::Type_Enum *type) const override {
+        LOG1("Type Enum name " << type);
+        if (type->name != "PacketPath_t") {
+            return false;
+        }
+        return true;
+    }
+
+    unsigned enumSize(unsigned size) const override { return 8; }
+};
 
 /// @pre: assume no nested control block or parser block,
 ///       as a result, all declarations within a control block have different names.
@@ -87,8 +101,7 @@ class AnalyzeProgram : public Inspector {
         auto* cgAnnotation = new IR::Annotations({
              new IR::Annotation(IR::ID("__compiler_generated"), { })});
         auto cgm = new IR::Type_Struct("compiler_generated_metadata_t", cgAnnotation);
-        auto pktPath = new IR::StructField("packet_path",
-                                           structure->enums.at("PacketPath_t")->getP4Type());
+        auto pktPath = new IR::StructField("packet_path", IR::Type::Bits::get(8));
         cgm->fields.push_back(pktPath);
         structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
     }
@@ -102,19 +115,19 @@ class AnalyzeProgram : public Inspector {
             param = node->getApplyParameters()->getParameter(5);
             structure->psaPacketPathNames.emplace("parser::recirc_md", param->name);
             structure->psaPacketPathTypes.emplace("parser::recirc_md", param->type);
+        } else if (node->name == structure->getBlockName(ProgramStructure::EGRESS_PARSER)) {
+            LOG1("create parser clone metadata");
+            auto param = node->getApplyParameters()->getParameter(5);
+            structure->psaPacketPathNames.emplace("parser::clone_i2e_md", param->name);
+            structure->psaPacketPathTypes.emplace("parser::clone_i2e_md", param->type);
+            param = node->getApplyParameters()->getParameter(6);
+            structure->psaPacketPathNames.emplace("parser::clone_e2e_md", param->name);
+            structure->psaPacketPathTypes.emplace("parser::clone_e2e_md", param->type);
         }
     }
 
     void process_packet_path_params(const IR::P4Control* node) {
-        if (node->name == structure->getBlockName(ProgramStructure::EGRESS_DEPARSER)) {
-            LOG1("create egress parser recirc metadata");
-            auto param = node->getApplyParameters()->getParameter(1);
-            structure->psaPacketPathNames.emplace("deparser::clone_e2e_md", param->name);
-            structure->psaPacketPathTypes.emplace("deparser::clone_e2e_md", param->type);
-            param = node->getApplyParameters()->getParameter(2);
-            structure->psaPacketPathNames.emplace("deparser::recirc_md", param->name);
-            structure->psaPacketPathTypes.emplace("deparser::recirc_md", param->type);
-        } else if (node->name == structure->getBlockName(ProgramStructure::INGRESS_DEPARSER)) {
+        if (node->name == structure->getBlockName(ProgramStructure::INGRESS_DEPARSER)) {
             LOG1("create egress parser resubmit metadata");
             auto param = node->getApplyParameters()->getParameter(1);
             structure->psaPacketPathNames.emplace("deparser::clone_i2e_md", param->name);
@@ -122,6 +135,14 @@ class AnalyzeProgram : public Inspector {
             param = node->getApplyParameters()->getParameter(2);
             structure->psaPacketPathNames.emplace("deparser::resubmit_md", param->name);
             structure->psaPacketPathTypes.emplace("deparser::resubmit_md", param->type);
+        } else if (node->name == structure->getBlockName(ProgramStructure::EGRESS_DEPARSER)) {
+            LOG1("create egress deparser recirc/clone metadata");
+            auto param = node->getApplyParameters()->getParameter(1);
+            structure->psaPacketPathNames.emplace("deparser::clone_e2e_md", param->name);
+            structure->psaPacketPathTypes.emplace("deparser::clone_e2e_md", param->type);
+            param = node->getApplyParameters()->getParameter(2);
+            structure->psaPacketPathNames.emplace("deparser::recirc_md", param->name);
+            structure->psaPacketPathTypes.emplace("deparser::recirc_md", param->type);
         }
     }
 
@@ -373,6 +394,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto structure = new BFN::PSA::ProgramStructure;
     addPasses({
+        new P4::ConvertEnums(refMap, typeMap, new PSA::PacketPathTo8Bits),
         new P4::TypeChecking(refMap, typeMap, true),
         evaluator,
         new VisitFunctor([structure, evaluator]() {
