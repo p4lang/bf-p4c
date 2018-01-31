@@ -328,6 +328,10 @@ class P4RuntimeTest(BaseTest):
             self.pLen = pLen
 
         def add_to(self, mf_id, mk):
+            # P4Runtime mandates that the match field should be omitted for
+            # "don't care" LPM matches (i.e. when prefix length is zero)
+            if self.pLen == 0:
+                return
             mf = mk.add()
             mf.field_id = mf_id
             mf.lpm.prefix_len = self.pLen
@@ -354,6 +358,10 @@ class P4RuntimeTest(BaseTest):
             self.mask = mask
 
         def add_to(self, mf_id, mk):
+            # P4Runtime mandates that the match field should be omitted for
+            # "don't care" ternary matches (i.e. when mask is zero)
+            if all(c == '\x00' for c in self.mask):
+                return
             mf = mk.add()
             mf.field_id = mf_id
             assert(len(self.mask) == len(self.v))
@@ -363,6 +371,27 @@ class P4RuntimeTest(BaseTest):
             # case of Ternary, "don't-care" bits in the value must be set to 0
             for i in xrange(len(self.mask)):
                 mf.ternary.value += chr(ord(self.v[i]) & ord(self.mask[i]))
+
+    class Range(MF):
+        def __init__(self, name, low, high):
+            super(P4RuntimeTest.Range, self).__init__(name)
+            self.low = low
+            self.high = high
+
+        def add_to(self, mf_id, mk):
+            # P4Runtime mandates that the match field should be omitted for
+            # "don't care" range matches (i.e. when all possible values are
+            # included in the range)
+            # TODO(antonin): negative values?
+            low_is_zero = all(c == '\x00' for c in self.low)
+            high_is_max = all(c == '\xff' for c in self.high)
+            if low_is_zero and high_is_max:
+                return
+            mf = mk.add()
+            mf.field_id = mf_id
+            assert(len(self.high) == len(self.low))
+            mf.range.low = self.low
+            mf.range.high = self.high
 
     # Sets the match key for a p4::TableEntry object. mk needs to be an iterable
     # object of MF instances
