@@ -306,17 +306,17 @@ class STF2ptf(P4RuntimeTest, STFRunner):
         # check that the name exists in p4info,
         # and rename with fully qualified name or fail
         if table_name is not None:
-            found = []
-            for t in self.p4info.tables:
-                if t.preamble.name == table_name:
-                    field_names = [ mf.name for mf in t.match_fields ]
-                    if name not in field_names:
-                        for x in field_names:
-                            if x.endswith(name) or x == name + ".$valid$":
-                                name = x
-                                found = True
-                    else:
-                        found = True
+            found = False
+            t = self.get_table(table_name)
+            if t is not None:
+                field_names = [ mf.name for mf in t.match_fields ]
+                if name not in field_names:
+                    for x in field_names:
+                        if x.endswith(name) or x == name + ".$valid$":
+                            name = x
+                            found = True
+                else:
+                    found = True
             self.assertTrue(found, "Invalid match name %s for table %s" % \
                             (match_name, table_name))
 
@@ -387,43 +387,39 @@ class STF2ptf(P4RuntimeTest, STFRunner):
 
 
     def get_table_size(self, table_name):
-        for t in self.p4info.tables:
-            if t.preamble.name == table_name:
-                return int(t.size)
-        return 1024
+        t = self.get_table(table_name)
+        return 1024 if t is None else int(t.size)
 
     def table_has_ternary_match(self, table_name):
-        for t in self.p4info.tables:
-            if t.preamble.name == table_name:
-                for mf in t.match_fields:
-                    if mf.match_type in {MatchType.TERNARY, MatchType.RANGE}:
-                        return True
-                return False
+        t = self.get_table(table_name)
+        if t is not None:
+            for mf in t.match_fields:
+                if mf.match_type in {MatchType.TERNARY, MatchType.RANGE}:
+                    return True
         return False
 
     def get_mf_match_type(self, table_name, field):
-        for t in self.p4info.tables:
-            if t.preamble.name == table_name:
-                for mf in t.match_fields:
-                    if mf.name == field:
-                        return mf.match_type
-
+        t = self.get_table(table_name)
+        if t is not None:
+            for mf in t.match_fields:
+                if mf.name == field:
+                    return mf.match_type
         return MatchType.UNSPECIFIED
 
     def get_mf_bitwidth(self, table_name, field):
-        for t in self.p4info.tables:
-            if t.preamble.name == table_name:
-                for mf in t.match_fields:
-                    if mf.name == field:
-                        return mf.bitwidth
+        t = self.get_table(table_name)
+        if t is not None:
+            for mf in t.match_fields:
+                if mf.name == field:
+                    return mf.bitwidth
         return 0
 
-    def get_ap_bytewidth(self, action, param):
-        for a in self.p4info.actions:
-            if a.preamble.name == action:
-                for p in a.params:
-                    if p.name == param:
-                        return int(math.ceil(p.bitwidth/8.0))
+    def get_ap_bytewidth(self, action_name, param):
+        a = self.get_action(action_name)
+        if a is not None:
+            for p in a.params:
+                if p.name == param:
+                    return (p.bitwidth + 7) / 8
         return 0
 
     def get_mf_match(self, table_name, field, value, length_or_mask):

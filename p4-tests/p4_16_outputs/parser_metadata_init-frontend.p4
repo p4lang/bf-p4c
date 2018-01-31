@@ -23,13 +23,13 @@ parser p(packet_in b, out packet_t hdrs, inout user_metadata_t m, inout standard
 }
 
 control ingress(inout packet_t hdrs, inout user_metadata_t m, inout standard_metadata_t meta) {
-    @name("set") action set_0(bit<9> port, bit<32> val) {
+    @name("ingress.set") action set_0(bit<9> port, bit<32> val) {
         hdrs.data.f = val;
         meta.egress_spec = port;
     }
-    @name("noop") action noop_0() {
+    @name("ingress.noop") action noop_0() {
     }
-    @name("test1") table test1 {
+    @name("ingress.test1") table test1 {
         key = {
             hdrs.meta: ternary @name("hdrs.meta") ;
         }

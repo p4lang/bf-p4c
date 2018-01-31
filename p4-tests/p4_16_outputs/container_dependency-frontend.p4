@@ -22,53 +22,53 @@ parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intr
 }
 
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    @name("set_port_act") action set_port_act_0(bit<9> port) {
+    @name("IngressP.set_port_act") action set_port_act_0(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
     }
-    @name("setx1") action setx1_0(bit<4> x1) {
+    @name("IngressP.setx1") action setx1_0(bit<4> x1) {
         hdr.data.x1 = x1;
     }
-    @name("setx1") action setx1_5(bit<4> x1) {
+    @name("IngressP.setx1") action setx1_5(bit<4> x1) {
         hdr.data.x1 = x1;
     }
-    @name("setx1") action setx1_6(bit<4> x1) {
+    @name("IngressP.setx1") action setx1_6(bit<4> x1) {
         hdr.data.x1 = x1;
     }
-    @name("setx1") action setx1_7(bit<4> x1) {
+    @name("IngressP.setx1") action setx1_7(bit<4> x1) {
         hdr.data.x1 = x1;
     }
-    @name("setx1") action setx1_8(bit<4> x1) {
+    @name("IngressP.setx1") action setx1_8(bit<4> x1) {
         hdr.data.x1 = x1;
     }
-    @name("setx2") action setx2_0(bit<4> x2) {
+    @name("IngressP.setx2") action setx2_0(bit<4> x2) {
         hdr.data.x2 = x2;
     }
-    @name("setx2") action setx2_2(bit<4> x2) {
+    @name("IngressP.setx2") action setx2_2(bit<4> x2) {
         hdr.data.x2 = x2;
     }
-    @name("setboth") action setboth_0(bit<4> x1, bit<4> x2) {
+    @name("IngressP.setboth") action setboth_0(bit<4> x1, bit<4> x2) {
         hdr.data.x1 = x1;
         hdr.data.x2 = x2;
     }
-    @name("noop") action noop_0() {
+    @name("IngressP.noop") action noop_0() {
     }
-    @name("noop") action noop_9() {
+    @name("IngressP.noop") action noop_9() {
     }
-    @name("noop") action noop_10() {
+    @name("IngressP.noop") action noop_10() {
     }
-    @name("noop") action noop_11() {
+    @name("IngressP.noop") action noop_11() {
     }
-    @name("noop") action noop_12() {
+    @name("IngressP.noop") action noop_12() {
     }
-    @name("noop") action noop_13() {
+    @name("IngressP.noop") action noop_13() {
     }
-    @name("noop") action noop_14() {
+    @name("IngressP.noop") action noop_14() {
     }
-    @name("noop") action noop_15() {
+    @name("IngressP.noop") action noop_15() {
     }
-    @name("noop") action noop_16() {
+    @name("IngressP.noop") action noop_16() {
     }
-    @name("t1") table t1 {
+    @name("IngressP.t1") table t1 {
         actions = {
             setx1_0();
             noop_0();
@@ -78,7 +78,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_0();
     }
-    @name("t2") table t2 {
+    @name("IngressP.t2") table t2 {
         actions = {
             setx2_0();
             noop_9();
@@ -88,7 +88,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_9();
     }
-    @name("t3") table t3 {
+    @name("IngressP.t3") table t3 {
         actions = {
             setx1_5();
             noop_10();
@@ -100,7 +100,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_10();
     }
-    @ignore_table_dependency("t3") @name("t4") table t4 {
+    @ignore_table_dependency("t3") @name("IngressP.t4") table t4 {
         actions = {
             setx1_6();
             noop_11();
@@ -110,7 +110,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_11();
     }
-    @name("t5") table t5 {
+    @name("IngressP.t5") table t5 {
         actions = {
             setx1_7();
             noop_12();
@@ -122,7 +122,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_12();
     }
-    @ignore_table_dependency("t5") @name("t6") table t6 {
+    @ignore_table_dependency("t5") @name("IngressP.t6") table t6 {
         actions = {
             setx2_2();
             noop_13();
@@ -132,7 +132,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_13();
     }
-    @name("t7") table t7 {
+    @name("IngressP.t7") table t7 {
         actions = {
             setx1_8();
             noop_14();
@@ -144,7 +144,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_14();
     }
-    @ignore_table_dependency("t7") @name("t8") table t8 {
+    @ignore_table_dependency("t7") @name("IngressP.t8") table t8 {
         actions = {
             setboth_0();
             noop_15();
@@ -154,7 +154,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_15();
     }
-    @name("set_port") table set_port {
+    @name("IngressP.set_port") table set_port {
         actions = {
             set_port_act_0();
             noop_16();

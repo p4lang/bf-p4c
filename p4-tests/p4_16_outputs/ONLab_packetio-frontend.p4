@@ -45,13 +45,13 @@ parser ParserImpl(packet_in packet, out headers_t hdr, inout metadata_t meta, in
 }
 
 control ingress(inout headers_t hdr, inout metadata_t meta, inout standard_metadata_t standard_metadata) {
-    @name("send_to_cpu") action send_to_cpu_0() {
+    @name("ingress.send_to_cpu") action send_to_cpu_0() {
         standard_metadata.egress_spec = 9w320;
     }
-    @name("set_egress_port") action set_egress_port_0(PortId_t port) {
+    @name("ingress.set_egress_port") action set_egress_port_0(PortId_t port) {
         standard_metadata.egress_spec = port;
     }
-    @name("table0") table table0 {
+    @name("ingress.table0") table table0 {
         support_timeout = false;
         key = {
             standard_metadata.ingress_port: ternary @name("standard_metadata.ingress_port") ;

@@ -115,3 +115,10 @@ you can locate them with `git status`. To generate the output files without
 running the entire test suite, you can use the following commands:
   - for a P4_14 program: `ctest -L p14_to_16 -R <prog name>`
   - for a P4_16 program: `ctest -L p4 -R <prog name>`
+
+Updating the P4 sample outputs:
+===============================
+
+You need to set the `P4TEST_REPLACE` environment variable:
+
+    P4TEST_REPLACE=1 make check-p4

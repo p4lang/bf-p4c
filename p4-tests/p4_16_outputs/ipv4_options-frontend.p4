@@ -30,7 +30,7 @@ struct user_metadata_t {
 }
 
 parser TopParser(packet_in b, out packet_t p, inout user_metadata_t m, inout standard_metadata_t meta) {
-    @name("ck") Checksum16() ck_1;
+    @name("TopParser.ck") Checksum16() ck_1;
     state start {
         b.extract<ipv4_t>(p.ipv4);
         verify(p.ipv4.version == 4w4, error.IPv4IncorrectVersion);
@@ -40,10 +40,10 @@ parser TopParser(packet_in b, out packet_t p, inout user_metadata_t m, inout sta
 }
 
 control ingress(inout packet_t p, inout user_metadata_t m, inout standard_metadata_t meta) {
-    @name("sendToCPU") action sendToCPU_0() {
+    @name("ingress.sendToCPU") action sendToCPU_0() {
         meta.egress_spec = 9w64;
     }
-    @name("forward") action forward_0() {
+    @name("ingress.forward") action forward_0() {
         meta.egress_spec = 9w1;
     }
     apply {

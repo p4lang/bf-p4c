@@ -24,11 +24,11 @@ parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intr
 }
 
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    @name("act") action act_0(bit<9> port) {
+    @name("IngressP.act") action act_0(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
         hdr.data.b1 = hdr.data.b2 + (bit<8>)hdr.data.f1;
     }
-    @name("test") table test {
+    @name("IngressP.test") table test {
         actions = {
             act_0();
         }

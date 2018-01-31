@@ -33,19 +33,19 @@ parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intr
 }
 
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    @name("noop") action noop_0() {
+    @name("IngressP.noop") action noop_0() {
     }
-    @name("noop") action noop_2() {
+    @name("IngressP.noop") action noop_2() {
     }
-    @name("init_index") action init_index_0(bit<10> p_index, bit<9> port) {
+    @name("IngressP.init_index") action init_index_0(bit<10> p_index, bit<9> port) {
         meta.partition.partition_index = p_index;
         ig_intr_tm_md.ucast_egress_port = port;
     }
-    @name("first") action first_0(bit<32> f2, bit<16> h2) {
+    @name("IngressP.first") action first_0(bit<32> f2, bit<16> h2) {
         hdr.data.f2 = f2;
         hdr.data.h2 = h2;
     }
-    @name("set_partition") table set_partition {
+    @name("IngressP.set_partition") table set_partition {
         actions = {
             init_index_0();
             noop_0();
@@ -56,7 +56,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_0();
     }
-    @atcam_partition_index("partition.partition_index") @atcam_number_partitions(1024) @name("atcam_match") table atcam_match {
+    @atcam_partition_index("partition.partition_index") @atcam_number_partitions(1024) @name("IngressP.atcam_match") table atcam_match {
         actions = {
             first_0();
             noop_2();

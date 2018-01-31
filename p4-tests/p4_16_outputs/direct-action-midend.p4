@@ -55,7 +55,7 @@ control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
 }
 
 control c(inout packet_t hdrs, inout standard_metadata meta) {
-    @name("a") action a_0() {
+    @name("c.a") action a_0() {
         meta.egress_spec = 9w3;
     }
     @hidden table tbl_a {

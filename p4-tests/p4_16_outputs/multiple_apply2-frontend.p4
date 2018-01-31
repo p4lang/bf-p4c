@@ -29,17 +29,17 @@ parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intr
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     bool tmp;
     bool inner_multiple_tmp_1;
-    @name("inner_multiple.noop") action inner_multiple_noop() {
+    @name("IngressP.inner_multiple.noop") action inner_multiple_noop() {
     }
-    @name("inner_multiple.noop") action inner_multiple_noop_0() {
+    @name("IngressP.inner_multiple.noop") action inner_multiple_noop_0() {
     }
-    @name("inner_multiple.t2_act") action inner_multiple_t2_act(bit<8> b4) {
+    @name("IngressP.inner_multiple.t2_act") action inner_multiple_t2_act(bit<8> b4) {
         hdr.data.b4 = b4;
     }
-    @name("inner_multiple.t3_act") action inner_multiple_t3_act(bit<8> b5) {
+    @name("IngressP.inner_multiple.t3_act") action inner_multiple_t3_act(bit<8> b5) {
         hdr.data.b5 = b5;
     }
-    @name("inner_multiple.t2") table inner_multiple_t2_1 {
+    @name("IngressP.inner_multiple.t2") table inner_multiple_t2_1 {
         actions = {
             inner_multiple_t2_act();
             inner_multiple_noop();
@@ -49,7 +49,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = inner_multiple_noop();
     }
-    @name("inner_multiple.t3") table inner_multiple_t3_1 {
+    @name("IngressP.inner_multiple.t3") table inner_multiple_t3_1 {
         actions = {
             inner_multiple_t3_act();
             inner_multiple_noop_0();
@@ -60,17 +60,17 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         default_action = inner_multiple_noop_0();
     }
     bool inner_multiple_tmp_2;
-    @name("inner_multiple.noop") action inner_multiple_noop_5() {
+    @name("IngressP.inner_multiple.noop") action inner_multiple_noop_5() {
     }
-    @name("inner_multiple.noop") action inner_multiple_noop_6() {
+    @name("IngressP.inner_multiple.noop") action inner_multiple_noop_6() {
     }
-    @name("inner_multiple.t2_act") action inner_multiple_t2_act_0(bit<8> b4) {
+    @name("IngressP.inner_multiple.t2_act") action inner_multiple_t2_act_0(bit<8> b4) {
         hdr.data.b4 = b4;
     }
-    @name("inner_multiple.t3_act") action inner_multiple_t3_act_0(bit<8> b5) {
+    @name("IngressP.inner_multiple.t3_act") action inner_multiple_t3_act_0(bit<8> b5) {
         hdr.data.b5 = b5;
     }
-    @name("inner_multiple.t2") table inner_multiple_t2_2 {
+    @name("IngressP.inner_multiple.t2") table inner_multiple_t2_2 {
         actions = {
             inner_multiple_t2_act_0();
             inner_multiple_noop_5();
@@ -80,7 +80,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = inner_multiple_noop_5();
     }
-    @name("inner_multiple.t3") table inner_multiple_t3_2 {
+    @name("IngressP.inner_multiple.t3") table inner_multiple_t3_2 {
         actions = {
             inner_multiple_t3_act_0();
             inner_multiple_noop_6();
@@ -90,17 +90,17 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = inner_multiple_noop_6();
     }
-    @name("noop") action noop_1() {
+    @name("IngressP.noop") action noop_1() {
     }
-    @name("noop") action noop_2() {
+    @name("IngressP.noop") action noop_2() {
     }
-    @name("set_port") action set_port_0(bit<9> port) {
+    @name("IngressP.set_port") action set_port_0(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
     }
-    @name("t1_act") action t1_act_0(bit<8> b3) {
+    @name("IngressP.t1_act") action t1_act_0(bit<8> b3) {
         hdr.data.b3 = b3;
     }
-    @name("t1") table t1 {
+    @name("IngressP.t1") table t1 {
         actions = {
             t1_act_0();
             noop_1();
@@ -110,7 +110,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_1();
     }
-    @name("port_setter") table port_setter {
+    @name("IngressP.port_setter") table port_setter {
         actions = {
             set_port_0();
             noop_2();

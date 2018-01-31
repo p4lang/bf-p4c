@@ -18,7 +18,8 @@
 #
 #
 
-from functools import wraps
+from collections import Counter
+from functools import wraps, partial
 import sys
 import threading
 import time
@@ -38,6 +39,15 @@ from p4.config import p4info_pb2
 import google.protobuf.text_format
 
 from unittest import SkipTest
+
+# See https://gist.github.com/carymrobbins/8940382
+# functools.partialmethod is introduced in Python 3.4
+class partialmethod(partial):
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return partial(self.func, instance,
+                       *(self.args or ()), **(self.keywords or {}))
 
 # Convert integer (with length) to binary byte string
 # Equivalent to Python 3.2 int.to_bytes
@@ -163,11 +173,32 @@ class P4RuntimeTest(BaseTest):
         with open(proto_txt_path, "rb") as fin:
             google.protobuf.text_format.Merge(fin.read(), self.p4info)
 
+        self.import_p4info_names()
+
         # used to store write requests sent to the P4Runtime server, useful for
         # autocleanup of tests (see definition of autocleanup decorator below)
         self._reqs = []
 
         self.set_up_stream()
+
+    # In order to make writing tests easier, we accept any suffix that uniquely
+    # identifies the object among p4info objects of the same type.
+    def import_p4info_names(self):
+        self.p4info_obj_map = {}
+        suffix_count = Counter()
+        for obj_type in ["tables", "action_profiles", "actions", "counters",
+                         "direct_counters"]:
+            for obj in getattr(self.p4info, obj_type):
+                pre = obj.preamble
+                suffix = None
+                for s in reversed(pre.name.split(".")):
+                    suffix = s if suffix is None else s + "." + suffix
+                    key = (obj_type, suffix)
+                    self.p4info_obj_map[key] = obj
+                    suffix_count[key] += 1
+        for key, c in suffix_count.items():
+            if c > 1:
+                del self.p4info_obj_map[key]
 
     def set_up_stream(self):
         self.stream_out_q = Queue.Queue()
@@ -247,42 +278,31 @@ class P4RuntimeTest(BaseTest):
             return None
         return self._swports[idx]
 
-    def get_id(self, name, attr):
-        for o in getattr(self.p4info, attr):
-            pre = o.preamble
-            if pre.name == name:
-                return pre.id
+    def get_obj(self, obj_type, name):
+        key = (obj_type, name)
+        return self.p4info_obj_map.get(key, None)
 
-    def get_table_id(self, name):
-        return self.get_id(name, "tables")
-
-    def get_ap_id(self, name):
-        return self.get_id(name, "action_profiles")
-
-    def get_action_id(self, name):
-        return self.get_id(name, "actions")
-
-    def get_counter_id(self, name):
-        return self.get_id(name, "counters")
-
-    def get_direct_counter_id(self, name):
-        return self.get_id(name, "direct_counters")
+    def get_obj_id(self, obj_type, name):
+        obj = self.get_obj(obj_type, name)
+        if obj is None:
+            return None
+        return obj.preamble.id
 
     def get_param_id(self, action_name, name):
-        for a in self.p4info.actions:
-            pre = a.preamble
-            if pre.name == action_name:
-                for p in a.params:
-                    if p.name == name:
-                        return p.id
+        a = self.get_obj("actions", action_name)
+        if a is None:
+            return None
+        for p in a.params:
+            if p.name == name:
+                return p.id
 
     def get_mf_id(self, table_name, name):
-        for t in self.p4info.tables:
-            pre = t.preamble
-            if pre.name == table_name:
-                for mf in t.match_fields:
-                    if mf.name == name:
-                        return mf.id
+        t = self.get_obj("tables", table_name)
+        if t is None:
+            return None
+        for mf in t.match_fields:
+            if mf.name == name:
+                return mf.id
 
     # These are attempts at convenience functions aimed at making writing
     # P4Runtime PTF tests easier.
@@ -520,6 +540,22 @@ class P4RuntimeTest(BaseTest):
             update.type = p4runtime_pb2.Update.DELETE
             new_req.updates.add().CopyFrom(update)
         rep = self._write(new_req)
+
+# Add p4info object and object id "getters" for each object type; these are just
+# wrappers around P4RuntimeTest.get_obj and P4RuntimeTest.get_obj_id.
+# For example: get_table(x) and get_table_id(x) respectively call
+# get_obj("tables", x) and get_obj_id("tables", x)
+for obj_type, nickname in [("tables", "table"),
+                           ("action_profiles", "ap"),
+                           ("actions", "action"),
+                           ("counters", "counter"),
+                           ("direct_counters", "direct_counter")]:
+    name = "_".join(["get", nickname])
+    setattr(P4RuntimeTest, name, partialmethod(
+        P4RuntimeTest.get_obj, obj_type))
+    name = "_".join(["get", nickname, "id"])
+    setattr(P4RuntimeTest, name, partialmethod(
+        P4RuntimeTest.get_obj_id, obj_type))
 
 # this decorator can be used on the runTest method of P4Runtime PTF tests
 # when it is used, the undo_write_requests will be called at the end of the test

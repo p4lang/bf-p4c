@@ -9,7 +9,7 @@ updates {
   type: INSERT
   entity {
     table_entry {
-      table_id: 33619357  # vrf_classifier
+      table_id: 33568747  # vrf_classifier
       match {
         field_id: 1  # hdr.ethernet.ether_type
         exact {
@@ -45,7 +45,7 @@ updates {
       }
       action {
         action {
-          action_id: 16793447  # set_vrf
+          action_id: 16786924  # set_vrf
 	  params {
 	    param_id: 1 # vrf_id
 	    value: "\x00\x00\x00\x01" # vrf ID 1
@@ -61,7 +61,7 @@ updates {
   type: INSERT
   entity {
     table_entry {
-      table_id: 33619357  # vrf_classifier
+      table_id: 33568747  # vrf_classifier
       match {
         field_id: 1  # hdr.ethernet.ether_type
         exact {
@@ -97,7 +97,7 @@ updates {
       }
       action {
         action {
-          action_id: 16793447  # set_vrf
+          action_id: 16786924  # set_vrf
 	  params {
 	    param_id: 1 # vrf_id
 	    value: "\x00\x00\x00\x01" # vrf ID 1
@@ -114,7 +114,7 @@ updates {
   type: INSERT
   entity {
     table_entry {
-      table_id: 33568218  # l3_routing_classifier
+      table_id: 33604201  # l3_routing_classifier
       match {
         field_id: 1  # ethernet.dstAddr
         exact {
@@ -134,7 +134,7 @@ updates {
   type: INSERT
   entity {
     table_entry {
-      table_id: 33568218  # l3_routing_classifier
+      table_id: 33604201  # l3_routing_classifier
       match {
         field_id: 1  # ethernet.dstAddr
         exact {
@@ -155,10 +155,10 @@ updates {
   type: INSERT
   entity {
     action_profile_member {
-      action_profile_id: 285270769  # ecmp_action_profile
+      action_profile_id: 285228846  # ecmp_action_profile
       member_id: 1
       action {
-        action_id: 16779406  # set_ecmp_nexthop_info_port
+        action_id: 16805813  # set_ecmp_nexthop_info_port
         params {
           param_id: 1        # port
           value: "\x00\x02"  # softswitch port2
@@ -181,10 +181,10 @@ updates {
   type: INSERT
   entity {
     action_profile_member {
-      action_profile_id: 285270769  # ecmp_action_profile
+      action_profile_id: 285228846  # ecmp_action_profile
       member_id: 3
       action {
-        action_id: 16779406  # set_ecmp_nexthop_info_port
+        action_id: 16805813  # set_ecmp_nexthop_info_port
         params {
           param_id: 1        # port
           value: "\x00\x01"  # softswitch port1
@@ -208,7 +208,7 @@ updates {
   type: INSERT
   entity {
     table_entry {
-      table_id: 33581631  # l3_ipv4_vrf_table
+      table_id: 33577970  # l3_ipv4_vrf_table
       match {
         field_id: 1  # local_metadata.vrf_id
         exact {
@@ -235,7 +235,7 @@ updates {
   type: INSERT
   entity {
     table_entry {
-      table_id: 33581631  # l3_ipv4_vrf_table
+      table_id: 33577970  # l3_ipv4_vrf_table
       match {
         field_id: 1  # local_metadata.vrf_id
         exact {

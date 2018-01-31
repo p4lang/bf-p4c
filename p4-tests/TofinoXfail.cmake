@@ -82,6 +82,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/port_vlan_mapping.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "metadata arrays not handled in InstanceRef::InstanceRef"
+  testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
+  )
+
 # BRIG-108
 p4c_add_xfail_reason("tofino"
   "No format in action table"
@@ -841,6 +846,7 @@ p4c_add_xfail_reason("tofino"
   "the packing is too complicated due to either hash distribution or attached outputs"
   extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   testdata/p4_14_samples/meter1.p4
+  testdata/p4_16_samples/named_meter_1-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1070,13 +1076,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/action_chain_limits.p4
   )
 
+# BRIG-435
 p4c_add_xfail_reason("tofino"
-  "metadata arrays not handled in InstanceRef::InstanceRef"
-  testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
+  "all_structs inconsistent"
+  testdata/p4_16_samples/issue486-bmv2.p4
   )
-
-p4c_add_xfail_reason("tofino"
-  "In the ALU operation over container .*in action .*"
-  testdata/p4_16_samples/named_meter_1-bmv2.p4
-  )
-

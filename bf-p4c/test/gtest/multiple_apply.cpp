@@ -128,9 +128,9 @@ TEST_F(MultipleApplyTest, NonMatchingSequences) {
 
     MultipleApply ma;
     test->pipe->apply(ma);
-    EXPECT_TRUE(ma.distinct_error("t2"));
-    EXPECT_TRUE(ma.distinct_error("t3"));
-    EXPECT_FALSE(ma.distinct_error("t1"));
+    EXPECT_TRUE(ma.distinct_error("ingress.t2"));
+    EXPECT_TRUE(ma.distinct_error("ingress.t3"));
+    EXPECT_FALSE(ma.distinct_error("ingress.t1"));
 }
 
 /** Because the gateway conditionals are different on t2, due to the constraint enforced by
@@ -156,7 +156,7 @@ TEST_F(MultipleApplyTest, NonMatchingConditionals) {
 
     MultipleApply ma;
     test->pipe->apply(ma);
-    EXPECT_TRUE(ma.gateway_chain_error("t2"));
+    EXPECT_TRUE(ma.gateway_chain_error("ingress.t2"));
 }
 
 /** The gateway conditional on this test are the same, but the next table of that gateways
@@ -183,8 +183,8 @@ TEST_F(MultipleApplyTest, OppositeSequences) {
 
     MultipleApply ma;
     test->pipe->apply(ma);
-    EXPECT_TRUE(ma.gateway_chain_error("t2"));
-    EXPECT_TRUE(ma.gateway_chain_error("t3"));
+    EXPECT_TRUE(ma.gateway_chain_error("ingress.t2"));
+    EXPECT_TRUE(ma.gateway_chain_error("ingress.t3"));
 
 }
 
@@ -209,7 +209,7 @@ TEST_F(MultipleApplyTest, EquivalentGatewayBug) {
 
     MultipleApply ma;
     test->pipe->apply(ma);
-    EXPECT_TRUE(ma.gateway_chain_error("t2"));
+    EXPECT_TRUE(ma.gateway_chain_error("ingress.t2"));
 }
 
 /** This is just an example that should completely work */
@@ -238,15 +238,15 @@ TEST_F(MultipleApplyTest, ChainedApplications) {
 
     MultipleApply ma;
     test->pipe->apply(ma);
-    EXPECT_FALSE(ma.mutex_error("t1"));
-    EXPECT_FALSE(ma.mutex_error("t2"));
-    EXPECT_FALSE(ma.mutex_error("t3"));
-    EXPECT_FALSE(ma.distinct_error("t1"));
-    EXPECT_FALSE(ma.distinct_error("t2"));
-    EXPECT_FALSE(ma.distinct_error("t3"));
-    EXPECT_FALSE(ma.gateway_chain_error("t1"));
-    EXPECT_FALSE(ma.gateway_chain_error("t2"));
-    EXPECT_FALSE(ma.gateway_chain_error("t3"));
+    EXPECT_FALSE(ma.mutex_error("ingress.t1"));
+    EXPECT_FALSE(ma.mutex_error("ingress.t2"));
+    EXPECT_FALSE(ma.mutex_error("ingress.t3"));
+    EXPECT_FALSE(ma.distinct_error("ingress.t1"));
+    EXPECT_FALSE(ma.distinct_error("ingress.t2"));
+    EXPECT_FALSE(ma.distinct_error("ingress.t3"));
+    EXPECT_FALSE(ma.gateway_chain_error("ingress.t1"));
+    EXPECT_FALSE(ma.gateway_chain_error("ingress.t2"));
+    EXPECT_FALSE(ma.gateway_chain_error("ingress.t3"));
 } 
 
 /** Currently direct action calls are created as separate tables, and some equivalence check
@@ -269,7 +269,7 @@ TEST_F(MultipleApplyTest, DirectAction) {
 
     MultipleApply ma;
     test->pipe->apply(ma);
-    EXPECT_TRUE(ma.distinct_error("t2"));
+    EXPECT_TRUE(ma.distinct_error("ingress.t2"));
 }
 
 /** All applies of a table must be mutually exclusive */
@@ -289,7 +289,7 @@ TEST_F(MultipleApplyTest, NonMutuallyExclusive) {
 
     MultipleApply ma;
     test->pipe->apply(ma);
-    EXPECT_TRUE(ma.mutex_error("t2"));
+    EXPECT_TRUE(ma.mutex_error("ingress.t2"));
 }
 
 /** Even though the conditionals of t2 are logically exclusive, the mutually exclusive algorithm
@@ -311,7 +311,7 @@ TEST_F(MultipleApplyTest, LogicallyMutuallyExclusive) {
 
     MultipleApply ma;
     test->pipe->apply(ma);
-    EXPECT_TRUE(ma.mutex_error("t2"));
+    EXPECT_TRUE(ma.mutex_error("ingress.t2"));
 }
 
 }  // namespace Test
