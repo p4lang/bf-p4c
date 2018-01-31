@@ -3,20 +3,20 @@
 #define YES(X)  X
 #define NO(X)
 
-#define JBAY_POV(GRESS, VAL, REG)                                                               \
-    if (VAL.pov) REG.pov = deparser.pov[GRESS].at(&VAL.pov->reg) + VAL.pov->lo;                 \
+#define JBAY_INTRINSIC_POV(GRESS, VAL, REG)                                                     \
+    if (VAL.pov) REG.pov = POV_BIT_POS(deparser.pov[GRESS], VAL.pov);                           \
     else error(VAL.val.lineno, "POV bit required for jbay");
 
 #define JBAY_SIMPLE_INTRINSIC(GRESS, VAL, REG, IFSHIFT)                                         \
     REG.phv = VAL.val->reg.deparser_id();                                                       \
-    JBAY_POV(GRESS, VAL, REG)                                                                   \
+    JBAY_INTRINSIC_POV(GRESS, VAL, REG)                                                         \
     IFSHIFT(REG.shft = intrin.vals[0].val->lo;)
 
 #define JBAY_ARRAY_INTRINSIC(GRESS, VAL, ARRAY, REG, POV, IFSHIFT)                              \
     for (auto &r : ARRAY) {                                                                     \
         r.REG.phv = VAL.val->reg.deparser_id();                                                 \
         IFSHIFT(r.REG.shft = intrin.vals[0].val->lo;) }                                         \
-    JBAY_POV(GRESS, VAL, POV)
+    JBAY_INTRINSIC_POV(GRESS, VAL, POV)
 
 #define EI_INTRINSIC(NAME, IFSHIFT)                                                             \
     DEPARSER_INTRINSIC(JBay, EGRESS, NAME, 1) {                                                 \
@@ -118,7 +118,7 @@ DEPARSER_INTRINSIC(JBay, INGRESS, xid, 2) {
 #define JBAY_SIMPLE_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT)                            \
     DEPARSER_DIGEST(JBay, GRESS, NAME, CNT, can_shift = true; ) {                       \
         SEL.phv = data.select.val->reg.deparser_id();                                   \
-        JBAY_POV(GRESS, data.select, SEL)                                               \
+        JBAY_INTRINSIC_POV(GRESS, data.select, SEL)                                     \
         SEL.shft = data.shift + data.select->lo;                                        \
         SEL.disable_ = 0;                                                               \
         JBAY_DIGEST_TABLE(GRESS, TBL, IFID, YES, CNT) }
@@ -126,7 +126,7 @@ DEPARSER_INTRINSIC(JBay, INGRESS, xid, 2) {
 #define JBAY_ARRAY_DIGEST(GRESS, NAME, ARRAY, TBL, SEL, IFID, CNT)                      \
     DEPARSER_DIGEST(JBay, GRESS, NAME, CNT, can_shift = true; ) {                       \
         SEL.phv = data.select.val->reg.deparser_id();                                   \
-        JBAY_POV(GRESS, data.select, SEL)                                               \
+        JBAY_INTRINSIC_POV(GRESS, data.select, SEL)                                     \
         SEL.shft = data.shift + data.select->lo;                                        \
         SEL.disable_ = 0;                                                               \
         for (auto &r : ARRAY) {                                                         \
@@ -245,7 +245,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
         if (byte && (clot || byte + size > CHUNK_SIZE ||
                      (prev_pov && *ent.pov != prev_pov))) {
             regs.chunk_info[ch].chunk_vld = 1;
-            regs.chunk_info[ch].pov = pov.at(&prev_pov.reg) + prev_pov.lo;
+            regs.chunk_info[ch].pov = POV_BIT_POS(pov, prev_pov);
             regs.chunk_info[ch].seg_vld = 0;
             regs.chunk_info[ch].seg_slice = byte & 7;
             regs.chunk_info[ch].seg_sel = byte >> 3;
@@ -264,7 +264,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
                     seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
                     regs.fd_tags[ch/CHUNKS_PER_GROUP].segment_tag[seg_tag] = clot_tag; }
                 regs.chunk_info[ch].chunk_vld = 1;
-                regs.chunk_info[ch].pov = pov.at(&ent.pov->reg) + ent.pov->lo;
+                regs.chunk_info[ch].pov = POV_BIT_POS(pov, ent.pov);
                 regs.chunk_info[ch].seg_vld = 1;
                 regs.chunk_info[ch].seg_sel = seg_tag;
                 regs.chunk_info[ch].seg_slice = i/8U; }
@@ -277,7 +277,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
         prev_pov = *ent.pov; }
     if (byte > 0) {
         regs.chunk_info[ch].chunk_vld = 1;
-        regs.chunk_info[ch].pov = pov.at(&prev_pov.reg) + prev_pov.lo;
+        regs.chunk_info[ch].pov = POV_BIT_POS(pov, prev_pov);
         regs.chunk_info[ch].seg_vld = 0;  // no CLOTs yet
         regs.chunk_info[ch].seg_slice = byte & 7;
         regs.chunk_info[ch].seg_sel = byte >> 3; }
@@ -432,7 +432,7 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
         if (!val.pov) {
             error(val.val.lineno, "POV bit required for jbay");
             continue; }
-        unsigned bit = pov.at(&val.pov->reg) + val.pov->lo;
+        unsigned bit = POV_BIT_POS(pov, val.pov);
         if (pov_map.count(bit)) continue;
         for (unsigned i = 0; i < byte; ++i) {
             if (pov_cfg.byte_sel[i] == bit/8U) {
@@ -450,7 +450,7 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
         unsigned mask = (1 << ((val->hi+1)/8U)) - (1 << (val->lo/8U));
         auto &remap = jbay_phv2cksum[val->reg.deparser_id()];
         if (!val.pov) continue;
-        int povbit = pov_map.at(pov.at(&val.pov->reg) + val.pov->lo);
+        int povbit = pov_map.at(POV_BIT_POS(pov, val.pov));
         if (remap[1] >= 0)
             swap ^= write_jbay_checksum_entry(phv_entries.entry[remap[1]], mask >> 2, swap, povbit,
                                               val.lineno, val->reg.name, unit);

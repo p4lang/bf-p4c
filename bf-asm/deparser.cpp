@@ -9,6 +9,35 @@
 
 extern unsigned unique_action_handle;
 
+/* This function converts bit position in a PHV container (which uses little endian bit order) to
+   bit position in a POV word entry.
+
+   JBay (but not tofino) uses mixed-endian for POV layout: big-endian byte ordering combined with
+   little endian bit ordering within the bits. The result is that "bit 0" of a container is the
+   least significant bit of the most significant byte.
+
+   e.g.   suppose a 16-bit(H) container holds the value of "10110000_01001101"
+        the corrent bit order for this to appear in POV is "01001101_10110000"
+*/
+static unsigned to_big_endian(unsigned bit_pos, unsigned container_size) {
+    assert(container_size % 8 == 0);
+
+    // (container_size / 8 - 1 - bit_pos / 8 ) * 8 + (bit_pos % 8);
+    // superoptimized below by cdodd
+    return bit_pos ^ (container_size - 8);
+}
+
+static unsigned pov_position(unsigned offset, unsigned bitpos_in_container, unsigned container_size) { 
+    return offset + to_big_endian(bitpos_in_container, container_size);
+}
+
+static unsigned pov_position(unsigned offset, Phv::Ref pov_bit) {
+    return pov_position(offset, pov_bit->lo, pov_bit->reg.size);
+}
+
+#define POV_BIT_POS(POV, POV_BIT)                                              \
+    pov_position(POV.at(&POV_BIT->reg), POV_BIT->lo, POV_BIT->reg.size)
+
 Deparser Deparser::singleton_object;
 
 Deparser::Deparser() : Section("deparser") { }

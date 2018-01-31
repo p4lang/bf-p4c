@@ -119,6 +119,9 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
     unsigned pos = 0;
     for (auto &ent : dict) {
         unsigned size = ent.what->size();
+        // FIXME tofino seems to use little endian (byte) for pov words ???
+        // changing to line (to use big endian) below causes test failures
+        // int pov_bit = pov_position(pov[ent.pov->reg.deparser_id()], ent.pov);
         int pov_bit = pov[ent.pov->reg.deparser_id()] + ent.pov->lo;
         if (options.match_compiler) {
             if (ent.what->is<Deparser::FDEntry::Checksum>()) {
