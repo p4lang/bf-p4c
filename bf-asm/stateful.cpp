@@ -180,6 +180,10 @@ void StatefulTable::pass2() {
         actions->stateful_pass2(this);
 }
 
+void StatefulTable::pass3() {
+    LOG1("### Stateful table " << name() << " pass3");
+}
+
 int StatefulTable::direct_shiftcount() const {
     return 64 + METER_ADDRESS_ZERO_PAD - address_shift();
 }

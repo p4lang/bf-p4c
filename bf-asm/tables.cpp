@@ -1403,7 +1403,8 @@ int Table::find_on_actionbus(Format::Field *f, int off, int size) {
 }
 
 void Table::need_on_actionbus(Format::Field *f, int off, int size) {
-    if (action_bus) action_bus->need_alloc(this, f, off, size);
+    if (!action_bus) action_bus = new ActionBus();
+    action_bus->need_alloc(this, f, off, size);
 }
 
 int Table::find_on_actionbus(const char *name, int off, int size, int *len) {
@@ -1411,7 +1412,8 @@ int Table::find_on_actionbus(const char *name, int off, int size, int *len) {
 }
 
 void Table::need_on_actionbus(Table *attached, int off, int size) {
-    if (action_bus) action_bus->need_alloc(this, attached, off, size);
+    if (!action_bus) action_bus = new ActionBus();
+    action_bus->need_alloc(this, attached, off, size);
 }
 
 int Table::find_on_actionbus(HashDistribution *hd, int off, int size) {
@@ -1419,7 +1421,8 @@ int Table::find_on_actionbus(HashDistribution *hd, int off, int size) {
 }
 
 void Table::need_on_actionbus(HashDistribution *hd, int off, int size) {
-    if (action_bus) action_bus->need_alloc(this, hd, off, size);
+    if (!action_bus) action_bus = new ActionBus();
+    action_bus->need_alloc(this, hd, off, size);
 }
 
 int Table::find_on_ixbar(Phv::Slice sl, int group) {

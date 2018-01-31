@@ -38,10 +38,14 @@ void ExactMatchTable::pass2() {
     input_xbar->pass2();
     setup_word_ixbar_group();
     if (actions) actions->pass2(this);
-    if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
     if (format) format->pass2(this);
+}
+
+void ExactMatchTable::pass3() {
+    LOG1("### Exact match table " << name() << " pass3");
+    if (action_bus) action_bus->pass3(this);
 }
 
 /* FIXME -- should have ExactMatchTable::write_merge_regs write some of the merge stuff

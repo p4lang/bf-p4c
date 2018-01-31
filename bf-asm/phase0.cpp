@@ -33,6 +33,10 @@ void Phase0MatchTable::pass2() {
     LOG1("### Phase 0 match table " << name() << " pass2");
 }
 
+void Phase0MatchTable::pass3() {
+    LOG1("### Phase 0 match table " << name() << " pass3");
+}
+
 template<class REGS>
 void Phase0MatchTable::write_regs(REGS &) {
     LOG1("### Phase 0 match table " << name() << " write_regs");

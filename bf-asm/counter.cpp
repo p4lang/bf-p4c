@@ -52,6 +52,10 @@ void CounterTable::pass2() {
     LOG1("### Counter table " << name() << " pass2");
 }
 
+void CounterTable::pass3() {
+    LOG1("### Counter table " << name() << " pass3");
+}
+
 static int counter_size[]         = { 0, 0, 1, 2, 3, 0, 4 };
 static int counter_masks[]        = { 0, 7, 3, 4, 1, 0, 0 };
 static int counter_shifts[]       = { 0, 3, 2, 3, 1, 0, 2 };

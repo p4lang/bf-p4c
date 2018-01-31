@@ -115,6 +115,17 @@ bool AttachedTables::run_at_eop() {
     return false;
 }
 
+bool AttachedTables::is_attached(const Table *tbl) const {
+    if (selector == tbl) return true;
+    for (auto &s : stats)
+        if (s == tbl) return true;
+    for (auto &m : meters)
+        if (m == tbl) return true;
+    for (auto &s : statefuls)
+        if (s == tbl) return true;
+    return false;
+}
+
 void AttachedTables::pass1(MatchTable *self) {
     if (selector.check()) {
         if (selector->set_match_table(self, true) != Table::SELECTION)

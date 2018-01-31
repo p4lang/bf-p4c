@@ -81,6 +81,48 @@ int ActionTable::find_on_actionbus(const char *name, int off, int size, int *len
     return -1;
 }
 
+void ActionTable::need_on_actionbus(Format::Field *f, int off, int size) {
+    if (f->fmt == format) {
+        Table::need_on_actionbus(f, off, size);
+        return; }
+    for (auto af : Values(action_formats)) {
+        if (f->fmt == af) {
+            Table::need_on_actionbus(f, off, size);
+            return; } }
+    for (auto *match_table : match_tables) {
+        assert((Table *)match_table != (Table *)this);
+        if (f->fmt == match_table->format) {
+            match_table->need_on_actionbus(f, off, size);
+            return; } }
+    assert(!"Can't find table associated with field");
+}
+
+void ActionTable::need_on_actionbus(Table *attached, int off, int size) {
+    int attached_count = 0;
+    for (auto *match_table : match_tables) {
+        if (match_table->is_attached(attached)) {
+            match_table->need_on_actionbus(attached, off, size);
+            ++attached_count; } }
+    // FIXME -- if its attached to more than one match table (mutex match tables that
+    // share attached action table and attached other table), then it needs to be allocated
+    // to the same slot of the action bus in all of the match tables.  Not sure if we do that
+    // properly
+    assert(attached_count == 1);
+}
+
+void ActionTable::need_on_actionbus(HashDistribution *hd, int off, int size) {
+    for (auto &hash_dist : this->hash_dist) {
+        if (&hash_dist == hd) {
+            Table::need_on_actionbus(hd, off, size);
+            return; } }
+    for (auto *match_table : match_tables) {
+        for (auto &hash_dist : match_table->hash_dist) {
+            if (&hash_dist == hd) {
+                match_table->need_on_actionbus(hd, off, size);
+                return; } } }
+    assert(!"Can't find table associated with hash_dist");
+}
+
 void ActionTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) {
     width = 1;
     depth = layout_size();
@@ -228,7 +270,11 @@ void ActionTable::pass2() {
         /* need all formats to be the same size, so pad them out */
         pad_format_fields(); }
     if (actions) actions->pass2(this);
-    action_bus->pass2(this);
+}
+
+void ActionTable::pass3() {
+    LOG1("### Action table " << name() << " pass3");
+    action_bus->pass3(this);
 }
 
 template<class REGS>

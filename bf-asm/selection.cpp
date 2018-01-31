@@ -119,6 +119,10 @@ void SelectionTable::pass2() {
         error(lineno, "No input xbar in selector table %s", name()); }
 }
 
+void SelectionTable::pass3() {
+    LOG1("### Selection table " << name() << " pass3");
+}
+
 template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;

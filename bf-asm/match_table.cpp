@@ -70,6 +70,10 @@ bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
     return false;
 }
 
+bool MatchTable::is_attached(const Table *tbl) const {
+    return tbl && tbl == gateway || tbl == idletime || attached.is_attached(tbl);
+}
+
 void MatchTable::pass1(int type) {
     /* FIXME -- move common stuff from Exact/Ternary/HashAction here. */
     if (table_counter >= GATEWAY_MISS && !gateway)

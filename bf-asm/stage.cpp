@@ -148,9 +148,11 @@ void AsmStage::process() {
 
 void AsmStage::output(json::map &ctxt_json) {
     for (unsigned i = 0; i < stage.size(); i++) {
-        //if  (stage[i].tables.empty()) continue;
         for (auto table : stage[i].tables)
             table->pass2(); }
+    for (unsigned i = 0; i < stage.size(); i++) {
+        for (auto table : stage[i].tables)
+            table->pass3(); }
     if (stage.size() > Target::NUM_MAU_STAGES())
         error(stage.back().tables.empty() ? 0 : stage.back().tables[0]->lineno,
               "%s supports up to %d stages, using %zd", Target::name(), Target::NUM_MAU_STAGES(),

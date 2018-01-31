@@ -179,10 +179,14 @@ void AlgTcamMatchTable::pass2() {
         // Assume that any hash bits usuable for select are used for select
         ixbar_mask[i] = ixbar_use.getrange(EXACT_HASH_FIRST_SELECT_BIT, EXACT_HASH_SELECT_BITS); }
     if (actions) actions->pass2(this);
-    if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
     if (format) format->pass2(this);
+}
+
+void AlgTcamMatchTable::pass3() {
+    LOG1("### ATCAM match table " << name() << " pass3");
+    if (action_bus) action_bus->pass3(this);
 }
 
 template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {

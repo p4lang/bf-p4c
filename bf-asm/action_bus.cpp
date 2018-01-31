@@ -543,9 +543,9 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
 }
 
 
-void ActionBus::pass2(Table *tbl) {
+void ActionBus::pass3(Table *tbl) {
     bool is_action_data = dynamic_cast<ActionTable *>(tbl) != nullptr;
-    LOG1("ActionBus::pass2(" << tbl->name() << ") " << (is_action_data ? "[action]" : "[immed]"));
+    LOG1("ActionBus::pass3(" << tbl->name() << ") " << (is_action_data ? "[action]" : "[immed]"));
     for (auto &d : need_place)
         for (auto &bits : d.second)
             alloc_field(tbl, d.first, bits.first, bits.second);
@@ -624,6 +624,9 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
                 data_size = std::min(el.second.size, f->size - data.second);
                 srcname = "field " + tbl->find_field(f);
             } else if (data.first.type == Source::TableOutput) {
+                if (data.first.table->home_row() != home_row) {
+                    // skip tables not on this home row
+                    continue; }
                 data_bit = data.second;
                 data_size = el.second.size;
                 srcname = "table " + data.first.table->name_;
@@ -634,7 +637,7 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
                  " (" << data.second << ".." << (data.second + data_size - 1) << ")" <<
                  " [" << data_bit << ".." << (data_bit+data_size-1) << "]");
             if (size) {
-                assert(bit == data_bit);  // checked in pass1; maintained by pass2
+                assert(bit == data_bit);  // checked in pass1; maintained by pass3
                 size = std::max(size, data_size);
             } else {
                 bit = data_bit;

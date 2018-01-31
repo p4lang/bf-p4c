@@ -276,6 +276,9 @@ void GatewayTable::pass2() {
                     stage->gw_payload_use[row.row][row.bus & 1] = this; } } }
     if (input_xbar) input_xbar->pass2();
 }
+void GatewayTable::pass3() {
+    LOG1("### Gateway table " << name() << " pass3");
+}
 
 static unsigned match_input_use(const std::vector<GatewayTable::MatchKey> &match) {
     unsigned rv = 0;

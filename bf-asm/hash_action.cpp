@@ -71,9 +71,13 @@ void HashActionTable::pass2() {
     if (input_xbar)
         input_xbar->pass2();
     if (actions) actions->pass2(this);
-    if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
+}
+
+void HashActionTable::pass3() {
+    LOG1("### Hash Action " << name() << " pass3");
+    if (action_bus) action_bus->pass3(this);
 }
 
 template<class REGS>

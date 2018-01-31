@@ -38,6 +38,10 @@ void IdletimeTable::pass2() {
     LOG1("### Idletime table " << name() << " pass2");
 }
 
+void IdletimeTable::pass3() {
+    LOG1("### Idletime table " << name() << " pass3");
+}
+
 static int precision_bits[] = { 0, 0, 1, 2, 0, 0, 3 };
 
 template<class REGS>

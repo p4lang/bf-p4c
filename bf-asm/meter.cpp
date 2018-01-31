@@ -88,6 +88,10 @@ void MeterTable::pass2() {
     if (input_xbar) input_xbar->pass2();
 }
 
+void MeterTable::pass3() {
+    LOG1("### Meter table " << name() << " pass3");
+}
+
 int MeterTable::direct_shiftcount() const {
     return 64 + METER_ADDRESS_ZERO_PAD - 7;  // meters are always 128 bits wide
 }

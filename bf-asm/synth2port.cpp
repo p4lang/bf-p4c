@@ -48,6 +48,10 @@ void Synth2Port::pass2() {
     LOG1("### Synth2Port table " << name() << " pass2");
 }
 
+void Synth2Port::pass3() {
+    LOG1("### Synth2Port table " << name() << " pass3");
+}
+
 template<class REGS>
 void Synth2Port::write_regs(REGS &) {
 }

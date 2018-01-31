@@ -253,7 +253,6 @@ void TernaryMatchTable::pass2() {
                 break; }
         if (indirect_bus < 0)
             error(lineno, "No ternary indirect bus available for table %s", name()); }
-    if (action_bus) action_bus->pass2(this);
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
@@ -272,6 +271,11 @@ void TernaryMatchTable::pass2() {
                     set_partition_field_name(act->p4_params_list[0].name);
             } else { 
                 error(lineno, "For ALPM pre_classifier '%s-%s' only 1 action expected to set parition index but found %d", p4_name(), name(), acts->count()); } } }
+}
+
+void TernaryMatchTable::pass3() {
+    LOG1("### Ternary match table " << name() << " pass3");
+    if (action_bus) action_bus->pass3(this);
 }
 
 extern int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable);
@@ -693,8 +697,12 @@ void TernaryIndirectTable::pass2() {
     if (!match_table)
         error(lineno, "No match table for ternary indirect table %s", name());
     if (actions) actions->pass2(this);
-    if (action_bus) action_bus->pass2(this);
     if (format) format->pass2(this);
+}
+
+void TernaryIndirectTable::pass3() {
+    LOG1("### Ternary indirect table " << name() << " pass3");
+    if (action_bus) action_bus->pass3(this);
 }
 
 template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
