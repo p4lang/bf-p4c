@@ -153,6 +153,8 @@ class GetTofinoParser {
     static const IR::BFN::Parser*
     extract(gress_t gress, const IR::P4Parser* parser);
 
+    bool addTransition(IR::BFN::ParserState* state, match_t matchVal, int shift, cstring nextState);
+
  private:
     explicit GetTofinoParser(gress_t gress) : gress(gress) { }
 
@@ -184,6 +186,25 @@ GetTofinoParser::extract(gress_t gress, const IR::P4Parser* parser) {
     auto* startState = getter.getState(getter.p4StateNameToStateName.at("start"));
     return new IR::BFN::Parser(gress, startState);
 }
+
+bool GetTofinoParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,
+    int shift, cstring nextState) {
+    auto* transition = new IR::BFN::Transition(matchVal, shift);
+    state->transitions.push_back(transition);
+
+    AutoPushTransition newTransition(transitionStack, state, transition);
+    if (newTransition.isValid) {
+        BUG_CHECK(p4StateNameToStateName.count(nextState),
+                  "Transition to unknown P4 state: %1%", nextState);
+        transition->next =
+          getState(p4StateNameToStateName.at(nextState));
+    } else {
+        return false;  // One bad transition means the whole state's bad.
+    }
+
+    return true;
+}
+
 
 }  // namespace
 
@@ -444,16 +465,17 @@ static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
 }
 
 static match_t buildMatch(int match_size, const IR::Expression *key,
-                          const IR::Vector<IR::Expression> &select) {
+                          const IR::Vector<IR::Expression> &selectExprs,
+                          int pad) {
     if (key->is<IR::DefaultExpression>())
         return match_t();
     else if (auto k = key->to<IR::Constant>())
-        return match_t(match_size, k->asLong(), ~0ULL);
+        return match_t(match_size + pad, k->asLong() << pad, ~0ULL << pad);
     else if (auto mask = key->to<IR::Mask>())
         return match_t(match_size, mask->left->to<IR::Constant>()->asLong(),
                                    mask->right->to<IR::Constant>()->asLong());
     else if (auto list = key->to<IR::ListExpression>())
-        return buildListMatch(&list->components, select);
+        return buildListMatch(&list->components, selectExprs);
     else
         BUG("Invalid select case expression %1%", key);
     return match_t();
@@ -461,27 +483,29 @@ static match_t buildMatch(int match_size, const IR::Expression *key,
 
 namespace {
 
-const IR::Node* rewriteSelect(const IR::Expression* component, int bitShift) {
+const IR::Node* rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
+                                  nw_bitrange& bitrange) {
     // We can transform a LookaheadExpression immediately to a concrete select
     // on bits in the input buffer.
-    if (auto* lookahead = component->to<IR::BFN::LookaheadExpression>()) {
+    if (auto* lookahead = selectExpr->to<IR::BFN::LookaheadExpression>()) {
         auto finalRange = lookahead->bitRange().shiftedByBits(bitShift);
+        bitrange = finalRange;
         return new IR::BFN::Select(new IR::BFN::PacketRVal(finalRange), lookahead);
     }
 
     // We can split a Concat into multiple selects. Note that this is quite
     // unlike a Slice; the Concat operands may not even be adjacent in the input
     // buffer, so this is really two primitive select operations.
-    if (auto* concat = component->to<IR::Concat>()) {
+    if (auto* concat = selectExpr->to<IR::Concat>()) {
         auto* rv = new IR::Vector<IR::BFN::Select>;
-        rv->pushBackOrAppend(rewriteSelect(concat->left, bitShift));
-        rv->pushBackOrAppend(rewriteSelect(concat->right, bitShift));
+        rv->pushBackOrAppend(rewriteSelectExpr(concat->left, bitShift, bitrange));
+        rv->pushBackOrAppend(rewriteSelectExpr(concat->right, bitShift, bitrange));
         return rv;
     }
 
     // For anything else, we'll have to resolve it later.
-    return new IR::BFN::Select(new IR::BFN::ComputedRVal(component),
-                               component);
+    // FIXME(zma) alright, I believe you have a good reason for that ...
+    return new IR::BFN::Select(new IR::BFN::ComputedRVal(selectExpr), selectExpr);
 }
 
 }  // namespace
@@ -526,51 +550,52 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
     auto bitShift = rewriteStatements.bitTotalShift();
     auto shift = rewriteStatements.byteTotalShift();
 
-    // Handle the simple cases: this state has no successor, or it transitions
-    // to a single successor state unconditionally.
     LOG2("GetParser::state(" << name << ")");
+
+    // case 1: no select
     if (!state->p4State->selectExpression) return state;
+
+    // case 2: unconditional transition, e.g. accept/reject
     if (auto* path = state->p4State->selectExpression->to<IR::PathExpression>()) {
-        auto* transition = new IR::BFN::Transition(match_t(), shift);
-        state->transitions.push_back(transition);
-
-        AutoPushTransition newTransition(transitionStack, state, transition);
-        if (newTransition.isValid) {
-            BUG_CHECK(p4StateNameToStateName.count(path->path->name),
-                      "Transition to unknown P4 state: %1%", path);
-            transition->next = getState(p4StateNameToStateName.at(path->path->name));
-        } else {
-            return nullptr;  // One bad transition means the whole state's bad.
-        }
-
-        return state;
+        bool ok = addTransition(state, match_t(), shift, path->path->name);
+        return ok ? state : nullptr;
     }
-    if (!state->p4State->selectExpression->is<IR::SelectExpression>())
-        BUG("Invalid select expression %1%", state->p4State->selectExpression);
 
-    // We have a select expression. Lower it to Tofino IR.
+    // case 3: we have a select expression. Lower it to Tofino IR.
+    auto* p4Select = state->p4State->selectExpression->to<IR::SelectExpression>();
+
+    BUG_CHECK(p4Select, "Invalid select expression %1%", state->p4State->selectExpression);
+
+    auto& selectExprs = p4Select->select->components;
+    auto& selectCases = p4Select->selectCases;
+
+    // FIXME multiple exprs can share match if they reside in same byte
+    // FIXME duplicated match exprs, is this legal in the language?
+    // FIXME non byte aligned select expression
+
     int matchSize = 0;
-    auto selectExpr = state->p4State->selectExpression->to<IR::SelectExpression>();
-    for (auto* component : selectExpr->select->components) {
-        matchSize += component->type->width_bits();
-        state->selects.pushBackOrAppend(rewriteSelect(component, bitShift));
+    int pad = 0;
+
+    for (auto* selectExpr : selectExprs) {
+        nw_bitrange bitrange;
+
+        state->selects.pushBackOrAppend(rewriteSelectExpr(selectExpr, bitShift, bitrange));
+
+        // XXX(zma) tmp fix for non byte-aligned select expr
+        // this won't work if there are mulitple non byte-aligned select exprs
+        // proper fix is to transform all select exprs into byte-aligned
+        // ones before building matches
+        if (bitrange != nw_bitrange())
+            pad = 7 - bitrange.hi % 8;
+
+        matchSize += selectExpr->type->width_bits();
     }
 
     // Generate the outgoing transitions.
-    for (auto selectCase : selectExpr->selectCases) {
-        auto matchVal = buildMatch(matchSize, selectCase->keyset, selectExpr->select->components);
-        auto* transition = new IR::BFN::Transition(matchVal, shift);
-        state->transitions.push_back(transition);
-
-        AutoPushTransition newTransition(transitionStack, state, transition);
-        if (newTransition.isValid) {
-            BUG_CHECK(p4StateNameToStateName.count(selectCase->state->path->name),
-                      "Transition to unknown P4 state: %1%", selectCase);
-            transition->next =
-              getState(p4StateNameToStateName.at(selectCase->state->path->name));
-        } else {
-            return nullptr;  // One bad transition means the whole state's bad.
-        }
+    for (auto selectCase : selectCases) {
+        auto matchVal = buildMatch(matchSize, selectCase->keyset, selectExprs, pad);
+        bool ok = addTransition(state, matchVal, shift, selectCase->state->path->name);
+        if (!ok) return nullptr;
     }
 
     return state;
