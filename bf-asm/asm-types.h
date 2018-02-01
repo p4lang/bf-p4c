@@ -66,6 +66,11 @@ struct value_t {
     value_t &operator[](int i) const {
         assert(type == tVEC || type == tCMD);
         return vec[i]; }
+    bool startsWith(const char *pfx) const {
+        if (type == tSTR) return strncmp(s, pfx, strlen(pfx)) == 0;
+        if (type == tCMD && vec.size > 0 && vec[0].type == tSTR)
+            return strncmp(vec[0].s, pfx, strlen(pfx)) == 0;
+        return false; }
 #endif /* __cplusplus */
 };
 

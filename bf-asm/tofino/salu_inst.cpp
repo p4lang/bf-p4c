@@ -7,12 +7,12 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
-    auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot - 2];
+    auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot - ALU2LO];
     auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
     auto &salu_instr_output_alu = meter_group.stateful.salu_instr_output_alu[act->code];
     salu.salu_op = opc->opcode & 0xf;
     salu.salu_arith = opc->opcode >> 4;
-    salu.salu_pred = predication_encode;
+    salu.salu_pred = predication_encode & Target::Tofino::STATEFUL_PRED_MASK;
     if (tbl->is_dual_mode()) {
         salu_instr_common.salu_datasize = tbl->format->log2size - 1;
         salu_instr_common.salu_op_dual = 1; }
@@ -57,9 +57,9 @@ template<>
 void BitOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
-    auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot-2];
+    auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot-ALU2LO];
     salu.salu_op = opc->opcode & 0xf;
-    salu.salu_pred = predication_encode;
+    salu.salu_pred = predication_encode & Target::Tofino::STATEFUL_PRED_MASK;
     //1b instructions are from mem-lo to alu1-lo
     salu.salu_asrc_memory = 1;
     salu.salu_asrc_memory_index = 0;
@@ -93,13 +93,27 @@ void CmpOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
 void CmpOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
 
+void OutOP::decode_output_mux(Target::Tofino, value_t &op) {
+    static const std::map<std::string, int> ops_mux_lookup = {
+        { "mem_hi", 0 }, { "mem_lo", 1 },
+        { "memory_hi", 0 }, { "memory_lo", 1 },
+        { "phv_hi", 2 }, { "phv_lo", 3 },
+        { "alu_hi", 4 }, { "alu_lo", 5 },
+        { "alu_hi_out", 4 }, { "alu_lo_out", 5 },
+        { "predicate", 6 } };
+    if (op.type == tSTR && ops_mux_lookup.count(op.s))
+        output_mux = ops_mux_lookup.at(op.s);
+    else
+        output_mux = -1;
+}
+
 template<>
 void OutOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_output_alu[act->code];
     if (predication_encode) {
-        salu.salu_output_cmpfn = predication_encode;
+        salu.salu_output_cmpfn = predication_encode & Target::Tofino::STATEFUL_PRED_MASK;
     } else {
         salu.salu_output_cmpfn = STATEFUL_PREDICATION_ENCODE_UNCOND; }
     salu.salu_output_asrc = output_mux;

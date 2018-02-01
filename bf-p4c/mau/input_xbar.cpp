@@ -1,6 +1,7 @@
 #include "bf-p4c/mau/input_xbar.h"
 
 #include <set>
+#include "bf-p4c/device.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
@@ -1537,8 +1538,8 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     return rv;
 }
 
-/** Allocation of the meter input xbar if it is an LPF or WRED.  Specifically have to reserve
- *  bytes 8-11 of a specific input xbar group currently
+/** Allocation of the meter input xbar if it is an LPF or WRED.  On Tofino, specifically have
+ *  to reserve bytes 8-11 of a specific input xbar group currently
  */
 bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const PhvInfo &phv, Use &alloc, bool second_try) {
     if (!mtr->alu_output())
@@ -1548,7 +1549,9 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const PhvInfo &phv, Use &alloc
 
     safe_vector<IXBar::Use::Byte *> alloced;
     std::set<cstring> fields_needed;
-    unsigned byte_mask = ((1U << LPF_INPUT_BYTES) - 1) << METER_ALU_BYTE_OFFSET;
+    unsigned byte_mask = ((1U << LPF_INPUT_BYTES) - 1);
+    if (Device::currentDevice() == "Tofino")
+        byte_mask <<= TOFINO_METER_ALU_BYTE_OFFSET;
     bitrange bits;
     if (auto *finfo = phv.field(mtr->input, &bits)) {
         if (!fields_needed.count(finfo->name)) {
@@ -1581,7 +1584,9 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
     salu->apply(FindFieldsToAlloc(phv, alloc, fields_needed, extra_align));
     unsigned width = salu->width/8U;
     if (!salu->dual) width *= 2;
-    unsigned byte_mask = ((1U << width) - 1) << METER_ALU_BYTE_OFFSET;
+    unsigned byte_mask = (1U << width) - 1;
+    if (Device::currentDevice() == "Tofino")
+        byte_mask <<= TOFINO_METER_ALU_BYTE_OFFSET;
     if (alloc.use.size() == 0) return true;
     if (alloc.use.size() > width) {
         // can't possibly fit

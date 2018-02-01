@@ -22,7 +22,7 @@ struct IXBar {
     static constexpr int HASH_DIST_SLICES = 3;
     static constexpr int HASH_DIST_BITS = 16;
     static constexpr int HASH_DIST_UNITS = 2;
-    static constexpr int METER_ALU_BYTE_OFFSET = 8;
+    static constexpr int TOFINO_METER_ALU_BYTE_OFFSET = 8;
     static constexpr int LPF_INPUT_BYTES = 4;
     static constexpr int TERNARY_GROUPS = StageUse::MAX_TERNARY_GROUPS;
     static constexpr int BYTE_GROUPS = StageUse::MAX_TERNARY_GROUPS/2;

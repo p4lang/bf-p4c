@@ -18,17 +18,22 @@
 #define INSTANTIATE_TARGET_TEMPLATE(TARGET, FUNC, ...) template FUNC(Target::TARGET::__VA_ARGS__);
 #define DECLARE_TARGET_CLASS(TARGET, ...)    class TARGET __VA_ARGS__;
 #define FRIEND_TARGET_CLASS(TARGET, ...)    friend class Target::TARGET __VA_ARGS__;
+#define TARGET_OVERLOAD(TARGET, FN, ...)    FN(Target::TARGET, ##__VA_ARGS__);
+
+#define PER_TARGET_CONSTANTS(M) \
+    M(const char *, name) \
+    M(int, DEPARSER_CHECKSUM_UNITS) M(int, DEPARSER_MAX_POV_BYTES) \
+    M(int, MAU_BASE_DELAY) M(int, MAU_BASE_PREDICATION_DELAY) \
+    M(int, NUM_MAU_STAGES) \
+    M(int, STATEFUL_CMP_UNITS) M(int, STATEFUL_OUTPUT_UNITS) M(int, STATEFUL_PRED_MASK)
+
+#define DECLARE_PER_TARGET_CONSTANT(TYPE, NAME) static TYPE NAME();
 
 class Target {
  public:
     class Phv;
     FOR_ALL_TARGETS(DECLARE_TARGET_CLASS)
-    static int NUM_MAU_STAGES();
-    static int DEPARSER_CHECKSUM_UNITS();
-    static int DEPARSER_MAX_POV_BYTES();
-    static int MAU_BASE_DELAY();
-    static int MAU_BASE_PREDICATION_DELAY();
-    static const char *name();
+    PER_TARGET_CONSTANTS(DECLARE_PER_TARGET_CONSTANT)
 };
 
 #include "gen/tofino/memories.pipe_addrmap.h"
@@ -86,6 +91,9 @@ class Target::Tofino : public Target {
         DEPARSER_MAX_FD_ENTRIES = 384,
         MAU_BASE_DELAY = 20,
         MAU_BASE_PREDICATION_DELAY = 11,
+        STATEFUL_CMP_UNITS = 2,
+        STATEFUL_OUTPUT_UNITS = 1,
+        STATEFUL_PRED_MASK = (1U << (1 << STATEFUL_CMP_UNITS)) - 1,
     };
 };
 
@@ -154,6 +162,9 @@ class Target::JBay : public Target {
         DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
+        STATEFUL_CMP_UNITS = 4,
+        STATEFUL_OUTPUT_UNITS = 4,
+        STATEFUL_PRED_MASK = (1U << (1 << STATEFUL_CMP_UNITS)) - 1,
     };
 };
 void declare_registers(const Target::JBay::top_level_regs *regs);

@@ -55,18 +55,20 @@ struct operand {
                 return;
             }
             int byte = tbl->find_on_ixbar(*reg, tbl->input_xbar->match_group());
+            int base = options.target == TOFINO ? 8 : 0;
             if (byte < 0)
                 error(lineno, "Can't find %s on the input xbar", reg.name());
-            else if (byte != 8 && byte != 8 + size)
-                error(lineno, "%s must be at 64 or %d on ixbar to be used in stateful table %s",
-                      reg.desc().c_str(), 64 + size*8, tbl->name());
+            else if (byte != base && byte != base + size)
+                error(lineno, "%s must be at %d or %d on ixbar to be used in stateful table %s",
+                      reg.desc().c_str(), base*8, (base + size)*8, tbl->name());
             else if (reg->size() > size * 8)
                 error(lineno, "%s is too big for stateful table %s",
                       reg.desc().c_str(), tbl->name());
             else
-                tbl->phv_byte_mask |= ((1U << (reg->size() + 7)/8U) - 1) << (byte - 8); }
+                tbl->phv_byte_mask |= ((1U << (reg->size() + 7)/8U) - 1) << (byte - base); }
         int phv_index(StatefulTable *tbl) override {
-            return tbl->find_on_ixbar(*reg, tbl->input_xbar->match_group()) > 8; }
+            int base = options.target == TOFINO ? 8 : 0;
+            return tbl->find_on_ixbar(*reg, tbl->input_xbar->match_group()) > base; }
     };
     // Operand which directly accesses phv(hi/lo) from Input Xbar
     struct PhvRaw : public Phv {
@@ -164,9 +166,12 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
 }
 
 enum salu_slot_use {
-    CMPLO, CMPHI,
+    CMP0, CMP1, CMP2, CMP3,
     ALU2LO, ALU1LO, ALU2HI, ALU1HI,
-    ALUOUT
+    ALUOUT0, ALUOUT1, ALUOUT2, ALUOUT3,
+    // aliases
+    CMPLO=CMP0, CMPHI=CMP1,
+    ALUOUT=ALUOUT0,
 };
 
 //Abstract interface class for SALU Instructions
@@ -181,11 +186,15 @@ struct SaluInstruction : public Instruction {
 int SaluInstruction::decode_predicate(const value_t &exp) {
     if (exp == "cmplo") return STATEFUL_PREDICATION_ENCODE_CMPLO;
     if (exp == "cmphi") return STATEFUL_PREDICATION_ENCODE_CMPHI;
-    if (exp == "!") return 0xf ^ decode_predicate(exp[1]);
+    if (exp == "cmp0") return STATEFUL_PREDICATION_ENCODE_CMP0;
+    if (Target::STATEFUL_CMP_UNITS() > 1 && exp == "cmp1") return STATEFUL_PREDICATION_ENCODE_CMP1;
+    if (Target::STATEFUL_CMP_UNITS() > 2 && exp == "cmp2") return STATEFUL_PREDICATION_ENCODE_CMP2;
+    if (Target::STATEFUL_CMP_UNITS() > 3 && exp == "cmp3") return STATEFUL_PREDICATION_ENCODE_CMP3;
+    if (exp == "!") return Target::STATEFUL_PRED_MASK() ^ decode_predicate(exp[1]);
     if (exp == "&") return decode_predicate(exp[1]) & decode_predicate(exp[2]);;
     if (exp == "|") return decode_predicate(exp[1]) | decode_predicate(exp[2]);;
     if (exp == "^") return decode_predicate(exp[1]) ^ decode_predicate(exp[2]);;
-    if (exp.type == tINT && exp.i >=0 && exp.i <= 15) return exp.i;
+    if (exp.type == tINT && exp.i >=0 && exp.i <= Target::STATEFUL_PRED_MASK()) return exp.i;
     error(exp.lineno, "Unexpected expression %s in predicate", value_desc(&exp));
     return -1;
 }
@@ -274,7 +283,7 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
         if (op[idx].type == tINT) {
             // Predicate is an integer. no warning for odd values
             rv->predication_encode = op[idx++].i;
-        } else if (op[idx] == "cmplo" || op[idx] == "cmphi" || op[idx] == "!" ||
+        } else if (op[idx].startsWith("cmp") || op[idx] == "!" ||
                    op[idx] == "&" || op[idx] == "|" || op[idx] == "^") {
             // Predicate is an expression
             rv->predication_encode = decode_predicate(op[idx++]);
@@ -507,9 +516,8 @@ struct OutOP : public SaluInstruction {
         void check_num_ops(int lineno, const VECTOR(value_t) &op) const;
     };
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
-    enum mux_select { MEM_HI=0, MEM_LO, PHV_HI, PHV_LO, ALU_HI, ALU_LO, PRED };
-    mux_select output_mux;
-    static const std::map<std::string, int> ops_mux_lookup;
+    int output_mux;
+    FOR_ALL_TARGETS(TARGET_OVERLOAD, void decode_output_mux, value_t &op)
     OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
     std::string name() override { return "output"; };
     void gen_prim_cfg(json::map& out) override { out["name"] = "output"; };
@@ -521,14 +529,6 @@ struct OutOP : public SaluInstruction {
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
-
-const std::map<std::string, int> OutOP::ops_mux_lookup = {
-    { "mem_hi", MEM_HI }, { "mem_lo", MEM_LO },
-    { "memory_hi", MEM_HI }, { "memory_lo", MEM_LO },
-    { "phv_hi", PHV_HI }, { "phv_lo", PHV_LO },
-    { "alu_hi", ALU_HI }, { "alu_lo", ALU_LO },
-    { "alu_hi_out", ALU_HI }, { "alu_lo_out", ALU_LO },
-    { "predicate", PRED } };
 
 static OutOP::Decode opOUTPUT("output");
 
@@ -558,7 +558,7 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
         if(op[idx].type == tINT) {
             rv->predication_encode = op[idx++].i;
         // Predicate is an expression
-        } else if (op[idx] == "cmplo" || op[idx] == "cmphi" || op[idx] == "!" ||
+        } else if (op[idx].startsWith("cmp") || op[idx] == "!" ||
                    op[idx] == "&" || op[idx] == "|" || op[idx] == "^") {
             rv->predication_encode = decode_predicate(op[idx++]);
             if (rv->predication_encode == STATEFUL_PREDICATION_ENCODE_NOOP)
@@ -567,9 +567,8 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
                 warning(op[idx-1].lineno, "Instruction predicate is always true"); } }
     //Check mux operand
     if (idx < op.size) {
-        if (op[idx].type == tSTR &&  OutOP::ops_mux_lookup.count(op[idx].s))
-            rv->output_mux = (mux_select)OutOP::ops_mux_lookup.at(op[idx].s);
-        else
+        SWITCH_FOREACH_TARGET(options.target, rv->decode_output_mux(TARGET(), op[idx]); );
+        if (rv->output_mux < 0)
             error(op[idx].lineno, "invalid operand '%s' for '%s' instruction",
                   value_desc(op[idx]), op[0].s); }
     return rv;

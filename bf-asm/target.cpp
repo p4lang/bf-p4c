@@ -158,32 +158,10 @@ void declare_registers(const Target::JBay::deparser_regs *regs) {
 #endif // HAVE_JBAY
 
 // should these be inline in the header file?
-int Target::NUM_MAU_STAGES() {
-    SWITCH_FOREACH_TARGET(options.target, return TARGET::NUM_MAU_STAGES; )
-    return -1;
+#define DEFINE_PER_TARGET_CONSTANT(TYPE, NAME)                          \
+TYPE Target::NAME() {                                                   \
+    SWITCH_FOREACH_TARGET(options.target, return TARGET::NAME; )        \
+    assert(!"invalid target");                                          \
+    return 0;                                                          \
 }
-
-int Target::DEPARSER_CHECKSUM_UNITS() {
-    SWITCH_FOREACH_TARGET(options.target, return TARGET::DEPARSER_CHECKSUM_UNITS; )
-    return -1;
-}
-
-int Target::DEPARSER_MAX_POV_BYTES() {
-    SWITCH_FOREACH_TARGET(options.target, return TARGET::DEPARSER_MAX_POV_BYTES; )
-    return -1;
-}
-
-int Target::MAU_BASE_DELAY() {
-    SWITCH_FOREACH_TARGET(options.target, return TARGET::MAU_BASE_DELAY; )
-    return -1;
-}
-
-int Target::MAU_BASE_PREDICATION_DELAY() {
-    SWITCH_FOREACH_TARGET(options.target, return TARGET::MAU_BASE_PREDICATION_DELAY; )
-    return -1;
-}
-
-const char *Target::name() {
-    SWITCH_FOREACH_TARGET(options.target, return TARGET::name; )
-    return nullptr;
-}
+PER_TARGET_CONSTANTS(DEFINE_PER_TARGET_CONSTANT)
