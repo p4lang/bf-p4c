@@ -153,7 +153,6 @@ const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
     constant_containers.clear();
     ActionAnalysis aa(phv, true, true, tbl);
     aa.set_container_actions_map(&container_actions_map);
-    aa.set_verbose();
     act->apply(aa);
 
     bool proceed = false;
@@ -566,7 +565,10 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
                                     adi.action_data_name, mo);
         src1 = mo;
         src1_writebits = adi.ad_alignment.write_bits;
-
+        bitvec src1_read_bits = adi.ad_alignment.read_bits;
+        if (src1_read_bits.popcount() != static_cast<int>(container.size())) {
+            src1 = MakeSlice(src1, src1_read_bits.min().index(), src1_read_bits.max().index());
+        }
     } else if (cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] == 1) {
         src1 = find_field_action_constant(cont_action);
         src1_writebits = cont_action.constant_alignment.write_bits;
@@ -581,9 +583,9 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
                                         read_container.toString(), mo);
             src1 = mo;
             src1_writebits = read_alignment.write_bits;
-            if (read_alignment.read_bits.popcount() != static_cast<int>(read_container.size())) {
-                src1 = MakeSlice(src1, read_alignment.read_bits.min().index(),
-                                 read_alignment.read_bits.max().index());
+            bitvec src1_read_bits = read_alignment.read_bits;
+            if (src1_read_bits.popcount() != static_cast<int>(read_container.size())) {
+                src1 = MakeSlice(src1, src1_read_bits.min().index(), src1_read_bits.max().index());
             }
         } else {
             auto mo = new IR::MAU::MultiOperand(components, read_container.toString(), true);
@@ -600,7 +602,6 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     if (!cont_action.partial_overwrite() && src1_writebits.popcount()
                                           != static_cast<int>(container.size())) {
         dst = MakeSlice(dst, src1_writebits.min().index(), src1_writebits.max().index());
-        src1 = MakeSlice(src1, src1_writebits.min().index(), src1_writebits.max().index());
     }
 
     cstring instr_name = cont_action.name;

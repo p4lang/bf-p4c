@@ -491,9 +491,14 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
  *  mark an instruction currently impossible or not yet implemented if it is either. 
  */
 bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
+    if (verbose)
+        LOG3("Action " << action_name << " in table " << tbl->name);
     for (auto &container_action : *container_actions_map) {
         auto &container = container_action.first;
         auto &cont_action = container_action.second;
+
+        if (verbose)
+            LOG3("Action over container " << container.toString() << ": " << cont_action);
         cstring instr_name;
         bool same_action = true;
         BUG_CHECK(cont_action.field_actions.size() > 0, "Somehow a container action has no "
