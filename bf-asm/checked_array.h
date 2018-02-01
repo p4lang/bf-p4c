@@ -39,7 +39,7 @@ public:
             if (it == v.end()) break;
             new(&e) T(*v++); } }
     T& operator[](size_t idx) {
-        assert(idx < S);
+        if (idx >= S) ERROR("array index " << idx << " out of bounds " << this);
         if (disabled_) ERROR("Accessing disabled record " << this);
         return data[idx]; }
     const T& operator[](size_t idx) const {

@@ -454,7 +454,7 @@ p4c_add_xfail_reason("tofino"
     testdata/p4_16_samples/issue955.p4
     )
 p4c_add_xfail_reason("tofino"
-    "TablePlacement::place_table(.*): Assertion"
+    "No table to place"
     testdata/p4_16_samples/issue986-1-bmv2.p4
     )
 p4c_add_xfail_reason("tofino"
@@ -710,7 +710,7 @@ p4c_add_xfail_reason("tofino"
   )
 # resubmit size is 32 bytes which exceeds max size for tofino (8 bytes).
 p4c_add_xfail_reason("tofino"
-  "Assertion .*failed"
+  "error: resubmit digest limited to 8 bytes"
   extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
   )
 

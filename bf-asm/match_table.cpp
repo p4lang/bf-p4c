@@ -71,7 +71,7 @@ bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
 }
 
 bool MatchTable::is_attached(const Table *tbl) const {
-    return tbl && tbl == gateway || tbl == idletime || attached.is_attached(tbl);
+    return tbl && (tbl == gateway || tbl == idletime || attached.is_attached(tbl));
 }
 
 void MatchTable::pass1(int type) {
@@ -450,4 +450,3 @@ void MatchTable::add_all_reference_tables(json::map &tbl, Table *match_table) {
         for (auto &s : a->stats) { add_reference_table(statistics_table_refs, s); }
         for (auto &s : a->statefuls) { add_reference_table(stateful_table_refs, s); } }
 }
-

@@ -757,7 +757,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                         ready = false;
                         break; } }
                 if (n->tables.size() == 1 && n->tables.at(0) == pl->table) {
-                    assert(!found_match && !gw_match_grp);
+                    BUG_CHECK(!found_match && !gw_match_grp, "No table to place");
                     BUG_CHECK(ready && parents.size() == 1, "Gateway incorrectly placed on "
                               "multi-referenced table");
                     found_match = true;
@@ -765,7 +765,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                 GroupPlace *g = ready ? new GroupPlace(*this, work, parents, n) : nullptr;
                 for (auto t : n->tables) {
                     if (t == pl->table) {
-                        assert(!found_match && !gw_match_grp);
+                        BUG_CHECK(!found_match && !gw_match_grp, "No table to place");
                         BUG_CHECK(ready && parents.size() == 1, "Gateway incorrectly placed on "
                                   "multi-referenced table");
                         found_match = true;
@@ -965,7 +965,7 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
     }
 }
 
-/* Sets the layout and ways for a table from the selected table layout option 
+/* Sets the layout and ways for a table from the selected table layout option
    from table placement */
 static void select_layout_option(IR::MAU::Table *tbl, const LayoutOption *layout_option) {
     tbl->layout = layout_option->layout;
