@@ -893,7 +893,7 @@ void Table::Actions::Action::set_action_handle(Table *tbl) {
 
 void Table::Actions::Action::pass1(Table *tbl) {
     set_action_handle(tbl);
-    if ((tbl->default_action == name) &&
+    if ((tbl->get_default_action() == name) &&
         (!tbl->default_action_handle))
         tbl->default_action_handle = handle;
     /* SALU actions always have addr == -1 (so iaddr == -1) */
@@ -1854,8 +1854,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
 
 
 void Table::common_tbl_cfg(json::map &tbl) {
-    if (!default_action.empty())
-        tbl["default_action_handle"] = default_action_handle;
+    tbl["default_action_handle"] = get_default_action_handle();
     tbl["action_profile"] = action_profile();
     // FIXME-JSON : If next table is present, set default_next_table_mask to
     // 2^(width of next table field called '--next_tbl--') - 1

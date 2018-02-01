@@ -199,6 +199,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
 
 void ActionTable::pass1() {
     LOG1("### Action table " << name() << " pass1");
+    if (default_action.empty()) default_action = get_default_action();
     if (!p4_table) p4_table = P4Table::alloc(P4Table::ActionData, this);
     else p4_table->check(this);
     alloc_vpns();

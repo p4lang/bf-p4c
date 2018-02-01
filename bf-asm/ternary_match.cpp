@@ -269,7 +269,7 @@ void TernaryMatchTable::pass2() {
                 set_partition_action_handle(act->handle);
                 if (act->p4_params_list.size() == 1)
                     set_partition_field_name(act->p4_params_list[0].name);
-            } else { 
+            } else {
                 error(lineno, "For ALPM pre_classifier '%s-%s' only 1 action expected to set parition index but found %d", p4_name(), name(), acts->count()); } } }
 }
 
@@ -436,7 +436,7 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
 void TernaryMatchTable::gen_alpm_cfg(json::vector &out) {
 }
 
-void TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list, int word, 
+void TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list, int word,
         bool uses_versioning, unsigned version_word_group) {
    // Insert payload (bit 0), parity (bit 45, 46) and
    // version bits(bits 43, 44 if specified) for new word

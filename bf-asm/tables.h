@@ -517,7 +517,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual void need_on_actionbus(Table *attached, int off, int size);
     virtual int find_on_actionbus(HashDistribution *hd, int off, int size);
     virtual void need_on_actionbus(HashDistribution *hd, int off, int size);
-    static bool allow_bus_sharing(Table *t1, Table *t2); 
+    static bool allow_bus_sharing(Table *t1, Table *t2);
     virtual Call &action_call() { return action; }
     virtual Actions *get_actions() { return actions; }
     void add_reference_table(json::vector &table_refs, const Table::Call& c);
@@ -562,6 +562,10 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     int get_mem_units_per_table_word();
     int get_table_word_width();
     int get_padding_format_width();
+    virtual std::string get_default_action() {
+        return (!default_action.empty()) ? default_action : action ? action->default_action : ""; }
+    virtual unsigned get_default_action_handle() {
+        return default_action_handle > 0 ? default_action_handle : action ? action->default_action_handle : 0; }
 };
 
 class FakeTable : public Table {
@@ -767,7 +771,7 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     void setup_nibble_mask(Table::Format::Field *match, int group,
                               std::map<int, match_element> &elems, bitvec &mask);
     std::string get_match_mode(Phv::Ref &pref, int offset) override;
-    void gen_alpm_cfg(json::vector &out); 
+    void gen_alpm_cfg(json::vector &out);
     void base_alpm_atcam_tbl_cfg(json::map &atcam_tbl, const char *type, int size) {
         if (p4_table) p4_table->base_alpm_tbl_cfg(atcam_tbl, size, this, P4Table::Atcam); }
 
@@ -775,15 +779,15 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
         std::string lpm = "lpm";
         if(auto *p = find_p4_param_type(lpm))
             return p->name;
-        else error(lineno, 
-            "'lpm' type field not found in alpm atcam '%s-%s' p4 param order", 
+        else error(lineno,
+            "'lpm' type field not found in alpm atcam '%s-%s' p4 param order",
                 name(), p4_name());
         return ""; }
     unsigned get_partition_action_handle() {
-        if (p4_table) return p4_table->get_partition_action_handle(); 
+        if (p4_table) return p4_table->get_partition_action_handle();
         return 0; }
     std::string get_partition_field_name() {
-        if (p4_table) return p4_table->get_partition_field_name(); 
+        if (p4_table) return p4_table->get_partition_field_name();
         return ""; }
 )
 
@@ -853,16 +857,23 @@ public:
     void gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
         std::string source, unsigned start_bit, unsigned field_width);
-    void gen_alpm_cfg(json::vector &out); 
+    void gen_alpm_cfg(json::vector &out);
     void set_partition_action_handle(unsigned handle) {
         if (p4_table) p4_table->set_partition_action_handle(handle); }
     void set_partition_field_name(std::string name) {
         if (p4_table) p4_table->set_partition_field_name(name); }
     void base_alpm_pre_classifier_tbl_cfg(json::map &pre_classifier_tbl, const char *type, int size){
-        if (p4_table) 
+        if (p4_table)
             p4_table->base_alpm_tbl_cfg(pre_classifier_tbl, size, this, P4Table::PreClassifier); }
-    void gen_match_fields_pvp(json::vector &match_field_list, int word, 
-        bool uses_versioning, unsigned version_word_group); 
+    void gen_match_fields_pvp(json::vector &match_field_list, int word,
+        bool uses_versioning, unsigned version_word_group);
+    unsigned get_default_action_handle() override {
+        unsigned def_act_handle = Table::get_default_action_handle();
+        return def_act_handle > 0 ? def_act_handle : indirect ? indirect->get_default_action_handle() ?
+            indirect->get_default_action_handle() : action ? action->default_action_handle : 0 : 0; }
+    std::string get_default_action() override {
+        std::string def_act = Table::get_default_action();
+        return !def_act.empty() ? def_act : indirect ? indirect->default_action : ""; }
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",
@@ -909,6 +920,9 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
 public:
     int address_shift() const override { return std::min(5U, format->log2size - 2); }
+    unsigned get_default_action_handle() override {
+        unsigned def_act_handle = Table::get_default_action_handle();
+        return def_act_handle ? def_act_handle : action ? action->default_action_handle : 0; }
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
@@ -964,6 +978,13 @@ public:
     bool get_per_flow_enable() { return per_flow_enable; }
     bool is_direct() const { return direct; }
     virtual int default_pfe_adjust() const { return 0; }
+    std::string get_default_action() override {
+        if (!default_action.empty()) return default_action;
+        for (auto m : match_tables) {
+            std::string def_action = m->get_default_action();
+            if (!def_action.empty()) return def_action; }
+        return "";
+    }
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",

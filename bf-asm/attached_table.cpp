@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 void AttachedTable::pass1() {
+    if (default_action.empty()) default_action = get_default_action();
     // Per Flow Enable - Validate and Set pfe and address bits
     bool pfe_set = false;
     if (per_flow_enable && !per_flow_enable_param.empty()) {

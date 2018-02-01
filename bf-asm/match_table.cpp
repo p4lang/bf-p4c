@@ -76,6 +76,9 @@ bool MatchTable::is_attached(const Table *tbl) const {
 
 void MatchTable::pass1(int type) {
     /* FIXME -- move common stuff from Exact/Ternary/HashAction here. */
+    // Set up default action. This will look up action and/or tind for default
+    // action if the match_table doesnt have one specified
+    if (default_action.empty()) default_action = get_default_action();
     if (table_counter >= GATEWAY_MISS && !gateway)
         error(lineno, "Can't count gateway events on table %s as it doesn't have a gateway",
               name());
@@ -390,7 +393,7 @@ void MatchTable::add_all_reference_tables(json::map &tbl, Table *match_table) {
     json::vector &statistics_table_refs = tbl["statistics_table_refs"];
     json::vector &stateful_table_refs = tbl["stateful_table_refs"];
     add_reference_table(action_data_table_refs, match_table->action);
-    if (auto a = match_table->get_attached()) { 
+    if (auto a = match_table->get_attached()) {
         if (a->selector) {
             tbl["default_selector_mask"] = 0; //FIXME-JSON
             tbl["default_selector_value"] = 0; //FIXME-JSON
