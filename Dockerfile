@@ -63,7 +63,8 @@ COPY scripts/docker_entry_point.sh /bfn/docker_entry_point.sh
 WORKDIR /bfn/bf-p4c-compilers
 ENV LDFLAGS="-Wl,-s"
 RUN /usr/local/bin/ccache --zero-stats && \
-    ./bootstrap_bfn_compilers.sh -DENABLE_P4C_GRAPHS=OFF \
+    ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RELEASE \
+                                 -DENABLE_P4C_GRAPHS=OFF \
                                  -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
                                  -DENABLE_EBPF=OFF -DENABLE_STF2PTF=OFF \
                                  && \
