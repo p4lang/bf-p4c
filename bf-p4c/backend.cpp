@@ -32,6 +32,7 @@
 #include "bf-p4c/phv/asm_output.h"
 #include "bf-p4c/phv/check_unallocated.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
+#include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_analysis.h"
 
 namespace BFN {
@@ -150,8 +151,8 @@ class TableAllocPass : public PassManager {
                 new CheckTableNameDuplicate,
                 &defuse,
                 (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
-                &mutex,
-                new TableSummary} );
+                &mutex
+            });
 
                 setName("Table Alloc");
             }
@@ -203,6 +204,7 @@ Backend::Backend(const BFN_Options& options) :
         new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps),  // phv analysis after last
                                                                  // CollectPhvInfo pass
         new TableAllocPass(options, phv, defuse, deps),
+        new TableSummary,
         new IXBarRealign(phv),
         new TotalInstructionAdjustment(phv),
         new DumpPipe("Final table graph"),

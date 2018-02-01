@@ -63,6 +63,18 @@ class Clustering : public PassManager {
     /// @returns the slices of @field in `fields_to_slices_i` overlapping with @range.
     std::vector<PHV::FieldSlice> slices(const PHV::Field* field, le_bitrange range) const;
 
+    /** For backtracking, clear all the pre-existing structs in the Clustering object.
+      */
+    class ClearClusteringStructs : public Inspector {
+        Clustering& self;
+        PhvInfo& phv_i;
+
+        Visitor::profile_t init_apply(const IR::Node* node) override;
+
+     public:
+        explicit ClearClusteringStructs(Clustering& self) : self(self), phv_i(self.phv_i) { }
+    };
+
     /** Find validity bits involved in any MAU instruction other than
      *
      *   `*.$valid = n`,
@@ -203,6 +215,9 @@ class Clustering : public PassManager {
         /// be placed, in order, in the same container.
         ordered_set<PHV::SuperCluster::SliceList*> slice_lists_i;
 
+        /// Clear state to enable backtracking
+        Visitor::profile_t init_apply(const IR::Node *) override;
+
         /// Create lists of slices that need to be allocated in the same container.
         bool preorder(const IR::HeaderRef*) override;
 
@@ -219,6 +234,7 @@ class Clustering : public PassManager {
     Clustering(PhvInfo &p, PhvUse &u)
     : phv_i(p), uses_i(u) {
         addPasses({
+            new ClearClusteringStructs(*this),      // clears pre-existing maps
             new FindComplexValidityBits(*this),     // populates complex_validity_bits_i
             new MakeSlices(*this),                  // populates fields_to_slices_i
             new MakeAlignedClusters(*this),         // populates aligned_clusters_i

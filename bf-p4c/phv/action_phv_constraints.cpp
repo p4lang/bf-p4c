@@ -7,8 +7,11 @@ Visitor::profile_t ActionPhvConstraints::init_apply(const IR::Node *root) {
     current_action = 0;
     field_writes_to_actions.clear();
     action_to_writes.clear();
+    action_to_reads.clear();
     write_to_reads_per_action.clear();
     read_to_writes_per_action.clear();
+    meter_color_destinations.clear();
+    special_no_pack.clear();
     return rv;
 }
 
@@ -473,6 +476,16 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
     // Create candidate packing
     for (auto slice : slices)
         container_state.insert(slice);
+
+    // Check if table placement induced any no pack constraints on fields that are candidates for
+    // packing. If yes, packing not possible.
+    for (auto sl1 : container_state) {
+        for (auto sl2 : container_state) {
+            if (sl1.field() == sl2.field()) continue;
+            if (conflicts.hasPackConflict(sl1.field(), sl2.field())) {
+                    LOG5("\t\t\t" << sl1.field()->name << " cannot be packed in the same stage with"
+                            << " " << sl2.field()->name);
+                    return boost::none; } } }
 
     // Merge actions for all the candidate fields into a set
     std::vector<const PHV::Field *> fields;

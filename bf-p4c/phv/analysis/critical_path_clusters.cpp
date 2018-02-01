@@ -1,5 +1,11 @@
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
 
+Visitor::profile_t CalcCriticalPathClusters::init_apply(const IR::Node* root) {
+    auto rv = Inspector::init_apply(root);
+    critical_fields_i.clear();
+    return rv;
+}
+
 const IR::Node *
 CalcCriticalPathClusters::apply_visitor(const IR::Node * node, const char *) {
     critical_fields_i = parser_critical_path.calc_all_critical_fields();

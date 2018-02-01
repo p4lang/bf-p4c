@@ -30,6 +30,8 @@ class CalcCriticalPathClusters : public Inspector {
     std::set<PHV::SuperCluster *>
     calc_critical_clusters(const std::list<PHV::SuperCluster *>& clusters) const;
 
+    profile_t init_apply(const IR::Node* root) override;
+
     void print(std::ostream& out, const std::set<PHV::SuperCluster *>& clusters) const;
 };
 

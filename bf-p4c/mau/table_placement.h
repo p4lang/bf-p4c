@@ -28,12 +28,11 @@ class TablePlacement : public MauTransform, public Backtrack {
     const TablesMutuallyExclusive &mutex;
     const PhvInfo &phv;
     const LayoutChoices &lc;
+    bool ignoreContainerConflicts = false;
     bool forced_placement = false;
     bool alloc_done = false;
     profile_t init_apply(const IR::Node *root) override;
-    bool backtrack(trigger &) override {
-        /* always back up to TableLayout -- don't catch here */
-        return false;  /* trig.is<IXBar::failure>() && !alloc_done; */ }
+    bool backtrack(trigger &) override;
     IR::MAU::Table *break_up_atcam(IR::MAU::Table *);
     IR::Node *preorder(IR::BFN::Pipe *) override;
     IR::Node *preorder(IR::MAU::TableSeq *) override;

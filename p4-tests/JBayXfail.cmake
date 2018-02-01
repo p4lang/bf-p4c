@@ -48,8 +48,6 @@ p4c_add_xfail_reason("jbay"
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
-  testdata/p4_14_samples/parser_dc_full.p4
-  testdata/p4_14_samples/port_vlan_mapping.p4
   testdata/p4_14_samples/source_routing.p4
   )
 
@@ -167,4 +165,10 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "Action Data parameter not configured properly"
   testdata/p4_14_samples/issue894.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "Compiler Bug.*: .*Match for state.*which is more than can fit"
+  testdata/p4_14_samples/parser_dc_full.p4
+  testdata/p4_14_samples/port_vlan_mapping.p4
   )

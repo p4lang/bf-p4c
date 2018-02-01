@@ -245,8 +245,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/cluster_to_cluster_interference.cpp
   phv/field_alignment.cpp
   phv/make_clusters.cpp
-  phv/pragma/pa_container_size.cpp
-  phv/pragma/pa_solitary.cpp
+  phv/mau_backtracker.cpp
   phv/phv_analysis.cpp
   phv/phv_fields.cpp
   phv/phv_parde_mau_use.cpp
@@ -254,8 +253,11 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/trivial_alloc.cpp
   phv/utils.cpp
   phv/validate_allocation.cpp
-  phv/analysis/field_interference.cpp
   phv/analysis/critical_path_clusters.cpp
+  phv/analysis/field_interference.cpp
+  phv/analysis/pack_conflicts.cpp
+  phv/pragma/pa_container_size.cpp
+  phv/pragma/pa_solitary.cpp
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_SRCS
@@ -276,19 +278,21 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/cluster_to_cluster_interference.h
   phv/field_alignment.h
   phv/make_clusters.h
+  phv/mau_backtracker.h
   phv/phv_analysis.h
   phv/phv_fields.h
   phv/phv_parde_mau_use.h
   phv/phv_spec.h
-  phv/pragma/pa_container_size.h
-  phv/pragma/pa_solitary.h
-  phv/pragma/phv_pragmas.h
   phv/trivial_alloc.h
   phv/utils.h
   phv/validate_allocation.h
-  phv/analysis/field_interference.h
   phv/analysis/critical_path_clusters.h
+  phv/analysis/field_interference.h
   phv/analysis/jbay_phv_analysis.h
+  phv/analysis/pack_conflicts.h
+  phv/pragma/pa_container_size.h
+  phv/pragma/pa_solitary.h
+  phv/pragma/phv_pragmas.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_HDRS}")
 
@@ -437,7 +441,7 @@ add_dependencies(p4c_driver linkp4cbarefoot)
 
 # # Tofino-specific GTests.
 set (GTEST_BF_P4C_SOURCES
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
+#${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp

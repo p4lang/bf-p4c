@@ -56,6 +56,12 @@ class UnionFind {
             insert(elt);
     }
 
+    /// Clears the union find data structure
+    void clear() {
+        element_map_i.clear();
+        sets_i.clear();
+    }
+
     /// Adds a new element.  Has no effect if @elt is already present.
     void insert(const T& elt) {
         if (element_map_i.find(elt) != element_map_i.end())

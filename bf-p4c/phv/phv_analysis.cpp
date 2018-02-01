@@ -2,6 +2,7 @@
 #include "bf-p4c/common/live_range_overlay.h"
 #include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
+#include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/phv/allocate_phv.h"
@@ -18,7 +19,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
     : clustering(phv, uses),
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
-      action_constraints(phv),
+      pack_conflicts(phv, deps, table_mutex, table_alloc/*, action_mutex*/),
+      action_constraints(phv, pack_conflicts),
       pragmas(phv, options) {
     if (options.trivial_phvalloc) {
         addPasses({
@@ -27,6 +29,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         addPasses({
             // XXX(cole): TODO: insert a pass here that explicitly clears all
             // PHV allocation state (in preparation for backtracking).
+            &table_alloc,          // populates table placement information and start of
+                                   // backtracking
             &uses,                 // use of field in mau, parde
             new ParserOverlay(phv, mutually_exclusive_field_ids),
                                    // produce pairs of mutually exclusive header
@@ -44,6 +48,11 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &clustering,           // cluster analysis
             new PhvInfo::DumpPhvFields(phv, uses),
             &critical_path_clusters,
+            &table_mutex,
+            // &action_mutex,
+            &pack_conflicts,       // collect list of fields that cannot be packed together based on
+                                   // first round of table allocation (only useful if we backtracked
+                                   // from table placement to PHV allocation)
             &action_constraints,
 #if HAVE_JBAY
             options.jbay_analysis ? new JbayPhvAnalysis(phv, uses, deps, defuse, action_constraints)
@@ -60,4 +69,3 @@ PHV_AnalysisPass::PHV_AnalysisPass(
 
     setName("PHV Analysis");
 }
-

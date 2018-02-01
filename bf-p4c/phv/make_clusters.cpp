@@ -4,6 +4,16 @@
 #include "lib/log.h"
 #include "lib/stringref.h"
 
+Visitor::profile_t Clustering::ClearClusteringStructs::init_apply(const IR::Node* root) {
+    auto rv = Inspector::init_apply(root);
+    self.aligned_clusters_i.clear();
+    self.rotational_clusters_i.clear();
+    self.super_clusters_i.clear();
+    self.fields_to_slices_i.clear();
+    self.complex_validity_bits_i.clear();
+    return rv;
+}
+
 bool Clustering::FindComplexValidityBits::preorder(const IR::MAU::Instruction* inst) {
     bool has_non_val = false;
     const PHV::Field* dst_validity_bit = nullptr;
@@ -65,6 +75,7 @@ bool Clustering::MakeSlices::updateSlices(const PHV::Field* field, le_bitrange r
 
 Visitor::profile_t Clustering::MakeSlices::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
+    equivalences_i.clear();
     // Wrap each field in a slice.
     for (auto& f : phv_i)
         self.fields_to_slices_i[&f].push_back(PHV::FieldSlice(&f, StartLen(0, f.size)));
@@ -123,6 +134,7 @@ void Clustering::MakeSlices::end_apply() {
 
 Visitor::profile_t Clustering::MakeAlignedClusters::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
+    union_find_i.clear();
     // Initialize union_find_i with pointers to all field slices.
     for (auto& by_field : self.fields_to_slices_i) {
         for (auto& slice : by_field.second) {
@@ -251,6 +263,8 @@ void Clustering::MakeAlignedClusters::end_apply() {
 
 Visitor::profile_t Clustering::MakeRotationalClusters::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
+    union_find_i.clear();
+    slices_to_clusters_i.clear();
     // Initialize union_find_i with pointers to the aligned clusters formed in
     // MakeAlignedClusters.  Ditto for slices_to_clusters_i.
     for (auto* cluster : self.aligned_clusters_i) {
@@ -310,6 +324,13 @@ bool Clustering::MakeRotationalClusters::preorder(const IR::MAU::Instruction *in
 void Clustering::MakeRotationalClusters::end_apply() {
     for (auto* cluster_set : union_find_i)
         self.rotational_clusters_i.emplace_back(new PHV::RotationalCluster(*cluster_set));
+}
+
+Visitor::profile_t Clustering::MakeSuperClusters::init_apply(const IR::Node* root) {
+    auto rv = Inspector::init_apply(root);
+    headers_i.clear();
+    slice_lists_i.clear();
+    return rv;
 }
 
 bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {

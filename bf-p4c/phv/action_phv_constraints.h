@@ -8,6 +8,7 @@
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils.h"
+#include "bf-p4c/phv/analysis/pack_conflicts.h"
 
 /** This class is meant to gather action information as well as provide information to PHV analysis
   * through function calls.  This must be run after InstructionSelection, as it is dependent on
@@ -64,6 +65,10 @@ class ActionPhvConstraints : public Inspector {
 
         FieldOperation() : phv_used(nullptr) {}
     };
+
+    const PhvInfo       &phv;
+
+    const PackConflicts &conflicts;
 
     profile_t init_apply(const IR::Node *root) override;
     /** Builds the data structures to be used in the API function call 
@@ -200,9 +205,8 @@ class ActionPhvConstraints : public Inspector {
     bool checkSpecialityPacking(ordered_set<const PHV::Field*>& fields);
 
  public:
-    explicit ActionPhvConstraints(const PhvInfo &p) : phv(p) {}
-
-    const PhvInfo &phv;
+    explicit ActionPhvConstraints(const PhvInfo &p, const PackConflicts &c)
+        : phv(p), conflicts(c) {}
 
     /// (xxx)Deep [HACK WARNING]: Right now action bus allocation requires any destination written
     /// by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such

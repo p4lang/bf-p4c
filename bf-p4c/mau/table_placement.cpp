@@ -11,6 +11,7 @@
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/mau/table_layout.h"
+#include "bf-p4c/mau/table_summary.h"
 #include "ir/ir.h"
 #include "lib/bitops.h"
 #include "lib/bitvec.h"
@@ -24,8 +25,23 @@ TablePlacement::TablePlacement(const DependencyGraph* d, const TablesMutuallyExc
                                const PhvInfo &p, const LayoutChoices &l, bool fp)
 : deps(d), mutex(m), phv(p), lc(l), forced_placement(fp) {}
 
+bool TablePlacement::backtrack(trigger &trig) {
+    // If a table does not fit in the available stages, then TableSummary throws an exception.
+    // TablePlacement catches that exception and re-runs table placement without considering
+    // container conflicts. This gives the "idealized" resource-sensitive table placement that is
+    // then used by PHV allocation to minimize the number of container conflicts seen in the final
+    // allocation.
+    if (trig.is<NoContainerConflictTrigger::failure>()) {
+        auto t = dynamic_cast<NoContainerConflictTrigger::failure *>(&trig);
+        ignoreContainerConflicts = t->ignoreContainerConflicts;
+        return true; }
+    ignoreContainerConflicts = false;
+    return false;
+}
+
 Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
+    LOG1("Table Placement ignores container conflicts? " << ignoreContainerConflicts);
     return MauTransform::init_apply(root);
 }
 
@@ -516,9 +532,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                  rv->stage++;
                  LOG2(" - dependency between " << p->table->name << " and gateway advances stage");
              } else if (deps->container_conflict(p->table, rv->table)) {
-                 rv->stage++;
-                 LOG2(" - action dependency between " << p->table->name << " and table due to "
-                      "PHV allocation advances stage");
+                 if (!ignoreContainerConflicts)
+                    rv->stage++;
+                 LOG2(" - action dependency between " << p->table->name << " and table " <<
+                         rv->table->name << " due to PHV allocation advances stage to " <<
+                         rv->stage);
              }
         }
     }
