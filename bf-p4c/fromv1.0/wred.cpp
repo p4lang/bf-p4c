@@ -55,7 +55,11 @@ const IR::Declaration_Instance *P4V1::WREDConverter::convertExternInstance(
     if (instance_count) ctor_args->push_back(instance_count);
     auto wred_type = new IR::Type_Specialized(new IR::Type_Name("wred"),
                                 new IR::Vector<IR::Type>({ input_type }));
-    return new IR::Declaration_Instance(ext->srcInfo, name, wred_type, ctor_args);
+    auto* externalName = new IR::StringLiteral(IR::ID("." + name));
+    auto* annotations = new IR::Annotations({
+        new IR::Annotation(IR::ID("name"), { externalName })
+    });
+    return new IR::Declaration_Instance(ext->srcInfo, name, annotations, wred_type, ctor_args);
 }
 
 const IR::Statement *P4V1::WREDConverter::convertExternCall(P4V1::ProgramStructure *structure,

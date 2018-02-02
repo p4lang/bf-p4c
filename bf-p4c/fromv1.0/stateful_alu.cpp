@@ -287,7 +287,11 @@ class CreateMathUnit : public Inspector {
         auto *ctor_args = new IR::Vector<IR::Expression>({
             exp_invert, exp_shift, output_scale, new IR::ListExpression(table->expressions)
         });
-        unit = new IR::Declaration_Instance(name, mutype, ctor_args);
+        auto* externalName = new IR::StringLiteral(IR::ID("." + name));
+        auto* annotations = new IR::Annotations({
+                new IR::Annotation(IR::ID("name"), { externalName })
+                });
+        unit = new IR::Declaration_Instance(name, annotations, mutype, ctor_args);
     }
     static const IR::Declaration_Instance *create(P4V1::ProgramStructure *structure,
                 const IR::Declaration_Instance *ext, const IR::Type::Bits *utype) {
@@ -405,7 +409,11 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
                     structure->action_profiles.get(ap))) });
         auto *block = new IR::BlockStatement({
             CreateSaluApplyFunction::create(structure, ext, bit1, bit1) });
-        auto *rv = new IR::Declaration_Instance(name, satype, ctor_args, block);
+        auto* externalName = new IR::StringLiteral(IR::ID("." + name));
+        auto* annotations = new IR::Annotations({
+                new IR::Annotation(IR::ID("name"), { externalName })
+                });
+        auto *rv = new IR::Declaration_Instance(name, annotations, satype, ctor_args, block);
         return rv->apply(TypeConverter(structure))->to<IR::Declaration_Instance>();
     }
     auto info = getRegInfo(structure, ext, structure->declarations);
@@ -422,7 +430,11 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         auto *block = new IR::BlockStatement({
             CreateSaluApplyFunction::create(structure, ext, info.rtype, info.utype,
                                             math ? math->name.name : cstring()) });
-        auto *rv = new IR::Declaration_Instance(name, ratype, ctor_args, block);
+        auto* externalName = new IR::StringLiteral(IR::ID("." + name));
+        auto* annotations = new IR::Annotations({
+                new IR::Annotation(IR::ID("name"), { externalName })
+                });
+        auto *rv = new IR::Declaration_Instance(name, annotations, ratype, ctor_args, block);
         LOG3("Created apply function: " << *rv);
         return rv->apply(TypeConverter(structure))->to<IR::Declaration_Instance>();
     }

@@ -43,7 +43,11 @@ const IR::Declaration_Instance *P4V1::LpfConverter::convertExternInstance(
     if (instance_count) ctor_args->push_back(instance_count);
     auto lpf_type = new IR::Type_Specialized(new IR::Type_Name("lpf"),
                                 new IR::Vector<IR::Type>({ filt_type }));
-    return new IR::Declaration_Instance(ext->srcInfo, name, lpf_type, ctor_args);
+    auto* externalName = new IR::StringLiteral(IR::ID("." + name));
+    auto* annotations = new IR::Annotations({
+        new IR::Annotation(IR::ID("name"), { externalName })
+    });
+    return new IR::Declaration_Instance(ext->srcInfo, name, annotations, lpf_type, ctor_args);
 }
 
 const IR::Statement *P4V1::LpfConverter::convertExternCall(P4V1::ProgramStructure *structure,
