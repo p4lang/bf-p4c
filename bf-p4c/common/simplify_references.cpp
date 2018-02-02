@@ -74,7 +74,8 @@ const IR::Node *SplitComplexInstanceRef::preorder(IR::MethodCallStatement *mc) {
     if (mc->methodCall->arguments->size() == 0) return mc;
     auto dest = mc->methodCall->arguments->at(0)->to<IR::InstanceRef>();
     if (!dest) return mc;
-    if (auto hs = dest->obj->to<IR::HeaderStack>()) {
+    if (dest->obj != nullptr && dest->obj->is<IR::HeaderStack>()) {
+        auto hs = dest->obj->to<IR::HeaderStack>();
         auto *rv = new IR::Vector<IR::StatOrDecl>;
         for (int idx = 0; idx < hs->size; ++idx) {
             auto *split = mc->methodCall->clone();
