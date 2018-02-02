@@ -14,4 +14,5 @@ set (TOFINO_MUST_PASS_TESTS
   extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
   extensions/p4_tests/p4_16/hash_driven_stats.p4
   extensions/p4_tests/p4_16/ONLab_packetio.p4
+  extensions/p4_tests/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4
   )

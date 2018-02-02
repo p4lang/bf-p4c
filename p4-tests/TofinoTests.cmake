@@ -43,7 +43,8 @@ p4c_add_ptf_test_with_ptfdir (
 set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4)
 p4c_add_ptf_test_with_ptfdir (
     "tofino" ${ONOS_FABRIC_P4} ${ONOS_FABRIC_P4}
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf)
+    "${testExtraArgs} -DWITH_SPGW"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf)
 
 set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
 set  (isXFail TRUE)
