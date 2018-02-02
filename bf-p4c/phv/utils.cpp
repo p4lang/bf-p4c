@@ -331,6 +331,38 @@ PHV::Allocation::mutually_exclusive(
     return true;
 }
 
+std::set<PHV::Allocation::AvailableSpot>
+PHV::Allocation::available_spots() const {
+    std::set<AvailableSpot> rst;
+    // Compute status.
+    for (auto cid : Device::phvSpec().physicalContainers()) {
+        PHV::Container c = Device::phvSpec().idToContainer(cid);
+        auto slices = this->slices(c);
+        auto gress = this->gress(c);
+        // Empty
+        if (slices.size() == 0) {
+            rst.insert(AvailableSpot(c, gress, c.size()));
+            continue; }
+        // calculate allocate bitvec
+        bitvec allocatedBits;
+        for (auto slice : slices) {
+            allocatedBits |= bitvec(slice.container_slice().lo,
+                                    slice.container_slice().size()); }
+        // Full
+        if (allocatedBits == bitvec(0, c.size())) {
+            continue;
+        } else {
+            // Occupied by no_pack field
+            if (slices.size() == 1 && slices.begin()->field()->no_pack()) {
+                continue; }
+            int used = std::accumulate(allocatedBits.begin(),
+                                       allocatedBits.end(), 0,
+                                       [] (int a, int) { return a + 1; });
+            rst.insert(AvailableSpot(c, gress, c.size() - used)); }
+    }
+    return rst;
+}
+
 /** Create an allocation from a vector of container IDs.  Physical
  * containers that the Device pins to a particular gress are
  * initialized to that gress.
@@ -420,6 +452,7 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
     int valid_ingress_unallocated_bits = 0;
     int valid_egress_unallocated_bits = 0;
 
+    // TODO(yumin): code duplication of available_spots()
     // Compute status.
     for (auto kv : container_status_i) {
         PHV::Container c = kv.first;
@@ -680,6 +713,7 @@ void PHV::AlignedCluster::initialize_constraints() {
         exact_containers_i += slice.field()->exact_containers() ? 1 : 0;
         max_width_i = std::max(max_width_i, slice.size());
         aggregate_size_i += slice.size();
+        gress_i = slice.gress();
 
         auto s_alignment = slice.alignment();
         if (alignment_i && s_alignment && *alignment_i != *s_alignment) {
@@ -901,6 +935,7 @@ PHV::RotationalCluster::RotationalCluster(ordered_set<PHV::AlignedCluster*> clus
             kind_i = PHV::Kind::normal;
         if (cluster->exact_containers())
             exact_containers_i++;
+        gress_i = cluster->gress();
         max_width_i = std::max(max_width_i, cluster->max_width());
         num_constraints_i += cluster->num_constraints();
         aggregate_size_i += cluster->aggregate_size(); }
@@ -989,6 +1024,7 @@ PHV::SuperCluster::SuperCluster(
             kind_i = PHV::Kind::normal;
         if (cluster->exact_containers())
             exact_containers_i++;
+        gress_i = cluster->gress();
         max_width_i = std::max(max_width_i, cluster->max_width());
         num_constraints_i += cluster->num_constraints();
         aggregate_size_i += cluster->aggregate_size(); }

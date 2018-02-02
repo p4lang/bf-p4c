@@ -983,26 +983,84 @@ BruteForceAllocationStrategy::remove_unreferenced_clusters(
     return cluster_groups_filtered;
 }
 
+std::vector<bitvec> BruteForceAllocationStrategy::calc_slicing_schemas(
+        const PHV::SuperCluster* sc,
+        const std::set<PHV::ConcreteAllocation::AvailableSpot>& spots) {
+    std::vector<bitvec> rst;
+    const std::vector<int> chunk_sizes = {7, 6, 5, 4, 3, 2, 1};
+
+    auto gress = sc->gress();
+    int size = sc->max_width();
+
+    // available spots suggested slicing
+    bitvec suggested_slice_schema;
+    int covered_size = 0;
+    for (const auto& spot : boost::adaptors::reverse(spots)) {
+        if (spot.gress && spot.gress != gress) continue;
+        if (spot.n_bits >= size) continue;
+        if (!sc->okIn(spot.container.type().kind())) continue;
+        covered_size += spot.n_bits;
+        if (covered_size >= size) break;
+        suggested_slice_schema.setbit(covered_size); }
+    if (covered_size >= size) {
+        rst.push_back(suggested_slice_schema); }
+
+    // slice them to n-bit chunks.
+    for (int sz : chunk_sizes) {
+        bitvec slice_schema;
+        for (int i = sz; i < sc->max_width(); i += sz) {
+            slice_schema.setbit(i); }
+        rst.push_back(slice_schema); }
+
+    return rst;
+}
+
 std::list<PHV::SuperCluster*>
-BruteForceAllocationStrategy::crush_clusters(
-        const std::list<PHV::SuperCluster*>& cluster_groups) {
-    std::list<PHV::SuperCluster*> cluster_groups_powders;
+BruteForceAllocationStrategy::pounderRoundAllocLoop(
+        PHV::Transaction& rst,
+        std::list<PHV::SuperCluster*>& cluster_groups,
+        const std::list<PHV::ContainerGroup *>& container_groups) {
+    // PounderRound in JBay make some tests timeout because
+    // there are so many unallocated clusters in some JBay tests.
+    // If there are so many unallocated clusters, pounder round is unlikely to
+    // work in this case, and it might make compiler timeout.
+    const int N_CLUSTER_LIMITATION = 20;
+    if (cluster_groups.size() > N_CLUSTER_LIMITATION) {
+        return { }; }
+    if (Device::currentDevice() == "JBay") {
+        return { }; }
+
+    std::list<PHV::SuperCluster*> allocated_sc;
     for (auto* sc : cluster_groups) {
         // clusters with slice lists are not considered.
         if (sc->slice_lists().size()) {
-            cluster_groups_powders.push_back(sc);
             continue; }
 
-        // slice them to 1-bit chunks.
-        bitvec slice_schema;
-        for (int i = 1; i < sc->max_width(); i += 1) {
-            slice_schema.setbit(i); }
-        if (auto slice_rst = PHV::SlicingIterator::split_super_cluster(sc, slice_schema)) {
-            for (auto* new_sc : *slice_rst) {
-                cluster_groups_powders.push_back(new_sc); }
-        } else {
-            cluster_groups_powders.push_back(sc); } }
-    return cluster_groups_powders;
+        auto available_spots = rst.available_spots();
+        std::vector<bitvec> slice_schemas = calc_slicing_schemas(sc, available_spots);
+        // Try different slicing, from large to small
+        for (const auto& slice_schema : slice_schemas) {
+            auto slice_rst = PHV::SlicingIterator::split_super_cluster(sc, slice_schema);
+            if (!slice_rst) continue;
+
+            if (LOGGING(5)) {
+                LOG5("Pounder slicing: " << sc << " to ");
+                for (auto* new_sc : *slice_rst) {
+                    LOG5(new_sc); } }
+
+            std::list<PHV::SuperCluster*> sliced_sc = *slice_rst;
+            auto try_this_slicing = rst.makeTransaction();
+            allocLoop(try_this_slicing, sliced_sc, container_groups);
+            // succ
+            if (sliced_sc.size() == 0) {
+                rst.commit(try_this_slicing);
+                allocated_sc.push_back(sc);
+                break; } }
+    }
+
+    for (auto cluster_group : allocated_sc)
+        cluster_groups.remove(cluster_group);
+    return allocated_sc;
 }
 
 std::list<PHV::SuperCluster*>
@@ -1097,18 +1155,18 @@ BruteForceAllocationStrategy::tryAllocation(
     // field_interference_i.calcSliceInterference(cluster_groups);
 
     auto rst = alloc.makeTransaction();
-
     auto allocated_clusters = allocLoop(rst, cluster_groups, container_groups);
 
-    // It is currently disable.
     // Pounder Round
-    // LOG5(cluster_groups.size() << " are unallocated before Pounder Round, they are:");
-    // for (auto* sc : cluster_groups) {
-    //     LOG5(sc); }
+    if (cluster_groups.size() > 0) {
+        LOG5(cluster_groups.size()
+             << " supercluster are unallocated before Pounder Round, they are:");
+        for (auto* sc : cluster_groups) {
+            LOG5(sc); }
 
-    // LOG5("Pounder Round");
-    // cluster_groups = crush_clusters(cluster_groups);
-    // auto allocated_cluster_powders = allocLoop(rst, cluster_groups, container_groups);
+        LOG5("Pounder Round");
+        auto allocated_cluster_powders =
+            pounderRoundAllocLoop(rst, cluster_groups, container_groups); }
 
     if (cluster_groups.size() > 0) {
         report_i << "BruteForceStrategy Allocation Failed.\n";
@@ -1153,17 +1211,20 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         if (super_cluster->exact_containers()) continue;
         if (n_valid_starts[super_cluster] <= 4) continue;
         if (super_cluster->slice_lists().size() > 1) continue;
-        bool is_candidate = true;
-        for (const auto* slice_list : super_cluster->slice_lists()) {
-            bool has_pov = false;
-            for (const auto& fs : *slice_list) {
-                if (fs.field()->pov) {
-                    has_pov = true;
-                    break; } }
 
-            if (has_pov) is_candidate = false;
-            if (slice_list->size() > 1) is_candidate = false;
-        }
+        bool is_candidate = true;
+
+        for (const auto* slice_list : super_cluster->slice_lists()) {
+            if (slice_list->size() > 1) is_candidate = false; }
+
+        for (const auto* rot : super_cluster->clusters()) {
+            for (const auto* ali : rot->clusters()) {
+                if (ali->slices().size() > 1) is_candidate = false;
+                for (const auto& fs : ali->slices()) {
+                    // pov bits are not
+                    if (fs.field()->pov) {
+                        is_candidate = false; } } } }
+
         if (!is_candidate) continue;
         pounder_clusters.insert(super_cluster);
     }
@@ -1244,7 +1305,8 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
             logs << "is_pounderable: "        << pounder_clusters.count(v) << ", ";
             logs << "required_length: "       << n_required_length[v] << ", ";
             logs << "n_valid_starts: "        << n_valid_starts[v] << ", ";
-            logs << "]" << std::endl; }
+            logs << "]\n";
+            logs << v; }
         LOG5(logs.str());
         LOG5("========== end Sorted SuperClusters ============="); }
 }
@@ -1252,7 +1314,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
 std::list<PHV::SuperCluster*>
 BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                                         std::list<PHV::SuperCluster*>& cluster_groups,
-                                        std::list<PHV::ContainerGroup *>& container_groups) {
+                                        const std::list<PHV::ContainerGroup *>& container_groups) {
     const int MAX_SLICING_TRY = 65535;
     std::stringstream alloc_history;
     std::list<PHV::SuperCluster*> allocated;

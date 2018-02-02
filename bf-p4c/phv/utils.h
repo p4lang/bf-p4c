@@ -336,6 +336,23 @@ class Allocation {
     /// Utility function.
     /// @returns true if @f1 and @f2 are mutually exclusive.
     static bool mutually_exclusive(SymBitMatrix mutex, const PHV::Field *f1, const PHV::Field *f2);
+
+    /// Available bits of this allocation
+    struct AvailableSpot {
+        PHV::Container container;
+        GressAssignment gress;
+        int n_bits;
+        AvailableSpot(const PHV::Container& c,
+                      const GressAssignment& gress,
+                      int n_bits)
+            : container(c), gress(gress), n_bits(n_bits)
+            { }
+        bool operator<(const AvailableSpot& other) const {
+            return n_bits < other.n_bits; }
+    };
+
+    /// Return a set of available spots of this allocation.
+    std::set<AvailableSpot> available_spots() const;
 };
 
 class ConcreteAllocation : public PHV::Allocation {
@@ -488,6 +505,9 @@ class ClusterStats {
 
     /// @returns true if this cluster contains @slice.
     virtual bool contains(const PHV::FieldSlice& slice) const = 0;
+
+    /// @returns the gress requiremnt of this cluster.
+    virtual gress_t gress() const = 0;
 };
 
 /// The result of slicing a cluster.
@@ -523,6 +543,7 @@ class AlignedCluster : public ClusterStats {
     /// The kind of PHV container representing the minimum requirements for all
     /// slices in this container.
     PHV::Kind kind_i;
+    gress_t gress_i;
 
     /// Field slices in this cluster.
     ordered_set<PHV::FieldSlice> slices_i;
@@ -640,6 +661,9 @@ class AlignedCluster : public ClusterStats {
     /// @returns true if this cluster contains @slice.
     bool contains(const PHV::FieldSlice& slice) const override;
 
+    /// @returns the gress requirement of this cluster.
+    gress_t gress() const override          { return gress_i; }
+
     /** Slices this cluster at the relative field bit @pos.  For example, if a
      * cluster contains a field slice [3..7] and pos == 2, then `slice` will
      * produce two clusters, one with [3..4] and the other with [5..7].
@@ -668,6 +692,7 @@ class RotationalCluster : public ClusterStats {
 
     // Statstics gathered from clusters.
     PHV::Kind kind_i;
+    gress_t gress_i;
     int exact_containers_i = 0;
     int max_width_i = 0;
     int num_constraints_i = 0;
@@ -712,6 +737,9 @@ class RotationalCluster : public ClusterStats {
 
     /// @returns true if this cluster contains @slice.
     bool contains(const PHV::FieldSlice& slice) const override;
+
+    /// @returns the gress requirement of this cluster.
+    gress_t gress() const override          { return gress_i; }
 
     /** Slices all AlignedClusters in this cluster at the relative field bit
      * @pos.  For example, if a cluster contains a field slice [3..7] and pos
@@ -766,6 +794,7 @@ class SuperCluster : public ClusterStats {
 
     // Statstics gathered from clusters.
     PHV::Kind kind_i;
+    gress_t gress_i;
     int exact_containers_i = 0;
     int max_width_i = 0;
     int num_constraints_i = 0;
@@ -825,6 +854,9 @@ class SuperCluster : public ClusterStats {
 
     /// @returns true if this cluster contains @slice.
     bool contains(const PHV::FieldSlice& slice) const override;
+
+    /// @returns the gress requirement of this cluster.
+    gress_t gress() const override { return gress_i; }
 
     /// @returns true if no structural constraints prevent this super cluster
     /// from fitting.

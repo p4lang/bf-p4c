@@ -301,7 +301,32 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     std::list<PHV::SuperCluster*>
     allocLoop(PHV::Transaction& rst,
               std::list<PHV::SuperCluster*>& cluster_groups,
-              std::list<PHV::ContainerGroup *>& container_groups);
+              const std::list<PHV::ContainerGroup *>& container_groups);
+
+    /** Return a vector of slicing schemas for @p sc, that
+     *
+     *  1. Slicing by the available spots on containers.
+     *  2. Slicing by 7, 6, 5...1-bit chunks.
+     *
+     */
+    std::vector<bitvec>
+    calc_slicing_schemas(const PHV::SuperCluster* sc,
+                         const std::set<PHV::Allocation::AvailableSpot>& spots);
+
+    /** Slice cluster_groups to small chunks and try allocate them.
+     *
+     *  After execution, @p rst will be updated with allocated clusters.
+     *  Unallocated superclusters will be stored in @p cluster_groups, without being sliced.
+     *  @returns allocated clusters.
+     *
+     *  Try to slice and allocate each cluster by trying the slicing schemas returned from
+     *  calc_slicing_schema, in order.
+     */
+    std::list<PHV::SuperCluster*>
+    pounderRoundAllocLoop(
+            PHV::Transaction& rst,
+            std::list<PHV::SuperCluster*>& cluster_groups,
+            const std::list<PHV::ContainerGroup *>& container_groups);
 };
 
 /** Given constraints gathered from compilation thus far, allocate fields to
