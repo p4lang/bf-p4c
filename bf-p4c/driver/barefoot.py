@@ -54,6 +54,9 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("-s", dest="run_post_compiler",
                                     help="Only run assembler and linker",
                                     action="store_true", default=False)
+        self._argGroup.add_argument("--no-link", dest="skip_linker",
+                                    help="Run up to linker",
+                                    action="store_true", default=False)
 
     def config_preprocessor(self, targetDefine):
         self.add_command_option('preprocessor', "-E -x c")
@@ -111,3 +114,5 @@ class BarefootBackend(BackendDriver):
         # local options
         if opts.run_post_compiler or src_extension == '.bfa':
             self.enable_commands(['assembler', 'linker'])
+        if opts.skip_linker or src_extension == '.bfa':
+            self.disable_commands(['linker'])

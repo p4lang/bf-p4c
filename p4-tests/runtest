@@ -254,6 +254,11 @@ if [ "$ptftestdir" = "" ]; then
     fi
 fi
 
+has_stf=false
+if $run_stf && [ -r ${file%.p4}.stf ]; then
+    has_stf=true
+fi
+
 p4runtime_out=$testdir/${name}${out_ext}.out/p4info.proto.txt
 P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
 
@@ -268,6 +273,12 @@ fi
 
 if [ ! -x $P4C ]; then
     die "Can't find $P4C"
+fi
+
+# if we don't have PTF or STF tests to run, we can skip the linking step
+# to save time
+if ! $run_ptf && ! $has_stf; then
+    P4C_ARGS="$P4C_ARGS --no-link"
 fi
 
 if $debug; then
