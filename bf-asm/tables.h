@@ -6,6 +6,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include "algorithm.h"
 #include "alloc.h"
 #include "asm-types.h"
@@ -113,6 +114,7 @@ public:
             lineno = a.lineno;
             return *this; }
         Ref(const std::string &n) : lineno(-1), name(n) {}
+        Ref(const char *n) : lineno(-1), name(n) {}
         Ref(const value_t &a) : lineno(a.lineno), name(a.s) {
             assert(a.type == tSTR); }
         Ref &operator=(const std::string &n) { name = n; return *this; }
@@ -322,7 +324,13 @@ public:
             bool                                default_allowed = false;
             std::string                         default_disallowed_reason = "";
             std::vector<Call>                   attached;
-            Action(Table *, Actions *, pair_t &);
+            int                                 next_table_encode = 0;
+            // The hit map points to next tables for actions as ordered in the
+            // assembly, we use 'position_in_assembly' to map the correct next
+            // table, as actions can be ordered in the map different from the
+            // assembly order.
+            int                                 position_in_assembly = -1;
+            Action(Table *, Actions *, pair_t &, int);
             Action(const char *n, int l) : name(n), lineno(l) {}
             bool equiv(Action *a);
             bool equivVLIW(Action *a);
@@ -442,6 +450,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual bool uses_colormaprams() const { return false; }
     virtual bool adr_mux_select_stats() { return false; }
     virtual bool run_at_eop() { return false; }
+    virtual Format* get_format() { return format; }
     template<class REGS> void write_mapram_regs(REGS &regs, int row, int col, int vpn, int type);
     template<class T> T *to() { return dynamic_cast<T *>(this); }
     template<class T> const T *to() const { return dynamic_cast<const T *>(this); }
@@ -476,6 +485,8 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     std::vector<HashDistribution>       hash_dist;
     p4_params                   p4_params_list;
     std::unique_ptr<json::map>  context_json;
+    unsigned                    default_next_table_id = 0xFF;
+    unsigned                    default_next_table_mask = 0x0;
 
     static std::map<std::string, Table *>       all;
 
@@ -566,6 +577,11 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
         return (!default_action.empty()) ? default_action : action ? action->default_action : ""; }
     virtual unsigned get_default_action_handle() {
         return default_action_handle > 0 ? default_action_handle : action ? action->default_action_handle : 0; }
+    int get_format_field_size(std::string s) {
+        if (format)
+            if (auto fmt_field = format->field(s))
+                return fmt_field->size;
+        return 0; }
 };
 
 class FakeTable : public Table {
@@ -831,7 +847,9 @@ public:
         return indirect ? indirect->find_on_actionbus(n, off, size, len)
                         : Table::find_on_actionbus(n, off, size, len); }
     const Call &get_action() const override { return indirect ? indirect->get_action() : action; }
-    Actions *get_actions() override { return actions ? actions : indirect ? indirect->actions : 0; }
+    Actions *get_actions() override { return actions ? actions : 
+        (action ? action->actions : indirect ? indirect->actions ? indirect->actions : 
+         indirect->action ? indirect->action->actions : 0 : 0); }
     const AttachedTables *get_attached() const override {
         return indirect ? indirect->get_attached() : &attached; }
     SelectionTable *get_selector() const override {
@@ -874,6 +892,7 @@ public:
     std::string get_default_action() override {
         std::string def_act = Table::get_default_action();
         return !def_act.empty() ? def_act : indirect ? indirect->default_action : ""; }
+    Format* get_format() override { return indirect ? indirect->format : format; }
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",

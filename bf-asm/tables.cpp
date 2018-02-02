@@ -8,8 +8,6 @@
 #include "stage.h"
 #include "tables.h"
 
-#include <unordered_map>
-
 extern unsigned unique_action_handle;
 
 std::map<std::string, Table *> Table::all;
@@ -313,9 +311,6 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
         if (!hit_next.empty())
             error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
         else if (kv.value.type == tVEC) {
-            if (kv.value.vec.size > NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
-                error(kv.value.lineno, "More than %d hit entries not supported",
-                      NEXT_TABLE_SUCCESSOR_TABLE_DEPTH);
             for (auto &v : kv.value.vec)
                 if (CHECKTYPE(v, tSTR))
                     hit_next.emplace_back(v);
@@ -803,8 +798,9 @@ Table::Actions::Action::alias_t::alias_t(value_t &data) {
             value = data.i; }
 }
 
-Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
+Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos) {
     lineno = kv.key.lineno;
+    position_in_assembly = pos;
     if (kv.key.type == tCMD) {
         name = kv.key[0].s;
         if (CHECKTYPE(kv.key[1], tINT)) {
@@ -866,6 +862,7 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
 
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
     table = tbl;
+    int pos = 0;
     for (auto &kv : data) {
         if ((kv.key.type != tINT && !CHECKTYPE2M(kv.key, tSTR, tCMD, "action")) ||
             !CHECKTYPE(kv.value, tVEC))
@@ -875,7 +872,7 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
         if (actions.count(name)) {
             error(kv.key.lineno, "Duplicate action %s", name.c_str());
             continue; }
-        actions.emplace(name, Action(tbl, this, kv)); }
+        actions.emplace(name, Action(tbl, this, kv, pos++)); }
 }
 
 void Table::Actions::Action::set_action_handle(Table *tbl) {
@@ -1233,11 +1230,11 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
     // changed, the assembler will also need updating. This suggests we should
     // come up with a better way of decoupling this.
     unsigned hit_index = (table->get_gateway() && (table->hit_next.size() > 1)) ? 1 : 0;
-    bool hit_index_inc = true;
+    int hit_index_inc = 1;
     // If hit and miss tables are same, set next table for all actions
     if (table->hit_next.size() == (hit_index + 1))
         if (table->hit_next[hit_index] == table->miss_next)
-            hit_index_inc = false;
+            hit_index_inc = 0;
     // If miss table not in any hit tables, set next table to miss table for all actions
     // This is the default action next table or miss table which runtime updates
     bool set_miss_table = true;
@@ -1247,15 +1244,25 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
     json::vector &action_format = tbl["action_format"] = json::vector();
     for (auto &act : *this) {
         json::map action_format_per_action;
-        // compute what is the next table and set next to "nullptr" if either this is the
-        // last table or it ran out of indices
-        auto next = hit_index < table->hit_next.size() ? table->hit_next[hit_index] : Table::Ref();
+        // compute what is the next table and set next to empty ref if either this is the
+        // last table or it ran out of indices. Since the hit_index follows the
+        // order of actions in assembly to specify next tables, we use the
+        // 'position_in_assembly' value in each action as index.
+        auto hit_next_index = hit_index + act.position_in_assembly;
+        auto next = (hit_next_index < table->hit_next.size()) ?
+            table->hit_next[hit_next_index] : Table::Ref();
+        // If there is only one next table, all actions will use this table
+        if (table->hit_next.size() == hit_index + 1)
+            next = table->hit_next[hit_index];
         if (set_miss_table) next = table->miss_next;
         if(next && next->name_ == "END") next = Table::Ref();
         std::string next_table_name = next ? next->name() : "--END_OF_PIPELINE--";
-        unsigned next_table = next ? hit_index : 0;
+        //unsigned next_table = next ? table->get_format_field_size("next") == 8 ? 
+        //    next->table_id() : next->table_type() == Table::GATEWAY ? 0 : act.next_table_encode : 0;
+        unsigned next_table = next ? table->get_format_field_size("next") == 8 ? 
+            next->table_id() : act.next_table_encode : 0;
         unsigned next_table_full = next ? next->table_id() : 0xff;
-        if (hit_index_inc) hit_index++;
+
         action_format_per_action["action_name"] = act.name;
         action_format_per_action["action_handle"] = act.handle;
         action_format_per_action["table_name"] = next_table_name;
@@ -1559,6 +1566,8 @@ void Table::get_cjson_source(const std::string &field_name,
         imm_name = field_name;
     } else if (field_name == "action")
         source = "instr";
+    else if (field_name == "next")
+        source = "next_table";
     else if (field_name == "action_addr")
         source = "adt_ptr";
     else if ((field_name == "meter_addr") && get_meter())
@@ -1856,10 +1865,8 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
 void Table::common_tbl_cfg(json::map &tbl) {
     tbl["default_action_handle"] = get_default_action_handle();
     tbl["action_profile"] = action_profile();
-    // FIXME-JSON : If next table is present, set default_next_table_mask to
-    // 2^(width of next table field called '--next_tbl--') - 1
-    // matters if test is changing default action
-    tbl["default_next_table_mask"] = 0;
+    tbl["default_next_table_mask"] = default_next_table_mask;
+    tbl["default_next_table"] = default_next_table_id ;
     //FIXME-JSON: No brig support yet, uncomment when driver support is
     //added to validate json
     //tbl["uses_dynamic_key_masks"] = false;

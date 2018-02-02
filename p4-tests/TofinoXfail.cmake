@@ -1070,11 +1070,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_324_tcam_range_11.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "More than 8 hit entries not supported"
-  extensions/p4_tests/p4_14/action_chain_limits.p4
-  )
-
 # BRIG-435
 p4c_add_xfail_reason("tofino"
   "all_structs inconsistent"

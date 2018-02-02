@@ -220,21 +220,69 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
     /*------------------------
      * Next Table
      *-----------------------*/
+    // Next Table processing can have 4 different types
+    // 1. One Next Table - No action or next bits in format, uses indirection
+    // map set, index 0 to next table, mask is 0, default doesnt matter
+    // 2. Action bits only - No next bits in format, uses indirection map, set
+    // index to action bits and configure 'next_table' in cjson as this index,
+    // mask is for action bits, default doesnt matter
+    // 3. Next bits < 8 - Uses indirection map, set index to next bits
+    // and configure 'next_table' in cjson as this index, mask is for next bits,
+    // default doesnt matter
+    // 4. Next bits == 8- Does not use indirection map, uses all 8 bits to
+    // configure full address in 'next_table', set default address to full
+    // address
     Table *next = result->hit_next.size() > 0 ? result : this;
+    int next_field_size = next->get_format_field_size("next");
+    int action_field_size = next->get_format_field_size("action");
     if (next->hit_next.empty()) {
         /* nothing to do... */
-    } else if (next->hit_next.size() <= NEXT_TABLE_SUCCESSOR_TABLE_DEPTH) {
+    } else if (next->hit_next.size() == 1) {
+        // Only 1 next table, action bits may or may not be present.
+        // Scenario 1 : Action bits present < 8 actions
+        // Scenario 2 : Action bits present > 8 actions
+        // Scenario 3 : Action bits absent = 1 action
         setup_next_table_map(regs, next);
-    } else {
-        /* FIXME */
-        assert(0);
-    }
+    } else if (((1U << next_field_size) <= NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
+            && (next_field_size > 0)) {
+        // Only setup next table map if there are < 8 next tables when 'next'
+        // field is present in format.
+        setup_next_table_map(regs, next);
+    } else if ((1U << action_field_size) <= NEXT_TABLE_SUCCESSOR_TABLE_DEPTH) {
+        // Only setup next table map if there are < 8 next tables when 'action'
+        // field is present or absent in format. If no 'action' field is present
+        // in format index 0 is used to setup the default next table
+        setup_next_table_map(regs, next); }
+
     if (next->miss_next || next->miss_next == "END") {
         merge.next_table_format_data[logical_id].match_next_table_adr_miss_value =
-            next->miss_next ? next->miss_next->table_id() : 0xff; }
-    if (next->hit_next.size() > 1)
+            default_next_table_id = next->miss_next ? next->miss_next->table_id() : 0xff; }
+    // For next table processing the address coming from match overhead goes
+    // through either
+    // 1. And'ed with an adr_mask and or'ed with an adr_default.
+    // 2. And'ed with an adr_mask and lower 3 bits sent to index the next table
+    // map.
+    // This is different from the shift - mask - or which happens in match
+    // merge for other registers. The adr_mask must be set according to how many
+    // bits in the match overhead are being used to determine next table address
+    // either directly or via indexing into the indirection table.  Sec 6.4.3.3
+    // on Next Table Processing in MAU uArch.
+    if (next->hit_next.size() > 1) {
+        unsigned adr_mask = (1U << ceil_log2(next->hit_next.size())) - 1;
+        // Generate mask on no. of bits required to denote the next table bits
+        if (next_field_size > 0)
+            adr_mask = (1U << next_field_size) - 1;
+        default_next_table_mask = adr_mask;
+        merge.next_table_format_data[logical_id].match_next_table_adr_mask = adr_mask;
+    } else if (next->hit_next.size() == 1) {
         merge.next_table_format_data[logical_id].match_next_table_adr_mask =
-            (1U << ceil_log2(next->hit_next.size())) - 1;
+            default_next_table_mask = 0;
+        merge.next_table_format_data[logical_id].match_next_table_adr_default =
+            next->hit_next[0] ? next->hit_next[0]->table_id() : 0xFF;
+    } else {
+        merge.next_table_format_data[logical_id].match_next_table_adr_mask =
+        merge.next_table_format_data[logical_id].match_next_table_adr_default = 0xFF; }
+
 
     /*------------------------
      * Immediate data found in overhead

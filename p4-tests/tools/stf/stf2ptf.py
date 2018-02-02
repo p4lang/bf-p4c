@@ -106,7 +106,7 @@ class STF2ptf(P4RuntimeTest, STFRunner):
             # STF defines priorities as higher numbers mean higher priorities.
             # However, the current bf-driver implementation interprets lower
             # numbers as higher priorities.
-            table_entry.priority = table_size - priority
+            table_entry.priority = table_size - table_entry.priority
         elif (not needs_priority) and (priority is not None):
             self._logger.warning("Priority value provided for non-ternary table will be discarded")
         self.set_match_key(table_entry, table, self.genMatchKey(table, match_list))
