@@ -81,6 +81,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool requires_split = false;
         bool constant_to_ad = false;
 
+        bool is_shift() {
+            return name == "shru" || name == "shrs" || name == "shl";
+        }
+
         friend std::ostream &operator<<(std::ostream &out, const FieldAction &);
     };
 
@@ -114,7 +118,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
 
         bool equiv_bit_totals() const { return write_bits.popcount() == read_bits.popcount(); }
-        bool aligned() const { return (write_bits & read_bits).popcount() == 0; }
+        bool aligned() const {
+            return (write_bits - read_bits).empty() && (read_bits - write_bits).empty();
+        }
     };
     /** Information on the action data field contained within the instruction.  The action data
      *  could be affected by multiple individual fields.  Assumes that only one action data field
@@ -148,6 +154,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
      *  within a single VLIW ALU
      */
     struct ContainerAction {
+        bool verbose = false;
         bool to_deposit_field = false;  ///> determined by tofino_compliance check
         bool to_bitmasked_set = false;  ///> determined by tofino_compliance_check
         bool impossible = false;
@@ -173,7 +180,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                             DIFFERENT_READ_SIZE = (1 << 12),
                             MAU_GROUP_MISMATCH = (1 << 13),
                             PHV_AND_ACTION_DATA = (1 << 14),
-                            PARTIAL_OVERWRITE = (1 << 15) };
+                            PARTIAL_OVERWRITE = (1 << 15),
+                            MULTIPLE_SHIFTS = (1 << 16),
+                            ILLEGAL_ACTION_DATA = (1 << 17) };
         unsigned error_code = NO_PROBLEM;
         cstring name;
         ActionDataInfo adi;
@@ -193,12 +202,16 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return field_actions[0].reads.size();
         }
 
+        int ad_sources() {
+            return std::min(1, counts[ActionParam::ACTIONDATA] + counts[ActionParam::CONSTANT]);
+        }
+
         bool is_shift() {
             return name == "shru" || name == "shrs" || name == "shl";
         }
 
         bool has_ad_or_constant() {
-            return (counts[ActionParam::ACTIONDATA] + counts[ActionParam::CONSTANT]) > 0;
+            return ad_sources() > 0;
         }
 
         bool partial_overwrite() {
@@ -222,16 +235,18 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         // bitvec rotate_contig(bitvec orig, int shift, int size);
 
         void verify_speciality(PHV::Container container, cstring action_name);
+        bool verify_shift(cstring &error_message, PHV::Container container, const PhvInfo &phv);
+        bool verify_phv_mau_group(PHV::Container container);
         bool verify_one_alignment(TotalAlignment &tot_alignment, int size, int &unaligned_count,
             int &non_contiguous_count);
         void move_source_to_bit(safe_vector<int> &bit_uses, TotalAlignment &ta);
         bool verify_source_to_bit(int operands, PHV::Container container);
         bool verify_overwritten(PHV::Container container, const PhvInfo &phv);
+        bool verify_only_read(const PhvInfo &phv);
         bool verify_possible(cstring &error_message, PHV::Container container,
                              cstring action_name, const PhvInfo &phv);
         bool verify_alignment(int max_phv_unaligned, int max_ad_unaligned, int max_non_contiguous,
                               PHV::Container container);
-        bool verify_phv_mau_group(PHV::Container container);
 
         bitvec total_write() const;
         bool convert_constant_to_actiondata() {

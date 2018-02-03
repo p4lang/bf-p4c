@@ -284,12 +284,14 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
             }
         }
 
-        for (auto read : field_action.reads) {
-            if (read.size() != field_action.write.size()) {
-                ::warning("In action %s, write %s and read %s sizes do not match up",
-                          action_name, cstring::to_cstring(field_action.write),
-                          cstring::to_cstring(read));
-                warning = true;
+        if (!field_action.is_shift()) {
+            for (auto read : field_action.reads) {
+                if (read.size() != field_action.write.size()) {
+                    ::warning("In action %s, write %s and read %s sizes do not match up",
+                              action_name, cstring::to_cstring(field_action.write),
+                              cstring::to_cstring(read));
+                    warning = true;
+                }
             }
         }
     }
@@ -311,9 +313,14 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
 bool ActionAnalysis::initialize_alignment(const ActionParam &write, const ActionParam &read,
     ContainerAction &cont_action, cstring &error_message, PHV::Container container,
     cstring action_name) {
+
+    if (cont_action.is_shift() && read.type == ActionParam::CONSTANT)
+        return true;
+
     error_message = "In the ALU operation over container " + container.toString() +
                     " in action " + action_name + ", ";
-    if (write.expr->type->width_bits() != read.expr->type->width_bits()) {
+    if (write.expr->type->width_bits() != read.expr->type->width_bits()
+        && !cont_action.is_shift()) {
         error_message += "the number of bits in the write and read aren't equal";
         cont_action.error_code |= ContainerAction::DIFFERENT_READ_SIZE;
         return false;
@@ -358,14 +365,11 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
     auto *field = phv.field(read.expr, &range);
 
     BUG_CHECK(field, "PHV read has no allocation");
-    bitvec read_bits;
-    PHV::Container read_container;
+
     int count = 0;
     field->foreach_alloc(range, [&](const PHV::Field::alloc_slice &alloc) {
         count++;
         BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
-        read_bits.setrange(alloc.container_bit, alloc.width);
-        read_container = alloc.container;
     });
 
     if (count > MAX_PHV_SOURCES) {
@@ -374,15 +378,27 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
         return false;
     }
 
-    auto &phv_alignment = cont_action.phv_alignment;
-    if (phv_alignment.find(read_container) == phv_alignment.end()) {
-        TotalAlignment ta;
-        ta.add_alignment(write_bits, read_bits);
-        phv_alignment[read_container] = ta;
-        cont_action.counts[ActionParam::PHV]++;
-    } else {
-        phv_alignment[read_container].add_alignment(write_bits, read_bits);
-    }
+    field->foreach_alloc(range, [&](const PHV::Field::alloc_slice &alloc) {
+         bitvec read_bits(alloc.container_bit, alloc.width);
+         bitvec mini_write_bits;
+         if (!cont_action.is_shift()) {
+             int mini_write_start = alloc.field_bit - range.lo;
+             int write_field_start = write_bits.ffs();
+             mini_write_bits.setrange(write_field_start + mini_write_start, alloc.width);
+         } else {
+             mini_write_bits = write_bits;
+         }
+
+         auto &phv_alignment = cont_action.phv_alignment;
+         if (phv_alignment.find(alloc.container) == phv_alignment.end()) {
+             TotalAlignment ta;
+             ta.add_alignment(mini_write_bits, read_bits);
+             phv_alignment[alloc.container] = ta;
+             cont_action.counts[ActionParam::PHV]++;
+         } else {
+             phv_alignment[alloc.container].add_alignment(mini_write_bits, read_bits);
+         }
+    });
     return true;
 }
 
@@ -496,6 +512,7 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
     for (auto &container_action : *container_actions_map) {
         auto &container = container_action.first;
         auto &cont_action = container_action.second;
+        cont_action.verbose = verbose;
 
         if (verbose)
             LOG3("Action over container " << container.toString() << ": " << cont_action);
@@ -618,6 +635,8 @@ bitvec ActionAnalysis::ContainerAction::total_write() const {
 bool ActionAnalysis::ContainerAction::verify_one_alignment(TotalAlignment &tot_alignment,
         int size, int &unaligned_count, int &non_contiguous_count) {
     (void) size;
+
+
     if (tot_alignment.write_bits.popcount() != tot_alignment.read_bits.popcount()) {
         return false;
     }
@@ -675,6 +694,10 @@ bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
 
     for (auto &tot_align_info : phv_alignment) {
         auto &tot_alignment = tot_align_info.second;
+        if (verbose)
+            LOG3("Alignment " << tot_align_info.first.toString() << " 0x"
+                 << tot_alignment.write_bits << " 0x" << tot_alignment.read_bits);
+
         // Verify on an individual field by field basis on the instruction on alignment
         bool verify = verify_one_alignment(tot_alignment, container.size(),
                                            unaligned_count, non_contiguous_count);
@@ -755,8 +778,22 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(PHV::Container containe
     if (total_write_bits != container_occupancy)
         return false;
 
-    if (static_cast<size_t>(total_write_bits.popcount()) != container.size())
+    if (static_cast<size_t>(total_write_bits.popcount()) != container.size()) {
         error_code |= PARTIAL_OVERWRITE;
+    }
+    return true;
+}
+
+/** Ensure that a read field is the only field within that container
+ */
+bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv) {
+    for (auto &tot_align_info : phv_alignment) {
+        auto container = tot_align_info.first;
+        auto &total_alignment = tot_align_info.second;
+        bitvec container_occupancy = phv.bits_allocated(container);
+        if (total_alignment.read_bits != container_occupancy)
+            return false;
+    }
     return true;
 }
 
@@ -898,6 +935,46 @@ void ActionAnalysis::ContainerAction::verify_speciality(PHV::Container container
                           "combined with other action data", container.toString(), action_name);
 }
 
+/** Due to shifts being fairly unique when it comes to action constraints, a separate function
+ *  is required. The following constraints are verified:
+ *     - Only one field_action is allowed per container (Not technically a constraint, but
+ *       difficult to verify this otherwise
+ *     - No action data or constants are allowed as a shift, only one PHV
+ *     - The writes and reads are the only fields within their containers (Again not technically
+ *       a constraint, but difficult to verify as well)
+ */
+
+bool ActionAnalysis::ContainerAction::verify_shift(cstring &error_message,
+        PHV::Container container, const PhvInfo &phv) {
+    if (field_actions.size() > 1) {
+        error_code |= MULTIPLE_SHIFTS;
+        error_message += "p4c cannot support multiple shift instructions in one container";
+        return false;
+    }
+
+    if (has_ad_or_constant()) {
+        error_code |= ILLEGAL_ACTION_DATA;
+        error_message += "no action data or constant field is allowed in a shift function";
+        return false;
+    }
+
+    if (counts[ActionParam::PHV] > 1) {
+        error_code |= TOO_MANY_PHV_SOURCES;
+        error_message += "a shift function can only have one PHV source";
+        return false;
+    }
+
+    bool total_overwrite_possible = verify_overwritten(container, phv);
+    total_overwrite_possible |= verify_only_read(phv);
+    if (!total_overwrite_possible) {
+        error_code |= ILLEGAL_OVERWRITE;
+        error_message += "either a read or write in a shift operation is not the only field "
+                         "within a container";
+    }
+    return true;
+}
+
+
 /** The goal of this function is to validate a container operation given the allocation
  *  the write fields and the sources of the particular operation.  The following checks are:
  *    - If the ALU operation requires too many sources
@@ -912,15 +989,23 @@ void ActionAnalysis::ContainerAction::verify_speciality(PHV::Container container
  */
 bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         PHV::Container container, cstring action_name, const PhvInfo &phv) {
-    if (is_shift()) {
-        return true;
-    }
-
     verify_speciality(container, action_name);
-    int actual_ad = std::min(1, counts[ActionParam::ACTIONDATA] + counts[ActionParam::CONSTANT]);
-    int sources_needed = counts[ActionParam::PHV] + actual_ad;
     error_message = "In the ALU operation over container " + container.toString() +
                     " in action " + action_name + ", ";
+
+    bool phv_group_correct = verify_phv_mau_group(container);
+    if (!phv_group_correct) {
+        error_code |= MAU_GROUP_MISMATCH;
+        error_message += "a read phv is in an incompatible PHV group";
+        return false;
+    }
+
+    if (is_shift()) {
+        return verify_shift(error_message, container, phv);
+    }
+
+    int actual_ad = ad_sources();
+    int sources_needed = counts[ActionParam::PHV] + actual_ad;
 
     if (sources_needed > 2) {
         if (actual_ad) {  // If action data as a source
@@ -949,18 +1034,13 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         return false;
     }
 
-    bool phv_group_correct = verify_phv_mau_group(container);
-    if (!phv_group_correct) {
-        error_code |= MAU_GROUP_MISMATCH;
-        error_message += "a read phv is in an incompatible PHV group";
-        return false;
-    }
-
     bitvec ad_bitmask = adi.ad_alignment.write_bits | constant_alignment.write_bits;
+
     if (sources_needed == 2 && name == "set")
         to_deposit_field = true;
     if (name == "set" && ad_bitmask.popcount() > 0 && !ad_bitmask.is_contiguous())
         to_bitmasked_set = true;
+
 
     bool can_phv_be_unaligned = (name == "set" && (actual_ad == 0));
     int phv_unaligned = can_phv_be_unaligned ? 1 : 0;

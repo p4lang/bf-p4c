@@ -21,6 +21,7 @@ const IR::MAU::Action *SplitInstructions::preorder(IR::MAU::Action *act) {
     container_actions_map.clear();
     split_fields.clear();
     aa.set_container_actions_map(&container_actions_map);
+    aa.set_verbose();
     act->apply(aa);
     if (aa.misaligned_actiondata())
         throw ActionFormat::failure(act->name);
@@ -316,10 +317,12 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     for (auto &container_action : container_actions_map) {
         auto container = container_action.first;
         auto &cont_action = container_action.second;
-        if (cont_action.field_actions.size() == 1
-            && (cont_action.error_code & ~error_mask) == 0) continue;
-        // Currently skip unresolved ActionAnalysis issues
         if ((cont_action.error_code & error_mask) != 0) continue;
+        if (cont_action.field_actions.size() == 1)
+            if (!cont_action.to_deposit_field
+                && (cont_action.error_code & ~error_mask) == 0)
+                continue;
+        // Currently skip unresolved ActionAnalysis issues
         merged_fields.insert(container);
     }
 
@@ -469,16 +472,17 @@ void MergeInstructions::fill_out_read_multi_operand(ActionAnalysis::ContainerAct
                 bitrange bits;
                 auto *field = phv.field(read.expr, &bits);
                 int split_count = 0;
-                bool names_match = false;
                 field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
                     split_count++;
-                    names_match = alloc.container.toString() == match_name;
+                    if (alloc.container.toString() != match_name)
+                       return;
+                    const IR::Expression* read_mo_expr = read.expr;
+                    if (alloc.width != read.size()) {
+                        int start = alloc.field_bit - bits.lo;
+                        read_mo_expr = MakeSlice(read.expr, start, start + alloc.width - 1);
+                    }
+                    mo->push_back(read_mo_expr);
                 });
-                if (split_count != 1)
-                    BUG("Read variable cannot be used within a single action");
-
-                if (names_match)
-                    mo->push_back(read.expr);
              }
          }
     }
@@ -542,9 +546,9 @@ IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container 
  */
 IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container container,
          ActionAnalysis::ContainerAction &cont_action) {
-    if (cont_action.field_actions.size() == 1) {
-        BUG_CHECK(cont_action.name != "set" &&
-            (cont_action.error_code & ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE) != 0,
+    if (cont_action.field_actions.size() == 1 && cont_action.name != "set") {
+        unsigned error_mask = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE;
+        BUG_CHECK((cont_action.error_code & error_mask) != 0,
             "Invalid call to build a merged instruction");
         return dest_slice_to_container(container, cont_action);
     }

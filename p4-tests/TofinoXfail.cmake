@@ -863,14 +863,12 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation creates a container action impossible within a Tofino ALU"
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
   extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
-  extensions/p4_tests/p4_14/test_config_190_modify_with_expr.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   # extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  switch_l2
 
   # Instruction adjustment needs to synthesize a bitmasked-set but does not.
   # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
@@ -887,7 +885,6 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
-  switch_dc_basic
   )
 
 # BRIG-426, and maybe BRIG-421
@@ -1074,4 +1071,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "all_structs inconsistent"
   testdata/p4_16_samples/issue486-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Extracted range .* with size .* doesn't match destination container .* with size"
+  switch_l2
   )

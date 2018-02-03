@@ -275,11 +275,6 @@ if [ ! -x $P4C ]; then
     die "Can't find $P4C"
 fi
 
-# if we don't have PTF or STF tests to run, we can skip the linking step
-# to save time
-if ! $run_ptf && ! $has_stf; then
-    P4C_ARGS="$P4C_ARGS --no-link"
-fi
 
 if $debug; then
     if $verbose; then
@@ -301,6 +296,13 @@ if $debug; then
         exec $BFAS $testdir/$name${out_ext}.bfa
     fi
 fi
+
+# if we don't have PTF or STF tests to run, we can skip the linking step
+# to save time
+if ! $run_ptf && ! $has_stf; then
+    P4C_ARGS="$P4C_ARGS --no-link"
+fi
+ 
 
 if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
     if run $P4C $P4C_ARGS $file -o $testdir/${name}${out_ext}.out; then
