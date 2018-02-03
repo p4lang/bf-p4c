@@ -115,6 +115,7 @@ function install_rapidjson() {
     # so we build from source
     if [[ $ubuntu_release =~ "16.04" ]]; then
         $SUDO apt-get remove -y rapidjson-dev
+    fi
     if [[ $ubuntu_release =~ "14.04" || $ubuntu_release =~ "16.04" ]]; then
         build_rapidjson_from_source ${rj_ver} && \
         $SUDO apt-get remove -y rapidjson-dev && \
