@@ -856,6 +856,8 @@ void AllocatePHV::end_apply() {
     // The meter hack, all destination of meter color go to 8-bit container.
     // TODO(yumin): remove this once this hack is removed in mau.
     for (const auto* f : actions_i.meter_color_dests()) {
+        auto* meter_color_dest = phv_i.field(f->id);
+        meter_color_dest->set_no_split(true);
         pragmas_i.pa_container_sizes().add_constraint(f, { PHV::Size::b8 }); }
 
     LOG1(pragmas_i.pa_container_sizes());
