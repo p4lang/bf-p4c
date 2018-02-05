@@ -397,11 +397,6 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs) {
         TopLevel::regs<Target::Tofino>()->mem_pipe.e_prsr[i] = "memories.all.parser.egress";
         TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.ebp18_reg.ebp_reg[i]
             = "regs.all.parser.egress";
-        // Explicitly disable register which should not be in tofino.bin as
-        // driver owns them.  Glass does set them, however.
-        if (!options.match_compiler)
-            TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.party_glue_reg
-                    .csr_ring_full_thresh.disable();
     }
     TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.prsr_reg = "regs.all.parse_merge";
     for (auto st : all)

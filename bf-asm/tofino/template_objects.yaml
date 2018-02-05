@@ -38,6 +38,7 @@
                         "parb_regs",
                         "pbus_station_regs",
                         "party_pgr_reg_rspec",
+                        "party_glue_reg_rspec",
                     # dprsr_reg_rspec
                         "mir_buf_all",
                         # dprsr_hdr
