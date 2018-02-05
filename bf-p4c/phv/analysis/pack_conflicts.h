@@ -3,7 +3,7 @@
 
 #include "ir/ir.h"
 #include "bf-p4c/mau/action_analysis.h"
-// #include "bf-p4c/mau/action_mutex.h"
+#include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/phv/mau_backtracker.h"
@@ -19,7 +19,7 @@ class PackConflicts : public Inspector {
     const DependencyGraph           &dg;
     const TablesMutuallyExclusive   &mutex;
     const MauBacktracker            &bt;
-    // const ActionMutuallyExclusive   &amutex;
+    const ActionMutuallyExclusive   &amutex;
 
     /// Count for total number of no pack constraints induced by table placement
     size_t                  totalNumSet;
@@ -54,8 +54,8 @@ class PackConflicts : public Inspector {
 
  public:
     PackConflicts(const PhvInfo &p, const DependencyGraph &d, const TablesMutuallyExclusive &m,
-            const MauBacktracker &b/*, const ActionMutuallyExclusive &a*/) :
-        phv(p), dg(d), mutex(m), bt(b) {} /*, amutex(a)*/
+            const MauBacktracker &b, const ActionMutuallyExclusive &a) :
+        phv(p), dg(d), mutex(m), bt(b), amutex(a) {}
 
     bool hasPackConflict(const PHV::Field* f1, const PHV::Field* f2) const;
 

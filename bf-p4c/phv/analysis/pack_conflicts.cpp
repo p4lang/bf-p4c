@@ -58,23 +58,16 @@ void PackConflicts::generateNoPackConstraints(const IR::MAU::Table* t1, const IR
     ordered_set<const PHV::Field*> fields2;
     size_t numSet = 0;
 
-    for (auto act : tableActions.at(t1))
-        fields1.insert(actionWrites[act].begin(), actionWrites[act].end());
-    for (auto act : tableActions.at(t2))
-        fields2.insert(actionWrites[act].begin(), actionWrites[act].end());
-
-    // xxx(Deep): To be pulled back in when action_mutex PR is in
-    /*
     for (auto act1 : tableActions.at(t1)) {
         for (auto act2 : tableActions.at(t2)) {
             if (amutex(act1, act2)) {
                 LOG6("Actions " << act1->name << " and " << act2->name << " are mutually "
                         "exclusive.");
             } else {
-                LOG1("Non mutually exclusive actions " << act1->name << " and " << act2->name);
+                LOG6("Non mutually exclusive actions " << act1->name << " and " << act2->name);
                 fields1.insert(actionWrites[act1].begin(), actionWrites[act1].end());
                 fields2.insert(actionWrites[act2].begin(), actionWrites[act2].end()); } } }
-                */
+
     LOG5("\tFor table: " << t1->name << ", number of fields written across actions: " <<
             fields1.size());
     LOG5("\tFor table: " << t2->name << ", number of fields written across actions: " <<

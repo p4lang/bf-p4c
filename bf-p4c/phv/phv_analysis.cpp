@@ -20,7 +20,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
     : clustering(phv, uses),
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
-      pack_conflicts(phv, deps, table_mutex, table_alloc/*, action_mutex*/),
+      pack_conflicts(phv, deps, table_mutex, table_alloc, action_mutex),
       action_constraints(phv, pack_conflicts),
       pragmas(phv, options) {
     if (options.trivial_phvalloc) {
@@ -49,8 +49,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &clustering,           // cluster analysis
             new PhvInfo::DumpPhvFields(phv, uses),
             &critical_path_clusters,
-            &table_mutex,
-                new ActionMutuallyExclusive(),
+            &table_mutex,          // Table mutual exclusion information
+            &action_mutex,         // Mutually exclusive action information
             &pack_conflicts,       // collect list of fields that cannot be packed together based on
                                    // first round of table allocation (only useful if we backtracked
                                    // from table placement to PHV allocation)

@@ -5,7 +5,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/parser_critical_path.h"
-// #include "bf-p4c/mau/action_mutex.h"
+#include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
@@ -29,7 +29,7 @@ class PHV_AnalysisPass : public PassManager {
 
     CalcCriticalPathClusters critical_path_clusters;    // critical clusters
     TablesMutuallyExclusive table_mutex;                // Mutual exclusion information for tables
-    // ActionMutuallyExclusive action_mutex;             // Mutual exclusion information for actions
+    ActionMutuallyExclusive action_mutex;               // Mutual exclusion information for actions
     PackConflicts pack_conflicts;                       // No pack conflicts generated from earlier
                                                         // table allocation pass
     ActionPhvConstraints action_constraints;            // Action induced constraints for packing
