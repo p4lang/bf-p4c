@@ -23,13 +23,7 @@ updates {
           value: "\xee\x61\x23\xbc\xe5\x00" # ee:61:23:bc:e5:00
         }
       }
-      match {
-        field_id: 3  # hdr.ipv4_base.diffserv
-        ternary {
-	  mask: "\x00" # don't match
-          value: "\x00"
-        }
-      }
+      # hdr.ipv4_base.diffserv (field_id 3) don't care
       match {
         field_id: 4  # "hdr.ipv4_base.dst_addr
         ternary {
@@ -75,13 +69,7 @@ updates {
           value: "\xee\x30\xca\x9d\x1e\x00" # Host 2 mac ee:30:ca:9d:1e:00
         }
       }
-      match {
-        field_id: 3  # hdr.ipv4_base.diffserv
-        ternary {
-	  mask: "\x00" # don't match
-          value: "\x00"
-        }
-      }
+      # hdr.ipv4_base.diffserv (field_id 3) don't care
       match {
         field_id: 4  # "hdr.ipv4_base.dst_addr
         ternary {
