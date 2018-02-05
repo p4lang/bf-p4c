@@ -144,6 +144,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/action_analysis.cpp
   mau/action_data_bus.cpp
   mau/action_format.cpp
+  mau/action_mutex.cpp
   mau/asm_output.cpp
   mau/field_use.cpp
   mau/db-gateway.cpp
@@ -173,6 +174,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/action_analysis.h
   mau/action_data_bus.h
   mau/action_format.h
+  mau/action_mutex.h
   mau/asm_output.h
   mau/default_next.h
   mau/field_use.h
@@ -441,7 +443,8 @@ add_dependencies(p4c_driver linkp4cbarefoot)
 
 # # Tofino-specific GTests.
 set (GTEST_BF_P4C_SOURCES
-#${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_mutex.cpp
+  # ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp

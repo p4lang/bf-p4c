@@ -9,6 +9,7 @@
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/phv/analysis/field_interference.h"
 #include "bf-p4c/phv/analysis/jbay_phv_analysis.h"
+#include "bf-p4c/mau/action_mutex.h"
 
 class PhvInfo;
 
@@ -49,7 +50,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new PhvInfo::DumpPhvFields(phv, uses),
             &critical_path_clusters,
             &table_mutex,
-            // &action_mutex,
+                new ActionMutuallyExclusive(),
             &pack_conflicts,       // collect list of fields that cannot be packed together based on
                                    // first round of table allocation (only useful if we backtracked
                                    // from table placement to PHV allocation)
