@@ -564,6 +564,10 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
         for (auto &p : p4_params_list)
             if (p.name == s) return &p;
         return nullptr; }
+    p4_param *find_p4_param(std::string s, std::string t) {
+        for (auto &p : p4_params_list)
+            if ((p.name == s) && (p.type == t)) return &p;
+        return nullptr; }
     p4_param *find_p4_param_type(std::string &s) {
         for (auto &p : p4_params_list)
             if (p.type == s) return &p;
@@ -814,6 +818,7 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
         Match() {}
         Match(const value_t &);
     };
+    enum range_match_t { TCAM_NORMAL=0, DIRTCAM_2B=1, DIRTCAM_4B_LO=2, DIRTCAM_4B_HI=3, NONE=4 };
     std::vector<Match>  match;
     int match_word(int word_group) {
         for (unsigned i = 0; i < match.size(); i++)
@@ -828,6 +833,14 @@ public:
     Table::Ref indirect;
     int indirect_bus;   /* indirect bus to use if there's no indirect table */
     void alloc_vpns() override;
+    range_match_t get_dirtcam_mode(int group, int byte) {
+        assert(group >= 0);
+        assert(byte >= 0);
+        range_match_t dirtcam_mode = NONE;
+        for (auto &m : match) {
+            if (m.word_group == group) {
+                dirtcam_mode = (range_match_t) ((m.dirtcam >> 2*byte) & 0x3); } }
+        return dirtcam_mode; }
     Format::Field *lookup_field(const std::string &name, const std::string &action) override {
         assert(!format);
         return indirect ? indirect->lookup_field(name, action) : 0; }
@@ -874,7 +887,8 @@ public:
     table_type_t table_type() const override { return TERNARY; }
     void gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
-        std::string source, unsigned start_bit, unsigned field_width);
+        std::string source, unsigned start_bit, unsigned field_width,
+        unsigned index);
     void gen_alpm_cfg(json::vector &out);
     void set_partition_action_handle(unsigned handle) {
         if (p4_table) p4_table->set_partition_action_handle(handle); }

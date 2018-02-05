@@ -288,6 +288,7 @@ void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &
             BUG_CHECK(n.second, "duplicate byte use in ixbar");
         }
     }
+
     for (auto &group : sort) {
         auto it = group.second.begin();
         while (it != group.second.end()) {

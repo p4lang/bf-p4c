@@ -1875,7 +1875,7 @@ void Table::common_tbl_cfg(json::map &tbl) {
     tbl["ap_bind_indirect_res_to_match"] = json::vector();
     //FIXME-JSON: PD related, check glass examples for false (ALPM)
     tbl["is_resource_controllable"] = true;
-    tbl["uses_range"] = false; //FIXME-JSON: Ranges not yet implemented by brig
+    tbl["uses_range"] = false;
     json::vector &params = tbl["match_key_fields"] = json::vector();
     if ((!p4_params_list.empty()) &&
             (this->to<MatchTable>() || this->to<Phase0MatchTable>())) {
@@ -1895,6 +1895,8 @@ void Table::common_tbl_cfg(json::map &tbl) {
             param["instance_name"] = instname;
             param["field_name"] = fieldname;
             params.push_back(std::move(param));
+            if (p.type == "range")
+                tbl["uses_range"] = true;
             start_bit += p.bit_width_full; } }
 }
 

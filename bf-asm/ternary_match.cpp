@@ -421,16 +421,40 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
 
 void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
-        std::string source, unsigned start_bit, unsigned field_width) {
+        std::string source, unsigned start_bit, unsigned field_width, \
+        unsigned index) {
     remove_aug_names(name);
-    out.push_back( json::map {
-        { "field_name", json::string(name) },
-        { "lsb_mem_word_offset", json::number(lsb_offset) },
-        { "lsb_mem_word_idx", json::number(lsb_idx) },
-        { "msb_mem_word_idx", json::number(msb_idx) },
-        { "source", json::string(source) },
-        { "start_bit", json::number(start_bit) },
-        { "field_width", json::number(field_width) }});
+    auto *p = find_p4_param(name, "range");
+    // For range match we need bytes to decide which nibble is being used, hence
+    // split the field in bytes. For normal match entire slice can be used
+    // directly.
+    unsigned field_bytes = p ? field_width/8 : 1;
+    for (int i = 0; i < field_bytes; i++) {
+        json::map entry;
+        entry["field_name"] = name;
+        entry["lsb_mem_word_offset"] = lsb_offset;
+        entry["lsb_mem_word_idx"] = lsb_idx;
+        entry["msb_mem_word_idx"] = msb_idx;
+        entry["source"] = source;
+        entry["start_bit"] = start_bit;
+        entry["field_width"] = field_width;
+        auto dirtcam_mode = get_dirtcam_mode(index, (lsb_offset + i*8)/8);
+        // If field is a range match output the 'range' node only for 4bit hi/lo
+        // encodings (dirtcam = 2 (4bit lo), dirtcam = 3 (4bit hi)
+        if (p && ((dirtcam_mode == DIRTCAM_4B_LO) ||
+                    (dirtcam_mode == DIRTCAM_4B_HI))) {
+            entry["source"] = "range";
+            // Shift start bit based on which nibble is used in range
+            entry["start_bit"] = i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4;
+            entry["field_width"] = 4;
+            entry["lsb_mem_word_offset"] = lsb_offset + i*8;
+            json::map &entry_range = entry["range"];
+            entry_range["type"] = 4;
+            // Glass generates the unused nibble entry and marks its
+            // 'is_duplicate' as true. Driver ignores these entries. We dont
+            // generate the unused entries, so all are marked as 'false'
+            entry_range["is_duplicate"] = false; }
+        out.push_back(std::move(entry)); }
 }
 
 void TernaryMatchTable::gen_alpm_cfg(json::vector &out) {
@@ -441,12 +465,12 @@ void TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list, int
    // Insert payload (bit 0), parity (bit 45, 46) and
    // version bits(bits 43, 44 if specified) for new word
    gen_entry_cfg(match_field_list, "--tcam_payload_" +
-                 std::to_string(word) + "--", 0, word, word, "payload", 0, 1);
+                 std::to_string(word) + "--", 0, word, word, "payload", 0, 1, 0);
    if (uses_versioning && (version_word_group == word)) {
        gen_entry_cfg(match_field_list, "--version--", \
-                     43, word, word, "version", 0, 2); }
+                     43, word, word, "version", 0, 2, 0); }
    gen_entry_cfg(match_field_list, "--tcam_parity_" +
-                 std::to_string(word) + "--", 45, word, word, "parity", 0, 2);
+                 std::to_string(word) + "--", 45, word, word, "parity", 0, 2, 0);
 }
 
 void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
@@ -515,20 +539,20 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             lsb_mem_word_offset = 1 + field.second.lo;
             gen_entry_cfg(match_field_list, field_name, \
                           lsb_mem_word_offset, word, word, source, \
-                          field.second.what.lobit(), hwidth);
+                          field.second.what.lobit(), hwidth, field.first.index);
             int adjword = match_index - match_word(field.first.index + 1);
             if (adjword < 0) continue;
             lsb_mem_word_offset = 1 + field.second.lo;
             gen_entry_cfg(match_field_list, field_name, \
                           lsb_mem_word_offset, adjword, adjword, source, \
                           field.second.what.lobit() + hwidth, \
-                          field.second.hi - 43);
+                          field.second.hi - 43, field.first.index);
         } else {
             lsb_mem_word_offset = 1 + field.second.lo;
             gen_entry_cfg(match_field_list, field_name, \
                           lsb_mem_word_offset, word, word, source, \
                           field.second.what.lobit(), \
-                          field.second.hi - field.second.lo + 1); } }
+                          field.second.hi - field.second.lo + 1, field.first.index); } }
     // For keyless table, just add parity & payload bits
     if (p4_params_list.empty())
         gen_match_fields_pvp(match_field_list, 0, false, -1);
