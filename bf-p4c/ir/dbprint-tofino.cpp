@@ -270,12 +270,14 @@ void IR::BFN::ChecksumUnitConfig::dbprint(std::ostream &out) const {
 }
 
 void IR::BFN::LoweredEmitClot::dbprint(std::ostream &out) const {
+/*
     out << "emit clot " << tag << " (" << byteLength << "B) { ";
 
     for (auto* phvOverride : overrides)
         out << endl << indent << *phvOverride << unindent;
 
     out << " }";
+*/
 }
 
 void IR::BFN::LoweredDeparser::dbprint(std::ostream &out) const {

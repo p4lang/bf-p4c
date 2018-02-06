@@ -256,7 +256,8 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
 
     if (next->miss_next || next->miss_next == "END") {
         merge.next_table_format_data[logical_id].match_next_table_adr_miss_value =
-            default_next_table_id = next->miss_next ? next->miss_next->table_id() : 0xff; }
+            default_next_table_id = next->miss_next ? next->miss_next->table_id()
+                                                    : Stage::end_of_pipe(); }
     // For next table processing the address coming from match overhead goes
     // through either
     // 1. And'ed with an adr_mask and or'ed with an adr_default.
@@ -278,10 +279,10 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
         merge.next_table_format_data[logical_id].match_next_table_adr_mask =
             default_next_table_mask = 0;
         merge.next_table_format_data[logical_id].match_next_table_adr_default =
-            next->hit_next[0] ? next->hit_next[0]->table_id() : 0xFF;
+            next->hit_next[0] ? next->hit_next[0]->table_id() : Stage::end_of_pipe();
     } else {
         merge.next_table_format_data[logical_id].match_next_table_adr_mask =
-        merge.next_table_format_data[logical_id].match_next_table_adr_default = 0xFF; }
+        merge.next_table_format_data[logical_id].match_next_table_adr_default = Stage::end_of_pipe(); }
 
 
     /*------------------------

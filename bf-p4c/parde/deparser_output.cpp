@@ -56,7 +56,7 @@ struct OutputDictionary : public Inspector {
 
     bool preorder(const IR::BFN::LoweredDeparser* deparser) override {
         out << indent << "dictionary:";
-        if (deparser->emits.empty() && deparser->emitClots.empty())
+        if (deparser->emits.empty())
             out << " {}";
         out << std::endl;
         return true;
@@ -77,20 +77,7 @@ struct OutputDictionary : public Inspector {
     }
 
     bool preorder(const IR::BFN::LoweredEmitClot* emit) override {
-        AutoIndent emitIndent(indent);
-        out << indent << "clot " << emit->tag << ":" << std::endl;
-
-        AutoIndent clotDetailsIndent(indent);
-        out << indent << "pov: " << emit->povBit;
-        outputDebugInfo(out, indent, emit->povBit) << std::endl;
-        out << indent << "length: " << emit->byteLength << std::endl;
-
-        for (auto* phvOverride : emit->overrides) {
-            out << indent << phvOverride->range.lo << ": " << phvOverride->source;
-            outputDebugInfo(out, indent, phvOverride->source) << std::endl;
-        }
-
-        return false;
+        return preorder(emit->clot);
     }
 
     bool preorder(const IR::BFN::EmitClot* emit) override {

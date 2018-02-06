@@ -240,15 +240,15 @@ class LoweredParser : AbstractParser {
 
 /// Supertype for all lowered deparser emit primitives - i.e., actions that
 /// write data to the output packet.
-abstract LoweredEmit {
-    /// The POV bit controlling whether the data is written.
-    BFN::ContainerBitRef povBit;
-}
+abstract LoweredEmit {}
 
 /// A primitive that writes the contents of a PHV container to the output
 /// packet.
 class LoweredEmitPhv : LoweredEmit {
     dbprint { out << "emit " << source << " if " << povBit; }
+
+    /// The POV bit controlling whether the data is written.
+    BFN::ContainerBitRef povBit;
 
     /// The container whose contents will be written to the packet.
     BFN::ContainerRef source;
@@ -258,38 +258,16 @@ class LoweredEmitPhv : LoweredEmit {
 class LoweredEmitChecksum : LoweredEmit {
     dbprint { out << "emit checksum " << unit << " if " << povBit; }
 
+    /// The POV bit controlling whether the data is written.
+    BFN::ContainerBitRef povBit;
+
     /// The checksum unit whose result will be written to the packet.
     unsigned unit;
 }
 
-/// A range of bytes in a CLOT which will be replaced with the contents of a PHV
-/// container.
-class ClotPhvOverride {
-    validate {
-        BUG_CHECK(size_t(range.size()) == source->container.size(),
-                  "Overriding clot bytes %1% with container %2% which is the "
-                  "wrong size", range, source->container);
-    }
-    dbprint { out << "override " << range.lo << " with " << source; }
-
-    /// The container to replace bytes in the CLOT with.
-    BFN::ContainerRef source;
-
-    /// The CLOT bytes to replace.
-    nw_byterange range;
-}
-
 /// A primitive that writes the contents of a CLOT to the output packet.
 class LoweredEmitClot : LoweredEmit {
-    /// The tag of the CLOT which will be written to the packet.
-    unsigned tag;
-
-    /// The length in bytes of the CLOT data.
-    unsigned byteLength;
-
-    /// A sequence of byte ranges within the CLOT which should be replaced with
-    /// the contents of a PHV container.
-    inline Vector<ClotPhvOverride> overrides;
+    EmitClot clot;
 }
 
 /// Configures the container whose value will be used to set an intrinsic
@@ -395,7 +373,6 @@ class LoweredDeparser : AbstractDeparser {
     toString { return gress ? "lowered egress deparser" : "lowered ingress deparser"; }
 
     inline Vector<LoweredEmit> emits;
-    inline Vector<EmitClot> emitClots;
     inline Vector<LoweredDeparserParameter> params;
     inline Vector<LoweredDigest> digests;
     inline Vector<ChecksumUnitConfig> checksums;

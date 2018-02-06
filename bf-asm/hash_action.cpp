@@ -146,7 +146,7 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
     match_attributes["uses_dynamic_key_masks"] = false; //FIXME-JSON
     // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
     // to. Otherwise, set it to the default next table for this stage.
-    stage_tbl["default_next_table"] = 255;
+    stage_tbl["default_next_table"] = Stage::end_of_pipe();
     add_pack_format(stage_tbl, 0, 0, hash_dist.empty() ? 1 : 0);
     add_result_physical_buses(stage_tbl);
     if (actions) {

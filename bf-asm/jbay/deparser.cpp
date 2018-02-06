@@ -356,20 +356,26 @@ static void check_jbay_ownership(bitvec phv_use[2]) {
 
 static void setup_jbay_ownership(bitvec phv_use, ubits_base &phv8, ubits_base &phv16,
                                  ubits_base &phv32) {
+    std::set<unsigned> phv8_grps, phv16_grps, phv32_grps;
+
     for (auto i : phv_use) {
         auto *reg = Phv::reg(i);
         switch (reg->size) {
         case 8:
-            phv8 |= 1U << ((reg->deparser_id() - 64)/4U);
+            phv8_grps.insert(1U << ((reg->deparser_id() - 64)/4U));
             break;
         case 16:
-            phv16 |= 1U << ((reg->deparser_id() - 128)/4U);
+            phv16_grps.insert(1U << ((reg->deparser_id() - 128)/4U));
             break;
         case 32:
-            phv32 |= 1U << (reg->deparser_id()/2U);
+            phv32_grps.insert(1U << (reg->deparser_id()/2U));
             break;
         default:
             assert(0); } }
+
+    for (auto v : phv8_grps)  phv8 |= v;
+    for (auto v : phv16_grps) phv16 |= v;
+    for (auto v : phv32_grps) phv32 |= v;
 }
 
 static short jbay_phv2cksum[224][2] = {

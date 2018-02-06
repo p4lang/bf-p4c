@@ -1261,7 +1261,7 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
         //    next->table_id() : next->table_type() == Table::GATEWAY ? 0 : act.next_table_encode : 0;
         unsigned next_table = next ? table->get_format_field_size("next") == 8 ? 
             next->table_id() : act.next_table_encode : 0;
-        unsigned next_table_full = next ? next->table_id() : 0xff;
+        unsigned next_table_full = next ? next->table_id() : Stage::end_of_pipe();
 
         action_format_per_action["action_name"] = act.name;
         action_format_per_action["action_handle"] = act.handle;

@@ -11,10 +11,6 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
             merge.predication_ctl[gress].start_table_fifo_delay0 =
                 this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + pred_cycle(gress) - 3;
             merge.predication_ctl[gress].start_table_fifo_enable = 1;
-            if (stageno == 10) {
-                // FIXME -- regs docs claim this is deprecated and should not be set, but
-                // FIXME -- the model complains if it is not?
-                merge.predication_ctl[gress].start_table_fifo_delay1 = 10; }
         } else {
             assert(stage_dep[gress] == ACTION_DEP);
             merge.predication_ctl[gress].start_table_fifo_delay0 = 0;
