@@ -8,7 +8,7 @@
 #   <register>  ::= <name> that matches a predefined register name
 #   <slice>     ::= <name>(<lo>..<hi>) | <name>(<bit>)
 #                   no spaces between parts of the <slice>
-#   <constant>  ::= unsigned integer constant 
+#   <constant>  ::= unsigned integer constant
 #                   0x/0b/0o prefix for hex/binary/octal
 #   <match-constant> ::= constant where one or more digits may be replaced
 #                   by '*' to denote don't-care for ternary matches.
@@ -35,7 +35,7 @@ phv [<thread>]:
         # May also use R0-R224 for all registers in W/B/H order.
         # TW0-TW31, TB0-TB21, TH0-TH47, R256-R367 for tagalong
 parser [<thread>]:
-    # Defines a parser.  <thread> must be 'ingress' or 'egress' 
+    # Defines a parser.  <thread> must be 'ingress' or 'egress'
     start: <name>
     start: '[' <name>, ... ']'
         # define up to 4 distinct initial start states for the four channels
@@ -45,7 +45,7 @@ parser [<thread>]:
     states:
         # Parser states can be defined with or without the 'states' key but this
         # is preferred as it avoids name collisions with other assembly
-        # directives, 
+        # directives,
         <name> [<match-constant>]:
             # Defines a parser state.  The state 'start' is the implicit initial state
             # if there is no explicit initial state defined by a separate 'start' entry.
@@ -78,8 +78,8 @@ parser [<thread>]:
                     # their values preserved for use by later states
                 shift: <constant>
                     # number of bytes to shift out
-                [rotate] <constant> : [offset] <phv_location> 
-                [rotate] <range> : [offset] <phv_location> 
+                [rotate] <constant> : [offset] <phv_location>
+                [rotate] <range> : [offset] <phv_location>
                     # write the specifed byte (or range) to named phv slot
                 [offset] <phv_location>: [rotate] <constant>
                     # write the specified constant to the phv location
@@ -148,7 +148,7 @@ stage <constant> <thread>:
                         # for a given program is repeatable.
                     crc(<int>, <phv-location>, ...)
                         # crc hash of the given phv locations -- first arg is integer
-                        # constant denoting polynomial (Koopman notation) 
+                        # constant denoting polynomial (Koopman notation)
                     <expression> ^ <expression>
                         # xor of other expressions.
                     stripe(<expression>, ...)
@@ -272,7 +272,7 @@ stage <constant> <thread>:
         format: { <name>: <range>, <name>: <size> ... }
             # names may have `(<int>)` suffix denoting up to 5 match groups
             # all match groups must contain the same keys
-            # some names have predefined meanings: 
+            # some names have predefined meanings:
             match: ...  # exact match groups to match against
             action: ... # field that selects which action to run
             next: ...   # next table
@@ -557,8 +557,8 @@ stage <constant> <thread>:
             # see hash_action hash_dist
         initial_value : { lo : <int> , hi : <int> }
             # Specify initial value for register, assumed 0 otherwise
-        actions: 
-            <action name> : 
+        actions:
+            <action name> :
                 - <instruction>
                     # SALU instructions to run for this table
         context_json: #anything
@@ -567,7 +567,7 @@ stage <constant> <thread>:
         # previous stage.  Ignored in stage 0
     error_mode: no_config | propagate | map_to_immediate | disable
 deparser <thread>:
-    # Defines a deparser.  <thread> must be 'ingress' or 'egress' 
+    # Defines a deparser.  <thread> must be 'ingress' or 'egress'
     dictionary:
         # ordered list of phv locations to write out as the output deparser
         - <phv-location> : <bit-location>
@@ -636,7 +636,7 @@ deparser <thread>:
     warp: <phv-location> [ ':' <pov-bit> ]
     ct_disable: <phv-location> [ ':' <pov-bit> ]
     ct_mcast: <phv-location> [ ':' <pov-bit> ]
-    # jbay ingress only 
+    # jbay ingress only
     bypass_egr: '{' <phv->location> ':' <pov-bit> '}'
     pkt_color: '{' <phv->location> ':' <pov-bit> '}'
     # egress only deparser params: [ ':' <pov-bit> ]
@@ -645,3 +645,6 @@ deparser <thread>:
     capture_tx_ts: <phv-location> [ ':' <pov-bit> ]
     coal: <phv-location> [ ':' <pov-bit> ]
     ecos: <phv-location> [ ':' <pov-bit> ]
+resources: <filename>
+    # Defines the name of the json file that has a description of the resources used by
+    # the program. This is directly placed in context.json for other tools (e.g., p4i).

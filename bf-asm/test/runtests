@@ -141,7 +141,7 @@ function searchdir () {
     for d in $TRY_BINDIRS; do
         if [[ $2 ]]; then
             if [ -d "$d/$2" ]; then
-                for f in $(find $d/$2 -executable -type f -name $1); do
+                for f in $(find $d/$2 -L -executable -type f -name $1); do
                     if [ "$f" -nt "$found" ]; then
                         found="$f"
                     fi
@@ -151,7 +151,7 @@ function searchdir () {
                 fi
             fi
         else
-            for f in $(find $d -executable -type f -name $1); do
+            for f in $(find $d -L -executable -type f -name $1); do
                 if [ "$f" -nt "$found" ]; then
                     found="$f"
                 fi
@@ -193,7 +193,7 @@ findexec BFAS           "bfas"                  "bfas"                  ""
 findexec BFLINK         "bflink"                "bflink"                ""
 findexec REFLOW         "reflow"                "reflow"                ""
 findexec JSON_DIFF      "json_diff"             "json_diff"             ""
-findexec SCHEMA         "gen_schema.py"         "gen_schema.py"         ""
+findexec SCHEMA         "gen_schema.py"         "gen_schema.py"         "ctx_json"
 findexec SCHEMA_VAL     "validate.py"           "validate.py"           ""
 findexec WALLE          "walle"                 "walle"                 ""
 
