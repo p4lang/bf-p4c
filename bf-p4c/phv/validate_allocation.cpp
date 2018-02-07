@@ -279,7 +279,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     // emitted in the deparser.
     for (auto& field : phv) {
         if (isDeparsed(&field))
-            ERROR_WARN_(deparseOccurrences.find(&field) != deparseOccurrences.end(),
+            WARN_CHECK(deparseOccurrences.find(&field) != deparseOccurrences.end(),
                         "Field is marked as deparsed, but the deparser doesn't "
                         "emit it: %1%", cstring::to_cstring(field));
         else

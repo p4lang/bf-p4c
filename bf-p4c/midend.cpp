@@ -200,8 +200,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::UniqueNames(&refMap),
         new P4::UniqueParameters(&refMap, &typeMap),
         new P4::TypeChecking(&refMap, &typeMap, true),
-        // XXX(zma) : assuming tofino & jbay have same arch for now
-        (options.arch == "native") ? nullptr : new FillFromBlockMap(&refMap, &typeMap),
+        new FillFromBlockMap(&refMap, &typeMap),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
         new MidEndLast,
