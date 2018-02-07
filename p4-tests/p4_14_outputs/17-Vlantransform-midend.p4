@@ -196,23 +196,23 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_10() {
+    @name(".NoAction") action NoAction_10() {
     }
-    @name("NoAction") action NoAction_11() {
+    @name(".NoAction") action NoAction_11() {
     }
-    @name("NoAction") action NoAction_12() {
+    @name(".NoAction") action NoAction_12() {
     }
-    @name("NoAction") action NoAction_13() {
+    @name(".NoAction") action NoAction_13() {
     }
-    @name("NoAction") action NoAction_14() {
+    @name(".NoAction") action NoAction_14() {
     }
-    @name("NoAction") action NoAction_15() {
+    @name(".NoAction") action NoAction_15() {
     }
-    @name("NoAction") action NoAction_16() {
+    @name(".NoAction") action NoAction_16() {
     }
-    @name("NoAction") action NoAction_17() {
+    @name(".NoAction") action NoAction_17() {
     }
     @name(".do_new_inner_cfi") action do_new_inner_cfi_0() {
         hdr.vlan_tag[1].cfi = meta.meta.new_inner_cfi;

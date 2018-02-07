@@ -180,9 +180,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".prof") @mode("fair") action_selector(HashAlgorithm.random, 32w4096, 32w64) prof;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_3() {
+    @name(".NoAction") action NoAction_3() {
     }
     @name(".sel_action_0") action sel_action(bit<16> p0, bit<8> p1) {
         hdr.ethernet.etherType = p0;

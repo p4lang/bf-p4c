@@ -724,13 +724,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
-    @name("NoAction") action NoAction_57() {
+    @name(".NoAction") action NoAction_57() {
     }
-    @name("NoAction") action NoAction_58() {
+    @name(".NoAction") action NoAction_58() {
     }
     @name(".Manilla") action _Manilla(bit<16> Richlawn, bit<1> Cornudas) {
         meta.Trenary.Glenvil = Richlawn;
@@ -980,107 +980,107 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_59() {
+    @name(".NoAction") action NoAction_59() {
     }
-    @name("NoAction") action NoAction_60() {
+    @name(".NoAction") action NoAction_60() {
     }
-    @name("NoAction") action NoAction_61() {
+    @name(".NoAction") action NoAction_61() {
     }
-    @name("NoAction") action NoAction_62() {
+    @name(".NoAction") action NoAction_62() {
     }
-    @name("NoAction") action NoAction_63() {
+    @name(".NoAction") action NoAction_63() {
     }
-    @name("NoAction") action NoAction_64() {
+    @name(".NoAction") action NoAction_64() {
     }
-    @name("NoAction") action NoAction_65() {
+    @name(".NoAction") action NoAction_65() {
     }
-    @name("NoAction") action NoAction_66() {
+    @name(".NoAction") action NoAction_66() {
     }
-    @name("NoAction") action NoAction_67() {
+    @name(".NoAction") action NoAction_67() {
     }
-    @name("NoAction") action NoAction_68() {
+    @name(".NoAction") action NoAction_68() {
     }
-    @name("NoAction") action NoAction_69() {
+    @name(".NoAction") action NoAction_69() {
     }
-    @name("NoAction") action NoAction_70() {
+    @name(".NoAction") action NoAction_70() {
     }
-    @name("NoAction") action NoAction_71() {
+    @name(".NoAction") action NoAction_71() {
     }
-    @name("NoAction") action NoAction_72() {
+    @name(".NoAction") action NoAction_72() {
     }
-    @name("NoAction") action NoAction_73() {
+    @name(".NoAction") action NoAction_73() {
     }
-    @name("NoAction") action NoAction_74() {
+    @name(".NoAction") action NoAction_74() {
     }
-    @name("NoAction") action NoAction_75() {
+    @name(".NoAction") action NoAction_75() {
     }
-    @name("NoAction") action NoAction_76() {
+    @name(".NoAction") action NoAction_76() {
     }
-    @name("NoAction") action NoAction_77() {
+    @name(".NoAction") action NoAction_77() {
     }
-    @name("NoAction") action NoAction_78() {
+    @name(".NoAction") action NoAction_78() {
     }
-    @name("NoAction") action NoAction_79() {
+    @name(".NoAction") action NoAction_79() {
     }
-    @name("NoAction") action NoAction_80() {
+    @name(".NoAction") action NoAction_80() {
     }
-    @name("NoAction") action NoAction_81() {
+    @name(".NoAction") action NoAction_81() {
     }
-    @name("NoAction") action NoAction_82() {
+    @name(".NoAction") action NoAction_82() {
     }
-    @name("NoAction") action NoAction_83() {
+    @name(".NoAction") action NoAction_83() {
     }
-    @name("NoAction") action NoAction_84() {
+    @name(".NoAction") action NoAction_84() {
     }
-    @name("NoAction") action NoAction_85() {
+    @name(".NoAction") action NoAction_85() {
     }
-    @name("NoAction") action NoAction_86() {
+    @name(".NoAction") action NoAction_86() {
     }
-    @name("NoAction") action NoAction_87() {
+    @name(".NoAction") action NoAction_87() {
     }
-    @name("NoAction") action NoAction_88() {
+    @name(".NoAction") action NoAction_88() {
     }
-    @name("NoAction") action NoAction_89() {
+    @name(".NoAction") action NoAction_89() {
     }
-    @name("NoAction") action NoAction_90() {
+    @name(".NoAction") action NoAction_90() {
     }
-    @name("NoAction") action NoAction_91() {
+    @name(".NoAction") action NoAction_91() {
     }
-    @name("NoAction") action NoAction_92() {
+    @name(".NoAction") action NoAction_92() {
     }
-    @name("NoAction") action NoAction_93() {
+    @name(".NoAction") action NoAction_93() {
     }
-    @name("NoAction") action NoAction_94() {
+    @name(".NoAction") action NoAction_94() {
     }
-    @name("NoAction") action NoAction_95() {
+    @name(".NoAction") action NoAction_95() {
     }
-    @name("NoAction") action NoAction_96() {
+    @name(".NoAction") action NoAction_96() {
     }
-    @name("NoAction") action NoAction_97() {
+    @name(".NoAction") action NoAction_97() {
     }
-    @name("NoAction") action NoAction_98() {
+    @name(".NoAction") action NoAction_98() {
     }
-    @name("NoAction") action NoAction_99() {
+    @name(".NoAction") action NoAction_99() {
     }
-    @name("NoAction") action NoAction_100() {
+    @name(".NoAction") action NoAction_100() {
     }
-    @name("NoAction") action NoAction_101() {
+    @name(".NoAction") action NoAction_101() {
     }
-    @name("NoAction") action NoAction_102() {
+    @name(".NoAction") action NoAction_102() {
     }
-    @name("NoAction") action NoAction_103() {
+    @name(".NoAction") action NoAction_103() {
     }
-    @name("NoAction") action NoAction_104() {
+    @name(".NoAction") action NoAction_104() {
     }
-    @name("NoAction") action NoAction_105() {
+    @name(".NoAction") action NoAction_105() {
     }
-    @name("NoAction") action NoAction_106() {
+    @name(".NoAction") action NoAction_106() {
     }
-    @name("NoAction") action NoAction_107() {
+    @name(".NoAction") action NoAction_107() {
     }
-    @name("NoAction") action NoAction_108() {
+    @name(".NoAction") action NoAction_108() {
     }
-    @name("NoAction") action NoAction_109() {
+    @name(".NoAction") action NoAction_109() {
     }
     @name(".Bayshore") action _Bayshore(bit<14> Iroquois, bit<1> Diomede, bit<12> Vidaurri, bit<1> Almelund, bit<1> BigWater, bit<6> Idria, bit<2> Taconite, bit<3> Kaolin, bit<6> Cotter) {
         meta.Kaweah.Everett = Iroquois;
@@ -1378,13 +1378,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Ashburn_temp_2;
     bit<1> _Ashburn_tmp_1;
     bit<1> _Ashburn_tmp_2;
-    @name(".Ashburn.Mattapex") register_action<bit<1>, bit<1>>(Willshire) _Ashburn_Mattapex_0 = {
+    @name(".Mattapex") register_action<bit<1>, bit<1>>(Willshire) _Mattapex_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
             rv = value;
         }
     };
-    @name(".Ashburn.RioPecos") register_action<bit<1>, bit<1>>(Longwood) _Ashburn_RioPecos_0 = {
+    @name(".RioPecos") register_action<bit<1>, bit<1>>(Longwood) _RioPecos_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
             rv = ~value;
@@ -1392,12 +1392,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Lardo") action _Lardo() {
         hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Ashburn_temp_1, HashAlgorithm.identity, 18w0, { meta.Kaweah.Newfolden, hdr.Pinecreek[0].Kinsley }, 19w262144);
-        _Ashburn_tmp_1 = _Ashburn_RioPecos_0.execute((bit<32>)_Ashburn_temp_1);
+        _Ashburn_tmp_1 = _RioPecos_0.execute((bit<32>)_Ashburn_temp_1);
         meta.PortVue.Manning = _Ashburn_tmp_1;
     }
     @name(".Homeland") action _Homeland() {
         hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Ashburn_temp_2, HashAlgorithm.identity, 18w0, { meta.Kaweah.Newfolden, hdr.Pinecreek[0].Kinsley }, 19w262144);
-        _Ashburn_tmp_2 = _Ashburn_Mattapex_0.execute((bit<32>)_Ashburn_temp_2);
+        _Ashburn_tmp_2 = _Mattapex_0.execute((bit<32>)_Ashburn_temp_2);
         meta.PortVue.Lazear = _Ashburn_tmp_2;
     }
     @name(".Kamrar") action _Kamrar(bit<1> LasVegas) {

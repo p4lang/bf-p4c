@@ -322,13 +322,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".next_hop_profile") action_profile(32w4096) next_hop_profile;
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
-    @name("NoAction") action NoAction_24() {
+    @name(".NoAction") action NoAction_24() {
     }
-    @name("NoAction") action NoAction_25() {
+    @name(".NoAction") action NoAction_25() {
     }
     @name(".egr_cntDum1") direct_counter(CounterType.packets) egr_cntDum1;
     @name(".nop") action nop_0() {
@@ -417,41 +417,41 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_26() {
+    @name(".NoAction") action NoAction_26() {
     }
-    @name("NoAction") action NoAction_27() {
+    @name(".NoAction") action NoAction_27() {
     }
-    @name("NoAction") action NoAction_28() {
+    @name(".NoAction") action NoAction_28() {
     }
-    @name("NoAction") action NoAction_29() {
+    @name(".NoAction") action NoAction_29() {
     }
-    @name("NoAction") action NoAction_30() {
+    @name(".NoAction") action NoAction_30() {
     }
-    @name("NoAction") action NoAction_31() {
+    @name(".NoAction") action NoAction_31() {
     }
-    @name("NoAction") action NoAction_32() {
+    @name(".NoAction") action NoAction_32() {
     }
-    @name("NoAction") action NoAction_33() {
+    @name(".NoAction") action NoAction_33() {
     }
-    @name("NoAction") action NoAction_34() {
+    @name(".NoAction") action NoAction_34() {
     }
-    @name("NoAction") action NoAction_35() {
+    @name(".NoAction") action NoAction_35() {
     }
-    @name("NoAction") action NoAction_36() {
+    @name(".NoAction") action NoAction_36() {
     }
-    @name("NoAction") action NoAction_37() {
+    @name(".NoAction") action NoAction_37() {
     }
-    @name("NoAction") action NoAction_38() {
+    @name(".NoAction") action NoAction_38() {
     }
-    @name("NoAction") action NoAction_39() {
+    @name(".NoAction") action NoAction_39() {
     }
-    @name("NoAction") action NoAction_40() {
+    @name(".NoAction") action NoAction_40() {
     }
-    @name("NoAction") action NoAction_41() {
+    @name(".NoAction") action NoAction_41() {
     }
-    @name("NoAction") action NoAction_42() {
+    @name(".NoAction") action NoAction_42() {
     }
-    @name("NoAction") action NoAction_43() {
+    @name(".NoAction") action NoAction_43() {
     }
     @name(".cntDum1") direct_counter(CounterType.packets) cntDum1;
     @name(".cntDum2") direct_counter(CounterType.packets) cntDum2;

@@ -172,29 +172,29 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".r0") register<bit<32>>(32w0) r0;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_11() {
+    @name(".NoAction") action NoAction_11() {
     }
-    @name("NoAction") action NoAction_12() {
+    @name(".NoAction") action NoAction_12() {
     }
-    @name("NoAction") action NoAction_13() {
+    @name(".NoAction") action NoAction_13() {
     }
-    @name("NoAction") action NoAction_14() {
+    @name(".NoAction") action NoAction_14() {
     }
-    @name("NoAction") action NoAction_15() {
+    @name(".NoAction") action NoAction_15() {
     }
-    @name("NoAction") action NoAction_16() {
+    @name(".NoAction") action NoAction_16() {
     }
-    @name("NoAction") action NoAction_17() {
+    @name(".NoAction") action NoAction_17() {
     }
-    @name("NoAction") action NoAction_18() {
+    @name(".NoAction") action NoAction_18() {
     }
-    @name("NoAction") action NoAction_19() {
+    @name(".NoAction") action NoAction_19() {
     }
     @name(".ha_cntr") direct_counter(CounterType.packets) ha_cntr;
     @name(".cntr") @min_width(32) counter(32w1000, CounterType.packets_and_bytes) cntr;
-    @name("r0_alu") register_action<bit<32>, bit<32>>(r0) r0_alu = {
+    @name(".r0_alu") register_action<bit<32>, bit<32>>(r0) r0_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;

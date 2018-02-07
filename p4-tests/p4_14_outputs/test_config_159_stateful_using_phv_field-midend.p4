@@ -173,9 +173,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<32> tmp_0;
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("sampler_alu") register_action<bit<32>, bit<32>>(flow_cnt) sampler_alu = {
+    @name(".sampler_alu") register_action<bit<32>, bit<32>>(flow_cnt) sampler_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             if (value == 32w10) 

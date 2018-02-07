@@ -169,7 +169,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
     @name(".a1") action a1_0(bit<32> d1, bit<32> d2, bit<32> d3, bit<32> d4, bit<32> d5, bit<32> d6, bit<32> d7, bit<32> d8) {
         meta.meta.f1 = d1;

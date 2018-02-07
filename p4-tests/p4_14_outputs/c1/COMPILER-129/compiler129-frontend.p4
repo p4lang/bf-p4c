@@ -1472,53 +1472,53 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".lag_action_profile") @mode("fair") action_selector(HashAlgorithm.identity, 32w1024, 32w14) lag_action_profile;
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
-    @name("NoAction") action NoAction_28() {
+    @name(".NoAction") action NoAction_28() {
     }
-    @name("NoAction") action NoAction_29() {
+    @name(".NoAction") action NoAction_29() {
     }
-    @name("NoAction") action NoAction_30() {
+    @name(".NoAction") action NoAction_30() {
     }
-    @name("NoAction") action NoAction_31() {
+    @name(".NoAction") action NoAction_31() {
     }
-    @name("NoAction") action NoAction_32() {
+    @name(".NoAction") action NoAction_32() {
     }
-    @name("NoAction") action NoAction_33() {
+    @name(".NoAction") action NoAction_33() {
     }
-    @name("NoAction") action NoAction_34() {
+    @name(".NoAction") action NoAction_34() {
     }
-    @name("NoAction") action NoAction_35() {
+    @name(".NoAction") action NoAction_35() {
     }
-    @name("NoAction") action NoAction_36() {
+    @name(".NoAction") action NoAction_36() {
     }
-    @name("NoAction") action NoAction_37() {
+    @name(".NoAction") action NoAction_37() {
     }
-    @name("NoAction") action NoAction_38() {
+    @name(".NoAction") action NoAction_38() {
     }
-    @name("NoAction") action NoAction_39() {
+    @name(".NoAction") action NoAction_39() {
     }
-    @name("NoAction") action NoAction_40() {
+    @name(".NoAction") action NoAction_40() {
     }
-    @name("NoAction") action NoAction_41() {
+    @name(".NoAction") action NoAction_41() {
     }
-    @name("NoAction") action NoAction_42() {
+    @name(".NoAction") action NoAction_42() {
     }
-    @name("NoAction") action NoAction_43() {
+    @name(".NoAction") action NoAction_43() {
     }
-    @name("NoAction") action NoAction_44() {
+    @name(".NoAction") action NoAction_44() {
     }
-    @name("NoAction") action NoAction_45() {
+    @name(".NoAction") action NoAction_45() {
     }
-    @name("NoAction") action NoAction_46() {
+    @name(".NoAction") action NoAction_46() {
     }
-    @name("NoAction") action NoAction_47() {
+    @name(".NoAction") action NoAction_47() {
     }
-    @name("NoAction") action NoAction_48() {
+    @name(".NoAction") action NoAction_48() {
     }
-    @name("NoAction") action NoAction_49() {
+    @name(".NoAction") action NoAction_49() {
     }
     @name(".egress_port_type_normal") action egress_port_type_normal_0() {
         meta.egress_metadata.port_type = 2w0;
@@ -2806,9 +2806,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_50() {
+    @name(".NoAction") action NoAction_50() {
     }
-    @name("NoAction") action NoAction_51() {
+    @name(".NoAction") action NoAction_51() {
     }
     @name(".modify_outer_pri1") action modify_outer_pri1_0(bit<1> a, bit<1> b, bit<1> c, bit<1> d, bit<1> e, bit<1> f) {
         meta.l2_metadata.field_1 = meta.ingress_metadata.port_type;

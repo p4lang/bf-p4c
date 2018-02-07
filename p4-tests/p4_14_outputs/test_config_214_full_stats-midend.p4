@@ -217,11 +217,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_4() {
+    @name(".NoAction") action NoAction_4() {
     }
-    @name("NoAction") action NoAction_5() {
+    @name(".NoAction") action NoAction_5() {
     }
     @name(".counter_0") @min_width(64) counter(32w35000, CounterType.packets_and_bytes) counter_0;
     @name(".counter_1") @min_width(64) counter(32w5000, CounterType.packets_and_bytes) counter_1;

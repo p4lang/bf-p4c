@@ -166,7 +166,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
     @name(".cntr") counter(32w29696, CounterType.packets_and_bytes) cntr;
     @name(".mtr") meter(32w4096, MeterType.packets) mtr;
@@ -214,116 +214,116 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".reg_9") register<bit<32>>(32w36864) reg_9;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
-    @name("NoAction") action NoAction_27() {
+    @name(".NoAction") action NoAction_27() {
     }
-    @name("NoAction") action NoAction_28() {
+    @name(".NoAction") action NoAction_28() {
     }
-    @name("NoAction") action NoAction_29() {
+    @name(".NoAction") action NoAction_29() {
     }
-    @name("NoAction") action NoAction_30() {
+    @name(".NoAction") action NoAction_30() {
     }
-    @name("NoAction") action NoAction_31() {
+    @name(".NoAction") action NoAction_31() {
     }
-    @name("NoAction") action NoAction_32() {
+    @name(".NoAction") action NoAction_32() {
     }
-    @name("NoAction") action NoAction_33() {
+    @name(".NoAction") action NoAction_33() {
     }
-    @name("NoAction") action NoAction_34() {
+    @name(".NoAction") action NoAction_34() {
     }
-    @name("NoAction") action NoAction_35() {
+    @name(".NoAction") action NoAction_35() {
     }
-    @name("NoAction") action NoAction_36() {
+    @name(".NoAction") action NoAction_36() {
     }
-    @name("NoAction") action NoAction_37() {
+    @name(".NoAction") action NoAction_37() {
     }
-    @name("NoAction") action NoAction_38() {
+    @name(".NoAction") action NoAction_38() {
     }
-    @name("NoAction") action NoAction_39() {
+    @name(".NoAction") action NoAction_39() {
     }
-    @name("NoAction") action NoAction_40() {
+    @name(".NoAction") action NoAction_40() {
     }
-    @name("NoAction") action NoAction_41() {
+    @name(".NoAction") action NoAction_41() {
     }
-    @name("NoAction") action NoAction_42() {
+    @name(".NoAction") action NoAction_42() {
     }
-    @name("NoAction") action NoAction_43() {
+    @name(".NoAction") action NoAction_43() {
     }
-    @name("NoAction") action NoAction_44() {
+    @name(".NoAction") action NoAction_44() {
     }
-    @name("NoAction") action NoAction_45() {
+    @name(".NoAction") action NoAction_45() {
     }
-    @name("NoAction") action NoAction_46() {
+    @name(".NoAction") action NoAction_46() {
     }
-    @name("NoAction") action NoAction_47() {
+    @name(".NoAction") action NoAction_47() {
     }
-    @name("NoAction") action NoAction_48() {
+    @name(".NoAction") action NoAction_48() {
     }
-    @name("NoAction") action NoAction_49() {
+    @name(".NoAction") action NoAction_49() {
     }
     @name(".ing_mtr") meter(32w10240, MeterType.packets) ing_mtr;
-    @name("reg_alu_0") register_action<bit<32>, bit<32>>(reg_0) reg_alu_0 = {
+    @name(".reg_alu_0") register_action<bit<32>, bit<32>>(reg_0) reg_alu_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
         }
     };
-    @name("reg_alu_1") register_action<bit<32>, bit<32>>(reg_1) reg_alu_1 = {
+    @name(".reg_alu_1") register_action<bit<32>, bit<32>>(reg_1) reg_alu_1 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
         }
     };
-    @name("reg_alu_10") register_action<bit<32>, bit<32>>(reg_10) reg_alu_2 = {
+    @name(".reg_alu_10") register_action<bit<32>, bit<32>>(reg_10) reg_alu_2 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
         }
     };
-    @name("reg_alu_2") register_action<bit<32>, bit<32>>(reg_2) reg_alu_3 = {
+    @name(".reg_alu_2") register_action<bit<32>, bit<32>>(reg_2) reg_alu_3 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
         }
     };
-    @name("reg_alu_3") register_action<bit<32>, bit<32>>(reg_3) reg_alu_4 = {
+    @name(".reg_alu_3") register_action<bit<32>, bit<32>>(reg_3) reg_alu_4 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
         }
     };
-    @name("reg_alu_4") register_action<bit<32>, bit<32>>(reg_4) reg_alu_5 = {
+    @name(".reg_alu_4") register_action<bit<32>, bit<32>>(reg_4) reg_alu_5 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
         }
     };
-    @name("reg_alu_5") register_action<bit<32>, bit<32>>(reg_5) reg_alu_6 = {
+    @name(".reg_alu_5") register_action<bit<32>, bit<32>>(reg_5) reg_alu_6 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
         }
     };
-    @name("reg_alu_6") register_action<bit<32>, bit<32>>(reg_6) reg_alu_7 = {
+    @name(".reg_alu_6") register_action<bit<32>, bit<32>>(reg_6) reg_alu_7 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
         }
     };
-    @name("reg_alu_7") register_action<bit<32>, bit<32>>(reg_7) reg_alu_8 = {
+    @name(".reg_alu_7") register_action<bit<32>, bit<32>>(reg_7) reg_alu_8 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
         }
     };
-    @name("reg_alu_8") register_action<bit<32>, bit<32>>(reg_8) reg_alu_9 = {
+    @name(".reg_alu_8") register_action<bit<32>, bit<32>>(reg_8) reg_alu_9 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;
         }
     };
-    @name("reg_alu_9") register_action<bit<32>, bit<32>>(reg_9) reg_alu_10 = {
+    @name(".reg_alu_9") register_action<bit<32>, bit<32>>(reg_9) reg_alu_10 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             value = value + 32w1;

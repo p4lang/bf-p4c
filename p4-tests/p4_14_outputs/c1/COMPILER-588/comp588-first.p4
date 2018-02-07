@@ -1272,14 +1272,14 @@ control Gibsland(inout headers hdr, inout metadata meta, inout standard_metadata
 @name(".OldMinto") register<bit<1>>(32w294912) OldMinto;
 
 control Giltner(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    register_action<bit<1>, bit<1>>(Bennet) Bramwell = {
+    @name(".Bramwell") register_action<bit<1>, bit<1>>(Bennet) Bramwell = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = value;
             rv = ~value;
         }
     };
-    register_action<bit<1>, bit<1>>(OldMinto) Colonias = {
+    @name(".Colonias") register_action<bit<1>, bit<1>>(OldMinto) Colonias = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = value;

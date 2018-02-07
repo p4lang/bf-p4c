@@ -462,9 +462,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".Garrison") action _Garrison(bit<12> Exton) {
         meta.Larue.Lenapah = Exton;
@@ -559,35 +559,35 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_19() {
+    @name(".NoAction") action NoAction_19() {
     }
-    @name("NoAction") action NoAction_20() {
+    @name(".NoAction") action NoAction_20() {
     }
-    @name("NoAction") action NoAction_21() {
+    @name(".NoAction") action NoAction_21() {
     }
-    @name("NoAction") action NoAction_22() {
+    @name(".NoAction") action NoAction_22() {
     }
-    @name("NoAction") action NoAction_23() {
+    @name(".NoAction") action NoAction_23() {
     }
-    @name("NoAction") action NoAction_24() {
+    @name(".NoAction") action NoAction_24() {
     }
-    @name("NoAction") action NoAction_25() {
+    @name(".NoAction") action NoAction_25() {
     }
-    @name("NoAction") action NoAction_26() {
+    @name(".NoAction") action NoAction_26() {
     }
-    @name("NoAction") action NoAction_27() {
+    @name(".NoAction") action NoAction_27() {
     }
-    @name("NoAction") action NoAction_28() {
+    @name(".NoAction") action NoAction_28() {
     }
-    @name("NoAction") action NoAction_29() {
+    @name(".NoAction") action NoAction_29() {
     }
-    @name("NoAction") action NoAction_30() {
+    @name(".NoAction") action NoAction_30() {
     }
-    @name("NoAction") action NoAction_31() {
+    @name(".NoAction") action NoAction_31() {
     }
-    @name("NoAction") action NoAction_32() {
+    @name(".NoAction") action NoAction_32() {
     }
-    @name("NoAction") action NoAction_33() {
+    @name(".NoAction") action NoAction_33() {
     }
     @name(".Vevay") action _Vevay(bit<14> Castine, bit<1> ElkRidge, bit<12> Navarro, bit<1> Wattsburg, bit<1> Levasy, bit<6> Dollar) {
         meta.Moylan.Capitola = Castine;
@@ -833,13 +833,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Halaula_temp_2;
     bit<1> _Halaula_tmp_1;
     bit<1> _Halaula_tmp_2;
-    @name(".Halaula.Fajardo") register_action<bit<1>, bit<1>>(Onamia) _Halaula_Fajardo_0 = {
+    @name(".Fajardo") register_action<bit<1>, bit<1>>(Onamia) _Fajardo_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
             rv = value;
         }
     };
-    @name(".Halaula.Gastonia") register_action<bit<1>, bit<1>>(Mahopac) _Halaula_Gastonia_0 = {
+    @name(".Gastonia") register_action<bit<1>, bit<1>>(Mahopac) _Gastonia_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
             rv = value;
@@ -847,7 +847,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Wyatte") action _Wyatte() {
         hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Halaula_temp_1, HashAlgorithm.identity, 18w0, { meta.Moylan.Monahans, hdr.Tarlton[0].McGonigle }, 19w262144);
-        _Halaula_tmp_1 = _Halaula_Fajardo_0.execute((bit<32>)_Halaula_temp_1);
+        _Halaula_tmp_1 = _Fajardo_0.execute((bit<32>)_Halaula_temp_1);
         meta.Myrick.Globe = _Halaula_tmp_1;
     }
     @name(".Janney") action _Janney() {
@@ -856,7 +856,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Renville") action _Renville() {
         hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Halaula_temp_2, HashAlgorithm.identity, 18w0, { meta.Moylan.Monahans, hdr.Tarlton[0].McGonigle }, 19w262144);
-        _Halaula_tmp_2 = _Halaula_Gastonia_0.execute((bit<32>)_Halaula_temp_2);
+        _Halaula_tmp_2 = _Gastonia_0.execute((bit<32>)_Halaula_temp_2);
         meta.Myrick.IowaCity = _Halaula_tmp_2;
     }
     @name(".Lewellen") action _Lewellen(bit<1> HydePark) {
@@ -908,7 +908,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_27();
     }
     @name(".Norborne") direct_counter(CounterType.packets_and_bytes) _Norborne_0;
-    @name(".Parshall.Challenge") register_action<bit<1>, bit<1>>(Ashville) _Parshall_Challenge_0 = {
+    @name(".Challenge") register_action<bit<1>, bit<1>>(Ashville) _Challenge_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;
@@ -917,7 +917,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_0() {
     }
     @name(".Lawai") action _Lawai(bit<8> Tahuya) {
-        _Parshall_Challenge_0.execute();
+        _Challenge_0.execute();
     }
     @name(".Pueblo") action _Pueblo() {
         meta.SomesBar.Laney = 1w1;

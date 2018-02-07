@@ -180,25 +180,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<8> tmp_2;
     bit<8> tmp_3;
     bit<8> tmp_4;
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_4() {
+    @name(".NoAction") action NoAction_4() {
     }
-    @name("NoAction") action NoAction_5() {
+    @name(".NoAction") action NoAction_5() {
     }
-    @name("alu_0") register_action<bit<8>, bit<8>>(reg_0) alu_0 = {
+    @name(".alu_0") register_action<bit<8>, bit<8>>(reg_0) alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = 8w15;
             rv = 8w15;
         }
     };
-    @name("alu_1") register_action<bit<8>, bit<8>>(reg_1) alu_1 = {
+    @name(".alu_1") register_action<bit<8>, bit<8>>(reg_1) alu_1 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = 8w0x30;
             rv = 8w0x30;
         }
     };
-    @name("alu_2") register_action<bit<8>, bit<8>>(reg_2) alu_2 = {
+    @name(".alu_2") register_action<bit<8>, bit<8>>(reg_2) alu_2 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = 8w0xc0;
             rv = 8w0xc0;

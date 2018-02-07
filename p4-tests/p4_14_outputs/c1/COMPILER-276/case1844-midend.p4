@@ -540,9 +540,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".Forman") action _Forman(bit<12> Corum, bit<1> Attalla) {
         meta.Higganum.Angle = Corum;
@@ -697,49 +697,49 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Rockville_tmp_2;
     bool _Haley_tmp_0;
     bit<24> key_66;
-    @name("NoAction") action NoAction_26() {
+    @name(".NoAction") action NoAction_26() {
     }
-    @name("NoAction") action NoAction_27() {
+    @name(".NoAction") action NoAction_27() {
     }
-    @name("NoAction") action NoAction_28() {
+    @name(".NoAction") action NoAction_28() {
     }
-    @name("NoAction") action NoAction_29() {
+    @name(".NoAction") action NoAction_29() {
     }
-    @name("NoAction") action NoAction_30() {
+    @name(".NoAction") action NoAction_30() {
     }
-    @name("NoAction") action NoAction_31() {
+    @name(".NoAction") action NoAction_31() {
     }
-    @name("NoAction") action NoAction_32() {
+    @name(".NoAction") action NoAction_32() {
     }
-    @name("NoAction") action NoAction_33() {
+    @name(".NoAction") action NoAction_33() {
     }
-    @name("NoAction") action NoAction_34() {
+    @name(".NoAction") action NoAction_34() {
     }
-    @name("NoAction") action NoAction_35() {
+    @name(".NoAction") action NoAction_35() {
     }
-    @name("NoAction") action NoAction_36() {
+    @name(".NoAction") action NoAction_36() {
     }
-    @name("NoAction") action NoAction_37() {
+    @name(".NoAction") action NoAction_37() {
     }
-    @name("NoAction") action NoAction_38() {
+    @name(".NoAction") action NoAction_38() {
     }
-    @name("NoAction") action NoAction_39() {
+    @name(".NoAction") action NoAction_39() {
     }
-    @name("NoAction") action NoAction_40() {
+    @name(".NoAction") action NoAction_40() {
     }
-    @name("NoAction") action NoAction_41() {
+    @name(".NoAction") action NoAction_41() {
     }
-    @name("NoAction") action NoAction_42() {
+    @name(".NoAction") action NoAction_42() {
     }
-    @name("NoAction") action NoAction_43() {
+    @name(".NoAction") action NoAction_43() {
     }
-    @name("NoAction") action NoAction_44() {
+    @name(".NoAction") action NoAction_44() {
     }
-    @name("NoAction") action NoAction_45() {
+    @name(".NoAction") action NoAction_45() {
     }
-    @name("NoAction") action NoAction_46() {
+    @name(".NoAction") action NoAction_46() {
     }
-    @name("NoAction") action NoAction_47() {
+    @name(".NoAction") action NoAction_47() {
     }
     @name(".IttaBena") action _IttaBena(bit<14> Coyote, bit<1> Elloree, bit<12> Roodhouse, bit<1> Asharoken, bit<1> Ozona, bit<6> Henrietta) {
         meta.Orrum.Kenton = Coyote;
@@ -995,12 +995,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_31();
     }
-    @name(".Rockville.Tavistock") register_action<bit<1>, bit<1>>(Goessel) _Rockville_Tavistock_0 = {
+    @name(".Tavistock") register_action<bit<1>, bit<1>>(Goessel) _Tavistock_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Rockville.Westboro") register_action<bit<1>, bit<1>>(Venice) _Rockville_Westboro_0 = {
+    @name(".Westboro") register_action<bit<1>, bit<1>>(Venice) _Westboro_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -1014,12 +1014,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Lansing") action _Lansing() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Rockville_temp_1, HashAlgorithm.identity, 18w0, { meta.Orrum.Hobucken, hdr.Basalt[0].Montague }, 19w262144);
-        _Rockville_tmp_1 = _Rockville_Westboro_0.execute((bit<32>)_Rockville_temp_1);
+        _Rockville_tmp_1 = _Westboro_0.execute((bit<32>)_Rockville_temp_1);
         meta.Mantee.Alameda = _Rockville_tmp_1;
     }
     @name(".Brainard") action _Brainard() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Rockville_temp_2, HashAlgorithm.identity, 18w0, { meta.Orrum.Hobucken, hdr.Basalt[0].Montague }, 19w262144);
-        _Rockville_tmp_2 = _Rockville_Tavistock_0.execute((bit<32>)_Rockville_temp_2);
+        _Rockville_tmp_2 = _Tavistock_0.execute((bit<32>)_Rockville_temp_2);
         meta.Mantee.Fries = _Rockville_tmp_2;
     }
     @name(".Lasara") action _Lasara() {
@@ -1079,7 +1079,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_35();
     }
     @name(".LaHoma") direct_counter(CounterType.packets_and_bytes) _LaHoma_0;
-    @name(".Hebbville.Veteran") register_action<bit<1>, bit<1>>(Linville) _Hebbville_Veteran_0 = {
+    @name(".Veteran") register_action<bit<1>, bit<1>>(Linville) _Veteran_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;
@@ -1089,7 +1089,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.UtePark.CityView = 1w1;
     }
     @name(".Callao") action _Callao(bit<8> Cecilton) {
-        _Hebbville_Veteran_0.execute();
+        _Veteran_0.execute();
     }
     @name(".Newellton") action _Newellton() {
         meta.Waialua.Devore = 1w1;

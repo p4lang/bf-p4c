@@ -2499,14 +2499,14 @@ control Rowden(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".Proctor") register<bit<1>>(32w262144) Proctor;
 
 control Shickley(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    register_action<bit<1>, bit<1>>(Flaxton) Baskett = {
+    @name(".Baskett") register_action<bit<1>, bit<1>>(Flaxton) Baskett = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = value;
             rv = ~value;
         }
     };
-    register_action<bit<1>, bit<1>>(Proctor) Sunrise = {
+    @name(".Sunrise") register_action<bit<1>, bit<1>>(Proctor) Sunrise = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = value;

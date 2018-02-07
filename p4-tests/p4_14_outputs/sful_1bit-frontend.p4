@@ -32,31 +32,31 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".reg") register<bit<1>>(32w1000) reg;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
     bit<1> tmp_3;
     bit<1> tmp_4;
     bit<1> tmp_5;
     bit<1> tmp_6;
-    @name("sful1") register_action<bit<1>, bit<1>>(reg) sful1 = {
+    @name(".sful1") register_action<bit<1>, bit<1>>(reg) sful1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
             value = 1w1;
         }
     };
-    @name("sful2") register_action<bit<1>, bit<1>>(reg) sful2 = {
+    @name(".sful2") register_action<bit<1>, bit<1>>(reg) sful2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
             value = 1w0;
         }
     };
-    @name("sful3") register_action<bit<1>, bit<1>>(reg) sful3 = {
+    @name(".sful3") register_action<bit<1>, bit<1>>(reg) sful3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
             value = value;
         }
     };
-    @name("sful4") register_action<bit<1>, bit<1>>(reg) sful4 = {
+    @name(".sful4") register_action<bit<1>, bit<1>>(reg) sful4 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
             value = value;

@@ -168,21 +168,21 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_9() {
+    @name(".NoAction") action NoAction_9() {
     }
-    @name("NoAction") action NoAction_10() {
+    @name(".NoAction") action NoAction_10() {
     }
-    @name("NoAction") action NoAction_11() {
+    @name(".NoAction") action NoAction_11() {
     }
-    @name("NoAction") action NoAction_12() {
+    @name(".NoAction") action NoAction_12() {
     }
-    @name("NoAction") action NoAction_13() {
+    @name(".NoAction") action NoAction_13() {
     }
-    @name("NoAction") action NoAction_14() {
+    @name(".NoAction") action NoAction_14() {
     }
-    @name("NoAction") action NoAction_15() {
+    @name(".NoAction") action NoAction_15() {
     }
     @name(".a0") action a0_0(bit<8> x) {
         meta.meta.x_8 = x;

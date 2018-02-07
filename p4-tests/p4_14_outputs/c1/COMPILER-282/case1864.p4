@@ -599,14 +599,14 @@ control Cassa(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 @name(".Mentmore") register<bit<1>>(32w262144) Mentmore;
 
 control Cypress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    register_action<bit<1>, bit<1>>(Ceiba) Clermont = {
+    @name(".Clermont") register_action<bit<1>, bit<1>>(Ceiba) Clermont = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = value;
             rv = value;
         }
     };
-    register_action<bit<1>, bit<1>>(Mentmore) Selah = {
+    @name(".Selah") register_action<bit<1>, bit<1>>(Mentmore) Selah = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = value;
@@ -1482,7 +1482,7 @@ control McKenna(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control Moark(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Silvertip") direct_counter(CounterType.packets_and_bytes) Silvertip;
-    register_action<bit<1>, bit<1>>(Brinson) Mabelle = {
+    @name(".Mabelle") register_action<bit<1>, bit<1>>(Brinson) Mabelle = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;

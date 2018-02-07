@@ -733,15 +733,15 @@ struct tuple_1 {
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bool tmp_6;
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_6() {
+    @name(".NoAction") action NoAction_6() {
     }
-    @name("NoAction") action NoAction_7() {
+    @name(".NoAction") action NoAction_7() {
     }
-    @name("NoAction") action NoAction_8() {
+    @name(".NoAction") action NoAction_8() {
     }
-    @name("NoAction") action NoAction_9() {
+    @name(".NoAction") action NoAction_9() {
     }
     @name(".nop") action nop_11() {
     }

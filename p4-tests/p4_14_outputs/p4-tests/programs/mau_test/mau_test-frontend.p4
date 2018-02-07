@@ -282,69 +282,69 @@ struct vpp6_alu_layout {
 @name(".vpp6_reg") register<vpp6_alu_layout>(32w0) vpp6_reg;
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
-    @name("NoAction") action NoAction_68() {
+    @name(".NoAction") action NoAction_68() {
     }
-    @name("NoAction") action NoAction_69() {
+    @name(".NoAction") action NoAction_69() {
     }
-    @name("NoAction") action NoAction_70() {
+    @name(".NoAction") action NoAction_70() {
     }
-    @name("NoAction") action NoAction_71() {
+    @name(".NoAction") action NoAction_71() {
     }
-    @name("NoAction") action NoAction_72() {
+    @name(".NoAction") action NoAction_72() {
     }
-    @name("NoAction") action NoAction_73() {
+    @name(".NoAction") action NoAction_73() {
     }
-    @name("NoAction") action NoAction_74() {
+    @name(".NoAction") action NoAction_74() {
     }
-    @name("NoAction") action NoAction_75() {
+    @name(".NoAction") action NoAction_75() {
     }
-    @name("NoAction") action NoAction_76() {
+    @name(".NoAction") action NoAction_76() {
     }
-    @name("NoAction") action NoAction_77() {
+    @name(".NoAction") action NoAction_77() {
     }
-    @name("NoAction") action NoAction_78() {
+    @name(".NoAction") action NoAction_78() {
     }
-    @name("NoAction") action NoAction_79() {
+    @name(".NoAction") action NoAction_79() {
     }
-    @name("NoAction") action NoAction_80() {
+    @name(".NoAction") action NoAction_80() {
     }
-    @name("NoAction") action NoAction_81() {
+    @name(".NoAction") action NoAction_81() {
     }
-    @name("NoAction") action NoAction_82() {
+    @name(".NoAction") action NoAction_82() {
     }
-    @name("NoAction") action NoAction_83() {
+    @name(".NoAction") action NoAction_83() {
     }
-    @name("NoAction") action NoAction_84() {
+    @name(".NoAction") action NoAction_84() {
     }
-    @name("NoAction") action NoAction_85() {
+    @name(".NoAction") action NoAction_85() {
     }
-    @name("NoAction") action NoAction_86() {
+    @name(".NoAction") action NoAction_86() {
     }
-    @name("NoAction") action NoAction_87() {
+    @name(".NoAction") action NoAction_87() {
     }
-    @name("NoAction") action NoAction_88() {
+    @name(".NoAction") action NoAction_88() {
     }
-    @name("NoAction") action NoAction_89() {
+    @name(".NoAction") action NoAction_89() {
     }
-    @name("NoAction") action NoAction_90() {
+    @name(".NoAction") action NoAction_90() {
     }
-    @name("NoAction") action NoAction_91() {
+    @name(".NoAction") action NoAction_91() {
     }
-    @name("NoAction") action NoAction_92() {
+    @name(".NoAction") action NoAction_92() {
     }
-    @name("NoAction") action NoAction_93() {
+    @name(".NoAction") action NoAction_93() {
     }
-    @name("NoAction") action NoAction_94() {
+    @name(".NoAction") action NoAction_94() {
     }
-    @name("NoAction") action NoAction_95() {
+    @name(".NoAction") action NoAction_95() {
     }
-    @name("NoAction") action NoAction_96() {
+    @name(".NoAction") action NoAction_96() {
     }
-    @name("NoAction") action NoAction_97() {
+    @name(".NoAction") action NoAction_97() {
     }
     int<32> tmp_13;
     bit<32> tmp_14;
@@ -376,7 +376,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @meter_sweep_interval(0) @name(".e4_meter") direct_meter<bit<8>>(MeterType.packets) e4_meter_1;
     @meter_sweep_interval(0) @name(".t3_meter") direct_meter<bit<8>>(MeterType.bytes) t3_meter_1;
     @meter_sweep_interval(0) @name(".t4_meter") direct_meter<bit<8>>(MeterType.packets) t4_meter_1;
-    @name("e1_alu") register_action<e1_alu_layout, int<32>>(e1_reg) e1_alu = {
+    @name(".e1_alu") register_action<e1_alu_layout, int<32>>(e1_reg) e1_alu = {
         void apply(inout e1_alu_layout value, out int<32> rv) {
             rv = value.hi;
             value.hi = value.hi + 32s1;
@@ -384,7 +384,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 value.lo = 32s0;
         }
     };
-    @name("e2_alu") register_action<e2_alu_layout, bit<16>>(e2_reg) e2_alu = {
+    @name(".e2_alu") register_action<e2_alu_layout, bit<16>>(e2_reg) e2_alu = {
         void apply(inout e2_alu_layout value, out bit<16> rv) {
             rv = 16w0;
             value.hi = value.hi + 16w1;
@@ -392,9 +392,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 value.lo = 16w0;
         }
     };
-    @name("e5_lpf") lpf<bit<32>>() e5_lpf_1;
-    @name("e6_lpf") lpf<bit<32>>() e6_lpf_1;
-    @name("t1_alu") register_action<t1_alu_layout, int<32>>(t1_reg) t1_alu = {
+    @name(".e5_lpf") lpf<bit<32>>() e5_lpf_1;
+    @name(".e6_lpf") lpf<bit<32>>() e6_lpf_1;
+    @name(".t1_alu") register_action<t1_alu_layout, int<32>>(t1_reg) t1_alu = {
         void apply(inout t1_alu_layout value, out int<32> rv) {
             rv = value.hi;
             value.hi = value.hi + 32s1;
@@ -402,7 +402,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 value.lo = 32s0;
         }
     };
-    @name("t2_alu") register_action<t2_alu_layout, bit<16>>(t2_reg) t2_alu = {
+    @name(".t2_alu") register_action<t2_alu_layout, bit<16>>(t2_reg) t2_alu = {
         void apply(inout t2_alu_layout value, out bit<16> rv) {
             rv = 16w0;
             value.hi = value.hi + 16w1;
@@ -410,9 +410,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 value.lo = 16w0;
         }
     };
-    @name("t5_lpf") lpf<bit<32>>() t5_lpf_1;
-    @name("t6_lpf") lpf<bit<32>>() t6_lpf_1;
-    @name("vp5_alu") register_action<vp5_alu_layout, bit<32>>(vp5_reg) vp5_alu = {
+    @name(".t5_lpf") lpf<bit<32>>() t5_lpf_1;
+    @name(".t6_lpf") lpf<bit<32>>() t6_lpf_1;
+    @name(".vp5_alu") register_action<vp5_alu_layout, bit<32>>(vp5_reg) vp5_alu = {
         void apply(inout vp5_alu_layout value, out bit<32> rv) {
             rv = 32w0;
             if (value.lo == 32w0xffffffff) 
@@ -420,7 +420,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             value.lo = value.lo + 32w1;
         }
     };
-    @name("vp6_alu") register_action<vp6_alu_layout, bit<32>>(vp6_reg) vp6_alu = {
+    @name(".vp6_alu") register_action<vp6_alu_layout, bit<32>>(vp6_reg) vp6_alu = {
         void apply(inout vp6_alu_layout value, out bit<32> rv) {
             rv = 32w0;
             if (value.lo == 32w0xffffffff) 
@@ -428,7 +428,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             value.lo = value.lo + 32w1;
         }
     };
-    @name("vpp5_alu") register_action<vpp5_alu_layout, bit<32>>(vpp5_reg) vpp5_alu = {
+    @name(".vpp5_alu") register_action<vpp5_alu_layout, bit<32>>(vpp5_reg) vpp5_alu = {
         void apply(inout vpp5_alu_layout value, out bit<32> rv) {
             rv = 32w0;
             if (value.lo == 32w0xffffffff) 
@@ -436,7 +436,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             value.lo = value.lo + 32w1;
         }
     };
-    @name("vpp6_alu") register_action<vpp6_alu_layout, bit<32>>(vpp6_reg) vpp6_alu = {
+    @name(".vpp6_alu") register_action<vpp6_alu_layout, bit<32>>(vpp6_reg) vpp6_alu = {
         void apply(inout vpp6_alu_layout value, out bit<32> rv) {
             rv = 32w0;
             if (value.lo == 32w0xffffffff) 
@@ -991,73 +991,73 @@ struct stats_key_alu1_layout {
 #include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_98() {
+    @name(".NoAction") action NoAction_98() {
     }
-    @name("NoAction") action NoAction_99() {
+    @name(".NoAction") action NoAction_99() {
     }
-    @name("NoAction") action NoAction_100() {
+    @name(".NoAction") action NoAction_100() {
     }
-    @name("NoAction") action NoAction_101() {
+    @name(".NoAction") action NoAction_101() {
     }
-    @name("NoAction") action NoAction_102() {
+    @name(".NoAction") action NoAction_102() {
     }
-    @name("NoAction") action NoAction_103() {
+    @name(".NoAction") action NoAction_103() {
     }
-    @name("NoAction") action NoAction_104() {
+    @name(".NoAction") action NoAction_104() {
     }
-    @name("NoAction") action NoAction_105() {
+    @name(".NoAction") action NoAction_105() {
     }
-    @name("NoAction") action NoAction_106() {
+    @name(".NoAction") action NoAction_106() {
     }
-    @name("NoAction") action NoAction_107() {
+    @name(".NoAction") action NoAction_107() {
     }
-    @name("NoAction") action NoAction_108() {
+    @name(".NoAction") action NoAction_108() {
     }
-    @name("NoAction") action NoAction_109() {
+    @name(".NoAction") action NoAction_109() {
     }
-    @name("NoAction") action NoAction_110() {
+    @name(".NoAction") action NoAction_110() {
     }
-    @name("NoAction") action NoAction_111() {
+    @name(".NoAction") action NoAction_111() {
     }
-    @name("NoAction") action NoAction_112() {
+    @name(".NoAction") action NoAction_112() {
     }
-    @name("NoAction") action NoAction_113() {
+    @name(".NoAction") action NoAction_113() {
     }
-    @name("NoAction") action NoAction_114() {
+    @name(".NoAction") action NoAction_114() {
     }
-    @name("NoAction") action NoAction_115() {
+    @name(".NoAction") action NoAction_115() {
     }
-    @name("NoAction") action NoAction_116() {
+    @name(".NoAction") action NoAction_116() {
     }
-    @name("NoAction") action NoAction_117() {
+    @name(".NoAction") action NoAction_117() {
     }
-    @name("NoAction") action NoAction_118() {
+    @name(".NoAction") action NoAction_118() {
     }
-    @name("NoAction") action NoAction_119() {
+    @name(".NoAction") action NoAction_119() {
     }
-    @name("NoAction") action NoAction_120() {
+    @name(".NoAction") action NoAction_120() {
     }
-    @name("NoAction") action NoAction_121() {
+    @name(".NoAction") action NoAction_121() {
     }
-    @name("NoAction") action NoAction_122() {
+    @name(".NoAction") action NoAction_122() {
     }
-    @name("NoAction") action NoAction_123() {
+    @name(".NoAction") action NoAction_123() {
     }
-    @name("NoAction") action NoAction_124() {
+    @name(".NoAction") action NoAction_124() {
     }
-    @name("NoAction") action NoAction_125() {
+    @name(".NoAction") action NoAction_125() {
     }
-    @name("NoAction") action NoAction_126() {
+    @name(".NoAction") action NoAction_126() {
     }
-    @name("NoAction") action NoAction_127() {
+    @name(".NoAction") action NoAction_127() {
     }
-    @name("NoAction") action NoAction_128() {
+    @name(".NoAction") action NoAction_128() {
     }
-    @name("NoAction") action NoAction_129() {
+    @name(".NoAction") action NoAction_129() {
     }
-    @name("NoAction") action NoAction_130() {
+    @name(".NoAction") action NoAction_130() {
     }
-    @name("NoAction") action NoAction_131() {
+    @name(".NoAction") action NoAction_131() {
     }
     bit<6> temp;
     bit<8> tmp_19;
@@ -1074,31 +1074,31 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".ig_cntr_3") counter(32w16384, CounterType.packets_and_bytes) ig_cntr_3;
     @name(".ig_cntr_4") counter(32w2048, CounterType.packets) ig_cntr_4;
     @meter_per_flow_enable(1) @meter_pre_color_aware_per_flow_enable(1) @meter_sweep_interval(0) @name(".m1") meter(32w20480, MeterType.bytes) m1_0;
-    @name("sel_res_alu") register_action<bit<16>, bit<16>>(sel_res_reg) sel_res_alu = {
+    @name(".sel_res_alu") register_action<bit<16>, bit<16>>(sel_res_reg) sel_res_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             value = (bit<16>)hdr.ig_intr_md_for_tm.ucast_egress_port;
         }
     };
-    @name("set_mrk_hi_alu") register_action<bit<16>, bit<16>>(mrk_hi_reg) set_mrk_hi_alu = {
+    @name(".set_mrk_hi_alu") register_action<bit<16>, bit<16>>(mrk_hi_reg) set_mrk_hi_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = meta.md.etherType_hi;
             rv = value;
         }
     };
-    @name("set_mrk_lo_alu") register_action<bit<16>, bit<16>>(mrk_lo_reg) set_mrk_lo_alu = {
+    @name(".set_mrk_lo_alu") register_action<bit<16>, bit<16>>(mrk_lo_reg) set_mrk_lo_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = hdr.ethernet.etherType & 16w0xff;
             rv = value;
         }
     };
-    @name("stateful_selection_alu") selector_action(sel_tbl_ap) stateful_selection_alu = {
+    @name(".stateful_selection_alu") selector_action(sel_tbl_ap) stateful_selection_alu = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w0;
         }
     };
-    @name("stats_key_alu1") register_action<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu1 = {
+    @name(".stats_key_alu1") register_action<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu1 = {
         void apply(inout stats_key_alu1_layout value, out bit<32> rv) {
             rv = value.lo;
             if (value.hi < 32w2) 
@@ -1111,7 +1111,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 value.lo = 32w100;
         }
     };
-    @name("stats_key_alu3") register_action<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu3 = {
+    @name(".stats_key_alu3") register_action<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu3 = {
         void apply(inout stats_key_alu1_layout value, out bit<32> rv) {
             rv = value.lo;
             if (value.hi < 32w2) 

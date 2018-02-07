@@ -1987,14 +1987,14 @@ control Mosinee(inout headers hdr, inout metadata meta, inout standard_metadata_
 @name(".Hibernia") register<bit<1>>(32w294912) Hibernia;
 
 control Netarts(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    register_action<bit<1>, bit<1>>(Hibernia) Campton = {
+    @name(".Campton") register_action<bit<1>, bit<1>>(Hibernia) Campton = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = value;
             rv = ~value;
         }
     };
-    register_action<bit<1>, bit<1>>(Frontier) Panaca = {
+    @name(".Panaca") register_action<bit<1>, bit<1>>(Frontier) Panaca = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = value;

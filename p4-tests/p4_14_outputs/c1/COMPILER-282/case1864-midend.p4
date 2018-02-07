@@ -530,9 +530,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".Padonia") action _Padonia(bit<12> Somis) {
         meta.Calabasas.Kensett = Somis;
@@ -666,55 +666,55 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Cypress_temp_2;
     bit<1> _Cypress_tmp_1;
     bit<1> _Cypress_tmp_2;
-    @name("NoAction") action NoAction_29() {
+    @name(".NoAction") action NoAction_29() {
     }
-    @name("NoAction") action NoAction_30() {
+    @name(".NoAction") action NoAction_30() {
     }
-    @name("NoAction") action NoAction_31() {
+    @name(".NoAction") action NoAction_31() {
     }
-    @name("NoAction") action NoAction_32() {
+    @name(".NoAction") action NoAction_32() {
     }
-    @name("NoAction") action NoAction_33() {
+    @name(".NoAction") action NoAction_33() {
     }
-    @name("NoAction") action NoAction_34() {
+    @name(".NoAction") action NoAction_34() {
     }
-    @name("NoAction") action NoAction_35() {
+    @name(".NoAction") action NoAction_35() {
     }
-    @name("NoAction") action NoAction_36() {
+    @name(".NoAction") action NoAction_36() {
     }
-    @name("NoAction") action NoAction_37() {
+    @name(".NoAction") action NoAction_37() {
     }
-    @name("NoAction") action NoAction_38() {
+    @name(".NoAction") action NoAction_38() {
     }
-    @name("NoAction") action NoAction_39() {
+    @name(".NoAction") action NoAction_39() {
     }
-    @name("NoAction") action NoAction_40() {
+    @name(".NoAction") action NoAction_40() {
     }
-    @name("NoAction") action NoAction_41() {
+    @name(".NoAction") action NoAction_41() {
     }
-    @name("NoAction") action NoAction_42() {
+    @name(".NoAction") action NoAction_42() {
     }
-    @name("NoAction") action NoAction_43() {
+    @name(".NoAction") action NoAction_43() {
     }
-    @name("NoAction") action NoAction_44() {
+    @name(".NoAction") action NoAction_44() {
     }
-    @name("NoAction") action NoAction_45() {
+    @name(".NoAction") action NoAction_45() {
     }
-    @name("NoAction") action NoAction_46() {
+    @name(".NoAction") action NoAction_46() {
     }
-    @name("NoAction") action NoAction_47() {
+    @name(".NoAction") action NoAction_47() {
     }
-    @name("NoAction") action NoAction_48() {
+    @name(".NoAction") action NoAction_48() {
     }
-    @name("NoAction") action NoAction_49() {
+    @name(".NoAction") action NoAction_49() {
     }
-    @name("NoAction") action NoAction_50() {
+    @name(".NoAction") action NoAction_50() {
     }
-    @name("NoAction") action NoAction_51() {
+    @name(".NoAction") action NoAction_51() {
     }
-    @name("NoAction") action NoAction_52() {
+    @name(".NoAction") action NoAction_52() {
     }
-    @name("NoAction") action NoAction_53() {
+    @name(".NoAction") action NoAction_53() {
     }
     @name(".Ozona") action _Ozona(bit<14> Braselton, bit<1> Burgin, bit<12> Pridgen, bit<1> MudButte, bit<1> Dunnellon, bit<6> McGonigle, bit<2> Lundell, bit<3> Oregon, bit<6> Remington, bit<1> Nelagoney, bit<1> Trilby) {
         meta.Fosston.PineHill = Braselton;
@@ -978,12 +978,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = _Pueblo();
     }
-    @name(".Cypress.Clermont") register_action<bit<1>, bit<1>>(Ceiba) _Cypress_Clermont_0 = {
+    @name(".Clermont") register_action<bit<1>, bit<1>>(Ceiba) _Clermont_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Cypress.Selah") register_action<bit<1>, bit<1>>(Mentmore) _Cypress_Selah_0 = {
+    @name(".Selah") register_action<bit<1>, bit<1>>(Mentmore) _Selah_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -994,7 +994,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Essex") action _Essex() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Cypress_temp_1, HashAlgorithm.identity, 18w0, { meta.Fosston.Shasta, hdr.LaMarque[0].Ivins }, 19w262144);
-        _Cypress_tmp_1 = _Cypress_Clermont_0.execute((bit<32>)_Cypress_temp_1);
+        _Cypress_tmp_1 = _Clermont_0.execute((bit<32>)_Cypress_temp_1);
         meta.Kerrville.Wanatah = _Cypress_tmp_1;
     }
     @name(".Wauregan") action _Wauregan() {
@@ -1003,7 +1003,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Hawthorn") action _Hawthorn() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Cypress_temp_2, HashAlgorithm.identity, 18w0, { meta.Fosston.Shasta, hdr.LaMarque[0].Ivins }, 19w262144);
-        _Cypress_tmp_2 = _Cypress_Selah_0.execute((bit<32>)_Cypress_temp_2);
+        _Cypress_tmp_2 = _Selah_0.execute((bit<32>)_Cypress_temp_2);
         meta.Kerrville.Ivanhoe = _Cypress_tmp_2;
     }
     @name(".Beatrice") action _Beatrice(bit<1> Westpoint) {
@@ -1099,7 +1099,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_40();
     }
     @name(".Silvertip") direct_counter(CounterType.packets_and_bytes) _Silvertip_0;
-    @name(".Moark.Mabelle") register_action<bit<1>, bit<1>>(Brinson) _Moark_Mabelle_0 = {
+    @name(".Mabelle") register_action<bit<1>, bit<1>>(Brinson) _Mabelle_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;
@@ -1111,7 +1111,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Shauck") action _Shauck_0() {
     }
     @name(".Perkasie") action _Perkasie(bit<8> Everett) {
-        _Moark_Mabelle_0.execute();
+        _Mabelle_0.execute();
     }
     @name(".White") action _White() {
         meta.Neshoba.Goulds = 1w1;

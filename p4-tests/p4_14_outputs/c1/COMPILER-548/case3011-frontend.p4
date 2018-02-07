@@ -768,15 +768,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
-    @name("NoAction") action NoAction_61() {
+    @name(".NoAction") action NoAction_61() {
     }
-    @name("NoAction") action NoAction_62() {
+    @name(".NoAction") action NoAction_62() {
     }
-    @name("NoAction") action NoAction_63() {
+    @name(".NoAction") action NoAction_63() {
     }
     @name(".Lepanto") action _Lepanto(bit<16> Onava, bit<1> Clearmont) {
         meta.Mishawaka.Ulysses = Onava;
@@ -1048,113 +1048,113 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_64() {
+    @name(".NoAction") action NoAction_64() {
     }
-    @name("NoAction") action NoAction_65() {
+    @name(".NoAction") action NoAction_65() {
     }
-    @name("NoAction") action NoAction_66() {
+    @name(".NoAction") action NoAction_66() {
     }
-    @name("NoAction") action NoAction_67() {
+    @name(".NoAction") action NoAction_67() {
     }
-    @name("NoAction") action NoAction_68() {
+    @name(".NoAction") action NoAction_68() {
     }
-    @name("NoAction") action NoAction_69() {
+    @name(".NoAction") action NoAction_69() {
     }
-    @name("NoAction") action NoAction_70() {
+    @name(".NoAction") action NoAction_70() {
     }
-    @name("NoAction") action NoAction_71() {
+    @name(".NoAction") action NoAction_71() {
     }
-    @name("NoAction") action NoAction_72() {
+    @name(".NoAction") action NoAction_72() {
     }
-    @name("NoAction") action NoAction_73() {
+    @name(".NoAction") action NoAction_73() {
     }
-    @name("NoAction") action NoAction_74() {
+    @name(".NoAction") action NoAction_74() {
     }
-    @name("NoAction") action NoAction_75() {
+    @name(".NoAction") action NoAction_75() {
     }
-    @name("NoAction") action NoAction_76() {
+    @name(".NoAction") action NoAction_76() {
     }
-    @name("NoAction") action NoAction_77() {
+    @name(".NoAction") action NoAction_77() {
     }
-    @name("NoAction") action NoAction_78() {
+    @name(".NoAction") action NoAction_78() {
     }
-    @name("NoAction") action NoAction_79() {
+    @name(".NoAction") action NoAction_79() {
     }
-    @name("NoAction") action NoAction_80() {
+    @name(".NoAction") action NoAction_80() {
     }
-    @name("NoAction") action NoAction_81() {
+    @name(".NoAction") action NoAction_81() {
     }
-    @name("NoAction") action NoAction_82() {
+    @name(".NoAction") action NoAction_82() {
     }
-    @name("NoAction") action NoAction_83() {
+    @name(".NoAction") action NoAction_83() {
     }
-    @name("NoAction") action NoAction_84() {
+    @name(".NoAction") action NoAction_84() {
     }
-    @name("NoAction") action NoAction_85() {
+    @name(".NoAction") action NoAction_85() {
     }
-    @name("NoAction") action NoAction_86() {
+    @name(".NoAction") action NoAction_86() {
     }
-    @name("NoAction") action NoAction_87() {
+    @name(".NoAction") action NoAction_87() {
     }
-    @name("NoAction") action NoAction_88() {
+    @name(".NoAction") action NoAction_88() {
     }
-    @name("NoAction") action NoAction_89() {
+    @name(".NoAction") action NoAction_89() {
     }
-    @name("NoAction") action NoAction_90() {
+    @name(".NoAction") action NoAction_90() {
     }
-    @name("NoAction") action NoAction_91() {
+    @name(".NoAction") action NoAction_91() {
     }
-    @name("NoAction") action NoAction_92() {
+    @name(".NoAction") action NoAction_92() {
     }
-    @name("NoAction") action NoAction_93() {
+    @name(".NoAction") action NoAction_93() {
     }
-    @name("NoAction") action NoAction_94() {
+    @name(".NoAction") action NoAction_94() {
     }
-    @name("NoAction") action NoAction_95() {
+    @name(".NoAction") action NoAction_95() {
     }
-    @name("NoAction") action NoAction_96() {
+    @name(".NoAction") action NoAction_96() {
     }
-    @name("NoAction") action NoAction_97() {
+    @name(".NoAction") action NoAction_97() {
     }
-    @name("NoAction") action NoAction_98() {
+    @name(".NoAction") action NoAction_98() {
     }
-    @name("NoAction") action NoAction_99() {
+    @name(".NoAction") action NoAction_99() {
     }
-    @name("NoAction") action NoAction_100() {
+    @name(".NoAction") action NoAction_100() {
     }
-    @name("NoAction") action NoAction_101() {
+    @name(".NoAction") action NoAction_101() {
     }
-    @name("NoAction") action NoAction_102() {
+    @name(".NoAction") action NoAction_102() {
     }
-    @name("NoAction") action NoAction_103() {
+    @name(".NoAction") action NoAction_103() {
     }
-    @name("NoAction") action NoAction_104() {
+    @name(".NoAction") action NoAction_104() {
     }
-    @name("NoAction") action NoAction_105() {
+    @name(".NoAction") action NoAction_105() {
     }
-    @name("NoAction") action NoAction_106() {
+    @name(".NoAction") action NoAction_106() {
     }
-    @name("NoAction") action NoAction_107() {
+    @name(".NoAction") action NoAction_107() {
     }
-    @name("NoAction") action NoAction_108() {
+    @name(".NoAction") action NoAction_108() {
     }
-    @name("NoAction") action NoAction_109() {
+    @name(".NoAction") action NoAction_109() {
     }
-    @name("NoAction") action NoAction_110() {
+    @name(".NoAction") action NoAction_110() {
     }
-    @name("NoAction") action NoAction_111() {
+    @name(".NoAction") action NoAction_111() {
     }
-    @name("NoAction") action NoAction_112() {
+    @name(".NoAction") action NoAction_112() {
     }
-    @name("NoAction") action NoAction_113() {
+    @name(".NoAction") action NoAction_113() {
     }
-    @name("NoAction") action NoAction_114() {
+    @name(".NoAction") action NoAction_114() {
     }
-    @name("NoAction") action NoAction_115() {
+    @name(".NoAction") action NoAction_115() {
     }
-    @name("NoAction") action NoAction_116() {
+    @name(".NoAction") action NoAction_116() {
     }
-    @name("NoAction") action NoAction_117() {
+    @name(".NoAction") action NoAction_117() {
     }
     @name(".Lathrop") action _Lathrop(bit<14> Theba, bit<1> Kalida, bit<12> Cache, bit<1> Ekwok, bit<1> Conda, bit<6> Bechyn, bit<2> Quinault, bit<3> Dubuque, bit<6> Chamois) {
         meta.Lugert.Baraboo = Theba;
@@ -1450,13 +1450,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Snowflake_temp_2;
     bit<1> _Snowflake_tmp_1;
     bit<1> _Snowflake_tmp_2;
-    @name(".Snowflake.ShadeGap") register_action<bit<1>, bit<1>>(Bosworth) _Snowflake_ShadeGap_0 = {
+    @name(".ShadeGap") register_action<bit<1>, bit<1>>(Bosworth) _ShadeGap_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
             rv = ~value;
         }
     };
-    @name(".Snowflake.ShowLow") register_action<bit<1>, bit<1>>(Tuttle) _Snowflake_ShowLow_0 = {
+    @name(".ShowLow") register_action<bit<1>, bit<1>>(Tuttle) _ShowLow_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
             rv = value;
@@ -1468,7 +1468,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Vining") action _Vining() {
         hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Snowflake_temp_1, HashAlgorithm.identity, 18w0, { meta.Lugert.Chappells, hdr.Farson[0].Bulverde }, 19w262144);
-        _Snowflake_tmp_1 = _Snowflake_ShadeGap_0.execute((bit<32>)_Snowflake_temp_1);
+        _Snowflake_tmp_1 = _ShadeGap_0.execute((bit<32>)_Snowflake_temp_1);
         meta.McLean.Gorman = _Snowflake_tmp_1;
     }
     @name(".Conner") action _Conner(bit<1> Headland) {
@@ -1476,7 +1476,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Deport") action _Deport() {
         hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Snowflake_temp_2, HashAlgorithm.identity, 18w0, { meta.Lugert.Chappells, hdr.Farson[0].Bulverde }, 19w262144);
-        _Snowflake_tmp_2 = _Snowflake_ShowLow_0.execute((bit<32>)_Snowflake_temp_2);
+        _Snowflake_tmp_2 = _ShowLow_0.execute((bit<32>)_Snowflake_temp_2);
         meta.McLean.Chaska = _Snowflake_tmp_2;
     }
     @name(".Knights") action _Knights() {

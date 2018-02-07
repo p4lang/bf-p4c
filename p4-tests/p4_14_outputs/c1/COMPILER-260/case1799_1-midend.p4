@@ -455,9 +455,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".yevXhQ") register<bit<1>>(32w262144) yevXhQ;
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".spcFKl") action _spcFKl(bit<12> OkndKI) {
         meta.qVEGeY.Crnury = OkndKI;
@@ -574,35 +574,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _TDPRYG_temp_2;
     bit<1> _TDPRYG_tmp_1;
     bit<1> _TDPRYG_tmp_2;
-    @name("NoAction") action NoAction_19() {
+    @name(".NoAction") action NoAction_19() {
     }
-    @name("NoAction") action NoAction_20() {
+    @name(".NoAction") action NoAction_20() {
     }
-    @name("NoAction") action NoAction_21() {
+    @name(".NoAction") action NoAction_21() {
     }
-    @name("NoAction") action NoAction_22() {
+    @name(".NoAction") action NoAction_22() {
     }
-    @name("NoAction") action NoAction_23() {
+    @name(".NoAction") action NoAction_23() {
     }
-    @name("NoAction") action NoAction_24() {
+    @name(".NoAction") action NoAction_24() {
     }
-    @name("NoAction") action NoAction_25() {
+    @name(".NoAction") action NoAction_25() {
     }
-    @name("NoAction") action NoAction_26() {
+    @name(".NoAction") action NoAction_26() {
     }
-    @name("NoAction") action NoAction_27() {
+    @name(".NoAction") action NoAction_27() {
     }
-    @name("NoAction") action NoAction_28() {
+    @name(".NoAction") action NoAction_28() {
     }
-    @name("NoAction") action NoAction_29() {
+    @name(".NoAction") action NoAction_29() {
     }
-    @name("NoAction") action NoAction_30() {
+    @name(".NoAction") action NoAction_30() {
     }
-    @name("NoAction") action NoAction_31() {
+    @name(".NoAction") action NoAction_31() {
     }
-    @name("NoAction") action NoAction_32() {
+    @name(".NoAction") action NoAction_32() {
     }
-    @name("NoAction") action NoAction_33() {
+    @name(".NoAction") action NoAction_33() {
     }
     @name(".IkihAY") action _IkihAY(bit<14> VRfGMf, bit<1> aWJnNz, bit<12> kAhNUQ, bit<1> FSkdgG, bit<1> EpRMew, bit<6> eMDkVu) {
         meta.lwmijB.bBdRYe = VRfGMf;
@@ -845,12 +845,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_24();
     }
-    @name(".TDPRYG.fcVprY") register_action<bit<1>, bit<1>>(GBdGiH) _TDPRYG_fcVprY_0 = {
+    @name(".fcVprY") register_action<bit<1>, bit<1>>(GBdGiH) _fcVprY_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".TDPRYG.vOaDPT") register_action<bit<1>, bit<1>>(yevXhQ) _TDPRYG_vOaDPT_0 = {
+    @name(".vOaDPT") register_action<bit<1>, bit<1>>(yevXhQ) _vOaDPT_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -868,12 +868,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".HWMlwq") action _HWMlwq() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_TDPRYG_temp_1, HashAlgorithm.identity, 18w0, { meta.lwmijB.qDdnCn, hdr.UsqKHW[0].SdLIvH }, 19w262144);
-        _TDPRYG_tmp_1 = _TDPRYG_fcVprY_0.execute((bit<32>)_TDPRYG_temp_1);
+        _TDPRYG_tmp_1 = _fcVprY_0.execute((bit<32>)_TDPRYG_temp_1);
         meta.njBqBq.ymFIux = _TDPRYG_tmp_1;
     }
     @name(".EAmgXn") action _EAmgXn() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_TDPRYG_temp_2, HashAlgorithm.identity, 18w0, { meta.lwmijB.qDdnCn, hdr.UsqKHW[0].SdLIvH }, 19w262144);
-        _TDPRYG_tmp_2 = _TDPRYG_vOaDPT_0.execute((bit<32>)_TDPRYG_temp_2);
+        _TDPRYG_tmp_2 = _vOaDPT_0.execute((bit<32>)_TDPRYG_temp_2);
         meta.njBqBq.sRUjfg = _TDPRYG_tmp_2;
     }
     @name(".Qfopml") table _Qfopml_0 {
@@ -917,14 +917,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = _EAmgXn();
     }
-    @name(".IFycyA.tOUEnP") register_action<bit<1>, bit<1>>(QUINJI) _IFycyA_tOUEnP_0 = {
+    @name(".tOUEnP") register_action<bit<1>, bit<1>>(QUINJI) _tOUEnP_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;
         }
     };
     @name(".DURXNj") action _DURXNj(bit<8> rEXFwh) {
-        _IFycyA_tOUEnP_0.execute();
+        _tOUEnP_0.execute();
     }
     @name(".rCZnqI") action _rCZnqI() {
         meta.CNpgHg.YpkCXt = 1w1;

@@ -193,11 +193,11 @@ struct tuple_0 {
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<8> tmp_1;
     tuple_0 tmp_2;
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_4() {
+    @name(".NoAction") action NoAction_4() {
     }
-    @name("NoAction") action NoAction_5() {
+    @name(".NoAction") action NoAction_5() {
     }
     @name(".action_select") action action_select_0() {
         tmp_2.field = hdr.ipv4.blah1;

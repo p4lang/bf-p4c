@@ -178,7 +178,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
     @name(".counter_egress") direct_counter(CounterType.packets) counter_egress;
     @name(".egress_action") action egress_action(bit<8> idx) {
@@ -202,7 +202,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".counter_0") counter(32w512, CounterType.packets) counter_0;
     @name(".do_nothing") action do_nothing_0() {

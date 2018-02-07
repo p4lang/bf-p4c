@@ -461,14 +461,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".Seagrove") register<bit<1>>(32w262144) Seagrove;
 
 control Alakanuk(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    register_action<bit<1>, bit<1>>(Seagrove) Cricket = {
+    @name(".Cricket") register_action<bit<1>, bit<1>>(Seagrove) Cricket = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = value;
             rv = value;
         }
     };
-    register_action<bit<1>, bit<1>>(Lackey) Jerico = {
+    @name(".Jerico") register_action<bit<1>, bit<1>>(Lackey) Jerico = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = value;
@@ -987,7 +987,7 @@ control Neavitt(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control NewRoads(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Elihu") direct_counter(CounterType.packets_and_bytes) Elihu;
-    register_action<bit<1>, bit<1>>(Floyd) Fowlkes = {
+    @name(".Fowlkes") register_action<bit<1>, bit<1>>(Floyd) Fowlkes = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;

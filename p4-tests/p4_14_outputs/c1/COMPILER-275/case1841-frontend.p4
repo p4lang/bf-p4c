@@ -515,9 +515,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".Ruffin") action _Ruffin(bit<12> Winters) {
         meta.Brazil.Sarepta = Winters;
@@ -611,47 +611,47 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_25() {
+    @name(".NoAction") action NoAction_25() {
     }
-    @name("NoAction") action NoAction_26() {
+    @name(".NoAction") action NoAction_26() {
     }
-    @name("NoAction") action NoAction_27() {
+    @name(".NoAction") action NoAction_27() {
     }
-    @name("NoAction") action NoAction_28() {
+    @name(".NoAction") action NoAction_28() {
     }
-    @name("NoAction") action NoAction_29() {
+    @name(".NoAction") action NoAction_29() {
     }
-    @name("NoAction") action NoAction_30() {
+    @name(".NoAction") action NoAction_30() {
     }
-    @name("NoAction") action NoAction_31() {
+    @name(".NoAction") action NoAction_31() {
     }
-    @name("NoAction") action NoAction_32() {
+    @name(".NoAction") action NoAction_32() {
     }
-    @name("NoAction") action NoAction_33() {
+    @name(".NoAction") action NoAction_33() {
     }
-    @name("NoAction") action NoAction_34() {
+    @name(".NoAction") action NoAction_34() {
     }
-    @name("NoAction") action NoAction_35() {
+    @name(".NoAction") action NoAction_35() {
     }
-    @name("NoAction") action NoAction_36() {
+    @name(".NoAction") action NoAction_36() {
     }
-    @name("NoAction") action NoAction_37() {
+    @name(".NoAction") action NoAction_37() {
     }
-    @name("NoAction") action NoAction_38() {
+    @name(".NoAction") action NoAction_38() {
     }
-    @name("NoAction") action NoAction_39() {
+    @name(".NoAction") action NoAction_39() {
     }
-    @name("NoAction") action NoAction_40() {
+    @name(".NoAction") action NoAction_40() {
     }
-    @name("NoAction") action NoAction_41() {
+    @name(".NoAction") action NoAction_41() {
     }
-    @name("NoAction") action NoAction_42() {
+    @name(".NoAction") action NoAction_42() {
     }
-    @name("NoAction") action NoAction_43() {
+    @name(".NoAction") action NoAction_43() {
     }
-    @name("NoAction") action NoAction_44() {
+    @name(".NoAction") action NoAction_44() {
     }
-    @name("NoAction") action NoAction_45() {
+    @name(".NoAction") action NoAction_45() {
     }
     @name(".Willamina") action _Willamina(bit<14> PaloAlto, bit<1> Enderlin, bit<12> Ozark, bit<1> Nanakuli, bit<1> Minneiska, bit<6> Masardis) {
         meta.Harpster.Champlain = PaloAlto;
@@ -907,13 +907,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Homeacre_temp_2;
     bit<1> _Homeacre_tmp_1;
     bit<1> _Homeacre_tmp_2;
-    @name(".Homeacre.Donegal") register_action<bit<1>, bit<1>>(Robinette) _Homeacre_Donegal_0 = {
+    @name(".Donegal") register_action<bit<1>, bit<1>>(Robinette) _Donegal_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
             rv = value;
         }
     };
-    @name(".Homeacre.Sitka") register_action<bit<1>, bit<1>>(Steger) _Homeacre_Sitka_0 = {
+    @name(".Sitka") register_action<bit<1>, bit<1>>(Steger) _Sitka_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
             rv = value;
@@ -932,12 +932,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Rawlins") action _Rawlins() {
         hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Homeacre_temp_1, HashAlgorithm.identity, 18w0, { meta.Harpster.Nettleton, hdr.Oklee[0].ElPortal }, 19w262144);
-        _Homeacre_tmp_1 = _Homeacre_Donegal_0.execute((bit<32>)_Homeacre_temp_1);
+        _Homeacre_tmp_1 = _Donegal_0.execute((bit<32>)_Homeacre_temp_1);
         meta.Noelke.Taylors = _Homeacre_tmp_1;
     }
     @name(".Colona") action _Colona() {
         hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Homeacre_temp_2, HashAlgorithm.identity, 18w0, { meta.Harpster.Nettleton, hdr.Oklee[0].ElPortal }, 19w262144);
-        _Homeacre_tmp_2 = _Homeacre_Sitka_0.execute((bit<32>)_Homeacre_temp_2);
+        _Homeacre_tmp_2 = _Sitka_0.execute((bit<32>)_Homeacre_temp_2);
         meta.Noelke.Anvik = _Homeacre_tmp_2;
     }
     @use_hash_action(0) @name(".Affton") table _Affton_0 {
@@ -993,14 +993,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_34();
     }
     @name(".Marquand") direct_counter(CounterType.packets_and_bytes) _Marquand_0;
-    @name(".Puyallup.Chaumont") register_action<bit<1>, bit<1>>(Grants) _Puyallup_Chaumont_0 = {
+    @name(".Chaumont") register_action<bit<1>, bit<1>>(Grants) _Chaumont_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;
         }
     };
     @name(".Lemhi") action _Lemhi(bit<8> Quarry) {
-        _Puyallup_Chaumont_0.execute();
+        _Chaumont_0.execute();
     }
     @name(".Mulhall") action _Mulhall() {
         meta.Wayne.Whiteclay = 1w1;

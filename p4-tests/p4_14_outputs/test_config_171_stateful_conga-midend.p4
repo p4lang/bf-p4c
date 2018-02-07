@@ -226,17 +226,17 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<8> tmp_1;
     bit<8> tmp_2;
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_3() {
+    @name(".NoAction") action NoAction_3() {
     }
-    @name("conga_alu") register_action<conga_state_layout, bit<8>>(conga_state) conga_alu = {
+    @name(".conga_alu") register_action<conga_state_layout, bit<8>>(conga_state) conga_alu = {
         void apply(inout conga_state_layout value, out bit<8> rv) {
             value.next_hop = value.utilization;
             rv = value.utilization;
         }
     };
-    @name("conga_update_alu") register_action<conga_state_layout, bit<8>>(conga_state) conga_update_alu = {
+    @name(".conga_update_alu") register_action<conga_state_layout, bit<8>>(conga_state) conga_update_alu = {
         void apply(inout conga_state_layout value, out bit<8> rv) {
             if (value.next_hop > meta.conga_meta.util) 
                 value.utilization = meta.conga_meta.next_hop;

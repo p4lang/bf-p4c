@@ -251,19 +251,19 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".kv_register") register<bit<32>>(32w8192) kv_register;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_6() {
+    @name(".NoAction") action NoAction_6() {
     }
-    @name("NoAction") action NoAction_7() {
+    @name(".NoAction") action NoAction_7() {
     }
-    @name("NoAction") action NoAction_8() {
+    @name(".NoAction") action NoAction_8() {
     }
-    @name("NoAction") action NoAction_9() {
+    @name(".NoAction") action NoAction_9() {
     }
     bit<32> tmp_3;
     bool tmp_4;
-    @name("kv_alu") register_action<bit<32>, bit<32>>(kv_register) kv_alu = {
+    @name(".kv_alu") register_action<bit<32>, bit<32>>(kv_register) kv_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = value;
         }

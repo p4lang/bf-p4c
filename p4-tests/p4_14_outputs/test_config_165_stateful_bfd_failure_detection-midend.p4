@@ -190,17 +190,17 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<8> tmp_0;
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_3() {
+    @name(".NoAction") action NoAction_3() {
     }
-    @name("bfd_cnt_rx_alu") register_action<bit<8>, bit<8>>(bfd_cnt) bfd_cnt_rx_alu = {
+    @name(".bfd_cnt_rx_alu") register_action<bit<8>, bit<8>>(bfd_cnt) bfd_cnt_rx_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
             rv = 8w0;
             value = 8w0;
         }
     };
-    @name("bfd_cnt_tx_alu") register_action<bit<8>, bit<8>>(bfd_cnt) bfd_cnt_tx_alu = {
+    @name(".bfd_cnt_tx_alu") register_action<bit<8>, bit<8>>(bfd_cnt) bfd_cnt_tx_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
             rv = 8w0;
             value = value + 8w1;

@@ -47,9 +47,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<32> tmp_1;
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("sful") register_action<pair32_t, bit<32>>(accum) sful = {
+    @name(".sful") register_action<pair32_t, bit<32>>(accum) sful = {
         void apply(inout pair32_t value, out bit<32> rv) {
             rv = value.lo;
             value.hi = value.hi + 32w1;

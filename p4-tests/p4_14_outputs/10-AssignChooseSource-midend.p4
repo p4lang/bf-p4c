@@ -164,13 +164,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_5() {
+    @name(".NoAction") action NoAction_5() {
     }
-    @name("NoAction") action NoAction_6() {
+    @name(".NoAction") action NoAction_6() {
     }
-    @name("NoAction") action NoAction_7() {
+    @name(".NoAction") action NoAction_7() {
     }
     @name(".assign_egress1_action") action assign_egress1_action_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.ing_metadata.tmp1;

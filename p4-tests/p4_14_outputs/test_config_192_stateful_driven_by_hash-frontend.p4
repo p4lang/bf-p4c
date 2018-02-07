@@ -176,17 +176,17 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".r_t_indirect") register<bit<16>>(32w8192) r_t_indirect;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_7() {
+    @name(".NoAction") action NoAction_7() {
     }
-    @name("NoAction") action NoAction_8() {
+    @name(".NoAction") action NoAction_8() {
     }
-    @name("NoAction") action NoAction_9() {
+    @name(".NoAction") action NoAction_9() {
     }
-    @name("NoAction") action NoAction_10() {
+    @name(".NoAction") action NoAction_10() {
     }
-    @name("NoAction") action NoAction_11() {
+    @name(".NoAction") action NoAction_11() {
     }
     bit<12> temp;
     bit<13> temp_0;
@@ -200,37 +200,37 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<16> tmp_8;
     bit<16> tmp_9;
     bit<16> tmp_10;
-    @name("b_em_direct") register_action<bit<16>, bit<16>>(r_em_direct) b_em_direct = {
+    @name(".b_em_direct") register_action<bit<16>, bit<16>>(r_em_direct) b_em_direct = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w1;
             rv = value;
         }
     };
-    @name("b_em_indirect") register_action<bit<16>, bit<16>>(r_em_indirect) b_em_indirect = {
+    @name(".b_em_indirect") register_action<bit<16>, bit<16>>(r_em_indirect) b_em_indirect = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w5;
             rv = value;
         }
     };
-    @name("b_hash_act") register_action<bit<8>, bit<8>>(r_hash_act) b_hash_act = {
+    @name(".b_hash_act") register_action<bit<8>, bit<8>>(r_hash_act) b_hash_act = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = value + 8w5;
             rv = value;
         }
     };
-    @name("b_no_key") register_action<bit<16>, bit<16>>(r_no_key) b_no_key = {
+    @name(".b_no_key") register_action<bit<16>, bit<16>>(r_no_key) b_no_key = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w5;
             rv = value;
         }
     };
-    @name("b_t_direct") register_action<bit<16>, bit<16>>(r_t_direct) b_t_direct = {
+    @name(".b_t_direct") register_action<bit<16>, bit<16>>(r_t_direct) b_t_direct = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w1;
             rv = value;
         }
     };
-    @name("b_t_indirect") register_action<bit<16>, bit<16>>(r_t_indirect) b_t_indirect = {
+    @name(".b_t_indirect") register_action<bit<16>, bit<16>>(r_t_indirect) b_t_indirect = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w5;
             rv = value;

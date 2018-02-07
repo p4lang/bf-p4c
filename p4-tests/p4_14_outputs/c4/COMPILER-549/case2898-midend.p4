@@ -301,9 +301,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".gtp_strip") action gtp_strip_0() {
         hdr.outer_ipv4.setInvalid();
@@ -357,17 +357,17 @@ struct tuple_1 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_10() {
+    @name(".NoAction") action NoAction_10() {
     }
-    @name("NoAction") action NoAction_11() {
+    @name(".NoAction") action NoAction_11() {
     }
-    @name("NoAction") action NoAction_12() {
+    @name(".NoAction") action NoAction_12() {
     }
-    @name("NoAction") action NoAction_13() {
+    @name(".NoAction") action NoAction_13() {
     }
-    @name("NoAction") action NoAction_14() {
+    @name(".NoAction") action NoAction_14() {
     }
-    @name("NoAction") action NoAction_15() {
+    @name(".NoAction") action NoAction_15() {
     }
     @name(".set_lb_hashed_index_ipv4") action set_lb_hashed_index_ipv4_0() {
         hash<bit<4>, bit<4>, tuple_0, bit<8>>(meta.meta.lb_hash, HashAlgorithm.crc16, 4w0, { hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr }, 8w16);

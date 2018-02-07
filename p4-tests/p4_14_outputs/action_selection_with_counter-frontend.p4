@@ -40,11 +40,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".set_b4_6") @mode("fair") action_selector(HashAlgorithm.random, 32w1024, 32w14) set_b4_6;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_4() {
+    @name(".NoAction") action NoAction_4() {
     }
-    @name("NoAction") action NoAction_5() {
+    @name(".NoAction") action NoAction_5() {
     }
     @name(".test3_counter") counter(32w4000, CounterType.packets) test3_counter;
     @name(".setb1") action setb1_0(bit<8> val1) {

@@ -31,13 +31,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".sel_profile") @mode("fair") action_selector(HashAlgorithm.crc16, 32w1024, 32w16) sel_profile;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    selector_action(sel_profile) port_down = {
+    @name(".port_down") selector_action(sel_profile) port_down = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;
         }
     };
-    selector_action(sel_profile) port_up = {
+    @name(".port_up") selector_action(sel_profile) port_up = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w0;

@@ -181,11 +181,11 @@ struct tuple_1 {
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<28> tmp_1;
     tuple_0 tmp_2;
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_4() {
+    @name(".NoAction") action NoAction_4() {
     }
-    @name("NoAction") action NoAction_5() {
+    @name(".NoAction") action NoAction_5() {
     }
     @name(".action_0") action action_3(bit<16> param0) {
         hdr.pkt.field_e_16 = param0;

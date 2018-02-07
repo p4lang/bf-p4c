@@ -226,27 +226,27 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_12() {
+    @name(".NoAction") action NoAction_12() {
     }
-    @name("NoAction") action NoAction_13() {
+    @name(".NoAction") action NoAction_13() {
     }
-    @name("NoAction") action NoAction_14() {
+    @name(".NoAction") action NoAction_14() {
     }
-    @name("NoAction") action NoAction_15() {
+    @name(".NoAction") action NoAction_15() {
     }
-    @name("NoAction") action NoAction_16() {
+    @name(".NoAction") action NoAction_16() {
     }
-    @name("NoAction") action NoAction_17() {
+    @name(".NoAction") action NoAction_17() {
     }
-    @name("NoAction") action NoAction_18() {
+    @name(".NoAction") action NoAction_18() {
     }
-    @name("NoAction") action NoAction_19() {
+    @name(".NoAction") action NoAction_19() {
     }
-    @name("NoAction") action NoAction_20() {
+    @name(".NoAction") action NoAction_20() {
     }
-    @name("NoAction") action NoAction_21() {
+    @name(".NoAction") action NoAction_21() {
     }
     @name(".nop") action nop_0() {
     }

@@ -255,9 +255,9 @@ struct tuple_7 {
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".set_pkt") action set_pkt_0(bit<8> p) {
         hdr.ethernet.dstAddr = 48w0xffffffffffff;
@@ -340,9 +340,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_6() {
+    @name(".NoAction") action NoAction_6() {
     }
-    @name("NoAction") action NoAction_7() {
+    @name(".NoAction") action NoAction_7() {
     }
     @name(".set_bm") action set_bm_0(bit<8> a, bit<8> b, bit<9> p) {
         meta.meta.bm_0 = a;

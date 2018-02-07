@@ -190,17 +190,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<17> temp_0;
     bit<8> tmp_1;
     bit<8> tmp_2;
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_3() {
+    @name(".NoAction") action NoAction_3() {
     }
-    @name("alu_0") register_action<bit<8>, bit<8>>(reg_0) alu_0 = {
+    @name(".alu_0") register_action<bit<8>, bit<8>>(reg_0) alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = 8w15;
             rv = 8w15;
         }
     };
-    @name("alu_1") register_action<bit<8>, bit<8>>(reg_1) alu_1 = {
+    @name(".alu_1") register_action<bit<8>, bit<8>>(reg_1) alu_1 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = 8w0x30;
             rv = 8w0x30;

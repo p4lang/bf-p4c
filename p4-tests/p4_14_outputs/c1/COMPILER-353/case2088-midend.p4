@@ -572,11 +572,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
-    @name("NoAction") action NoAction_39() {
+    @name(".NoAction") action NoAction_39() {
     }
     @name(".Chalco") action _Chalco(bit<12> Garrison) {
         meta.Roseau.Grabill = Garrison;
@@ -755,73 +755,73 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Parnell_temp_2;
     bit<1> _Parnell_tmp_1;
     bit<1> _Parnell_tmp_2;
-    @name("NoAction") action NoAction_40() {
+    @name(".NoAction") action NoAction_40() {
     }
-    @name("NoAction") action NoAction_41() {
+    @name(".NoAction") action NoAction_41() {
     }
-    @name("NoAction") action NoAction_42() {
+    @name(".NoAction") action NoAction_42() {
     }
-    @name("NoAction") action NoAction_43() {
+    @name(".NoAction") action NoAction_43() {
     }
-    @name("NoAction") action NoAction_44() {
+    @name(".NoAction") action NoAction_44() {
     }
-    @name("NoAction") action NoAction_45() {
+    @name(".NoAction") action NoAction_45() {
     }
-    @name("NoAction") action NoAction_46() {
+    @name(".NoAction") action NoAction_46() {
     }
-    @name("NoAction") action NoAction_47() {
+    @name(".NoAction") action NoAction_47() {
     }
-    @name("NoAction") action NoAction_48() {
+    @name(".NoAction") action NoAction_48() {
     }
-    @name("NoAction") action NoAction_49() {
+    @name(".NoAction") action NoAction_49() {
     }
-    @name("NoAction") action NoAction_50() {
+    @name(".NoAction") action NoAction_50() {
     }
-    @name("NoAction") action NoAction_51() {
+    @name(".NoAction") action NoAction_51() {
     }
-    @name("NoAction") action NoAction_52() {
+    @name(".NoAction") action NoAction_52() {
     }
-    @name("NoAction") action NoAction_53() {
+    @name(".NoAction") action NoAction_53() {
     }
-    @name("NoAction") action NoAction_54() {
+    @name(".NoAction") action NoAction_54() {
     }
-    @name("NoAction") action NoAction_55() {
+    @name(".NoAction") action NoAction_55() {
     }
-    @name("NoAction") action NoAction_56() {
+    @name(".NoAction") action NoAction_56() {
     }
-    @name("NoAction") action NoAction_57() {
+    @name(".NoAction") action NoAction_57() {
     }
-    @name("NoAction") action NoAction_58() {
+    @name(".NoAction") action NoAction_58() {
     }
-    @name("NoAction") action NoAction_59() {
+    @name(".NoAction") action NoAction_59() {
     }
-    @name("NoAction") action NoAction_60() {
+    @name(".NoAction") action NoAction_60() {
     }
-    @name("NoAction") action NoAction_61() {
+    @name(".NoAction") action NoAction_61() {
     }
-    @name("NoAction") action NoAction_62() {
+    @name(".NoAction") action NoAction_62() {
     }
-    @name("NoAction") action NoAction_63() {
+    @name(".NoAction") action NoAction_63() {
     }
-    @name("NoAction") action NoAction_64() {
+    @name(".NoAction") action NoAction_64() {
     }
-    @name("NoAction") action NoAction_65() {
+    @name(".NoAction") action NoAction_65() {
     }
-    @name("NoAction") action NoAction_66() {
+    @name(".NoAction") action NoAction_66() {
     }
-    @name("NoAction") action NoAction_67() {
+    @name(".NoAction") action NoAction_67() {
     }
-    @name("NoAction") action NoAction_68() {
+    @name(".NoAction") action NoAction_68() {
     }
-    @name("NoAction") action NoAction_69() {
+    @name(".NoAction") action NoAction_69() {
     }
-    @name("NoAction") action NoAction_70() {
+    @name(".NoAction") action NoAction_70() {
     }
-    @name("NoAction") action NoAction_71() {
+    @name(".NoAction") action NoAction_71() {
     }
-    @name("NoAction") action NoAction_72() {
+    @name(".NoAction") action NoAction_72() {
     }
-    @name("NoAction") action NoAction_73() {
+    @name(".NoAction") action NoAction_73() {
     }
     @name(".Fallsburg") action _Fallsburg(bit<14> Leacock, bit<1> Hartwick, bit<12> Maybee, bit<1> Moorcroft, bit<1> Pickering, bit<6> Robbs, bit<2> Sidon, bit<3> Revere, bit<6> Stone) {
         meta.Wolsey.Buras = Leacock;
@@ -1099,12 +1099,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_47();
     }
-    @name(".Parnell.Gonzalez") register_action<bit<1>, bit<1>>(BigWells) _Parnell_Gonzalez_0 = {
+    @name(".Gonzalez") register_action<bit<1>, bit<1>>(BigWells) _Gonzalez_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Parnell.Tillatoba") register_action<bit<1>, bit<1>>(Skillman) _Parnell_Tillatoba_0 = {
+    @name(".Tillatoba") register_action<bit<1>, bit<1>>(Skillman) _Tillatoba_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
@@ -1114,7 +1114,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Ledger") action _Ledger() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Parnell_temp_1, HashAlgorithm.identity, 18w0, { meta.Wolsey.Perryton, hdr.Moodys[0].Salome }, 19w262144);
-        _Parnell_tmp_1 = _Parnell_Tillatoba_0.execute((bit<32>)_Parnell_temp_1);
+        _Parnell_tmp_1 = _Tillatoba_0.execute((bit<32>)_Parnell_temp_1);
         meta.Rixford.TonkaBay = _Parnell_tmp_1;
     }
     @name(".Wheaton") action _Wheaton() {
@@ -1127,7 +1127,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Quinault") action _Quinault() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Parnell_temp_2, HashAlgorithm.identity, 18w0, { meta.Wolsey.Perryton, hdr.Moodys[0].Salome }, 19w262144);
-        _Parnell_tmp_2 = _Parnell_Gonzalez_0.execute((bit<32>)_Parnell_temp_2);
+        _Parnell_tmp_2 = _Gonzalez_0.execute((bit<32>)_Parnell_temp_2);
         meta.Rixford.Houston = _Parnell_tmp_2;
     }
     @use_hash_action(0) @name(".Cankton") table _Cankton_0 {

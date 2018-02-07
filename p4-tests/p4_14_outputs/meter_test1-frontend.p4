@@ -30,9 +30,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_3() {
+    @name(".NoAction") action NoAction_3() {
     }
     @name(".meter_1") direct_meter<bit<8>>(MeterType.bytes) meter_1;
     @name(".meter_2") direct_meter<bit<8>>(MeterType.bytes) meter_2;

@@ -535,9 +535,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".Tryon") register<bit<1>>(32w262144) Tryon;
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".Lepanto") action _Lepanto(bit<12> Slana) {
         meta.CedarKey.Bigfork = Slana;
@@ -668,71 +668,71 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Sitka_temp_2;
     bit<1> _Sitka_tmp_1;
     bit<1> _Sitka_tmp_2;
-    @name("NoAction") action NoAction_37() {
+    @name(".NoAction") action NoAction_37() {
     }
-    @name("NoAction") action NoAction_38() {
+    @name(".NoAction") action NoAction_38() {
     }
-    @name("NoAction") action NoAction_39() {
+    @name(".NoAction") action NoAction_39() {
     }
-    @name("NoAction") action NoAction_40() {
+    @name(".NoAction") action NoAction_40() {
     }
-    @name("NoAction") action NoAction_41() {
+    @name(".NoAction") action NoAction_41() {
     }
-    @name("NoAction") action NoAction_42() {
+    @name(".NoAction") action NoAction_42() {
     }
-    @name("NoAction") action NoAction_43() {
+    @name(".NoAction") action NoAction_43() {
     }
-    @name("NoAction") action NoAction_44() {
+    @name(".NoAction") action NoAction_44() {
     }
-    @name("NoAction") action NoAction_45() {
+    @name(".NoAction") action NoAction_45() {
     }
-    @name("NoAction") action NoAction_46() {
+    @name(".NoAction") action NoAction_46() {
     }
-    @name("NoAction") action NoAction_47() {
+    @name(".NoAction") action NoAction_47() {
     }
-    @name("NoAction") action NoAction_48() {
+    @name(".NoAction") action NoAction_48() {
     }
-    @name("NoAction") action NoAction_49() {
+    @name(".NoAction") action NoAction_49() {
     }
-    @name("NoAction") action NoAction_50() {
+    @name(".NoAction") action NoAction_50() {
     }
-    @name("NoAction") action NoAction_51() {
+    @name(".NoAction") action NoAction_51() {
     }
-    @name("NoAction") action NoAction_52() {
+    @name(".NoAction") action NoAction_52() {
     }
-    @name("NoAction") action NoAction_53() {
+    @name(".NoAction") action NoAction_53() {
     }
-    @name("NoAction") action NoAction_54() {
+    @name(".NoAction") action NoAction_54() {
     }
-    @name("NoAction") action NoAction_55() {
+    @name(".NoAction") action NoAction_55() {
     }
-    @name("NoAction") action NoAction_56() {
+    @name(".NoAction") action NoAction_56() {
     }
-    @name("NoAction") action NoAction_57() {
+    @name(".NoAction") action NoAction_57() {
     }
-    @name("NoAction") action NoAction_58() {
+    @name(".NoAction") action NoAction_58() {
     }
-    @name("NoAction") action NoAction_59() {
+    @name(".NoAction") action NoAction_59() {
     }
-    @name("NoAction") action NoAction_60() {
+    @name(".NoAction") action NoAction_60() {
     }
-    @name("NoAction") action NoAction_61() {
+    @name(".NoAction") action NoAction_61() {
     }
-    @name("NoAction") action NoAction_62() {
+    @name(".NoAction") action NoAction_62() {
     }
-    @name("NoAction") action NoAction_63() {
+    @name(".NoAction") action NoAction_63() {
     }
-    @name("NoAction") action NoAction_64() {
+    @name(".NoAction") action NoAction_64() {
     }
-    @name("NoAction") action NoAction_65() {
+    @name(".NoAction") action NoAction_65() {
     }
-    @name("NoAction") action NoAction_66() {
+    @name(".NoAction") action NoAction_66() {
     }
-    @name("NoAction") action NoAction_67() {
+    @name(".NoAction") action NoAction_67() {
     }
-    @name("NoAction") action NoAction_68() {
+    @name(".NoAction") action NoAction_68() {
     }
-    @name("NoAction") action NoAction_69() {
+    @name(".NoAction") action NoAction_69() {
     }
     @name(".Nederland") action _Nederland(bit<14> Heaton, bit<1> Almond, bit<12> Caputa, bit<1> Netarts, bit<1> Lamison, bit<6> Emsworth, bit<2> McKenna, bit<3> FortShaw, bit<6> Cashmere) {
         meta.Mapleview.Almedia = Heaton;
@@ -1010,24 +1010,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = _Richvale();
     }
-    @name(".Sitka.Klondike") register_action<bit<1>, bit<1>>(Buenos) _Sitka_Klondike_0 = {
+    @name(".Klondike") register_action<bit<1>, bit<1>>(Buenos) _Klondike_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Sitka.Theba") register_action<bit<1>, bit<1>>(Tryon) _Sitka_Theba_0 = {
+    @name(".Theba") register_action<bit<1>, bit<1>>(Tryon) _Theba_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
     @name(".Flaxton") action _Flaxton() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Sitka_temp_1, HashAlgorithm.identity, 18w0, { meta.Mapleview.Lamont, hdr.Kinston[0].Holliday }, 19w262144);
-        _Sitka_tmp_1 = _Sitka_Theba_0.execute((bit<32>)_Sitka_temp_1);
+        _Sitka_tmp_1 = _Theba_0.execute((bit<32>)_Sitka_temp_1);
         meta.Trammel.Choptank = _Sitka_tmp_1;
     }
     @name(".Cisne") action _Cisne() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Sitka_temp_2, HashAlgorithm.identity, 18w0, { meta.Mapleview.Lamont, hdr.Kinston[0].Holliday }, 19w262144);
-        _Sitka_tmp_2 = _Sitka_Klondike_0.execute((bit<32>)_Sitka_temp_2);
+        _Sitka_tmp_2 = _Klondike_0.execute((bit<32>)_Sitka_temp_2);
         meta.Trammel.Cement = _Sitka_tmp_2;
     }
     @name(".Prosser") action _Prosser(bit<1> Carlin) {

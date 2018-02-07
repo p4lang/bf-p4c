@@ -163,7 +163,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
     @name(".action_0") action action_6() {
         hdr.pkt.field_a_signed = hdr.pkt.field_a_signed + (int<32>)hdr.pkt.field_b_32;

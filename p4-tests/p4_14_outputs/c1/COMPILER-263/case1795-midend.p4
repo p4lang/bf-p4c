@@ -463,9 +463,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".Celada") action _Celada(bit<12> Inola) {
         meta.Roachdale.Pelion = Inola;
@@ -591,31 +591,31 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Alakanuk_temp_2;
     bit<1> _Alakanuk_tmp_1;
     bit<1> _Alakanuk_tmp_2;
-    @name("NoAction") action NoAction_17() {
+    @name(".NoAction") action NoAction_17() {
     }
-    @name("NoAction") action NoAction_18() {
+    @name(".NoAction") action NoAction_18() {
     }
-    @name("NoAction") action NoAction_19() {
+    @name(".NoAction") action NoAction_19() {
     }
-    @name("NoAction") action NoAction_20() {
+    @name(".NoAction") action NoAction_20() {
     }
-    @name("NoAction") action NoAction_21() {
+    @name(".NoAction") action NoAction_21() {
     }
-    @name("NoAction") action NoAction_22() {
+    @name(".NoAction") action NoAction_22() {
     }
-    @name("NoAction") action NoAction_23() {
+    @name(".NoAction") action NoAction_23() {
     }
-    @name("NoAction") action NoAction_24() {
+    @name(".NoAction") action NoAction_24() {
     }
-    @name("NoAction") action NoAction_25() {
+    @name(".NoAction") action NoAction_25() {
     }
-    @name("NoAction") action NoAction_26() {
+    @name(".NoAction") action NoAction_26() {
     }
-    @name("NoAction") action NoAction_27() {
+    @name(".NoAction") action NoAction_27() {
     }
-    @name("NoAction") action NoAction_28() {
+    @name(".NoAction") action NoAction_28() {
     }
-    @name("NoAction") action NoAction_29() {
+    @name(".NoAction") action NoAction_29() {
     }
     @name(".Ganado") action _Ganado(bit<14> Abernant, bit<1> Roseworth, bit<12> Cadott, bit<1> Sutter, bit<1> Hauppauge, bit<6> Grantfork) {
         meta.Brodnax.Bannack = Abernant;
@@ -856,12 +856,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = _Kamas(8w0, 1w1, 1w0, 1w1, 1w0);
     }
-    @name(".Alakanuk.Cricket") register_action<bit<1>, bit<1>>(Seagrove) _Alakanuk_Cricket_0 = {
+    @name(".Cricket") register_action<bit<1>, bit<1>>(Seagrove) _Cricket_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Alakanuk.Jerico") register_action<bit<1>, bit<1>>(Lackey) _Alakanuk_Jerico_0 = {
+    @name(".Jerico") register_action<bit<1>, bit<1>>(Lackey) _Jerico_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -872,12 +872,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Telephone") action _Telephone() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Alakanuk_temp_1, HashAlgorithm.identity, 18w0, { meta.Brodnax.Columbia, hdr.Jayton[0].Jigger }, 19w262144);
-        _Alakanuk_tmp_1 = _Alakanuk_Jerico_0.execute((bit<32>)_Alakanuk_temp_1);
+        _Alakanuk_tmp_1 = _Jerico_0.execute((bit<32>)_Alakanuk_temp_1);
         meta.Boyle.Maida = _Alakanuk_tmp_1;
     }
     @name(".Clementon") action _Clementon() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Alakanuk_temp_2, HashAlgorithm.identity, 18w0, { meta.Brodnax.Columbia, hdr.Jayton[0].Jigger }, 19w262144);
-        _Alakanuk_tmp_2 = _Alakanuk_Cricket_0.execute((bit<32>)_Alakanuk_temp_2);
+        _Alakanuk_tmp_2 = _Cricket_0.execute((bit<32>)_Alakanuk_temp_2);
         meta.Boyle.Rehobeth = _Alakanuk_tmp_2;
     }
     @name(".Moosic") action _Moosic(bit<1> Ossineke) {
@@ -929,7 +929,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_24();
     }
     @name(".Elihu") direct_counter(CounterType.packets_and_bytes) _Elihu_0;
-    @name(".NewRoads.Fowlkes") register_action<bit<1>, bit<1>>(Floyd) _NewRoads_Fowlkes_0 = {
+    @name(".Fowlkes") register_action<bit<1>, bit<1>>(Floyd) _Fowlkes_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;
@@ -938,7 +938,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Kapowsin") action _Kapowsin_0() {
     }
     @name(".Fentress") action _Fentress(bit<8> Abernathy) {
-        _NewRoads_Fowlkes_0.execute();
+        _Fowlkes_0.execute();
     }
     @name(".Chunchula") action _Chunchula() {
         meta.Algoa.Dushore = 1w1;

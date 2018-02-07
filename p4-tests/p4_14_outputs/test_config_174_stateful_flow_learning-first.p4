@@ -248,7 +248,7 @@ struct flow_cache_2_way_2_alu_layout {
 @name(".flow_cache_2_way_2") register<flow_cache_2_way_2_alu_layout>(32w16384) flow_cache_2_way_2;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_alu = {
+    @name(".flow_cache_1_way_1_alu") register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_alu = {
         void apply(inout flow_cache_1_way_1_alu_layout value, out bit<32> rv) {
             rv = 32w0;
             value.lo = 32w1;
@@ -256,7 +256,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 rv = value.lo;
         }
     };
-    register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_learn_alu = {
+    @name(".flow_cache_1_way_1_learn_alu") register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_learn_alu = {
         void apply(inout flow_cache_1_way_1_alu_layout value, out bit<32> rv) {
             rv = 32w0;
             if (value.lo == 32w0 && value.hi == 32w0) 
@@ -265,7 +265,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 value.lo = hdr.ipv4.dstAddr;
         }
     };
-    register_action<flow_cache_1_way_2_alu_layout, bit<32>>(flow_cache_1_way_2) flow_cache_1_way_2_alu = {
+    @name(".flow_cache_1_way_2_alu") register_action<flow_cache_1_way_2_alu_layout, bit<32>>(flow_cache_1_way_2) flow_cache_1_way_2_alu = {
         void apply(inout flow_cache_1_way_2_alu_layout value, out bit<32> rv) {
             rv = 32w0;
             value.lo = 32w1;
@@ -273,7 +273,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 rv = value.lo;
         }
     };
-    register_action<flow_cache_2_way_1_alu_layout, bit<16>>(flow_cache_2_way_1) flow_cache_2_way_1_alu = {
+    @name(".flow_cache_2_way_1_alu") register_action<flow_cache_2_way_1_alu_layout, bit<16>>(flow_cache_2_way_1) flow_cache_2_way_1_alu = {
         void apply(inout flow_cache_2_way_1_alu_layout value, out bit<16> rv) {
             rv = 16w0;
             value.lo = value.lo;
@@ -281,7 +281,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 rv = value.lo;
         }
     };
-    register_action<flow_cache_2_way_1_alu_layout, bit<16>>(flow_cache_2_way_1) flow_cache_2_way_1_learn_alu = {
+    @name(".flow_cache_2_way_1_learn_alu") register_action<flow_cache_2_way_1_alu_layout, bit<16>>(flow_cache_2_way_1) flow_cache_2_way_1_learn_alu = {
         void apply(inout flow_cache_2_way_1_alu_layout value, out bit<16> rv) {
             rv = 16w0;
             if (value.lo == 16w0 && value.hi == 16w0) 
@@ -290,7 +290,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 value.lo = meta.meta.proto_idx_pair1;
         }
     };
-    register_action<flow_cache_2_way_2_alu_layout, bit<16>>(flow_cache_2_way_2) flow_cache_2_way_2_alu = {
+    @name(".flow_cache_2_way_2_alu") register_action<flow_cache_2_way_2_alu_layout, bit<16>>(flow_cache_2_way_2) flow_cache_2_way_2_alu = {
         void apply(inout flow_cache_2_way_2_alu_layout value, out bit<16> rv) {
             rv = 16w0;
             value.lo = value.lo;

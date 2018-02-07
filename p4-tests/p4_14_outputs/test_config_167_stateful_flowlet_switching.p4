@@ -215,7 +215,7 @@ struct flowlet_state_alu_layout {
 @name(".flowlet_state") register<flowlet_state_alu_layout>(32w65536) flowlet_state;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    register_action<flowlet_state_alu_layout, bit<32>>(flowlet_state) flowlet_state_alu = {
+    @name(".flowlet_state_alu") register_action<flowlet_state_alu_layout, bit<32>>(flowlet_state) flowlet_state_alu = {
         void apply(inout flowlet_state_alu_layout value, out bit<32> rv) {
             rv = 32w0;
             if (meta.meta.tstamp - value.lo > 32w20000) 

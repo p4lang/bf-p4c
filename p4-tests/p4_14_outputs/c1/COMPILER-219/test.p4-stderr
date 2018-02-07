@@ -10,31 +10,31 @@ parser Parser<H, M>(packet_in b,
 test.p4(32)
 header_type M {
 ^
-v1model.p4(226): warning: M shadows struct M
+v1model.p4(227): warning: M shadows struct M
 control VerifyChecksum<H, M>(inout H hdr,
                           ^
 test.p4(32)
 header_type M {
 ^
-v1model.p4(229): warning: M shadows struct M
+v1model.p4(230): warning: M shadows struct M
 control Ingress<H, M>(inout H hdr,
                    ^
 test.p4(32)
 header_type M {
 ^
-v1model.p4(233): warning: M shadows struct M
+v1model.p4(234): warning: M shadows struct M
 control Egress<H, M>(inout H hdr,
                   ^
 test.p4(32)
 header_type M {
 ^
-v1model.p4(240): warning: M shadows struct M
+v1model.p4(242): warning: M shadows struct M
 control ComputeChecksum<H, M>(inout H hdr,
                            ^
 test.p4(32)
 header_type M {
 ^
-v1model.p4(245): warning: M shadows struct M
+v1model.p4(247): warning: M shadows struct M
 package V1Switch<H, M>(Parser<H, M> p,
                     ^
 test.p4(32)

@@ -166,11 +166,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".table_2_action_profile") action_selector(HashAlgorithm.random, 32w512, 32w72) table_2_action_profile;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_4() {
+    @name(".NoAction") action NoAction_4() {
     }
-    @name("NoAction") action NoAction_5() {
+    @name(".NoAction") action NoAction_5() {
     }
     bit<28> tmp_1;
     tuple<bit<28>, bit<32>, bit<8>> tmp_2;

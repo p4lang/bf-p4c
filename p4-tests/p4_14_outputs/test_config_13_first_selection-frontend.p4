@@ -185,11 +185,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".some_action_profile2") @mode("resilient") action_selector(HashAlgorithm.random, 32w2048, 32w32) some_action_profile2;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_4() {
+    @name(".NoAction") action NoAction_4() {
     }
-    @name("NoAction") action NoAction_5() {
+    @name(".NoAction") action NoAction_5() {
     }
     bit<8> tmp_1;
     tuple<bit<32>, bit<8>, bit<64>> tmp_2;

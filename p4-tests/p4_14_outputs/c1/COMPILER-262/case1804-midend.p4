@@ -459,9 +459,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".Ramapo") action _Ramapo(bit<12> Sublett) {
         meta.Glenshaw.Horsehead = Sublett;
@@ -572,39 +572,39 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _KentPark_temp_2;
     bit<1> _KentPark_tmp_1;
     bit<1> _KentPark_tmp_2;
-    @name("NoAction") action NoAction_21() {
+    @name(".NoAction") action NoAction_21() {
     }
-    @name("NoAction") action NoAction_22() {
+    @name(".NoAction") action NoAction_22() {
     }
-    @name("NoAction") action NoAction_23() {
+    @name(".NoAction") action NoAction_23() {
     }
-    @name("NoAction") action NoAction_24() {
+    @name(".NoAction") action NoAction_24() {
     }
-    @name("NoAction") action NoAction_25() {
+    @name(".NoAction") action NoAction_25() {
     }
-    @name("NoAction") action NoAction_26() {
+    @name(".NoAction") action NoAction_26() {
     }
-    @name("NoAction") action NoAction_27() {
+    @name(".NoAction") action NoAction_27() {
     }
-    @name("NoAction") action NoAction_28() {
+    @name(".NoAction") action NoAction_28() {
     }
-    @name("NoAction") action NoAction_29() {
+    @name(".NoAction") action NoAction_29() {
     }
-    @name("NoAction") action NoAction_30() {
+    @name(".NoAction") action NoAction_30() {
     }
-    @name("NoAction") action NoAction_31() {
+    @name(".NoAction") action NoAction_31() {
     }
-    @name("NoAction") action NoAction_32() {
+    @name(".NoAction") action NoAction_32() {
     }
-    @name("NoAction") action NoAction_33() {
+    @name(".NoAction") action NoAction_33() {
     }
-    @name("NoAction") action NoAction_34() {
+    @name(".NoAction") action NoAction_34() {
     }
-    @name("NoAction") action NoAction_35() {
+    @name(".NoAction") action NoAction_35() {
     }
-    @name("NoAction") action NoAction_36() {
+    @name(".NoAction") action NoAction_36() {
     }
-    @name("NoAction") action NoAction_37() {
+    @name(".NoAction") action NoAction_37() {
     }
     @name(".Tascosa") action _Tascosa(bit<14> Vinita, bit<1> Verdigris, bit<12> Armijo, bit<1> Exeter, bit<1> Clearco, bit<6> PawCreek) {
         meta.Kranzburg.Renton = Vinita;
@@ -812,12 +812,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction_26();
     }
-    @name(".KentPark.Sherack") register_action<bit<1>, bit<1>>(Chaffey) _KentPark_Sherack_0 = {
+    @name(".Sherack") register_action<bit<1>, bit<1>>(Chaffey) _Sherack_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".KentPark.Spiro") register_action<bit<1>, bit<1>>(Buenos) _KentPark_Spiro_0 = {
+    @name(".Spiro") register_action<bit<1>, bit<1>>(Buenos) _Spiro_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -828,7 +828,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Hanapepe") action _Hanapepe() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_KentPark_temp_1, HashAlgorithm.identity, 18w0, { meta.Kranzburg.Arnold, hdr.Florala.Lutsen }, 19w262144);
-        _KentPark_tmp_1 = _KentPark_Sherack_0.execute((bit<32>)_KentPark_temp_1);
+        _KentPark_tmp_1 = _Sherack_0.execute((bit<32>)_KentPark_temp_1);
         meta.SandCity.Tuttle = _KentPark_tmp_1;
     }
     @name(".Dellslow") action _Dellslow() {
@@ -837,7 +837,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Hadley") action _Hadley() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_KentPark_temp_2, HashAlgorithm.identity, 18w0, { meta.Kranzburg.Arnold, hdr.Florala.Lutsen }, 19w262144);
-        _KentPark_tmp_2 = _KentPark_Spiro_0.execute((bit<32>)_KentPark_temp_2);
+        _KentPark_tmp_2 = _Spiro_0.execute((bit<32>)_KentPark_temp_2);
         meta.SandCity.DeLancey = _KentPark_tmp_2;
     }
     @name(".Skiatook") action _Skiatook(bit<1> Hammonton) {
@@ -884,14 +884,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_29();
     }
-    @name(".Laneburg.Powderly") register_action<bit<1>, bit<1>>(Ingleside) _Laneburg_Powderly_0 = {
+    @name(".Powderly") register_action<bit<1>, bit<1>>(Ingleside) _Powderly_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;
         }
     };
     @name(".Ingraham") action _Ingraham(bit<8> Isabel) {
-        _Laneburg_Powderly_0.execute();
+        _Powderly_0.execute();
     }
     @name(".Belcher") action _Belcher() {
         meta.Phelps.Anacortes = 1w1;

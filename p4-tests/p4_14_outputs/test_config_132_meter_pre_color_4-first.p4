@@ -200,8 +200,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @meter_per_flow_enable(1) @name(".meter_0") meter(32w500, MeterType.bytes) meter_0;
-    wred<bit<8>>(8w63, 8w127) meter_2;
-    lpf<bit<8>>() meter_3;
+    @name(".meter_2") wred<bit<8>>(8w63, 8w127) meter_2;
+    @name(".meter_3") lpf<bit<8>>() meter_3;
     @name(".action_0") action action_0(bit<8> param0) {
         execute_meter_with_color<meter, bit<32>, bit<4>>(meter_0, 32w7, hdr.pkt.color_0, hdr.pkt.pre_color_0);
     }

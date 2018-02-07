@@ -267,7 +267,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
     @name(".tcp_sport_modify") action tcp_sport_modify_0(bit<16> sPort, bit<9> port) {
         hdr.tcp.srcPort = sPort;

@@ -515,9 +515,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".Malinta") action _Malinta(bit<12> Coalwood) {
         meta.Paxico.Kranzburg = Coalwood;
@@ -649,49 +649,49 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Ottertail_temp_2;
     bit<1> _Ottertail_tmp_1;
     bit<1> _Ottertail_tmp_2;
-    @name("NoAction") action NoAction_26() {
+    @name(".NoAction") action NoAction_26() {
     }
-    @name("NoAction") action NoAction_27() {
+    @name(".NoAction") action NoAction_27() {
     }
-    @name("NoAction") action NoAction_28() {
+    @name(".NoAction") action NoAction_28() {
     }
-    @name("NoAction") action NoAction_29() {
+    @name(".NoAction") action NoAction_29() {
     }
-    @name("NoAction") action NoAction_30() {
+    @name(".NoAction") action NoAction_30() {
     }
-    @name("NoAction") action NoAction_31() {
+    @name(".NoAction") action NoAction_31() {
     }
-    @name("NoAction") action NoAction_32() {
+    @name(".NoAction") action NoAction_32() {
     }
-    @name("NoAction") action NoAction_33() {
+    @name(".NoAction") action NoAction_33() {
     }
-    @name("NoAction") action NoAction_34() {
+    @name(".NoAction") action NoAction_34() {
     }
-    @name("NoAction") action NoAction_35() {
+    @name(".NoAction") action NoAction_35() {
     }
-    @name("NoAction") action NoAction_36() {
+    @name(".NoAction") action NoAction_36() {
     }
-    @name("NoAction") action NoAction_37() {
+    @name(".NoAction") action NoAction_37() {
     }
-    @name("NoAction") action NoAction_38() {
+    @name(".NoAction") action NoAction_38() {
     }
-    @name("NoAction") action NoAction_39() {
+    @name(".NoAction") action NoAction_39() {
     }
-    @name("NoAction") action NoAction_40() {
+    @name(".NoAction") action NoAction_40() {
     }
-    @name("NoAction") action NoAction_41() {
+    @name(".NoAction") action NoAction_41() {
     }
-    @name("NoAction") action NoAction_42() {
+    @name(".NoAction") action NoAction_42() {
     }
-    @name("NoAction") action NoAction_43() {
+    @name(".NoAction") action NoAction_43() {
     }
-    @name("NoAction") action NoAction_44() {
+    @name(".NoAction") action NoAction_44() {
     }
-    @name("NoAction") action NoAction_45() {
+    @name(".NoAction") action NoAction_45() {
     }
-    @name("NoAction") action NoAction_46() {
+    @name(".NoAction") action NoAction_46() {
     }
-    @name("NoAction") action NoAction_47() {
+    @name(".NoAction") action NoAction_47() {
     }
     @name(".Keltys") action _Keltys(bit<14> Flomaton, bit<1> Swifton, bit<12> Cabot, bit<1> Paisano, bit<1> Nightmute, bit<6> BoyRiver) {
         meta.DewyRose.Fairchild = Flomaton;
@@ -943,12 +943,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = _Goessel();
     }
-    @name(".Ottertail.Flourtown") register_action<bit<1>, bit<1>>(Patchogue) _Ottertail_Flourtown_0 = {
+    @name(".Flourtown") register_action<bit<1>, bit<1>>(Patchogue) _Flourtown_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Ottertail.Lordstown") register_action<bit<1>, bit<1>>(LaConner) _Ottertail_Lordstown_0 = {
+    @name(".Lordstown") register_action<bit<1>, bit<1>>(LaConner) _Lordstown_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -958,12 +958,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Mishicot") action _Mishicot() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Ottertail_temp_1, HashAlgorithm.identity, 18w0, { meta.DewyRose.Lowden, hdr.Cornish[0].KawCity }, 19w262144);
-        _Ottertail_tmp_1 = _Ottertail_Lordstown_0.execute((bit<32>)_Ottertail_temp_1);
+        _Ottertail_tmp_1 = _Lordstown_0.execute((bit<32>)_Ottertail_temp_1);
         meta.Lemhi.Goodlett = _Ottertail_tmp_1;
     }
     @name(".Basehor") action _Basehor() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Ottertail_temp_2, HashAlgorithm.identity, 18w0, { meta.DewyRose.Lowden, hdr.Cornish[0].KawCity }, 19w262144);
-        _Ottertail_tmp_2 = _Ottertail_Flourtown_0.execute((bit<32>)_Ottertail_temp_2);
+        _Ottertail_tmp_2 = _Flourtown_0.execute((bit<32>)_Ottertail_temp_2);
         meta.Lemhi.Maybeury = _Ottertail_tmp_2;
     }
     @name(".Omemee") action _Omemee() {
@@ -1027,7 +1027,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_35();
     }
     @name(".BigBay") direct_counter(CounterType.packets_and_bytes) _BigBay_0;
-    @name(".Achille.Sunrise") register_action<bit<1>, bit<1>>(Pueblo) _Achille_Sunrise_0 = {
+    @name(".Sunrise") register_action<bit<1>, bit<1>>(Pueblo) _Sunrise_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;
@@ -1039,7 +1039,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_0() {
     }
     @name(".Traskwood") action _Traskwood(bit<8> Manilla) {
-        _Achille_Sunrise_0.execute();
+        _Sunrise_0.execute();
     }
     @name(".Melstrand") action _Melstrand() {
         meta.Wentworth.Wellford = 1w1;

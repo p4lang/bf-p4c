@@ -167,21 +167,21 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<16> tmp_0;
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("cntr") register_action<bit<16>, bit<16>>(stateful_cntr) cntr = {
+    @name(".cntr") register_action<bit<16>, bit<16>>(stateful_cntr) cntr = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             value = value + 16w1;
         }
     };
-    @name("cntr2") register_action<bit<16>, bit<16>>(stateful_cntr) cntr2 = {
+    @name(".cntr2") register_action<bit<16>, bit<16>>(stateful_cntr) cntr2 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             value = value + 16w255;
         }
     };
-    @name("cntr3") register_action<bit<16>, bit<16>>(stateful_cntr) cntr3 = {
+    @name(".cntr3") register_action<bit<16>, bit<16>>(stateful_cntr) cntr3 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w63;
             rv = value;

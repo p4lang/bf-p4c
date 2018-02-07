@@ -165,7 +165,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
     @name(".egr_action") action egr_action_0() {
         clone3<tuple<bit<8>>>(CloneType.E2E, 32w7, { meta.m.foo });
@@ -192,7 +192,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".ingr_action") action ingr_action_0() {
         clone3<tuple<bit<8>>>(CloneType.I2E, 32w5, { meta.m.foo });

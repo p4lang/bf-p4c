@@ -214,13 +214,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bool tmp_2;
     bool tmp_3;
     bool tmp_4;
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_5() {
+    @name(".NoAction") action NoAction_5() {
     }
-    @name("NoAction") action NoAction_6() {
+    @name(".NoAction") action NoAction_6() {
     }
-    @name("NoAction") action NoAction_7() {
+    @name(".NoAction") action NoAction_7() {
     }
     @name(".do_forward") action do_forward_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;

@@ -177,27 +177,27 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_2;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_4() {
+    @name(".NoAction") action NoAction_4() {
     }
-    @name("NoAction") action NoAction_5() {
+    @name(".NoAction") action NoAction_5() {
     }
     bit<16> tmp_1;
     bit<8> tmp_2;
-    @name("cntr_1") register_action<bit<16>, bit<16>>(stateful_cntr_1) cntr_1 = {
+    @name(".cntr_1") register_action<bit<16>, bit<16>>(stateful_cntr_1) cntr_1 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             value = value + 16w1;
         }
     };
-    @name("cntr_2") register_action<bit<16>, bit<16>>(stateful_cntr_2) cntr_2 = {
+    @name(".cntr_2") register_action<bit<16>, bit<16>>(stateful_cntr_2) cntr_2 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w1;
             rv = value;
         }
     };
-    @name("sampler_alu") register_action<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
+    @name(".sampler_alu") register_action<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
             rv = 8w0;
             if (value == 8w10) 

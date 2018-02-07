@@ -536,9 +536,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
     @name(".Eclectic") action _Eclectic(bit<12> Kaplan) {
         meta.Barksdale.Honalo = Kaplan;
@@ -632,71 +632,71 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_37() {
+    @name(".NoAction") action NoAction_37() {
     }
-    @name("NoAction") action NoAction_38() {
+    @name(".NoAction") action NoAction_38() {
     }
-    @name("NoAction") action NoAction_39() {
+    @name(".NoAction") action NoAction_39() {
     }
-    @name("NoAction") action NoAction_40() {
+    @name(".NoAction") action NoAction_40() {
     }
-    @name("NoAction") action NoAction_41() {
+    @name(".NoAction") action NoAction_41() {
     }
-    @name("NoAction") action NoAction_42() {
+    @name(".NoAction") action NoAction_42() {
     }
-    @name("NoAction") action NoAction_43() {
+    @name(".NoAction") action NoAction_43() {
     }
-    @name("NoAction") action NoAction_44() {
+    @name(".NoAction") action NoAction_44() {
     }
-    @name("NoAction") action NoAction_45() {
+    @name(".NoAction") action NoAction_45() {
     }
-    @name("NoAction") action NoAction_46() {
+    @name(".NoAction") action NoAction_46() {
     }
-    @name("NoAction") action NoAction_47() {
+    @name(".NoAction") action NoAction_47() {
     }
-    @name("NoAction") action NoAction_48() {
+    @name(".NoAction") action NoAction_48() {
     }
-    @name("NoAction") action NoAction_49() {
+    @name(".NoAction") action NoAction_49() {
     }
-    @name("NoAction") action NoAction_50() {
+    @name(".NoAction") action NoAction_50() {
     }
-    @name("NoAction") action NoAction_51() {
+    @name(".NoAction") action NoAction_51() {
     }
-    @name("NoAction") action NoAction_52() {
+    @name(".NoAction") action NoAction_52() {
     }
-    @name("NoAction") action NoAction_53() {
+    @name(".NoAction") action NoAction_53() {
     }
-    @name("NoAction") action NoAction_54() {
+    @name(".NoAction") action NoAction_54() {
     }
-    @name("NoAction") action NoAction_55() {
+    @name(".NoAction") action NoAction_55() {
     }
-    @name("NoAction") action NoAction_56() {
+    @name(".NoAction") action NoAction_56() {
     }
-    @name("NoAction") action NoAction_57() {
+    @name(".NoAction") action NoAction_57() {
     }
-    @name("NoAction") action NoAction_58() {
+    @name(".NoAction") action NoAction_58() {
     }
-    @name("NoAction") action NoAction_59() {
+    @name(".NoAction") action NoAction_59() {
     }
-    @name("NoAction") action NoAction_60() {
+    @name(".NoAction") action NoAction_60() {
     }
-    @name("NoAction") action NoAction_61() {
+    @name(".NoAction") action NoAction_61() {
     }
-    @name("NoAction") action NoAction_62() {
+    @name(".NoAction") action NoAction_62() {
     }
-    @name("NoAction") action NoAction_63() {
+    @name(".NoAction") action NoAction_63() {
     }
-    @name("NoAction") action NoAction_64() {
+    @name(".NoAction") action NoAction_64() {
     }
-    @name("NoAction") action NoAction_65() {
+    @name(".NoAction") action NoAction_65() {
     }
-    @name("NoAction") action NoAction_66() {
+    @name(".NoAction") action NoAction_66() {
     }
-    @name("NoAction") action NoAction_67() {
+    @name(".NoAction") action NoAction_67() {
     }
-    @name("NoAction") action NoAction_68() {
+    @name(".NoAction") action NoAction_68() {
     }
-    @name("NoAction") action NoAction_69() {
+    @name(".NoAction") action NoAction_69() {
     }
     @name(".Panaca") action _Panaca(bit<14> WestLine, bit<1> Bucklin, bit<12> Normangee, bit<1> Neoga, bit<1> Myrick, bit<6> Malmo, bit<2> Amenia, bit<3> Telida, bit<6> Mattson) {
         meta.Shine.Walcott = WestLine;
@@ -980,13 +980,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Chamois_temp_2;
     bit<1> _Chamois_tmp_1;
     bit<1> _Chamois_tmp_2;
-    @name(".Chamois.Millikin") register_action<bit<1>, bit<1>>(Sprout) _Chamois_Millikin_0 = {
+    @name(".Millikin") register_action<bit<1>, bit<1>>(Sprout) _Millikin_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
             rv = value;
         }
     };
-    @name(".Chamois.Pierpont") register_action<bit<1>, bit<1>>(Jemison) _Chamois_Pierpont_0 = {
+    @name(".Pierpont") register_action<bit<1>, bit<1>>(Jemison) _Pierpont_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
             rv = ~value;
@@ -994,7 +994,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Sequim") action _Sequim() {
         hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Chamois_temp_1, HashAlgorithm.identity, 18w0, { meta.Shine.Sitka, hdr.Ahmeek[0].Pinta }, 19w262144);
-        _Chamois_tmp_1 = _Chamois_Millikin_0.execute((bit<32>)_Chamois_temp_1);
+        _Chamois_tmp_1 = _Millikin_0.execute((bit<32>)_Chamois_temp_1);
         meta.Comobabi.Oneonta = _Chamois_tmp_1;
     }
     @name(".Hartwick") action _Hartwick(bit<1> Beresford) {
@@ -1010,7 +1010,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Cadott") action _Cadott() {
         hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Chamois_temp_2, HashAlgorithm.identity, 18w0, { meta.Shine.Sitka, hdr.Ahmeek[0].Pinta }, 19w262144);
-        _Chamois_tmp_2 = _Chamois_Pierpont_0.execute((bit<32>)_Chamois_temp_2);
+        _Chamois_tmp_2 = _Pierpont_0.execute((bit<32>)_Chamois_temp_2);
         meta.Comobabi.Mentone = _Chamois_tmp_2;
     }
     @name(".Duchesne") table _Duchesne_0 {

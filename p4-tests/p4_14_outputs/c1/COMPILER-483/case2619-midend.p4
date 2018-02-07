@@ -593,13 +593,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
-    @name("NoAction") action NoAction_38() {
+    @name(".NoAction") action NoAction_38() {
     }
-    @name("NoAction") action NoAction_39() {
+    @name(".NoAction") action NoAction_39() {
     }
     @name(".Oakmont") action _Oakmont(bit<12> Macedonia) {
         meta.Century.Bergton = Macedonia;
@@ -814,69 +814,69 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Tahuya_temp_2;
     bit<1> _Tahuya_tmp_1;
     bit<1> _Tahuya_tmp_2;
-    @name("NoAction") action NoAction_40() {
+    @name(".NoAction") action NoAction_40() {
     }
-    @name("NoAction") action NoAction_41() {
+    @name(".NoAction") action NoAction_41() {
     }
-    @name("NoAction") action NoAction_42() {
+    @name(".NoAction") action NoAction_42() {
     }
-    @name("NoAction") action NoAction_43() {
+    @name(".NoAction") action NoAction_43() {
     }
-    @name("NoAction") action NoAction_44() {
+    @name(".NoAction") action NoAction_44() {
     }
-    @name("NoAction") action NoAction_45() {
+    @name(".NoAction") action NoAction_45() {
     }
-    @name("NoAction") action NoAction_46() {
+    @name(".NoAction") action NoAction_46() {
     }
-    @name("NoAction") action NoAction_47() {
+    @name(".NoAction") action NoAction_47() {
     }
-    @name("NoAction") action NoAction_48() {
+    @name(".NoAction") action NoAction_48() {
     }
-    @name("NoAction") action NoAction_49() {
+    @name(".NoAction") action NoAction_49() {
     }
-    @name("NoAction") action NoAction_50() {
+    @name(".NoAction") action NoAction_50() {
     }
-    @name("NoAction") action NoAction_51() {
+    @name(".NoAction") action NoAction_51() {
     }
-    @name("NoAction") action NoAction_52() {
+    @name(".NoAction") action NoAction_52() {
     }
-    @name("NoAction") action NoAction_53() {
+    @name(".NoAction") action NoAction_53() {
     }
-    @name("NoAction") action NoAction_54() {
+    @name(".NoAction") action NoAction_54() {
     }
-    @name("NoAction") action NoAction_55() {
+    @name(".NoAction") action NoAction_55() {
     }
-    @name("NoAction") action NoAction_56() {
+    @name(".NoAction") action NoAction_56() {
     }
-    @name("NoAction") action NoAction_57() {
+    @name(".NoAction") action NoAction_57() {
     }
-    @name("NoAction") action NoAction_58() {
+    @name(".NoAction") action NoAction_58() {
     }
-    @name("NoAction") action NoAction_59() {
+    @name(".NoAction") action NoAction_59() {
     }
-    @name("NoAction") action NoAction_60() {
+    @name(".NoAction") action NoAction_60() {
     }
-    @name("NoAction") action NoAction_61() {
+    @name(".NoAction") action NoAction_61() {
     }
-    @name("NoAction") action NoAction_62() {
+    @name(".NoAction") action NoAction_62() {
     }
-    @name("NoAction") action NoAction_63() {
+    @name(".NoAction") action NoAction_63() {
     }
-    @name("NoAction") action NoAction_64() {
+    @name(".NoAction") action NoAction_64() {
     }
-    @name("NoAction") action NoAction_65() {
+    @name(".NoAction") action NoAction_65() {
     }
-    @name("NoAction") action NoAction_66() {
+    @name(".NoAction") action NoAction_66() {
     }
-    @name("NoAction") action NoAction_67() {
+    @name(".NoAction") action NoAction_67() {
     }
-    @name("NoAction") action NoAction_68() {
+    @name(".NoAction") action NoAction_68() {
     }
-    @name("NoAction") action NoAction_69() {
+    @name(".NoAction") action NoAction_69() {
     }
-    @name("NoAction") action NoAction_70() {
+    @name(".NoAction") action NoAction_70() {
     }
-    @name("NoAction") action NoAction_71() {
+    @name(".NoAction") action NoAction_71() {
     }
     @name(".Loris") action _Loris(bit<14> RioLajas, bit<1> Revere, bit<12> Neubert, bit<1> Nederland, bit<1> Fennimore, bit<6> Tennessee, bit<2> Domestic, bit<3> Lansing, bit<6> Mammoth) {
         meta.Riverwood.LaSal = RioLajas;
@@ -1158,12 +1158,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = _Diomede();
     }
-    @name(".Tahuya.Goldsmith") register_action<bit<1>, bit<1>>(Alcalde) _Tahuya_Goldsmith_0 = {
+    @name(".Goldsmith") register_action<bit<1>, bit<1>>(Alcalde) _Goldsmith_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Tahuya.Mizpah") register_action<bit<1>, bit<1>>(NewSite) _Tahuya_Mizpah_0 = {
+    @name(".Mizpah") register_action<bit<1>, bit<1>>(NewSite) _Mizpah_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -1174,7 +1174,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Craigmont") action _Craigmont() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Tahuya_temp_1, HashAlgorithm.identity, 18w0, { meta.Riverwood.Renick, hdr.Lamison[0].Floris }, 19w262144);
-        _Tahuya_tmp_1 = _Tahuya_Goldsmith_0.execute((bit<32>)_Tahuya_temp_1);
+        _Tahuya_tmp_1 = _Goldsmith_0.execute((bit<32>)_Tahuya_temp_1);
         meta.Wanatah.LongPine = _Tahuya_tmp_1;
     }
     @name(".Osakis") action _Osakis(bit<1> Naubinway) {
@@ -1182,7 +1182,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Baytown") action _Baytown() {
         hash<bit<18>, bit<18>, tuple_0, bit<19>>(_Tahuya_temp_2, HashAlgorithm.identity, 18w0, { meta.Riverwood.Renick, hdr.Lamison[0].Floris }, 19w262144);
-        _Tahuya_tmp_2 = _Tahuya_Mizpah_0.execute((bit<32>)_Tahuya_temp_2);
+        _Tahuya_tmp_2 = _Mizpah_0.execute((bit<32>)_Tahuya_temp_2);
         meta.Wanatah.Lepanto = _Tahuya_tmp_2;
     }
     @name(".Luttrell") action _Luttrell() {

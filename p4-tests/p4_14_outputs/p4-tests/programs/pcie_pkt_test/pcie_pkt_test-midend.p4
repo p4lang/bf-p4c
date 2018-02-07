@@ -147,7 +147,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
     @name(".set_md") action set_md_0(bit<9> eg_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = eg_port;

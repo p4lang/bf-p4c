@@ -33,7 +33,7 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
     @name(".action_0") action action_1() {
         hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.pkt.field_e_16, HashAlgorithm.identity, 16w0, { hdr.pkt.field_f_16 }, 32w65536);

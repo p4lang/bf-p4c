@@ -160,7 +160,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
     @name(".act1") action act1_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
