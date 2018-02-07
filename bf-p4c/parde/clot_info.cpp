@@ -1,3 +1,4 @@
+#include <array>
 #include <vector>
 
 #include "bf-p4c/device.h"
