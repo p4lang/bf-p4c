@@ -99,6 +99,8 @@ ID [A-Za-z_@$]([-.]?*[A-Za-z0-9_@$])*
 
 %%
 
+/* flex's #line generation is broken, so we manually resync so we can debug */
+#line 104 "lex-yaml.l"
 int indent_depth(const char *pfx) {
     int rv = 0;
     while (*pfx)
@@ -186,7 +188,7 @@ int parse_num(YYSTYPE *val, const char *s, int base) {
             // we use a long (generally 64 bits) to hold them, as most parts of the
             // compiler can't deal with larger constants.  The few places that can
             // deal with >32bit values handle BIGINTs
-            int v = val->i;
+            long v = val->i;
             VECTOR_init1(val->bigi, v);
             rv = BIGINT; } }
     return rv;
