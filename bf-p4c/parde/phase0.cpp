@@ -76,9 +76,6 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     // generated as,
     // 1. phase0 does not do any actual ALU operations
     // 2. This info is not needed in the context json (for now).
-    // Glass does generate primitives (for model logging - previously
-    // p4_name_lookup) which requires setting ingress metadata fields as ALU ops
-    // but it is unclear if model uses this info.
     out << indent << "actions:" << std::endl;
     out << ++indent << canon_name(info->actionName) << ":" << std::endl;
     out <<   indent << "- p4_param_order: { ";
