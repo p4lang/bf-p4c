@@ -501,8 +501,9 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
 
     // Do not specify identity ghost bits at places where ghost bits are already specified
     if (ident_bits_prev_alloc > 0) {
+        int prev_alloc = std::min(ident_bits_prev_alloc - 1, TableFormat::RAM_GHOST_BITS - 1);
         emit_ixbar_hash_way(out, indent, match_data, nullptr, use, hash_group, 0,
-                            ident_bits_prev_alloc);
+                            prev_alloc);
     }
 
     safe_vector<Slice> way_ghost;
@@ -580,6 +581,7 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
             bits_allocated += select_bits;
         }
     }
+    ident_bits_prev_alloc += ident_bits_alloc;
 
     // For all holes in the upper 12 bits that don't have a corresponding select bit
     if (match_data.size() == 0)

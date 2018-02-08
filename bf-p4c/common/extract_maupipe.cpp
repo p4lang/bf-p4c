@@ -385,7 +385,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         mtr->implementation = IR::ID("wred");
         if (args->size() == 2) {
             mtr->direct = true;
-        } else if (args->size() == 1) {
+        } else if (args->size() == 3) {
             mtr->size = args->at(2)->as<IR::Constant>().asInt();
         }
         return mtr;
