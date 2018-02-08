@@ -1014,6 +1014,9 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
     for (int lt = 0; lt < placed->use.preferred()->logical_tables(); lt++) {
         cstring atcam_suffix = "$atcam" + std::to_string(lt);
         auto *table_part = tbl->clone();
+        // Clear gateway_name for the split tables
+        if (lt != 0)
+            table_part->gateway_name = cstring();
         table_part->name = table_part->name + atcam_suffix + suffix;
         table_part->logical_id = placed->logical_id + lt;
         table_part->atcam_logical_split = lt;
@@ -1057,6 +1060,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         gw_only = false;
         assert(match && tbl->gateway_only() && !match->uses_gateway());
         LOG3("folding gateway " << tbl->name << " onto " << match->name);
+        tbl->gateway_name = tbl->name;
         tbl->name = match->name;
         for (auto &gw : tbl->gateway_rows)
             if (gw.second == it->second->gw_result_tag)
@@ -1125,6 +1129,10 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     for (it = table_placed.find(tbl->name); it->first == tbl->name; it++) {
         cstring suffix = "." + std::to_string(++counter);
         auto *table_part = tbl->clone();
+        // When a gateway is merged against a split table, only the first table created from the
+        // split must have the name of the merged gateway
+        if (counter != 1)
+            table_part->gateway_name = cstring();
         select_layout_option(table_part, it->second->use.preferred());
         add_attached_tables(table_part, it->second->use.preferred());
         if (gw_layout_used)

@@ -8,8 +8,9 @@ bool MauBacktracker::backtrack(trigger &trig) {
         tables.clear();
         auto t = dynamic_cast<PHVTrigger::failure *>(&trig);
         LOG1("Backtracking caught at MauBacktracker");
-        for (auto entry : t->tableAlloc)
+        for (auto entry : t->tableAlloc) {
             tables[entry.first] = entry.second;
+            maxStage = (maxStage < entry.second) ? entry.second : maxStage; }
         LOG4("Inserted tables size: " << tables.size());
         return true; }
     return false;
@@ -35,10 +36,24 @@ int MauBacktracker::inSameStage(const IR::MAU::Table* t1, const IR::MAU::Table* 
     return -1;
 }
 
-void MauBacktracker::printTableAlloc() {
+void MauBacktracker::printTableAlloc() const {
     if (!LOGGING(3)) return;
     LOG4("Printing Table Placement Before PHV Allocation Pass");
     LOG4("Stage | Table Name");
     for (auto tbl : tables)
         LOG4(boost::format("%5d") % tbl.second << " | " << tbl.first);
+}
+
+bool MauBacktracker::hasTablePlacement() const {
+    return (tables.size() > 0);
+}
+
+int MauBacktracker::stage(const IR::MAU::Table* t) const {
+    if (tables.size() == 0) return -1;
+    if (!tables.count(t->name)) return -1;
+    return tables.at(t->name);
+}
+
+int MauBacktracker::numStages() const {
+    return maxStage;
 }

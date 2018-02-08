@@ -35,6 +35,7 @@ class TableSummary: public MauInspector {
     /// Map of table name to stage: sent with the backtracking exception to communicate table
     /// placement constraints to PHV allocation
     ordered_map<cstring, int> tableAlloc;
+    ordered_map<cstring, cstring> merged_gateways;
 
     std::map<int, const IR::MAU::Table *>    order;
     std::map<int, IXBar>                     ixbar;

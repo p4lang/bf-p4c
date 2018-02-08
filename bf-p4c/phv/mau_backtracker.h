@@ -18,6 +18,9 @@ class MauBacktracker : public Inspector, Backtrack {
     /// (after a backtrack exception has been thrown by TableSummary)
     ordered_map<cstring, int> tables;
 
+    /// Store the number of stages required by table allocation
+    int maxStage = -1;
+
     profile_t init_apply(const IR::Node *root) override;
     void end_apply() override;
 
@@ -31,7 +34,17 @@ class MauBacktracker : public Inspector, Backtrack {
     int inSameStage(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const;
 
     /// Prints the table allocation received by MauBacktracker by means of the backtrack trigger
-    void printTableAlloc();
+    void printTableAlloc() const;
+
+    /// @returns true if the MauBacktracker class has any information about table placement (found
+    /// in the tables map
+    bool hasTablePlacement() const;
+
+    /// @returns that stage in which table @t was placed
+    int stage(const IR::MAU::Table* t) const;
+
+    /// @returns the number of stages in the table allocation
+    int numStages() const;
 };
 
 #endif /* BF_P4C_PHV_MAU_BACKTRACKER_H_ */

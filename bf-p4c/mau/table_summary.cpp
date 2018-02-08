@@ -27,14 +27,16 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
 }
 
 void TableSummary::end_apply() {
-    if (Log::verbose() || LOGGING(1))
-        std::cout << *this;
+    printTablePlacement();
+    LOG2(*this);
 }
 
 bool TableSummary::preorder(const IR::MAU::Table *t) {
     BUG_CHECK(order.count(t->logical_id) == 0, "Encountering table multiple times in IR traversal");
     assert(order.count(t->logical_id) == 0);
     order[t->logical_id] = t;
+    if (t->gateway_name)
+        merged_gateways[t->name] = t->gateway_name;
     if (t->resources) {
         ixbar[t->stage()].update(t);
         memory[t->stage()].update(t->resources->memuse); }
@@ -47,10 +49,16 @@ void TableSummary::throwBacktrackException() {
         int stage = static_cast<int>(entry.first/NUM_LOGICAL_TABLES_PER_STAGE);
         maxStage = (maxStage < stage) ? stage : maxStage;
         tableAlloc[entry.second->name] = stage; }
-    LOG4("Number of tables allocated: " << order.size());
     // maxStage is counted from 0 to n-1
     ++maxStage;
-    LOG2("Number of stages in table allocation: " << maxStage);
+    LOG1("Number of stages in table allocation: " << maxStage);
+
+    for (auto entry : merged_gateways) {
+        if (tableAlloc[entry.first] != -1)
+            tableAlloc[entry.second] = tableAlloc[entry.first];
+        else
+            ::warning("Source of merged gateway does not have stage allocated");
+    }
 
     // First round
     // First round of table placement places tables in less than 12 stages, no backtracking invoked
@@ -71,10 +79,11 @@ void TableSummary::throwBacktrackException() {
 }
 
 void TableSummary::printTablePlacement() {
-    LOG3("Printing Table Placement");
-    LOG3("Stage | Table Name");
+    LOG1("Printing Table Placement");
+    LOG1("Number of tables allocated: " << order.size());
+    LOG1("Stage | Table Name");
     for (auto tbl : tableAlloc)
-        LOG3(boost::format("%5d") % tbl.second << " | " << tbl.first);
+        LOG1(boost::format("%5d") % tbl.second << " | " << tbl.first);
 }
 
 std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
