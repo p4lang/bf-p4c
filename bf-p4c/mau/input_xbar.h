@@ -131,6 +131,7 @@ struct IXBar {
                 return match_index < b.match_index;
             }
             bool is_range() const { return range_lo || range_hi; }
+            void unallocate() { search_bus = -1;  loc.group = -1;  loc.byte = -1; }
         };
         safe_vector<Byte>    use;
 
@@ -241,62 +242,67 @@ struct IXBar {
         int group;
         bitvec found;
         bitvec free;
-        bool first_hash_open = true;
-        bool second_hash_open = true;
-        type_t first_hash_dist = FREE;
-        type_t second_hash_dist = FREE;
+        bool attempted = false;
+        std::array<bool, 2> hash_open = { true, true };
+        std::array<type_t, 2> hash_table_type = { FREE, FREE };
 
-        bool first_hash_dist_avail() {
-            return first_hash_dist == HASH_DIST || first_hash_dist == FREE;
+        bool hash_dist_avail(int ht) const {
+            return hash_table_type[ht] == HASH_DIST || hash_table_type[ht] == FREE;
         }
 
-        bool second_hash_dist_avail() {
-            return second_hash_dist == HASH_DIST || second_hash_dist == FREE;
+        bool hash_dist_only(int ht) const {
+            return hash_table_type[ht] == HASH_DIST;
         }
 
-        bool first_hash_dist_only() {
-            return first_hash_dist == HASH_DIST;
-        }
-
-        bool second_hash_dist_only() {
-            return second_hash_dist == HASH_DIST;
-        }
         void dbprint(std::ostream &out) const {
             out << group << " found: " << found << " free: " << free;
         }
+
+        int total_avail() const { return found.popcount() + free.popcount(); }
+
+        explicit grp_use(int g) : group(g) {}
     };
 
-    /* A struct use for TCAM split between 2 groups.  Mid bytes are for the individual
-       byte groups within the two ternary groups.  Only one grp_use is necessary for the
-       calculation of the SRAM xbar */
-    struct big_grp_use {
-        int big_group;
-        grp_use first;
-        grp_use second;
-        bool mid_byte_found;
-        bool mid_byte_free;
+    struct mid_byte_use {
+        int group;
+        bool found = false;
+        bool free = false;
+        bool attempted = false;
+
         void dbprint(std::ostream &out) const {
-            out << big_group << " : found=" << first.found << " " << mid_byte_found << " "
-                << second.found  << " : free= " << first.free  << " " << mid_byte_free
-                << " " << second.free; }
-        int total_found() const { return first.found.popcount() + second.found.popcount()
-                                         + mid_byte_found; }
-        int total_free() const { return first.free.popcount() + second.free.popcount()
-                                        + mid_byte_free; }
-        int total_used() const { return total_found() + total_free(); }
-        int better_group() const {
-            int first_open = first.free.popcount() + first.found.popcount();
-            int second_open = second.free.popcount() + second.found.popcount();
-            if (first_open >= second_open)
-                 return first_open;
-            return second_open;
+            out << group << " found: " << found << " free: " << free;
         }
+        explicit mid_byte_use(int g) : group(g) {}
+    };
+
+    struct hash_matrix_reqs {
+        int index_groups = 0;
+        int select_bits = 0;
+        bool hash_dist = false;
+
+        static hash_matrix_reqs max(bool hd, bool ternary = false) {
+            hash_matrix_reqs rv;
+            if (ternary)
+                return rv;
+            rv.hash_dist = hd;
+            if (rv.hash_dist) {
+                rv.index_groups = HASH_DIST_SLICES;
+            } else {
+                rv.index_groups = HASH_INDEX_GROUPS;
+                rv.select_bits = HASH_SINGLE_BITS;
+            }
+            return rv;
+        }
+
+        hash_matrix_reqs() {}
+        hash_matrix_reqs(int ig, int sb, bool hd)
+            : index_groups(ig), select_bits(sb), hash_dist(hd) {}
     };
 
 
     void clear();
     bool allocMatch(bool ternary, const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
-                    safe_vector<IXBar::Use::Byte *> &alloced, bool second_try, int hash_groups);
+                    safe_vector<IXBar::Use::Byte *> &alloced, hash_matrix_reqs &hm_reqs);
     bool allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                         bool second_try);
     int getHashGroup(unsigned hash_table_input);
@@ -309,9 +315,9 @@ struct IXBar {
                       size_t index, size_t start, Use &alloc);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocSelector(const IR::MAU::Selector *, const IR::MAU::Table *, const PhvInfo &phv,
-                       Use &alloc, bool second_try, cstring name);
-    bool allocStateful(const IR::MAU::StatefulAlu *, const PhvInfo &phv, Use &alloc, bool);
-    bool allocMeter(const IR::MAU::Meter *, const PhvInfo &phv, Use &alloc, bool second_try);
+                       Use &alloc, cstring name);
+    bool allocStateful(const IR::MAU::StatefulAlu *, const PhvInfo &phv, Use &alloc);
+    bool allocMeter(const IR::MAU::Meter *, const PhvInfo &phv, Use &alloc);
     bool allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashDistType hdt,
                        const PhvInfo &phv, IXBar::Use &alloc, bool second_try, cstring name);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
@@ -329,50 +335,64 @@ struct IXBar {
         return nullptr; }
 
  private:
-    bool find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary, bool second_try,
-                    safe_vector<IXBar::Use::Byte *> &alloced, int hash_groups_needed,
-                    bool hash_dist = false, unsigned byte_mask = ~0U);
-    bool find_original_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
-    bool find_ternary_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
-    void calculate_available_groups(safe_vector<big_grp_use> &order, int hash_groups_needed,
-                                    bool hash_dist);
-    void calculate_available_hash_dist_groups(safe_vector<big_grp_use> &order,
-                                              int hash_groups_needed);
-    grp_use::type_t is_group_for_hash_dist(int hash_table);
-    bool violates_hash_constraints(safe_vector <big_grp_use> &order, bool hash_dist, int group,
-                                   int byte);
-    void calculate_found(safe_vector<IXBar::Use::Byte *> unalloced,
-                         safe_vector<big_grp_use> &order,
-                         bool ternary, bool hash_dist, unsigned byte_mask);
-    void calculate_ternary_free(safe_vector<big_grp_use> &order, int big_groups,
-                                int bytes_per_big_group);
-    void calculate_exact_free(safe_vector<big_grp_use> &order, int big_groups,
-                              int bytes_per_big_group, bool hash_dist, unsigned byte_mask);
-    void found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced, bool ternary,
-                    int &match_bytes_needed, int search_bus);
-    void free_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
-                   safe_vector<IXBar::Use::Byte *> &alloced, bool ternary, bool hash_dist,
-                   int &match_bytes_needed, int search_bus);
-    void found_bytes_big_group(big_grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
-                              int &match_bytes_needed, int search_bus);
-    void free_bytes_big_group(big_grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
-                              safe_vector<IXBar::Use::Byte *> &alloced, bool &version_placed,
-                              int &match_bytes_needed, int search_bus);
-    void allocate_byte(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
-                       safe_vector<IXBar::Use::Byte *> *alloced, IXBar::Use::Byte &need,
-                       int group, int byte, size_t &index, int &free_bytes,
-                       int &ixbar_bytes_placed, int &match_bytes_placed, int search_bus);
+    int groups(bool ternary) const;
+    int mid_bytes(bool ternary) const;
+    int bytes_per_group(bool ternary) const;
+
+    bool calculate_sizes(safe_vector<Use::Byte> &alloc_use, bool ternary, int &total_bytes_needed,
+        int &groups_needed, int &mid_bytes_needed);
+    bool find_alloc(safe_vector<Use::Byte> &alloc_use, bool ternary,
+        safe_vector<Use::Byte> &alloced, hash_matrix_reqs &hm_reqs, unsigned byte_mask = ~0U);
+    void initialize_orders(safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
+        bool ternary);
+    void setup_byte_vectors(safe_vector<Use::Byte> &alloc_use, bool ternary,
+        safe_vector<Use::Byte *> &unalloced, safe_vector<Use::Byte *> &alloced,
+        safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
+        hash_matrix_reqs &hm_reqs, unsigned byte_mask);
+
+    void print_groups(safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
+        bool ternary);
     void fill_out_use(safe_vector<IXBar::Use::Byte *> &alloced, bool ternary);
-    bool big_grp_alloc(bool ternary, bool second_try, safe_vector<IXBar::Use::Byte *> &unalloced,
-                       safe_vector<IXBar::Use::Byte *> &alloced, safe_vector<big_grp_use> &order,
-                       int big_groups_needed, int &total_bytes_needed, int bytes_per_big_group,
-                       int &search_bus, bool hash_dist, unsigned byte_mask);
-    bool small_grp_alloc(bool ternary, bool second_try,
-                         safe_vector<IXBar::Use::Byte *> &unalloced,
-                         safe_vector<IXBar::Use::Byte *> &alloced,
-                         safe_vector<grp_use *> &small_order,
-                         safe_vector<big_grp_use> &order, int &total_bytes_needed,
-                         int &search_bus, bool hash_dist, unsigned byte_mask);
+    void calculate_available_groups(safe_vector<grp_use> &order, hash_matrix_reqs &hm_reqs);
+    void calculate_available_hash_dist_groups(safe_vector<grp_use> &order,
+        hash_matrix_reqs &hm_reqs);
+    grp_use::type_t is_group_for_hash_dist(int hash_table);
+    bool violates_hash_constraints(safe_vector <grp_use> &order, bool hash_dist, int group,
+        int byte);
+    void reset_orders(safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order);
+    void calculate_found(safe_vector<Use::Byte *> &unalloced, safe_vector<grp_use> &order,
+        safe_vector<mid_byte_use> &mid_byte_order, bool ternary, bool hash_dist,
+        unsigned byte_mask);
+    void calculate_free(safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
+        bool ternary, bool hash_dist, unsigned byte_mask);
+    void found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced, bool ternary,
+        int &match_bytes_placed, int search_bus);
+    void found_mid_bytes(mid_byte_use *mb_grp, safe_vector<Use::Byte *> &unalloced,
+        bool ternary, int &match_bytes_placed, int search_bus, bool &version_placed);
+    void free_bytes(grp_use *grp, safe_vector<Use::Byte *> &unalloced,
+        safe_vector<Use::Byte *> &alloced, bool ternary, bool hash_dist, int &match_bytes_placed,
+        int search_bus);
+    void free_mid_bytes(mid_byte_use *mb_grp, safe_vector<Use::Byte *> &unalloced,
+        safe_vector<Use::Byte *> &alloced, int &match_bytes_placed, int search_bus,
+        bool &version_placed);
+    void allocate_byte(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
+        safe_vector<IXBar::Use::Byte *> *alloced, IXBar::Use::Byte &need, int group,
+        int byte, size_t &index, int &free_bytes, int &ixbar_bytes_placed,
+        int &match_bytes_placed, int search_bus);
+    void allocate_mid_bytes(safe_vector<Use::Byte *> &unalloced,
+        safe_vector<Use::Byte *> &alloced, bool ternary, bool prefer_found,
+        safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
+        int mid_bytes_needed, int &bytes_to_allocate, bool &version_placed);
+    void allocate_groups(safe_vector<Use::Byte *> &unalloced, safe_vector<Use::Byte *> &alloced,
+        bool ternary, bool prefer_found, safe_vector<grp_use> &order,
+        safe_vector<mid_byte_use> &mid_byte_order, int &bytes_to_allocate, int groups_needed,
+        bool hash_dist, unsigned byte_mask);
+    bool version_placeable(bool version_placed, int mid_bytes_needed, int groups_needed);
+    bool find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
+        safe_vector<IXBar::Use::Byte *> &alloced, hash_matrix_reqs &hm_reqs,
+        unsigned byte_mask = ~0U);
+    hash_matrix_reqs match_hash_reqs(const LayoutOption *lo, size_t start, size_t end,
+        bool ternary);
     void layout_option_calculation(const LayoutOption *layout_option,
                                    size_t &start, size_t &last);
     void field_management(const IR::Expression *field, IXBar::Use &alloc,

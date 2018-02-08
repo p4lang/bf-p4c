@@ -99,12 +99,15 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                          int entries) {
     table_alloc *ta;
     if (!t->gateway_only())
-        ta = new table_alloc(t, &resources->match_ixbar, &resources->memuse, lo, entries);
+        ta = new table_alloc(t, &resources->match_ixbar, &resources->table_format,
+                             &resources->memuse, lo, entries);
     else
-        ta = new table_alloc(t, &resources->gateway_ixbar, &resources->memuse, lo, entries);
+        ta = new table_alloc(t, &resources->gateway_ixbar, nullptr, &resources->memuse, lo,
+                             entries);
     tables.push_back(ta);
     if (gw != nullptr)  {
-        auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, &resources->memuse, lo, -1);
+        auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, nullptr, &resources->memuse,
+                                      lo, -1);
         ta_gw->link_table(ta);
         ta->link_table(ta_gw);
         tables.push_back(ta_gw);
@@ -1130,28 +1133,37 @@ bool Memories::allocate_all_atcam(mem_info &mi) {
 
 
 /* Number of continuous TCAMs needed for table width */
-int Memories::ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed) {
-    int groups = ta->match_ixbar->groups();
-    if (groups == 0)
-        groups++;
-    mid_bytes_needed = groups/2;
-    return groups;
+int Memories::ternary_TCAMs_necessary(table_alloc *ta, int &midbyte) {
+    midbyte = ta->table_format->split_midbyte;
+    return ta->table_format->tcam_use.size();
 }
 
 /* Finds the stretch on the ternary array that can hold entries */
-bool Memories::find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed,
-                                    int &row, int &col) {
+bool Memories::find_ternary_stretch(int TCAMs_necessary, int &row, int &col,
+                                    int midbyte) {
     for (int j = 0; j < TCAM_COLUMNS; j++) {
         int clear_cols = 0;
+
         for (int i = 0; i < TCAM_ROWS; i++) {
             if (tcam_use[i][j]) {
                 clear_cols = 0;
                 continue;
             }
 
-            if (clear_cols == 0 && mid_bytes_needed == TCAMs_necessary / 2
-                && TCAMs_necessary % 2 == 0 && i % 2 == 1)
-                 continue;
+            // These checks are enforcing that the midbyte is shared correctly between two
+            // contiguous blocks.
+            if ((TCAMs_necessary % 2) == 0) {
+                if ((i % 2) == 1 && clear_cols == 0)
+                    continue;
+            } else {
+                if ((i % 2) == 1 && clear_cols == 0) {
+                    if (midbyte >= 0 && tcam_midbyte_use[i / 2][j] >= 0
+                        && midbyte != tcam_midbyte_use[i / 2][j]) {
+                        continue;
+                    }
+                }
+            }
+
             clear_cols++;
             if (clear_cols == TCAMs_necessary) {
                 col = j;
@@ -1175,8 +1187,8 @@ bool Memories::allocate_all_ternary() {
 
     // FIXME: All of this needs to be changed on this to match up with xbar
     for (auto *ta : ternary_tables) {
-        int mid_bytes_needed = 0;
-        int TCAMs_necessary = ternary_TCAMs_necessary(ta, mid_bytes_needed);
+        int midbyte = -1;
+        int TCAMs_necessary = ternary_TCAMs_necessary(ta, midbyte);
         // FIXME: If the table is just a default action table, essentially a hack
         if (TCAMs_necessary == 0)
             continue;
@@ -1185,10 +1197,11 @@ bool Memories::allocate_all_ternary() {
         auto name = ta->table->get_use_name();
         Memories::Use &alloc = (*ta->memuse)[name];
         for (int i = 0; i < ta->calculated_entries / 512; i++) {
-            if (!find_ternary_stretch(TCAMs_necessary, mid_bytes_needed, row, col))
+            if (!find_ternary_stretch(TCAMs_necessary, row, col, midbyte))
                 return false;
             for (int i = row; i < row + TCAMs_necessary; i++) {
                  tcam_use[i][col] = name;
+                 tcam_midbyte_use[i/2][col] = midbyte;
                  alloc.row.emplace_back(i, col);
                  alloc.row.back().col.push_back(col);
             }

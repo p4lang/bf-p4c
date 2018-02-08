@@ -313,8 +313,9 @@ void TernaryMatchTable::write_regs(REGS &regs) {
             halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_select = match[word].byte_config;
             halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_enable = 1;
             halfbyte_mux_ctl.tcam_row_search_thread = gress;
-            setup_muxctl(tcam_vh_xbar.tcam_row_output_ctl[col][row.row],
-                         match[word].word_group);
+            if (match[word].word_group >= 0)
+                setup_muxctl(tcam_vh_xbar.tcam_row_output_ctl[col][row.row],
+                             match[word].word_group);
             if (match[word].byte_group >= 0)
                 setup_muxctl(tcam_vh_xbar.tcam_extra_byte_ctl[col][row.row/2],
                              match[word].byte_group);
@@ -438,7 +439,8 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
         entry["source"] = source;
         entry["start_bit"] = start_bit;
         entry["field_width"] = field_width;
-        auto dirtcam_mode = get_dirtcam_mode(index, (lsb_offset + i*8)/8);
+        auto dirtcam_mode = (name != "--unused--") ?
+            get_dirtcam_mode(index, (lsb_offset + i*8)/8) : TCAM_NORMAL;
         // If field is a range match output the 'range' node only for 4bit hi/lo
         // encodings (dirtcam = 2 (4bit lo), dirtcam = 3 (4bit hi)
         if (p && ((dirtcam_mode == DIRTCAM_4B_LO) ||
@@ -519,6 +521,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     add_result_physical_buses(stage_tbl);
     json::vector match_field_list, match_entry_list;
     unsigned curWord = -1;
+    bool version_allocated = false;
     for (auto field : *input_xbar) {
         if (!field.first.ternary) continue;
         int word = match_index - match_word(field.first.index);
@@ -526,6 +529,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         if (curWord != word) {
             gen_match_fields_pvp(match_field_list, word, uses_versioning, version_word_group);
             curWord = word; }
+        if (word == version_word_group)
+            version_allocated = true;
         std::string source = "spec";
         std::string field_name = field.second.what.name();
         remove_aug_names(field_name);
@@ -533,20 +538,32 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         if (field.second.hi > 43) {
             // a field in the (mid) byte group, which is shared with the adjacent word group
             // each word gets only 4 bits of the byte group and is placed at msb
+            // Check mid-byte field does not cross byte boundary (40-47)
             assert(field.second.hi < 48);
+            // Check mid-byte field is associated with even group
+            // | == 5 == | == 1 == | == 5 == | == 5 == | == 1 == | == 5 == |
+            // | Grp 0   | Midbyte0| Grp 1   | Grp 2   | Midbyte1| Grp 3   |
             assert((field.first.index & 1) == 0);
-            int hwidth = 44 - field.second.lo;
-            lsb_mem_word_offset = 1 + field.second.lo;
-            gen_entry_cfg(match_field_list, field_name, \
-                          lsb_mem_word_offset, word, word, source, \
-                          field.second.what.lobit(), hwidth, field.first.index);
-            int adjword = match_index - match_word(field.first.index + 1);
-            if (adjword < 0) continue;
-            lsb_mem_word_offset = 1 + field.second.lo;
-            gen_entry_cfg(match_field_list, field_name, \
-                          lsb_mem_word_offset, adjword, adjword, source, \
-                          field.second.what.lobit() + hwidth, \
-                          field.second.hi - 43, field.first.index);
+            // Find groups to place this byte nibble. Check group which has this
+            // group as the byte_group
+            for (auto &m : match) {
+                if (m.byte_group * 2 == field.first.index) {
+                    // Check byte_config to determine where to place the nibble
+                    lsb_mem_word_offset = 1 + field.second.lo;
+                    int nibble_offset = 0;
+                    int hwidth = 44 - field.second.lo;
+                    int start_bit = 0;
+                    if (m.byte_config == MIDBYTE_NIBBLE_HI) {
+                        nibble_offset += 4;
+                        start_bit = hwidth;
+                        hwidth = field.second.hi - 43;
+                    }
+                    int midbyte_word_group = match_index - match_word(m.word_group);
+                    gen_entry_cfg(match_field_list, field_name, \
+                        lsb_mem_word_offset, midbyte_word_group, midbyte_word_group, source, \
+                        field.second.what.lobit() + start_bit, hwidth, field.first.index);
+                }
+            }
         } else {
             lsb_mem_word_offset = 1 + field.second.lo;
             gen_entry_cfg(match_field_list, field_name, \
@@ -554,8 +571,39 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
                           field.second.what.lobit(), \
                           field.second.hi - field.second.lo + 1, field.first.index); } }
     // For keyless table, just add parity & payload bits
-    if (p4_params_list.empty())
+    if (p4_params_list.empty()) {
         gen_match_fields_pvp(match_field_list, 0, false, -1);
+    }
+    if (!version_allocated && uses_versioning) {
+        gen_match_fields_pvp(match_field_list, version_word_group, true, version_word_group);
+    }
+    
+    // Mark unused portion of format as a field with source 'zero'. This tells
+    // the driver to dont care this field bits.
+    //
+    // Determine the zero padding necessary by creating a bitvector that has all
+    // bits cleared, and then iterate through parameters and immediates and set the
+    // bits that are used. Create padding for the remaining bit ranges.
+    unsigned format_width = 43;
+    bitvec padbits;
+    padbits.clrrange(0, format_width-1);
+    for (auto field : *input_xbar) {
+        padbits.setrange(field.second.lo, field.second.hi - field.second.lo + 1);
+    }
+
+    if (padbits != bitvec(0)) {
+        unsigned idx_lo = 0;
+        std::string pad_name = "--unused--";
+        for (auto p : padbits) {
+            if (p > idx_lo) {
+                gen_entry_cfg(match_field_list, pad_name, \
+                              idx_lo, 0, 0, "zero", 0, p - idx_lo, -1); }
+            idx_lo = p + 1; }
+        if (idx_lo < format_width) {
+            gen_entry_cfg(match_field_list, pad_name, \
+                idx_lo + 1, 0, 0, "zero", 0, format_width - (idx_lo + 1), -1); }
+    }
+
     canon_field_list(match_field_list);
     pack_fmt["entries"] = json::vector {
         json::map {

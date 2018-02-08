@@ -96,8 +96,11 @@ p4c_add_xfail_reason("tofino"
   )
 
 # BRIG-240
+# Associated with the fix for BRIG-451
 p4c_add_xfail_reason("tofino"
   "Input xbar group.* conflict in stage"
+  extensions/p4_tests/p4_14/test_config_197_default_next_table.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/entry_read_from_hw/entry_read_from_hw.p4
   )
 
 # BRIG-109
@@ -246,6 +249,7 @@ p4c_add_xfail_reason("tofino"
   "Can't fit table .* in .* by itself"
   extensions/p4_tests/p4_14/test_config_13_first_selection.p4
   extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
+  extensions/p4_tests/p4_14/test_config_129_various_exact_match_keys.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1011,11 +1015,6 @@ p4c_add_xfail_reason("tofino"
 #   "error: Could not find declaration for key_1"
 #   extensions/p4_tests/p4_14/c1/BRIG-372/case4346.p4
 #   )
-
-p4c_add_xfail_reason("tofino"
-  "Can't find .* and .* in same input xbar group"
-  extensions/p4_tests/p4_14/test_config_129_various_exact_match_keys.p4
-  )
 
 # XXX(cole): The following test appears impossible to compile on Tofino,
 # because it has non-byte aligned header fields (parsed/deparsed) subject to

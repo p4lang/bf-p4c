@@ -819,6 +819,7 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
         Match(const value_t &);
     };
     enum range_match_t { TCAM_NORMAL=0, DIRTCAM_2B=1, DIRTCAM_4B_LO=2, DIRTCAM_4B_HI=3, NONE=4 };
+    enum byte_config_t { MIDBYTE_NIBBLE_LO=0, MIDBYTE_NIBBLE_HI=1 }; 
     std::vector<Match>  match;
     int match_word(int word_group) {
         for (unsigned i = 0; i < match.size(); i++)

@@ -72,16 +72,20 @@ struct TableFormat {
         };
 
         struct TCAM_use {
-            int group;
-            int byte_group;
-            int byte_config;
+            int group = -1;
+            int byte_group = -1;
+            int byte_config = -1;
             bitvec dirtcam;
-            TCAM_use(int g, int bg, int bc, bitvec dc)
-                : group(g), byte_group(bg), byte_config(bc), dirtcam(dc) {}
+
+            void set_group(int _group, bitvec _dirtcam);
+            void set_midbyte(int _byte_group, int _byte_config);
+
+            TCAM_use() {}
         };
 
         safe_vector<match_group_use> match_groups;
         safe_vector<TCAM_use> tcam_use;
+        int split_midbyte = -1;
 
         /// The byte and individual bits to be ghosted. Ghost bits should be the
         /// same for all match entries.
@@ -145,6 +149,8 @@ struct TableFormat {
 
     bool allocate_all_ternary_match();
     void initialize_dirtcam_value(bitvec &dirtcam, const IXBar::Use::Byte &byte);
+    void ternary_midbyte(int midbyte, size_t &index, bool lo_midbyte);
+    void ternary_version(size_t &index);
 
     bool analyze_layout_option();
     bool analyze_skinny_layout_option(int per_RAM, safe_vector<std::pair<int, int>> &sizes);

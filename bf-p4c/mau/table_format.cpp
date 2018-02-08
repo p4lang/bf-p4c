@@ -1134,53 +1134,121 @@ void TableFormat::initialize_dirtcam_value(bitvec &dirtcam, const IXBar::Use::By
     }
 }
 
+void TableFormat::Use::TCAM_use::set_group(int _group, bitvec _dirtcam) {
+    group = _group;
+    dirtcam = _dirtcam;
+}
+
+void TableFormat::Use::TCAM_use::set_midbyte(int _byte_group, int _byte_config) {
+    byte_group = _byte_group;
+    byte_config = _byte_config;
+
+    if (byte_config == MID_BYTE_LO || byte_config == MID_BYTE_HI)
+        dirtcam.setbit(IXBar::TERNARY_BYTES_PER_GROUP * 2);
+}
+
+void TableFormat::ternary_midbyte(int midbyte, size_t &index, bool lo_midbyte) {
+    Use::TCAM_use *tcam_p;
+    Use::TCAM_use tcam;
+    if (index < use->tcam_use.size())
+        tcam_p = &(use->tcam_use[index]);
+    else
+        tcam_p = &tcam;
+
+    int midbyte_type = lo_midbyte ? MID_BYTE_LO : MID_BYTE_HI;
+
+    if (lo_midbyte)
+        tcam_p->set_midbyte(midbyte, midbyte_type);
+    else
+        tcam_p->set_midbyte(midbyte, midbyte_type);
+
+    if (tcam_p == &tcam)
+        use->tcam_use.push_back(tcam);
+    index++;
+}
+
+void TableFormat::ternary_version(size_t &index) {
+    Use::TCAM_use *tcam_version_p;
+    Use::TCAM_use tcam_version;
+    if (index < use->tcam_use.size()) {
+        tcam_version_p = &(use->tcam_use[index]);
+    } else {
+        tcam_version_p = &tcam_version;
+    }
+    tcam_version_p->set_midbyte(-1, MID_BYTE_VERS);
+    if (tcam_version_p == &tcam_version)
+        use->tcam_use.push_back(tcam_version);
+    index++;
+}
+
+/** Reservation of ternary match tables.  Allocate the group and midbyte
+ */
 bool TableFormat::allocate_all_ternary_match() {
     bitvec used_groups;
-    bitvec used_midbyte;
-    std::map<int, int> byte_config;
     std::map<int, bitvec> dirtcam;
+    bitvec used_midbytes;
+    std::map<int, std::pair<bool, bool>> midbyte_lo_hi;
 
     for (auto &byte : match_ixbar.use) {
         if (byte.loc.byte == IXBar::TERNARY_BYTES_PER_GROUP) {
             // Reserves groups and the mid bytes
+            used_midbytes.setbit(byte.loc.group / 2);
+            std::pair<bool, bool> lo_hi = { false, false };
             if (byte.bit_use.min().index() <= 3) {
-                int group_used = byte.loc.group;
-                used_groups.setbit(group_used);
-                used_midbyte.setbit(group_used);
-                byte_config[group_used] = MID_BYTE_LO;
-                initialize_dirtcam_value(dirtcam[group_used], byte);
+                lo_hi.first = true;
             }
             if (byte.bit_use.max().index() >= 4) {
-                int group_used = byte.loc.group + 1;
-                used_groups.setbit(group_used);
-                used_midbyte.setbit(group_used);
-                byte_config[group_used] = MID_BYTE_HI;
-                initialize_dirtcam_value(dirtcam[group_used], byte);
+                lo_hi.second = true;
             }
+            midbyte_lo_hi[byte.loc.group / 2] = lo_hi;
         } else {
             used_groups.setbit(byte.loc.group);
             initialize_dirtcam_value(dirtcam[byte.loc.group], byte);
         }
     }
 
-    // Determines a mid_byte for the version valid
-    bool version_set = false;
-    int version_group = 0;
-    for (auto group : used_groups) {
-        if (used_midbyte.getbit(group)) continue;
-        if (version_set) continue;
-        version_group = group;
-        byte_config[group] = MID_BYTE_VERS;
-    }
-
     // Sets up the the TCAM_use with the four fields output to the assembler
     for (auto group : used_groups) {
-        if (used_midbyte.getbit(group))
-            use->tcam_use.emplace_back(group, group / 2, byte_config[group], dirtcam[group]);
-        else if (version_group == group)
-            use->tcam_use.emplace_back(group, -1, byte_config[group], dirtcam[group]);
-        else
-            use->tcam_use.emplace_back(group, -1, -1, dirtcam[group]);
+        Use::TCAM_use tcam;
+        tcam.set_group(group, dirtcam.at(group));
+        use->tcam_use.push_back(tcam);
+    }
+
+    size_t index = 0;
+    bitvec done_midbytes;
+    // Because midbyte is shared between two TCAMs, make sure that contiguous TCAMs keep their
+    // bytes together
+    for (auto midbyte : used_midbytes) {
+        if (!(midbyte_lo_hi[midbyte].first && midbyte_lo_hi[midbyte].second))
+            continue;
+        for (int i = 0; i < 2; i++) {
+            ternary_midbyte(midbyte, index, (i % 2) == 0);
+        }
+        done_midbytes.setbit(midbyte);
+    }
+
+    // Allocate all groups that have either a lo or hi section of midbyte but not both.
+    // Potentially one can use this for version as well
+    bool version_placed = false;
+    for (auto midbyte : used_midbytes) {
+        if (done_midbytes.getbit(midbyte)) continue;
+        bool lo = midbyte_lo_hi[midbyte].first;
+        bool hi = midbyte_lo_hi[midbyte].second;
+        BUG_CHECK((lo || hi) && !(lo && hi), "Midbytes with both a lo and hi range should have "
+                  "been handled");
+        ternary_midbyte(midbyte, index, lo);
+        if (!version_placed) {
+            version_placed = true;
+            ternary_version(index);
+        } else {
+            index++;
+        }
+    }
+    if (!version_placed)
+        ternary_version(index);
+
+    if ((use->tcam_use.size() % 2) == 1) {
+        use->split_midbyte = use->tcam_use.back().byte_group;
     }
     return true;
 }

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <unordered_set>
 #include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/mau/table_format.h"
 #include "ir/ir.h"
 #include "lib/alloc.h"
 #include "lib/safe_vector.h"
@@ -63,6 +64,7 @@ struct Memories {
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
+    Alloc2D<int, TCAM_ROWS / 2, TCAM_COLUMNS>          tcam_midbyte_use;
     Alloc2D<cstring, SRAM_ROWS, 2>                     gateway_use;
     Alloc2D<search_bus_info, SRAM_ROWS, 2>             sram_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_search_bus;
@@ -169,6 +171,7 @@ struct Memories {
     struct table_alloc {
         const IR::MAU::Table *table;
         const IXBar::Use *match_ixbar;
+        const TableFormat::Use *table_format;
         std::map<cstring, Memories::Use>* memuse;
         const LayoutOption *layout_option;
         int provided_entries;
@@ -177,9 +180,11 @@ struct Memories {
         // Linked gw/match table that uses the same result bus
         table_alloc *table_link = nullptr;
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi,
+                             const TableFormat::Use *tf,
                              std::map<cstring, Memories::Use> *mu,
                              const LayoutOption *lo, const int e)
-                : table(t), match_ixbar(mi), memuse(mu), layout_option(lo), provided_entries(e),
+                : table(t), match_ixbar(mi), table_format(tf), memuse(mu),
+                  layout_option(lo), provided_entries(e),
                   calculated_entries(0), attached_gw_bytes(0), table_link(nullptr) {}
         void link_table(table_alloc *ta) {table_link = ta;}
     };
@@ -413,8 +418,8 @@ struct Memories {
     SRAM_group *best_partition_candidate(int row, unsigned column_mask, int &loc);
 
     bool allocate_all_ternary();
-    int ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed);
-    bool find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed, int &row, int &col);
+    int ternary_TCAMs_necessary(table_alloc *ta, int &midbyte);
+    bool find_ternary_stretch(int TCAMs_necessary, int &row, int &col, int midbyte);
 
     bool allocate_all_tind();
     void find_tind_groups();

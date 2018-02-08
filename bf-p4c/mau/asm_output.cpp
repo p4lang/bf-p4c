@@ -1121,7 +1121,8 @@ void MauAsmOutput::emit_ternary_match(std::ostream &out, indent_t indent,
     out << indent << "match:" << std::endl;
     for (auto tcam_use : use.tcam_use) {
         out << indent << "- { ";
-        out << "group: " << tcam_use.group << ", ";
+        if (tcam_use.group != -1)
+            out << "group: " << tcam_use.group << ", ";
         if (tcam_use.byte_group != -1)
             out << "byte_group: " << tcam_use.byte_group << ", ";
         if (tcam_use.byte_config != -1)

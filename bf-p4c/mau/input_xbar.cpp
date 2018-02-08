@@ -1,5 +1,4 @@
 #include "bf-p4c/mau/input_xbar.h"
-
 #include <set>
 #include "bf-p4c/device.h"
 #include "bf-p4c/mau/gateway.h"
@@ -12,6 +11,8 @@
 #include "lib/hex.h"
 #include "lib/range.h"
 #include "lib/log.h"
+
+constexpr int IXBar::HASH_SINGLE_BITS;
 
 void IXBar::clear() {
     exact_use.clear();
@@ -216,63 +217,52 @@ static int align_flags[4] = {
     IXBar::Use::Align16lo | IXBar::Use::Align32lo,
 };
 
-/* An individual SRAM group or half of a TCAM group */
-struct grp_use {
-    enum type_t { MATCH, HASH_DIST, FREE };
-    int group;
-    bitvec found;
-    bitvec free;
-    bool first_hash_open = true;
-    bool second_hash_open = true;
-    type_t first_hash_dist = FREE;
-    type_t second_hash_dist = FREE;
+int inline IXBar::groups(bool ternary) const {
+    return ternary ? TERNARY_GROUPS : EXACT_GROUPS;
+}
 
-    bool first_hash_dist_avail() {
-        return first_hash_dist == HASH_DIST || first_hash_dist == FREE;
+int inline IXBar::mid_bytes(bool ternary) const {
+    return ternary ? BYTE_GROUPS : 0;
+}
+
+int inline IXBar::bytes_per_group(bool ternary) const {
+    return ternary ? TERNARY_BYTES_PER_GROUP : EXACT_BYTES_PER_GROUP;
+}
+
+bool IXBar::calculate_sizes(safe_vector<Use::Byte> &alloc_use, bool ternary,
+        int &total_bytes_needed, int &groups_needed, int &mid_bytes_needed) {
+    if (groups_needed == 0) {
+        for (auto byte : alloc_use) {
+            if (byte.atcam_double)
+                total_bytes_needed += 2;
+            else
+                total_bytes_needed++;
+        }
+
+        if (ternary) {
+            int big_groups_needed = (total_bytes_needed + TERNARY_BYTES_PER_BIG_GROUP - 1)
+                                    / TERNARY_BYTES_PER_BIG_GROUP;
+            groups_needed = big_groups_needed * 2;
+            mid_bytes_needed = big_groups_needed - 1;
+            if (total_bytes_needed % TERNARY_BYTES_PER_BIG_GROUP == 0)
+                mid_bytes_needed++;
+        } else {
+            groups_needed = (total_bytes_needed + bytes_per_group(false) - 1)
+                            / bytes_per_group(false);
+            mid_bytes_needed = 0;
+        }
+    } else {
+        if ((groups_needed % 2) == 0 && ternary)
+            if (mid_bytes_needed * 2 != groups_needed)
+                mid_bytes_needed++;
+        groups_needed++;
     }
 
-    bool second_hash_dist_avail() {
-        return second_hash_dist == HASH_DIST || second_hash_dist == FREE;
-    }
 
-    bool first_hash_dist_only() {
-        return first_hash_dist == HASH_DIST;
-    }
-
-    bool second_hash_dist_only() {
-        return second_hash_dist == HASH_DIST;
-    }
-    void dbprint(std::ostream &out) const {
-        out << group << " found: " << found << " free: " << free;
-    }
-};
-
-/* A struct use for TCAM split between 2 groups.  Mid bytes are for the individual
-   byte groups within the two ternary groups.  Only one grp_use is necessary for the
-   calculation of the SRAM xbar */
-struct big_grp_use {
-    int big_group;
-    grp_use first;
-    grp_use second;
-    bool mid_byte_found;
-    bool mid_byte_free;
-    void dbprint(std::ostream &out) const {
-        out << big_group << " : found=" << first.found << " " << mid_byte_found << " "
-            << second.found  << " : free= " << first.free  << " " << mid_byte_free
-            << " " << second.free; }
-    int total_found() const { return first.found.popcount() + second.found.popcount()
-                                     + mid_byte_found; }
-    int total_free() const { return first.free.popcount() + second.free.popcount()
-                                    + mid_byte_free; }
-    int total_used() const { return total_found() + total_free(); }
-    int better_group() const {
-        int first_open = first.free.popcount() + first.found.popcount();
-        int second_open = second.free.popcount() + second.found.popcount();
-        if (first_open >= second_open)
-             return first_open;
-        return second_open;
-    }
-};
+    if (groups_needed > groups(ternary))
+        return false;
+    return true;
+}
 
 /** This is too constraining than the actual algorithm, but this ensures that the hash
  *  distribution group has available space for this particular hash distribution section.
@@ -280,67 +270,94 @@ struct big_grp_use {
  *  individual hash distribution section, but potentially need to be refactored in order
  *  to include multiple wide addresses or 8 bit hash distribution sections.
  */
-void IXBar::calculate_available_hash_dist_groups(safe_vector<big_grp_use> &order,
-                                                 int hash_groups_needed) {
+void IXBar::calculate_available_hash_dist_groups(safe_vector<grp_use> &order,
+        hash_matrix_reqs &hm_reqs) {
     for (int i = 0; i < HASH_DIST_UNITS; i++) {
         if (hash_dist_groups[i] == -1) continue;
         auto hash_tables = hash_group_use[hash_dist_groups[i]];
         bitvec slices_used;
-        for (auto &big_grp : order) {
-             for (int hash_slice = 0; hash_slice < HASH_DIST_SLICES; hash_slice++) {
-                 if (!(hash_dist_inuse[hash_slice] & (1 << (2 * big_grp.big_group))))
-                     slices_used.setbit(hash_slice);
-                 if (!(hash_dist_inuse[hash_slice] & (1 << (2 * big_grp.big_group + 1))))
-                     slices_used.setbit(hash_slice);
-             }
+        for (auto &grp : order) {
+            for (int i = 0; i < 2; i++) {
+                for (int hash_slice = 0; hash_slice < HASH_DIST_SLICES; hash_slice++) {
+                    if (!(hash_dist_inuse[hash_slice] & (1 << (2 * grp.group + i))))
+                        slices_used.setbit(hash_slice);
+                }
+            }
         }
-        if (HASH_DIST_SLICES - slices_used.popcount() >= hash_groups_needed)
+        if (HASH_DIST_SLICES - slices_used.popcount() >= hm_reqs.index_groups)
             continue;
         for (auto bit : bitvec(hash_tables)) {
-            if (bit % 1 == 0)
-                order[bit / 2].first.first_hash_open = false;
-            else
-                order[bit / 2].first.second_hash_open = false;
+            order[bit / 2].hash_open[bit % 2] = false;
         }
     }
 }
 
-/* Calculates the number of hash ways available in each group.  Currently not including the
-   extra 12 hash bits.  Also now separates hash tables from being part of hash distribution
-   vs. standard tables and gateways.  */
-void IXBar::calculate_available_groups(safe_vector<big_grp_use> &order,
-                                       int hash_groups_needed, bool hash_dist) {
-    for (auto &big_grp : order) {
-        big_grp.first.first_hash_open = true;
-        big_grp.first.second_hash_open = true;
+/** The hash matrix, described in section 6.1.9 Hash Generation of the uArch, is a further
+ *  constraint on where bytes can be placed within the input xbar.  The hash matrix is tied
+ *  specifically to the exact match, and is not used for ternary.  The hash matrix is used
+ *  for the following reasons:
+ *     - Generating a lookup address for an exact table
+ *     - Generating a hash for a selector to use
+ *     - Generating any kind of hash to use through hash distribution.
+ *
+ *  The hash matrix itself is an 1024b * 52b matrix, broken into 16 64b by 52b matrix.  In order
+ *  to generate a hash, the input xbar itself is broken into 16 64 bit sections.  Each 64 bit
+ *  section performs a matrix multiply with its corresponding 64bx52b matrix to come up with
+ *  a 16 separate 52b words.  Then any of the 52b words can be XORed together.  This is useful,
+ *  for example, if a tables match data is larger than 64 bits, and thus requires the combination
+ *  of multiple 64 bit sections.
+ *
+ *  Thus in order to successfully allocate a byte within a 64 bit section, that byte cannot use
+ *  hash bits used by any other byte not part of the hash generation in this section.  For
+ *  example, say a P4 program had two exact match tables with 32 bit keys, and each key needed
+ *  30 bits of hash data.  Now because the hash matrix is only 52 bits, it is impossible for
+ *  each of these tables data to be within the same 64 section of the input xbar, and have
+ *  an independent hash calculation.
+ *
+ *  Futhermore, the algorithm currently restricts hash distribution and everything else to
+ *  never be within the same 64 bit hash table.  This is just because it would be fairly tedious
+ *  to check, and may limit hash distribution much later, especially for a greedy algorithm.
+ */
+void IXBar::calculate_available_groups(safe_vector<grp_use> &order,
+                                       hash_matrix_reqs &hm_reqs) {
+    for (auto &grp : order) {
+        for (int i = 0; i < 2; i++) {
+            grp.hash_open[i] = true;
+        }
     }
 
-    if (hash_dist) {
-        calculate_available_hash_dist_groups(order, hash_groups_needed);
+    if (hm_reqs.hash_dist) {
+        calculate_available_hash_dist_groups(order, hm_reqs);
     } else {
-        for (auto &big_grp : order) {
-            int first_ways_available = 0; int second_ways_available = 0;
-            for (int hash_group = 0; hash_group < HASH_INDEX_GROUPS; hash_group++) {
-                if (!(hash_index_inuse[hash_group] & (1 << (2 * big_grp.big_group))))
-                    first_ways_available++;
-                if (!(hash_index_inuse[hash_group] & (1 << (2 * big_grp.big_group + 1))))
-                    second_ways_available++;
-            }
-            if (first_ways_available < hash_groups_needed) {
-                big_grp.first.first_hash_open = false;
-            }
-            if (second_ways_available < hash_groups_needed) {
-                big_grp.first.second_hash_open = false;
+        for (auto &grp : order) {
+            for (int i = 0; i < 2; i++) {
+                int ways_available = 0;
+                int select_bits_available = 0;
+                for (int hg = 0; hg < HASH_INDEX_GROUPS; hg++) {
+                     if (!(hash_index_inuse[hg] & (1 << (2 * grp.group + i))))
+                         ways_available++;
+                }
+                for (int sb = 0; sb < HASH_SINGLE_BITS; sb++) {
+                    if (!(hash_single_bit_inuse[sb] & (1 << (2 * grp.group + i))))
+                        select_bits_available++;
+                }
+
+                if (ways_available < hm_reqs.index_groups ||
+                    select_bits_available < hm_reqs.select_bits) {
+                    grp.hash_open[i] = false;
+                }
             }
         }
     }
 
-    for (auto &big_grp : order) {
-        big_grp.first.first_hash_dist = is_group_for_hash_dist(2 * big_grp.big_group);
-        big_grp.first.second_hash_dist = is_group_for_hash_dist(2 * big_grp.big_group + 1);
+    for (auto &grp : order) {
+        for (int i = 0; i < 2; i++) {
+            grp.hash_table_type[i] = is_group_for_hash_dist(2 * grp.group + i);
+        }
     }
 }
 
+/** Determine if a group is either for hash distribution or match only */
 IXBar::grp_use::type_t IXBar::is_group_for_hash_dist(int hash_table) {
     for (int i = 0; i < HASH_GROUPS; i++) {
         bool hash_dist = false;
@@ -356,54 +373,66 @@ IXBar::grp_use::type_t IXBar::is_group_for_hash_dist(int hash_table) {
     return grp_use::FREE;
 }
 
-/* Determines if the byte within the crossbar has enough space within the hash table in
-   order to be placed in that spot */
-bool IXBar::violates_hash_constraints(safe_vector<big_grp_use> &order,
-                                      bool hash_dist, int group, int byte) {
-    if (byte / 8 == 0) {
-        if (!order[group].first.first_hash_open) return true;
-        if (hash_dist) {
-            if (!order[group].first.first_hash_dist_avail())
-                return true;
-        } else {
-            if (order[group].first.first_hash_dist_only())
-                return true;
-        }
+/** Due to the earlier calculations on what 64 bit hash matrices are available, determine
+ *  whether a byte within the input xbar is available.
+ */
+bool IXBar::violates_hash_constraints(safe_vector<grp_use> &order, bool hash_dist, int group,
+        int byte) {
+    if (!order[group].hash_open[byte / 8]) {
+        return true;
     }
-    if (byte / 8 == 1) {
-        if (!order[group].first.second_hash_open) return true;
-        if (hash_dist) {
-            if (!order[group].first.second_hash_dist_avail())
-                return true;
-        } else {
-           if (order[group].first.second_hash_dist_only())
-               return true;
+    if (hash_dist) {
+        if (!order[group].hash_dist_avail(byte / 8)) {
+            return true;
+        }
+    } else {
+        if (order[group].hash_dist_only(byte / 8)) {
+            return true;
         }
     }
     return false;
 }
 
-/* Calculates the bytes per each group that match any currently unallocated */
-void IXBar::calculate_found(safe_vector<IXBar::Use::Byte *> unalloced,
-                            safe_vector<big_grp_use> &order,
+/** Put the grp_use and mid_byte_use vectors in group order */
+void IXBar::reset_orders(safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order) {
+    std::sort(order.begin(), order.end(), [=](const grp_use &a, const grp_use &b) {
+        return a.group < b.group;
+    });
+
+    std::sort(mid_byte_order.begin(), mid_byte_order.end(),
+              [=](const mid_byte_use &a, const mid_byte_use &b) {
+        return a.group < b.group;
+    });
+}
+
+/** Calculates the bytes per each group/midbyte that have previously been allocated by a table,
+ *  and can also be used by this table. 
+ */
+void IXBar::calculate_found(safe_vector<IXBar::Use::Byte *> &unalloced,
+                            safe_vector<grp_use> &order,
+                            safe_vector<mid_byte_use> &mid_byte_order,
                             bool ternary, bool hash_dist, unsigned byte_mask) {
     if (byte_mask != ~0U)
         return;
 
     auto &use = this->use(ternary);
     auto &fields = this->fields(ternary);
-    for (size_t i = 0; i < order.size(); i++) {
-        order[i].first.found.clear();
-        order[i].second.found.clear();
-        order[i].mid_byte_found = false;
+    reset_orders(order, mid_byte_order);
+    for (int i = 0; i < groups(ternary); i++) {
+        order[i].found.clear();
     }
+
+    for (int i = 0; i < mid_bytes(ternary); i++) {
+        mid_byte_order[i].found = false;
+    }
+
     for (auto &need : unalloced) {
         for (auto &p : Values(fields.equal_range(need->field))) {
             if (ternary && p.byte == 5) {
                 if (need->is_range())
                     continue;
                 if (byte_group_use[p.group/2].second == need->lo) {
-                    order[p.group/2].mid_byte_found = true;
+                    mid_byte_order[p.group/2].found = true;
                 }
                 continue;
             }
@@ -414,74 +443,58 @@ void IXBar::calculate_found(safe_vector<IXBar::Use::Byte *> unalloced,
                 }
                 if (!(byte_mask & (1U << p.byte)))
                     continue;
-
-                if (p.group % 2) {
-                    order[p.group/2].second.found[p.byte] = true;
-                } else {
-                    order[p.group/2].first.found[p.byte] = true;
-                }
+                order[p.group].found[p.byte] = true;
             }
         }
     }
 }
 
-/* Calculates the bytes per each group that are currently not used, specifically for the ternary
-   groups */
-void IXBar::calculate_ternary_free(safe_vector<big_grp_use> &order,
-                                   int big_groups, int bytes_per_big_group) {
-    auto &use = this->use(true);
-    for (int grp = 0; grp < big_groups; grp++) {
-        for (int byte = 0; byte < bytes_per_big_group/2; byte++) {
-            if (!use[2*grp][byte].first)
-                order[grp].first.free[byte] = true;
-            if (!use[2*grp + 1][byte].first)
-                order[grp].second.free[byte] = true;
-            if (!byte_group_use[grp].first)
-                order[grp].mid_byte_free = true;
-        }
-    }
-}
-
-/* Calculates the bytes in each group that are currently not used for the SRAM xbar */
-void IXBar::calculate_exact_free(safe_vector<big_grp_use> &order, int big_groups,
-                                 int bytes_per_big_group, bool hash_dist, unsigned byte_mask) {
-    auto &use = this->use(false);
+/** Calculate the empty locations within the groups and midbytes
+ */
+void IXBar::calculate_free(safe_vector<grp_use> &order,
+        safe_vector<mid_byte_use> &mid_byte_order, bool ternary, bool hash_dist,
+        unsigned byte_mask)  {
+    auto &use = this->use(ternary);
+    reset_orders(order, mid_byte_order);
     // FIXME: This is a way too tight constraint in order to get stful.p4 to correctly compile
     // There needs to be some coordination with what is actually needed vs. what is actually
     // available.  One doesn't need the whole byte_mask to be free, in order to allocate it.
     if (byte_mask != ~0U) {
-        for (int grp = 0; grp < big_groups; grp++) {
+        for (int grp = 0; grp < groups(ternary); grp++) {
             bool whole_section_free = true;
-            for (int byte = 0; byte < bytes_per_big_group; byte++) {
+            for (int byte = 0; byte < bytes_per_group(ternary); byte++) {
                 if (!(byte_mask & (1U << byte)))
                     continue;
                 if (use[grp][byte].first)
                     whole_section_free = false;
             }
-            for (int byte = 0; byte < bytes_per_big_group && whole_section_free; byte++) {
+            for (int byte = 0; byte < bytes_per_group(ternary) && whole_section_free; byte++) {
                 if (!(byte_mask & (1U << byte)))
                     continue;
-                order[grp].first.free[byte] = true;
+                order[grp].free[byte] = true;
             }
         }
         return;
     }
 
-    for (int grp = 0; grp < big_groups; grp++) {
-        for (int byte = 0; byte < bytes_per_big_group; byte++) {
-            if (violates_hash_constraints(order, hash_dist, grp, byte))
-                continue;
-            if (!(byte_mask & (1U << byte)))
+    for (int grp = 0; grp < groups(ternary); grp++) {
+        for (int byte = 0; byte < bytes_per_group(ternary); byte++) {
+            if (!ternary && violates_hash_constraints(order, hash_dist, grp, byte))
                 continue;
             if (!use[grp][byte].first)
-                order[grp].first.free[byte] = true;
+                order[grp].free[byte] = true;
         }
+    }
+
+    for (int mid_byte = 0; mid_byte < mid_bytes(ternary); mid_byte++) {
+        if (!byte_group_use[mid_byte].first)
+            mid_byte_order[mid_byte].free = true;
     }
 }
 
-/* Find the unalloced bytes in the current table that are already contained within the xbar
-   group and share those locations.  Works with grp_use only, used for a single TCAM group
-   or an SRAM group */
+/** Find the unalloced bytes in the current table that are already contained within the xbar
+ *  group and share those locations.
+ */
 void IXBar::found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced, bool ternary,
                        int &match_bytes_placed, int search_bus) {
     auto &use = this->use(ternary);
@@ -496,16 +509,14 @@ void IXBar::found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced
         if (match_bytes_placed >= total_match_bytes)
             break;
         int match_bytes_added = need.atcam_double ? 2 : 1;
-        if (match_bytes_placed + match_bytes_added > match_bytes_placed)
+        if (match_bytes_placed + match_bytes_added > total_match_bytes)
             continue;
 
         for (auto &p : Values(fields.equal_range(need.field))) {
-            if (ternary && p.byte == 5)
+            if (ternary && p.byte == TERNARY_BYTES_PER_GROUP)
                 continue;
             if ((grp->group == p.group) && (use[p.group][p.byte].second == need.lo)) {
-                if (!ternary && (p.byte / 8 == 0) && !grp->first_hash_open)
-                    continue;
-                if (!ternary && (p.byte / 8 == 1) && !grp->second_hash_open)
+                if (!ternary && !grp->hash_open[p.byte / 8])
                     continue;
                 allocate_byte(nullptr, unalloced, nullptr, need, p.group, p.byte, i,
                               found_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
@@ -516,44 +527,139 @@ void IXBar::found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced
     LOG4("Total found bytes placed was " << ixbar_bytes_placed << " " << match_bytes_placed);
 }
 
-/* Find the unalloced bytes in the current table that are contained in the grp_use containing two
-   ternary groups and shared these locations.  Currently designed only for the ternary groups */
-void IXBar::found_bytes_big_group(big_grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
-                                 int &match_bytes_placed, int search_bus) {
-    auto &use = this->use(true);
-    auto &fields = this->fields(true);
-    int found_bytes = grp->total_found();
+/** Find the unalloced bytes in the current table that are already contained within the xbar
+ *  midbyte for ternary and share those locations.
+ */
+void IXBar::found_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *> &unalloced,
+    bool ternary, int &match_bytes_placed, int search_bus, bool &version_placed) {
+    auto &fields = this->fields(ternary);
+    if (mb_grp->found == false)
+        return;
+    int found_bytes = 1;
     int ixbar_bytes_placed = 0;
-    int total_match_bytes = TERNARY_BYTES_PER_BIG_GROUP;
+    int total_match_bytes = 1;
+
     for (size_t i = 0; i < unalloced.size(); i++) {
+        auto &need = *(unalloced[i]);
         if (found_bytes == 0)
             break;
         if (match_bytes_placed >= total_match_bytes)
             break;
-        auto &need = *(unalloced[i]);
-        BUG_CHECK(!need.atcam_double, "Cannot place ATCAM resources on the ternary crossbar");
         for (auto &p : Values(fields.equal_range(need.field))) {
-            if (p.byte == 5) {
-                if (need.is_range())
-                    continue;
-                if ((grp->big_group == p.group/2)
-                    && (byte_group_use[p.group/2].second == need.lo)) {
-                    allocate_byte(nullptr, unalloced, nullptr, need, p.group, p.byte, i,
-                                  found_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
-                    break;
-                }
+            if (!(ternary && p.byte == TERNARY_BYTES_PER_GROUP))
                 continue;
-            }
-            if ((grp->big_group == p.group/2) && (use[p.group][p.byte].second == need.lo)) {
+            if ((mb_grp->group == p.group/2) && (byte_group_use[p.group/2].second == need.lo)) {
                 allocate_byte(nullptr, unalloced, nullptr, need, p.group, p.byte, i,
-                              found_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
+                               found_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
+                if (need.bit_use.getslice(4, 4).popcount() == 0 ||
+                    need.bit_use.getslice(0, 4).popcount() > 0)
+                    version_placed = true;
                 break;
             }
         }
     }
-
-    LOG4("Total found bytes placed was " << ixbar_bytes_placed << " " << match_bytes_placed);
+    LOG4("Total found mid bytes placed was " << ixbar_bytes_placed << " " << match_bytes_placed);
 }
+
+/** Fills out all currently unoccupied xbar bytes within a group with bytes from the current table
+ *  following alignment constraints. 
+ */
+void IXBar::free_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
+                      safe_vector<IXBar::Use::Byte *> &alloced,
+                      bool ternary, bool hash_dist, int &match_bytes_placed, int search_bus) {
+    int ixbar_bytes_placed = 0;
+    int free_bytes = grp->free.popcount();
+    int total_match_bytes = ternary ? TERNARY_BYTES_PER_GROUP : EXACT_BYTES_PER_GROUP;
+    int ternary_offset = (grp->group / 2) * TERNARY_BYTES_PER_BIG_GROUP;
+    ternary_offset += (grp->group % 2) * (TERNARY_BYTES_PER_GROUP + 1);
+    int align_offset = ternary ? ternary_offset : 0;
+    int align = align_offset & 3;
+
+    for (size_t i = 0; i < unalloced.size(); i++) {
+        if (free_bytes == 0)
+            break;
+        if (match_bytes_placed >= total_match_bytes)
+            break;
+        auto &need = *(unalloced[i]);
+        int match_bytes_added = need.atcam_double ? 2 : 1;
+        if (match_bytes_placed + match_bytes_added > total_match_bytes)
+            continue;
+
+        int chosen_byte = -1;
+        bool found = false;
+        for (auto byte : grp->free) {
+            if (align_flags[(byte+align) & 3] & need.flags) {
+                 continue;
+            }
+            allocate_byte(grp, unalloced, &alloced, need, grp->group, byte, i, free_bytes,
+                          ixbar_bytes_placed, match_bytes_placed, search_bus);
+            chosen_byte = byte;
+            found = true;
+            break;
+        }
+
+        if (hash_dist && !ternary && found) {
+            grp->hash_table_type[chosen_byte / 8] = grp_use::HASH_DIST;
+        }
+    }
+    LOG4("Total free bytes placed was " << ixbar_bytes_placed << " " << match_bytes_placed);
+}
+
+/** Fills out a currently unoccupied midbyte from the current table, following PHV alignment
+ *  constraints
+ */
+void IXBar::free_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *> &unalloced,
+        safe_vector<Use::Byte *> &alloced, int &match_bytes_placed, int search_bus,
+        bool &version_placed) {
+    if (!mb_grp->free)
+        return;
+
+    int ixbar_bytes_placed = 0;
+    int free_bytes = 1;
+    int align_offset = (mb_grp->group * TERNARY_BYTES_PER_BIG_GROUP)
+                        + TERNARY_BYTES_PER_GROUP;
+    int align = align_offset & 3;
+    int total_match_bytes = 1;
+
+    if (!version_placed) {
+        for (size_t i = 0; i < unalloced.size(); i++) {
+            if (free_bytes == 0)
+                break;
+            if (match_bytes_placed >= total_match_bytes)
+                break;
+            auto &need = *(unalloced[i]);
+            if (need.is_range())
+                continue;
+            if (need.bit_use.getslice(4, 4).popcount() > 0 &&
+                need.bit_use.getslice(0, 4).popcount() > 0) continue;
+            if (align_flags[align & 3] & need.flags) continue;
+            allocate_byte(nullptr, unalloced, &alloced, need, mb_grp->group * 2, 5, i,
+                               free_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
+            mb_grp->free = false;
+            version_placed = true;
+        }
+    }
+
+    for (size_t i = 0; i < unalloced.size(); i++) {
+        if (free_bytes == 0)
+            break;
+        if (match_bytes_placed >= total_match_bytes)
+            break;
+        auto &need = *(unalloced[i]);
+        if (need.is_range())
+            continue;
+        if (align_flags[align & 3] & need.flags) continue;
+        allocate_byte(nullptr, unalloced, &alloced, need, mb_grp->group * 2,
+                      bytes_per_group(true), i, free_bytes, ixbar_bytes_placed,
+                      match_bytes_placed, search_bus);
+        mb_grp->free = false;
+        if (need.bit_use.getslice(4, 4).popcount() == 0 ||
+            need.bit_use.getslice(0, 4).popcount() > 0)
+            version_placed = true;
+    }
+    LOG4("Total free bytes placed was " << ixbar_bytes_placed << " " << match_bytes_placed);
+}
+
 
 /** Allocate all fields within a IXBar::Byte object given its selection throughout the
  *  algorithm.  If it is not shared, move the byte to the alloced list to be filled in
@@ -581,126 +687,6 @@ void IXBar::allocate_byte(grp_use *grp, safe_vector<Use::Byte *> &unalloced,
         match_bytes_placed++;
 }
 
-
-/* Fills out all currently unoccupied xbar bytes within a group with bytes from the current table
-   following alignment constraints.  Works for single TCAM groups or SRAM groups */
-void IXBar::free_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
-                      safe_vector<IXBar::Use::Byte *> &alloced,
-                      bool ternary, bool hash_dist, int &match_bytes_placed, int search_bus) {
-    int ixbar_bytes_placed = 0;
-    int free_bytes = grp->free.popcount();
-    int total_match_bytes = ternary ? TERNARY_BYTES_PER_GROUP : EXACT_BYTES_PER_GROUP;
-
-    for (size_t i = 0; i < unalloced.size(); i++) {
-        if (free_bytes == 0)
-            break;
-        if (match_bytes_placed >= total_match_bytes)
-            break;
-        auto &need = *(unalloced[i]);
-        int match_bytes_added = need.atcam_double ? 2 : 1;
-        if (match_bytes_placed + match_bytes_added > total_match_bytes)
-            continue;
-
-        int align = ternary ? ((grp->group * 11 + 1)/2) & 3 : 0;
-        int chosen_byte = -1;
-        bool found = false;
-        for (auto byte : grp->free) {
-            if (align_flags[(byte+align) & 3] & need.flags) {
-                 continue;
-            }
-            allocate_byte(grp, unalloced, &alloced, need, grp->group, byte, i, free_bytes,
-                          ixbar_bytes_placed, match_bytes_placed, search_bus);
-            chosen_byte = byte;
-            found = true;
-            break;
-        }
-
-        if (hash_dist && !ternary && found) {
-            if (chosen_byte < 8) {
-                grp->first_hash_dist = grp_use::HASH_DIST;
-            } else {
-                grp->second_hash_dist = grp_use::HASH_DIST;
-            }
-        }
-    }
-    LOG4("Total free bytes placed was " << ixbar_bytes_placed << " " << match_bytes_placed);
-}
-
-/* Fills out all currently unoccupied xbar bytes within a group with bytes from the current table
-   following alignment constraints.  Specifically designed to handle the allocation of a large
-   ternary group */
-void IXBar::free_bytes_big_group(big_grp_use *grp,
-                                safe_vector<IXBar::Use::Byte*> &unalloced,
-                                safe_vector<IXBar::Use::Byte *> &alloced,
-                                bool &version_placed, int &match_bytes_placed, int search_bus) {
-    int ixbar_bytes_placed = 0;
-    int free_bytes = grp->total_free();
-    int align = (grp->big_group * (2 * TERNARY_BYTES_PER_GROUP + 1)) & 3;
-    int total_match_bytes = TERNARY_BYTES_PER_BIG_GROUP;
-
-    /* Version bit information has to be at the midbyte boundary.  However, if there is a hole
-       in the bits, then the code can go there. */
-    if (!version_placed) {
-        for (size_t i = 0; i < unalloced.size(); i++) {
-            if (free_bytes == 0)
-                break;
-            auto &need = *(unalloced[i]);
-            if (need.bit_use.getslice(4, 4).popcount() > 0 &&
-                need.bit_use.getslice(0, 4).popcount() > 0) continue;
-            if (align_flags[(TERNARY_BYTES_PER_GROUP + align) & 3] & need.flags) continue;
-            allocate_byte(nullptr, unalloced, &alloced, need, grp->big_group * 2, 5, i,
-                               free_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
-            grp->mid_byte_free = false;
-            version_placed = true;
-            break;
-        }
-    }
-
-
-    for (size_t i = 0; i < unalloced.size(); i++) {
-        bool found = false;
-        if (free_bytes == 0)
-            break;
-        if (match_bytes_placed >= total_match_bytes)
-            break;
-        auto &need = *(unalloced[i]);
-        BUG_CHECK(!need.atcam_double, "Should not be allocating algorithmic TCAM bytes to the "
-                  "ternary crossbar");
-
-        /* Allocate free bytes within the first ternary group */
-        for (auto byte : grp->first.free) {
-            if (align_flags[(byte + align) & 3] & need.flags) continue;
-            allocate_byte(&(grp->first), unalloced, &alloced, need, grp->big_group * 2, byte, i,
-                          free_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
-            found = true;
-            break;
-        }
-        if (found)
-            continue;
-
-        /* Allocate free bytes within the second ternary group */
-        for (auto byte : grp->second.free) {
-            if (align_flags[(byte + TERNARY_BYTES_PER_GROUP + 1 + align) & 3] & need.flags)
-                continue;
-            allocate_byte(&(grp->second), unalloced, &alloced, need, grp->big_group * 2 + 1, byte,
-                          i, free_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
-            found = true;
-            break;
-        }
-
-        if (found)
-            continue;
-
-        /* Allocate middle bytes of the ternary big group */
-        if (grp->mid_byte_free && !(need.is_range())) {
-            if (align_flags[(TERNARY_BYTES_PER_GROUP + align) & 3] & need.flags) continue;
-            allocate_byte(nullptr, unalloced, &alloced, need, grp->big_group * 2, 5, i, free_bytes,
-                          ixbar_bytes_placed, match_bytes_placed, search_bus);
-            grp->mid_byte_free = false;
-        }
-    }
-}
-
 /* When all bytes of the current table have been given a placement, this function fills out
    the xbars use for later record keeping and checks */
 void IXBar::fill_out_use(safe_vector<IXBar::Use::Byte *> &alloced, bool ternary) {
@@ -716,190 +702,34 @@ void IXBar::fill_out_use(safe_vector<IXBar::Use::Byte *> &alloced, bool ternary)
     }
 }
 
-/* This allocation scheme is used when more than one group on either the TCAM or SRAM xbar is
-   required.  The sorting algorithm is a best fit while still shrinking the allocation so that one
-   less xbar group was required.  */
-bool IXBar::big_grp_alloc(bool ternary, bool second_try,
-                          safe_vector<IXBar::Use::Byte *> &unalloced,
-                          safe_vector<IXBar::Use::Byte *> &alloced,
-                          safe_vector<big_grp_use> &order,
-                          int big_groups_needed, int &total_bytes_needed,
-                          int bytes_per_big_group, int &search_bus,
-                          bool hash_dist, unsigned byte_mask) {
-    bool version_placed = false;
-    int big_groups_max = 1;
-    while (big_groups_needed > big_groups_max) {
-        int reduced_bytes_needed = total_bytes_needed % bytes_per_big_group;
-        if (reduced_bytes_needed == 0)
-            reduced_bytes_needed += bytes_per_big_group;
-
-        /* Find the best group that still lowers the total number of groups */
-        std::sort(order.begin(), order.end(), [=](const big_grp_use &a, const big_grp_use &b) {
-            if (!second_try && (a.total_found() + a.total_free() < reduced_bytes_needed))
-                return false;
-            if (!second_try && (b.total_found() + b.total_free() < reduced_bytes_needed))
-                return true;
-
-            int t;
-            if (!second_try && (t = a.total_found() - b.total_found()) != 0) return t > 0;
-
-            if ((t = a.total_free() - b.total_free()) != 0) return t > 0;
-            return a.big_group < b.big_group; });
-
-        int match_bytes_placed = 0;
-        if (ternary) {
-            LOG4("TCAM big group selected was " << order[0].big_group);
-            found_bytes_big_group(&order[0], unalloced, match_bytes_placed, search_bus);
-            free_bytes_big_group(&order[0], unalloced, alloced, version_placed,
-                                 match_bytes_placed, search_bus);
-        } else {
-            LOG4("SRAM group selected was " << order[0].first.group);
-            found_bytes(&order[0].first, unalloced, ternary, match_bytes_placed, search_bus);
-            free_bytes(&order[0].first, unalloced, alloced, ternary, hash_dist,
-                       match_bytes_placed, search_bus);
-        }
-
-        /* No bytes placed in the xbar.  You're finished */
-        if (match_bytes_placed == 0) {
-            return false;
-        }
-        total_bytes_needed -= match_bytes_placed;
-        search_bus++;
-        /* FIXME: Need some calculations for 88 bit multiples */
-        big_groups_needed = (total_bytes_needed + bytes_per_big_group - 1)/bytes_per_big_group;
-        calculate_found(unalloced, order, ternary, hash_dist, byte_mask);
-        if (ternary && version_placed)
-            big_groups_max = 0;
+/** Given whether the input xbar is either for the TCAM or the SRAM, create and size the order
+ *  and midbyte order accordingly
+ */
+void IXBar::initialize_orders(safe_vector<grp_use> &order,
+        safe_vector<mid_byte_use> &mid_byte_order, bool ternary) {
+    order.clear();
+    mid_byte_order.clear();
+    for (int group = 0; group < groups(ternary); group++) {
+        order.emplace_back(group);
     }
 
-
-    return true;
-}
-
-/* This allocation scheme is used when only one SRAM xbar or 2 TCAM xbars are needed, as the middle
-   byte is no longer available to be used by the TCAM xbar due to version restrictions. */
-bool IXBar::small_grp_alloc(bool ternary, bool second_try,
-                            safe_vector<IXBar::Use::Byte *> &unalloced,
-                            safe_vector<IXBar::Use::Byte *> &alloced,
-                            safe_vector<grp_use *> &small_order,
-                            safe_vector<big_grp_use> &order,
-                            int &total_bytes_needed, int &search_bus, bool hash_dist,
-                            unsigned byte_mask) {
-    while (total_bytes_needed != 0) {
-        int bytes_needed = total_bytes_needed;
-        if (ternary && bytes_needed > 5) {
-            bytes_needed /= 2;
-        }
-        // Find the best fit for the group that still fits within only one group
-        std::sort(small_order.begin(), small_order.end(), [=](const grp_use *ap,
-                  const grp_use *bp) {
-            if (!second_try && (ap->free.popcount() + ap->found.popcount() < bytes_needed))
-                return false;
-            if (!second_try && (bp->free.popcount() + bp->found.popcount() < bytes_needed))
-                return true;
-            int t;
-            if (!second_try && (t = ap->found.popcount() - bp->found.popcount()) != 0)
-                return t > 0;
-
-            int r = total_bytes_needed - ap->found.popcount();
-            int s = total_bytes_needed - bp->found.popcount();
-            if (!second_try && (t = (bp->free.popcount() - s) - (ap->free.popcount() - r)) != 0)
-                return t > 0;
-            if ((t = ap->free.popcount() - bp->free.popcount()) != 0) return t > 0;
-            return (ap->group < bp->group);
-        });
-
-        int match_bytes_placed = 0;
-        if (ternary)
-            LOG4("TCAM small group selected was " << small_order[0]->group);
-        else
-            LOG4("SRAM group selected was " << small_order[0]->group);
-
-        found_bytes(small_order[0], unalloced, ternary, match_bytes_placed, search_bus);
-        free_bytes(small_order[0], unalloced, alloced, ternary, hash_dist, match_bytes_placed,
-                   search_bus);
-        /* No bytes placed in the xbar.  You're finished */
-        if (match_bytes_placed == 0) {
-            return false;
-        }
-        total_bytes_needed -= match_bytes_placed;
-        calculate_found(unalloced, order, ternary, hash_dist, byte_mask);
+    for (int mid_byte = 0; mid_byte < mid_bytes(ternary); mid_byte++) {
+        mid_byte_order.emplace_back(mid_byte);
     }
-    search_bus++;
-    return true;
 }
 
-/* The algorithm for allocation of bytes from the table on to the input xbar.  Both for
-   TCAM and SRAM xbar.  Overall algorithm looks at the size of the allocation.  If the allocation
-   spans a group, tries to minimize total number of groups while finding the best groups to fill.
-   If the allocation is less than a group, tries to find the best fit
-
-   ARGUMENTS:
-     alloc_use  vector of Byte objects that need to be allocated on the ixbar
-     ternary    true for ternary ixbar, false for exact
-     second_try true for the second attempt, after a fist attempt minimizing the overhead failed
-     alloced    output -- the Byte objects that were successfully allocated
-     hash_groups_needed
-                how many hash groups are needed for has tables
-     hash_dist  true if this is for a hash_dist config
-     byte_mask  which bytes in ixbar groups to use -- default mask of ~0 means use any bytes
-*/
-bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
-                       bool ternary, bool second_try,
-                       safe_vector<IXBar::Use::Byte *> &alloced,
-                       int hash_groups_needed,
-                       bool hash_dist, unsigned byte_mask) {
-    /* Initial sizing calculations*/
-    int groups = ternary ? TERNARY_GROUPS : EXACT_GROUPS;
-    int big_groups = ternary ? TERNARY_GROUPS/2 : EXACT_GROUPS;
-    int bytes_per_big_group = ternary ? 11 : EXACT_BYTES_PER_GROUP;
-
-    int total_bytes_needed = 0;
+/** Clear the alloced vector, reinitialize all bytes to unallocated, and reset unalloced
+ */
+void IXBar::setup_byte_vectors(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
+        safe_vector<IXBar::Use::Byte *> &unalloced, safe_vector<IXBar::Use::Byte *> &alloced,
+        safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
+        hash_matrix_reqs &hm_reqs, unsigned byte_mask) {
+    unalloced.clear();
+    alloced.clear();
     for (auto byte : alloc_use) {
-        if (byte.atcam_double)
-            total_bytes_needed += 2;
-        else
-            total_bytes_needed++;
+        byte.unallocate();
     }
-    int big_groups_needed = (total_bytes_needed + bytes_per_big_group - 1)/bytes_per_big_group;
 
-
-    int groups_needed;
-    if (ternary) {
-        groups_needed = 2 * big_groups_needed;
-        if (total_bytes_needed - big_groups_needed * bytes_per_big_group <= 5)
-            groups_needed -= 1;
-    } else {
-        groups_needed = big_groups_needed;
-    }
-    if (big_groups_needed > big_groups || groups_needed > groups)
-        return false;
-
-    /* Initialize all required data structures */
-    safe_vector<big_grp_use> order(big_groups);
-    safe_vector<grp_use *> small_order;
-    for (int i = 0; i < big_groups; i++) {
-        order[i].big_group = i;
-        if (ternary) {
-            order[i].first.group = i*2;
-            order[i].second.group = 2*i+1;
-        } else {
-            order[i].first.group = i;
-            order[i].second.group = i;
-        }
-        order[i].mid_byte_found = false;
-        order[i].mid_byte_free = false;
-    }
-    for (int i = 0; i < big_groups; i++) {
-        small_order.push_back(&order[i].first);
-        if (ternary)
-            small_order.push_back(&order[i].second);
-    }
-    safe_vector<IXBar::Use::Byte *> unalloced;
-
-    /* Try to place most constrained to least constrained bytes, unless the ordering of the bytes
-     * matters, as in the case of any bytes headed to the meter ALU and cannot be swizzled
-     */
     if (byte_mask == ~0U) {
         std::sort(alloc_use.begin(), alloc_use.end(),
                   [=](const Use::Byte &a, const Use::Byte &b) {
@@ -914,50 +744,210 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
         unalloced.push_back(&need);
     }
     if (!ternary) {
-        calculate_available_groups(order, hash_groups_needed, hash_dist);
+        calculate_available_groups(order, hm_reqs);
     }
-
 
     /* Initial found and free calculations */
-    calculate_found(unalloced, order, ternary, hash_dist, byte_mask);
+    calculate_found(unalloced, order, mid_byte_order, ternary, hm_reqs.hash_dist, byte_mask);
+    calculate_free(order, mid_byte_order, ternary, hm_reqs.hash_dist, byte_mask);
+}
 
-    if (ternary) {
-        calculate_ternary_free(order, big_groups, bytes_per_big_group);
-    } else {
-        calculate_exact_free(order, big_groups, bytes_per_big_group, hash_dist, byte_mask);
+void IXBar::print_groups(safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
+        bool ternary) {
+    for (int grp = 0; grp < groups(ternary); grp++) {
+        LOG3("  Group " << order[grp]);
+        if (ternary && (grp % 2) == 0)
+            LOG3("  Mid byte " << mid_byte_order[grp / 2]);
     }
+}
 
-    if (ternary) {
-        for (int grp = 0; grp < big_groups; grp++)
-            LOG3("Big Group " << order[grp]);
-    } else {
-        for (int grp = 0; grp < groups; grp++)
-            LOG3("Small Group " << *(small_order[grp]));
+void IXBar::allocate_mid_bytes(safe_vector<IXBar::Use::Byte *> &unalloced,
+        safe_vector<IXBar::Use::Byte *> &alloced, bool ternary, bool prefer_found,
+        safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
+        int mid_bytes_needed, int &bytes_to_allocate, bool &version_placed) {
+    for (int search_bus = 0; search_bus < mid_bytes_needed; search_bus++) {
+        if (unalloced.size() == 0)
+            return;
+        std::sort(mid_byte_order.begin(), mid_byte_order.end(),
+                  [=](const mid_byte_use &a, const mid_byte_use &b) {
+            if (!a.attempted && b.attempted)
+                return true;
+            if (b.attempted && !a.attempted)
+                return false;
+
+            if (prefer_found) {
+               if (a.found && !b.found)
+                   return true;
+               if (b.found && !a.found)
+                   return false;
+            }
+
+            if (a.free && !b.free)
+                return true;
+            if (b.free && !a.free)
+                return false;
+
+            return a.group < b.group;
+        });
+
+        int match_bytes_placed = 0;
+        LOG4("TCAM mid byte selected was " << mid_byte_order[0].group);
+        found_mid_bytes(&mid_byte_order[0], unalloced, ternary, match_bytes_placed, search_bus,
+                        version_placed);
+        free_mid_bytes(&mid_byte_order[0], unalloced, alloced, match_bytes_placed, search_bus,
+                       version_placed);
+        mid_byte_order[0].attempted = true;
+        bytes_to_allocate -= match_bytes_placed;
+        calculate_found(unalloced, order, mid_byte_order, ternary, false, ~0U);
     }
+}
 
-    int search_bus = 0;
+void IXBar::allocate_groups(safe_vector<IXBar::Use::Byte *> &unalloced,
+        safe_vector<IXBar::Use::Byte *> &alloced, bool ternary, bool prefer_found,
+        safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
+        int &bytes_to_allocate, int groups_needed, bool hash_dist, unsigned byte_mask) {
+    for (int search_bus = 0; search_bus < groups_needed; search_bus++) {
+        if (unalloced.size() == 0)
+            return;
 
-    /* While more than one individual group is necessary for the number of unallocated bytes */
-    if (!big_grp_alloc(ternary, second_try, unalloced, alloced, order, big_groups_needed,
-                       total_bytes_needed, bytes_per_big_group, search_bus, hash_dist,
-                       byte_mask)) {
+        int match_bytes_placed = 0;
+        int max_possible_bytes = (groups_needed - search_bus) * bytes_per_group(ternary);
+        int leeway = std::max(max_possible_bytes - bytes_to_allocate, 0);
+        int required_allocation_bytes = std::max(bytes_per_group(ternary) - leeway, 0);
+
+        std::sort(order.begin(), order.end(), [=](const grp_use &a, const grp_use &b) {
+            if (!a.attempted && b.attempted)
+                return true;
+            if (b.attempted && !a.attempted)
+                return false;
+
+            bool a_candidate = a.total_avail() > required_allocation_bytes;
+            bool b_candidate = b.total_avail() > required_allocation_bytes;
+
+            if (a_candidate && !b_candidate)
+                return true;
+            if (b_candidate && !a_candidate)
+                return false;
+
+            int t;
+            if (prefer_found) {
+               if ((t = a.found.popcount() - b.found.popcount()) != 0)
+                   return t > 0;
+            }
+
+            if ((t = a.free.popcount() - b.free.popcount()) != 0)
+                return t > 0;
+            return a.group < b.group;
+        });
+
+        LOG4("Group selected was " << order[0].group << " bytes left " << unalloced.size());
+        found_bytes(&order[0], unalloced, ternary, match_bytes_placed, search_bus);
+        free_bytes(&order[0], unalloced, alloced, ternary, hash_dist, match_bytes_placed,
+                   search_bus);
+        order[0].attempted = true;
+        bytes_to_allocate -= match_bytes_placed;
+        calculate_found(unalloced, order, mid_byte_order, ternary, hash_dist, byte_mask);
+    }
+}
+
+bool IXBar::version_placeable(bool version_placed, int mid_bytes_needed, int groups_needed) {
+    if (mid_bytes_needed == groups_needed && !version_placed)
         return false;
-    }
-
-    // Only one large group at most is necessary
-    if (!small_grp_alloc(ternary, second_try, unalloced, alloced, small_order, order,
-                         total_bytes_needed, search_bus, hash_dist, byte_mask)) {
-         return false; }
-
-    if (ternary) {
-        for (int grp = 0; grp < big_groups; grp++)
-            LOG3("Big Group " << order[grp]);
-    } else {
-        for (int grp = 0; grp < groups; grp++)
-            LOG3("Small Group " << *(small_order[grp]));
-    }
     return true;
 }
+
+
+/** The algorithm for the allocation of bytes from the table to the input xbar, both for the
+ *  TCAM and SRAM xbar.  The input xbar is defined in section 6.1.8 Match Input Xbar of the
+ *  uArch.
+ *
+ *  The input xbar for SRAM is 128 bytes, divided into 8 sections of 16 bytes (128 bits).  As
+ *  defined in section 6.2.3 Exact Match Row Vertical/Horizontal (VH) Xbars, any of the 8
+ *  sections can go to any search bus within the match array.  However, a search bus can
+ *  only input one of input xbar groups.  Thus to minimize the width of the match, the algorithm
+ *  must minimize the number of input xbar groups needed.  Keep in mind that a search bus is
+ *  128 bits as well, so that only one search bus is need for an entire input xbar group.
+ *
+ *  The input xbar for TCAM is 66 bytes, divided into 6 groups of 11 bytes.  These groups of 11
+ *  bytes can be thought of as a group of 5 bytes, a mid byte and a final group of 5 bytes.
+ *  The reason for this odd structure is described in section 6.3.5 TCAM Matching Setup.  Each
+ *  TCAM is 44 bits.  The lower 40 bits of the TCAM can pull from any 5 byte group, and the
+ *  upper 4 bits can pull from any nibble of a midbyte.
+ *
+ *  An input xbar groups has the capability to be shared between multiple tables.  Say for
+ *  instance two separate ternary tables include a 40 bit field, and were to be placed in the
+ *  same stage.  If that 40 bit field occupied a single TCAM input xbar group, then two separate
+ *  TCAMs, one for each table can pull from the same input xbar groups.
+ *
+ *  The algorithm works as follows:
+ *    - Calculate the minimum number of midbytes/groups needed for a particular table
+ *    - Run potentially two versions of a fitting algorithm.
+ *      * On the first iteration, prefer groups that have capabilities to share input xbar bytes. 
+ *      * If, when found groups were preferred, the bytes did not fit within the alloted
+ *        amount of space, prefer input xbar groups with the most open space and just try to
+ *        pack.
+ *      * If neither fit, then increase the minimum amount groups/midbytes
+ *
+ * ARGUMENTS:
+ *   alloc_use  vector of Byte objects that need to be allocated on the ixbar
+ *   ternary    true for ternary ixbar, false for exact
+ *   alloced    output -- the Byte objects that were successfully allocated, as we want to fill
+ *              out the values after we know the bytes don't break any hash constraints 
+ *   hm_reqs    how much space, if any is required to be reserved on the hash matrix
+ *   byte_mask  which bytes in ixbar groups to use -- default mask of ~0 means use any bytes
+ */
+bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
+                      safe_vector<IXBar::Use::Byte *> &alloced, hash_matrix_reqs &hm_reqs,
+                      unsigned byte_mask) {
+    int total_bytes_needed = 0;
+    int groups_needed = 0;
+    int mid_bytes_needed = 0;
+
+    safe_vector<grp_use> small_order;
+    bool allocated = false;
+    safe_vector<grp_use> order;
+    safe_vector<mid_byte_use> mid_byte_order;
+    safe_vector<IXBar::Use::Byte *> unalloced;
+    bool first_time = true;
+
+    do {
+        bool possible = calculate_sizes(alloc_use, ternary, total_bytes_needed, groups_needed,
+                                        mid_bytes_needed);
+        if (!possible)
+            break;
+        for (int i = 0; i < 2 && !allocated; i++) {
+            bool version_placed = false;
+            bool prefer_found = i == 0;
+            initialize_orders(order, mid_byte_order, ternary);
+            setup_byte_vectors(alloc_use, ternary, unalloced, alloced, order, mid_byte_order,
+                               hm_reqs, byte_mask);
+            if (first_time) {
+                LOG3("Pre allocation groups:");
+                print_groups(order, mid_byte_order, ternary);
+            }
+            int bytes_to_allocate = total_bytes_needed;
+            if (ternary) {
+                allocate_mid_bytes(unalloced, alloced, ternary, prefer_found, order,
+                                   mid_byte_order, mid_bytes_needed, bytes_to_allocate,
+                                   version_placed);
+            }
+            LOG3("Allocation post midbyte ");
+                print_groups(order, mid_byte_order, ternary);
+            allocate_groups(unalloced, alloced, ternary, prefer_found, order, mid_byte_order,
+                            bytes_to_allocate, groups_needed, hm_reqs.hash_dist, byte_mask);
+            allocated = unalloced.size() == 0;
+            if (ternary)
+                allocated &= version_placeable(version_placed, mid_bytes_needed, groups_needed);
+        }
+    } while (allocated == false);
+
+    if (allocated) {
+        LOG3("Post allocation groups:");
+        print_groups(order, mid_byte_order, ternary);
+    }
+    return allocated;
+}
+
 
 
 int need_align_flags[4][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
@@ -1021,6 +1011,21 @@ void IXBar::layout_option_calculation(const LayoutOption *layout_option,
     } else {
         last = layout_option->way_sizes.size();
     }
+}
+
+IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
+        size_t start, size_t last, bool ternary) {
+    if (ternary) {
+        return hash_matrix_reqs();
+    }
+
+    int bits_required = 0;
+    for (size_t index = start; index < last; index++) {
+        bits_required += ceil_log2(lo->way_sizes[index]);
+    }
+    bits_required += std::min(bits_required, HASH_SINGLE_BITS);
+    int groups_required = std::min(last - start, static_cast<size_t>(IXBar::HASH_INDEX_GROUPS));
+    return hash_matrix_reqs(groups_required, bits_required, false);
 }
 
 /* This is for adding fields to be allocated in the ixbar allocation scheme.  Used by
@@ -1102,7 +1107,7 @@ class FindFieldsToAlloc : public Inspector {
 bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
                        const PhvInfo &phv, Use &alloc,
                        safe_vector<IXBar::Use::Byte *> &alloced,
-                       bool second_try, int hash_groups) {
+                       hash_matrix_reqs &hm_reqs) {
     alloc.ternary = ternary;
     if (tbl->match_key.empty()) return true;
     std::map<cstring, bitvec> fields_needed;
@@ -1113,7 +1118,7 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
     }
     LOG3("need " << alloc.use.size() << " bytes for table " << tbl->name);
 
-    bool rv = find_alloc(alloc.use, ternary, second_try, alloced, hash_groups);
+    bool rv = find_alloc(alloc.use, ternary, alloced, hm_reqs);
     if (!ternary && !tbl->layout.atcam && rv)
         alloc.compute_hash_tables();
     if (!rv) alloc.clear();
@@ -1193,6 +1198,7 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
             free_groups++;
         }
     }
+
     if (free_groups == 0) {
         alloc.clear();
         return false;
@@ -1208,10 +1214,12 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
             way_bits++;
         }
     }
+
     if (way_bits == 0 && way_bits_needed > 0) {
         alloc.clear();
         return false;
     }
+
     // Currently should  never return false
     for (size_t index = start; index < last; index++) {
         if (!allocHashWay(tbl, layout_option, index, start, alloc)) {
@@ -1326,6 +1334,15 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     Use alloc;
     std::map<cstring, bitvec> fields_needed;
     safe_vector<Use::Byte *> alloced;
+    hash_matrix_reqs hm_reqs;
+
+    if (second_try) {
+        hm_reqs = hash_matrix_reqs::max(false);
+    } else {
+        hm_reqs.index_groups = 1;
+        hm_reqs.select_bits = std::max(tbl->layout.partition_bits - TableFormat::RAM_GHOST_BITS, 0);
+    }
+
     for (auto ixbar_read : tbl->match_key) {
         if (ixbar_read->match_type.name == "selector") continue;
         field_management(ixbar_read, alloc, fields_needed, false, tbl->name, phv,
@@ -1333,7 +1350,7 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     }
     BUG_CHECK(alloc.use.size() > 0, "No partition index found");
 
-    bool rv = find_alloc(alloc.use, false, second_try, alloced, 1);
+    bool rv = find_alloc(alloc.use, false, alloced, hm_reqs);
     unsigned hash_table_input = 0;
     if (!rv) {
         alloc.clear();
@@ -1402,6 +1419,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
                          bool second_try) {
     alloc.gw_search_bus = false; alloc.gw_hash_group = false;
     alloc.gw_search_bus_bytes = 0;
+    int hash_bus_bits = 0;
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
     if (collect.info.empty()) return true;
@@ -1415,13 +1433,22 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         } else if (info.second.need_range) {
             flags |= IXBar::Use::NeedRange;
             alloc.gw_hash_group = true;
+            hash_bus_bits += info.first->size;
         } else {
             alloc.gw_search_bus = true;
             alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
         }
         add_use(alloc, info.first, &info.second.bits, flags, NO_BYTE_TYPE); }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;
-    if (!find_alloc(alloc.use, false, second_try, xbar_alloced, 0)) {
+
+    hash_matrix_reqs hm_reqs;
+    if (second_try) {
+        hm_reqs.select_bits = HASH_SINGLE_BITS;
+    } else {
+        hm_reqs.select_bits = hash_bus_bits;
+    }
+
+    if (!find_alloc(alloc.use, false, xbar_alloced, hm_reqs)) {
         alloc.clear();
         return false; }
     if (!collect.compute_offsets()) {
@@ -1477,7 +1504,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
  *  even if the selector is only on fair mode, rather than resilient
  */
 bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl,
-                          const PhvInfo &phv, Use &alloc, bool second_try, cstring name) {
+                          const PhvInfo &phv, Use &alloc, cstring name) {
     safe_vector<IXBar::Use::Byte *>  alloced;
     std::map<cstring, bitvec>        fields_needed;
     for (auto ixbar_read : tbl->match_key) {
@@ -1486,7 +1513,8 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     }
 
     LOG3("need " << alloc.use.size() << " bytes for table " << tbl->name);
-    bool rv = find_alloc(alloc.use, false, second_try, alloced, HASH_INDEX_GROUPS);
+    hash_matrix_reqs hm_reqs = hash_matrix_reqs::max(false);
+    bool rv = find_alloc(alloc.use, false, alloced, hm_reqs);
     unsigned hash_table_input = 0;
     if (rv)
          hash_table_input = alloc.compute_hash_tables();
@@ -1541,7 +1569,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
 /** Allocation of the meter input xbar if it is an LPF or WRED.  On Tofino, specifically have
  *  to reserve bytes 8-11 of a specific input xbar group currently
  */
-bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const PhvInfo &phv, Use &alloc, bool second_try) {
+bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const PhvInfo &phv, Use &alloc) {
     if (!mtr->alu_output())
         return true;
     if (mtr->input == nullptr)
@@ -1559,7 +1587,9 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const PhvInfo &phv, Use &alloc
             add_use(alloc, finfo, &bits, 0, IXBar::NO_BYTE_TYPE);
         }
     }
-    if (!find_alloc(alloc.use, false, second_try, alloced, 0, false, byte_mask)) {
+
+    hash_matrix_reqs hm_reqs;
+    if (!find_alloc(alloc.use, false, alloced, hm_reqs, byte_mask)) {
         alloc.clear();
         return false;
     }
@@ -1567,11 +1597,10 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const PhvInfo &phv, Use &alloc
     return true;
 }
 
-bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
-                          const PhvInfo &phv, Use &alloc, bool second_try) {
+bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const PhvInfo &phv, Use &alloc) {
     std::set <cstring> fields_needed;
     unsigned extra_align = 0;
-    if (!second_try && salu->width > 1) {
+    if (salu->width > 1) {
         /* To use the stateful_meter_alu_data path, any fields read must be aligned
          * properly on the ixbar for the size of the stateful alu.  We only do this
          * on the first try, since if it's not aligned, we can still make it work, we
@@ -1592,7 +1621,9 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
         // can't possibly fit
         return false; }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;
-    if (!find_alloc(alloc.use, false, second_try, xbar_alloced, 0, false, byte_mask)) {
+
+    hash_matrix_reqs hm_reqs;
+    if (!find_alloc(alloc.use, false, xbar_alloced, hm_reqs, byte_mask)) {
         alloc.clear();
         return false; }
     // FIXME -- need to allocate hash table space if it turns out we need it
@@ -1739,8 +1770,16 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashD
 
     field_management(hd->field_list, alloc, fields_needed, true, name, phv);
     int hash_slices_needed = (hd->bit_width + HASH_DIST_BITS - 1) / hd->bit_width;
+    hash_matrix_reqs hm_reqs;
 
-    bool rv = find_alloc(alloc.use, false, second_try, alloced, hash_slices_needed, true);
+    if (second_try) {
+        hm_reqs = hash_matrix_reqs::max(true);
+    } else {
+        hm_reqs.index_groups = hash_slices_needed;
+        hm_reqs.hash_dist = true;
+    }
+
+    bool rv = find_alloc(alloc.use, false, alloced, hm_reqs);
     if (!rv) {
         alloc.use.clear();
         alloced.clear();
@@ -1976,10 +2015,12 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
             Use next_alloc;
             layout_option_calculation(lo, start, last);
             /* Essentially a calculation of how much space is potentially available */
-            int hash_groups = (last - start > 4) ? 4 : last - start;
-            if (!(allocMatch(ternary, tbl, phv, next_alloc, alloced, false, hash_groups)
+            auto hm_reqs = match_hash_reqs(lo, start, last, ternary);
+            auto max_hm_reqs = hash_matrix_reqs::max(false, ternary);
+
+            if (!(allocMatch(ternary, tbl, phv, next_alloc, alloced, hm_reqs)
                 && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last))
-                && !(allocMatch(ternary, tbl, phv, next_alloc, alloced, true, hash_groups)
+                && !(allocMatch(ternary, tbl, phv, next_alloc, alloced, max_hm_reqs)
                 && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last))) {
                 next_alloc.clear();
                 alloc.match_ixbar.clear();
@@ -1997,8 +2038,8 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         }
     } else if (tbl->layout.atcam) {
         safe_vector<IXBar::Use::Byte *> alloced;
-        if (!allocMatch(false, tbl, phv, alloc.match_ixbar, alloced, false, 0)
-            && !allocMatch(false, tbl, phv, alloc.match_ixbar, alloced, true, 0)) {
+        hash_matrix_reqs hm_reqs;
+        if (!allocMatch(false, tbl, phv, alloc.match_ixbar, alloced, hm_reqs)) {
             alloc.match_ixbar.clear();
             alloced.clear();
             return false;
@@ -2017,22 +2058,17 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         auto at_mem = back_at->attached;
         if (auto as = at_mem->to<IR::MAU::Selector>()) {
             if (!attached_tables.count(as) &&
-                !allocSelector(as, tbl, phv, alloc.selector_ixbar, false, tbl->name) &&
-                !allocSelector(as, tbl, phv, alloc.selector_ixbar, true, tbl->name)) {
+                !allocSelector(as, tbl, phv, alloc.selector_ixbar, tbl->name)) {
                 alloc.clear_ixbar();
                 return false; } }
         if (auto mtr = at_mem->to<IR::MAU::Meter>()) {
-            if (!attached_tables.count(mtr) &&
-                !allocMeter(mtr, phv, alloc.meter_ixbar, false) &&
-                !allocMeter(mtr, phv, alloc.meter_ixbar, true)) {
+            if (!attached_tables.count(mtr) && !allocMeter(mtr, phv, alloc.meter_ixbar)) {
                 alloc.clear_ixbar();
                 return false;
             }
         }
         if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
-            if (!attached_tables.count(salu) &&
-                !allocStateful(salu, phv, alloc.salu_ixbar, false) &&
-                !allocStateful(salu, phv, alloc.salu_ixbar, true)) {
+            if (!attached_tables.count(salu) && !allocStateful(salu, phv, alloc.salu_ixbar)) {
                 alloc.clear_ixbar();
                 return false; } } }
 
