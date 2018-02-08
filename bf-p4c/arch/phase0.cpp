@@ -238,7 +238,7 @@ struct FindPhase0Table : public Inspector {
         auto* action = decl->to<IR::P4Action>();
 
         // Save the action name for assembly output.
-        phase0->actionName = action->getName().originalName;
+        phase0->actionName = action->externalName();
 
         // The action should have only action data parameters.
         for (auto* param : *action->parameters)

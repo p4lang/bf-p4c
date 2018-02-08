@@ -1,6 +1,7 @@
 #include "bf-p4c/parde/phase0.h"
 
 #include <algorithm>
+#include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/field_packing.h"
 #include "frontends/p4/coreLibrary.h"
@@ -79,7 +80,7 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     // p4_name_lookup) which requires setting ingress metadata fields as ALU ops
     // but it is unclear if model uses this info.
     out << indent << "actions:" << std::endl;
-    out << ++indent << info->actionName << ":" << std::endl;
+    out << ++indent << canon_name(info->actionName) << ":" << std::endl;
     out <<   indent << "- p4_param_order: { ";
     wroteAtLeastOneField = false;
     for (auto& field : *info->packing) {
