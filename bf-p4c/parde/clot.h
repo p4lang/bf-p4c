@@ -13,7 +13,8 @@ class JSONLoader;
 
 class Clot {
  public:
-    Clot() { tag = tagCnt++; }
+    Clot() { tag = ++tagCnt; }
+    explicit Clot(unsigned t) { tag = t; }
     explicit Clot(cstring);
 
     cstring toString() const;
@@ -26,7 +27,7 @@ class Clot {
     void toJSON(JSONGenerator& json) const;
     static Clot fromJSON(JSONLoader& json);
 
-    unsigned tag = 0;
+    unsigned tag = 0;  // 0 = invalid
 
     unsigned start = 0;  // start byte offset in the packet
 

@@ -14,6 +14,7 @@ class ClotInfo {
 
     PhvUse &uses;
 
+    // XXX(zma) fix non determinism
     std::map<const IR::BFN::ParserState*, std::vector<const PHV::Field*>> all_fields_;
 
     std::vector<const Clot*> clots_;
@@ -29,6 +30,8 @@ class ClotInfo {
 
  public:
     const std::vector<const Clot*>& clots() const { return clots_; }
+
+    unsigned num_clots_allocated() const { return Clot::tagCnt; }
 
     const std::map<const IR::BFN::ParserState*, std::vector<const Clot*>>&
         parser_state_to_clots() const { return parser_state_to_clots_; }
@@ -77,6 +80,8 @@ class ClotInfo {
 };
 
 class AllocateClot : public PassManager {
+    /*BuildParserOverlay2 parser_overlay;*/
+
  public:
     explicit AllocateClot(ClotInfo &clot, const PhvInfo &phv, PhvUse &uses);
 };

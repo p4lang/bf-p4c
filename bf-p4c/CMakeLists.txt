@@ -120,6 +120,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/slice.h
   common/type_categories.h
   common/collect_global_pragma.h
+  common/utils.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_HDRS}")
 
