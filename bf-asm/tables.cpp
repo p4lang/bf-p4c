@@ -1175,6 +1175,13 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
         // to the compiler this must reflect "has_rng" or similar string.
         if (!act.default_allowed)
             action_cfg["disallowed_as_default_action_reason"] = act.default_disallowed_reason;
+
+        // \TODO(cc): constant_default_action is used by the driver in schema version 1.3.1
+        // to indicate which action is constant. This will need to be updated based on
+        // has_const_default, however, I could not find where that is set, so for now
+        // we just set it to false for all table actions.
+        action_cfg["constant_default_action"] = false;
+
         // XXX(amresh): These will be set to 'true' & "" for a keyless table to
         // allow any action to be set as default by the control plane
         if (table->p4_params_list.empty()) {
@@ -1266,9 +1273,9 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
         if (set_miss_table) next = table->miss_next;
         if(next && next->name_ == "END") next = Table::Ref();
         std::string next_table_name = next ? next->name() : "--END_OF_PIPELINE--";
-        //unsigned next_table = next ? table->get_format_field_size("next") == 8 ? 
+        //unsigned next_table = next ? table->get_format_field_size("next") == 8 ?
         //    next->table_id() : next->table_type() == Table::GATEWAY ? 0 : act.next_table_encode : 0;
-        unsigned next_table = next ? table->get_format_field_size("next") == 8 ? 
+        unsigned next_table = next ? table->get_format_field_size("next") == 8 ?
             next->table_id() : act.next_table_encode : 0;
         unsigned next_table_full = next ? next->table_id() : Stage::end_of_pipe();
 
