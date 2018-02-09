@@ -1,6 +1,7 @@
 #ifndef BF_P4C_MAU_INPUT_XBAR_H_
 #define BF_P4C_MAU_INPUT_XBAR_H_
 
+#include <array>
 #include <map>
 #include <unordered_set>
 #include "bf-p4c/mau/table_layout.h"
@@ -243,8 +244,8 @@ struct IXBar {
         bitvec found;
         bitvec free;
         bool attempted = false;
-        std::array<bool, 2> hash_open = { true, true };
-        std::array<type_t, 2> hash_table_type = { FREE, FREE };
+        std::array<bool, 2> hash_open = { { true, true } };
+        std::array<type_t, 2> hash_table_type = { { FREE, FREE } };
 
         bool hash_dist_avail(int ht) const {
             return hash_table_type[ht] == HASH_DIST || hash_table_type[ht] == FREE;
