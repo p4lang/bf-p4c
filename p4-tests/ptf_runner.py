@@ -184,10 +184,11 @@ def run_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
         return False
     return p.returncode == 0
 
-def start_model(model, out=None, lookup_json=None, port_map_path=None):
+# model uses the context json to lookup names when logging
+def start_model(model, out=None, context_json=None, port_map_path=None):
     cmd = [model]
-    if lookup_json is not None:
-        cmd.extend(['-l', lookup_json])
+    if context_json is not None:
+        cmd.extend(['-l', context_json])
     if port_map_path is not None:
         cmd.extend(['-f', port_map_path])
     return subprocess.Popen(cmd, stdout=out, stderr=out)
@@ -305,11 +306,6 @@ def main():
         error("STF test {} requested and not found".format(args.stftest))
         sys.exit(1)
 
-    lookup_json_path = os.path.join(compiler_out_dir, 'p4_name_lookup.json')
-    if not os.path.exists(lookup_json_path):
-        warn("Name lookup json {} not found; debugging will be harder".format(
-            lookup_json_path))
-
     port_map_path = args.port_map
     if port_map_path is not None and not os.path.exists(port_map_path):
         error("Provided port mapping file {} not found".format(port_map_path))
@@ -382,7 +378,7 @@ def main():
         with open(model_log_path, 'w') as model_out, \
              open(switchd_log_path, 'w') as switchd_out:
             model_p = start_model(HARLYN_MODEL, out=model_out,
-                                  lookup_json=lookup_json_path,
+                                  context_json=cxt_json_path,
                                   port_map_path=port_map_path)
             processes["model"] = model_p
 

@@ -136,7 +136,6 @@ exact\_match0.p4.out
 ├── context
 │   ├── deparser.context.json
 │   ├── mau.context.json
-│   ├── p4_name_lookup.json
 │   ├── parser.context.json
 │   └── phv.context.json
 ```

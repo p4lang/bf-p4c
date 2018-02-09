@@ -76,7 +76,7 @@ general, `$PTF_DIR` corresponds to `p4-tests/p4_<version>/<prog_name>.ptf`.
 
   1) Starting the Tofino model
 
-    sudo tofino-model -l $P4C_OUTPUT/p4_name_lookup.json
+    sudo tofino-model -l $P4C_OUTPUT/context.json
 
   2) Starting bf_switchd
 
