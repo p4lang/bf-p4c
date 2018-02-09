@@ -39,6 +39,16 @@ public:
         virtual int mau_id() const { return -1; }
         virtual int ixbar_id() const { return -1; }
         virtual int deparser_id() const { return -1; }
+        /// return a string representation based on the container type
+        const char *type_to_string() const {
+            switch (type) {
+            case NORMAL:   return "normal";
+            case TAGALONG: return "tagalong";
+            case CHECKSUM: return "checksum";
+            case MOCHA:    return "mocha";
+            case DARK:     return "dark";
+            }
+        }
     };
     class Slice {
         static const Register invalid;

@@ -1,7 +1,7 @@
+#include <iostream>
 #include "log.h"
 #include "misc.h"
 #include "phv.h"
-#include <iostream>
 
 Phv Phv::phv;
 const Phv::Register Phv::Slice::invalid("<bad>", Phv::Register::NORMAL, 0, ~0, 0);
@@ -240,6 +240,7 @@ void Phv::output(json::map &ctxt_json) {
             gress_t gress = slot.second.first;
             json::map phv_container;
             phv_container["phv_number"] = phv_number;
+            phv_container["container_type"] = slot.first->type_to_string();
             json::vector &phv_records = phv_container["records"] = json::vector();
             for (auto field_name : slot.second.second) {
                 unsigned phv_lsb = 0, phv_msb = 0;
@@ -271,7 +272,7 @@ void Phv::output(json::map &ctxt_json) {
                     phv_record["is_pov"] = true;
                     phv_record["field_width"] = 0;
                     phv_record["position_offset"] = 0;
-                    /* Now that we know that this record is representing a POV, overwrite the 
+                    /* Now that we know that this record is representing a POV, overwrite the
                      * phv_record to call it "POV" and get rid of "$valid" */
                     phv_record["field_name"] = "POV";
                     json::vector &pov_headers = phv_record["pov_headers"] = json::vector();
@@ -301,4 +302,3 @@ void Phv::output(json::map &ctxt_json) {
 #if HAVE_JBAY
 #include "jbay/phv.cpp"
 #endif // HAVE_JBAY
-
