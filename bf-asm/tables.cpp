@@ -1513,6 +1513,8 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     stage_tbl["size"] = size;
     stage_tbl["stage_table_type"] = type;
     stage_tbl["logical_table_id"] = logical_id;
+    stage_tbl["default_next_table"] = default_next_table_id;
+
     if (this->to<MatchTable>()) {
         stage_tbl["has_attached_gateway"] = false;
         if (get_gateway())
@@ -1875,7 +1877,6 @@ void Table::common_tbl_cfg(json::map &tbl) {
     tbl["default_action_handle"] = get_default_action_handle();
     tbl["action_profile"] = action_profile();
     tbl["default_next_table_mask"] = default_next_table_mask;
-    tbl["default_next_table"] = default_next_table_id ;
     //FIXME-JSON: No brig support yet, uncomment when driver support is
     //added to validate json
     //tbl["uses_dynamic_key_masks"] = false;

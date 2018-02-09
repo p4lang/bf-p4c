@@ -66,7 +66,7 @@ struct operand {
             return -1; }
         void dbprint(std::ostream &out) const override { out << value; }
         void gen_prim_cfg(json::map& out) override {
-          out["type"] = "immmediate";
+          out["type"] = "immediate";
           out["name"] = std::to_string(value);
         }
     };
@@ -477,7 +477,7 @@ struct AluOP : VLIWInstruction {
     void gen_prim_cfg(json::map& out) {
       out["name"] = "DirectAluPrimitive";
       out["operation"] = opc->name;
-      dest.gen_prim_cfg((out["dest"] = json::map()));
+      dest.gen_prim_cfg((out["dst"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map oneoper;
       src1.gen_prim_cfg(oneoper);
@@ -617,7 +617,7 @@ struct LoadConst : VLIWInstruction {
     std::string name() { return ""; };
     void gen_prim_cfg(json::map& out) {
       out["name"] = "ModifyFieldPrimitive";
-      dest.gen_prim_cfg((out["dest"] = json::map()));
+      dest.gen_prim_cfg((out["dst"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map onemap;
       onemap["immediate"] = std::to_string(src);
@@ -697,7 +697,7 @@ struct CondMoveMux : VLIWInstruction {
     std::string name() { return opc->name; }
     void gen_prim_cfg(json::map& out) {
       out["name"] = opc->name;
-      dest.gen_prim_cfg((out["dest"] = json::map()));
+      dest.gen_prim_cfg((out["dst"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map oneoper;
       src1.gen_prim_cfg(oneoper);
@@ -794,7 +794,7 @@ struct DepositField : VLIWInstruction {
     std::string name() { return "deposit_field"; }
     void gen_prim_cfg(json::map& out) {
       out["name"] = "ModifyFieldPrimitive";
-      dest.gen_prim_cfg((out["dest"] = json::map()));
+      dest.gen_prim_cfg((out["dst"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map oneoper;
       src1.gen_prim_cfg(oneoper);
@@ -894,7 +894,7 @@ struct Set : VLIWInstruction {
     std::string name() { return "set"; };
     void gen_prim_cfg(json::map& out) {
       out["name"] = "ModifyFieldPrimitive";
-      dest.gen_prim_cfg((out["dest"] = json::map()));
+      dest.gen_prim_cfg((out["dst"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map oneoper;
       src.gen_prim_cfg(oneoper);
@@ -990,7 +990,7 @@ struct NulOP : VLIWInstruction {
     void gen_prim_cfg(json::map& out) {
       out["name"] = "DirectAluPrimitive";
       out["operator"] = opc->name;
-      dest.gen_prim_cfg((out["dest"] = json::map()));
+      dest.gen_prim_cfg((out["dst"] = json::map()));
     }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *, Table::Actions::Action *) {}
@@ -1055,7 +1055,7 @@ struct ShiftOP : VLIWInstruction {
     void gen_prim_cfg(json::map& out) {
       out["name"] = "DirectAluPrimitive";
       out["operator"] = opc->name;
-      dest.gen_prim_cfg((out["dest"] = json::map()));
+      dest.gen_prim_cfg((out["dst"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map oneoper;
       src1.gen_prim_cfg(oneoper);

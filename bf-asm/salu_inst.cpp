@@ -237,7 +237,7 @@ struct AluOP : public SaluInstruction {
     void gen_prim_cfg(json::map& out) override {
         out["name"] = opc->name;
         /* TODO:
-        dest.gen_prim_cfg((out["dest"] = json::map()));
+        dest.gen_prim_cfg((out["dst"] = json::map()));
         json::vector &srcv = out["src"] = json::vector();
         json::map oneoper;
         srca.gen_prim_cfg(oneoper);
@@ -430,8 +430,8 @@ struct CmpOP : public SaluInstruction {
     std::string name() override { return opc->name; };
     void gen_prim_cfg(json::map& out) override {
         out["name"] = opc->name;
-        /* TODO: Whar are srca, srcb and srcc here?
-        srca->gen_prim_cfg((out["dest"] = json::map()));
+        /* TODO: What are srca, srcb and srcc here?
+        srca->gen_prim_cfg((out["dst"] = json::map()));
         json::vector &srcv = out["src"] = json::vector();
         json::map oneoper;
         srcb->gen_prim_cfg(oneoper);
