@@ -477,6 +477,18 @@ void Clustering::MakeSuperClusters::end_apply() {
         if (!f.pov)
             continue;
 
+#if HAVE_JBAY
+        // HACK WARNING
+        // There might be an assumption in the Jbay parde generation
+        // part that all pov bits are allocated to 8-bit containers.
+        // Marking them as exact_container does not work because there
+        // are cases that the total number of pov bits are less than 8.
+        if (Device::currentDevice() == "JBay") {
+            // stkvalid skipped to form slice list less or equal to 8bit slice list.
+            if (f.size > 1) continue;
+        }
+#endif  // HAVE_JBAY
+
         // Skip valid bits for header stacks, which are allocated with
         // $stkvalid.
         if (f.ccgf())

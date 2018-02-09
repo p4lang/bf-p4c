@@ -143,10 +143,7 @@ p4c_add_xfail_reason("jbay"
   # testdata/p4_14_samples/gateway1.p4
   # testdata/p4_14_samples/gateway2.p4
   # testdata/p4_14_samples/gateway3.p4
-
-  # "egress_unicast_port" not set? needs further investigation ...
-  testdata/p4_14_samples/gateway4.p4
-  testdata/p4_14_samples/action_chain1.p4
+  # testdata/p4_14_samples/gateway4.p4
   )
 
 p4c_add_xfail_reason("jbay"
@@ -161,9 +158,23 @@ p4c_add_xfail_reason("jbay"
  testdata/p4_14_samples/meter1.p4
  )
 
+# The following xfails are removed because of introducing the jbay-pov-hack
+# "expected packet on port .* not seen"
+# testdata/p4_14_samples/hash_action_two_separate.p4
+# testdata/p4_14_samples/gateway7.p4
+# testdata/p4_14_samples/gateway2.p4
+# testdata/p4_14_samples/action_chain1.p4
+# testdata/p4_14_samples/gateway6.p4
+# testdata/p4_14_samples/exact_match_valid1.p4
+# testdata/p4_14_samples/hash_action_gateway.p4
+# testdata/p4_14_samples/gateway3.p4
+# testdata/p4_14_samples/hash_action_basic.p4
+# "mismatch from expected.* at byte"
+# testdata/p4_14_samples/07-MultiProtocol.p4
+
 # BRIG-421
 p4c_add_xfail_reason("jbay"
-  "Action Data parameter not configured properly"
+  "PHV allocation creates a container action impossible within a Tofino ALU"
   testdata/p4_14_samples/issue894.p4
   )
 
