@@ -1,0 +1,53 @@
+#! /usr/bin/env python
+
+# Script to validate a context.json against the json schema
+#
+# The default behavior takes a context.json file as a mandatory argument
+# and it validates it agains the gen_schema file in the Glass repo.
+#
+# If used from the default location, the relative path to the Glass repo
+# is automatically configured. Otherwise, please add the corresponding
+# directory to PYTHONPATH
+#
+# The script can optionally dump the schema into a file.
+#
+# \TODO: add support for passing a generated schema as an argument.
+
+import os
+import sys
+import argparse
+import json, jsonschema
+
+MYPATH = os.path.dirname(__file__)
+GEN_SCHEMA_PATH=os.path.join(MYPATH, "../glass/p4c_tofino/target/tofino")
+sys.path.append(GEN_SCHEMA_PATH)
+
+from ctx_json.gen_schema import ContextJSONSchema
+
+parser=argparse.ArgumentParser()
+
+parser.add_argument ("--schema", action="store", default=None,
+                     help="load this schema instead of the default")
+parser.add_argument ("--dump-schema", action="store", default=None,
+                     help="dump the schema into file")
+parser.add_argument ("context_file", help="context.json to validate")
+opts = parser.parse_args()
+
+
+try:
+    if opts.schema is not None:
+        print "explicit schema not yet supported"
+        sys.exit(1)
+
+    schema = ContextJSONSchema.get_schema()
+
+    if opts.dump_schema is not None:
+        with open(opts.dump_schema, "wb") as schema_file:
+            json.dump(schema, schema_file, indent=2)
+
+    context_json = json.load(open(opts.context_file, 'r'))
+
+    jsonschema.validate(context_json, schema)
+
+except Exception as e:
+    print e
