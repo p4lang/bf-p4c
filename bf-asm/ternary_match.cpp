@@ -501,12 +501,17 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     unsigned version_word_group = -1;
     unsigned match_index = match.size() - 1;
     unsigned index = 0;
+    json::vector match_field_list, match_entry_list;
     for (auto &m : match) {
         if (m.byte_config == 3) {
             uses_versioning = true;
             version_word_group = match_index - index;
             break; }
         index++; }
+    // Set pvp bits for each tcam
+    for (unsigned i = 0; i < match.size(); i++) {
+        gen_match_fields_pvp(match_field_list, i, uses_versioning, version_word_group);
+    }
     json::map &match_attributes = tbl["match_attributes"];
     json::vector &stage_tables = match_attributes["stage_tables"];
     json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "ternary_match", number_entries);
@@ -519,23 +524,15 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     stage_tbl["default_next_table"] = (hit_next.size() > 0) ?
         ((hit_next[0].name != "END") ? hit_next[0]->logical_id : 255) : 255;
     add_result_physical_buses(stage_tbl);
-    json::vector match_field_list, match_entry_list;
-    unsigned curWord = -1;
-    bool version_allocated = false;
     for (auto field : *input_xbar) {
         if (!field.first.ternary) continue;
         int word = match_index - match_word(field.first.index);
         if (word < 0) continue;
-        if (curWord != word) {
-            gen_match_fields_pvp(match_field_list, word, uses_versioning, version_word_group);
-            curWord = word; }
-        if (word == version_word_group)
-            version_allocated = true;
         std::string source = "spec";
         std::string field_name = field.second.what.name();
         remove_aug_names(field_name);
         unsigned lsb_mem_word_offset = 0;
-        if (field.second.hi > 43) {
+        if (field.second.hi > 40) {
             // a field in the (mid) byte group, which is shared with the adjacent word group
             // each word gets only 4 bits of the byte group and is placed at msb
             // Check mid-byte field does not cross byte boundary (40-47)
@@ -573,9 +570,6 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     // For keyless table, just add parity & payload bits
     if (p4_params_list.empty()) {
         gen_match_fields_pvp(match_field_list, 0, false, -1);
-    }
-    if (!version_allocated && uses_versioning) {
-        gen_match_fields_pvp(match_field_list, version_word_group, true, version_word_group);
     }
     
     // Mark unused portion of format as a field with source 'zero'. This tells

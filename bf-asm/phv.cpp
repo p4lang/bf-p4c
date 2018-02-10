@@ -215,6 +215,7 @@ void Phv::gen_phv_field_size_map() {
                 field_size = phv_container_size;
             // Fields can be stored only in 8/16/32 bit containers
             field_size_bytes = field_size/8;
+            if (field_size % 8) field_size_bytes++; //round up if not byte-aligned
             if (field_size_bytes == 3) field_size_bytes++;
             if (phv_field_sizes[gress].count(field_name) == 0)
                 phv_field_sizes[gress][field_name] = field_size_bytes;
@@ -229,7 +230,6 @@ void Phv::gen_phv_field_size_map() {
 // (in assembly syntax/compiler) to set per stage phv containers correctly.
 void Phv::output(json::map &ctxt_json) {
     json::vector &phv_alloc = ctxt_json["phv_allocation"];
-    gen_phv_field_size_map();
     for (int i = 0; i < Target::NUM_MAU_STAGES(); i++) {
         json::map phv_alloc_stage;
         json::vector &phv_alloc_stage_ingress = phv_alloc_stage["ingress"] = json::vector();

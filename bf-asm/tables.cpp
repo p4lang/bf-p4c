@@ -1203,6 +1203,15 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
 void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) {
     int index = 0;
     unsigned start_bit = 0;
+    // XXX(amresh): If an action is empty - it has no instructions - we still
+    // generate the action in the assembly because PD Gen expects this in
+    // cjson(?).  But PG Gen complains if any p4_parameters are passed as it
+    // does not generate an action spec.
+    // E.g. Table egress_vlan_xlate - Action set_egress_if_params_untagged
+    // in switch basic profile
+    // Here, we do not generate p4_parameters node if no instructions are
+    // present for compatibility with PD Gen 
+    if (act.instr.empty() && !table->to<Phase0MatchTable>()) return; 
     for (auto &a : act.p4_params_list) {
         json::map param;
         param["name"] = a.name;

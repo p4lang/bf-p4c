@@ -143,6 +143,7 @@ public:
         bool merge(const Ref &r);
         void dbprint(std::ostream &out) const;
     };
+    void process() override { gen_phv_field_size_map(); }
     static const Register *reg(int idx)
         { assert(idx >= 0 && size_t(idx) < phv.regs.size()); return phv.regs[idx]; }
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
@@ -151,6 +152,10 @@ public:
     static void output_names(json::map &);
     static std::string db_regset(const bitvec &s);
     static unsigned mau_groupsize();
+    /* Return phv field size in bytes */
+    static int get_phv_field_size(gress_t gress, const std::string field_name) {
+        return (phv.phv_field_sizes[gress].count(field_name) > 0) ? 
+            phv.phv_field_sizes[gress][field_name] : 0; }
 };
 
 extern void merge_phv_vec(std::vector<Phv::Ref> &vec, const Phv::Ref &r);

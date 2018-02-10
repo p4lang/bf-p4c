@@ -82,15 +82,14 @@ void MatchTable::pass1(int type) {
     if (table_counter >= GATEWAY_MISS && !gateway)
         error(lineno, "Can't count gateway events on table %s as it doesn't have a gateway",
               name());
-    if (!p4_params_list.empty()){
+    if (!p4_params_list.empty()) {
         for (auto &p : p4_params_list) {
+            p.bit_width_full = Phv::get_phv_field_size(gress, p.name) * 8;
             if (!p.bit_width_full)
                 p.bit_width_full = p.bit_width;
             bool found = remove_aug_names(p.name);
             if (found)
-                p.is_valid = true;
-            }
-    }
+                p.is_valid = true; } }
 }
 
 void MatchTable::gen_idletime_tbl_cfg(json::map &stage_tbl) {
