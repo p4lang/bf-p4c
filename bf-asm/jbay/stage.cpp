@@ -7,6 +7,11 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
         if (stageno == 0) {
             merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(gress) - 2;
             merge.predication_ctl[gress].start_table_fifo_enable = 1;
+            /* MFerrera: "After some debug on the emulator, we've found a programming issue due to
+             * incorrect documentation and CSR description of match_ie_input_mux_sel in JBAY"
+             * MAU Stage 0 must always be configured to source iPHV from Parser-Arbiter
+             * Otherwise, MAU stage 0 is configured as match-dependent on Parser-Arbiter */
+            if (gress == INGRESS) regs.dp.match_ie_input_mux_sel |= 1;
         } else if (stage_dep[gress] == MATCH_DEP) {
             merge.predication_ctl[gress].start_table_fifo_delay0 =
                 this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + pred_cycle(gress) - 3;
