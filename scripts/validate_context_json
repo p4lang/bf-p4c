@@ -30,6 +30,9 @@ parser.add_argument ("--schema", action="store", default=None,
                      help="load this schema instead of the default")
 parser.add_argument ("--dump-schema", action="store", default=None,
                      help="dump the schema into file")
+parser.add_argument ("-g", dest="debug", action="store_true", default=False,
+                     help="debug")
+
 parser.add_argument ("context_file", help="context.json to validate")
 opts = parser.parse_args()
 
@@ -47,7 +50,13 @@ try:
 
     context_json = json.load(open(opts.context_file, 'r'))
 
+    if opts.debug:
+        print "validating", opts.context_file
+
     jsonschema.validate(context_json, schema)
+
+    if opts.debug:
+        print "successful validation"
 
 except Exception as e:
     print e

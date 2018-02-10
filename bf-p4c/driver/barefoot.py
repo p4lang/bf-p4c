@@ -41,6 +41,9 @@ class BarefootBackend(BackendDriver):
                          os.path.join(os.environ['P4C_BIN_DIR'], 'p4c-barefoot'))
         self.add_command('assembler', bfas)
         self.add_command('linker', bflink)
+        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
+            self.add_command('verifier', os.path.join(os.environ['P4C_BIN_DIR'],
+                                                      '../../scripts/validate_context_json'))
 
         # order of commands
         self.enable_commands(['preprocessor', 'compiler', 'assembler', 'linker'])
@@ -57,6 +60,8 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--no-link", dest="skip_linker",
                                     help="Run up to linker",
                                     action="store_true", default=False)
+        self._argGroup.add_argument("--validate-output", action="store_true", default=False,
+                                    help="run context.json validation")
 
     def config_preprocessor(self, targetDefine):
         self.add_command_option('preprocessor', "-E -x c")
@@ -116,3 +121,7 @@ class BarefootBackend(BackendDriver):
             self.enable_commands(['assembler', 'linker'])
         if opts.skip_linker or src_extension == '.bfa':
             self.disable_commands(['linker'])
+
+        if opts.validate_output and os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
+            self.add_command_option('verifier', "{}/context.json".format(output_dir))
+            self._commandsEnabled.append('verifier')
