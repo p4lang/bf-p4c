@@ -10,6 +10,7 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/parde/parde_visitor.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 namespace PHV {
 class Field;
@@ -35,13 +36,16 @@ class PhvInfo;
 class BuildParserOverlay : public BFN::ControlFlowVisitor,
                            public PardeInspector, TofinoWriteContext {
  private:
-    const PhvInfo&   phv;
-    const bitvec&    addedHeaderFields;
+    const PhvInfo&      phv;
+    const bitvec&       addedHeaderFields;
 
     // mutually_inclusive(f1, f2) == false implies that f1 and f2 cannot appear
     // in the same packet header.
     SymBitMatrix     mutually_inclusive;
     SymBitMatrix&    mutually_exclusive;
+
+    // Used to get information about mutually exclusive fields, specified by pragmas
+    const PragmaMutuallyExclusive& pragmas;
 
     bitvec           fields_encountered;
 
@@ -50,7 +54,6 @@ class BuildParserOverlay : public BFN::ControlFlowVisitor,
 
     bool preorder(const IR::BFN::Extract*) override;
     bool preorder(const IR::BFN::Deparser*) override { return false; }
-    void postorder(const IR::BFN::Pipe*) override;
 
     void flow_merge(Visitor &) override;
     void end_apply() override;
@@ -59,8 +62,9 @@ class BuildParserOverlay : public BFN::ControlFlowVisitor,
     BuildParserOverlay(
             PhvInfo& phv,
             const bitvec& addedHeaderFields,
-            SymBitMatrix& rv)
-            : phv(phv), addedHeaderFields(addedHeaderFields), mutually_exclusive(rv) {
+            SymBitMatrix& rv,
+            const PragmaMutuallyExclusive& p)
+            : phv(phv), addedHeaderFields(addedHeaderFields), mutually_exclusive(rv), pragmas(p) {
         joinFlows = true;
         visitDagOnce = false; }
 
@@ -94,13 +98,20 @@ class FindAddedHeaderFields : public MauInspector {
 /** See documentation for BuildParserOverlay and FindAddedHeaderFields. */
 class ParserOverlay : public PassManager {
  private:
-    bitvec addedHeaderFields;
+    bitvec              addedHeaderFields;
 
  public:
-    ParserOverlay(PhvInfo& phv, SymBitMatrix& rv) {
+    ParserOverlay(PhvInfo& phv, SymBitMatrix& rv, PHV::Pragmas& pragmas) {
         addPasses({
             // new FindAddedHeaderFields(phv, addedHeaderFields),
-            new BuildParserOverlay(phv, addedHeaderFields, rv) });
+            new BuildParserOverlay(phv, addedHeaderFields, rv, pragmas.pa_mutually_exclusive()) });
+    }
+
+    // Constructor for gtest
+    ParserOverlay(PhvInfo& phv, SymBitMatrix& rv, PragmaMutuallyExclusive& pragmas) {
+        addPasses({
+            // new FindAddedHeaderFields(phv, addedHeaderFields),
+            new BuildParserOverlay(phv, addedHeaderFields, rv, pragmas) });
     }
 };
 

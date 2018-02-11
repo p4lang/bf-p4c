@@ -29,61 +29,6 @@ void BuildParserOverlay::flow_merge(Visitor& other_) {
     mutually_inclusive |= other.mutually_inclusive;
 }
 
-void BuildParserOverlay::postorder(const IR::BFN::Pipe* pipe) {
-    // TODO(yumin): Code Duplication and this logic should be moved
-    // to phv/pragma, instead of hooked up with parser overlay.
-    auto check_pragma_string = [] (const IR::StringLiteral* ir) {
-        if (!ir) {
-            ::warning("%1%", "@pragma pa_mutually_exclusive's arguments must be strings, skipped");
-            return false; }
-        return true; };
-
-    auto global_pragmas = pipe->global_pragmas;
-    for (const auto* annotation : global_pragmas) {
-        if (annotation->name.name != PHV::pragma::MUTUALLY_EXCLUSIVE)
-            continue;
-
-        auto& exprs = annotation->expr;
-        // check pragma argument
-        if (exprs.size() != 3) {
-            ::warning("@pragma pa_mutually_exclusive must "
-                      "have 3 arguments, only %1% found, skipped", exprs.size());
-            continue; }
-
-        auto gress = exprs[0]->to<IR::StringLiteral>();
-        auto field1_ir = exprs[1]->to<IR::StringLiteral>();
-        auto field2_ir = exprs[2]->to<IR::StringLiteral>();
-
-        // check gress correct
-        if (!check_pragma_string(gress) || !check_pragma_string(field1_ir)
-            || !check_pragma_string(field2_ir))
-            continue;
-
-        if (gress->value != "ingress" && gress->value != "egress") {
-            ::warning("@pragma pa_mutually_exclusive's first argument "
-                      "must be either ingress/egress, instead of %1%, skipped", gress);
-            continue; }
-
-        auto field1_name = gress->value + "::" + field1_ir->value;
-        auto field2_name = gress->value + "::" + field2_ir->value;
-        auto field1 = phv.field(field1_name);
-        auto field2 = phv.field(field2_name);
-
-        if (!field1) {
-            ::warning("@pragma pa_mutually_exclusive's argument "
-                      "%1% does not match any phv fields, skipped", field1_name);
-            continue; }
-        if (!field2) {
-            ::warning("@pragma pa_mutually_exclusive's argument "
-                      "%1% does not match any phv fields, skipped", field2_name);
-            continue; }
-
-        mutually_exclusive(field1->id, field2->id) = true;
-        LOG1("set " << field1 << " and " << field2
-             << " to be mutually_exclusive because of @pragma pa_mutually_exclusive");
-    }
-}
-
 void BuildParserOverlay::end_apply() {
     LOG4("mutually exclusive fields:");
     for (auto it1 = fields_encountered.begin();
@@ -99,6 +44,16 @@ void BuildParserOverlay::end_apply() {
                 continue;
             mutually_exclusive(*it1, *it2) = true;
             LOG4("(" << phv.field(*it1)->name << ", " << phv.field(*it2)->name << ")"); } }
+
+    // Mark fields specified by pa_mutually_exclusive pragmas
+    const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& parsedPragma =
+        pragmas.mutex_fields();
+    for (auto fieldSet : parsedPragma) {
+        auto* field1 = fieldSet.first;
+        for (auto* field2 : fieldSet.second) {
+            mutually_exclusive(field1->id, field2->id) = true;
+            LOG1("set " << field1 << " and " << field2
+                << " to be mutually_exclusive because of @pragma pa_mutually_exclusive"); } }
 }
 
 bool FindAddedHeaderFields::preorder(const IR::Primitive* prim) {

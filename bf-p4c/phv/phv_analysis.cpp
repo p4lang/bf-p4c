@@ -33,7 +33,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &table_alloc,          // populates table placement information and start of
                                    // backtracking
             &uses,                 // use of field in mau, parde
-            new ParserOverlay(phv, mutually_exclusive_field_ids),
+            &pragmas,              // parse and fold PHV-related pragmas
+            new ParserOverlay(phv, mutually_exclusive_field_ids, pragmas),
                                    // produce pairs of mutually exclusive header
                                    // fields, eg. (arpSrc, ipSrc)
             &parser_critical_path,
@@ -59,10 +60,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             options.jbay_analysis ? new JbayPhvAnalysis(phv, uses, deps, defuse, action_constraints)
                 : nullptr,
 #endif      // HAVE_JBAY
-            &pragmas,
             new AllocatePHV(mutually_exclusive_field_ids, clustering, uses, clot,
-                            pragmas, phv,
-                            action_constraints, critical_path_clusters),
+                            pragmas, phv, action_constraints, critical_path_clusters),
 
             new PHV::ValidateAllocation(phv, clot, mutually_exclusive_field_ids),
             new PHV::ValidateActions(phv, false, true, false)

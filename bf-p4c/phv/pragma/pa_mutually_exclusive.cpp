@@ -1,0 +1,68 @@
+#include "bf-p4c/phv/pragma/pa_mutually_exclusive.h"
+#include <string>
+#include <numeric>
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "lib/log.h"
+
+bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
+    auto check_pragma_string = [] (const IR::StringLiteral* ir) {
+        if (!ir) {
+            ::warning("%1%", "@pragma pa_mutually_exclusive's arguments must be strings, skipped");
+            return false; }
+        return true; };
+
+    auto global_pragmas = pipe->global_pragmas;
+    for (const auto* annotation : global_pragmas) {
+        if (annotation->name.name != PHV::pragma::MUTUALLY_EXCLUSIVE)
+            continue;
+
+        auto& exprs = annotation->expr;
+        // check pragma argument
+        if (exprs.size() != 3) {
+            ::warning("@pragma pa_mutually_exclusive must "
+                      "have 3 arguments, only %1% found, skipped", exprs.size());
+            continue; }
+
+        auto gress = exprs[0]->to<IR::StringLiteral>();
+        auto field1_ir = exprs[1]->to<IR::StringLiteral>();
+        auto field2_ir = exprs[2]->to<IR::StringLiteral>();
+
+        // check gress correct
+        if (!check_pragma_string(gress) || !check_pragma_string(field1_ir)
+            || !check_pragma_string(field2_ir))
+            continue;
+
+        if (gress->value != "ingress" && gress->value != "egress") {
+            ::warning("@pragma pa_mutually_exclusive's first argument "
+                      "must be either ingress/egress, instead of %1%, skipped", gress);
+            continue; }
+
+        auto field1_name = gress->value + "::" + field1_ir->value;
+        auto field2_name = gress->value + "::" + field2_ir->value;
+        auto field1 = phv_i.field(field1_name);
+        auto field2 = phv_i.field(field2_name);
+
+        if (!field1) {
+            ::warning("@pragma pa_mutually_exclusive's argument "
+                      "%1% does not match any phv fields, skipped", field1_name);
+            continue; }
+        if (!field2) {
+            ::warning("@pragma pa_mutually_exclusive's argument "
+                      "%1% does not match any phv fields, skipped", field2_name);
+            continue; }
+        pa_mutually_exclusive_i[field1].insert(field2);
+        pa_mutually_exclusive_i[field2].insert(field1); }
+    return false;
+}
+
+std::ostream& operator<<(std::ostream& out, const PragmaMutuallyExclusive& pa_me) {
+    std::stringstream logs;
+    logs <<  "Printing all fields marked mutually exclusive by @pragma pa_mutually_exclusive" <<
+        std::endl;
+    for (auto entry : pa_me.mutex_fields()) {
+        for (auto f : entry.second) {
+            logs << "Fields " << entry.first->name << " and " << f->name << " are marked mutually "
+                "exclusive." << std::endl; } }
+    out << logs.str();
+    return out;
+}

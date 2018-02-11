@@ -15,6 +15,7 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
+#include "bf-p4c/phv/pragma/pa_mutually_exclusive.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
@@ -95,6 +96,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    Clustering& clustering,
                                    SymBitMatrix& mutually_exclusive_field_ids,
                                    CalcParserCriticalPath& parser_critical_path) {
+    PragmaMutuallyExclusive* pragmas = new PragmaMutuallyExclusive(phv);
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
@@ -102,7 +104,8 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
         &defuse,
         new ElimUnused(phv, defuse),
         &uses,
-        new ParserOverlay(phv, mutually_exclusive_field_ids),
+        pragmas,
+        new ParserOverlay(phv, mutually_exclusive_field_ids, *pragmas),
         &parser_critical_path,
         &defuse,
         new PHV_Field_Operations(phv),
