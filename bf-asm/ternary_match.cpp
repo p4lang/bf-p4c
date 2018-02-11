@@ -188,27 +188,45 @@ void TernaryMatchTable::pass1() {
     if (action_bus) action_bus->pass1(this);
     if (action.check() && action->set_match_table(this, action.args.size() > 1) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());
-    chain_rows = 0;
+    for (auto &chain_rows_col : chain_rows)
+        chain_rows_col = 0;
     unsigned row_use = 0;
     for (auto &row : layout) row_use |= 1U << row.row;
-    unsigned word = 0;
+    unsigned word = 0, wide_row_use = 0;
     int prev_row = -1;
+    std::vector<int> *cols = nullptr;
     for (auto &row : layout) {
         if (row.cols.empty()) {
             error(row.lineno, "Empty row in ternary table %s", name());
             continue; }
-        if (word && prev_row+1 != row.row)
-            error(row.lineno, "Ternary match rows must be contiguous in ascending order"
-                  "within each group of rows in a wide match");
-        /* row 6 never chains -- other rows chain towards row 6 */
-        if (row.row != 6 && word != (row.row < 6 ? match.size()-1 : 0)) {
-            chain_rows |= 1 << row.row;
-            int chain_to = row.row + (row.row < 6 ? 1 : -1);
-            if (!((row_use >> chain_to) & 1))
-                error(row.lineno, "Can't chain properly from row %d in ternary match %s, "
-                      "as the table isn't using the next row", row.row, name()); }
-        prev_row = row.row;
-        if (++word == match.size()) word = 0; }
+        if (cols) {
+            if (row.cols != *cols)
+                error(row.lineno, "Column mismatch across rows in wide tcam match");
+        } else {
+            cols = &row.cols; }
+        wide_row_use |= 1U << row.row;
+        if (++word == match.size()) {
+            int top_row = floor_log2(wide_row_use);
+            int bottom_row = top_row + 1 - match.size();
+            if (wide_row_use + (1U << bottom_row) != 1U << (top_row+1)) {
+                error(row.lineno, "Ternary match rows must be contiguous "
+                      "within each group of rows in a wide match");
+            } else {
+                // rows chain towards row 6
+                if (top_row < 6)
+                    wide_row_use -= 1U << top_row;
+                else if (bottom_row > 6)
+                    wide_row_use -= 1U << bottom_row;
+                else
+                    wide_row_use -= 1U << 6;
+                for (int col : *cols) {
+                    if (col < 0 || col >= TCAM_UNITS_PER_ROW)
+                        error(row.lineno, "Invalid column %d in table %s", col, name());
+                    else
+                        chain_rows[col] |= wide_row_use; } }
+            word = 0;
+            cols = nullptr;
+            wide_row_use = 0; } }
     if (indirect) {
         if (indirect->set_match_table(this, false) != TERNARY_INDIRECT)
             error(indirect.lineno, "%s is not a ternary indirect table", indirect->name());
@@ -293,13 +311,13 @@ void TernaryMatchTable::write_regs(REGS &regs) {
             //tcam_mode.tcam_data1_select = row.bus; -- no longer used
             if (options.match_compiler)
                 tcam_mode.tcam_data1_select = col;
-            tcam_mode.tcam_chain_out_enable = (chain_rows >> row.row) & 1;
+            tcam_mode.tcam_chain_out_enable = (chain_rows[col] >> row.row) & 1;
             if (gress == INGRESS)
                 tcam_mode.tcam_ingress = 1;
             else
                 tcam_mode.tcam_egress = 1;
             tcam_mode.tcam_match_output_enable =
-                ((~chain_rows | ALWAYS_ENABLE_ROW) >> row.row) & 1;
+                ((~chain_rows[col] | ALWAYS_ENABLE_ROW) >> row.row) & 1;
             tcam_mode.tcam_vpn = *vpn++;
             tcam_mode.tcam_logical_table = logical_id;
             tcam_mode.tcam_data_dirtcam_mode = match[word].dirtcam & 0x3ff;
@@ -319,7 +337,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
             if (match[word].byte_group >= 0)
                 setup_muxctl(tcam_vh_xbar.tcam_extra_byte_ctl[col][row.row/2],
                              match[word].byte_group);
-            if (!((chain_rows >> row.row) & 1))
+            if (!((chain_rows[col] >> row.row) & 1))
                 regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row; }
         if (++word == match.size()) word = 0; }
     setup_muxctl(merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id], logical_id);

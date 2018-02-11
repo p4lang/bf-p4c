@@ -826,7 +826,7 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
             if (match[i].word_group == word_group)
                 return i;
         return -1; }
-    unsigned            chain_rows; /* bitvector */
+    unsigned            chain_rows[TCAM_UNITS_PER_ROW]; /* bitvector per column */
     enum { ALWAYS_ENABLE_ROW = (1<<2) | (1<<5) | (1<<9) };
     friend class TernaryIndirectTable;
 public:
