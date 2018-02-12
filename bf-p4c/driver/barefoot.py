@@ -24,13 +24,9 @@ from p4c_src.driver import BackendDriver
 
 # Search the environment for assets
 if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
-    walle = find_file('bf-asm', 'walle/walle')
     bfas = find_file('bf-asm', 'bfas')
-    bflink = find_file('bf-asm', 'bflink')
 else:
-    walle = find_file(os.environ['P4C_BIN_DIR'], 'walle')
     bfas = find_file(os.environ['P4C_BIN_DIR'], 'bfas')
-    bflink = find_file(os.environ['P4C_BIN_DIR'], 'bflink')
 
 class BarefootBackend(BackendDriver):
     def __init__(self, target, argParser):

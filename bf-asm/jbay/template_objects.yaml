@@ -80,6 +80,8 @@ ignore:
   regs:
     # jbay_reg
     - dvsl_addrmap
+    - eth100g_addrmap
+    - eth400g_addrmap
     - gpio_regs
     - serdes_addrmap
     # pipes

@@ -22,7 +22,7 @@ endforeach()
 add_custom_command(OUTPUT ${GEN_JBAY_HDRS} ${GEN_JBAY_SRCS}
   COMMAND ${BFASM_WALLE} --schema chip.schema --generate-cpp template_objects.yaml -o ${BFASM_BINARY_DIR}/gen/jbay
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  DEPENDS template_objects.yaml chip.schema walle
+  DEPENDS template_objects.yaml chip.schema ${WALLE_SOURCES}
   COMMENT "Generating cpp code for jbay from jbay/chip.schema")
 
 set_source_files_properties(

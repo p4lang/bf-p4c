@@ -42,8 +42,6 @@ add_cxx_compiler_option ("-Werror")
 add_cxx_compiler_option ("-Wno-overloaded-virtual")
 add_cxx_compiler_option ("-Wno-deprecated")
 
-add_subdirectory (walle)
-
 set (BFN_P4C_LIB_DIR ${BFN_P4C_SOURCE_DIR}/p4c/lib)
 include_directories(${BFASM_SOURCE_DIR} ${BFASM_BINARY_DIR} ${BFN_P4C_LIB_DIR})
 
@@ -55,10 +53,6 @@ endif()
 
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
-
-
-install (PROGRAMS bflink
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
 # json_diff
 set (JSONDIFF_SOURCES json_diff.cpp json.cpp fdstream.cpp)
@@ -201,6 +195,10 @@ add_custom_command(OUTPUT gen/uptr_sizes.h
   DEPENDS lex-yaml.c mksizes)
 
 set (BFASM_WALLE ${BFASM_SOURCE_DIR}/walle/walle.py)
+set (WALLE_SOURCES
+      ${BFASM_SOURCE_DIR}/walle/chip.py
+      ${BFASM_SOURCE_DIR}/walle/csr.py
+      ${BFASM_SOURCE_DIR}/walle/walle.py)
 
 add_subdirectory (tofino)
 set (HAVE_TOFINO 1)
