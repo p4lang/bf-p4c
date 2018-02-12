@@ -814,7 +814,7 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override;
     struct Match {
-        int word_group=-1, byte_group=-1, byte_config=0, dirtcam=0;
+        int lineno=-1, word_group=-1, byte_group=-1, byte_config=0, dirtcam=0;
         Match() {}
         Match(const value_t &);
     };

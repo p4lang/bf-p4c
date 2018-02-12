@@ -230,7 +230,14 @@ class InputXbar_Group_Printer:
     def __init__(self, val):
         self.val = val
     def to_string(self):
-        rv = 'ternary' if self.val['ternary'] else 'exact'
+        if self.val['type'] == 0:
+            rv = 'exact'
+        elif self.val['type'] == 1:
+            rv = 'ternary'
+        elif self.val['type'] == 2:
+            rv = 'byte'
+        else:
+            rv = '<bad type 0x%x>' % int(self.val['type'])
         rv += ' group ' + str(self.val['index'])
         return rv;
 

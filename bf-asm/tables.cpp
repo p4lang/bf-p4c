@@ -1454,7 +1454,7 @@ int Table::find_on_ixbar(Phv::Slice sl, int group) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
             assert(bit < 128);
             return bit/8; }
-    for (auto *in : stage->ixbar_use[InputXbar::Group(false, group)]) {
+    for (auto *in : stage->ixbar_use[InputXbar::Group(InputXbar::Group::EXACT, group)]) {
         if (auto *i = in->find_exact(sl, group)) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
             assert(bit < 128);

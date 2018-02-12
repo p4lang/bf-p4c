@@ -246,42 +246,16 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
 
 /* Calculate the hash tables used by an individual P4 table in the IXBar */
 void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &use,
-        std::map<int, std::map<int, Slice>> &sort, bool ternary, bool atcam) const {
+        std::map<int, std::map<int, Slice>> &sort,
+        std::map<int, std::map<int, Slice>> &midbytes, bool ternary, bool atcam) const {
     for (auto &b : use) {
         int byte_loc = IXBar::TERNARY_BYTES_PER_GROUP;
-        int split_byte = 4;
         if (atcam && !b.atcam_index)
             continue;
         if (b.loc.byte == byte_loc && ternary) {
-            auto *field = phv.field(b.field);
-            field->foreach_byte([&](const PHV::Field::alloc_slice &sl) {
-                if (sl.field_bit != b.lo) return;
-                if ((sl.container_bit % 8)  >= split_byte) {
-                    int lo = std::max(b.hi - split_byte + 1, b.lo);
-                    Slice sl(phv, b.field, lo, b.hi);
-                    auto n = sort[b.loc.group + 1].emplace(byte_loc*8 + sl.bytealign() - 4, sl);
-                    BUG_CHECK(n.second, "duplicate byte use in ixbar");
-                } else {
-                    Slice sl(phv, b.field, b.lo, b.hi);
-                    auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
-                    BUG_CHECK(n.second, "duplicate byte use in ixbar");
-                }
-                /* Should be the code if the assembly parsing was reasonable
-                if ((sl.container_bit % 8) < split_byte) {
-                    int hi = std::min(b.hi, b.lo + split_byte - 1);
-                    Slice sl(phv, b.field, b.lo, hi);
-                    auto n = sort[b.loc.group].emplace(byte_loc*8 + sl.bytealign(), sl);
-                    BUG_CHECK(n.second, "duplicate byte use in ixbar");
-                }
-                if ((sl.container_hi()% 8) >= split_byte) {
-                    int lo = std::max(b.hi - split_byte + 1, b.lo);
-                    Slice sl(phv, b.field, lo, b.hi);
-                    auto n = sort[b.loc.group + 1].emplace(byte_loc*8 + sl.bytealign() - 4, sl);
-                    BUG_CHECK(n.second, "duplicate byte use in ixbar");
-                }
-                */
-            });
-
+            Slice sl(phv, b.field, b.lo, b.hi);
+            auto n = midbytes[b.loc.group/2].emplace(sl.bytealign(), sl);
+            BUG_CHECK(n.second, "duplicate byte use in ixbar");
         } else {
             Slice sl(phv, b.field, b.lo, b.hi);
             auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
@@ -755,14 +729,18 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
 void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
         const TableMatch *fmt, const IR::Expression *hd_expr) const {
     std::map<int, std::map<int, Slice>> sort;
-    emit_ixbar_gather_bytes(use->use, sort, use->ternary);
+    std::map<int, std::map<int, Slice>> midbytes;
+    emit_ixbar_gather_bytes(use->use, sort, midbytes, use->ternary);
     cstring group_type = use->ternary ? "ternary" : "exact";
     for (auto &group : sort)
         out << indent << group_type << " group " << group.first << ": "
                       << group.second << std::endl;
+    for (auto &midbyte : midbytes)
+        out << indent << "byte group " << midbyte.first << ": " << midbyte.second << std::endl;
     if (use->atcam) {
         sort.clear();
-        emit_ixbar_gather_bytes(use->use, sort, use->ternary, use->atcam);
+        midbytes.clear();
+        emit_ixbar_gather_bytes(use->use, sort, midbytes, use->ternary, use->atcam);
     }
     int hash_group = 0;
     for (auto hash_table_input : use->hash_table_inputs) {

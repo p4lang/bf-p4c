@@ -95,14 +95,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/port_vlan_mapping.p4
   )
 
-# BRIG-240
-# Associated with the fix for BRIG-451
-p4c_add_xfail_reason("tofino"
-  "Input xbar group.* conflict in stage"
-  extensions/p4_tests/p4_14/test_config_197_default_next_table.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/entry_read_from_hw/entry_read_from_hw.p4
-  )
-
 # BRIG-109
 p4c_add_xfail_reason("tofino"
   "Couldn't resolve computed value for select"

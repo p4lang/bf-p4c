@@ -20,12 +20,24 @@ struct HashCol {
 class InputXbar {
  public:
     struct Group {
-        unsigned short  index;
-        bool            ternary;
-        Group(bool t, unsigned i) : index(i), ternary(t) {}
-        bool operator==(const Group &a) const { return ternary == a.ternary && index == a.index; }
+        unsigned short                          index;
+        enum type_t { EXACT, TERNARY, BYTE }    type;
+        Group(Group::type_t t, unsigned i) : index(i), type(t) {}
+        bool operator==(const Group &a) const { return type == a.type && index == a.index; }
         bool operator<(const Group &a) const {
-            return (ternary << 16) + index < (a.ternary << 16) + a.index; }
+            return (type << 16) + index < (a.type << 16) + a.index; }
+        static constexpr int max_index(Group::type_t t) {
+            return t == EXACT ? EXACT_XBAR_GROUPS :
+                   t == TERNARY ? TCAM_XBAR_GROUPS :
+                   t == BYTE ? BYTE_XBAR_GROUPS : -1; }
+        static constexpr int group_size(Group::type_t t) {
+            return t == EXACT ? EXACT_XBAR_GROUP_SIZE :
+                   t == TERNARY ? TCAM_XBAR_GROUP_SIZE :
+                   t == BYTE ? BYTE_XBAR_GROUP_SIZE : -1; }
+        static constexpr const char *group_type(Group::type_t t) {
+            return t == EXACT ? "exact" :
+                   t == TERNARY ? "ternary" :
+                   t == BYTE ? "byte" : ""; }
     };
  private:
     struct Input {
@@ -34,6 +46,7 @@ class InputXbar {
         Input(const Phv::Ref &a) : what(a), lo(-1), hi(-1) {}
         Input(const Phv::Ref &a, int s) : what(a), lo(s), hi(-1) {}
         Input(const Phv::Ref &a, int l, int h) : what(a), lo(l), hi(h) {}
+        unsigned size() const { return hi - lo + 1; }
     };
     struct HashGrp {
         int             lineno = -1;
@@ -52,6 +65,13 @@ class InputXbar {
     bool can_merge(HashGrp &a, HashGrp &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
     void setup_hash(std::map<int, HashCol> &, int, gress_t, value_t &, int lineno, int lo, int hi);
+    struct TcamUseCache {
+       std::map<int, std::pair<const Input &, int>>     tcam_use;
+       std::set<InputXbar *>                            ixbars_added;
+    };
+    void check_tcam_input_conflict(Group group, Input &input, TcamUseCache &tcam_use);
+    int tcam_input_use(int out_byte, int phv_byte, int phv_size);
+    void tcam_update_use(TcamUseCache &use);
     struct GroupSet {
         Group           group;
         const std::vector<InputXbar *> &use;
@@ -71,10 +91,10 @@ public:
             int id, const std::map<int, HashCol> &mat);
 
     bool have_exact() const {
-        for (auto &grp : groups) if (!grp.first.ternary) return true;
+        for (auto &grp : groups) if (grp.first.type == Group::EXACT) return true;
         return false; }
     bool have_ternary() const {
-        for (auto &grp : groups) if (grp.first.ternary) return true;
+        for (auto &grp : groups) if (grp.first.type != Group::EXACT) return true;
         return false; }
     int hash_group() const {
         /* used by gateways to get the associated hash group */
@@ -84,7 +104,7 @@ public:
     std::vector<const HashCol *> hash_column(int col, int grp = -1) const;
     int match_group() {
         /* used by gateways and stateful to get the associated match group */
-        if (groups.size() != 1 || groups.begin()->first.ternary) return -1;
+        if (groups.size() != 1 || groups.begin()->first.type != Group::EXACT) return -1;
         return groups.begin()->first.index; }
     /* functions for tcam ixbar that take into account funny byte/word group stuff */
     unsigned tcam_width();
@@ -97,7 +117,7 @@ public:
         warning(lineno, "Hash Table for index %d does not exist in table %s", id, table->name());
         return empty_hash_table; }
     Phv::Ref get_hashtable_bit(unsigned id, unsigned bit) {
-        return get_group_bit(InputXbar::Group(false, id/2), bit + 64*(id & 0x1)); }
+        return get_group_bit(Group(Group::EXACT, id/2), bit + 64*(id & 0x1)); }
     Phv::Ref get_group_bit(Group grp, unsigned bit) {
         if (groups.count(grp))
             for (auto &in : groups.at(grp))
@@ -152,13 +172,15 @@ public:
     all_iter end() const { return all_iter(groups.end(), groups.end()); }
 
     Input *find(Phv::Slice sl, Group grp);
-    Input *find_exact(Phv::Slice sl, int group) { return find(sl, Group(false, group)); }
+    Input *find_exact(Phv::Slice sl, int group) { return find(sl, Group(Group::EXACT, group)); }
 };
 
 inline std::ostream &operator<<(std::ostream &out, InputXbar::Group gr) {
-    if (gr.ternary)
-        return out << "ternary ixbar group " << gr.index;
-    else
-        return out << "exact ixbar group " << gr.index; }
+    switch (gr.type) {
+    case InputXbar::Group::EXACT: out << "exact"; break;
+    case InputXbar::Group::TERNARY: out << "exact"; break;
+    case InputXbar::Group::BYTE: out << "exact"; break;
+    default: out << "<type=" << static_cast<int>(gr.type) << ">"; }
+    return out << " ixbar group " << gr.index; }
 
 #endif /* _input_xbar_h_ */

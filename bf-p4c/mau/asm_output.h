@@ -61,7 +61,9 @@ class MauAsmOutput : public MauInspector {
     void emit_hash_dist(std::ostream &out, indent_t indent,
              const safe_vector<IXBar::HashDistUse> *hash_dist_use) const;
     void emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &use,
-             std::map<int, std::map<int, Slice>> &sort, bool ternary, bool atcam = false) const;
+             std::map<int, std::map<int, Slice>> &sort,
+             std::map<int, std::map<int, Slice>> &midbytes, bool ternary,
+             bool atcam = false) const;
     void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
             safe_vector<Slice> &ghost, const TableMatch *fmt,
             std::map<int, std::map<int, Slice>> &sort) const;

@@ -51,7 +51,7 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
 : table(t), lineno(data[0].key.lineno)
 {
     for (auto &kv : data) {
-        bool ternary = tern;
+        Group::type_t grtype = tern ? Group::TERNARY : Group::EXACT;
         if (!CHECKTYPEM(kv.key, tCMD, "group or hash descriptor"))
             continue;
         unsigned index = 1;
@@ -63,27 +63,40 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
         bool isgroup = false;
 
         if (kv.key[0] == "exact" && kv.key[1] == "group") {
-            ternary = false;
+            grtype = Group::EXACT;
             isgroup = true;
         } else if (kv.key[0] == "ternary" && kv.key[1] == "group") {
-            ternary = true;
+            grtype = Group::TERNARY;
+            isgroup = true;
+        } else if (kv.key[0] == "byte" && kv.key[1] == "group") {
+            grtype = Group::BYTE;
             isgroup = true; }
         if (isgroup || kv.key[0] == "group") {
-            if (index >= (ternary ? TCAM_XBAR_GROUPS : EXACT_XBAR_GROUPS)) {
+            if (index >= Group::max_index(grtype)) {
                 error(kv.key.lineno, "invalid group descriptor");
                 continue; }
-            auto &group = groups[Group(ternary, index)];
+            auto &group = groups[Group(grtype, index)];
             if (kv.value.type == tVEC) {
                 for (auto &reg : kv.value.vec)
                     group.emplace_back(Phv::Ref(t->gress, reg));
             } else if (kv.value.type == tMAP) {
                 for (auto &reg : kv.value.map) {
                     if (!CHECKTYPE2(reg.key, tINT, tRANGE)) continue;
+                    int lo = -1, hi = -1;
                     if (reg.key.type == tINT)
-                        group.emplace_back(Phv::Ref(t->gress, reg.value), reg.key.i);
-                    else
-                        group.emplace_back(Phv::Ref(t->gress, reg.value),
-                                           reg.key.lo, reg.key.hi); }
+                        lo = reg.key.i;
+                    else {
+                        lo = reg.key.lo;
+                        hi = reg.key.hi; }
+                    if (lo < 0 || lo >= Group::group_size(grtype)) {
+                        error(reg.key.lineno, "Invalid offset for %s group",
+                              Group::group_type(grtype));
+                    } else if (grtype == Group::TERNARY && lo >= 40) {
+                        if (hi >= lo) hi -= 40;
+                        groups[Group(Group::BYTE, index/2)]
+                            .emplace_back(Phv::Ref(t->gress, reg.value), lo-40, hi);
+                    } else {
+                        group.emplace_back(Phv::Ref(t->gress, reg.value), lo, hi); } }
             } else
                 group.emplace_back(Phv::Ref(t->gress, kv.value));
         } else if (kv.key[0] == "hash") {
@@ -160,7 +173,9 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
 unsigned InputXbar::tcam_width() {
     unsigned words = 0, bytes = 0;
     for (auto &group : groups) {
-        if (!group.first.ternary) continue;
+        if (group.first.type != Group::TERNARY) {
+            if (group.first.type == Group::BYTE) ++bytes;
+        continue; }
         unsigned in_word = 0, in_byte = 0;
         for (auto &input : group.second) {
             if (input.lo < 40)
@@ -176,7 +191,7 @@ unsigned InputXbar::tcam_width() {
 
 int InputXbar::tcam_byte_group(int idx) {
     for (auto &group : groups) {
-        if (!group.first.ternary) continue;
+        if (group.first.type != Group::TERNARY) continue;
         for (auto &input : group.second)
             if (input.lo >= 40 || input.hi >= 40) {
                 if (--idx < 0) return group.first.index/2;
@@ -186,7 +201,7 @@ int InputXbar::tcam_byte_group(int idx) {
 
 int InputXbar::tcam_word_group(int idx) {
     for (auto &group : groups) {
-        if (!group.first.ternary) continue;
+        if (group.first.type != Group::TERNARY) continue;
         for (auto &input : group.second)
             if (input.lo < 40) {
                 if (--idx < 0) return group.first.index;
@@ -199,12 +214,10 @@ bool InputXbar::conflict(const std::vector<Input> &a, const std::vector<Input> &
         if (i1.lo < 0) continue;
         for (auto &i2 : b) {
             if (i2.lo < 0) continue;
-            if (i1.lo < i2.lo) {
-                if (i1.hi >= i2.lo) return true;
-            } else if (i2.hi >= i1.lo) {
-                if (i1.lo != i2.lo || i1.hi != i2.hi || i1.what != i2.what)
-                    return true;
-            }
+            if (i2.lo > i1.hi || i1.lo > i2.hi) continue;
+            if (i1.what->reg != i2.what->reg) return true;
+            if (i1.lo - i1.what->lo != i2.lo - i2.what->lo)
+                return true;
         }
     }
     return false;
@@ -260,30 +273,118 @@ bool InputXbar::can_merge(HashGrp &a, HashGrp &b)
     return true;
 }
 
-void InputXbar::pass1() {
-    auto &use = table->stage->ixbar_use;
+static int tcam_swizzle_offset[4][4] = {
+    {  0, +1, -2, -1 },
+    { +3,  0, +1, -2 },
+    { +2, -1,  0, -3 },
+    { +1, +2, -1,  0 },
+};
+
+// FIXME -- when swizlling 16 bit PHVs, there are 2 places we could copy from, but
+// FIXME -- we only consider the closest/easiest
+static int tcam_swizzle_16[2][2] { { 0, -1 }, { +1, 0 } };
+
+int InputXbar::tcam_input_use(int out_byte, int phv_byte, int phv_size) {
+    int rv = out_byte;
+    assert(phv_byte >= 0 && phv_byte < phv_size/8);
+    switch(phv_size) {
+    case 8:
+        break;
+    case 32:
+        rv += tcam_swizzle_offset[out_byte & 3][phv_byte];
+        break;
+    case 16:
+        rv += tcam_swizzle_16[out_byte & 1][phv_byte];
+        break;
+    default:
+        assert(0); }
+    return rv;
+}
+
+void InputXbar::tcam_update_use(TcamUseCache &use) {
+    if (use.ixbars_added.count(this)) return;
+    use.ixbars_added.insert(this);
     for (auto &group : groups) {
-        auto size = group.first.ternary ? TCAM_XBAR_GROUP_SIZE : EXACT_XBAR_GROUP_SIZE;
+        if (group.first.type == Group::EXACT) continue;
+        for (auto &input : group.second) {
+            if (input.lo < 0) continue;
+            int group_base = (group.first.index*11 + 1)/2U;
+            int half_byte = 5 + 11*(group.first.index/2U);
+            if (group.first.type == Group::BYTE) {
+                group_base = 5 + 11*group.first.index;
+                half_byte = -1; }
+            int group_byte =input.lo/8;
+            for (int phv_byte = input.what->lo/8; phv_byte <= input.what->hi/8;
+                 phv_byte++, group_byte++)
+            {
+                assert(group_byte <= 5);
+                int out_byte = group_byte == 5 ? half_byte : group_base + group_byte;
+                int in_byte = tcam_input_use(out_byte, phv_byte, input.what->reg.size);
+                use.tcam_use.emplace(in_byte, std::pair<const Input &, int>(input, phv_byte));
+            }
+        }
+    }
+}
+
+void InputXbar::check_tcam_input_conflict(InputXbar::Group group, Input &input, TcamUseCache &use) {
+    unsigned bit_align_mask = input.lo >= 40 ? 3 : 7;
+    unsigned byte_align_mask = (input.what->reg.size-1) >> 3;
+    int group_base = (group.index * 11 + 1)/2U;
+    int half_byte = 5 + 11*(group.index/2U);
+    if (group.type == Group::BYTE) {
+        bit_align_mask = 3;
+        group_base = 5 + 11*group.index;
+        half_byte = -1; }
+    int group_byte =input.lo/8;
+    if ((input.lo ^ input.what->lo) & bit_align_mask) {
+        error(input.what.lineno, "%s misaligned on input_xbar", input.what.name());
+        return; }
+    for (int phv_byte = input.what->lo/8; phv_byte <= input.what->hi/8; phv_byte++, group_byte++) {
+        assert(group_byte <= 5);
+        int out_byte = group_byte == 5 ? half_byte : group_base + group_byte;
+        int in_byte = tcam_input_use(out_byte, phv_byte, input.what->reg.size);
+        if (in_byte < 0 || in_byte >= TCAM_XBAR_INPUT_BYTES) {
+            error(input.what.lineno, "%s misaligned on input_xbar", input.what.name());
+            break; }
+        auto *tbl = table->stage->tcam_ixbar_input[in_byte];
+        if (tbl) tbl->input_xbar->tcam_update_use(use);
+        if (use.tcam_use.count(in_byte)) {
+            if (use.tcam_use.at(in_byte).first.what->reg != input.what->reg ||
+                use.tcam_use.at(in_byte).second != phv_byte) {
+                error(input.what.lineno, "Use of tcam ixbar for %s", input.what.name());
+                error(use.tcam_use.at(in_byte).first.what.lineno, "...conflicts with %s",
+                      use.tcam_use.at(in_byte).first.what.name());
+                break; }
+        } else {
+            use.tcam_use.emplace(in_byte, std::pair<const Input &, int>(input, phv_byte));
+            table->stage->tcam_ixbar_input[in_byte] = tbl; } }
+}
+
+void InputXbar::pass1() {
+    TcamUseCache tcam_use;
+    tcam_use.ixbars_added.insert(this);
+    for (auto &group : groups) {
         for (auto &input : group.second) {
             if (!input.what.check()) continue;
             if (input.what->reg.ixbar_id() < 0)
                 error(input.what.lineno, "%s not accessable in input xbar", input.what->reg.name);
             table->stage->match_use[table->gress][input.what->reg.uid] = 1;
+            if (input.lo < 0 && group.first.type == Group::BYTE)
+                input.lo = input.what->lo % 8U;
             if (input.lo >= 0) {
                 if (input.hi >= 0) {
-                    if (input.hi - input.lo != input.what->hi - input.what->lo)
+                    if (input.size() != input.what->size())
                         error(input.what.lineno, "Input xbar size doesn't match register size");
                 } else
-                    input.hi = input.lo - input.what->lo + input.what->hi;
-                if (input.lo >= size)
+                    input.hi = input.lo + input.what->size() - 1;
+                if (input.lo >= Group::group_size(group.first.type))
                     error(input.what.lineno, "placing %s off the top of the input xbar",
                           input.what.name()); }
-                if (group.first.ternary) {
-                    unsigned align_mask = input.lo >= 40 ? 3 : 7;
-                    if ((input.lo ^ input.what->lo) & align_mask)
-                        error(input.what.lineno, "%s misaligned on input_xbar", input.what.name());
-                } else if (input.lo % input.what->reg.size != input.what->lo)
+                if (group.first.type != Group::EXACT)
+                    check_tcam_input_conflict(group.first, input, tcam_use);
+                else if (input.lo % input.what->reg.size != input.what->lo)
                     error(input.what.lineno, "%s misaligned on input_xbar", input.what.name()); }
+        auto &use = table->stage->ixbar_use;
         for (InputXbar *other : use[group.first]) {
             if (other->groups.count(group.first) &&
                 conflict(other->groups[group.first], group.second)) {
@@ -365,7 +466,6 @@ void InputXbar::GroupSet::dbprint(std::ostream &out) const {
 void InputXbar::pass2() {
     auto &use = table->stage->ixbar_use;
     for (auto &group : groups) {
-        auto size = group.first.ternary ? TCAM_XBAR_GROUP_SIZE : EXACT_XBAR_GROUP_SIZE;
         unsigned bytes_in_use = 0;
         for (auto &input : group.second) {
             if (input.lo >= 0) continue;
@@ -381,7 +481,7 @@ void InputXbar::pass2() {
                         add_use(bytes_in_use, other->groups[group.first]);
             int need = input.what->hi/8U - input.what->lo/8U + 1;
             unsigned mask = (1U << need)-1;
-            int max = (size+7)/8 - need;
+            int max = (Group::group_size(group.first.type)+7)/8 - need;
             for (int i = 0; i <= max; i++, mask <<= 1)
                 if (!(bytes_in_use & mask)) {
                     input.lo = i*8 + input.what->lo%8U;
@@ -392,7 +492,7 @@ void InputXbar::pass2() {
                     break; }
             if (input.lo < 0) {
                 error(input.what.lineno, "No space in input xbar %s group %d for %s",
-                      group.first.ternary ? "ternary" : "exact", group.first.index,
+                      Group::group_type(group.first.type), group.first.index,
                       input.what.name());
                 LOG1("Failed to put " << input.what << " into " << group.first <<
                      " in stage " << table->stage->stageno);
@@ -405,13 +505,6 @@ void InputXbar::pass2() {
             if (!col.second.data && col.second.fn)
                 col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first/2U);
 }
-
-static int tcam_swizzle_offset[4][4] = {
-    {  0, +1, -2, -1 },
-    { +3,  0, +1, -2 },
-    { +2, -1,  0, -3 },
-    { +1, +2, -1,  0 },
-};
 
 #include <tofino/input_xbar.cpp>        // tofino template specializations
 #if HAVE_JBAY
@@ -427,13 +520,21 @@ void InputXbar::write_regs(REGS &regs) {
         unsigned group_base;
         unsigned half_byte = 0;
         unsigned bytes_used = 0;
-        if (group.first.ternary) {
+        switch (group.first.type) {
+        case Group::EXACT:
+            group_base = group.first.index * 16U;
+            break;
+        case Group::TERNARY:
             group_base = 128 + (group.first.index*11 + 1)/2U;
             half_byte = 133 + 11*(group.first.index/2U);
             xbar.mau_match_input_xbar_ternary_match_enable[table->gress]
                 |= 1 << (group.first.index)/2U;
-        } else
-            group_base = group.first.index * 16U;
+            break;
+        case Group::BYTE:
+            group_base = 133 + 11*group.first.index;
+            break;
+        default:
+            assert(0); }
         for (auto &input : group.second) {
             assert(input.lo >= 0);
             unsigned word_group, word_index, swizzle_mask;
@@ -465,7 +566,7 @@ void InputXbar::write_regs(REGS &regs) {
                 unsigned i = group_base + byte;
                 if (half_byte && byte == 5) i = half_byte;
                 if (i%phv_size != phv_byte) {
-                    if (group.first.ternary) {
+                    if (group.first.type != Group::EXACT) {
                         int off;
                         if (phv_size == 2)
                             off = (i&2) ? -1 : 1;
@@ -495,7 +596,7 @@ void InputXbar::write_regs(REGS &regs) {
             auto &power_ctl = regs.dp.match_input_xbar_din_power_ctl;
             // we do in fact want mau_id, not ixbar_id here!
             set_power_ctl_reg(power_ctl, input.what->reg.mau_id()); }
-        if (!group.first.ternary) {
+        if (group.first.type == Group::EXACT) {
             unsigned enable = 0;
             if (bytes_used & 0xff) enable |= 1;
             if (bytes_used & 0xff00) enable |= 2;

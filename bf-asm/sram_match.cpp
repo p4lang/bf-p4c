@@ -222,7 +222,8 @@ static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {
         for (auto &r : match) {
             LOG3("  looking for " << r);
             bool found = false;
-            for (auto *in : table->stage->ixbar_use[InputXbar::Group(false, group)]) {
+            InputXbar::Group ixbar_group(InputXbar::Group::EXACT, group);
+            for (auto *in : table->stage->ixbar_use[ixbar_group]) {
                 if (in->find_exact(*r, group)) {
                     found = true;
                     break; } }

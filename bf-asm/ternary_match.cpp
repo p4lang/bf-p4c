@@ -41,7 +41,7 @@ void TernaryMatchTable::alloc_vpns() {
                   "in each column", width, width); }
 }
 
-TernaryMatchTable::Match::Match(const value_t &v) {
+TernaryMatchTable::Match::Match(const value_t &v) : lineno(v.lineno) {
     if (v.type == tVEC) {
         if (v.vec.size < 2 || v.vec.size > 3) {
             error(v.lineno, "Syntax error");
@@ -179,8 +179,25 @@ void TernaryMatchTable::pass1() {
             error(layout[0].lineno, "No match or input_xbar in non-empty ternary table %s", name());
     } else if (layout.size() % match.size() != 0) {
         error(layout[0].lineno, "Rows not a multiple of the match width in tables %s", name());
-    } else if (layout.size() == 0)
+    } else if (layout.size() == 0) {
         error(lineno, "Empty ternary table with non-empty match");
+    } else {
+        auto mg = match.begin();
+        for (auto &row : layout) {
+            if (row.bus < 0) row.bus = row.cols.at(0);
+            if (mg->byte_group >= 0) {
+                auto &bg_use = stage->tcam_byte_group_use[row.row/2][row.bus];
+                if (bg_use.first) {
+                    if (bg_use.second != mg->byte_group) {
+                        error(mg->lineno, "Conflicting tcam byte group between rows %d and %d "
+                              "in col %d for table %s", row.row, row.row^1, row.bus, name());
+                        if (bg_use.first != this)
+                            error(bg_use.first->lineno, "...also used in table %s",
+                                  bg_use.first->name()); }
+                } else {
+                    bg_use.first = this;
+                    bg_use.second = mg->byte_group; } }
+            if (++mg == match.end()) mg = match.begin(); } }
     if (error_count > 0) return;
     alloc_vpns();
     check_next();
@@ -543,48 +560,73 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         ((hit_next[0].name != "END") ? hit_next[0]->logical_id : 255) : 255;
     add_result_physical_buses(stage_tbl);
     for (auto field : *input_xbar) {
-        if (!field.first.ternary) continue;
-        int word = match_index - match_word(field.first.index);
-        if (word < 0) continue;
-        std::string source = "spec";
-        std::string field_name = field.second.what.name();
-        remove_aug_names(field_name);
-        unsigned lsb_mem_word_offset = 0;
-        if (field.second.hi > 40) {
-            // a field in the (mid) byte group, which is shared with the adjacent word group
-            // each word gets only 4 bits of the byte group and is placed at msb
-            // Check mid-byte field does not cross byte boundary (40-47)
-            assert(field.second.hi < 48);
-            // Check mid-byte field is associated with even group
-            // | == 5 == | == 1 == | == 5 == | == 5 == | == 1 == | == 5 == |
-            // | Grp 0   | Midbyte0| Grp 1   | Grp 2   | Midbyte1| Grp 3   |
-            assert((field.first.index & 1) == 0);
-            // Find groups to place this byte nibble. Check group which has this
-            // group as the byte_group
-            for (auto &m : match) {
-                if (m.byte_group * 2 == field.first.index) {
-                    // Check byte_config to determine where to place the nibble
-                    lsb_mem_word_offset = 1 + field.second.lo;
-                    int nibble_offset = 0;
-                    int hwidth = 44 - field.second.lo;
-                    int start_bit = 0;
-                    if (m.byte_config == MIDBYTE_NIBBLE_HI) {
-                        nibble_offset += 4;
-                        start_bit = hwidth;
-                        hwidth = field.second.hi - 43;
+        switch(field.first.type) {
+        case InputXbar::Group::EXACT:
+            continue;
+        case InputXbar::Group::TERNARY: {
+            int word = match_index - match_word(field.first.index);
+            if (word < 0) continue;
+            std::string source = "spec";
+            std::string field_name = field.second.what.name();
+            remove_aug_names(field_name);
+            unsigned lsb_mem_word_offset = 0;
+            if (field.second.hi > 40) {
+                // FIXME -- no longer needed if we always convert these to Group::BYTE?
+                // a field in the (mid) byte group, which is shared with the adjacent word group
+                // each word gets only 4 bits of the byte group and is placed at msb
+                // Check mid-byte field does not cross byte boundary (40-47)
+                assert(field.second.hi < 48);
+                // Check mid-byte field is associated with even group
+                // | == 5 == | == 1 == | == 5 == | == 5 == | == 1 == | == 5 == |
+                // | Grp 0   | Midbyte0| Grp 1   | Grp 2   | Midbyte1| Grp 3   |
+                assert((field.first.index & 1) == 0);
+                // Find groups to place this byte nibble. Check group which has this
+                // group as the byte_group
+                for (auto &m : match) {
+                    if (m.byte_group * 2 == field.first.index) {
+                        // Check byte_config to determine where to place the nibble
+                        lsb_mem_word_offset = 1 + field.second.lo;
+                        int nibble_offset = 0;
+                        int hwidth = 44 - field.second.lo;
+                        int start_bit = 0;
+                        if (m.byte_config == MIDBYTE_NIBBLE_HI) {
+                            nibble_offset += 4;
+                            start_bit = hwidth;
+                            hwidth = field.second.hi - 43;
+                        }
+                        int midbyte_word_group = match_index - match_word(m.word_group);
+                        gen_entry_cfg(match_field_list, field_name,
+                            lsb_mem_word_offset, midbyte_word_group, midbyte_word_group, source,
+                            field.second.what.lobit() + start_bit, hwidth, field.first.index);
                     }
-                    int midbyte_word_group = match_index - match_word(m.word_group);
-                    gen_entry_cfg(match_field_list, field_name, \
-                        lsb_mem_word_offset, midbyte_word_group, midbyte_word_group, source, \
-                        field.second.what.lobit() + start_bit, hwidth, field.first.index);
                 }
-            }
-        } else {
-            lsb_mem_word_offset = 1 + field.second.lo;
-            gen_entry_cfg(match_field_list, field_name, \
-                          lsb_mem_word_offset, word, word, source, \
-                          field.second.what.lobit(), \
-                          field.second.hi - field.second.lo + 1, field.first.index); } }
+            } else {
+                lsb_mem_word_offset = 1 + field.second.lo;
+                gen_entry_cfg(match_field_list, field_name,
+                              lsb_mem_word_offset, word, word, source,
+                              field.second.what.lobit(),
+                              field.second.hi - field.second.lo + 1, field.first.index); }
+            break; }
+        case InputXbar::Group::BYTE:
+            for (size_t word = 0; word < match.size(); word++) {
+                if (match[word].byte_group != field.first.index) continue;
+                std::string source = "spec";
+                std::string field_name = field.second.what.name();
+                remove_aug_names(field_name);
+                int byte_lo = field.second.lo;
+                int field_lo = field.second.what.lobit();
+                int width = field.second.what.size();
+                if (match[word].byte_config == MIDBYTE_NIBBLE_HI) {
+                    if (byte_lo >= 4) {
+                        byte_lo -= 4;
+                    } else {
+                        field_lo += 4 - byte_lo;
+                        width -= 4 - byte_lo;
+                        byte_lo = 0; } }
+                if (width > 4) width = 4;
+                gen_entry_cfg(match_field_list, field_name, 41 + byte_lo, match_index - word,
+                    match_index - word, source, field_lo, width, match[word].word_group); }
+            break; } }
     // For keyless table, just add parity & payload bits
     if (p4_params_list.empty()) {
         gen_match_fields_pvp(match_field_list, 0, false, -1);

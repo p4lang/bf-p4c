@@ -64,11 +64,12 @@ struct Memories {
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
-    Alloc2D<int, TCAM_ROWS / 2, TCAM_COLUMNS>          tcam_midbyte_use;
     Alloc2D<cstring, SRAM_ROWS, 2>                     gateway_use;
     Alloc2D<search_bus_info, SRAM_ROWS, 2>             sram_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     sram_match_bus;
+    int tcam_group_use[TCAM_ROWS][TCAM_COLUMNS] = {{-1}};
+    int tcam_midbyte_use[TCAM_ROWS/2][TCAM_COLUMNS] = {{-1}};
     Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     payload_use;
     Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
@@ -135,10 +136,11 @@ struct Memories {
         /* FIXME -- when tracking EXACT table memuse, do we need to track which way
          * each memory is allocated to?  For now, we do not. */
         struct Row {
-            int         row, bus;
+            int         row, bus, group, alloc;
             safe_vector<int> col, mapcol;
-            Row() : row(-1), bus(-1) {}
-            explicit Row(int r, int b = -1) : row(r), bus(b) {}
+            Row() : row(-1), bus(-1), group(-1), alloc(-1) {}
+            explicit Row(int r, int b = -1, int g = -1, int a = -1)
+                : row(r), bus(b), group(g), alloc(a) {}
             void dbprint(std::ostream &out) const {
                 out << "Row " << row << " with bus " << bus;
             }
@@ -382,6 +384,8 @@ struct Memories {
     safe_vector<table_alloc *>       idletime_tables;
     safe_vector<SRAM_group *>        idletime_groups;
 
+    int allocation_count = 0;
+
     ordered_map<const IR::MAU::AttachedMemory *, table_alloc *> shared_attached;
 
     unsigned side_mask(RAM_side_t side);
@@ -419,7 +423,8 @@ struct Memories {
 
     bool allocate_all_ternary();
     int ternary_TCAMs_necessary(table_alloc *ta, int &midbyte);
-    bool find_ternary_stretch(int TCAMs_necessary, int &row, int &col, int midbyte);
+    bool find_ternary_stretch(int TCAMs_necessary, int &row, int &col, int midbyte,
+        bool &split_midbyte);
 
     bool allocate_all_tind();
     void find_tind_groups();

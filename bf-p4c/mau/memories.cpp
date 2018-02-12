@@ -61,6 +61,7 @@ void Memories::clear_uses() {
     memset(sram_inuse, 0, sizeof(sram_inuse));
     memset(gw_bytes_per_sb, 0, sizeof(gw_bytes_per_sb));
     memset(mapram_inuse, 0, sizeof(mapram_inuse));
+    memset(tcam_midbyte_use, -1, sizeof(tcam_midbyte_use));
 }
 
 void Memories::clear() {
@@ -104,10 +105,13 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
     else
         ta = new table_alloc(t, &resources->gateway_ixbar, nullptr, &resources->memuse, lo,
                              entries);
+    LOG2("Adding table " << ta->table->name);
     tables.push_back(ta);
     if (gw != nullptr)  {
         auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, nullptr, &resources->memuse,
                                       lo, -1);
+        LOG2("Adding gateway table " << ta_gw->table->name << " to table "
+             << ta_gw->table->name);
         ta_gw->link_table(ta);
         ta->link_table(ta_gw);
         tables.push_back(ta_gw);
@@ -749,6 +753,7 @@ void Memories::calculate_column_balance(const mem_info &mi, unsigned &row) {
 
 /* Allocates all of the ways */
 bool Memories::allocate_all_exact(unsigned column_mask) {
+    allocation_count = 0;
     break_exact_tables_into_ways();
     while (exact_match_ways.size() > 0) {
         if (find_best_row_and_fill_out(column_mask) == false) {
@@ -775,7 +780,7 @@ void Memories::compress_row(Use &alloc) {
             int t;
             if ((t = a.row - b.row) != 0) return t < 0;
             if ((t = a.bus - b.bus) != 0) return t < 0;
-            return false;
+            return a.alloc < b.alloc;
         });
     for (size_t i = 0; i < alloc.row.size() - 1; i++) {
         if (alloc.row[i].row == alloc.row[i+1].row &&
@@ -786,6 +791,14 @@ void Memories::compress_row(Use &alloc) {
             i--;
         }
     }
+
+    std::stable_sort(alloc.row.begin(), alloc.row.end(),
+        [=](const Memories::Use::Row &a, const Memories::Use::Row &b) {
+        int t;
+        if ((t = a.alloc - b.alloc) != 0) return t < 0;
+        if ((t = a.group - b.group) != 0) return t < 0;
+        return a.row < b.row;
+    });
 }
 
 /** Adjust the Use structures so that there is is only one Use::Row object per row and bus.
@@ -971,14 +984,14 @@ void Memories::fill_out_match_alloc(SRAM_group *group, match_selection &match_se
     // Save row and column information
     for (auto row : match_select.rows) {
         auto bus = match_select.buses.at(row);
-        alloc.row.emplace_back(row, bus);
+        int width = match_select.widths.at(row);
+        alloc.row.emplace_back(row, bus, width, allocation_count);
         auto &back_row = alloc.row.back();
         for (auto col : match_select.cols) {
             sram_use[row][col] = name;
             back_row.col.push_back(col);
         }
 
-        int width = match_select.widths.at(row);
         auto group_search_bus = group->build_search_bus(width);
         sram_inuse[row] |= match_select.column_mask;
         if (!sram_search_bus[row][bus].free()) {
@@ -1010,6 +1023,7 @@ void Memories::fill_out_match_alloc(SRAM_group *group, match_selection &match_se
             }
         }
     }
+    allocation_count++;
 }
 
 /** Given a partition, find a set of rows, buses, and columns for that partition.  An ATCAM
@@ -1121,6 +1135,7 @@ unsigned Memories::best_partition_side(mem_info &mi) {
 }
 
 bool Memories::allocate_all_atcam(mem_info &mi) {
+    allocation_count = 0;
     break_atcams_into_partitions();
     while (!atcam_partitions.empty()) {
         auto partition_mask = best_partition_side(mi);
@@ -1140,13 +1155,15 @@ int Memories::ternary_TCAMs_necessary(table_alloc *ta, int &midbyte) {
 
 /* Finds the stretch on the ternary array that can hold entries */
 bool Memories::find_ternary_stretch(int TCAMs_necessary, int &row, int &col,
-                                    int midbyte) {
+                                    int midbyte, bool &split_first) {
     for (int j = 0; j < TCAM_COLUMNS; j++) {
         int clear_cols = 0;
+        split_first = false;
 
         for (int i = 0; i < TCAM_ROWS; i++) {
             if (tcam_use[i][j]) {
                 clear_cols = 0;
+                split_first = false;
                 continue;
             }
 
@@ -1161,6 +1178,8 @@ bool Memories::find_ternary_stretch(int TCAMs_necessary, int &row, int &col,
                         && midbyte != tcam_midbyte_use[i / 2][j]) {
                         continue;
                     }
+                    if (tcam_midbyte_use[i / 2][j] == midbyte)
+                        split_first = true;
                 }
             }
 
@@ -1177,6 +1196,7 @@ bool Memories::find_ternary_stretch(int TCAMs_necessary, int &row, int &col,
 
 /* Allocates all ternary entries within the stage */
 bool Memories::allocate_all_ternary() {
+    allocation_count = 0;
     std::sort(ternary_tables.begin(), ternary_tables.end(),
         [=](const table_alloc *a, table_alloc *b) {
         int t;
@@ -1197,16 +1217,41 @@ bool Memories::allocate_all_ternary() {
         auto name = ta->table->get_use_name();
         Memories::Use &alloc = (*ta->memuse)[name];
         for (int i = 0; i < ta->calculated_entries / 512; i++) {
-            if (!find_ternary_stretch(TCAMs_necessary, row, col, midbyte))
+            bool split_midbyte = false;
+            if (!find_ternary_stretch(TCAMs_necessary, row, col, midbyte, split_midbyte))
                 return false;
+            int group = 0;
+            if (split_midbyte)
+                group = TCAMs_necessary - 1;
             for (int i = row; i < row + TCAMs_necessary; i++) {
                  tcam_use[i][col] = name;
-                 tcam_midbyte_use[i/2][col] = midbyte;
-                 alloc.row.emplace_back(i, col);
+                 auto tcam = ta->table_format->tcam_use[group];
+                 if (tcam_midbyte_use[i/2][col] >= 0 && tcam.byte_group >= 0)
+                     BUG_CHECK(tcam_midbyte_use[i/2][col] == tcam.byte_group, "Two contiguous "
+                         "TCAMs cannot correct share midbyte");
+                 else if (tcam_midbyte_use[i/2][col] < 0)
+                     tcam_midbyte_use[i/2][col] = tcam.byte_group;
+                 alloc.row.emplace_back(i, col, group, allocation_count);
                  alloc.row.back().col.push_back(col);
+                 group++;
+                 group %= TCAMs_necessary;
             }
+            allocation_count++;
         }
     }
+
+    for (auto *ta : ternary_tables) {
+        auto name = ta->table->get_use_name();
+        auto &alloc = (*ta->memuse)[name];
+        std::stable_sort(alloc.row.begin(), alloc.row.end(),
+            [=](const Memories::Use::Row &a, const Memories::Use::Row &b) {
+            int t;
+            if ((t = a.alloc - b.alloc) != 0) return t < 0;
+            if ((t = a.group - b.group) != 0) return t < 0;
+            return a.row < b.row;
+        });
+    }
+
     for (auto *ta : ternary_tables) {
         auto name = ta->table->get_use_name();
         auto &alloc = (*ta->memuse)[name];
