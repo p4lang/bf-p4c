@@ -7,11 +7,6 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
         if (stageno == 0) {
             merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(gress) - 2;
             merge.predication_ctl[gress].start_table_fifo_enable = 1;
-            /* MFerrera: "After some debug on the emulator, we've found a programming issue due to
-             * incorrect documentation and CSR description of match_ie_input_mux_sel in JBAY"
-             * MAU Stage 0 must always be configured to source iPHV from Parser-Arbiter
-             * Otherwise, MAU stage 0 is configured as match-dependent on Parser-Arbiter */
-            if (gress == INGRESS) regs.dp.match_ie_input_mux_sel |= 1;
         } else if (stage_dep[gress] == MATCH_DEP) {
             merge.predication_ctl[gress].start_table_fifo_delay0 =
                 this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + pred_cycle(gress) - 3;
@@ -43,6 +38,14 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
             merge.mpr_thread_delay[gress] = pipelength(gress) - pred_cycle(gress) - 4;
         else
             merge.mpr_thread_delay[gress] = 0; }
+
+    if (stageno == 0) {
+        /* MFerrera: "After some debug on the emulator, we've found a programming issue due to
+        * incorrect documentation and CSR description of match_ie_input_mux_sel in JBAY"
+        * MAU Stage 0 must always be configured to source iPHV from Parser-Arbiter
+        * Otherwise, MAU stage 0 is configured as match-dependent on Parser-Arbiter */
+        regs.dp.match_ie_input_mux_sel |= 3;
+    }
     merge.mpr_stage = stageno;
     merge.pred_stage_id = stageno;
     if (stageno != AsmStage::numstages()-1) {
