@@ -887,6 +887,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "No phv record"
   extensions/p4_tests/p4_14/action_conflict_3.p4
+  extensions/p4_tests/p4_16/brig-42.p4
   )
 
 # p4c_add_xfail_reason("tofino"
@@ -1017,22 +1018,8 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: Invalid slice of .*"
-  testdata/p4_14_samples/mac_rewrite.p4
-  # extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
-  # extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
-  extensions/p4_tests/p4_16/brig-42.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "error: Match overhead field immediate.* not in bottom 64 bits"
   extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4
-  )
-
-# BRIG-394
-p4c_add_xfail_reason("tofino"
-  "error: Invalid slice of .*"
-  extensions/p4_tests/p4_14/test_config_274_diff_size_fields.p4
   )
 
 p4c_add_xfail_reason("tofino"

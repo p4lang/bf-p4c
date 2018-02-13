@@ -1225,7 +1225,8 @@ class MauAsmOutput::EmitAction : public Inspector {
                         if (!single_loc)
                             out << "." << alloc.field_bit << "-" << alloc.field_hi();
                         if (bits.lo > alloc.field_bit || bits.hi < alloc.field_hi())
-                            out << "(" << bits.lo << ".." << bits.hi << ")";
+                            out << "(" << bits.lo - alloc.field_bit << ".." <<
+                                          bits.hi - alloc.field_bit  << ")";
                     });
                 }
             } else {

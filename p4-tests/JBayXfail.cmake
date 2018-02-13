@@ -117,11 +117,6 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "error: Invalid slice of .*"
-  testdata/p4_14_samples/mac_rewrite.p4
-  )
-
-p4c_add_xfail_reason("jbay"
   "Structure header ingress_intrinsic_metadata_t does not have a field ucast_egress_port"
   testdata/p4_14_samples/sai_p4.p4
   )
