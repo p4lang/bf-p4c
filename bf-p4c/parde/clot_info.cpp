@@ -1,7 +1,6 @@
 #include <array>
 #include <vector>
 
-#include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -98,6 +97,7 @@ class NaiveClotAlloc : public Visitor {
 
     ClotInfo& clotInfo;
     /*const BuildParserOverlay2& mutexStates;*/
+    const CollectParserGraph& parserGraph;
 
     struct ParserStatePredecessor : public Inspector {
         ParserStatePredecessor() {}
@@ -124,8 +124,12 @@ class NaiveClotAlloc : public Visitor {
     std::map<const IR::BFN::ParserState*, unsigned> state_gap_credit;
 
  public:
-    explicit NaiveClotAlloc(ClotInfo& clotInfo /*, const BuildParserOverlay2& mutexStates*/) :
-        clotInfo(clotInfo) /*, mutexStates(mutexStates)*/ { }
+    explicit NaiveClotAlloc(ClotInfo& clotInfo,
+                            /*, const BuildParserOverlay2& mutexStates*/
+                            const CollectParserGraph& parserGraph) :
+        clotInfo(clotInfo),
+        /*, mutexStates(mutexStates),*/
+        parserGraph(parserGraph) { }
 
     struct ClotAlloc {
         ClotAlloc(const IR::BFN::ParserState* state, unsigned unused, unsigned total) :
@@ -169,8 +173,15 @@ class NaiveClotAlloc : public Visitor {
        }
 
        // XXX(zma) replace this with optimizition based on parse graph anlysis
-        std::stable_sort(req[0].begin(), req[0].end());
-        std::stable_sort(req[1].begin(), req[1].end());
+
+       auto ingressSorted = parserGraph.egress().topological_sort();
+
+       std::cout << "topological sort order:" << std::endl;
+       for (auto s : ingressSorted)
+           std::cout << s->name << std::endl;
+
+       std::stable_sort(req[0].begin(), req[0].end());
+       std::stable_sort(req[1].begin(), req[1].end());
 
        std::reverse(req[0].begin(), req[0].end());
        std::reverse(req[1].begin(), req[1].end());
@@ -301,10 +312,10 @@ class NaiveClotAlloc : public Visitor {
 AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses) {
     addPasses({
         &uses,
+        &parserGraph,
         LOGGING(3) ? new DumpParser("before_clot_allocation.dot") : nullptr,
-        /*&parser_overlay,*/
         new CollectClotInfo(phv, clotInfo),
-        new NaiveClotAlloc(clotInfo/*, parser_overlay*/),
+        new NaiveClotAlloc(clotInfo, parserGraph),
     });
 }
 

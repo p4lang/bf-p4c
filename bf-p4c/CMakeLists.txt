@@ -113,6 +113,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/multiple_apply.h
   common/rewrite.h
   common/param_binding.h
+  common/parser_graph.h
   common/parser_overlay.h
   common/parser_critical_path.h
   common/linear_path.h

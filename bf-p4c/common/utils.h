@@ -4,6 +4,8 @@
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 
+#include "bf-p4c/common/parser_graph.h"
+
 struct DumpPipe : public Inspector {
     const char *heading;
     DumpPipe() : heading(nullptr) {}
@@ -21,19 +23,11 @@ struct DumpPipe : public Inspector {
         return false; }
 };
 
-
-struct DumpParser : public Inspector {
+struct DumpParser : public Visitor {
     explicit DumpParser(cstring filename) {
         out = &std::cout;
         if (filename)
             out = new std::ofstream(filename);
-    }
-
-    Visitor::profile_t init_apply(const IR::Node* root) override {
-        auto rv = Inspector::init_apply(root);
-        *out << "digraph parser {" << std::endl;
-        *out << "size=\"8,5\"" << std::endl;
-        return rv;
     }
 
     static cstring escape_name(cstring name) {
@@ -44,26 +38,32 @@ struct DumpParser : public Inspector {
         return es.c_str();
     }
 
-    bool preorder(const IR::BFN::Parser* parser) override {
-        cstring gress = parser->gress ? "cluster_egress" : "cluster_ingress";
-        *out << "subgraph " << gress << " {" << std::endl;
-        return true;
+    static void write_cluster(std::ostream &out, const ParserGraph& graph/*, cstring gress*/) {
+        // out << "subgraph cluster_" << gress << "{" << std::endl;
+        for (auto transition : graph.transitions())
+            for (auto dst : transition.second)
+                out << escape_name((transition.first)->name)
+                    << " -> " << escape_name(dst->name) << std::endl;
+        // out << "}" << std::endl;
     }
 
-    void postorder(const IR::BFN::Parser* parser) override {
-        cstring gress = parser->gress ? "cluster_egress" : "cluster_ingress";
-        *out << "} #" << gress << std::endl;
-    }
+    const IR::Node *apply_visitor(const IR::Node *n, const char*) override { return n; }
 
-    bool preorder(const IR::BFN::ParserState* state) override {
-        auto *pred = findContext<IR::BFN::ParserState>();
-        if (pred)
-            *out << escape_name(pred->name) << " -> " << escape_name(state->name) << std::endl;
-        return true;
-    }
+    Visitor::profile_t init_apply(const IR::Node* root) override {
+        auto rv = Visitor::init_apply(root);
 
-    void end_apply() override {
-        *out << "}" << std::endl;;
+        CollectParserGraph cg;
+        root->apply(cg);
+
+        *out << "digraph parser {" << std::endl;
+        *out << "size=\"8,5\"" << std::endl;
+
+        write_cluster(*out, cg.ingress());
+        write_cluster(*out, cg.egress());
+
+        *out << "}" << std::endl;
+
+        return rv;
     }
 
     std::ostream* out = nullptr;

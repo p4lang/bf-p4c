@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_PARDE_CLOT_INFO_H_
 
 #include "clot.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/parde/parde_visitor.h"
@@ -81,6 +82,7 @@ class ClotInfo {
 
 class AllocateClot : public PassManager {
     /*BuildParserOverlay2 parser_overlay;*/
+    CollectParserGraph parserGraph;
 
  public:
     explicit AllocateClot(ClotInfo &clot, const PhvInfo &phv, PhvUse &uses);
