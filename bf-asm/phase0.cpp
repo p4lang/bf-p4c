@@ -55,6 +55,8 @@ void Phase0MatchTable::gen_tbl_cfg(json::vector &out) {
     match_attributes["match_type"] = "phase_0_match";
     stage_tbl["stage_number"] = -1;
     stage_tbl.erase("logical_table_id");
+    stage_tbl.erase("default_next_table");
+    stage_tbl.erase("has_attached_gateway");
     auto &mra = stage_tbl["memory_resource_allocation"] = json::map();
     mra["spare_bank_memory_unit"] = 0;
     mra["memory_type"] = "ingress_buffer";

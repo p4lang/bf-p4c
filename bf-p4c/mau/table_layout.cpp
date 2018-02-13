@@ -420,7 +420,6 @@ class VisitAttached : public Inspector {
     bool counter_set = false;
     bool meter_set = false;
     bool register_set = false;
-    bool meter_found = false;
     cstring counter_addr_name;
     cstring meter_addr_name;
 

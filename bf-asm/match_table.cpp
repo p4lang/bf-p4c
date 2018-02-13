@@ -399,7 +399,10 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                 if (!find_p4_param(field_name) && !p4_params_list.empty())
                     warning(col.second.lineno, "Cannot find field name %s in p4_param_order "
                             "for table %s", field_name.c_str(), name());
-                field["field_name"] = field_name; }
+                field["field_name"] = field_name;
+                field["hash_match_group"] = input_xbar->hash_group();
+                field["hash_match_group_bit"] = 0;  // FIXME: input_xbar->get_group_bit(input_xbar->get_group() col.first);
+            }
             if (!hash_bit_added)
                 bits_to_xor.push_back(std::move(field));
             else
@@ -429,6 +432,7 @@ void MatchTable::add_hash_functions(json::map &stage_tbl) {
             json::map hash_function;
             json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
             for (const auto hash_table : ht) {
+                hash_function["hash_function_number"] = hash_table.first;
                 gen_hash_bits(hash_table.second, hash_table.first, hash_bits);
             hash_functions.push_back(std::move(hash_function)); } } }
 }

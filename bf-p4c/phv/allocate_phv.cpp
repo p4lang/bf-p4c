@@ -946,7 +946,8 @@ void AllocatePHV::formatAndThrowError(
         msg << std::endl; }
 
     msg << alloc.getSummary(uses_i) << std::endl;
-    ::error("%1%", msg.str());
+    // ::error("%1%", msg.str());
+    throw Util::CompilationError("%1%", msg.str());
 }
 
 void AllocationStrategy::writeTransactionSummary(

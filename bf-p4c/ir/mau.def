@@ -80,7 +80,7 @@ class Table : BFN::Unit {
      * is not present, the default action is to run the table. */
     NullOK Action                               gateway_payload;
     // match_table never visited, keys are in match_key, default action also in action
-    NullOK IR::P4Table                          match_table; 
+    NullOK IR::P4Table                          match_table;
     inline Vector<BackendAttached>              attached;
     inline NameMap<Action, ordered_map>         actions;
     inline NameMap<TableSeq>                    next;
@@ -142,10 +142,10 @@ class Table : BFN::Unit {
                 return false;
             if (action_data_bytes == 0)
                 return false;
-            return action_data_bytes_in_table > 0; 
+            return action_data_bytes_in_table > 0;
         }
         bool ternary_indirect_required() const { return ternary; }
-        bool no_match_data() const { 
+        bool no_match_data() const {
             return match_width_bits == 0;
         }
         /** Currently hash action tables and default action tables that cannot be adapted by

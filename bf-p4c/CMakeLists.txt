@@ -330,18 +330,21 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")
 
 set (BF_P4C_BACKEND_MAIN_SRCS
   backend.cpp
+  bf-p4c-options.cpp
   device.cpp
   midend.cpp
-  bf-p4c-options.cpp
+  visualization.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAIN_SRCS}")
 build_unified(BF_P4C_BACKEND_MAIN_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_MAIN_HDRS
+  asm.h
   backend.h
+  bf-p4c-options.h
   device.h
   midend.h
-  bf-p4c-options.h
+  visualization.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAIN_HDRS}")
 

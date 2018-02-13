@@ -110,6 +110,8 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     json::map &stage_tbl = *add_common_sram_tbl_cfgs(tbl, "exact", "hash_match");
     add_pack_format(stage_tbl, format, true, false);
     stage_tbl["memory_resource_allocation"] = nullptr;
+    json::map &match_attributes = tbl["match_attributes"];
+    match_attributes["uses_dynamic_key_masks"] = false; //FIXME-JSON
     if (ways.size() > 0) {
         json::vector &way_stage_tables = stage_tbl["ways"] = json::vector();
         unsigned way_number = 0;
@@ -123,7 +125,6 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
             way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
             way_stage_tables.push_back(std::move(way_tbl)); } }
     if (size == 0) {
-        json::map &match_attributes = tbl["match_attributes"];
         match_attributes["match_type"] = "match_with_no_key";
         stage_tbl["stage_table_type"] = "match_with_no_key";
         stage_tbl["size"] = 1024; }
@@ -160,4 +161,3 @@ void ExactMatchTable::add_hash_functions(json::map &stage_tbl) {
             // Mark hash group as visited
             visited_groups[hash_group_no] = 1; } } }
 }
-

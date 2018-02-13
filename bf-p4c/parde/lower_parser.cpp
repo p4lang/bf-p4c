@@ -126,7 +126,7 @@ static bool isIntervalEarlierInPacket(nw_byteinterval a,
     if (a.empty()) return false;
     if (b.empty()) return true;
     return a.hi != b.hi ? a.hi < b.hi
-                        : a.lo < a.lo;
+                        : a.lo < b.lo;
 }
 
 /// A predicate which orders extracts by where their input data ends. Extracts

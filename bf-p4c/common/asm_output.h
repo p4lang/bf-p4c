@@ -17,6 +17,8 @@ class canon_name {
     explicit canon_name(StringRef n) : name(n) {}
     explicit canon_name(cstring n) : name(n) {}
     explicit canon_name(IR::ID n) : name(n.name) {}
+
+    operator cstring() const { return cstring(name); }
 };
 
 class Slice {

@@ -23,6 +23,9 @@ class Backend : public PassManager {
 
  public:
     explicit Backend(const BFN_Options& options);
+
+    const PhvInfo  &get_phv()  const { return phv; }
+    const ClotInfo &get_clot() const { return clot; }
 };
 
 }  // namespace BFN

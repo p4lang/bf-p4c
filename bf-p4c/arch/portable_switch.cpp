@@ -20,7 +20,7 @@ class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
         return true;
     }
 
-    unsigned enumSize(unsigned size) const override { return 8; }
+    unsigned enumSize(unsigned /* size */) const override { return 8; }
 };
 
 /// @pre: assume no nested control block or parser block,

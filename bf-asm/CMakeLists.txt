@@ -106,6 +106,7 @@ set (BFAS_COMMON_SOURCES
   parser.cpp
   phase0.cpp
   phv.cpp
+  resources.cpp
   salu_inst.cpp
   selection.cpp
   sram_match.cpp

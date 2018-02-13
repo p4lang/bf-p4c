@@ -8,6 +8,8 @@
 #include <stdarg.h>
 #include "bfas.h"
 
+/// A Section represents a top level section in assembly
+/// Current sections include: version, phv, parser, deparser, stage, and resource
 class Section {
     static std::map<std::string, Section *>     *sections;
     std::string name;
@@ -24,9 +26,13 @@ protected:
         if (sections->empty()) {
             delete sections;
             sections = 0; } }
+    /// process the arguments on the same line as the heading
     virtual void start(int lineno, VECTOR(value_t) args) { }
+    /// parsing the section: data is the entire map/sequence of elements
     virtual void input(VECTOR(value_t) args, value_t data) = 0;
+    /// optionally process the data if not done during parsing
     virtual void process() {}
+    /// generate context.json for this section
     virtual void output(json::map &ctxtJson) = 0;
 public:
     static int start_section(int lineno, char *name, VECTOR(value_t) args) {

@@ -100,7 +100,7 @@ safe_vector<IXBar::Use::Byte> IXBar::Use::atcam_partition() const {
 }
 
 /** Base matching on search buses rather than ixbar groups, as potentially an input xbar
- *  group for an ATCAM table has multiple matches in it. 
+ *  group for an ATCAM table has multiple matches in it.
  */
 int IXBar::Use::search_buses_single() const {
     unsigned counted = 0;
@@ -406,7 +406,7 @@ void IXBar::reset_orders(safe_vector<grp_use> &order, safe_vector<mid_byte_use> 
 }
 
 /** Calculates the bytes per each group/midbyte that have previously been allocated by a table,
- *  and can also be used by this table. 
+ *  and can also be used by this table.
  */
 void IXBar::calculate_found(safe_vector<IXBar::Use::Byte *> &unalloced,
                             safe_vector<grp_use> &order,
@@ -562,7 +562,7 @@ void IXBar::found_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *
 }
 
 /** Fills out all currently unoccupied xbar bytes within a group with bytes from the current table
- *  following alignment constraints. 
+ *  following alignment constraints.
  */
 void IXBar::free_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
                       safe_vector<IXBar::Use::Byte *> &alloced,
@@ -882,7 +882,7 @@ bool IXBar::version_placeable(bool version_placed, int mid_bytes_needed, int gro
  *  The algorithm works as follows:
  *    - Calculate the minimum number of midbytes/groups needed for a particular table
  *    - Run potentially two versions of a fitting algorithm.
- *      * On the first iteration, prefer groups that have capabilities to share input xbar bytes. 
+ *      * On the first iteration, prefer groups that have capabilities to share input xbar bytes.
  *      * If, when found groups were preferred, the bytes did not fit within the alloted
  *        amount of space, prefer input xbar groups with the most open space and just try to
  *        pack.
@@ -892,7 +892,7 @@ bool IXBar::version_placeable(bool version_placed, int mid_bytes_needed, int gro
  *   alloc_use  vector of Byte objects that need to be allocated on the ixbar
  *   ternary    true for ternary ixbar, false for exact
  *   alloced    output -- the Byte objects that were successfully allocated, as we want to fill
- *              out the values after we know the bytes don't break any hash constraints 
+ *              out the values after we know the bytes don't break any hash constraints
  *   hm_reqs    how much space, if any is required to be reserved on the hash matrix
  *   byte_mask  which bytes in ixbar groups to use -- default mask of ~0 means use any bytes
  */
@@ -2122,7 +2122,8 @@ void IXBar::update(cstring name, const Use &alloc) {
                     BUG("conflicting ixbar hash bit allocation");
                 }
                 hash_single_bit_use.at(ht, b + bits.bit) = name; }
-            hash_single_bit_inuse[b + bits.bit] |= alloc.hash_table_inputs[bits.group]; }
+            hash_single_bit_inuse[b + bits.bit] |= alloc.hash_table_inputs[bits.group];
+        }
         if (hash_group_use[bits.group] == 0) {
             hash_group_use[bits.group] = alloc.hash_table_inputs[bits.group];
             hash_group_print_use[bits.group] = name;
@@ -2202,29 +2203,27 @@ void IXBar::update(cstring name, const TableResourceAlloc *rsrc) {
         update(name + "$hash_dist" + std::to_string(index++), hash_dist.use);
 }
 
+static void replace_name(cstring n, std::map<cstring, char> &names) {
+    if (!names.count(n)) {
+        if (names.size() >= 52)
+            names.emplace(n, '?');
+        else if (names.size() >= 26)
+            names.emplace(n, 'a' + names.size() - 26);
+        else
+            names.emplace(n, 'A' + names.size()); }
+}
+
 static void write_one(std::ostream &out, const std::pair<cstring, int> &f,
                       std::map<cstring, char> &fields) {
     if (f.first) {
-        if (!fields.count(f.first)) {
-            if (fields.size() >= 52)
-                fields.emplace(f.first, '?');
-            else if (fields.size() >= 26)
-                fields.emplace(f.first, 'a' + fields.size() - 26);
-            else
-                fields.emplace(f.first, 'A' + fields.size()); }
+        replace_name(f.first, fields);
         out << fields[f.first] << hex(f.second/8);
     } else {
         out << ".."; }
 }
 static void write_one(std::ostream &out, cstring n, std::map<cstring, char> &names) {
     if (n) {
-        if (!names.count(n)) {
-            if (names.size() >= 52)
-                names.emplace(n, '?');
-            else if (names.size() >= 26)
-                names.emplace(n, 'a' + names.size() - 26);
-            else
-                names.emplace(n, 'A' + names.size()); }
+        replace_name(n, names);
         out << names[n];
     } else {
         out << '.'; }

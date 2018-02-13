@@ -768,8 +768,9 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
 
 /* Emit the ixbar use for a particular type of table */
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
-        const safe_vector<IXBar::HashDistUse> *hash_dist_use, const Memories::Use *mem,
-        const TableMatch *fmt, bool ternary) const {
+                              const safe_vector<IXBar::HashDistUse> *hash_dist_use,
+                              const Memories::Use *mem,
+                              const TableMatch *fmt, bool ternary) const {
     if (!ternary) {
         emit_ways(out, indent, use, mem);
         emit_hash_dist(out, indent, hash_dist_use); }
@@ -2042,7 +2043,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     out << indent++ << "selection " << name << ":" << std::endl;
     out << indent << "p4: { name: " << canon_name(as->name) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
-    self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar, nullptr, nullptr, nullptr, false);
+    self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar,
+                    nullptr, nullptr, nullptr, false);
     out << indent << "mode: " << (as->mode ? as->mode.name : "fair") << " 0" << std::endl;
     out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     // FIXME: Currently outputting default values for now, these must be brought through

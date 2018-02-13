@@ -504,7 +504,7 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
  *
  *  The total container action also goes through a large verification step, which checks
  *  general constraints on total number of PHVs, ActionData and Constants used.  It'll then
- *  mark an instruction currently impossible or not yet implemented if it is either. 
+ *  mark an instruction currently impossible or not yet implemented if it is either.
  */
 bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
     if (verbose)

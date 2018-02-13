@@ -8,7 +8,6 @@
 #include "bf-p4c/common/live_range_overlay.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/common/parser_overlay.h"
-#include "bf-p4c/mau/asm_output.h"
 #include "bf-p4c/mau/empty_controls.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/instruction_adjustment.h"
@@ -24,12 +23,10 @@
 #include "bf-p4c/mau/table_seqdeps.h"
 #include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/parde/add_jbay_pov.h"
-#include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/parde/bridge_metadata.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/resolve_computed.h"
 #include "bf-p4c/parde/stack_push_shims.h"
-#include "bf-p4c/phv/asm_output.h"
 #include "bf-p4c/phv/check_unallocated.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 #include "bf-p4c/phv/mau_backtracker.h"
@@ -92,37 +89,6 @@ void force_link_dump(const IR::Node *n) { dump(n); }
 static void debug_hook(const char *, unsigned, const char *pass, const IR::Node *n) {
     LOG4(pass << ": " << std::endl << *n << std::endl);
 }
-
-class AsmOutput : public Inspector {
- private:
-    std::ostream* out = nullptr;
-    const PhvInfo &phv;
-    const ClotInfo &clot;
-
- public:
-    AsmOutput(const PhvInfo &phv, const ClotInfo &clot, cstring outputFile) : phv(phv), clot(clot) {
-        out = &std::cout;
-        if (outputFile)
-            out = new std::ofstream(outputFile); }
-
-    bool preorder(const IR::BFN::Pipe* pipe) override {
-       MauAsmOutput mauasm(phv);
-       pipe->apply(mauasm);
-
-       if (::errorCount() > 0)
-           return false;
-
-       *out << "version: 1.0.0" << std::endl
-            << PhvAsmOutput(phv)
-            << ParserAsmOutput(pipe, INGRESS)
-            << DeparserAsmOutput(pipe, phv, clot, INGRESS)
-            << ParserAsmOutput(pipe, EGRESS)
-            << DeparserAsmOutput(pipe, phv, clot, EGRESS)
-            << mauasm
-            << std::flush;
-
-       return false; }
-};
 
 class TableAllocPass : public PassManager {
  private:
@@ -219,7 +185,6 @@ Backend::Backend(const BFN_Options& options) :
 
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),
-        new AsmOutput(phv, clot, options.outputFile)
     });
     setName("Tofino backend");
 

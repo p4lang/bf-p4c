@@ -118,6 +118,7 @@ static value_t command(char *cmd, value_t &a1, value_t &a2, int lineno_adj) {
 %token<i>       INT
 %token<bigi>    BIGINT
 %token<str>     ID
+%token<str>     STR
 %token<match>   MATCH
 
 %type<value>    param param_expr list_element key value elements opt_indent_elements
@@ -260,6 +261,7 @@ value: key
     | value '<' '<' value { $$ = CMD(strdup("<<"), $1, $4); }
     | value '>' '>' value { $$ = CMD(strdup(">>"), $1, $4); }
     | '(' value ')' { $$ = $2; }
+    | STR { $$ = VAL($1); }
     ;
 
 flow_value

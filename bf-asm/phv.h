@@ -11,9 +11,9 @@
 #include <vector>
 
 class Phv : public Section {
-    void start(int lineno, VECTOR(value_t) args);
-    void input(VECTOR(value_t) args, value_t data);
-    void output(json::map &);
+    void start(int lineno, VECTOR(value_t) args) override;
+    void input(VECTOR(value_t) args, value_t data) override;
+    void output(json::map &) override;
     Phv() : Section("phv") {}
     Phv(const Phv &) = delete;
     Phv &operator=(const Phv &) = delete;
@@ -164,7 +164,7 @@ public:
     static unsigned mau_groupsize();
     /* Return phv field size in bytes */
     static int get_phv_field_size(gress_t gress, const std::string field_name) {
-        return (phv.phv_field_sizes[gress].count(field_name) > 0) ? 
+        return (phv.phv_field_sizes[gress].count(field_name) > 0) ?
             phv.phv_field_sizes[gress][field_name] : 0; }
 };
 

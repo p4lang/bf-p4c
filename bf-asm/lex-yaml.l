@@ -28,7 +28,7 @@ static int parse_match(YYSTYPE *, const char *s, int bits_per_digit);
 %}
 
 ID [A-Za-z_@$]([-.]?*[A-Za-z0-9_@$])*
-
+STR \".*\"
 %option nounput noyywrap
 
 %%
@@ -80,6 +80,7 @@ ID [A-Za-z_@$]([-.]?*[A-Za-z0-9_@$])*
 [ \t\r]+            ;
 ".."              { return DOTDOT; }
 {ID}              { yylval.str = strdup(yytext); return ID; }
+{STR}             { yylval.str = strndup(yytext+1, yyleng-2); return STR; }
 [0-9_]+           { return parse_num(&yylval, yytext, 10); }
 0[xX][0-9a-fA-F_]+ { return parse_num(&yylval, yytext+2, 16); }
 0[oO][0-7_]+      { return parse_num(&yylval, yytext+2, 8); }

@@ -190,6 +190,7 @@ struct Memories {
                   calculated_entries(0), attached_gw_bytes(0), table_link(nullptr) {}
         void link_table(table_alloc *ta) {table_link = ta;}
     };
+    friend std::ostream & operator<<(std::ostream &out, const Memories::table_alloc &ta);
 
     /** Information on a particular table that is to be allocated in the RAM array */
     struct SRAM_group {

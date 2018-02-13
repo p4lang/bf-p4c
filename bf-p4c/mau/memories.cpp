@@ -5,6 +5,12 @@
 #include "lib/bitops.h"
 #include "lib/range.h"
 
+static const char *use_type_to_str[] = {
+    "EXACT", "ATCAM", "TERNARY", "GATEWAY", "TIND", "IDLETIME",
+    "COUNTER", "METER", "SELECTOR", "STATEFUL", "ACTIONDATA"
+};
+
+
 cstring Memories::SRAM_group::get_name() const {
     if (ta->table->layout.atcam) {
         if (type == ATCAM)
@@ -1627,7 +1633,7 @@ void Memories::determine_cand_order(swbox_fill candidates[SWBOX_TYPES],
 }
 
 /** Is a test within best candidates to see if even though sel unplaced is not yet finished,
- *  its action can be placed within this next row so that a new selector can be placed as well 
+ *  its action can be placed within this next row so that a new selector can be placed as well
  *
  *  Currently commented out as this doesn't fit in, but the optimization could be used in
  *  another PR
@@ -1658,9 +1664,9 @@ bool Memories::can_place_selector(action_fill &curr_oflow, SRAM_group *curr_chec
 
 /** This function called is used in the particular scenario where a previous selector's action
  *  can be placed within the same row as a new selector.  This has the possibility to use
- *  up potentially some RAMs in a particular row 
- *  
- *  Currently removed as it is an optimization that needs a better approach 
+ *  up potentially some RAMs in a particular row
+ *
+ *  Currently removed as it is an optimization that needs a better approach
 void Memories::selector_candidate_setup(action_fill candidates[SWBOX_TYPES],
                                         action_fill &curr_oflow, action_fill &sel_oflow,
                                         action_fill nexts[OFLOW], int order[SWBOX_TYPES],
@@ -1674,7 +1680,7 @@ void Memories::selector_candidate_setup(action_fill candidates[SWBOX_TYPES],
 
     // FIXME: Potentially could save room if the action group that is overflowing is the
     // sel_unplaced group
-    
+
     if (curr_oflow && curr_oflow.group->type != SRAM_group::ACTION) {
         candidates[SYNTH] = nexts[SYNTH];
         order[SUPPL_IND] = 0;
@@ -1930,7 +1936,7 @@ void Memories::find_action_candidates(int row, RAM_side_t side, swbox_fill candi
     /*
     if (sel_unplaced && nexts[SYNTH] && nexts[SYNTH].group->type == SRAM_group::SELECTOR) {
         selector_candidate_setup(candidates, curr_oflow, sel_unplaced, nexts, order, RAMs_avail);
-    } 
+    }
     */
 
     determine_cand_order(candidates, best_fits, curr_oflow, nexts, RAMs_avail, side, order);
@@ -2147,7 +2153,7 @@ void Memories::calculate_sel_oflow(swbox_fill candidates[SWBOX_TYPES], swbox_fil
  *  is used to calculate a right to left overflow.  A synth2port table cannot overflow to the left
  *  side of the RAM array, but an action can potentially overflow from right to left.  Because an
  *  action table can have multiple home rows, it is fine to break an overflowing action.  However,
- *  a synth2port table cannot have a broken overflow. 
+ *  a synth2port table cannot have a broken overflow.
  */
 void Memories::calculate_curr_oflow(swbox_fill candidates[SWBOX_TYPES],
                                     swbox_fill &curr_oflow, swbox_fill &synth_oflow,
@@ -2360,7 +2366,7 @@ void Memories::action_bus_users_log() {
  *  Also on the right side of the RAM array are ALUs to perform stateful operations.  Every odd
  *  row has a meter ALU, which can perform meter, selector, or stateful operations.  Every even
  *  row has a stats ALU, which can perform stats operations.  Each of these ALUs has a
- *  corrsponding meter/stats bus, depending on ALU on that particular row. 
+ *  corrsponding meter/stats bus, depending on ALU on that particular row.
  *
  *  Lastly, every single row, both left and right, has an overflow bus.  This bus can be used
  *  on a row below the original home row of that attached table.  Using the switchbox, the data
@@ -2518,7 +2524,7 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int wid
 }
 
 /** This algorithm looks for the first free available gateway.  The gateway may need a search
- *  bus as well, so the algorithm looks for that too. 
+ *  bus as well, so the algorithm looks for that too.
  */
 bool Memories::find_unit_gw(Memories::Use &alloc, cstring name, bool requires_search_bus) {
     for (int i = 0; i < SRAM_ROWS; i++) {
@@ -2716,7 +2722,7 @@ bool Memories::allocate_all_no_match_gw() {
  *
  *  Out of this comes three reservations of gateways.
  *  1. Gateways that require payloads, which are conditionals linked to no match hit path tables.
- *     In this case, a payload is required be resereved.  
+ *     In this case, a payload is required be resereved.
  *  2. Gateways that are conditionals.  These conditionals can be paired with a match table or
  *     exist by themselves.
  *  3. Gateways that are no match tables alone.  Due to the nature of the hit path, the gateway
@@ -2986,6 +2992,7 @@ void Memories::update(cstring name, const Memories::Use &alloc) {
             BUG("conflicting memory use between %s and %s", use, name);
         use = name; });
 }
+
 void Memories::update(const std::map<cstring, Use> &alloc) {
     for (auto &a : alloc) update(a.first, a.second);
 }
@@ -3055,5 +3062,13 @@ std::ostream &operator<<(std::ostream& out, const Alloc2D<cstring, R, C>& alloc2
         }
         out << std::endl;
     }
+    return out;
+}
+
+std::ostream & operator<<(std::ostream &out, const Memories::table_alloc &ta) {
+    out << "table_alloc[" << ta.table->match_table->externalName() << ": ";
+    for (auto &u : *ta.memuse)
+        out << "(" << u.first << ", " << use_type_to_str[u.second.type] << ") ";
+    out << "]";
     return out;
 }

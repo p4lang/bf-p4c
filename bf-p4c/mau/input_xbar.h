@@ -35,6 +35,18 @@ struct IXBar {
         Loc(int g, int b) : group(g), byte(b) {}
         explicit operator bool() const { return group >= 0 && byte >= 0; }
         operator std::pair<int, int>() const { return std::make_pair(group, byte); }
+        /// return the byte number in the total order
+        int getOrd(const bool isTernary = false) const {
+            if ((*this)) {
+                if (isTernary)
+                    return EXACT_GROUPS * EXACT_BYTES_PER_GROUP +
+                        (group * TERNARY_BYTES_PER_BIG_GROUP) + byte;
+                else
+                    return (group * EXACT_BYTES_PER_GROUP) + byte;
+            } else {
+                return -1;
+            }
+        }
     };
 
  private:

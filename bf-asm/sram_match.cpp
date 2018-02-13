@@ -829,7 +829,6 @@ json::map* SRamMatchTable::add_common_sram_tbl_cfgs(json::map &tbl,
         add_stage_tbl_cfg(match_attributes, stage_table_type.c_str() , get_number_entries());
     json::map &stage_tbl = *stage_tbl_ptr;
     match_attributes["match_type"] = match_type;
-    match_attributes["uses_dynamic_key_masks"] = false; //FIXME-JSON
     add_hash_functions(stage_tbl);
     add_action_cfgs(tbl, stage_tbl);
     add_result_physical_buses(stage_tbl);
@@ -859,4 +858,3 @@ void SRamMatchTable::alloc_vpns() {
                 word = 0;
                 vpn += period; } } }
 }
-

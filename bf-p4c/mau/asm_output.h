@@ -2,6 +2,7 @@
 #define BF_P4C_MAU_ASM_OUTPUT_H_
 
 #include <map>
+#include <set>
 #include <vector>
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/mau/default_next.h"
@@ -14,8 +15,8 @@ class PhvInfo;
 
 class MauAsmOutput : public MauInspector {
  protected:
-    const PhvInfo       &phv;
-    const IR::BFN::Pipe *pipe;
+    const PhvInfo        &phv;
+    const IR::BFN::Pipe  *pipe;
 
  private:
     struct TableInstance {
@@ -49,13 +50,14 @@ class MauAsmOutput : public MauInspector {
         auto tbl = findContext<IR::MAU::Table>();
         auto name = tbl->get_use_name(as);
         if (tbl->resources->memuse.count(name))
-            selector_memory[as] = &tbl->resources->memuse.at(name); }
+            selector_memory[as] = &tbl->resources->memuse.at(name);
+    }
     bool preorder(const IR::MAU::StatefulAlu *) override { return false; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
     class TableMatch;
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *,
-            const safe_vector<IXBar::HashDistUse> *,
-            const Memories::Use *, const TableMatch *, bool ternary) const;
+                    const safe_vector<IXBar::HashDistUse> *,
+                    const Memories::Use *, const TableMatch *, bool ternary) const;
     void emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
             const Memories::Use *mem) const;
     void emit_hash_dist(std::ostream &out, indent_t indent,
