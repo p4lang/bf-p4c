@@ -25,17 +25,14 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/action_inline2.p4
     testdata/p4_14_samples/gateway7.p4
     testdata/p4_14_samples/tmvalid.p4
-    testdata/p4_14_samples/instruct6.p4
     testdata/p4_14_samples/ternary_match1.p4
     testdata/p4_14_samples/action_chain1.p4
     testdata/p4_14_samples/07-MultiProtocol.p4
     testdata/p4_14_samples/ternary_match3.p4
     testdata/p4_14_samples/action_inline1.p4
     testdata/p4_14_samples/gateway6.p4
-    testdata/p4_14_samples/gateway3.p4
     testdata/p4_14_samples/hitmiss.p4
     testdata/p4_14_samples/gateway5.p4
-    testdata/p4_14_samples/exact_match1.p4
   )
 
   p4c_add_xfail_reason("jbay"
@@ -49,6 +46,9 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/gateway4.p4
     testdata/p4_14_samples/exact_match_valid1.p4
     testdata/p4_14_samples/exact_match2.p4
+    testdata/p4_14_samples/instruct6.p4
+    testdata/p4_14_samples/gateway3.p4
+    testdata/p4_14_samples/exact_match1.p4
   )
 
 endif() # HARLYN_STF
