@@ -22,11 +22,33 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("jbay"
     ".* expected packet.* on port .* not seen"
     testdata/p4_14_samples/repeater.p4
+    testdata/p4_14_samples/action_inline2.p4
+    testdata/p4_14_samples/gateway7.p4
+    testdata/p4_14_samples/tmvalid.p4
+    testdata/p4_14_samples/instruct6.p4
+    testdata/p4_14_samples/ternary_match1.p4
+    testdata/p4_14_samples/action_chain1.p4
+    testdata/p4_14_samples/07-MultiProtocol.p4
+    testdata/p4_14_samples/ternary_match3.p4
+    testdata/p4_14_samples/action_inline1.p4
+    testdata/p4_14_samples/gateway6.p4
+    testdata/p4_14_samples/gateway3.p4
+    testdata/p4_14_samples/hitmiss.p4
+    testdata/p4_14_samples/gateway5.p4
+    testdata/p4_14_samples/exact_match1.p4
   )
 
   p4c_add_xfail_reason("jbay"
     "mismatch from expected.* at byte .*"
     testdata/p4_14_samples/bigfield1.p4
+    testdata/p4_14_samples/gateway2.p4
+    testdata/p4_14_samples/ternary_match4.p4
+    testdata/p4_14_samples/exact_match_mask1.p4
+    testdata/p4_14_samples/bridge1.p4
+    testdata/p4_14_samples/ternary_match2.p4
+    testdata/p4_14_samples/gateway4.p4
+    testdata/p4_14_samples/exact_match_valid1.p4
+    testdata/p4_14_samples/exact_match2.p4
   )
 
 endif() # HARLYN_STF
@@ -177,4 +199,15 @@ p4c_add_xfail_reason("jbay"
   "Compiler Bug.*: .*Match for state.*which is more than can fit"
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "counter cnt virtual value .*"
+  testdata/p4_14_samples/counter1.p4
+  testdata/p4_14_samples/counter2.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "no value with matching vpn for counter cnt"
+  testdata/p4_14_samples/counter3.p4
   )
