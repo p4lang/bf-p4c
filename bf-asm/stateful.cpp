@@ -386,17 +386,6 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) {
     json::map &tbl = *base_tbl_cfg(out, "stateful", size);
     unsigned alu_width = format->size/(dual_mode ? 2 : 1);
     tbl["alu_width"] = alu_width;
-    // FIXME: For a single bit stateful register, the driver assumes set/clr
-    // instructions are present even if the p4 program does not specify them.
-    // This is the way for control plane to set/clr these registers directly.
-    // Used in p4factory - stful.p4 - TestOneBit
-    // Here, we set these values explicitly -  which is a hack - allowing them
-    // to be overwritten if the instructions are present in the p4 program.
-    // Proper way to do this is to have an additional pass in the compiler to
-    // output these instructions in assembly - BRIG-397
-    if (alu_width == 1) {
-        tbl["set_instr"] = 1;
-        tbl["clr_instr"] = 2; }
     tbl["dual_width_mode"] = dual_mode;
     json::vector &act_to_sful_instr_slot = tbl["action_to_stateful_instruction_slot"];
     if (actions) {

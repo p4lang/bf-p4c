@@ -469,5 +469,27 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
     } else if (!bits ||
                (bits->size != 1 && bits->size != 8 && bits->size != 16 && bits->size != 32)) {
         error("Unsupported register element type %s for stateful alu %s", regtype, salu); }
+
+    // For a 1bit SALU, the driver expects a set and clr instr. Check if these
+    // instr are already present, if not add them. Test - p4factory stful.p4 -
+    // TestOneBit
+    if (bits && bits->size == 1) {
+        std::set<cstring> set_clr { "set_bit", "clr_bit" };
+        for (auto &salu_action : salu->instruction) {
+            auto &salu_action_instr = salu_action.second;
+            if (salu_action_instr) {
+                for (auto &salu_instr : salu_action_instr->action) {
+                    set_clr.erase(salu_instr->name);
+                }
+            }
+        }
+        for (auto sc : set_clr) {
+            if (sc == "") continue;
+            auto instr_action = new IR::MAU::SaluAction(IR::ID(sc + "_alu$0"));
+            salu->instruction.addUnique(sc + "_alu$0", instr_action);
+            auto set_clr_instr = new IR::MAU::Instruction(sc);
+            instr_action->action.push_back(set_clr_instr);
+        }
+    }
     return false;
 }
