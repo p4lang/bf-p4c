@@ -1,4 +1,27 @@
+
 /* mau stage template specializations for jbay -- #included directly in top-level stage.cpp */
+
+
+
+/* disable power gating configuration for specific MAU regs to weedout delay programming
+ * issues. We dont expect to call this function in the normal usage of JBay - this is
+ * only for emulator debug/bringup
+ */
+void disable_jbay_power_gating(Target::JBay::mau_regs &regs) {
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+        regs.dp.mau_match_input_xbar_exact_match_enable[gress] |= 0x1;
+        regs.dp.xbar_hash.xbar.mau_match_input_xbar_ternary_match_enable[gress] |= 0x1;
+    }
+
+    auto &xbar_power_ctl = regs.dp.match_input_xbar_din_power_ctl;
+    auto &actionmux_power_ctl = regs.dp.actionmux_din_power_ctl;
+    for(int side=0; side < 2; side++) {
+      for(int reg=0; reg < 16; reg++) {
+        xbar_power_ctl[side][reg] |= 0x3FF;
+        actionmux_power_ctl[side][reg] |= 0x3FF;
+      }
+    }
+}
 
 template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
     write_common_regs<Target::JBay>(regs);
@@ -72,4 +95,7 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
             regs.dp.phv_egress_thread[i][j] = regs.dp.phv_egress_thread_imem[i][j] =
                 eg_use.getrange(10*phv_use_transpose[i][j], 10); } }
 
+    if (options.disable_power_gating) {
+        disable_jbay_power_gating(regs);
+    }
 }

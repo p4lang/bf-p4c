@@ -13,6 +13,7 @@ extern struct option_t {
     bool                condense_json;
     bool                debug_info;
     bool                werror;
+    bool                disable_power_gating;
 } options;
 
 extern unsigned unique_action_handle;

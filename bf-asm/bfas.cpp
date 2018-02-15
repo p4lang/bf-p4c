@@ -25,6 +25,7 @@ option_t options = {
     .condense_json = true,
     .debug_info = false,
     .werror = false,
+    .disable_power_gating = false,
 };
 
 
@@ -197,6 +198,9 @@ int main(int ac, char **av) {
                         std::cerr << av[i] << " exists and is not a directory" << std::endl;
                         error_count++; }
                     output_dir = av[i];
+                    break;
+                case 'p':
+                    options.disable_power_gating = true;
                     break;
                 case 'q':
                     std::clog.setstate(std::ios::failbit);
