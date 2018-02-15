@@ -320,6 +320,15 @@ class SpgwTest(FabricTest):
                                  FORWARDING_TYPE_UNICAST_IPV4)
         self.set_forwarding_type(self.port2, self.SWITCH_MAC_2, 0x800,
                                  FORWARDING_TYPE_UNICAST_IPV4)
+
+    # GTP header has no scapy support
+    def make_gtp(self, msg_len, teid, flags=0x30, msg_type=0xff):
+        return struct.pack(">BBHL", flags, msg_type, msg_len, teid)
+
+class SpgwSimpleTest(SpgwTest):
+    def setUp(self):
+        super(SpgwSimpleTest, self).setUp()
+
         self.add_forwarding_unicast_v4_entry(self.S1U_ENB_IPV4, 32, 1)
         self.add_forwarding_unicast_v4_entry(self.END_POINT_IPV4, 32, 2)
         self.add_next_hop_L3(1, self.port2, self.SWITCH_MAC_2, self.DMAC_2)
@@ -349,11 +358,7 @@ class SpgwTest(FabricTest):
              ("s1u_sgw_addr", s1u_sgw_ipv4_)])
         self.write_request(req)
 
-    # GTP header has no scapy support
-    def make_gtp(self, msg_len, teid, flags=0x30, msg_type=0xff):
-        return struct.pack(">BBHL", flags, msg_type, msg_len, teid)
-
-class SpgwDownlinkTest(SpgwTest):
+class SpgwDownlinkTest(SpgwSimpleTest):
     @autocleanup
     def runTest(self):
         inner_udp = UDP(sport=5061, dport=5060) / ("\xab" * 128)
@@ -370,7 +375,7 @@ class SpgwDownlinkTest(SpgwTest):
         testutils.send_packet(self, self.port2, str(pkt))
         testutils.verify_packet(self, exp_pkt, self.port1)
 
-class SpgwUplinkTest(SpgwTest):
+class SpgwUplinkTest(SpgwSimpleTest):
     @autocleanup
     def runTest(self):
         inner_udp = UDP(sport=5060, dport=5061) / ("\xab" * 128)
@@ -385,3 +390,57 @@ class SpgwUplinkTest(SpgwTest):
                   inner_udp
         testutils.send_packet(self, self.port1, str(pkt))
         testutils.verify_packet(self, exp_pkt, self.port2)
+
+class SpgwDownlinkMPLSTest(SpgwTest):
+    @autocleanup
+    def runTest(self):
+        # internal vlan required for MPLS
+        self.set_internal_vlan(self.port1, vlan_valid=False,
+                               vlan_id=0, vlan_id_mask=0, new_vlan_id=4094)
+        self.set_internal_vlan(self.port2, vlan_valid=False,
+                               vlan_id=0, vlan_id_mask=0, new_vlan_id=20)
+        self.add_forwarding_unicast_v4_entry(self.S1U_ENB_IPV4, 32, 1)
+        self.add_forwarding_unicast_v4_entry(self.END_POINT_IPV4, 32, 2)
+        self.add_next_hop_L3(1, self.port2, self.SWITCH_MAC_2, self.DMAC_2)
+        mpls_label = 204
+        self.add_next_hop_mpls_v4(2, self.port1, self.SWITCH_MAC_1, self.DMAC_1,
+                                  mpls_label)
+
+        req = p4runtime_pb2.WriteRequest()
+        req.device_id = self.device_id
+        s1u_enb_ipv4_ = ipv4_to_binary(self.S1U_ENB_IPV4)
+        s1u_sgw_ipv4_ = ipv4_to_binary(self.S1U_SGW_IPV4)
+        end_point_ipv4_ = ipv4_to_binary(self.END_POINT_IPV4)
+        self.push_update_add_entry_to_action(
+            req,
+            "spgw_ingress.ue_filter_table",
+            [self.Lpm("ipv4.dst_addr", end_point_ipv4_, 32)],
+            "NoAction", [])
+        self.push_update_add_entry_to_action(
+            req,
+            "spgw_ingress.s1u_filter_table",
+            [self.Exact("spgw_meta.s1u_sgw_addr", s1u_sgw_ipv4_)],
+            "NoAction", [])
+        self.push_update_add_entry_to_action(
+            req,
+            "spgw_ingress.dl_sess_lookup",
+            [self.Exact("ipv4.dst_addr", end_point_ipv4_)],
+            "spgw_ingress.set_dl_sess_info",
+            [("teid", stringify(1, 4)), ("s1u_enb_addr", s1u_enb_ipv4_),
+             ("s1u_sgw_addr", s1u_sgw_ipv4_)])
+        self.write_request(req)
+
+        inner_udp = UDP(sport=5061, dport=5060) / ("\xab" * 128)
+        pkt = Ether(src=self.DMAC_2, dst=self.SWITCH_MAC_2) /\
+              IP(src=self.S1U_ENB_IPV4, dst=self.END_POINT_IPV4) /\
+              inner_udp
+        exp_pkt = Ether(src=self.SWITCH_MAC_1, dst=self.DMAC_1) /\
+                  MPLS(label=mpls_label, cos=0, s=1, ttl=64) /\
+                  IP(tos=0, id=0x1513, flags=0, frag=0,
+                     src=self.S1U_SGW_IPV4, dst=self.S1U_ENB_IPV4) /\
+                  UDP(sport=2152, dport=2152, chksum=0) /\
+                  self.make_gtp(20 + len(inner_udp), 1) /\
+                  IP(src=self.S1U_ENB_IPV4, dst=self.END_POINT_IPV4, ttl=64) /\
+                  inner_udp
+        testutils.send_packet(self, self.port2, str(pkt))
+        testutils.verify_packet(self, exp_pkt, self.port1)
