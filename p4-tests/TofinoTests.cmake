@@ -42,7 +42,7 @@ p4c_add_ptf_test_with_ptfdir (
 
 set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4)
 p4c_add_ptf_test_with_ptfdir (
-    "tofino" ${ONOS_FABRIC_P4} ${ONOS_FABRIC_P4}
+    "tofino" fabric.p4 ${ONOS_FABRIC_P4}
     "${testExtraArgs} -DWITH_SPGW"
     ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf)
 
