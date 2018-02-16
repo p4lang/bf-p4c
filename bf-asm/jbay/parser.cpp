@@ -116,10 +116,11 @@ template <> int Parser::State::Match::Save::write_output_config(Target::JBay::pa
             mask <<= 1;
             --lo; } }
     if (flags & ROTATE) error(where.lineno, "no rotate support in jbay");
+     if (mask & 0xc) {
+        write_output_slot(where.lineno, row, used, lo, dest+1, (mask>>2) & 3, flags & OFFSET);
+        lo += bitcount(mask & 0xc); }
     if (mask & 3)
         write_output_slot(where.lineno, row, used, lo, dest, mask & 3, flags & OFFSET);
-    if (mask & 0xc)
-        write_output_slot(where.lineno, row, used, lo+2, dest+1, (mask>>2) & 3, flags & OFFSET);
     return hi;
 }
 
