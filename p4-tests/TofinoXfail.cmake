@@ -34,7 +34,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     "Floating point exception"
     extensions/p4_tests/p4_14/adjust_instr3.p4
     extensions/p4_tests/p4_14/action_default_multiple.p4
-    extensions/p4_tests/p4_14/overlay_add_header.p4
     extensions/p4_tests/p4_14/no_match_miss.p4
     testdata/p4_14_samples/instruct5.p4
   )
@@ -51,11 +50,12 @@ p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 #   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
 #   )
 
-# We need a deposit_field instruction, but we fail to select it.
+# This test fails because two fields are mutually exclusive in the parser, but
+# one is added in the MAU while the other is live.  This behavior matches glass
+# but is known to be incorrect.
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
-  extensions/p4_tests/p4_14/15-SetMetadata.p4
-  extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
+  extensions/p4_tests/p4_14/overlay_add_header.p4
   )
 
 # BRIG-104
@@ -145,7 +145,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Value too large"
+  "error: src2 must be phv register"
   extensions/p4_tests/p4_14/test_config_88_testing_action_data_allocation_3.p4
   )
 
@@ -202,6 +202,7 @@ p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/multicast_scale/multicast_scale.p4
+  switch_l2
   )
 
 # BRIG-113
@@ -502,7 +503,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
 
-# due to action analysis working correctly
+  # BRIG-421
+  extensions/p4_tests/p4_14/adjust_instr1.p4
+
+  # Expected to fail, which means that action analysis is working correctly.
   extensions/p4_tests/p4_14/action_conflict_1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
   #extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
@@ -836,10 +840,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
-
-  # Lack of container packing:
-  extensions/p4_tests/p4_14/15-SetMetadata.p4
-  extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
+  switch_dc_basic
   )
 
 p4c_add_xfail_reason("tofino"
@@ -862,8 +863,9 @@ p4c_add_xfail_reason("tofino"
 # BRIG-219
 p4c_add_xfail_reason("tofino"
   "PHV allocation creates a container action impossible within a Tofino ALU"
-  extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
-  extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
+  # extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
+  # extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
+  # extensions/p4_tests/p4_14/test_config_190_modify_with_expr.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   # extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
@@ -873,26 +875,29 @@ p4c_add_xfail_reason("tofino"
 
   # Instruction adjustment needs to synthesize a bitmasked-set but does not.
   # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/test_config_50_action_data_different_size_fields.p4
+  # extensions/p4_tests/p4_14/test_config_50_action_data_different_size_fields.p4
 
   # Action analysis failures.
-  extensions/p4_tests/p4_14/overlay_add_header.p4
-  extensions/p4_tests/p4_14/adjust_instr2.p4
-  extensions/p4_tests/p4_14/test_config_252_pa_required_packing.p4
-  extensions/p4_tests/p4_14/test_config_256_pa_problem_4.p4
-  extensions/p4_tests/p4_14/test_config_257_pa_problem_5.p4
+  # extensions/p4_tests/p4_14/test_config_252_pa_required_packing.p4
+  # extensions/p4_tests/p4_14/test_config_256_pa_problem_4.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
+  # extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
+  )
+
+
+p4c_add_xfail_reason("tofino"
+  "Can't fit table .* in input xbar by itself"
+  extensions/p4_tests/p4_14/test_config_257_pa_problem_5.p4
+  extensions/p4_tests/p4_14/test_config_252_pa_required_packing.p4
   )
 
 # BRIG-426, and maybe BRIG-421
 p4c_add_xfail_reason("tofino"
   "No phv record"
   extensions/p4_tests/p4_14/action_conflict_3.p4
-  extensions/p4_tests/p4_16/brig-42.p4
   )
 
 # p4c_add_xfail_reason("tofino"
@@ -941,17 +946,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: hash expression width mismatch"
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Multiple tables claim to be attached table"
-  extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
-  )
-
-# BRIG-421
-p4c_add_xfail_reason("tofino"
-  "PHV allocation creates a container action impossible within a Tofino ALU"
-  extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
   )
 
 # missing support for meter in backend
@@ -1056,9 +1050,13 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue486-bmv2.p4
   )
 
+# This test is expected to fail (for now) because it includes multiple writes
+# to the same field in the same action.  However, in this case the sources are
+# constants, which could theoretically be merged into one write by the
+# compiler.
 p4c_add_xfail_reason("tofino"
-  "Extracted range .* with size .* doesn't match destination container .* with size"
-  switch_l2
+  "Field .* written to more than once in action .*"
+  testdata/p4_16_samples/slice-def-use1.p4
   )
 
 p4c_add_xfail_reason("tofino"

@@ -1,15 +1,41 @@
 #include "parser_overlay.h"
 #include <sstream>
 #include <typeinfo>
-#include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "ir/ir.h"
 #include "lib/log.h"
 
-void BuildParserOverlay::mark(const PHV::Field* f) {
-    // XXX(cole): f->pov is supposed to imply f->metadata.
-    if (!f || f->metadata || f->pov)
+Visitor::profile_t BuildMutex::init_apply(const IR::Node* root) {
+    auto rv = Inspector::init_apply(root);
+    mutually_inclusive.clear();
+    fields_encountered.clear();
+    return rv;
+}
+
+Visitor::profile_t BuildParserOverlay::init_apply(const IR::Node* root) {
+    auto rv = BuildMutex::init_apply(root);
+    LOG4("Beginning BuildParserOverlay");
+    return rv;
+}
+
+Visitor::profile_t BuildMetadataOverlay::init_apply(const IR::Node* root) {
+    auto rv = BuildMutex::init_apply(root);
+    LOG4("Beginning BuildMetadataOverlay");
+    return rv;
+}
+
+void BuildMutex::mark(const PHV::Field* f) {
+    if (!f)
         return;
+    if (IgnoreField(f)) {
+        LOG5("Ignoring field    " << f);
+        return;
+    } else {
+        LOG5("Considering field " << f << " ( "
+             << (f->pov ? "pov " : "")
+             << (f->metadata ? "metadata " : "")
+             << (!f->pov && !f->metadata ? "header " : "") << ")");
+    }
     int new_field = f->id;
     if (fields_encountered[new_field])
         return;
@@ -17,30 +43,36 @@ void BuildParserOverlay::mark(const PHV::Field* f) {
     mutually_inclusive[new_field] |= fields_encountered;
 }
 
-bool BuildParserOverlay::preorder(const IR::BFN::Extract *e) {
-    auto *f = phv.field(e->dest->field);
-    mark(f);
-    return false;
+bool BuildMutex::preorder(const IR::Expression *e) {
+    if (auto *f = phv.field(e)) {
+        mark(f);
+        return false; }
+    return true;
 }
 
-void BuildParserOverlay::flow_merge(Visitor& other_) {
-    BuildParserOverlay &other = dynamic_cast<BuildParserOverlay &>(other_);
+void BuildMutex::flow_merge(Visitor& other_) {
+    BuildMutex &other = dynamic_cast<BuildMutex &>(other_);
     fields_encountered |= other.fields_encountered;
     mutually_inclusive |= other.mutually_inclusive;
 }
 
-void BuildParserOverlay::end_apply() {
+void BuildMutex::end_apply() {
     LOG4("mutually exclusive fields:");
     for (auto it1 = fields_encountered.begin();
          it1 != fields_encountered.end();
          ++it1 ) {
+        if (neverOverlay[*it1]) {
+            LOG5("Excluding field from overlay: " << *it1);
+            continue; }
         for (auto it2 = it1; it2 != fields_encountered.end(); ++it2) {
             // Consider fields that are part of headers that can be added in the
             // MAU pipeline to always be mutually inclusive.
             // XXX(cole): this could use a more sophisticated analysis to be
             // more precise.
-            bool skipAddedField = addedHeaderFields[*it1] || addedHeaderFields[*it2];
-            if (mutually_inclusive(*it1, *it2) || skipAddedField)
+            if (neverOverlay[*it2]) {
+                LOG5("Excluding field from overlay: " << *it2);
+                continue; }
+            if (mutually_inclusive(*it1, *it2))
                 continue;
             mutually_exclusive(*it1, *it2) = true;
             LOG4("(" << phv.field(*it1)->name << ", " << phv.field(*it2)->name << ")"); } }
@@ -54,6 +86,13 @@ void BuildParserOverlay::end_apply() {
             mutually_exclusive(field1->id, field2->id) = true;
             LOG1("set " << field1 << " and " << field2
                 << " to be mutually_exclusive because of @pragma pa_mutually_exclusive"); } }
+}
+
+void ExcludeDeparsedIntrinsicMetadata::end_apply() {
+    for (auto& f : phv) {
+        if (f.pov || (f.deparsed_to_tm() && f.no_pack())) {
+            LOG1("Marking field as never overlaid: " << f);
+            neverOverlay.setbit(f.id); } }
 }
 
 bool FindAddedHeaderFields::preorder(const IR::Primitive* prim) {

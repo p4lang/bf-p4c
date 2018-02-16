@@ -10,12 +10,6 @@
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
 
-enum class FieldKind : unsigned short {
-    header   = 0,   // header fields
-    metadata = 1,   // metadata fields
-    pov      = 2    // POV fields, eg. $valid
-};
-
 namespace PHV {
 
 /** A set of PHV containers of the same size. */
@@ -59,98 +53,11 @@ class ContainerGroup {
 
     /// @returns the ids of containers in this group.
     bitvec ids() const { return ids_i; }
-};
 
-class FieldSlice {
-    // There is no reason for a FieldSlice to change the field it is representing, so make this
-    // const (also used in ActionPhvConstraints)
-    const PHV::Field* field_i;
-    le_bitrange range_i;
-    boost::optional<FieldAlignment> alignment_i = boost::none;
-    nw_bitrange validContainerRange_i = ZeroToMax();
-
- public:
-    FieldSlice(const Field* field, le_bitrange range)
-    : field_i(field), range_i(range) {
-        BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start");
-        BUG_CHECK(range.size() <= field->size, "Trying to create field slice larger than field");
-
-        // Calculate relative alignment for this field slice.
-        if (field->alignment) {
-            le_bitrange field_range = StartLen(field->alignment->littleEndian, field->size);
-            le_bitrange slice_range = field_range.shiftedByBits(range_i.lo)
-                                                 .resizedToBits(range_i.size());
-            alignment_i = FieldAlignment(slice_range);
-            LOG5("Adjusting alignment of field " << field << " to " << *alignment_i <<
-                 " for slice " << range); }
-
-        // Calculate valid container range for this slice by shrinking
-        // the valid range of the field by the size of the "tail"
-        // (i.e. the least significant bits) not in this slice.
-        if (field_i->validContainerRange_i == ZeroToMax()) {
-            validContainerRange_i = ZeroToMax();
-        } else {
-            int new_size = field_i->validContainerRange_i.size() - range.lo;
-            validContainerRange_i = field_i->validContainerRange_i.resizedToBits(new_size); }
+    /// @returns true if @c is in this group.
+    bool contains(PHV::Container c) const {
+        return std::find(containers_i.begin(), containers_i.end(), c) != containers_i.end();
     }
-
-    /// Create a slice that holds the entirety of @field.
-    explicit FieldSlice(const Field* field)
-    : FieldSlice(field, le_bitrange(StartLen(0, field->size))) { }
-
-    /// Creates a subslice of @slice from @range.lo to @range.hi.
-    FieldSlice(FieldSlice slice, le_bitrange range) : FieldSlice(slice.field(), range) {
-        BUG_CHECK(slice.range().contains(range),
-                  "Trying to create field sub-slice larger than the original slice");
-    }
-
-    bool operator==(const FieldSlice& other) const {
-        return field_i == other.field() && range_i == other.range();
-    }
-
-    bool operator!=(const FieldSlice& other) const {
-        return !(*this == other);
-    }
-
-    bool operator<(const FieldSlice& other) const {
-        if (field_i != other.field())
-            return field_i < other.field();
-        if (range_i.lo != other.range().lo)
-            return range_i.lo < other.range().lo;
-        return range_i.hi < other.range().hi;
-    }
-
-    /// Whether the Field is ingress or egress.
-    gress_t gress() const { return field_i->gress; }
-
-    /// Total size of FieldSlice in bits.
-    int size() const { return range_i.size(); }
-
-    /// The alignment requirement of this field slice. If boost::none, there is
-    /// no particular alignment requirement.
-    boost::optional<FieldAlignment> alignment() const { return alignment_i; }
-
-    /// See documentation for `Field::validContainerRange()`.
-    /// TODO(cole): Refactor this.
-    nw_bitrange validContainerRange() const { return validContainerRange_i; }
-
-    /// Kind of field of this slice.
-    FieldKind kind() const {
-        // XXX(cole): PHV::Field::metadata and PHV::Field::pov should be
-        // replaced by FieldKind.
-        if (field_i->pov)
-            return FieldKind::pov;
-        else if (field_i->metadata)
-            return FieldKind::metadata;
-        else
-            return FieldKind::header;
-    }
-
-    /// @returns the field this is a slice of.
-    const PHV::Field* field() const   { return field_i; }
-
-    /// @returns the bits of the field included in this field slice.
-    le_bitrange range() const   { return range_i; }
 };
 
 // XXX(cole): This duplicates PHV::Field::alloc_slice.
@@ -281,9 +188,10 @@ class Allocation {
       * that mutex_i(f1, f2) = false and mutex_i(f1, f3) = false, a call to slicesByLiveness(c,
       * f1[0:3]) would return the set {f2[0:3], f3[0:3]}.
      */
-    virtual MutuallyLiveSlices slicesByLiveness(const PHV::Container c, const AllocSlice& sl) const;
-    virtual MutuallyLiveSlices slicesByLiveness(const PHV::Container c, std::vector<AllocSlice>&
-            slices) const;
+    virtual MutuallyLiveSlices slicesByLiveness(const PHV::Container c,
+                                                const AllocSlice& sl) const;
+    virtual MutuallyLiveSlices slicesByLiveness(const PHV::Container c,
+                                                std::vector<AllocSlice>& slices) const;
 
     /// @returns all slices allocated for @f that include any part of @range in
     /// the field portion of the allocated slice.  May be empty (if @f is not
@@ -421,6 +329,7 @@ class Transaction : public Allocation {
     Transaction(SymBitMatrix mutex, const Allocation* parent)
     : parent_i(parent) {
         BUG_CHECK(parent != nullptr, "Creating transaction with null parent");
+        BUG_CHECK(parent != this, "Creating transaction with self as parent");
         this->mutex_i = mutex;
         this->count_by_status_i = parent_i->count_by_status_i;
     }
@@ -790,7 +699,14 @@ class SuperCluster : public ClusterStats {
  private:
     ordered_set<const RotationalCluster*> clusters_i;
     ordered_set<SliceList*> slice_lists_i;
+
+    /// Map each slice to the rotational cluster that contains it.  Each slice
+    /// is in exactly one rotational cluster.
     ordered_map<const PHV::FieldSlice, const RotationalCluster*> slices_to_clusters_i;
+
+    /// Map a slice to the slice lists that contain it.  Each slice is in at
+    /// least one slice list.
+    ordered_map<const PHV::FieldSlice, ordered_set<const SliceList*>> slices_to_slice_lists_i;
 
     // Statstics gathered from clusters.
     PHV::Kind kind_i;
@@ -813,6 +729,9 @@ class SuperCluster : public ClusterStats {
 
     /// @returns the slice lists that induced this grouping.
     const ordered_set<SliceList*>& slice_lists() const { return slice_lists_i; }
+
+    /// @returns the slice lists holding @slice.
+    const ordered_set<const SliceList*>& slice_list(const PHV::FieldSlice& slice) const;
 
     /// @returns the rotational cluster containing @slice.
     /// @warning fails catastrophicaly if @slice is not in any cluster in this group; all slices

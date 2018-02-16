@@ -65,8 +65,9 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
 
                     // XXX(cole) [Artificial Constraint]: Require SALU operands
                     // to be placed in the bottom bits of their PHV containers.
-                    // In the future, this can be removed with better input
-                    // crossbar allocation.
+                    // In the future, this can be handled by allocating a hash
+                    // table to arbitrarily swizzle the bits to get them into
+                    // the right place.
                     if (has_reg_operand)
                         field->set_deparsed_bottom_bits(true);
                 }

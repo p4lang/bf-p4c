@@ -109,7 +109,7 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
     addDeparserParam(d, tmMeta, "ucast_egress_port", "egress_unicast_port",
                      /* canPack = */ false);
-    addDeparserParam(d, tmMeta, "drop_ctl", "drop_ctl");
+    addDeparserParam(d, tmMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
     addDeparserParam(d, tmMeta, "bypass_egress", "bypss_egr");
     addDeparserParam(d, tmMeta, "deflect_on_drop", "deflect_on_drop");
     addDeparserParam(d, tmMeta, "ingress_cos", "icos");
@@ -145,12 +145,11 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
     addDeparserParam(d, outputMeta, "capture_tstamp_on_tx", "capture_tx_ts");
     addDeparserParam(d, outputMeta, "update_delay_on_tx", "tx_pkt_has_offsets");
     addDeparserParam(d, outputMeta, "force_tx_error", "force_tx_err");
-    addDeparserParam(d, outputMeta, "drop_ctl", "drop_ctl");
+    addDeparserParam(d, outputMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
 
     /* egress_port is how the egress deparser knows where to push
      * the reassembled header and is absolutely necessary
      */
     auto* egMeta = getMetadataType(pipe, "egress_intrinsic_metadata");
-    addDeparserParam(d, egMeta, "egress_port", "egress_unicast_port",
-                     /* canPack = */ false);
+    addDeparserParam(d, egMeta, "egress_port", "egress_unicast_port");
 }

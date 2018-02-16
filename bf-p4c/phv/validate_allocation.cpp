@@ -311,28 +311,33 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         // verify that. We're much less restrictive for bridged metadata fields,
         // since they don't end up on the wire and they're not visible to the
         // programmer.
-        bool hasDeparsedHeaderFields = false;
-        bool hasDeparsedMetadataFields = false;
+        std::set<const PHV::Field*> deparsedHeaderFields;
+        std::set<const PHV::Field*> deparsedMetadataFields;
+        std::set<const PHV::Field*> nonDeparsedFields;
 
         for (auto& slice : slices) {
             auto* field = slice.field;
-            if (!isDeparsed(field)) continue;
+            if (!isDeparsed(field)) {
+                nonDeparsedFields.insert(field);
+                continue; }
             if (isMetadata(field))
-                hasDeparsedMetadataFields = true;
+                deparsedMetadataFields.insert(field);
             else
-                hasDeparsedHeaderFields = true;
+                deparsedHeaderFields.insert(field);
         }
 
-        ERROR_CHECK(!(hasDeparsedHeaderFields && hasDeparsedMetadataFields),
+        ERROR_CHECK(!(deparsedHeaderFields.size() && deparsedMetadataFields.size()),
                     "Deparsed container %1% contains both deparsed header "
                     "fields and deparsed metadata fields: %2%", container,
                     cstring::to_cstring(fields));
 
-        if (hasDeparsedHeaderFields) {
-            ERROR_CHECK(std::all_of(fields.begin(), fields.end(), isDeparsed),
-                        "Deparsed container %1% mixes deparsed header "
-                        "fields with non-deparsed fields: %2%", container,
-                        cstring::to_cstring(fields));
+        if (deparsedHeaderFields.size() && nonDeparsedFields.size()) {
+            for (auto* deparsed : deparsedHeaderFields)
+                for (auto* nonDeparsed : nonDeparsedFields)
+                    ERROR_CHECK(mutually_exclusive_field_ids(deparsed->id, nonDeparsed->id),
+                                "Deparsed container %1% mixes deparsed header field %2% with "
+                                "non-deparsed field %3%", container, cstring::to_cstring(deparsed),
+                                cstring::to_cstring(nonDeparsed));
         }
 
         // Verify that the allocations for each field don't overlap. (Note that
@@ -389,7 +394,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         // up on the wire (externally, at least) and we can ensure that garbage
         // data isn't visible to the programmer. If this container has a mixed
         // of both, we'll already have reported an error above.
-        if (hasDeparsedHeaderFields) {
+        if (deparsedHeaderFields.size()) {
             bitvec allBitsInContainer(0, container.size());
             ERROR_WARN_(allocatedBitsForContainer == allBitsInContainer,
                         "Container %1% contains deparsed header fields, but "

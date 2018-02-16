@@ -594,6 +594,7 @@ ordered_set<PHV::AllocSlice> PHV::Transaction::slices(PHV::Container c) const {
 // Returns the contents of this transaction *and* its parent.
 ordered_set<PHV::AllocSlice> PHV::Transaction::slices(PHV::Container c, le_bitrange range) const {
     ordered_set<PHV::AllocSlice> rv;
+    assert(parent_i != this);
 
     // Copy in any parent slices first, as they were allocated first.
     rv = parent_i->slices(c, range);
@@ -1014,7 +1015,8 @@ PHV::SuperCluster::SuperCluster(
         for (auto& slice : *slice_list) {
             BUG_CHECK(slices_to_clusters_i.find(slice) != slices_to_clusters_i.end(),
                       "Trying to form cluster group with a slice list containing %1%, "
-                      "which is not present in any cluster", cstring::to_cstring(slice)); } }
+                      "which is not present in any cluster", cstring::to_cstring(slice));
+            slices_to_slice_lists_i[slice].insert(slice_list); } }
 
     // Tally stats.
     kind_i = PHV::Kind::tagalong;
@@ -1054,6 +1056,14 @@ bool PHV::SuperCluster::operator==(const PHV::SuperCluster& other) const {
             return false; }
 
     return true;
+}
+
+const ordered_set<const PHV::SuperCluster::SliceList*>&
+PHV::SuperCluster::slice_list(const PHV::FieldSlice& slice) const {
+    static const ordered_set<const SliceList*> empty;
+    if (slices_to_slice_lists_i.find(slice) == slices_to_slice_lists_i.end())
+        return empty;
+    return slices_to_slice_lists_i.at(slice);
 }
 
 bool PHV::SuperCluster::okIn(PHV::Kind kind) const {

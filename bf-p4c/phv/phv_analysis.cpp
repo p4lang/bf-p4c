@@ -34,7 +34,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                                    // backtracking
             &uses,                 // use of field in mau, parde
             &pragmas,              // parse and fold PHV-related pragmas
-            new ParserOverlay(phv, mutually_exclusive_field_ids, pragmas),
+            new ParserOverlay(phv, pragmas, mutually_exclusive_field_ids),
                                    // produce pairs of mutually exclusive header
                                    // fields, eg. (arpSrc, ipSrc)
             &parser_critical_path,

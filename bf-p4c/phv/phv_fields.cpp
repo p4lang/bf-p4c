@@ -1,6 +1,7 @@
 #include "bf-p4c/phv/phv_fields.h"
 
 #include <boost/optional.hpp>
+#include <boost/range/adaptor/reversed.hpp>
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -188,13 +189,11 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
         for (auto &stack : stacks) {
             safe_vector<PHV::Field *> pov_fields;  // accumulate member povs of header stk pov
             StructInfo info = struct_info(stack.name);
-            bool has_push = false;
             if (info.gress == gress) {
                 if (stack.maxpush) {
                     size[gress] -= stack.maxpush;
                     add(stack.name + ".$push", gress, stack.maxpush, size[gress], true, true);
                     pov_fields.push_back(&all_fields[stack.name + ".$push"]);
-                    has_push = true;
                 }
                 char buffer[16];
                 for (int i = 0; i < stack.size; ++i) {
@@ -211,20 +210,18 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
                     size[gress], true, true);
                 // do not push ".$stkvalid" as a member
                 // members are slices of owner ".stkvalid"'s allocation span
-                // TODO FIXME: why only push_exists?  What about the $valid and $pop fields?
-                if (has_push) {
-                    PHV::Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
-                    for (auto &f : pov_fields) {
-                        pov_stk->ccgf_fields().push_back(f);
-                        f->set_ccgf(pov_stk);
-                        BUG_CHECK(f->validContainerRange() == nw_bitrange(ZeroToMax()),
-                            "POV bit with absolute container offset"); }
-                    pov_stk->set_header_stack_pov_ccgf(true);
-                    pov_stk->set_no_split(true);
-                    LOG3("Creating HEADER STACK CCGF " << pov_stk);
-                    BUG_CHECK(pov_stk->ccgf_fields().size() > 0,
-                        "Creating .$stkvalid CCGF with no members: %1%",
-                        cstring::to_cstring(pov_stk)); }
+                PHV::Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
+                for (auto &f : pov_fields) {
+                    pov_stk->ccgf_fields().push_back(f);
+                    f->set_ccgf(pov_stk);
+                    BUG_CHECK(f->validContainerRange() == nw_bitrange(ZeroToMax()),
+                        "POV bit with absolute container offset"); }
+                pov_stk->set_header_stack_pov_ccgf(true);
+                pov_stk->set_no_split(true);
+                LOG3("Creating HEADER STACK CCGF " << pov_stk);
+                BUG_CHECK(pov_stk->ccgf_fields().size() > 0,
+                    "Creating .$stkvalid CCGF with no members: %1%",
+                    cstring::to_cstring(pov_stk));
             }
         }
         assert(size[gress] == 0);
@@ -315,6 +312,21 @@ PhvInfo::alloc(const IR::Member *member) {
     return &info->alloc_i;
 }
 
+void PHV::Field::foreach_byte(
+        le_bitrange range,
+        std::function<void(const PHV::Field::Slice&)> fn) const {
+    le_bitrange window = StartLen(range.lo, 8);
+    while (window.overlaps(range)) {
+        // Create a Slice of the window intersected with the range.
+        PHV::Field::Slice slice(this, *toClosedRange(window.intersectWith(range)));
+
+        // Apply @fn.
+        fn(slice);
+
+        // Advance the window.
+        window = window.shiftedByBits(8); }
+}
+
 const PHV::Field::alloc_slice &PHV::Field::for_bit(int bit) const {
     for (auto &sl : alloc_i)
         if (bit >= sl.field_bit && bit < sl.field_bit + sl.width)
@@ -324,67 +336,74 @@ const PHV::Field::alloc_slice &PHV::Field::for_bit(int bit) const {
     return invalid;
 }
 
-void PHV::Field::foreach_byte(int lo, int hi,
-                                  std::function<void(const alloc_slice &)> fn) const {
-    alloc_slice tmp(this, PHV::Container(), lo, lo, 8 - (lo&7));
-    if (alloc_i.empty()) {
-        while (lo <= hi) {
-            if (lo/8U == hi/8U)
-                tmp.width = hi - lo + 1;
+// TODO(cole): Should really reimplement this to call foreach_alloc and then
+// iterate byte-by-byte through each alloc.
+void PHV::Field::foreach_byte(
+        le_bitrange range,
+        std::function<void(const alloc_slice &)> fn) const {
+    // Iterate in reverse order, because alloc_i slices are ordered from field
+    // MSB to LSB, but foreach_byte iterates from LSB to MSB.
+    for (auto slice : boost::adaptors::reverse(alloc_i)) {
+        // Break after we've processed the last element.
+        if (range.hi < slice.field_bits().lo)
+            break;
+
+        // Otherwise, skip allocations that don't overlap with the target
+        // range.
+        if (!range.overlaps(slice.field_bits()))
+            continue;
+
+        // XXX(cole): HACK: clients of foreach_byte assume that @fn is invoked
+        // exactly once for each byte of the field, which is violated if the
+        // field is allocated in more than one place.  There was a time when
+        // fields could be allocated to both PHV and TPHV (but this may not be
+        // true any longer).  Hence, skip TPHV allocations.
+        if (slice.container.is(PHV::Kind::tagalong))
+            continue;
+
+        // The requested range may only cover part of slice, so we create a new
+        // slice that intersects with the range.
+        auto intersectedSlice = slice;
+        if (slice.field_bit < range.lo) {
+            int difference = range.lo - slice.field_bit;
+            intersectedSlice.container_bit += difference;
+            intersectedSlice.field_bit += difference;
+            intersectedSlice.width -= difference; }
+        if (range.hi < slice.field_hi())
+            intersectedSlice.width -= slice.field_hi() - range.hi;
+
+        // Apply @fn to each byte of the restricted allocation, taking care to
+        // split the allocation along container byte boundaries.
+        le_bitrange containerRange = intersectedSlice.container_bits();
+        le_bitrange byte = StartLen(containerRange.loByte() * 8, 8);
+        BUG_CHECK(byte.overlaps(containerRange),
+                  "Bad alloc?\nByte: %1%\nContainer range: %2%\nField: %3%",
+                  cstring::to_cstring(byte), cstring::to_cstring(containerRange),
+                  cstring::to_cstring(this));
+        while (byte.overlaps(containerRange)) {
+            auto window = toClosedRange(byte.intersectWith(containerRange));
+            BUG_CHECK(window, "Bad alloc slice");
+
+            // Create an alloc_slice for this window.
+            int offset = window->lo - containerRange.lo;
+            alloc_slice tmp(this,
+                            intersectedSlice.container,
+                            intersectedSlice.field_bit + offset,
+                            window->lo,
+                            window->size());
+
+            // Invoke the function.
             fn(tmp);
-            tmp.field_bit = tmp.container_bit = lo = (lo|7) + 1;
-            tmp.width = 8; }
-        return; }
-    auto it = alloc_i.rbegin();
-    while (it != alloc_i.rend() && (it->container.is(PHV::Kind::tagalong) ||
-           it->field_hi() < lo)) ++it;
-    while (it != alloc_i.rend() && it->field_bit <= hi) {
-        if (it->container.is(PHV::Kind::tagalong)) continue;
-        unsigned clo = it->container_bit, chi = it->container_hi();
-        if (lo > it->field_bit)
-            clo += lo - it->field_bit;
-        if (hi < it->field_hi())
-            chi -= it->field_hi() - hi;
-        BUG_CHECK(chi >= clo, "Impossible foreach_byte container slice");
-        for (unsigned cbyte = clo/8U; cbyte <= chi/8U; ++cbyte) {
-            int byte_lo = std::max(cbyte*8, clo);
-            int byte_hi = std::min(cbyte*8+7, chi);
-            if (it->container != tmp.container || cbyte != tmp.container_bit/8U) {
-                if (tmp.container) fn(tmp);
-                tmp = *it;
-                if (byte_lo > it->container_bit) {
-                    tmp.container_bit = byte_lo;
-                    tmp.field_bit += byte_lo - it->container_bit;
-                    tmp.width -= byte_lo - it->container_bit; }
-                if (byte_hi < it->container_hi())
-                    tmp.width -= it->container_hi() - byte_hi;
-            } else {
-                if (byte_hi < tmp.container_hi()) {
-                    LOG1("********** phv_fields.cpp:sanity_FAIL **********"
-                        << ".....byte_hi <= container_hi....."
-                        << " byte_hi = " << byte_hi
-                        << " tmp.container_hi = " << tmp.container_hi()
-                        << " field_bit = " << it->field_bit
-                        << " container_bit = " << it->container_bit
-                        << " width = " << it->width
-                        << " lo = " << lo
-                        << " tmp.container_bit = " << tmp.container_bit
-                        << std::endl
-                        << " field = " << this
-                        << " container = " << it->container);
-                    BUG("phv_fields.cpp:foreach_byte(): byte_hi < container_hi");
-                }
-                if (byte_hi > tmp.container_hi())
-                    tmp.width += byte_hi - tmp.container_hi();
-                assert(tmp.width <= 8); } }
-        ++it; }
-    if (tmp.container) fn(tmp);
-}  // foreach byte
+
+            // Increment the window.
+            byte = byte.shiftedByBits(8); } }
+}
 
 void PHV::Field::foreach_alloc(
-    int lo,
-    int hi,
-    std::function<void(const alloc_slice &)> fn) const {
+        le_bitrange range,
+        std::function<void(const alloc_slice &)> fn) const {
+    int lo = range.lo;
+    int hi = range.hi;
     alloc_slice tmp(this, PHV::Container(), lo, lo, hi-lo+1);
 
     // Find first slice that includes @lo, and process it.

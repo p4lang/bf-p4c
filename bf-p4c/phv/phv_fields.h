@@ -52,7 +52,13 @@ std::ostream &operator<<(std::ostream &out, const Slice &sl);
 
 namespace PHV {
 
-enum class Field_Ops {NONE = 0, R = 1, W = 2, RW = 3};
+enum class FieldKind : unsigned short {
+    header   = 0,   // header fields
+    metadata = 1,   // metadata fields
+    pov      = 2    // POV fields, eg. $valid
+};
+
+enum class Field_Ops { NONE = 0, R = 1, W = 2, RW = 3 };
 
 class Field {
  public:
@@ -104,9 +110,116 @@ class Field {
     /// True if this Field is a validity bit.
     bool            pov;
 
-    // ****************************************************************************************
-    // begin phv_assignment (phv_bind) interface
-    // ****************************************************************************************
+    /** Represents a slice (range of bits) of a PHV::Field.  Constraints on the
+     * field that are related to position, like alignment, are tailored for
+     * each slice.
+     */
+    class Slice {
+        // There is no reason for a Slice to change the field it is representing, so make this
+        // const (also used in ActionPhvConstraints)
+        const PHV::Field* field_i;
+        le_bitrange range_i;
+        boost::optional<FieldAlignment> alignment_i = boost::none;
+        nw_bitrange validContainerRange_i = ZeroToMax();
+
+     public:
+        Slice(const Field* field, le_bitrange range) : field_i(field), range_i(range) {
+            BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start");
+            BUG_CHECK(range.size() <= field->size,
+                      "Trying to create field slice larger than field");
+
+            // Calculate relative alignment for this field slice.
+            if (field->alignment) {
+                le_bitrange field_range = StartLen(field->alignment->littleEndian, field->size);
+                le_bitrange slice_range = field_range.shiftedByBits(range_i.lo)
+                                                     .resizedToBits(range_i.size());
+                alignment_i = FieldAlignment(slice_range);
+                LOG5("Adjusting alignment of field " << field << " to " << *alignment_i <<
+                     " for slice " << range); }
+
+            // Calculate valid container range for this slice by shrinking
+            // the valid range of the field by the size of the "tail"
+            // (i.e. the least significant bits) not in this slice.
+            if (field_i->validContainerRange_i == ZeroToMax()) {
+                validContainerRange_i = ZeroToMax();
+            } else {
+                int new_size = field_i->validContainerRange_i.size() - range.lo;
+                validContainerRange_i = field_i->validContainerRange_i.resizedToBits(new_size); }
+        }
+
+        /// Create a slice that holds the entirety of @field.
+        explicit Slice(const Field* field)
+        : Slice(field, le_bitrange(StartLen(0, field->size))) { }
+
+        /// Creates a subslice of @slice from @range.lo to @range.hi.
+        Slice(Slice slice, le_bitrange range) : Slice(slice.field(), range) {
+            BUG_CHECK(slice.range().contains(range),
+                      "Trying to create field sub-slice larger than the original slice");
+        }
+
+        bool operator==(const Slice& other) const {
+            return field_i == other.field() && range_i == other.range();
+        }
+
+        bool operator!=(const Slice& other) const {
+            return !(*this == other);
+        }
+
+        bool operator<(const Slice& other) const {
+            if (field_i != other.field())
+                return field_i < other.field();
+            if (range_i.lo != other.range().lo)
+                return range_i.lo < other.range().lo;
+            return range_i.hi < other.range().hi;
+        }
+
+        /// Whether the Field is ingress or egress.
+        gress_t gress() const { return field_i->gress; }
+
+        /// Total size of Slice in bits.
+        int size() const { return range_i.size(); }
+
+        /// The alignment requirement of this field slice. If boost::none, there is
+        /// no particular alignment requirement.
+        boost::optional<FieldAlignment> alignment() const { return alignment_i; }
+
+        /// See documentation for `Field::validContainerRange()`.
+        /// TODO(cole): Refactor this.
+        nw_bitrange validContainerRange() const { return validContainerRange_i; }
+
+        /// Kind of field of this slice.
+        FieldKind kind() const {
+            // XXX(cole): PHV::Field::metadata and PHV::Field::pov should be
+            // replaced by FieldKind.
+            if (field_i->pov)
+                return FieldKind::pov;
+            else if (field_i->metadata)
+                return FieldKind::metadata;
+            else
+                return FieldKind::header;
+        }
+
+        /// @returns the field this is a slice of.
+        const PHV::Field* field() const   { return field_i; }
+
+        /// @returns the bits of the field included in this field slice.
+        le_bitrange range() const   { return range_i; }
+    };
+
+    /// Apply @fn to each byte-sized subslice of the slice @range of @this
+    /// field, starting at bit @range.lo.  If @range is not a byte multiple,
+    /// then the last slice will be smaller than 8 bits.
+    void foreach_byte(le_bitrange range, std::function<void(const Slice &)> fn) const;
+
+    /** Equivalent to `foreach_byte(StartLen(0, this->size), fn)`.
+     *
+     * @see foreach_byte(le_bitrange, std::function<void(const Slice &)>).
+     */
+    void foreach_byte(std::function<void(const Slice &)> fn) const {
+        foreach_byte(StartLen(0, this->size), fn);
+    }
+
+    /// Represents an allocation of a field slice to a container slice.
     struct alloc_slice {
         const Field*           field;
         PHV::Container         container;
@@ -123,53 +236,88 @@ class Field {
                    container_bit == other.container_bit &&
                    width == other.width; }
         bool operator!=(const alloc_slice& other) const {
-            return !operator==(other); } };
-    //
-    // alloc_slice bit
+            return !operator==(other); }
+    };
+
+    /// @returns the alloc_slice in which field @bit is allocated.  Fails
+    /// catastrophically if @bit is not allocated or not within the range of
+    /// @this field's size.
     const alloc_slice &for_bit(int bit) const;
-    //
-    // alloc_slice byte
-    void foreach_byte(std::function<void(const alloc_slice &)> fn) const {
-        foreach_byte(0, size-1, fn); }
-    void foreach_byte(le_bitrange r, std::function<void(const alloc_slice &)> fn) const {
-        foreach_byte(r.lo, r.hi, fn); }
+
+    /** For each byte-aligned container byte of each allocated slice of this
+     * field, construct an alloc_slice representing that allocated byte (or
+     * fraction thereof) and apply @fn to it, BUT ONLY if the container is NOT
+     * a TPHV container.
+     *
+     *  For example, suppose a 16b field (f) is allocated as follows:
+     *
+     *  C8 [4:0]     <— f [15:11]
+     *  C8 [7:7]     <— f [10:10]
+     *  C16 [9:0]    <— f [9:0]
+     *
+     *  Where C8 is an 8b container and C16 is a 16b container.
+     *
+     *  Invoking `f->foreach_byte(1, 14, fn)` should invoke fn on the following alloc_slices (in this order):
+     *
+     *  C16 [7:1]    <— f [7:1]
+     *  C16 [9:8]    <— f [9:8]
+     *  C8 [7:7]    <— f [10:10]
+     *  C8 [3:0]    <— f [14:11]
+     */
+    void foreach_byte(le_bitrange r, std::function<void(const alloc_slice &)> fn) const;
+
+    /** Equivalent to `foreach_byte(*r, fn)`, or `foreach_byte(StartLen(0,
+     * this->size), fn)` when @r is null.
+     *
+     * @see foreach_byte(le_bitrange, std::function<void(const alloc_slice&)>).
+     */
     void foreach_byte(const le_bitrange *r, std::function<void(const alloc_slice &)> fn) const {
-        foreach_byte(r ? r->lo : 0, r ? r->hi : size-1, fn); }
-    //
-    // alloc_slice bitrange
-    void foreach_alloc(
-        std::function<void(const alloc_slice &)> fn) const {
-        foreach_alloc(0, size-1, fn);
+        foreach_byte(r ? *r : StartLen(0, this->size), fn);
     }
-    void foreach_alloc(le_bitrange r, std::function<void(const alloc_slice &)> fn) const {
-        foreach_alloc(r.lo, r.hi, fn); }
+
+    /** Equivalent to `foreach_byte(StartLen(0, this->size), fn)`.
+     *
+     * @see foreach_byte(le_bitrange, std::function<void(const alloc_slice&)>).
+     */
+    void foreach_byte(std::function<void(const alloc_slice &)> fn) const {
+        foreach_byte(StartLen(0, this->size), fn);
+    }
+
+    /// Apply @fn to each alloc_slice to which @this has been allocated (if any).
+    void foreach_alloc(le_bitrange r, std::function<void(const alloc_slice &)> fn) const;
+
+    /** Equivalent to `foreach_alloc(StartLen(0, this->size), fn)`.
+     *
+     * @see foreach_alloc(le_bitrange, std::function<void(const alloc_slice &)>).
+     */
+    void foreach_alloc(std::function<void(const alloc_slice &)> fn) const {
+        foreach_alloc(StartLen(0, this->size), fn);
+    }
+
+    /** Equivalent to `foreach_alloc(StartLen(0, this->size), fn)`, or to
+     * `foreach_alloc(fn)` when @r is null.
+     *
+     * @see foreach_alloc(le_bitrange, std::function<void(const alloc_slice &)>).
+     */
     void foreach_alloc(const le_bitrange *r, std::function<void(const alloc_slice &)> fn) const {
-        foreach_alloc(r ? r->lo : 0, r ? r->hi : size-1, fn); }
-            // e.g., foreach_alloc function with le_bitrange to only iterate over part of field
-            // le_bitrange  bits;        // local var (on stack)
-            // auto *field = phv.field(expr, &bits);  // pointer to bits, phv.field fills it
-            // field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
-            //     LOG1("Alloc slice of write " << alloc); }
-    //
+        foreach_alloc(r ? *r : StartLen(0, this->size), fn);
+    }
+
+    /// XXX(cole): These should be commented (or removed if unused).
     cstring header() const { return name.before(strrchr(name, '.')); }
     int container_bytes(le_bitrange bits = {0, -1}) const;
-    //
     void clear_alloc() { alloc_i.clear(); }
 
-    safe_vector<alloc_slice> alloc_i;  // sorted MSB (field) first
+    /// Maps slices of @this field to PHV containers.  Sorted by field MSB
+    /// first.
+    /// XXX(cole): This should be private.
+    safe_vector<alloc_slice> alloc_i;
 
     /// Update the alignment requirement for this field. Reports an error if
     /// conflicting requirements render the alignment unsatisfiable.
     void updateAlignment(const FieldAlignment& newAlignment);
 
- private:  // class Field
-    void foreach_alloc(
-        int lo,
-        int hi,
-        std::function<void(const alloc_slice &)> fn) const;
-    void foreach_byte(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
-
-
+ private:
     /**
      * Update the valid range of container positions for this field.
      * Reports an error if conflicting requirements render the constraint
@@ -377,6 +525,10 @@ class Field {
         return validContainerRange_i;
     }
 };
+
+// XXX(cole): Eventually, we should replace FieldSlice with Field::Slice
+// everywhere.
+using FieldSlice = Field::Slice;
 
 std::ostream &operator<<(std::ostream &out, const Field &);
 std::ostream &operator<<(std::ostream &out, const Field *);

@@ -182,8 +182,8 @@ class CoreAllocation {
     boost::optional<PHV::Transaction> tryAllocSliceList(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
-        const PHV::SuperCluster::SliceList& slices,
-        const ordered_map<const PHV::FieldSlice, int>& start_positions) const;
+        const PHV::SuperCluster& super_cluster,
+        const ordered_map<PHV::FieldSlice, int>& start_positions) const;
 
     /** Helper function for tryAlloc that tries to allocate all the fields of a single CCGF.
      *

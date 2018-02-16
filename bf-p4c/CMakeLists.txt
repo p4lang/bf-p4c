@@ -465,6 +465,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_constraints.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_field.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/portable_switch.cpp

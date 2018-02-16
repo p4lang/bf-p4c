@@ -111,8 +111,8 @@ AllocScore::AllocScore(const PHV::Transaction& alloc,
         bitvec parent_alloc_vec = calcContainerAllocVec(parent->slices(container));
 
         // skip, if there is no allocated slices.
-        if (slices.size() == 0) {
-            continue; }
+        if (slices.size() == 0)
+            continue;
 
         // calc n_wasted_bits
         for (const auto& slice : slices) {
@@ -306,9 +306,21 @@ bool CoreAllocation::satisfies_constraints(std::vector<PHV::AllocSlice> slices) 
         LOG5("    ...but slice list contains multiple fields and one has the 'no pack' constraint");
         return false; }
 
+    // XXX(cns): HACK!  Reject slice lists of bridged metadata fields that
+    // could fit in a smaller container.
+    for (auto& slice : slices) {
+        if (!slice.field()->bridged || slice.field_slice().size() != slice.field()->size)
+            continue;
+        if (slice.container().is(PHV::Size::b16) && slice.field()->size <= int(PHV::Size::b8))
+            return false;
+        if (slice.container().is(PHV::Size::b32) && slice.field()->size <= int(PHV::Size::b16))
+            return false; }
+
     return true;
 }
 
+// NB: action-induced PHV constraints are checked separately as part of
+// `can_pack` on slice lists.
 bool CoreAllocation::satisfies_constraints(
         const PHV::Allocation& alloc,
         PHV::AllocSlice slice) const {
@@ -334,13 +346,17 @@ bool CoreAllocation::satisfies_constraints(
                          "already placed in this container");
             return false; } }
 
-    // Check action analysis induced constraints if multiple slices are to be packed in the same
-    // container.
-    if (slices.size() > 0) {
-        boost::optional<UnionFind<PHV::FieldSlice>> rv = actions_i.can_pack(alloc, slice);
-        if (!rv) {
-            LOG5("        ...action constraint: cannot pack " << slice << " into container " << c);
-            return false; } }
+    // If `slice` is extracted, then check that no existing allocated field is
+    // also extracted.
+    bool hasExtracted = std::any_of(slices.begin(), slices.end(), [&](const PHV::AllocSlice& s) {
+        return uses_i.is_extracted(s.field())
+               && !PHV::Allocation::mutually_exclusive(mutex_i, s.field(), slice.field())
+               && !s.field()->pov;
+    });
+    if (!slice.field()->pov && uses_i.is_extracted(slice.field()) && hasExtracted) {
+        LOG5("        constraint: slice is extracted but container already contains extracted "
+             "slices");
+        return false; }
 
     return true;
 }
@@ -484,14 +500,51 @@ boost::optional<PHV::Transaction>
 CoreAllocation::tryAllocSliceList(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
-        const PHV::SuperCluster::SliceList& slices,
-        const ordered_map<const PHV::FieldSlice, int>& start_positions) const {
-    LOG5("trying to allocate slices at container indices: ");
+        const PHV::SuperCluster& super_cluster,
+        const ordered_map<PHV::FieldSlice, int>& start_positions) const {
+    PHV::SuperCluster::SliceList slices;
+    for (auto& kv : start_positions)
+        slices.push_back(kv.first);
+    if (LOGGING(5)) {
+        LOG5("trying to allocate slices at container indices: ");
+        for (auto& slice : slices)
+            LOG5("  " << start_positions.at(slice) << ": " << slice); }
+
+    // Check if any of these slices have already been allocated.  If so, record
+    // where.  Because we have already finely sliced each field, we can check
+    // slices for equivalence rather than containment.
+    ordered_map<PHV::FieldSlice, PHV::AllocSlice> previous_allocations;
+    boost::optional<PHV::Container> previous_container = boost::none;
     for (auto& slice : slices) {
-        BUG_CHECK(start_positions.find(slice) != start_positions.end(),
-                  "Trying to place slice list with no container index for slice %1%",
-                  cstring::to_cstring(slice));
-        LOG5("  " << start_positions.at(slice) << ": " << slice); }
+        // XXX(cole): Looking up existing allocations is expensive in the
+        // current implementation.  Consider refactoring.
+        auto alloc_slices = alloc.slices(slice.field(), slice.range());
+        BUG_CHECK(alloc_slices.size() <= 1, "Fine slicing failed");
+        if (alloc_slices.size() == 0)
+            continue;
+        auto alloc_slice = *alloc_slices.begin();
+
+        // Check if previous allocations were to a container in this group.
+        if (!group.contains(alloc_slice.container())) {
+            LOG5("    ...but slice " << slice << " has already been allocated to a different "
+                 "container group");
+            return boost::none; }
+
+        // Check if all previous allocations were to the same container.
+        if (previous_container && *previous_container != alloc_slice.container()) {
+            LOG5("    ...but some slices in this list have already been allocated to different "
+                 "containers");
+            return boost::none; }
+        previous_container = alloc_slice.container();
+
+        // Check that previous allocations match the proposed bit positions in this allocation.
+        if (alloc_slice.container_slice().lo != start_positions.at(slice)) {
+            LOG5("    ...but " << alloc_slice << " has already been allocated and does not start "
+                 "at " << start_positions.at(slice));
+            return boost::none; }
+
+        // Record previous allocations for use later.
+        previous_allocations.emplace(slice, alloc_slice); }
 
     // Check FIELD<-->GROUP constraints for each field.
     for (auto& slice : slices) {
@@ -542,6 +595,12 @@ CoreAllocation::tryAllocSliceList(
     AllocScore best_score = AllocScore::make_lowest();
     boost::optional<PHV::Transaction> best_candidate = boost::none;
     for (const PHV::Container c : group) {
+        // If any slices were already allocated, ensure that unallocated slices
+        // are allocated to the same container.
+        if (previous_container && *previous_container != c) {
+            LOG5("    ...but some slices were already allocated to " << *previous_container);
+            continue; }
+
         std::vector<PHV::AllocSlice> candidate_slices;
 
         // Generate candidate_slices if we choose this container.
@@ -556,27 +615,14 @@ CoreAllocation::tryAllocSliceList(
         if (!satisfies_constraints(candidate_slices))
             continue;
 
-        // Check that each field slice satisfies slice<-->container constraints.
-        bool constraints_ok =
-            std::all_of(candidate_slices.begin(), candidate_slices.end(),
-                        [&](const PHV::AllocSlice& slice) {
-                            return satisfies_constraints(alloc_attempt, slice); });
-        if (!constraints_ok)
-            continue;
-
-        // In case there are multiple members in alloc_slices, need to check how their packing is
-        // affected by action induced constraints
-        if (candidate_slices.size() > 1) {
-            boost::optional<UnionFind<PHV::FieldSlice>> rv = actions_i.can_pack(alloc_attempt,
-                    candidate_slices);
-            if (!rv) {
-                LOG5("        ...action constraint: cannot pack into container " << c);
-                continue; } }
-
         // Check that there's space.
         bool can_place = true;
         for (auto& slice : candidate_slices) {
             if (!uses_i.is_referenced(slice.field()))
+                continue;
+            // Skip slices that have already been allocated.
+            if (previous_allocations.find(PHV::FieldSlice(slice.field(), slice.field_slice()))
+                    != previous_allocations.end())
                 continue;
             const auto& alloced_slices =
                 alloc_attempt.slices(slice.container(), slice.container_slice());
@@ -588,16 +634,139 @@ CoreAllocation::tryAllocSliceList(
                 break; } }
         if (!can_place) continue;  // try next container
 
+        // Check that each field slice satisfies slice<-->container
+        // constraints, skipping slices that have already been allocated.
+        bool constraints_ok =
+            std::all_of(candidate_slices.begin(), candidate_slices.end(),
+                [&](const PHV::AllocSlice& slice) {
+                    PHV::FieldSlice fs(slice.field(), slice.field_slice());
+                    bool alloced = previous_allocations.find(PHV::FieldSlice(fs)) !=
+                                   previous_allocations.end();
+                    return alloced ? true : satisfies_constraints(alloc_attempt, slice); });
+        if (!constraints_ok)
+            continue;
+
+        // Check whether the candidate slice allocations respect action-induced constraints.
+        auto action_constraints = actions_i.can_pack(alloc_attempt, candidate_slices);
+        if (!action_constraints) {
+            LOG5("        ...action constraint: cannot pack into container " << c);
+            continue;
+        } else if (action_constraints->size() > 0) {
+            if (LOGGING(5)) {
+                LOG5("    ...but only if the following placements are respected:");
+                for (auto kv : *action_constraints)
+                    LOG5("        " << kv.first << " @ " << kv.second); }
+
+            // Find slice lists that contain slices in action_constraints.
+            boost::optional<const PHV::SuperCluster::SliceList*> slice_list = boost::none;
+            bool has_not_in_list = false;
+            for (auto& slice_and_pos : *action_constraints) {
+                const auto& slice_lists = super_cluster.slice_list(slice_and_pos.first);
+
+                // Disregard slices that aren't in slice lists.
+                if (slice_lists.size() == 0) {
+                    has_not_in_list = true;
+                    continue; }
+
+                // If a slice is in multiple slice lists, abort.
+                // XXX(cole): This is overly constrained.
+                if (slice_lists.size() > 1) {
+                    LOG5("    ...but a conditional placement is in multiple slice lists");
+                    return boost::none; }
+
+                // If another slice in these action constraints is in a
+                // different slice list, abort.
+                // XXX(cole): This is also overly constrained.
+                if (slice_list && *slice_list != *slice_lists.begin()) {
+                    LOG5("    ...but two conditional placements are in two different slice lists");
+                    return boost::none; }
+
+                slice_list = *slice_lists.begin(); }
+
+            // XXX(cole): Abort if the requirements a mix of slices in slice
+            // lists and those not in slice lists.  This is overly constrained.
+            if (has_not_in_list && slice_list) {
+                LOG5("    ...but action constraints include some slices in a slice list and "
+                     "some that are not");
+                return boost::none; }
+
+            if (slice_list) {
+                // Check that the positions induced by action constraints match
+                // the positions in the slice list.  The offset is relative to
+                // the beginning of the slice list until the first
+                // action-constrained slice is encountered, at which point the
+                // offset is set to the required offset.
+                int offset = 0;
+                bool absolute = false;
+                int size = 0;
+                for (auto& slice : **slice_list) {
+                    size += slice.range().size();
+                    if (action_constraints->find(slice) == action_constraints->end()) {
+                        offset += slice.range().size();
+                        continue; }
+
+                    int required_pos = action_constraints->at(slice);
+                    if (!absolute && required_pos < offset) {
+                        // This is the first slice with an action alignment
+                        // constraint.  Check that the constraint is >= the
+                        // bits seen so far.
+                        LOG5("    ...action constraint: " << slice << " must be placed at bit "
+                             << required_pos << " but is " << offset << "b deep in a slice list");
+                        return boost::none;
+                    } else if (!absolute) {
+                        absolute = true;
+                        offset = required_pos + slice.range().size();
+                    } else if (offset != required_pos) {
+                        LOG5("    ...action constraint: " << slice << " must be placed at bit "
+                             << required_pos << " which conflicts with another action-induced "
+                             "constraint for another slice in the slice list");
+                        return boost::none;
+                    } else {
+                        offset += slice.range().size(); } }
+
+                // If we've reached here, then all the slices that have
+                // conditional constraints are in slice_list, and the slice
+                // list must be placed with its first field starting at
+                // offset - size.
+                ordered_map<PHV::FieldSlice, int> slice_list_pos;
+                int required_offset = offset - size;
+                for (auto& slice : **slice_list) {
+                    slice_list_pos[slice] = required_offset;
+                    required_offset += slice.range().size(); }
+
+                // Update the action constraints with positions for all fields
+                // in the slice list.
+                action_constraints = slice_list_pos; } }
+
         // Create this alloc for calculating score.
         auto this_alloc = alloc_attempt.makeTransaction();
         for (auto& slice : candidate_slices) {
-            if (uses_i.is_referenced(slice.field()) && !clot_i.allocated(slice.field())) {
+            bool is_referenced = uses_i.is_referenced(slice.field());
+            bool is_clot = clot_i.allocated(slice.field());
+            bool is_allocated =
+                previous_allocations.find(PHV::FieldSlice(slice.field(), slice.field_slice()))
+                    != previous_allocations.end();
+            if (is_referenced && !is_clot && !is_allocated) {
                 this_alloc.allocate(slice);
-            } else {
+            } else if (!is_referenced) {
                 LOG5("NOT ALLOCATING unreferenced field: " << slice); } }
 
+        // Recursively try to allocate slices according to conditional
+        // constraints induced by actions.  NB: By allocating the current slice
+        // list first, we guarantee that recursion terminates, because each
+        // invocation allocates fields or fails before recursion, and there are
+        // finitely many fields.
+        if (action_constraints->size() > 0) {
+            auto action_alloc =
+                tryAllocSliceList(this_alloc, group, super_cluster, *action_constraints);
+            if (!action_alloc) {
+                LOG5("    ...but slice list has conditional constraints that cannot be satisfied");
+                continue; }
+            LOG5("    ...and conditional constraints are satisfied");
+            this_alloc.commit(*action_alloc); }
+
         auto score = AllocScore(this_alloc, uses_i);
-        LOG5("    ...score: " << score);
+        LOG5("    ...SLICE LIST score: " << score);
 
         // update the best
         if ((!best_candidate || score > best_score)) {
@@ -637,7 +806,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
     actions_i.sort(slice_lists);
     for (const PHV::SuperCluster::SliceList* slice_list : slice_lists) {
         int le_offset = 0;
-        ordered_map<const PHV::FieldSlice, int> slice_alignment;
+        ordered_map<PHV::FieldSlice, int> slice_alignment;
         for (auto& slice : *slice_list) {
             const PHV::AlignedCluster& cluster = super_cluster.aligned_cluster(slice);
             auto valid_start_options = satisfies_constraints(container_group, cluster);
@@ -676,7 +845,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
 
         // Try allocating the slice list.
         auto partial_alloc_result =
-            tryAllocSliceList(alloc_attempt, container_group, *slice_list, slice_alignment);
+            tryAllocSliceList(alloc_attempt, container_group, super_cluster, slice_alignment);
         if (!partial_alloc_result)
             return boost::none;
         alloc_attempt.commit(*partial_alloc_result);
@@ -725,9 +894,9 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
                 for (const PHV::FieldSlice& slice : slice_list) {
                     // Skip fields that have already been allocated above.
                     if (allocated.find(slice) != allocated.end()) continue;
-                    ordered_map<const PHV::FieldSlice, int> start_map = { { slice, start } };
+                    ordered_map<PHV::FieldSlice, int> start_map = { { slice, start } };
                     auto partial_alloc_result =
-                        tryAllocSliceList(this_alloc, container_group, {slice}, start_map);
+                        tryAllocSliceList(this_alloc, container_group, super_cluster, start_map);
                     if (partial_alloc_result) {
                         this_alloc.commit(*partial_alloc_result);
                     } else {
@@ -1357,7 +1526,7 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                     if (auto partial_alloc =
                             core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc)) {
                         AllocScore score = AllocScore(*partial_alloc, core_alloc_i.uses());
-                        LOG4("    ...score: " << score);
+                        LOG4("    ...SUPERCLUSTER score: " << score);
                         if (!best_slice_alloc || score > best_slice_score) {
                             best_slice_score = score;
                             best_slice_alloc = partial_alloc; } } }
@@ -1372,7 +1541,7 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
 
             // If allocation succeeded, check the score.
             auto slicing_score = AllocScore(slicing_alloc, core_alloc_i.uses());
-            LOG4("score: " << slicing_score);
+            LOG4("Best SUPERCLUSTER score: " << slicing_score);
             if (succeeded && (!best_alloc || slicing_score > best_score)) {
                 best_score = slicing_score;
                 best_alloc = slicing_alloc;

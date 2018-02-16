@@ -71,7 +71,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
         pragmas,
-        new ParserOverlay(phv, mutually_exclusive_field_ids, *pragmas),
+        new ParserOverlay(phv, *pragmas, mutually_exclusive_field_ids),
     };
     return pipe->apply(quick_backend);
 }

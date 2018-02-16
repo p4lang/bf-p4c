@@ -19,6 +19,9 @@
  */
 class ActionPhvConstraints : public Inspector {
  private:
+    const PhvInfo &phv;
+    const PackConflicts &conflicts;
+
     using ClassifiedSources = ordered_map<size_t, ordered_set<PHV::AllocSlice>>;
     /// Defines a struct for returning number of containers
     struct NumContainers {
@@ -34,7 +37,7 @@ class ActionPhvConstraints : public Inspector {
     /// Defines a struct for a particular field operation: either read or write
     // TODO: Will we ever need a boolean indicating read or write in this
     // struct?
-    struct FieldOperation {
+    struct OperandInfo {
         int unique_action_id;
         enum field_read_flags_t { MOVE = 1,
                                   WHOLE_CONTAINER = (1 << 1),
@@ -42,67 +45,202 @@ class ActionPhvConstraints : public Inspector {
                                   MIXED = (1 << 3),
                                   WHOLE_CONTAINER_SAME_FIELD = (1 << 4) };
         uint8_t flags = 0;
+
+        // An operand is either action data (ad), a constant (constant), or
+        // drawn from a PHV container (phv_used).
         bool ad = false;
         bool constant = false;
         int64_t const_value = 0;
-        const PHV::Field *phv_used;
+        boost::optional<PHV::FieldSlice> phv_used = boost::none;
         cstring action_name;
 
-        bool operator < (FieldOperation other) const {
-            return (phv_used->id < other.phv_used->id);
+        bool operator < (OperandInfo other) const {
+            // XXX(cole): What if ad == other.ad?
+            if (ad && !other.ad)
+                return true;
+            else if (!ad && other.ad)
+                return false;
+            else if (constant && !other.constant)
+                return true;
+            else if (!constant && other.constant)
+                return false;
+            else if (constant && other.constant)
+                return const_value < other.const_value;
+            else if (phv_used && !other.phv_used)
+                return true;
+            else if (!phv_used && other.phv_used)
+                return false;
+            else if (!phv_used && !other.phv_used)
+                return false;
+            else if (phv_used->field()->id != other.phv_used->field()->id)
+                return phv_used->field()->id < other.phv_used->field()->id;
+            else if (phv_used->range().lo != other.phv_used->range().lo)
+                return phv_used->range().lo < other.phv_used->range().lo;
+            else
+                return phv_used->range().hi < other.phv_used->range().hi;
         }
 
-        bool operator == (FieldOperation other) const {
-            return (phv_used->id == other.phv_used->id);
+        bool operator == (OperandInfo other) const {
+            return phv_used == other.phv_used
+                && ad == other.ad
+                && constant == other.constant
+                && const_value == other.const_value;
         }
 
         bool operator == (const PHV::Field* field) const {
-            return (phv_used->id == field->id);
+            return phv_used && phv_used->field()->id == field->id;
         }
 
-        explicit FieldOperation(const PHV::Field *field, int id = -1) : unique_action_id(id),
-        phv_used(field) {}
+        explicit OperandInfo(PHV::FieldSlice slice, int id = -1)
+        : unique_action_id(id), phv_used(slice) { }
 
-        FieldOperation() : phv_used(nullptr) {}
+        OperandInfo() { }
     };
 
-    const PhvInfo       &phv;
+    friend std::ostream
+    &operator<<(std::ostream &out, const ActionPhvConstraints::OperandInfo& info);
 
-    const PackConflicts &conflicts;
+    class ConstraintTracker {
+        const PhvInfo& phv;
+        ActionPhvConstraints& self;
 
+        /// Maps fields to the actions that write them, keeping track of range
+        /// of each write.
+        ordered_map<const PHV::Field*,
+            ordered_map<le_bitrange,
+                ordered_set<const IR::MAU::Action *>>> field_writes_to_actions;
+
+        /// Any OperandInfo (Field) within the set will have been written in the
+        /// key action.
+        ordered_map<const IR::MAU::Action *, ordered_set<OperandInfo>> action_to_writes;
+
+        /// Any OperandInfo (Field) within the set will have been read in the
+        /// key action.
+        ordered_map<const IR::MAU::Action *, ordered_set<PHV::FieldSlice>> action_to_reads;
+
+        /// Any OperandInfo in the std::vector will use the following as an operand in
+        /// action where the key is the field written in that action.
+        ordered_map<const PHV::Field*,
+            ordered_map<const IR::MAU::Action *,
+                ordered_map<le_bitrange,
+                    std::vector<OperandInfo>>>> write_to_reads_per_action;
+
+        ordered_map<const PHV::Field*,
+            ordered_map<const IR::MAU::Action *,
+                ordered_map<le_bitrange,
+                    ordered_set<PHV::FieldSlice>>>> read_to_writes_per_action;
+
+        /// Used to generate unique action IDs when creating `struct OperandInfo` objects
+        static int current_action;
+
+     public:
+        ConstraintTracker(const PhvInfo& phv, ActionPhvConstraints& self)
+        : phv(phv), self(self) { }
+
+        /// Clear internal state.
+        void clear();
+
+        /// Add constraints induced by @act.
+        void add_action(
+            const IR::MAU::Action *act,
+            const ActionAnalysis::FieldActionsMap field_actions_map);
+
+        /** If @dst is a slice of the destination operand of an instruction
+         * in @act, then return one OperandInfo for each corresponding slice
+         * of each source, if any.  Returns an empty vector if @dst is not
+         * written in @act or if there are no sources.
+         */
+        std::vector<OperandInfo>
+        sources(PHV::FieldSlice dst, const IR::MAU::Action* act) const;
+
+        /// Convenience method that translates @dst to a FieldSlice and passes
+        /// it to `sources` above.
+        std::vector<OperandInfo>
+        sources(PHV::AllocSlice dst, const IR::MAU::Action* act) const {
+            return sources(PHV::FieldSlice(dst.field(), dst.field_slice()), act);
+        }
+
+        /** If @src is a slice of a source operand of any instructions
+         * in @act, then return one OperandInfo for each corresponding slice
+         * of each destination, if any.  Returns an empty vector if @src is not
+         * read in @act.
+         */
+        ordered_set<PHV::FieldSlice>
+        destinations(PHV::FieldSlice src, const IR::MAU::Action* act) const;
+
+        /// @returns the actions that read @dst.
+        ordered_set<const IR::MAU::Action*> read_in(PHV::FieldSlice src) const;
+
+        /// @returns the actions that write @dst.
+        ordered_set<const IR::MAU::Action*> written_in(PHV::FieldSlice dst) const;
+
+        /// Convenience method that translates @dst to a FieldSlice and passes
+        /// it to `written_in` above.
+        ordered_set<const IR::MAU::Action*> written_in(PHV::AllocSlice dst) const {
+            return written_in(PHV::FieldSlice(dst.field(), dst.field_slice()));
+        }
+
+        /// @returns operation information for fields written in @act.
+        const ordered_set<OperandInfo>& writes(const IR::MAU::Action* act) const;
+
+        /// @returns operation information for fields written in @act.
+        const ordered_set<PHV::FieldSlice>& reads(const IR::MAU::Action* act) const;
+
+        /// @eturns a OperandInfo structure if @slice is written in @act.
+        boost::optional<OperandInfo>
+        is_written(PHV::FieldSlice slice, const IR::MAU::Action *act) const;
+
+        /// Convenience method that translates @slice to a FieldSlice and passes
+        /// it to `is_written` above.
+        boost::optional<OperandInfo>
+        is_written(PHV::AllocSlice slice, const IR::MAU::Action *act) const {
+            return is_written(PHV::FieldSlice(slice.field(), slice.field_slice()), act);
+        }
+
+        /** If @dst allocates field slice f[x:y] to container c[a:b], and @src
+         * is a field slice g[x':y'] involved in an MAU instruction with
+         * f[x:y], then there exists a range of container bits [a':b'] at which
+         * g[x':y'] will be aligned with the corresponding bits of f[x:y].
+         *
+         * For example, suppose we have:
+         *
+         *      bit<16> f
+         *      bit<16> g
+         *      f[7:0] = g[15:8]
+         *
+         * If c[31:24]<--f[7:0], then g[10:9] would need to be placed at
+         * [26:25] (starting at bit 25) to be aligned with f.
+         *
+         * @returns the set of alignments of @dst that cause it to align with
+         * @src, or an empty set if @dst and @src are not involved in an MAU
+         * operation.  The set will contain multiple alignments if @dst and
+         * @src are in different instructions (in different actions) at
+         * different alignments.
+         */
+        ordered_set<int> source_alignment(PHV::AllocSlice dst, PHV::FieldSlice src) const;
+
+        /** Print the state of the maps */
+        void printMapStates() const;
+
+        /** Debug function to print the total number of reads and writes across all actions for the
+         * fields in the vector of AllocSlices represented by @slices
+         */
+        void print_field_ordering(std::vector<PHV::AllocSlice>& slices) const;
+    };
+
+    ConstraintTracker constraint_tracker;
+
+    /// Clears any state accumulated in prior invocations of this pass.
     profile_t init_apply(const IR::Node *root) override;
+
     /** Builds the data structures to be used in the API function call 
       * Also checks that the actions can be scheduled on Tofino in the same stage
       * without splitting and without considering PHV allocation (yet to happen)
       */
     bool preorder(const IR::MAU::Action *act) override;
-    /** Print out all the maps created in ActionPhvConstraints
-      */
+
+    /// Print out all the maps created in ActionPhvConstraints.
     void end_apply() override;
-
-    /** Debug function to print the total number of reads and writes across all actions for the
-      * fields in the vector of AllocSlices represented by @slices
-      */
-    void field_ordering(std::vector<PHV::AllocSlice>& slices);
-
-    /// Any action within this set will have written the key field
-    ordered_map<const PHV::Field *, ordered_set<const IR::MAU::Action *>>
-        field_writes_to_actions;
-
-    /// Any FieldOperation (Field) within the set will have been written in the
-    /// key action
-    ordered_map<const IR::MAU::Action *, ordered_set<FieldOperation>> action_to_writes;
-    ordered_map<const IR::MAU::Action *, ordered_set<const PHV::Field*>> action_to_reads;
-
-    /// Any FieldOperation in the std::vector will use the following as an operand in
-    /// action where the key is the field written in that action
-    ordered_map<const PHV::Field *, ordered_map<const IR::MAU::Action *,
-        std::vector<FieldOperation>>> write_to_reads_per_action;
-    ordered_map<const PHV::Field *, ordered_map<const IR::MAU::Action *, ordered_set<const
-        PHV::Field *>>> read_to_writes_per_action;
-
-    /// Used to generate unique action IDs when creating `struct FieldOperation` objects
-    static int current_action;
 
     /** Given the state of PHV allocation represented by @alloc and @container_state, a vector of
       * slices to be packed together and mutually live in a given container
@@ -117,20 +255,16 @@ class ActionPhvConstraints : public Inspector {
     boost::optional<PHV::AllocSlice> getSourcePHVSlice(const PHV::Allocation& alloc,
             PHV::AllocSlice& slice, const IR::MAU::Action* action, size_t source_num = 0);
 
-    /** @returns true if @fields packed in the same container read from action data or from constant
-      * in action @act
-      */
-    bool has_ad_or_constant_sources(std::vector<const PHV::Field *>& fields, const IR::MAU::Action
-            *act);
+    /** @returns true if @slices packed in the same container read from action
+     * data or from constant in action @act
+     */
+    bool has_ad_or_constant_sources(
+        const PHV::Allocation::MutuallyLiveSlices& slices,
+        const IR::MAU::Action *act) const;
 
     /** Check if two fields share the same container
       */
     bool fields_share_container(const PHV::Field *, const PHV::Field *);
-
-    /** Returns a FieldOperation structure if field is found to be written within
-      * action act
-      */
-    boost::optional<FieldOperation> is_written(const IR::MAU::Action *, const PHV::Field *);
 
     /** @returns the number of no unallocated bits in a set of mutually live field slices @slice
       * in container @c
@@ -146,15 +280,16 @@ class ActionPhvConstraints : public Inspector {
       */
     unsigned count_container_holes(const PHV::Allocation::MutuallyLiveSlices& state) const;
 
-    /** @returns the type of operation (FieldOperation::MOVE or FieldOperation::WHOLE_CONTAINER)  
+    /** @returns the type of operation (OperandInfo::MOVE or OperandInfo::WHOLE_CONTAINER)  
       * if for every action in @actions, the fields in @fields are all written using
       * either MOVE or WHOLE_CONTAINER operations (in case of WHOLE_CONTAINER, no field is @fields
       * may be left unwritten by an action).
-      * @returns FieldOperation::MIXED if there is a mix of WHOLE_CONTAINER and MOVE operations in
+      * @returns OperandInfo::MIXED if there is a mix of WHOLE_CONTAINER and MOVE operations in
       * the same action.
       */
-    unsigned container_operation_type(ordered_set<const IR::MAU::Action*>&, std::vector<const
-            PHV::Field*>&);
+    unsigned container_operation_type(
+        const ordered_set<const IR::MAU::Action*>&,
+        const PHV::Allocation::MutuallyLiveSlices&);
 
     /** Given a set of MutuallyLiveSlices @container_state and the state of allocation @alloc, this
       * function generates packing constraints induced by instructions in the action @action. These
@@ -164,9 +299,12 @@ class ActionPhvConstraints : public Inspector {
       * @pack_unallocated_only is true, only unallocated field slices in @container_state must be
       * packed together.
       */
-    void pack_slices_together(const PHV::Allocation& alloc, PHV::Allocation::MutuallyLiveSlices&
-            container_state, UnionFind<PHV::FieldSlice> &packing_constraints, const
-            IR::MAU::Action* action, bool pack_unallocated_only);
+    void pack_slices_together(
+        const PHV::Allocation& alloc,
+        PHV::Allocation::MutuallyLiveSlices& container_state,
+        UnionFind<PHV::FieldSlice> &packing_constraints,
+        const IR::MAU::Action* action,
+        bool pack_unallocated_only);
 
     /** Check that at least one container in a two source PHV instruction is aligned with the
       * destination
@@ -186,9 +324,6 @@ class ActionPhvConstraints : public Inspector {
     bool masks_valid(ordered_map<size_t, ordered_set<PHV::AllocSlice>>& sources, const
             PHV::Container c) const;
 
-    /** Print the state of the maps */
-    void printMapStates();
-
     /// (xxx)Deep [Artificial Constraint]: Right now action bus allocation requires any destination
     /// written by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
     /// destinations. To be removed when Evan lands his patch relaxing the above requirement.
@@ -206,7 +341,7 @@ class ActionPhvConstraints : public Inspector {
 
  public:
     explicit ActionPhvConstraints(const PhvInfo &p, const PackConflicts &c)
-        : phv(p), conflicts(c) {}
+    : phv(p), conflicts(c), constraint_tracker(ConstraintTracker(p, *this)) { }
 
     /// (xxx)Deep [HACK WARNING]: Right now action bus allocation requires any destination written
     /// by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
@@ -219,46 +354,29 @@ class ActionPhvConstraints : public Inspector {
         return meter_color_destinations;
     }
 
-    /** Checks whether packing @fields into a container will violate MAU action constraints.
-      * @returns a boost::optional<UnionFind<PHV::FieldSlice>> object, which is interpreted as
-      * follows:
-      * - When boost::none is returned, @slice cannot be packed in container @c with
-      *   mutually live slices specified by @container_state.
-      * - The UnionFind object (when it is returned) contains a set of sets of field slices,
-      *   requiring that each field slice in the inner set be packed together.
-      *
-      * Example,
-      *   Metadata m {a, b, c, d, ...}  // Metadata header
-      *   Header vlan {                 // VLAN header
-      *       bit<3> priority;
-      *       bit<1> cfi;
-      *       bit<12> tag; }
-      *   Also, there are other headers m1 and m2 of type metadata m
-      *
-      *   Action {
-      *       m1.a = m2.a;
-      *       priority = m.c;
-      *       tag = m.d; }
-      *
-      * In this case, if container_state is {priority, cfi} and the candidate slice (slice) is tag,
-      * then the UnionFind structure will return {{m2.a}, {m.c, m.d}}.
-      *
-      * xxx(deep): Right now, the packing constraints generated by can_pack() have one limitation.
-      * Suppose there are n sources related to moves for a container in a particular action, and 2
-      * of the sources (s1 and s2) are already allocated. In that case, valid packing requires the
-      * remaining n-2 sources to be packed with either s1 or s2. Right now, s1, s2, and all the
-      * other sources are put in the same set in the UnionFind. The allocator needs to be aware of
-      * this case.
-      */
-    boost::optional<UnionFind<PHV::FieldSlice>> can_pack(const PHV::Allocation& alloc, const
-            PHV::AllocSlice& slice);
+    /** Checks whether packing @slices into a container will violate MAU action
+     * constraints.
+     *
+     * @returns bit positions at which unallocated slices must be allocated for
+     * the proposed packing to be valid, or boost::none if no packing is
+     * possible.  An empty map indicates the proposed packing is
+     * unconditionally valid.
+     *
+     * XXX(deep): Right now, the packing constraints generated by can_pack()
+     * have one limitation.  Suppose there are n sources related to moves for a
+     * container in a particular action, and 2 of the sources (s1 and s2) are
+     * already allocated. In that case, valid packing requires the remaining
+     * n-2 sources to be packed with either s1 or s2. Right now, s1, s2, and
+     * all the other sources are put in the same set in the UnionFind. The
+     * allocator needs to be aware of this case.
+     */
+    boost::optional<ordered_map<PHV::FieldSlice, int>>
+    can_pack(const PHV::Allocation& alloc, std::vector<PHV::AllocSlice>& slices);
 
-    /** In case of SliceLists, we might try to pack multiple AllocSlices together into a container.
-      * This function checks whether such a packing is possible by internally calling the above
-      * can_pack method
-      */
-    boost::optional<UnionFind<PHV::FieldSlice>> can_pack(const PHV::Allocation& alloc,
-            std::vector<PHV::AllocSlice>& slices);
+    /// Convenience method that transforms @slice into a singleton slice list,
+    /// which is passed to `can_pack` above.
+    boost::optional<ordered_map<PHV::FieldSlice, int>>
+    can_pack(const PHV::Allocation& alloc, const PHV::AllocSlice& slice);
 
     /** Approximates a topographical sorting of field lists such that all source-only slice lists
       * are considered for allocation before destination-only slice lists.
@@ -274,12 +392,8 @@ class ActionPhvConstraints : public Inspector {
       */
     void sort(std::vector<PHV::FieldSlice>& slice_list);
 
-    /** @returns true if @f is used in any ALU operation
-      */
-    bool is_field_used_in_alu(const PHV::Field* f) const;
-
-    ordered_set<const PHV::Field*> actionReads(const IR::MAU::Action* act);
-    ordered_set<const PHV::Field*> actionWrites(const IR::MAU::Action* act);
+    ordered_set<const PHV::Field*> actionReads(const IR::MAU::Action* act) const;
+    ordered_set<const PHV::Field*> actionWrites(const IR::MAU::Action* act) const;
 
     /** For GTest function.
       * Checks if the field_writes_to_actions ordered_map entry is valid or not
@@ -294,5 +408,7 @@ class ActionPhvConstraints : public Inspector {
       */
     bool is_in_write_to_reads(cstring, const IR::MAU::Action *, cstring) const;
 };
+
+std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::OperandInfo& info);
 
 #endif  /* BF_P4C_PHV_ACTION_PHV_CONSTRAINTS_H_ */

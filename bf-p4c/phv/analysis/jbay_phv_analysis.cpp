@@ -268,7 +268,7 @@ size_t JbayPhvAnalysis::egressTPhvBits() const {
 size_t JbayPhvAnalysis::aluUseBits() {
     size_t rv = 0;
     for (auto& f : phv) {
-        bool isUsedInALU = actions.is_field_used_in_alu(&f);
+        bool isUsedInALU = uses.is_used_alu(&f);
         if (!isUsedInALU) continue;
         if (uses.is_referenced(&f)) {
             rv += f.size;
@@ -282,7 +282,7 @@ size_t JbayPhvAnalysis::aluUseBitsHeader() const {
     size_t rv = 0;
     for (auto& f : phv) {
         if (!isHeader(&f)) continue;
-        bool isUsedInALU = actions.is_field_used_in_alu(&f);
+        bool isUsedInALU = uses.is_used_alu(&f);
         if (!isUsedInALU) continue;
         if (uses.is_referenced(&f))
             rv += f.size;
@@ -295,7 +295,7 @@ size_t JbayPhvAnalysis::aluUseBitsMetadata() const {
     size_t rv = 0;
     for (auto& f : phv) {
         if (!f.metadata) continue;
-        bool isUsedInALU = actions.is_field_used_in_alu(&f);
+        bool isUsedInALU = uses.is_used_alu(&f);
         if (!isUsedInALU) continue;
         if (uses.is_referenced(&f))
             rv += f.size;
@@ -317,7 +317,7 @@ size_t JbayPhvAnalysis::aluUseBitsPOV() const {
     size_t rv = 0;
     for (auto& f : phv) {
         if (!f.pov) continue;
-        bool isUsedInALU = actions.is_field_used_in_alu(&f);
+        bool isUsedInALU = uses.is_used_alu(&f);
         if (!isUsedInALU) continue;
         if (uses.is_referenced(&f))
             rv += f.size;

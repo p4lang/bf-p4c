@@ -22,9 +22,14 @@ class Pragmas : public PassManager {
     PragmaSolitary              pa_solitary_i;
 
  public:
-    PragmaContainerSize& pa_container_sizes() { return pa_container_sizes_i; }
-    PragmaMutuallyExclusive& pa_mutually_exclusive() { return pa_mutually_exclusive_i; }
-    PragmaSolitary& pa_solitary() { return pa_solitary_i; }
+    const PragmaContainerSize& pa_container_sizes() const { return pa_container_sizes_i; }
+    PragmaContainerSize& pa_container_sizes()             { return pa_container_sizes_i; }
+
+    const PragmaMutuallyExclusive& pa_mutually_exclusive() const { return pa_mutually_exclusive_i; }
+    PragmaMutuallyExclusive& pa_mutually_exclusive()             { return pa_mutually_exclusive_i; }
+
+    const PragmaSolitary& pa_solitary() const { return pa_solitary_i; }
+    PragmaSolitary& pa_solitary()             { return pa_solitary_i; }
 
     explicit Pragmas(PhvInfo& phv, const BFN_Options &options)
         : pa_container_sizes_i(phv), pa_mutually_exclusive_i(phv), pa_solitary_i(phv) {
