@@ -74,6 +74,15 @@ bool MatchTable::is_attached(const Table *tbl) const {
     return tbl && (tbl == gateway || tbl == idletime || attached.is_attached(tbl));
 }
 
+void MatchTable::pass0() {
+    LOG1("### match table " << name() << " pass0");
+    alloc_id("logical", logical_id, stage->pass1_logical_id,
+             LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
+    if (action.check() && action->set_match_table(this, action.args.size() > 1) != ACTION)
+        error(action.lineno, "%s is not an action table", action->name());
+    attached.pass0(this);
+}
+
 void MatchTable::pass1(int type) {
     /* FIXME -- move common stuff from Exact/Ternary/HashAction here. */
     // Set up default action. This will look up action and/or tind for default

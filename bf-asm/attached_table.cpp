@@ -106,7 +106,7 @@ Table::Format::Field *AttachedTables::find_address_field(AttachedTable *tbl) con
                 // FIXME -- this special case is a hack in case we're calling this before
                 // pass1 has run on the match table with these attached tables
                 auto *f = s.args.at(0).field();
-                if (f->size > 3) return f; } }
+                if (f && f->size > 3) return f; } }
     return nullptr; }
 
 bool AttachedTables::run_at_eop() {
@@ -127,10 +127,23 @@ bool AttachedTables::is_attached(const Table *tbl) const {
     return false;
 }
 
-void AttachedTables::pass1(MatchTable *self) {
-    if (selector.check()) {
-        if (selector->set_match_table(self, true) != Table::SELECTION)
+void AttachedTables::pass0(MatchTable *self) {
+    if (selector.check() && selector->set_match_table(self, true) != Table::SELECTION)
             error(selector.lineno, "%s is not a selection table", selector->name());
+    for (auto &s : stats)
+        if (s.check() && s->set_match_table(self, s.args.size() > 0) != Table::COUNTER)
+            error(s.lineno, "%s is not a counter table", s->name());
+    for (auto &m : meters) if (m.check()) {
+        auto type = m->set_match_table(self, m.args.size() > 0);
+        if (type != Table::METER && type != Table::STATEFUL)
+            error(m.lineno, "%s is not a meter table", m->name()); }
+    for (auto &s : statefuls)
+        if (s.check() && s->set_match_table(self, s.args.size() > 1) != Table::STATEFUL)
+            error(s.lineno, "%s is not a stateful table", s->name());
+}
+
+void AttachedTables::pass1(MatchTable *self) {
+    if (selector) {
         if (selector.args.size() < 1 || selector.args.size() > 3)
             error(selector.lineno, "Selector requires 1-3 args");
         if (selector->stage != self->stage)
@@ -142,9 +155,7 @@ void AttachedTables::pass1(MatchTable *self) {
         for (auto &arg : selector.args)
             if (arg.type == Table::Call::Arg::Name)
                 error(selector.lineno, "No field named %s in format", arg.name()); }
-    for (auto &s : stats) if (s.check()) {
-        if (s->set_match_table(self, s.args.size() > 0) != Table::COUNTER)
-            error(s.lineno, "%s is not a counter table", s->name());
+    for (auto &s : stats) if (s) {
         if (s.args.size() > 1)
             error(s.lineno, "Stats table requires zero or one args");
         if (s.args.size() > 0) {
@@ -158,10 +169,7 @@ void AttachedTables::pass1(MatchTable *self) {
             error(s.lineno, "Counter %s not in same stage as %s", s->name(), self->name());
         else if (s->gress != self->gress)
             error(s.lineno, "Counter %s not in same thread as %s", s->name(), self->name()); }
-    for (auto &m : meters) if (m.check()) {
-        auto type = m->set_match_table(self, m.args.size() > 0);
-        if (type != Table::METER && type != Table::STATEFUL)
-            error(m.lineno, "%s is not a meter table", m->name());
+    for (auto &m : meters) if (m) {
         if (m.args.size() > 1)
             error(m.lineno, "Meter table requires zero or one args");
         if (m.args.size() > 0) {
@@ -175,20 +183,17 @@ void AttachedTables::pass1(MatchTable *self) {
             error(m.lineno, "Meter %s not in same stage as %s", m->name(), self->name());
         else if (m->gress != self->gress)
             error(m.lineno, "Meter %s not in same thread as %s", m->name(), self->name()); }
-    for (auto &s : statefuls) if (s.check()) {
+    for (auto &s : statefuls) if (s) {
         if (s.args.size() > 2)
             error(s.lineno, "Stateful table requires no more than two args");
         auto *salu = s->to<StatefulTable>();
-        if (!salu) {
-            error(s.lineno, "%s is not a stateful table", s->name());
-            continue; }
+        if (!salu) continue;
         if (s.args.size() > 0) {
             if (s.args[0].type == Table::Call::Arg::Name) {
                 if (!salu->actions || !salu->actions->exists(s.args[0].name()))
                     error(selector.lineno, "No action or field named %s", s.args[0].name());
             } else if (s.args.size() == 1 && (s.args[0].size() > 3 || s.args.size() == 0)) {
                 s.args.emplace(s.args.begin(), 0); } }
-        s->set_match_table(self, s.args.size() > 1);
         if (s.args.size() > 1) {
             if (s.args.at(1).type == Table::Call::Arg::Name)
                 error(s.lineno, "No field named %s in format", s.args.at(1).name());

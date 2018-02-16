@@ -378,12 +378,8 @@ void SRamMatchTable::pass1() {
     MatchTable::pass1(0);
     if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
     else p4_table->check(this);
-    alloc_id("logical", logical_id, stage->pass1_logical_id,
-             LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);
     check_next();
-    if (action.check() && action->set_match_table(this, action.args.size() > 1) != ACTION)
-        error(action.lineno, "%s is not an action table", action->name());
     attached.pass1(this);
     if (action_bus) action_bus->pass1(this);
     if (actions) {

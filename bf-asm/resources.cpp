@@ -7,28 +7,32 @@
 
 class Resources : public Section {
 
+    int lineno = -1;
     std::unique_ptr<json::obj>_resources = nullptr;
     std::string _resourcesFileName;
 
     Resources() : Section("resources") {}
 
     void input(VECTOR(value_t) args, value_t data) {
+        lineno = data.lineno;
         if (!CHECKTYPE(data, tSTR)) return;
         _resourcesFileName = data.s;
     }
 
     void process() {
+        if (_resourcesFileName.empty()) return;
         std::ifstream inputFile(_resourcesFileName);
         inputFile >> _resources;
         if (!inputFile) {
-            std::cerr << _resourcesFileName << ": not valid resources json representation"
-                      << std::endl;
+            warning(lineno, "%s: not valid resources json representation",
+                    _resourcesFileName.c_str());
             _resources.reset(new json::map());
         }
     }
 
     void output(json::map &ctxtJson) {
-        ctxtJson["resources"] = std::move(_resources);
+        if (_resources)
+            ctxtJson["resources"] = std::move(_resources);
     }
 
     static Resources singleton_resources;

@@ -388,6 +388,7 @@ public:
     unsigned handle() const { if(p4_table) return p4_table->get_handle(); return -1; }
     std::string action_profile() const { if(p4_table) return p4_table->action_profile; return ""; }
     int table_id() const;
+    virtual void pass0() {} // only match tables need pass0
     virtual void pass1() = 0;
     virtual void pass2() = 0;
     virtual void pass3() = 0;
@@ -608,6 +609,7 @@ struct AttachedTables {
     StatefulTable *get_stateful(std::string name = "") const;
     Table::Format::Field *find_address_field(AttachedTable *tbl) const;
     bool is_attached(const Table *) const;
+    void pass0(MatchTable *self);
     void pass1(MatchTable *self);
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *self, int type, int bus);
     template<class REGS> void write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus,
@@ -641,6 +643,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
     int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable);
 public:
+    void pass0() override;
     bool is_alpm() {
         if (p4_table) return p4_table->is_alpm(); return false; }
     bool is_attached(const Table *tbl) const override;
@@ -830,6 +833,7 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     enum { ALWAYS_ENABLE_ROW = (1<<2) | (1<<5) | (1<<9) };
     friend class TernaryIndirectTable;
 public:
+    void pass0() override;
     int tcam_id;
     Table::Ref indirect;
     int indirect_bus;   /* indirect bus to use if there's no indirect table */

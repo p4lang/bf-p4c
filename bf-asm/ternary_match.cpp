@@ -151,6 +151,12 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     if (actions && !action_bus) action_bus = new ActionBus();
 }
 
+void TernaryMatchTable::pass0() {
+    MatchTable::pass0();
+    if (indirect.check() && indirect->set_match_table(this, false) != TERNARY_INDIRECT)
+        error(indirect.lineno, "%s is not a ternary indirect table", indirect->name());
+}
+
 void TernaryMatchTable::pass1() {
     LOG1("### Ternary match table " << name() << " pass1");
     MatchTable::pass1(1);
@@ -160,8 +166,6 @@ void TernaryMatchTable::pass1() {
     /* FIXME -- unconditionally setting piped mode -- only need it for wide
      * match across a 4-row boundary */
     stage->table_use[gress] |= Stage::USE_TCAM_PIPED;
-    alloc_id("logical", logical_id, stage->pass1_logical_id,
-             LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
     // alloc_busses(stage->tcam_match_bus_use); -- now hardwired
@@ -201,10 +205,7 @@ void TernaryMatchTable::pass1() {
     if (error_count > 0) return;
     alloc_vpns();
     check_next();
-    indirect.check();
     if (action_bus) action_bus->pass1(this);
-    if (action.check() && action->set_match_table(this, action.args.size() > 1) != ACTION)
-        error(action.lineno, "%s is not an action table", action->name());
     for (auto &chain_rows_col : chain_rows)
         chain_rows_col = 0;
     unsigned row_use = 0;
@@ -245,8 +246,6 @@ void TernaryMatchTable::pass1() {
             cols = nullptr;
             wide_row_use = 0; } }
     if (indirect) {
-        if (indirect->set_match_table(this, false) != TERNARY_INDIRECT)
-            error(indirect.lineno, "%s is not a ternary indirect table", indirect->name());
         if (hit_next.size() > 0 && indirect->hit_next.size() > 0)
             error(hit_next[0].lineno, "Ternary Match table with both direct and indirect "
                   "next tables");
@@ -785,7 +784,7 @@ Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m, bool in
     else {
         if (action.check() && action->set_match_table(m, action.args.size() > 1) != ACTION)
             error(action.lineno, "%s is not an action table", action->name());
-        attached.pass1(m);
+        attached.pass0(m);
         logical_id = m->logical_id;
         p4_table = m->p4_table; }
     return TERNARY_INDIRECT;
@@ -809,8 +808,7 @@ void TernaryIndirectTable::pass1() {
     } else if (action.args.size() == 0) {
         if (auto *sel = lookup_field("action"))
             action.args.push_back(sel); }
-    // attached.pass1(match_table); -- done in set_match_table, called from
-    // TernaryMatchTable::pass1()
+    attached.pass1(match_table);
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);

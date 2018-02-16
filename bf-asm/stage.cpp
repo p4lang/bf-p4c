@@ -128,6 +128,10 @@ void AsmStage::process() {
         stage[i].pass1_logical_id = -1;
         stage[i].pass1_tcam_id = -1;
         for (auto table : stage[i].tables)
+            table->pass0();
+    }
+    for (unsigned i = 0; i < stage.size(); i++) {
+        for (auto table : stage[i].tables)
             table->pass1();
         if (i == Target::NUM_MAU_STAGES()/2) {
             /* to turn the corner, the middle stage must always be match dependent */
