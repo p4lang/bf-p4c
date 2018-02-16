@@ -225,10 +225,10 @@ class FabricIPv4UnicastGroupTest(FabricTest):
             ip_src = HOST1_IPV4, ip_dst = HOST2_IPV4, ip_ttl = 64)
         exp_pkt_to2 = testutils.simple_tcp_packet(
             eth_src = SWITCH_MAC, eth_dst = HOST2_MAC,
-            ip_src = HOST1_IPV4, ip_dst = HOST2_IPV4, ip_ttl = 63)
+            ip_src = HOST1_IPV4, ip_dst = HOST2_IPV4, ip_ttl = 64)
         exp_pkt_to3 = testutils.simple_tcp_packet(
             eth_src = SWITCH_MAC, eth_dst = HOST3_MAC,
-            ip_src = HOST1_IPV4, ip_dst = HOST2_IPV4, ip_ttl = 63)
+            ip_src = HOST1_IPV4, ip_dst = HOST2_IPV4, ip_ttl = 64)
 
         testutils.send_packet(self, self.port1, str(pkt_from1))
         port_index = testutils.verify_any_packet_any_port(
