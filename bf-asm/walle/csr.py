@@ -351,6 +351,14 @@ class csr_composite_object (csr_object):
         outfile.write("%s}\n" % indent)
 
     def gen_emit_binary_method(self, outfile, args, classname, indent):
+        def field_name(child):
+            name = child.name
+            if name in args.cpp_reserved:
+                name += '_'
+            if child.count != (1,):
+                for i in range(0, len(child.count)):
+                    name += "[j%d]" % i
+            return name
         outfile.write(indent)
         if self.gen_method_declarator(outfile, args, "void", classname, "emit_binary",
                 ["std::ostream &out", "uint64_t a"], "const"):
@@ -364,9 +372,6 @@ class csr_composite_object (csr_object):
         for a in self.children():
             addr_var = "a"
             if a.disabled(): continue
-            field_name = a.name
-            if field_name in args.cpp_reserved:
-                field_name += '_'
             if root_parent=="memories":
                 indirect = True
                 width_unit = 128
@@ -395,23 +400,26 @@ class csr_composite_object (csr_object):
                     outfile.write('%sfor (int j%d = 0; j%d < %d; j%d++) { \n' %
                                   (indent, idx_num, idx_num, idx, idx_num))
                     indent += '  '
-            outfile.write(indent)
-            if not indirect and a.singleton_obj() != a:
-                outfile.write("out << binout::tag('R') << binout::byte4(%s " % addr_var +
-                              "+ 0x%x) << binout::byte4(" % (a.offset//address_unit))
-            elif a.top_level():
-                outfile.write("if (%s" % field_name)
-                if a.count != (1,):
-                    for i in range(0, len(a.count)):
-                        outfile.write("[j%d]" % i)
-                outfile.write(") ")
-            outfile.write(field_name)
-            if a.count != (1,):
-                for i in range(0, len(a.count)):
-                    outfile.write("[j%d]" % i)
-            if not indirect and a.singleton_obj() != a:
-                outfile.write(");\n")
+            single = a.singleton_obj()
+            if not indirect and single != a:
+                if single.msb >= 64:
+                    for w in range(single.msb//32 + 1, -1, -1):
+                        outfile.write("%sout << binout::tag('R') << binout::byte4" % indent +
+                                      "(%s + 0x%x) << binout::byte4(%s.value.getrange(%d, 32));\n" %
+                                      (addr_var, a.offset//address_unit + 4, field_name(a), w*32))
+                else:
+                    if single.msb >= 32:
+                        outfile.write("%sout << binout::tag('R') << binout::byte4" % indent +
+                                      "(%s + 0x%x) << binout::byte4(%s >> 32);\n" %
+                                      (addr_var, a.offset//address_unit + 4, field_name(a)))
+                    outfile.write("%sout << binout::tag('R') << binout::byte4" % indent +
+                                  "(%s + 0x%x) << binout::byte4(%s);\n" %
+                                  (addr_var, a.offset//address_unit, field_name(a)))
             else:
+                outfile.write(indent)
+                if a.top_level():
+                    outfile.write("if (%s)" % field_name(a))
+                outfile.write(field_name(a))
                 outfile.write("->" if a.top_level() else ".")
                 outfile.write("emit_binary(out, %s + 0x%x);\n" %
                               (addr_var, a.offset//address_unit))
@@ -1424,9 +1432,14 @@ class reg(csr_composite_object):
                     emit_widereg_field(None)
                 else:
                     emit_ubits_field(None)
-        for idx, val in enumerate(context.words):
+        pairs = enumerate(context.words)
+        if not indirect:
+            # DANGER -- certain registers must be written in reverse order (higher
+            # address then lower), so we reverse the order of register writes here.
+            # block writes must be in order (lowest to highest) as they are a block
+            pairs = reversed(list(pairs))
+        for idx, val in pairs:
             if val is None:
-                if not indirect: continue
                 val = '0'
             outfile.write("%sout << " % indent);
             if not indirect:
