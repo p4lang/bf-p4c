@@ -575,6 +575,33 @@ class AnalyzeProgram : public Inspector {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+class CollectVerifyChecksums : public Inspector {
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
+    std::vector<const IR::MethodCallStatement*> verifyChecksums;
+
+ public:
+    CollectVerifyChecksums(P4::ReferenceMap *refMap, P4::TypeMap *typeMap)
+            : refMap(refMap), typeMap(typeMap) {
+        setName("CollectVerifyChecksums");
+    }
+
+    const std::vector<const IR::MethodCallStatement*>& get() { return verifyChecksums; }
+
+    void postorder(const IR::MethodCallStatement *node) override {
+        auto mce = node->methodCall->to<IR::MethodCallExpression>();
+        CHECK_NULL(mce);
+        auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
+        if (auto ef = mi->to<P4::ExternFunction>()) {
+            if (ef->method->name == "verify_checksum") {
+                verifyChecksums.push_back(node);
+            }
+        }
+    }
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
 class ConstructSymbolTable : public Inspector {
     ProgramStructure *structure;
     P4::ReferenceMap *refMap;
@@ -584,12 +611,15 @@ class ConstructSymbolTable : public Inspector {
     unsigned igCloneIndex;
     unsigned egCloneIndex;
     std::set<cstring> globals;
+    const std::vector<const IR::MethodCallStatement*>& verifyChecksums;
 
  public:
     ConstructSymbolTable(ProgramStructure *structure,
-                           P4::ReferenceMap *refMap, P4::TypeMap *typeMap)
+                         P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                         const std::vector<const IR::MethodCallStatement*>& verifyChecksums)
             : structure(structure), refMap(refMap), typeMap(typeMap),
-              resubmitIndex(0), digestIndex(0), igCloneIndex(0), egCloneIndex(0) {
+              resubmitIndex(0), digestIndex(0), igCloneIndex(0), egCloneIndex(0),
+              verifyChecksums(verifyChecksums) {
         CHECK_NULL(structure);
         setName("ConstructSymbolTable");
     }
@@ -926,25 +956,20 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
-    const IR::Declaration_Instance *cvtVerifyChecksum(const IR::MethodCallExpression *) {
-        /// XXX(hanw): TBD
-        return nullptr;
-    }
-
     boost::optional<ChecksumSourceMap::value_type>
-    analyzeComputedChecksumStatement(const IR::MethodCallStatement *statement) {
+    analyzeVerifyOrUpdateChecksum(const IR::MethodCallStatement *statement, cstring which) {
         auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
         if (!methodCall) {
             ::warning("Expected a non-empty method call expression: %1%", statement);
             return boost::none;
         }
         auto method = methodCall->method->to<IR::PathExpression>();
-        if (!method || method->path->name != "update_checksum") {
-            ::warning("Expected an update_checksum statement in %1%", statement);
+        if (!method || (method->path->name != which)) {
+            ::warning("Expected an %1% statement in %2%", statement, which);
             return boost::none;
         }
         if (methodCall->arguments->size() != 4) {
-            ::warning("Expected 4 arguments for update_checksum statement: %1%", statement);
+            ::warning("Expected 4 arguments for %1% statement: %2%", statement, which);
             return boost::none;
         }
         auto destField = (*methodCall->arguments)[2]->to<IR::Member>();
@@ -953,37 +978,45 @@ class ConstructSymbolTable : public Inspector {
         return ChecksumSourceMap::value_type(destField, methodCall);
     }
 
+    const IR::Declaration_Instance*
+    getVerifyOrUpdateChecksumDeclaration(ChecksumSourceMap::value_type csum) {
+        auto typeArgs = new IR::Vector<IR::Type>();
+        typeArgs->push_back(csum.second->arguments->at(2)->type);
+        auto inst = new IR::Type_Specialized(new IR::Type_Name("checksum"), typeArgs);
+
+        auto csum_name = cstring::make_unique(structure->unique_names, "checksum", '_');
+        structure->unique_names.insert(csum_name);
+        auto args = new IR::Vector<IR::Expression>();
+        auto hashAlgo = new IR::Member(
+                new IR::TypeNameExpression("HashAlgorithm_t"), "CRC16");
+        args->push_back(hashAlgo);
+        auto decl = new IR::Declaration_Instance(csum_name, inst, args);
+
+        return decl;
+    }
+
+    void implementUpdateChecksum(ChecksumSourceMap::value_type csum) {
+        auto* decl = getVerifyOrUpdateChecksumDeclaration(csum);
+
+        structure->ingressDeparserDeclarations.push_back(decl);
+        structure->egressDeparserDeclarations.push_back(decl);
+
+        auto fieldlist = csum.second->arguments->at(1);
+        auto dest_field = csum.second->arguments->at(2);
+
+        auto* updateCall = new IR::MethodCallStatement(
+                csum.second->srcInfo,
+                new IR::Member(new IR::PathExpression(decl->name), "update"),
+                {fieldlist, dest_field});
+
+        structure->ingressDeparserStatements.push_back(updateCall);
+        structure->egressDeparserStatements.push_back(updateCall);
+    }
+
     void cvtUpdateChecksum(const IR::MethodCallStatement *method) {
-        auto checksum = analyzeComputedChecksumStatement(method);
-        if (checksum) {
-            auto csum = *checksum;
-            auto typeArgs = new IR::Vector<IR::Type>();
-            typeArgs->push_back(csum.second->arguments->at(2)->type);
-            auto inst = new IR::Type_Specialized(new IR::Type_Name("checksum"), typeArgs);
-
-            auto csum_name = cstring::make_unique(structure->unique_names, "checksum", '_');
-            structure->unique_names.insert(csum_name);
-            auto args = new IR::Vector<IR::Expression>();
-            auto hashAlgo = new IR::Member(
-                    new IR::TypeNameExpression("HashAlgorithm_t"), "CRC16");
-            args->push_back(hashAlgo);
-            auto decl = new IR::Declaration_Instance(csum_name, inst, args);
-            structure->ingressDeparserDeclarations.push_back(decl);
-            structure->egressDeparserDeclarations.push_back(decl);
-
-            auto fieldlist = csum.second->arguments->at(1);
-            auto dest_field = csum.second->arguments->at(2);
-            auto ig_csum = new IR::MethodCallStatement(
-                    csum.second->srcInfo,
-                    new IR::Member(new IR::PathExpression(csum_name), "update"),
-                    {fieldlist, dest_field});
-            auto eg_csum = new IR::MethodCallStatement(
-                    csum.second->srcInfo,
-                    new IR::Member(new IR::PathExpression(csum_name), "update"),
-                    {fieldlist, dest_field});
-            structure->ingressDeparserStatements.push_back(ig_csum);
-            structure->egressDeparserStatements.push_back(eg_csum);
-        }
+        auto checksum = analyzeVerifyOrUpdateChecksum(method, "update_checksum");
+        if (checksum)
+            implementUpdateChecksum(*checksum);
     }
 
     /// build up a table for all metadata member that need to be translated.
@@ -1135,9 +1168,6 @@ class ConstructSymbolTable : public Inspector {
                 cvtCloneFunction(node, /* hasData = */ true);
             } else if (name == "update_checksum") {
                 cvtUpdateChecksum(node);
-            } else if (name == "verify_checksum") {
-                // cvtVerifyChecksum(node);
-                WARNING("verify_checksum is not converted");
             } else if (name == "execute_meter_with_color") {
                 cvtExecuteMeterFunctiion(node);
             } else {
@@ -1173,6 +1203,113 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
+    struct CollectExtractMembers : public Inspector {
+        CollectExtractMembers() {}
+
+        std::vector<const IR::Member*> extracts;
+
+        void postorder(const IR::MethodCallStatement* statement) override {
+            auto* call = statement->methodCall;
+            auto* method = call->method->to<IR::Member>();
+            if (method && method->member == "extract") {
+                for (auto m : *(call->arguments))
+                    extracts.push_back(m->to<IR::Member>());
+            }
+        }
+    };
+
+    // FIXME -- yet another 'deep' comparison for expressions
+    static bool equiv(const IR::Expression *a, const IR::Expression *b) {
+        if (a == b) return true;
+        if (typeid(*a) != typeid(*b)) return false;
+        if (auto ma = a->to<IR::Member>()) {
+            auto mb = b->to<IR::Member>();
+            return ma->member == mb->member && equiv(ma->expr, mb->expr); }
+        if (auto pa = a->to<IR::PathExpression>()) {
+            auto pb = b->to<IR::PathExpression>();
+            return pa->path->name == pb->path->name; }
+        return false;
+    }
+
+    static bool belongsTo(const IR::Member* a, const IR::Member* b) {
+        if (!a || !b) return false;
+
+        // case 1: a is field, b is field
+        if (equiv(a, b)) return true;
+
+        // case 2: a is field, b is header
+        if (a->type->is<IR::Type::Bits>()) {
+            if (equiv(a->expr, b)) return true;
+        }
+
+        return false;
+    }
+
+    void implementVerifyChecksum(ChecksumSourceMap::value_type csum, cstring stateName,
+                                 const std::vector<const IR::Member*>& extracts) {
+        auto *decl = getVerifyOrUpdateChecksumDeclaration(csum);
+
+        structure->ingressParserDeclarations.push_back(decl);
+        structure->egressParserDeclarations.push_back(decl);
+
+        auto fieldlist = csum.second->arguments->at(1);
+        auto dest_field = csum.second->arguments->at(2);
+
+        // check if any of the fields or dest belong to extracts
+
+        std::vector<IR::MethodCallStatement*> toBeAdded;
+
+        for (auto extract : extracts) {
+            for (auto f : fieldlist->to<IR::ListExpression>()->components) {
+                if (belongsTo(f->to<IR::Member>(), extract)) {
+                    auto addCall = new IR::MethodCallStatement(csum.second->srcInfo,
+                        new IR::Member(new IR::PathExpression(decl->name), "add"), {f});
+                    toBeAdded.push_back(addCall);
+                }
+            }
+
+            if (belongsTo(dest_field->to<IR::Member>(), extract)) {
+                auto verifyCall = new IR::MethodCallStatement(csum.second->srcInfo,
+                    new IR::Member(new IR::PathExpression(decl->name), "verify"), {});
+                toBeAdded.push_back(verifyCall);
+            }
+        }
+
+        // now add new statements in ingress/egress parser state
+
+        for (auto gress : { ProgramStructure::INGRESS_PARSER }) {
+            // XXX(zma) is the responsibility of duplicating the statements of translation
+            // OR during extract_parser.cpp?
+
+            auto parser = structure->parsers.at(structure->getBlockName(gress));
+
+            for (auto* state : parser->states) {
+                if (state->name == stateName) {
+                    // XXX(zma) the const_cast doesn't look right ...
+                    // add fields in their corresponding state here OR
+                    // in during extract_parser in backend?
+                    auto* s = const_cast<IR::ParserState*>(state);
+                    for (auto* stmt : toBeAdded)
+                        s->components.push_back(stmt);
+                }
+            }
+        }
+    }
+
+    void postorder(const IR::ParserState *state) override {
+        // see if any of the verify_checksum statement is relavent to this state
+        // if so, convert relavent fields in verify_checksum to add/verify
+
+        CollectExtractMembers collectExtractMembers;
+        state->apply(collectExtractMembers);
+
+        for (auto* vc : verifyChecksums) {
+            auto checksum = analyzeVerifyOrUpdateChecksum(vc, "verify_checksum");
+            if (checksum)
+                implementVerifyChecksum(*checksum, state->name, collectExtractMembers.extracts);
+        }
+    }
+
     // debug
     void postorder(const IR::P4Program *node) override {
         LOG3("program before translation " << node);
@@ -1193,6 +1330,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
     addDebugHook(options.getDebugHook());
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto structure = new BFN::V1::ProgramStructure;
+    auto collectVerifyChecksums = new BFN::V1::CollectVerifyChecksums(refMap, typeMap);
     addPasses({
         new P4::TypeChecking(refMap, typeMap, true),
         new RemoveExternMethodCallsExcludedByAnnotation,
@@ -1204,7 +1342,9 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new BFN::V1::LoadTargetArchitecture(structure),
         new BFN::V1::RemoveNodesWithNoMapping(),
         new BFN::V1::AnalyzeProgram(structure),
-        new BFN::V1::ConstructSymbolTable(structure, refMap, typeMap),
+        collectVerifyChecksums,
+        new BFN::V1::ConstructSymbolTable(structure, refMap, typeMap,
+                                          collectVerifyChecksums->get()),
         new BFN::GenerateTofinoProgram(structure),
         new BFN::TranslationLast(),
         new BFN::AddIntrinsicMetadata,

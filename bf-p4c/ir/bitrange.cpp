@@ -9,6 +9,7 @@ namespace {
 
 void writeRangeToStream(std::ostream& out, const char* prefix, int lo, int hi,
                         const char* suffix) {
+    // FIXME(zma) precision?
     out << prefix << lo;
     if (hi != lo) out << ".." << hi;
     out << suffix;

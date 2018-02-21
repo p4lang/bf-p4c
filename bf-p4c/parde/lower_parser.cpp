@@ -143,30 +143,6 @@ static bool isExtractEarlierInPacket(const IR::BFN::LoweredExtractPhv* a,
     return aFromPacket;
 }
 
-/**
- * Locate the PHV allocation for an expression.
- *
- * @param phvBackedStorage  An expression that evaluates to a reference to some
- *                          location in the PHV.
- * @param phv  The results of PHV allocation.
- *
- * @return the bits of the location that the expression references (generally
- * the location is a field, and the expression may only refer to part of it if
- * it's e.g. a Slice expression) and the PHV allocation slices for those bits.
- */
-static std::pair<le_bitrange, std::vector<alloc_slice>>
-computeSlices(const IR::Expression* phvBackedStorage, const PhvInfo& phv) {
-    CHECK_NULL(phvBackedStorage);
-    std::vector<alloc_slice> slices;
-    le_bitrange bits;
-    auto* field = phv.field(phvBackedStorage, &bits);
-    if (!field) return std::make_pair(bits, slices);
-    field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice& alloc) {
-        slices.push_back(alloc);
-    });
-    return std::make_pair(bits, slices);
-}
-
 /// Helper class that splits extract operations into multiple smaller extracts,
 /// such that each extract writes to exactly one PHV container.
 struct ExtractSimplifier {
@@ -181,8 +157,7 @@ struct ExtractSimplifier {
     void add(const IR::BFN::Extract* extract) {
         LOG4("[ExtractSimplifier] adding: " << extract);
 
-        std::vector<alloc_slice> slices;
-        std::tie(std::ignore, slices) = computeSlices(extract->dest->field, phv);
+        std::vector<alloc_slice> slices = phv.get_alloc(extract->dest->field);
 
         auto field = phv.field(extract->dest->field);
         if (auto c = clot.clot(field)) {
@@ -203,9 +178,9 @@ struct ExtractSimplifier {
         if (auto* bufferSource = extract->source->to<IR::BFN::BufferlikeRVal>()) {
             for (const auto& slice : slices) {
                 // Shift the slice to its proper place in the input buffer.
-                auto bitOffset = bufferSource->extractedBits().lo;
+                auto bitOffset = bufferSource->range().lo;
                 const nw_bitrange bufferRange = slice.field_bits()
-                  .toOrder<Endian::Network>(extract->dest->field->type->width_bits())
+                  .toOrder<Endian::Network>(extract->dest->size())
                   .shiftedByBits(bitOffset);
 
                 // Expand the buffer slice so that it will write to the entire
@@ -264,8 +239,8 @@ struct ExtractSimplifier {
                 // applying the mask at compile time, we need to transform this
                 // slice into host endian order. We'll also treat it as a
                 // half-open range to simplify the math.
-                host_bitinterval sliceBits = toHalfOpenRange(slice.field_bits())
-                  .toOrder<Endian::Host>(slice.field->size);
+                le_bitinterval sliceBits = toHalfOpenRange(slice.field_bits())
+                  .toOrder<Endian::Little>(slice.field->size);
 
                 // Construct a mask with all 1's in [0, slice.hi).
                 const unsigned long hiMask = (1 << sliceBits.hi) - 1;
@@ -279,7 +254,7 @@ struct ExtractSimplifier {
 
                 // Place those bits at their offset within the container.
                 maskedValue <<= slice.container_bits()
-                  .toOrder<Endian::Host>(slice.container.size()).lo;
+                  .toOrder<Endian::Little>(slice.container.size()).lo;
 
                 LOG4(" - Placing slice " << sliceBits << " (mask " << mask
                       << ") into " << slice.container << ". Final value: "
@@ -403,7 +378,7 @@ struct ExtractSimplifier {
 
             for (auto extract : cx.second) {
                 if (auto* bufferSource = extract->source->to<IR::BFN::PacketRVal>())
-                    bitInterval = bitInterval.unionWith(bufferSource->bitInterval());
+                    bitInterval = bitInterval.unionWith(bufferSource->interval());
                 else
                     BUG("not sure if CLOT can extract constant");
             }
@@ -431,6 +406,38 @@ struct ExtractSimplifier {
 
 using LoweredParserIRStates = std::map<const IR::BFN::ParserState*,
                                        const IR::BFN::LoweredParserState*>;
+
+IR::Vector<IR::BFN::LoweredParserPrimitive>
+lowerParserChecksums(const std::vector<const IR::BFN::ParserPrimitive*>& checksums) {
+    IR::Vector<IR::BFN::LoweredParserPrimitive> loweredChecksums;
+
+    nw_byteinterval finalInterval;
+    // bool end = false;
+
+    for (auto c : checksums) {
+        if (auto* add = c->to<IR::BFN::AddToChecksum>()) {
+            if (auto* v = add->source->to<IR::BFN::PacketRVal>()) {
+                const auto byteInterval = v->interval().toUnit<RangeUnit::Byte>();
+                finalInterval = finalInterval.unionWith(byteInterval);
+                // FIXME(zma) wholes?
+             }
+        }
+        // else if (c->is<IR::BFN::VerifyChecksum>()) {
+        //     end = true;
+        // }
+    }
+
+    if (!finalInterval.empty()) {
+        // TODO swap/start/end/type
+
+        unsigned mask = (1 << finalInterval.hi) - 1;
+
+        auto csum = new IR::BFN::LoweredParserChecksum(mask, 0x0, true, true, false);
+        loweredChecksums.push_back(csum);
+    }
+
+    return loweredChecksums;
+}
 
 /// Combine the high-level parser IR and the results of PHV allocation to
 /// produce a low-level, target-specific representation of the parser program.
@@ -472,6 +479,12 @@ struct ComputeLoweredParserIR : public ParserInspector {
         loweredState->debug.info.push_back("from state " + state->name);
         loweredState->debug.mergeWith(state->debug);
 
+        std::vector<const IR::BFN::ParserPrimitive*> checksums;
+
+        // TODO(zma) checksum resouce allocation
+        // Five checksum units are available; 0,1 can be used for verificaion/residual,
+        // 2,3,4 can be used for CLOT; Checksum verification steals extractors.
+
         // Collect all the extract operations; we'll lower them as a group so we
         // can merge extracts that write to the same PHV containers.
         ExtractSimplifier simplifier(phv, clotInfo);
@@ -479,16 +492,21 @@ struct ComputeLoweredParserIR : public ParserInspector {
                       [&](const IR::BFN::ParserPrimitive* prim) {
             if (auto* extract = prim->to<IR::BFN::Extract>()) {
                 simplifier.add(extract);
-                return;
-            }
-
-            // Report other kinds of parser primitives, which we currently can't
-            // handle, in the debug info.
-            loweredState->debug.info.push_back("unhandled: " +
+            } else if (auto* add = prim->to<IR::BFN::AddToChecksum>()) {
+                checksums.push_back(add);
+            } else if (auto* verify = prim->to<IR::BFN::VerifyChecksum>()) {
+                checksums.push_back(verify);
+            } else {
+                // Report other kinds of parser primitives, which we currently can't
+                // handle, in the debug info.
+                loweredState->debug.info.push_back("unhandled: " +
                                                cstring::to_cstring(prim));
+            }
         });
 
         auto loweredStatements = simplifier.lowerExtracts();
+
+        auto loweredChecksums = lowerParserChecksums(checksums);
 
         // XXX(zma) populate container range in clot info
 
@@ -512,7 +530,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 // system. We need to change that, though; it doesn't work
                 // correctly in general.
                 const auto bufferRange =
-                  bufferSource->extractedBits().toUnit<RangeUnit::Byte>();
+                  bufferSource->range().toUnit<RangeUnit::Byte>();
                 // Load match register from previous result.
                 BUG_CHECK(select->reg.size() > 0, "Match register not allocated.");
                 auto* loweredSelect =
@@ -541,7 +559,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 saves.push_back(
                     new IR::BFN::LoweredSave(
                             save->dest,
-                            save->source->extractedBits().toUnit<RangeUnit::Byte>()));
+                            save->source->range().toUnit<RangeUnit::Byte>()));
             }
             auto* loweredMatch =
                 new IR::BFN::LoweredParserMatch(
@@ -549,6 +567,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                         *transition->shift,
                         loweredStatements,
                         saves,
+                        loweredChecksums,
                         loweredStates[transition->next]);
             loweredState->match.push_back(loweredMatch);
         }
@@ -637,14 +656,14 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
         if (clotInfo.allocated(field))
             continue;
 
-        std::vector<alloc_slice> slices;
-        std::tie(std::ignore, slices) = computeSlices(fieldRef->field, phv);
+        std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
+
         BUG_CHECK(!slices.empty(),
                   "Emitted field didn't receive a PHV allocation: %1%",
                   fieldRef->field);
 
         // Walk each slice of the field. We need to walk the slices in reverse
-        // because `foreach_alloc()` (and hence `computeSlices()`) enumerates
+        // because `foreach_alloc()` (and hence `get_alloc()`) enumerates
         // the slices in increasing order of their little endian offset, which
         // means that in terms of network order it walks the slices backwards.
         for (auto& slice : boost::adaptors::reverse(slices)) {
@@ -710,14 +729,14 @@ computeControlPlaneFormat(const PhvInfo& phv,
     // FieldPacking that reflects its structure, with padding added where
     // necessary to reflect gaps between the fields.
     for (auto* fieldRef : fields) {
-        std::vector<alloc_slice> slices;
-        std::tie(std::ignore, slices) = computeSlices(fieldRef->field, phv);
+        std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
+
         BUG_CHECK(!slices.empty(),
                   "Emitted field didn't receive a PHV allocation: %1%",
                   fieldRef->field);
 
         // Confusingly, the first slice in network order is the *last* one in
-        // `slices` because `foreach_alloc()` (and hence `computeSlices()`)
+        // `slices` because `foreach_alloc()` (and hence `get_alloc()`)
         // enumerates the slices in increasing order of their little endian
         // offset, which means that in terms of network order it walks the
         // slices backwards.
@@ -757,8 +776,8 @@ computeControlPlaneFormat(const PhvInfo& phv,
 /// ContainerBitRef. Checks that the allocation for the POV bit field is sane.
 const IR::BFN::ContainerBitRef*
 lowerPovBit(const PhvInfo& phv, const IR::BFN::FieldLVal* fieldRef) {
-    std::vector<alloc_slice> slices;
-    std::tie(std::ignore, slices) = computeSlices(fieldRef->field, phv);
+    std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
+
     BUG_CHECK(!slices.empty(), "POV bit %1% didn't receive a PHV allocation",
               fieldRef->field);
     BUG_CHECK(slices.size() == 1, "POV bit %1% is somehow split across "

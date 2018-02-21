@@ -86,14 +86,14 @@ abstract ParserRVal { }
 /// `BufferlikeRVal`.
 abstract BufferlikeRVal : ParserRVal {
     /// @return this buffer range as a half-open range of bits in network order.
-    nw_bitinterval bitInterval() const { return toHalfOpenRange(range); }
+    nw_bitinterval interval() const { return toHalfOpenRange(range_); }
 
     /// @return this buffer range as a closed range of bits in network order.
-    nw_bitrange extractedBits() const { return range; }
+    nw_bitrange range() const { return range_; }
 
     /// The region represented by this `BufferlikeRVal`, expressed as a range of
     /// bits in network order.
-    nw_bitrange range;
+    nw_bitrange range_;
 }
 
 /// An r-value originating from the input packet. Represented as a range of bits
@@ -105,7 +105,7 @@ abstract BufferlikeRVal : ParserRVal {
 /// be used on.
 class PacketRVal : BufferlikeRVal {
     dbprint {
-        out << "packet bits " << bitInterval() << "(" << range.size() << "b)";
+        out << "packet bits " << interval() << "(" << range().size() << "b)";
     }
 }
 
@@ -117,7 +117,7 @@ class PacketRVal : BufferlikeRVal {
 /// hardware-specific.
 class BufferRVal : BufferlikeRVal {
     dbprint {
-        out << "buffer bits " << bitInterval() << "(" << range.size() << "b)";
+        out << "buffer bits " << interval() << "(" << range().size() << "b)";
     }
 }
 
@@ -159,6 +159,8 @@ abstract ParserLVal { }
 class FieldLVal : ParserLVal {
     dbprint { out << field; }
     toString { return field->toString(); }
+
+    int size() const { return field->type->width_bits(); }
 
     validate {
         CHECK_NULL(field);
@@ -206,6 +208,20 @@ class SaveToRegister {
     /// The register this save writes to.
     MatchRegister dest;
 };
+
+class VerifyChecksum : ParserPrimitive {
+
+    dbprint { out << "verify checksum"; }
+
+    /// TODO(zma) not sure what this should hold
+}
+
+class AddToChecksum : ParserPrimitive {
+
+    dbprint { out << "add " << source << " to checksum"; }
+
+    ParserRVal source;
+}
 
 /// The high-level representation of a parser state transition.
 class Transition {

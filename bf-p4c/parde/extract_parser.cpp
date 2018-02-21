@@ -210,6 +210,8 @@ bool GetTofinoParser::addTransition(IR::BFN::ParserState* state, match_t matchVa
 }  // namespace
 
 struct RewriteParserStatements : public Transform {
+    std::map<cstring, const IR::BFN::PacketRVal*> extractedFields;
+
     RewriteParserStatements(cstring stateName, gress_t gress)
         : stateName(stateName), gress(gress) { }
 
@@ -266,10 +268,11 @@ struct RewriteParserStatements : public Transform {
                 P4C_UNIMPLEMENTED("Parser writes to varbits values are not yet supported.");
             IR::Expression* fref = new IR::Member(field->type, hdr, field->name);
             auto width = field->type->width_bits();
-            auto* extract = new IR::BFN::Extract(srcInfo, fref,
-                              new IR::BFN::PacketRVal(StartLen(currentBit, width)));
+            auto* rval = new IR::BFN::PacketRVal(StartLen(currentBit, width));
+            auto* extract = new IR::BFN::Extract(srcInfo, fref, rval);
             currentBit += width;
             rv->push_back(extract);
+            extractedFields[field->name] = rval;
         }
 
         // On Tofino we can only extract and deparse headers with byte
@@ -305,6 +308,32 @@ struct RewriteParserStatements : public Transform {
     }
 
     const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteChecksumAdd(const IR::Expression* src) {
+         auto* mem = src->to<IR::Member>();
+         auto* hdr = mem->expr->to<IR::HeaderRef>();
+         BUG_CHECK(hdr != nullptr,
+                   "Extracting something other than a header: %1%", src);
+         auto* hdr_type = hdr->type->to<IR::Type_StructLike>();
+         BUG_CHECK(hdr_type != nullptr,
+                   "Header type isn't a structlike: %1%", hdr_type);
+
+         // Generate an extract operation for each field.
+         auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+         auto rval = extractedFields.at(mem->member);
+         auto* add = new IR::BFN::AddToChecksum(rval);
+         rv->push_back(add);
+         return rv;
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteVerifyChecksum() {
+        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+        auto* verify = new IR::BFN::VerifyChecksum();
+        rv->push_back(verify);
+        return rv;
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
     preorder(IR::MethodCallStatement* statement) override {
         auto* call = statement->methodCall;
         auto* method = call->method->to<IR::Member>();
@@ -315,14 +344,33 @@ struct RewriteParserStatements : public Transform {
                       "Wrong number of arguments for method call: %1%", statement);
             return rewriteExtract(statement->srcInfo, (*call->arguments)[0]);
         }
+
         if (method->member == "advance") {
             BUG_CHECK(call->arguments->size() == 1,
                       "Wrong number of arguments for method call: %1%", statement);
             return rewriteAdvance((*call->arguments)[0]);
         }
+
         if (method->member == "set") {
             WARNING("packet priority set is not yet implemented");
             return nullptr;
+        }
+
+        if (method->member == "add") {
+            BUG_CHECK(call->arguments->size() == 1,
+                      "Wrong number of arguments for method call: %1%", statement);
+            return rewriteChecksumAdd((*call->arguments)[0]);
+        }
+
+        if (method->member == "remove") {
+            WARNING("checksum.remove is not yet implemented");
+            return nullptr;
+        }
+
+        if (method->member == "verify") {
+            BUG_CHECK(call->arguments->size() == 0,
+                      "Wrong number of arguments for method call: %1%", statement);
+            return rewriteVerifyChecksum();
         }
 
         ::error("Unexpected method call in parser: %1%", statement->toString());

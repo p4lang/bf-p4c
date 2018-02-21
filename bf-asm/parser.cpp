@@ -285,7 +285,7 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
             else if (data.key[i] == "start") start = true;
             else if (data.key[i] == "end") end = true;
             else if (data.key[i] == "verify") residual = false;
-            else if (data.key[i] == "residual") residual = false;
+            else if (data.key[i] == "residual") residual = true;
             else error(data.key[i].lineno, "Syntax error"); }
     for (auto &kv : MapIterChecked(data.value.map, true)) {
         if (kv.key == "addr") {

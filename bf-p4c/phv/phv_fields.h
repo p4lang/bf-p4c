@@ -689,6 +689,22 @@ class PhvInfo {
     const StructInfo struct_info(const IR::HeaderRef *hr) const {
         return struct_info(hr->toString()); }
     size_t num_fields() const { return all_fields.size(); }
+
+     std::vector<PHV::Field::alloc_slice>
+     get_alloc(const IR::Expression* f) const {
+         CHECK_NULL(f);
+         std::vector<PHV::Field::alloc_slice> slices;
+
+         auto* phv_field = field(f);
+         if (!phv_field) return slices;
+
+         phv_field->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+             slices.push_back(alloc);
+         });
+
+         return slices;
+     }
+
     iterator<safe_vector<PHV::Field *>::iterator> begin() { return by_id.begin(); }
     iterator<safe_vector<PHV::Field *>::iterator> end() { return by_id.end(); }
     iterator<safe_vector<PHV::Field *>::const_iterator> begin() const { return by_id.begin(); }

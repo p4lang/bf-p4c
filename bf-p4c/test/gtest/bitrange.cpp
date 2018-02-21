@@ -135,10 +135,8 @@ TYPED_TEST(TofinoHalfOpenRange, EmptyRange) {
         // (The `template` business here is just grossness caused by the fact
         // that this test is *itself* a template; you wouldn't ordinarily need
         // that.)
-        EXPECT_TRUE(range.template toOrder<Endian::Big>(10).empty());
         EXPECT_TRUE(range.template toOrder<Endian::Little>(10).empty());
         EXPECT_TRUE(range.template toOrder<Endian::Network>(10).empty());
-        EXPECT_TRUE(range.template toOrder<Endian::Host>(10).empty());
 
         // Check that empty ranges remain empty when their unit changes.
         EXPECT_TRUE(range.template toUnit<RangeUnit::Bit>().empty());

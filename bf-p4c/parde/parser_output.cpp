@@ -117,7 +117,13 @@ struct ParserAsmSerializer : public ParserInspector {
                 BUG("unknown lowered parser primitive type");
         }
 
+
         outputSave(match->saves);
+
+        for (auto* ck : match->checksums) {
+            if (auto* verify = ck->to<IR::BFN::LoweredParserChecksum>())
+                outputChecksum(verify);
+        }
 
         if (match->shift != 0)
             out << indent << "shift: " << match->shift << std::endl;
@@ -181,6 +187,15 @@ struct ParserAsmSerializer : public ParserInspector {
         } else {
             BUG("Can't generate assembly for: %1%", extract);
         }
+    }
+
+    void outputChecksum(const IR::BFN::LoweredParserChecksum* csum) {
+        cstring type = csum->type ? "residual" : "verify";
+        out << indent << "checksum 0 " << type << ":" << std::endl;
+        AutoIndent indentCsum(indent, 1);
+        out << indent << "mask: " << csum->mask << std::endl;
+        out << indent << "swap: " << csum->swap << std::endl;
+        out << indent << "end: " << csum->end << std::endl;
     }
 
     std::ostream& out;

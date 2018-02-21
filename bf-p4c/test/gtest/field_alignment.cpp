@@ -301,7 +301,7 @@ TEST_F(TofinoFieldAlignment, DISABLED_BridgedMetadataRespectsAlignment) {
         EXPECT_EQ("meta.metadataField", extract->dest->field->toString());
         auto* bufferSource = extract->source->to<IR::BFN::PacketRVal>();
         ASSERT_TRUE(bufferSource != nullptr);
-        EXPECT_EQ(3, bufferSource->extractedBits().lo % 8);
+        EXPECT_EQ(3, bufferSource->range().lo % 8);
     });
 
     EXPECT_TRUE(foundBridgedMetadataState);

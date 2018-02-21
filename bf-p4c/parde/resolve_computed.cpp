@@ -301,7 +301,7 @@ struct CopyPropagateParserValues : public ParserInspector {
             // to the left to compensate for the fact that the transition is
             // shifting the input buffer to the right.
             auto* clone = rVal->to<IR::BFN::PacketRVal>()->clone();
-            clone->range = clone->range.shiftedByBytes(-byteShift);
+            clone->range_ = clone->range_.shiftedByBytes(-byteShift);
             updated[lVal] = clone;
         }
 
@@ -346,7 +346,7 @@ struct CopyPropagateParserValues : public ParserInspector {
 
         if (size_cast_to) {
             auto* buf = resolvedValue->to<IR::BFN::BufferlikeRVal>();
-            auto casted_range = buf->range.resizedToBits(*size_cast_to);
+            auto casted_range = buf->range().resizedToBits(*size_cast_to);
             resolvedValue = new IR::BFN::PacketRVal(casted_range);
         }
 
@@ -369,9 +369,9 @@ struct CopyPropagateParserValues : public ParserInspector {
             const le_bitrange sliceRange = FromTo(outerSlice->getL(),
                                                   outerSlice->getH());
             const nw_bitinterval sliceOfValue =
-              sliceRange.toOrder<Endian::Network>(bufferlikeValue->range.size())
-                        .shiftedByBits(bufferlikeValue->range.lo)
-                        .intersectWith(bufferlikeValue->range);
+              sliceRange.toOrder<Endian::Network>(bufferlikeValue->range().size())
+                        .shiftedByBits(bufferlikeValue->range().lo)
+                        .intersectWith(bufferlikeValue->range());
             if (sliceOfValue.empty()) {
                 ::error("Computed value resolves to a zero-width slice: %1%",
                         value->source);
@@ -380,7 +380,7 @@ struct CopyPropagateParserValues : public ParserInspector {
             }
 
             // Success; we've eliminated the slice.
-            bufferlikeValue->range = *toClosedRange(sliceOfValue);
+            bufferlikeValue->range_ = *toClosedRange(sliceOfValue);
             resolvedValue = bufferlikeValue;
         }
 
@@ -613,7 +613,7 @@ class ComputeSaveAndSelect: public ParserInspector {
         // input buffer.
         nw_bitrange source() const {
             if (auto* buf = select->source->to<IR::BFN::BufferlikeRVal>()) {
-                return buf->extractedBits().shiftedByBytes(byte_shifted);
+                return buf->range().shiftedByBytes(byte_shifted);
             } else {
                 ::error("select on a field that is impossible to implement");
                 return nw_bitrange(); }

@@ -12,6 +12,7 @@ class P4Control;
 
 namespace BFN {
 
+#if 0
 /**
  * Attempts to convert the P4 code in the provided control into deparser
  * EmitChecksum primitives. The control is expected to follow the pattern of
@@ -60,6 +61,7 @@ namespace BFN {
 IR::BFN::Pipe*
 extractComputeChecksum(const IR::P4Control* computeChecksumControl,
                        IR::BFN::Pipe* pipe);
+#endif
 
 /**
  * Attempts to convert the P4 code in the provided control into deparser
@@ -100,6 +102,5 @@ extractComputeChecksum(const IR::P4Control* computeChecksumControl,
 IR::BFN::Pipe*
 extractChecksumFromDeparser(const IR::P4Control* deparserControl,
                             IR::BFN::Pipe* pipe);
-
 }  // namespace BFN
 #endif /* BF_P4C_PARDE_CHECKSUM_H_ */

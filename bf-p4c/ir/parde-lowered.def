@@ -118,6 +118,16 @@ class LoweredExtractClot : LoweredParserPrimitive {
 #end
 }
 
+class LoweredParserChecksum : LoweredParserPrimitive {
+    dbprint { out << " parser checksum "; }
+
+    unsigned mask;
+    unsigned swap;
+    bool start;
+    bool end;
+    bool type;
+}
+
 /// A lowered save operation, representing save a bits from input buffer to matchRegisters.
 class LoweredSave : LoweredParserPrimitive {
     /// Convenience constructors for accepting a raw source
@@ -180,6 +190,9 @@ class LoweredParserMatch {
 
     /// If the match is successful, the save to register to perform.
     inline Vector<LoweredSave> saves;
+
+    ///
+    inline Vector<LoweredParserPrimitive> checksums;
 
     /// The number of packet bytes which must be available in the input buffer
     /// for the extractions to be performed successfully. If `boost::none`,

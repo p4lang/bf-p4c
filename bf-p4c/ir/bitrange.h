@@ -65,11 +65,8 @@ enum class RangeUnit : uint8_t {
 
 /// An ordering for bits or bytes.
 enum class Endian : uint8_t {
-    Big = 0,        /// Most significant bit/byte first.
+    Network = 0,    /// Most significant bit/byte first.
     Little = 1,     /// Least significant bit/byte first.
-    Network = Big,  /// Network order is big endian.
-    Host = Little   /// Host order is little endian until we port this compiler
-                    /// to something that isn't. =)
 };
 
 /**
@@ -451,7 +448,7 @@ struct ClosedRange {
     static constexpr RangeUnit unit = Unit;
     static constexpr Endian order = Order;
 
-    ClosedRange() : lo(0), hi(0) { }
+    ClosedRange() : lo(0), hi(0) { }  // FIXME(zma) default is [0,0]? This is just wrong ...
     ClosedRange(int lo, int hi) : lo(lo), hi(hi) { }
     ClosedRange(FromTo&& fromTo)  // NOLINT(runtime/explicit)
       : lo(fromTo.from), hi(fromTo.to) { }
@@ -680,26 +677,18 @@ toClosedRange(HalfOpenRange<Unit, Order> halfOpenRange) {
 
 /// Convenience typedefs for closed ranges in bits.
 using nw_bitrange = ClosedRange<RangeUnit::Bit, Endian::Network>;
-using host_bitrange = ClosedRange<RangeUnit::Bit, Endian::Host>;
-using be_bitrange = ClosedRange<RangeUnit::Bit, Endian::Big>;
 using le_bitrange = ClosedRange<RangeUnit::Bit, Endian::Little>;
 
 /// Convenience typedefs for closed ranges in bytes.
 using nw_byterange = ClosedRange<RangeUnit::Byte, Endian::Network>;
-using host_byterange = ClosedRange<RangeUnit::Byte, Endian::Host>;
-using be_byterange = ClosedRange<RangeUnit::Byte, Endian::Big>;
 using le_byterange = ClosedRange<RangeUnit::Byte, Endian::Little>;
 
 /// Convenience typedefs for half-open ranges in bits.
 using nw_bitinterval = HalfOpenRange<RangeUnit::Bit, Endian::Network>;
-using host_bitinterval = HalfOpenRange<RangeUnit::Bit, Endian::Host>;
-using be_bitinterval = HalfOpenRange<RangeUnit::Bit, Endian::Big>;
 using le_bitinterval = HalfOpenRange<RangeUnit::Bit, Endian::Little>;
 
 /// Convenience typedefs for half-open ranges in bytes.
 using nw_byteinterval = HalfOpenRange<RangeUnit::Byte, Endian::Network>;
-using host_byteinterval = HalfOpenRange<RangeUnit::Byte, Endian::Host>;
-using be_byteinterval = HalfOpenRange<RangeUnit::Byte, Endian::Big>;
 using le_byteinterval = HalfOpenRange<RangeUnit::Byte, Endian::Little>;
 
 // XXX(seth): This is a compatibility typedef for old code which didn't specify
