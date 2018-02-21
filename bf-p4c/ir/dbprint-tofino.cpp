@@ -106,7 +106,17 @@ void IR::BFN::Transition::dbprint(std::ostream &out) const {
     else
         out << "(shift unknown)";
 
+    for (const auto& save : saves) {
+        out << endl << save; }
+
     out << endl << "goto " << (next ? next->name : "(end)");
+}
+
+void IR::BFN::Select::dbprint(std::ostream &out) const {
+    out << "match " << source << " saved in [";
+    for (const auto& r : reg) {
+        out << " " << r; }
+    out << "] of " << mask;
 }
 
 void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
@@ -120,6 +130,9 @@ void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
     out << indent;
     for (auto *st : statements)
         out << endl << *st;
+    for (auto *save : saves)
+        out << endl << *save;
+
     out << unindent;
 
     out << endl << "goto " << (next ? next->name : "(end)");
@@ -146,6 +159,14 @@ void IR::BFN::ParserState::dbprint(std::ostream &out) const {
         out << endl << *transition;
 
     out << unindent;
+}
+
+void IR::BFN::LoweredSelect::dbprint(std::ostream &out) const {
+    out << "select";
+    const char* sep = " ";
+    for (const auto& r : reg) {
+        out << sep << r.name;
+        sep = ", "; }
 }
 
 void IR::BFN::LoweredParserState::dbprint(std::ostream &out) const {

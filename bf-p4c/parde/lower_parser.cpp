@@ -513,7 +513,10 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 // correctly in general.
                 const auto bufferRange =
                   bufferSource->extractedBits().toUnit<RangeUnit::Byte>();
-                auto* loweredSelect = new IR::BFN::LoweredSelect(bufferRange);
+                // Load match register from previous result.
+                BUG_CHECK(select->reg.size() > 0, "Match register not allocated.");
+                auto* loweredSelect =
+                    new IR::BFN::LoweredSelect(select->reg);
                 loweredSelect->debug.info.push_back(debugInfoFor(select, bufferRange));
                 loweredState->select.push_back(loweredSelect);
                 return;
@@ -533,11 +536,20 @@ struct ComputeLoweredParserIR : public ParserInspector {
             BUG_CHECK(loweredStates.find(transition->next) != loweredStates.end(),
                       "Didn't already lower state %1%?",
                       transition->next ? transition->next->name : cstring("(null)"));
-
+            IR::Vector<IR::BFN::LoweredSave> saves;
+            for (const auto* save : transition->saves) {
+                saves.push_back(
+                    new IR::BFN::LoweredSave(
+                            save->dest,
+                            save->source->extractedBits().toUnit<RangeUnit::Byte>()));
+            }
             auto* loweredMatch =
-              new IR::BFN::LoweredParserMatch(transition->value, *transition->shift,
-                                              loweredStatements,
-                                              loweredStates[transition->next]);
+                new IR::BFN::LoweredParserMatch(
+                        transition->value,
+                        *transition->shift,
+                        loweredStatements,
+                        saves,
+                        loweredStates[transition->next]);
             loweredState->match.push_back(loweredMatch);
         }
 
@@ -1071,21 +1083,29 @@ struct LowerDeparserIR : public PassManager {
 /// state.
 class ExtractorAllocator {
  public:
+    /** A group of primitives that needs to be executed when match happens.
+     * Used by the allocator to split a big state.
+     */
+    struct MatchPrimitives {
+        MatchPrimitives(const IR::Vector<IR::BFN::LoweredParserPrimitive>& ext,
+                        const IR::Vector<IR::BFN::LoweredSave>& sa, int sft)
+            : extracts(ext), saves(sa), shift(sft) { }
+
+        IR::Vector<IR::BFN::LoweredParserPrimitive> extracts;
+        IR::Vector<IR::BFN::LoweredSave> saves;
+        int shift;
+    };
+
     /**
      * Create a new extractor allocator.
      *
-     * @param phv  PHV allocation information.
      * @param stateName  The name of the parser state we're allocating for.
-     * @param byteDesiredShift  The total number of bytes we want to shift in
-     *                          this state. Needs to be provided separately
-     *                          because we may shift over data that doesn't get
-     *                          extracted.
+     * @param match      The match expression to split.
+     *
      */
-    ExtractorAllocator(cstring stateName, const IR::BFN::LoweredParserMatch* match)
-        : stateName(stateName), byteDesiredShift(match->shift) {
-        BUG_CHECK(byteDesiredShift >= 0,
-                  "Splitting state %1% with negative shift", stateName);
-
+    ExtractorAllocator(cstring stateName, const IR::BFN::LoweredParserMatch* m)
+        : stateName(stateName), shift_required(m->shift),
+          match(m), shifted(0), current_input_buffer() {
         for (auto* stmt : match->statements)
             if (auto* e = stmt->to<IR::BFN::LoweredExtractPhv>())
                 extracts.push_back(e);
@@ -1094,13 +1114,16 @@ class ExtractorAllocator {
             else
                 BUG("unknown parser primitive type");
 
+        for (auto* save : match->saves)
+            saves.push_back(save);
+
         // Sort the extract primitives by position in the input packet.
         std::sort(extracts.begin(), extracts.end(), isExtractEarlierInPacket);
     }
 
     /// @return true if we haven't allocated everything yet.
     bool hasMore() const {
-        return byteDesiredShift > 0 || !extracts.empty();
+        return !extracts.empty() || !saves.empty();
     }
 
     /**
@@ -1112,16 +1135,17 @@ class ExtractorAllocator {
      * @return a pair containing (1) the parser primitives that were allocated,
      * and (2) the shift that the new state should have.
      */
-    std::pair<IR::Vector<IR::BFN::LoweredParserPrimitive>, int> allocateOneState() {
+    MatchPrimitives allocateOneState() {
         auto& pardeSpec = Device::pardeSpec();
 
         // Allocate. We have a limited number of extractions of each size per
         // state. We also ensure that we don't overflow the input buffer.
-        LOG3("Allocating extracts for state " << stateName);
-
-        IR::Vector<IR::BFN::LoweredParserPrimitive> allocatedExtractions;
+        IR::Vector<IR::BFN::LoweredParserPrimitive>    allocatedExtractions;
+        IR::Vector<IR::BFN::LoweredSave>               allocatedSaves;
         std::vector<const IR::BFN::LoweredExtractPhv*> remainingExtractions;
+        std::vector<const IR::BFN::LoweredSave*>       remainingSaves;
         nw_byteinterval remainingBytes;
+        nw_byteinterval extractedInterval;
 
         if (Device::currentDevice() == "Tofino") {
             std::map<size_t, unsigned> allocatedExtractorsBySize;
@@ -1134,13 +1158,29 @@ class ExtractorAllocator {
                                         : nw_byteinterval();
                 if (allocatedExtractorsBySize[containerSize] ==
                     pardeSpec.extractorSpec().at(containerSize) ||
-                      byteInterval.hi >= pardeSpec.byteInputBufferSize()) {
+                    byteInterval.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
                     remainingExtractions.push_back(extract);
                     remainingBytes = remainingBytes.unionWith(byteInterval);
                     continue;
                 }
+                extractedInterval |= byteInterval;
                 allocatedExtractorsBySize[containerSize]++;
                 allocatedExtractions.push_back(extract);
+            }
+
+            // Allocate saves if the source of save is inside the input buffer.
+            // When there is no more extraction and save can not be inserted in this
+            // state, it is impossible to perform that kind of action.
+            // Note that input buffer required bytes are calculated by assembler, so
+            // it does not matter even if save source is not insede the extracted bytes.
+            for (auto* save : saves) {
+                const auto& source = save->source->byteInterval();
+                if (source.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
+                    if (allocatedExtractions.empty()) {
+                        ::error("%1% is an impossible save for Tofino,"
+                                " lookahead more than 32 bytes", save); }
+                    continue; }
+                allocatedSaves.push_back(save);
             }
 #if HAVE_JBAY
         } else if (Device::currentDevice() == "JBay") {
@@ -1170,7 +1210,7 @@ class ExtractorAllocator {
                 }
                 // XXX(zma) we could pack two 8-bit extract into a single exact
                 // if the two containers are an even-odd pair.
-
+                extractedInterval |= byteInterval;
                 allocatedExtractions.push_back(extract);
             }
 
@@ -1180,39 +1220,55 @@ class ExtractorAllocator {
                 allocatedExtractions.push_back(extract);
             }
             extractClots.clear();
+
+            for (auto* save : saves) {
+                const auto& source = save->source->byteInterval();
+                if (source.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
+                    if (allocatedExtractions.empty()) {
+                        ::error("%1% is an impossible save for Tofino,"
+                                " lookahead more than 32 bytes", save); }
+                    continue; }
+                allocatedSaves.push_back(save);
+            }
 #endif  // HAVE_JBAY
         }
 
-        // Compute the actual shift for this state. If we allocated everything,
-        // we use the desired shift. Otherwise, we want to shift enough to bring
-        // the first remaining extraction to the beginning of the input buffer.
-        const int byteActualShift = remainingBytes.empty()
-                                  ? std::min(byteDesiredShift, pardeSpec.byteInputBufferSize())
-                                  : std::min(byteDesiredShift, remainingBytes.loByte());
+        // If there is no more extract, calculate the actual shift for this state.
+        // If remaining save falls into 32 byte range, then it's fine. If it does not
+        // We need a new state for it.
+        current_input_buffer |= extractedInterval;
+        int byteActualShift = 0;
+        if (remainingExtractions.empty() && remainingSaves.empty()) {
+            byteActualShift = shift_required - shifted;
+        } else {
+            // If no more remaining extractions, just shift out the whole input buffer,
+            // otherwise, shift until the first byte of the remaining is at head.
+            byteActualShift = remainingBytes.empty()
+                              ? current_input_buffer.hiByte() + 1
+                              : remainingBytes.loByte();
+        }
 
         BUG_CHECK(byteActualShift >= 0,
                   "Computed invalid shift %1% when splitting state %2%",
                   byteActualShift, stateName);
-        byteDesiredShift -= byteActualShift;
-        BUG_CHECK(byteDesiredShift >= 0,
-                  "Computed shift %1% is too large when splitting state %2%",
-                  byteActualShift, stateName);
+
+        LOG4("Created split state for " << stateName << " with shift "
+             << byteActualShift << ":");
 
         // Shift up all the remaining extractions.
         extracts.clear();
         for (auto* extract : remainingExtractions)
             extracts.push_back(shiftExtract(extract, byteActualShift));
 
-        BUG_CHECK(!allocatedExtractions.empty() || byteActualShift > 0 || !hasMore(),
-                  "Have more to allocate in state %1%, but couldn't take "
-                  "any action?", stateName);
+        saves.clear();
+        for (auto* save : remainingSaves)
+            saves.push_back(shiftSave(save, byteActualShift));
 
-        LOG3("Created split state for " << stateName << " with shift "
-              << byteActualShift << ":");
-        for (auto* extract : allocatedExtractions)
-            LOG3(" - " << extract);
+        current_input_buffer = current_input_buffer.resizedToBytes(
+                current_input_buffer.hiByte() + 1 - byteActualShift);
 
-        return std::make_pair(allocatedExtractions, byteActualShift);
+        shifted += byteActualShift;
+        return MatchPrimitives(allocatedExtractions, allocatedSaves, byteActualShift);
     }
 
  private:
@@ -1222,17 +1278,34 @@ class ExtractorAllocator {
     shiftExtract(const IR::BFN::LoweredExtractPhv* extract, int byteDelta) {
         auto* bufferSource = extract->source->to<IR::BFN::LoweredPacketRVal>();
         if (!bufferSource) return extract;
+
         const auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
-        BUG_CHECK(shiftedRange.lo >= 0, "Shifted extract too much?");
+        BUG_CHECK(shiftedRange.lo >= 0, "Shifting extract to negative position.");
         auto* clone = extract->clone();
         clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
         return clone;
     }
 
+    /// Shift all input packet extracts in the sequence to the left by the given
+    /// amount.
+    const IR::BFN::LoweredSave*
+    shiftSave(const IR::BFN::LoweredSave* save, int byteDelta) {
+        auto* bufferSource = save->source;
+        const auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
+        BUG_CHECK(shiftedRange.lo >= 0, "Shifting save to negative position.");
+        auto* clone = save->clone();
+        clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
+        return clone;
+    }
+
+    cstring stateName;
+    const int shift_required;
+    const IR::BFN::LoweredParserMatch* match;
+    int shifted;
     std::vector<const IR::BFN::LoweredExtractPhv*> extracts;
     std::vector<const IR::BFN::LoweredExtractClot*> extractClots;
-    cstring stateName;
-    int byteDesiredShift;
+    std::vector<const IR::BFN::LoweredSave*> saves;
+    nw_byteinterval current_input_buffer;
 };
 
 /// Split states into smaller states which can be executed in a single cycle by
@@ -1249,11 +1322,17 @@ class SplitBigStates : public ParserModifier {
     }
 
     bool preorder(IR::BFN::LoweredParserMatch* match) override {
+        if (added.count(match))
+            return true;
         auto* state = findContext<IR::BFN::LoweredParserState>();
+
         ExtractorAllocator allocator(state->name, match);
 
         // Allocate whatever we can fit into this match.
-        std::tie(match->statements, match->shift) = allocator.allocateOneState();
+        auto primitives_a = allocator.allocateOneState();
+        match->statements = primitives_a.extracts;
+        match->saves      = primitives_a.saves;
+        match->shift      = primitives_a.shift;
 
         // If there's still more, allocate as many followup states as we need.
         auto* finalState = match->next;
@@ -1268,19 +1347,25 @@ class SplitBigStates : public ParserModifier {
             currentMatch->next = newState;
 
             // Create a new match node and place as many primitives in it as we can.
+            auto primitives = allocator.allocateOneState();
             auto* newMatch =
               new IR::BFN::LoweredParserMatch(match_t(), 0, finalState);
-            std::tie(newMatch->statements, newMatch->shift) = allocator.allocateOneState();
+
+            newMatch->statements = primitives.extracts;
+            newMatch->saves      = primitives.saves;
+            newMatch->shift      = primitives.shift;
             newState->match.push_back(newMatch);
 
             // If there's more, we'll append the next state to the new match node.
             currentMatch = newMatch;
+            added.insert(newMatch);
         }
 
         return true;
     }
 
     std::set<cstring> stateNames;
+    std::set<IR::BFN::LoweredParserMatch*> added;
 };
 
 /// Locate all containers that are written more than once by the parser (and
@@ -1325,22 +1410,10 @@ class ComputeBufferRequirements : public ParserModifier {
             bytesRead = bytesRead.unionWith(packetSource->byteInterval());
         });
 
-        // XXX(seth): This is pretty unintuitive. It doesn't matter what we're
-        // matching against here; that stuff was all loaded into the match
-        // registers in a previous state. Instead, we need to take into account
-        // the bytes that the *next* state will match on, because those bytes
-        // will be loaded here. This is gross, but it'll go away once we start
-        // modeling the match registers explicitly.
-        if (match->next) {
-            for (auto* select : match->next->select) {
-                // We need to consider these bytes in this state's coordinate
-                // system, rather than that of the next state, so we "undo" the
-                // shift we'd apply.
-                const auto matchedBytes =
-                  toHalfOpenRange(select->range.shiftedByBytes(match->shift));
-                bytesRead = bytesRead.unionWith(matchedBytes);
-            }
-        }
+        forAllMatching<IR::BFN::LoweredSave>(&match->saves,
+                      [&](const IR::BFN::LoweredSave* save) {
+            bytesRead = bytesRead.unionWith(save->source->byteInterval());
+        });
 
         // We need to have buffered enough bytes to read the last byte in the
         // range. We also need to be sure to buffer at least as many bytes as we
@@ -1364,6 +1437,6 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot) {
         new LowerDeparserIR(phv, clot),
         new SplitBigStates,
         new ComputeMultiwriteContainers,
-        new ComputeBufferRequirements
+        new ComputeBufferRequirements,
     });
 }

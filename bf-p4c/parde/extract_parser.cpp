@@ -418,12 +418,11 @@ static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
 }
 
 static match_t buildMatch(int match_size, const IR::Expression *key,
-                          const IR::Vector<IR::Expression> &selectExprs,
-                          int pad) {
+                          const IR::Vector<IR::Expression> &selectExprs) {
     if (key->is<IR::DefaultExpression>())
         return match_t();
     else if (auto k = key->to<IR::Constant>())
-        return match_t(match_size + pad, k->asLong() << pad, ~0ULL << pad);
+        return match_t(match_size, k->asLong(), ~((~uintmax_t(0)) << match_size));
     else if (auto mask = key->to<IR::Mask>())
         return match_t(match_size, mask->left->to<IR::Constant>()->asLong(),
                                    mask->right->to<IR::Constant>()->asLong());
@@ -527,26 +526,16 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
     // FIXME non byte aligned select expression
 
     int matchSize = 0;
-    int pad = 0;
 
     for (auto* selectExpr : selectExprs) {
         nw_bitrange bitrange;
-
         state->selects.pushBackOrAppend(rewriteSelectExpr(selectExpr, bitShift, bitrange));
-
-        // XXX(zma) tmp fix for non byte-aligned select expr
-        // this won't work if there are mulitple non byte-aligned select exprs
-        // proper fix is to transform all select exprs into byte-aligned
-        // ones before building matches
-        if (bitrange != nw_bitrange())
-            pad = 7 - bitrange.hi % 8;
-
         matchSize += selectExpr->type->width_bits();
     }
 
     // Generate the outgoing transitions.
     for (auto selectCase : selectCases) {
-        auto matchVal = buildMatch(matchSize, selectCase->keyset, selectExprs, pad);
+        auto matchVal = buildMatch(matchSize, selectCase->keyset, selectExprs);
         bool ok = addTransition(state, matchVal, shift, selectCase->state->path->name);
         if (!ok) return nullptr;
     }

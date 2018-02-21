@@ -29,6 +29,7 @@ set (BF_P4C_IR_SRCS
   ir/tofino.cpp
   ir/tofino_write_context.cpp
   parde/clot.cpp
+  parde/match_register.cpp
   phv/phv.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_SRCS}")
@@ -40,6 +41,7 @@ set (BF_P4C_IR_HDRS
   ir/thread_visitor.h
   ir/tofino_write_context.h
   parde/clot.h
+  parde/match_register.h
   phv/phv.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_HDRS}")
@@ -233,6 +235,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/field_packing.h
   parde/gen_deparser.h
   parde/lower_parser.h
+  parde/match_register.h
   parde/mirror.h
   parde/parde_spec.h
   parde/phase0.h

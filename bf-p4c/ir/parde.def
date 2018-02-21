@@ -2,6 +2,7 @@
 #include <boost/optional.hpp>
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/parde/match_register.h"
 #end
 
 namespace BFN {
@@ -191,6 +192,21 @@ class Extract : ParserPrimitive {
     ParserRVal source;
 }
 
+/// Save data from input buffer to a match register.
+class SaveToRegister {
+#emit
+    SaveToRegister(const MatchRegister& reg, nw_byterange source)
+      : source(new PacketRVal(source.toUnit<RangeUnit::Bit>())), dest(reg) { }
+#end
+    dbprint { out << "save " << source << " to " << dest.name; }
+
+    /// The location that will be read from.
+    BufferlikeRVal source;
+
+    /// The register this save writes to.
+    MatchRegister dest;
+};
+
 /// The high-level representation of a parser state transition.
 class Transition {
     Transition(match_t value) : value(value), next(nullptr) { }
@@ -207,6 +223,9 @@ class Transition {
 
     /// ...and transition to this state (or, if null, end the parser program).
     NullOK ParserState             next;
+
+    /// The save to registers need to perform for this transition.
+    optional inline Vector<SaveToRegister>  saves;
 }
 
 /// A parser selection operation. These represent a load of a value from some
@@ -216,10 +235,13 @@ class Select {
     Select(ParserRVal source, Expression p4Source)
         : Node(p4Source->srcInfo), source(source), p4Source(p4Source) { }
 
-    dbprint { out << "match " << source; }
-
     /// The value which will be matched against.
     ParserRVal source;
+
+    /// The register match against.
+    optional std::vector<MatchRegister> reg;
+
+    optional nw_bitrange mask;
 
 #emit
     /// The higher-level expression we were selecting against. Not visited.

@@ -4,6 +4,7 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/clot.h"
 #include "bf-p4c/parde/epb_config.h"
+#include "bf-p4c/parde/match_register.h"
 #include "bf-p4c/phv/phv.h"
 
 namespace BFN {
@@ -117,14 +118,38 @@ class LoweredExtractClot : LoweredParserPrimitive {
 #end
 }
 
-/// A lowered parser selection operation. These represent a load of a range of
-/// bytes from the input buffer which will be compared against the state's
-/// LoweredParserMatch entries to select the next state to transition to.
-class LoweredSelect {
-    dbprint { out << "match " << range; }
+/// A lowered save operation, representing save a bits from input buffer to matchRegisters.
+class LoweredSave : LoweredParserPrimitive {
+    /// Convenience constructors for accepting a raw source
+    LoweredSave(const MatchRegister& reg, const LoweredBufferlikeRVal* source)
+      : source(source), dest(reg) { }
+    LoweredSave(const MatchRegister& reg, nw_byterange source)
+      : source(new LoweredBufferRVal(source)), dest(reg) { }
 
-    /// The region of the input buffer which will be loaded and matched against.
-    nw_byterange range;
+    dbprint { out << "save " << source << " to " << dest.name; }
+
+    /// The location that will be read from.
+    LoweredBufferlikeRVal source;
+
+    /// The register this save writes to.
+    MatchRegister dest;
+#emit
+
+    /// Debugging information about the high-level operations that are
+    /// implemented by this low-level extract.
+    ::BFN::DebugInfo debug;
+#end
+}
+
+/// A lowered parser selection operation. These represent a vector of
+/// registers that have data loaded from input buffer in previous states
+/// which will be compared against in the state's LoweredParserMatch
+/// entries to select the next state to transition to.
+/// In the select on tuple case, there might be multiple selects in one
+/// parser state.
+class LoweredSelect {
+    /// The register match against.
+    std::vector<MatchRegister> reg;
 
 #emit
     /// Debugging information about the high-level operations that are
@@ -152,6 +177,9 @@ class LoweredParserMatch {
 
     /// If the match is successful, the extractions to perform.
     inline Vector<LoweredParserPrimitive> statements;
+
+    /// If the match is successful, the save to register to perform.
+    inline Vector<LoweredSave> saves;
 
     /// The number of packet bytes which must be available in the input buffer
     /// for the extractions to be performed successfully. If `boost::none`,

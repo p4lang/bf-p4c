@@ -7,6 +7,7 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/epb_config.h"
 #include "bf-p4c/parde/field_packing.h"
+#include "bf-p4c/parde/match_register.h"
 
 namespace IR {
 class HeaderOrMetadata;
@@ -110,6 +111,10 @@ class PardeSpec {
     /// and the number of extractors of each kind available in each hardware parser
     /// state.
     virtual const std::map<unsigned, unsigned>& extractorSpec() const = 0;
+
+    /// Specifies the available match registers in bits. Note that they can be
+    /// combined and used as a larger match key.
+    virtual const std::vector<MatchRegister> matchRegisters() const = 0;
 };
 
 class TofinoPardeSpec : public PardeSpec {
@@ -141,6 +146,12 @@ class TofinoPardeSpec : public PardeSpec {
         };
         return extractorSpec;
     }
+
+    const std::vector<MatchRegister> matchRegisters() const override {
+        return { MatchRegister("byte0", 1),
+                 MatchRegister("byte1", 1),
+                 MatchRegister("half", 2) };
+    }
 };
 
 #if HAVE_JBAY
@@ -170,6 +181,15 @@ class JBayPardeSpec : public PardeSpec {
             {16, 20}
         };
         return extractorSpec;
+    }
+
+    const std::vector<MatchRegister> matchRegisters() const override {
+        // TODO(yumin): Currently, asm does not support jbay match registers,
+        // so we are still using the Tofino settings. Need to change this when
+        // asm support match register.
+        return { MatchRegister("byte0", 1),
+                 MatchRegister("byte1", 1),
+                 MatchRegister("half", 2) };
     }
 };
 #endif /* HAVE_JBAY */

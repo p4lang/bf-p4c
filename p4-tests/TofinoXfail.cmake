@@ -835,7 +835,6 @@ endif()  # STF FAILURE IN TNA
 # PHV allocation.
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
-  testdata/p4_14_samples/source_routing.p4
   extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4

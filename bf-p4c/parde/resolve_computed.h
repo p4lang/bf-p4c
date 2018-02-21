@@ -6,9 +6,8 @@
 /**
  * Resolve all computed parser expressions if possible. These are expressions in
  * extracts or selects that reference outputs of the parser program or track
- * state in some way. They generally need copy propagation or other kinds of
- * forwarding to be implemented on the hardware, since the parser has a very
- * limited capacity to keep state.
+ * state in some way. Then all select on input buffer are replaced by selecting
+ * on match registers, and corresponding saves are inserted.
  *
  * If you add to the parser program after the initial run of this pass, you
  * should rerun it. Removing parts of the parser program (e.g. via dead code
@@ -19,8 +18,8 @@
  * already have been generated, for example.
  *
  * @post If it's possible, all UnresolvedStackRef and ComputedRVal IR nodes are
- * removed from the program, and all negative offsets and negative shifts are
- * eliminated. If program errors (e.g. ambiguous references, references to
+ * removed from the program, and select will have match registers allocated.
+ * If program errors (e.g. ambiguous references, references to
  * unextracted headers, or input buffer requirements in excess of what is
  * available on the hardware) prevent us from doing so, or if we're simply
  * incapable of handling what the program is doing, errors are reported.

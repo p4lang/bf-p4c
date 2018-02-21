@@ -70,16 +70,17 @@ struct ParserAsmSerializer : public ParserInspector {
             AutoIndent indentSelect(indent);
 
             // Generate the assembly that actually implements the select.
+            // XXX(yumin): The order of registers is sorted by MatchRegister::operator<.
+            // We use this order to adjust the match value.
+            std::set<MatchRegister> used_registers;
+            for (auto *select : state->select) {
+                for (auto& r : select->reg) {
+                    used_registers.insert(r); } }
+
             out << indent << "match: ";
             const char *sep = "[ ";
-            // merge all common bytes
-            auto prev = Range(-1, -1);
-            for (auto *select : state->select) {
-                auto curr = Range(select->range.lo, select->range.hi);
-                // skip the byte used by multiple select tuple elements
-                if (curr == prev) continue;
-                out << sep << curr;
-                prev = curr;
+            for (const auto& r : used_registers) {
+                out << sep << r;
                 sep = ", ";
             }
             out << " ]" << std::endl;
@@ -116,6 +117,8 @@ struct ParserAsmSerializer : public ParserInspector {
                 BUG("unknown lowered parser primitive type");
         }
 
+        outputSave(match->saves);
+
         if (match->shift != 0)
             out << indent << "shift: " << match->shift << std::endl;
 
@@ -129,6 +132,20 @@ struct ParserAsmSerializer : public ParserInspector {
             out << "end";
 
         out << std::endl;
+    }
+
+    void outputSave(const IR::Vector<IR::BFN::LoweredSave>& saves) {
+        if (!saves.size()) {
+            return; }
+        const char* sep = "save: { ";
+        out << indent;
+        for (const auto* save : saves) {
+            if (auto* source = save->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
+                auto bytes = source->extractedBytes();
+                out << sep << save->dest << " : " << Range(bytes.lo, bytes.hi);
+                sep = ", "; }
+        }
+        out << " }" << std::endl;
     }
 
     void outputExtractPhv(const IR::BFN::LoweredExtractPhv* extract) {

@@ -1,6 +1,7 @@
 #include "bf-p4c/parde/resolve_computed.h"
 
 #include <boost/optional.hpp>
+#include <boost/range/adaptors.hpp>
 #include <limits>
 
 #include "frontends/p4/callGraph.h"
@@ -313,9 +314,15 @@ struct CopyPropagateParserValues : public ParserInspector {
         // XXX(seth): This obviously isn't sound, but it's consistent with what
         // we're doing elsewhere in the parser code. This is just a hack until
         // we eliminate casts correctly in an earlier pass.
+        // XXX(yumin): The size that is casted to is used to form the match range.
+        // It would make match value incorrect if we don't respect it.
+        boost::optional<int> size_cast_to = boost::make_optional(false, int());
         auto* sourceExpr = value->source;
-        if (auto* cast = sourceExpr->to<IR::Cast>())
+        if (auto* cast = sourceExpr->to<IR::Cast>()) {
+            if (auto* type_bits = cast->destType->to<IR::Type_Bits>()) {
+                size_cast_to = type_bits->size; }
             sourceExpr = cast->expr;
+        }
 
         // XXX(seth): Ugh. =( This is a terrible hack, but this stuff will get
         // replaced soon, so it's not worth using a non-hacky approach.
@@ -336,6 +343,12 @@ struct CopyPropagateParserValues : public ParserInspector {
 
         // We found a definition; propagate it here.
         auto* resolvedValue = defs.at(sourceName)->clone();
+
+        if (size_cast_to) {
+            auto* buf = resolvedValue->to<IR::BFN::BufferlikeRVal>();
+            auto casted_range = buf->range.resizedToBits(*size_cast_to);
+            resolvedValue = new IR::BFN::PacketRVal(casted_range);
+        }
 
         // If this use was wrapped in a slice, try to simplify it.
         // XXX(seth): Again, this will get replaced with something non-hacky
@@ -431,7 +444,6 @@ struct CopyPropagateParserValues : public ParserInspector {
                 propagateToUse(computed, defs);
         });
 
-
         // Recursively propagate the definitions which have reached this point
         // to child states.
         for (auto* transition : state->transitions)
@@ -463,128 +475,6 @@ class ResolveComputedValues : public PassManager {
         addPasses({
             copyPropagate,
             new ApplyParserValueResolutions(copyPropagate->resolvedValues)
-        });
-    }
-};
-
-using OffsetCorrections = std::map<const IR::Node*, int>;
-using ShiftCorrections = std::map<const IR::BFN::Transition*, int>;
-
-class ComputeOffsetCorrections : public ParserInspector {
- public:
-    ComputeOffsetCorrections() : transitions("transitions") { }
-
-    OffsetCorrections bitOffsetCorrections;
-    ShiftCorrections byteShiftCorrections;
-
- private:
-    Visitor::profile_t init_apply(const IR::Node* node) override {
-        forAllMatching<IR::BFN::Transition>(node,
-                      [&](const IR::BFN::Transition* transition) {
-            if (transition->next) transitions.calls(transition, transition->next);
-        });
-        return ParserInspector::init_apply(node);
-    }
-
-    void postorder(const IR::BFN::ParserState* state) override {
-        // Find the minimum negative offset used in this state. This tells us
-        // how far back in the input packet we need to move this state so that
-        // all offsets are positive. Note that we take any shift corrections
-        // that were already computed by our successor states into account.
-        int bitMinOffset = 0;
-        forAllMatching<IR::BFN::PacketRVal>(&state->statements,
-                      [&](const IR::BFN::PacketRVal* value) {
-            bitMinOffset = std::min(bitMinOffset, value->range.lo);
-        });
-        forAllMatching<IR::BFN::PacketRVal>(&state->selects,
-                      [&](const IR::BFN::PacketRVal* value) {
-            bitMinOffset = std::min(bitMinOffset, value->range.lo);
-        });
-        for (auto* transition : state->transitions) {
-            BUG_CHECK(byteShiftCorrections[transition] <= 0,
-                      "Computed a positive shift correction?");
-            auto byteCorrectedShift = *transition->shift +
-                                      byteShiftCorrections[transition];
-            bitMinOffset = std::min(bitMinOffset, byteCorrectedShift * 8);
-        }
-
-        // We can only shift by whole bytes, so convert to bytes to determine
-        // the final correction. This correction can be interpreted two ways:
-        //  (1) It tells us how much to *increase* all of the offsets and shifts
-        //      in this state so that they'll refer to the correct range of bits
-        //      in the input buffer after the correction is applied.
-        //  (2) It tells us how much to *reduce* the shifts that are applied on
-        //      the transitions that lead into this state. That reduction may
-        //      actually make those shifts negative, requiring us to fix the
-        //      offsets in that state as well. That's why this is a bottom-up
-        //      analysis.
-        // All of these changes will be applied in ApplyOffsetCorrections.
-        const int byteShiftCorrection = (-bitMinOffset + 7) / 8;
-        const int bitOffsetCorrection = byteShiftCorrection * 8;
-
-        // Increase offsets and shifts.
-        bitOffsetCorrections[state] = bitOffsetCorrection;
-        for (auto* transition : state->transitions)
-            byteShiftCorrections[transition] += byteShiftCorrection;
-
-        // Reduce the shifts of callers.
-        auto* callers = transitions.getCallers(state);
-        if (!callers || callers->empty()) {
-            if (byteShiftCorrection != 0)
-                ::error("Parser program attempts to read %1% bytes before the "
-                        "beginning of the %2% input buffer", byteShiftCorrection,
-                        state->gress);
-            return;
-        }
-        for (auto* caller : *callers) {
-            BUG_CHECK(caller->is<IR::BFN::Transition>(),
-                      "A non-Transition calls a ParserState?");
-            auto* transition = caller->to<IR::BFN::Transition>();
-            BUG_CHECK(byteShiftCorrections[transition] == 0,
-                      "Already corrected this Transition's shift?");
-            byteShiftCorrections[transition] = -byteShiftCorrection;
-        }
-    }
-
-    P4::CallGraph<const IR::Node*> transitions;
-};
-
-struct ApplyOffsetCorrections : public ParserModifier {
-    ApplyOffsetCorrections(const OffsetCorrections& bitOffsetCorrections,
-                           const ShiftCorrections& byteShiftCorrections)
-      : bitOffsetCorrections(bitOffsetCorrections),
-        byteShiftCorrections(byteShiftCorrections)
-    { }
-
- private:
-    void postorder(IR::BFN::PacketRVal* value) override {
-        auto* state = findOrigCtxt<IR::BFN::ParserState>();
-        BUG_CHECK(bitOffsetCorrections.find(state) != bitOffsetCorrections.end(),
-                  "No offset correction entries for state %1%", state->name);
-        value->range = value->range.shiftedByBits(bitOffsetCorrections.at(state));
-        BUG_CHECK(value->range.lo >= 0, "Failed to correct offset?");
-    }
-
-    void postorder(IR::BFN::Transition* transition) override {
-        auto* original = getOriginal<IR::BFN::Transition>();
-        BUG_CHECK(byteShiftCorrections.find(original) != byteShiftCorrections.end(),
-                  "No shift correction entries for transition in state %1%",
-                  findContext<IR::BFN::ParserState>()->name);
-        *transition->shift += byteShiftCorrections.at(original);
-        BUG_CHECK(*transition->shift >= 0, "Failed to correct shift?");
-    }
-
-    const OffsetCorrections& bitOffsetCorrections;
-    const ShiftCorrections& byteShiftCorrections;
-};
-
-struct RemoveNegativeOffsets : public PassManager {
-    RemoveNegativeOffsets() {
-        auto* computeCorrections = new ComputeOffsetCorrections;
-        addPasses({
-            computeCorrections,
-            new ApplyOffsetCorrections(computeCorrections->bitOffsetCorrections,
-                                       computeCorrections->byteShiftCorrections)
         });
     }
 };
@@ -637,46 +527,6 @@ class CheckResolvedParserExpressions : public ParserTransform {
     }
 
     const IR::BFN::Extract*
-    checkExtractFitsInBuffer(const IR::BFN::Extract* extract) const {
-        auto* bufferSource = extract->source->to<IR::BFN::PacketRVal>();
-        if (!bufferSource) return extract;
-
-        auto* state = findContext<IR::BFN::ParserState>();
-        if (state->transitions.empty()) return extract;
-
-        // Check if this extract could possibly fit within the input buffer on
-        // the hardware. We can split large states into smaller ones, but we're
-        // limited by the fact that the total number of bytes we shift out of
-        // the input buffer in those smaller states has to equal the shift of
-        // the original state. If, after shifting that much, this extract still
-        // doesn't fit in the input buffer, then it's unimplementable on the
-        // hardware.
-        // XXX(seth): That doesn't mean that we couldn't produce a parser
-        // program with the same behavior that *is* implementable; we could
-        // support a lot more with some additional program transformations.
-        int worstCaseShift = std::numeric_limits<int>::max();
-        for (auto* transition : state->transitions)
-            worstCaseShift = std::min(worstCaseShift, *transition->shift);
-
-        const int byteOverflow = bufferSource->bitInterval().hiByte() - worstCaseShift;
-        if (byteOverflow < Device::pardeSpec().byteInputBufferSize())
-            return extract;
-
-        ::error("Extract in state %1% requires reading %2% bytes ahead, which "
-                "is beyond %3%'s limit of %4% bytes: %5%",
-                findContext<IR::BFN::ParserState>()->name, byteOverflow,
-                Device::currentDevice(),
-                Device::pardeSpec().byteInputBufferSize(), extract);
-
-        // The most likely cause is that RemoveNegativeOffsets had to put off
-        // shifting so long that we ran out of runway in the input buffer.
-        ::error("(Does your parser read or select on a value which originated "
-                "in a much earlier state?)");
-
-        return nullptr;
-    }
-
-    const IR::BFN::Extract*
     checkExtractIsNotComputed(const IR::BFN::Extract* extract) const {
         if (!extract->source->is<IR::BFN::ComputedRVal>()) return extract;
         ::error("Couldn't resolve computed value for extract in state %1%: %2%",
@@ -688,8 +538,6 @@ class CheckResolvedParserExpressions : public ParserTransform {
     preorder(IR::BFN::Extract* extract) override {
         prune();
         auto* checkedExtract = checkExtractIsNotComputed(extract);
-        if (!checkedExtract) return checkedExtract;
-        checkedExtract = checkExtractFitsInBuffer(checkedExtract);
         if (!checkedExtract) return checkedExtract;
         return checkExtractDestination(checkedExtract);
     }
@@ -705,6 +553,442 @@ class CheckResolvedParserExpressions : public ParserTransform {
     }
 };
 
+/** Compute select/save to register on each state.
+ *
+ * @pre: ResolveComputedValues has resolved all Rvalue expression in select to a
+ * specific buffer range. If referencing to data that is already shifted out from
+ * input buffer, the range offset should remain negative. At this point, we assume
+ * that each state has infinitely large input buffer, and the reason of shifting on
+ * transition to the other state is because that it is how it is written in the p4 program.
+ *
+ * The algorithm used here is to generate save [*] to register, when [*] is inside the current
+ * state. Registers are allocated greedily, in that we try smaller registers first.
+ * Algorithm detail:
+ * 1. On postorder of every state, add selects to unresolved select of this state.
+ *    add itself to unprocessed state.
+ * 2. Forall transitions from this state,
+ *     a. Get all unresolved select of the next state, shift them by the `shift` value.
+ *     b. Allocate match register to them, if they are extracted in this state, otherwise,
+ *        add it to unresolved selets of this state. Note that there are several requirements
+ *        on register allocation, e.g. if the select has already been allocated with a specific
+ *        register, we must use that register on all the other branches.
+ *     c. Mark corresponding select that it is using this register.
+ * 3. In the end_apply, if there are unprocess state that has unresolved selets (TNA case),
+ *    Insert a new state to add saves for that state.
+ *
+ * About Match Register Liverange:
+ * If you select field.A in state.5, and field.A is extracted in state.2,
+ * then field.A is saved to a match_register.i in state.2, during the second clock,
+ * then [state.3, state.5) is the span of match_register.i.
+ *
+ * Now we eargerly resolve selects, which means: `who decides first, others must follow`.
+ * It is for a two branch and merge case, all parent nodes need to coperate and make same
+ * decision on which register to used for each select.
+ *
+ * TODO(yumin): Currently, we greedily allocate registers. so if there is a lot match on
+ * fields extracted in earlier stage, it might not compile. However, the case is rare,
+ * because it does not compile in previous implementation.
+ *
+ * TODO(yumin): if select on something does not show up in the first 32 bytes of the header
+ * currently implementation is not able to do, those it's possible by splitting this header.
+ *
+*/
+class ComputeSaveAndSelect: public ParserInspector {
+    using State = IR::BFN::ParserState;
+    using StateTransition = IR::BFN::Transition;
+    using StateSelect = IR::BFN::Select;
+
+    struct UnresolvedSelect {
+        UnresolvedSelect(const StateSelect* s, unsigned shifts,
+                         const std::set<MatchRegister>& used)
+            : select(s), byte_shifted(shifts), used_by_others(used) { }
+
+        const StateSelect* select;
+        unsigned byte_shifted;
+        // MatchRegisters that has been used on the path by other selects.
+        // Any save before that state need to update this.
+        std::set<MatchRegister> used_by_others;
+
+        // The absolute offset that this select match on for current state's
+        // input buffer.
+        nw_bitrange source() const {
+            if (auto* buf = select->source->to<IR::BFN::BufferlikeRVal>()) {
+                return buf->extractedBits().shiftedByBytes(byte_shifted);
+            } else {
+                ::error("select on a field that is impossible to implement");
+                return nw_bitrange(); }
+        }
+    };
+
+    std::map<const State*, std::vector<UnresolvedSelect>> state_unresolved_selects;
+    ordered_set<const State*> unprocessed_states;
+
+    void postorder(const State* state) override {
+        // Mark state_unresolved_selects for this state
+        for (const auto* select : state->selects) {
+            state_unresolved_selects[state].push_back(
+                    UnresolvedSelect(select, 0, { })); }
+        unprocessed_states.insert(state);
+        calcSaves(state);
+    }
+
+    void calcSaves(const State* state) {
+        // For each transition branch, calculate the saves and corresponding select.
+        for (const auto* transition : state->transitions) {
+            BUG_CHECK(transition->shift, "State %1% has unset shift?", state->name);
+            BUG_CHECK(*transition->shift >= 0, "State %1% has negative shift %2%?",
+                      state->name, *transition->shift);
+
+            // Mapping input buffer to a register that save it.
+            std::map<nw_byterange, MatchRegister> saved_range;
+
+            // XXX(yumin): shift is in byte, while all others are in bits.
+            unsigned shift_bytes = *transition->shift;
+            auto next_state = transition->next;
+
+            // If this state is the last one, do not need to insert any save.
+            if (!next_state)
+                continue;
+
+            unprocessed_states.erase(next_state);
+
+            // Get unresolved selects by merge all child state's unresolved selects.
+            auto unresolved_selects = calcUnresolvedSelects(next_state, shift_bytes);
+            std::vector<UnresolvedSelect> early_stage_extracted;
+
+            auto registers = Device::pardeSpec().matchRegisters();
+            std::set<MatchRegister> used_registers;
+
+            // Sorted by whether has decided register, the size of select.
+            sort(unresolved_selects.begin(), unresolved_selects.end(),
+                 [&] (const UnresolvedSelect& l, const UnresolvedSelect& r) {
+                     if (select_registers.count(l.select) != select_registers.count(r.select))
+                         return select_registers.count(l.select) > select_registers.count(r.select);
+                     return l.source().size() < r.source().size();
+                 });
+
+            for (const auto& unresolved : unresolved_selects) {
+                nw_byterange source = unresolved.source().toUnit<RangeUnit::Byte>();
+                if (isExtractedEarlier(unresolved)) {
+                    early_stage_extracted.push_back(unresolved);
+                    continue; }
+
+                boost::optional<std::vector<MatchRegister>> reg_choice;
+
+                if (select_registers.count(unresolved.select)) {
+                    // If the select has already be set by other branch,
+                    // this branch need to follow it's decision.
+                    // already saved in this state.
+                    auto& regs = select_registers[unresolved.select];
+                    if (!std::any_of(regs.begin(), regs.end(),
+                                     [&] (const MatchRegister& r) -> bool {
+                                         return unresolved.used_by_others.count(r); })) {
+                        reg_choice = regs; }
+                } else {
+                    // TODO(yumin):
+                    // We should have an algorithm that minimizes the use the
+                    // register, e.g. use half to cover two small field,
+                    // instead of this naive one.
+                    // calculate which regs to use for each byte.
+                    std::vector<MatchRegister> accumulated_regs;
+                    size_t match_reg_itr = 0;
+                    bool found_registers = true;
+                    for (int i = source.loByte(); i <= source.hiByte();) {
+                        bool found_saved_reg = false;
+                        for (int reg_size : {1, 2}) {
+                            nw_byterange reg_range = nw_byterange(StartLen(i, reg_size));
+                            if (saved_range.count(reg_range)) {
+                                accumulated_regs.push_back(saved_range.at(reg_range));
+                                i += reg_size;
+                                found_saved_reg = true;
+                                break; } }
+
+                        if (found_saved_reg) continue;
+
+                        bool found_reg_for_this_byte = false;
+                        while (match_reg_itr < registers.size()) {
+                            auto& reg = registers[match_reg_itr++];
+                            if (used_registers.count(reg) || unresolved.used_by_others.count(reg)) {
+                                continue; }
+                            accumulated_regs.push_back(reg);
+                            i += reg.size;
+                            found_reg_for_this_byte = true;
+                            break;
+                        }
+
+                        if (!found_reg_for_this_byte) {
+                            found_registers = false;
+                            break;
+                        }
+                    }
+                    if (found_registers) {
+                        reg_choice = accumulated_regs; }
+                }
+
+                // Cannot find a register or the found one has been used
+                // by downstream states because of brother's decision.
+                if (!reg_choice) {
+                    // throw error message saying that it's impossible.
+                    ::error("Too much data for parse matcher, register not enough for %1%",
+                            cstring::to_cstring(unresolved.select));
+                    return;
+                }
+
+                // Assign registers and update match_saves
+                // TODO(yumin): if it's the last byte, we can't use half register on it.
+                // This case is rare because it only happens when you lookahead
+                // to the last byte and all byte registers are used.
+                nw_byterange save_range_itr = source;
+                for (const auto& r : *reg_choice) {
+                    nw_byterange range_of_this_register = save_range_itr.resizedToBytes(r.size);
+                    if (!saved_range.count(range_of_this_register)) {
+                        transition_saves[transition].push_back(
+                                new IR::BFN::SaveToRegister(r, range_of_this_register));
+                        saved_range[range_of_this_register] = r;
+                    }
+                    save_range_itr = save_range_itr.shiftedByBytes(r.size);
+                }
+                select_registers[unresolved.select] = *reg_choice;
+                select_masks[unresolved.select]     = calcMask(unresolved.source(), source);
+                used_registers.insert((*reg_choice).begin(), (*reg_choice).end());
+            }
+
+            // If there are remaining selects that needs to be extracted in earlier state,
+            // update the used registers on this transition.
+            // Note that, though registers used in this state will 'start to live' in the next
+            // state, it should be added because those remaining_unresolved selects 'start to live'
+            // in next state as well.
+            for (const auto& remaining_unresolved : early_stage_extracted) {
+                auto unresolved = remaining_unresolved;
+                unresolved.used_by_others.insert(used_registers.begin(), used_registers.end());
+                state_unresolved_selects[state].push_back(unresolved);
+            }
+        }  // for transition
+    }
+
+    void end_apply() override {
+        // Add all unresolved select to a dummy state.
+        auto unprocessed_copy = unprocessed_states;
+        for (const auto* state : unprocessed_copy) {
+            auto gress = state->thread();
+            BUG_CHECK(additional_states.count(gress) == 0,
+                      "More than one starting state for %1%", gress);
+            auto* transition = new IR::BFN::Transition(match_t(), 0, state);
+            auto* init_state = new IR::BFN::ParserState(
+                    "$_save_init_state", gress, { }, { }, { transition });
+            calcSaves(init_state);
+            if (transition_saves.count(transition)
+                && transition_saves[transition].size() > 0) {
+                additional_states[gress] = init_state; }
+        }
+        BUG_CHECK(unprocessed_states.size() == 0,
+                  "Unprocessed states remaining");
+    }
+
+    nw_bitrange calcMask(nw_bitrange match_range, nw_byterange saved_range) {
+        int loByte = saved_range.loByte();
+        return match_range.shiftedByBytes(-loByte);
+    }
+
+    bool
+    isExtractedEarlier(const UnresolvedSelect& select) {
+        if (select.source().lo < 0) return true;
+        return false;
+    }
+
+    std::vector<UnresolvedSelect>
+    calcUnresolvedSelects(const State* next_state, unsigned shift_bytes) {
+        // For the state_unresolved_selects from children state,
+        // The range in this state used to save should be range + shift.
+        std::vector<UnresolvedSelect> rst;
+        for (const auto& s : state_unresolved_selects[next_state]) {
+            UnresolvedSelect for_this_state(s);
+            for_this_state.byte_shifted += shift_bytes;
+            rst.push_back(for_this_state); }
+
+        return rst;
+    }
+
+ public:
+    // The saves need to be executed on this transition.
+    std::map<const StateTransition*, std::vector<const IR::BFN::SaveToRegister*>> transition_saves;
+
+    // The register that this select should match against.
+    std::map<const StateSelect*, std::vector<MatchRegister>> select_registers;
+    std::map<const StateSelect*, nw_bitrange> select_masks;
+
+    // The additional state that should be prepended to the start state
+    // to generate save for the select on the first state.
+    std::map<gress_t, IR::BFN::ParserState*> additional_states;
+};
+
+struct WriteBackSaveAndSelect : public ParserModifier {
+    explicit WriteBackSaveAndSelect(const ComputeSaveAndSelect& saves)
+        : rst(saves) { }
+
+    bool preorder(IR::BFN::Parser* parser) override {
+        auto gress = parser->gress;
+        if (rst.additional_states.count(gress) > 0) {
+            parser->start = rst.additional_states.at(gress); }
+        return true;
+    }
+
+    void postorder(IR::BFN::Transition* transition) override {
+        auto* original_transition = getOriginal<IR::BFN::Transition>();
+        if (rst.transition_saves.count(original_transition)) {
+            for (const auto* save : rst.transition_saves.at(original_transition)) {
+                transition->saves.push_back(save); }
+        }
+    }
+
+    void postorder(IR::BFN::Select* select) override {
+        auto* original_select = getOriginal<IR::BFN::Select>();
+        if (rst.select_registers.count(original_select)) {
+            select->reg = rst.select_registers.at(original_select);
+            select->mask = rst.select_masks.at(original_select); }
+    }
+
+    const ComputeSaveAndSelect& rst;
+};
+
+/** A helper class for adjusting match value.
+ */
+class MatchRegisterLayout {
+ private:
+    std::vector<MatchRegister> all_regs;
+    std::map<MatchRegister, match_t> values;
+    size_t total_size;
+
+    match_t shiftRight(match_t val, int n) {
+        auto word0 = val.word0;
+        auto word1 = val.word1;
+        word0 >>= n;
+        word1 >>= n;
+        return match_t(word0, word1);
+    }
+
+    match_t shiftLeft(match_t val, int n) {
+        auto word0 = val.word0;
+        auto word1 = val.word1;
+        word0 <<= n;
+        word1 <<= n;
+        return match_t(word0, word1);
+    }
+
+    match_t orTwo(match_t a, match_t b) {
+        auto word0 = (a.word0 | b.word0);
+        auto word1 = (a.word1 | b.word1);
+        return match_t(word0, word1);
+    }
+
+    match_t setWild(match_t a) {
+        auto word0 = a.word0;
+        auto word1 = a.word1;
+        auto wilds = (~(word0 ^ word1)) & (~((~uintmax_t(0)) << total_size));
+        return match_t(word0 | wilds, word1 | wilds);
+    }
+
+    // start is the from the left
+    match_t getSubValue(match_t val, int sz, int start, int len) {
+        auto word0 = val.word0;
+        auto word1 = val.word1;
+        uintmax_t mask = (~((~uintmax_t(0)) << (sz - start)));
+        auto trim_left_word0 = (word0 & mask);
+        auto trim_left_word1 = (word1 & mask);
+        return shiftRight(match_t(trim_left_word0, trim_left_word1), sz - start - len);
+    }
+
+ public:
+    explicit MatchRegisterLayout(std::set<MatchRegister> used_regs)
+        : total_size(0) {
+        for (const auto& r : used_regs) {
+            total_size += r.size * 8;
+            all_regs.push_back(r);
+            values[r] = match_t(0, 0); }
+    }
+
+    void writeValue(const std::vector<MatchRegister> regs,
+                    nw_bitrange mask, match_t val) {
+        int total_reg_size = 0;
+        for (const auto& r : regs) {
+            total_reg_size += r.size * 8; }
+
+        int val_shifted = 0;
+        int reg_shifted = 0;
+        for (const auto& r : regs) {
+            nw_bitrange range_of_r(StartLen(reg_shifted, r.size * 8));
+            BUG_CHECK(toClosedRange(mask.intersectWith(range_of_r)),
+                      "Use Match register on empty range");
+            nw_bitrange value_range_of_r = *toClosedRange(mask.intersectWith(range_of_r));
+            // For the stored match value, shift right to remove all bits that is
+            // matched in the next match register. Shift right 0 when it's the last
+            // chunk.
+            match_t value_of_r = getSubValue(val, mask.size(),
+                                             val_shifted, value_range_of_r.size());
+            // Then shift left by the empty (the 'bb..b' part) to or in.
+            // LOG1("sft2: " << range_of_r.hi - value_range_of_r.hi);
+            match_t value_to_or = shiftLeft(value_of_r, range_of_r.hi - value_range_of_r.hi);
+            values[r] = orTwo(values[r], value_to_or);
+            val_shifted += value_range_of_r.size();
+            reg_shifted += r.size * 8;
+        }
+    }
+
+    match_t getMatchValue() {
+        int shift = 0;
+        match_t rtn(0, 0);
+        for (const auto& r : boost::adaptors::reverse(all_regs)) {
+            rtn = orTwo(rtn, shiftLeft(values[r], shift));
+            shift += r.size * 8;
+        }
+        return setWild(rtn);
+    }
+};
+
+struct AdjustMatchValue : public ParserModifier {
+    void postorder(IR::BFN::Transition* transition) override {
+        auto* state = findContext<IR::BFN::ParserState>();
+        std::set<MatchRegister> used_registers;
+        for (const auto* select : state->selects) {
+            for (const auto& r : select->reg) {
+                used_registers.insert(r); } }
+
+        // Pop out value for each select.
+        auto& value = transition->value;
+        uintmax_t word0 = value.word0;
+        uintmax_t word1 = value.word1;
+        auto shiftOut = [&word0, &word1] (int sz) {
+            uintmax_t mask = ~(~uintmax_t(0) << sz);
+            uintmax_t sub0 = (word0 & mask);
+            uintmax_t sub1 = (word1 & mask);
+            word0 >>= sz;
+            word1 >>= sz;
+            return match_t(sub0, sub1); };
+
+        std::map<const IR::BFN::Select*, match_t> select_values;
+        for (const auto* select : boost::adaptors::reverse(state->selects)) {
+            int value_size = select->mask.size();
+            select_values[select] = shiftOut(value_size); }
+
+        MatchRegisterLayout layout(used_registers);
+        for (const auto* select : state->selects) {
+            layout.writeValue(select->reg, select->mask, select_values[select]);
+        }
+        transition->value = layout.getMatchValue();
+    }
+};
+
+struct InsertSaveAndSelect : public PassManager {
+    InsertSaveAndSelect() {
+        auto* computeSaveAndSelect = new ComputeSaveAndSelect();
+        addPasses({
+            computeSaveAndSelect,
+            new WriteBackSaveAndSelect(*computeSaveAndSelect),
+            new AdjustMatchValue(),
+        });
+    }
+};
+
 }  // namespace
 
 ResolveComputedParserExpressions::ResolveComputedParserExpressions() {
@@ -713,8 +997,8 @@ ResolveComputedParserExpressions::ResolveComputedParserExpressions() {
         new ResolveNextAndLast,
         new VerifyParserRValsAreUnique,
         new ResolveComputedValues,
-        new RemoveNegativeOffsets,
-        new CheckResolvedParserExpressions
+        new CheckResolvedParserExpressions,
+        new InsertSaveAndSelect,
     });
 }
 
