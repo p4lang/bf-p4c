@@ -7,18 +7,30 @@
  * parts of the tree */
 
 class MauInspector : public Inspector {
+    /// for traversing backend IR
     bool preorder(const IR::BFN::Parser *) override { return false; }
     bool preorder(const IR::BFN::Deparser *) override { return false; }
+    /// for traversing midend IR
+    bool preorder(const IR::BFN::TranslatedP4Parser *) override { return false; }
+    bool preorder(const IR::BFN::TranslatedP4Deparser *) override { return false; }
 };
 
 class MauModifier : public Modifier {
+    /// for traversing backend IR
     bool preorder(IR::BFN::Parser *) override { return false; }
     bool preorder(IR::BFN::Deparser *) override { return false; }
+    /// for traversing midend IR
+    bool preorder(IR::BFN::TranslatedP4Parser *) override { return false; }
+    bool preorder(IR::BFN::TranslatedP4Deparser *) override { return false; }
 };
 
 class MauTransform : public Transform {
-    IR::BFN::Parser *preorder(IR::BFN::Parser *p) override { prune(); return p; }
-    IR::BFN::Deparser *preorder(IR::BFN::Deparser *d) override { prune(); return d; }
+    /// for traversing backend IR
+    IR::Node *preorder(IR::BFN::Parser *p) override { prune(); return p; }
+    IR::Node *preorder(IR::BFN::Deparser *d) override { prune(); return d; }
+    /// for traversing midend IR
+    IR::Node *preorder(IR::BFN::TranslatedP4Parser *p) override { prune(); return p; }
+    IR::Node *preorder(IR::BFN::TranslatedP4Deparser *p) override { prune(); return p; }
 };
 
 #endif /* _mau_visitor_h_ */

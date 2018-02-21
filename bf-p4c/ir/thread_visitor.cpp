@@ -6,3 +6,4 @@ gress_t VisitingThread(Visitor *v) {
         return gress_t(ctxt->child_index / 3);
     BUG("Not visiting a BFN::Pipe");
 }
+

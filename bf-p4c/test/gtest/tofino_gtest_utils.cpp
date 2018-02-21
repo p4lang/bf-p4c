@@ -46,7 +46,10 @@ TofinoPipeTestCase::create(const std::string& source,
     auto midendTestCase = MidendTestCase::create(source, langVersion);
     if (!midendTestCase) return boost::none;
 
-    auto* pipe = extract_maupipe(midendTestCase->program, false);
+    AutoCompileContext autoBFNContext(new BFNContext(BFNContext::get()));
+    auto& options = BFNContext::get().options();
+    options.langVersion = langVersion;
+    auto* pipe = BFN::extract_maupipe(midendTestCase->program, options);
     if (pipe == nullptr) {
         std::cerr << "extract_maupipe failed" << std::endl;
         return boost::none;

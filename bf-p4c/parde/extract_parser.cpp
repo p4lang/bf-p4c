@@ -10,6 +10,7 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/add_parde_metadata.h"
 #include "bf-p4c/parde/resolve_computed.h"
+#include "bf-p4c/parde/gen_deparser.h"
 
 namespace BFN {
 
@@ -207,54 +208,6 @@ bool GetTofinoParser::addTransition(IR::BFN::ParserState* state, match_t matchVa
 
 
 }  // namespace
-
-ParserInfo extractParser(const IR::BFN::Pipe* pipe,
-                         const IR::P4Parser* igParser,
-                         const IR::P4Control* igDeparser,
-                         const IR::P4Parser* egParser,
-                         const IR::P4Control* egDeparser,
-                         bool useTna /* = false */) {
-    CHECK_NULL(igParser);
-    CHECK_NULL(igDeparser);
-    CHECK_NULL(egParser);
-    CHECK_NULL(egDeparser);
-
-    ParserInfo info;
-
-    // Convert the parsers.
-    info.parsers[INGRESS] = GetTofinoParser::extract(INGRESS, igParser);
-    info.parsers[EGRESS] = GetTofinoParser::extract(EGRESS, egParser);
-
-    // Attempt to resolve header stack ".next" and ".last" members.
-    // XXX(seth): In the long term we should run
-    // ResolveComputedParserExpressions here instead, but right now we can't
-    // because we haven't yet added bridged metadata, and without it the egress
-    // parser may fail because it tries to read ingress intrinsic metadata that
-    // isn't present natively in egress.
-    // XXX(seth): Also, generating the egress deparser from the egress parser
-    // correctly requires that we've resolved header stack indices, but that's
-    // an artifact of the IR conversion and it's not something that should not
-    // be happening at this layer anyway.
-    // XXX(seth): We could and should deal with this in the midend.
-    ResolveComputedHeaderStackExpressions resolveComputed;
-    for (auto gress : { INGRESS, EGRESS })
-        info.parsers[gress] = info.parsers[gress]->apply(resolveComputed);
-
-    // Convert the deparsers.
-    info.deparsers[INGRESS] = new IR::BFN::Deparser(INGRESS, igDeparser);
-    info.deparsers[EGRESS] = new IR::BFN::Deparser(EGRESS, egDeparser);
-
-
-    // Add shims for intrinsic metadata.
-    AddMetadataShims addMetadataShims(pipe);
-    for (auto gress : { INGRESS, EGRESS }) {
-        if (!useTna)
-            info.parsers[gress] = info.parsers[gress]->apply(addMetadataShims);
-        info.deparsers[gress] = info.deparsers[gress]->apply(addMetadataShims);
-    }
-
-    return info;
-}
 
 struct RewriteParserStatements : public Transform {
     RewriteParserStatements(cstring stateName, gress_t gress)
@@ -599,6 +552,32 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
     }
 
     return state;
+}
+
+void BFN::ExtractParser::postorder(const IR::BFN::TranslatedP4Parser* parser) {
+    gress_t thread = parser->thread;
+    rv->thread[thread].parser = BFN::GetTofinoParser::extract(thread, parser);
+}
+
+ProcessParde::ProcessParde(IR::BFN::Pipe* rv, bool useTna) {
+    setName("ProcessParde");
+    addPasses({
+        // Attempt to resolve header stack ".next" and ".last" members.
+        // XXX(seth): In the long term we should run
+        // ResolveComputedParserExpressions here instead, but right now we can't
+        // because we haven't yet added bridged metadata, and without it the egress
+        // parser may fail because it tries to read ingress intrinsic metadata that
+        // isn't present natively in egress.
+        // XXX(seth): Also, generating the egress deparser from the egress parser
+        // correctly requires that we've resolved header stack indices, but that's
+        // an artifact of the IR conversion and it's not something that should not
+        // be happening at this layer anyway.
+        // XXX(seth): We could and should deal with this in the midend.
+        new ResolveComputedHeaderStackExpressions(),
+        // Add shims for intrinsic metadata.
+        (useTna) ? nullptr : new AddParserMetadataShims(rv),
+        new AddDeparserMetadataShims(rv),
+    });
 }
 
 }  // namespace BFN

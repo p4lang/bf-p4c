@@ -1,5 +1,5 @@
-add test1 data.f1:0x01010101 addb1(port:2)
-add test1 data.f1:0x02020202 addb1(port:3)
+add ingress.test1 data.f1:0x01010101 ingress.addb1(port:2)
+add ingress.test1 data.f1:0x02020202 ingress.addb1(port:3)
 
 expect 2 01010101 00000202 0000 0000 0010
 packet 0 01010101 00000202 ffff 0000 0010

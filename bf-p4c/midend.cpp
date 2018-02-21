@@ -145,6 +145,8 @@ MidEnd::MidEnd(BFN_Options& options) {
             new BFN::SimpleSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
         (options.arch == "native") ?
             new BFN::NormalizeNativeProgram(&refMap, &typeMap, options /*map*/) : nullptr,
+        (options.arch == "native") ?
+            new BFN::LowerTofinoToStratum(&refMap, &typeMap, options /*map*/) : nullptr,
         (options.arch == "psa") ?
         new BFN::PortableSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
         new P4::SimplifyControlFlow(&refMap, &typeMap),

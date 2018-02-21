@@ -1,9 +1,11 @@
 #ifndef BF_P4C_PARDE_EXTRACT_PARSER_H_
 #define BF_P4C_PARDE_EXTRACT_PARSER_H_
 
+#include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
 #include "bf-p4c/ir/gress.h"
+#include "bf-p4c/parde/parde_visitor.h"
 
 namespace IR {
 
@@ -20,29 +22,20 @@ class P4Parser;
 
 namespace BFN {
 
-struct ParserInfo {
-  const IR::BFN::Parser* parsers[2] = { nullptr, nullptr };
-  const IR::BFN::Deparser* deparsers[2] = { nullptr, nullptr };
+/// Transform frontend parser and deparser into IR::BFN::Parser and IR::BFN::Deparser
+class ExtractParser: public ParserInspector {
+ public:
+    explicit ExtractParser(IR::BFN::Pipe *rv) : rv(rv) { setName("ExtractParser"); }
+    void postorder(const IR::BFN::TranslatedP4Parser* parser);
+    IR::BFN::Pipe *rv;
 };
 
-/**
- * Convert the frontend parser and deparser IR into the representation used in
- * the backend. Special architecture-specific states are automatically added.
- *
- * @param pipe  The pipe into which these parsers will eventually be installed.
- *              The metadata headers must already be configured.
- * @param igParser    The ingress parser.
- * @param igDeparser  The ingress deparser.
- * @param egParser    The egress parser.
- * @param egDeparser  The egress deparser.
- * @return a ParserInfo object containing the Tofino IR parsers and deparsers.
- */
-ParserInfo extractParser(const IR::BFN::Pipe* pipe,
-                         const IR::P4Parser* igParser,
-                         const IR::P4Control* igDeparser,
-                         const IR::P4Parser* egParser,
-                         const IR::P4Control* egDeparser,
-                         bool useTna = false);
+/// Process IR::BFN::Parser and IR::BFN::Deparser to resolve header stack and add shim
+/// for intrinsic metadata, must be applied to IR::BFN::Parser and IR::BFN::Deparser.
+class ProcessParde : public PassManager {
+ public:
+    ProcessParde(IR::BFN::Pipe *rv, bool useTna);
+};
 
 }  // namespace BFN
 

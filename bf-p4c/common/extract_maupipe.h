@@ -2,12 +2,17 @@
 #define BF_P4C_COMMON_EXTRACT_MAUPIPE_H_
 
 #include "ir/ir.h"
+#include "frontends/common/options.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
+#include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/common/param_binding.h"
 
 class BFN_Options;
 
-const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *, bool useTna);
+namespace BFN {
+
+const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *, BFN_Options& options);
 
 /** The purpose of this code is to translate in each pipeline to Backend structures.
  *  At the top of each pipeline, each extern to be used by that pipeline is declared.
@@ -38,7 +43,7 @@ class AttachTables : public PassManager {
 
     // Create all the stateful ALUs by passing over all of the register actions.  Once
     // the pipeline is fully examined, add these to the all_salus map
-    class InitializeStatefulAlus : public Inspector {
+    class InitializeStatefulAlus : public MauInspector {
         AttachTables &self;
         std::map<const IR::Declaration_Instance *, IR::MAU::StatefulAlu *> salu_inits;
         std::set<const IR::Declaration_Instance *> register_actions;
@@ -52,7 +57,7 @@ class AttachTables : public PassManager {
         explicit InitializeStatefulAlus(AttachTables &s) : self(s) {}
     };
 
-    class DefineGlobalRefs : public Modifier {
+    class DefineGlobalRefs : public MauModifier {
         AttachTables &self;
         std::map<cstring, safe_vector<const IR::MAU::BackendAttached *>> attached;
         bool preorder(IR::MAU::Table *) override;
@@ -81,5 +86,24 @@ class AttachTables : public PassManager {
         stop_on_error = false;
     }
 };
+
+/// must be applied to IR::P4Program
+class ExtractBackendPipe : public PassManager {
+ public:
+    ExtractBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                       IR::BFN::Pipe* rv, ParamBinding *bindings);
+
+    DeclarationConversions converted;
+};
+
+/// must be applied to IR::BFN::Pipe
+class ProcessBackendPipe : public PassManager {
+ public:
+    ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                       IR::BFN::Pipe* rv, DeclarationConversions &converted,
+                       ParamBinding *bindings, bool useTna);
+};
+
+}  // namespace BFN
 
 #endif /* BF_P4C_COMMON_EXTRACT_MAUPIPE_H_ */

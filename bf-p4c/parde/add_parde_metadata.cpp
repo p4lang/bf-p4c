@@ -24,7 +24,7 @@ getMetadataType(const IR::BFN::Pipe* pipe, cstring typeName) {
 
 }  // namespace
 
-bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
+bool AddParserMetadataShims::preorder(IR::BFN::Parser *parser) {
     switch (parser->gress) {
         case INGRESS: addIngressMetadata(parser); break;
         case EGRESS:  addEgressMetadata(parser);  break;
@@ -33,7 +33,7 @@ bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
     return false;
 }
 
-void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
+void AddParserMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
     // This state initializes some special metadata and serves as an entry
     // point.
     auto* igParserMeta =
@@ -55,7 +55,7 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
-void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
+void AddParserMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
     auto* egParserMeta =
       getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
 
@@ -72,7 +72,7 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
-bool AddMetadataShims::preorder(IR::BFN::Deparser *d) {
+bool AddDeparserMetadataShims::preorder(IR::BFN::Deparser *d) {
     switch (d->gress) {
         case INGRESS: addIngressMetadata(d); break;
         case EGRESS:  addEgressMetadata(d);  break;
@@ -105,7 +105,7 @@ void addDeparserParam(IR::BFN::Deparser* deparser,
 
 }  // namespace
 
-void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
+void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
     addDeparserParam(d, tmMeta, "ucast_egress_port", "egress_unicast_port",
                      /* canPack = */ false);
@@ -135,7 +135,7 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     addDeparserParam(d, tmMeta, "rid", "rid");
 }
 
-void AddMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
+void AddDeparserMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
     auto* mirrorMeta =
       getMetadataType(pipe, "egress_intrinsic_metadata_for_mirror_buffer");
     addDeparserParam(d, mirrorMeta, "coalesce_length", "coal");

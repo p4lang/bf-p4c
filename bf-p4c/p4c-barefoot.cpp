@@ -160,9 +160,7 @@ int main(int ac, char **av) {
         return 1;
     log_dump(program, "After midend");
 
-    bool useTna = (options.langVersion == CompilerOptions::FrontendVersion::P4_16 &&
-                   options.arch == "native");
-    auto maupipe = extract_maupipe(program, useTna);
+    auto maupipe = BFN::extract_maupipe(program, options);
 
     if (::errorCount() > 0)
         return 1;

@@ -1,6 +1,8 @@
 #ifndef BF_P4C_PARDE_CHECKSUM_H_
 #define BF_P4C_PARDE_CHECKSUM_H_
 
+#include "ir/ir.h"
+
 namespace IR {
 namespace BFN {
 class Pipe;

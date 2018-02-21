@@ -10,17 +10,26 @@
  * needs to be extracted by the parser before applying the user-supplied parser.
  */
 
-class AddMetadataShims : public PardeModifier {
+class AddParserMetadataShims : public ParserModifier {
  public:
-    explicit AddMetadataShims(const IR::BFN::Pipe* pipe)
+    explicit AddParserMetadataShims(const IR::BFN::Pipe* pipe)
             : pipe(pipe) { CHECK_NULL(pipe); }
 
  private:
     bool preorder(IR::BFN::Parser *) override;
-    bool preorder(IR::BFN::Deparser *) override;
 
     void addIngressMetadata(IR::BFN::Parser *d);
     void addEgressMetadata(IR::BFN::Parser *d);
+
+    const IR::BFN::Pipe* pipe;
+};
+
+class AddDeparserMetadataShims : public DeparserModifier {
+ public:
+    explicit AddDeparserMetadataShims(const IR::BFN::Pipe* pipe)
+        : pipe(pipe) { CHECK_NULL(pipe); }
+
+    bool preorder(IR::BFN::Deparser *) override;
 
     void addIngressMetadata(IR::BFN::Deparser *d);
     void addEgressMetadata(IR::BFN::Deparser *d);

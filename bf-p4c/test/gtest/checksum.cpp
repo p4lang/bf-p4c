@@ -293,7 +293,7 @@ TEST_F(TofinoComputedChecksum, ErrorEmptyChecksum) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::diagnosticCount(), 0u);
+    ASSERT_FALSE(test);
 }
 
 TEST_F(TofinoComputedChecksum, ErrorDestFieldMismatch) {
@@ -307,7 +307,7 @@ TEST_F(TofinoComputedChecksum, ErrorDestFieldMismatch) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::diagnosticCount(), 0u);
+    ASSERT_FALSE(test);
 }
 
 TEST_F(TofinoComputedChecksum, ErrorSourceFieldMismatch) {
@@ -321,7 +321,7 @@ TEST_F(TofinoComputedChecksum, ErrorSourceFieldMismatch) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::diagnosticCount(), 0u);
+    ASSERT_FALSE(test);
 }
 
 TEST_F(TofinoComputedChecksum, ErrorSourceFieldMismatchWithoutIsValid) {
@@ -335,7 +335,7 @@ TEST_F(TofinoComputedChecksum, ErrorSourceFieldMismatchWithoutIsValid) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::diagnosticCount(), 0u);
+    ASSERT_FALSE(test);
 }
 
 TEST_F(TofinoComputedChecksum, ErrorDestFieldNot16Bit) {
@@ -349,7 +349,7 @@ TEST_F(TofinoComputedChecksum, ErrorDestFieldNot16Bit) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::diagnosticCount(), 0u);
+    ASSERT_FALSE(test);
 }
 
 TEST_F(TofinoComputedChecksum, DISABLED_ErrorUnexpectedStatement) {
@@ -364,7 +364,7 @@ TEST_F(TofinoComputedChecksum, DISABLED_ErrorUnexpectedStatement) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::diagnosticCount(), 0u);
+    ASSERT_FALSE(test);
 }
 
 TEST_F(TofinoComputedChecksum, ErrorUnexpectedSource) {
@@ -378,7 +378,7 @@ TEST_F(TofinoComputedChecksum, ErrorUnexpectedSource) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::diagnosticCount(), 0u);
+    ASSERT_FALSE(test);
 }
 
 TEST_F(TofinoComputedChecksum, ErrorNoDestField) {
@@ -392,7 +392,7 @@ TEST_F(TofinoComputedChecksum, ErrorNoDestField) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::diagnosticCount(), 0u);
+    ASSERT_FALSE(test);
 }
 
 }  // namespace Test

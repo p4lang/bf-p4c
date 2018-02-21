@@ -53,4 +53,28 @@ class TranslatedP4Parser : P4Parser {
     gress_t thread;
 }
 
+/// A thread of P4 execution expressed in frontend IR;
+/// Used to identify the parser/mau/deparser block from
+/// architecture PackageBlock.
+class P4Thread {
+    toString { return "P4Thread"; }
+    dbprint { out << toString(); }
+#noconstructor
+    P4Thread() = default;
+    const IR::P4Parser *parser = nullptr;
+    const IR::P4Control *mau = nullptr;
+    const IR::P4Control *deparser = nullptr;
+    toJSON {
+        json << json.indent << "\"parser\" : " << parser << "," << std::endl
+             << json.indent << "\"mau\" : " << mau << "," << std::endl
+             << json.indent << "\"deparser\" : " << deparser; }
+    fromJSON {
+        IR::BFN::P4Thread * thread = new IR::BFN::P4Thread();
+        json.load("parser", thread->parser);
+        json.load("mau", thread->mau);
+        json.load("deparser", thread->deparser);
+        return thread;
+    }
+}
+
 }  // end namespace BFN

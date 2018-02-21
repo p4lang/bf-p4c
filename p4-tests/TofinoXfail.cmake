@@ -968,7 +968,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Null egParser"
+  "multiple calls to execute in action"
   extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
   extensions/p4_tests/p4_14/p4-tests/programs/pgrs/pgrs.p4
   )

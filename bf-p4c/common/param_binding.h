@@ -11,7 +11,7 @@ class TypeMap;
 
 /// ParamBinding creates and tracks instances of package parameters and
 /// variable declarations.
-class ParamBinding {
+class ParamBinding : public Inspector {
     const P4::TypeMap *typeMap;
     std::map<const IR::Type*, const IR::InstanceRef *>          by_type;
     std::map<const IR::Parameter *, const IR::InstanceRef *>    by_param;
@@ -36,6 +36,13 @@ class ParamBinding {
     /// variable declaration.
     const IR::InstanceRef *get(const IR::Declaration_Variable *var) const {
         return by_declvar.count(var) ? by_declvar.at(var) : nullptr; }
+
+    /// Add a new header or metadata instance bound to the given parameter.
+    void postorder(const IR::Parameter *param);
+
+    /// Add a new header or metadata instance bound to the given variable
+    /// declaration.
+    void postorder(const IR::Declaration_Variable *var);
 };
 
 #endif /* _COMMON_PARAM_BINDING_H_ */

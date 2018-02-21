@@ -156,3 +156,8 @@ IR::BFN::Deparser::Deparser(gress_t gr, const IR::P4Control* dp)
     CHECK_NULL(dp);
     dp->apply(GenerateDeparser(this));
 }
+
+void BFN::ExtractDeparser::postorder(const IR::BFN::TranslatedP4Deparser* deparser) {
+    gress_t thread = deparser->thread;
+    rv->thread[thread].deparser = new IR::BFN::Deparser(thread, deparser);
+}

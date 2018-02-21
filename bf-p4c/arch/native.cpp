@@ -126,6 +126,108 @@ struct RestoreOptionalParams : public Modifier {
     P4::EvaluatorPass* evaluator;
 };
 
+struct MapPackageBlockToThread : Inspector {
+    MapPackageBlockToThread(P4::EvaluatorPass* evaluator, IR::BFN::P4Thread *ingress,
+                            IR::BFN::P4Thread *egress)
+        : evaluator(evaluator), ingress(ingress), egress(egress) {
+        setName("MapPackageBlockToThread");
+    }
+
+    bool preorder(const IR::P4Program* ) {
+        auto toplevel = evaluator->getToplevelBlock();
+        auto main = toplevel->getMain();
+        if (auto blk = main->getParameterValue("ingress_parser")) {
+            if (auto pb = blk->to<IR::ParserBlock>()) {
+                ingress->parser = pb->container; }}
+        if (auto blk = main->getParameterValue("ingress")) {
+            if (auto cb = blk->to<IR::ControlBlock>()) {
+                ingress->mau = cb->container; }}
+        if (auto blk = main->getParameterValue("ingress_deparser")) {
+            if (auto cb = blk->to<IR::ControlBlock>()) {
+                ingress->deparser = cb->container; }}
+        if (auto blk = main->getParameterValue("egress_parser")) {
+            if (auto pb = blk->to<IR::ParserBlock>()) {
+                egress->parser = pb->container; }}
+        if (auto blk = main->getParameterValue("egress")) {
+            if (auto cb = blk->to<IR::ControlBlock>()) {
+                egress->mau = cb->container; }}
+        if (auto blk = main->getParameterValue("egress_deparser")) {
+            if (auto cb = blk->to<IR::ControlBlock>()) {
+                egress->deparser = cb->container; }}
+        return false;
+    }
+
+    P4::EvaluatorPass *evaluator;
+    IR::BFN::P4Thread *ingress;
+    IR::BFN::P4Thread *egress;
+};
+
+struct RewriteControlAndParserBlocks : Transform {
+    RewriteControlAndParserBlocks(IR::BFN::P4Thread *ingress, IR::BFN::P4Thread *egress)
+    : ingress(ingress), egress(egress) {
+        CHECK_NULL(ingress); CHECK_NULL(egress);
+    }
+
+    const IR::Node* postorder(IR::P4Parser *node) override {
+        auto orig = getOriginal();
+        if (orig == ingress->parser) {
+            auto rv = new IR::BFN::TranslatedP4Parser(
+                node->srcInfo, node->name,
+                node->type, node->constructorParams,
+                node->parserLocals, node->states,
+                {}, INGRESS);
+            return rv;
+        } else if (orig == egress->parser) {
+            auto rv = new IR::BFN::TranslatedP4Parser(
+                node->srcInfo, node->name,
+                node->type, node->constructorParams,
+                node->parserLocals, node->states,
+                {}, EGRESS);
+            return rv;
+        } else {
+            BUG("P4Parser is mutated after evaluation");
+            return node;
+        }
+    }
+
+    const IR::Node* postorder(IR::P4Control *node) override {
+        auto orig = getOriginal();
+        if (orig == ingress->mau) {
+            auto rv = new IR::BFN::TranslatedP4Control(
+                node->srcInfo, node->name, node->type,
+                node->constructorParams, node->controlLocals,
+                node->body, {}, INGRESS);
+            return rv;
+        } else if (orig == ingress->deparser) {
+            auto rv = new IR::BFN::TranslatedP4Deparser(
+                node->srcInfo, node->name, node->type,
+                node->constructorParams, node->controlLocals,
+                node->body, {}, INGRESS);
+            return rv;
+        } else if (orig == egress->mau) {
+            auto rv = new IR::BFN::TranslatedP4Control(
+                node->srcInfo, node->name, node->type,
+                node->constructorParams, node->controlLocals,
+                node->body, {}, EGRESS);
+            return rv;
+        } else if (orig == egress->deparser) {
+            auto rv = new IR::BFN::TranslatedP4Deparser(
+                node->srcInfo, node->name, node->type,
+                node->constructorParams, node->controlLocals,
+                node->body, {}, EGRESS);
+            return rv;
+        } else {
+            BUG("P4Control is mutated after evaluation");
+            return node;
+        }
+    }
+
+    IR::BFN::P4Thread *ingress;
+    IR::BFN::P4Thread *egress;
+};
+
+/// Rewrite P4Control and P4Parser blocks to TranslatedP4Deparser,
+/// TranslatedP4Control and TranslatedP4Parser.
 NormalizeNativeProgram::NormalizeNativeProgram(P4::ReferenceMap* refMap,
                                                P4::TypeMap* typeMap,
                                                BFN_Options& options) {
@@ -135,6 +237,22 @@ NormalizeNativeProgram::NormalizeNativeProgram(P4::ReferenceMap* refMap,
     addPasses({
         evaluator,
         new RestoreOptionalParams(evaluator),
+        new P4::ClearTypeMap(typeMap),
+        new P4::TypeChecking(refMap, typeMap, true),
+    });
+}
+
+LowerTofinoToStratum::LowerTofinoToStratum(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                                           BFN_Options &options) {
+    setName("LowerTofinoToStratum");
+    addDebugHook(options.getDebugHook());
+    auto ingress = new IR::BFN::P4Thread();
+    auto egress = new IR::BFN::P4Thread();
+    auto* evaluator = new P4::EvaluatorPass(refMap, typeMap);
+    addPasses({
+        evaluator,
+        new MapPackageBlockToThread(evaluator, ingress, egress),
+        new RewriteControlAndParserBlocks(ingress, egress),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
     });

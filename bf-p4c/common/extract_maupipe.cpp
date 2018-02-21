@@ -20,9 +20,12 @@
 #include "bf-p4c/parde/mirror.h"
 #include "bf-p4c/parde/phase0.h"
 #include "bf-p4c/parde/resubmit.h"
+#include "bf-p4c/parde/gen_deparser.h"
 #include "lib/algorithm.h"
 #include "lib/error.h"
 #include "lib/safe_vector.h"
+
+namespace BFN {
 
 class ActionArgSetup : public MauTransform {
     /* FIXME -- use ParameterSubstitution for this somehow? */
@@ -565,7 +568,7 @@ void AttachTables::InitializeStatefulAlus::postorder(const IR::GlobalRef *gref) 
 
 /** Convert these Stateful ALUs to constant pointers.  This was necessary to maintain const
  *  pointers for a later pass.
- */ 
+ */
 void AttachTables::InitializeStatefulAlus::end_apply() {
     self.all_salus.insert(salu_inits.begin(), salu_inits.end());
 }
@@ -668,7 +671,7 @@ static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool 
     return nullptr;
 }
 
-class GetTofinoTables : public Inspector {
+class GetTofinoTables : public MauInspector {
     P4::ReferenceMap                            *refMap;
     P4::TypeMap                                 *typeMap;
     gress_t                                     gress;
@@ -829,9 +832,10 @@ class GetTofinoTables : public Inspector {
             tables.at(c)->next[T] = getseq(c->ifTrue);
         if (c->ifFalse && !c->ifFalse->is<IR::EmptyStatement>())
             tables.at(c)->next[F] = getseq(c->ifFalse); }
-    bool preorder(const IR::P4Control *cf) override {
+    bool preorder(const IR::BFN::TranslatedP4Control *cf) override {
+        if (cf->thread != gress)
+            return false;
         visit(cf->body);
-        assert(!pipe->thread[gress].mau);
         pipe->thread[gress].mau = getseq(cf->body);
         return false; }
 
@@ -840,56 +844,15 @@ class GetTofinoTables : public Inspector {
         BUG("Unhandled statement %1%", st); }
 };
 
-// model tofino native pipeline using frontend IR
-class TnaPipe {
+class ExtractMetadata : public Inspector {
  public:
-    P4::ReferenceMap* refMap;
-    P4::TypeMap* typeMap;
-    const IR::P4Parser *parser;
-    const IR::P4Control *mau;
-    const IR::P4Control *deparser;
-    DeclarationConversions converted;
-
-    TnaPipe(const IR::PackageBlock* main, gress_t gress,
-            P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
-      : refMap(refMap), typeMap(typeMap) {
-        // XXX(hanw): parameter names must be consistent with tofino.p4
-        if (gress == INGRESS) {
-            if (auto blk = main->getParameterValue("ingress_parser")) {
-                if (auto pb = blk->to<IR::ParserBlock>()) {
-                    parser = pb->container; }}
-            if (auto blk = main->getParameterValue("ingress")) {
-                if (auto cb = blk->to<IR::ControlBlock>()) {
-                    mau = cb->container; }}
-            if (auto blk = main->getParameterValue("ingress_deparser")) {
-                if (auto cb = blk->to<IR::ControlBlock>()) {
-                    deparser = cb->container; }}
-        } else if (gress == EGRESS) {
-            if (auto blk = main->getParameterValue("egress_parser")) {
-                if (auto pb = blk->to<IR::ParserBlock>()) {
-                    parser = pb->container; }}
-            if (auto blk = main->getParameterValue("egress")) {
-                if (auto cb = blk->to<IR::ControlBlock>()) {
-                    mau = cb->container; }}
-            if (auto blk = main->getParameterValue("egress_deparser")) {
-                if (auto cb = blk->to<IR::ControlBlock>()) {
-                    deparser = cb->container; }}
-        } else {
-            ::error("Unknown pipeline %1%", gress);
-        }
+    ExtractMetadata(IR::BFN::Pipe *rv, ParamBinding *bindings) : rv(rv), bindings(bindings) {
+        setName("ExtractMetadata");
     }
 
-    void bindParams(ParamBinding* bindings) {
-        for (auto param : *parser->getApplyParameters()->getEnumerator())
-            bindings->bind(param);
-        for (auto param : *mau->getApplyParameters()->getEnumerator())
-            bindings->bind(param);
-        for (auto param : *deparser->getApplyParameters()->getEnumerator())
-            bindings->bind(param);
-    }
+    void postorder(const IR::BFN::TranslatedP4Control *mau) override {
+        gress_t gress = mau->thread;
 
-    /// XXX(hanw): key to rv->metadata is used in add_parde_metadata.cpp
-    void extractMetadata(IR::BFN::Pipe* rv, ParamBinding* bindings, gress_t gress) {
         if (gress == INGRESS) {
             // XXX(hanw) index must be consistent with tofino.p4
             int size = mau->getApplyParameters()->parameters.size();
@@ -905,7 +868,7 @@ class TnaPipe {
                                        bindings->get(md)->obj->to<IR::Metadata>());
             }
             if (size > 4) {
-                 // intrinsic_metadata_for_tm
+                // intrinsic_metadata_for_tm
                 auto md = mau->getApplyParameters()->parameters.at(4);
                 rv->metadata.addUnique("ingress_intrinsic_metadata_for_tm",
                                        bindings->get(md)->obj->to<IR::Metadata>());
@@ -950,107 +913,109 @@ class TnaPipe {
         }
     }
 
-    void apply(PassManager& fixup) {
-        parser = parser->apply(fixup);
-        mau = mau->apply(fixup);
-        deparser = deparser->apply(fixup);
-    }
+ private:
+    IR::BFN::Pipe *rv;
+    ParamBinding *bindings;
+};
 
-    void extractTable(IR::BFN::Pipe* rv, gress_t gress) {
-        mau->apply(GetTofinoTables(refMap, typeMap, gress, rv, converted));
-    }
+class ExtractPhase0 : public Inspector {
+ public:
+    ExtractPhase0(IR::BFN::Pipe *rv, P4::ReferenceMap *refMap)
+        : rv(rv), refMap(refMap) {}
 
-    void extractAttached(IR::BFN::Pipe* rv, gress_t gress) {
-        AttachTables toAttach(refMap, converted);
-        rv->thread[gress].mau = rv->thread[gress].mau->apply(toAttach);
-    }
-
-    void extractPhase0(IR::BFN::Pipe* rv, gress_t gress) {
-        if (gress == EGRESS) return;
-        // Check for an @phase0 annotation and add the necessary metadata to the
-        // pipe.
+    void postorder(const IR::BFN::TranslatedP4Control *mau) override {
+        gress_t thread = mau->thread;
+        if (thread == EGRESS) return;
         BFN::extractPhase0(mau, rv, refMap);
     }
 
-    void addMirroredFieldParser(IR::BFN::Pipe* rv,
-                                const IR::P4Control* ingressDeparser,
-                                const IR::P4Control* egressDeparser) {
-        BFN::addMirroredFieldParser(rv, ingressDeparser, egressDeparser,
-                                    refMap, typeMap);
-    }
+ private:
+    IR::BFN::Pipe *rv;
+    P4::ReferenceMap *refMap;
+};
 
-    void extractResubmit(IR::BFN::Pipe* rv, gress_t gress) {
-        if (gress == EGRESS) return;
-        std::tie(deparser, rv) = BFN::extractResubmit(deparser, rv, refMap, typeMap);
+class ExtractParde : public PassManager {
+ public:
+    explicit ExtractParde(IR::BFN::Pipe* rv) {
+        setName("ExtractParde");
+        addPasses({
+            new ExtractParser(rv),
+            new ExtractDeparser(rv),
+        });
     }
 };
 
-const IR::BFN::Pipe* extract_tna_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                                      const IR::PackageBlock* main, bool useTna,
-                                      const IR::P4Program *program) {
-    TnaPipe* pipes[2];
-    pipes[INGRESS] = new TnaPipe(main, INGRESS, refMap, typeMap);
-    pipes[EGRESS] = new TnaPipe(main, EGRESS, refMap, typeMap);
+struct ExtractChecksum : public Inspector {
+    explicit ExtractChecksum(IR::BFN::Pipe* rv) : rv(rv) { setName("ExtractChecksumNative"); }
 
-    ParamBinding bindings(typeMap);
-    SimplifyReferences simplifyReferences(&bindings, refMap, typeMap);
+    void postorder(const IR::BFN::TranslatedP4Deparser* deparser) override {
+        extractChecksumFromDeparser(deparser, rv);
+    }
 
+    IR::BFN::Pipe* rv;
+};
+
+ExtractBackendPipe::ExtractBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                                       IR::BFN::Pipe *rv, ParamBinding *bindings) {
+    setName("ExtractBackendPipe");
+    auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
+    addPasses({
+        bindings,
+        new ExtractMetadata(rv, bindings),
+        new ExtractPhase0(rv, refMap),
+        simplifyReferences,
+        new GetTofinoTables(refMap, typeMap, INGRESS, rv, converted),
+        new GetTofinoTables(refMap, typeMap, EGRESS, rv, converted),
+        new ExtractParde(rv),
+        new ExtractChecksum(rv),
+    });
+}
+
+// XXX(hanw): these passes should've been done in the midend with frontend IR.
+ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                                       IR::BFN::Pipe *rv, DeclarationConversions &converted,
+                                       ParamBinding *bindings, bool useTna) {
+    CHECK_NULL(bindings);
+    setName("ProcessBackendPipe");
+    auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
+    addPasses({
+        new AttachTables(refMap, converted),  // add attached tables
+        new ProcessParde(rv, useTna),         // add parde metadata
+        new AddMirrorFieldParser(rv, refMap, typeMap),
+        new ExtractResubmit(refMap, typeMap),
+        /// followings two passes are necessary, because ProcessBackendPipe transforms the
+        /// IR::BFN::Pipe objects. If all the above passes can be moved to an earlier midend
+        /// pass, then the passes below can possibily be removed.
+        simplifyReferences,
+        new CopyHeaderEliminator(),
+    });
+}
+
+const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, BFN_Options& options) {
+    P4::ReferenceMap refMap;
+    P4::TypeMap typeMap;
+    refMap.setIsV1(true);
+    P4::EvaluatorPass evaluator(&refMap, &typeMap);
+    program = program->apply(evaluator);
+
+    bool useTna = (options.langVersion == CompilerOptions::FrontendVersion::P4_16 &&
+                   options.arch == "native");
     auto rv = new IR::BFN::Pipe();
+    auto bindings = new ParamBinding(&typeMap);
+    ExtractBackendPipe extractBackendPipe(&refMap, &typeMap, rv, bindings);
+    extractBackendPipe.addDebugHook(options.getDebugHook());
+    program = program->apply(extractBackendPipe);
 
     // collect and set global_pragmas
     CollectGlobalPragma collect_pragma;
-    program->apply(collect_pragma);
+    program = program->apply(collect_pragma);
     rv->global_pragmas = collect_pragma.global_pragmas();
 
-    for (auto gress : {INGRESS, EGRESS}) {
-        pipes[gress]->bindParams(&bindings /* out */);
-        pipes[gress]->extractMetadata(rv /* out */, &bindings /* in */, gress);
-        pipes[gress]->extractPhase0(rv, gress);
-        pipes[gress]->apply(simplifyReferences);
-        pipes[gress]->extractTable(rv /* out */, gress /* in */);
-        pipes[gress]->extractAttached(rv /* out */, gress);
-    }
-
-
-    auto parserInfo = BFN::extractParser(rv, pipes[INGRESS]->parser, pipes[INGRESS]->deparser,
-                                         pipes[EGRESS]->parser, pipes[EGRESS]->deparser, useTna);
-    for (auto gress : { INGRESS, EGRESS }) {
-        rv->thread[gress].parser = parserInfo.parsers[gress];
-        rv->thread[gress].deparser = parserInfo.deparsers[gress];
-    }
-
-    // Native tofino path should skip this pass.
-    pipes[EGRESS]->addMirroredFieldParser(rv, pipes[INGRESS]->deparser,
-                                              pipes[EGRESS]->deparser);
-
-    for (auto gress : { INGRESS, EGRESS}) {
-        /// native tofino path should skip this pass
-        pipes[gress]->extractResubmit(rv, gress);
-    }
-
-    for (auto gress : { INGRESS, EGRESS }) {
-        rv = BFN::extractChecksumFromDeparser(pipes[gress]->deparser, rv);
-    }
-
-    PassManager finalSimplifications = {
-        &simplifyReferences,
-        new CopyHeaderEliminator
-    };
-
-    return rv->apply(finalSimplifications);
+    ProcessBackendPipe processBackendPipe(&refMap, &typeMap, rv,
+                                          extractBackendPipe.converted, bindings, useTna);
+    processBackendPipe.addDebugHook(options.getDebugHook());
+    return rv->apply(processBackendPipe);
 }
 
-const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, bool useTna) {
-    P4::ReferenceMap  refMap;
-    P4::TypeMap       typeMap;
-    refMap.setIsV1(true);
-    P4::EvaluatorPass evaluator(&refMap, &typeMap);
-    program->apply(evaluator);
-    auto toplevel = evaluator.getToplevelBlock();
-    auto top = toplevel->getMain();
-    if (!top) {
-        error("No main switch");
-        return nullptr; }
+}  // namespace BFN
 
-    return extract_tna_arch(&refMap, &typeMap, top, useTna, program);
-}

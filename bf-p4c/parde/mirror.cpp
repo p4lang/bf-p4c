@@ -208,12 +208,7 @@ getMetadataType(const IR::BFN::Pipe* pipe, cstring typeName) {
 struct AddMirroredFieldListParser : public Transform {
   AddMirroredFieldListParser(const IR::BFN::Pipe* pipe,
                              const MirroredFieldListPacking* fieldLists)
-          : fieldLists(fieldLists) {
-      auto* egParserMeta =
-        getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
-      cloneDigestId = gen_fieldref(egParserMeta, "clone_digest_id");
-      cloneSource = gen_fieldref(egParserMeta, "clone_src");
-  }
+          : pipe(pipe), fieldLists(fieldLists) { }
 
   const IR::BFN::ParserState* preorder(IR::BFN::ParserState* state) override {
       if (state->name != "$mirrored") return state;
@@ -268,7 +263,16 @@ struct AddMirroredFieldListParser : public Transform {
                                       { select }, transitions);
   }
 
+  Visitor::profile_t init_apply(const IR::Node *root) override {
+      auto* egParserMeta =
+          getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
+      cloneDigestId = gen_fieldref(egParserMeta, "clone_digest_id");
+      cloneSource = gen_fieldref(egParserMeta, "clone_src");
+      return Transform::init_apply(root);
+  }
+
  private:
+  const IR::BFN::Pipe* pipe;
   const MirroredFieldListPacking* fieldLists;
   const IR::Member* cloneDigestId;
   const IR::Member* cloneSource;
@@ -302,6 +306,43 @@ void addMirroredFieldParser(IR::BFN::Pipe* pipe,
     AddMirroredFieldListParser addParser(pipe, fieldPackings);
     pipe->thread[EGRESS].parser =
       pipe->thread[EGRESS].parser->apply(addParser);
+}
+
+class CollectFieldLists : public Inspector {
+ public:
+    CollectFieldLists(MirroredFieldLists *fieldLists, P4::ReferenceMap *refMap,
+                      P4::TypeMap *typeMap)
+        : fieldLists(fieldLists), refMap(refMap), typeMap(typeMap) {
+        CHECK_NULL(fieldLists);
+    }
+
+    bool preorder(IR::BFN::TranslatedP4Deparser* dp) {
+        gress_t thread = dp->thread;
+        FindMirroredFieldLists findFieldLists(*fieldLists, thread, refMap, typeMap);
+        dp->apply(findFieldLists);
+        return false;
+    }
+
+ private:
+    MirroredFieldLists *fieldLists;
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
+};
+
+AddMirrorFieldParser::AddMirrorFieldParser(IR::BFN::Pipe* pipe,
+                                           P4::ReferenceMap *refMap, P4::TypeMap *typeMap) {
+    BFN::MirroredFieldLists fieldLists;
+    auto* fieldPackings = new BFN::MirroredFieldListPacking;
+    addPasses({
+        new BFN::CollectFieldLists(&fieldLists, refMap, typeMap),
+        new VisitFunctor([this, fieldLists, fieldPackings]() {
+            for (auto& fieldList : fieldLists) {
+                auto* packing = BFN::packMirroredFieldList(fieldList.second);
+                fieldPackings->emplace(fieldList.first, packing);
+            }
+        }),
+        new BFN::AddMirroredFieldListParser(pipe, fieldPackings)
+    });
 }
 
 }  // namespace BFN

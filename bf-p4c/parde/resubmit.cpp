@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/field_packing.h"
+#include "bf-p4c/parde/parde_visitor.h"
 #include "frontends/p4/coreLibrary.h"
 #include "frontends/p4/fromv1.0/v1model.h"
 #include "ir/ir.h"
@@ -89,7 +90,7 @@ checkIfStatement(const IR::IfStatement* ifStatement) {
     return constant;
 }
 
-class FindResubmit : public Inspector {
+class FindResubmit : public ParserInspector {
     bool preorder(const IR::MethodCallStatement* node) override {
         auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
         if (auto* em = mi->to<P4::ExternMethod>()) {
@@ -158,7 +159,7 @@ FieldPacking* packResubmitFields(const ResubmitSources* extracts) {
 }
 
 /// resubmit parser is only generated for p4-14 based programs
-class AddResubmitParser : public Modifier {
+class AddResubmitParser : public ParserModifier {
  public:
   explicit AddResubmitParser(const ResubmitPacking* packings)
       : packings(packings) { }
@@ -222,6 +223,21 @@ extractResubmit(const IR::P4Control* deparser, IR::BFN::Pipe* pipe,
     pipe->thread[INGRESS].parser = pipe->thread[INGRESS].parser->apply(addResubmitParser);
 
     return std::make_pair(deparser, pipe);
+}
+
+ExtractResubmit::ExtractResubmit(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) {
+    auto findResubmit = new FindResubmit(refMap, typeMap);
+    auto fieldPackings = new ResubmitPacking;
+    addPasses({
+        findResubmit,
+        new VisitFunctor([this, findResubmit, fieldPackings]() {
+            for (auto extract : findResubmit->extracts) {
+                auto packing = packResubmitFields(extract.second);
+                fieldPackings->emplace(extract.first, packing);
+            }
+        }),
+        new AddResubmitParser(fieldPackings)
+    });
 }
 
 }  // namespace BFN

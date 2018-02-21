@@ -1,6 +1,8 @@
 #ifndef BF_P4C_PARDE_MIRROR_H_
 #define BF_P4C_PARDE_MIRROR_H_
 
+#include "ir/ir.h"
+
 namespace IR {
 namespace BFN {
 class Pipe;
@@ -35,6 +37,11 @@ void addMirroredFieldParser(IR::BFN::Pipe* pipe,
                             const IR::P4Control* egressDeparser,
                             P4::ReferenceMap* refMap,
                             P4::TypeMap* typeMap);
+
+class AddMirrorFieldParser : public PassManager {
+ public:
+    AddMirrorFieldParser(IR::BFN::Pipe* pipe, P4::ReferenceMap *refMap, P4::TypeMap *typeMap);
+};
 
 }  // namespace BFN
 

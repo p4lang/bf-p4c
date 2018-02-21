@@ -231,6 +231,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/epb_config.h
   parde/extract_parser.h
   parde/field_packing.h
+  parde/gen_deparser.h
   parde/lower_parser.h
   parde/mirror.h
   parde/parde_spec.h

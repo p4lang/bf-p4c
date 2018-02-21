@@ -1,5 +1,5 @@
 
-add ingress.t 0 data$0.f:0x0000 set_port(port:1)
+add ingress.t 0 data$0.f:0x0000 ingress.set_port(port:1)
 
 #        f[0]     payload
 expect 1 0000     00000202 0303 55 66

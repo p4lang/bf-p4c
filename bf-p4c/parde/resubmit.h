@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include "ir/ir.h"
 #include "lib/cstring.h"
 
 namespace IR {
@@ -26,6 +27,12 @@ struct FieldPacking;
 std::pair<const IR::P4Control*, IR::BFN::Pipe*>
 extractResubmit(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
                 P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
+
+/// This pass must be applied to IR::BFN::Pipe
+class ExtractResubmit : public PassManager {
+ public:
+    ExtractResubmit(P4::ReferenceMap *refMap, P4::TypeMap *typeMap);
+};
 
 }  // namespace BFN
 
