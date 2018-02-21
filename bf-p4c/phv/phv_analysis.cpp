@@ -34,7 +34,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                                    // backtracking
             &uses,                 // use of field in mau, parde
             &pragmas,              // parse and fold PHV-related pragmas
-            new ParserOverlay(phv, pragmas, mutually_exclusive_field_ids),
+            new ParserOverlay(phv, pragmas),
                                    // produce pairs of mutually exclusive header
                                    // fields, eg. (arpSrc, ipSrc)
             &parser_critical_path,
@@ -43,7 +43,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                                    // refresh dependency graph for live range
                                    // analysis
             &defuse,               // refresh defuse
-            new LiveRangeOverlay(phv, deps, defuse, mutually_exclusive_field_ids),
+            new LiveRangeOverlay(phv, deps, defuse),
                                    // produce pairs of fields that are never live
                                    // in the same stage
             new PHV_Field_Operations(phv),  // PHV field operations analysis
@@ -60,10 +60,10 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             options.jbay_analysis ? new JbayPhvAnalysis(phv, uses, deps, defuse, action_constraints)
                 : nullptr,
 #endif      // HAVE_JBAY
-            new AllocatePHV(mutually_exclusive_field_ids, clustering, uses, clot,
-                            pragmas, phv, action_constraints, critical_path_clusters),
+            new AllocatePHV(clustering, uses, clot, pragmas, phv, action_constraints,
+                    critical_path_clusters),
 
-            new PHV::ValidateAllocation(phv, clot, mutually_exclusive_field_ids),
+            new PHV::ValidateAllocation(phv, clot, phv.field_mutex),
             new PHV::ValidateActions(phv, false, true, false)
         }); }
 

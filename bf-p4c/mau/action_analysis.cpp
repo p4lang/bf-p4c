@@ -764,9 +764,16 @@ bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
  *  can have a portion masked.  Any other operation currently acts on the entire container, and
  *  all fields could be potentially affected.
  */
-bool ActionAnalysis::ContainerAction::verify_overwritten(PHV::Container container,
-          const PhvInfo &phv) {
-    bitvec container_occupancy = phv.bits_allocated(container);
+bool ActionAnalysis::ContainerAction::verify_overwritten(
+        const PHV::Container container, const PhvInfo &phv) {
+    ordered_set<const PHV::Field*> fieldsWritten;
+    for (auto& field_action : field_actions) {
+        const PHV::Field* write_field = phv.field(field_action.write.expr);
+        if (write_field == nullptr)
+            BUG("Verify Overwritten: Action does not have a write?");
+        fieldsWritten.insert(write_field); }
+
+    bitvec container_occupancy = phv.bits_allocated(container, fieldsWritten);
     bitvec total_write_bits;
     for (auto &tot_align_info : phv_alignment) {
         total_write_bits |= tot_align_info.second.write_bits;
@@ -787,10 +794,23 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(PHV::Container containe
 /** Ensure that a read field is the only field within that container
  */
 bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv) {
+    ordered_set<const PHV::Field*> fieldsRead;
+    for (auto& field_action : field_actions) {
+        const PHV::Field* read_field = nullptr;
+        for (auto& read : field_action.reads) {
+            if (read_field != nullptr && read.type == ActionParam::PHV) {
+                BUG("Multiple reads found in shift");
+            }
+            if (read.type == ActionParam::PHV)
+                read_field = phv.field(read.expr);
+            BUG_CHECK(read_field, "Read field not found for shift"); }
+        fieldsRead.insert(read_field); }
+    BUG_CHECK(fieldsRead.size() == 1, "More than one field action in shift");
+
     for (auto &tot_align_info : phv_alignment) {
         auto container = tot_align_info.first;
         auto &total_alignment = tot_align_info.second;
-        bitvec container_occupancy = phv.bits_allocated(container);
+        bitvec container_occupancy = phv.bits_allocated(container, fieldsRead);
         if (total_alignment.read_bits != container_occupancy)
             return false;
     }
@@ -944,8 +964,8 @@ void ActionAnalysis::ContainerAction::verify_speciality(PHV::Container container
  *       a constraint, but difficult to verify as well)
  */
 
-bool ActionAnalysis::ContainerAction::verify_shift(cstring &error_message,
-        PHV::Container container, const PhvInfo &phv) {
+bool ActionAnalysis::ContainerAction::verify_shift(
+        cstring &error_message, PHV::Container container, const PhvInfo &phv) {
     if (field_actions.size() > 1) {
         error_code |= MULTIPLE_SHIFTS;
         error_message += "p4c cannot support multiple shift instructions in one container";

@@ -4,6 +4,7 @@
 
 #include "ir/ir.h"
 #include "lib/error.h"
+#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/parser_overlay.h"
@@ -64,14 +65,13 @@ createPaMutuallyExclusivePragmaTestCase() {
 }
 
 const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
-                                   PhvInfo& phv,
-                                   SymBitMatrix& mutually_exclusive_field_ids) {
+                                   PhvInfo& phv) {
     PragmaMutuallyExclusive* pragmas = new PragmaMutuallyExclusive(phv);
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
         pragmas,
-        new ParserOverlay(phv, *pragmas, mutually_exclusive_field_ids),
+        new ParserOverlay(phv, *pragmas),
     };
     return pipe->apply(quick_backend);
 }
@@ -82,10 +82,10 @@ TEST_F(PaMutuallyExclusivePragmaTest, P4_16) {
     auto test = createPaMutuallyExclusivePragmaTestCase();
     ASSERT_TRUE(test);
 
-    PhvInfo phv;
     SymBitMatrix mutually_exclusive_field_ids;
+    PhvInfo phv(mutually_exclusive_field_ids);
 
-    runMockPasses(test->pipe, phv, mutually_exclusive_field_ids);
+    runMockPasses(test->pipe, phv);
     EXPECT_EQ(mutually_exclusive_field_ids(phv.field("ingress::h1.f2")->id,
                                            phv.field("ingress::h2.f1")->id), false);
 

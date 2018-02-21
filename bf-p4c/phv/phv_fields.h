@@ -16,6 +16,7 @@
 #include "lib/ordered_set.h"
 #include "lib/range.h"
 #include "lib/safe_vector.h"
+#include "lib/symbitmatrix.h"
 
 namespace PHV {
 class ManualAlloc;
@@ -607,6 +608,11 @@ class PhvInfo {
         }
     };
 
+    /// Stores the mutual exclusion relationships between different PHV fields
+    SymBitMatrix&                            field_mutex;
+
+    const SymBitMatrix& mutex() const { return field_mutex; }
+
  private:  // class PhvInfo
     //
     std::map<cstring, PHV::Field>            all_fields;
@@ -663,6 +669,8 @@ class PhvInfo {
     void allocatePOV(const BFN::HeaderStackInfo&);
 
  public:  // class PhvInfo
+    explicit PhvInfo(SymBitMatrix& m) : field_mutex(m) {}
+
     const PHV::Field *field(int idx) const {
         return (size_t)idx < by_id.size() ? by_id.at(idx) : 0;
     }
@@ -700,14 +708,11 @@ class PhvInfo {
     /// @returns the set of fields assigned (partially or entirely) to @c
     const ordered_set<const PHV::Field *>& fields_in_container(const PHV::Container c) const;
 
-    /// @returns true whenever field f is the only field present in container c
-    bool is_only_field_in_container(const PHV::Container c, const PHV::Field *f) const;
-
-    /** @returns a bitvec showing the currently allocated bits in a container
+    /** @returns a bitvec showing the currently allocated bits in a container corresponding to 
+      * fields simultaneously live with the fields passed in the argument set. 
       * Note that one common bitvec is used to represent all fields that may be in a container
-      * (overlaid or allocated to disjoint parts of the container)
       */
-    bitvec bits_allocated(const PHV::Container c) const;
+    bitvec bits_allocated(const PHV::Container, const ordered_set<const PHV::Field*>&) const;
 };
 
 /**

@@ -14,6 +14,7 @@
 namespace BFN {
 
 class Backend : public PassManager {
+    SymBitMatrix mutually_exclusive_field_ids;
     ClotInfo clot;
     PhvInfo phv;
     PhvUse uses;

@@ -125,6 +125,7 @@ class TableAllocPass : public PassManager {
 };
 
 Backend::Backend(const BFN_Options& options) :
+    phv(mutually_exclusive_field_ids),
     clot(uses),
     uses(phv),
     defuse(phv) {

@@ -387,19 +387,18 @@ class AllocatePHV : public Inspector {
         const std::list<PHV::SuperCluster *>& unallocated);
 
  public:
-    AllocatePHV(const SymBitMatrix& mutex,
-                const Clustering& clustering,
+    AllocatePHV(const Clustering& clustering,
                 const PhvUse& uses,
                 const ClotInfo& clot,
                 PHV::Pragmas& pragmas,
                 PhvInfo& phv,
                 ActionPhvConstraints& actions,
                 const CalcCriticalPathClusters& critical_cluster)
-        : core_alloc_i(mutex, clustering, uses, clot, pragmas, phv, actions),
+        : core_alloc_i(phv.field_mutex, clustering, uses, clot, pragmas, phv, actions),
           phv_i(phv), uses_i(uses),
-          clustering_i(clustering), mutex_i(mutex), pragmas_i(pragmas),
+          clustering_i(clustering), mutex_i(phv.field_mutex), pragmas_i(pragmas),
           actions_i(actions), critical_path_clusters_i(critical_cluster),
-          field_interference_i(mutex, uses) { }
+          field_interference_i(phv.field_mutex, uses) { }
 };
 
 #endif  /* BF_P4C_PHV_ALLOCATE_PHV_H_ */

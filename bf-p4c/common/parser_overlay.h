@@ -90,9 +90,8 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
             const PhvInfo& phv,
             const bitvec& neverOverlay,
             const PragmaMutuallyExclusive& p,
-            SymBitMatrix& rv,
             FieldFilter_t ignore_field)
-            : phv(phv), neverOverlay(neverOverlay), pragmas(p), mutually_exclusive(rv),
+            : phv(phv), neverOverlay(neverOverlay), pragmas(p), mutually_exclusive(phv.field_mutex),
               IgnoreField(ignore_field) {
         joinFlows = true;
         visitDagOnce = false; }
@@ -120,8 +119,8 @@ class BuildParserOverlay : public BuildMutex {
     BuildParserOverlay(
             const PhvInfo& phv,
             const bitvec& neverOverlay,
-            const PragmaMutuallyExclusive& p,
-            SymBitMatrix& rv) : BuildMutex(phv, neverOverlay, p, rv, ignore_field) { }
+            const PragmaMutuallyExclusive& p)
+        : BuildMutex(phv, neverOverlay, p, ignore_field) { }
 };
 
 /* Produces a SymBitMatrix where keys are PHV::Field ids and values indicate
@@ -144,8 +143,8 @@ class BuildMetadataOverlay : public BuildMutex {
     BuildMetadataOverlay(
             const PhvInfo& phv,
             const bitvec& neverOverlay,
-            const PragmaMutuallyExclusive& p,
-            SymBitMatrix& rv) : BuildMutex(phv, neverOverlay, p, rv, ignore_field) { }
+            const PragmaMutuallyExclusive& p)
+        : BuildMutex(phv, neverOverlay, p, ignore_field) { }
 };
 
 /** Mark deparsed intrinsic metadata fields as never overlaid.  The deparser
@@ -199,21 +198,19 @@ class ParserOverlay : public PassManager {
  public:
     ParserOverlay(
             const PhvInfo& phv,
-            const PragmaMutuallyExclusive& pragmas,
-            SymBitMatrix& rv) {
+            const PragmaMutuallyExclusive& pragmas) {
         addPasses({
             new ExcludeDeparsedIntrinsicMetadata(phv, neverOverlay),
             // new FindAddedHeaderFields(phv, neverOverlay),
-            new BuildParserOverlay(phv, neverOverlay, pragmas, rv),
-            new BuildMetadataOverlay(phv, neverOverlay, pragmas, rv)
+            new BuildParserOverlay(phv, neverOverlay, pragmas),
+            new BuildMetadataOverlay(phv, neverOverlay, pragmas)
         });
     }
 
     ParserOverlay(
         const PhvInfo& phv,
-        const PHV::Pragmas& pragmas,
-        SymBitMatrix& rv)
-    : ParserOverlay(phv, pragmas.pa_mutually_exclusive(), rv) { }
+        const PHV::Pragmas& pragmas)
+    : ParserOverlay(phv, pragmas.pa_mutually_exclusive()) { }
 };
 
 #endif /*_PARSER_OVERLAY_H_ */

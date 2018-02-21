@@ -94,7 +94,6 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    PhvUse& uses,
                                    FieldDefUse& defuse,
                                    Clustering& clustering,
-                                   SymBitMatrix& mutually_exclusive_field_ids,
                                    CalcParserCriticalPath& parser_critical_path) {
     PragmaMutuallyExclusive* pragmas = new PragmaMutuallyExclusive(phv);
     PassManager quick_backend = {
@@ -105,7 +104,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
         new ElimUnused(phv, defuse),
         &uses,
         pragmas,
-        new ParserOverlay(phv, *pragmas, mutually_exclusive_field_ids),
+        new ParserOverlay(phv, *pragmas),
         &parser_critical_path,
         &defuse,
         new PHV_Field_Operations(phv),
@@ -166,9 +165,9 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
     )"));
     ASSERT_TRUE(test);
 
-    PhvInfo phv;
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
     CalcParserCriticalPath parser_critical_path(phv);
-    SymBitMatrix mutually_exclusive_field_ids;
     FieldDefUse defuse(phv);
     PhvUse uses(phv);
     Clustering clustering(phv, uses);
@@ -176,7 +175,6 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
     auto *post_pm_pipe = runMockPasses(test->pipe, phv, uses,
                                        defuse,
                                        clustering,
-                                       mutually_exclusive_field_ids,
                                        parser_critical_path);
 
     auto *cluster_cp = new CalcCriticalPathClusters(parser_critical_path);

@@ -11,6 +11,7 @@
 #include "lib/bitvec.h"
 #include "lib/error.h"
 #include "lib/safe_vector.h"
+#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 
 namespace Test {
@@ -93,7 +94,8 @@ TYPED_TEST(TofinoPHVTrivialAllocators, DISABLED_AutomaticAllocation) {
     ASSERT_TRUE(testcase);
 
     // Perform PHV analysis and run the allocator.
-    PhvInfo phv;
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
     PassManager passes = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
@@ -242,7 +244,8 @@ class TofinoPHVManualAlloc : public TofinoBackendTest {
         ASSERT_TRUE(testcase);
 
         // Perform PHV analysis and run the allocator.
-        PhvInfo phv;
+        SymBitMatrix mutex;
+        PhvInfo phv(mutex);
         PassManager passes = {
             new CollectHeaderStackInfo,
             new CollectPhvInfo(phv),
@@ -271,17 +274,23 @@ class TofinoPHVManualAlloc : public TofinoBackendTest {
                 // Only for the width mismatch test, also check the bits_allocated function, which
                 // returns a bitvector with the allocated container bits
                 if (!isWidthMismatchTest) continue;
-
+                ordered_set<const PHV::Field*> allocated_fields;
                 if (requested[i].container == "H1") {
-                    auto bitvec_ret = phv.bits_allocated(actual[i].container);
+                    allocated_fields.insert(actual[i].field);
+                    auto bitvec_ret = phv.bits_allocated(actual[i].container, allocated_fields);
+                    allocated_fields.clear();
                     bitvec real (8, 8);
                     EXPECT_EQ(bitvec_ret, real);
                 } else if (requested[i].container == "B2" || requested[i].container == "B3") {
-                    auto bitvec_ret = phv.bits_allocated(actual[i].container);
+                    allocated_fields.insert(actual[i].field);
+                    auto bitvec_ret = phv.bits_allocated(actual[i].container, allocated_fields);
+                    allocated_fields.clear();
                     bitvec real(0, 8);
                     EXPECT_EQ(bitvec_ret, real);
                 } else if (requested[i].container == "W31") {
-                    auto bitvec_ret = phv.bits_allocated(actual[i].container);
+                    allocated_fields.insert(actual[i].field);
+                    auto bitvec_ret = phv.bits_allocated(actual[i].container, allocated_fields);
+                    allocated_fields.clear();
                     bitvec real(24, 8);
                     EXPECT_EQ(bitvec_ret, real); } } } }
 };
@@ -353,7 +362,8 @@ TEST_F(TofinoPHVManualAlloc, DISABLED_ReservedContainerAllocation) {
     ASSERT_TRUE(testcase);
 
     // Perform PHV analysis.
-    PhvInfo phv;
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
     PassManager passes = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv)

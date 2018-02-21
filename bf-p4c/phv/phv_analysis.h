@@ -16,13 +16,11 @@
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
-#include "lib/symbitmatrix.h"
 
 class ClotInfo;
 
 class PHV_AnalysisPass : public PassManager {
  private:
-    SymBitMatrix mutually_exclusive_field_ids;
     Clustering clustering;
     CalcParserCriticalPath parser_critical_path;        // parser critical path of both
                                                         // ingress/egress

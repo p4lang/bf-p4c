@@ -249,25 +249,30 @@ PhvInfo::fields_in_container(const PHV::Container c) const {
     return empty_list;
 }
 
-// XXX(deep): Currently, this analysis is conservative, in the sense that this does not take
-// overlaying into account
-bool PhvInfo::is_only_field_in_container(const PHV::Container c,
-                                         const PHV::Field *f) const {
-    if (f == nullptr) return false;
-    auto& fields = fields_in_container(c);
-    return (fields.size() == 1 && fields.count(f));
-}
-
-bitvec PhvInfo::bits_allocated(const PHV::Container c) const {
+bitvec PhvInfo::bits_allocated(
+        const PHV::Container c, const ordered_set<const PHV::Field*>& writes) const {
     bitvec ret_bitvec;
     auto& fields = fields_in_container(c);
     if (fields.size() == 0)
         return ret_bitvec;
+    // Gather all the slices of written fields allocated to container c
+    ordered_set<const PHV::Field::alloc_slice*> write_slices_in_container;
+    for (auto* field : writes) {
+        field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
+            if (alloc.container != c) return;
+            write_slices_in_container.insert(&alloc);
+        }); }
     for (auto* field : fields) {
         field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
             le_bitrange bits = alloc.container_bits();
-            ret_bitvec.setrange(bits.lo, bits.size());
+            // Discard the slices that are mutually exclusive with all the written slices
+            bool mutually_exclusive = true;
+            for (auto* slice : write_slices_in_container) {
+                if (!field_mutex(slice->field->id, alloc.field->id))
+                    mutually_exclusive = false; }
+            if (!mutually_exclusive)
+                ret_bitvec.setrange(bits.lo, bits.size());
         }); }
     return ret_bitvec;
 }

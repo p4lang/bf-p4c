@@ -149,8 +149,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
 
 
-    /** Information on all of the indivdidual reads and writes within a single PHV container
-     *  in an action function.  Essentially coordinate to all the action that can happen
+    /** Information on all of the individual reads and writes within a single PHV container
+     *  in an action function. Essentially coordinate to all the action that can happen
      *  within a single VLIW ALU
      */
     struct ContainerAction {

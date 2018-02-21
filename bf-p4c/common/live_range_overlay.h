@@ -100,9 +100,8 @@ class LiveRangeOverlay : public Inspector {
     explicit LiveRangeOverlay(
         PhvInfo &phv,
         DependencyGraph &dg,
-        FieldDefUse &defuse,
-        SymBitMatrix &rv)
-    : phv(phv), dg(dg), defuse(defuse), overlay(rv) { }
+        FieldDefUse &defuse)
+    : phv(phv), dg(dg), defuse(defuse), overlay(phv.field_mutex) { }
 };
 
 #endif /* _LIVE_RANGE_OVERLAY_H_ */

@@ -6,6 +6,7 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
+#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/header_stack.h"
@@ -74,7 +75,8 @@ using ExpectedAlignmentMap = std::map<cstring, boost::optional<ExpectedAlignment
 /// agree with the alignments we expect.
 void checkFieldAlignment(const IR::BFN::Pipe* pipe,
                          const ExpectedAlignmentMap& expected) {
-    PhvInfo phv;
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
     PassManager computeAlignment = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv)
@@ -263,7 +265,8 @@ TEST_F(TofinoFieldAlignment, DISABLED_BridgedMetadataRespectsAlignment) {
 
     // We need to run enough of the backend to generate the bridged metadata
     // parser state.
-    PhvInfo phv;
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
     FieldDefUse defuse(phv);
     PassManager addBridgedMetadataParserState = {
         new CollectHeaderStackInfo,
