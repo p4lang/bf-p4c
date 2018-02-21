@@ -184,8 +184,10 @@ size_t JBayPardeSpec::byteIngressMetadataPrefixSize() const {
 
 size_t
 JBayPardeSpec::byteEgressMetadataSize(EgressParserBufferConfig config) const {
-    const size_t byteMetadataSize =
+    size_t byteMetadataSize =
       computeBitMetadataSize(getJBayEgressIntrinsicMetadataSpec(), config) / 8;
+    // Glen: Must round this up to 4 for JBay
+    byteMetadataSize = ((byteMetadataSize+3)/4)*4;
     return byteMetadataSize;
 }
 
