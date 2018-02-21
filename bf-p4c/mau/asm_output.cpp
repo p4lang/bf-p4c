@@ -1625,7 +1625,8 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             expr = expr->to<IR::Slice>()->e0;
         out << indent << canon_name(phv.field(expr)->name) << ": ";
         out << "{ type: " << ixbar_read->match_type.name << ", ";
-        out << "size: " << expr->type->width_bits() << " }" << std::endl;
+        out << "size: " << expr->type->width_bits() << ", ";
+        out << "full_size: " << phv.field(expr)->size << " }" << std::endl;
         p4_param_index++;
     }
 }

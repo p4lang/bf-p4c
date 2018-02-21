@@ -93,7 +93,9 @@ void MatchTable::pass1(int type) {
               name());
     if (!p4_params_list.empty()) {
         for (auto &p : p4_params_list) {
-            p.bit_width_full = Phv::get_phv_field_size(gress, p.name) * 8;
+            // bit_width_full should be generated in assembly as 'full_size' in
+            // the 'p4_param_order'. This is the full size of the field as used
+            // in p4 program.
             if (!p.bit_width_full)
                 p.bit_width_full = p.bit_width;
             bool found = remove_aug_names(p.name);

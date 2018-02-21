@@ -640,8 +640,10 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     unsigned format_width = 43;
     bitvec padbits;
     padbits.clrrange(0, format_width-1);
+    // Payload at bit 0
+    padbits.setrange(0,1);
     for (auto field : *input_xbar) {
-        padbits.setrange(field.second.lo, field.second.hi - field.second.lo + 1);
+        padbits.setrange(1 + field.second.lo, field.second.hi - field.second.lo + 1);
     }
 
     if (padbits != bitvec(0)) {
@@ -654,7 +656,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             idx_lo = p + 1; }
         if (idx_lo < format_width) {
             gen_entry_cfg(match_field_list, pad_name, \
-                idx_lo + 1, 0, 0, "zero", 0, format_width - (idx_lo + 1), -1); }
+                idx_lo, 0, 0, "zero", 0, format_width - (idx_lo + 1), -1); }
     }
 
     canon_field_list(match_field_list);
