@@ -71,27 +71,32 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
 
     auto remainingOptions = CompilerOptions::process(argc, argv);
 
-    if (!supportedTargets.count(target)) {
-        ::error("Target '%s' is not supported", target);
-        return remainingOptions;
-    }
+    static bool processed = false;
 
-    std::vector<std::string> splits;
-    std::string target_str(target.c_str());
-    boost::split(splits, target_str, [](char c){return c == '-';});
-    if (splits.size() != 3)
-        BUG("Invalid target %s", target);
+    if (!processed) {
+        if (!supportedTargets.count(target)) {
+            ::error("Target '%s' is not supported", target);
+            return remainingOptions;
+        }
 
-    device = splits[0];
-    arch   = splits[1];
-    vendor = splits[2];
+        std::vector<std::string> splits;
+        std::string target_str(target.c_str());
+        boost::split(splits, target_str, [](char c){return c == '-';});
+        if (splits.size() != 3)
+            BUG("Invalid target %s", target);
 
-    if (device == "tofino")
-        preprocessor_options += " -D__TARGET_TOFINO__";
+        device = splits[0];
+        arch   = splits[1];
+        vendor = splits[2];
+
+        if (device == "tofino")
+            preprocessor_options += " -D__TARGET_TOFINO__";
 #if HAVE_JBAY
-    else if (device == "jbay")
-        preprocessor_options += " -D__TARGET_JBAY__";
+        else if (device == "jbay")
+            preprocessor_options += " -D__TARGET_JBAY__";
 #endif
+        processed = true;
+    }
 
     return remainingOptions;
 }

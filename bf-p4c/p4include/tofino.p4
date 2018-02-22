@@ -642,7 +642,6 @@ control EgressDeparser<H, M>(
     @optional in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
     @optional mirror_packet mirror);
 
-@bf_p4c_compiler_option("--target", "tofino-native-barefoot")
 package Switch<IH, IM, EH, EM>(
     IngressParser<IH, IM> ingress_parser,
     Ingress<IH, IM> ingress,

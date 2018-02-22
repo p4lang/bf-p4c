@@ -199,7 +199,7 @@ createPSATest(TestArgs& args) {
 
 
     auto& options = BFNContext::get().options();
-    options.target = "tofino-psa-barefoot";
+    options.arch = "psa";
 
     return T::create(source);
 }
