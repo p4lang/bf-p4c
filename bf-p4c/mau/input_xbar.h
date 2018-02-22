@@ -256,8 +256,8 @@ struct IXBar {
         bitvec found;
         bitvec free;
         bool attempted = false;
-        std::array<bool, 2> hash_open = { { true, true } };
-        std::array<type_t, 2> hash_table_type = { { FREE, FREE } };
+        bool hash_open[2] = { true, true };
+        type_t hash_table_type[2] = { FREE, FREE };
 
         bool hash_dist_avail(int ht) const {
             return hash_table_type[ht] == HASH_DIST || hash_table_type[ht] == FREE;
