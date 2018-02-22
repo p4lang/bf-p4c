@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
+#include "ir/vector.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
@@ -63,22 +64,28 @@ createComputedChecksumTestCase(const std::string& computeChecksumSource,
 void checkComputedChecksum(const IR::BFN::Pipe* pipe,
                            const std::vector<cstring>& expected) {
     for (auto gress : { INGRESS, EGRESS }) {
-        auto& actual = pipe->thread[gress].deparser
-                           ->to<IR::BFN::Deparser>()->emits;
+        auto actual = pipe->thread[gress].deparser
+                           ->to<IR::BFN::Deparser>()->emits.clone();
+
+        /// ingress deparser emit additional bridged metadata indicator, which should
+        /// be skipped in checking.
+        if (gress == INGRESS) {
+            actual->erase(actual->begin());
+        }
 
         for (size_t i = 0; i < expected.size(); ++i) {
-            if (i >= actual.size()) {
+            if (i >= actual->size()) {
                 ADD_FAILURE() << "#" << i << " Missing: " << expected[i] << std::endl;
                 continue;
             }
 
-            if (expected[i] != cstring::to_cstring(actual[i]))
+            if (expected[i] != cstring::to_cstring(actual->at(i)))
                 ADD_FAILURE() << "#" << i << " Expected: " << expected[i] << std::endl
-                              << "#" << i << " Actual: " << cstring::to_cstring(actual[i])
+                              << "#" << i << " Actual: " << cstring::to_cstring(actual->at(i))
                               << std::endl;
         }
 
-        for (auto i = expected.size(); i < actual.size(); ++i)
+        for (auto i = expected.size(); i < actual->size(); ++i)
             ADD_FAILURE() << "#" << i << " Unexpected: " << expected[i] << std::endl;
     }
 }

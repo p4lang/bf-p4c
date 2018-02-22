@@ -137,8 +137,6 @@ Backend::Backend(const BFN_Options& options) :
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),
         &defuse,
-        new AddBridgedMetadata(phv, defuse),
-        new DumpPipe("After bridge metadata"),
 #if HAVE_JBAY
         options.device == "jbay" ? new AddJBayMetadataPOV(phv) : nullptr,
 #endif  // HAVE_JBAY

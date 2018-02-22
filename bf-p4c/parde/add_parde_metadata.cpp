@@ -41,7 +41,7 @@ void AddParserMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
     auto* alwaysDeparseBit =
         new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
     auto* bridgedMetadataIndicator =
-      new IR::TempVar(IR::Type::Bits::get(8), false, "$bridged_metadata_indicator");
+      new IR::TempVar(IR::Type::Bits::get(8), false, "^bridged_metadata_indicator");
     auto* globalTimestamp = gen_fieldref(igParserMeta, "ingress_global_tstamp");
     auto* globalVersion = gen_fieldref(igParserMeta, "ingress_global_ver");
 

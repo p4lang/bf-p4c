@@ -91,7 +91,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/param_binding.cpp
   common/parser_overlay.cpp
   common/parser_critical_path.cpp
-  common/linear_path.cpp
+  common/path_linearizer.cpp
   common/simplify_references.cpp
   common/slice.cpp
   common/type_categories.cpp
@@ -118,7 +118,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/parser_graph.h
   common/parser_overlay.h
   common/parser_critical_path.h
-  common/linear_path.h
+  common/path_linearizer.h
   common/simplify_references.h
   common/slice.h
   common/type_categories.h
@@ -307,7 +307,9 @@ set (BF_P4C_BACKEND_PHV_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_HDRS}")
 
 set (BF_P4C_BACKEND_ARCH_SRCS
+  arch/bridge_metadata.cpp
   arch/converters.cpp
+  arch/internal/collect_bridged_fields.cpp
   arch/native.cpp
   arch/phase0.cpp
   arch/portable_switch.cpp
@@ -321,7 +323,9 @@ build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_ARCH_HDRS
   arch/architecture.h
+  arch/bridge_metadata.h
   arch/converters.h
+  arch/internal/collect_bridged_fields.h
   arch/native.h
   arch/phase0.h
   arch/portable_switch.h
@@ -461,7 +465,6 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/linear_path.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_mutually_exclusive_pragma.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_size.cpp
@@ -470,6 +473,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_constraints.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_field.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/portable_switch.cpp

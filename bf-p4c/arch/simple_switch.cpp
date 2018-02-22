@@ -7,6 +7,7 @@
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "bf-p4c/arch/phase0.h"
 #include "bf-p4c/arch/remove_set_metadata.h"
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/device.h"
 #include "program_structure.h"
 #include "remove_set_metadata.h"
@@ -41,7 +42,10 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"standard_metadata", "egress_port", 9},
                                MetadataField{"eg_intr_md", "egress_port", 9});
 
-        structure->addMetadata(MetadataField{"standard_metadata", "ingress_port", 9},
+        structure->addMetadata(INGRESS, MetadataField{"standard_metadata", "ingress_port", 9},
+                               MetadataField{"ig_intr_md", "ingress_port", 9});
+
+        structure->addMetadata(EGRESS, MetadataField{"standard_metadata", "ingress_port", 9},
                                MetadataField{"ig_intr_md", "ingress_port", 9});
 
         structure->addMetadata(EGRESS,
@@ -1354,6 +1358,9 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new BFN::RemoveSetMetadata(refMap, typeMap),
         new BFN::TranslatePhase0(refMap, typeMap),
         new P4::ClonePathExpressions,
+        new P4::ClearTypeMap(typeMap),
+        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::BridgeMetadata(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
     });

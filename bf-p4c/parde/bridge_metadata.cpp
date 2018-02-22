@@ -100,12 +100,12 @@ class AddBridgedMetadata::AddBridge : public PardeTransform {
     }
 
     IR::BFN::ParserState* preorder(IR::BFN::ParserState* state) override {
-        if (state->name != "$bridged_metadata") return state;
+        if (state->name != "^bridged_metadata") return state;
 
         // Replace this placeholder state with a generated parser program
         // that extracts the bridged metadata.
         auto* next = state->transitions[0]->next;
-        cstring stateName = "$bridge_metadata_extract";
+        cstring stateName = "^bridge_metadata_extract";
         return self.packing.createExtractionState(EGRESS, stateName, next);
     }
 
@@ -125,6 +125,6 @@ AddBridgedMetadata:: AddBridgedMetadata(PhvInfo &phv, const FieldDefUse &defuse)
     // rather than mirrored data. (We could pack more information in there, too,
     // but we don't right now.)
     auto* bridgedMetadataIndicator =
-      new IR::TempVar(IR::Type::Bits::get(8), false, "$bridged_metadata_indicator");
+      new IR::TempVar(IR::Type::Bits::get(8), false, "^bridged_metadata_indicator");
     packing.appendField(bridgedMetadataIndicator, 8);
 }

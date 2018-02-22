@@ -68,7 +68,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Assignment cannot be supported in the parser"
   testdata/p4_16_samples/scalarmeta-bmv2.p4
-  testdata/p4_16_samples/issue281.p4
   testdata/p4_14_samples/axon.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   testdata/p4_16_samples/issue737-bmv2.p4
@@ -82,8 +81,9 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "metadata arrays not handled in InstanceRef::InstanceRef"
+  "Field .* of header .* cannot have type header"
   testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
+  testdata/p4_16_samples/issue281.p4
   )
 
 # BRIG-108
@@ -922,7 +922,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Inferred incompatible alignments for field"
+  "warning: .* may be uninitialized"
   # extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
   extensions/p4_tests/p4_14/p4-tests/programs/parser_intr_md/parser_intr_md.p4
   )
@@ -1059,6 +1059,11 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "Extracted range .* with size .* doesn't match destination container .* with size"
+  extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4
+  )
+
+p4c_add_xfail_reason("tofino"
   "error: Can't find .* on the input xbar"
   #extensions/p4_tests/p4_14/c1/COMPILER-352/netchain_one.p4
   )
@@ -1073,3 +1078,9 @@ p4c_add_xfail_reason("tofino"
   "Could not find declaration for standard_metadata"
   extensions/p4_tests/p4_16/verify_checksum.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  switch_l2
+  switch_dc_basic
+  )

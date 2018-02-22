@@ -584,7 +584,7 @@ extern learning_packet {
 parser IngressParser<H, M>(
     packet_in pkt,
     out H hdr,
-    out M ig_md,
+    out M md,
     out ingress_intrinsic_metadata_t ig_intr_md,
     @optional out ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
@@ -593,7 +593,7 @@ parser IngressParser<H, M>(
 parser EgressParser<H, M>(
     packet_in pkt,
     out H hdr,
-    out M eg_md,
+    out M md,
     out egress_intrinsic_metadata_t eg_intr_md,
     @optional out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
     /// following two arguments are bridged metadata
@@ -603,7 +603,7 @@ parser EgressParser<H, M>(
 
 control Ingress<H, M>(
     inout H hdr,
-    inout M ig_md,
+    inout M md,
     in ingress_intrinsic_metadata_t ig_intr_md,
     @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
@@ -612,7 +612,7 @@ control Ingress<H, M>(
 
 control Egress<H, M>(
     inout H hdr,
-    inout M eg_md,
+    inout M md,
     in egress_intrinsic_metadata_t eg_intr_md,
     @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
     @optional inout egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
@@ -626,7 +626,7 @@ control Egress<H, M>(
 control IngressDeparser<H, M>(
     packet_out pkt,
     inout H hdr,
-    @optional in M metadata,
+    @optional in M md,
     @optional in ingress_intrinsic_metadata_t ig_intr_md,
     @optional in ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb,
     @optional in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
@@ -637,7 +637,7 @@ control IngressDeparser<H, M>(
 control EgressDeparser<H, M>(
     packet_out pkt,
     inout H hdr,
-    @optional in M metadata,
+    @optional in M md,
     @optional in egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
     @optional in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
     @optional mirror_packet mirror);

@@ -1,11 +1,11 @@
 #include "gtest/gtest.h"
 
-#include "bf-p4c/common/linear_path.h"
+#include "bf-p4c/common/path_linearizer.h"
 #include "ir/ir.h"
 
 namespace BFN {
 
-TEST(BFNLinearPath, PathExpression) {
+TEST(TofinoPathLinearizer, PathExpression) {
     // A lone PathExpression should be linearized as a single component.
     auto* pathExpr = new IR::PathExpression(new IR::Path(IR::ID("path")));
 
@@ -17,7 +17,7 @@ TEST(BFNLinearPath, PathExpression) {
     EXPECT_EQ(pathExpr, linearizer.linearPath->components[0]);
 }
 
-TEST(BFNLinearPath, MemberExpression) {
+TEST(TofinoPathLinearizer, MemberExpression) {
     // A single Member should be linearized as two components: the Member, and
     // the PathExpression it contains.
     auto* pathExpr = new IR::PathExpression(new IR::Path(IR::ID("path")));
@@ -32,7 +32,7 @@ TEST(BFNLinearPath, MemberExpression) {
     EXPECT_EQ(member, linearizer.linearPath->components[1]);
 }
 
-TEST(BFNLinearPath, NestedMemberExpressions) {
+TEST(TofinoPathLinearizer, NestedMemberExpressions) {
     // Nested Member expressions should be linearized into a sequence of
     // components that matches the components that the corresponding P4
     // expression would have.
@@ -52,7 +52,7 @@ TEST(BFNLinearPath, NestedMemberExpressions) {
     EXPECT_EQ(fourth, linearizer.linearPath->components[3]);
 }
 
-TEST(BFNLinearPath, RejectUnexpectedExpressions) {
+TEST(TofinoPathLinearizer, RejectUnexpectedExpressions) {
     // If there are any expression types we don't expect in the path, we should
     // fail to linearize it.
     auto* first = new IR::PathExpression(new IR::Path(IR::ID("first")));
@@ -66,7 +66,7 @@ TEST(BFNLinearPath, RejectUnexpectedExpressions) {
     ASSERT_FALSE(bool(linearizer.linearPath));
 }
 
-TEST(BFNLinearPath, RejectHeaderStackIndexing) {
+TEST(TofinoPathLinearizer, RejectHeaderStackIndexing) {
     // For now, at least, PathLinearizer doesn't support indexing into header
     // stacks.
     auto* first = new IR::PathExpression(new IR::Path(IR::ID("first")));
@@ -80,7 +80,7 @@ TEST(BFNLinearPath, RejectHeaderStackIndexing) {
     ASSERT_FALSE(bool(linearizer.linearPath));
 }
 
-TEST(BFNLinearPath, RejectNonPathlikeExpressions) {
+TEST(TofinoPathLinearizer, RejectNonPathlikeExpressions) {
     // Attempting to linearize an expression which isn't path-like should throw
     // an exception.
     PathLinearizer linearizer;

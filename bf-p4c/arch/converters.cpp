@@ -72,7 +72,7 @@ const IR::Node* IngressControlConverter::preorder(IR::P4Control* node) {
     paramList->push_back(headers);
 
     auto* meta = params->parameters.at(1);
-    tnaParams.emplace("ig_md", meta->name);
+    tnaParams.emplace("md", meta->name);
     paramList->push_back(meta);
 
     // add ig_intr_md
@@ -141,7 +141,7 @@ const IR::Node* EgressControlConverter::preorder(IR::P4Control *node) {
     paramList->push_back(headers);
 
     auto* meta = params->parameters.at(1);
-    tnaParams.emplace("eg_md", meta->name);
+    tnaParams.emplace("md", meta->name);
     paramList->push_back(meta);
 
     // add eg_intr_md
@@ -239,7 +239,7 @@ const IR::Node* IngressDeparserConverter::preorder(IR::P4Control* node) {
     auto meta = structure->user_metadata;
     param = new IR::Parameter(meta->name, meta->annotations,
                               IR::Direction::In, meta->type);
-    tnaParams.emplace("metadata", param->name);
+    tnaParams.emplace("md", param->name);
     paramList->push_back(param);
 
     // add ingress intrinsic metadata
@@ -338,7 +338,7 @@ const IR::Node* EgressDeparserConverter::preorder(IR::P4Control* node) {
     auto meta = structure->user_metadata;
     param = new IR::Parameter(meta->name, meta->annotations,
                               IR::Direction::In, meta->type);
-    tnaParams.emplace("metadata", param->name);
+    tnaParams.emplace("md", param->name);
     paramList->push_back(param);
 
     // add mirror buffer intrinsic metadata
@@ -405,7 +405,7 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     auto* meta = parser->getApplyParameters()->parameters.at(2);
     auto* param = new IR::Parameter(meta->name, meta->annotations,
                                     IR::Direction::Out, meta->type);
-    tnaParams.emplace("ig_md", meta->name);
+    tnaParams.emplace("md", meta->name);
     paramList->push_back(param);
 
     // add ig_intr_md
@@ -474,7 +474,7 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     auto* meta = params->parameters.at(2);
     auto* param = new IR::Parameter(meta->name, meta->annotations,
                                     IR::Direction::Out, meta->type);
-    tnaParams.emplace("eg_md", meta->name);
+    tnaParams.emplace("md", meta->name);
     paramList->push_back(param);
 
     // add eg_intr_md

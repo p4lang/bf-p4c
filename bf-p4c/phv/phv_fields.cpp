@@ -609,10 +609,10 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         auto gress = VisitingThread(this);
         phv.addTempVar(tv, gress);
 
-        // XXX(seth): `$bridged_metadata_indicator` is a special case, because
+        // XXX(seth): `^bridged_metadata_indicator` is a special case, because
         // it looks like bridged metadata in the IR, but it *must* be placed in
         // a single 8-bit container so that the egress parser works correctly.
-        if (tv->name.endsWith("$bridged_metadata_indicator")) {
+        if (tv->name.endsWith("^bridged_metadata_indicator")) {
             PHV::Field* f = phv.field(tv);
             BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
             f->set_exact_containers(true);
@@ -752,7 +752,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
  * metadata to indicate that.
  *
  * We consider fields to be bridged if they're written to in the special
- * `$bridged_metadata_extract` state that we generate in AddBridgedMetadata.
+ * `^bridged_metadata_extract` state that we generate in AddBridgedMetadata.
  * Using this approach ensures that fields are marked as bridged even if we
  * rebuild the PhvInfo data structure after AddBridgedMetadata has run.
  */
@@ -761,7 +761,7 @@ struct MarkBridgedMetadataFields : public Inspector {
 
  private:
     bool preorder(const IR::BFN::ParserState* state) override {
-        if (!state->name.endsWith("$bridge_metadata_extract")) return true;
+        if (!state->name.endsWith("^bridge_metadata_extract")) return true;
 
         forAllMatching<IR::BFN::Extract>(&state->statements,
                       [&](const IR::BFN::Extract* extract) {
@@ -877,7 +877,7 @@ struct ComputeFieldAlignments : public Inspector {
         // run, since before that there is just one version of the field; that's
         // why we check for "egress::" below.)
         auto* state = findContext<IR::BFN::ParserState>();
-        if (state->name.endsWith("$bridge_metadata_extract") &&
+        if (state->name.endsWith("^bridge_metadata_extract") &&
                 fieldInfo->name.startsWith("egress::")) {
             cstring ingressFieldName = cstring("ingress::")
                                      + fieldInfo->name.substr(strlen("egress::"));

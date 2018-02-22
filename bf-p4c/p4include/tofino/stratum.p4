@@ -437,14 +437,6 @@ extern parser_counter {
     bool is_neg();
 }
 
-// Parser value set
-// The parser value set implements a run-time updatable values that is used to
-// determine parser transition
-extern value_set<D> {
-    value_set(bit<8> size);
-    bool is_member(in D data);
-}
-
 // Parser priority
 // The ingress parser drops the packet based on priority if the input buffer is
 // indicating congestion; egress parser does not perform any dropping.

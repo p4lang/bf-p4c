@@ -292,7 +292,7 @@ TEST_F(TofinoFieldAlignment, DISABLED_BridgedMetadataRespectsAlignment) {
     bool foundBridgedMetadataState = false;
     forAllMatching<IR::BFN::ParserState>(pipe->thread[EGRESS].parser,
                   [&](const IR::BFN::ParserState* state) {
-        if (state->name != "$bridge_metadata_extract") return;
+        if (state->name != "^bridge_metadata_extract") return;
         foundBridgedMetadataState = true;
 
         ASSERT_EQ(1u, state->statements.size());

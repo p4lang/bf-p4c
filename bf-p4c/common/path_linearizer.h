@@ -1,13 +1,9 @@
-#ifndef BF_P4C_COMMON_LINEAR_PATH_H_
-#define BF_P4C_COMMON_LINEAR_PATH_H_
+#ifndef BF_P4C_COMMON_PATH_LINEARIZER_H_
+#define BF_P4C_COMMON_PATH_LINEARIZER_H_
 
 #include <boost/optional.hpp>
 #include <vector>
 #include "ir/ir.h"
-
-namespace P4 {
-class TypeMap;
-}  // namespace P4
 
 namespace BFN {
 
@@ -67,4 +63,4 @@ struct PathLinearizer : public Inspector {
 
 }  // namespace BFN
 
-#endif  /* BF_P4C_COMMON_LINEAR_PATH_H_ */
+#endif  /* BF_P4C_COMMON_PATH_LINEARIZER_H_ */
