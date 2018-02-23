@@ -137,9 +137,22 @@ void AttachedTables::pass0(MatchTable *self) {
         auto type = m->set_match_table(self, m.args.size() > 0);
         if (type != Table::METER && type != Table::STATEFUL)
             error(m.lineno, "%s is not a meter table", m->name()); }
-    for (auto &s : statefuls)
-        if (s.check() && s->set_match_table(self, s.args.size() > 1) != Table::STATEFUL)
-            error(s.lineno, "%s is not a stateful table", s->name());
+    for (auto &s : statefuls) {
+        if (!s.check()) continue;
+        bool default_action_arg = false;
+        // If no args are present, stateful is direct running default action. We
+        // assume action is at 0 and add an action arg
+        if (s.args.size() == 0) default_action_arg = true;
+        if (s.args.size() > 0) {
+            // If no action name argument is present and action bits size > 3
+            // (bit 2 - Meter Type, bit 1:0 - 1 of 4 instructions)
+            if (s.args[0].type != Table::Call::Arg::Name) {
+                if ((s.args.size() == 1) && (s.args[0].size() > 3))
+                default_action_arg = true; } }
+        // Add default action at 0
+        if (default_action_arg) s.args.emplace(s.args.begin(), 0);
+        if (s->set_match_table(self, s.args.size() > 1) != Table::STATEFUL)
+            error(s.lineno, "%s is not a stateful table", s->name()); }
 }
 
 void AttachedTables::pass1(MatchTable *self) {
@@ -191,9 +204,7 @@ void AttachedTables::pass1(MatchTable *self) {
         if (s.args.size() > 0) {
             if (s.args[0].type == Table::Call::Arg::Name) {
                 if (!salu->actions || !salu->actions->exists(s.args[0].name()))
-                    error(selector.lineno, "No action or field named %s", s.args[0].name());
-            } else if (s.args.size() == 1 && (s.args[0].size() > 3 || s.args.size() == 0)) {
-                s.args.emplace(s.args.begin(), 0); } }
+                    error(selector.lineno, "No action or field named %s", s.args[0].name()); } }
         if (s.args.size() > 1) {
             if (s.args.at(1).type == Table::Call::Arg::Name)
                 error(s.lineno, "No field named %s in format", s.args.at(1).name());
