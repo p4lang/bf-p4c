@@ -44,31 +44,36 @@ class ElimUnused::Instructions : public Transform {
 class ElimUnused::Headers : public PardeTransform {
     ElimUnused &self;
 
-    IR::BFN::ParserState *postorder(IR::BFN::ParserState *state) override {
-        // XXX(seth): It's unclear to me whether there's any reason to maintain
-        // these restrictions.
-        if (state->name == "ingress::$ingress_metadata_shim" ||
-            state->name == "egress::$egress_metadata_shim")
-            return state;  // do not eliminate the shims
-        if (state->name == "ingress::start$")
-            /* FIXME -- it SHOULD be ok to eliminate this if it isn't needed in the
-             * ingress pipe (all processing done in egress pipe), but harlyn doesn't
-             * like it */
-            return state;
-        if (state->name == "egress::start$")
-            /* FIXME -- similar reason to ingress::start$. In addition, eliminating
-             * start state in egress triggers a NULL check in IR */
-            return state;
+    IR::BFN::Transition *postorder(IR::BFN::Transition *transition) override {
+        const auto* next = transition->next;
 
-        if (!state->statements.empty()) return state;
+        if (!next)
+            return transition;
 
-        for (auto* transition : state->transitions) {
-            if (transition->next) return state;
-            if (transition->shift && *transition->shift == 0) return state;
+        // If the next state has any statement, any branching, it's not dead.
+        if (next->statements.size() > 0 || next->transitions.size() > 1)
+            return transition;
+
+        // No transition
+        if (next->transitions.size() == 0) {
+            transition->next = nullptr;
+            return transition;
         }
 
-        LOG1("ELIMINATING parser state " << state->name);
-        return nullptr; }
+        auto* next_single_transition = *next->transitions.begin();
+        // Not a leaf state.
+        if (next_single_transition->next != nullptr)
+            return transition;
+
+        // Eliminate that state.
+        transition->next = nullptr;
+        if (next_single_transition->shift)
+            transition->shift = *transition->shift + *next_single_transition->shift;
+
+        LOG1("ELIMINATING parser state " << next->name);
+        return transition;
+    }
+
 
     bool hasDefs(const IR::Expression* fieldRef) const {
         // XXX(seth): We should really be checking if any reaching definition
