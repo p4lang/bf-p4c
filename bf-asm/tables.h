@@ -559,11 +559,13 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     void check_next(Ref &next, Actions::Action *act = nullptr);
     bool choose_logical_id(const slist<Table *> *work = nullptr);
     virtual int hit_next_size() const { return hit_next.size(); }
-    p4_param *find_p4_param(std::string &s) {
+    p4_param *find_p4_param(std::string s) {
+        remove_name_tail_range(s);
         for (auto &p : p4_params_list)
             if (p.name == s) return &p;
         return nullptr; }
     p4_param *find_p4_param(std::string s, std::string t) {
+        remove_name_tail_range(s);
         for (auto &p : p4_params_list)
             if ((p.name == s) && (p.type == t)) return &p;
         return nullptr; }
