@@ -615,7 +615,8 @@ class ComputeSaveAndSelect: public ParserInspector {
             if (auto* buf = select->source->to<IR::BFN::BufferlikeRVal>()) {
                 return buf->range().shiftedByBytes(byte_shifted);
             } else {
-                ::error("select on a field that is impossible to implement");
+                ::error("select on a field that is impossible to implement for hardware, "
+                        "likely selecting on a field that is written by constants: %1%", select);
                 return nw_bitrange(); }
         }
     };
@@ -729,8 +730,8 @@ class ComputeSaveAndSelect: public ParserInspector {
                 // by downstream states because of brother's decision.
                 if (!reg_choice) {
                     // throw error message saying that it's impossible.
-                    ::error("Too much data for parse matcher, register not enough for %1%",
-                            cstring::to_cstring(unresolved.select));
+                    ::error("Too much data for parse matcher, not enough register for %1%",
+                            unresolved.select);
                     return;
                 }
 
