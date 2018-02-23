@@ -968,21 +968,27 @@ ExtractBackendPipe::ExtractBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
         new GetTofinoTables(refMap, typeMap, EGRESS, rv, converted),
         new ExtractParde(rv),
         new ExtractChecksum(rv),
+        new ExtractResubmitFieldPackings(refMap, typeMap, &resubmitPackings),
+        new ExtractMirrorFieldPackings(refMap, typeMap, &mirrorPackings),
     });
 }
 
 // XXX(hanw): these passes should've been done in the midend with frontend IR.
 ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
                                        IR::BFN::Pipe *rv, DeclarationConversions &converted,
+                                       const BFN::ResubmitPacking* resubmitPackings,
+                                       const BFN::MirroredFieldListPacking* mirrorPackings,
                                        ParamBinding *bindings, bool useTna) {
-    CHECK_NULL(bindings);
     setName("ProcessBackendPipe");
+    CHECK_NULL(bindings);
+    CHECK_NULL(resubmitPackings);
+    CHECK_NULL(mirrorPackings);
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
     addPasses({
         new AttachTables(refMap, converted),  // add attached tables
         new ProcessParde(rv, useTna),         // add parde metadata
-        new AddMirrorFieldParser(rv, refMap, typeMap),
-        new ExtractResubmit(refMap, typeMap),
+        new PopulateResubmitStateWithFieldPackings(resubmitPackings),
+        new PopulateMirrorStateWithFieldPackings(rv, mirrorPackings),
         /// followings two passes are necessary, because ProcessBackendPipe transforms the
         /// IR::BFN::Pipe objects. If all the above passes can be moved to an earlier midend
         /// pass, then the passes below can possibily be removed.
@@ -1012,7 +1018,10 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, BFN_Options& 
     rv->global_pragmas = collect_pragma.global_pragmas();
 
     ProcessBackendPipe processBackendPipe(&refMap, &typeMap, rv,
-                                          extractBackendPipe.converted, bindings, useTna);
+                                          extractBackendPipe.converted,
+                                          &extractBackendPipe.resubmitPackings,
+                                          &extractBackendPipe.mirrorPackings,
+                                          bindings, useTna);
     processBackendPipe.addDebugHook(options.getDebugHook());
     return rv->apply(processBackendPipe);
 }

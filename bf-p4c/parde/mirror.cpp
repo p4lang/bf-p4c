@@ -12,11 +12,6 @@
 namespace BFN {
 namespace {
 
-using FieldListId = std::pair<gress_t, unsigned>;
-using MirroredFieldList = IR::Vector<IR::Expression>;
-using MirroredFieldLists = std::map<FieldListId, const MirroredFieldList*>;
-using MirroredFieldListPacking = std::map<FieldListId, const FieldPacking*>;
-
 /**
  * Analyze the `mirror_packet.add_metadata()` method within the deparser block,
  * and try to extract the field list.
@@ -98,14 +93,16 @@ checkIfStatement(const IR::IfStatement* ifStatement) {
 }
 
 struct FindMirroredFieldLists : public Inspector {
-    FindMirroredFieldLists(MirroredFieldLists& fieldListsOut,
-                           gress_t gress,
-                           P4::ReferenceMap* refMap,
-                           P4::TypeMap* typeMap)
-      : fieldListsOut(fieldListsOut), gress(gress),
-        refMap(refMap), typeMap(typeMap) { }
+    FindMirroredFieldLists(P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
+      : refMap(refMap), typeMap(typeMap) { }
 
     bool preorder(const IR::MethodCallStatement* call) override {
+        auto deparser = findContext<IR::BFN::TranslatedP4Deparser>();
+        if (!deparser)
+            return call;
+
+        auto gress = deparser->thread;
+
         auto* mi = P4::MethodInstance::resolve(call, refMap, typeMap);
         if (auto* em = mi->to<P4::ExternMethod>()) {
             cstring externName = em->actualExternType->name;
@@ -125,13 +122,13 @@ struct FindMirroredFieldLists : public Inspector {
 
         unsigned mirrorIdx = (*mirrorIdxConstant)->asInt();
         BUG_CHECK((mirrorIdx & ~0x07) == 0, "Mirror index is more than 3 bits?");
-        fieldListsOut[std::make_pair(gress, mirrorIdx)] = *fieldList;
+        fieldLists[std::make_pair(gress, mirrorIdx)] = *fieldList;
+
+        LOG1("found mirror list");
         return false;
     }
 
- private:
-    MirroredFieldLists& fieldListsOut;
-    gress_t gress;
+    MirroredFieldLists fieldLists;
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
 };
@@ -210,9 +207,16 @@ struct AddMirroredFieldListParser : public Transform {
                              const MirroredFieldListPacking* fieldLists)
           : pipe(pipe), fieldLists(fieldLists) { }
 
+  const IR::BFN::Parser* preorder(IR::BFN::Parser* parser) override {
+      if (parser->gress != EGRESS)
+          prune();
+      return parser;
+  }
+
   const IR::BFN::ParserState* preorder(IR::BFN::ParserState* state) override {
       if (state->name != "$mirrored") return state;
 
+      LOG1("add mirror state");
       // This is the '$mirrored' placeholder state. Generate code to extract
       // mirrored field lists.
       return addMirroredFieldListParser(state->transitions[0]->next);
@@ -280,68 +284,29 @@ struct AddMirroredFieldListParser : public Transform {
 
 }  // namespace
 
-void addMirroredFieldParser(IR::BFN::Pipe* pipe,
-                            const IR::P4Control* ingressDeparser,
-                            const IR::P4Control* egressDeparser,
-                            P4::ReferenceMap* refMap,
-                            P4::TypeMap* typeMap) {
-    CHECK_NULL(pipe);
-    CHECK_NULL(ingressDeparser);
-    CHECK_NULL(egressDeparser);
-    CHECK_NULL(refMap);
-    CHECK_NULL(typeMap);
-
-    MirroredFieldLists fieldLists;
-    FindMirroredFieldLists findIgFieldLists(fieldLists, INGRESS, refMap, typeMap);
-    ingressDeparser->apply(findIgFieldLists);
-    FindMirroredFieldLists findEgFieldLists(fieldLists, EGRESS, refMap, typeMap);
-    egressDeparser->apply(findEgFieldLists);
-
-    auto* fieldPackings = new MirroredFieldListPacking;
-    for (auto& fieldList : fieldLists) {
-        auto* packing = packMirroredFieldList(fieldList.second);
-        fieldPackings->emplace(fieldList.first, packing);
-    }
-
-    AddMirroredFieldListParser addParser(pipe, fieldPackings);
-    pipe->thread[EGRESS].parser =
-      pipe->thread[EGRESS].parser->apply(addParser);
-}
-
-class CollectFieldLists : public Inspector {
- public:
-    CollectFieldLists(MirroredFieldLists *fieldLists, P4::ReferenceMap *refMap,
-                      P4::TypeMap *typeMap)
-        : fieldLists(fieldLists), refMap(refMap), typeMap(typeMap) {
-        CHECK_NULL(fieldLists);
-    }
-
-    bool preorder(IR::BFN::TranslatedP4Deparser* dp) {
-        gress_t thread = dp->thread;
-        FindMirroredFieldLists findFieldLists(*fieldLists, thread, refMap, typeMap);
-        dp->apply(findFieldLists);
-        return false;
-    }
-
- private:
-    MirroredFieldLists *fieldLists;
-    P4::ReferenceMap *refMap;
-    P4::TypeMap *typeMap;
-};
-
-AddMirrorFieldParser::AddMirrorFieldParser(IR::BFN::Pipe* pipe,
-                                           P4::ReferenceMap *refMap, P4::TypeMap *typeMap) {
-    BFN::MirroredFieldLists fieldLists;
-    auto* fieldPackings = new BFN::MirroredFieldListPacking;
+ExtractMirrorFieldPackings::ExtractMirrorFieldPackings(P4::ReferenceMap *refMap,
+                                                       P4::TypeMap *typeMap,
+                                                       MirroredFieldListPacking* fieldPackings)
+    : fieldPackings(fieldPackings) {
+    CHECK_NULL(fieldPackings);
+    auto findMirror = new FindMirroredFieldLists(refMap, typeMap);
     addPasses({
-        new BFN::CollectFieldLists(&fieldLists, refMap, typeMap),
-        new VisitFunctor([this, fieldLists, fieldPackings]() {
-            for (auto& fieldList : fieldLists) {
+        findMirror,
+        new VisitFunctor([this, findMirror, fieldPackings]() {
+            for (auto& fieldList : findMirror->fieldLists) {
                 auto* packing = BFN::packMirroredFieldList(fieldList.second);
                 fieldPackings->emplace(fieldList.first, packing);
             }
         }),
-        new BFN::AddMirroredFieldListParser(pipe, fieldPackings)
+    });
+}
+
+PopulateMirrorStateWithFieldPackings::PopulateMirrorStateWithFieldPackings(
+        IR::BFN::Pipe* pipe, const MirroredFieldListPacking* fieldPackings) {
+    CHECK_NULL(fieldPackings);
+    auto addMirrorParserState = new AddMirroredFieldListParser(pipe, fieldPackings);
+    addPasses({
+        addMirrorParserState,
     });
 }
 

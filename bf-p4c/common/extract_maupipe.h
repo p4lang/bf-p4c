@@ -7,6 +7,8 @@
 #include "frontends/p4/typeMap.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/common/param_binding.h"
+#include "bf-p4c/parde/resubmit.h"
+#include "bf-p4c/parde/mirror.h"
 
 class BFN_Options;
 
@@ -94,6 +96,8 @@ class ExtractBackendPipe : public PassManager {
                        IR::BFN::Pipe* rv, ParamBinding *bindings);
 
     DeclarationConversions converted;
+    ResubmitPacking resubmitPackings;
+    MirroredFieldListPacking mirrorPackings;
 };
 
 /// must be applied to IR::BFN::Pipe
@@ -101,6 +105,8 @@ class ProcessBackendPipe : public PassManager {
  public:
     ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
                        IR::BFN::Pipe* rv, DeclarationConversions &converted,
+                       const BFN::ResubmitPacking *resubmitPackings,
+                       const BFN::MirroredFieldListPacking *mirrorPackings,
                        ParamBinding *bindings, bool useTna);
 };
 

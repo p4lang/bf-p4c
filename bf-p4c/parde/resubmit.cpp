@@ -21,10 +21,6 @@ namespace BFN {
  * or boost::none if the resubmit code was invalid.
  */
 
-using ResubmitSources = IR::Vector<IR::Expression>;
-using ResubmitExtracts = std::map<unsigned, const ResubmitSources*>;
-using ResubmitPacking = std::map<unsigned, const FieldPacking*>;
-
 boost::optional<ResubmitSources*>
 analyzeResubmitStatement(const IR::MethodCallStatement* statement) {
     auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
@@ -90,7 +86,7 @@ checkIfStatement(const IR::IfStatement* ifStatement) {
     return constant;
 }
 
-class FindResubmit : public ParserInspector {
+class FindResubmit : public DeparserInspector {
     bool preorder(const IR::MethodCallStatement* node) override {
         auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
         if (auto* em = mi->to<P4::ExternMethod>()) {
@@ -109,7 +105,8 @@ class FindResubmit : public ParserInspector {
         }
 
         auto resubmit = analyzeResubmitStatement(node);
-        if (resubmit) extracts.emplace((*resubmit_idx)->asInt(), *resubmit);
+        if (resubmit)
+            extracts.emplace((*resubmit_idx)->asInt(), *resubmit);
         return false;
     }
 
@@ -225,18 +222,29 @@ extractResubmit(const IR::P4Control* deparser, IR::BFN::Pipe* pipe,
     return std::make_pair(deparser, pipe);
 }
 
-ExtractResubmit::ExtractResubmit(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) {
+ExtractResubmitFieldPackings::ExtractResubmitFieldPackings(P4::ReferenceMap *refMap,
+                                                           P4::TypeMap *typeMap,
+                                                           ResubmitPacking* fieldPackings)
+    : fieldPackings(fieldPackings) {
+    CHECK_NULL(fieldPackings);
     auto findResubmit = new FindResubmit(refMap, typeMap);
-    auto fieldPackings = new ResubmitPacking;
     addPasses({
         findResubmit,
         new VisitFunctor([this, findResubmit, fieldPackings]() {
             for (auto extract : findResubmit->extracts) {
                 auto packing = packResubmitFields(extract.second);
+                LOG1("field packing" << packing);
                 fieldPackings->emplace(extract.first, packing);
             }
         }),
-        new AddResubmitParser(fieldPackings)
+    });
+}
+
+PopulateResubmitStateWithFieldPackings::PopulateResubmitStateWithFieldPackings(
+    const ResubmitPacking *fieldPackings) : fieldPackings(fieldPackings) {
+    auto addResubmitParser = new AddResubmitParser(fieldPackings);
+    addPasses({
+         addResubmitParser,
     });
 }
 

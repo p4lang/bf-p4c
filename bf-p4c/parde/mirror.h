@@ -17,6 +17,11 @@ class TypeMap;
 
 namespace BFN {
 
+using FieldListId = std::pair<gress_t, unsigned>;
+using MirroredFieldList = IR::Vector<IR::Expression>;
+using MirroredFieldLists = std::map<FieldListId, const MirroredFieldList*>;
+using MirroredFieldListPacking = std::map<FieldListId, const FieldPacking*>;
+
 /**
  * Searches for invocations of the `mirror_packet.add_metadata()` extern in
  * deparser controls and generates a parser program that will extract the
@@ -38,9 +43,18 @@ void addMirroredFieldParser(IR::BFN::Pipe* pipe,
                             P4::ReferenceMap* refMap,
                             P4::TypeMap* typeMap);
 
-class AddMirrorFieldParser : public PassManager {
+class ExtractMirrorFieldPackings : public PassManager {
  public:
-    AddMirrorFieldParser(IR::BFN::Pipe* pipe, P4::ReferenceMap *refMap, P4::TypeMap *typeMap);
+    ExtractMirrorFieldPackings(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                               MirroredFieldListPacking* fieldPackings);
+
+    MirroredFieldListPacking* fieldPackings;
+};
+
+class PopulateMirrorStateWithFieldPackings : public PassManager {
+ public:
+    PopulateMirrorStateWithFieldPackings(IR::BFN::Pipe* pipe,
+                                         const MirroredFieldListPacking* fieldPackings);
 };
 
 }  // namespace BFN

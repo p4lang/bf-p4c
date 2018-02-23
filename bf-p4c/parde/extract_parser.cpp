@@ -612,6 +612,12 @@ void BFN::ExtractParser::postorder(const IR::BFN::TranslatedP4Parser* parser) {
     rv->thread[thread].parser = BFN::GetTofinoParser::extract(thread, parser);
 }
 
+/// XXX(hanw): This pass must be applied to IR::BFN::Pipe. It modifies the
+/// ingress and egress parser to insert parser state that deals with tofino
+/// intrinsic metadata and resubmit/mirror metadata. It does not have to be
+/// in the backend though. The compiler should be able to insert placeholder
+/// parser state in the midend instead, and let the backend to insert the
+/// intrinsic metadata extraction logic based on the target device (tofino/jbay).
 ProcessParde::ProcessParde(IR::BFN::Pipe* rv, bool useTna) {
     setName("ProcessParde");
     addPasses({
