@@ -1083,4 +1083,10 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_l2
   switch_dc_basic
+)
+
+# BRIG-487
+p4c_add_xfail_reason("tofino"
+  "No hash dist .* in table .*"
+  extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
   )

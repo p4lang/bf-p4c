@@ -39,7 +39,6 @@ const IR::MAU::Action *SplitInstructions::preorder(IR::MAU::Action *act) {
 
 const IR::MAU::Instruction *SplitInstructions::preorder(IR::MAU::Instruction *instr) {
     write_found = false;
-    hash_dist = false;
     meter_color = false;
     split_location = split_fields.end();
     return instr;
@@ -87,7 +86,6 @@ const IR::MAU::StatefulAlu *SplitInstructions::preorder(IR::MAU::StatefulAlu *sa
 }
 
 const IR::MAU::HashDist *SplitInstructions::preorder(IR::MAU::HashDist *hd) {
-    hash_dist = true;
     prune(); return hd;
 }
 
@@ -102,9 +100,6 @@ const IR::MAU::Instruction *SplitInstructions::postorder(IR::MAU::Instruction *i
     if (split_location == split_fields.end()) {
         return instr;
     } else {
-        if (hash_dist)
-            warning("%s: Due to lacking assembler support, cannot currently split "
-                    "hash distribution units %s", instr->srcInfo, *instr);
         if (meter_color)
             ::error("%s: The compiler currently cannot support the splitting of instructions "
                     "that contain meter color: %s", instr->srcInfo, *instr);
@@ -129,7 +124,7 @@ const IR::MAU::Action *SplitInstructions::postorder(IR::MAU::Action *act) {
             split_instr->operands.push_back(write.expr);
 
             for (auto read : field_action.reads) {
-                 split_instr->operands.push_back(read.expr);
+                split_instr->operands.push_back(read.expr);
             }
             act->action.push_back(split_instr);
         }

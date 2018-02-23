@@ -367,9 +367,8 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
         if (auto *mem = decl->arguments->at(0)->to<IR::Member>()) {
             algorithm = mem->member;
         }
-        safe_vector<int> init_units;
         auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size),
-                                         prim->operands[1], algorithm, init_units, prim);
+                                         prim->operands[1], algorithm, prim);
         hd->bit_width = size;
         if (op_size > 1) {
             if (auto *constant = prim->operands[1]->to<IR::Constant>()) {
@@ -459,7 +458,6 @@ void StatefulHashDistSetup::Scan::postorder(const IR::MAU::Instruction *instr) {
 
 IR::MAU::HashDist *StatefulHashDistSetup::create_hash_dist(const IR::Expression *expr,
                                                            const IR::Primitive *prim) {
-    safe_vector<int> init_units;
     cstring algorithm = "identity";
     auto hash_field = expr;
     if (auto c = expr->to<IR::Cast>())
@@ -467,7 +465,7 @@ IR::MAU::HashDist *StatefulHashDistSetup::create_hash_dist(const IR::Expression 
 
     int size = hash_field->type->width_bits();
     auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), hash_field,
-                                     algorithm, init_units, prim);
+                                     algorithm, prim);
     hd->algorithm = algorithm;
     hd->bit_width = size;
     return hd;

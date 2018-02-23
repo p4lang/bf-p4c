@@ -185,10 +185,16 @@ struct IXBar {
             int group = -1;
             unsigned slice = 0;  // bitmask of the 3 hash distributions pre-units
             unsigned long bit_mask = 0;
+            std::map<int, bitrange> bit_starts;
             cstring algorithm;
 
             void clear() {
                 allocated = false;
+                unit = -1;
+                group = -1;
+                slice = 0;
+                bit_mask = 0;
+                bit_starts.clear();
             }
         };
 
@@ -227,6 +233,7 @@ struct IXBar {
         std::map<int, int> shifts;  // Controls the mau_hash_group_shift register per unit
         std::map<int, bitvec> masks;  // Control the mau_hash_group_mask register per unit
         // Classification of what the hash distribution is used for
+        const IR::MAU::HashDist *original_hd;
         const IR::Expression *field_list;  // For a comparison between IR::HashDist and this
 
         void clear() {
@@ -237,7 +244,7 @@ struct IXBar {
             shifts.clear();
             masks.clear();
         }
-        explicit HashDistUse(const IR::Expression* fl) : use(), field_list(fl) {}
+        explicit HashDistUse(const IR::MAU::HashDist* hd) : use(), original_hd(hd) {}
     };
 
 
@@ -332,9 +339,10 @@ struct IXBar {
     bool allocStateful(const IR::MAU::StatefulAlu *, const PhvInfo &phv, Use &alloc);
     bool allocMeter(const IR::MAU::Meter *, const PhvInfo &phv, Use &alloc);
     bool allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashDistType hdt,
-                       const PhvInfo &phv, IXBar::Use &alloc, bool second_try, cstring name);
+                       const PhvInfo &phv, const ActionFormat::Use *af, IXBar::Use &alloc,
+                       bool second_try, cstring name);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
-                    const LayoutOption *lo);
+                    const LayoutOption *lo, const ActionFormat::Use *af);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
     void update(const IR::MAU::Table *tbl) {
@@ -413,9 +421,11 @@ struct IXBar {
         bool is_atcam = false, bool partition = false);
     bool allocHashDistAddress(const IR::MAU::HashDist *hd, const unsigned used_hash_dist_groups,
         const unsigned long used_hash_dist_bits, const unsigned &hash_table_input,
-        unsigned &slice, unsigned long &bit_mask, cstring name);
-    bool allocHashDistImmediate(const IR::MAU::HashDist *hd, const unsigned used_hash_dist_slices,
-        const unsigned &hash_table_input, unsigned &slice, unsigned long &bit_mask, cstring name);
+        unsigned &slice, unsigned long &bit_mask, std::map<int, bitrange> &bit_starts,
+        cstring name);
+    bool allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionFormat::Use *af,
+        const unsigned used_hash_dist_slices, const unsigned &hash_table_input, unsigned &slice,
+        unsigned long &bit_mask, std::map<int, bitrange> &bit_starts, cstring name);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {

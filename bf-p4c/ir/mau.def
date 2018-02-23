@@ -503,7 +503,6 @@ class HashDist : Expression {
     Expression           field_list;
     cstring              algorithm;
     int                  bit_width = 0;
-    safe_vector<int>     units;
     // Pointer to the IR::Primitive that was used to generate this HashDist
     // (and then removed).  This is not visited as part of IR traversal.
     Primitive            prim;

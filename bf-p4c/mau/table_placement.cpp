@@ -340,8 +340,10 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         current_ixbar.update(p->name, p->resources);
     }
 
-    if (!current_ixbar.allocTable(next->table, phv, *resources, sue.preferred()) ||
-        !current_ixbar.allocTable(next->gw, phv, *resources, sue.preferred())) {
+    if (!current_ixbar.allocTable(next->table, phv, *resources, sue.preferred(),
+                                  sue.preferred_action_format()) ||
+        !current_ixbar.allocTable(next->gw, phv, *resources, sue.preferred(),
+                                  sue.preferred_action_format())) {
         resources->clear_ixbar();
         return false; }
 
@@ -1175,35 +1177,6 @@ IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
         });
     }
     return seq;
-}
-
-/** This is to specifically link up hash distribution input xbar information to
- *  to the actual IR node, as the asm output looks directly at the IR node in order to understand
- *  which actual hash distribution unit it needs to use
- */
-IR::Expression *TablePlacement::preorder(IR::MAU::HashDist *hd) {
-    auto *tbl = findContext<IR::MAU::Table>();
-    auto hash_dists = tbl->resources->hash_dists;
-
-    IXBar::HashDistUse::HashDistType type = IXBar::HashDistUse::UNKNOWN;
-
-    if (auto back_at = findContext<IR::MAU::BackendAttached>()) {
-        if (back_at->attached->is<IR::MAU::Counter>())
-            type = IXBar::HashDistUse::COUNTER_ADR;
-        else if (back_at->attached->is<IR::MAU::Meter>())
-            type = IXBar::HashDistUse::METER_ADR;
-        else if (back_at->attached->is<IR::MAU::StatefulAlu>())
-            type = IXBar::HashDistUse::METER_ADR;
-    } else if (findContext<IR::MAU::Action>()) {
-        type = IXBar::HashDistUse::IMMEDIATE;
-    }
-
-    for (auto hash_dist : hash_dists) {
-        if (hash_dist.type != type) continue;
-        if (hash_dist.field_list != hd->field_list) continue;
-        hd->units.insert(hd->units.end(), hash_dist.slices.begin(), hash_dist.slices.end());
-    }
-    return hd;
 }
 
 std::multimap<cstring, const TablePlacement::Placed *>::const_iterator

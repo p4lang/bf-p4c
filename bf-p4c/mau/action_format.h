@@ -88,6 +88,8 @@ struct ActionFormat {
                 is_constant = true;
                 constant_value = cv;
             }
+            int field_hi() const { return field_bit + data_loc.popcount() - 1; }
+            int cont_lo() const { return data_loc.min().index(); }
 
             ActionAnalysis::ActionParam::speciality_t speciality
                 = ActionAnalysis::ActionParam::NO_SPECIAL;
@@ -193,7 +195,7 @@ struct ActionFormat {
 
         cont_type_t best_candidate_to_move(int overhead_bytes);
 
-        int find_maximum_immed(bool meter_color);
+        int find_maximum_immed(bool meter_color, int hash_dist_bytes);
         void finalize_min_maxes();
 
         bool overlaps(int max_bytes, location_t loc) {
@@ -205,12 +207,15 @@ struct ActionFormat {
     };
 
 
+    typedef safe_vector<ActionDataPlacement> SingleActionPlacement;
     typedef std::map<cstring, safe_vector<ActionDataPlacement>> ArgFormat;
     typedef std::map<std::pair<cstring, int>, safe_vector<int>> ArgPlacementData;
     typedef std::map<std::pair<cstring, int>, cstring> ConstantRenames;
 
     int action_bytes[LOCATIONS] = {0, 0};
     int action_data_bytes = 0;
+
+    typedef std::map<const IR::MAU::HashDist *, safe_vector<ActionDataPlacement>> HashDistInfo;
 
     /** Contains all of the information on all the action data format and individual arguments
      *  Because we only currently have either only an action data table or action data through
@@ -223,16 +228,14 @@ struct ActionFormat {
         ArgFormat action_data_format;
         std::map<cstring, ArgPlacementData> arg_placement;
         std::map<cstring, ConstantRenames> constant_locations;
+        HashDistInfo hash_dist_placement;
 
         int action_data_bytes[LOCATIONS];
 
         bitvec immediate_mask;
         bitvec total_layouts[LOCATIONS][CONTAINER_TYPES];
+        bitvec hash_dist_layouts[CONTAINER_TYPES];
 
-        /*
-        bitvec total_layouts[CONTAINER_TYPES];
-        bitvec total_layouts_immed[CONTAINER_TYPES];
-        */
         bitvec full_layout_bitmasked;
         bool meter_reserved = false;
 
@@ -244,6 +247,8 @@ struct ActionFormat {
         cstring get_format_name(int start_byte, cont_type_t type, bool immediate, bitvec range,
             bool use_range, bool bitmasked_set = false) const;
         bool is_meter_color(int start_byte, bool immediate) const;
+        int find_hash_dist(const IR::MAU::HashDist *hd, int field_lo, int field_hi,
+                           int &hash_lo, int &hash_hi) const;
     };
 
     struct failure : public Backtrack::trigger {
@@ -263,25 +268,29 @@ struct ActionFormat {
     bool meter_color = false;
     ActionContainerInfo max_total;
     safe_vector<ActionContainerInfo> init_action_counts;
+    ActionContainerInfo hash_counts;
     safe_vector<ActionContainerInfo> action_counts;
 
     ArgFormat init_format;
+    HashDistInfo init_hash_dist_placement;
     std::map<cstring, ConstantRenames> renames;
 
     bool split_started = false;
 
-    void analyze_all_actions();
+    bool analyze_all_actions();
     void create_placement_non_phv(ActionAnalysis::FieldActionsMap &field_actions_map,
                                   cstring action_name);
     void create_placement_phv(ActionAnalysis::ContainerActionsMap &container_actions_map,
                               cstring action_name);
     void create_from_actiondata(ActionDataPlacement &adp,
-        const ActionAnalysis::ActionParam &read, int container_bit);
+        const ActionAnalysis::ActionParam &read, int container_bit,
+        const IR::MAU::HashDist **hd);
     void create_from_constant(ActionDataPlacement &adp,
         const ActionAnalysis::ActionParam &read, int field_bit, int container_bit,
         int &constant_to_ad_count, PHV::Container container, ConstantRenames &constant_renames);
 
     void initialize_action_counts();
+    bool initialize_hash_dist_counts();
     void calculate_maximum();
     bool new_action_format(bool immediate_allowed, bool &finished);
     void setup_use(safe_vector<Use> &uses);
@@ -293,16 +302,19 @@ struct ActionFormat {
     int check_full_bitmasked(ActionContainerInfo &aci, int max_small_bytes);
     void space_32_containers();
 
-    void space_all_immediate_containers();
-    void space_individ_immed(ActionContainerInfo &aci);
+    int space_hash_dist();
+    void space_all_immediate_containers(int start_byte);
+    void space_individ_immed(ActionContainerInfo &aci, int start_byte);
     void space_32_immed(ActionContainerInfo &aci);
     void space_all_meter_color();
 
+    void align_hash_dist(bitvec hash_layouts_placed[CONTAINER_TYPES]);
     void align_action_data_layouts();
     void reserve_meter_color(ArgFormat &format, ActionContainerInfo &aci,
                              bitvec layouts_placed[CONTAINER_TYPES]);
-    void align_section(ArgFormat &format, ActionContainerInfo &aci, location_t loc,
-        bitmasked_t bm, bitvec layouts_placed[CONTAINER_TYPES],
+    void align_section(SingleActionPlacement &placement_vec, SingleActionPlacement &output_vec,
+        ActionContainerInfo &aci, location_t loc, bitmasked_t bm,
+        bitvec layouts_placed[CONTAINER_TYPES],
         int placed[BITMASKED_TYPES][CONTAINER_TYPES]);
     void find_immed_last(ArgFormat &format, ActionContainerInfo &aci,
         bitvec layouts_placed[CONTAINER_TYPES], int placed[BITMASKED_TYPES][CONTAINER_TYPES]);

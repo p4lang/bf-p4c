@@ -1,4 +1,5 @@
 #include "action_format.h"
+#include "input_xbar.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/log.h"
 
@@ -42,7 +43,7 @@ void ActionFormat::ActionContainerInfo::finalize_min_maxes() {
     }
 }
 
-int ActionFormat::ActionContainerInfo::find_maximum_immed(bool meter_color) {
+int ActionFormat::ActionContainerInfo::find_maximum_immed(bool meter_color, int hash_dist_bytes) {
     int max_byte = counts[IMMED][BYTE] > 0
         ? (counts[IMMED][BYTE] - 1) * 8 + minmaxes[NORMAL][BYTE] : 0;
     int max_half = counts[IMMED][HALF] > 0
@@ -52,7 +53,7 @@ int ActionFormat::ActionContainerInfo::find_maximum_immed(bool meter_color) {
 
     int maximum = 0;
     if (max_byte > 0 && max_half > 0) {
-        if (max_byte > max_half || meter_color) {
+        if ((max_byte > max_half || hash_dist_bytes == 1) && !meter_color) {
             order = FIRST_8;
             maximum = max_half + 16;
         } else {
@@ -151,11 +152,48 @@ bool ActionFormat::Use::is_meter_color(int start_byte, bool immediate) const {
     return meter_reserved && immediate && start_byte == (IMMEDIATE_BYTES - 1);
 }
 
+/** Coordination of where a particular slice of hash distribution is allocated within the
+ *   action format, based on where the lo and hi provided field_lo and field_hi
+ */
+int ActionFormat::Use::find_hash_dist(const IR::MAU::HashDist *hd, int field_lo, int field_hi,
+        int &hash_lo, int &hash_hi) const {
+    BUG_CHECK(hash_dist_placement.find(hd) != hash_dist_placement.end(), "Hash Dist IR cannot "
+              "be found within the action format");
+    auto &hd_vec = hash_dist_placement.at(hd);
+    bitvec field_bv = bitvec(field_lo, field_hi - field_lo + 1);
+    int unit_index = -1;
+    int bit_offset = -1;
+    bool split_needed = false;
+    for (auto &placement : hd_vec) {
+        auto &arg_loc = placement.arg_locs[0];
+        bitvec arg_loc_bv(arg_loc.field_bit, arg_loc.data_loc.popcount());
+        if ((arg_loc_bv & field_bv) == arg_loc_bv) {
+            int potential_unit_index = (placement.start * 8) / IXBar::HASH_DIST_BITS;
+            BUG_CHECK(unit_index == -1 || potential_unit_index == unit_index, "Hash distribution "
+                      "illegally split over 16 bit boundary");
+            unit_index = potential_unit_index;
+            bit_offset = (placement.start * 8) % IXBar::HASH_DIST_BITS;
+            if (placement.size == CONTAINER_SIZES[BYTE])
+                split_needed = true;
+        } else if ((arg_loc_bv & field_bv).empty()) {
+            continue;
+        } else {
+            BUG("Cannot find hash distribution correctly");
+        }
+        if (split_needed) {
+            hash_lo = bit_offset;
+            hash_hi = bit_offset + 7;
+        }
+    }
+    return unit_index;
+}
+
 /** The allocation scheme for the action data format and immediate format.
  */
 void ActionFormat::allocate_format(safe_vector<Use> &uses, bool immediate_allowed) {
     LOG2("Allocating Table Format for " << tbl->name);
-    analyze_all_actions();
+    if (!analyze_all_actions())
+        return;
     LOG2("Analysis finished");
 
     while (true) {
@@ -236,7 +274,8 @@ void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &fie
 /** Creates an ActionDataPlacement from an ActionArg, correctly verified from the PHV allocation
  */
 void ActionFormat::create_from_actiondata(ActionDataPlacement &adp,
-        const ActionAnalysis::ActionParam &read, int container_bit) {
+        const ActionAnalysis::ActionParam &read, int container_bit,
+        const IR::MAU::HashDist **hd) {
     bitvec data_location;
     bool single_loc = true;
     int field_bit = 0;
@@ -246,13 +285,17 @@ void ActionFormat::create_from_actiondata(ActionDataPlacement &adp,
     }
     data_location.setrange(container_bit, read.size());
     cstring arg_name;
-    if (read.speciality == ActionAnalysis::ActionParam::NO_SPECIAL)
+    if (read.speciality == ActionAnalysis::ActionParam::HASH_DIST) {
+        arg_name = "hash_dist";
+        *hd = read.unsliced_expr()->to<IR::MAU::HashDist>();
+    } else if (read.speciality == ActionAnalysis::ActionParam::NO_SPECIAL) {
         arg_name = read.unsliced_expr()->to<IR::ActionArg>()->name;
-    else if (read.speciality == ActionAnalysis::ActionParam::METER_COLOR)
+    } else if (read.speciality == ActionAnalysis::ActionParam::METER_COLOR) {
         arg_name = "meter";
-    else
+    } else {
         BUG("Currently cannot handle the speciality %d in ActionFormat creation",
             read.speciality);
+    }
 
     adp.arg_locs.emplace_back(arg_name, data_location, field_bit,
                               single_loc);
@@ -307,6 +350,7 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
         // Every instruction in the container process has to have its action data stored
         // in the same action data slot
         bool initialized = false;
+        const IR::MAU::HashDist *hd = nullptr;
         for (auto &field_action : cont_action.field_actions) {
             bitrange bits;
             auto *write_field = phv.field(field_action.write.expr, &bits);
@@ -327,10 +371,11 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
 
             for (auto &read : field_action.reads) {
                 if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL &&
-                    read.speciality != ActionAnalysis::ActionParam::METER_COLOR)
+                    read.speciality != ActionAnalysis::ActionParam::METER_COLOR &&
+                    read.speciality != ActionAnalysis::ActionParam::HASH_DIST)
                     continue;
                 if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
-                    create_from_actiondata(adp, read, container_bits.lo);
+                    create_from_actiondata(adp, read, container_bits.lo, &hd);
                     initialized = true;
                 } else if (read.type == ActionAnalysis::ActionParam::CONSTANT
                     && cont_action.convert_constant_to_actiondata()) {
@@ -341,7 +386,15 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
                 }
             }
         }
-        if (initialized) {
+        if (hd) {
+           adp.size = container.size();
+           if (cont_action.to_bitmasked_set)
+               P4C_UNIMPLEMENTED("Can't yet handle a hash distribution unit in a bitmasked-set");
+           auto &hash_dist_vec = init_hash_dist_placement[hd];
+           if (std::find(hash_dist_vec.begin(), hash_dist_vec.end(), adp) != hash_dist_vec.end())
+               continue;
+           hash_dist_vec.push_back(adp);
+        } else if (initialized) {
             adp.size = container.size();
             if (cont_action.to_bitmasked_set)
                 adp.bitmasked_set = true;
@@ -359,7 +412,7 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
 
 /** Performs the argument analyzer and initializes the vector of ActionContainerInfo
  */
-void ActionFormat::analyze_all_actions() {
+bool ActionFormat::analyze_all_actions() {
     ActionAnalysis::FieldActionsMap field_actions_map;
     ActionAnalysis::ContainerActionsMap container_actions_map;
 
@@ -378,6 +431,7 @@ void ActionFormat::analyze_all_actions() {
             create_placement_phv(container_actions_map, action->name);
     }
     initialize_action_counts();
+    return initialize_hash_dist_counts();
 }
 
 /** Calculate how much action data space is needed per actions.
@@ -422,6 +476,30 @@ void ActionFormat::initialize_action_counts() {
         aci.finalize_min_maxes();
         init_action_counts.push_back(aci);
     }
+}
+
+/** Because all hash can not be enabled per action, but instead used for all actions, the
+ *  hash distribution units are reserved separately from all actions.
+ */
+bool ActionFormat::initialize_hash_dist_counts() {
+    for (auto &hd_vec : Values(init_hash_dist_placement)) {
+        for (auto &adp : hd_vec) {
+            int index = adp.gen_index();
+            hash_counts.counts[IMMED][index]++;
+        }
+    }
+
+    int immediate_bytes_available = IMMEDIATE_BYTES;
+    if (meter_color)
+        immediate_bytes_available--;
+
+
+    if (hash_counts.total_bytes(IMMED) > immediate_bytes_available) {
+        error("In table %s, the number of bytes through hash is larger than the available "
+              "amount %d, and can not be allocated", tbl->name, immediate_bytes_available);
+        return false;
+    }
+    return true;
 }
 
 /** This is the algorithm to choose which bytes to move from the action data table to
@@ -536,6 +614,8 @@ bool ActionFormat::new_action_format(bool immediate_allowed, bool &finished) {
         return false;
     }
 
+    int hash_dist_bytes = hash_counts.total_bytes(IMMED);
+
     action_bytes[ADT] /= 2;
     int overhead_attempt = total_bytes - action_bytes[ADT];
 
@@ -562,7 +642,7 @@ bool ActionFormat::new_action_format(bool immediate_allowed, bool &finished) {
         }
 
         // Currently save an upper byte for meter color, if it is required
-        int max_immediate_bytes = IMMEDIATE_BYTES;
+        int max_immediate_bytes = IMMEDIATE_BYTES - hash_dist_bytes;
         if (meter_color)
             max_immediate_bytes--;
 
@@ -627,7 +707,8 @@ void ActionFormat::calculate_maximum() {
 
     for (auto &aci : action_counts) {
         if (aci.total_bytes(IMMED) == 0) continue;
-        max_total.maximum = std::max(aci.find_maximum_immed(meter_color), max_total.maximum);
+        int local_maximum = aci.find_maximum_immed(meter_color, hash_counts.total_bytes(IMMED));
+        max_total.maximum = std::max(local_maximum, max_total.maximum);
     }
 }
 
@@ -635,7 +716,8 @@ void ActionFormat::calculate_maximum() {
  */
 void ActionFormat::space_containers() {
     space_all_table_containers();
-    space_all_immediate_containers();
+    int start_byte = space_hash_dist();
+    space_all_immediate_containers(start_byte);
     space_all_meter_color();
 }
 
@@ -830,18 +912,22 @@ void ActionFormat::space_all_table_containers() {
  *  because the immediate data is small and doesn't require that many action data bus slots,
  *  it wasn't worth it on the first iteration.
  */
-void ActionFormat::space_individ_immed(ActionContainerInfo &aci) {
+void ActionFormat::space_individ_immed(ActionContainerInfo &aci, int min_start) {
     if (aci.order == ActionContainerInfo::FIRST_8 || aci.order == ActionContainerInfo::FIRST_16) {
         int first = HALF; int second = BYTE;
         if (aci.order == ActionContainerInfo::FIRST_8) {
             first = BYTE;
             second = HALF;
         }
-        if (aci.counts[IMMED][first] > 0)
+        if (aci.counts[IMMED][first] > 0) {
+            if (min_start > 0)
+                BUG_CHECK(first == BYTE && aci.counts[IMMED][first] == 1, "Miscoordination of "
+                          "hash distribution fields and normal fields");
             aci.layouts[IMMED][first]
-                |= bitvec(0, aci.counts[IMMED][first] * (CONTAINER_SIZES[first] / 8));
-        else
+                |= bitvec(min_start, aci.counts[IMMED][first] * (CONTAINER_SIZES[first] / 8));
+        } else {
              BUG("Should never be reached");
+        }
         if (aci.counts[IMMED][second] > 0)
             aci.layouts[IMMED][second]
                 |= bitvec(2, aci.counts[IMMED][second] * (CONTAINER_SIZES[second] / 8));
@@ -851,8 +937,12 @@ void ActionFormat::space_individ_immed(ActionContainerInfo &aci) {
         // TODO: Could do even better byte packing potentially, not currently saving a byte
         for (int i = 0; i < CONTAINER_TYPES; i++) {
             if (aci.counts[IMMED][i] > 0) {
+                int container_bytes = CONTAINER_SIZES[i] / 8;
+                int start_byte = min_start;
+                if (start_byte % container_bytes != 0)
+                    start_byte += (container_bytes - (start_byte % container_bytes));
                 aci.layouts[IMMED][i]
-                    |= bitvec(0, aci.counts[IMMED][i] * CONTAINER_SIZES[i] / 8);
+                    |= bitvec(start_byte, aci.counts[IMMED][i] * CONTAINER_SIZES[i] / 8);
             }
         }
     }
@@ -872,8 +962,28 @@ void ActionFormat::space_all_meter_color() {
     }
 }
 
+/** Reserves spaces for all the hash distribution format.  Returns the first byte to start
+ *  allocating standard immediate data in.  Allocates 32 bits, then 16 bits, then 8 bits
+ *  last until out of space.
+ */
+int ActionFormat::space_hash_dist() {
+    int start_byte = 0;
+    for (int i = FULL; i >= BYTE; i--) {
+        for (int j = 0; j < hash_counts.counts[IMMED][i]; j++) {
+            hash_counts.layouts[IMMED][i] |= bitvec(start_byte, CONTAINER_SIZES[i] / 8);
+            start_byte += CONTAINER_SIZES[i] / 8;
+        }
+    }
+
+    for (int i = 0 ; i < CONTAINER_TYPES; i++) {
+        use->hash_dist_layouts[i] |= hash_counts.layouts[IMMED][i];
+    }
+
+    return start_byte;
+}
+
 /** Simply find the action data formats for immediate data for every single action */
-void ActionFormat::space_all_immediate_containers() {
+void ActionFormat::space_all_immediate_containers(int start_byte) {
     max_bytes = action_bytes[IMMED];
     if (max_bytes == 0)
         return;
@@ -898,11 +1008,26 @@ void ActionFormat::space_all_immediate_containers() {
         return a.minmaxes[IMMED][BYTE] > b.minmaxes[IMMED][BYTE];
     });
 
-
     for (auto &aci : action_counts) {
-        space_individ_immed(aci);
+        space_individ_immed(aci, start_byte);
         for (int i = 0; i < CONTAINER_TYPES; i++)
             use->total_layouts[IMMED][i] |= aci.layouts[IMMED][i];
+    }
+}
+
+/** Goes through each hash distribution action format and pick a space within the action
+ *  for it
+ */
+void ActionFormat::align_hash_dist(bitvec hash_layouts_placed[CONTAINER_TYPES]) {
+    auto hash_dist_placement = init_hash_dist_placement;
+    int placed[BITMASKED_TYPES][CONTAINER_TYPES] = {{0, 0, 0}, {0, 0, 0}};
+
+    for (auto &hd_info : hash_dist_placement) {
+        auto hd = hd_info.first;
+        auto hd_vec = hd_info.second;
+        auto &output_vec = use->hash_dist_placement[hd];
+        align_section(hd_vec, output_vec, hash_counts, IMMED, NORMAL, hash_layouts_placed,
+                      placed);
     }
 }
 
@@ -934,11 +1059,10 @@ void ActionFormat::reserve_meter_color(ArgFormat &format, ActionContainerInfo &a
  *  set object are allocated before all others, as those fields are required to be allocated
  *  in pairs.
  */
-void ActionFormat::align_section(ArgFormat &format, ActionContainerInfo &aci, location_t loc,
-        bitmasked_t bm, bitvec layouts_placed[CONTAINER_TYPES],
-        int placed[BITMASKED_TYPES][CONTAINER_TYPES]) {
+void ActionFormat::align_section(SingleActionPlacement &placement_vec,
+        SingleActionPlacement &output_vec, ActionContainerInfo &aci, location_t loc, bitmasked_t bm,
+        bitvec layouts_placed[CONTAINER_TYPES], int placed[BITMASKED_TYPES][CONTAINER_TYPES]) {
     int multiplier = static_cast<int>(bm) + 1;
-    auto &placement_vec = format[aci.action];
 
     auto it = placement_vec.begin();
     while (it != placement_vec.end()) {
@@ -980,7 +1104,8 @@ void ActionFormat::align_section(ArgFormat &format, ActionContainerInfo &aci, lo
         layouts_placed[index].setrange(init_byte, byte_sz * multiplier);
         placed[bm][index]++;
 
-        use->action_data_format.at(aci.action).push_back(*it);
+        output_vec.push_back(*it);
+        // use->action_data_format.at(aci.action).push_back(*it);
         it = placement_vec.erase(it);
     }
 }
@@ -1046,6 +1171,9 @@ void ActionFormat::find_immed_last(ArgFormat &format, ActionContainerInfo &aci,
  */
 void ActionFormat::align_action_data_layouts() {
     ArgFormat format = init_format;
+    bitvec hash_layouts_placed[CONTAINER_TYPES];
+    align_hash_dist(hash_layouts_placed);
+
     for (auto aci : action_counts) {
         safe_vector<ActionDataPlacement> adp_vector;
         use->action_data_format[aci.action] = adp_vector;
@@ -1053,12 +1181,20 @@ void ActionFormat::align_action_data_layouts() {
             int placed[BITMASKED_TYPES][CONTAINER_TYPES] = {{0, 0, 0}, {0, 0, 0}};
             auto loc = static_cast<location_t>(i);
             bitvec layouts_placed[CONTAINER_TYPES];
+            auto &output_vec = use->action_data_format[aci.action];
+            if (i == IMMED) {
+                for (int i = 0; i < CONTAINER_TYPES; i++) {
+                    layouts_placed[i] |= hash_layouts_placed[i];
+                }
+            }
             if (i == IMMED)
                 reserve_meter_color(format, aci, layouts_placed);
-            align_section(format, aci, loc, BITMASKED, layouts_placed, placed);
+            align_section(format[aci.action], output_vec, aci, loc, BITMASKED, layouts_placed,
+                          placed);
             if (i == IMMED)
                 find_immed_last(format, aci, layouts_placed, placed);
-            align_section(format, aci, loc, NORMAL, layouts_placed, placed);
+            align_section(format[aci.action], output_vec, aci, loc, NORMAL, layouts_placed,
+                          placed);
         }
     }
 

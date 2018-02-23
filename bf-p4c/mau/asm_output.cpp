@@ -590,45 +590,41 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
                 slice_bits_seen += field->size;
             }
         }
+
         int sl_lo = sl.get_lo() + slice_bits_seen;
         int sl_hi = sl.get_hi() + slice_bits_seen;
-        int bits_seen = 0;
         auto bv = bitvec(hdh.bit_mask);
         int start_bit = bv.ffs();
         while (start_bit >= 0) {
             int end_bit = bv.ffz(start_bit);
-            int br_lo = start_bit;
-            int br_hi = end_bit - 1;
-            int br_width = br_hi - br_lo + 1;
-            // Is slice outside of the bitrange
-            if (bits_seen + br_width - 1 < sl_lo) {
-                bits_seen += br_width;
-                start_bit = bv.ffs(end_bit);
-                continue;
+            for (auto position : hdh.bit_starts) {
+                if (!(position.first >= start_bit && position.first < end_bit))
+                    continue;
+                auto br = position.second;
+                int hash_lo = position.first;
+                int hash_hi = position.first + br.size() - 1;
+
+                // Is slice outside of the bitrange
+                if (br.hi < sl_lo || br.lo > sl_hi)
+                    continue;
+
+                // Shrink slice and bitrange until they are the same size
+                auto adapted_sl = sl;
+                if (sl_lo < br.lo)
+                    adapted_sl.shrink_lo(br.lo - sl_lo);
+                else
+                    hash_lo += (sl_lo - br.lo);
+                if (sl_hi > br.hi)
+                    adapted_sl.shrink_hi(sl_hi - br.hi);
+                else
+                    hash_hi -= br.hi - sl_hi;
+
+                safe_vector<Slice> ident_slice;
+                ident_slice.push_back(adapted_sl);
+
+                out << indent << hash_lo << ".." << hash_hi;
+                out << ": " << FormatHash(ident_slice, nullptr, "identity") << std::endl;
             }
-            if (bits_seen > sl_hi) {
-                bits_seen += br_width;
-                start_bit = bv.ffs(end_bit);
-                continue;
-            }
-
-            // Shrink slice and bitrange until they are the same size
-            auto adapted_sl = sl;
-            if (sl_lo < bits_seen)
-                adapted_sl.shrink_lo(bits_seen - sl_lo);
-            else
-                br_lo += (sl_lo - bits_seen);
-            if (sl_hi > bits_seen + br_width - 1)
-                adapted_sl.shrink_hi(sl_hi - (bits_seen + br_width - 1));
-            else
-                br_hi -= (bits_seen + br_width - 1) - sl_hi;
-
-            safe_vector<Slice> ident_slice;
-            ident_slice.push_back(adapted_sl);
-
-            out << indent << br_lo << ".." << br_hi;
-            out << ": " << FormatHash(ident_slice, nullptr, "identity") << std::endl;
-            bits_seen += br_width;
             start_bit = bv.ffs(end_bit);
         }
     }
@@ -786,7 +782,8 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
 
     if (hash_dist_use) {
         for (auto &hash_dist : *hash_dist_use) {
-            emit_single_ixbar(out, indent, &(hash_dist.use), nullptr, hash_dist.field_list);
+            emit_single_ixbar(out, indent, &(hash_dist.use), nullptr,
+                              hash_dist.original_hd->field_list);
         }
     }
 }
@@ -1143,7 +1140,7 @@ class MauAsmOutput::EmitAction : public Inspector {
                        ->to<IR::MAU::AttachedMemory>();
             if (prim->operands.size() < 2) continue;
             if (auto aa = prim->operands.at(1)->to<IR::ActionArg>()) {
-                alias[aa->name] = self.find_indirect_index(at, true, nullptr); } }
+                alias[aa->name] = self.find_indirect_index(at, true, nullptr, table); } }
         out << indent << canon_name(act->name) << ":" << std::endl;
         action_context_json(act);
         out << indent << "- default_action: { "
@@ -1257,17 +1254,27 @@ class MauAsmOutput::EmitAction : public Inspector {
             hd = expr->to<IR::MAU::HashDist>();
         }
         assert(sep);
-        BUG_CHECK(hd != nullptr, "Printing an ivlaid the hash distribution in assembly");
+        BUG_CHECK(hd != nullptr, "Printing an invalid the hash distribution in assembly");
         out << sep << "hash_dist(";
         sep = "";
+        const IXBar::HashDistUse *hd_use = nullptr;
+        auto &hash_dist_uses = table->resources->hash_dists;
+        for (auto &hash_dist_use : hash_dist_uses) {
+            if (hd == hash_dist_use.original_hd) {
+                hd_use = &hash_dist_use;
+                break;
+            }
+        }
+
+        BUG_CHECK(hd_use != nullptr, "Could not find hash distribution unit in link up of tables");
         safe_vector<int> units;
-        if (lo == -1 && hi == -1) {
-            units.insert(units.end(), hd->units.begin(), hd->units.end());
+        int hash_lo = -1; int hash_hi = -1;
+        if (lo >= 0 && hi >= 0) {
+            auto af = table->resources->action_format;
+            int unit_index = af.find_hash_dist(hd, lo, hi, hash_lo, hash_hi);
+            units.push_back(hd_use->slices[unit_index]);
         } else {
-            if (lo < IXBar::HASH_DIST_BITS)
-                units.push_back(hd->units[0]);
-            if (hi >= IXBar::HASH_DIST_BITS)
-                units.push_back(hd->units[1]);
+            units.insert(units.end(), hd_use->slices.begin(), hd_use->slices.end());
         }
 
         for (size_t i = 0; i < units.size(); i++) {
@@ -1276,12 +1283,8 @@ class MauAsmOutput::EmitAction : public Inspector {
                 out << ", ";
         }
 
-        if (lo >= 0 && hi >= 0) {
-            out << ", ";
-            if (units.size() > 1)
-                out << lo << ".." << hi;
-            else
-                out << (lo % IXBar::HASH_DIST_BITS) << ".." << (hi % IXBar::HASH_DIST_BITS);
+        if (hash_lo >= 0 && hash_hi >= 0) {
+            out << ", " << hash_lo << ".." << hash_hi;
         }
 
         out << ")";
@@ -1828,10 +1831,18 @@ class MauAsmOutput::UnattachedName : public MauInspector {
  *  now within the actual IR for Hash Distribution
  */
 std::string MauAsmOutput::find_indirect_index(const IR::MAU::AttachedMemory *at_mem,
-        bool index_only, const IR::MAU::HashDist *hd) const {
-    cstring index_name;
+        bool index_only, const IR::MAU::HashDist *hd, const IR::MAU::Table *tbl) const {
     if (hd != nullptr) {
-        return "hash_dist " + std::to_string(hd->units[0]);
+        auto hash_dist_uses = tbl->resources->hash_dists;
+        const IXBar::HashDistUse *hd_use = nullptr;
+        for (auto &hash_dist_use : hash_dist_uses) {
+            if (hd == hash_dist_use.original_hd) {
+                hd_use = &hash_dist_use;
+                break;
+            }
+        }
+        BUG_CHECK(hd_use != nullptr, "No associated hash distribution group for an address");
+        return "hash_dist " + std::to_string(hd_use->slices[0]);
     }
 
     if (at_mem->is<IR::MAU::Counter>()) {
@@ -1879,7 +1890,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         out << indent << at_mem->kind() << ": ";
         out << find_attached_name(tbl, at_mem);
         if (at_mem->indexed())
-            out << '(' << find_indirect_index(at_mem, false, back_at->hash_dist) << ')';
+            out << '(' << find_indirect_index(at_mem, false, back_at->hash_dist, tbl) << ')';
         out << std::endl;
     }
 
