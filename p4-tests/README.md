@@ -74,18 +74,38 @@ outputs for the P4 program. In general, `$P4C_OUTPUT` corresponds to
 `$PTF_DIR` for the directory containing the PTF tests for your P4 program. In
 general, `$PTF_DIR` corresponds to `p4-tests/p4_<version>/<prog_name>.ptf`.
 
-  1) Starting the Tofino model
+1. **Start the Tofino model**
 
+    ```bash
     sudo tofino-model -l $P4C_OUTPUT/context.json
+    ```
 
-  2) Starting bf_switchd
+1. **Start bf_switchd**
 
+    ```bash
     sudo bf_switchd --install-dir /usr/local --conf-file p4-tests/dummy.conf --skip-p4
+    ```
 
-  3) Pushing P4 config to model / drivers and running PTF tests
+1. **Push P4 config to model / driver**
 
+    ```bash
     ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> --update-config-only
+    ```
+
+1. *(Optional) Turn on model debug output*
+
+    ```bash
+    telnet localhost 8000
+    rmt-set-log-flags
+    ```
+    Use `rmt-clear-log-flags` to turn verbose logging off and
+    `rmt-set-log-flags -t <type> -f <flags>` to set specific logging flags.
+
+1.  **Run PTF tests**
+
+    ```bash
     sudo ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> --ptfdir $PTF_DIR --test-only
+    ```
 
 Any extra argument that you pass to ptf_runner.py will be forwarded to PTF. In
 practice this is convenient when you want to run a single PTF test in the
