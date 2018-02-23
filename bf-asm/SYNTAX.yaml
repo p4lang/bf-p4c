@@ -555,8 +555,18 @@ stage <constant> <thread>:
         bus: <vector>
         hash_dist: <hash_distribution>
             # see hash_action hash_dist
-        initial_value : { lo : <int> , hi : <int> }
+        initial_value: { lo : <int> , hi : <int> }
             # Specify initial value for register, assumed 0 otherwise
+        const_table: <vector> | '{' <index>: <value> '}'
+        math_table:
+          data: <vector> | '{' <index>: <value> '}'
+          invert: true | false
+          shift: <int>
+          scale: <int>
+        sbus and|or [not]:
+          # jbay only -- shared bus use
+          learn: <table> | '[' <table>, ... ']'
+          match: <table> | '[' <table>, ... ']'
         actions:
             <action name> :
                 - <instruction>

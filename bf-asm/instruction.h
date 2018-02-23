@@ -29,13 +29,13 @@ struct Instruction {
 
     enum instruction_set_t { VLIW_ALU=0, STATEFUL_ALU=1, NUM_SETS=2 };
     struct Decode {
-        static std::map<std::string, const Decode *> opcode[NUM_SETS];
-        static void init_vliw_opcodes();
-        bool    type_suffix;
-        Decode(const char *name, int set = VLIW_ALU, bool ts = false) : type_suffix(ts) {
-            opcode[set][name] = this; }
-        const Decode &alias(const char *name, int set = VLIW_ALU, bool ts = false) const {
-            opcode[set][name] = this;
+        static std::multimap<std::string, Decode *> opcode[NUM_SETS];
+        bool            type_suffix;
+        unsigned        targets;
+        Decode(const char *name, int set = VLIW_ALU, bool ts = false);
+        Decode(const char *name, target_t target, int set = VLIW_ALU, bool ts = false);
+        const Decode &alias(const char *name, int set = VLIW_ALU, bool ts = false) {
+            opcode[set].emplace(name, this);
             return *this; }
         virtual Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                                     const VECTOR(value_t) &op) const = 0;

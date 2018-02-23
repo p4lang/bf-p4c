@@ -25,4 +25,4 @@ reflow
 tags
 tfas
 y.output
-test/faillog.txt
+faillog.txt

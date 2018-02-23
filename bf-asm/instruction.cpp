@@ -7,19 +7,35 @@
 #include "tables.h"
 #include "stage.h"
 
-std::map<std::string, const Instruction::Decode *>
+std::multimap<std::string, Instruction::Decode *>
     Instruction::Decode::opcode[Instruction::NUM_SETS];
+
+Instruction::Decode::Decode(const char *name, int set, bool ts) : type_suffix(ts) {
+    targets = ~0U;
+    for (auto d : ValuesForKey(opcode[set], name)) {
+        assert(!(d->targets & 1));
+        targets &= ~d->targets; }
+    assert(targets > 1);
+    opcode[set].emplace(name, this);
+}
+Instruction::Decode::Decode(const char *name, target_t target, int set, bool ts) : type_suffix(ts) {
+    targets = 1 << target;
+    for (auto d : ValuesForKey(opcode[set], name)) {
+        if (d->targets & 1) {
+            d->targets &= ~targets;
+            assert(d->targets > 1); } }
+    opcode[set].emplace(name, this);
+}
 
 Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
                                  const VECTOR(value_t) &op) {
-    Instruction::Decode::init_vliw_opcodes();
-
-    if (auto *d = ::get(Instruction::Decode::opcode[tbl->instruction_set()], op[0].s))
-        return d->decode(tbl, act, op);
+    for (auto d : ValuesForKey(Instruction::Decode::opcode[tbl->instruction_set()], op[0].s)) {
+        if ((d->targets >> options.target) & 1)
+            return d->decode(tbl, act, op); }
     if (auto p = strchr(op[0].s, '.')) {
         std::string opname(op[0].s, p - op[0].s);
-        if (auto *d = ::get(Instruction::Decode::opcode[tbl->instruction_set()], opname)) {
-            if (d->type_suffix)
+        for (auto d : ValuesForKey(Instruction::Decode::opcode[tbl->instruction_set()], opname)) {
+            if (((d->targets >> options.target) & 1) && d->type_suffix)
                 return d->decode(tbl, act, op); } }
     return 0;
 }
@@ -460,8 +476,14 @@ struct AluOP : VLIWInstruction {
         const Decode *swap_args;
         Decode(const char *n, unsigned opc, bool assoc = false) : Instruction::Decode(n), name(n),
             opcode(opc), swap_args(assoc ? this : 0) {}
+        Decode(const char *n, target_t targ, unsigned opc, bool assoc = false)
+        : Instruction::Decode(n, targ), name(n), opcode(opc), swap_args(assoc ? this : 0) {}
         Decode(const char *n, unsigned opc, Decode *sw, const char *alias_name = 0)
         : Instruction::Decode(n), name(n), opcode(opc), swap_args(sw) {
+            if (sw && !sw->swap_args) sw->swap_args = this;
+            if (alias_name) alias(alias_name); }
+        Decode(const char *n, target_t targ, unsigned opc, Decode *sw, const char *alias_name = 0)
+        : Instruction::Decode(n, targ), name(n), opcode(opc), swap_args(sw) {
             if (sw && !sw->swap_args) sw->swap_args = this;
             if (alias_name) alias(alias_name); }
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
@@ -500,6 +522,7 @@ struct AluOP : VLIWInstruction {
 struct AluOP3Src : AluOP {
     struct Decode : AluOP::Decode {
         Decode(const char *n, unsigned opc) : AluOP::Decode(n, opc) {}
+        Decode(const char *n, target_t t, unsigned opc) : AluOP::Decode(n, t, opc) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     };
@@ -679,6 +702,10 @@ struct CondMoveMux : VLIWInstruction {
         bool    src2opt;
         Decode(const char *name, unsigned opc, bool s2opt, unsigned csize, const char *alias_name)
         : name(name), Instruction::Decode(name), opcode(opc), cond_size(csize), src2opt(s2opt) {
+            alias(alias_name); }
+        Decode(const char *name, target_t targ, unsigned opc, bool s2opt, unsigned csize,
+               const char *alias_name) : name(name), Instruction::Decode(name, targ),
+               opcode(opc), cond_size(csize), src2opt(s2opt) {
             alias(alias_name); }
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
@@ -910,8 +937,6 @@ struct Set : VLIWInstruction {
 
 };
 
-AluOP::Decode* Set::opA = nullptr;
-
 DepositField::DepositField(const Set &s)
 : VLIWInstruction(s), dest(s.dest), src1(s.src), src2(s.dest->reg) {}
 
@@ -1126,70 +1151,56 @@ bool ShiftOP::equiv(Instruction *a_) {
         return false;
 }
 
-static void init_vliw_opcodes() {
-    // lifted from MAU uArch 15.1.6
+// lifted from MAU uArch 15.1.6
 
-    static AluOP::Decode        opADD         ("add",           0x23e, true),
-                                opADDC        ("addc",          0x2be, true),
-                                opSUB         ("sub",           0x33e),
-                                opSUBC        ("subc",          0x3be),
-                                opSADDU       ("saddu",         0x03e),
-                                opSADDS       ("sadds",         0x07e),
-                                opSSUBU       ("ssubu",         0x0be),
-                                opSSUBS       ("ssubs",         0x0fe),
-                                opMINU        ("minu",          0x13e, true),
-                                opMINS        ("mins",          0x17e, true),
-                                opMAXU        ("maxu",          0x1be, true),
-                                opMAXS        ("maxs",          0x1fe, true),
-                                opSETZ        ("setz",          0x01e, true),
-                                opNOR         ("nor",           0x05e, true),
-                                opANDCA       ("andca",         0x09e),
-                                opNOTA        ("nota",          0x0de),
-                                opANDCB       ("andcb",         0x11e, &opANDCA),
-                                opNOTB        ("notb",          0x15e, &opNOTA, "not"),
-                                opXOR         ("xor",           0x19e, true),
-                                opNAND        ("nand",          0x19e, true),
-                                opAND         ("and",           0x21e, true),
-                                opXNOR        ("xnor",          0x25e, true),
-                                opB           ("alu_b",         0x29e),
-                                opORCA        ("orca",          0x29e),
-                                opA           ("alu_a",         0x31e, &opB),
-                                opORCB        ("orcb",          0x35e, &opORCA),
-                                opOR          ("or",            0x39e, true),
-                                opSETHI       ("sethi",         0x39e, true);
-    static LoadConst::Decode    opLoadConst   ("load-const");
-    static Set::Decode          opSet         ("set");
-    static NulOP::Decode        opInvalidate  ("invalidate",    0x3800),
-                                opNoop        ("noop",          0x0);
-    static ShiftOP::Decode      opSHL         ("shl",           0x0c, false),
-                                opSHRS        ("shrs",          0x1c, false),
-                                opSHRU        ("shru",          0x14, false),
-                                opFUNSHIFT    ("funnel-shift",  0x04, true);
-    static DepositField::Decode opDepositField;
+static AluOP::Decode        opADD         ("add",           0x23e, true),
+                            opADDC        ("addc",          0x2be, true),
+                            opSUB         ("sub",           0x33e),
+                            opSUBC        ("subc",          0x3be),
+                            opSADDU       ("saddu",         0x03e),
+                            opSADDS       ("sadds",         0x07e),
+                            opSSUBU       ("ssubu",         0x0be),
+                            opSSUBS       ("ssubs",         0x0fe),
+                            opMINU        ("minu",          0x13e, true),
+                            opMINS        ("mins",          0x17e, true),
+                            opMAXU        ("maxu",          0x1be, true),
+                            opMAXS        ("maxs",          0x1fe, true),
+                            opSETZ        ("setz",          0x01e, true),
+                            opNOR         ("nor",           0x05e, true),
+                            opANDCA       ("andca",         0x09e),
+                            opNOTA        ("nota",          0x0de),
+                            opANDCB       ("andcb",         0x11e, &opANDCA),
+                            opNOTB        ("notb",          0x15e, &opNOTA, "not"),
+                            opXOR         ("xor",           0x19e, true),
+                            opNAND        ("nand",          0x19e, true),
+                            opAND         ("and",           0x21e, true),
+                            opXNOR        ("xnor",          0x25e, true),
+                            opB           ("alu_b",         0x29e),
+                            opORCA        ("orca",          0x29e),
+                            opA           ("alu_a",         0x31e, &opB),
+                            opORCB        ("orcb",          0x35e, &opORCA),
+                            opOR          ("or",            0x39e, true),
+                            opSETHI       ("sethi",         0x39e, true);
+static LoadConst::Decode    opLoadConst   ("load-const");
+static Set::Decode          opSet         ("set");
+static NulOP::Decode        opInvalidate  ("invalidate",    0x3800),
+                            opNoop        ("noop",          0x0);
+static ShiftOP::Decode      opSHL         ("shl",           0x0c, false),
+                            opSHRS        ("shrs",          0x1c, false),
+                            opSHRU        ("shru",          0x14, false),
+                            opFUNSHIFT    ("funnel-shift",  0x04, true);
+static DepositField::Decode opDepositField;
 
-    Set::opA = &opA;
+AluOP::Decode* Set::opA = &VLIW::opA;
 
-    if (options.target == TOFINO) {
-        static AluOP3Src::Decode    opBMSET       ("bitmasked-set", 0x2e);
-        static CondMoveMux::Decode  opCondMove    ("cmov",          0x16, true,  5, "conditional-move");
-        static CondMoveMux::Decode  opCondMux     ("cmux",          0x6,  false, 2, "conditional-mux");
+static AluOP3Src::Decode    tf_opBMSET    ("bitmasked-set", TOFINO, 0x2e);
+static CondMoveMux::Decode  tf_opCondMove ("cmov",  TOFINO, 0x16, true,  5, "conditional-move");
+static CondMoveMux::Decode  tf_opCondMux  ("cmux",  TOFINO, 0x6,  false, 2, "conditional-mux");
 #if HAVE_JBAY
-    } else if (options.target == JBAY) {
-        static AluOP3Src::Decode    opBMSET       ("bitmasked-set", 0x0e);
-        static CondMoveMux::Decode  opCondMove    ("cmov",          0x6, true,  5, "conditional-move");
+static AluOP3Src::Decode    jb_opBMSET    ("bitmasked-set", JBAY, 0x0e);
+static CondMoveMux::Decode  jb_opCondMove ("cmov",    JBAY, 0x6, true,  5, "conditional-move");
 
         // TODO add new jbay instructions, alu_gtequ, alu_geqs ...
 #endif // HAVE_JBAY
-    }
-
-}
 
 }  // end namespace VLIW
-
-/* static */
-void Instruction::Decode::init_vliw_opcodes() {
-    if (!Instruction::Decode::opcode[VLIW_ALU].empty())
-        return;
-
-    VLIW::init_vliw_opcodes();
-}

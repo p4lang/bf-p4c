@@ -36,9 +36,7 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "const_table") {
             if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
             if (kv.value.type == tVEC) {
-                for (auto &v : kv.value.vec)
-                    if (CHECKTYPE(v, tINT))
-                        const_vals.push_back(v.i);
+                parse_vector(const_vals, kv.value);
             } else {
                 for (auto &v : kv.value.map)
                     if (CHECKTYPE(v.key, tINT) && CHECKTYPE(v.value, tINT)) {
@@ -54,9 +52,7 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                 if (v.key == "data") {
                     if (!CHECKTYPE2(v.value, tVEC, tMAP)) continue;
                     if (v.value.type == tVEC) {
-                        for (auto &d : v.value.vec)
-                            if (CHECKTYPE(d, tINT))
-                                math_table.data.push_back(d.i);
+                        parse_vector(math_table.data, v.value);
                     } else {
                         math_table.data.resize(16);
                         for (auto &d : v.value.map)
@@ -77,6 +73,23 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                     if (CHECKTYPE(v.value, tINT))
                         math_table.data[v.key.i] = v.value.i;
                 } else error(v.key.lineno, "Unknow item %s in math_table", value_desc(kv.key)); }
+        } else if (kv.key.type == tCMD && kv.key == "sbus" && options.target != TOFINO) {
+            if (!CHECKTYPE(kv.value, tMAP)) continue;
+            for (auto &el : kv.value.map) {
+                if (el.key == "match")
+                    parse_vector(sbus_match, el.value);
+                else if (el.key == "learn")
+                    parse_vector(sbus_learn, el.value);
+                else
+                    warning(el.key.lineno, "ignoring unknown item %s in sbus of table %s",
+                            value_desc(el.key), name()); }
+            for (auto &el : kv.key.vec) {
+                if (el == "and") sbus_and = true;
+                else if (el == "or") sbus_or = true;
+                else if (el == "not") sbus_invert = true;
+                else if (el != "sbus")
+                    warning(el.lineno, "ignoring unknown item %s in sbus of table %s",
+                            value_desc(el), name()); }
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
@@ -163,6 +176,14 @@ void StatefulTable::pass1() {
         error(lineno, "No actions in stateful table %s", name());
     if (math_table)
         math_table.check();
+    for (auto &r : sbus_learn)
+        if (r.check() && (r->table_type() != STATEFUL || r->stage != stage))
+            error(r.lineno, "%s is not a stateful table in the same stage as %s",
+                  r->name(), name());
+    for (auto &r : sbus_match)
+        if (r.check() && (r->table_type() != STATEFUL || r->stage != stage))
+            error(r.lineno, "%s is not a stateful table in the same stage as %s",
+                  r->name(), name());
     AttachedTable::pass1();
 }
 

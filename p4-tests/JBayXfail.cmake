@@ -4,6 +4,15 @@ set (JBAY_XFAIL_TESTS
   # or open a new one.
   )
 
+# All ptf tests xfail due to lack of jbay driver support...
+p4c_add_xfail_reason("jbay"
+  "ERROR:PTF runner:Error when running PTF tests"
+  extensions/p4_tests/p4_16/hash_driven_stats.p4
+  extensions/p4_tests/p4_16/ONLab_packetio.p4
+  extensions/p4_tests/p4_16/ingress_checksum.p4
+  extensions/p4_tests/p4_16/adata_constant_out_of_range_for_immediate.p4
+  )
+
 # These tests compile successfuly and fail in the model when running the STF test
 # the reasons need more characterization
 if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
@@ -16,17 +25,28 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/exact_match3.p4
     testdata/p4_14_samples/exact_match5.p4
     testdata/p4_14_samples/counter4.p4
+    extensions/p4_tests/p4_14/stateful3.p4
   )
 
   # ingress_port isn't being setup properly (STF harness bug)
   p4c_add_xfail_reason("jbay"
     ".* expected packet.* on port .* not seen"
     testdata/p4_14_samples/repeater.p4
+    extensions/p4_tests/p4_14/hash_calculation_32.p4
   )
 
   p4c_add_xfail_reason("jbay"
     "mismatch from expected.* at byte .*"
     testdata/p4_14_samples/bigfield1.p4
+    extensions/p4_tests/p4_14/action_chain_limits.p4
+    extensions/p4_tests/p4_14/adjust_instr5.p4
+    extensions/p4_tests/p4_14/adjust_instr7.p4
+    extensions/p4_tests/p4_14/clot1.p4
+  )
+
+  p4c_add_xfail_reason("jbay"
+    "unexpected packet output on port"
+    extensions/p4_tests/p4_16/parser_metadata_init.p4
   )
 
 endif() # HARLYN_STF
@@ -72,6 +92,7 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "PHV allocation creates a container action impossible within a Tofino ALU"
   testdata/p4_14_samples/action_inline.p4
+  extensions/p4_tests/p4_14/overlay_add_header.p4
   )
 
 p4c_add_xfail_reason("jbay"
@@ -136,6 +157,9 @@ p4c_add_xfail_reason("jbay"
   "Floating point exception"
   # These tests start to fail after introducing PHV packing.
   testdata/p4_14_samples/instruct5.p4
+  extensions/p4_tests/p4_14/adjust_instr3.p4
+  extensions/p4_tests/p4_14/action_default_multiple.p4
+  extensions/p4_tests/p4_14/no_match_miss.p4
   )
 
 p4c_add_xfail_reason("jbay"
@@ -159,3 +183,20 @@ p4c_add_xfail_reason("jbay"
   "Too much data for parse matcher"
   testdata/p4_14_samples/source_routing.p4
   )
+
+# Checksum16 is deprecated
+p4c_add_xfail_reason("jbay"
+  "Could not find declaration for"
+  extensions/p4_tests/p4_16/ipv4_options.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "warning: Instruction selection creates an instruction that the rest of the compiler cannot correctly interpret"
+  extensions/p4_tests/p4_16/brig-42.p4
+  )
+
+# Translation code does not support standard_metadata.checksum_error
+p4c_add_xfail_reason("jbay"
+  "Could not find declaration for standard_metadata"
+  extensions/p4_tests/p4_16/verify_checksum.p4
+)

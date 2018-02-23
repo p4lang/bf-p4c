@@ -140,7 +140,7 @@ function searchdir () {
     for d in $TRY_BINDIRS; do
         if [[ $2 ]]; then
             if [ -d "$d/$2" ]; then
-                for f in $(find $d/$2 -L -executable -type f -name $1); do
+                for f in $(find -L $d/$2 -executable -type f -name $1); do
                     if [ "$f" -nt "$found" ]; then
                         found="$f"
                     fi
@@ -150,7 +150,7 @@ function searchdir () {
                 fi
             fi
         else
-            for f in $(find $d -L -executable -type f -name $1); do
+            for f in $(find -L $d -executable -type f -name $1); do
                 if [ "$f" -nt "$found" ]; then
                     found="$f"
                 fi
@@ -472,7 +472,15 @@ function test_bfa() {
         ok=false
     else
         msg="$msg pass"
-        gzip $name.out/*.cfg.json
+        for f in $name.out/*.cfg.json; do
+            if $REFLOW $f | gzip -9 > $f.gz; then
+                rm $f
+            fi
+        done
+        for f in $name.out/*.bin; do
+            rm -f $f.gz
+            gzip -9 $f
+        done
     fi
     if [ "$expect_fail" != "" ]; then
         if $ok; then

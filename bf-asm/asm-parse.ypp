@@ -134,7 +134,7 @@ static value_t command(char *cmd, value_t &a1, value_t &a2, int lineno_adj) {
 %destructor   { free_pair(&$$); } <pair>
 %destructor   { VECTOR_foreach($$, free_pair); VECTOR_fini($$); } <map>
 
-%printer  { fprintf(yyoutput, "%d", $$); } <i>
+%printer  { fprintf(yyoutput, "%ld", $$); } <i>
 %printer  { fprintf(yyoutput, "0x%lx", $$.data[$$.size-1]);
             for (int i = $$.size-2; i >= 0; i--)
                 fprintf(yyoutput, "%016lx", $$.data[i]); } <bigi>

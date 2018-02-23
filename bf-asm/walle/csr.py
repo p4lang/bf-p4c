@@ -461,10 +461,11 @@ class csr_composite_object (csr_object):
                         outfile.write("[0]")
                     outfile.write(");\n")
                     if idx > 1:
-                        outfile.write("%sif (i%d == 0 && 1 + &%s" % (indent, i, field_name))
+                        outfile.write("%sif (i%d < 0 || (i%d == 0 && 1 + &%s" %
+                                      (indent, i, i, field_name))
                         for j in range(0, i):
                             outfile.write("[i%d]" % j)
-                        outfile.write(" == end) return;\n")
+                        outfile.write(" == end)) return;\n")
                     outfile.write("%sout << '[' << i%d << ']';\n" % (indent, i))
             single = a.singleton_obj()
             if not single.is_field() and not single.top_level():

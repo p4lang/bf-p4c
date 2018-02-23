@@ -35,7 +35,6 @@ class StatefulTable;
 class MeterTable;
 class Synth2Port;
 class Stage;
-struct Ref;
 struct HashCol;
 
 class Table {
@@ -115,8 +114,7 @@ public:
             return *this; }
         Ref(const std::string &n) : lineno(-1), name(n) {}
         Ref(const char *n) : lineno(-1), name(n) {}
-        Ref(const value_t &a) : lineno(a.lineno), name(a.s) {
-            assert(a.type == tSTR); }
+        Ref(const value_t &a) : lineno(a.lineno) { if (CHECKTYPE(a, tSTR)) name = a.s; }
         Ref &operator=(const std::string &n) { name = n; return *this; }
         operator bool() const { return all.count(name) > 0; }
         operator Table*() const { return ::get(all, name); }
@@ -1257,6 +1255,8 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
 public:
     Ref                 bound_selector;
     unsigned phv_byte_mask = 0;
+    std::vector<Ref>    sbus_learn, sbus_match;
+    bool                sbus_invert = false, sbus_or = false, sbus_and = false;
     int instruction_set() override { return 1; /* STATEFUL_ALU */ }
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;

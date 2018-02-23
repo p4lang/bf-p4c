@@ -5,10 +5,18 @@ set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_JBAY "${P4TESTDATA}/p4_16_samples/*.p4")
 p4c_find_tests("${P4TESTS_FOR_JBAY}" v1tests INCLUDE "${V1_SEARCH_PATTERNS}")
 
+set (P16_INCLUDE_PATTERNS "include.*(v1model|psa|jbay).p4" "main")
+set (P16_EXCLUDE_PATTERNS "tofino.h")
+set (P16_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
+p4c_find_tests("${P16_FOR_TOFINO}" p16tests INCLUDE "${P16_INCLUDE_PATTERNS}" EXCLUDE "${P16_EXCLUDE_PATTERNS}")
+
 # p4-tests has all the includes at the same level with the programs.
 set (BFN_EXCLUDE_PATTERNS "tofino.p4")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/*/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
+
+file (GLOB STF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.stf")
+string (REGEX REPLACE "\\.stf;" ".p4;" STF_P4_TESTS "${STF_TESTS};")
 
 set (JBAY_TEST_SUITES
   ${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4
@@ -25,9 +33,11 @@ set (JBAY_TEST_SUITES
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c8/*/*.p4
   # switch DC_BASIC_PROFILE
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
-#  ${BFN_TESTS}
+#  ${BFN_TESTS_LIST}
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
 #  ${v1tests}
+  ${p16tests}
+  ${STF_P4_TESTS}
   )
 
 p4c_add_bf_backend_tests("jbay" "${JBAY_TEST_SUITES}")

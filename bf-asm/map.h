@@ -109,4 +109,31 @@ template<class PairIter> IterValues<PairIter>
 Values(std::pair<PairIter, PairIter> range) {
     return IterValues<PairIter>(range.first, range.second); }
 
+/* iterate over the values for a single key in a multimap */
+template<class M> class MapForKey {
+    M                           &map;
+    typename M::key_type        key;
+    class iterator {
+        const MapForKey         &self;
+        decltype(map.begin())   it;
+     public:
+        iterator(const MapForKey &s, decltype(map.begin()) i) : self(s), it(i) {}
+        iterator &operator++() {
+            if (++it != self.map.end() && it->first != self.key)
+                it = self.map.end();
+            return *this; }
+        bool operator==(const iterator &i) const { return it == i.it; }
+        bool operator!=(const iterator &i) const { return it != i.it; }
+        decltype(*&it->second) operator*() const { return it->second; }
+        decltype(&it->second) operator->() const { return &it->second; }
+    };
+ public:
+    MapForKey(M &m, typename M::key_type k) : map(m), key(k) {}
+    iterator begin() const { return iterator(*this, map.find(key)); }
+    iterator end() const { return iterator(*this, map.end()); }
+};
+
+template<class M> MapForKey<M> ValuesForKey(M &m, typename M::key_type k) {
+    return MapForKey<M>(m, k); }
+
 #endif /* _map_h_ */

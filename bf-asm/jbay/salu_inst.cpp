@@ -68,12 +68,22 @@ void BitOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions:
 void BitOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
 
+static int sbus_mask(int alu, const std::vector<Table::Ref> &tbls) {
+    int rv = 0;
+    for (auto &tbl : tbls) {
+        int bit = tbl->layout[0].row/4U;
+        if (bit > alu) --bit;
+        rv |= 1 << bit; }
+    return rv;
+}
+
 template<>
 void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_cmp_alu[act->code][slot];
+    auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
     if (srca) {
         salu.salu_cmp_asrc_input = srca->field->bit(0) > 0;
         salu.salu_cmp_asrc_sign = srca_neg;
@@ -90,6 +100,13 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
             salu.salu_cmp_regfile_adr = tbl->get_const(srcc->value);
             salu.salu_cmp_regfile_const = 1; } }
     salu.salu_cmp_opcode = opc->opcode | (type << 2);
+    if (auto lmask = sbus_mask(logical_home_row/4U, tbl->sbus_learn))
+        salu_instr_common.salu_lmatch_sbus_listen = lmask;
+    if (auto mmask = sbus_mask(logical_home_row/4U, tbl->sbus_match))
+        salu_instr_common.salu_match_sbus_listen = mmask;
+    salu.salu_cmp_sbus_or = tbl->sbus_or;
+    salu.salu_cmp_sbus_and = tbl->sbus_and;
+    salu.salu_cmp_sbus_invert = tbl->sbus_invert;
 }
 void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::JBay::mau_regs>(regs, tbl, act); }

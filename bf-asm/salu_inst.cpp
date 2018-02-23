@@ -421,7 +421,6 @@ struct CmpOP : public SaluInstruction {
                                     const VECTOR(value_t) &op) const override;
     } *opc;
     int                 type = 0;
-    enum { LO, HI }     dest;
     operand::Memory     *srca = 0;
     operand::Phv        *srcb = 0;
     operand::Const      *srcc = 0;
@@ -462,15 +461,21 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
         else error(rv->lineno, "Invalid type %s for %s instruction", p+1, name.c_str());
     } else if (type_suffix)
         error(rv->lineno, "Missing type for %s instruction", name.c_str());
-    int idx = 1;
-    if (idx < op.size && op[idx] == "lo") {
-        rv->dest = LO;
-        idx++;
-    } else if (idx < op.size && op[idx] == "hi") {
-        rv->dest = HI;
-        idx++;
+    if (op.size < 1 || op[1].type != tSTR) {
+        error(rv->lineno, "invalid destination for %s instruction", op[0].s);
+        return rv; }
+    unsigned unit;
+    char *end;
+    if (op[1] == "lo") {
+        rv->slot = CMPLO;
+    } else if (op[1] == "hi") {
+        rv->slot = CMPHI;
+    } else if (op[1].s[0] == 'p' && isdigit(op[1].s[1]) &&
+               (unit = strtol(op[1].s+1, &end, 10)) < Target::STATEFUL_CMP_UNITS() && *end == 0) {
+        rv->slot = CMP0 + unit;
     } else
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
+    int idx = 2;
     while (idx < op.size) {
         operand src(tbl, act, op[idx++]);
         if (!rv->srca && (rv->srca = src.to<operand::Memory>())) {
@@ -491,14 +496,13 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 
 bool CmpOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<CmpOP *>(a_))
-        return opc == a->opc && dest == a->dest && srca == a->srca &&
+        return opc == a->opc && slot == a->slot && srca == a->srca &&
                srcb == a->srcb && srcc == a->srcc;
     return false;
 }
 
 Instruction *CmpOP::pass1(Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
-    slot = dest;
     if (srca) srca->pass1(tbl);
     if (srcb) srcb->pass1(tbl);
     if (srcc) srcc->pass1(tbl);
@@ -521,7 +525,7 @@ struct OutOP : public SaluInstruction {
     OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
     std::string name() override { return "output"; };
     void gen_prim_cfg(json::map& out) override { out["name"] = "output"; };
-    Instruction *pass1(Table *tbl, Table::Actions::Action *) override { slot = ALUOUT; return this; }
+    Instruction *pass1(Table *tbl, Table::Actions::Action *) override { return this; }
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
     void dbprint(std::ostream &out) const override {
@@ -565,7 +569,25 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
                 warning(op[idx-1].lineno, "Instruction predicate is always false");
             else if (rv->predication_encode == STATEFUL_PREDICATION_ENCODE_UNCOND)
                 warning(op[idx-1].lineno, "Instruction predicate is always true"); } }
-    //Check mux operand
+    rv->slot = ALUOUT;
+#if HAVE_JBAY
+    // Check for destination
+    if (idx < op.size && op[idx].startsWith("word")) {
+        unsigned unit = -1;
+        char *end;
+        if (op[idx].type == tSTR) {
+            if (isdigit(op[idx].s[4])) {
+                unit = strtol(op[idx].s + 4, &end, 10);
+                if (*end) unit = -1; }
+        } else if (op[idx].vec.size == 2 && op[idx][1].type == tINT) {
+            unit = op[idx][1].i; }
+        if (unit >= Target::STATEFUL_OUTPUT_UNITS())
+            error(op[idx].lineno, "Invalid output dest %s", value_desc(op[idx]));
+        else
+            rv->slot = unit + ALUOUT0;
+        idx++; }
+#endif
+    // Check mux operand
     if (idx < op.size) {
         SWITCH_FOREACH_TARGET(options.target, rv->decode_output_mux(TARGET(), op[idx]); );
         if (rv->output_mux < 0)

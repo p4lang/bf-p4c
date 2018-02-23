@@ -291,9 +291,9 @@ if $debug; then
         die "Can't find $BFAS"
     fi
     if $debug_bfas; then
-        exec $DEBUGGER_COMMAND $BFAS $testdir/$name${out_ext}.bfa
+        exec $DEBUGGER_COMMAND $BFAS -t ${device} $testdir/$name${out_ext}.bfa
     else
-        exec $BFAS $testdir/$name${out_ext}.bfa
+        exec $BFAS -t ${device} $testdir/$name${out_ext}.bfa
     fi
 fi
 

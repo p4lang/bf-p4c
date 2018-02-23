@@ -9,6 +9,7 @@
 #include <sstream>
 #include "vector.h"
 #include "json.h"
+#include "bfas.h"
 
 enum gress_t { INGRESS, EGRESS, NONE };
 
@@ -186,6 +187,31 @@ inline const value_t *get(const VECTOR(pair_t) &map, const char *key) {
     return 0; }
 
 #ifdef __cplusplus
+
+template<class T> inline void parse_vector(std::vector<T> &vec, const VECTOR(value_t) &data) {
+    for (auto &v : data) vec.emplace_back(v); }
+template<> inline void parse_vector(std::vector<int> &vec, const VECTOR(value_t) &data) {
+    for (auto &v : data) if (CHECKTYPE(v, tINT)) vec.push_back(v.i); }
+template<> inline void parse_vector(std::vector<long> &vec, const VECTOR(value_t) &data) {
+    for (auto &v : data) if (CHECKTYPE(v, tINT)) vec.push_back(v.i); }
+template<> inline void parse_vector(std::vector<std::string> &vec, const VECTOR(value_t) &data) {
+    for (auto &v : data) if (CHECKTYPE(v, tSTR)) vec.emplace_back(v.s); }
+template<class T> inline void parse_vector(std::vector<T> &vec, const value_t &data) {
+    if (data.type == tVEC) parse_vector(vec, data.vec);
+    else vec.emplace_back(data); }
+template<> inline void parse_vector(std::vector<int> &vec, const value_t &data) {
+    if (CHECKTYPE2(data, tINT, tVEC)) {
+        if (data.type == tVEC) parse_vector(vec, data.vec);
+        else vec.push_back(data.i); } }
+template<> inline void parse_vector(std::vector<long> &vec, const value_t &data) {
+    if (CHECKTYPE2(data, tINT, tVEC)) {
+        if (data.type == tVEC) parse_vector(vec, data.vec);
+        else vec.push_back(data.i); } }
+template<> inline void parse_vector(std::vector<std::string> &vec, const value_t &data) {
+    if (CHECKTYPE2(data, tSTR, tVEC)) {
+        if (data.type == tVEC) parse_vector(vec, data.vec);
+        else vec.push_back(data.s); } }
+
 #include <functional>
 #include <iostream>
 #include "map.h"
