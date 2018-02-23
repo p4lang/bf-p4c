@@ -125,8 +125,8 @@ class TableAllocPass : public PassManager {
 };
 
 Backend::Backend(const BFN_Options& options) :
-    phv(mutually_exclusive_field_ids),
     clot(uses),
+    phv(mutually_exclusive_field_ids),
     uses(phv),
     defuse(phv) {
     addPasses({
@@ -161,6 +161,7 @@ Backend::Backend(const BFN_Options& options) :
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         new CollectPhvInfo(phv),
         &defuse,
+        new CollectNameAnnotations(phv),
         new DumpPipe("Before phv_analysis"),
         new CheckForHeaders(),
 #if HAVE_JBAY

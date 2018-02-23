@@ -319,6 +319,10 @@ class Field {
     void updateAlignment(const FieldAlignment& newAlignment);
 
  private:
+    /// When set, use this name rather than PHV::Field::name when generating
+    /// assembly.
+    boost::optional<cstring> externalName_i;
+
     /**
      * Update the valid range of container positions for this field.
      * Reports an error if conflicting requirements render the constraint
@@ -457,6 +461,23 @@ class Field {
 
     bool constrained(bool packing_constraint = false) const;
 
+    /// Get the external name of this field.  If PHV::Field::externalName is
+    /// not boost::none, use that; otherwise, use PHV::Field::name.
+    cstring externalName() const {
+        return boost::get_optional_value_or(externalName_i, name);
+    }
+
+    /// Set the external name of this field, which will be used in place of
+    /// PHV::Field::name when generating assembly.
+    void setExternalName(cstring name) {
+        externalName_i = name;
+    }
+
+    /// Clear the external name, if any has been set.
+    void clearExternalName() {
+        externalName_i = boost::none;
+    }
+
  private:
     /**
      * Returns alignment constraint (little Endian bit position within
@@ -538,6 +559,20 @@ std::ostream &operator<<(std::ostream &, const AllocSlice &);
 std::ostream &operator<<(std::ostream &, const std::vector<Field::alloc_slice> &);
 
 }  // namespace PHV
+
+/// Walk the IR, converting `@name` pragmas on IR::KeyElement nodes to PHV
+/// field external names.
+class CollectNameAnnotations : public Inspector {
+    PhvInfo& phv;
+
+    /// For each back-end table, check if it has a pointer to the corresponding
+    /// front-end table.  If so, walk its IR::KeyElement nodes and look for
+    /// `@name` annotations.
+    bool preorder(const IR::MAU::Table* t) override;
+
+ public:
+    explicit CollectNameAnnotations(PhvInfo& phv) : phv(phv) { }
+};
 
 /**
  * PhvInfo stores information about the PHV-backed storage in the program -
@@ -674,8 +709,7 @@ class PhvInfo {
     const PHV::Field *field(int idx) const {
         return (size_t)idx < by_id.size() ? by_id.at(idx) : 0;
     }
-    const PHV::Field *field(cstring name) const {
-        return all_fields.count(name) ? &all_fields.at(name) : 0; }
+    const PHV::Field *field(const cstring&) const;
     const PHV::Field *field(const IR::Expression *, le_bitrange *bits = 0) const;
     const PHV::Field *field(const IR::Member *, le_bitrange *bits = 0) const;
     PHV::Field *field(int idx) { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }

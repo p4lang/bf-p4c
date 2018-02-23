@@ -25,7 +25,7 @@ std::ostream &operator<<(std::ostream &out, canon_name n) {
 
 std::ostream &operator<<(std::ostream &out, const Slice &sl) {
     if (sl.field) {
-        out << canon_name(trim_asm_name(sl.field->name));
+        out << canon_name(trim_asm_name(sl.field->externalName()));
         for (auto &alloc : sl.field->alloc_i) {
             if (sl.lo < alloc.field_bit) continue;
             if (sl.hi > alloc.field_hi())

@@ -117,10 +117,20 @@ const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) con
 }
 
 const PHV::Field *PhvInfo::field(const IR::Member *fr, le_bitrange *bits) const {
-    StringRef name = fr->toString();
     if (bits) {
         bits->lo = 0;
         bits->hi = fr->type->width_bits() - 1; }
+
+    // No need to look up enums, which are really constants.  This sidesteps
+    // the warning message for "can't find field" as well.
+    if (fr->type->is<IR::Type_Enum>())
+        return nullptr;
+
+    return field(fr->toString());
+}
+
+const PHV::Field *PhvInfo::field(const cstring& name_) const {
+    StringRef name = name_;
     if (auto *p = name.find('[')) {
         if (name.after(p).find(':'))
             name = name.before(p); }
@@ -134,8 +144,7 @@ const PHV::Field *PhvInfo::field(const IR::Member *fr, le_bitrange *bits) const 
     // XXX(seth): The warning spew from POV bits prior to allocatePOV() being
     // called is just too great. We need to improve how that's handled, but for
     // now, silence those warnings.
-    // (ctd): also no need to warn about enum tags, as they are really constants
-    if (!name.toString().endsWith(".$valid") && !fr->type->is<IR::Type_Enum>())
+    if (!name.toString().endsWith(".$valid"))
         warning("can't find field '%s'", name);
 
     return nullptr;
@@ -957,6 +966,33 @@ class MarkDeparsedFields : public Inspector {
     explicit MarkDeparsedFields(PhvInfo& phv) : phv_i(phv) { }
 };
 
+bool CollectNameAnnotations::preorder(const IR::MAU::Table* t) {
+    if (t->match_table) {
+        forAllMatching<IR::KeyElement>(t->match_table,
+            [&](const IR::KeyElement* e) {
+                // XXX(cole): This method is applied to mid-end IR but needs to
+                // look up the back-end version of field names.  The following
+                // code basically reapplies the name mangling that the back end
+                // does.  There must be a better way.
+
+                for (auto gress : { INGRESS, EGRESS }) {
+                    auto prefix = gress == INGRESS ? "ingress::" : "egress::";
+                    StringRef name = e->expression->toString();
+                    if (auto* p1 = name.findlast('.')) {
+                        StringRef n1 = name.before(p1);
+                        if (auto* p2 = n1.findlast('.')) {
+                            name = name.after(p2 + 1); } }
+                    auto* field = phv.field(prefix + name);
+                    if (!field) return true;
+                    if (auto ann = e->getAnnotation(IR::Annotation::nameAnnotation)) {
+                        field->setExternalName(prefix + IR::Annotation::getName(ann));
+                        LOG1(ann << ": setting external name of field " << field->name
+                             << " to " << field->externalName()); } }
+                    return true;
+            }); }
+    return true;
+}
+
 CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
     addPasses({
         new CollectPhvFields(phv),
@@ -1131,7 +1167,7 @@ const IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const IR::Node *n, const c
               (uses.is_used_parde(&f) ? "P" : " ") <<
               (uses.is_used_mau(&f) ? "M" : " ") <<
               (uses.is_referenced(&f) ? "R" : " ") <<
-              (uses.is_deparsed(&f) ? "D" : " ") << ") " << f); }
+              (uses.is_deparsed(&f) ? "D" : " ") << ") " << f.externalName()); }
     LOG1("");
 
     LOG1("--- PHV FIELDS WIDTH HISTOGRAM----------------------------");

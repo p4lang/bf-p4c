@@ -1210,7 +1210,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         if (sep) {
             bitrange bits;
             if (auto field = self.phv.field(expr, &bits)) {
-                out << sep << canon_name(field->name);
+                out << sep << canon_name(field->externalName());
                 int count = 0;
                 field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &) {
                     count++;
@@ -1626,7 +1626,7 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         auto *expr = ixbar_read->expr;
         if (ixbar_read->from_mask)
             expr = expr->to<IR::Slice>()->e0;
-        out << indent << canon_name(phv.field(expr)->name) << ": ";
+        out << indent << canon_name(phv.field(expr)->externalName()) << ": ";
         out << "{ type: " << ixbar_read->match_type.name << ", ";
         out << "size: " << expr->type->width_bits() << ", ";
         out << "full_size: " << phv.field(expr)->size << " }" << std::endl;
@@ -1644,7 +1644,7 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
     for (auto ixr : tbl->match_key) {
         if (ixr->partition_index) {
             out << indent << "partition_field_name: " <<
-                canon_name(phv.field(ixr->expr)->name) << std::endl;
+                canon_name(phv.field(ixr->expr)->externalName()) << std::endl;
             break;
         }
     }

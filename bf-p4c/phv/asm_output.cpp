@@ -8,7 +8,7 @@ void emit_phv_field(std::ostream &out, PHV::Field &field,
     for (auto &alloc : field.alloc_i) {
         out << sectionHeaderInOut;
         sectionHeaderInOut = "";
-        out << "  " << canon_name(field.name);
+        out << "  " << canon_name(field.externalName());
         if (alloc.field_bit > 0 || alloc.width < field.size)
             out << '.' << alloc.field_bit << '-' << alloc.field_hi();
         out << ": " << alloc.container;

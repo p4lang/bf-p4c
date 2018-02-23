@@ -86,7 +86,7 @@ struct OutputDictionary : public Inspector {
 
         auto povBit = phv.field(emit->povBit->field);
         AutoIndent fieldIndent(indent);
-        out << indent << "pov: " << canon_name(trim_asm_name(povBit->name)) << std::endl;
+        out << indent << "pov: " << canon_name(trim_asm_name(povBit->externalName())) << std::endl;
 
         std::set<PHV::Container> containers;
         for (auto f : emit->clot.phv_fields) {

@@ -757,8 +757,9 @@ computeControlPlaneFormat(const PhvInfo& phv,
 
         // Place the entire field at once. We're assuming it was allocated
         // contiguously, obviously; ValidateAllocation will have complained if
-        // it wasn't.
-        packing->appendField(fieldRef->field, firstSlice.field->name,
+        // it wasn't.  The field name is used in assembly generation; hence,
+        // we use its external name.
+        packing->appendField(fieldRef->field, firstSlice.field->externalName(),
                              firstSlice.field->size);
 
         // Remember information about the container placement of the last slice
