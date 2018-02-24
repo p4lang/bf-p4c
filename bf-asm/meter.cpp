@@ -438,7 +438,7 @@ void MeterTable::gen_tbl_cfg(json::vector &out) {
     int size = (layout_size() - 1)*1024;
     json::map &tbl = *base_tbl_cfg(out, "meter", size);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "meter", size);
-    stage_tbl["color_map_ram_resource_allocation"] =
+    stage_tbl["color_memory_resource_allocation"] =
             gen_memory_resource_allocation_tbl_cfg("map_ram", color_maprams);
     stage_tbl["meter_sweep_interval"] = sweep_interval;
     switch (type) {
