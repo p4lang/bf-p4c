@@ -24,7 +24,7 @@
  ******************************************************************************/
 
 #include <core.p4>
-#include <tofino.p4>
+#include <tna.p4>
 
 #define ETHERTYPE_IPV4 0x0800
 #define IP_PROTOCOLS_TCP 6
@@ -161,7 +161,8 @@ parser SwitchEgressParser(
 // ---------------------------------------------------------------------------
 control SwitchIngressDeparser(packet_out pkt,
                               inout switch_header_t hdr,
-                              in switch_metadata_t ig_md) {
+                              in switch_metadata_t ig_md,
+                              in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
     checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum;
 
     apply {
@@ -188,7 +189,8 @@ control SwitchIngressDeparser(packet_out pkt,
 // ---------------------------------------------------------------------------
 control SwitchEgressDeparser(packet_out pkt,
                              inout switch_header_t hdr,
-                             in switch_metadata_t eg_md) {
+                             in switch_metadata_t eg_md,
+                             in egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md) {
     apply {}
 }
 
@@ -197,8 +199,9 @@ control SwitchIngress(
         inout switch_header_t hdr,
         inout switch_metadata_t ig_md,
         in ingress_intrinsic_metadata_t ig_intr_md,
-        in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
-        inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
+        in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
+        inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
+        inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
     switch_nexthop_t nexthop_index;
 
@@ -213,8 +216,8 @@ control SwitchIngress(
     }
 
     action set_port(PortId_t port) {
-        ig_intr_md_for_tm.ucast_egress_port = port;
-        ig_intr_md_for_tm.bypass_egress = 1; // bypass egress pipeline.
+        ig_intr_tm_md.ucast_egress_port = port;
+        ig_intr_tm_md.bypass_egress = 1; // bypass egress pipeline.
     }
 
     action rewrite_(mac_addr_t smac) {
@@ -249,7 +252,7 @@ control SwitchIngress(
     }
 
     table rewrite {
-        key = { ig_intr_md_for_tm.ucast_egress_port : exact; }
+        key = { ig_intr_tm_md.ucast_egress_port : exact; }
         actions = { rewrite_; }
     }
 
@@ -268,7 +271,9 @@ control SwitchEgress(
         inout switch_header_t hdr,
         inout switch_metadata_t eg_md,
         in egress_intrinsic_metadata_t eg_intr_md,
-        in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr)  {
+        in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+        inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
+        inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
     apply {}
 }
 

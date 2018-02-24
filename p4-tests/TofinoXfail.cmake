@@ -163,16 +163,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Could not find declaration for"
-  extensions/p4_tests/p4_16/stful.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Type register has 1 type parameter.*, but it is specialized with 2"
-  extensions/p4_tests/p4_16/tna-salu.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Cannot unify Type"
   extensions/p4_tests/p4_14/02-FlexCounterActionProfile.p4
   extensions/p4_tests/p4_14/test_config_172_stateful_heavy_hitter.p4
@@ -491,8 +481,8 @@ p4c_add_xfail_reason("tofino"
   )
 p4c_add_xfail_reason("tofino"
   "warning: : Currently the Barefoot HW compiler cannot handle any non direct assignment instruction that has missized rvalues"
-  extensions/p4_tests/p4_16/cast_narrowing_add.p4
-  extensions/p4_tests/p4_16/cast_widening_add.p4
+  #extensions/p4_tests/p4_16/cast_narrowing_add.p4
+  #extensions/p4_tests/p4_16/cast_widening_add.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -628,7 +618,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/gateway2.p4
   testdata/p4_14_samples/gateway3.p4
   testdata/p4_14_samples/gateway4.p4
-  extensions/p4_tests/p4_16/cast_widening_set.p4
   )
 
 #END: XFAILS that match glass XFAILS
@@ -821,15 +810,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 
 
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
-
-if (HARLYN_STF_tofino AND NOT ENABLE_STF2PTF)
-  p4c_add_xfail_reason("tofino"
-    ".* expected packet on port .* not seen"
-    extensions/p4_tests/p4_16/multiple_apply1.p4
-    extensions/p4_tests/p4_16/cast_narrowing_set.p4
-    extensions/p4_tests/p4_16/container_dependency.p4
-    )
-endif()  # STF FAILURE IN TNA
 
 # XXX(cole): Temporarily override previous XFAILs with new failures related to
 # PHV allocation.

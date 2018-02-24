@@ -1,5 +1,5 @@
 #if __p4c__ && __p4c_major__ >= 6
-#include <tofino.p4>
+#include <tna.p4>
 
 header data_h {
     bit<32> da;
@@ -21,12 +21,14 @@ parser InParser(
 }
 control SwitchIngress(
     inout headers_t hdr,
-    inout user_metadata_t md,
+    inout user_metadata_t meta,
     in ingress_intrinsic_metadata_t ig_intr_md,
-    in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
-    inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
+    in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
+    inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
+    inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+
     action m_action() {
-        ig_intr_md_for_tm.ucast_egress_port = 1;
+        ig_intr_tm_md.ucast_egress_port = 1;
     }
     action nop() {
     }
@@ -39,28 +41,31 @@ control SwitchIngress(
     }
 }
 control SwitchIngressDeparser(
-    packet_out pkt,
+    packet_out b,
     inout headers_t hdr,
-    in user_metadata_t meta) {
+    in user_metadata_t meta,
+    in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
     apply {
-        pkt.emit(hdr);
+        b.emit(hdr);
     }
 }
 parser EgParser(
-    packet_in pkt,
+    packet_in b,
     out headers_t hdr,
-    out user_metadata_t md,
+    out user_metadata_t meta,
     out egress_intrinsic_metadata_t eg_intr_md) {
   state start {
-    pkt.extract(hdr.data);
+    b.extract(hdr.data);
     transition accept;
   }
 }
 control SwitchEgress(
-    inout headers_t hdr,
-    inout user_metadata_t md,
+    inout headers_t hdr,  
+    inout user_metadata_t meta,
     in egress_intrinsic_metadata_t eg_intr_md,
-    in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_parser) {
+    in egress_intrinsic_metadata_from_parser_t eg_intr_prsr_md,
+    inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
+    inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
     table t {
         key = {
             eg_intr_md.egress_port : exact;
@@ -72,10 +77,12 @@ control SwitchEgress(
     }
 }
 control SwitchEgressDeparser(
-    packet_out pkt,
-    inout headers_t hdr) {
+    packet_out b,
+    inout headers_t hdr,
+    in user_metadata_t meta,
+    in egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md) {
     apply {
-        pkt.emit(hdr);
+        b.emit(hdr);
     }
 }
 Switch(InParser(), SwitchIngress(), SwitchIngressDeparser(),
