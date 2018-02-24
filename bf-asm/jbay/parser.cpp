@@ -272,6 +272,15 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
     regs.main[INGRESS].hdr_len_adj.amt = hdr_len_adj[INGRESS];
     regs.main[EGRESS].hdr_len_adj.amt = hdr_len_adj[EGRESS];
 
+    /* This reg has a active high reset for enable: en, Enable, [23], R/W, Reset->1
+     * and is causing the parser error codes not to be captured. By making this '0'
+     * we are allowing the error codes to be captured in the PHV for debug
+     *
+     * When parser error codes are supported from assembly this can be added as a
+     * proper feature. It seems that we do not support this completely
+     */
+    regs.main[EGRESS].err_phv_cfg.en = 0;
+
     int i_start = Stage::first_table(INGRESS) & 0x1ff;
     for (auto &reg : regs.merge.ll1.i_start_table)
         reg.table = i_start;
