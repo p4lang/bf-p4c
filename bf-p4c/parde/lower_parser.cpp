@@ -1268,6 +1268,18 @@ class ExtractorAllocator {
                               : remainingBytes.loByte();
         }
 
+        // TODO(yumin): currently, phv allocation might generate out-of-end allocation
+        // that leads to extraction on metadata across the header boundary. Generally,
+        // it is correct because of the masking. However, this is a constraint that phv
+        // should respect in some day, because if there is not enough payload for this
+        // extraction, it is wrong. But, it is a very rare case, so we are relaxing it here.
+        if (byteActualShift > shift_required) {
+            ::warning("Extraction over the header boundary happens, "
+                      "please make sure packet have at least %1% bytes payload.",
+                      byteActualShift - shift_required);
+            byteActualShift = shift_required;
+        }
+
         BUG_CHECK(byteActualShift >= 0,
                   "Computed invalid shift %1% when splitting state %2%",
                   byteActualShift, stateName);
