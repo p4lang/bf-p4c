@@ -1041,6 +1041,7 @@ void AllocatePHV::end_apply() {
 #endif  // HAVE_JBAY
 
     LOG1(pragmas_i.pa_container_sizes());
+    LOG1(pragmas_i.pa_atomic());
     auto alloc = make_concrete_allocation();
     auto container_groups = makeDeviceContainerGroups();
     std::list<PHV::SuperCluster*> cluster_groups = make_cluster_groups();

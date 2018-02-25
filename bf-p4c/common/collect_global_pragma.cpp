@@ -4,8 +4,9 @@
 
 const std::vector<cstring>*
 CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
-    PHV::pragma::MUTUALLY_EXCLUSIVE,
+    PHV::pragma::ATOMIC,
     PHV::pragma::CONTAINER_SIZE,
+    PHV::pragma::MUTUALLY_EXCLUSIVE,
     PHV::pragma::SOLITARY
 };
 
