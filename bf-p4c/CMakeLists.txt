@@ -214,6 +214,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/field_packing.cpp
   parde/gen_deparser.cpp
   parde/lower_parser.cpp
+  parde/merge_parser_state.cpp
   parde/mirror.cpp
   parde/parde_spec.cpp
   parde/parser_output.cpp
@@ -236,6 +237,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/gen_deparser.h
   parde/lower_parser.h
   parde/match_register.h
+  parde/merge_parser_state.h
   parde/mirror.h
   parde/parde_spec.h
   parde/phase0.h

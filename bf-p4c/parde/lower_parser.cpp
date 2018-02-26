@@ -1132,7 +1132,7 @@ class ExtractorAllocator {
             else if (auto* e = stmt->to<IR::BFN::LoweredExtractClot>())
                 extractClots.push_back(e);
             else
-                BUG("unknown parser primitive type");
+                ::warning("Splitting State ignores unsupported primitive: %1%", stmt);
 
         for (auto* save : match->saves)
             saves.push_back(save);
@@ -1188,19 +1188,17 @@ class ExtractorAllocator {
                 allocatedExtractions.push_back(extract);
             }
 
-            // Allocate saves if the source of save is inside the input buffer.
-            // When there is no more extraction and save can not be inserted in this
-            // state, it is impossible to perform that kind of action.
+            // Allocate saves as long as the source of save is inside the input buffer.
             // Note that input buffer required bytes are calculated by assembler, so
-            // it does not matter even if save source is not insede the extracted bytes.
+            // it does not matter even if save source is not inside the extracted bytes.
+            // Also, save source does not need to update neither remainingBytes nor
+            // extractedBytes, it does not affect actual shift byte.
             for (auto* save : saves) {
                 const auto& source = save->source->byteInterval();
-                if (source.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
-                    if (allocatedExtractions.empty()) {
-                        ::error("%1% is an impossible save for Tofino,"
-                                " lookahead more than 32 bytes", save); }
-                    continue; }
-                allocatedSaves.push_back(save);
+                if (source.hiByte() > pardeSpec.byteInputBufferSize() - 1)
+                    remainingSaves.push_back(save);
+                else
+                    allocatedSaves.push_back(save);
             }
 #if HAVE_JBAY
         } else if (Device::currentDevice() == "JBay") {
@@ -1216,7 +1214,7 @@ class ExtractorAllocator {
                                         : nw_byteinterval();
 
                 if (allocatedExtractors == totalExtractors ||
-                    byteInterval.hi >= pardeSpec.byteInputBufferSize()) {
+                    byteInterval.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
                     remainingExtractions.push_back(extract);
                     remainingBytes = remainingBytes.unionWith(byteInterval);
                     continue;
@@ -1243,12 +1241,10 @@ class ExtractorAllocator {
 
             for (auto* save : saves) {
                 const auto& source = save->source->byteInterval();
-                if (source.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
-                    if (allocatedExtractions.empty()) {
-                        ::error("%1% is an impossible save for Tofino,"
-                                " lookahead more than 32 bytes", save); }
-                    continue; }
-                allocatedSaves.push_back(save);
+                if (source.hiByte() > pardeSpec.byteInputBufferSize() - 1)
+                    remainingSaves.push_back(save);
+                else
+                    allocatedSaves.push_back(save);
             }
 #endif  // HAVE_JBAY
         }
@@ -1258,14 +1254,14 @@ class ExtractorAllocator {
         // We need a new state for it.
         current_input_buffer |= extractedInterval;
         int byteActualShift = 0;
-        if (remainingExtractions.empty() && remainingSaves.empty()) {
+        if (remainingExtractions.empty()) {
             byteActualShift = shift_required - shifted;
         } else {
             // If no more remaining extractions, just shift out the whole input buffer,
             // otherwise, shift until the first byte of the remaining is at head.
             byteActualShift = remainingBytes.empty()
-                              ? current_input_buffer.hiByte() + 1
-                              : remainingBytes.loByte();
+                ? current_input_buffer.hiByte() + 1
+                : std::min(remainingBytes.loByte(), current_input_buffer.hiByte() + 1);
         }
 
         // TODO(yumin): currently, phv allocation might generate out-of-end allocation
@@ -1290,30 +1286,45 @@ class ExtractorAllocator {
         // Shift up all the remaining extractions.
         extracts.clear();
         for (auto* extract : remainingExtractions)
-            extracts.push_back(shiftExtract(extract, byteActualShift));
+            extracts.push_back(leftShiftExtract(extract, byteActualShift));
 
         saves.clear();
-        for (auto* save : remainingSaves)
-            saves.push_back(shiftSave(save, byteActualShift));
+        for (auto* save : remainingSaves) {
+            // If there is no shift in this state, but the save is still out of input buffer,
+            // currently we can not support this.
+            // TODO(yumin): It can be supported if we split the next state, and push this save
+            // down to that state.
+            if (byteActualShift == 0) {
+                ::error("%1% is an impossible save for Tofino,"
+                        " lookahead more than 32 bytes", save);
+                continue; }
+            saves.push_back(leftShiftSave(save, byteActualShift));
+        }
 
-        current_input_buffer = current_input_buffer.resizedToBytes(
-                current_input_buffer.hiByte() + 1 - byteActualShift);
+        current_input_buffer = nw_byteinterval(
+                StartLen(0, current_input_buffer.hiByte() + 1 - byteActualShift));
 
         shifted += byteActualShift;
         return MatchPrimitives(allocatedExtractions, allocatedSaves, byteActualShift);
     }
 
- private:
     /// Shift all input packet extracts in the sequence to the left by the given
-    /// amount.
-    const IR::BFN::LoweredExtractPhv*
-    shiftExtract(const IR::BFN::LoweredExtractPhv* extract, int byteDelta) {
-        auto* bufferSource = extract->source->to<IR::BFN::LoweredPacketRVal>();
-        if (!bufferSource) return extract;
+    /// amount. Works for both ExtractPhv and ExtractClot
+    /// The coordinate system:
+    /// [0............31]
+    /// left..........right
+    template<class T>
+    T*
+    leftShiftExtract(T* primitive, int byteDelta) {
+        const IR::BFN::LoweredPacketRVal* bufferSource =
+            primitive->source->template to<typename IR::BFN::LoweredPacketRVal>();
+
+        // Do not need to shift it's not packetRval
+        if (!bufferSource) return primitive;
 
         const auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
         BUG_CHECK(shiftedRange.lo >= 0, "Shifting extract to negative position.");
-        auto* clone = extract->clone();
+        auto* clone = primitive->clone();
         clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
         return clone;
     }
@@ -1321,7 +1332,7 @@ class ExtractorAllocator {
     /// Shift all input packet extracts in the sequence to the left by the given
     /// amount.
     const IR::BFN::LoweredSave*
-    shiftSave(const IR::BFN::LoweredSave* save, int byteDelta) {
+    leftShiftSave(const IR::BFN::LoweredSave* save, int byteDelta) {
         auto* bufferSource = save->source;
         const auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
         BUG_CHECK(shiftedRange.lo >= 0, "Shifting save to negative position.");
@@ -1330,6 +1341,7 @@ class ExtractorAllocator {
         return clone;
     }
 
+ private:
     cstring stateName;
     const int shift_required;
     const IR::BFN::LoweredParserMatch* match;
@@ -1437,13 +1449,15 @@ class ComputeBufferRequirements : public ParserModifier {
         // `LoweredConstantRVal`s, since those do not originate in the input
         // packet.
         nw_byteinterval bytesRead;
-        forAllMatching<IR::BFN::LoweredPacketRVal>(&match->statements,
-                      [&](const IR::BFN::LoweredPacketRVal* packetSource) {
-            bytesRead = bytesRead.unionWith(packetSource->byteInterval());
+        forAllMatching<IR::BFN::LoweredExtractPhv>(&match->statements,
+                      [&] (const IR::BFN::LoweredExtractPhv* extract) {
+            if (auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>()) {
+                bytesRead = bytesRead.unionWith(source->byteInterval());
+            }
         });
 
         forAllMatching<IR::BFN::LoweredSave>(&match->saves,
-                      [&](const IR::BFN::LoweredSave* save) {
+                      [&] (const IR::BFN::LoweredSave* save) {
             bytesRead = bytesRead.unionWith(save->source->byteInterval());
         });
 

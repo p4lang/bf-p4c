@@ -25,6 +25,7 @@
 #include "bf-p4c/parde/add_jbay_pov.h"
 #include "bf-p4c/parde/bridge_metadata.h"
 #include "bf-p4c/parde/lower_parser.h"
+#include "bf-p4c/parde/merge_parser_state.h"
 #include "bf-p4c/parde/resolve_computed.h"
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/check_unallocated.h"
@@ -160,6 +161,7 @@ Backend::Backend(const BFN_Options& options) :
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         new CollectPhvInfo(phv),
+        new MergeParserStates,
         &defuse,
         new CollectNameAnnotations(phv),
         new DumpPipe("Before phv_analysis"),
