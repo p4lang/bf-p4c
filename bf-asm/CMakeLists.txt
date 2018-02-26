@@ -224,6 +224,9 @@ install (TARGETS bfas
 
 add_custom_target(check-asm
   COMMAND export BUILDDIR=${BFASM_BINARY_DIR} && cd ${BFASM_SOURCE_DIR}/test &&
+          ./runtests asm/*.tfa asm/*.jba)
+add_custom_target(check-all-asm
+  COMMAND export BUILDDIR=${BFASM_BINARY_DIR} && cd ${BFASM_SOURCE_DIR}/test &&
           ./runtests -f asm/*.tfa *.p4 mau/*.p4
   COMMAND export BUILDDIR=${BFASM_BINARY_DIR} && cd ${BFASM_SOURCE_DIR}/test &&
           ./runtests -f -b stf/*.stf brig/*.p4)

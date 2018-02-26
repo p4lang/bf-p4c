@@ -167,13 +167,17 @@ void AttachedTables::pass1(MatchTable *self) {
                   selector->name(), self->name());
         for (auto &arg : selector.args)
             if (arg.type == Table::Call::Arg::Name)
-                error(selector.lineno, "No field named %s in format", arg.name()); }
+                error(selector.lineno, "No field named %s in format", arg.name());
+            else if (arg.type == Table::Call::Arg::Counter)
+                error(selector.lineno, "Can't use counter index to selector"); }
     for (auto &s : stats) if (s) {
         if (s.args.size() > 1)
             error(s.lineno, "Stats table requires zero or one args");
         if (s.args.size() > 0) {
             if (s.args.at(0).type == Table::Call::Arg::Name)
                 error(s.lineno, "No field named %s in format", s.args.at(0).name());
+            else if (s.args.at(0).type == Table::Call::Arg::Counter)
+                error(selector.lineno, "Can't use counter index to counter");
             else if (s.args[0].hash_dist())
                 s.args[0].hash_dist()->xbar_use |= HashDistribution::STATISTICS_ADDRESS;
         } else if (s.args != stats[0].args)
@@ -188,6 +192,8 @@ void AttachedTables::pass1(MatchTable *self) {
         if (m.args.size() > 0) {
             if (m.args.at(0).type == Table::Call::Arg::Name)
                 error(m.lineno, "No field named %s in format", m.args.at(0).name());
+            else if (m.args.at(0).type == Table::Call::Arg::Counter)
+                error(selector.lineno, "Can't use counter index to meter");
             else if (m.args[0].hash_dist())
                 m.args[0].hash_dist()->xbar_use |= HashDistribution::METER_ADDRESS;
         } else if (m.args != meters[0].args)
@@ -210,9 +216,8 @@ void AttachedTables::pass1(MatchTable *self) {
                 error(s.lineno, "No field named %s in format", s.args.at(1).name());
             auto f1 = s.args.at(0).field();
             auto f2 = s.args.at(1).field();
-            /* If format is a NULL, this is a ternary_table and we dont need to check for match group
-             * consistency
-             */
+            /* If format is a NULL, this is a ternary_table and we dont need to check for
+             * match group consistency */
             if (self->format && f1 && f2) {
                 int off = f1->bits[0].lo - f2->bits[0].lo;
                 for (int i = self->format->groups()-1; i > 0; --i)
@@ -221,7 +226,9 @@ void AttachedTables::pass1(MatchTable *self) {
                               self->find_field(f1).c_str(), self->find_field(f2).c_str());
                         break; } }
             if (s.args[1].hash_dist())
-                s.args[1].hash_dist()->xbar_use |= HashDistribution::METER_ADDRESS; }
+                s.args[1].hash_dist()->xbar_use |= HashDistribution::METER_ADDRESS;
+            else if (s.args[1].type == Table::Call::Arg::Counter)
+                salu->set_counter_mode(s.args[1].count_mode()); }
         if (s.args != statefuls[0].args)
             error(s.lineno, "Must pass same args to all stateful tables in a single table");
         if (s->stage != self->stage)

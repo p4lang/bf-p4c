@@ -105,7 +105,7 @@ inline bool operator==(const struct value_t &a, int b) {
 inline bool operator==(int a, const struct value_t &b) {
     return b.type == tINT && a == b.i; }
 
-inline const char *value_desc(value_t &v) { return value_desc(&v); }
+inline const char *value_desc(const value_t &v) { return value_desc(&v); }
 
 template<class A, class B> inline bool operator !=(A a, B b)
     { return !(a == b); }

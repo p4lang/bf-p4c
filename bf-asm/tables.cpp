@@ -62,6 +62,11 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
                 else
                     error(val[i].lineno, "hash_dist %ld not defined in table %s", val[i][1].i,
                           tbl->name()); }
+        } else if (val[i] == "counter") {
+            int mode = StatefulTable::parse_counter_mode(val);
+            if (mode < 0)
+                error(val.lineno, "invalid mode %s", value_desc(val));
+            args.emplace_back(Arg::Counter, mode);
         } else if (!CHECKTYPE(val[i], tSTR)) {
             ;  // syntax error message emit by CHEKCTYPE
         } else if (auto arg = tbl->lookup_field(val[i].s)) {
@@ -79,6 +84,8 @@ unsigned Table::Call::Arg::size() const {
         return fld ? fld->size : 0;
     case HashDist:
         return hd ? hd->expand >= 0 ? 23 : 16 : 0;
+    case Counter:
+        return 23;
     case Const:
     case Name:
         return 0;

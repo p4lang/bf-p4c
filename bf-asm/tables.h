@@ -226,7 +226,7 @@ public:
 
     struct Call : Ref { /* a Ref with arguments */
         struct Arg {
-            enum { Field, HashDist, Const, Name }    type;
+            enum { Field, HashDist, Counter, Const, Name }    type;
         private:
             union {
                 Format::Field           *fld;
@@ -255,19 +255,22 @@ public:
             Arg(HashDistribution *hdist) : type(HashDist) { hd = hdist; }
             Arg(int v) : type(Const) { val = v; }
             Arg(const char *n) : type(Name) { str = strdup(n); }
+            Arg(decltype(Counter) ctr, int mode) : type(Counter) { val = mode;
+                assert(ctr == Counter); }
             ~Arg() { if (type == Name) free(str); }
             bool operator==(const Arg &a) const {
                 if (type != a.type) return false;
                 switch(type) {
                     case Field: return fld == a.fld;
                     case HashDist: return hd == a.hd;
-                    case Const: return val == a.val;
+                    case Counter: case Const: return val == a.val;
                     case Name: return !strcmp(str, a.str);
                     default: assert(0); } }
             bool operator!=(const Arg &a) const { return !operator==(a); }
             Format::Field *field() const { return type == Field ? fld : nullptr; }
             HashDistribution *hash_dist() const { return type == HashDist ? hd : nullptr; }
             const char *name() const { return type == Name ? str : nullptr; }
+            int count_mode() const { return type == Counter ? val : 0; }
             int value() const { return type == Const ? val : 0; }
             operator bool() const { return fld != nullptr; }
             unsigned size() const;
@@ -1239,8 +1242,12 @@ public:
 
 DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     table_type_t table_type() const override { return STATEFUL; }
+#if HAVE_JBAY
+    bool setup_jbay(const pair_t &kv);
+#endif
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
+    template<class REGS> void write_logging_regs(REGS &regs);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS)
     std::vector<long>   const_vals;
     struct MathTable {
@@ -1252,11 +1259,16 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
         void check();
     }                   math_table;
     bool dual_mode = false;
+    int stateful_counter_mode = 0;
+    int watermark_level = 0;
+    int watermark_pop_not_push = 0;
     unsigned initial_value_lo = 0;
     unsigned initial_value_hi = 0;
+    int logvpn_lineno = -1;
+    int logvpn_min = -1, logvpn_max = -1;
 public:
     Ref                 bound_selector;
-    unsigned phv_byte_mask = 0;
+    unsigned            phv_byte_mask = 0;
     std::vector<Ref>    sbus_learn, sbus_match;
     bool                sbus_invert = false, sbus_or = false, sbus_and = false;
     int instruction_set() override { return 1; /* STATEFUL_ALU */ }
@@ -1268,6 +1280,10 @@ public:
     bool is_dual_mode() { return dual_mode; }
     int home_row() const override { return layout.at(0).row | 3; }
     void set_output_used() override { output_used = true; }
+    void set_counter_mode(int mode) { if (!stateful_counter_mode) stateful_counter_mode = mode; }
+    FOR_ALL_TARGETS(TARGET_OVERLOAD, static int parse_counter_mode, const value_t &)
+    static int parse_counter_mode(const value_t &v) {
+        SWITCH_FOREACH_TARGET(options.target, return parse_counter_mode(TARGET(), v);) }
 )
 
 #endif /* _tables_h_ */

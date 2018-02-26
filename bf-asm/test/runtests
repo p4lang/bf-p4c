@@ -36,12 +36,12 @@ for mflag in $MAKEFLAGS; do
     --jobserver-*=*)
         fds=${mflag/*=/}
         vec=(${fds/,/ })
-        if eval "command >&${vec[1]}" 2>/dev/null; then : ; else
+        if eval "command >&${vec[1]}" 2>/dev/null; then
+            TOKEN_READ=${vec[0]}
+            TOKEN_WRITE=${vec[1]}
+        else
             echo >&2 "invalid --jobserver -- must use '+' in Makefile rule"
-            exit 1
         fi
-        TOKEN_READ=${vec[0]}
-        TOKEN_WRITE=${vec[1]}
         ;;
     esac
     prev_mflag=$mflag
@@ -462,6 +462,7 @@ function test_bfa() {
     expect_fail=$(sed -n "/^$srcfile/s/[^ ]* *//p" expected_failures.txt 2>/dev/null | head -1)
     ok=true
     rv=0
+    start=`date +%s`
     if not run $BFAS -g -t $target -Mvvvvl $name.out/bfas.config.log $srcfile >$name.out/bfas.log 2>&1; then
         msg="$msg bfas failed"
         fail_type="bfas"
@@ -495,6 +496,15 @@ function test_bfa() {
             msg="$msg (expected)"
             rv=2
         fi
+    fi
+    if $TIME; then
+        let elapsed=`date +%s`-start
+        let min=elapsed/60
+        let sec=elapsed%60
+        if [ $sec -lt 10 ]; then
+            sec=0$sec
+        fi
+        msg="$msg ($min:$sec)"
     fi
     echo "$msg"
     popd >/dev/null

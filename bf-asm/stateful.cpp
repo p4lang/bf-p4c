@@ -73,23 +73,18 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                     if (CHECKTYPE(v.value, tINT))
                         math_table.data[v.key.i] = v.value.i;
                 } else error(v.key.lineno, "Unknow item %s in math_table", value_desc(kv.key)); }
-        } else if (kv.key.type == tCMD && kv.key == "sbus" && options.target != TOFINO) {
-            if (!CHECKTYPE(kv.value, tMAP)) continue;
-            for (auto &el : kv.value.map) {
-                if (el.key == "match")
-                    parse_vector(sbus_match, el.value);
-                else if (el.key == "learn")
-                    parse_vector(sbus_learn, el.value);
-                else
-                    warning(el.key.lineno, "ignoring unknown item %s in sbus of table %s",
-                            value_desc(el.key), name()); }
-            for (auto &el : kv.key.vec) {
-                if (el == "and") sbus_and = true;
-                else if (el == "or") sbus_or = true;
-                else if (el == "not") sbus_invert = true;
-                else if (el != "sbus")
-                    warning(el.lineno, "ignoring unknown item %s in sbus of table %s",
-                            value_desc(el), name()); }
+#ifdef HAVE_JBAY
+        } else if (options.target == JBAY && setup_jbay(kv)) {
+            /* jbay specific extensions done in setup_jbay */
+#endif
+        } else if (kv.key == "log_vpn") {
+            logvpn_lineno = kv.value.lineno;
+            if (CHECKTYPE2(kv.value, tINT, tRANGE)) {
+                if (kv.value.type == tINT)
+                    logvpn_min = logvpn_max = kv.value.i;
+                else {
+                    logvpn_min = kv.value.lo;
+                    logvpn_max = kv.value.hi; } }
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
@@ -199,6 +194,14 @@ void StatefulTable::pass2() {
     if (input_xbar) input_xbar->pass2();
     if (actions)
         actions->stateful_pass2(this);
+    if (stateful_counter_mode) {
+        if (logvpn_min < 0)
+            layout_vpn_bounds(logvpn_min, logvpn_max, true);
+        else {
+            int min, max;
+            layout_vpn_bounds(min, max, true);
+            if (logvpn_min < min || logvpn_max > max)
+                error(logvpn_lineno, "log_vpn out of range (%d..%d)", min, max); } }
 }
 
 void StatefulTable::pass3() {
@@ -217,6 +220,11 @@ int StatefulTable::address_shift() const {
     return ceil_log2(format->size);
 }
 
+#include "tofino/stateful.cpp"
+#if HAVE_JBAY
+#include "jbay/stateful.cpp"
+#endif /* HAVE_JBAY */
+
 template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
@@ -229,8 +237,8 @@ template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable
             ptr_bits = EXACT_VPN_BITS + EXACT_WORD_BITS;
         } else
             ptr_bits = TCAM_VPN_BITS + TCAM_WORD_BITS;
-    } else if (args[1].type == Call::Arg::HashDist) {
-        // indirect access via hash dist -- bits are ORed in after mask.
+    } else if (args[1].type == Call::Arg::HashDist || args[1].type == Call::Arg::Counter) {
+        // indirect access via counter or hash dist -- bits are ORed in after mask.
         ptr_bits = 0;
     } else if (args[1].type == Call::Arg::Field) {
         // indirect access via match overhead
@@ -381,6 +389,8 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
         if (push_on_overflow)
             adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;
         adrdist.packet_action_at_headertime[1][meter_group] = 1; }
+    if (stateful_counter_mode)
+        write_logging_regs(regs);
     //for (auto &hd : hash_dist)
     //    hd.write_regs(regs, this, 0, non_linear_hash);
     if (gress == INGRESS) {

@@ -219,9 +219,9 @@ stage <constant> <thread>:
         meter: <table-name> [ (<index-field>) ]
             # meter table to use
             # FIXME -- how to specify meter type
-        stateful: <table-name> [ (<index-field>) ]
+        stateful: <table-name> [ (<sful action> [, <index-field> ]) ]
+        stateful: <table-name> [ (<sful action>, counter [ hit | miss | gateway ]) ]
             # stateful table to use
-            # FIXME -- how to specify stateful instruction?
         idletime:
             # idletime table
             row: <vector>
@@ -563,15 +563,26 @@ stage <constant> <thread>:
           invert: true | false
           shift: <int>
           scale: <int>
-        sbus and|or [not]:
-          # jbay only -- shared bus use
-          learn: <table> | '[' <table>, ... ']'
-          match: <table> | '[' <table>, ... ']'
+        log_vpn: <int> | <range>
+          # vpns to use in stateful logging mode
         actions:
             <action name> :
                 - <instruction>
                     # SALU instructions to run for this table
         context_json: #anything
+        # jbay additional features:
+        sbus and|or [not]:
+          # jbay only -- shared bus use
+          learn: <table> | '[' <table>, ... ']'
+          match: <table> | '[' <table>, ... ']'
+        fifo: { push: <mode>, pop: <mode> }
+        stack: { push: <mode>, pop: <mode> }
+        bloom filter clear: <mode>
+          # fifo or stack or bloom filter fast clear mode (mutually exclusive)
+          # <mode> is hit | miss | gateway | active | control_plane
+          # controls when the stack/fifo is pushed or popped
+        watermark: push <level> | pop <level>
+          # watermark interrupts sent every <level> pushes or pops
     dependency: concurrent | action | match
         # set the interstage dependency between this stage and the
         # previous stage.  Ignored in stage 0

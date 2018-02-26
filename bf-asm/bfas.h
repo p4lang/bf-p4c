@@ -17,6 +17,7 @@ extern struct option_t {
 } options;
 
 extern unsigned unique_action_handle;
+struct value_t;
 
 #include <string>
 extern std::string asmfile_name;

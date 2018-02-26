@@ -307,7 +307,8 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
                     f->bit(0) + METER_ADDRESS_ZERO_PAD;
             } else {
-                assert(s.args[1].type == Call::Arg::HashDist);
+                assert(s.args[1].type == Call::Arg::HashDist ||
+                       s.args[1].type == Call::Arg::Counter);
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 0; }
         } else if (options.match_compiler) {
             /* unused, so should not be set... */

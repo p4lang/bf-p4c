@@ -303,19 +303,17 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
         if (idx < op.size)
             error(rv->lineno, "too many operands for %s instruction", op[0].s);
         return rv; }
-    if (idx < op.size)
+    if (idx < op.size && operands != B)
         rv->srca = operand(tbl, act, op[idx++]);
-    if (idx < op.size)
+    if (idx < op.size && operands != A)
         rv->srcb = operand(tbl, act, op[idx++]);
-    if ((rv->srca.to<operand::Phv>() || rv->srca.to<operand::MathFn>()) && swap_args) {
+    if (swap_args && (
+            rv->srca.to<operand::Phv>() ||
+            rv->srca.to<operand::MathFn>() ||
+            (rv->srcb.to<operand::Memory>() && rv->srca.to<operand::Const>()))) {
         operands = (rv->opc = swap_args)->operands;
-        std::swap(rv->srca, rv->srcb);
-    } else if ((rv->srcb.to<operand::Memory>() && rv->srca.to<operand::Const>()) && swap_args) {
-        operands = (rv->opc = swap_args)->operands;
-        std::swap(rv->srca, rv->srcb);
-    } else if (operands == B) {
         std::swap(rv->srca, rv->srcb); }
-    if (idx < op.size || (operands == A && rv->srcb) || (operands == B && rv->srca))
+    if (idx < op.size)
         error(rv->lineno, "too many operands for %s instruction", op[0].s);
     else if ((!rv->srca && operands != B) || (!rv->srcb && operands != A))
         error(rv->lineno, "not enough operands for %s instruction", op[0].s);
