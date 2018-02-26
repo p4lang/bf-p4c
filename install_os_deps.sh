@@ -55,7 +55,9 @@ install_linux_packages() {
 
     install_cmake "3.5.2"
     install_boost "1.58.0"
-    install_rapidjson "1.1.0"
+    if ! `pkg-config RapidJSON` && version_LT `pkg-config --modversion RapidJSON` "1.1.0"; then
+        install_rapidjson "1.1.0"
+    fi
 }
 
 function install_cmake() {

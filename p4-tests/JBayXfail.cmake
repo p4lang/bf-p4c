@@ -156,7 +156,6 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "Floating point exception"
   # These tests start to fail after introducing PHV packing.
-  testdata/p4_14_samples/instruct5.p4
   extensions/p4_tests/p4_14/adjust_instr3.p4
   extensions/p4_tests/p4_14/action_default_multiple.p4
   extensions/p4_tests/p4_14/no_match_miss.p4
@@ -200,3 +199,20 @@ p4c_add_xfail_reason("jbay"
   "Could not find declaration for standard_metadata"
   extensions/p4_tests/p4_16/verify_checksum.p4
 )
+
+# BRIG-275
+p4c_add_xfail_reason("jbay"
+  "Invalid select case expression pvs.*"
+  testdata/p4_14_samples/issue946.p4
+  testdata/p4_14_samples/parser_value_set0.p4
+  testdata/p4_14_samples/parser_value_set1.p4
+  testdata/p4_14_samples/parser_value_set2.p4
+  )
+
+# This test fails because two fields are mutually exclusive in the parser, but
+# one is added in the MAU while the other is live.  This behavior matches glass
+# but is known to be incorrect.
+p4c_add_xfail_reason("jbay"
+  "instruction slot [0-9]+ used multiple times in action"
+  testdata/p4_14_samples/instruct5.p4
+  )

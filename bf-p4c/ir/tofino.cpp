@@ -20,12 +20,12 @@ IR::InstanceRef::InstanceRef(cstring prefix, IR::ID n, const IR::Type *t, bool f
                 nested.add(f->name, new InstanceRef(n, f->name, f->type, forceMeta));
     } else if (auto *stk = t->to<IR::Type_Stack>()) {
         if (forceMeta)
-            BUG("metadata arrays not handled in InstanceRef::InstanceRef");
+            P4C_UNIMPLEMENTED("metadata arrays not handled in InstanceRef::InstanceRef");
         obj = new IR::HeaderStack(n, stk->elementType->to<IR::Type_Header>(), stk->getSize());
-    } else if (t->is<IR::Type::Bits>() || t->is<IR::Type::Boolean>()) {
+    } else if (t->is<IR::Type::Bits>() || t->is<IR::Type::Boolean>() || t->is<IR::Type_Set>()) {
         obj = nullptr;
     } else {
-        BUG("Unhandled InstanceRef type %1%", t); }
+        P4C_UNIMPLEMENTED("Unhandled InstanceRef type %1%", t); }
 }
 
 int IR::TempVar::uid = 0;

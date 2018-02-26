@@ -1,5 +1,27 @@
 set (tofino_timeout 500)
 
+set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
+set  (isXFail TRUE)
+file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
+  "switch_ent_fin_leaf" ${switchtest} "${testExtraArgs} -DENT_FIN_LEAF_PROFILE")
+p4c_add_test_label("tofino" "17Q4Goal" "switch_ent_fin_leaf")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "switch_dc_basic" ${switchtest} "${testExtraArgs} -DDC_BASIC_PROFILE")
+p4c_add_test_label("tofino" "17Q4Goal" "switch_dc_basic")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
+  "switch_ent_dc_general" ${switchtest} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
+p4c_add_test_label("tofino" "17Q4Goal" "switch_ent_dc_general")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
+  "switch_msdc" ${switchtest} "${testExtraArgs} -DMSDC_PROFILE")
+p4c_add_test_label("tofino" "17Q4Goal" "switch_msdc")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "switch_l2" ${switchtest} "${testExtraArgs} -DL2_PROFILE")
+
 set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main")
 set (V1_EXCLUDE_PATTERNS "package" "extern")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
@@ -45,28 +67,6 @@ p4c_add_ptf_test_with_ptfdir (
     "tofino" fabric.p4 ${ONOS_FABRIC_P4}
     "${testExtraArgs} -DWITH_SPGW"
     ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf)
-
-set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
-set  (isXFail TRUE)
-file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-  "switch_ent_fin_leaf" ${switchtest} "${testExtraArgs} -DENT_FIN_LEAF_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_ent_fin_leaf")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE 
-  "switch_dc_basic" ${switchtest} "${testExtraArgs} -DDC_BASIC_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_dc_basic")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-  "switch_ent_dc_general" ${switchtest} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_ent_dc_general")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-  "switch_msdc" ${switchtest} "${testExtraArgs} -DMSDC_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_msdc")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_l2" ${switchtest} "${testExtraArgs} -DL2_PROFILE")
 
 include(TofinoMustPass.cmake)
 include(TofinoXfail.cmake)

@@ -583,6 +583,7 @@ extern selector_action {
 //    abstract T hash();
 //}
 
+
 extern action_profile {
     action_profile(bit<32> size);
 }

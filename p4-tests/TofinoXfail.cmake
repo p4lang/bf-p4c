@@ -35,8 +35,12 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_14/adjust_instr3.p4
     extensions/p4_tests/p4_14/action_default_multiple.p4
     extensions/p4_tests/p4_14/no_match_miss.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "error: instruction slot [0-9]+ used multiple times in action push"
     testdata/p4_14_samples/instruct5.p4
-  )
+    )
 
 endif() # HARLYN_STF_tofino
 
@@ -56,6 +60,7 @@ p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   extensions/p4_tests/p4_14/overlay_add_header.p4
+  extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
   )
 
 # BRIG-104
@@ -81,7 +86,12 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Field .* of header .* cannot have type header"
+  "metadata arrays not handled in InstanceRef::InstanceRef"
+  testdata/p4_16_samples/equality-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Field .* of header .* cannot have type header"
   testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
   testdata/p4_16_samples/issue281.p4
   )
@@ -120,6 +130,7 @@ p4c_add_xfail_reason("tofino"
 # varbit extracts don't work in parser
 p4c_add_xfail_reason("tofino"
   "Wrong number of arguments for method call"
+  testdata/p4_16_samples/equality-varbit-bmv2.p4
   testdata/p4_16_samples/issue447-bmv2.p4
   testdata/p4_16_samples/issue447-1-bmv2.p4
   testdata/p4_16_samples/issue447-2-bmv2.p4
@@ -467,6 +478,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Constant lookup does not match the ActionFormat"
+  extensions/p4_tests/p4_14/test_config_222_small_tag_stack.p4
   testdata/p4_14_samples/action_inline.p4
   )
 
@@ -545,6 +557,16 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
   testdata/p4_16_samples/issue134-bmv2.p4
 )
+
+# BRIG-275
+p4c_add_xfail_reason("tofino"
+  "Invalid select case expression pvs.*"
+  extensions/p4_tests/p4_14/p4-tests/programs/pvs/pvs.p4
+  testdata/p4_14_samples/issue946.p4
+  testdata/p4_14_samples/parser_value_set0.p4
+  testdata/p4_14_samples/parser_value_set1.p4
+  testdata/p4_14_samples/parser_value_set2.p4
+  )
 
 # Incorrect P4_14->16 conversion for varbit extract
 p4c_add_xfail_reason("tofino"
