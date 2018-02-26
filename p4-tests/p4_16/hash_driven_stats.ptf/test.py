@@ -15,11 +15,11 @@ class CounterReadTest(P4RuntimeTest):
         counter_entry = entity.counter_entry
         cid = self.get_counter_id(name)
         counter_entry.counter_id = cid
-        counter_entry.index = port
+        counter_entry.index.index = port
         for rep in self.stub.Read(req):
             for entity in rep.entities:
                 counter_entry = entity.counter_entry
-                if counter_entry.counter_id == cid and counter_entry.index == port:
+                if counter_entry.counter_id == cid and counter_entry.index.index == port:
                     return counter_entry.data.byte_count
 
     def runTest(self):

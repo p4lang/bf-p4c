@@ -242,7 +242,7 @@ class STF2ptf(P4RuntimeTest, STFRunner):
             counter_entry = reqCounter.counter_entry
             counterId = self.get_counter_id(counterName)
             counter_entry.counter_id = counterId
-            counter_entry.index = counterIndex
+            counter_entry.index.index = counterIndex
         try:
             foundCounter = False
             for rep in self.stub.Read(rr):
@@ -254,7 +254,7 @@ class STF2ptf(P4RuntimeTest, STFRunner):
                             continue
                     else:
                         counter = entity.counter_entry
-                        if counter.counter_id != counterId or counter.index != counterIndex:
+                        if counter.counter_id != counterId or counter.index.index != counterIndex:
                             continue
                     foundCounter = True
                     if chk[3][0] is not None:
