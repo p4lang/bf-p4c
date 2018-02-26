@@ -1211,8 +1211,10 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
     const int N_CLUSTER_LIMITATION = 20;
     if (cluster_groups.size() > N_CLUSTER_LIMITATION) {
         return { }; }
+#if HAVE_JBAY
     if (Device::currentDevice() == "JBay") {
         return { }; }
+#endif  // HAVE_JBAY
 
     std::list<PHV::SuperCluster*> allocated_sc;
     for (auto* sc : cluster_groups) {
