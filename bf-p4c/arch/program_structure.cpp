@@ -32,7 +32,11 @@ const cstring ProgramStructure::EGRESS_DEPARSER  = "egress_deparser";
 
 // append target architecture to declaration
 void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node>* vector) {
-    Util::PathName path(p4includePath);
+    // the p4c driver sets environment variables for include
+    // paths.  check the environment and add these to the command
+    // line for the preporicessor
+    char * drvP4IncludePath = getenv("P4C_16_INCLUDE_PATH");
+    Util::PathName path(drvP4IncludePath ? drvP4IncludePath : p4includePath);
     path = path.join(filename);
 
     CompilerOptions options;
