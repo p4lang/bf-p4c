@@ -70,6 +70,14 @@ class LoadTargetArchitecture : public Inspector {
         // XXX(seth): We need to figure out what to map this to.
         // structure->addMetadata("standard_metadata", "instance_type",
         //             "eg_intr_md", "instance_type", 32);
+
+        structure->addMetadata(INGRESS,
+                      MetadataField{"standard_metadata", "checksum_error", 1},
+                      MetadataField{"ig_intr_md_from_parser_aux", "ingress_parser_err", 1, 12});
+
+        structure->addMetadata(EGRESS,
+                      MetadataField{"standard_metadata", "checksum_error", 1},
+                      MetadataField{"eg_intr_md_from_parser_aux", "egress_parser_err", 1, 12});
     }
 
     void analyzeTofinoModel() {
@@ -1261,41 +1269,39 @@ class ConstructSymbolTable : public Inspector {
 
         // check if any of the fields or dest belong to extracts
 
-        std::vector<IR::MethodCallStatement*> toBeAdded;
+        std::vector<IR::Statement*> ingressStmts;
+        std::vector<IR::Statement*> egressStmts;
 
         for (auto extract : extracts) {
             for (auto f : fieldlist->to<IR::ListExpression>()->components) {
                 if (belongsTo(f->to<IR::Member>(), extract)) {
                     auto addCall = new IR::MethodCallStatement(csum.second->srcInfo,
                         new IR::Member(new IR::PathExpression(decl->name), "add"), {f});
-                    toBeAdded.push_back(addCall);
+                    structure->ingressParserStatements[stateName].push_back(addCall);
+                    structure->egressParserStatements[stateName].push_back(addCall);
                 }
             }
 
             if (belongsTo(dest_field->to<IR::Member>(), extract)) {
-                auto verifyCall = new IR::MethodCallStatement(csum.second->srcInfo,
-                    new IR::Member(new IR::PathExpression(decl->name), "verify"), {});
-                toBeAdded.push_back(verifyCall);
-            }
-        }
+                auto methodCall = new IR::Member(new IR::PathExpression(decl->name), "verify");
+                auto verifyCall = new IR::MethodCallExpression(csum.second->srcInfo,
+                                                               methodCall, {});
+                auto rhs = new IR::Cast(IR::Type::Bits::get(1), verifyCall);
 
-        // now add new statements in ingress/egress parser state
+                auto ingress_parser_err = new IR::Member(
+                    new IR::PathExpression("ig_intr_md_from_parser_aux"), "ingress_parser_err");
 
-        for (auto gress : { ProgramStructure::INGRESS_PARSER }) {
-            // XXX(zma) is the responsibility of duplicating the statements of translation
-            // OR during extract_parser.cpp?
+                auto lhs = new IR::Slice(ingress_parser_err, 12, 12);
 
-            auto parser = structure->parsers.at(structure->getBlockName(gress));
+                structure->ingressParserStatements[stateName].push_back(
+                    new IR::AssignmentStatement(lhs, rhs));
 
-            for (auto* state : parser->states) {
-                if (state->name == stateName) {
-                    // XXX(zma) the const_cast doesn't look right ...
-                    // add fields in their corresponding state here OR
-                    // in during extract_parser in backend?
-                    auto* s = const_cast<IR::ParserState*>(state);
-                    for (auto* stmt : toBeAdded)
-                        s->components.push_back(stmt);
-                }
+                auto egress_parser_err = new IR::Member(
+                    new IR::PathExpression("eg_intr_md_from_parser_aux"), "egress_parser_err");
+
+                lhs = new IR::Slice(egress_parser_err, 12, 12);
+                structure->egressParserStatements[stateName].push_back(
+                    new IR::AssignmentStatement(lhs, rhs));
             }
         }
     }

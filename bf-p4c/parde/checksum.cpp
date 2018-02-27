@@ -491,21 +491,6 @@ ChecksumSourceMap findUpdateChecksumsNative(/*const IR::P4Control* control*/
     return checksums;
 }
 
-std::vector<const IR::MethodCallExpression*>
-findParserChecksumStatements(const IR::IndexedVector<IR::StatOrDecl>& stmts, cstring which) {
-    std::vector<const IR::MethodCallExpression*> statements;
-
-    for (auto *statement : stmts) {
-        if (auto* method = statement->to<IR::MethodCallStatement>()) {
-            auto methodCall = method->methodCall->to<IR::MethodCallExpression>();
-            if (checkSanity(methodCall, which))
-                statements.push_back(methodCall);
-        }
-    }
-
-    return statements;
-}
-
 /// Substitute computed checksums into the deparser code by replacing Emits for
 /// the destination field with EmitChecksums.
 struct SubstituteUpdateChecksums : public Transform {
@@ -531,26 +516,6 @@ struct SubstituteUpdateChecksums : public Transform {
     }
 
     const ChecksumSourceMap& checksums;
-};
-
-struct InsertAddVerifyChecksums : public Transform {
-    explicit InsertAddVerifyChecksums(const ParserStateChecksumMap& adds,
-        const ParserStateChecksumMap& verify) : adds(adds), verify(verify) { }
-
- private:
-    IR::BFN::ParserState* preorder(IR::BFN::ParserState* state) override {
-        prune();
-
-        auto* clone = state->clone();
-        IR::Vector<IR::BFN::ParserPrimitive> newStatements;
-
-        // add adds/verify for this state
-
-        return clone;
-    }
-
-    const ParserStateChecksumMap& adds;
-    const ParserStateChecksumMap& verify;
 };
 
 }  // namespace

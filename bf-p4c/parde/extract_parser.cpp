@@ -383,7 +383,8 @@ struct RewriteParserStatements : public Transform {
                expression->is<IR::PathExpression>() ||
                expression->is<IR::Member>() ||
                expression->is<IR::HeaderStackItemRef>() ||
-               expression->is<IR::TempVar>();
+               expression->is<IR::TempVar>() ||
+               expression->is<IR::MethodCallExpression>();  // verify checksum
     }
 
     const IR::BFN::ParserPrimitive*
@@ -416,6 +417,12 @@ struct RewriteParserStatements : public Transform {
         if (!canEvaluateInParser(rhs)) {
             ::error("Assignment cannot be supported in the parser: %1%", rhs);
             return nullptr;
+        }
+
+        if (auto mc = rhs->to<IR::MethodCallExpression>()) {
+            auto* method = mc->method->to<IR::Member>();
+            if (method && method->member == "verify")
+                return nullptr;  // AssignementStatement -> VerifyChecksum?
         }
 
         return new IR::BFN::Extract(s->srcInfo, s->left,

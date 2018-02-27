@@ -442,6 +442,15 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     parserLocals->append(structure->ingressParserDeclarations);
     parserLocals->append(node->parserLocals);
 
+    for (auto* state : parser->states) {
+        auto it = structure->ingressParserStatements.find(state->name);
+        if (it != structure->ingressParserStatements.end()) {
+            auto* s = const_cast<IR::ParserState*>(state);
+            for (auto* stmt : it->second)
+                s->components.push_back(stmt);
+        }
+    }
+
     auto result = new IR::BFN::TranslatedP4Parser(parser->srcInfo, "ingressParserImpl",
                                                   parser_type, parser->constructorParams,
                                                   *parserLocals, parser->states,
@@ -516,6 +525,15 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     parserLocals.append(structure->egressParserDeclarations);
     parserLocals.append(node->parserLocals);
 
+    for (auto* state : parser->states) {
+        auto it = structure->egressParserStatements.find(state->name);
+        if (it != structure->egressParserStatements.end()) {
+            auto* s = const_cast<IR::ParserState*>(state);
+            for (auto* stmt : it->second)
+                s->components.push_back(stmt);
+        }
+    }
+
     auto parser_type = new IR::Type_Parser("egressParserImpl", paramList);
     auto result = new IR::BFN::TranslatedP4Parser(parser->srcInfo, "egressParserImpl",
                                                   parser_type, parser->constructorParams,
@@ -587,11 +605,19 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
         auto it = nameMap.find(MetadataField{pathname, membername, type->size});
         if (it != nameMap.end()) {
             auto expr = new IR::PathExpression(it->second.structName);
-            auto result = new IR::Member(node->srcInfo, expr, it->second.fieldName);
-            result->type = IR::Type::Bits::get(it->second.width);
-            if (it->first.width != it->second.width && findOrigCtxt<IR::Operation>()) {
-                return new IR::Cast(IR::Type::Bits::get(it->first.width), result);
+            auto member = new IR::Member(node->srcInfo, expr, it->second.fieldName);
+            member->type = IR::Type::Bits::get(it->second.width);
+
+            IR::Expression* result = member;
+
+            if (it->second.offset != 0) {
+                result = new IR::Slice(result, it->second.offset + it->second.width - 1,
+                                       it->second.offset);
             }
+            if (it->first.width != it->second.width && findOrigCtxt<IR::Operation>()) {
+                result = new IR::Cast(IR::Type::Bits::get(it->first.width), result);
+            }
+
             LOG3("Translating " << node << " to " << result);
             return result;
         }
@@ -1375,11 +1401,19 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
         auto it = nameMap.find(MetadataField{pathname, membername, type->size});
         if (it != nameMap.end()) {
             auto expr = new IR::PathExpression(it->second.structName);
-            auto result = new IR::Member(node->srcInfo, expr, it->second.fieldName);
-            result->type = IR::Type::Bits::get(it->second.width);
-            if (it->first.width != it->second.width) {
-                return new IR::Cast(IR::Type::Bits::get(it->first.width), result);
+            auto member = new IR::Member(node->srcInfo, expr, it->second.fieldName);
+            member->type = IR::Type::Bits::get(it->second.width);
+
+            IR::Expression* result = member;
+
+            if (it->second.offset != 0) {
+                result = new IR::Slice(result, it->second.offset + it->second.width - 1,
+                                       it->second.offset);
             }
+            if (it->first.width != it->second.width && findOrigCtxt<IR::Operation>()) {
+                result = new IR::Cast(IR::Type::Bits::get(it->first.width), result);
+            }
+
             LOG3("Translating " << node << " to " << result);
             return result;
         }

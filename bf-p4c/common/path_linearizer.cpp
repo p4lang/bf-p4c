@@ -4,7 +4,8 @@ namespace BFN {
 
 Visitor::profile_t PathLinearizer::init_apply(const IR::Node* root) {
     BUG_CHECK(root->is<IR::PathExpression>() ||
-              root->is<IR::Member>(),
+              root->is<IR::Member>() ||
+              root->is<IR::Slice>(),
               "Applying PathlikeExpressionAnalyzer to non-path-like "
               "expression: %1%", root);
     linearPath.emplace();

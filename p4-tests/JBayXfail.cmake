@@ -194,12 +194,6 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_16/brig-42.p4
   )
 
-# Translation code does not support standard_metadata.checksum_error
-p4c_add_xfail_reason("jbay"
-  "Could not find declaration for standard_metadata"
-  extensions/p4_tests/p4_16/verify_checksum.p4
-)
-
 # BRIG-275
 p4c_add_xfail_reason("jbay"
   "Invalid select case expression pvs.*"

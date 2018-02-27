@@ -24,6 +24,13 @@ struct MetadataField {
     cstring structName;
     cstring fieldName;
     int width;
+    int offset;
+
+    MetadataField(cstring structName, cstring fieldName, int width) :
+        structName(structName), fieldName(fieldName), width(width), offset(0) { }
+
+    MetadataField(cstring structName, cstring fieldName, int width, int offset) :
+        structName(structName), fieldName(fieldName), width(width), offset(offset) { }
 
     bool operator<(const MetadataField& other) const {
         if (structName != other.structName)
@@ -94,9 +101,12 @@ struct ProgramStructure {
     std::vector<const IR::Declaration *>         ingressDeparserDeclarations;
     std::vector<const IR::Declaration *>         egressDeparserDeclarations;
     std::vector<const IR::StatOrDecl *>          ingressDeparserStatements;
-    safe_vector<const IR::StatOrDecl *>          egressDeparserStatements;
+    std::vector<const IR::StatOrDecl *>          egressDeparserStatements;
     std::vector<const IR::Declaration *>         ingressParserDeclarations;
     std::vector<const IR::Declaration *>         egressParserDeclarations;
+
+    ordered_map<cstring, std::vector<const IR::StatOrDecl *>>          ingressParserStatements;
+    ordered_map<cstring, std::vector<const IR::StatOrDecl *>>          egressParserStatements;
 
     ordered_map<const IR::Member*, const IR::Member*> membersToDo;
     /// maintain the paths to translate and their thread info

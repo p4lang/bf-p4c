@@ -107,7 +107,7 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-109
 p4c_add_xfail_reason("tofino"
-  "Couldn't resolve computed value for select"
+  "Couldn't resolve computed value for"
   # XXX(seth): This code just uses packet_in.lookahead() in a way which isn't supported yet.
   testdata/p4_16_samples/issue355-bmv2.p4
   )
@@ -1064,12 +1064,6 @@ p4c_add_xfail_reason("tofino"
   #extensions/p4_tests/p4_14/c2/COMPILER-401/case2308_bugged.p4
   )
 
-# Translation code does not support standard_metadata.checksum_error
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for standard_metadata"
-  extensions/p4_tests/p4_16/verify_checksum.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_l2
@@ -1081,3 +1075,8 @@ p4c_add_xfail_reason("tofino"
   "No hash dist .* in table .*"
   extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
   )
+
+p4c_add_xfail_reason("tofino"
+  "AssertionError: A packet was received on device"
+  extensions/p4_tests/p4_16/verify_checksum.p4
+)

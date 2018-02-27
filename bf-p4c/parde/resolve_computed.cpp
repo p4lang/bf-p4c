@@ -253,6 +253,11 @@ class VerifyParserRValsAreUnique : public ParserInspector {
 using ParserValueResolution = std::map<const IR::BFN::ComputedRVal*,
                                        const IR::BFN::ParserRVal*>;
 
+static void print(const std::map<cstring, const IR::BFN::ParserRVal*>& defs) {
+    for (auto d : defs)
+        std::cout << d.first << " " << d.second << std::endl;
+}
+
 /**
  * Walk the parser programs (each thread is treated separately) and try to
  * simplify r-values by replacing any uses of l-values with their definition.
