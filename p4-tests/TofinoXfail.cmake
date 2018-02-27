@@ -815,12 +815,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/exact_match_mask1.p4
     )
 
-  # BRIG-356
-  p4c_add_xfail_reason("tofino"
-    "StatusCode.UNAVAILABLE, Endpoint read failed"
-    testdata/p4_14_samples/exact_match3.p4
-    )
-
   #BRIG-357
   p4c_add_xfail_reason("tofino"
     "StatusCode.UNKNOWN, Error in first phase of device update"
@@ -1020,11 +1014,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Match overhead field immediate.* not in bottom 64 bits"
   extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "action data table .* not in right stage"
-  testdata/p4_14_samples/exact_match3.p4
   )
 
 # BRIG-400
