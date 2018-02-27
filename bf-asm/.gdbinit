@@ -239,7 +239,54 @@ class InputXbar_Group_Printer:
         else:
             rv = '<bad type 0x%x>' % int(self.val['type'])
         rv += ' group ' + str(self.val['index'])
-        return rv;
+        return rv
+class ActionBus_Source_Printer:
+    "Print an ActionBus::Source"
+    def __init__(self, val):
+        self.val = val
+    def to_string(self):
+        if self.val['type'] == 0:
+            rv = "None"
+        elif self.val['type'] == 1:
+            rv = "Field"
+        elif self.val['type'] == 2:
+            rv = "HashDist"
+        elif self.val['type'] == 3:
+            rv = "TableOutput"
+        elif self.val['type'] == 4:
+            rv = "TableColor"
+        elif self.val['type'] == 5:
+            rv = "NameRef"
+        elif self.val['type'] == 6:
+            rv = "ColorRef"
+        else:
+            rv = '<bad type 0x%x>' % int(self.val['type'])
+        return rv
+    class _iter:
+        def __init__(self, val, type):
+            self.val = val
+            self.type = type
+            self.done = type < 1 or type > 6
+        def __iter__(self):
+            return self
+        def __next__(self):
+            if self.done:
+                raise StopIteration
+            self.done = True
+            if type == 1:
+                return ("field", self.val['field'])
+            elif type == 2:
+                return ("hd", self.val['hd'])
+            elif type == 3 or type == 4:
+                return ("table", self.val['table'])
+            elif type == 5 or type == 6:
+                return ("name_ref", self.val['name_ref'])
+            else:
+                raise StopIteration
+        def next(self): return self.__next__()
+    def children(self):
+        return self._iter(self.val, int(self.val['type']))
+
 
 def find_pp(val):
     if val.type.tag == 'bitvec':
@@ -254,6 +301,8 @@ def find_pp(val):
         return ordered_map_Printer(val)
     if val.type.tag == 'InputXbar::Group':
         return InputXbar_Group_Printer(val)
+    if val.type.tag == 'ActionBus::Source':
+        return ActionBus_Source_Printer(val)
     return None
 
 #gdb.pretty_printers = [ gdb.pretty_printers[0] ]  # uncomment if reloading

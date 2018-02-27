@@ -382,6 +382,9 @@ void SRamMatchTable::pass1() {
     alloc_busses(stage->sram_match_bus_use);
     check_next();
     attached.pass1(this);
+    if (format) {
+        verify_format();
+        setup_ways(); }
     if (action_bus) action_bus->pass1(this);
     if (actions) {
         assert(action.args.size() == 0);
@@ -399,9 +402,6 @@ void SRamMatchTable::pass1() {
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     input_xbar->pass1();
-    if (format) {
-        verify_format();
-        setup_ways(); }
     alloc_vpns();
     if (gateway) {
         gateway->logical_id = logical_id;

@@ -183,16 +183,21 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                  " data = " << src.toString(tbl) << " off=" << off); }
         tbl->apply_to_field(name, [](Table::Format::Field *f){
             f->flags |= Table::Format::Field::USED_IMMED; });
+        if (f) {
+            auto &slot = by_byte.at(idx);
+            tbl->apply_to_field(name, [&slot, tbl, off](Table::Format::Field *f){
+                Source src(f);
+                if (slot.data.emplace(src, off).second)
+                    LOG4("        data += " << src.toString(tbl) << " off=" << off); }); }
     }
 }
 
 unsigned ActionBus::Slot::lo(Table *tbl) const {
     int rv = -1;
-    int immed_offset = tbl->format && tbl->format->immed ? tbl->format->immed->bit(0) : 0;
     for (auto &src : data) {
         int off = src.second;
         if (src.first.type == Source::Field)
-            off += src.first.field->bit(0) - immed_offset;
+            off += src.first.field->immed_bit(0);
         assert(rv < 0 || rv == off);
         rv = off; }
     assert(rv >= 0);
@@ -203,6 +208,9 @@ bool ActionBus::compatible(const Source &a, unsigned a_off, const Source &b, uns
     if (a.type != b.type) return false;
     switch (a.type) {
     case Source::Field:
+        // corresponding fields in different groups are compatible even though they
+        // are at different locations.  Table::Format::pass1 checks that
+        if (a.field->by_group == b.field->by_group) return true;
         return a.field->bit(a_off) == b.field->bit(b_off);
     case Source::HashDist:
         return a.hd->hash_group == b.hd->hash_group && a.hd->id == b.hd->id && a_off == b_off;
@@ -349,8 +357,7 @@ bool ActionBus::check_sharing(Table *tbl1, Table *tbl2) {
 void ActionBus::need_alloc(Table *tbl, Table::Format::Field *f, unsigned off, unsigned size) {
     LOG3("need_alloc " << tbl->find_field(f) << " off=" << off << " size=0x" << hex(size));
     need_place[f][off] |= size;
-    int immed_offset = tbl->format && tbl->format->immed ? tbl->format->immed->bit(0) : 0;
-    byte_use.setrange((f->bit(0) - immed_offset + off)/8U, size);
+    byte_use.setrange((f->immed_bit(0) + off)/8U, size);
 }
 void ActionBus::need_alloc(Table *tbl, HashDistribution *hd, unsigned off, unsigned size) {
     LOG3("need_alloc hash_dist " << hd->id << " off=" << off << " size=0x" << hex(size));
@@ -471,13 +478,11 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
     LOG4("alloc_field(" << src << ", " << offset << ", " << sizes_needed << ")");
     int lineno = this->lineno;
     bool is_action_data = dynamic_cast<ActionTable *>(tbl) != nullptr;
-    int immed_offset = tbl->format && tbl->format->immed ? tbl->format->immed->bit(0) : 0;
-    assert(immed_offset == 0 || !is_action_data);
     int lo, hi, use;
     bool can_merge = true;
     if (src.type == Source::Field) {
-        lo = src.field->bit(offset) - immed_offset;
-        hi = src.field->bit(src.field->size) - 1 - immed_offset;
+        lo = src.field->immed_bit(offset);
+        hi = src.field->immed_bit(src.field->size) - 1;
         lineno = tbl->find_field_lineno(src.field);
     } else {
         if (src.type == Source::TableOutput)
@@ -763,9 +768,8 @@ template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
         unsigned off = 0;
         if (!f.second.data.empty()) {
             off = f.second.data.begin()->second;
-            if (f.second.data.begin()->first.type == Source::Field) {
-                off += f.second.data.begin()->first.field->bits[0].lo;
-                if (tbl->format) off -= tbl->format->immed->bits[0].lo; } }
+            if (f.second.data.begin()->first.type == Source::Field)
+                off -= f.second.data.begin()->first.field->immed_bit(0); }
         unsigned size = f.second.size;
         switch(Stage::action_bus_slot_size[slot]) {
         case 8:

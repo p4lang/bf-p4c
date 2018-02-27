@@ -148,6 +148,7 @@ public:
             Field       **by_group = 0;
             Format      *fmt;  // containing format
             bool operator==(const Field &a) const { return size == a.size; }
+            /* return the bit in the format that contains bit i of this field */
             unsigned bit(unsigned i) {
                 unsigned last = 0;
                 for (auto &chunk : bits) {
@@ -159,6 +160,12 @@ public:
                 assert(0);
                 return 0; // quiet -Wreturn-type warning
             }
+            /* bit(i), adjusted for the immediate shift of the match group of the field
+             * returns the bit in the post-extract immediate containing bit i */
+            unsigned immed_bit(unsigned i) {
+                auto rv = bit(i);
+                if (fmt->immed) rv -= fmt->immed->by_group[group]->bit(0);
+                return rv; }
             unsigned hi(unsigned bit) {
                 for (auto &chunk : bits)
                     if (bit >= chunk.lo && bit <= chunk.hi)
