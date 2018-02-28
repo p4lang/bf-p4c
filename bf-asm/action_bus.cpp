@@ -79,6 +79,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
     lineno = data.size ? data[0].key.lineno : -1;
     for (auto &kv : data) {
         if (!CHECKTYPE2(kv.key, tINT, tRANGE)) continue;
+        unsigned idx = kv.key.type == tRANGE ? kv.key.lo : kv.key.i;
         if (!CHECKTYPE2M(kv.value, tSTR, tCMD, "field name or slice")) continue;
         const char *name = kv.value.s;
         value_t *name_ref = &kv.value;
@@ -128,11 +129,16 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                     continue; }
                 sz = 16;
                 for (int i = 2; i < kv.value.vec.size; ++i) {
-                    if (kv.value[i] == "lo" || "low") {
+                    if (kv.value[i] == "lo" || kv.value[i] == "low") {
                         src.hd->xbar_use |= HashDistribution::IMMEDIATE_LOW;
-                    } else if (kv.value[i] == "hi" || "high") {
+                    } else if (kv.value[i] == "hi" || kv.value[i] == "high") {
                         src.hd->xbar_use |= HashDistribution::IMMEDIATE_HIGH;
                         off += 16;
+                    } else if (kv.value[i].type == tINT) {
+                        if (auto hd_hi = tbl->find_hash_dist(kv.value[i].i)) {
+                            src.hd->xbar_use |= HashDistribution::IMMEDIATE_LOW;
+                            hd_hi->xbar_use |= HashDistribution::IMMEDIATE_HIGH;
+                            setup_slot(kv.value.lineno, tbl, name, idx+2, Source(hd_hi), 16, 16); }
                     } else if (kv.value[i].type == tRANGE) {
                         if ((kv.value[i].lo & 7) != 0 || (kv.value[i].hi & 7) != 7)
                             error(kv.value.lineno, "Slice must be byte slice");
@@ -142,7 +148,6 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                         error(kv.value[i].lineno, "Unexpected hash_dist %s",
                               value_desc(kv.value[i]));
                         break; } }
-                src = Source(new Table::Ref(*name_ref));
             } else if (name_ref) {
                 src = Source(new Table::Ref(*name_ref));
                 if (kv.value.type == tCMD && kv.value[1] == "color") {
@@ -157,30 +162,14 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
             if (!sz) sz = f->size;
             if (off + sz > f->size)
                 error(kv.value.lineno, "Invalid slice of %d bit field %s", f->size, name); }
-        unsigned idx = kv.key.i;
         if (kv.key.type == tRANGE) {
-            idx = kv.key.lo;
             unsigned size = (kv.key.hi-idx+1) * 8;
             // Make slot size (sz) same as no. of bytes allocated on action bus.
             if (size > sz) sz = size;
         } else if (!sz)
             sz = idx < ACTION_DATA_8B_SLOTS ? 8 :
                  idx < ACTION_DATA_8B_SLOTS + 2*ACTION_DATA_16B_SLOTS ? 16 : 32;
-        if (idx >= ACTION_DATA_BUS_BYTES) {
-            error(kv.key.lineno, "Action bus index out of range");
-            continue; }
-        if (by_byte.count(idx)) {
-            auto &slot = by_byte.at(idx);
-            if (sz > slot.size) {
-                slot.name = name;
-                slot.size = sz; }
-            slot.data.emplace(src, off);
-            LOG4("ActionBus::ActionBus: " << idx << ": " << name << " sz=" << sz <<
-                 " data += " << src.toString(tbl) << " off=" << off);
-        } else {
-            by_byte.emplace(idx, Slot(name, idx, sz, src, off));
-            LOG4("ActionBus::ActionBus: " << idx << ": " << name << " sz=" << sz <<
-                 " data = " << src.toString(tbl) << " off=" << off); }
+        setup_slot(kv.key.lineno, tbl, name, idx, src, sz, off);
         tbl->apply_to_field(name, [](Table::Format::Field *f){
             f->flags |= Table::Format::Field::USED_IMMED; });
         if (f) {
@@ -190,6 +179,25 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 if (slot.data.emplace(src, off).second)
                     LOG4("        data += " << src.toString(tbl) << " off=" << off); }); }
     }
+}
+
+void ActionBus::setup_slot(int lineno, Table *tbl, const char *name, int idx,
+                           Source src, int sz, int off) {
+    if (idx >= ACTION_DATA_BUS_BYTES) {
+        error(lineno, "Action bus index out of range");
+        return; }
+    if (by_byte.count(idx)) {
+        auto &slot = by_byte.at(idx);
+        if (sz > slot.size) {
+            slot.name = name;
+            slot.size = sz; }
+        slot.data.emplace(src, off);
+        LOG4("ActionBus::ActionBus: " << idx << ": " << name << " sz=" << sz <<
+             " data += " << src.toString(tbl) << " off=" << off);
+    } else {
+        by_byte.emplace(idx, Slot(name, idx, sz, src, off));
+        LOG4("ActionBus::ActionBus: " << idx << ": " << name << " sz=" << sz <<
+             " data = " << src.toString(tbl) << " off=" << off); }
 }
 
 unsigned ActionBus::Slot::lo(Table *tbl) const {
@@ -426,6 +434,7 @@ int ActionBus::find_free(Table *tbl, int min, int max, int step, int lobyte, int
  */
 int ActionBus::find_merge(Table *tbl, int offset, int bytes, int use) {
     LOG4("find_merge(" << offset << ", " << bytes << ", " << use << ")");
+    bool is_action_data = dynamic_cast<ActionTable *>(tbl) != nullptr;
     for (auto &alloc : by_byte) {
         if (use & 1) {
             if (alloc.first >= 32) break;
@@ -434,7 +443,9 @@ int ActionBus::find_merge(Table *tbl, int offset, int bytes, int use) {
             if (alloc.first >= 96) break; }
         if (alloc.second.is_table_output()) continue;  // can't merge table output with immediate
         int inbyte = alloc.second.lo(tbl) / 8U;
-        int align = action_hv_slice_group_align.at(alloc.first/16U).at(inbyte%16U);
+        int align = 4;
+        if (is_action_data)
+            align = action_hv_slice_group_align.at(alloc.first/16U).at(inbyte%16U);
         int outbyte = alloc.first & ~(align-1);
         inbyte &= ~(align-1);
         if (offset >= inbyte*8 && offset + bytes*8 <= (inbyte + align)*8)
@@ -485,15 +496,19 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
         hi = src.field->immed_bit(src.field->size) - 1;
         lineno = tbl->find_field_lineno(src.field);
     } else {
+        lo = offset;
         if (src.type == Source::TableOutput)
             can_merge = false;
-        lo = offset;
+        if (src.type == Source::HashDist && !(src.hd->xbar_use & HashDistribution::IMMEDIATE_LOW))
+            lo += 16;
         hi = lo | size_masks[sizes_needed]; }
     if (lo/32U != hi/32U) {
         /* Can't go across 32-bit boundary so chop it down as needed */
         hi = lo|31U; }
     int bytes = hi/8U - lo/8U + 1;
-    int step = (lo%128U) < 32 && is_action_data ? 2 : (lo%128U) < 64 ? 4 : 8;
+    int step = 4;
+    if (is_action_data)
+        step = (lo%128U) < 32 ? 2 : (lo%128U) < 64 ? 4 : 8;
     if (sizes_needed & 1) {
         /* need 8-bit */
         if ((lo % 8U) && (lo/8U != hi/8U)) {
@@ -546,7 +561,6 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
             error(lineno, "Can't allocate space on action bus for %s",
                   src.toString(tbl).c_str()); }
 }
-
 
 void ActionBus::pass3(Table *tbl) {
     bool is_action_data = dynamic_cast<ActionTable *>(tbl) != nullptr;

@@ -269,24 +269,22 @@ struct operand {
                 if (!(hd->xbar_use & HashDistribution::IMMEDIATE_HIGH))
                     hd->xbar_use |= HashDistribution::IMMEDIATE_LOW;
             } else error(lineno, "No hash dist %d in table %s", units.at(0), table->name());
-            int offset = 0;
             for (auto u : units) {
                 if (auto hd = find_hash_dist(u)) {
-                    if (!(hd->xbar_use & HashDistribution::IMMEDIATE_LOW))
-                        offset = 16;
-                    if (lo > 0)
-                        offset += lo & ~7U;
-                    if (table->find_on_actionbus(hd, offset, size) < 0)
-                        table->need_on_actionbus(hd, offset, size);
-                    offset = 16; } } }
+                    if (table->find_on_actionbus(hd, 0, size) < 0)
+                        table->need_on_actionbus(hd, 0, size); } } }
         int bits(int group) override {
             int size = group_size[group]/8U;
             auto hd = find_hash_dist(units.at(0));
-            int offset = hd->xbar_use & HashDistribution::IMMEDIATE_LOW ? 0 : 16;
-            int byte = table->find_on_actionbus(hd, offset, size);
+            int byte = table->find_on_actionbus(hd, 0, size);
             if (byte < 0) {
                 error(lineno, "hash dist %d is not on the action bus", hd->id);
                 return -1; }
+            if (units.size() == 2) {
+                auto hd1 = find_hash_dist(units.at(1));
+                if (table->find_on_actionbus(hd1, 0, size) != byte + 2)
+                    error(lineno, "hash dists %d and %d not contiguous on the action bus",
+                          hd->id, hd1->id); }
             if (size == 2) byte -= 32;
             if (byte >= 0 || byte < 32*size)
                 return ACTIONBUS_OPERAND + byte/size;

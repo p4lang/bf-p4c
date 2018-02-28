@@ -61,6 +61,7 @@ class ActionBus {
     bitvec      byte_use;  // bytes on the action data (input) bus or immediate bus in use
                            // for wide action tables, this may be >16 bytes...
 
+    void setup_slot(int lineno, Table *tbl, const char *name, int idx, Source src, int sz, int off);
     int find_free(Table *tbl, int min, int max, int step, int lobyte, int bytes);
     int find_merge(Table *tbl, int offset, int bytes, int use);
     bool check_sharing(Table *tbl1, Table *tbl2);
