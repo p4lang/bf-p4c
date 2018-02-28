@@ -131,7 +131,7 @@ inline void fini(value_t &v) { free_value(&v); }
 inline void fini(pair_t &p) { free_pair(&p); }
 inline void fini(VECTOR(value_t) &v) { VECTOR_foreach(v, free_value); VECTOR_fini(v); }
 inline void fini(VECTOR(pair_t) &v) { VECTOR_foreach(v, free_pair); VECTOR_fini(v); }
-void collapse_list_of_maps(value_t &);
+void collapse_list_of_maps(value_t &, bool singleton_only = false);
 
 std::unique_ptr<json::obj> toJson(value_t &);
 std::unique_ptr<json::vector> toJson(VECTOR(value_t) &);

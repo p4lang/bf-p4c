@@ -1218,6 +1218,14 @@ DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS)
+    struct lrt_params {   // largest recent with threshold paramters
+        int     lineno;
+        long    threshold;
+        int     interval;
+        lrt_params(int l, long t, int i) : lineno(l), threshold(t), interval(i) {}
+        lrt_params(const value_t &);
+    };
+    std::vector<lrt_params>     lrt;
 public:
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;

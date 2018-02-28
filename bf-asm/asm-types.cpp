@@ -16,11 +16,13 @@ void push_back(VECTOR(pair_t) &m, const char *s, value_t &&v) {
 
 /** check a value and see if it is a list of maps -- if so, concatenate the
  * maps into a single map and replace the list with that */
-void collapse_list_of_maps(value_t &v) {
+void collapse_list_of_maps(value_t &v, bool singleton_only) {
     if (v.type != tVEC || v.vec.size == 0) return;
-    for (int i = 0; i < v.vec.size; i++)
+    for (int i = 0; i < v.vec.size; i++) {
         if (v[i].type != tMAP)
             return;
+        if (singleton_only && v[i].map.size != 1)
+            return; }
     VECTOR(pair_t) map = v[0].map;
     for (int i = 1; i < v.vec.size; i++) {
         VECTOR_addcopy(map, v[i].map.data, v[i].map.size);

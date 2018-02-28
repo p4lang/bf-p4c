@@ -87,7 +87,17 @@ enum {
     // from assembly
     INGRESS_PARSER_HEADER_LENGTH_ADJUST = 16,
     EGRESS_PARSER_HEADER_LENGTH_ADJUST = 2,
-    MAX_PORTS = 288
+    MAX_PORTS = 288,
+    // LRT params should per target specific?  Currently tofino and jbay look to be the same
+    MAX_LRT_PACKET_INTERVAL = 0xfffffff,
+    MAX_LRT_ENTRIES = 3,
+};
+
+enum {
+    // global large constants in a separate enum, so as to not make the above
+    // constants long instead of int
+    MAX_LRT_BYTE_INTERVAL = 0xfffffff00,
+    MAX_LRT_THRESHOLD = 0xffffffff0,
 };
 
 enum METER_ACCESS_TYPE {

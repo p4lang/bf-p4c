@@ -518,6 +518,9 @@ stage <constant> <thread>:
         vpns: <vector>
         format:
         count: bytes | packets | both | packets_and_bytes
+        lrt: '{' <threshold>: <interval>, ... '}'
+          - '{' threshold: <int>, interval: <int> '}' ...
+          # largest recent with threshold params
         global_binding: true | false
         per_flow_enable: true | false
     meter <name> [<logical_id>]:

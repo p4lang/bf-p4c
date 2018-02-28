@@ -21,10 +21,47 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
             else if (kv.value == "both" || kv.value == "packets_and_bytes")
                 type = BOTH;
             else error(kv.value.lineno, "Unknown counter type %s", value_desc(kv.value));
+        } else if (kv.key == "lrt") {
+            if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
+            collapse_list_of_maps(kv.value, true);
+            if (kv.value.type == tVEC) {
+                for (auto &el : kv.value.vec)
+                    lrt.emplace_back(el);
+            } else if (kv.value.map.size >= 1 && kv.value.map[0].key.type == tSTR) {
+                lrt.emplace_back(kv.value);
+            } else {
+                for (auto &el : kv.value.map) {
+                    if (!CHECKTYPE2(el.key, tINT, tBIGINT) || !CHECKTYPE(el.value, tINT))
+                        break;
+                    if (el.key.type == tBIGINT) {
+                        if (el.key.bigi.size != 1)
+                            error(el.key.lineno, "Threshold too large\n");
+                        lrt.emplace_back(el.key.lineno, el.key.bigi.data[0], el.value.i);
+                    } else {
+                        lrt.emplace_back(el.key.lineno, el.key.i, el.value.i); } } }
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
     alloc_rams(true, stage->sram_use);
+}
+
+CounterTable::lrt_params::lrt_params(const value_t &m)
+: lineno(m.lineno), threshold(-1), interval(-1) {
+    if (CHECKTYPE(m, tMAP)) {
+        for (auto &kv : MapIterChecked(m.map, true)) {
+            if (kv.key == "threshold") {
+                if (kv.value.type == tBIGINT && kv.value.bigi.size == 1)
+                    threshold = kv.value.bigi.data[0];
+                else if (CHECKTYPE(kv.value, tINT))
+                    threshold = kv.value.i;
+            } else if (kv.key == "interval") {
+                if (CHECKTYPE(kv.value, tINT))
+                    interval = kv.value.i;
+            } else
+                warning(kv.key.lineno, "ignoring unknown item %s in lrt params",
+                        value_desc(kv.key)); }
+        if (threshold < 0) error(m.lineno, "No threshold in lrt params");
+        if (interval < 0) error(m.lineno, "No interval in lrt params"); }
 }
 
 void CounterTable::pass1() {
@@ -46,10 +83,26 @@ void CounterTable::pass1() {
             need_bus(lineno, stage->overflow_bus_use, r, "Overflow");
         prev_row = row.row; }
     AttachedTable::pass1();
+    for (auto &l : lrt) {
+        if (l.threshold > MAX_LRT_THRESHOLD)
+            error(l.lineno, "lrt threshold too large");
+        else if (l.threshold & 0xf != 0)
+            error(l.lineno, "lrt threshold must be a mulitple of 16");
+        if (type & BYTES) {
+            if (l.interval > MAX_LRT_BYTE_INTERVAL)
+                error(l.lineno, "lrt interval too large");
+            else if ((l.interval & 0xff) != 0)
+                error(l.lineno, "lrt interval must be a mulitple of 256 when measuring bytes");
+        } else if (l.interval > MAX_LRT_PACKET_INTERVAL)
+            error(l.lineno, "lrt interval too large"); }
+    if (lrt.size() > MAX_LRT_ENTRIES)
+        error(lrt[0].lineno, "Too many lrt entries (max %d)", MAX_LRT_ENTRIES);
 }
 
 void CounterTable::pass2() {
     LOG1("### Counter table " << name() << " pass2");
+    if (logical_id < 0)
+        warning(lineno, "counter %s appears unused by any table", name());
 }
 
 void CounterTable::pass3() {
@@ -144,16 +197,27 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
             ++mapram, ++vpn; }
         if (&logical_row == home) {
             int stats_group_index = row/2;
-            auto &stat_ctl = map_alu.stats_wrap[stats_group_index].stats.statistics_ctl;
+            auto &stats = map_alu.stats_wrap[stats_group_index].stats;
+            auto &stat_ctl = stats.statistics_ctl;
             stat_ctl.stats_entries_per_word = format->groups();
             if (type & BYTES) stat_ctl.stats_process_bytes = 1;
             if (type & PACKETS) stat_ctl.stats_process_packets = 1;
-            stat_ctl.lrt_enable = 0;
+            if (lrt.size() > 0) {
+                stat_ctl.lrt_enable = 1;
+                int idx = 0;
+                for (auto &l : lrt) {
+                    stats.lrt_threshold[idx] = l.threshold / 16U;
+                    if (type & BYTES)
+                        stats.lrt_update_interval[idx] = l.interval / 256U;
+                    else
+                        stats.lrt_update_interval[idx] = l.interval;
+                    ++idx; } }
             stat_ctl.stats_alu_egress = gress;
             stat_ctl.stats_bytecount_adjust = 0; // TODO
             stat_ctl.stats_alu_error_enable = 0; // TODO
-            regs.cfg_regs.mau_cfg_stats_alu_lt[stats_group_index] = logical_id;
-            //setup_muxctl(adrdist.stats_alu_phys_to_logical_ixbar_ctl[row/2], logical_id);
+            if (logical_id >= 0)
+                regs.cfg_regs.mau_cfg_stats_alu_lt[stats_group_index] = logical_id;
+                //setup_muxctl(adrdist.stats_alu_phys_to_logical_ixbar_ctl[row/2], logical_id);
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
         } else {
