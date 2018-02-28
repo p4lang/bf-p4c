@@ -44,11 +44,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/clot1.p4
   )
 
-  p4c_add_xfail_reason("jbay"
-    "unexpected packet output on port"
-    extensions/p4_tests/p4_16/parser_metadata_init.p4
-  )
-
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS

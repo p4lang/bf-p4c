@@ -96,7 +96,7 @@ static void write_output_slot(int lineno, Target::JBay::parser_regs::_memory::_p
     for (int i = 0; i < 20; ++i) {
         if (used & (1 << i)) continue;
         row->phv_dst[i] = dest;
-        row->phv_src[i] = src + (bytemask == 2);
+        row->phv_src[i] = src;
         if (offset) row->phv_offset_add_dst[i] = 1;
         row->extract_type[i] = bytemask;
         used |= 1 << i;
@@ -116,11 +116,15 @@ template <> int Parser::State::Match::Save::write_output_config(Target::JBay::pa
             mask <<= 1;
             --lo; } }
     if (flags & ROTATE) error(where.lineno, "no rotate support in jbay");
-     if (mask & 0xc) {
-        write_output_slot(where.lineno, row, used, lo, dest+1, (mask>>2) & 3, flags & OFFSET);
+
+    int bytemask = (mask >> 2) & 3;
+    if (bytemask) {
+        write_output_slot(where.lineno, row, used, lo + (bytemask == 2), dest+1, bytemask, flags & OFFSET);
         lo += bitcount(mask & 0xc); }
-    if (mask & 3)
-        write_output_slot(where.lineno, row, used, lo, dest, mask & 3, flags & OFFSET);
+
+    bytemask = mask & 3;
+    if (bytemask)
+        write_output_slot(where.lineno, row, used, lo + (bytemask == 2), dest, bytemask, flags & OFFSET);
     return hi;
 }
 
@@ -139,12 +143,11 @@ static void write_output_const_slot(
     if (cslot >= 2) {
         error(lineno, "Ran out of constant output slots");
         return; }
-    if (bytemask == 1) src <<= 8;
     row->val_const[cslot] |= src;
     if (flags & 2 /*ROTATE*/) row->val_const_rot[cslot] = 1;
     used |= bytemask << (2*cslot + 24);
     unsigned tmpused = used | SAVE_ONLY_USED_SLOTS;
-    write_output_slot(lineno, row, tmpused, 62 - 2*cslot - (bytemask == 2), dest, bytemask, flags);
+    write_output_slot(lineno, row, tmpused, 62 - 2*cslot + (bytemask == 1), dest, bytemask, flags);
     used |= tmpused &~ SAVE_ONLY_USED_SLOTS;
 }
 
