@@ -89,6 +89,36 @@ class CollectClotInfo : public Inspector {
     }
 };
 
+/**
+
+ This class implements a greedy CLOT allocation algorithm based on the parse graph.
+
+ The constraints for CLOT allocation are:
+    1) Each CLOT can hold up to 64 bytes of contigious data. CLOTs larger than
+       32 byte (input buffer size) can spill into the next parser state.
+    2) Each parser state can issue up to 2 CLOTs.
+    3) Successive CLOTs must have a 3 byte gap (PHV extraction) in between.
+    4) There are a total of 64 unique CLOT tags while only up to 16 CLOTs can be
+       live in a packet.
+
+  The objective is to allocate as many as "tagalong" fields (fields that do not
+  particate in MAU match/action), while minimizing the number of CLOTs used.
+
+  The greedy algorithm used here sorts parser states by number of "tagalong" bits
+  in each state, and allocates on a per state basis. At a given state, if any of
+  its predecessor/successors has been allocated, the gap constraint needs to be
+  satisfied (these are "head" or "tail" gap in the code). If a state's first/last
+  few bytes are not a CLOT (i.e. in PHV), then its predecessors/successors can use
+  these bytes towards its gap (or "credit" in the code).
+
+  TODO
+      1) Add parser mutex state logic to reuse CLOT tag.
+      2) Currently, a field is either in CLOT or PHV. There might be cases that
+         it's beneficical to break a field into bytes.
+      3) Inter-state CLOT analysis: this is useful when the maximal gain for a CLOT
+         straddles the state boundary.
+
+*/
 class NaiveClotAlloc : public Visitor {
     static const int MAX_CLOTS_PER_STATE = 2;  // TODO(zma) move to pardeSpec
     static const int MAX_BYTES_PER_CLOT = 64;
@@ -99,29 +129,8 @@ class NaiveClotAlloc : public Visitor {
     /*const BuildParserOverlay2& mutexStates;*/
     const CollectParserGraph& parserGraph;
 
-    struct ParserStatePredecessor : public Inspector {
-        ParserStatePredecessor() {}
-
-        const IR::BFN::ParserState* get(const IR::BFN::ParserState* state) {
-            if (pred.count(state))
-                return pred.at(state);
-            return nullptr;
-        }
-
-     private:
-        std::map<const IR::BFN::ParserState*, const IR::BFN::ParserState*> pred;
-
-        bool preorder(const IR::BFN::ParserState* state) override {
-            auto p = findContext<IR::BFN::ParserState>();
-            if (p) {
-                pred[state] = p;
-                LOG3("pred of " << state->name << " is " << p->name);
-            }
-            return true;
-        }
-    } predecessor;
-
-    std::map<const IR::BFN::ParserState*, unsigned> state_gap_credit;
+    std::map<const IR::BFN::ParserState*, unsigned> tail_gap_credit_map;
+    std::map<const IR::BFN::ParserState*, unsigned> head_gap_credit_map;
 
  public:
     explicit NaiveClotAlloc(ClotInfo& clotInfo,
@@ -147,12 +156,6 @@ class NaiveClotAlloc : public Visitor {
         }
     };
 
-    Visitor::profile_t init_apply(const IR::Node* root) override {
-        auto rv = Visitor::init_apply(root);
-        root->apply(predecessor);
-        return rv;
-    }
-
     std::array<std::vector<ClotAlloc>, 2> compute_requirement() {
        std::array<std::vector<ClotAlloc>, 2> req;
 
@@ -174,12 +177,6 @@ class NaiveClotAlloc : public Visitor {
 
        // XXX(zma) replace this with optimizition based on parse graph anlysis
 
-       auto ingressSorted = parserGraph.egress().topological_sort();
-
-       std::cout << "topological sort order:" << std::endl;
-       for (auto s : ingressSorted)
-           std::cout << s->name << std::endl;
-
        std::stable_sort(req[0].begin(), req[0].end());
        std::stable_sort(req[1].begin(), req[1].end());
 
@@ -193,65 +190,122 @@ class NaiveClotAlloc : public Visitor {
        return req;
     }
 
+    unsigned calculate_gap_needed(const IR::BFN::ParserState* state, bool head_or_tail) {
+        auto& preds_or_succs = head_or_tail ? parserGraph.get(state->gress).predecessors() :
+                                              parserGraph.get(state->gress).successors();
+
+        auto& credit_map = head_or_tail ? tail_gap_credit_map : head_gap_credit_map;
+
+        unsigned gap_needed = 0;
+
+        if (preds_or_succs.count(state)) {
+            for (auto s : preds_or_succs.at(state)) {
+                unsigned gap_needed_for_s = 0;
+                auto& state_clots = clotInfo.parser_state_to_clots();
+
+                // XXX(zma) needs to optimize this ...
+                if (state_clots.count(s) && state_clots.at(s).size() > 0) {
+                    unsigned credit = 0;
+
+                    if (credit_map.count(s))
+                        credit = credit_map.at(s);
+                    else  // s hasn't been allocated
+                        credit = INTER_CLOTS_BYTE_GAP * 8;
+
+                    gap_needed_for_s = INTER_CLOTS_BYTE_GAP * 8 - credit;
+                }
+
+                gap_needed = std::max(gap_needed, gap_needed_for_s);
+            }
+        }
+
+        return gap_needed;
+    }
+
     bool allocate(const ClotAlloc& ca) {
         LOG3("try allocate " << ca.state->name << ", unused = " << ca.unused_bytes);
 
         if (ca.unused_bytes == 0)
             return false;
 
-        unsigned gap_needed = 0;
+        unsigned head_gap_needed = calculate_gap_needed(ca.state, true  /* head */);
+        unsigned tail_gap_needed = calculate_gap_needed(ca.state, false /* tail */);
 
-        auto* pred = predecessor.get(ca.state);
-
-        if (pred) {
-            auto& state_clots = clotInfo.parser_state_to_clots();
-
-            // XXX(zma) needs to optimize this ...
-            if (state_clots.count(pred) && state_clots.at(pred).size() > 0) {
-                unsigned pred_gap_credit = 0;
-                if (state_gap_credit.count(pred))
-                    pred_gap_credit = state_gap_credit.at(pred);
-                gap_needed = INTER_CLOTS_BYTE_GAP * 8 - pred_gap_credit;
-                LOG3(gap_needed << " bits of gap needed");
-            }
-        }
+        LOG3(head_gap_needed << " bits of head gap needed");
+        LOG3(tail_gap_needed << " bits of tail gap needed");
 
         // FIXME(zma) state larger than 64 bytes
-        /*if (ca.total_bytes > MAX_BYTES_PER_CLOT)
+        if (ca.total_bytes > MAX_BYTES_PER_CLOT)
             return false;
-        */
-
-        // extract whole header in clot
-        Clot* clot = nullptr;
-        unsigned offset = 0;
 
         std::vector<const PHV::Field*> to_be_allocated;
 
-        bool seen_unused_field = false;
-        for (auto f : clotInfo.all_fields_[ca.state]) {
-            if (!seen_unused_field && !clotInfo.is_clot_candidate(f)) {
-                offset += f->size;
-                continue;
-            }
-
+        for (auto f : clotInfo.all_fields_[ca.state])
             to_be_allocated.push_back(f);
-        }
 
-        seen_unused_field = true;
-        unsigned last_fields_to_delete = 0;
-        unsigned gap_credit = 0;
+        unsigned head_offset = 0;
+        unsigned tail_offset = 0;
+
+        // skip through first fields until head gap is satisfied
+        unsigned to_delete = 0;
+        unsigned skipped_bits = 0;
+
+        for (auto f : to_be_allocated) {
+            if (head_gap_needed > skipped_bits) {
+                skipped_bits += f->size;
+                head_offset += f->size;
+                to_delete++;
+            }
+        }
+        for (unsigned i = 0; i < to_delete; ++i)
+            to_be_allocated.erase(to_be_allocated.begin());
+
+        // skip through last fields until tail gap is satisfied
+        to_delete = 0;
+        skipped_bits = 0;
 
         for (auto it = to_be_allocated.rbegin(); it != to_be_allocated.rend(); ++it) {
-            auto* f = *it;
-            if (!seen_unused_field && !clotInfo.is_clot_candidate(f)) {
-                gap_credit += f->size;
-                last_fields_to_delete++;
-                continue;
+            if (tail_gap_needed > skipped_bits) {
+                skipped_bits += (*it)->size;
+                tail_offset += (*it)->size;
+                to_delete++;
             }
         }
-
-        for (unsigned i = 0; i < last_fields_to_delete; i++)
+        for (unsigned i = 0; i < to_delete; ++i)
             to_be_allocated.pop_back();
+
+        // now see if we can earn some credit on head/tail
+        unsigned head_gap_credit = 0;
+        unsigned tail_gap_credit = 0;
+
+        to_delete = 0;
+        for (auto f : to_be_allocated) {
+            if (clotInfo.is_clot_candidate(f))
+                break;
+            head_gap_credit += f->size;
+            head_offset += f->size;
+            to_delete++;
+        }
+        for (unsigned i = 0; i < to_delete; ++i)
+            to_be_allocated.erase(to_be_allocated.begin());
+
+        to_delete = 0;
+        for (auto it = to_be_allocated.rbegin(); it != to_be_allocated.rend(); ++it) {
+            if (clotInfo.is_clot_candidate((*it)))
+                break;
+            tail_gap_credit += (*it)->size;
+            tail_offset += (*it)->size;
+            to_delete++;
+        }
+        for (unsigned i = 0; i < to_delete; ++i)
+            to_be_allocated.pop_back();
+
+        // FIXME rollback or skip forward to find byte boundary
+        if (head_offset % 8 != 0 || tail_offset % 8 != 0)
+            return false;
+
+        // now allocate
+        Clot* clot = nullptr;
 
         // see if can find a mutex state and reuse clot
 
@@ -259,18 +313,13 @@ class NaiveClotAlloc : public Visitor {
         // TODO add overlay logic here
 
         for (auto f : to_be_allocated) {
-            if (gap_needed > offset + 1) {
-                offset += f->size;
-                continue;
-            }
-
             if (clot == nullptr) {
                 if (reuse_tag > 0)
                     clot = new Clot(reuse_tag);
                 else
                     clot = new Clot();
 
-                clot->start = offset;
+                clot->start = head_offset / 8;  // clot start is in byte, offset in bits
                 clotInfo.add(clot, ca.state);
             }
 
@@ -278,11 +327,13 @@ class NaiveClotAlloc : public Visitor {
                 clot->phv_fields.push_back(f);
 
             clot->all_fields.push_back(f);
-
-            offset += f->size;
         }
 
-        state_gap_credit[ca.state] = gap_credit;
+        head_gap_credit_map[ca.state] = head_gap_credit;
+        tail_gap_credit_map[ca.state] = tail_gap_credit;
+
+        LOG3(head_gap_credit << " bits of head credit earned");
+        LOG3(tail_gap_credit << " bits of tail credit earned");
 
         return true;
     }

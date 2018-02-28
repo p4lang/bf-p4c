@@ -41,7 +41,9 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/action_chain_limits.p4
     extensions/p4_tests/p4_14/adjust_instr5.p4
     extensions/p4_tests/p4_14/adjust_instr7.p4
-    extensions/p4_tests/p4_14/clot1.p4
+    # clot-phv interaction bug?
+    testdata/p4_14_samples/exact_match_valid1.p4
+    testdata/p4_14_samples/gateway5.p4
   )
 
 endif() # HARLYN_STF
@@ -55,6 +57,7 @@ endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 p4c_add_xfail_reason("jbay"
   "Ran out of tcam space in .* parser"
   testdata/p4_14_samples/issue583.p4
+  testdata/p4_14_samples/parser_dc_full.p4
   )
 
 p4c_add_xfail_reason("jbay"
@@ -63,7 +66,6 @@ p4c_add_xfail_reason("jbay"
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
-  testdata/p4_14_samples/parser_dc_full.p4
   )
 
 p4c_add_xfail_reason("jbay"

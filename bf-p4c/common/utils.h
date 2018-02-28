@@ -40,9 +40,9 @@ struct DumpParser : public Visitor {
 
     static void write_cluster(std::ostream &out, const ParserGraph& graph/*, cstring gress*/) {
         // out << "subgraph cluster_" << gress << "{" << std::endl;
-        for (auto transition : graph.transitions())
-            for (auto dst : transition.second)
-                out << escape_name((transition.first)->name)
+        for (auto succ : graph.successors())
+            for (auto dst : succ.second)
+                out << escape_name((succ.first)->name)
                     << " -> " << escape_name(dst->name) << std::endl;
         // out << "}" << std::endl;
     }

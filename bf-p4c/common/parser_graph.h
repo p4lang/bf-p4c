@@ -1,9 +1,6 @@
 #ifndef EXTENSIONS_BF_P4C_COMMON_PARSER_GRAPH_H_
 #define EXTENSIONS_BF_P4C_COMMON_PARSER_GRAPH_H_
 
-// FIXME(zma) this file is missing quite a few headers and yet compiles fine
-// thanks to the unified build; not sure if it's a good thing ...
-
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/copy.hpp>
 #include <boost/graph/topological_sort.hpp>
@@ -54,17 +51,34 @@ class DirectedGraph {
     Graph _graph;
 };
 
+template <typename T>
+static void merge(std::map<T, std::set<T>> &my,
+                  const std::map<T, std::set<T>> &other) {
+    for (auto t : other) {
+        if (my.count(t.first) == 0)
+            my[t.first] = t.second;
+        else
+            my[t.first].insert(t.second.begin(), t.second.end());
+    }
+}
+
 class ParserGraph : public DirectedGraph {
  public:
+    using ParserStateMap = std::map<const IR::BFN::ParserState*,
+                                    std::set<const IR::BFN::ParserState*>>;
+
     friend class CollectParserGraph;
 
     ParserGraph() {}
 
     const std::set<const IR::BFN::ParserState*>& states() const { return _states; }
 
-    const std::map<const IR::BFN::ParserState*,
-                   std::set<const IR::BFN::ParserState*>>& transitions() const {
-        return _transitions;
+    const ParserStateMap& successors() const {
+        return _succs;
+    }
+
+    const ParserStateMap& predecessors() const {
+        return _preds;
     }
 
     std::vector<const IR::BFN::ParserState*> topological_sort() const {
@@ -83,20 +97,15 @@ class ParserGraph : public DirectedGraph {
     void add_transition(const IR::BFN::ParserState* src, const IR::BFN::ParserState* dst) {
         add_state(src);
         add_state(dst);
-        _transitions[src].insert(dst);
+        _succs[src].insert(dst);
+        _preds[dst].insert(src);
     }
 
     void merge_with(const ParserGraph& other) {
         _states.insert(other.states().begin(), other.states().end());
 
-        for (auto t : other.transitions()) {
-            if (_transitions.count(t.first) == 0) {
-                _transitions[t.first] = t.second;
-            } else {
-                for (auto dst : t.second)
-                    _transitions[t.first].insert(dst);
-            }
-        }
+        merge(_succs, other.successors());
+        merge(_preds, other.predecessors());
     }
 
     void map_to_boost_graph() {
@@ -106,7 +115,7 @@ class ParserGraph : public DirectedGraph {
             _id_to_state[id] = s;
         }
 
-        for (auto t : _transitions)
+        for (auto t : _succs)
             for (auto dst : t.second)
                 DirectedGraph::add_edge(get_id(t.first), get_id(dst));
     }
@@ -123,7 +132,8 @@ class ParserGraph : public DirectedGraph {
 
  private:
     std::set<const IR::BFN::ParserState*> _states;
-    std::map<const IR::BFN::ParserState*, std::set<const IR::BFN::ParserState*>> _transitions;
+    ParserStateMap _succs;
+    ParserStateMap _preds;
 
     std::map<const IR::BFN::ParserState*, int> _state_to_id;
     std::map<int, const IR::BFN::ParserState*> _id_to_state;
@@ -139,6 +149,7 @@ class CollectParserGraph : public BFN::ControlFlowVisitor, public PardeInspector
         _graphs[1] = new ParserGraph;
     }
 
+    const ParserGraph& get(gress_t gress) const { return *(_graphs[gress]); }
     const ParserGraph& ingress() const { return *(_graphs[0]); }
     const ParserGraph& egress() const { return *(_graphs[1]); }
 

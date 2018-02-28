@@ -20,7 +20,7 @@ class BFN_Options : public CompilerOptions {
     bool debugInfo = false;
     bool no_deadcode_elimination = false;
     bool forced_placement = false;
-    bool use_clot = false;
+    bool use_clot = true;
     bool jbay_analysis = false;
     bool virtual_phvs = false;
     bool use_pa_solitary = false;

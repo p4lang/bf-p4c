@@ -133,8 +133,18 @@ static bool isIntervalEarlierInPacket(nw_byteinterval a,
 /// which don't come from the input packet are ordered last - they're lowest
 /// priority, since we can execute them at any time without delaying other
 /// extracts.
-static bool isExtractEarlierInPacket(const IR::BFN::LoweredExtractPhv* a,
-                                     const IR::BFN::LoweredExtractPhv* b) {
+static bool isExtractPhvEarlierInPacket(const IR::BFN::LoweredExtractPhv* a,
+                                        const IR::BFN::LoweredExtractPhv* b) {
+    auto* aFromPacket = a->source->to<IR::BFN::LoweredPacketRVal>();
+    auto* bFromPacket = b->source->to<IR::BFN::LoweredPacketRVal>();
+    if (aFromPacket && bFromPacket)
+        return isIntervalEarlierInPacket(aFromPacket->byteInterval(),
+                                         bFromPacket->byteInterval());
+    return aFromPacket;
+}
+
+static bool isExtractClotEarlierInPacket(const IR::BFN::LoweredExtractClot* a,
+                                         const IR::BFN::LoweredExtractClot* b) {
     auto* aFromPacket = a->source->to<IR::BFN::LoweredPacketRVal>();
     auto* bFromPacket = b->source->to<IR::BFN::LoweredPacketRVal>();
     if (aFromPacket && bFromPacket)
@@ -1128,7 +1138,7 @@ class ExtractorAllocator {
           match(m), shifted(0), current_input_buffer() {
         for (auto* stmt : match->statements)
             if (auto* e = stmt->to<IR::BFN::LoweredExtractPhv>())
-                extracts.push_back(e);
+                extractPhvs.push_back(e);
             else if (auto* e = stmt->to<IR::BFN::LoweredExtractClot>())
                 extractClots.push_back(e);
             else
@@ -1138,12 +1148,13 @@ class ExtractorAllocator {
             saves.push_back(save);
 
         // Sort the extract primitives by position in the input packet.
-        std::sort(extracts.begin(), extracts.end(), isExtractEarlierInPacket);
+        std::sort(extractPhvs.begin(), extractPhvs.end(), isExtractPhvEarlierInPacket);
+        std::sort(extractClots.begin(), extractClots.end(), isExtractClotEarlierInPacket);
     }
 
     /// @return true if we haven't allocated everything yet.
     bool hasMore() const {
-        return !extracts.empty() || !saves.empty();
+        return !extractPhvs.empty() || !extractClots.empty() || !saves.empty();
     }
 
     /**
@@ -1160,32 +1171,40 @@ class ExtractorAllocator {
 
         // Allocate. We have a limited number of extractions of each size per
         // state. We also ensure that we don't overflow the input buffer.
-        IR::Vector<IR::BFN::LoweredParserPrimitive>    allocatedExtractions;
-        IR::Vector<IR::BFN::LoweredSave>               allocatedSaves;
-        std::vector<const IR::BFN::LoweredExtractPhv*> remainingExtractions;
-        std::vector<const IR::BFN::LoweredSave*>       remainingSaves;
+        IR::Vector<IR::BFN::LoweredParserPrimitive>     allocatedExtracts;
+        IR::Vector<IR::BFN::LoweredSave>                allocatedSaves;
+        std::vector<const IR::BFN::LoweredExtractPhv*>  remainingPhvExtracts;
+        std::vector<const IR::BFN::LoweredExtractClot*> remainingClotExtracts;
+        std::vector<const IR::BFN::LoweredSave*>        remainingSaves;
         nw_byteinterval remainingBytes;
         nw_byteinterval extractedInterval;
 
         if (Device::currentDevice() == "Tofino") {
             std::map<size_t, unsigned> allocatedExtractorsBySize;
 
-            for (auto* extract : extracts) {
-                const auto containerSize = extract->dest->container.size();
+            for (auto* extract : extractPhvs) {
+                bool extractorsAvail = true;
+                if (extract->dest) {
+                    const auto containerSize = extract->dest->container.size();
+                    if (allocatedExtractorsBySize[containerSize] ==
+                        pardeSpec.extractorSpec().at(containerSize))
+                        extractorsAvail = false;
+                }
+
                 const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
                                         ? extract->source->to<IR::BFN::LoweredPacketRVal>()
                                                  ->byteInterval()
                                         : nw_byteinterval();
-                if (allocatedExtractorsBySize[containerSize] ==
-                    pardeSpec.extractorSpec().at(containerSize) ||
+                if (!extractorsAvail ||
                     byteInterval.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
-                    remainingExtractions.push_back(extract);
+                    remainingPhvExtracts.push_back(extract);
                     remainingBytes = remainingBytes.unionWith(byteInterval);
                     continue;
                 }
                 extractedInterval |= byteInterval;
-                allocatedExtractorsBySize[containerSize]++;
-                allocatedExtractions.push_back(extract);
+                if (extract->dest)
+                    allocatedExtractorsBySize[extract->dest->container.size()]++;
+                allocatedExtracts.push_back(extract);
             }
 
             // Allocate saves as long as the source of save is inside the input buffer.
@@ -1206,36 +1225,61 @@ class ExtractorAllocator {
             unsigned allocatedExtractors = 0;
             unsigned totalExtractors = pardeSpec.extractorSpec().at(16);
 
-            for (auto* extract : extracts) {
-                const auto containerSize = extract->dest->container.size();
+            bool extractorsAvail = true;
+            for (auto* extract : extractPhvs) {
+                if (extract->dest) {
+                    if (allocatedExtractors == totalExtractors)
+                        extractorsAvail = false;
+                }
+
                 const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
                                         ? extract->source->to<IR::BFN::LoweredPacketRVal>()
                                                  ->byteInterval()
                                         : nw_byteinterval();
 
-                if (allocatedExtractors == totalExtractors ||
+                if (!extractorsAvail ||
                     byteInterval.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
-                    remainingExtractions.push_back(extract);
+                    remainingPhvExtracts.push_back(extract);
                     remainingBytes = remainingBytes.unionWith(byteInterval);
                     continue;
                 }
 
-                switch (containerSize) {
-                    case 8:  allocatedExtractors++;  break;
-                    case 16: allocatedExtractors++;  break;
-                    case 32: allocatedExtractors+=2; break;
-                    default: BUG("Unknown container size");
+                if (extract->dest) {
+                    switch (extract->dest->container.size()) {
+                        case 8:  allocatedExtractors++;  break;
+                        case 16: allocatedExtractors++;  break;
+                        case 32: allocatedExtractors+=2; break;
+                        default: BUG("Unknown container size");
+                    }
                 }
+
                 // XXX(zma) we could pack two 8-bit extract into a single exact
                 // if the two containers are an even-odd pair.
                 extractedInterval |= byteInterval;
-                allocatedExtractions.push_back(extract);
+                allocatedExtracts.push_back(extract);
             }
 
             for (auto* extract : extractClots) {
-                // XXX(zma) assumes allocation takes care of
-                // the 2 CLOTs per state constraint
-                allocatedExtractions.push_back(extract);
+                const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
+                                        ? extract->source->to<IR::BFN::LoweredPacketRVal>()
+                                                 ->byteInterval()
+                                        : nw_byteinterval();
+
+                if ((byteInterval.loByte() > pardeSpec.byteInputBufferSize() - 1) &&
+                    (byteInterval.hiByte() > pardeSpec.byteInputBufferSize() - 1)) {
+                    remainingClotExtracts.push_back(extract);
+                    remainingBytes = remainingBytes.unionWith(byteInterval);
+                    continue;
+                }
+
+                if (byteInterval.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
+                    nw_byteinterval remain(pardeSpec.byteInputBufferSize(), byteInterval.hi);
+                    auto rval = new IR::BFN::LoweredPacketRVal(*toClosedRange(remain));
+                    remainingPhvExtracts.push_back(new IR::BFN::LoweredExtractPhv(rval));
+                    remainingBytes = remainingBytes.unionWith(remain);
+                }
+
+                allocatedExtracts.push_back(extract);
             }
             extractClots.clear();
 
@@ -1254,7 +1298,7 @@ class ExtractorAllocator {
         // We need a new state for it.
         current_input_buffer |= extractedInterval;
         int byteActualShift = 0;
-        if (remainingExtractions.empty()) {
+        if (remainingPhvExtracts.empty()) {
             byteActualShift = shift_required - shifted;
         } else {
             // If no more remaining extractions, just shift out the whole input buffer,
@@ -1284,9 +1328,13 @@ class ExtractorAllocator {
              << byteActualShift << ":");
 
         // Shift up all the remaining extractions.
-        extracts.clear();
-        for (auto* extract : remainingExtractions)
-            extracts.push_back(leftShiftExtract(extract, byteActualShift));
+        extractPhvs.clear();
+        for (auto* extract : remainingPhvExtracts)
+            extractPhvs.push_back(leftShiftExtract(extract, byteActualShift));
+
+        extractClots.clear();
+        for (auto* extract : remainingClotExtracts)
+            extractClots.push_back(leftShiftExtract(extract, byteActualShift));
 
         saves.clear();
         for (auto* save : remainingSaves) {
@@ -1305,7 +1353,7 @@ class ExtractorAllocator {
                 StartLen(0, current_input_buffer.hiByte() + 1 - byteActualShift));
 
         shifted += byteActualShift;
-        return MatchPrimitives(allocatedExtractions, allocatedSaves, byteActualShift);
+        return MatchPrimitives(allocatedExtracts, allocatedSaves, byteActualShift);
     }
 
     /// Shift all input packet extracts in the sequence to the left by the given
@@ -1346,7 +1394,7 @@ class ExtractorAllocator {
     const int shift_required;
     const IR::BFN::LoweredParserMatch* match;
     int shifted;
-    std::vector<const IR::BFN::LoweredExtractPhv*> extracts;
+    std::vector<const IR::BFN::LoweredExtractPhv*> extractPhvs;
     std::vector<const IR::BFN::LoweredExtractClot*> extractClots;
     std::vector<const IR::BFN::LoweredSave*> saves;
     nw_byteinterval current_input_buffer;
@@ -1418,7 +1466,8 @@ class ComputeMultiwriteContainers : public ParserModifier {
     bool preorder(IR::BFN::LoweredParserMatch* match) override {
         for (auto* stmt : match->statements)
             if (auto* extract = stmt->to<IR::BFN::LoweredExtractPhv>())
-                writes[extract->dest->container]++;
+                if (extract->dest)
+                    writes[extract->dest->container]++;
         return true;
     }
 
@@ -1465,13 +1514,16 @@ class ComputeBufferRequirements : public ParserModifier {
         // range. We also need to be sure to buffer at least as many bytes as we
         // plan to shift.
         match->bufferRequired = std::max(unsigned(bytesRead.hi), match->shift);
-
+        match->bufferRequired = std::min(unsigned(*match->bufferRequired),
+                                         unsigned(Device::pardeSpec().byteInputBufferSize()));
+/*
         const unsigned inputBufferSize = Device::pardeSpec().byteInputBufferSize();
         BUG_CHECK(*match->bufferRequired <= inputBufferSize,
                   "Match for state %1% requires %2% bytes to be buffered, which "
                   "is more than can fit in the %3% byte input buffer",
                   findContext<IR::BFN::LoweredParserState>()->name,
                   *match->bufferRequired, inputBufferSize);
+*/
     }
 };
 

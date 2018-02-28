@@ -864,8 +864,11 @@ Parser::State::Match::Clot::Clot(Parser &prsr, gress_t gress, const value_t &tag
             this->tag = -1;
             name = tag.s; } }
     prsr.clots[gress][name].push_back(this);
-    if (!CHECKTYPE2(data, tRANGE, tMAP)) return;
-    if (data.type == tRANGE) {
+    if (!CHECKTYPE3(data, tINT, tRANGE, tMAP)) return;
+    if (data.type == tINT) {
+       start = data.i;
+       length = 1;
+    } else if (data.type == tRANGE) {
         start = data.lo;
         length = data.hi - data.lo + 1;
     } else for (auto &kv : data.map) {

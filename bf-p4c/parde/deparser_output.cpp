@@ -100,7 +100,7 @@ struct OutputDictionary : public Inspector {
             // TODO(zma) check if c exists
             auto range = clot.container_range_.at(c);
             range = range.shiftedByBytes(-clot_offset);
-            out << indent << Range(range.lo, range.hi) << " : " << c << std::endl;
+            out << indent << range.lo << " : " << c << std::endl;
         }
 
         return false;

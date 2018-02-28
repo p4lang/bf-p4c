@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-@pragma bf_p4c_compiler_option --use-clot
-
 header_type data_t {
     fields {
         f1 : 32;

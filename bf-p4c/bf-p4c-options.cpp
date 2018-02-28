@@ -39,11 +39,11 @@ BFN_Options::BFN_Options() {
         [this](const char *) { forced_placement = true; return true; },
         "ignore all dependencies during table placement");
 #if HAVE_JBAY
-    registerOption("--use-clot", nullptr,
+    registerOption("--no-clot", nullptr,
         [this](const char *) {
-            use_clot = true;
+            use_clot = false;
             return true;
-        }, "use clots in JBay");
+        }, "do not use clots in JBay");
     registerOption("--jbay-phv-analysis", nullptr,
         [this](const char *) {
             jbay_analysis = true;

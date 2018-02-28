@@ -155,6 +155,9 @@ struct ParserAsmSerializer : public ParserInspector {
     }
 
     void outputExtractPhv(const IR::BFN::LoweredExtractPhv* extract) {
+        if (!extract->dest)
+            return;
+
         // Generate the assembly that actually implements the extract.
         if (auto* source = extract->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
             auto bytes = source->extractedBytes();

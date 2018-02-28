@@ -76,6 +76,8 @@ class LoweredExtractPhv : LoweredParserPrimitive {
     LoweredExtractPhv(Util::SourceInfo si, PHV::Container dest,
                    const LoweredParserRVal* source)
       : LoweredParserPrimitive(si), source(source), dest(new BFN::ContainerRef(dest)) { }
+    LoweredExtractPhv(const LoweredParserRVal* source)
+      : source(source), dest(nullptr) { }
 #end
 
     dbprint { out << "extract " << source << " to " << dest; }

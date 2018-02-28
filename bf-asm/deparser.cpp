@@ -72,7 +72,9 @@ struct Deparser::FDEntry {
                     } else if (kv.key.type == tINT) {
                         if (replace.count(kv.key.i))
                             error(kv.value.lineno, "Duplicate value at offset %ld", kv.key.i);
-                        replace.emplace(kv.key.i, ::Phv::Ref(gress, kv.value)); } }
+                        replace.emplace(kv.key.i, ::Phv::Ref(gress, kv.value));
+                    } else {
+                         error(kv.value.lineno, "Syntax error for clot"); } }
             } else {
                 pov = ::Phv::Ref(gress, data); } }
         void check(bitvec &phv_use) override {

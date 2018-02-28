@@ -161,7 +161,9 @@ Backend::Backend(const BFN_Options& options) :
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         new CollectPhvInfo(phv),
-        new MergeParserStates,
+#if HAVE_JBAY
+        options.device == "jbay" ? nullptr : new MergeParserStates,
+#endif  // HAVE_JBAY
         &defuse,
         new CollectNameAnnotations(phv),
         new DumpPipe("Before phv_analysis"),
