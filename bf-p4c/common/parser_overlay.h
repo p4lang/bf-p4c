@@ -136,7 +136,6 @@ class BuildMetadataOverlay : public BuildMutex {
     }
 
     profile_t init_apply(const IR::Node* root) override;
-    bool preorder(const IR::BFN::Parser*) override { return false; }
     bool preorder(const IR::BFN::Deparser*) override { return false; }
 
  public:
