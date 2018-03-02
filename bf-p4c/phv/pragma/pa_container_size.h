@@ -76,6 +76,23 @@ class PragmaContainerSize : public Inspector {
      *  In phv allocation, use this at the begging.
      */
     void add_constraint(const PHV::Field* field, std::vector<PHV::Size> sizes);
+
+    /** Adjust field_slice_req_i based on slice list.
+     *
+     * Since slice list ensures that all fieldslice will be allocated together, so that
+     * even if fields are not sliced in the way specified by pragma, however,
+     * they will be allocated while satisfying pragmas, for example,
+     * slice lists:
+        [ abc<16> meta no_split [0:11]
+          abc<16> meta no_split [12:12]
+          abc<16> meta no_split [13:15] ]
+     * rotational clusters:
+     *  [[abc<16> meta no_split [0:11]]]
+     *  [[abc<16> meta no_split [12:12]]]
+     *  [[abc<16> meta no_split [13:15]]]
+     * and @pa_container_size("ingress", "abc", 16) is actually Okay.
+     */
+    void adjust_requirements(const std::list<PHV::SuperCluster*>& sliced);
 };
 
 std::ostream& operator<<(std::ostream& out, const PragmaContainerSize& pa_cs);

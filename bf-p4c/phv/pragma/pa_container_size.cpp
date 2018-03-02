@@ -133,6 +133,7 @@ std::set<const PHV::Field*>
 PragmaContainerSize::unsatisfiable_fields(
         const std::list<PHV::SuperCluster*>& sliced) const {
     std::set<const PHV::Field*> rst;
+    std::set<const PHV::Field*> is_in_slicelist;
     // field is not sliced in the way specified.
     for (const auto* sup_cluster : sliced) {
         for (const auto* slice_list : sup_cluster->slice_lists()) {
@@ -163,8 +164,9 @@ PragmaContainerSize::unsatisfiable_fields(
                 // not possible because of the form of slice list.
                 if (int(field_slice_req_i.at(slice)) != slice_list_size) {
                     rst.insert(slice.field()); }
-                }
+            }
         }
+
         for (const auto* rot_cluster : sup_cluster->clusters()) {
             for (const auto* ali_cluster : rot_cluster->clusters()) {
                 for (const auto& slice : ali_cluster->slices()) {
@@ -172,7 +174,8 @@ PragmaContainerSize::unsatisfiable_fields(
                     // not a specified slicing
                     if (!field_slice_req_i.count(slice)) {
                         rst.insert(slice.field()); }
-                } } } }
+                } } }
+    }
     return rst;
 }
 
@@ -217,4 +220,33 @@ void PragmaContainerSize::add_constraint(
                   cstring::to_cstring(field)); }
     pa_container_sizes_i[field] = sizes;
     update_field_slice_req(field, sizes);
+}
+
+void PragmaContainerSize::adjust_requirements(const std::list<PHV::SuperCluster*>& sliced) {
+    for (const auto* sup_cluster : sliced) {
+        for (const auto* slice_list : sup_cluster->slice_lists()) {
+            const PHV::Field* field = slice_list->front().field();
+            // if slice_list have different fields, ignored.
+            if (std::any_of(slice_list->begin(), slice_list->end(),
+                            [&] (const PHV::FieldSlice& fs) {
+                                return fs.field() != field; })) {
+                continue; }
+
+            if (!is_specified(field)) continue;
+            // Field in different slice list is too complicated.
+            if (!is_single_parameter(field)) continue;
+
+            int req_size = int(pa_container_sizes_i.at(field).front());
+            int slice_list_size =
+                std::accumulate(slice_list->begin(), slice_list->end(), 0,
+                                [] (int a, const PHV::FieldSlice& fs) {
+                                    return a + fs.size(); });
+
+            if (slice_list_size != field->size) continue;
+            if (slice_list_size > req_size) continue;
+
+            // This slice list works, so we can add redundent fieldslice requirements.
+            for (const auto& fs : *slice_list)
+                field_slice_req_i[fs] = static_cast<PHV::Size>(req_size);
+        } }
 }
