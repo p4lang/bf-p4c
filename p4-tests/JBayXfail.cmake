@@ -33,6 +33,10 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     ".* expected packet.* on port .* not seen"
     testdata/p4_14_samples/repeater.p4
     extensions/p4_tests/p4_14/hash_calculation_32.p4
+    testdata/p4_14_samples/gateway1.p4
+    testdata/p4_14_samples/gateway2.p4
+    testdata/p4_14_samples/gateway3.p4
+    testdata/p4_14_samples/gateway4.p4
   )
 
   p4c_add_xfail_reason("jbay"
