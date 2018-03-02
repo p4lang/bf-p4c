@@ -505,9 +505,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
 
-  # BRIG-421
-  extensions/p4_tests/p4_14/adjust_instr1.p4
-
   # Expected to fail, which means that action analysis is working correctly.
   extensions/p4_tests/p4_14/action_conflict_1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4

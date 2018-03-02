@@ -252,8 +252,16 @@ class ActionPhvConstraints : public Inspector {
             PHV::Allocation::MutuallyLiveSlices container_state, const IR::MAU::Action* action,
             UnionFind<PHV::FieldSlice>& copacking_constraints);
 
-    boost::optional<PHV::AllocSlice> getSourcePHVSlice(const PHV::Allocation& alloc,
-            PHV::AllocSlice& slice, const IR::MAU::Action* action, size_t source_num = 0);
+    /** Return the first allocated (in @alloc) or proposed (in @slices) source
+     * of an instruction in @action that writes to @slice, if any.  There may
+     * be up to two PHV sources per destination in any action, as each
+     * destination may only be written to once.
+     */
+    boost::optional<PHV::AllocSlice> getSourcePHVSlice(
+        const PHV::Allocation& alloc,
+        const std::vector<PHV::AllocSlice>& slices,
+        PHV::AllocSlice& dst,
+        const IR::MAU::Action* action);
 
     /** @returns true if @slices packed in the same container read from action
      * data or from constant in action @act

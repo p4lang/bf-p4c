@@ -336,6 +336,10 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
 
             ordered_set<PHV::Container> per_source_containers;
             ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(fieldRead, rangeRead);
+            for (auto source : container_state)
+                if (source.field() == fieldRead && source.field_slice().overlaps(rangeRead))
+                    per_source_slices.insert(source);
+
             for (auto source_slice : per_source_slices) {
                 per_source_containers.insert(source_slice.container());
                 LOG5("\t\t\t\t\tSource slice for " << slice << " : " << source_slice); }
@@ -351,33 +355,43 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
     return NumContainers(containerList.size(), num_unallocated);
 }
 
-boost::optional<PHV::AllocSlice> ActionPhvConstraints::getSourcePHVSlice(const PHV::Allocation
-        &alloc, PHV::AllocSlice& slice, const IR::MAU::Action* action, size_t source_num) {
+boost::optional<PHV::AllocSlice> ActionPhvConstraints::getSourcePHVSlice(
+        const PHV::Allocation &alloc,
+        const std::vector<PHV::AllocSlice>& slices,
+        PHV::AllocSlice& slice,
+        const IR::MAU::Action* action) {
     LOG5("\t\t\t\tgetSourcePHVSlices for action: " << action->name << " and slice " << slice);
     auto *field = slice.field();
     auto reads = constraint_tracker.sources(slice, action);
+
     if (reads.size() == 0)
         LOG5("\t\t\t\tField " << field->name << " is not written in action " << action->name);
     else
         LOG5("\t\t\t\tField " << field->name << " is written in action "  << action->name <<
              " using " << reads.size() << " operands");
-    size_t i = 0;
+
     for (auto operand : reads) {
         if (operand.ad || operand.constant) continue;
-        if (i != source_num) {
-            i++;
-            continue; }
-
         const PHV::Field* fieldRead = operand.phv_used->field();
         le_bitrange rangeRead = operand.phv_used->range();
         ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(fieldRead, rangeRead);
+
+        // Add any source slices found in @slices, which are the proposed packing.
+        for (auto &packed_slice : slices)
+            // XXX(cole): Should this be overlaps() or contains()?
+            if (packed_slice.field() == fieldRead && packed_slice.field_slice().overlaps(rangeRead))
+                per_source_slices.insert(packed_slice);
+
+        LOG5("\t\t\t\t\tSlice read: " << PHV::FieldSlice(fieldRead, rangeRead));
         LOG5("\t\t\t\t\tNumber of source slices: " << per_source_slices.size());
+
         if (per_source_slices.size() > 1) {
             // Adjacent slices of the same field as the multiple sources ok
             if (!are_adjacent_field_slices(per_source_slices))
-                BUG("Multiple source slices found in getSourcePHVSlice()"); }
-        for (auto sl : per_source_slices)
-            return sl; }
+                BUG("Multiple source slices found in getSourcePHVSlice()");
+        } else if (per_source_slices.size() == 1) {
+            return *per_source_slices.begin(); } }
+
     return boost::optional<PHV::AllocSlice>{};
 }
 
@@ -515,15 +529,25 @@ void ActionPhvConstraints::pack_slices_together(
     ordered_set<PHV::FieldSlice> pack_together;
     for (auto slice : container_state) {
         for (auto operand : constraint_tracker.sources(slice, action)) {
-            if (operand.ad || operand.constant) continue;
+            if (operand.ad || operand.constant)
+                continue;
             const PHV::Field* fieldRead = operand.phv_used->field();
             le_bitrange rangeRead = operand.phv_used->range();
             if (pack_unallocated_only) {
                 ordered_set<PHV::Container> containers;
                 ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(fieldRead, rangeRead);
+
+                // Add any source slices found in @slices, which are the proposed packing.
+                for (auto &packed_slice : container_state)
+                    // XXX(cole): Should this be overlaps() or contains()?
+                    if (packed_slice.field() == fieldRead &&
+                            packed_slice.field_slice().overlaps(rangeRead))
+                        per_source_slices.insert(packed_slice);
+
                 for (auto slice : per_source_slices)
                     containers.insert(slice.container());
-                if (containers.size() != 0) continue; }
+                if (containers.size() != 0)
+                    continue; }
 
             // Insert the slices to be packed together into the UnionFind structure
             LOG6("\t\t\t\t\tInserting " << fieldRead->name << " [" << rangeRead.lo << ", " <<
@@ -677,7 +701,7 @@ boost::optional<ordered_map<PHV::FieldSlice, int>> ActionPhvConstraints::can_pac
 
         // num_source_containers == 2 if execution gets here
         // If source fields have already been allocated and there are two PHV sources in addition to
-        // an action data/constant sourcem then packing is not possible (TOO_MANY_SOURCES)
+        // an action data/constant source then packing is not possible (TOO_MANY_SOURCES)
         if (sources.num_allocated == 2 && has_ad_constant_sources) {
             LOG5("\t\t\t\tAction " << action->name << " uses action data/constant in addition to "
                     "two PHV sources");
@@ -759,17 +783,25 @@ boost::optional<ordered_map<PHV::FieldSlice, int>> ActionPhvConstraints::can_pac
 
     LOG5("\t\t\tChecking rotational alignment corresponding to deposit-field instructions");
     for (auto &action : set_of_actions) {
-        LOG5("\t\t\tphvMustBeAligned: " << phvMustBeAligned[action] << " numSourceContainers: " <<
-                numSourceContainers[action] << " action: " << action->name);
+        LOG5("\t\t\tphvMustBeAligned: " << phvMustBeAligned[action] <<
+             " numSourceContainers: " << numSourceContainers[action] <<
+             " action: " << action->name);
+
         if (phvMustBeAligned[action] && numSourceContainers[action] == 1) {
             // The single phv source must be aligned
             for (auto slice : container_state) {
                 LOG5("\t\t\t\tslice: " << slice);
-                boost::optional<PHV::AllocSlice> source = getSourcePHVSlice(alloc, slice, action);
+                boost::optional<PHV::AllocSlice> source =
+                    getSourcePHVSlice(alloc, slices, slice, action);
                 if (!source) continue;
                 if (slice.container_slice() != source->container_slice()) {
                     LOG5("\t\t\t\tContainer alignment for slice and source do not match");
                     return boost::none; } } }
+
+        // TODO(cole): If phvMustBeAligned[action] and one of the fields to be
+        // packed is in the UnionFind data structure (i.e. is a source), then
+        // fail: It's impossible for a source to be aligned and also packed in
+        // the same container as its destination (unless it's the same field).
 
         if (phvMustBeAligned[action] && numSourceContainers[action] == 2) {
             boost::optional<ClassifiedSources> classifiedSourceSlices =
@@ -797,8 +829,8 @@ boost::optional<ordered_map<PHV::FieldSlice, int>> ActionPhvConstraints::can_pac
                 // adjacent slices of the same field as well
                 ordered_set<PHV::AllocSlice> sources;
                 for (auto slice : container_state) {
-                    boost::optional<PHV::AllocSlice> source = getSourcePHVSlice(alloc, slice,
-                            action);
+                    boost::optional<PHV::AllocSlice> source =
+                        getSourcePHVSlice(alloc, slices, slice, action);
                     if (!source) continue;
                     if (!sources.count(source.get()))
                         sources.insert(source.get()); }
@@ -808,7 +840,8 @@ boost::optional<ordered_map<PHV::FieldSlice, int>> ActionPhvConstraints::can_pac
             bool firstSlice = true;
             int firstOffset = 0;
             for (auto slice : container_state) {
-                boost::optional<PHV::AllocSlice> source = getSourcePHVSlice(alloc, slice, action);
+                boost::optional<PHV::AllocSlice> source =
+                    getSourcePHVSlice(alloc, slices, slice, action);
                 if (!source) continue;
                 int offset = getOffset(slice.container_slice(), source->container_slice(),
                         slice.container());
@@ -834,8 +867,6 @@ boost::optional<ordered_map<PHV::FieldSlice, int>> ActionPhvConstraints::can_pac
     // All fields in rv must be placed in the same container.  If there are
     // overlaps based on required alignment, return boost::none.
     bitvec placements;
-
-    // TODO(cole): Pick up here.  Incorporate placement checking.
 
     // Find the copacking constraints.
     ordered_set<PHV::FieldSlice> copacking_set;
@@ -889,18 +920,27 @@ inline int ActionPhvConstraints::getOffset(le_bitrange a, le_bitrange b, PHV::Co
     return ((a.lo - b.lo) % c.size());
 }
 
-/// Steps in verifying alignment of the two PHV sources
-/// 1. Divide the source AllocSlices corresponding to the packing in @container_state into the
-/// respective containers (firstContainerSet and secondContainerSet). All slices in each respective
-/// ContainerSet must be aligned at the same offset with reference to their destination slices.
-/// Also, only one container set can be unaligned with the destination for every instruction.
-/// 2. If both firstContainerAligned and secondContainerAligned are simultaneously false, then
-/// packing is impossible due to alignment constraints on the instructions.
-/// 3. If packing is possible, return the classification of source slices into the respective source
-/// containers (modeled as a ClassifiedSources map).
+/** Steps in verifying alignment of the two PHV sources:
+ *
+ * 1. Divide the source AllocSlices corresponding to the packing in
+ * @container_state into the respective containers (firstContainerSet and
+ * secondContainerSet). All slices in each respective ContainerSet must be
+ * aligned at the same offset with reference to their destination slices.
+ * Also, only one container set can be unaligned with the destination for every
+ * instruction.
+ *
+ * 2. If both firstContainerAligned and secondContainerAligned are
+ * simultaneously false, then packing is impossible due to alignment
+ * constraints on the instructions.
+ *
+ * 3. If packing is possible, return the classification of source slices into
+ * the respective source containers (modeled as a ClassifiedSources map).
+ */
 boost::optional<ActionPhvConstraints::ClassifiedSources>
-ActionPhvConstraints::verify_two_container_alignment(const PHV::Allocation& alloc, const
-        PHV::Allocation::MutuallyLiveSlices& container_state, const IR::MAU::Action* action) {
+ActionPhvConstraints::verify_two_container_alignment(
+        const PHV::Allocation& alloc,
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const IR::MAU::Action* action) {
     ClassifiedSources rm;
     bool firstContainerSet = false;
     bool secondContainerSet = false;
@@ -917,6 +957,10 @@ ActionPhvConstraints::verify_two_container_alignment(const PHV::Allocation& allo
             const PHV::Field* fieldRead = operand.phv_used->field();
             le_bitrange rangeRead = operand.phv_used->range();
             ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(fieldRead, rangeRead);
+            for (auto sourceSlice : container_state) {
+                bool rangeOverlaps = sourceSlice.field_slice().overlaps(rangeRead);
+                if (sourceSlice.field() == fieldRead && rangeOverlaps)
+                    per_source_slices.insert(sourceSlice); }
 
             // Combine multiple adjacent source slices.
             boost::optional<PHV::AllocSlice> src_slice = boost::none;
