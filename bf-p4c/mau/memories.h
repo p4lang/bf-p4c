@@ -297,7 +297,10 @@ struct Memories {
         }
 
         int left_to_place() { return depth - placed; }
-        bool all_placed() { return (depth == placed); }
+        bool all_placed() {
+            BUG_CHECK(placed <= depth, "Placed more than needed");
+            return (depth == placed);
+        }
         bool any_placed() { return (placed != 0); }
         bool needs_ab() { return requires_ab && !all_placed(); }
         bool is_synth_type() { return type == STATS || type == METER || type == REGISTER

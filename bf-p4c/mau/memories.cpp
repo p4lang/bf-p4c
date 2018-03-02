@@ -1287,10 +1287,11 @@ int Memories::find_best_tind_row(SRAM_group *tg, int &bus) {
     safe_vector<int> available_rows;
     auto name = tg->ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
     for (int i = 0; i < SRAM_ROWS; i++) {
-        open_space += bitcount(~sram_inuse[i] & left_mask);
         auto tbus = tind_bus[i];
-        if (!tbus[0] || tbus[0] == name || !tbus[1] || tbus[1] == name)
+        if (!tbus[0] || tbus[0] == name || !tbus[1] || tbus[1] == name) {
             available_rows.push_back(i);
+            open_space += bitcount(~sram_inuse[i] & left_mask);
+        }
     }
 
     if (open_space == 0)
@@ -1302,14 +1303,18 @@ int Memories::find_best_tind_row(SRAM_group *tg, int &bus) {
         if ((t = bitcount(~sram_inuse[a] & left_mask)
                - bitcount(~sram_inuse[b] & left_mask)) != 0) return t > 0;
 
-        auto tbus = tind_bus[a];
-        if (tbus[0] == name || tbus[1] == name)
+        auto tbus0 = tind_bus[a];
+        auto tbus1 = tind_bus[b];
+        if ((tbus0[0] == name || tbus0[1] == name)
+            && !(tbus1[0] == name || tbus1[1] == name))
             return true;
-        tbus = tind_bus[b];
-        if (tbus[0] == name || tbus[1] == name)
+        if ((tbus1[0] == name || tbus1[1] == name)
+            && !(tbus0[0] == name || tbus0[1] == name))
             return false;
         return a < b;
     });
+
+
     int best_row = available_rows[0];
     if (!tind_bus[best_row][0] || tind_bus[best_row][0] == name)
         bus = 0;
