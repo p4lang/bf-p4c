@@ -768,7 +768,7 @@ control Bufalo(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        if ((meta.Portal.Glenmora & 16w0x2000) == 16w0x2000) 
+        if (meta.Portal.Glenmora & 16w0x2000 == 16w0x2000) 
             Mattese.apply();
     }
 }
@@ -1472,7 +1472,7 @@ control Lonepine(inout headers hdr, inout metadata meta, inout standard_metadata
         default_action = NoAction();
     }
     apply {
-        if ((meta.Pearson.Basco & 8w0x80) == 8w0x80) 
+        if (meta.Pearson.Basco & 8w0x80 == 8w0x80) 
             PeaRidge.apply();
     }
 }
@@ -1753,7 +1753,7 @@ control Pedro(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         default_action = Kendrick();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             Woodburn.apply();
     }
 }
@@ -1776,7 +1776,7 @@ control PellCity(inout headers hdr, inout metadata meta, inout standard_metadata
         default_action = NoAction();
     }
     apply {
-        if (((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Portal.Epsie == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) && meta.Kekoskee.Lincroft == 1w1) 
+        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Portal.Epsie == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) && meta.Kekoskee.Lincroft == 1w1) 
             Marquette.apply();
     }
 }
@@ -2147,7 +2147,7 @@ control StarLake(inout headers hdr, inout metadata meta, inout standard_metadata
                 Brockton: {
                     switch (Belfalls.apply().action_run) {
                         Chevak: {
-                            if ((meta.Portal.Littleton & 24w0x10000) == 24w0x10000) 
+                            if (meta.Portal.Littleton & 24w0x10000 == 24w0x10000) 
                                 Glentana.apply();
                             else 
                                 Chappells.apply();

@@ -663,7 +663,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = _Olcott();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             _Edmeston_0.apply();
         _Perrytown_0.apply();
         _Wittman_0.apply();
@@ -1970,13 +1970,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             tbl_act_1.apply();
             _Cortland_0.apply();
         }
-        if (meta.Egypt.Blanding == 1w0 && (meta.DuBois.Branson & 24w0x10000) == 24w0x0) 
+        if (meta.Egypt.Blanding == 1w0 && meta.DuBois.Branson & 24w0x10000 == 24w0x0) 
             _Myrick_0.apply();
         _NewTrier_0.apply();
         if (meta.Egypt.Blanding == 1w0 && meta.Egypt.Harvard == 1w1) 
             if (meta.DuBois.Miller == 1w0 && meta.Egypt.MuleBarn == meta.DuBois.Holyoke) 
                 _Isabela_0.apply();
-        if ((meta.DuBois.Holyoke & 16w0x2000) == 16w0x2000) 
+        if (meta.DuBois.Holyoke & 16w0x2000 == 16w0x2000) 
             _Sheldahl_0.apply();
         if (meta.Egypt.Newborn == 1w1) 
             _Paulette_0.apply();

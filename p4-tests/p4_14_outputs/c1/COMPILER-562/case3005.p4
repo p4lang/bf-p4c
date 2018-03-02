@@ -835,7 +835,7 @@ control Bassett(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = Normangee();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) {
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) {
             Catawba.apply();
         }
     }
@@ -1608,7 +1608,7 @@ control ElDorado(inout headers hdr, inout metadata meta, inout standard_metadata
                 Lincroft: {
                     switch (Poulsbo.apply().action_run) {
                         Elimsport: {
-                            if ((meta.PineCity.Oakville & 24w0x10000) == 24w0x10000) {
+                            if (meta.PineCity.Oakville & 24w0x10000 == 24w0x10000) {
                                 Alamance.apply();
                             }
                             else {
@@ -2244,7 +2244,7 @@ control Lefor(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         size = 2304;
     }
     apply {
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.PineCity.Newfolden == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.PineCity.Newfolden == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
             Perma.apply();
         }
     }
@@ -2472,7 +2472,7 @@ control Nelagoney(inout headers hdr, inout metadata meta, inout standard_metadat
         implementation = Dowell;
     }
     apply {
-        if ((meta.PineCity.Okaton & 16w0x2000) == 16w0x2000) {
+        if (meta.PineCity.Okaton & 16w0x2000 == 16w0x2000) {
             Manilla.apply();
         }
     }

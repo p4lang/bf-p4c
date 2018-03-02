@@ -882,7 +882,7 @@ control Armijo(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        if (((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Trenary.Sylvan == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) && meta.Cushing.Kelvin == 1w1) 
+        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Trenary.Sylvan == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) && meta.Cushing.Kelvin == 1w1) 
             AukeBay.apply();
     }
 }
@@ -2628,7 +2628,7 @@ control Pineville(inout headers hdr, inout metadata meta, inout standard_metadat
                 Eastover: {
                     switch (Maljamar.apply().action_run) {
                         Moquah: {
-                            if ((meta.Trenary.Dunmore & 24w0x10000) == 24w0x10000) 
+                            if (meta.Trenary.Dunmore & 24w0x10000 == 24w0x10000) 
                                 Foster.apply();
                             else 
                                 FoxChase.apply();
@@ -2835,7 +2835,7 @@ control Trego(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         default_action = Elvaston();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             LaHoma.apply();
     }
 }
@@ -2887,7 +2887,7 @@ control Wrenshall(inout headers hdr, inout metadata meta, inout standard_metadat
         default_action = NoAction();
     }
     apply {
-        if ((meta.Trenary.Arredondo & 16w0x2000) == 16w0x2000) 
+        if (meta.Trenary.Arredondo & 16w0x2000 == 16w0x2000) 
             Strasburg.apply();
     }
 }

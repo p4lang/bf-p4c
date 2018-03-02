@@ -1926,7 +1926,7 @@ control Ringtown(inout headers hdr, inout metadata meta, inout standard_metadata
                 Tagus: {
                     switch (Boquillas.apply().action_run) {
                         Nunda: {
-                            if ((meta.Cusseta.Pearland & 24w0x10000) == 24w0x10000) {
+                            if (meta.Cusseta.Pearland & 24w0x10000 == 24w0x10000) {
                                 Saltair.apply();
                             }
                             else {
@@ -2028,7 +2028,7 @@ control Wyanet(inout headers hdr, inout metadata meta, inout standard_metadata_t
         implementation = Pensaukee;
     }
     apply {
-        if ((meta.Cusseta.Gassoway & 16w0x2000) == 16w0x2000) {
+        if (meta.Cusseta.Gassoway & 16w0x2000 == 16w0x2000) {
             Nichols.apply();
         }
     }

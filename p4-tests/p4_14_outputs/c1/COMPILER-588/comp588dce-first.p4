@@ -1096,7 +1096,7 @@ control Eastover(inout headers hdr, inout metadata meta, inout standard_metadata
         default_action = Challis();
     }
     apply {
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Wegdahl.Naches == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Wegdahl.Naches == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
             LaMonte.apply();
             RoseBud.apply();
         }
@@ -1124,7 +1124,7 @@ control WolfTrap(inout headers hdr, inout metadata meta, inout standard_metadata
         default_action = NoAction();
     }
     apply {
-        if ((meta.Wegdahl.Adair & 16w0x2000) == 16w0x2000) 
+        if (meta.Wegdahl.Adair & 16w0x2000 == 16w0x2000) 
             Sabetha.apply();
     }
 }
@@ -2273,7 +2273,7 @@ control PawPaw(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Wauconda: {
                     switch (Pilar.apply().action_run) {
                         Depew: {
-                            if ((meta.Wegdahl.Piney & 24w0x10000) == 24w0x10000) 
+                            if (meta.Wegdahl.Piney & 24w0x10000 == 24w0x10000) 
                                 LeSueur.apply();
                             else 
                                 Ranburne.apply();
@@ -2630,7 +2630,7 @@ control Temelec(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = WestCity();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             Keltys.apply();
     }
 }

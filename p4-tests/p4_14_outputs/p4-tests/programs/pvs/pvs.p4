@@ -184,15 +184,20 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @parser_value_set_size(7) value_set<bit<16>> pvs2;
+    @parser_value_set_size(9) value_set<tuple<bit<6>, bit<14>>> pvs3;
+    @parser_value_set_size(2) value_set<bit<32>> pvs4;
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
+            pvs2: parse_vlan;
             default: accept;
         }
     }
     @name(".parse_hdr_pvs1") state parse_hdr_pvs1 {
         packet.extract(hdr.new_tag24_);
         transition select(hdr.new_tag24_.t24_f1_6b, hdr.new_tag24_.t24_f3_14b) {
+            pvs3: parse_hdr_pvs3;
             (6w0, 14w199): parse_hdr_pvs4;
             default: accept;
         }
@@ -204,6 +209,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     @name(".parse_hdr_pvs3") state parse_hdr_pvs3 {
         packet.extract(hdr.new_tag48_);
         transition select(hdr.new_tag48_.t48_f2_32b) {
+            pvs4: parse_hdr_pvs4;
             default: accept;
         }
     }

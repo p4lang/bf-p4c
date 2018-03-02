@@ -738,7 +738,7 @@ control Daguao(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 LeSueur: {
                     switch (Breda.apply().action_run) {
                         Dougherty: {
-                            if ((meta.Peebles.Fentress & 24w0x10000) == 24w0x10000) 
+                            if (meta.Peebles.Fentress & 24w0x10000 == 24w0x10000) 
                                 Hickox.apply();
                             else 
                                 Bieber.apply();
@@ -1356,7 +1356,7 @@ control Hallwood(inout headers hdr, inout metadata meta, inout standard_metadata
         default_action = NoAction();
     }
     apply {
-        if ((meta.Peebles.Subiaco & 16w0x2000) == 16w0x2000) 
+        if (meta.Peebles.Subiaco & 16w0x2000 == 16w0x2000) 
             Garibaldi.apply();
     }
 }

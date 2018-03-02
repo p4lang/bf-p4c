@@ -2067,7 +2067,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     _Suwanee: {
                         switch (_Waucoma_0.apply().action_run) {
                             _Cowles: {
-                                if ((meta.Clementon.Lovett & 24w0x10000) == 24w0x10000) 
+                                if (meta.Clementon.Lovett & 24w0x10000 == 24w0x10000) 
                                     _Westtown_0.apply();
                                 else 
                                     _Kittredge_0.apply();
@@ -2093,7 +2093,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         _Madera.apply();
         _Medulla_0.apply();
         _Paskenta_0.apply();
-        if ((meta.Clementon.Talbert & 16w0x2000) == 16w0x2000) 
+        if (meta.Clementon.Talbert & 16w0x2000 == 16w0x2000) 
             _Northway_0.apply();
         if (meta.Conneaut.Wagener == 1w1) 
             _Suamico_0.apply();

@@ -962,7 +962,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_58();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             _LaHoma_0.apply();
         _Tolley_0.apply();
         switch (_Mapleton_0.apply().action_run) {
@@ -2846,7 +2846,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         _Eastover: {
                             switch (_Maljamar_0.apply().action_run) {
                                 _Moquah: {
-                                    if ((meta.Trenary.Dunmore & 24w0x10000) == 24w0x10000) 
+                                    if (meta.Trenary.Dunmore & 24w0x10000 == 24w0x10000) 
                                         _Foster_0.apply();
                                     else 
                                         _FoxChase_0.apply();
@@ -2864,7 +2864,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 if (meta.Trenary.Selby == 1w0 && meta.Maddock.SomesBar == 1w0 && meta.Maddock.Durant == 1w0 && meta.Maddock.Sturgis == meta.Trenary.Arredondo) 
                     _Catawba_0.apply();
                 else 
-                    if ((meta.Trenary.Arredondo & 16w0x2000) == 16w0x2000) 
+                    if (meta.Trenary.Arredondo & 16w0x2000 == 16w0x2000) 
                         _Strasburg.apply();
         if (meta.Kaweah.Conneaut != 1w0) 
             _Westline_0.apply();
@@ -2875,7 +2875,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Theta_0.apply();
             _Norias_0.apply();
         }
-        if (((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Trenary.Sylvan == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) && meta.Cushing.Kelvin == 1w1) 
+        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Trenary.Sylvan == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) && meta.Cushing.Kelvin == 1w1) 
             _AukeBay_0.apply();
         if (hdr.Pinecreek[0].isValid()) 
             _Ankeny_0.apply();

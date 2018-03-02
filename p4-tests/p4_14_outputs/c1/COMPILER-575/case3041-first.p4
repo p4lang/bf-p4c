@@ -718,7 +718,7 @@ control Angus(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         default_action = NoAction();
     }
     apply {
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Homeacre.Aspetuck == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) 
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Homeacre.Aspetuck == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) 
             Esmond.apply();
     }
 }
@@ -819,7 +819,7 @@ control Borth(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         default_action = Plains();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             Chunchula.apply();
     }
 }
@@ -1036,12 +1036,12 @@ control Crary(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         default_action = Alston();
     }
     apply {
-        if ((meta.Lisle.CeeVee & 2w1) == 2w1) {
+        if (meta.Lisle.CeeVee & 2w1 == 2w1) {
             Woodburn.apply();
             Bunavista.apply();
         }
         else 
-            if ((meta.Lisle.CeeVee & 2w2) == 2w2) {
+            if (meta.Lisle.CeeVee & 2w2 == 2w2) {
                 Lofgreen.apply();
                 Roseville.apply();
             }
@@ -1342,14 +1342,14 @@ control Elvaston(inout headers hdr, inout metadata meta, inout standard_metadata
     }
     apply {
         if (meta.Lisle.Grannis == 1w0 && meta.Nondalton.Buncombe == 1w1) 
-            if (meta.Nondalton.Fairchild == 1w1 && (meta.Lisle.CeeVee & 2w1) == 2w1) 
+            if (meta.Nondalton.Fairchild == 1w1 && meta.Lisle.CeeVee & 2w1 == 2w1) 
                 if (meta.CruzBay.WestPark != 16w0) 
                     Manning.apply();
                 else 
                     if (meta.Ramah.Alcoma == 16w0 && meta.Ramah.Pilger == 11w0) 
                         BigArm.apply();
             else 
-                if (meta.Nondalton.Welcome == 1w1 && (meta.Lisle.CeeVee & 2w2) == 2w2) 
+                if (meta.Nondalton.Welcome == 1w1 && meta.Lisle.CeeVee & 2w2 == 2w2) 
                     if (meta.Dorset.Woodrow != 11w0) 
                         Addicks.apply();
                     else 
@@ -1663,7 +1663,7 @@ control Mentone(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        if ((meta.Homeacre.Hanford & 16w0x2000) == 16w0x2000) 
+        if (meta.Homeacre.Hanford & 16w0x2000 == 16w0x2000) 
             Stonefort.apply();
     }
 }
@@ -1962,7 +1962,7 @@ control Inverness(inout headers hdr, inout metadata meta, inout standard_metadat
                 Bowers: {
                     switch (Wanilla.apply().action_run) {
                         Finlayson: {
-                            if ((meta.Homeacre.Rocheport & 24w0x10000) == 24w0x10000) 
+                            if (meta.Homeacre.Rocheport & 24w0x10000 == 24w0x10000) 
                                 Comunas.apply();
                             else 
                                 Excel.apply();
@@ -2476,7 +2476,7 @@ control Radom(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     }
     apply {
         if (meta.Lisle.Grannis == 1w0 && meta.Nondalton.Buncombe == 1w1) 
-            if (meta.Nondalton.Fairchild == 1w1 && (meta.Lisle.CeeVee & 2w1) == 2w1) 
+            if (meta.Nondalton.Fairchild == 1w1 && meta.Lisle.CeeVee & 2w1 == 2w1) 
                 switch (Bellville.apply().action_run) {
                     Sultana: {
                         Coamo.apply();
@@ -2484,7 +2484,7 @@ control Radom(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                 }
 
             else 
-                if (meta.Nondalton.Welcome == 1w1 && (meta.Lisle.CeeVee & 2w2) == 2w2) 
+                if (meta.Nondalton.Welcome == 1w1 && meta.Lisle.CeeVee & 2w2 == 2w2) 
                     switch (Tonasket.apply().action_run) {
                         Sultana: {
                             Frontenac.apply();

@@ -937,7 +937,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_57();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             _Keltys_0.apply();
         _NewAlbin_0.apply();
         switch (_Waterfall_0.apply().action_run) {
@@ -2996,7 +2996,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         _Wauconda: {
                             switch (_Pilar_0.apply().action_run) {
                                 _Depew: {
-                                    if ((meta.Wegdahl.Piney & 24w0x10000) == 24w0x10000) 
+                                    if (meta.Wegdahl.Piney & 24w0x10000 == 24w0x10000) 
                                         _LeSueur_0.apply();
                                     else 
                                         _Ranburne_0.apply();
@@ -3014,7 +3014,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 if (meta.Wegdahl.Alamosa == 1w0 && meta.Tillamook.Gause == 1w0 && meta.Tillamook.Corinne == 1w0 && meta.Tillamook.Blossom == meta.Wegdahl.Adair) 
                     _LaUnion_0.apply();
                 else 
-                    if ((meta.Wegdahl.Adair & 16w0x2000) == 16w0x2000) 
+                    if (meta.Wegdahl.Adair & 16w0x2000 == 16w0x2000) 
                         _Sabetha.apply();
         _Jermyn_0.apply();
         if (meta.Daisytown.Daniels != 1w0) 
@@ -3026,7 +3026,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Norma_0.apply();
             _Arkoe_0.apply();
         }
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Wegdahl.Naches == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Wegdahl.Naches == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
             _LaMonte_0.apply();
             _RoseBud_0.apply();
         }

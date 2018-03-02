@@ -925,7 +925,7 @@ control Archer(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Telida: {
                     switch (Gahanna.apply().action_run) {
                         Breda: {
-                            if ((meta.CoalCity.Almont & 24w0x10000) == 24w0x10000) 
+                            if (meta.CoalCity.Almont & 24w0x10000 == 24w0x10000) 
                                 Tolono.apply();
                             else 
                                 Yerington.apply();
@@ -1102,7 +1102,7 @@ control Baskin(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Otranto.apply();
                 Havana.apply();
             }
-        if ((meta.Westboro.Correo & 3w2) == 3w2) {
+        if (meta.Westboro.Correo & 3w2 == 3w2) {
             Pendroy.apply();
             Maxwelton.apply();
         }
@@ -1277,7 +1277,7 @@ control Brodnax(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = Fitler();
     }
     apply {
-        if ((meta.Wetumpka.Ocheyedan & 4w0x2) == 4w0x2 && meta.Westboro.Giltner == 1w1) 
+        if (meta.Wetumpka.Ocheyedan & 4w0x2 == 4w0x2 && meta.Westboro.Giltner == 1w1) 
             if (meta.Westboro.Kasilof == 1w0 && meta.Wetumpka.Yetter == 1w1) 
                 switch (Fairland.apply().action_run) {
                     Fitler: {
@@ -1286,7 +1286,7 @@ control Brodnax(inout headers hdr, inout metadata meta, inout standard_metadata_
                 }
 
         else 
-            if ((meta.Wetumpka.Ocheyedan & 4w0x1) == 4w0x1 && meta.Westboro.Sturgeon == 1w1) 
+            if (meta.Wetumpka.Ocheyedan & 4w0x1 == 4w0x1 && meta.Westboro.Sturgeon == 1w1) 
                 if (meta.Westboro.Kasilof == 1w0) 
                     if (meta.Wetumpka.Yetter == 1w1) 
                         switch (Virgil.apply().action_run) {
@@ -1421,7 +1421,7 @@ control Cornville(inout headers hdr, inout metadata meta, inout standard_metadat
         default_action = Mondovi(24w0);
     }
     apply {
-        if ((meta.CoalCity.CruzBay & 32w0x60000) == 32w0x40000) 
+        if (meta.CoalCity.CruzBay & 32w0x60000 == 32w0x40000) 
             Ebenezer.apply();
         if (meta.CoalCity.CruzBay != 32w0) 
             ElToro.apply();
@@ -1663,14 +1663,14 @@ control Geneva(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         if (meta.Westboro.Kasilof == 1w0 && meta.Wetumpka.Yetter == 1w1) 
-            if ((meta.Wetumpka.Ocheyedan & 4w0x1) == 4w0x1 && meta.Westboro.Sturgeon == 1w1) 
+            if (meta.Wetumpka.Ocheyedan & 4w0x1 == 4w0x1 && meta.Westboro.Sturgeon == 1w1) 
                 if (meta.Macon.Prismatic != 16w0) 
                     Dillsburg.apply();
                 else 
                     if (meta.Alburnett.Luttrell == 16w0 && meta.Alburnett.Rohwer == 11w0) 
                         Glennie.apply();
             else 
-                if ((meta.Wetumpka.Ocheyedan & 4w0x2) == 4w0x2 && meta.Westboro.Giltner == 1w1) 
+                if (meta.Wetumpka.Ocheyedan & 4w0x2 == 4w0x2 && meta.Westboro.Giltner == 1w1) 
                     if (meta.Evelyn.Nowlin != 11w0) 
                         Scanlon.apply();
                     else 
@@ -1880,10 +1880,10 @@ control Loris(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         default_action = NoAction();
     }
     apply {
-        if ((meta.CoalCity.Killen & 20w0x3c00) == 20w0x3c00) 
+        if (meta.CoalCity.Killen & 20w0x3c00 == 20w0x3c00) 
             Weskan.apply();
         else 
-            if ((meta.CoalCity.Killen & 20w0xffc00) == 20w0) 
+            if (meta.CoalCity.Killen & 20w0xffc00 == 20w0) 
                 Noelke.apply();
     }
 }
@@ -2084,7 +2084,7 @@ control Hercules(inout headers hdr, inout metadata meta, inout standard_metadata
         default_action = Ontonagon(12w0, 1w0, 3w1);
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             Simnasho.apply();
     }
 }
@@ -2706,7 +2706,7 @@ control Olcott(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        if (meta.Westboro.Kasilof == 1w0 && (meta.Wetumpka.Ocheyedan & 4w0x4) == 4w0x4 && meta.Westboro.Abbott == 1w1) 
+        if (meta.Westboro.Kasilof == 1w0 && meta.Wetumpka.Ocheyedan & 4w0x4 == 4w0x4 && meta.Westboro.Abbott == 1w1) 
             Wollochet.apply();
     }
 }

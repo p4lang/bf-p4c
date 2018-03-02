@@ -976,7 +976,7 @@ control Needles(inout headers hdr, inout metadata meta, inout standard_metadata_
                 Elkville: {
                     switch (Pineland.apply().action_run) {
                         Fairlee: {
-                            if ((meta.Brazil.Sonora & 24w0x10000) == 24w0x10000) {
+                            if (meta.Brazil.Sonora & 24w0x10000 == 24w0x10000) {
                                 GlenRock.apply();
                             }
                             else {
@@ -1208,7 +1208,7 @@ control Perez(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         implementation = Steprock;
     }
     apply {
-        if (meta.Wayne.Maiden == 1w0 && (meta.Brazil.Slana & 16w0x2000) == 16w0x2000) {
+        if (meta.Wayne.Maiden == 1w0 && meta.Brazil.Slana & 16w0x2000 == 16w0x2000) {
             Sylvan.apply();
         }
     }

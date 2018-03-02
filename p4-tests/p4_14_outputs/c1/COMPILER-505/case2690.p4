@@ -1371,7 +1371,7 @@ control Fowler(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Eddington: {
                     switch (Quealy.apply().action_run) {
                         BirchBay: {
-                            if ((meta.Carver.Boerne & 24w0x10000) == 24w0x10000) {
+                            if (meta.Carver.Boerne & 24w0x10000 == 24w0x10000) {
                                 Newpoint.apply();
                             }
                             else {
@@ -1431,7 +1431,7 @@ control Goulding(inout headers hdr, inout metadata meta, inout standard_metadata
         implementation = Taconite;
     }
     apply {
-        if ((meta.Carver.WestPike & 16w0x2000) == 16w0x2000) {
+        if (meta.Carver.WestPike & 16w0x2000 == 16w0x2000) {
             Brave.apply();
         }
     }

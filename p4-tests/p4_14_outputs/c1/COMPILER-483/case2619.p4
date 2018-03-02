@@ -979,7 +979,7 @@ control JimFalls(inout headers hdr, inout metadata meta, inout standard_metadata
         implementation = Minneiska;
     }
     apply {
-        if ((meta.Century.Pickett & 16w0x2000) == 16w0x2000) {
+        if (meta.Century.Pickett & 16w0x2000 == 16w0x2000) {
             TiffCity.apply();
         }
     }
@@ -1990,7 +1990,7 @@ control Robbins(inout headers hdr, inout metadata meta, inout standard_metadata_
                 Between: {
                     switch (Hannah.apply().action_run) {
                         Pridgen: {
-                            if ((meta.Century.Freetown & 24w0x10000) == 24w0x10000) {
+                            if (meta.Century.Freetown & 24w0x10000 == 24w0x10000) {
                                 Occoquan.apply();
                             }
                             else {

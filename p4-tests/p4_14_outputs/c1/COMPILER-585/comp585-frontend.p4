@@ -958,7 +958,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_57();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             _Malabar_0.apply();
         _Cowles_0.apply();
         switch (_Liberal_0.apply().action_run) {
@@ -3019,7 +3019,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         _Duster: {
                             switch (_Epsie_0.apply().action_run) {
                                 _Yorkshire: {
-                                    if ((meta.Ballville.Mynard & 24w0x10000) == 24w0x10000) 
+                                    if (meta.Ballville.Mynard & 24w0x10000 == 24w0x10000) 
                                         _Broadmoor_0.apply();
                                     else 
                                         _Protivin_0.apply();
@@ -3037,7 +3037,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 if (meta.Ballville.Indios == 1w0 && meta.Pimento.Graford == 1w0 && meta.Pimento.Canfield == 1w0 && meta.Pimento.BullRun == meta.Ballville.Chenequa) 
                     _Turkey_0.apply();
                 else 
-                    if ((meta.Ballville.Chenequa & 16w0x2000) == 16w0x2000) 
+                    if (meta.Ballville.Chenequa & 16w0x2000 == 16w0x2000) 
                         _Oregon.apply();
         _Hartville_0.apply();
         if (meta.Shauck.Allison != 1w0) 
@@ -3049,7 +3049,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Quivero_0.apply();
             _RioLinda_0.apply();
         }
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Ballville.Mantee == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Ballville.Mantee == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
             _Gheen_0.apply();
             _Raven_0.apply();
         }

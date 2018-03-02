@@ -2300,7 +2300,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     _GlenDean: {
                         switch (_Ihlen_0.apply().action_run) {
                             _Ingraham: {
-                                if ((meta.Orrum.Pettry & 24w0x10000) == 24w0x10000) 
+                                if (meta.Orrum.Pettry & 24w0x10000 == 24w0x10000) 
                                     _Salix_0.apply();
                                 else 
                                     _Cedonia_0.apply();
@@ -2329,7 +2329,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                             _WestLawn.apply();
         _TroutRun_0.apply();
         _RichBar_0.apply();
-        if ((meta.Orrum.Kaluaaha & 16w0x2000) == 16w0x2000) 
+        if (meta.Orrum.Kaluaaha & 16w0x2000 == 16w0x2000) 
             _Hooven_0.apply();
         if (meta.Horton.Cadwell == 1w1) 
             _Langtry_0.apply();

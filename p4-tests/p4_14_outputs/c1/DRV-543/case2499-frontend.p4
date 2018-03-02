@@ -2021,7 +2021,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     _Tagus: {
                         switch (_Boquillas_0.apply().action_run) {
                             _Nunda: {
-                                if ((meta.Cusseta.Pearland & 24w0x10000) == 24w0x10000) 
+                                if (meta.Cusseta.Pearland & 24w0x10000 == 24w0x10000) 
                                     _Saltair_0.apply();
                                 else 
                                     _Strevell_0.apply();
@@ -2047,7 +2047,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         _Lenox.apply();
         _BigArm_0.apply();
         _Eldena_0.apply();
-        if ((meta.Cusseta.Gassoway & 16w0x2000) == 16w0x2000) 
+        if (meta.Cusseta.Gassoway & 16w0x2000 == 16w0x2000) 
             _Nichols_0.apply();
         if (meta.Goodrich.Bronaugh == 1w1) 
             _Farthing_0.apply();

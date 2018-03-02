@@ -48,9 +48,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".push_3") action push_3() {
         hdr.hdr_stack_.push_front(3);
+        hdr.hdr_stack_[0].setValid();
+        hdr.hdr_stack_[1].setValid();
+        hdr.hdr_stack_[2].setValid();
     }
     @name(".push_2") action push_2() {
         hdr.hdr_stack_.push_front(2);
+        hdr.hdr_stack_[0].setValid();
+        hdr.hdr_stack_[1].setValid();
     }
     @name(".pop_2") action pop_2() {
         hdr.hdr_stack_.pop_front(2);

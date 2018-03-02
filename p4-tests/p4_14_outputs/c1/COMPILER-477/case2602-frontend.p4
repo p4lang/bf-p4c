@@ -2139,7 +2139,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     _Chemult: {
                         switch (_Stewart_0.apply().action_run) {
                             _Bayshore: {
-                                if ((meta.Sigsbee.Goodrich & 24w0x10000) == 24w0x10000) 
+                                if (meta.Sigsbee.Goodrich & 24w0x10000 == 24w0x10000) 
                                     _Kaplan_0.apply();
                                 else 
                                     _Beeler_0.apply();
@@ -2174,7 +2174,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         if (meta.Sigsbee.Monteview == 1w1) 
             _Floris_0.apply();
         else 
-            if ((meta.Sigsbee.Placid & 16w0x2000) == 16w0x2000) 
+            if (meta.Sigsbee.Placid & 16w0x2000 == 16w0x2000) 
                 _Ravenwood_0.apply();
     }
 }

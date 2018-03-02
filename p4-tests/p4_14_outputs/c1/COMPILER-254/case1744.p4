@@ -865,7 +865,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 QySKDb: {
                     switch (isqhxf.apply().action_run) {
                         rGpmFL: {
-                            if ((meta.UEnfPN.aReYBT & 24w0x10000) == 24w0x10000) {
+                            if (meta.UEnfPN.aReYBT & 24w0x10000 == 24w0x10000) {
                                 kjsVFs.apply();
                             }
                             ZWumNk.apply();

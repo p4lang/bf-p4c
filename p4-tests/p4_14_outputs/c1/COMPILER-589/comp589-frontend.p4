@@ -970,7 +970,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_57();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             _Suntrana_0.apply();
         _ElmGrove_0.apply();
         switch (_Poulan_0.apply().action_run) {
@@ -3035,7 +3035,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         _Algodones: {
                             switch (_Alamance_0.apply().action_run) {
                                 _FairOaks: {
-                                    if ((meta.Holliston.Covelo & 24w0x10000) == 24w0x10000) 
+                                    if (meta.Holliston.Covelo & 24w0x10000 == 24w0x10000) 
                                         _Kelsey_0.apply();
                                     else 
                                         _Paisano_0.apply();
@@ -3053,7 +3053,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 if (meta.Holliston.Doddridge == 1w0 && meta.Newburgh.Lenwood == 1w0 && meta.Newburgh.Zebina == 1w0 && meta.Newburgh.Theta == meta.Holliston.Gilman) 
                     _Ironia_0.apply();
                 else 
-                    if ((meta.Holliston.Gilman & 16w0x2000) == 16w0x2000) 
+                    if (meta.Holliston.Gilman & 16w0x2000 == 16w0x2000) 
                         _Haley.apply();
         _Bergton_0.apply();
         if (meta.Realitos.Glendevey != 1w0) 
@@ -3065,7 +3065,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _ElToro_0.apply();
             _Clifton_0.apply();
         }
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Holliston.Ragley == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Holliston.Ragley == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
             _Emsworth_0.apply();
             _Salome_0.apply();
         }

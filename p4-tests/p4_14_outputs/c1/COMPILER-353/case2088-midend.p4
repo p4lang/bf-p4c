@@ -1953,7 +1953,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     _Escatawpa: {
                         switch (_Glenside_0.apply().action_run) {
                             _Sawmills: {
-                                if ((meta.Roseau.Rippon & 24w0x10000) == 24w0x10000) 
+                                if (meta.Roseau.Rippon & 24w0x10000 == 24w0x10000) 
                                     _Lilydale_0.apply();
                                 else 
                                     _Dialville_0.apply();
@@ -1973,7 +1973,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Blackman_0.apply();
                 _Yerington_0.apply();
             }
-        if ((meta.Roseau.Dateland & 16w0x2000) == 16w0x2000) 
+        if (meta.Roseau.Dateland & 16w0x2000 == 16w0x2000) 
             _Gibsland_0.apply();
         if (meta.Goodlett.Maybeury == 1w1) 
             _Bondad_0.apply();

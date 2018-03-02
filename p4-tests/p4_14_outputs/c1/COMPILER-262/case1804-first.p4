@@ -594,7 +594,7 @@ control Colonie(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        if ((meta.Glenshaw.Segundo & 16w0x2000) == 16w0x2000) 
+        if (meta.Glenshaw.Segundo & 16w0x2000 == 16w0x2000) 
             Anguilla.apply();
     }
 }
@@ -1117,7 +1117,7 @@ control Magness(inout headers hdr, inout metadata meta, inout standard_metadata_
                 ArchCape: {
                     switch (Masontown.apply().action_run) {
                         Homeworth: {
-                            if ((meta.Glenshaw.Berlin & 24w0x10000) == 24w0x10000) 
+                            if (meta.Glenshaw.Berlin & 24w0x10000 == 24w0x10000) 
                                 Hoven.apply();
                             else 
                                 Hopedale.apply();

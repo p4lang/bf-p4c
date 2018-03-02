@@ -1827,7 +1827,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Dassel: {
                     switch (_Duncombe_0.apply().action_run) {
                         _Gibson: {
-                            if ((meta.Skyway.Yreka & 24w0x10000) == 24w0x10000) 
+                            if (meta.Skyway.Yreka & 24w0x10000 == 24w0x10000) 
                                 _Lowes_0.apply();
                             else 
                                 _Cascadia_0.apply();
@@ -1845,7 +1845,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Verdery_0.apply();
                 _Chatawa_0.apply();
             }
-        if ((meta.Skyway.Johnstown & 16w0x2000) == 16w0x2000) 
+        if (meta.Skyway.Johnstown & 16w0x2000 == 16w0x2000) 
             _Fowlkes_0.apply();
         if (meta.Roxboro.Cleator == 1w1) 
             _Hubbell_0.apply();

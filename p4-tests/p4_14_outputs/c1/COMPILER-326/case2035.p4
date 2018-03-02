@@ -861,7 +861,7 @@ control Clinchco(inout headers hdr, inout metadata meta, inout standard_metadata
         implementation = Anselmo;
     }
     apply {
-        if ((meta.DuBois.Holyoke & 16w0x2000) == 16w0x2000) {
+        if (meta.DuBois.Holyoke & 16w0x2000 == 16w0x2000) {
             Sheldahl.apply();
         }
     }
@@ -1141,7 +1141,7 @@ control IttaBena(inout headers hdr, inout metadata meta, inout standard_metadata
         default_action = Averill();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) {
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) {
             Edmeston.apply();
         }
     }
@@ -1313,7 +1313,7 @@ control Milano(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = Parmele();
     }
     apply {
-        if (meta.Egypt.Blanding == 1w0 && (meta.DuBois.Branson & 24w0x10000) == 24w0x0) {
+        if (meta.Egypt.Blanding == 1w0 && meta.DuBois.Branson & 24w0x10000 == 24w0x0) {
             Myrick.apply();
         }
     }

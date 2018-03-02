@@ -2378,7 +2378,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                     else 
                         _rewrite_multicast_0.apply();
                     _egress_bd_map_0.apply();
-                    if ((meta.ingress_metadata.bypass_lookups & 16w0x8) == 16w0) 
+                    if (meta.ingress_metadata.bypass_lookups & 16w0x8 == 16w0) 
                         _egress_qos_map_0.apply();
                     if (meta.egress_metadata.routed == 1w1) {
                         _l3_rewrite_0.apply();
@@ -4700,7 +4700,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         _port_vlan_mapping_0.apply();
         if (meta.ingress_metadata.port_type == 2w0 && meta.l2_metadata.stp_group != 10w0) 
             _spanning_tree_0.apply();
-        if ((meta.ingress_metadata.bypass_lookups & 16w0x8) == 16w0) 
+        if (meta.ingress_metadata.bypass_lookups & 16w0x8 == 16w0) 
             if (meta.qos_metadata.trust_dscp == 1w1) 
                 _ingress_qos_map_dscp_0.apply();
             else 
@@ -4757,19 +4757,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         if (meta.ingress_metadata.port_type == 2w0) 
             _storm_control_0.apply();
         if (meta.ingress_metadata.port_type != 2w1) {
-            if ((meta.ingress_metadata.bypass_lookups & 16w0x40) == 16w0 && meta.ingress_metadata.drop_flag == 1w0) 
+            if (meta.ingress_metadata.bypass_lookups & 16w0x40 == 16w0 && meta.ingress_metadata.drop_flag == 1w0) 
                 _validate_packet_0.apply();
             _ingress_l4_src_port_0.apply();
             _ingress_l4_dst_port_0.apply();
-            if ((meta.ingress_metadata.bypass_lookups & 16w0x80) == 16w0 && meta.ingress_metadata.port_type == 2w0) 
+            if (meta.ingress_metadata.bypass_lookups & 16w0x80 == 16w0 && meta.ingress_metadata.port_type == 2w0) 
                 _smac_0.apply();
-            if ((meta.ingress_metadata.bypass_lookups & 16w0x1) == 16w0) 
+            if (meta.ingress_metadata.bypass_lookups & 16w0x1 == 16w0) 
                 _dmac_0.apply();
             if (meta.l3_metadata.lkp_ip_type == 2w0) 
-                if ((meta.ingress_metadata.bypass_lookups & 16w0x4) == 16w0) 
+                if (meta.ingress_metadata.bypass_lookups & 16w0x4 == 16w0) 
                     _mac_acl_0.apply();
             else 
-                if ((meta.ingress_metadata.bypass_lookups & 16w0x4) == 16w0) 
+                if (meta.ingress_metadata.bypass_lookups & 16w0x4 == 16w0) 
                     if (meta.l3_metadata.lkp_ip_type == 2w1) 
                         _ip_acl_0.apply();
                     else 
@@ -4777,7 +4777,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                             _ipv6_acl_0.apply();
             switch (rmac.apply().action_run) {
                 default: {
-                    if ((meta.ingress_metadata.bypass_lookups & 16w0x2) == 16w0) 
+                    if (meta.ingress_metadata.bypass_lookups & 16w0x2 == 16w0) 
                         if (meta.l3_metadata.lkp_ip_type == 2w1 && meta.ipv4_metadata.ipv4_unicast_enabled == 1w1) {
                             _ipv4_racl_0.apply();
                             switch (_ipv4_fib_0.apply().action_run) {
@@ -4800,14 +4800,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 }
                 rmac_miss_0: {
                     if (meta.l3_metadata.lkp_ip_type == 2w1) {
-                        if ((meta.ingress_metadata.bypass_lookups & 16w0x1) == 16w0) 
+                        if (meta.ingress_metadata.bypass_lookups & 16w0x1 == 16w0) 
                             switch (_ipv4_multicast_bridge.apply().action_run) {
                                 _on_miss_18: {
                                     _ipv4_multicast_bridge_star_g.apply();
                                 }
                             }
 
-                        if ((meta.ingress_metadata.bypass_lookups & 16w0x2) == 16w0 && meta.multicast_metadata.ipv4_multicast_enabled == 1w1) 
+                        if (meta.ingress_metadata.bypass_lookups & 16w0x2 == 16w0 && meta.multicast_metadata.ipv4_multicast_enabled == 1w1) 
                             switch (_ipv4_multicast_route.apply().action_run) {
                                 _on_miss_19: {
                                     _ipv4_multicast_route_star_g.apply();
@@ -4817,14 +4817,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     }
                     else 
                         if (meta.l3_metadata.lkp_ip_type == 2w2) {
-                            if ((meta.ingress_metadata.bypass_lookups & 16w0x1) == 16w0) 
+                            if (meta.ingress_metadata.bypass_lookups & 16w0x1 == 16w0) 
                                 switch (_ipv6_multicast_bridge.apply().action_run) {
                                     _on_miss_20: {
                                         _ipv6_multicast_bridge_star_g.apply();
                                     }
                                 }
 
-                            if ((meta.ingress_metadata.bypass_lookups & 16w0x2) == 16w0 && meta.multicast_metadata.ipv6_multicast_enabled == 1w1) 
+                            if (meta.ingress_metadata.bypass_lookups & 16w0x2 == 16w0 && meta.multicast_metadata.ipv6_multicast_enabled == 1w1) 
                                 switch (_ipv6_multicast_route.apply().action_run) {
                                     _on_miss_27: {
                                         _ipv6_multicast_route_star_g.apply();
@@ -4879,7 +4879,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         _traffic_class_0.apply();
         if (meta.ingress_metadata.port_type != 2w1) 
-            if ((meta.ingress_metadata.bypass_lookups & 16w0x20) == 16w0) {
+            if (meta.ingress_metadata.bypass_lookups & 16w0x20 == 16w0) {
                 _system_acl_0.apply();
                 if (meta.ingress_metadata.drop_flag == 1w1) 
                     _drop_stats_4.apply();

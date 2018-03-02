@@ -1383,7 +1383,7 @@ control Oxford(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        if ((meta.Laplace.Ocracoke & 16w0x2000) == 16w0x2000) 
+        if (meta.Laplace.Ocracoke & 16w0x2000 == 16w0x2000) 
             Eldena.apply();
     }
 }
@@ -1677,7 +1677,7 @@ control Rendville(inout headers hdr, inout metadata meta, inout standard_metadat
                 Alzada: {
                     switch (Duelm.apply().action_run) {
                         Worland: {
-                            if ((meta.Laplace.Martelle & 24w0x10000) == 24w0x10000) 
+                            if (meta.Laplace.Martelle & 24w0x10000 == 24w0x10000) 
                                 Montague.apply();
                             else 
                                 if (meta.Laplace.Oakmont == 1w0) 

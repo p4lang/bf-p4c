@@ -1275,7 +1275,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _IBmwsU: {
                     switch (_xiJqBR_0.apply().action_run) {
                         _QEckLK: {
-                            if ((meta.qVEGeY.XtjQOt & 24w0x10000) == 24w0x10000) 
+                            if (meta.qVEGeY.XtjQOt & 24w0x10000 == 24w0x10000) 
                                 _fagWRM_0.apply();
                             else 
                                 _uuDtAx_0.apply();
@@ -1287,7 +1287,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
         if (meta.qVEGeY.BxqzOJ == 1w0 && meta.CNpgHg.fxaceD == meta.qVEGeY.FJaMhx) 
             _OSjRGs_0.apply();
-        if ((meta.qVEGeY.FJaMhx & 16w0x2000) == 16w0x2000) 
+        if (meta.qVEGeY.FJaMhx & 16w0x2000 == 16w0x2000) 
             _lANHpg_0.apply();
         if (meta.CNpgHg.Btudba == 1w1) 
             _keYVCs_0.apply();

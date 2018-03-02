@@ -1070,7 +1070,7 @@ control fVGlMw(inout headers hdr, inout metadata meta, inout standard_metadata_t
         implementation = JjjNMB;
     }
     apply {
-        if ((meta.qVEGeY.FJaMhx & 16w0x2000) == 16w0x2000) {
+        if (meta.qVEGeY.FJaMhx & 16w0x2000 == 16w0x2000) {
             lANHpg.apply();
         }
     }
@@ -1307,7 +1307,7 @@ control lrVCTN(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 IBmwsU: {
                     switch (xiJqBR.apply().action_run) {
                         QEckLK: {
-                            if ((meta.qVEGeY.XtjQOt & 24w0x10000) == 24w0x10000) {
+                            if (meta.qVEGeY.XtjQOt & 24w0x10000 == 24w0x10000) {
                                 fagWRM.apply();
                             }
                             else {

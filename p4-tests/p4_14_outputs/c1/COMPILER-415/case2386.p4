@@ -1813,7 +1813,7 @@ control Slinger(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = Osman;
     }
     apply {
-        if ((meta.Clementon.Talbert & 16w0x2000) == 16w0x2000) {
+        if (meta.Clementon.Talbert & 16w0x2000 == 16w0x2000) {
             Northway.apply();
         }
     }
@@ -2015,7 +2015,7 @@ control Westel(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Suwanee: {
                     switch (Waucoma.apply().action_run) {
                         Cowles: {
-                            if ((meta.Clementon.Lovett & 24w0x10000) == 24w0x10000) {
+                            if (meta.Clementon.Lovett & 24w0x10000 == 24w0x10000) {
                                 Westtown.apply();
                             }
                             else {

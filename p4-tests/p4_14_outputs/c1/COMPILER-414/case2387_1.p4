@@ -1043,7 +1043,7 @@ control Guion(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                 Kealia: {
                     switch (Talbotton.apply().action_run) {
                         Billett: {
-                            if ((meta.Fontana.Lisman & 24w0x10000) == 24w0x10000) {
+                            if (meta.Fontana.Lisman & 24w0x10000 == 24w0x10000) {
                                 Auburn.apply();
                             }
                             else {
@@ -1809,7 +1809,7 @@ control Sugarloaf(inout headers hdr, inout metadata meta, inout standard_metadat
         implementation = Tagus;
     }
     apply {
-        if ((meta.Fontana.Calverton & 16w0x2000) == 16w0x2000) {
+        if (meta.Fontana.Calverton & 16w0x2000 == 16w0x2000) {
             Willard.apply();
         }
     }

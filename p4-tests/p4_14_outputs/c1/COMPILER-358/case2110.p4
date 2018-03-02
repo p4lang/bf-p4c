@@ -939,7 +939,7 @@ control Lordstown(inout headers hdr, inout metadata meta, inout standard_metadat
         implementation = Husum;
     }
     apply {
-        if ((meta.CedarKey.Bladen & 16w0x2000) == 16w0x2000) {
+        if (meta.CedarKey.Bladen & 16w0x2000 == 16w0x2000) {
             Hotevilla.apply();
         }
     }
@@ -1328,7 +1328,7 @@ control Silva(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                 Osterdock: {
                     switch (Thayne.apply().action_run) {
                         Bellamy: {
-                            if ((meta.CedarKey.Provencal & 24w0x10000) == 24w0x10000) {
+                            if (meta.CedarKey.Provencal & 24w0x10000 == 24w0x10000) {
                                 Langtry.apply();
                             }
                             else {

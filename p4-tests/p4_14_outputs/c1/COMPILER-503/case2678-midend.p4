@@ -2298,7 +2298,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         _LeSueur: {
                             switch (_Breda_0.apply().action_run) {
                                 _Dougherty: {
-                                    if ((meta.Peebles.Fentress & 24w0x10000) == 24w0x10000) 
+                                    if (meta.Peebles.Fentress & 24w0x10000 == 24w0x10000) 
                                         _Hickox_0.apply();
                                     else 
                                         _Bieber_0.apply();
@@ -2314,7 +2314,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 if (meta.Peebles.Waucoma == 1w0 && meta.Netcong.Sieper == 1w0 && meta.Netcong.Wellford == 1w0 && meta.Netcong.Mantee == meta.Peebles.Subiaco) 
                     _Ulysses_0.apply();
                 else 
-                    if ((meta.Peebles.Subiaco & 16w0x2000) == 16w0x2000) 
+                    if (meta.Peebles.Subiaco & 16w0x2000 == 16w0x2000) 
                         _Garibaldi.apply();
         if (meta.Lowemont.Blakeman != 1w0) {
             _Merrill_0.apply();

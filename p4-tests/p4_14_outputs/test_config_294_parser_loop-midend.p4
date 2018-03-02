@@ -711,6 +711,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ipv6_srh.nextHdr = meta.sr_metadata.proto;
         hdr.ipv6_srh.routingType = 8w0x4;
         hdr.ipv6_srh_seg_list.push_front(1);
+        hdr.ipv6_srh_seg_list[0].setValid();
         hdr.ethernet.etherType = 16w0x86dd;
         hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w24;
     }
@@ -723,6 +724,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ipv6_srh.nextHdr = meta.sr_metadata.proto;
         hdr.ipv6_srh.routingType = 8w0x4;
         hdr.ipv6_srh_seg_list.push_front(2);
+        hdr.ipv6_srh_seg_list[0].setValid();
+        hdr.ipv6_srh_seg_list[1].setValid();
         hdr.ethernet.etherType = 16w0x86dd;
         hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w40;
     }
@@ -735,6 +738,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ipv6_srh.nextHdr = meta.sr_metadata.proto;
         hdr.ipv6_srh.routingType = 8w0x4;
         hdr.ipv6_srh_seg_list.push_front(3);
+        hdr.ipv6_srh_seg_list[0].setValid();
+        hdr.ipv6_srh_seg_list[1].setValid();
+        hdr.ipv6_srh_seg_list[2].setValid();
         hdr.ethernet.etherType = 16w0x86dd;
         hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w56;
     }
@@ -747,6 +753,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ipv6_srh.nextHdr = meta.sr_metadata.proto;
         hdr.ipv6_srh.routingType = 8w0x4;
         hdr.ipv6_srh_seg_list.push_front(4);
+        hdr.ipv6_srh_seg_list[0].setValid();
+        hdr.ipv6_srh_seg_list[1].setValid();
+        hdr.ipv6_srh_seg_list[2].setValid();
+        hdr.ipv6_srh_seg_list[3].setValid();
         hdr.ethernet.etherType = 16w0x86dd;
         hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w72;
     }
@@ -1251,7 +1261,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
         switch (rmac.apply().action_run) {
             rmac_hit_0: {
-                if ((meta.ingress_metadata.bypass & 4w0x2) == 4w0) {
+                if (meta.ingress_metadata.bypass & 4w0x2 == 4w0) {
                     _compute_hash_0.apply();
                     if (meta.l3_metadata.version == 4w4) 
                         switch (_ipv4_fib.apply().action_run) {
@@ -1273,7 +1283,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
 
         nexthop_1.apply();
-        if ((meta.ingress_metadata.bypass & 4w0x1) == 4w0) {
+        if (meta.ingress_metadata.bypass & 4w0x1 == 4w0) {
             _smac_0.apply();
             _dmac_0.apply();
         }

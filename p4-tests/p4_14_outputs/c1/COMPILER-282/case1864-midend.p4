@@ -1754,7 +1754,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Danforth: {
                     switch (_Kentwood_0.apply().action_run) {
                         _Diana: {
-                            if ((meta.Calabasas.Storden & 24w0x10000) == 24w0x10000) 
+                            if (meta.Calabasas.Storden & 24w0x10000 == 24w0x10000) 
                                 _Bonney_0.apply();
                             else 
                                 _Navarro_0.apply();
@@ -1774,7 +1774,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Ruston_0.apply();
         _Sutherlin_0.apply();
         _Blanding_0.apply();
-        if (meta.Neshoba.Saugatuck == 1w0 && (meta.Calabasas.Everton & 16w0x2000) == 16w0x2000) 
+        if (meta.Neshoba.Saugatuck == 1w0 && meta.Calabasas.Everton & 16w0x2000 == 16w0x2000) 
             _Brashear_0.apply();
     }
 }

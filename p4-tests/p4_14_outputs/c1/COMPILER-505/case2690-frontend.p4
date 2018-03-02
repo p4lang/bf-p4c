@@ -2328,7 +2328,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     _Eddington: {
                         switch (_Quealy_0.apply().action_run) {
                             _BirchBay: {
-                                if ((meta.Carver.Boerne & 24w0x10000) == 24w0x10000) 
+                                if (meta.Carver.Boerne & 24w0x10000 == 24w0x10000) 
                                     _Newpoint_0.apply();
                                 else 
                                     _Ketchum_0.apply();
@@ -2354,7 +2354,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         if (meta.Deeth.Knolls == 1w0) 
             _VanWert_0.apply();
-        if ((meta.Carver.WestPike & 16w0x2000) == 16w0x2000) 
+        if (meta.Carver.WestPike & 16w0x2000 == 16w0x2000) 
             _Brave_0.apply();
         if (hdr.Dougherty[0].isValid()) 
             _Moseley_0.apply();

@@ -1568,7 +1568,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Wenona: {
                     switch (_Kosmos_0.apply().action_run) {
                         _Cheyenne: {
-                            if ((meta.Macksburg.Matheson & 24w0x10000) == 24w0x10000) 
+                            if (meta.Macksburg.Matheson & 24w0x10000 == 24w0x10000) 
                                 _Monahans_0.apply();
                             else 
                                 _Choudrant_0.apply();
@@ -1586,7 +1586,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Longhurst_0.apply();
         if (hdr.Talbert[0].isValid()) 
             _Almedia_0.apply();
-        if (meta.Rhodell.Wauseon == 1w0 && (meta.Macksburg.Poteet & 16w0x2000) == 16w0x2000) 
+        if (meta.Rhodell.Wauseon == 1w0 && meta.Macksburg.Poteet & 16w0x2000 == 16w0x2000) 
             _Leucadia_0.apply();
     }
 }

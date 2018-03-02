@@ -1152,7 +1152,7 @@ control Millwood(inout headers hdr, inout metadata meta, inout standard_metadata
         default_action = NoAction();
     }
     apply {
-        if ((meta.Tonasket.Reydon & 16w0x2000) == 16w0x2000) 
+        if (meta.Tonasket.Reydon & 16w0x2000 == 16w0x2000) 
             Shelbina.apply();
     }
 }
@@ -1396,7 +1396,7 @@ control Granbury(inout headers hdr, inout metadata meta, inout standard_metadata
                 Duquoin: {
                     switch (Arial.apply().action_run) {
                         Wenham: {
-                            if ((meta.Tonasket.Grantfork & 24w0x10000) == 24w0x10000) 
+                            if (meta.Tonasket.Grantfork & 24w0x10000 == 24w0x10000) 
                                 Sarasota.apply();
                             else 
                                 Glendale.apply();
@@ -1504,7 +1504,7 @@ control Joslin(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = ElPortal();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             Magness.apply();
     }
 }
@@ -2005,7 +2005,7 @@ control Oketo(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         default_action = NoAction();
     }
     apply {
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Tonasket.Onida == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Tonasket.Onida == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
             Nursery.apply();
             Inverness.apply();
         }

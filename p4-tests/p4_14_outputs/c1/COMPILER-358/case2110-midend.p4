@@ -1827,7 +1827,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Osterdock: {
                     switch (_Thayne_0.apply().action_run) {
                         _Bellamy: {
-                            if ((meta.CedarKey.Provencal & 24w0x10000) == 24w0x10000) 
+                            if (meta.CedarKey.Provencal & 24w0x10000 == 24w0x10000) 
                                 _Langtry_0.apply();
                             else 
                                 _FairPlay_0.apply();
@@ -1845,7 +1845,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Emden_0.apply();
                 _Maysfield_0.apply();
             }
-        if ((meta.CedarKey.Bladen & 16w0x2000) == 16w0x2000) 
+        if (meta.CedarKey.Bladen & 16w0x2000 == 16w0x2000) 
             _Hotevilla_0.apply();
         if (meta.Seagrove.Rockport == 1w1) 
             _Satolah_0.apply();

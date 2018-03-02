@@ -886,7 +886,7 @@ control Filley(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Escatawpa: {
                     switch (Glenside.apply().action_run) {
                         Sawmills: {
-                            if ((meta.Roseau.Rippon & 24w0x10000) == 24w0x10000) 
+                            if (meta.Roseau.Rippon & 24w0x10000 == 24w0x10000) 
                                 Lilydale.apply();
                             else 
                                 Dialville.apply();
@@ -1184,7 +1184,7 @@ control Neponset(inout headers hdr, inout metadata meta, inout standard_metadata
         default_action = NoAction();
     }
     apply {
-        if ((meta.Roseau.Dateland & 16w0x2000) == 16w0x2000) 
+        if (meta.Roseau.Dateland & 16w0x2000 == 16w0x2000) 
             Gibsland.apply();
     }
 }

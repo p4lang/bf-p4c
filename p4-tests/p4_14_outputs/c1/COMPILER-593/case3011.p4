@@ -849,7 +849,7 @@ control Boxelder(inout headers hdr, inout metadata meta, inout standard_metadata
         implementation = Locke;
     }
     apply {
-        if ((meta.Wyatte.Peletier & 8w0x80) == 8w0x80) {
+        if (meta.Wyatte.Peletier & 8w0x80 == 8w0x80) {
             Lakefield.apply();
         }
     }
@@ -1045,7 +1045,7 @@ control Everett(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = Crump();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) {
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) {
             Asherton.apply();
         }
     }
@@ -1159,7 +1159,7 @@ control Finley(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 2304;
     }
     apply {
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Mishawaka.Umkumiut == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Mishawaka.Umkumiut == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
             Caroleen.apply();
         }
     }
@@ -1448,7 +1448,7 @@ control Mertens(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = BlueAsh;
     }
     apply {
-        if ((meta.Mishawaka.Cornville & 16w0x2000) == 16w0x2000) {
+        if (meta.Mishawaka.Cornville & 16w0x2000 == 16w0x2000) {
             Dowell.apply();
         }
     }
@@ -2707,7 +2707,7 @@ control Sanford(inout headers hdr, inout metadata meta, inout standard_metadata_
                 Tuskahoma: {
                     switch (Silica.apply().action_run) {
                         Evendale: {
-                            if ((meta.Mishawaka.PeaRidge & 24w0x10000) == 24w0x10000) {
+                            if (meta.Mishawaka.PeaRidge & 24w0x10000 == 24w0x10000) {
                                 Whitten.apply();
                             }
                             else {

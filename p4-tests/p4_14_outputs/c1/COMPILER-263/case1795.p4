@@ -969,7 +969,7 @@ control Neavitt(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = FlyingH;
     }
     apply {
-        if ((meta.Roachdale.Carnero & 16w0x2000) == 16w0x2000) {
+        if (meta.Roachdale.Carnero & 16w0x2000 == 16w0x2000) {
             Twisp.apply();
         }
     }
@@ -1357,7 +1357,7 @@ control Vantage(inout headers hdr, inout metadata meta, inout standard_metadata_
                 Balfour: {
                     switch (Gotebo.apply().action_run) {
                         Norco: {
-                            if ((meta.Roachdale.Roscommon & 24w0x10000) == 24w0x10000) {
+                            if (meta.Roachdale.Roscommon & 24w0x10000 == 24w0x10000) {
                                 Karlsruhe.apply();
                             }
                             else {

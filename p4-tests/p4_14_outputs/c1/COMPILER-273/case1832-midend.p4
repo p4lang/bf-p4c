@@ -1621,7 +1621,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Kooskia: {
                     switch (_Hemet_0.apply().action_run) {
                         _Harpster: {
-                            if ((meta.Paxico.Bajandas & 24w0x10000) == 24w0x10000) 
+                            if (meta.Paxico.Bajandas & 24w0x10000 == 24w0x10000) 
                                 _Nighthawk_0.apply();
                             else 
                                 _Wetonka_0.apply();
@@ -1639,7 +1639,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Verbena_0.apply();
         if (hdr.Cornish[0].isValid()) 
             _Chatom_0.apply();
-        if (meta.Wentworth.Spraberry == 1w0 && (meta.Paxico.Waukesha & 16w0x2000) == 16w0x2000) 
+        if (meta.Wentworth.Spraberry == 1w0 && meta.Paxico.Waukesha & 16w0x2000 == 16w0x2000) 
             _Millhaven_0.apply();
     }
 }

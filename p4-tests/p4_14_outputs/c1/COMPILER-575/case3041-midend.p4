@@ -1055,7 +1055,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     apply {
         _Deport_0.apply();
         _Raeford_0.apply();
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             _Chunchula_0.apply();
         _LaSalle_0.apply();
         _Pelland_0.apply();
@@ -2893,12 +2893,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
         }
         _Foristell_0.apply();
-        if ((meta.Lisle.CeeVee & 2w1) == 2w1) {
+        if (meta.Lisle.CeeVee & 2w1 == 2w1) {
             _Woodburn_0.apply();
             _Bunavista_0.apply();
         }
         else 
-            if ((meta.Lisle.CeeVee & 2w2) == 2w2) {
+            if (meta.Lisle.CeeVee & 2w2 == 2w2) {
                 _Lofgreen_0.apply();
                 _Roseville_0.apply();
             }
@@ -2921,7 +2921,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         _Accord_0.apply();
         if (meta.CedarKey.Southam != 1w0) 
             if (meta.Lisle.Grannis == 1w0 && meta.Nondalton.Buncombe == 1w1) 
-                if (meta.Nondalton.Fairchild == 1w1 && (meta.Lisle.CeeVee & 2w1) == 2w1) 
+                if (meta.Nondalton.Fairchild == 1w1 && meta.Lisle.CeeVee & 2w1 == 2w1) 
                     switch (_Bellville_0.apply().action_run) {
                         _Sultana_31: {
                             _Coamo_0.apply();
@@ -2929,7 +2929,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     }
 
                 else 
-                    if (meta.Nondalton.Welcome == 1w1 && (meta.Lisle.CeeVee & 2w2) == 2w2) 
+                    if (meta.Nondalton.Welcome == 1w1 && meta.Lisle.CeeVee & 2w2 == 2w2) 
                         switch (_Tonasket_0.apply().action_run) {
                             _Sultana_34: {
                                 _Frontenac_0.apply();
@@ -2942,14 +2942,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         _Arriba_0.apply();
         if (meta.CedarKey.Southam != 1w0) 
             if (meta.Lisle.Grannis == 1w0 && meta.Nondalton.Buncombe == 1w1) 
-                if (meta.Nondalton.Fairchild == 1w1 && (meta.Lisle.CeeVee & 2w1) == 2w1) 
+                if (meta.Nondalton.Fairchild == 1w1 && meta.Lisle.CeeVee & 2w1 == 2w1) 
                     if (meta.CruzBay.WestPark != 16w0) 
                         _Manning_0.apply();
                     else 
                         if (meta.Ramah.Alcoma == 16w0 && meta.Ramah.Pilger == 11w0) 
                             _BigArm_0.apply();
                 else 
-                    if (meta.Nondalton.Welcome == 1w1 && (meta.Lisle.CeeVee & 2w2) == 2w2) 
+                    if (meta.Nondalton.Welcome == 1w1 && meta.Lisle.CeeVee & 2w2 == 2w2) 
                         if (meta.Dorset.Woodrow != 11w0) 
                             _Addicks_0.apply();
                         else 
@@ -2998,7 +2998,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         _Bowers: {
                             switch (_Wanilla_0.apply().action_run) {
                                 _Finlayson: {
-                                    if ((meta.Homeacre.Rocheport & 24w0x10000) == 24w0x10000) 
+                                    if (meta.Homeacre.Rocheport & 24w0x10000 == 24w0x10000) 
                                         _Comunas_0.apply();
                                     else 
                                         _Excel_0.apply();
@@ -3016,7 +3016,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 if (meta.Homeacre.Gardena == 1w0 && meta.Lisle.Talkeetna == 1w0 && meta.Lisle.Ackley == 1w0 && meta.Lisle.McLean == meta.Homeacre.Hanford) 
                     _Killen_0.apply();
                 else 
-                    if ((meta.Homeacre.Hanford & 16w0x2000) == 16w0x2000) 
+                    if (meta.Homeacre.Hanford & 16w0x2000 == 16w0x2000) 
                         _Stonefort.apply();
         if (meta.CedarKey.Southam != 1w0) 
             _Sodaville_0.apply();
@@ -3027,7 +3027,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Kerby_0.apply();
             _Taiban_0.apply();
         }
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Homeacre.Aspetuck == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) 
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Homeacre.Aspetuck == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) 
             _Esmond_0.apply();
         if (hdr.Carnero[0].isValid()) 
             _Mecosta_0.apply();

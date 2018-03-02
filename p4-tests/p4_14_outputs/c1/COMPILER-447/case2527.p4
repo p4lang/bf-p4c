@@ -842,7 +842,7 @@ control BigBar(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Rendville: {
                     switch (Montague.apply().action_run) {
                         Gilman: {
-                            if ((meta.Laplace.Martelle & 24w0x10000) == 24w0x10000) {
+                            if (meta.Laplace.Martelle & 24w0x10000 == 24w0x10000) {
                                 Ladoga.apply();
                             }
                             else {
@@ -1064,7 +1064,7 @@ control Embarrass(inout headers hdr, inout metadata meta, inout standard_metadat
         implementation = Oxford;
     }
     apply {
-        if ((meta.Laplace.Ocracoke & 16w0x2000) == 16w0x2000) {
+        if (meta.Laplace.Ocracoke & 16w0x2000 == 16w0x2000) {
             Desdemona.apply();
         }
     }

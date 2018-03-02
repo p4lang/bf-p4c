@@ -1110,7 +1110,7 @@ control Longwood(inout headers hdr, inout metadata meta, inout standard_metadata
         default_action = NoAction();
     }
     apply {
-        if ((meta.Barksdale.Aspetuck & 16w0x2000) == 16w0x2000) 
+        if (meta.Barksdale.Aspetuck & 16w0x2000 == 16w0x2000) 
             Mekoryuk.apply();
     }
 }
@@ -1785,7 +1785,7 @@ control Wellford(inout headers hdr, inout metadata meta, inout standard_metadata
                 PineLawn: {
                     switch (Century.apply().action_run) {
                         Longport: {
-                            if ((meta.Barksdale.Maywood & 24w0x10000) == 24w0x10000) 
+                            if (meta.Barksdale.Maywood & 24w0x10000 == 24w0x10000) 
                                 Maryhill.apply();
                             else 
                                 Almeria.apply();

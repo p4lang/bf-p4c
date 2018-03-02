@@ -1333,7 +1333,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Balfour: {
                     switch (_Gotebo_0.apply().action_run) {
                         _Norco: {
-                            if ((meta.Roachdale.Roscommon & 24w0x10000) == 24w0x10000) 
+                            if (meta.Roachdale.Roscommon & 24w0x10000 == 24w0x10000) 
                                 _Karlsruhe_0.apply();
                             else 
                                 _Sanchez_0.apply();
@@ -1345,7 +1345,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
         if (meta.Roachdale.Dubuque == 1w0 && meta.Algoa.Kasilof == meta.Roachdale.Carnero) 
             _Browning_0.apply();
-        if ((meta.Roachdale.Carnero & 16w0x2000) == 16w0x2000) 
+        if (meta.Roachdale.Carnero & 16w0x2000 == 16w0x2000) 
             _Twisp_0.apply();
         if (meta.Algoa.BeeCave == 1w1) 
             _Vernal_0.apply();

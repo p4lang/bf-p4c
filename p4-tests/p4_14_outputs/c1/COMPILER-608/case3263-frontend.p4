@@ -979,7 +979,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             _Bokeelia_0.apply();
             _Stewart_0.apply();
         }
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             _Lignite_0.apply();
         _Blunt_0.apply();
         switch (_Lamont_0.apply().action_run) {
@@ -2908,7 +2908,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _SomesBar_0.apply();
                 _Pierceton_0.apply();
             }
-        if ((meta.Tingley.MoonRun & 3w2) == 3w2) {
+        if (meta.Tingley.MoonRun & 3w2 == 3w2) {
             _Indrio_0.apply();
             _Connell_0.apply();
         }
@@ -2927,7 +2927,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Annetta_0.apply();
         _Pavillion_0.apply();
         if (meta.Flasher.Nixon != 1w0) 
-            if ((meta.Mystic.Vestaburg & 4w0x2) == 4w0x2 && meta.Tingley.Lucas == 1w1) 
+            if (meta.Mystic.Vestaburg & 4w0x2 == 4w0x2 && meta.Tingley.Lucas == 1w1) 
                 if (meta.Tingley.Cache == 1w0 && meta.Mystic.Dugger == 1w1) 
                     switch (_Elmwood_0.apply().action_run) {
                         _Nanson_10: {
@@ -2936,7 +2936,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     }
 
             else 
-                if ((meta.Mystic.Vestaburg & 4w0x1) == 4w0x1 && meta.Tingley.Mantee == 1w1) 
+                if (meta.Mystic.Vestaburg & 4w0x1 == 4w0x1 && meta.Tingley.Mantee == 1w1) 
                     if (meta.Tingley.Cache == 1w0) {
                         switch (_Isleta.apply().action_run) {
                             _Woodston_0: {
@@ -2958,14 +2958,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         _Mackeys_0.apply();
         if (meta.Flasher.Nixon != 1w0) 
             if (meta.Tingley.Cache == 1w0 && meta.Mystic.Dugger == 1w1) 
-                if ((meta.Mystic.Vestaburg & 4w0x1) == 4w0x1 && meta.Tingley.Mantee == 1w1) 
+                if (meta.Mystic.Vestaburg & 4w0x1 == 4w0x1 && meta.Tingley.Mantee == 1w1) 
                     if (meta.Luzerne.KentPark != 16w0) 
                         _Herring_0.apply();
                     else 
                         if (meta.Ballwin.Ruffin == 16w0 && meta.Ballwin.Millett == 11w0) 
                             _Shelbina_0.apply();
                 else 
-                    if ((meta.Mystic.Vestaburg & 4w0x2) == 4w0x2 && meta.Tingley.Lucas == 1w1) 
+                    if (meta.Mystic.Vestaburg & 4w0x2 == 4w0x2 && meta.Tingley.Lucas == 1w1) 
                         if (meta.Ringwood.Guayabal != 11w0) 
                             _Willows_0.apply();
                         else 
@@ -2990,7 +2990,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         _Crestone_0.apply();
         _Wartburg_0.apply();
         _Hebbville_0.apply();
-        if (meta.Tingley.Cache == 1w0 && (meta.Mystic.Vestaburg & 4w0x4) == 4w0x4 && meta.Tingley.Dalkeith == 1w1) 
+        if (meta.Tingley.Cache == 1w0 && meta.Mystic.Vestaburg & 4w0x4 == 4w0x4 && meta.Tingley.Dalkeith == 1w1) 
             _Borth_0.apply();
         if (meta.Flasher.Nixon != 1w0) 
             if (meta.Ballwin.Ruffin != 16w0) 
@@ -3013,7 +3013,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         _Renton: {
                             switch (_Plains_0.apply().action_run) {
                                 _Calvary: {
-                                    if ((meta.Ranburne.Sidnaw & 24w0x10000) == 24w0x10000) 
+                                    if (meta.Ranburne.Sidnaw & 24w0x10000 == 24w0x10000) 
                                         _Arapahoe_0.apply();
                                     else 
                                         _Greendale_0.apply();
@@ -3058,7 +3058,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Terrytown: {
             }
             default: {
-                if ((meta.Ranburne.Jonesport & 16w0x2000) == 16w0x2000) 
+                if (meta.Ranburne.Jonesport & 16w0x2000 == 16w0x2000) 
                     _Neosho.apply();
             }
         }

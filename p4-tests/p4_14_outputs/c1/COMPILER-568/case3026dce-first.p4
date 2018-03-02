@@ -725,7 +725,7 @@ control Angus(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         default_action = NoAction();
     }
     apply {
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Homeacre.Aspetuck == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) 
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Homeacre.Aspetuck == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) 
             Esmond.apply();
     }
 }
@@ -827,7 +827,7 @@ control Borth(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         default_action = Plains();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             Chunchula.apply();
     }
 }
@@ -1677,7 +1677,7 @@ control Mentone(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        if ((meta.Homeacre.Hanford & 16w0x2000) == 16w0x2000) 
+        if (meta.Homeacre.Hanford & 16w0x2000 == 16w0x2000) 
             Stonefort.apply();
     }
 }
@@ -1976,7 +1976,7 @@ control Inverness(inout headers hdr, inout metadata meta, inout standard_metadat
                 Bowers: {
                     switch (Wanilla.apply().action_run) {
                         Finlayson: {
-                            if ((meta.Homeacre.Rocheport & 24w0x10000) == 24w0x10000) 
+                            if (meta.Homeacre.Rocheport & 24w0x10000 == 24w0x10000) 
                                 Comunas.apply();
                             else 
                                 Excel.apply();

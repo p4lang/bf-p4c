@@ -1880,7 +1880,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     _Jayton: {
                         switch (_Findlay_0.apply().action_run) {
                             _Clarendon: {
-                                if ((meta.Milan.Hobucken & 24w0x10000) == 24w0x10000) 
+                                if (meta.Milan.Hobucken & 24w0x10000 == 24w0x10000) 
                                     _Sylvan_0.apply();
                                 else 
                                     _NewTrier_0.apply();
@@ -1900,7 +1900,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Opelousas_0.apply();
                 _Scottdale_0.apply();
             }
-        if ((meta.Milan.Nason & 16w0x2000) == 16w0x2000) 
+        if (meta.Milan.Nason & 16w0x2000 == 16w0x2000) 
             _Cross_0.apply();
         if (meta.Counce.Ivanpah == 1w1) 
             _Pearl_0.apply();

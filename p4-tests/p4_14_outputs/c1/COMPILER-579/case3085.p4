@@ -825,7 +825,7 @@ control Amenia(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = Niota();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) {
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) {
             Alvord.apply();
         }
     }
@@ -851,7 +851,7 @@ control Kranzburg(inout headers hdr, inout metadata meta, inout standard_metadat
         implementation = Tanacross;
     }
     apply {
-        if ((meta.Weehawken.Boise & 16w0x2000) == 16w0x2000) {
+        if (meta.Weehawken.Boise & 16w0x2000 == 16w0x2000) {
             LaPalma.apply();
         }
     }
@@ -994,7 +994,7 @@ control Barnwell(inout headers hdr, inout metadata meta, inout standard_metadata
                 Whigham: {
                     switch (Lehigh.apply().action_run) {
                         Rexville: {
-                            if ((meta.Weehawken.Micro & 24w0x10000) == 24w0x10000) {
+                            if (meta.Weehawken.Micro & 24w0x10000 == 24w0x10000) {
                                 Powderly.apply();
                             }
                             else {
@@ -1143,7 +1143,7 @@ control Cammal(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 2304;
     }
     apply {
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Weehawken.Saticoy == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Weehawken.Saticoy == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
             Edinburgh.apply();
             Arnold.apply();
         }
@@ -1363,7 +1363,7 @@ control Dustin(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 16384;
     }
     apply {
-        if (meta.Garretson.Bowen == 1w0 && (meta.Elbert.Parkville & 4w4) == 4w4 && meta.Garretson.Garibaldi == 1w1) {
+        if (meta.Garretson.Bowen == 1w0 && meta.Elbert.Parkville & 4w4 == 4w4 && meta.Garretson.Garibaldi == 1w1) {
             LaneCity.apply();
         }
     }
@@ -1965,7 +1965,7 @@ control Hotchkiss(inout headers hdr, inout metadata meta, inout standard_metadat
     }
     apply {
         if (meta.Garretson.Bowen == 1w0 && meta.Elbert.Welcome == 1w1) {
-            if ((meta.Elbert.Parkville & 4w1) == 4w1 && (meta.Garretson.Talmo & 2w1) == 2w1) {
+            if (meta.Elbert.Parkville & 4w1 == 4w1 && meta.Garretson.Talmo & 2w1 == 2w1) {
                 if (meta.Shanghai.Callao != 16w0) {
                     Nuyaka.apply();
                 }
@@ -1976,7 +1976,7 @@ control Hotchkiss(inout headers hdr, inout metadata meta, inout standard_metadat
                 }
             }
             else {
-                if ((meta.Elbert.Parkville & 4w2) == 4w2 && (meta.Garretson.Talmo & 2w2) == 2w2) {
+                if (meta.Elbert.Parkville & 4w2 == 4w2 && meta.Garretson.Talmo & 2w2 == 2w2) {
                     if (meta.StarLake.Conner != 11w0) {
                         Hilgard.apply();
                     }
@@ -2123,12 +2123,12 @@ control Iberia(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = Millstadt();
     }
     apply {
-        if ((meta.Garretson.Talmo & 2w1) == 2w1) {
+        if (meta.Garretson.Talmo & 2w1 == 2w1) {
             Alvordton.apply();
             MiraLoma.apply();
         }
         else {
-            if ((meta.Garretson.Talmo & 2w2) == 2w2) {
+            if (meta.Garretson.Talmo & 2w2 == 2w2) {
                 Rotan.apply();
                 Coachella.apply();
             }
@@ -2279,7 +2279,7 @@ control Lemont(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         if (meta.Garretson.Bowen == 1w0 && meta.Elbert.Welcome == 1w1) {
-            if ((meta.Elbert.Parkville & 4w1) == 4w1 && (meta.Garretson.Talmo & 2w1) == 2w1) {
+            if (meta.Elbert.Parkville & 4w1 == 4w1 && meta.Garretson.Talmo & 2w1 == 2w1) {
                 switch (Vigus.apply().action_run) {
                     Millstadt: {
                         Oronogo.apply();
@@ -2288,7 +2288,7 @@ control Lemont(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
             }
             else {
-                if ((meta.Elbert.Parkville & 4w2) == 4w2 && (meta.Garretson.Talmo & 2w2) == 2w2) {
+                if (meta.Elbert.Parkville & 4w2 == 4w2 && meta.Garretson.Talmo & 2w2 == 2w2) {
                     switch (Compton.apply().action_run) {
                         Millstadt: {
                             Valsetz.apply();

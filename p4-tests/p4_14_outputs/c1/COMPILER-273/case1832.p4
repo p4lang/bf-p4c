@@ -671,7 +671,7 @@ control Bogota(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Kooskia: {
                     switch (Hemet.apply().action_run) {
                         Harpster: {
-                            if ((meta.Paxico.Bajandas & 24w0x10000) == 24w0x10000) {
+                            if (meta.Paxico.Bajandas & 24w0x10000 == 24w0x10000) {
                                 Nighthawk.apply();
                             }
                             else {
@@ -906,7 +906,7 @@ control Lapoint(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = Coulee;
     }
     apply {
-        if (meta.Wentworth.Spraberry == 1w0 && (meta.Paxico.Waukesha & 16w0x2000) == 16w0x2000) {
+        if (meta.Wentworth.Spraberry == 1w0 && meta.Paxico.Waukesha & 16w0x2000 == 16w0x2000) {
             Millhaven.apply();
         }
     }

@@ -2071,7 +2071,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     _Alzada: {
                         switch (_Duelm_0.apply().action_run) {
                             _Worland: {
-                                if ((meta.Laplace.Martelle & 24w0x10000) == 24w0x10000) 
+                                if (meta.Laplace.Martelle & 24w0x10000 == 24w0x10000) 
                                     _Montague_0.apply();
                                 else 
                                     if (meta.Laplace.Oakmont == 1w0) 
@@ -2095,7 +2095,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             if (meta.Renton.Waitsburg == 1w0) 
                 if (meta.Laplace.Oakmont == 1w0 && meta.Renton.Pacifica == 1w0 && meta.Renton.Lakin == 1w0 && meta.Renton.Rodessa == meta.Laplace.Ocracoke) 
                     _BigBar_0.apply();
-            if ((meta.Laplace.Ocracoke & 16w0x2000) == 16w0x2000) 
+            if (meta.Laplace.Ocracoke & 16w0x2000 == 16w0x2000) 
                 _Eldena_0.apply();
         }
         if (hdr.Casper[0].isValid()) 

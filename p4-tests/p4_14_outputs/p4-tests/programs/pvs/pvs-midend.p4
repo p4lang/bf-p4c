@@ -184,11 +184,17 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @parser_value_set_size(7) value_set<bit<16>> pvs2;
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
+            pvs2: parse_vlan;
             default: accept;
         }
+    }
+    @name(".parse_vlan") state parse_vlan {
+        packet.extract<vlan_tag_t>(hdr.vlan_tag_);
+        transition accept;
     }
     @name(".start") state start {
         transition parse_ethernet;

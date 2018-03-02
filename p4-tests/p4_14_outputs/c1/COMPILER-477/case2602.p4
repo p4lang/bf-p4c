@@ -800,7 +800,7 @@ control Coventry(inout headers hdr, inout metadata meta, inout standard_metadata
         implementation = Bairoa;
     }
     apply {
-        if ((meta.Sigsbee.Placid & 16w0x2000) == 16w0x2000) {
+        if (meta.Sigsbee.Placid & 16w0x2000 == 16w0x2000) {
             Ravenwood.apply();
         }
     }
@@ -1535,7 +1535,7 @@ control Norcatur(inout headers hdr, inout metadata meta, inout standard_metadata
                 Chemult: {
                     switch (Stewart.apply().action_run) {
                         Bayshore: {
-                            if ((meta.Sigsbee.Goodrich & 24w0x10000) == 24w0x10000) {
+                            if (meta.Sigsbee.Goodrich & 24w0x10000 == 24w0x10000) {
                                 Kaplan.apply();
                             }
                             else {

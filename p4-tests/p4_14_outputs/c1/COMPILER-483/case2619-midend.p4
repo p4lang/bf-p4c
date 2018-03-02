@@ -2170,7 +2170,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     _Between: {
                         switch (_Hannah_0.apply().action_run) {
                             _Pridgen: {
-                                if ((meta.Century.Freetown & 24w0x10000) == 24w0x10000) 
+                                if (meta.Century.Freetown & 24w0x10000 == 24w0x10000) 
                                     _Occoquan_0.apply();
                                 else 
                                     _LaMoille_0.apply();
@@ -2202,7 +2202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         if (meta.Perrin.Elmdale == 1w0) 
             _Recluse_0.apply();
         if (meta.Century.PortVue == 1w0) {
-            if ((meta.Century.Pickett & 16w0x2000) == 16w0x2000) 
+            if (meta.Century.Pickett & 16w0x2000 == 16w0x2000) 
                 _TiffCity_0.apply();
             if (hdr.ig_intr_md_for_tm.mcast_grp_a != 16w0) 
                 _Barnhill_0.apply();

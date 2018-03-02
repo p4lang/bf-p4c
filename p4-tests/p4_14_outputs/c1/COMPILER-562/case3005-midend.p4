@@ -973,7 +973,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_57();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             _Catawba_0.apply();
         _Arvada_0.apply();
         switch (_Power_0.apply().action_run) {
@@ -3033,7 +3033,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         _Lincroft: {
                             switch (_Poulsbo_0.apply().action_run) {
                                 _Elimsport: {
-                                    if ((meta.PineCity.Oakville & 24w0x10000) == 24w0x10000) 
+                                    if (meta.PineCity.Oakville & 24w0x10000 == 24w0x10000) 
                                         _Alamance_0.apply();
                                     else 
                                         _Alden_0.apply();
@@ -3051,7 +3051,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 if (meta.PineCity.Knierim == 1w0 && meta.Gerster.August == 1w0 && meta.Gerster.Pownal == 1w0 && meta.Gerster.Paisley == meta.PineCity.Okaton) 
                     _BoyRiver_0.apply();
                 else 
-                    if ((meta.PineCity.Okaton & 16w0x2000) == 16w0x2000) 
+                    if (meta.PineCity.Okaton & 16w0x2000 == 16w0x2000) 
                         _Manilla.apply();
         if (meta.Acree.Louviers != 1w0) 
             _Dorris_0.apply();
@@ -3063,7 +3063,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Eldred_0.apply();
             _Bokeelia_0.apply();
         }
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.PineCity.Newfolden == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) 
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.PineCity.Newfolden == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) 
             _Perma_0.apply();
         if (hdr.Wamesit[0].isValid()) 
             _Bothwell_0.apply();

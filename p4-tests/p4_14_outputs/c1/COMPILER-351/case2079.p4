@@ -1257,7 +1257,7 @@ control Lookeba(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = Masontown;
     }
     apply {
-        if ((meta.Milan.Nason & 16w0x2000) == 16w0x2000) {
+        if (meta.Milan.Nason & 16w0x2000 == 16w0x2000) {
             Cross.apply();
         }
     }
@@ -1480,7 +1480,7 @@ control Reddell(inout headers hdr, inout metadata meta, inout standard_metadata_
                 Jayton: {
                     switch (Findlay.apply().action_run) {
                         Clarendon: {
-                            if ((meta.Milan.Hobucken & 24w0x10000) == 24w0x10000) {
+                            if (meta.Milan.Hobucken & 24w0x10000 == 24w0x10000) {
                                 Sylvan.apply();
                             }
                             else {

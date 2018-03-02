@@ -469,10 +469,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 flow_table_cache_0.apply();
                 flow_table_cache_1_1.apply();
                 flow_table_cache_2_1.apply();
-                if (meta.meta.fc_1_1_hit == 1w1 && meta.meta.same_proto_1 == 8w0 && (meta.meta.proto_idx_pair1 & 16w0xffff) != 16w0) 
+                if (meta.meta.fc_1_1_hit == 1w1 && meta.meta.same_proto_1 == 8w0 && meta.meta.proto_idx_pair1 & 16w0xffff != 16w0) 
                     flow_table_cache_1_age.apply();
                 else 
-                    if (meta.meta.fc_1_2_hit == 1w1 && meta.meta.same_proto_2 == 8w0 && (meta.meta.proto_idx_pair2 & 16w0xffff) != 16w0) 
+                    if (meta.meta.fc_1_2_hit == 1w1 && meta.meta.same_proto_2 == 8w0 && meta.meta.proto_idx_pair2 & 16w0xffff != 16w0) 
                         flow_table_cache_2_age.apply();
                     else 
                         slow_path.apply();

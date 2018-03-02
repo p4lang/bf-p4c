@@ -1334,7 +1334,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _ArchCape: {
                     switch (_Masontown_0.apply().action_run) {
                         _Homeworth: {
-                            if ((meta.Glenshaw.Berlin & 24w0x10000) == 24w0x10000) 
+                            if (meta.Glenshaw.Berlin & 24w0x10000 == 24w0x10000) 
                                 _Hoven_0.apply();
                             else 
                                 _Hopedale_0.apply();
@@ -1346,7 +1346,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
         if (meta.Glenshaw.Needles == 1w0 && meta.Phelps.Ahmeek == meta.Glenshaw.Segundo) 
             _Nason_0.apply();
-        if ((meta.Glenshaw.Segundo & 16w0x2000) == 16w0x2000) 
+        if (meta.Glenshaw.Segundo & 16w0x2000 == 16w0x2000) 
             _Anguilla_0.apply();
         if (meta.Phelps.Cutler == 1w1) 
             _Merkel_0.apply();

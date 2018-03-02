@@ -545,7 +545,7 @@ control Boyle(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         default_action = NoAction();
     }
     apply {
-        if (meta.Neshoba.Saugatuck == 1w0 && (meta.Calabasas.Everton & 16w0x2000) == 16w0x2000) 
+        if (meta.Neshoba.Saugatuck == 1w0 && meta.Calabasas.Everton & 16w0x2000 == 16w0x2000) 
             Brashear.apply();
     }
 }
@@ -923,7 +923,7 @@ control Glenshaw(inout headers hdr, inout metadata meta, inout standard_metadata
                 Danforth: {
                     switch (Kentwood.apply().action_run) {
                         Diana: {
-                            if ((meta.Calabasas.Storden & 24w0x10000) == 24w0x10000) 
+                            if (meta.Calabasas.Storden & 24w0x10000 == 24w0x10000) 
                                 Bonney.apply();
                             else 
                                 Navarro.apply();

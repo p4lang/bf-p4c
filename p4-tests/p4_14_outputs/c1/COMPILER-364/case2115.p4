@@ -572,7 +572,7 @@ control Bethesda(inout headers hdr, inout metadata meta, inout standard_metadata
         implementation = Newburgh;
     }
     apply {
-        if ((meta.Skyway.Johnstown & 16w0x2000) == 16w0x2000) {
+        if (meta.Skyway.Johnstown & 16w0x2000 == 16w0x2000) {
             Fowlkes.apply();
         }
     }
@@ -652,7 +652,7 @@ control Brimley(inout headers hdr, inout metadata meta, inout standard_metadata_
                 Dassel: {
                     switch (Duncombe.apply().action_run) {
                         Gibson: {
-                            if ((meta.Skyway.Yreka & 24w0x10000) == 24w0x10000) {
+                            if (meta.Skyway.Yreka & 24w0x10000 == 24w0x10000) {
                                 Lowes.apply();
                             }
                             else {

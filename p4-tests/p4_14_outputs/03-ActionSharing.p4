@@ -365,7 +365,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32768;
     }
     apply {
-        if ((hdr.ig_intr_md.ingress_port & 9w0x1) == 9w0x1) {
+        if (hdr.ig_intr_md.ingress_port & 9w0x1 == 9w0x1) {
             dmac1.apply();
         }
         else {

@@ -1,7 +1,7 @@
 #include <core.p4>
 #include <v1model.p4>
 
-@bf_p4c_compiler_option("--use-clot") header data_t {
+header data_t {
     bit<32> f1;
     bit<32> f2;
     bit<16> h1;

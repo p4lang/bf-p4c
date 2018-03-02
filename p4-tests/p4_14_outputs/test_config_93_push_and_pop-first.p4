@@ -57,6 +57,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".push_action") action push_action() {
         hdr.tags.push_front(3);
+        hdr.tags[0].setValid();
+        hdr.tags[1].setValid();
+        hdr.tags[2].setValid();
     }
     @name(".pop_action") action pop_action() {
         hdr.tags.pop_front(4);

@@ -520,7 +520,7 @@ control Brodnax(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        if ((meta.Larue.Goodlett & 16w0x2000) == 16w0x2000) 
+        if (meta.Larue.Goodlett & 16w0x2000 == 16w0x2000) 
             LaJoya.apply();
     }
 }
@@ -1105,7 +1105,7 @@ control Mabelvale(inout headers hdr, inout metadata meta, inout standard_metadat
                 Piedmont: {
                     switch (Hartfield.apply().action_run) {
                         Abbott: {
-                            if ((meta.Larue.Stillmore & 24w0x10000) == 24w0x10000) 
+                            if (meta.Larue.Stillmore & 24w0x10000 == 24w0x10000) 
                                 Valentine.apply();
                             else 
                                 Hallowell.apply();

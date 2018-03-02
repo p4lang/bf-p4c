@@ -1644,7 +1644,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Elkville: {
                     switch (_Pineland_0.apply().action_run) {
                         _Fairlee: {
-                            if ((meta.Brazil.Sonora & 24w0x10000) == 24w0x10000) 
+                            if (meta.Brazil.Sonora & 24w0x10000 == 24w0x10000) 
                                 _GlenRock_0.apply();
                             else 
                                 _Harvard_0.apply();
@@ -1662,7 +1662,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Macopin_0.apply();
         if (hdr.Oklee[0].isValid()) 
             _Nestoria_0.apply();
-        if (meta.Wayne.Maiden == 1w0 && (meta.Brazil.Slana & 16w0x2000) == 16w0x2000) 
+        if (meta.Wayne.Maiden == 1w0 && meta.Brazil.Slana & 16w0x2000 == 16w0x2000) 
             _Sylvan_0.apply();
     }
 }

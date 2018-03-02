@@ -1104,7 +1104,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         _Ganado_0.apply();
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             _Palmer_0.apply();
         _Kempton_0.apply();
         _Canovanas_0.apply();
@@ -3082,7 +3082,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         _Rocheport: {
                             switch (_Annawan_0.apply().action_run) {
                                 _Trevorton: {
-                                    if ((meta.Crane.Basehor & 24w0x10000) == 24w0x10000) 
+                                    if (meta.Crane.Basehor & 24w0x10000 == 24w0x10000) 
                                         _Florahome_0.apply();
                                     else 
                                         _Macksburg_0.apply();
@@ -3100,7 +3100,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 if (meta.Crane.Wheeler == 1w0 && meta.Godley.Seattle == 1w0 && meta.Godley.Woodstown == 1w0 && meta.Godley.Chloride == meta.Crane.Millbrae) 
                     _Lepanto_0.apply();
                 else 
-                    if ((meta.Crane.Millbrae & 16w0x2000) == 16w0x2000) 
+                    if (meta.Crane.Millbrae & 16w0x2000 == 16w0x2000) 
                         _Platea.apply();
         if (meta.Udall.Lamona != 1w0) 
             if (meta.Crane.Midas == 1w0 && meta.Godley.Seattle == 1w1) 
@@ -3111,7 +3111,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Macdona_0.apply();
             _Woolwine_0.apply();
         }
-        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Crane.Midas == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
+        if (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Crane.Midas == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) {
             _Sespe_0.apply();
             _Wells_0.apply();
         }

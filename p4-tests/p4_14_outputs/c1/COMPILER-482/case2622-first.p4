@@ -1385,7 +1385,7 @@ control Kalvesta(inout headers hdr, inout metadata meta, inout standard_metadata
         default_action = NoAction();
     }
     apply {
-        if ((meta.Orrum.Kaluaaha & 16w0x2000) == 16w0x2000) 
+        if (meta.Orrum.Kaluaaha & 16w0x2000 == 16w0x2000) 
             Hooven.apply();
     }
 }
@@ -1830,7 +1830,7 @@ control Pendleton(inout headers hdr, inout metadata meta, inout standard_metadat
                 GlenDean: {
                     switch (Ihlen.apply().action_run) {
                         Ingraham: {
-                            if ((meta.Orrum.Pettry & 24w0x10000) == 24w0x10000) 
+                            if (meta.Orrum.Pettry & 24w0x10000 == 24w0x10000) 
                                 Salix.apply();
                             else 
                                 Cedonia.apply();

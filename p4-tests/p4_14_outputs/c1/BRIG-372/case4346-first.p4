@@ -925,7 +925,7 @@ control Biehle(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        if (meta.Bigspring.Hewitt == 1w0 && (meta.Wyanet.Lafourche & 4w0x4) == 4w0x4 && meta.Bigspring.Cadley == 1w1 && meta.Bigspring.Verdemont == 2w1) 
+        if (meta.Bigspring.Hewitt == 1w0 && meta.Wyanet.Lafourche & 4w0x4 == 4w0x4 && meta.Bigspring.Cadley == 1w1 && meta.Bigspring.Verdemont == 2w1) 
             Mather.apply();
     }
 }
@@ -1012,7 +1012,7 @@ control Breese(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        if ((meta.Wyanet.Lafourche & 4w0x2) == 4w0x2 && meta.Bigspring.Verdemont == 2w2 && meta.Talmo.Gotham != 2w0 && meta.Bigspring.Hewitt == 1w0 && meta.Wyanet.Winfall == 1w1) 
+        if (meta.Wyanet.Lafourche & 4w0x2 == 4w0x2 && meta.Bigspring.Verdemont == 2w2 && meta.Talmo.Gotham != 2w0 && meta.Bigspring.Hewitt == 1w0 && meta.Wyanet.Winfall == 1w1) 
             switch (Coulee.apply().action_run) {
                 MintHill: {
                     Plato.apply();
@@ -1020,7 +1020,7 @@ control Breese(inout headers hdr, inout metadata meta, inout standard_metadata_t
             }
 
         else 
-            if ((meta.Wyanet.Lafourche & 4w0x1) == 4w0x1 && meta.Bigspring.Verdemont == 2w1 && meta.Talmo.Gotham != 2w0 && meta.Bigspring.Hewitt == 1w0) 
+            if (meta.Wyanet.Lafourche & 4w0x1 == 4w0x1 && meta.Bigspring.Verdemont == 2w1 && meta.Talmo.Gotham != 2w0 && meta.Bigspring.Hewitt == 1w0) 
                 if (meta.Wyanet.Winfall == 1w1) 
                     switch (Sofia.apply().action_run) {
                         MintHill: {
@@ -1132,7 +1132,7 @@ control Challis(inout headers hdr, inout metadata meta, inout standard_metadata_
             Wyatte: {
                 switch (Hohenwald.apply().action_run) {
                     RowanBay: {
-                        if ((meta.Upalco.Bledsoe & 24w0x10000) == 24w0x10000) 
+                        if (meta.Upalco.Bledsoe & 24w0x10000 == 24w0x10000) 
                             Comobabi.apply();
                         else 
                             Gonzalez.apply();
@@ -1827,7 +1827,7 @@ control Kalskag(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (meta.Emajagua.Raeford != 16w0) 
-            if ((meta.Emajagua.Raeford & 16w0xfff0) == 16w0) 
+            if (meta.Emajagua.Raeford & 16w0xfff0 == 16w0) 
                 Fishers.apply();
             else 
                 Wrenshall.apply();
@@ -1926,7 +1926,7 @@ control Leflore(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = Machens(32w0);
     }
     apply {
-        if ((meta.Upalco.Colonie & 32w0x60000) == 32w0x40000) 
+        if (meta.Upalco.Colonie & 32w0x60000 == 32w0x40000) 
             Weatherly.apply();
     }
 }
@@ -2122,14 +2122,14 @@ control Merino(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         if (meta.Bigspring.Hewitt == 1w0 && meta.Wyanet.Winfall == 1w1 && meta.Talmo.Gotham != 2w0) 
-            if ((meta.Wyanet.Lafourche & 4w0x1) == 4w0x1 && meta.Bigspring.Verdemont == 2w1) 
+            if (meta.Wyanet.Lafourche & 4w0x1 == 4w0x1 && meta.Bigspring.Verdemont == 2w1) 
                 if (meta.Nunnelly.Monkstown != 16w0) 
                     Reidville.apply();
                 else 
                     if (meta.Emajagua.Raeford == 16w0 && meta.Emajagua.Lakota == 11w0) 
                         Dizney.apply();
             else 
-                if ((meta.Wyanet.Lafourche & 4w0x2) == 4w0x2 && meta.Bigspring.Verdemont == 2w2) 
+                if (meta.Wyanet.Lafourche & 4w0x2 == 4w0x2 && meta.Bigspring.Verdemont == 2w2) 
                     if (meta.Portal.Raynham != 11w0) 
                         Ruthsburg.apply();
                     else 
@@ -2142,7 +2142,7 @@ control Merino(inout headers hdr, inout metadata meta, inout standard_metadata_t
                                     Quogue.apply();
                         }
                 else 
-                    if (meta.Bigspring.Ivyland == 1w1 || (meta.Wyanet.Lafourche & 4w0x1) == 4w0x1 && meta.Bigspring.Verdemont == 2w3) 
+                    if (meta.Bigspring.Ivyland == 1w1 || meta.Wyanet.Lafourche & 4w0x1 == 4w0x1 && meta.Bigspring.Verdemont == 2w3) 
                         Campbell.apply();
     }
 }
@@ -2300,7 +2300,7 @@ control Mynard(inout headers hdr, inout metadata meta, inout standard_metadata_t
             if (meta.Bigspring.Zeeland == meta.Upalco.Pilottown) 
                 Longview.apply();
             else 
-                if (meta.Talmo.Gotham == 2w2 && (meta.Upalco.Pilottown & 20w0xff800) == 20w0x3800) 
+                if (meta.Talmo.Gotham == 2w2 && meta.Upalco.Pilottown & 20w0xff800 == 20w0x3800) 
                     Anawalt.apply();
         LasVegas.apply();
     }
@@ -2456,7 +2456,7 @@ control Pardee(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = Pridgen(12w0, 1w0, 3w1);
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             switch (Mosinee.apply().action_run) {
                 MintHill: {
                     Mulvane.apply();
@@ -3311,10 +3311,10 @@ control Stout(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         default_action = NoAction();
     }
     apply {
-        if ((meta.Upalco.Pilottown & 20w0x3800) == 20w0x3800) 
+        if (meta.Upalco.Pilottown & 20w0x3800 == 20w0x3800) 
             Kisatchie.apply();
         else 
-            if ((meta.Upalco.Pilottown & 20w0xffc00) == 20w0) 
+            if (meta.Upalco.Pilottown & 20w0xffc00 == 20w0) 
                 Aguilita.apply();
     }
 }
@@ -3521,7 +3521,7 @@ control Sunflower(inout headers hdr, inout metadata meta, inout standard_metadat
                 Grasmere.apply();
                 Waukegan.apply();
             }
-        if ((meta.Bigspring.Homeworth & 3w2) == 3w2) {
+        if (meta.Bigspring.Homeworth & 3w2 == 3w2) {
             Grenville.apply();
             Barron.apply();
         }

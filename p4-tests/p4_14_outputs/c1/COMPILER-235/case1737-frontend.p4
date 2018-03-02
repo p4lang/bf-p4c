@@ -939,7 +939,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 LFyINr_0: {
                     switch (qBOLVQ.apply().action_run) {
                         SXIJHU_0: {
-                            if ((meta.ZIrQiH.UkUtwO & 24w0x10000) == 24w0x10000) 
+                            if (meta.ZIrQiH.UkUtwO & 24w0x10000 == 24w0x10000) 
                                 NEINGI.apply();
                             dqtyNX.apply();
                         }

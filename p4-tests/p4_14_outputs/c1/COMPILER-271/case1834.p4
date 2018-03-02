@@ -1089,7 +1089,7 @@ control Novinger(inout headers hdr, inout metadata meta, inout standard_metadata
         implementation = Picayune;
     }
     apply {
-        if (meta.Rhodell.Wauseon == 1w0 && (meta.Macksburg.Poteet & 16w0x2000) == 16w0x2000) {
+        if (meta.Rhodell.Wauseon == 1w0 && meta.Macksburg.Poteet & 16w0x2000 == 16w0x2000) {
             Leucadia.apply();
         }
     }
@@ -1540,7 +1540,7 @@ control Watters(inout headers hdr, inout metadata meta, inout standard_metadata_
                 Wenona: {
                     switch (Kosmos.apply().action_run) {
                         Cheyenne: {
-                            if ((meta.Macksburg.Matheson & 24w0x10000) == 24w0x10000) {
+                            if (meta.Macksburg.Matheson & 24w0x10000 == 24w0x10000) {
                                 Monahans.apply();
                             }
                             else {

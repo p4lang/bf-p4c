@@ -634,28 +634,46 @@ control process_srv6_encap(inout headers hdr, inout metadata meta, inout standar
     @name(".srv6_rewrite_1") action srv6_rewrite_1() {
         insert_ipv6_header(8w43);
         insert_ipv6_srh(meta.sr_metadata.proto);
-        hdr.ipv6_srh_seg_list.push_front(1);
+        {
+            hdr.ipv6_srh_seg_list.push_front(1);
+            hdr.ipv6_srh_seg_list[0].setValid();
+        }
         hdr.ethernet.etherType = 16w0x86dd;
         hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w24;
     }
     @name(".srv6_rewrite_2") action srv6_rewrite_2() {
         insert_ipv6_header(8w43);
         insert_ipv6_srh(meta.sr_metadata.proto);
-        hdr.ipv6_srh_seg_list.push_front(2);
+        {
+            hdr.ipv6_srh_seg_list.push_front(2);
+            hdr.ipv6_srh_seg_list[0].setValid();
+            hdr.ipv6_srh_seg_list[1].setValid();
+        }
         hdr.ethernet.etherType = 16w0x86dd;
         hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w40;
     }
     @name(".srv6_rewrite_3") action srv6_rewrite_3() {
         insert_ipv6_header(8w43);
         insert_ipv6_srh(meta.sr_metadata.proto);
-        hdr.ipv6_srh_seg_list.push_front(3);
+        {
+            hdr.ipv6_srh_seg_list.push_front(3);
+            hdr.ipv6_srh_seg_list[0].setValid();
+            hdr.ipv6_srh_seg_list[1].setValid();
+            hdr.ipv6_srh_seg_list[2].setValid();
+        }
         hdr.ethernet.etherType = 16w0x86dd;
         hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w56;
     }
     @name(".srv6_rewrite_4") action srv6_rewrite_4() {
         insert_ipv6_header(8w43);
         insert_ipv6_srh(meta.sr_metadata.proto);
-        hdr.ipv6_srh_seg_list.push_front(4);
+        {
+            hdr.ipv6_srh_seg_list.push_front(4);
+            hdr.ipv6_srh_seg_list[0].setValid();
+            hdr.ipv6_srh_seg_list[1].setValid();
+            hdr.ipv6_srh_seg_list[2].setValid();
+            hdr.ipv6_srh_seg_list[3].setValid();
+        }
         hdr.ethernet.etherType = 16w0x86dd;
         hdr.ipv6.payloadLen = meta.egress_metadata.payload_length + 16w72;
     }
@@ -1189,14 +1207,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         process_srv6_0.apply(hdr, meta, standard_metadata);
         switch (rmac.apply().action_run) {
             rmac_hit: {
-                if ((meta.ingress_metadata.bypass & 4w0x2) == 4w0) {
+                if (meta.ingress_metadata.bypass & 4w0x2 == 4w0) {
                     process_l3_forwarding_0.apply(hdr, meta, standard_metadata);
                 }
             }
         }
 
         nexthop.apply();
-        if ((meta.ingress_metadata.bypass & 4w0x1) == 4w0) {
+        if (meta.ingress_metadata.bypass & 4w0x1 == 4w0) {
             process_l2_forwarding_0.apply(hdr, meta, standard_metadata);
         }
         lag_group.apply();

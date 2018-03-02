@@ -1958,7 +1958,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     _Kealia: {
                         switch (_Talbotton_0.apply().action_run) {
                             _Billett: {
-                                if ((meta.Fontana.Lisman & 24w0x10000) == 24w0x10000) 
+                                if (meta.Fontana.Lisman & 24w0x10000 == 24w0x10000) 
                                     _Auburn_0.apply();
                                 else 
                                     _Redmon_0.apply();
@@ -1978,7 +1978,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _FordCity_0.apply();
                 _Ivyland_0.apply();
             }
-        if ((meta.Fontana.Calverton & 16w0x2000) == 16w0x2000) 
+        if (meta.Fontana.Calverton & 16w0x2000 == 16w0x2000) 
             _Willard_0.apply();
         if (meta.Timken.Salix == 1w1) 
             _Westwood_0.apply();

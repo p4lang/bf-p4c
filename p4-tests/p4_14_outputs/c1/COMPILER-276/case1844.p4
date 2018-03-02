@@ -678,7 +678,7 @@ control Dixmont(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = Hearne();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) {
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) {
             Grainola.apply();
         }
     }
@@ -825,7 +825,7 @@ control Granbury(inout headers hdr, inout metadata meta, inout standard_metadata
                 Papeton: {
                     switch (Marbury.apply().action_run) {
                         Keyes: {
-                            if ((meta.Higganum.Cowpens & 24w0x10000) == 24w0x0) {
+                            if (meta.Higganum.Cowpens & 24w0x10000 == 24w0x0) {
                                 Ikatan.apply();
                             }
                         }
@@ -1223,7 +1223,7 @@ control Harvest(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = Claiborne;
     }
     apply {
-        if (meta.Waialua.Blossburg == 1w0 && (meta.Higganum.Yreka & 16w0x2000) == 16w0x2000) {
+        if (meta.Waialua.Blossburg == 1w0 && meta.Higganum.Yreka & 16w0x2000 == 16w0x2000) {
             Riverland.apply();
         }
     }

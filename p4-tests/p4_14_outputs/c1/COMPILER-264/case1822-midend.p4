@@ -1335,7 +1335,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Piedmont: {
                     switch (_Hartfield_0.apply().action_run) {
                         _Abbott: {
-                            if ((meta.Larue.Stillmore & 24w0x10000) == 24w0x10000) 
+                            if (meta.Larue.Stillmore & 24w0x10000 == 24w0x10000) 
                                 _Valentine_0.apply();
                             else 
                                 _Hallowell_0.apply();
@@ -1347,7 +1347,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
         if (meta.Larue.Greenbush == 1w0 && meta.SomesBar.Sonoita == meta.Larue.Goodlett) 
             _Bomarton_0.apply();
-        if ((meta.Larue.Goodlett & 16w0x2000) == 16w0x2000) 
+        if (meta.Larue.Goodlett & 16w0x2000 == 16w0x2000) 
             _LaJoya_0.apply();
         if (meta.SomesBar.Connell == 1w1) 
             _RioLajas_0.apply();

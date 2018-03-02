@@ -984,7 +984,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_57();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             _Woodburn_0.apply();
         if (standard_metadata.instance_type == 32w1 || standard_metadata.instance_type == 32w2) 
             _Hiwasse_0.apply();
@@ -2662,7 +2662,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         _Coronado_0.apply();
         if (meta.Pearson.Darmstadt == 1w0 && meta.Tornillo.Boyero == 1w1 && meta.Pearson.Occoquan == 1w1) 
             _Hahira_0.apply();
-        if ((meta.Pearson.Basco & 8w0x80) == 8w0x80) 
+        if (meta.Pearson.Basco & 8w0x80 == 8w0x80) 
             _PeaRidge_0.apply();
         if (meta.Mentone.Westboro != 1w0) 
             if (meta.Gregory.Glenshaw != 16w0) 
@@ -2684,7 +2684,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         _Brockton: {
                             switch (_Belfalls_0.apply().action_run) {
                                 _Chevak: {
-                                    if ((meta.Portal.Littleton & 24w0x10000) == 24w0x10000) 
+                                    if (meta.Portal.Littleton & 24w0x10000 == 24w0x10000) 
                                         _Glentana_0.apply();
                                     else 
                                         _Chappells_0.apply();
@@ -2702,7 +2702,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 if (meta.Portal.Panola == 1w0 && meta.Pearson.Corinth == 1w0 && meta.Pearson.Eaton == 1w0 && meta.Pearson.Laramie == meta.Portal.Glenmora) 
                     _Annette_0.apply();
                 else 
-                    if ((meta.Portal.Glenmora & 16w0x2000) == 16w0x2000) 
+                    if (meta.Portal.Glenmora & 16w0x2000 == 16w0x2000) 
                         _Mattese.apply();
         if (meta.Mentone.Westboro != 1w0) 
             _Hadley_0.apply();
@@ -2713,7 +2713,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Yorklyn_0.apply();
             _Huttig_0.apply();
         }
-        if (((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1) == 3w0 && meta.Portal.Epsie == 1w1 || (hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2) == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) && meta.Kekoskee.Lincroft == 1w1) 
+        if ((hdr.ig_intr_md_for_tm.drop_ctl & 3w0x1 == 3w0 && meta.Portal.Epsie == 1w1 || hdr.ig_intr_md_for_tm.drop_ctl & 3w0x2 == 3w0 && hdr.ig_intr_md_for_tm.copy_to_cpu == 1w1) && meta.Kekoskee.Lincroft == 1w1) 
             _Marquette_0.apply();
         if (hdr.Rockfield[0].isValid()) 
             _Edler_0.apply();

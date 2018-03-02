@@ -59,6 +59,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".push_action") action push_action_0() {
         hdr.tags.push_front(3);
+        hdr.tags[0].setValid();
+        hdr.tags[1].setValid();
+        hdr.tags[2].setValid();
     }
     @name(".pop_action") action pop_action_0() {
         hdr.tags.pop_front(4);

@@ -1830,7 +1830,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _PineLawn: {
                     switch (_Century_0.apply().action_run) {
                         _Longport: {
-                            if ((meta.Barksdale.Maywood & 24w0x10000) == 24w0x10000) 
+                            if (meta.Barksdale.Maywood & 24w0x10000 == 24w0x10000) 
                                 _Maryhill_0.apply();
                             else 
                                 _Almeria_0.apply();
@@ -1848,7 +1848,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Amasa_0.apply();
                 _Philip_0.apply();
             }
-        if ((meta.Barksdale.Aspetuck & 16w0x2000) == 16w0x2000) 
+        if (meta.Barksdale.Aspetuck & 16w0x2000 == 16w0x2000) 
             _Mekoryuk_0.apply();
         if (meta.Nashoba.McCammon == 1w1) 
             _Corum_0.apply();

@@ -1249,7 +1249,7 @@ control Creston(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
     }
     apply {
-        if (meta.Tingley.Cache == 1w0 && (meta.Mystic.Vestaburg & 4w0x4) == 4w0x4 && meta.Tingley.Dalkeith == 1w1) {
+        if (meta.Tingley.Cache == 1w0 && meta.Mystic.Vestaburg & 4w0x4 == 4w0x4 && meta.Tingley.Dalkeith == 1w1) {
             Borth.apply();
         }
     }
@@ -1275,7 +1275,7 @@ control Palatka(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = Gallinas;
     }
     apply {
-        if ((meta.Ranburne.Jonesport & 16w0x2000) == 16w0x2000) {
+        if (meta.Ranburne.Jonesport & 16w0x2000 == 16w0x2000) {
             Neosho.apply();
         }
     }
@@ -1459,7 +1459,7 @@ control Dominguez(inout headers hdr, inout metadata meta, inout standard_metadat
     }
     apply {
         if (meta.Tingley.Cache == 1w0 && meta.Mystic.Dugger == 1w1) {
-            if ((meta.Mystic.Vestaburg & 4w0x1) == 4w0x1 && meta.Tingley.Mantee == 1w1) {
+            if (meta.Mystic.Vestaburg & 4w0x1 == 4w0x1 && meta.Tingley.Mantee == 1w1) {
                 if (meta.Luzerne.KentPark != 16w0) {
                     Herring.apply();
                 }
@@ -1470,7 +1470,7 @@ control Dominguez(inout headers hdr, inout metadata meta, inout standard_metadat
                 }
             }
             else {
-                if ((meta.Mystic.Vestaburg & 4w0x2) == 4w0x2 && meta.Tingley.Lucas == 1w1) {
+                if (meta.Mystic.Vestaburg & 4w0x2 == 4w0x2 && meta.Tingley.Lucas == 1w1) {
                     if (meta.Ringwood.Guayabal != 11w0) {
                         Willows.apply();
                     }
@@ -1700,7 +1700,7 @@ control Edroy(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     }
     @name(".Sequim") Sequim() Sequim_0;
     apply {
-        if ((meta.Mystic.Vestaburg & 4w0x2) == 4w0x2 && meta.Tingley.Lucas == 1w1) {
+        if (meta.Mystic.Vestaburg & 4w0x2 == 4w0x2 && meta.Tingley.Lucas == 1w1) {
             if (meta.Tingley.Cache == 1w0 && meta.Mystic.Dugger == 1w1) {
                 switch (Elmwood.apply().action_run) {
                     Nanson: {
@@ -1711,7 +1711,7 @@ control Edroy(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             }
         }
         else {
-            if ((meta.Mystic.Vestaburg & 4w0x1) == 4w0x1 && meta.Tingley.Mantee == 1w1) {
+            if (meta.Mystic.Vestaburg & 4w0x1 == 4w0x1 && meta.Tingley.Mantee == 1w1) {
                 if (meta.Tingley.Cache == 1w0) {
                     Sequim_0.apply(hdr, meta, standard_metadata);
                     if (meta.Mystic.Dugger == 1w1) {
@@ -1885,7 +1885,7 @@ control Freeny(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Pierceton.apply();
             }
         }
-        if ((meta.Tingley.MoonRun & 3w2) == 3w2) {
+        if (meta.Tingley.MoonRun & 3w2 == 3w2) {
             Indrio.apply();
             Connell.apply();
         }
@@ -2489,7 +2489,7 @@ control Pierre(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Renton: {
                     switch (Plains.apply().action_run) {
                         Calvary: {
-                            if ((meta.Ranburne.Sidnaw & 24w0x10000) == 24w0x10000) {
+                            if (meta.Ranburne.Sidnaw & 24w0x10000 == 24w0x10000) {
                                 Arapahoe.apply();
                             }
                             else {
@@ -2552,7 +2552,7 @@ control Scanlon(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = Mattapex();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) {
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) {
             Lignite.apply();
         }
     }

@@ -1342,7 +1342,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 }
             }
         }
-        if (32w1 == (hdr.ethernet.srcAddr & 32w1) && 1w0 == hdr.ig_intr_md.resubmit_flag && 1w0 == meta.md.drop_it) {
+        if (32w1 == hdr.ethernet.srcAddr & 32w1 && 1w0 == hdr.ig_intr_md.resubmit_flag && 1w0 == meta.md.drop_it) {
             ig_meter_resubmit.apply();
         }
         set_mrk_hi.apply();

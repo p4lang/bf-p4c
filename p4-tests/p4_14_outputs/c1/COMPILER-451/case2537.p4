@@ -674,7 +674,7 @@ control Alzada(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 Stamford: {
                     switch (Hawthorn.apply().action_run) {
                         Arthur: {
-                            if ((meta.Laplace.Martelle & 24w0x10000) == 24w0x10000) {
+                            if (meta.Laplace.Martelle & 24w0x10000 == 24w0x10000) {
                                 Duelm.apply();
                             }
                             else {
@@ -1672,7 +1672,7 @@ control Nichols(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = Troup;
     }
     apply {
-        if ((meta.Laplace.Ocracoke & 16w0x2000) == 16w0x2000) {
+        if (meta.Laplace.Ocracoke & 16w0x2000 == 16w0x2000) {
             Winfall.apply();
         }
     }

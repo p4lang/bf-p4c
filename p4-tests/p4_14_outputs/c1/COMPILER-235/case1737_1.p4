@@ -859,7 +859,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 ruSbdS: {
                     switch (OgtsFH.apply().action_run) {
                         uYBjrZ: {
-                            if ((meta.ScmCsW.WzPLog & 24w0x10000) == 24w0x10000) {
+                            if (meta.ScmCsW.WzPLog & 24w0x10000 == 24w0x10000) {
                                 AosIFt.apply();
                             }
                             UHdtQj.apply();

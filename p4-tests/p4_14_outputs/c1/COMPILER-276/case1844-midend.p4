@@ -647,7 +647,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = _Wabuska();
     }
     apply {
-        if (hdr.eg_intr_md.egress_rid != 16w0 && (hdr.eg_intr_md.egress_rid & 16w0xe000) != 16w0xe000) 
+        if (hdr.eg_intr_md.egress_rid != 16w0 && hdr.eg_intr_md.egress_rid & 16w0xe000 != 16w0xe000) 
             _Grainola_0.apply();
         _Meservey_0.apply();
         _Whiteclay_0.apply();
@@ -1737,7 +1737,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Papeton: {
                     switch (_Marbury_0.apply().action_run) {
                         _Keyes: {
-                            if ((meta.Higganum.Cowpens & 24w0x10000) == 24w0x0) 
+                            if (meta.Higganum.Cowpens & 24w0x10000 == 24w0x0) 
                                 _Ikatan_0.apply();
                         }
                     }
@@ -1767,7 +1767,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Calcasieu_0.apply();
         if (hdr.Basalt[0].isValid()) 
             _BoxElder_0.apply();
-        if (meta.Waialua.Blossburg == 1w0 && (meta.Higganum.Yreka & 16w0x2000) == 16w0x2000) 
+        if (meta.Waialua.Blossburg == 1w0 && meta.Higganum.Yreka & 16w0x2000 == 16w0x2000) 
             _Riverland_0.apply();
     }
 }

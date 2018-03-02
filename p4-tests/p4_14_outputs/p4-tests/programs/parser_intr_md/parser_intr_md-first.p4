@@ -174,6 +174,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @parser_value_set_size(2) value_set<bit<9>> pvs_fabric_port;
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
@@ -192,6 +193,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
     @name(".start") state start {
         transition select(hdr.ig_intr_md.ingress_port) {
+            pvs_fabric_port: parse_fabric_header;
             default: parse_ethernet;
         }
     }

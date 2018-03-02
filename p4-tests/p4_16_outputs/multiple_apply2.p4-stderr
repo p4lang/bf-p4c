@@ -1,0 +1,12 @@
+tofino.p4(444): warning: max shadows max
+             in W max,
+                  ^^^
+tofino.p4(384)
+extern T max<T>(T t1, T t2);
+         ^^^
+tofino.p4(488): warning: max shadows max
+    W get<D>(in D data, in W base, in bit<32> max);
+                                              ^^^
+tofino.p4(384)
+extern T max<T>(T t1, T t2);
+         ^^^
