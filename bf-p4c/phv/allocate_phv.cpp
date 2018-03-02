@@ -346,16 +346,40 @@ bool CoreAllocation::satisfies_constraints(
                          "already placed in this container");
             return false; } }
 
-    // If `slice` is extracted, then check that no existing allocated field is
-    // also extracted.
+    // Are any (non-POV) slices extracted?
     bool hasExtracted = std::any_of(slices.begin(), slices.end(), [&](const PHV::AllocSlice& s) {
         return uses_i.is_extracted(s.field())
                && !PHV::Allocation::mutually_exclusive(mutex_i, s.field(), slice.field())
                && !s.field()->pov;
     });
+
+    // Are there any POV slices?
+    bool hasPOV = std::any_of(slices.begin(), slices.end(), [&](const PHV::AllocSlice& s) {
+        // POV fields are never mutually exclusive.
+        return s.field()->pov;
+    });
+
+    // If `slice` is extracted, then check that no existing allocated field is
+    // also extracted.
     if (!slice.field()->pov && uses_i.is_extracted(slice.field()) && hasExtracted) {
         LOG5("        constraint: slice is extracted but container already contains extracted "
              "slices");
+        return false; }
+
+    // ...and also check that no other field is a POV field.  (POV fields are
+    // also extracted, but they're special in that they're written bit-by-bit
+    // rather than as a whole container, which allows POV fields to be packed
+    // together if necessary.)
+    if (!slice.field()->pov && uses_i.is_extracted(slice.field()) && hasPOV) {
+        LOG5("        constraint: slice is extracted but container already contains POV bits"
+             "(which are extracted)");
+        return false; }
+
+    // Similarly, if `slice` is a POV bit, then check that no existing
+    // allocated field is extracted.
+    if (slice.field()->pov && hasExtracted) {
+        LOG5("        constraint: slice is a POV slice but container already contains non-POV "
+             "extracted slices");
         return false; }
 
     return true;

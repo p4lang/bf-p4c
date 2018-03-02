@@ -47,7 +47,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/adjust_instr7.p4
     # clot-phv interaction bug?
     testdata/p4_14_samples/exact_match_valid1.p4
-    testdata/p4_14_samples/gateway5.p4
   )
 
 endif() # HARLYN_STF
