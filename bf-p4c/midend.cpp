@@ -32,6 +32,7 @@
 #include "midend/validateProperties.h"
 #include "common/blockmap.h"
 #include "common/check_header_alignment.h"
+#include "common/flatten_emit_args.h"
 
 namespace BFN {
 
@@ -203,6 +204,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::UniqueParameters(&refMap, &typeMap),
         new P4::TypeChecking(&refMap, &typeMap, true),
         new FillFromBlockMap(&refMap, &typeMap),
+        new FlattenEmitArgs(),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
         new MidEndLast,

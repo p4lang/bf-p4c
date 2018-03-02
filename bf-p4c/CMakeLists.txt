@@ -84,6 +84,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/elim_unused.cpp
   common/extract_maupipe.cpp
   common/field_defuse.cpp
+  common/flatten_emit_args.cpp
   common/header_stack.cpp
   common/live_range_overlay.cpp
   common/multiple_apply.cpp
@@ -110,6 +111,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/elim_unused.h
   common/extract_maupipe.h
   common/field_defuse.h
+  common/flatten_emit_args.h
   common/header_stack.h
   common/live_range_overlay.h
   common/multiple_apply.h
