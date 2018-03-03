@@ -1031,7 +1031,8 @@ class address_map(csr_composite_object):
                         registers_to_write_with_dma = [ "mapram_config",
                             "imem_dark_subword16", "imem_dark_subword32", "imem_dark_subword8",
                             "imem_mocha_subword16", "imem_mocha_subword32", "imem_mocha_subword8",
-                            "imem_subword16", "imem_subword32", "imem_subword8" ]
+                            "imem_subword16", "imem_subword32", "imem_subword8",
+                            "galois_field_matrix"]
                         if product(obj.count) > 4 and (root_parent=="memories" or obj.name in registers_to_write_with_dma):
                             mem = chip.dma_block(obj.offset, obj.width, src_key=obj.name, is_reg=root_parent=="regs")
                             def mem_loop(sub_data, context):

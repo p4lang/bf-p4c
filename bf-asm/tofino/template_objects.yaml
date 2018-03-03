@@ -8,6 +8,7 @@ global:
   - write_dma=imem_subword8
   - write_dma=imem_subword16
   - write_dma=imem_subword32
+  - write_dma=galois_field_matrix
 generate:
   memories:
     pipe_top_level:
