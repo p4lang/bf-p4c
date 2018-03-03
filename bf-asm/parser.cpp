@@ -568,7 +568,40 @@ void Parser::State::Ref::check(gress_t gress, Parser *pa, State *state) {
                     ptr.push_back(st); } } }
 }
 
-static const char *loc_names[] = { "half", "half", "byte0", "byte1" };
+static const char* match_key_loc_name(int loc) {
+    if (options.target == TOFINO) {
+        if (loc == 0 || loc == 1) return "half";
+#if HAVE_JBAY
+    } else if (options.target == JBAY) {
+        if (loc == 0) return "byte2";
+        if (loc == 1) return "byte3";
+#endif // HAVE_JBAY
+    }
+    if (loc == 2) return "byte0";
+    if (loc == 3) return "byte1";
+
+    error(-1, "Invalid match key loc");
+    return nullptr;
+}
+
+static int match_key_loc(value_t &key, bool errchk = true) {
+    if (errchk && !CHECKTYPE(key, tSTR)) return -1;
+
+    if (options.target == TOFINO) {
+        if (key == "half" || key == "half0") return 0;
+#if HAVE_JBAY
+    } else if (options.target == JBAY) {
+        if (key == "byte2") return 0;
+        if (key == "byte3") return 1;
+#endif // HAVE_JBAY
+    }
+    if (key == "byte0") return 2;
+    if (key == "byte1") return 3;
+
+    if (errchk)
+        error(key.lineno, "Invalid matcher location %s", key.s);
+    return -1;
+}
 
 int Parser::State::MatchKey::move_down(int loc) {
     int to = loc;
@@ -587,7 +620,7 @@ int Parser::State::MatchKey::add_byte(int loc, int byte, bool use_saved) {
         return -1; }
     if (loc >= 0) {
         if ((specified >> loc) & 1)
-            error(lineno, "Multiple matches in %s matcher", loc_names[loc]);
+            error(lineno, "Multiple matches in %s matcher", match_key_loc_name(loc));
         specified |= (1 << loc);
         if (data[loc].bit >= 0 && move_down(loc) < 0)
             return -1;
@@ -603,16 +636,6 @@ int Parser::State::MatchKey::add_byte(int loc, int byte, bool use_saved) {
     data[loc].byte = use_saved ? USE_SAVED : byte;
     width += 8;
     return 0;
-}
-
-static int matchKeyLoc(value_t &key, bool errchk = true) {
-    if (errchk && !CHECKTYPE(key, tSTR)) return -1;
-    if (key == "half" || key == "half0") return 0;
-    if (key == "byte0") return 2;
-    if (key == "byte1") return 3;
-    if (errchk)
-        error(key.lineno, "Invalid matcher location %s", key.s);
-    return -1;
 }
 
 int Parser::State::MatchKey::setup_match_el(int at, value_t &spec) {
@@ -632,7 +655,7 @@ int Parser::State::MatchKey::setup_match_el(int at, value_t &spec) {
     case tMAP:
         if (at >= 0) goto error;
         for (int i = spec.map.size-1; i >= 0; i--)
-            if (setup_match_el(matchKeyLoc(spec.map[i].key), spec.map[i].value) < 0)
+            if (setup_match_el(match_key_loc(spec.map[i].key), spec.map[i].value) < 0)
                 return -1;
         return 0;
     case tSTR:
@@ -648,8 +671,8 @@ int Parser::State::MatchKey::setup_match_el(int at, value_t &spec) {
                 return -1; }
             ctr_neg = width++;
             return 0;
-        } else if (at < 0 && (at = matchKeyLoc(spec, false)) >= 0) {
-            if (at == 0 && add_byte(1, 0, true) < 0) return -1;
+        } else if (at < 0 && (at = match_key_loc(spec, false)) >= 0) {
+            if (options.target == TOFINO && at == 0 && add_byte(1, 0, true) < 0) return -1;
             return add_byte(at, 0, true); }
         /* fall through */
     default:
@@ -1066,7 +1089,7 @@ void Parser::State::MatchKey::preserve_saved(unsigned saved) {
             continue;
         if ((specified >> i) & 1)
             error(lineno, "match in %s matcher conflicts with previous state save "
-                  "action", loc_names[i]);
+                  "action", match_key_loc_name(i));
         else if (move_down(i) < 0) {
             error(lineno, "Ran out of matching space due to preserved values from "
                   "previous states");

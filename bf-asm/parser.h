@@ -85,7 +85,7 @@ class Parser : public Section {
         struct MatchKey {
             int     lineno;
             struct {
-            short   bit, byte;
+                short   bit, byte;
             }       data[4];
             enum { USE_SAVED = 0x7fff }; /* magic number can be stored in 'byte' field */
             short   specified;

@@ -184,12 +184,10 @@ class JBayPardeSpec : public PardeSpec {
     }
 
     const std::vector<MatchRegister> matchRegisters() const override {
-        // TODO(yumin): Currently, asm does not support jbay match registers,
-        // so we are still using the Tofino settings. Need to change this when
-        // asm support match register.
         return { MatchRegister("byte0", 1),
                  MatchRegister("byte1", 1),
-                 MatchRegister("half", 2) };
+                 MatchRegister("byte2", 1),
+                 MatchRegister("byte3", 1) };
     }
 };
 #endif /* HAVE_JBAY */
