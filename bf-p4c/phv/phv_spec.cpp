@@ -218,72 +218,50 @@ TofinoPhvSpec::TofinoPhvSpec() {
     addType(PHV::Type::TH);
     addType(PHV::Type::TW);
 
-    auto& options = BFNContext::get().options();
-    if (options.virtual_phvs == false) {
-        mauGroupSpec = {
-            { PHV::Type::B, std::make_pair(4, 16) },
-            { PHV::Type::H, std::make_pair(6, 16) },
-            { PHV::Type::W, std::make_pair(4, 16) }
-        };
+    auto phv_scale_factor = BFNContext::get().options().phv_scale_factor;
 
-        ingressOnlyMauGroupIds = {
-            { PHV::Type::B, { 0 } },
-            { PHV::Type::H, { 0 } },
-            { PHV::Type::W, { 0 } }
-        };
+    BUG_CHECK(unsigned(phv_scale_factor * 4) >= 1,
+              "PHV scale factor %1% too small", phv_scale_factor);
 
-        egressOnlyMauGroupIds = {
-            { PHV::Type::B, { 1 } },
-            { PHV::Type::H, { 1 } },
-            { PHV::Type::W, { 1 } }
-        };
+    mauGroupSpec = {
+        { PHV::Type::B, std::make_pair(4*phv_scale_factor, 16) },
+        { PHV::Type::H, std::make_pair(6*phv_scale_factor, 16) },
+        { PHV::Type::W, std::make_pair(4*phv_scale_factor, 16) }
+    };
 
-        tagalongCollectionSpec = {
-            { PHV::Type::TB, 4 },
-            { PHV::Type::TW, 4 },
-            { PHV::Type::TH, 6 }
-        };
+    std::vector<unsigned> ingressGroupIds;
+    for (unsigned i = 0; i < (unsigned)phv_scale_factor; ++i)
+        ingressGroupIds.push_back(4*i);
 
-        numTagalongCollections = 8;
+    ingressOnlyMauGroupIds = {
+        { PHV::Type::B, ingressGroupIds },
+        { PHV::Type::H, ingressGroupIds },
+        { PHV::Type::W, ingressGroupIds }
+    };
 
-        deparserGroupSize = {
-            { PHV::Type::B, { 8 } },
-            { PHV::Type::H, { 8 } },
-            { PHV::Type::W, { 4 } }
-        };
-    } else {  // virtual tofino with 2x phv resources :)
-        mauGroupSpec = {
-            { PHV::Type::B, std::make_pair(8, 16) },
-            { PHV::Type::H, std::make_pair(12, 16) },
-            { PHV::Type::W, std::make_pair(8, 16) }
-        };
+    std::vector<unsigned> egressGroupIds;
+    for (unsigned i = 0; i < (unsigned)phv_scale_factor; ++i)
+        egressGroupIds.push_back(4*i + 1);
 
-        ingressOnlyMauGroupIds = {
-            { PHV::Type::B, { 0, 4 } },
-            { PHV::Type::H, { 0, 4 } },
-            { PHV::Type::W, { 0, 4 } }
-        };
+    egressOnlyMauGroupIds = {
+        { PHV::Type::B, egressGroupIds },
+        { PHV::Type::H, egressGroupIds },
+        { PHV::Type::W, egressGroupIds }
+    };
 
-        egressOnlyMauGroupIds = {
-            { PHV::Type::B, { 1, 5 } },
-            { PHV::Type::H, { 1, 5 } },
-            { PHV::Type::W, { 1, 5 } }
-        };
+    tagalongCollectionSpec = {
+        { PHV::Type::TB, 4*phv_scale_factor },
+        { PHV::Type::TW, 4*phv_scale_factor },
+        { PHV::Type::TH, 6*phv_scale_factor }
+    };
 
-        tagalongCollectionSpec = {
-            { PHV::Type::TB, 8 },
-            { PHV::Type::TW, 8 },
-            { PHV::Type::TH, 12 }
-        };
+    numTagalongCollections = 8*phv_scale_factor;
 
-        numTagalongCollections = 16;
-
-        deparserGroupSize = {
-            { PHV::Type::B, { 16 } },
-            { PHV::Type::H, { 16 } },
-            { PHV::Type::W, { 8 } }
-        };
-    }
+    deparserGroupSize = {
+        { PHV::Type::B, 8*phv_scale_factor },
+        { PHV::Type::H, 8*phv_scale_factor },
+        { PHV::Type::W, 4*phv_scale_factor }
+    };
 }
 
 const bitvec& TofinoPhvSpec::individuallyAssignedContainers() const {

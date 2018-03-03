@@ -50,9 +50,16 @@ BFN_Options::BFN_Options() {
             return true;
         }, "perform JBay mocha and dark analysis");
 #endif
-    registerOption("--virtual-phvs", nullptr,
-        [this](const char *) { virtual_phvs = true; return true; },
-        "allow virtual phvs");
+    registerOption("--phv_scale_factor", "arg",
+        [this](const char* arg) {
+            float temp = std::atof(arg);
+            if (temp <= 0.0) {
+                ::error("Invalid phv scale factor %s", arg);
+                return false;
+            }
+            phv_scale_factor = temp;
+            return true; },
+         "Scale number of phvs by a factor");
     registerOption("--use-pa-solitary", nullptr,
         [this](const char *) { use_pa_solitary = true; return true; },
         "use phv solitary pragma");
