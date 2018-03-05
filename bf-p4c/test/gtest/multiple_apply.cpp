@@ -26,13 +26,15 @@ boost::optional<TofinoPipeTestCase> createMultipleApplyTest(const std::string& i
             bit<8>  b4;
             bit<8>  b5;
         }
-        
+
         struct metadata {
+bit<2> a;
+bit<1> b;
         }
-        
+
         struct headers { data_t data; }
-        
-        
+
+
         parser parse(packet_in packet, out headers hdr, inout metadata meta,
                  inout standard_metadata_t sm) {
             state start {
@@ -44,13 +46,13 @@ boost::optional<TofinoPipeTestCase> createMultipleApplyTest(const std::string& i
         control verifyChecksum(inout headers hdr, inout metadata meta) { apply { } }
         control ingress(inout headers hdr, inout metadata meta,
                         inout standard_metadata_t sm) {
-        
+
             action noop() {}
-        
+
             action t1_act(bit<8> b3) {
                 hdr.data.b3 = b3;
             }
-        
+
             action t2_act(bit<8> b4) {
                 hdr.data.b4 = b4;
             }
@@ -58,35 +60,35 @@ boost::optional<TofinoPipeTestCase> createMultipleApplyTest(const std::string& i
             action t3_act(bit<8> b5) {
                 hdr.data.b5 = b5;
             }
-        
+
             table t1 {
                 actions = { t1_act;
                             noop; }
-        	key = { hdr.data.h1 : exact; }
+            key = { hdr.data.h1 : exact; }
                 default_action = noop;
             }
-        
+
             table t2 {
                 actions = { t2_act;
                             noop; }
                 key = { hdr.data.h2: exact; }
-                default_action = noop; 
+                default_action = noop;
             }
 
             table t3 {
                 actions = { t3_act;
                             noop; }
                 key = { hdr.data.h3: exact; }
-                default_action = noop; 
+                default_action = noop;
             }
-        
-        
+
+
             apply {
-%INGRESS_APPLY%               
+%INGRESS_APPLY%
             }
-        
+
         }
-        
+
         control egress(inout headers hdr, inout metadata meta,
                        inout standard_metadata_t sm) {
             apply { } }
@@ -133,85 +135,6 @@ TEST_F(MultipleApplyTest, NonMatchingSequences) {
     EXPECT_FALSE(ma.distinct_error("ingress.t1"));
 }
 
-/** Because the gateway conditionals are different on t2, due to the constraint enforced by
- *  Brig currently, all gateways must be the same.  This is not a hardware constraint, as
- *  one could allocate a separate gateway for each conditional, and not link any of these
- *  gateways with the match table as a logical table, but that is a long term optimization
- */
-TEST_F(MultipleApplyTest, NonMatchingConditionals) {
-    auto test = createMultipleApplyTest(P4_SOURCE(P4Headers::NONE, R"(
-        if (hdr.data.b1 == 0) {
-            if (!t1.apply().hit) {
-                if (hdr.data.b2 == 0) {
-                    t2.apply();
-                }
-            }
-        } else {
-            if (hdr.data.b2 == 33) {
-                t2.apply();
-            }
-        }
-        t3.apply();
-    )"));
-
-    MultipleApply ma;
-    test->pipe->apply(ma);
-    EXPECT_TRUE(ma.gateway_chain_error("ingress.t2"));
-}
-
-/** The gateway conditional on this test are the same, but the next table of that gateways
- *  are different, which should not be replaceable
- */
-TEST_F(MultipleApplyTest, OppositeSequences) {
-    auto test = createMultipleApplyTest(P4_SOURCE(P4Headers::NONE, R"(
-        if (hdr.data.b1 == 0) {
-            if (!t1.apply().hit) {
-                if (hdr.data.b2 == 0) {
-                    t2.apply();
-                } else {
-                    t3.apply();
-                }
-            }
-        } else {
-            if (hdr.data.b2 == 0) {
-                t3.apply();
-            } else {
-                t2.apply();
-            }
-        }
-    )"));
-
-    MultipleApply ma;
-    test->pipe->apply(ma);
-    EXPECT_TRUE(ma.gateway_chain_error("ingress.t2"));
-    EXPECT_TRUE(ma.gateway_chain_error("ingress.t3"));
-
-}
-
-/** Even though the gateways are logically equivalent, the conditionals are written in such a way
- *  that the equivalence check will not understand what to do.
- */
-TEST_F(MultipleApplyTest, EquivalentGatewayBug) {
-    auto test = createMultipleApplyTest(P4_SOURCE(P4Headers::NONE, R"(
-        if (hdr.data.b1 == 0) {
-            if (!t1.apply().hit) {
-                if (hdr.data.b2 == 0 || hdr.data.b2 == 1) {
-                    t2.apply();
-                }
-            }
-        } else {
-            if (hdr.data.b2 == 1 || hdr.data.b2 == 0) {
-                t2.apply();
-            }
-        }
-        t3.apply();
-    )"));
-
-    MultipleApply ma;
-    test->pipe->apply(ma);
-    EXPECT_TRUE(ma.gateway_chain_error("ingress.t2"));
-}
-
 /** This is just an example that should completely work */
 TEST_F(MultipleApplyTest, ChainedApplications) {
     auto test = createMultipleApplyTest(P4_SOURCE(P4Headers::NONE, R"(
@@ -247,7 +170,7 @@ TEST_F(MultipleApplyTest, ChainedApplications) {
     EXPECT_FALSE(ma.gateway_chain_error("ingress.t1"));
     EXPECT_FALSE(ma.gateway_chain_error("ingress.t2"));
     EXPECT_FALSE(ma.gateway_chain_error("ingress.t3"));
-} 
+}
 
 /** Currently direct action calls are created as separate tables, and some equivalence check
  *  would be needed on these tables to wrap them together.  Unnecessary in the short-term
@@ -277,7 +200,7 @@ TEST_F(MultipleApplyTest, NonMutuallyExclusive) {
     auto test = createMultipleApplyTest(P4_SOURCE(P4Headers::NONE, R"(
         if (hdr.data.b1 == 0) {
             t2.apply();
-        } 
+        }
 
         if (hdr.data.b1 == 0) {
             t2.apply();
@@ -299,7 +222,7 @@ TEST_F(MultipleApplyTest, LogicallyMutuallyExclusive) {
     auto test = createMultipleApplyTest(P4_SOURCE(P4Headers::NONE, R"(
         if (hdr.data.b1 == 0) {
             t2.apply();
-        } 
+        }
 
         if (hdr.data.b1 == 1) {
             t2.apply();

@@ -156,55 +156,6 @@ bool MultipleApply::DistinctTables::preorder(const IR::MAU::Table *tbl) {
     return true;
 }
 
-/** This particular pass ensures that any table considered a gateway is identical in the IR
- *  tree above each appearance of a match table.  This is to ensure that these gateways
- *  do not have any limitations on being paired with any table
- */
-bool MultipleApply::UniqueGatewayChain::preorder(const IR::MAU::Table *tbl) {
-    if (tbl->match_table == nullptr)
-        return true;
-
-    safe_vector<const IR::MAU::Table *> gateway_chain;
-    for (auto ctxt = getContext(); ctxt; ctxt = ctxt->parent) {
-        if (ctxt->node->is<IR::BFN::Pipe>()) {
-            break;
-        } else if (ctxt->node->is<IR::MAU::TableSeq>()) {
-            continue;
-        } else if (auto upper_table = ctxt->node->to<IR::MAU::Table>()) {
-            if (upper_table->gateway_only())
-                gateway_chain.push_back(upper_table);
-        } else {
-            BUG("Unexpected IR Node within the table structure.");
-        }
-    }
-
-    if (gateway_chains.find(tbl->match_table) == gateway_chains.end()) {
-        gateway_chains[tbl->match_table] = gateway_chain;
-    } else {
-        auto chain_check = gateway_chains.at(tbl->match_table);
-        if (chain_check.size() != gateway_chain.size()) {
-            ::error("%s: Table %s is applied multiple times, but the gateway conditionals "
-                    "determining control flow are different for these instances.  Currently, "
-                    "the compiler does not allow different gateway conditionals above a "
-                    "repeated apply", tbl->srcInfo, tbl->name);
-            errors.emplace(tbl->match_table->externalName());
-            return true;
-        }
-
-        for (size_t i = 0; i < gateway_chain.size(); i++) {
-            if (chain_check[i] != gateway_chain[i]) {
-                ::error("%s: Table %s is applied multiple times, but the gateway conditionals "
-                       "determining control flow are different for these instances.  Currently, "
-                       "the compiler does not allow different gateway conditionals above a "
-                       "repeated apply", tbl->srcInfo, tbl->name);
-                errors.emplace(tbl->match_table->externalName());
-                return true;
-            }
-        }
-    }
-    return true;
-}
-
 MultipleApply::MultipleApply() {
     addPasses({
         &mutex,
@@ -212,6 +163,5 @@ MultipleApply::MultipleApply() {
         new EquivalentTableSequence(equiv_seqs),
         new RefactorSequence(equiv_seqs),
         new DistinctTables(distinct_errors),
-        new UniqueGatewayChain(gateway_chain_errors)
     });
 }

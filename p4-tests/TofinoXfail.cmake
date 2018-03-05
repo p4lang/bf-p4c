@@ -641,12 +641,6 @@ p4c_add_xfail_reason("tofino"
 
 #END: XFAILS that match glass XFAILS
 
-p4c_add_xfail_reason("tofino"
-  "Table .* is applied multiple times, but the gateway conditionals determining"
-  # extensions/p4_tests/p4_14/c1/COMPILER-100/eth_addr_cmp.p4
-  extensions/p4_tests/p4_14/eth_addr_cmp.p4
-  )
-
 # This code contains an implicit cast in an assignment in the parser; we need to
 # convert it into a slice instead of just ignoring the cast.
 p4c_add_xfail_reason("tofino"
@@ -1077,3 +1071,10 @@ p4c_add_xfail_reason("tofino"
   "AssertionError: A packet was received on device"
   extensions/p4_tests/p4_16/verify_checksum.p4
 )
+
+# Should fail because meaningless invalidate operand.
+p4c_add_xfail_reason("tofino"
+  "invalid operand"
+  extensions/p4_tests/p4_14/test_config_191_invalidate.p4
+)
+

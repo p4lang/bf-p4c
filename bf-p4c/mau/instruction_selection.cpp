@@ -379,6 +379,8 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
             }
         }
         return hd;
+    } else if (prim->name == "invalidate") {
+        return new IR::MAU::Instruction(prim->srcInfo, "invalidate", prim->operands[0]);
     } else {
         WARNING("unhandled in InstSel: " << *prim); }
     return prim;
@@ -720,9 +722,51 @@ const IR::Node *ConvertCastToSlice::postorder(IR::MAU::Instruction *instr) {
     return converted_instrs;
 }
 
+struct CollectInvalidatableFields : public Inspector {
+    explicit CollectInvalidatableFields(const PhvInfo& phv) : phv(phv) { }
 
+    bool preorder(const IR::BFN::DeparserParameter* parameter) override {
+        if (parameter->canPack == false) {
+            invalidatable_fields.insert(phv.field(parameter->source->field));
+        }
+        return true;
+    }
+
+    std::set<const PHV::Field*> invalidatable_fields;
+    const PhvInfo& phv;
+};
+
+struct CheckInvalidate : public Inspector {
+    CheckInvalidate(const PhvInfo& phv,
+                    const std::set<const PHV::Field*>& fields)
+        : phv(phv), invalidatable_fields(fields) { }
+
+
+    void postorder(const IR::Primitive *prim) override {
+        if (prim->name == "invalidate") {
+            auto* f = phv.field(prim->operands[0]);
+            if (!invalidatable_fields.count(f)) {
+                error("%s: invalid operand, %s", prim->srcInfo, prim);
+            }
+        }
+    }
+
+    const PhvInfo& phv;
+    const std::set<const PHV::Field*>& invalidatable_fields;
+};
+
+struct ValidateInvalidatePrimitive : public PassManager {
+    explicit ValidateInvalidatePrimitive(const PhvInfo& phv) {
+        auto* collectFields = new CollectInvalidatableFields(phv);
+        addPasses({
+                collectFields,
+                    new CheckInvalidate(phv, collectFields->invalidatable_fields),
+            });
+    }
+};
 
 DoInstructionSelection::DoInstructionSelection(PhvInfo &phv) : PassManager {
+    new ValidateInvalidatePrimitive(phv),
     new InstructionSelection(phv),
     new ConvertCastToSlice,
     new StatefulHashDistSetup(phv),
