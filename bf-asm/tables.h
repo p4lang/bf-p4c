@@ -929,6 +929,10 @@ DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",
     int         width = 1;
     int         constant_value = 0;
     table_type_t table_type() const override { return PHASE0; }
+    // Phase0 Tables are not actual tables. They cannot have action data
+    // or attached tables and do not need a logical id assignment, hence
+    // we skip pass0
+    void pass0() override {}
 )
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
 public:
