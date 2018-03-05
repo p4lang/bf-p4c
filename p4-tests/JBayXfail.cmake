@@ -210,3 +210,41 @@ p4c_add_xfail_reason("jbay"
   "instruction slot [0-9]+ used multiple times in action"
   testdata/p4_14_samples/instruct5.p4
   )
+
+p4c_add_xfail_reason("jbay"
+  "Error when trying to push config to bf_switchd"
+  extensions/p4_tests/p4_16/hash_driven_stats.p4
+  fabric.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "AssertionError: Expected packet was not received on device"
+  easy.p4
+  easy_no_match.p4
+  easy_no_match_with_gateway.p4
+  adata_constant_out_of_range_for_immediate.p4
+  ingress_checksum.p4
+  ONLab_packetio.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "TIMEOUT"
+  easy_exact.p4
+  ternary_match_constant_action_data.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "syntax error, unexpected IDENTIFIER, expecting ACTION or CONST or TABLE"
+  ipv4_checksum.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "Rendezvous of RPC that terminated with"
+  easy_ternary.p4
+  ecmp_pi.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "Can't fit table .* in input xbar by itself"
+  tor.p4
+  )

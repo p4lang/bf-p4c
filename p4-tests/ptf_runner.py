@@ -185,19 +185,23 @@ def run_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
     return p.returncode == 0
 
 # model uses the context json to lookup names when logging
-def start_model(model, out=None, context_json=None, port_map_path=None):
+def start_model(model, out=None, context_json=None, port_map_path=None, device=None):
     cmd = [model]
     if context_json is not None:
         cmd.extend(['-l', context_json])
     if port_map_path is not None:
         cmd.extend(['-f', port_map_path])
+    if device is not None and 'jbay' in device:
+        cmd.extend(['--chip-type=4']) # default CHIPTYPE=4 for Jbay
     return subprocess.Popen(cmd, stdout=out, stderr=out)
 
-def start_switchd(switchd, status_port, conf_path, out=None):
+def start_switchd(switchd, status_port, conf_path, out=None, device=None):
     cmd = [switchd]
     cmd.extend(['--status-port', str(status_port)])
     cmd.extend(['--install-dir', '/usr/local'])
     cmd.extend(['--conf-file', conf_path])
+    if device is not None and 'jbay' in device:
+        cmd.extend(['--skip-hld', 'krt'])
     cmd.append('--skip-p4')
     cmd.append('--background')
     return subprocess.Popen(cmd, stdout=out, stderr=out)
@@ -379,16 +383,18 @@ def main():
              open(switchd_log_path, 'w') as switchd_out:
             model_p = start_model(HARLYN_MODEL, out=model_out,
                                   context_json=cxt_json_path,
-                                  port_map_path=port_map_path)
+                                  port_map_path=port_map_path,
+                                  device=device)
             processes["model"] = model_p
 
             conf_path = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), 'dummy.conf')
+                os.path.dirname(os.path.realpath(__file__)), device + '.conf')
             assert(os.path.exists(conf_path))
 
             switchd_status_port = 6789
-            switchd_p = start_switchd(
-                BF_SWITCHD, switchd_status_port, conf_path, out=switchd_out)
+            switchd_p = start_switchd(BF_SWITCHD, switchd_status_port, 
+                                      conf_path, out=switchd_out,
+                                      device=device)
             processes["switchd"] = switchd_p
 
             success = wait_for_switchd(model_p, switchd_p, switchd_status_port)

@@ -37,11 +37,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_14/no_match_miss.p4
     )
 
-  p4c_add_xfail_reason("tofino"
-    "error: instruction slot [0-9]+ used multiple times in action push"
-    testdata/p4_14_samples/instruct5.p4
-    )
-
 endif() # HARLYN_STF_tofino
 
 # add the failures with no reason
@@ -110,14 +105,6 @@ p4c_add_xfail_reason("tofino"
   "Couldn't resolve computed value for"
   # XXX(seth): This code just uses packet_in.lookahead() in a way which isn't supported yet.
   testdata/p4_16_samples/issue355-bmv2.p4
-  )
-
-# This test selects against tuples containing `default` expressions, but the
-# ternary match values we generate in the assembly don't mark the appropriate
-# bits as "don't care".
-p4c_add_xfail_reason("tofino"
-  "expected packets on port .* not seen"
-  testdata/p4_16_samples/issue1000-bmv2.p4
   )
 
 # Too big a select key (96 bits) for tofino to match in one parser state.  Could be split into
@@ -586,10 +573,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "expected packet on port .* not seen"
-  testdata/p4_16_samples/issue774-4-bmv2.p4
-)
-p4c_add_xfail_reason("tofino"
   " Encountered invalid code in computed checksum control"
   #extensions/p4_tests/p4_14/switch_l2_profile.p4
 )
@@ -756,13 +739,12 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
-    extensions/p4_tests/p4_14/adb_shared2.p4
-    testdata/p4_14_samples/07-MultiProtocol.p4
-    testdata/p4_14_samples/instruct5.p4
-    testdata/p4_14_samples/tmvalid.p4
+    extensions/p4_tests/p4_14/adjust_instr7.p4
+    extensions/p4_tests/p4_14/no_match_miss.p4
     testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/issue655-bmv2.p4
-    extensions/p4_tests/p4_14/stateful2.p4
+    testdata/p4_16_samples/issue1000-bmv2.p4
+    testdata/p4_16_samples/issue774-4-bmv2.p4
     extensions/p4_tests/p4_16/multiple_apply1.p4
     extensions/p4_tests/p4_16/container_dependency.p4
     # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
@@ -773,19 +755,9 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     )
 
   p4c_add_xfail_reason("tofino"
-    "StatusCode.UNKNOWN, Error when adding match entry to target"
-    testdata/p4_14_samples/exact_match_valid1.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: .*: wrong (packets|bytes) count: expected 8 not 64"
+    "AssertionError: .*: wrong (packets|bytes) count: expected 8 not 68"
     # counter3 fails because it receives 64 bytes: for PTF the test should be adjusted to send more than 8 bytes
     testdata/p4_14_samples/counter3.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: .*: wrong (packets|bytes) count: expected 1 not 0"
-    testdata/p4_14_samples/counter4.p4
     )
 
   # P4runtime p4info.proto gen
@@ -794,10 +766,9 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/exact_match_mask1.p4
     )
 
-# Detailed error  "<_Rendezvous of RPC that terminated with (StatusCode.INVALID_ARGUMENT, Cannot map table entry to handle)>"
   p4c_add_xfail_reason("tofino"
-    "StatusCode.INVALID_ARGUMENT, Cannot map table entry to handle"
-    testdata/p4_14_samples/counter2.p4
+    "error: instruction slot [0-9]+ used multiple times in action push"
+    testdata/p4_14_samples/instruct5.p4
     )
 
 # BRIG-241
@@ -805,16 +776,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     "AssertionError: Invalid match name .* for table .*"
     testdata/p4_14_samples/exact_match_mask1.p4
     )
-
-  #BRIG-357
-  p4c_add_xfail_reason("tofino"
-    "StatusCode.UNKNOWN, Error in first phase of device update"
-    extensions/p4_tests/p4_14/adjust_instr3.p4
-    extensions/p4_tests/p4_14/action_default_multiple.p4
-    extensions/p4_tests/p4_14/overlay_add_header.p4
-    extensions/p4_tests/p4_14/no_match_miss.p4
-  )
-
 
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
@@ -1013,13 +974,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1127-bmv2.p4
   )
 
-# BRIG-411
-# STF test bug, passed on stf2ptf
-p4c_add_xfail_reason("tofino"
-  ".* expected packet.* on port .* not seen"
-  testdata/p4_14_samples/basic_routing.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
   extensions/p4_tests/p4_14/test_config_324_tcam_range_11.p4
@@ -1076,5 +1030,45 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "invalid operand"
   extensions/p4_tests/p4_14/test_config_191_invalidate.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "stf2ptf.STF2ptf ... ERROR"
+  # Detailed: "KeyError: (0, 10)"
+  testdata/p4_14_samples/parser_dc_full.p4
+  # Detailed: "Error when adding match entry to target" 
+  testdata/p4_14_samples/exact_match3.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "p4c CRASH with signal 6" 
+  extensions/p4_tests/p4_16/cast_widening_add.p4
+  extensions/p4_tests/p4_16/atcam_match2.p4
+  extensions/p4_tests/p4_16/multiple_apply2.p4
+  extensions/p4_tests/p4_16/atcam_match4.p4
+  extensions/p4_tests/p4_16/multiple_apply3.p4
+  extensions/p4_tests/p4_16/atcam_match_wide1.p4
+  extensions/p4_tests/p4_16/cast_narrowing_set.p4
+  extensions/p4_tests/p4_16/multiple_apply1.p4
+  extensions/p4_tests/p4_16/atcam_match1.p4
+  extensions/p4_tests/p4_16/cast_widening_set.p4
+  extensions/p4_tests/p4_16/atcam_match5.p4
+  extensions/p4_tests/p4_16/test_compiler_macro_defs.p4
+  extensions/p4_tests/p4_16/ipv4_checksum.p4
+  extensions/p4_tests/p4_16/container_dependency.p4
+  extensions/p4_tests/p4_16/default_actions.p4
+  extensions/p4_tests/p4_16/cast_narrowing_add.p4
+  extensions/p4_tests/p4_16/atcam_match3.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "expecting ACTION or CONST or TABLE"
+  extensions/p4_tests/p4_16/ipv4_checksum.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Error when trying to push config to bf_switchd"
+  extensions/p4_tests/p4_14/sful_1bit.p4
+  extensions/p4_tests/p4_14/stateful2.p4
 )
 

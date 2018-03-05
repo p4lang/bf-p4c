@@ -16,7 +16,9 @@ else
     DEBUGGER_COMMAND="gdb --args"
 fi
 
-TIMEOUT=${P4C_TIMEOUT:-500}
+# Setting this timeout (490) to be lower than the ctest timeout (500) 
+# to capture known failures due to test timeout for XFAIL
+TIMEOUT=${P4C_TIMEOUT:-490}
 TIME_COMMAND="" # don't time commands
 verbose=false
 debug=false

@@ -23,14 +23,19 @@ Running PTF tests:
 All PTF tests are tagged with the 'ptf' label. Therefore, to run all PTF tests:
 
     cd build/p4c
-    ctest -V -L ptf
+    - For tofino
+    ctest -V -L ptf -R "^tofino"
+    - For jbay
+    ctest -V -L ptf -R "^jbay"
 
 To run the PTF tests for a specific P4 program, use the '-R' option, with the
 name of your P4 program. For example:
 
     cd build/p4c
-    ctest -V -L ptf -R easy_ternary
-
+    - For tofino
+    ctest -V -L ptf -R "^tofino.*easy_ternary"
+    - For jbay
+    ctest -V -L ptf -R "^jbay.*easy_ternary"
 
 Running STF tests:
 ==================
@@ -83,7 +88,7 @@ general, `$PTF_DIR` corresponds to `p4-tests/p4_<version>/<prog_name>.ptf`.
 1. **Start bf_switchd**
 
     ```bash
-    sudo bf_switchd --install-dir /usr/local --conf-file p4-tests/dummy.conf --skip-p4
+    sudo bf_switchd --install-dir /usr/local --conf-file p4-tests/tofino.conf --skip-p4
     ```
 
 1. **Push P4 config to model / driver**

@@ -42,8 +42,58 @@ set (JBAY_TEST_SUITES
 
 p4c_add_bf_backend_tests("jbay" "${JBAY_TEST_SUITES}")
 
-#p4c_add_ptf_test_with_ptfdir (
-#    "jbay" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
-#    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
+set (testExtraArgs "${testExtraArgs} -jbay")
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" easy.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy.ptf)
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" easy_exact.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_exact.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_exact.ptf)
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" easy_no_match.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_no_match.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_no_match.ptf)
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" easy_no_match_with_gateway.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_no_match_with_gateway.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_no_match_with_gateway.ptf)
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" easy_ternary.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_ternary.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_ternary.ptf)
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" ecmp_pi.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ecmp_pi.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ecmp_pi.ptf)
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" ternary_match_constant_action_data.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ternary_match_constant_action_data.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ternary_match_constant_action_data.ptf)
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" adata_constant_out_of_range_for_immediate.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/adata_constant_out_of_range_for_immediate.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/adata_constant_out_of_range_for_immediate.ptf)
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" fabric.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf)
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" ingress_checksum.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ingress_checksum.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ingress_checksum.ptf)
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" ipv4_checksum.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ipv4_checksum.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ipv4_checksum.ptf)
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" ONLab_packetio.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ONLab_packetio.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ONLab_packetio.ptf)
+
+p4c_add_ptf_test_with_ptfdir (
+    "jbay" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
 
 include(JBayXfail.cmake)
