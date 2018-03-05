@@ -1003,6 +1003,7 @@ struct NulOP : VLIWInstruction {
         std::string name;
         unsigned opcode;
         Decode(const char *n, unsigned opc) : Instruction::Decode(n), name(n), opcode(opc) {}
+        Decode(const char *n, target_t targ, unsigned opc) : Instruction::Decode(n, targ), name(n), opcode(opc) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     } *opc;
@@ -1181,8 +1182,7 @@ static AluOP::Decode        opADD         ("add",           0x23e, true),
                             opSETHI       ("sethi",         0x39e, true);
 static LoadConst::Decode    opLoadConst   ("load-const");
 static Set::Decode          opSet         ("set");
-static NulOP::Decode        opInvalidate  ("invalidate",    0x3800),
-                            opNoop        ("noop",          0x0);
+static NulOP::Decode        opNoop        ("noop",          0x0);
 static ShiftOP::Decode      opSHL         ("shl",           0x0c, false),
                             opSHRS        ("shrs",          0x1c, false),
                             opSHRU        ("shru",          0x14, false),
@@ -1191,9 +1191,10 @@ static DepositField::Decode opDepositField;
 
 AluOP::Decode* Set::opA = &VLIW::opA;
 
-static AluOP3Src::Decode    tf_opBMSET    ("bitmasked-set", TOFINO, 0x2e);
-static CondMoveMux::Decode  tf_opCondMove ("cmov",  TOFINO, 0x16, true,  5, "conditional-move");
-static CondMoveMux::Decode  tf_opCondMux  ("cmux",  TOFINO, 0x6,  false, 2, "conditional-mux");
+static AluOP3Src::Decode    tf_opBMSET       ("bitmasked-set", TOFINO, 0x2e);
+static CondMoveMux::Decode  tf_opCondMove    ("cmov",  TOFINO, 0x16, true,  5, "conditional-move");
+static CondMoveMux::Decode  tf_opCondMux     ("cmux",  TOFINO, 0x6,  false, 2, "conditional-mux");
+static NulOP::Decode        tf_opInvalidate  ("invalidate", TOFINO, 0x3800);
 #if HAVE_JBAY
 static AluOP3Src::Decode    jb_opBMSET    ("bitmasked-set", JBAY, 0x0e);
 static CondMoveMux::Decode  jb_opCondMove ("cmov",    JBAY, 0x6, true,  5, "conditional-move");
