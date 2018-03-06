@@ -65,7 +65,7 @@ void Memories::clear_uses() {
     overflow_bus.clear();
     vert_overflow_bus.clear();
     memset(sram_inuse, 0, sizeof(sram_inuse));
-    memset(gw_bytes_per_sb, 0, sizeof(gw_bytes_per_sb));
+    memset(gw_bytes_reserved, false, sizeof(gw_bytes_reserved));
     memset(mapram_inuse, 0, sizeof(mapram_inuse));
     memset(tcam_midbyte_use, -1, sizeof(tcam_midbyte_use));
 }
@@ -931,14 +931,14 @@ void Memories::break_atcams_into_partitions() {
 bool Memories::determine_match_rows_and_cols(SRAM_group *group, int row, unsigned column_mask,
         match_selection &match_select, bool atcam) {
     // Pick a bus
-    int match_bus = select_search_bus(group, 0, row);
+    int match_bus = select_search_bus(group, group->width - 1, row);
     BUG_CHECK(match_bus >= 0, "Search somehow found an impossible bus");
     match_select.rows.push_back(row);
     match_select.buses[row] = match_bus;
     int cols = 0;
     std::set<int> determined_rows;
     determined_rows.emplace(row);
-    match_select.widths[row] = 0;
+    match_select.widths[row] = group->width - 1;
 
     // Pick available columns
     for (int i = 0; i < SRAM_COLUMNS && cols < group->left_to_place(); i++) {
@@ -950,7 +950,7 @@ bool Memories::determine_match_rows_and_cols(SRAM_group *group, int row, unsigne
     }
 
     // If the match is wide, pick rows that have these columns available
-    for (int i = 1; i < group->width; i++) {
+    for (int i = group->width - 2; i >= 0; i--) {
         safe_vector<int> matching_rows =
             available_match_SRAMs_per_row(match_select.column_mask, column_mask,
                                           determined_rows, group, i);
@@ -1017,16 +1017,24 @@ void Memories::fill_out_match_alloc(SRAM_group *group, match_selection &match_se
         alloc.type = Use::ATCAM;
         int number = 0;
         for (auto col : match_select.cols) {
+            safe_vector<std::pair<int, int>> ram_pairs(match_select.rows.size());
             for (auto row : match_select.rows) {
-                alloc.ways[number].rams.emplace_back(row, col);
+                ram_pairs[match_select.widths.at(row)] = std::make_pair(row, col);
             }
+            std::reverse(ram_pairs.begin(), ram_pairs.end());
+            alloc.ways[number].rams.insert(alloc.ways[number].rams.end(),
+                                           ram_pairs.begin(), ram_pairs.end());
             number++;
         }
     } else {
         for (auto col : match_select.cols) {
+            safe_vector<std::pair<int, int>> ram_pairs(match_select.rows.size());
             for (auto row : match_select.rows) {
-                alloc.ways[group->number].rams.emplace_back(row, col);
+                ram_pairs[match_select.widths.at(row)] = std::make_pair(row, col);
             }
+            std::reverse(ram_pairs.begin(), ram_pairs.end());
+            alloc.ways[group->number].rams.insert(alloc.ways[group->number].rams.end(),
+                                                  ram_pairs.begin(), ram_pairs.end());
         }
     }
     allocation_count++;
@@ -2507,23 +2515,23 @@ Memories::table_alloc *Memories::find_corresponding_exact_match(cstring name) {
     return nullptr;
 }
 
-bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
-                                 int row, int col) {
-    if (!ta->match_ixbar->exact_comp(exact_ta->match_ixbar, width_sect)) return false;
-    // FIXME: Needs to better orient with the layout
-    int bytes_needed = exact_ta->table->layout.match_bytes;
-    bytes_needed = (exact_ta->table->layout.overhead_bits + 7) / 8;
-    int groups = exact_ta->layout_option->way.match_groups;
-    int width = exact_ta->layout_option->way.width;
-    bytes_needed *= groups * width;
-    // FIXME: For version bits
-    bytes_needed += groups / 2 * width;
-    int total_bytes = 16 * width;
-    int remaining_bytes = total_bytes - bytes_needed - exact_ta->attached_gw_bytes;
-    if (remaining_bytes < ta->match_ixbar->gw_search_bus_bytes) {
+bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int row, int col) {
+    auto search_bus = sram_search_bus[row][col];
+    BUG_CHECK(exact_ta->table_format->ixbar_group_per_width.count(search_bus.hash_group) > 0,
+              "Miscoordination of what hash groups are on the search bus vs. what hash "
+              "groups are in the table format");
+
+    auto ixbar_groups = exact_ta->table_format->ixbar_group_per_width.at(search_bus.hash_group);
+    int ixbar_group = ixbar_groups[search_bus.width_section];
+
+    if (ixbar_group != ta->match_ixbar->gateway_group())
         return false;
-    }
-    if (gw_bytes_per_sb[row][col] + ta->match_ixbar->gw_search_bus_bytes > 4)
+
+    int lo = TableFormat::SINGLE_RAM_BYTES * search_bus.width_section;
+
+    auto avail_bytes = exact_ta->table_format->avail_sb_bytes;
+    if (avail_bytes.getslice(lo, ta->match_ixbar->gw_search_bus_bytes).popcount()
+        != ta->match_ixbar->gw_search_bus_bytes)
         return false;
     return true;
 }
@@ -2565,20 +2573,24 @@ bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring
                 // FIXME: currently we have to fold in the table format to this equation
                 // in order to share a format
                 if (ta->match_ixbar->gw_search_bus) {
-                    continue;
-                    // if (!gw_search_bus_fit(ta, exact_ta, bus.second, i, j)) continue;
+                    if (gw_bytes_reserved[i][k])
+                        continue;
+                    if (!gw_search_bus_fit(ta, exact_ta, i, k))
+                        continue;
                 }
                 // Because multiple ways could have different hash groups, this check is no
                 // longer valid
                 if (ta->match_ixbar->gw_hash_group) {
-                    continue;
+                    auto sbi = sram_search_bus[i][k];
+                    if (sbi.hash_group != ta->match_ixbar->bit_use[0].group)
+                        continue;
                     // FIXME: Currently all ways do not share the same hash_group
                     // if (ta->match_ixbar->bit_use[0].group
                        //  != exact_ta->match_ixbar->way_use[0].group)
                          // continue;
                 }
                 exact_ta->attached_gw_bytes += ta->match_ixbar->gw_search_bus_bytes;
-                gw_bytes_per_sb[i][k] += ta->match_ixbar->gw_search_bus_bytes;
+                gw_bytes_reserved[i][k] = true;
                 alloc.row.emplace_back(i, k);
                 alloc.gateway.unit = j;
                 gateway_use[i][j] = name;

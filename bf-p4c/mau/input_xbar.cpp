@@ -56,45 +56,71 @@ int IXBar::Use::hash_groups() const {
     return rv;
 }
 
-safe_vector<IXBar::Use::Byte> IXBar::Use::match_hash_single() const {
-    if (atcam)
-        return atcam_match();
-    safe_vector<IXBar::Use::Byte> single_match;
+/** Returns each vector of match data.  If multiple hash groups are used, then the allocation,
+ *  per hash group is provided
+ */
+IXBar::Use::TotalBytes IXBar::Use::match_hash(safe_vector<int> *hash_groups) const {
+    TotalBytes rv;
+    if (atcam) {
+        rv = atcam_match();
+        if (hash_groups) {
+            int atcam_partition_group = -1;
+            atcam_partition(&atcam_partition_group);
+            hash_groups->push_back(atcam_partition_group);
+        }
+        return rv;
+    }
+
     for (int i = 0; i < HASH_GROUPS; i++) {
         if (hash_table_inputs[i] == 0) continue;
+        auto rv_index = new safe_vector<Byte>();
         for (auto byte : use) {
             int hash_group = byte.loc.group * 2 + byte.loc.byte / 8;
-            if ((1 << hash_group) & hash_table_inputs[i])
-                single_match.push_back(byte);
+            if ((1 << hash_group) & hash_table_inputs[i]) {
+                rv_index->push_back(byte);
+            }
         }
-        break;
+
+        rv.push_back(rv_index);
+        if (hash_groups)
+            hash_groups->push_back(i);
     }
-    return single_match;
+    return rv;
 }
 
 /** Do not count partition indexes within the match bytes and double count repeated bytes
  */
-safe_vector<IXBar::Use::Byte> IXBar::Use::atcam_match() const {
-    safe_vector<IXBar::Use::Byte> single_match;
+IXBar::Use::TotalBytes IXBar::Use::atcam_match() const {
+    TotalBytes single_match;
+    single_match.emplace_back(new safe_vector<Byte>());
     for (auto byte : use) {
         if (byte.atcam_index)
             continue;
-        single_match.push_back(byte);
+        single_match[0]->push_back(byte);
         if (byte.atcam_double) {
             auto repeat_byte = byte;
             repeat_byte.match_index = 1;
-            single_match.push_back(repeat_byte);
+            single_match[0]->push_back(repeat_byte);
         }
     }
     return single_match;
 }
 
-safe_vector<IXBar::Use::Byte> IXBar::Use::atcam_partition() const {
+/** Provides the bytes and hash group location of the partition index of an atcam table
+ */
+safe_vector<IXBar::Use::Byte> IXBar::Use::atcam_partition(int *hash_group) const {
     safe_vector<IXBar::Use::Byte> partition;
     for (auto byte : use) {
         if (!byte.atcam_index)
             continue;
         partition.push_back(byte);
+    }
+    if (hash_group) {
+        for (int i = 0; i < HASH_GROUPS; i++) {
+            if (hash_table_inputs[i] == 0) continue;
+            *hash_group = i;
+            break;
+        }
     }
     return partition;
 }
@@ -105,7 +131,8 @@ safe_vector<IXBar::Use::Byte> IXBar::Use::atcam_partition() const {
 int IXBar::Use::search_buses_single() const {
     unsigned counted = 0;
     int rv = 0;
-    for (auto &b : match_hash_single()) {
+
+    for (auto &b : *match_hash()[0]) {
         assert(b.loc.group >= 0 && b.loc.group < 16);
         assert(b.search_bus >= 0 && b.search_bus < 16);
         if (((1 << b.search_bus) & counted) == 0) {
@@ -116,50 +143,61 @@ int IXBar::Use::search_buses_single() const {
     return rv;
 }
 
-safe_vector<std::pair<int, int>> IXBar::Use::bits_per_search_bus_single() const {
-    int bits_per[IXBar::EXACT_GROUPS] = { 0 };
-    auto single_match = match_hash_single();
-
-    for (auto &b : match_hash_single()) {
-        assert(b.loc.group >= 0 && b.loc.group < 8);
-        assert(b.search_bus >= 0 && b.search_bus < 8);
-        bits_per[b.search_bus] += b.bit_use.popcount();
+/** Returns the ixbar group that the gateway is allocated to */
+int IXBar::Use::gateway_group() const {
+    int rv = -1;
+    bool unset = true;
+    for (auto &b : use) {
+        if (unset)
+            rv = b.loc.group;
+        else if (rv != b.loc.group)
+            BUG("Gateway can only currently be allocated to one ixbar group");
     }
-
-    safe_vector<std::pair<int, int>> sizes;
-    for (int i = 0; i < IXBar::EXACT_GROUPS; i++) {
-         if (bits_per[i] == 0) continue;
-         sizes.emplace_back(i, bits_per[i]);
-    }
-    return sizes;
+    return rv;
 }
 
-bool IXBar::Use::exact_comp(const IXBar::Use *exact_use, int width) const {
-    unsigned gw_counted = 0, exact_counted = 0;
-    for (auto &b : use) {
-        assert(b.loc.group >= 0 && b.loc.group < 16);
-        if (!(1 & (gw_counted >> b.loc.group))) {
-            gw_counted |= 1U << b.loc.group; } }
+/** Provides information per search bus of how many bytes/bits a particular section of
+ *  table uses in order to determine what section is the best candidate to ghost off
+ */
+safe_vector<IXBar::Use::TotalInfo> IXBar::Use::bits_per_search_bus() const {
+    safe_vector<TotalInfo> rv;
+    safe_vector<int> hash_groups;
+    auto match_bytes = match_hash(&hash_groups);
+    int hash_index = 0;
 
-    int exact_groups = 0;
-    for (auto &b : exact_use->use) {
-        if (!(1 & (exact_counted >> b.loc.group))) {
-            ++exact_groups;
-            exact_counted |= 1U << b.loc.group; } }
+    for (auto &single_match : match_bytes) {
+        int bits_per[IXBar::EXACT_GROUPS] = { 0 };
+        int bytes_per[IXBar::EXACT_GROUPS] = { 0 };
+        int group_per[IXBar::EXACT_GROUPS];
+        std::fill(group_per, group_per + IXBar::EXACT_GROUPS, -1);
 
-    if (width != 0) {
-        int groups_found = 0, index = 0;
-        while (groups_found < exact_groups) {
-            if ((1 << index) & exact_counted) {
-                if (groups_found == width) {
-                    exact_counted &= ~(1 << index);
-                }
-                groups_found++;
-            }
-            index++;
+        for (auto &b : *single_match) {
+            assert(b.loc.group >= 0 && b.loc.group < 8);
+            assert(b.search_bus >= 0 && b.search_bus < 8);
+            bits_per[b.search_bus] += b.bit_use.popcount();
+            bytes_per[b.search_bus]++;
+            if (group_per[b.search_bus] != -1)
+                BUG_CHECK(group_per[b.search_bus] == b.loc.group, "Bytes on same search bus are "
+                          "not contained within the same ixbar group");
+            group_per[b.search_bus] = b.loc.group;
         }
+
+        safe_vector<GroupInfo> sizes;
+        int search_bus_index = 0;
+        for (int i = 0; i < IXBar::EXACT_GROUPS; i++) {
+             if (bits_per[i] == 0) continue;
+             sizes.emplace_back(search_bus_index, group_per[i], bytes_per[i], bits_per[i]);
+             search_bus_index++;
+        }
+
+        std::sort(sizes.begin(), sizes.end(),
+            [=](const GroupInfo &a, const GroupInfo &b) {
+            return a.search_bus < b.search_bus;
+        });
+        rv.emplace_back(hash_groups[hash_index], sizes);
+        hash_index++;
     }
-    return exact_counted & gw_counted;
+    return rv;
 }
 
 unsigned IXBar::Use::compute_hash_tables() {
@@ -815,7 +853,8 @@ void IXBar::allocate_groups(safe_vector<IXBar::Use::Byte *> &unalloced,
         int leeway = std::max(max_possible_bytes - bytes_to_allocate, 0);
         int required_allocation_bytes = std::max(bytes_per_group(ternary) - leeway, 0);
 
-        std::sort(order.begin(), order.end(), [=](const grp_use &a, const grp_use &b) {
+        std::sort(order.begin(), order.end(),
+                 [required_allocation_bytes, prefer_found](const grp_use &a, const grp_use &b) {
             if (!a.attempted && b.attempted)
                 return true;
             if (b.attempted && !a.attempted)
@@ -833,9 +872,11 @@ void IXBar::allocate_groups(safe_vector<IXBar::Use::Byte *> &unalloced,
             if (prefer_found) {
                if ((t = a.found.popcount() - b.found.popcount()) != 0)
                    return t > 0;
+               if ((t = a.total_avail() - b.total_avail()) != 0)
+                   return t < 0;
             }
 
-            if ((t = a.free.popcount() - b.free.popcount()) != 0)
+            if ((t = a.total_avail() - b.total_avail()) != 0)
                 return t > 0;
             return a.group < b.group;
         });
@@ -1420,23 +1461,21 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     alloc.gw_search_bus = false; alloc.gw_hash_group = false;
     alloc.gw_search_bus_bytes = 0;
     int hash_bus_bits = 0;
+    bool xor_required = false;
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
     if (collect.info.empty()) return true;
+
     for (auto &info : collect.info) {
         int flags = 0;
+
         if (info.second.xor_with) {
             flags |= IXBar::Use::NeedXor;
-            alloc.gw_search_bus = true;
             // FIXME: This need to be coordinated with the actual PHV!!!
-            alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
+            xor_required = true;
         } else if (info.second.need_range) {
             flags |= IXBar::Use::NeedRange;
-            alloc.gw_hash_group = true;
             hash_bus_bits += info.first->size;
-        } else {
-            alloc.gw_search_bus = true;
-            alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
         }
         add_use(alloc, info.first, &info.second.bits, flags, NO_BYTE_TYPE); }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;
@@ -1455,6 +1494,17 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         alloc.clear();
         LOG3("collect.compute_offsets failed?");
         return false; }
+
+    if (collect.bits) {
+        alloc.gw_hash_group = true;
+    }
+    if (collect.bytes > 0) {
+        alloc.gw_search_bus = true;
+        alloc.gw_search_bus_bytes = collect.bytes;
+        if (xor_required)
+            alloc.gw_search_bus_bytes += GATEWAY_SEARCH_BYTES;
+    }
+
     if (collect.bits > 0) {
         int hash_table_input = alloc.compute_hash_tables();
         int hash_group = getHashGroup(hash_table_input);

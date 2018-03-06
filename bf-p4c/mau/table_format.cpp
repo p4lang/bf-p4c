@@ -36,8 +36,7 @@ bool TableFormat::analyze_layout_option() {
     }
 
     int per_RAM = layout_option.way.match_groups / layout_option.way.width;
-    safe_vector<std::pair<int, int>> sizes
-        = match_ixbar.bits_per_search_bus_single();
+    auto total_info = match_ixbar.bits_per_search_bus();
 
     for (int i = 0; i < layout_option.way.match_groups; i++) {
         use->match_groups.emplace_back();
@@ -50,14 +49,33 @@ bool TableFormat::analyze_layout_option() {
     search_bus_per_width.resize(layout_option.way.width, 0);
     version_allocated.resize(layout_option.way.match_groups, false);
 
-    single_match = match_ixbar.match_hash_single();
+    single_match = *(match_ixbar.match_hash()[0]);
 
     if (per_RAM > 0) {
-        bool rv = analyze_skinny_layout_option(per_RAM, sizes);
+        bool rv = analyze_skinny_layout_option(per_RAM, total_info[0].all_group_info);
         if (!rv) return false;
     } else {
-        bool rv = analyze_wide_layout_option(sizes);
+        bool rv = analyze_wide_layout_option(total_info[0].all_group_info);
         if (!rv) return false;
+    }
+
+
+    for (auto &hi : total_info) {
+        safe_vector<int> ixbar_groups;
+        std::sort(hi.all_group_info.begin(), hi.all_group_info.end(),
+            [=](const IXBar::Use::GroupInfo &a, IXBar::Use::GroupInfo &b) {
+            return a.search_bus < b.search_bus;
+        });
+
+        for (auto sb : search_bus_per_width) {
+            ixbar_groups.push_back(hi.all_group_info[sb].ixbar_group);
+        }
+        use->ixbar_group_per_width[hi.hash_group] = ixbar_groups;
+    }
+
+    for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
+        bool result_bus_needed = overhead_groups_per_RAM[i] > 0;
+        use->result_bus_needed.push_back(result_bus_needed);
     }
 
     // Unsure if more code will be required here in the future
@@ -67,7 +85,7 @@ bool TableFormat::analyze_layout_option() {
 /* Specifically for the allocation of groups that only require one RAM.  If it requires
    multiple match groups, then balance these match groups and corresponding overhead */
 bool TableFormat::analyze_skinny_layout_option(int per_RAM,
-                                               safe_vector<std::pair<int, int>> &sizes) {
+        safe_vector<IXBar::Use::GroupInfo> &sizes) {
     if (match_ixbar.search_buses_single() > 1) {
         return false;  // FIXME: deal with this later, essentially potentially can ghost
                        // the extra group of if possible/have enough space
@@ -90,15 +108,15 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM,
 
     // Every single RAM is assigned the same search bus, as there is only one
     for (int i = 0; i < layout_option.way.width; i++) {
-        search_bus_per_width[i] = sizes[0].first;
+        search_bus_per_width[i] = sizes[0].search_bus;
     }
-    ghost_bit_bus = sizes[0].first;
+    ghost_bit_bus = sizes[0].search_bus;
     return true;
 }
 
 /* Specifically for the allocation of groups that require multiple RAMs.  Determine where
    the overhead has to be, and which RAMs contain the particular match groups */
-bool TableFormat::analyze_wide_layout_option(safe_vector<std::pair<int, int>> &sizes) {
+bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> &sizes) {
     size_t RAM_per = (layout_option.way.width + layout_option.way.match_groups - 1)
                      / layout_option.way.match_groups;
     if (layout_option.way.width % layout_option.way.match_groups == 0
@@ -119,11 +137,10 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<std::pair<int, int>> &s
     // Whichever one has the least amount of bits will be the group in which the overhead
     // will be stored.  This is because we can ghost the most bits off in that section
     std::sort(sizes.begin(), sizes.end(),
-        [=](const std::pair<int, int> &a, const std::pair<int, int> &b) {
+        [=](const IXBar::Use::GroupInfo &a, const IXBar::Use::GroupInfo &b) {
         int t;
-        if ((t = a.second - b.second) != 0) return a.second > b.second;
-        if ((t = a.first - b.first) != 0) return a.first < b.first;
-        return true;
+        if ((t = a.bits - b.bits) != 0) return a.bits > b.bits;
+        return a.search_bus < b.search_bus;
     });
 
     int full_RAMs = layout_option.way.match_groups * (sizes.size() - 1);
@@ -137,11 +154,11 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<std::pair<int, int>> &s
 
     // Determine where the overhead groups go.  Evenly distribute the overhead.  At most, only
     // 2 sections of overhead can be within a wide match, as that is the maximum sharing
-    ghost_bit_bus = sizes.back().first;
+    ghost_bit_bus = sizes.back().search_bus;
     int total = 0;
     for (int i = 0; i < overhead_RAMs; i++) {
         overhead_groups_per_RAM[i] = 1;
-        search_bus_per_width[i] = sizes.back().first;
+        search_bus_per_width[i] = sizes.back().search_bus;
         total++;
     }
 
@@ -161,14 +178,13 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<std::pair<int, int>> &s
             it++;
             match_groups_set = 0;
         }
-        search_bus_per_width[i] = it->first;
+        search_bus_per_width[i] = it->search_bus;
         match_groups_set++;
     }
     return true;
 }
 
-/** The algorithm find_format is to determine how to best pack the RAMs of match tables.
- *  For any table using SRAMs only (i.e. exact match/atcam), this means determining how
+/** The algorithm find_format is to determine how to best pack the RAMs of match tables.  *  For any table using SRAMs only (i.e. exact match/atcam), this means determining how
  *  the RAM line is filled.  For tables using the TCAMs, (i.e. ternary), this is specifically
  *  for the ternary indirect packing.
  *
@@ -501,30 +517,22 @@ bool TableFormat::initialize_byte(int byte_offset, int width_sect, ByteInfo &inf
 
 bool TableFormat::allocate_match_byte(ByteInfo &info, safe_vector<ByteInfo> &alloced,
         int width_sect, bitvec &byte_attempt, bitvec &bit_attempt) {
+    int lo = pa == SAVE_GW_SPACE ? GATEWAY_BYTES : 0;
+    int hi = pa == SAVE_GW_SPACE ? VERSION_BYTES : SINGLE_RAM_BYTES;
+
     for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
+       if (i < lo || i >= hi)
+           continue;
        if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt))
            return true;
     }
-    return false;
-
-    /* Future optimization to save potential ram space for gateways, but the memories
-       algorithm doesn't even share search buses yet
-    for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
-        if (i < GATEWAY_BYTES || i >= VERSION_BYTES)
-            continue;
-        if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt)) {
-            return true;
-        }
-    }
 
     for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
-        if (i >= GATEWAY_BYTES && i < VERSION_BYTES)
-            continue;
-        if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt)) {
-            return true;
-        }
+       if (i >= lo && i < hi)
+           continue;
+       if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt))
+           return true;
     }
-    */
     return false;
 }
 
@@ -586,7 +594,10 @@ bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &
     }
 
     // Look for a corresponding place within the overhead
+
     for (int i = 0; i < OVERHEAD_BITS / 8; i++) {
+        if (pa != PACK_TIGHT)
+            break;
         int byte = width_sect * SINGLE_RAM_BYTES + i;
         if (byte_attempt.getbit(i) || match_byte_use.getbit(i)) continue;
         auto use_slice = total_use.getslice(byte * 8, 8);
@@ -1019,6 +1030,37 @@ bool TableFormat::attempt_allocate_shares() {
     return false;
 }
 
+/** Gateway tables and exact match tables share search buses to perform lookups.  Thus
+ *  in order to potentially share a search bus, the allocation algorithm is run up to
+ *  two times.  The first run, the lower 4 bytes of the gateway are packed last.  However,
+ *  occasionally this is suboptimal, as the combination of overhead with match bytes might
+ *  provide extra room.  Thus if the first iteration doesn't fit, the bytes closest to the
+ *  overhead are attempted first
+ */
+bool TableFormat::allocate_match() {
+    pre_match_total_use = total_use;
+    bool success = false;
+
+    for (int i = 0; i < PACKING_ALGORITHMS; i++) {
+        total_use = pre_match_total_use;
+        for (int group = 0; group < layout_option.way.match_groups; group++) {
+            use->match_groups[group].clear_match();
+        }
+        match_bytes.clear();
+        ghost_bytes.clear();
+        std::fill(full_match_groups_per_RAM.begin(), full_match_groups_per_RAM.end(), 0);
+
+        use->ghost_bits.clear();
+        match_byte_use.clear();
+
+        pa = static_cast<packing_algorithm_t>(i);
+        success = allocate_match_with_algorithm();
+
+        if (success)
+            break;
+    }
+    return success;
+}
 
 /** This section allocates all of the match data.  Given that we have assigned search buses to
  *  each individual RAM as well as overhead, this algorithm fills in the gap with all of the
@@ -1045,7 +1087,7 @@ bool TableFormat::attempt_allocate_shares() {
  *    2. Allocate full fits: i.e. match groups that fit on the entirety of the individual RAM
  *    3. Allocate shares: share match groups RAMs
  */
-bool TableFormat::allocate_match() {
+bool TableFormat::allocate_match_with_algorithm() {
     choose_ghost_bits();
 
     for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
@@ -1069,6 +1111,8 @@ bool TableFormat::allocate_match() {
 
     if (split_match) {
         // Will not split up wide matches
+        if (pa != PACK_TIGHT)
+            return false;
         if (match_ixbar.search_buses_single() > 1) {
             return false;
         } else {
@@ -1257,13 +1301,16 @@ bool TableFormat::allocate_all_ternary_match() {
    be checked as well.  */
 void TableFormat::verify() {
     bitvec verify_mask;
+    bitvec on_search_bus_mask;
 
     for (int i = 0; i < layout_option.way.match_groups; i++) {
-        for (int j = ACTION; j <= INDIRECT_ACTION; j++) {
+        for (int j = NEXT; j <= INDIRECT_ACTION; j++) {
             if (!use->match_groups[i].mask[j].empty())
             if ((verify_mask & use->match_groups[i].mask[j]).popcount() != 0)
                 BUG("Overlap of multiple things in the format");
             verify_mask |= use->match_groups[i].mask[j];
+            if (j == VERS)
+                on_search_bus_mask |= use->match_groups[i].mask[j];
         }
     }
 
@@ -1273,6 +1320,15 @@ void TableFormat::verify() {
             if ((verify_mask & byte_mask).popcount() != 0)
                 BUG("Overlap of a match byte in the format");
             verify_mask |= byte_mask;
+            on_search_bus_mask |= byte_mask;
+        }
+    }
+
+    for (int i = 0; i < layout_option.way.width; i++) {
+        for (int j = 0; j < GATEWAY_BYTES * 2; j++) {
+            if (on_search_bus_mask.getrange(i * SINGLE_RAM_BITS + j * 8, 8))
+                continue;
+            use->avail_sb_bytes.setbit(i * SINGLE_RAM_BYTES + j);
         }
     }
 }

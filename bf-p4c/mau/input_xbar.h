@@ -29,10 +29,12 @@ struct IXBar {
     static constexpr int BYTE_GROUPS = StageUse::MAX_TERNARY_GROUPS/2;
     static constexpr int TERNARY_BYTES_PER_GROUP = 5;
     static constexpr int TERNARY_BYTES_PER_BIG_GROUP = 11;
+    static constexpr int GATEWAY_SEARCH_BYTES = 4;
     struct Loc {
         int group = -1, byte = -1;
         Loc() = default;
         Loc(int g, int b) : group(g), byte(b) {}
+        Loc(const Loc &) = default;
         explicit operator bool() const { return group >= 0 && byte >= 0; }
         operator std::pair<int, int>() const { return std::make_pair(group, byte); }
         /// return the byte number in the total order
@@ -91,6 +93,7 @@ struct IXBar {
     std::unordered_set<const IR::Attached *>                attached_tables;
     enum byte_type_t { NO_BYTE_TYPE, ATCAM, PARTITION_INDEX, RANGE };
 
+
     /** IXbar::Use tracks the input xbar use of a single table */
     struct Use {
         /* everything is public so anyone can read it, but only IXBar should write to this */
@@ -131,6 +134,7 @@ struct IXBar {
 
             Byte(cstring f, int l, int h) : field(f), lo(l), hi(h) {}
             Byte(cstring f, int l, int h, int g, int gb) : field(f), lo(l), hi(h), loc(g, gb) {}
+            Byte(const Byte &) = default;
             operator std::pair<cstring, int>() const { return std::make_pair(field, lo); }
             bool operator==(const std::pair<cstring, int> &a) const {
                 return field == a.first && lo == a.second; }
@@ -204,14 +208,35 @@ struct IXBar {
                        hash_dist_hash.clear(); }
         unsigned compute_hash_tables();
         int groups() const;  // how many different groups in this use
-        bool exact_comp(const IXBar::Use *exact_use, int width) const;
         void add(const Use &alloc);
         int hash_groups() const;
-        safe_vector<Byte> atcam_match() const;
-        safe_vector<Byte> match_hash_single() const;
-        safe_vector<std::pair<int, int>> bits_per_search_bus_single() const;
-        safe_vector<Byte> atcam_partition() const;
+
+        typedef safe_vector<safe_vector<Byte> *> TotalBytes;
+
+        struct GroupInfo {
+            int search_bus;
+            int ixbar_group;
+            int bytes;
+            int bits;
+
+            GroupInfo(int sb, int ig, int by, int b)
+                : search_bus(sb), ixbar_group(ig), bytes(by), bits(b) { }
+        };
+
+        struct TotalInfo {
+            int hash_group;
+            safe_vector<GroupInfo> all_group_info;
+
+            TotalInfo(int hg, safe_vector<GroupInfo> agi)
+                : hash_group(hg), all_group_info(agi) { }
+        };
+
+        TotalBytes match_hash(safe_vector<int> *hash_groups = nullptr) const;
+        TotalBytes atcam_match() const;
+        safe_vector<TotalInfo> bits_per_search_bus() const;
+        safe_vector<Byte> atcam_partition(int *hash_group = nullptr) const;
         int search_buses_single() const;
+        int gateway_group() const;
     };
 
     struct HashDistUse {

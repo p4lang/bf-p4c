@@ -87,6 +87,10 @@ struct TableFormat {
         safe_vector<TCAM_use> tcam_use;
         int split_midbyte = -1;
 
+        std::map<int, safe_vector<int>> ixbar_group_per_width;
+        safe_vector<bool> result_bus_needed;
+        bitvec avail_sb_bytes;
+
         /// The byte and individual bits to be ghosted. Ghost bits should be the
         /// same for all match entries.
         std::map<IXBar::Use::Byte, bitvec> ghost_bits;
@@ -95,6 +99,10 @@ struct TableFormat {
             ghost_bits.clear();
             match_groups.clear();
             tcam_use.clear();
+
+            ixbar_group_per_width.clear();
+            result_bus_needed.clear();
+            avail_sb_bytes.clear();
         }
         bitvec immed_mask;
     };
@@ -113,8 +121,13 @@ struct TableFormat {
     int ghost_bit_bus;
 
     bitvec total_use;  // Total bitvec for all entries in table format
+    bitvec pre_match_total_use;
     bitvec match_byte_use;   // Bytes used by all match byte masks
-    safe_vector<bitvec> byte_use;  // Vector of individual byte by byte masks
+    // safe_vector<bitvec> byte_use;  // Vector of individual byte by byte masks
+
+    enum packing_algorithm_t { SAVE_GW_SPACE, PACK_TIGHT, PACKING_ALGORITHMS };
+
+    packing_algorithm_t pa = PACKING_ALGORITHMS;
 
     // Size of the following vectors is the layout_option.way->width
 
@@ -146,6 +159,7 @@ struct TableFormat {
     bool allocate_all_immediate();
     bool allocate_all_instr_selection();
     bool allocate_match();
+    bool allocate_match_with_algorithm();
 
     bool allocate_all_ternary_match();
     void initialize_dirtcam_value(bitvec &dirtcam, const IXBar::Use::Byte &byte);
@@ -153,8 +167,8 @@ struct TableFormat {
     void ternary_version(size_t &index);
 
     bool analyze_layout_option();
-    bool analyze_skinny_layout_option(int per_RAM, safe_vector<std::pair<int, int>> &sizes);
-    bool analyze_wide_layout_option(safe_vector<std::pair<int, int>> &sizes);
+    bool analyze_skinny_layout_option(int per_RAM, safe_vector<IXBar::Use::GroupInfo> &sizes);
+    bool analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> &sizes);
 
     int hit_actions();
     bool allocate_next_table();

@@ -80,7 +80,7 @@ struct Memories {
     unsigned                                           mapram_inuse[SRAM_ROWS] = {0};
     Alloc1D<cstring, SRAM_ROWS>                        stateful_bus;
     Alloc2D<cstring, 2, NUM_IDLETIME_BUS>              idletime_bus;
-    int gw_bytes_per_sb[SRAM_ROWS][BUS_COUNT] = {{0}};
+    bool gw_bytes_reserved[SRAM_ROWS][BUS_COUNT] = {{false}};
     Alloc1D<cstring, STATS_ALUS>                       stats_alus;
     Alloc1D<cstring, METER_ALUS>                       meter_alus;
 
@@ -486,8 +486,7 @@ struct Memories {
     bool allocate_all_normal_gw();
     bool allocate_all_no_match_gw();
     table_alloc *find_corresponding_exact_match(cstring name);
-    bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
-                           int row, int col);
+    bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int row, int col);
     bool allocate_all_no_match_miss();
 
     bool find_mem_and_bus_for_idletime(std::vector<std::pair<int, std::vector<int>>>& mem_locs,
