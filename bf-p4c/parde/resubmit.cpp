@@ -60,18 +60,18 @@ boost::optional<const IR::Constant*>
 checkIfStatement(const IR::IfStatement* ifStatement) {
     auto* equalExpr = ifStatement->condition->to<IR::Equ>();
     if (!equalExpr) {
-        ::warning("Expected comparing resubmit_idx with constant: %1%", ifStatement->condition);
+        ::warning("Expected comparing resubmit_type with constant: %1%", ifStatement->condition);
         return boost::none;
     }
     auto* constant = equalExpr->right->to<IR::Constant>();
     if (!constant) {
-        ::warning("Expected comparing resubmit_idx with constant: %1%", equalExpr->right);
+        ::warning("Expected comparing resubmit_type with constant: %1%", equalExpr->right);
         return boost::none;
     }
 
     auto* member = equalExpr->left->to<IR::Member>();
-    if (!member || member->member != "resubmit_idx") {
-        ::warning("Expected comparing resubmit_idx with constant: %1%", ifStatement->condition);
+    if (!member || member->member != "resubmit_type") {
+        ::warning("Expected comparing resubmit_type with constant: %1%", ifStatement->condition);
         return boost::none;
     }
     if (!ifStatement->ifTrue || ifStatement->ifFalse) {
@@ -99,14 +99,14 @@ class FindResubmit : public DeparserInspector {
         if (!ifStatement) {
             ::warning("Expected resubmit_packet to be used within an If statement");
         }
-        auto resubmit_idx = checkIfStatement(ifStatement);
-        if (!resubmit_idx) {
+        auto resubmit_type = checkIfStatement(ifStatement);
+        if (!resubmit_type) {
             return false;
         }
 
         auto resubmit = analyzeResubmitStatement(node);
         if (resubmit)
-            extracts.emplace((*resubmit_idx)->asInt(), *resubmit);
+            extracts.emplace((*resubmit_type)->asInt(), *resubmit);
         return false;
     }
 
@@ -135,8 +135,8 @@ FieldPacking* packResubmitFields(const ResubmitSources* extracts) {
         BUG_CHECK(field != nullptr,
                   "Resubmit field %1% not found in type %2%", field, type);
 
-        // skip parsing intr_md_for_deparser.resubmit_idx
-        if (source->member == "resubmit_idx" &&
+        // skip parsing intr_md_for_deparser.resubmit_type
+        if (source->member == "resubmit_type" &&
             type->name == "ingress_intrinsic_metadata_for_deparser_t") {
             packing->padToAlignment(8);
             continue;

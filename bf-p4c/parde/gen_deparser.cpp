@@ -63,10 +63,15 @@ class GenerateDeparser : public Inspector {
                 generateEmits((*mc->arguments)[0], [&](const IR::Expression* field,
                                                        const IR::Expression* povBit) {
                     dprsr->emits.push_back(new IR::BFN::Emit(mc->srcInfo, field, povBit)); });
-            } else if (type->name == "mirror_packet" ||
-                       type->name == "resubmit_packet" ||
-                       type->name == "learning_packet" ) {
-                generateDigest(digests[dname->path->name], dname->path->name, mc->arguments->at(0));
+            } else if (type->name == "Mirror") {
+                // Convert session_id, { field_list } --> { session_id, field_list }
+                auto list = mc->arguments->at(1)->to<IR::ListExpression>();
+                auto expr = new IR::ListExpression(
+                    list->srcInfo, list->type, list->components);
+                expr->components.insert(expr->components.begin(), mc->arguments->at(0));
+                generateDigest(digests["mirror"], "mirror", expr);
+            } else if (type->name == "Resubmit") {
+                generateDigest(digests["resubmit"], "resubmit", mc->arguments->at(0));
             } else {
                 error("Unsupported method call %s in deparser", mc);
             }

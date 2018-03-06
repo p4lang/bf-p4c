@@ -33,14 +33,14 @@ analyzeMirrorStatement(const IR::MethodCallStatement* statement) {
     if (!member || (member->member != "add_metadata" && member->member != "emit")) {
         return boost::none;
     }
-    if (methodCall->arguments->size() != 1) {
-        ::warning("Expected 1 arguments for mirror_packet.%1% statement: %1%",
+    if (methodCall->arguments->size() != 2) {
+        ::warning("Expected 2 arguments for mirror.%1% statement: %1%",
                   member->member);
         return boost::none;
     }
     const IR::ListExpression* fieldList = nullptr;
     {
-        fieldList = (*methodCall->arguments)[0]->to<IR::ListExpression>();
+        fieldList = (*methodCall->arguments)[1]->to<IR::ListExpression>();
         if (!fieldList) {
             ::warning("Expected field list: %1%", methodCall);
             return boost::none;
@@ -63,20 +63,20 @@ boost::optional<const IR::Constant*>
 checkIfStatement(const IR::IfStatement* ifStatement) {
     auto* equalExpr = ifStatement->condition->to<IR::Equ>();
     if (!equalExpr) {
-        ::warning("Expected comparison of mirror_idx with constant: "
+        ::warning("Expected comparison of mirror_type with constant: "
                   "%1%", ifStatement->condition);
         return boost::none;
     }
     auto* constant = equalExpr->right->to<IR::Constant>();
     if (!constant) {
-        ::warning("Expected comparison of mirror_idx with constant: "
+        ::warning("Expected comparison of mirror_type with constant: "
                   "%1%", equalExpr->right);
         return boost::none;
     }
 
     auto* member = equalExpr->left->to<IR::Member>();
-    if (!member || member->member != "mirror_idx") {
-        ::warning("Expected comparison of mirror_idx with constant: "
+    if (!member || member->member != "mirror_type") {
+        ::warning("Expected comparison of mirror_type with constant: "
                   "%1%", ifStatement->condition);
         return boost::none;
     }
@@ -147,7 +147,7 @@ FieldPacking* packMirroredFieldList(const MirroredFieldList* fieldList) {
         BUG_CHECK(field != nullptr,
                   "Mirror field %1% not found in type %2%", field, type);
 
-        // Skip parsing `mirror_id`, `mirror_idx`, and `mirror_source`; they're
+        // Skip parsing `mirror_id`, `mirror_type`, and `mirror_source`; they're
         // handled specially.
         if (source->member == "mirror_id" &&
               (type->name == "ingress_intrinsic_metadata_for_mirror_buffer_t" ||
@@ -155,7 +155,7 @@ FieldPacking* packMirroredFieldList(const MirroredFieldList* fieldList) {
             packing->padToAlignment(8);
             continue;
         }
-        if ((source->member == "mirror_idx" ||  source->member == "mirror_source") &&
+        if ((source->member == "mirror_type" ||  source->member == "mirror_source") &&
               (type->name == "ingress_intrinsic_metadata_for_deparser_t" ||
                type->name == "egress_intrinsic_metadata_for_deparser_t")) {
             packing->padToAlignment(8);
@@ -267,13 +267,13 @@ struct AddMirroredFieldListParser : public Transform {
                                       { select }, transitions);
   }
 
-  Visitor::profile_t init_apply(const IR::Node *root) override {
-      auto* egParserMeta =
-          getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
-      cloneDigestId = gen_fieldref(egParserMeta, "clone_digest_id");
-      cloneSource = gen_fieldref(egParserMeta, "clone_src");
-      return Transform::init_apply(root);
-  }
+//  Visitor::profile_t init_apply(const IR::Node *root) override {
+//      auto* egParserMeta =
+//          getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
+//      cloneDigestId = gen_fieldref(egParserMeta, "clone_digest_id");
+//      cloneSource = gen_fieldref(egParserMeta, "clone_src");
+//      return Transform::init_apply(root);
+//  }
 
  private:
   const IR::BFN::Pipe* pipe;

@@ -67,7 +67,7 @@ struct RestoreOptionalParams : public Transform {
             // add ig_intr_md_from_prsr
             auto* path = new IR::Path("ingress_intrinsic_metadata_from_parser_t");
             auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("ig_intr_md_from_parser_aux", IR::Direction::In, type);
+            auto* param = new IR::Parameter("ig_intr_md_from_prsr", IR::Direction::In, type);
             tnaParams.emplace("ig_intr_md_from_prsr", param->name);
             paramList->push_back(param);
         } else {
@@ -158,7 +158,7 @@ struct RestoreOptionalParams : public Transform {
             // add eg_intr_md_from_prsr
             auto* path = new IR::Path("egress_intrinsic_metadata_from_parser_t");
             auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("eg_intr_md_from_parser_aux", IR::Direction::In, type);
+            auto* param = new IR::Parameter("eg_intr_md_from_prsr", IR::Direction::In, type);
             tnaParams.emplace("eg_intr_md_from_prsr", param->name);
             paramList->push_back(param);
         } else {

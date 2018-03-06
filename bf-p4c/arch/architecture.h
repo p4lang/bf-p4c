@@ -268,7 +268,7 @@ struct AddIntrinsicMetadata : public Transform {
         // This state handles the extraction of ingress intrinsic metadata.
         auto *igMetadataState =
             createGeneratedParserState("ingress_metadata", {
-                createSetMetadata(parser, "ig_intr_md_from_prsr", "ingress_parser_err", 16, 0),
+                createSetMetadata(parser, "ig_intr_md_from_prsr", "parser_err", 16, 0),
                 createExtractCall(parser, "ig_intr_md")
             }, checkResubmitState->name);
         parser->states.push_back(igMetadataState);
@@ -326,8 +326,8 @@ struct AddIntrinsicMetadata : public Transform {
 
         auto *egMetadataState =
             createGeneratedParserState("egress_metadata", {
-                createSetMetadata(parser, "eg_intr_md_from_prsr", "egress_parser_err", 16, 0),
-                createSetMetadata(parser, "eg_intr_md_from_prsr", "coalesce_sample_count", 8, 0),
+                createSetMetadata(parser, "eg_intr_md_from_prsr", "parser_err", 16, 0),
+                // createSetMetadata(parser, "eg_intr_md_from_prsr", "coalesce_sample_count", 8, 0),
                 createExtractCall(parser, "eg_intr_md")
             }, checkMirroredState->name);
         parser->states.push_back(egMetadataState);

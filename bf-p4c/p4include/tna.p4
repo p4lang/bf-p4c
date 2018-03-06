@@ -50,7 +50,7 @@ control Egress<H, M>(
     inout M eg_md,
     in egress_intrinsic_metadata_t eg_intr_md,
     in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
-    inout egress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprs,
+    inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs,
     inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
 
 control IngressDeparser<H, M>(
@@ -63,7 +63,7 @@ control EgressDeparser<H, M>(
     packet_out pkt,
     inout H hdr,
     in M metadata,
-    in egress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprs);
+    in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs);
 
 @bf_p4c_compiler_option("--target", "tofino-native-barefoot")
 package Switch<IH, IM, EH, EM>(

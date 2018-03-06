@@ -80,8 +80,8 @@ struct BridgeIngressToEgress : public Transform {
         // compiler-generated package parameter to hold this kind of thing.
         forAllMatching<IR::BFN::TranslatedP4Control>(root,
                       [&](const IR::BFN::TranslatedP4Control* control) {
-            if (!userMetadataStructName.isNullOrEmpty()) return;
-            auto p4ParamName = control->tnaParams.at("md");
+            if (!cgMetadataStructName.isNullOrEmpty()) return;
+            auto p4ParamName = control->tnaParams.at("compiler_generated_meta");
             auto* params = control->type->getApplyParameters();
             auto* param = params->getParameter(p4ParamName);
             BUG_CHECK(param, "Couldn't find param %1% on control: %2%",
@@ -91,11 +91,11 @@ struct BridgeIngressToEgress : public Transform {
             BUG_CHECK(paramType->is<IR::Type_StructLike>(),
                       "User metadata parameter type isn't structlike %2%: %1%",
                       paramType, typeid(*paramType).name());
-            userMetadataStructName = paramType->to<IR::Type_StructLike>()->name;
+            cgMetadataStructName = paramType->to<IR::Type_StructLike>()->name;
         });
 
-        BUG_CHECK(!userMetadataStructName.isNullOrEmpty(),
-                  "Couldn't determine the P4 name of the TNA user metadata "
+        BUG_CHECK(!cgMetadataStructName.isNullOrEmpty(),
+                  "Couldn't determine the P4 name of the TNA compiler generated  metadata "
                   "struct parameter 'md'");
 
         return Transform::init_apply(root);
@@ -103,7 +103,7 @@ struct BridgeIngressToEgress : public Transform {
 
     IR::Type_StructLike* preorder(IR::Type_StructLike* type) override {
         prune();
-        if (type->name != userMetadataStructName) return type;
+        if (type->name != cgMetadataStructName) return type;
 
         LOG1("Will inject the new field");
 
@@ -129,11 +129,11 @@ struct BridgeIngressToEgress : public Transform {
                   state->name);
         if (tnaContext->thread != INGRESS) return state;
 
-        auto userMetadataParam = tnaContext->tnaParams.at("md");
+        auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
 
-        // Add "md.^bridged_metadata.^bridged_metadata_indicator = 0;".
+        // Add "compiler_generated_meta.^bridged_metadata.^bridged_metadata_indicator = 0;".
         {
-            auto* member = new IR::Member(new IR::PathExpression(userMetadataParam),
+            auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                           IR::ID("^bridged_metadata"));
             auto* fieldMember =
               new IR::Member(member, IR::ID("^bridged_metadata_indicator"));
@@ -144,8 +144,8 @@ struct BridgeIngressToEgress : public Transform {
 
         // Add "md.^bridged_metadata.setValid();"
         {
-            auto userMetadataParam = tnaContext->tnaParams.at("md");
-            auto* member = new IR::Member(new IR::PathExpression(userMetadataParam),
+            auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
+            auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                           IR::ID("^bridged_metadata"));
             auto* method = new IR::Member(member, IR::ID("setValid"));
             auto* args = new IR::Vector<IR::Expression>;
@@ -167,8 +167,8 @@ struct BridgeIngressToEgress : public Transform {
         auto* method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("extract"));
 
-        auto userMetadataParam = tnaContext->tnaParams.at("md");
-        auto* member = new IR::Member(new IR::PathExpression(userMetadataParam),
+        auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
+        auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                       IR::ID("^bridged_metadata"));
         auto* args = new IR::Vector<IR::Expression>({ member });
         auto* callExpr = new IR::MethodCallExpression(method, args);
@@ -176,7 +176,7 @@ struct BridgeIngressToEgress : public Transform {
 
         // Copy all of the bridged fields to their final locations.
         for (auto& bridgedField : fieldsToBridge) {
-            auto* member = new IR::Member(new IR::PathExpression(userMetadataParam),
+            auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                           IR::ID("^bridged_metadata"));
             auto* fieldMember =
               new IR::Member(member, bridgedHeaderFieldNames.at(bridgedField));
@@ -205,7 +205,7 @@ struct BridgeIngressToEgress : public Transform {
 
     IR::BFN::TranslatedP4Control*
     updateIngressControl(IR::BFN::TranslatedP4Control* control) {
-        auto userMetadataParam = control->tnaParams.at("md");
+        auto cgMetadataParam = control->tnaParams.at("compiler_generated_meta");
 
         // Inject code to copy all of the bridged fields into the bridged
         // metadata header. This will run at the very end of the ingress
@@ -213,7 +213,7 @@ struct BridgeIngressToEgress : public Transform {
         auto* body = control->body->clone();
 
         for (auto& bridgedField : fieldsToBridge) {
-            auto* member = new IR::Member(new IR::PathExpression(userMetadataParam),
+            auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                           IR::ID("^bridged_metadata"));
             auto* fieldMember =
               new IR::Member(member, bridgedHeaderFieldNames.at(bridgedField));
@@ -249,8 +249,8 @@ struct BridgeIngressToEgress : public Transform {
         auto* method = new IR::Member(new IR::PathExpression(packetOutParam),
                                       IR::ID("emit"));
 
-        auto userMetadataParam = control->tnaParams.at("md");
-        auto* member = new IR::Member(new IR::PathExpression(userMetadataParam),
+        auto cgMetadataParam = control->tnaParams.at("compiler_generated_meta");
+        auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                       IR::ID("^bridged_metadata"));
         auto* args = new IR::Vector<IR::Expression>({ member });
         auto* callExpr = new IR::MethodCallExpression(method, args);
@@ -276,7 +276,7 @@ struct BridgeIngressToEgress : public Transform {
 
     ordered_map<FieldRef, cstring> bridgedHeaderFieldNames;
     const IR::Type_Header* bridgedHeaderType = nullptr;
-    cstring userMetadataStructName;
+    cstring cgMetadataStructName;
 };
 
 using TnaParams = CollectBridgedFields::TnaParams;
@@ -408,8 +408,8 @@ struct CopyPropagateBridgedMetadata : public Transform {
         FieldRef fieldRef(*tnaParam, fullPath);
         if (bmMap.find(fieldRef) != bmMap.end()) {
             LOG4("Need to replace expression " << expr);
-            auto userMetadataParam = tnaContext->second.at("md");
-            auto* member = new IR::Member(new IR::PathExpression(userMetadataParam),
+            auto cgMetadataParam = tnaContext->second.at("compiler_generated_meta");
+            auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                           IR::ID("^bridged_metadata"));
             auto* fieldMember =
                 new IR::Member(member, bridgedHeaderFieldNames.at(fieldRef));

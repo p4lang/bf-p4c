@@ -190,7 +190,7 @@ struct ingress_intrinsic_metadata_for_deparser_t {
                                         //      multicast, and resubmit
                                         //    - bit 1 disables copy-to-cpu
                                         //    - bit 2 disables mirroring
-    bit<3> learn_type;
+    bit<3> digest_type;
 
     bit<3> resubmit_type;
 
@@ -376,21 +376,6 @@ header ptp_metadata_t {
                                         // message
 }
 
-
-// -----------------------------------------------------------------------------
-// EXTERN FUNCTIONS
-// -----------------------------------------------------------------------------
-
-extern T max<T>(T t1, T t2);
-
-extern T min<T>(T t1, T t2);
-
-// Invalidates a PHV container by setting the container’s validity bit to 0 and
-// clearing the container to all zeros.  If the dst argument is a packet or
-// metadata field, all PHV containers that contain all or part of the field
-// will be invalidated.
-extern void invalidate<T>(in T field);
-
 // -----------------------------------------------------------------------------
 // CHECKSUM
 // -----------------------------------------------------------------------------
@@ -503,9 +488,24 @@ extern IdleTimeout {
     IdleTimeout();
 }
 
+
+// -----------------------------------------------------------------------------
+// EXTERN FUNCTIONS
+// -----------------------------------------------------------------------------
+
+extern T max<T>(T t1, T t2);
+
+extern T min<T>(T t1, T t2);
+
+// Invalidates a PHV container by setting the container’s validity bit to 0 and
+// clearing the container to all zeros.  If the dst argument is a packet or
+// metadata field, all PHV containers that contain all or part of the field
+// will be invalidated.
+extern void invalidate<T>(in T field);
+
 /// Counter
 extern Counter<W, I> {
-    Counter(bit<32> n_counters, CounterType_t type);
+    Counter(bit<32> size, CounterType_t type);
     void count(in I index);
 }
 
@@ -517,7 +517,7 @@ extern DirectCounter<W> {
 
 /// Meter
 extern Meter<I> {
-    Meter(bit<32> n_meters, MeterType_t type);
+    Meter(bit<32> size, MeterType_t type);
     bit<8> execute(in I index, in bit<2> color);
     bit<8> execute(in I index);
 }
@@ -531,7 +531,7 @@ extern DirectMeter {
 
 /// LPF
 extern Lpf<T, I> {
-    Lpf(bit<32> instance_count);
+    Lpf(bit<32> size);
     T execute(in T val, in I index);
 }
 
@@ -543,7 +543,7 @@ extern DirectLpf<T> {
 
 /// WRED
 extern Wred<T, I> {
-    Wred(bit<32> instance_count, bit<8> drop_value, bit<8> no_drop_value);
+    Wred(bit<32> size, bit<8> drop_value, bit<8> no_drop_value);
     bit<8> execute(in T val, in I index);
 }
 
@@ -617,12 +617,12 @@ extern ActionProfile {
 extern Mirror {
     Mirror();
 
-    void emit(MirrorId_t session_id);
+    void emit(in MirrorId_t session_id);
 
     /// Write @hdr into the ingress/egress mirror buffer.
     /// @param hdr : T can be a header type, a header stack, a header_union,
     /// or a struct containing fields with such types.
-    void emit<T>(MirrorId_t session_id, in T hdr);
+    void emit<T>(in MirrorId_t session_id, in T hdr);
 }
 
 

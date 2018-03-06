@@ -31,6 +31,7 @@ class LoadTargetArchitecture : public Inspector {
         structure->addMetadata(INGRESS,
                                MetadataField{"standard_metadata", "egress_spec", 9},
                                MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", 9});
+
         structure->addMetadata(EGRESS,
                                MetadataField{"standard_metadata", "egress_spec", 9},
                                MetadataField{"eg_intr_md", "egress_port", 9});
@@ -38,46 +39,77 @@ class LoadTargetArchitecture : public Inspector {
         structure->addMetadata(INGRESS,
                                MetadataField{"standard_metadata", "egress_port", 9},
                                MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", 9});
+
         structure->addMetadata(EGRESS,
                                MetadataField{"standard_metadata", "egress_port", 9},
                                MetadataField{"eg_intr_md", "egress_port", 9});
 
-        structure->addMetadata(INGRESS, MetadataField{"standard_metadata", "ingress_port", 9},
-                               MetadataField{"ig_intr_md", "ingress_port", 9});
-
-        structure->addMetadata(EGRESS, MetadataField{"standard_metadata", "ingress_port", 9},
+        structure->addMetadata(MetadataField{"standard_metadata", "ingress_port", 9},
                                MetadataField{"ig_intr_md", "ingress_port", 9});
 
         structure->addMetadata(EGRESS,
                                MetadataField{"standard_metadata", "packet_length", 32},
                                MetadataField{"eg_intr_md", "pkt_length", 16});
 
+        structure->addMetadata(MetadataField{"standard_metadata", "clone_spec", 32},
+                               MetadataField{"compiler_generated_meta", "mirror_id", 10});
+
         structure->addMetadata(INGRESS,
-                               MetadataField{"standard_metadata", "clone_spec", 32},
-                               MetadataField{"ig_intr_md_for_mb", "mirror_id", 10});
-        structure->addMetadata(EGRESS,
-                               MetadataField{"standard_metadata", "clone_spec", 32},
-                               MetadataField{"eg_intr_md_for_mb", "mirror_id", 10});
+                               MetadataField{"standard_metadata", "drop", 1},
+                               MetadataField{"ig_intr_md_for_dprsr", "drop_ctl", 3});
 
-        structure->addMetadata(MetadataField{"standard_metadata", "drop", 1},
-                               MetadataField{"ig_intr_md_for_tm", "drop_ctl", 3});
+        structure->addMetadata(INGRESS,
+                               MetadataField{"standard_metadata", "drop", 1},
+                               MetadataField{"eg_intr_md_for_dprsr", "drop_ctl", 3});
 
-        // XXX(hanw): standard_metadata.mcast_grp does not have a mapping tofino.
+        // standard_metadata.mcast_grp does not have a mapping tofino.
         // we default to ig_intr_md_for_tm.mcast_grp_a just to pass the translation.
         structure->addMetadata(INGRESS,
                                MetadataField{"standard_metadata", "mcast_grp", 16},
                                MetadataField{"ig_intr_md_for_tm", "mcast_grp_a", 16});
+
+        structure->addMetadata(
+                INGRESS,
+                MetadataField{"standard_metadata", "checksum_error", 1},
+                MetadataField{"ig_intr_md_from_prsr", "parser_err", 1, 12});
+
+        structure->addMetadata(
+                EGRESS,
+                MetadataField{"standard_metadata", "checksum_error", 1},
+                MetadataField{"eg_intr_md_from_prsr", "parser_err", 1, 12});
+
         // XXX(seth): We need to figure out what to map this to.
         // structure->addMetadata("standard_metadata", "instance_type",
         //             "eg_intr_md", "instance_type", 32);
 
+        // drop_ctl is moved to ingress/egress_metadata_for_deparser_t in tofino architecture.
         structure->addMetadata(INGRESS,
-                      MetadataField{"standard_metadata", "checksum_error", 1},
-                      MetadataField{"ig_intr_md_from_parser_aux", "ingress_parser_err", 1, 12});
+                               MetadataField{"ig_intr_md_for_tm", "drop_ctl", 3},
+                               MetadataField{"ig_intr_md_for_dprsr", "drop_ctl", 3});
 
         structure->addMetadata(EGRESS,
-                      MetadataField{"standard_metadata", "checksum_error", 1},
-                      MetadataField{"eg_intr_md_from_parser_aux", "egress_parser_err", 1, 12});
+                               MetadataField{"eg_intr_md_for_oport", "drop_ctl", 3},
+                               MetadataField{"eg_intr_md_for_dprsr", "drop_ctl", 3});
+
+        structure->addMetadata(
+                INGRESS,
+                MetadataField{"ig_intr_md_from_parser_aux", "ingress_global_tstamp", 48},
+                MetadataField{"ig_intr_md_from_prsr", "global_tstamp", 48});
+
+        structure->addMetadata(
+                INGRESS,
+                MetadataField{"ig_intr_md_from_parser_aux", "ingress_parser_err", 16},
+                MetadataField{"ig_intr_md_from_prsr", "parser_err", 16});
+
+        structure->addMetadata(
+                EGRESS,
+                MetadataField{"eg_intr_md_from_parser_aux", "egress_parser_err", 16},
+                MetadataField{"eg_intr_md_from_prsr", "parser_err", 16});
+
+        structure->addMetadata(
+                EGRESS,
+                MetadataField{"eg_intr_md_from_parser_aux", "clone_src", 4},
+                MetadataField{"compiler_generated_meta", "mirror_source", 8});
     }
 
     void analyzeTofinoModel() {
@@ -98,7 +130,6 @@ class LoadTargetArchitecture : public Inspector {
         /// append tofino.p4 architecture definition
         structure->include("tofino/stratum.p4", &structure->targetTypes);
         structure->include("tofino/p4_14_prim.p4", &structure->targetTypes);
-        structure->include("tofino/p4_16_prim.p4", &structure->targetTypes);
 
         analyzeTofinoModel();
     }
@@ -581,6 +612,13 @@ class AnalyzeProgram : public Inspector {
     void end_apply() override {
         // add 'compiler_generated_metadata_t'
         auto cgm = new IR::Type_Struct("compiler_generated_metadata_t");
+
+        // Inject new fields for mirroring.
+        cgm->fields.push_back(
+            new IR::StructField("mirror_id", IR::Type::Bits::get(10)));
+        cgm->fields.push_back(
+            new IR::StructField("mirror_source", IR::Type::Bits::get(8)));
+
         structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
     }
 };
@@ -646,7 +684,7 @@ class ConstructSymbolTable : public Inspector {
         /*
          * translate digest() function in ingress control block to
          *
-         * ig_intr_md_for_dprsr.digest_idx = n;
+         * ig_intr_md_for_dprsr.digest_type = n;
          *
          */
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
@@ -656,8 +694,8 @@ class ConstructSymbolTable : public Inspector {
         BUG_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
                   "digest() can only be used in %1%",
                   structure->getBlockName(ProgramStructure::INGRESS));
-        IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_deparser");
-        auto mem = new IR::Member(path, "learn_idx");
+        IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
+        auto mem = new IR::Member(path, "digest_type");
         auto idx = new IR::Constant(IR::Type::Bits::get(3), digestIndex++);
         auto stmt = new IR::AssignmentStatement(mem, idx);
         structure->digestCalls.emplace(node, stmt);
@@ -673,9 +711,9 @@ class ConstructSymbolTable : public Inspector {
         BUG_CHECK(typeName != nullptr, "Wrong argument type for %1%", typeArg);
         /*
          * In the ingress deparser, add the following code
-         * _learning_packet_ () learn_1;
-         * if (ig_intr_md_for_dprsr.learn_idx == n)
-         *    learning_1.pack({fields});
+         * Digest() learn_1;
+         * if (ig_intr_md_for_dprsr.digest_type == n)
+         *    learn_1.pack({fields});
          *
          */
         auto field_list = mce->arguments->at(1);
@@ -687,14 +725,13 @@ class ConstructSymbolTable : public Inspector {
                 new IR::MethodCallExpression(member, typeArgs, args));
 
         auto condExprPath = new IR::Member(
-                new IR::PathExpression(new IR::Path("ig_intr_md_for_deparser")), "learn_idx");
+                new IR::PathExpression(new IR::Path("ig_intr_md_for_dprsr")), "digest_type");
         auto condExpr = new IR::Equ(condExprPath, idx);
         auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
         structure->ingressDeparserStatements.push_back(cond);
 
-        auto declArgs = new IR::Vector<IR::Expression>({mce->arguments->at(0)});
-        auto declType = new IR::Type_Specialized(new IR::Type_Name("_learning_packet_"),
-                                                 mce->typeArguments);
+        auto declArgs = new IR::Vector<IR::Expression>({});
+        auto declType = new IR::Type_Name("Digest");
         auto decl = new IR::Declaration_Instance(typeName->path->name,
                                                  new IR::Annotations({declAnno}),
                                                  declType, declArgs);
@@ -710,11 +747,10 @@ class ConstructSymbolTable : public Inspector {
         const bool isIngress =
                 (control->name == structure->getBlockName(ProgramStructure::INGRESS));
         auto *deparserMetadataPath =
-                new IR::PathExpression(isIngress ? "ig_intr_md_for_deparser"
-                                                 : "eg_intr_md_for_deparser");
-        auto *mirrorBufferMetadataPath =
-                new IR::PathExpression(isIngress ? "ig_intr_md_for_mb"
-                                                 : "eg_intr_md_for_mb");
+                new IR::PathExpression(isIngress ? "ig_intr_md_for_dprsr"
+                                                 : "eg_intr_md_for_dprsr");
+        auto *compilerMetadataPath =
+                new IR::PathExpression("compiler_generated_meta");
 
         // Generate a fresh index for this clone field list. This is used by the
         // hardware to select the correct mirror table entry, and to select the
@@ -722,7 +758,7 @@ class ConstructSymbolTable : public Inspector {
         auto *idx =
                 new IR::Constant(IR::Type::Bits::get(3), isIngress ? igCloneIndex++
                                                                    : egCloneIndex++);
-        if (idx->asInt() > 7) {
+        if ((isIngress ? igCloneIndex : egCloneIndex) > 8) {
             ::error("Too many clone() calls in %1%",
                     isIngress ? ProgramStructure::INGRESS : ProgramStructure::EGRESS);
             return;
@@ -735,7 +771,7 @@ class ConstructSymbolTable : public Inspector {
             // compiler-generated metadata that's prepended to the user field
             // list. Its layout (in network order) is:
             //   [  0    1       2          3         4       5    6   7 ]
-            //     [unused] [coalesced?] [gress] [mirrored?] [mirror idx]
+            //     [unused] [coalesced?] [gress] [mirrored?] [mirror_type]
             // Here `gress` is 0 for I2E mirroring and 1 for E2E mirroring.
             //
             // This information is used to set intrinsic metadata in the egress
@@ -743,11 +779,11 @@ class ConstructSymbolTable : public Inspector {
             // bit is zero, the egress parser expects the following bytes to be
             // bridged metadata rather than mirrored fields.
             //
-            // XXX(seth): Glass is able to reuse `mirror_idx` for last three
+            // XXX(seth): Glass is able to reuse `mirror_type` for last three
             // bits of this data, which eliminates the need for an extra PHV
             // container. We'll start doing that soon as well, but we need to
             // work out some issues with PHV allocation constraints first.
-            auto *mirrorSource = new IR::Member(deparserMetadataPath, "mirror_source");
+            auto *mirrorSource = new IR::Member(compilerMetadataPath, "mirror_source");
             const unsigned sourceIdx = idx->asInt();
             const unsigned isMirroredTag = 1 << 3;
             const unsigned gressTag = isIngress ? 0 : 1 << 4;
@@ -755,16 +791,16 @@ class ConstructSymbolTable : public Inspector {
                     new IR::Constant(IR::Type::Bits::get(8), sourceIdx | isMirroredTag | gressTag);
             block->components.push_back(new IR::AssignmentStatement(mirrorSource, source));
 
-            // Set `mirror_idx`, which is used as the digest selector in the
+            // Set `mirror_type`, which is used as the digest selector in the
             // deparser (in other words, it selects the field list to use).
-            auto *mirrorIdx = new IR::Member(deparserMetadataPath, "mirror_idx");
+            auto *mirrorIdx = new IR::Member(deparserMetadataPath, "mirror_type");
             block->components.push_back(new IR::AssignmentStatement(mirrorIdx, idx));
 
             // Set `mirror_id`, which configures the mirror session id that the
             // hardware uses to route mirrored packets in the TM.
             BUG_CHECK(mce->arguments->size() >= 2,
                       "No mirror session id specified: %1%", mce);
-            auto *mirrorId = new IR::Member(mirrorBufferMetadataPath, "mirror_id");
+            auto *mirrorId = new IR::Member(compilerMetadataPath, "mirror_id");
             auto *mirrorIdValue = mce->arguments->at(1);
             /// v1model mirror_id is 32bit, cast to bit<10>
             auto *castedMirrorIdValue = new IR::Cast(IR::Type::Bits::get(10), mirrorIdValue);
@@ -776,13 +812,25 @@ class ConstructSymbolTable : public Inspector {
 
         /*
          * generate statement in ingress/egress deparser to prepend mirror metadata
-         * if (ig_intr_md_for_dprsr.mirror_idx == N)
+         *
+         * Mirror mirror();
+         * if (ig_intr_md_for_dprsr.mirror_type == N)
          *    mirror.emit({});
          */
 
+        // Only instantiate the extern for the first instance of clone()
+        if ((isIngress ? igCloneIndex : egCloneIndex) == 1) {
+            auto declArgs = new IR::Vector<IR::Expression>({});
+            auto declType = new IR::Type_Name("Mirror");
+            auto decl = new IR::Declaration_Instance("mirror", declType, declArgs);
+            if (isIngress)
+                structure->ingressDeparserDeclarations.push_back(decl);
+            else
+                structure->egressDeparserDeclarations.push_back(decl);
+        }
+
         auto *newFieldList = new IR::ListExpression({
-            new IR::Member(mirrorBufferMetadataPath, "mirror_id"),
-            new IR::Member(deparserMetadataPath, "mirror_source")});
+            new IR::Member(compilerMetadataPath, "mirror_source")});
 
         if (hasData && mce->arguments->size() > 2) {
             auto *clonedData = mce->arguments->at(2);
@@ -791,14 +839,17 @@ class ConstructSymbolTable : public Inspector {
             else
                 newFieldList->components.push_back(clonedData);
         }
-        auto *args = new IR::Vector<IR::Expression>({newFieldList});
+
+        auto args = new IR::Vector<IR::Expression>();
+        args->push_back(new IR::Member(compilerMetadataPath, "mirror_id"));
+        args->push_back(newFieldList);
 
         auto pathExpr = new IR::PathExpression(new IR::Path("mirror"));
         auto member = new IR::Member(pathExpr, "emit");
         auto typeArgs = new IR::Vector<IR::Type>();
         auto mcs = new IR::MethodCallStatement(
                 new IR::MethodCallExpression(member, typeArgs, args));
-        auto condExprPath = new IR::Member(deparserMetadataPath, "mirror_idx");
+        auto condExprPath = new IR::Member(deparserMetadataPath, "mirror_type");
         auto condExpr = new IR::Equ(condExprPath, idx);
         auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
         if (isIngress)
@@ -811,13 +862,13 @@ class ConstructSymbolTable : public Inspector {
         auto control = findContext<IR::P4Control>();
         if (control->name == structure->getBlockName(ProgramStructure::INGRESS)) {
             auto path = new IR::Member(
-                    new IR::PathExpression("ig_intr_md_for_tm"), "drop_ctl");
+                    new IR::PathExpression("ig_intr_md_for_dprsr"), "drop_ctl");
             auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
             auto stmt = new IR::AssignmentStatement(path, val);
             structure->dropCalls.emplace(node, stmt);
         } else if (control->name == structure->getBlockName(ProgramStructure::EGRESS)) {
             auto path = new IR::Member(
-                    new IR::PathExpression("eg_intr_md_for_oport"), "drop_ctl");
+                    new IR::PathExpression("eg_intr_md_for_dprsr"), "drop_ctl");
             auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
             auto stmt = new IR::AssignmentStatement(path, val);
             structure->dropCalls.emplace(node, stmt);
@@ -894,12 +945,12 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
-    /// resubmit function is converted to an assignment on resubmit_idx
+    /// resubmit function is converted to an assignment on resubmit_type
     void cvtResubmitFunction(const IR::MethodCallStatement *node) {
         /*
          * translate resubmit() function in ingress control block to
          *
-         * ig_intr_md_for_dprsr.resubmit_idx = n;
+         * ig_intr_md_for_dprsr.resubmit_type = n;
          *
          */
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
@@ -908,8 +959,8 @@ class ConstructSymbolTable : public Inspector {
         BUG_CHECK(control != nullptr, "resubmit() must be used in a control block");
         BUG_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
                   "resubmit() can only be used in ingress control");
-        IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_deparser");
-        auto mem = new IR::Member(path, "resubmit_idx");
+        IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
+        auto mem = new IR::Member(path, "resubmit_type");
         auto idx = new IR::Constant(IR::Type::Bits::get(3), resubmitIndex++);
         auto stmt = new IR::AssignmentStatement(mem, idx);
         structure->resubmitCalls.emplace(node, stmt);
@@ -917,12 +968,28 @@ class ConstructSymbolTable : public Inspector {
         /*
          * In the ingress deparser, add the following code
          *
-         * if (ig_intr_md_for_dprsr.resubmit_idx == n)
+         * Resubmit() resubmit;
+         * if (ig_intr_md_for_dprsr.resubmit_type == n)
          *    resubmit.emit({fields});
          *
          */
+
+        if (resubmitIndex > 8) {
+            ::error("Too many resubmit() calls in %1%", ProgramStructure::INGRESS);
+            return;
+        }
+
+        // Only instantiate the extern for the first instance of resubmit()
+        if (resubmitIndex == 1) {
+            auto declArgs = new IR::Vector<IR::Expression>({});
+            auto declType = new IR::Type_Name("Resubmit");
+            auto decl = new IR::Declaration_Instance("resubmit",
+                                                 declType, declArgs);
+            structure->ingressDeparserDeclarations.push_back(decl);
+        }
+
         auto fl = mce->arguments->at(0);   // resubmit field list
-        /// compiler inserts resubmit_idx as the format id to
+        /// compiler inserts resubmit_type as the format id to
         /// identify the resubmit group, it is 3 bits in size, but
         /// will be aligned to byte boundary in backend.
         auto new_fl = new IR::ListExpression({mem});
@@ -936,8 +1003,8 @@ class ConstructSymbolTable : public Inspector {
                 new IR::MethodCallExpression(member, typeArgs, args));
 
         auto condExprPath = new IR::Member(
-                new IR::PathExpression(new IR::Path("ig_intr_md_for_deparser")),
-                "resubmit_idx");
+                new IR::PathExpression(new IR::Path("ig_intr_md_for_dprsr")),
+                "resubmit_type");
         auto condExpr = new IR::Equ(condExprPath, idx);
         auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
         structure->ingressDeparserStatements.push_back(cond);
@@ -1289,7 +1356,7 @@ class ConstructSymbolTable : public Inspector {
                 auto rhs = new IR::Cast(IR::Type::Bits::get(1), verifyCall);
 
                 auto ingress_parser_err = new IR::Member(
-                    new IR::PathExpression("ig_intr_md_from_parser_aux"), "ingress_parser_err");
+                    new IR::PathExpression("ig_intr_md_from_prsr"), "parser_err");
 
                 auto lhs = new IR::Slice(ingress_parser_err, 12, 12);
 
@@ -1297,7 +1364,7 @@ class ConstructSymbolTable : public Inspector {
                     new IR::AssignmentStatement(lhs, rhs));
 
                 auto egress_parser_err = new IR::Member(
-                    new IR::PathExpression("eg_intr_md_from_parser_aux"), "egress_parser_err");
+                    new IR::PathExpression("eg_intr_md_from_prsr"), "parser_err");
 
                 lhs = new IR::Slice(egress_parser_err, 12, 12);
                 structure->egressParserStatements[stateName].push_back(

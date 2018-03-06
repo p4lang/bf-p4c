@@ -42,8 +42,8 @@ void AddParserMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
         new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
     auto* bridgedMetadataIndicator =
       new IR::TempVar(IR::Type::Bits::get(8), false, "^bridged_metadata_indicator");
-    auto* globalTimestamp = gen_fieldref(igParserMeta, "ingress_global_tstamp");
-    auto* globalVersion = gen_fieldref(igParserMeta, "ingress_global_ver");
+    auto* globalTimestamp = gen_fieldref(igParserMeta, "global_tstamp");
+    auto* globalVersion = gen_fieldref(igParserMeta, "global_ver");
 
     parser->start =
       new IR::BFN::ParserState("$entry_point", INGRESS,
@@ -61,8 +61,8 @@ void AddParserMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
 
     auto* alwaysDeparseBit =
         new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
-    auto* globalTimestamp = gen_fieldref(egParserMeta, "egress_global_tstamp");
-    auto* globalVersion = gen_fieldref(egParserMeta, "egress_global_ver");
+    auto* globalTimestamp = gen_fieldref(egParserMeta, "global_tstamp");
+    auto* globalVersion = gen_fieldref(egParserMeta, "global_ver");
     parser->start =
       new IR::BFN::ParserState("$entry_point", EGRESS,
         { new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)),
@@ -109,7 +109,6 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
     addDeparserParam(d, tmMeta, "ucast_egress_port", "egress_unicast_port",
                      /* canPack = */ false);
-    addDeparserParam(d, tmMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
     addDeparserParam(d, tmMeta, "bypass_egress", "bypss_egr");
     addDeparserParam(d, tmMeta, "deflect_on_drop", "deflect_on_drop");
     addDeparserParam(d, tmMeta, "ingress_cos", "icos");
@@ -133,19 +132,20 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     addDeparserParam(d, tmMeta, "level1_exclusion_id", "xid");
     addDeparserParam(d, tmMeta, "level2_exclusion_id", "yid");
     addDeparserParam(d, tmMeta, "rid", "rid");
+
+    auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
+    addDeparserParam(d, dpMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
 }
 
 void AddDeparserMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
-    auto* mirrorMeta =
-      getMetadataType(pipe, "egress_intrinsic_metadata_for_mirror_buffer");
-    addDeparserParam(d, mirrorMeta, "coalesce_length", "coal");
-
     auto* outputMeta =
       getMetadataType(pipe, "egress_intrinsic_metadata_for_output_port");
     addDeparserParam(d, outputMeta, "capture_tstamp_on_tx", "capture_tx_ts");
     addDeparserParam(d, outputMeta, "update_delay_on_tx", "tx_pkt_has_offsets");
     addDeparserParam(d, outputMeta, "force_tx_error", "force_tx_err");
-    addDeparserParam(d, outputMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
+
+    auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser");
+    addDeparserParam(d, dpMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
 
     /* egress_port is how the egress deparser knows where to push
      * the reassembled header and is absolutely necessary

@@ -371,7 +371,6 @@ class LoadTargetArchitecture : public Inspector {
         setup_metadata_map();
         structure->include("tofino/stratum.p4", &structure->targetTypes);
         structure->include("tofino/p4_14_prim.p4", &structure->targetTypes);
-        structure->include("tofino/p4_16_prim.p4", &structure->targetTypes);
         for (auto decl : structure->targetTypes) {
             if (auto v = decl->to<IR::Type_Enum>()) {
                 structure->enums.emplace(v->name, v);
