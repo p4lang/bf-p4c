@@ -715,6 +715,7 @@ class SuperCluster : public ClusterStats {
     int max_width_i = 0;
     int num_constraints_i = 0;
     size_t aggregate_size_i = 0;
+    size_t num_pack_conflicts_i = 0;
 
  public:
     SuperCluster(
@@ -767,6 +768,14 @@ class SuperCluster : public ClusterStats {
 
     /// @returns the aggregate size of all slices in all clusters in this group.
     size_t aggregate_size() const override { return aggregate_size_i; }
+
+    /// @returns the number of pack conflicts of all slices in all clusters in this group. A pack
+    /// conflict indicates that the field of a given slice cannot be packed with some other field
+    /// referenced in the program.
+    size_t num_pack_conflicts() const { return num_pack_conflicts_i; }
+
+    /// calculates the value of num_pack_conflicts_i (to be performed after PackConflicts analysis)
+    void calc_pack_conflicts();
 
     /// @returns true if this cluster contains @f.
     bool contains(const PHV::Field* f) const override;

@@ -39,12 +39,13 @@ void PackConflicts::end_apply() {
             auto* t1 = row1.first;
             auto* t2 = row2.first;
             if (t1 == t2) continue;
-            int stage = bt.inSameStage(t1, t2);
-            if (stage != -1) {
+            ordered_set<int> stage = bt.inSameStage(t1, t2);
+            if (!stage.empty()) {
                 LOG4("\tGenerate no pack conditions for table " << t1->name << " and table " <<
                         t2->name << " in stage " << stage);
                 generateNoPackConstraints(t1, t2); } } }
-    LOG4("Total packing conditions: " << totalNumSet);
+    LOG3("Total packing conditions: " << totalNumSet);
+    updateNumPackConstraints();
     if (LOGGING(5))
         printNoPackConflicts();
 }
@@ -110,4 +111,14 @@ void PackConflicts::printNoPackConflicts() const {
                 LOG5("\t" << f1.name << " (" << f1.id << "), " << f2.name << " (" << f2.id << ")");
         } }
     LOG5("End List of no pack constraints " << this << " " << &fieldNoPack);
+}
+
+void PackConflicts::updateNumPackConstraints() {
+    for (auto& f1 : phv) {
+        size_t numPack = 0;
+        for (auto& f2 : phv) {
+            if (f1.id == f2.id) continue;
+            if (fieldNoPack(f1.id, f2.id))
+                numPack++; }
+        f1.set_num_pack_conflicts(numPack); }
 }

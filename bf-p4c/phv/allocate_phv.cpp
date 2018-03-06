@@ -255,8 +255,7 @@ bool CoreAllocation::satisfies_constraints(std::vector<PHV::AllocSlice> slices) 
             // XXX(cole): This is a hack to deal with bridged metadata; it
             // should be revisited once bridged metadata is moved to the
             // midend.
-            return (slice.field()->deparsed() || slice.field()->exact_containers())
-                   && !slice.field()->bridged;
+            return (slice.field()->deparsed() || slice.field()->exact_containers());
         };
     if (std::any_of(slices.begin(), slices.end(), IsDeparsed)) {
         // Reject mixes of deparsed/not deparsed fields.
@@ -290,9 +289,12 @@ bool CoreAllocation::satisfies_constraints(std::vector<PHV::AllocSlice> slices) 
     // unsatisfiable with slice lists, which induce packing.  Ignore adjacent slices of the same
     // field.
     std::vector<PHV::AllocSlice> used;
-    for (auto& slice : slices)
-        if ((uses_i.is_deparsed(slice.field()) || uses_i.is_used_mau(slice.field()))
-                && !clot_i.allocated(slice.field())) {
+    for (auto& slice : slices) {
+        bool isDeparsedOrMau = uses_i.is_deparsed(slice.field()) ||
+            uses_i.is_used_mau(slice.field());
+        bool isClot = clot_i.allocated(slice.field());
+        bool alwaysPackable = slice.field()->alwaysPackable;
+        if (isDeparsedOrMau && !isClot && !alwaysPackable)
             used.push_back(slice); }
     auto NotAdjacent = [](const PHV::AllocSlice& left, const PHV::AllocSlice& right) {
             return left.field() != right.field() ||
@@ -305,16 +307,6 @@ bool CoreAllocation::satisfies_constraints(std::vector<PHV::AllocSlice> slices) 
     if (not_adjacent && no_pack) {
         LOG5("    ...but slice list contains multiple fields and one has the 'no pack' constraint");
         return false; }
-
-    // XXX(cns): HACK!  Reject slice lists of bridged metadata fields that
-    // could fit in a smaller container.
-    for (auto& slice : slices) {
-        if (!slice.field()->bridged || slice.field_slice().size() != slice.field()->size)
-            continue;
-        if (slice.container().is(PHV::Size::b16) && slice.field()->size <= int(PHV::Size::b8))
-            return false;
-        if (slice.container().is(PHV::Size::b32) && slice.field()->size <= int(PHV::Size::b16))
-            return false; }
 
     return true;
 }
@@ -1084,9 +1076,9 @@ void AllocatePHV::end_apply() {
         clearSlices(phv_i);
         bindSlices(alloc, phv_i);
         phv_i.set_done();
-        LOG5("ALLOCATION SUCCESSFUL:");
-        LOG5(alloc);
-        LOG5(alloc.getSummary(uses_i));
+        LOG1("ALLOCATION SUCCESSFUL:");
+        LOG2(alloc);
+        LOG2(alloc.getSummary(uses_i));
     } else {
         formatAndThrowError(alloc, result.remaining_clusters);
     }
@@ -1105,7 +1097,7 @@ void AllocatePHV::formatAndThrowError(
     msg << "PHV allocation was not successful "
         << "(" << unallocated.size() << " cluster groups remaining)" << std::endl;
 
-    if (LOGGING(5)) {
+    if (LOGGING(3)) {
         msg << "Fields successfully allocated: " << std::endl;
         msg << alloc << std::endl;
         msg << "SuperClusters unallocated: " << std::endl;
@@ -1398,6 +1390,10 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     std::set<const PHV::SuperCluster*> pounder_clusters;
     std::set<const PHV::SuperCluster*> non_slicable;
 
+    // calc num_pack_conflicts
+    for (auto* super_cluster : cluster_groups)
+        super_cluster->calc_pack_conflicts();
+
     // calc no_pack and no_split.
     for (const auto* super_cluster : cluster_groups) {
         n_valid_starts[super_cluster] = (std::numeric_limits<int>::max)();
@@ -1492,6 +1488,8 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
             if (n_required_length[l] != n_required_length[r]) {
                 return n_required_length[l] < n_required_length[r]; }
         }
+        if (l->num_pack_conflicts() != r->num_pack_conflicts()) {
+            return l->num_pack_conflicts() > r->num_pack_conflicts(); }
         // if (critical_clusters.count(l) != critical_clusters.count(r)) {
         //     return critical_clusters.count(l) > critical_clusters.count(r); }
         if (l->num_constraints() != r->num_constraints()) {

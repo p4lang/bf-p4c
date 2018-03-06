@@ -54,7 +54,7 @@ bool TableLayout::backtrack(trigger &trig) {
  *      2 ^ (partition index bits)
  */
 void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
-                                  cstring &partition_index) {
+                                  cstring &partition_index, const PhvInfo& phv) {
     auto annot = tbl->match_table->getAnnotations();
     bool index_found = false;
     bool partitions_found = false;
@@ -86,9 +86,8 @@ void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU:
                    "ignored because no partition index specified", tbl->srcInfo, tbl->name);
     }
 
-
     if (index_found) {
-        if (VisitingThread(this) == INGRESS)
+        if (tbl->gress == INGRESS)
             partition_index = "ingress::" + partition_index;
         else
             partition_index = "egress::" + partition_index;
@@ -153,7 +152,7 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
     if (layout.alpm)
         check_for_alpm(layout, tbl, partition_index);
     if (!layout.atcam)
-        check_for_atcam(layout, tbl, partition_index);
+        check_for_atcam(layout, tbl, partition_index, phv);
     if (!layout.atcam)
         check_for_ternary(layout, tbl);
 

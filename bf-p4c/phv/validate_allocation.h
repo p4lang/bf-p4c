@@ -44,6 +44,7 @@ class ValidateActions final : public MauInspector {
     bool phv_alloc;
     bool ad_alloc;
     bool warning_found = false;
+    profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::MAU::Action *act) override;
     void end_apply() override;
 

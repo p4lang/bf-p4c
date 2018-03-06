@@ -28,6 +28,11 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stateful3.p4
   )
 
+  p4c_add_xfail_reason("jbay"
+    "Assertion .*kInstrAluGrpSize.* failed."
+    testdata/p4_14_samples/parser_dc_full.p4
+  )
+
   # ingress_port isn't being setup properly (STF harness bug)
   p4c_add_xfail_reason("jbay"
     ".* expected packet.* on port .* not seen"
@@ -171,6 +176,7 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "PHV allocation creates a container action impossible within a Tofino ALU"
   testdata/p4_14_samples/issue894.p4
+# PHV packs POV bits incorrectly
   )
 
 p4c_add_xfail_reason("jbay"

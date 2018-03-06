@@ -90,7 +90,7 @@ void BuildMutex::end_apply() {
 
 void ExcludeDeparsedIntrinsicMetadata::end_apply() {
     for (auto& f : phv) {
-        if (f.pov || (f.deparsed_to_tm() && f.no_pack())) {
+        if (f.pov || f.deparsed_to_tm()) {
             LOG1("Marking field as never overlaid: " << f);
             neverOverlay.setbit(f.id); } }
 }

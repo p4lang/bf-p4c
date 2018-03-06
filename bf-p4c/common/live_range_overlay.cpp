@@ -1,5 +1,7 @@
-#include "lib/ordered_set.h"
 #include "live_range_overlay.h"
+
+#include <numeric>
+#include "lib/ordered_set.h"
 #include "ir/ir.h"
 #include "bf-p4c/ir/gress.h"
 
@@ -47,19 +49,33 @@ void LiveRangeOverlay::end_apply() {
     // NB: Only metadata fields are considered.
 
     // Fields that are not definitely dead are possibly live.
-    std::map<int, ordered_set<const IR::BFN::Unit *>> livemap;
+    ordered_map<int, ordered_set<const IR::BFN::Unit *>> livemap;
     for (const PHV::Field &f : phv) {
-        if (!f.metadata)
+        // Only consider for live range overlay if the field is non-bridged metadata or a bridged
+        // metadata padding field
+        if (!f.metadata && !f.alwaysPackable)
             continue;
         LOG4("checking liveness of " << f.name);
         ordered_set<const IR::BFN::Unit *> *all_units;
         all_units = f.gress == INGRESS ? &all_ingress_units : &all_egress_units;
         for (const IR::BFN::Unit *u : *all_units) {
-            if (is_dead_at(f, u)) {
-                LOG4("    dead at " << DBPrint::Brief << u);
+            if (f.alwaysPackable) {
+                bool isEgressParser = u->is<IR::BFN::ParserState>() && u->thread() ==  EGRESS;
+                bool isIngressParser = u->is<IR::BFN::ParserState>() && u->thread() == INGRESS;
+                if (isEgressParser || isIngressParser) {
+                    LOG4("    live at " << DBPrint::Brief << u);
+                    livemap[f.id].insert(u);
+                } else {
+                    LOG4("    dead at " << DBPrint::Brief << u); }
             } else {
-                LOG4("    maybe live at " << DBPrint::Brief << u);
-                livemap[f.id].insert(u); } } }
+                if (is_dead_at(f, u)) {
+                    LOG4("    dead at " << DBPrint::Brief << u);
+                } else {
+                    LOG4("    maybe live at " << DBPrint::Brief << u);
+                    livemap[f.id].insert(u); } } } }
+
+    if (LOGGING(1))
+        printLiveRanges(livemap);
 
     // Fields can be overlaid if they may never be live in the same
     // unit.
@@ -67,11 +83,11 @@ void LiveRangeOverlay::end_apply() {
     // deparser.
     LOG4("mutually exclusive metadata:");
     for (auto f1 : phv) {
-        if (!f1.metadata || f1.pov || (f1.deparsed_to_tm() && f1.no_pack()))
+        if ((!f1.metadata && !f1.alwaysPackable) || f1.pov || f1.deparsed_to_tm())
             continue;
         for (auto f2 : phv) {
-            if (!f2.metadata || f2.pov || f1.gress != f2.gress || (f2.deparsed_to_tm() &&
-                        f2.no_pack()))
+            if ((!f2.metadata && !f2.alwaysPackable) || f2.pov || f1.gress != f2.gress ||
+                    f2.deparsed_to_tm())
                 continue;
             if (!intersects(livemap[f1.id], livemap[f2.id])) {
                 LOG4("(" << f1.name << ", " << f2.name << ")");
@@ -142,4 +158,57 @@ void LiveRangeOverlay::get_uninitialized_reads(
                      " at "<< DBPrint::Brief <<
                      use.first << ":" << DBPrint::Brief << use.second);
                 out[f.id].insert(use); } } }
+}
+
+void LiveRangeOverlay::printLiveRanges(ordered_map<int, ordered_set<const IR::BFN::Unit*>>& lm) {
+    ordered_map<unsigned, unsigned> minStage;
+    ordered_map<unsigned, unsigned> maxStage;
+    std::stringstream dashes;
+    auto numStages = 12;
+    const unsigned dashWidth = 95 + (numStages + 2) * 3;
+    for (unsigned i = 0; i < dashWidth; i++)
+        dashes << "-";
+    LOG1(dashes.str());
+    std::stringstream colTitle;
+    colTitle << (boost::format("%=70s") % "Field Name") << "|  gress  | P |";
+    for (int i = 0; i < numStages; i++)
+        colTitle << boost::format("%=3s") % i << "|";
+    colTitle << " D |";
+    LOG1(colTitle.str());
+    LOG1(dashes.str());
+    for (auto entry : lm) {
+        const auto* f = phv.field(entry.first);
+        bool usedInParser = false;
+        bool usedInDeparser = false;
+        ordered_set<unsigned> stages;
+        for (auto u : entry.second) {
+            if (dynamic_cast<const IR::BFN::ParserState *>(u))
+                usedInParser = true;
+            if (dynamic_cast<const IR::BFN::Deparser *>(u))
+                usedInDeparser = true;
+            if (const auto *t = dynamic_cast<const IR::MAU::Table *>(u))
+                stages.insert(dg.min_stage(t));
+        }
+        minStage[entry.first] = std::accumulate(stages.begin(), stages.end(), 13, [](int a, int b)
+                { return std::min(a, b); });
+        maxStage[entry.first] = std::accumulate(stages.begin(), stages.end(), 0, [](int a, int b)
+                { return std::max(a, b); });
+        std::stringstream ss;
+        ss << boost::format("%=70s") % f->name << "|" << boost::format("%=9s") % f->gress << "|";
+        if (usedInParser)
+            ss << " x |";
+        else
+            ss << "   |";
+        for (int i = 0; i < numStages; i++) {
+            if (stages.count(i))
+                ss << " x |";
+            else
+                ss << "   |"; }
+        if (usedInDeparser)
+            ss << " x |";
+        else
+            ss << "   |";
+        LOG1(ss.str());
+    }
+    LOG1(dashes);
 }

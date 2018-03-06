@@ -8,8 +8,8 @@
 
 struct PHVTrigger {
     struct failure : public Backtrack::trigger {
-        ordered_map<cstring, int> tableAlloc;
-        explicit failure(ordered_map<cstring, int> tables)
+        ordered_map<cstring, ordered_set<int>> tableAlloc;
+        explicit failure(ordered_map<cstring, ordered_set<int>> tables)
             : trigger(OTHER), tableAlloc(tables) {}
     };
 };
@@ -34,8 +34,11 @@ class TableSummary: public MauInspector {
 
     /// Map of table name to stage: sent with the backtracking exception to communicate table
     /// placement constraints to PHV allocation
-    ordered_map<cstring, int> tableAlloc;
-    ordered_map<cstring, cstring> merged_gateways;
+    ordered_map<cstring, ordered_set<int>> tableAlloc;
+    /// Map of table name to the name of the gateway merged with it
+    ordered_map<cstring, cstring> mergedGateways;
+    /// Map of table pointers to the names used for communicating table placement information
+    ordered_map<cstring, cstring> tableNames;
 
     std::map<int, const IR::MAU::Table *>    order;
     std::map<int, IXBar>                     ixbar;
@@ -47,10 +50,16 @@ class TableSummary: public MauInspector {
     void postorder(const IR::BFN::Pipe* pipe) override;
     void end_apply() override;
 
+    /// Prints the stage wise table placement.
     void printTablePlacement();
+    /// Throws the appropriate backtracking exception if table placement is not successful.
     void throwBacktrackException();
 
  public:
+    /// @returns the P4 name for tables with an external name (non-gateways). @returns the
+    /// compiler-generated name otherwise.
+    static cstring getTableName(const IR::MAU::Table* tbl);
+
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };
 

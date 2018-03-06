@@ -56,6 +56,7 @@ p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   extensions/p4_tests/p4_14/overlay_add_header.p4
   extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
+# packing valid bits incorrectly
   )
 
 # BRIG-104
@@ -787,7 +788,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
-  switch_dc_basic
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1009,11 +1009,11 @@ p4c_add_xfail_reason("tofino"
   #extensions/p4_tests/p4_14/c2/COMPILER-401/case2308_bugged.p4
   )
 
+# Translation code does not support standard_metadata.checksum_error
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  switch_l2
-  switch_dc_basic
-)
+  "Could not find declaration for standard_metadata"
+  extensions/p4_tests/p4_16/verify_checksum.p4
+  )
 
 # BRIG-487
 p4c_add_xfail_reason("tofino"
@@ -1072,3 +1072,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/stateful2.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  switch_dc_basic
+  switch_l2
+)

@@ -87,10 +87,12 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
 
 void PHV_Field_Operations::end_apply() {
     LOG3("..........Begin PHV_Field_Operations..........");
-    for (auto &f : phv)
+    for (auto &f : phv) {
         for (auto &op : f.operations()) {
             bool is_move_op = std::get<0>(op);
-            if (is_move_op != true) {
+            bool is_write = std::get<2>(op) == PHV::Field_Ops::W
+                            || std::get<2>(op) == PHV::Field_Ops::RW;
+            if (!is_move_op) {
                 // Don't split carry operations.
                 f.set_no_split(true);
 
@@ -100,7 +102,13 @@ void PHV_Field_Operations::end_apply() {
                                       "32b, but field %1% has %2%b and is involved in '%3%'",
                                       cstring::to_cstring(f), f.size, std::get<1>(op));
 
-                f.set_no_pack(true);
-                break; } }
+                // For sources of writes involved in a non-MOVE operation, the bits not involved in
+                // the non-move operations do not change. Therefore, it is safe to not put a
+                // no_pack() constraint on those sources.
+                if (is_write) {
+                    LOG1("    ...setting no pack because " << f.name << " is involved in a "
+                         "write by non-MOVE");
+                    f.set_no_pack(true); } } } }
+
     LOG3("..........End PHV_Field_Operations..........");
 }  // end_apply()

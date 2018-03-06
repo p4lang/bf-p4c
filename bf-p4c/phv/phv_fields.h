@@ -96,6 +96,10 @@ class Field {
     /// True if this Field is metadata bridged from ingress to egress.
     bool            bridged = false;
 
+    /// True if this Field can always be packed with other fields. Used for padding fields for
+    /// bridged metadata.
+    bool            alwaysPackable = false;
+
     /// A mirror field points to its field list (one of eight)
     struct mirror_field_list_t {
         Field *member_field;
@@ -373,6 +377,8 @@ class Field {
                                                        /// multiple PHV containers
 
     bool            deparsed_to_tm_i = false;          /// true if field is read by TM
+    size_t          numNoPack = 0;                     /// Number of fields with which this field
+                                                       /// cannot be packed
 
     //
     // operations on this field
@@ -458,6 +464,10 @@ class Field {
 
     bool deparsed_to_tm() const                            { return deparsed_to_tm_i; }
     void set_deparsed_to_tm(bool b)                        { deparsed_to_tm_i = b; }
+
+    void set_num_pack_conflicts(size_t no)                 { numNoPack = no; }
+
+    size_t num_pack_conflicts() const                      { return numNoPack; }
 
     bool constrained(bool packing_constraint = false) const;
 
@@ -669,7 +679,7 @@ class PhvInfo {
 
     void clear();
     void add(cstring fieldName, gress_t gress, int size, int offset,
-             bool isMetadata, bool isPOV);
+             bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false);
     void add_hdr(cstring headerName, const IR::Type_StructLike* type,
                  gress_t gress, bool isMetadata);
     void addTempVar(const IR::TempVar* tempVar, gress_t gress);

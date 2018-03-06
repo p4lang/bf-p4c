@@ -26,9 +26,14 @@ void PhvInfo::clear() {
     pov_alloc_done = false;
 }
 
-void PhvInfo::add(cstring name, gress_t gress, int size, int offset, bool meta, bool pov) {
-    LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " field " << name <<
-         " size " << size);
+void PhvInfo::add(
+        cstring name, gress_t gress, int size, int offset, bool meta, bool pov,
+        bool bridged, bool pad) {
+    // Set the egress version of bridged fields to metadata
+    if (gress == EGRESS && bridged)
+        meta = true;
+    LOG3("PhvInfo adding " << (pad ? "padding" : (meta ? "metadata" : "header")) << " field " <<
+         name << " size " << size);
     assert(all_fields.count(name) == 0);
     auto *info = &all_fields[name];
     info->name = name;
@@ -38,6 +43,8 @@ void PhvInfo::add(cstring name, gress_t gress, int size, int offset, bool meta, 
     info->offset = offset;
     info->metadata = meta;
     info->pov = pov;
+    info->bridged = bridged;
+    info->alwaysPackable = pad;
     by_id.push_back(info);
 }
 
@@ -49,11 +56,18 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gre
     BUG_CHECK(all_structs.count(name) == 0, "phv_fields.cpp:add_hdr(): all_structs inconsistent");
     int start = by_id.size();
     int offset = 0;
+    auto annot = type->getAnnotations();
+    bool bridged = false;
+    if (auto s = annot->getSingle("layout")) {
+        LOG3("Candidate bridged metadata header (found layout annotation): " << name);
+        bridged = true; }
     for (auto f : type->fields)
         offset += f->type->width_bits();
     for (auto f : type->fields) {
         int size = f->type->width_bits();
-        add(name + '.' + f->name, gress, size, offset -= size, meta, false); }
+        // "Hidden" annotation indicates padding introduced with bridged metadata fields
+        bool isPad = f->getAnnotations()->getSingle("hidden") != nullptr;
+        add(name + '.' + f->name, gress, size, offset -= size, meta, false, bridged, isPad); }
     int end = by_id.size();
     all_structs.emplace(name, StructInfo(meta, gress, start, end - start));
 }
@@ -272,14 +286,15 @@ bitvec PhvInfo::bits_allocated(
             write_slices_in_container.insert(&alloc);
         }); }
     for (auto* field : fields) {
+        if (field->alwaysPackable) continue;
         field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
             le_bitrange bits = alloc.container_bits();
-            // Discard the slices that are mutually exclusive with all the written slices
-            bool mutually_exclusive = true;
-            for (auto* slice : write_slices_in_container) {
-                if (!field_mutex(slice->field->id, alloc.field->id))
-                    mutually_exclusive = false; }
+            // Discard the slices that are mutually exclusive with any of the written slices
+            bool mutually_exclusive = std::any_of(
+                write_slices_in_container.begin(), write_slices_in_container.end(),
+                [&](const PHV::Field::alloc_slice* slice) {
+                    return field_mutex(slice->field->id, alloc.field->id); });
             if (!mutually_exclusive)
                 ret_bitvec.setrange(bits.lo, bits.size());
         }); }
@@ -756,52 +771,6 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
     PhvInfo& phv;
 };
 
-/**
- * Determine which fields are bridged and set a flag in their PHV::Field
- * metadata to indicate that.
- *
- * We consider fields to be bridged if they're written to in the special
- * `^bridged_metadata_extract` state that we generate in AddBridgedMetadata.
- * Using this approach ensures that fields are marked as bridged even if we
- * rebuild the PhvInfo data structure after AddBridgedMetadata has run.
- */
-struct MarkBridgedMetadataFields : public Inspector {
-    explicit MarkBridgedMetadataFields(PhvInfo& phv) : phv(phv) { }
-
- private:
-    bool preorder(const IR::BFN::ParserState* state) override {
-        if (!state->name.endsWith("^bridge_metadata_extract")) return true;
-
-        forAllMatching<IR::BFN::Extract>(&state->statements,
-                      [&](const IR::BFN::Extract* extract) {
-            auto* fieldInfo = phv.field(extract->dest->field);
-            if (!fieldInfo) return;
-
-            // Prior to CreateThreadLocalInstances, a P4 field is represented by
-            // the same PHV::Field object in both ingress and egress. After
-            // that pass runs, there are two PHV::Field objects. The extract
-            // will write to the *egress* version, but the one we actually want
-            // to mark as bridged is the *ingress* version.
-            if (!fieldInfo->name.startsWith("egress::")) {
-                fieldInfo->bridged = true;
-                return;
-            }
-
-            // XXX(seth): Yuck.
-            cstring ingressFieldName = cstring("ingress::")
-                                     + fieldInfo->name.substr(strlen("egress::"));
-            auto* ingressFieldInfo = phv.field(ingressFieldName);
-            BUG_CHECK(ingressFieldInfo != nullptr,
-                      "No ingress version of egress bridged metadata field?");
-            ingressFieldInfo->bridged = true;
-        });
-
-        return true;
-    }
-
-    PhvInfo& phv;
-};
-
 /// Allocate POV bits for each header instance, metadata instance, or header
 /// stack that we visited in CollectPhvFields.
 struct AllocatePOVBits : public Inspector {
@@ -957,8 +926,7 @@ class MarkDeparsedFields : public Inspector {
                   cstring::to_cstring(emit));
         // XXX(cole): These two constraints will be subsumed by deparser schema.
         src_field->set_deparsed(true);
-        if (!src_field->bridged)
-            src_field->set_exact_containers(true);
+        src_field->set_exact_containers(true);
         return false;
     }
 
@@ -997,7 +965,6 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
     addPasses({
         new CollectPhvFields(phv),
         new AllocatePOVBits(phv),
-        new MarkBridgedMetadataFields(phv),
         new ComputeFieldAlignments(phv),
         new MarkDeparsedFields(phv)
     });
@@ -1059,6 +1026,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.deparsed()) out << " deparsed";
     if (field.mau_phv_no_pack()) out << " mau_phv_no_pack";
     if (field.no_pack()) out << " no_pack";
+    if (field.alwaysPackable) out << " always_packable";
     if (field.no_split()) out << " no_split";
     if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
     if (field.deparsed_to_tm()) out << " deparsed_to_tm";
@@ -1180,7 +1148,7 @@ const IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const IR::Node *n, const c
 }
 
 void PhvInfo::DumpPhvFields::generate_field_histogram(gress_t gress) const {
-    if (!LOGGING(2)) return;
+    if (!LOGGING(1)) return;
     std::map<int, size_t> size_distribution;
     size_t total_bits = 0;
     size_t total_fields = 0;

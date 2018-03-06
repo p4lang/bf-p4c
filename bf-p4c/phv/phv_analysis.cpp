@@ -4,6 +4,7 @@
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
+#include "bf-p4c/phv/table_phv_constraints.h"
 #include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/validate_allocation.h"
@@ -22,7 +23,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       critical_path_clusters(parser_critical_path),
       pack_conflicts(phv, deps, table_mutex, table_alloc, action_mutex),
       action_constraints(phv, pack_conflicts),
-      pragmas(phv, options) {
+      pragmas(phv, options),
+      table_alloc(phv.field_mutex) {
     if (options.trivial_phvalloc) {
         addPasses({
             new PHV::TrivialAlloc(phv)});
@@ -49,6 +51,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new PHV_Field_Operations(phv),  // PHV field operations analysis
             &clustering,           // cluster analysis
             new PhvInfo::DumpPhvFields(phv, uses),
+            new TablePhvConstraints(phv),
             &critical_path_clusters,
             &table_mutex,          // Table mutual exclusion information
             &action_mutex,         // Mutually exclusive action information

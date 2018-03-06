@@ -58,8 +58,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                     "No PHV or CLOT allocation for referenced field %1%",
                     cstring::to_cstring(field));
 
-        ERROR_CHECK(!field.bridged || field.deparsed_i,
-                    "Field is bridged, but not deparsed: %1%",
+        ERROR_CHECK(!field.bridged || field.deparsed_i || field.gress == EGRESS,
+                    "Ingress field is bridged, but not deparsed: %1%",
                     cstring::to_cstring(field));
 
         // TODO(zma) add clot validation
@@ -333,11 +333,12 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         if (deparsedHeaderFields.size() && nonDeparsedFields.size()) {
             for (auto* deparsed : deparsedHeaderFields)
-                for (auto* nonDeparsed : nonDeparsedFields)
+                for (auto* nonDeparsed : nonDeparsedFields) {
+                    if (deparsed->bridged) continue;
                     ERROR_CHECK(mutually_exclusive_field_ids(deparsed->id, nonDeparsed->id),
                                 "Deparsed container %1% mixes deparsed header field %2% with "
                                 "non-deparsed field %3%", container, cstring::to_cstring(deparsed),
-                                cstring::to_cstring(nonDeparsed));
+                                cstring::to_cstring(nonDeparsed)); }
         }
 
         // Verify that the allocations for each field don't overlap. (Note that
@@ -501,6 +502,12 @@ bool ValidateActions::preorder(const IR::MAU::Action *act) {
     act->apply(aa);
     warning_found |= aa.warning_found();
     return false;
+}
+
+Visitor::profile_t ValidateActions::init_apply(const IR::Node *root) {
+    profile_t rv = Inspector::init_apply(root);
+    warning_found = false;
+    return rv;
 }
 
 void ValidateActions::end_apply() {

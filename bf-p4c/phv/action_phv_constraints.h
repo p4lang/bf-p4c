@@ -11,19 +11,17 @@
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 
 /** This class is meant to gather action information as well as provide information to PHV analysis
-  * through function calls.  This must be run after InstructionSelection, as it is dependent on
-  * ActionAnalysis, but during PHV analysis (before PHV_MAU_Group_Assignments).
-  * container_no_pack() and container_pack_cohabit() in PHV_MAU_Group_Assignments then query the
-  * information contained in class members here to determine constraints on packing induced by MAU
-  * actions. 
- */
+  * through function calls. Methods in AllocatePHV query the information contained in class members
+  * here to determine constraints on packing induced by MAU actions. 
+  * @pre Must be run after InstructionSelection, as it is dependent on ActionAnalysis
+  */
 class ActionPhvConstraints : public Inspector {
  private:
     const PhvInfo &phv;
     const PackConflicts &conflicts;
 
     using ClassifiedSources = ordered_map<size_t, ordered_set<PHV::AllocSlice>>;
-    /// Defines a struct for returning number of containers
+    /// Defines a struct for returning number of containers.
     struct NumContainers {
         size_t num_allocated;
         size_t num_unallocated;
@@ -34,7 +32,7 @@ class ActionPhvConstraints : public Inspector {
         NumContainers() : num_allocated(0), num_unallocated(0) {}
     };
 
-    /// Defines a struct for a particular field operation: either read or write
+    /// Defines a struct for a particular field operation: either read or write.
     // TODO: Will we ever need a boolean indicating read or write in this
     // struct?
     struct OperandInfo {

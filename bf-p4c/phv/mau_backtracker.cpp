@@ -10,7 +10,8 @@ bool MauBacktracker::backtrack(trigger &trig) {
         LOG1("Backtracking caught at MauBacktracker");
         for (auto entry : t->tableAlloc) {
             tables[entry.first] = entry.second;
-            maxStage = (maxStage < entry.second) ? entry.second : maxStage; }
+            for (int st : entry.second)
+                maxStage = (maxStage < st) ? st : maxStage; }
         LOG4("Inserted tables size: " << tables.size());
         return true; }
     return false;
@@ -19,6 +20,7 @@ bool MauBacktracker::backtrack(trigger &trig) {
 Visitor::profile_t MauBacktracker::init_apply(const IR::Node* root) {
     LOG1("MauBacktracker called " << numInvoked << " time(s)");
     ++numInvoked;
+    overlay.clear();
     profile_t rv = Inspector::init_apply(root);
     return rv;
 }
@@ -29,11 +31,18 @@ void MauBacktracker::end_apply() {
     printTableAlloc();
 }
 
-int MauBacktracker::inSameStage(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
-    if (tables.size() == 0) return -1;
-    if (tables.at(t1->name) == tables.at(t2->name))
-        return tables.at(t1->name);
-    return -1;
+ordered_set<int>
+MauBacktracker::inSameStage(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+    ordered_set<int> rs;
+    if (tables.size() == 0) return rs;
+    const ordered_set<int>& t1Stages = tables.at(TableSummary::getTableName(t1));
+    const ordered_set<int>& t2Stages = tables.at(TableSummary::getTableName(t2));
+    BUG_CHECK(t1Stages.size() > 0, "No allocation for table %1%", t1->name);
+    BUG_CHECK(t2Stages.size() > 0, "No allocation for table %2%", t2->name);
+    for (int a : t1Stages) {
+        for (int b : t2Stages) {
+            if (a == b) rs.insert(a); } }
+    return rs;
 }
 
 void MauBacktracker::printTableAlloc() const {
@@ -41,17 +50,21 @@ void MauBacktracker::printTableAlloc() const {
     LOG4("Printing Table Placement Before PHV Allocation Pass");
     LOG4("Stage | Table Name");
     for (auto tbl : tables)
-        LOG4(boost::format("%5d") % tbl.second << " | " << tbl.first);
+        for (int st : tbl.second)
+            LOG4(boost::format("%5d") % st << " | " << tbl.first);
 }
 
 bool MauBacktracker::hasTablePlacement() const {
     return (tables.size() > 0);
 }
 
-int MauBacktracker::stage(const IR::MAU::Table* t) const {
-    if (tables.size() == 0) return -1;
-    if (!tables.count(t->name)) return -1;
-    return tables.at(t->name);
+ordered_set<int> MauBacktracker::stage(const IR::MAU::Table* t) const {
+    ordered_set<int> emptySet;
+    if (tables.size() == 0) return emptySet;
+    cstring tableName = TableSummary::getTableName(t);
+    if (!tables.count(tableName))
+        return emptySet;
+    return tables.at(tableName);
 }
 
 int MauBacktracker::numStages() const {

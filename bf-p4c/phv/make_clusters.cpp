@@ -353,6 +353,16 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
     int accumulator_bits = 0;
     // TODO(yumin): optional<bool> is not good.
     boost::optional<bool> prev_is_tphv = boost::none;
+    bool lastNoPack = false;
+
+    auto StartNewSliceList = [&](void) {
+        slice_lists_i.insert(accumulator);
+        accumulator_bits = 0;
+        prev_is_tphv = boost::none;
+        accumulator = new PHV::SuperCluster::SliceList();
+        lastNoPack = false;
+    };
+
     LOG5("Starting new slice list:");
     for (int fid : boost::adaptors::reverse(struct_info.field_ids())) {
         PHV::Field* field = phv_i.field(fid);
@@ -373,39 +383,37 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
             LOG5("    ...skipping unreferenced field at the beginning of a slice list: " << field);
             continue; }
 
-        bool is_tphv = field->is_tphv_candidate(self.uses_i);
+        // If the slice list contains a no_pack field, then all the other slices in the list (if
+        // any) must be alwaysPackable
+        if (lastNoPack && !field->alwaysPackable) {
+            StartNewSliceList();
+            LOG5("Starting new slice list (to isolate a no_pack field): "); }
 
+        bool is_tphv = field->is_tphv_candidate(self.uses_i);
         // constraint.
         if (accumulator_bits && (field->no_pack())) {
             // Break off the existing slice list if this field has a no_pack
             // Break at bottom as well
-            slice_lists_i.insert(accumulator);
-            accumulator_bits = 0;
-            prev_is_tphv = boost::none;
-            accumulator = new PHV::SuperCluster::SliceList();
+            StartNewSliceList();
+            LOG5("Starting new slice list (for no_pack field):");
         } else if (accumulator_bits % int(PHV::Size::b8) == 0 && prev_is_tphv
             && prev_is_tphv.value() != is_tphv) {
             // Break off, if previous one is phv/tphv but this one is not the same.
-            slice_lists_i.insert(accumulator);
-            accumulator_bits = 0;
-            prev_is_tphv = boost::none;
-            accumulator = new PHV::SuperCluster::SliceList();
+            StartNewSliceList();
+            LOG5("Starting new slice list (at PHV/TPHV boundary):");
         } else if (accumulator_bits % int(PHV::Size::b8) == 0
                    && accumulator_bits + field->size > int(PHV::Size::b32)) {
             // Break off, if this field is a large field.
-            slice_lists_i.insert(accumulator);
-            accumulator_bits = 0;
-            prev_is_tphv = boost::none;
-            accumulator = new PHV::SuperCluster::SliceList();
+            StartNewSliceList();
+            LOG5("Starting new slice list (after " << accumulator_bits << "b because the next field"
+                    " is large):");
         } else if (accumulator_bits % int(PHV::Size::b8) == 0
                    && !self.uses_i.is_referenced(field)) {
             // Break off, on unreferenced/referenced boundary.
             // Break at bottom as well
-            slice_lists_i.insert(accumulator);
-            accumulator_bits = 0;
-            prev_is_tphv = boost::none;
-            accumulator = new PHV::SuperCluster::SliceList();
-        }
+            StartNewSliceList();
+            LOG5("Starting new slice list (after " << accumulator_bits << "b because the next field"
+                    " is unreferenced):"); }
 
 
         int field_slice_list_size = 0;
@@ -415,6 +423,7 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
             field_slice_list_size += slice.size(); }
         accumulator_bits += field->size;
         prev_is_tphv = is_tphv;
+        lastNoPack = field->no_pack();
 
         BUG_CHECK(field_slice_list_size == field->size,
                   "Fine grained slicing of field %1% (size %2%) produced slices adding up to %3%b",
@@ -424,14 +433,10 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
         // constraint, or if the list has reached a byte multiple of at least
         // 32b.
         bool is_multiple = accumulator_bits % int(PHV::Size::b8) == 0 && accumulator_bits >= 32;
-        if (field->no_pack() || is_multiple
-            || (accumulator_bits % int(PHV::Size::b8) == 0
+        if (is_multiple || (accumulator_bits % int(PHV::Size::b8) == 0
                 && !self.uses_i.is_referenced(field))) {
-            slice_lists_i.insert(accumulator);
-            accumulator_bits = 0;
-            prev_is_tphv = boost::none;
-            accumulator = new PHV::SuperCluster::SliceList(); }
-    }
+            StartNewSliceList();
+            LOG5("Starting new slice list:"); } }
 
     if (accumulator->size())
         slice_lists_i.insert(accumulator);
@@ -512,18 +517,11 @@ void Clustering::MakeSuperClusters::end_apply() {
         current_list_bits += f.size;
 
         // Make a new list after every 8 bits
-        if (current_list_bits >= 8) {
+        if (current_list_bits >= 16) {
             LOG5("Creating new POV slice list: " << current_list);
             slice_lists_i.insert(current_list);
             current_list = new PHV::SuperCluster::SliceList();
             current_list_bits = 0; } }
-
-    // If the number of headers is not a multiple of 8, then there will be some
-    // leftover POV fields.
-    if (ingress_list->size() > 0)
-        slice_lists_i.insert(ingress_list);
-    if (egress_list->size() > 0)
-        slice_lists_i.insert(egress_list);
 
     // XXX(cole): end hack.
 

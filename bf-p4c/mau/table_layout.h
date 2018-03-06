@@ -77,11 +77,8 @@ class TableLayout : public MauModifier, Backtrack {
     bool preorder(IR::MAU::Table *tbl) override;
     bool preorder(IR::MAU::Action *act) override;
     bool preorder(IR::MAU::InputXBarRead *read) override;
-    void check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
-                         cstring &partition_index);
     void check_for_alpm(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
                          cstring &partition_index);
-    void check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
     void setup_instr_and_next(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
     void setup_match_layout(IR::MAU::Table::Layout &, const IR::MAU::Table *);
     void setup_gateway_layout(IR::MAU::Table::Layout &, IR::MAU::Table *);
@@ -94,6 +91,9 @@ class TableLayout : public MauModifier, Backtrack {
 
  public:
     explicit TableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {}
+    static void check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
+    static void check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
+                                cstring &partition_index, const PhvInfo& phv);
 };
 
 #endif /* BF_P4C_MAU_TABLE_LAYOUT_H_ */

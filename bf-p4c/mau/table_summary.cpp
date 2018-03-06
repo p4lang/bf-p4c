@@ -1,4 +1,5 @@
 #include "bf-p4c/mau/table_summary.h"
+#include <numeric>
 #include "bf-p4c/mau/resource_estimate.h"
 #include "lib/hex.h"
 #include "lib/map.h"
@@ -13,6 +14,8 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     memory.clear();
     action_data_bus.clear();
     tableAlloc.clear();
+    tableNames.clear();
+    mergedGateways.clear();
     maxStage = 0;
     ingressDone = false;
     egressDone = false;
@@ -35,8 +38,10 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
     BUG_CHECK(order.count(t->logical_id) == 0, "Encountering table multiple times in IR traversal");
     assert(order.count(t->logical_id) == 0);
     order[t->logical_id] = t;
-    if (t->gateway_name)
-        merged_gateways[t->name] = t->gateway_name;
+    tableNames[t->name] = getTableName(t);
+    if (t->gateway_name) {
+        mergedGateways[t->name] = t->gateway_name;
+        tableNames[t->gateway_name] = t->gateway_name; }
     if (t->resources) {
         ixbar[t->stage()].update(t);
         memory[t->stage()].update(t->resources->memuse); }
@@ -44,21 +49,37 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
     return true;
 }
 
+cstring TableSummary::getTableName(const IR::MAU::Table* tbl) {
+    if (tbl->match_table) {
+        BUG_CHECK(tbl->match_table->externalName(), "Table %1% does not have a P4 name", tbl->name);
+        return tbl->match_table->externalName();
+    } else {
+        // For gateways, return the compiler generated name
+        return tbl->name; }
+}
+
 void TableSummary::throwBacktrackException() {
     for (auto entry : order) {
         int stage = static_cast<int>(entry.first/NUM_LOGICAL_TABLES_PER_STAGE);
         maxStage = (maxStage < stage) ? stage : maxStage;
-        tableAlloc[entry.second->name] = stage; }
+        tableAlloc[tableNames[entry.second->name]].insert(stage); }
     // maxStage is counted from 0 to n-1
     ++maxStage;
     LOG1("Number of stages in table allocation: " << maxStage);
 
-    for (auto entry : merged_gateways) {
-        if (tableAlloc[entry.first] != -1)
-            tableAlloc[entry.second] = tableAlloc[entry.first];
-        else
-            ::warning("Source of merged gateway does not have stage allocated");
-    }
+    for (auto entry : mergedGateways) {
+        ordered_set<int> tblStages = tableAlloc[tableNames[entry.first]];
+        // Make sure that the table to which the gateway has been merged has been allocated to a
+        // stage
+        if (!tblStages.count(-1)) {
+            ordered_set<int> stages = tableAlloc[tableNames[entry.first]];
+            int const & (*min)(int const &, int const &) = std::min<int>;
+            // If a gateway is merged with a P4 table split into multiple stages, then the placement
+            // of the gateway is always in the earliest stage into which the P4 table has been split
+            int minStage = std::accumulate(stages.begin(), stages.end(), maxStage + 1, min);
+            tableAlloc[tableNames[entry.second]].insert(minStage);
+        } else {
+            ::warning("Source of merged gateway does not have stage allocated"); } }
 
     // First round
     // First round of table placement places tables in less than 12 stages, no backtracking invoked
@@ -82,8 +103,10 @@ void TableSummary::printTablePlacement() {
     LOG1("Printing Table Placement");
     LOG1("Number of tables allocated: " << order.size());
     LOG1("Stage | Table Name");
-    for (auto tbl : tableAlloc)
-        LOG1(boost::format("%5d") % tbl.second << " | " << tbl.first);
+    for (auto tbl : tableAlloc) {
+        for (int st : tbl.second)
+            LOG1(boost::format("%5d") % st << " | " << tbl.first);
+    }
 }
 
 std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {

@@ -89,6 +89,11 @@ class LiveRangeOverlay : public Inspector {
      * this map. */
     void get_uninitialized_reads(ordered_map<int, FieldDefUse::LocPairSet> &out) const;
 
+    /** Visual representation of the live ranges calculated for various metadata fields. Uses
+      * logging-level 1.
+      */
+    void printLiveRanges(ordered_map<int, ordered_set<const IR::BFN::Unit *>>& lm);
+
  public:
     /** Build a LiveRangeOverlay Inspector.
      *

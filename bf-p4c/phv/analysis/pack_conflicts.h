@@ -49,8 +49,9 @@ class PackConflicts : public Inspector {
     /// written in those actions.
     void generateNoPackConstraints(const IR::MAU::Table* t1, const IR::MAU::Table* t2);
 
-    /// @returns true if tables @t1 and @t2 are placed in the same stage
-    bool inSameStage(const IR::MAU::Table* t1, const IR::MAU::Table* t2);
+    /// Update the PHV::Field object for every field with the number of fields with which it cannot
+    /// be packed
+    void updateNumPackConstraints();
 
  public:
     PackConflicts(const PhvInfo &p, const DependencyGraph &d, const TablesMutuallyExclusive &m,
