@@ -805,7 +805,7 @@ boost::optional<ordered_map<PHV::FieldSlice, int>> ActionPhvConstraints::can_pac
 
         if (phvMustBeAligned[action] && numSourceContainers[action] == 2) {
             boost::optional<ClassifiedSources> classifiedSourceSlices =
-                verify_two_container_alignment(alloc, container_state, action);
+                verify_two_container_alignment(alloc, container_state, action, c);
             if (!classifiedSourceSlices)
                 return boost::none;
             if (LOGGING(5)) {
@@ -940,7 +940,8 @@ boost::optional<ActionPhvConstraints::ClassifiedSources>
 ActionPhvConstraints::verify_two_container_alignment(
         const PHV::Allocation& alloc,
         const PHV::Allocation::MutuallyLiveSlices& container_state,
-        const IR::MAU::Action* action) {
+        const IR::MAU::Action* action,
+        const PHV::Container destination) {
     ClassifiedSources rm;
     bool firstContainerSet = false;
     bool secondContainerSet = false;
@@ -1001,7 +1002,7 @@ ActionPhvConstraints::verify_two_container_alignment(
                     firstContainerAligned = false;
                     firstOffset = getOffset(sl.container_slice(), slice.container_slice(),
                             slice.container()); }
-                    firstContainerSet = true;
+                firstContainerSet = true;
             } else if (!secondContainerSet) {
                 // first container has already been encountered at this point
                 if (num_to_source_mapping[1] == sl.container()) {
@@ -1072,6 +1073,20 @@ ActionPhvConstraints::verify_two_container_alignment(
     // If both source containers are unaligned, then packing is invalid.
     if (!firstContainerAligned && !secondContainerAligned) {
         LOG5("\t\t\t\tBoth source containers cannot be unaligned.");
+        return boost::optional<ClassifiedSources>{}; }
+
+    // xxx(Deep): Overly restrictive constraint
+    // For deposit-field, if the destination container is also a source, it cannot be the rotated
+    // source only.
+    // The right way to fix this is to ensure that for fields containers with unallocated bits, all
+    // unallocated sources have to be packed in the same container as the allocated sources.
+    if (!firstContainerAligned && num_to_source_mapping[1] == destination &&
+            num_to_source_mapping[2] != destination) {
+        LOG5("\t\t\t\tDestination cannot also be rotated source.");
+        return boost::optional<ClassifiedSources>{}; }
+    if (!secondContainerAligned && num_to_source_mapping[2] == destination &&
+            num_to_source_mapping[1] != destination) {
+        LOG5("\t\t\t\tDestination cannot also be rotated source.");
         return boost::optional<ClassifiedSources>{}; }
 
     return rm;

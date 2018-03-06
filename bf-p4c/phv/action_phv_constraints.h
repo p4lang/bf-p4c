@@ -317,9 +317,11 @@ class ActionPhvConstraints : public Inspector {
     /** Check that at least one container in a two source PHV instruction is aligned with the
       * destination
       */
-    boost::optional<ClassifiedSources> verify_two_container_alignment(const PHV::Allocation& alloc,
-            const PHV::Allocation::MutuallyLiveSlices& container_state, const IR::MAU::Action*
-            action);
+    boost::optional<ClassifiedSources> verify_two_container_alignment(
+            const PHV::Allocation& alloc,
+            const PHV::Allocation::MutuallyLiveSlices& container_state,
+            const IR::MAU::Action* action,
+            const PHV::Container destination);
 
     /** Returns offset (difference between lo bits) by which slice @a differs from slice @b
       * offset = (a.lo - b.lo) % b.container().size()
@@ -329,8 +331,9 @@ class ActionPhvConstraints : public Inspector {
 
     /** Check that the bitmasks needed to realize a two source PHV instruction are valid
       */
-    bool masks_valid(ordered_map<size_t, ordered_set<PHV::AllocSlice>>& sources, const
-            PHV::Container c) const;
+    bool masks_valid(
+            ordered_map<size_t, ordered_set<PHV::AllocSlice>>& sources,
+            const PHV::Container c) const;
 
     /// (xxx)Deep [Artificial Constraint]: Right now action bus allocation requires any destination
     /// written by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
