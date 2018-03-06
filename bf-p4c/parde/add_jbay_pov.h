@@ -41,51 +41,44 @@ class AddJBayMetadataPOV : public Transform {
         return new IR::Primitive("modify_field", povBit,
             new IR::Constant(IR::Type::Bits::get(1), (unsigned)validate));
     }
-    IR::Vector<IR::Primitive>* validate_deparser_param_pov(const IR::Primitive* p) {
+    IR::Node* insert_deparser_param_pov_write(const IR::Primitive* p, bool validate) {
         auto *dest = p->operands.at(0);
-        for (auto* param : dp->params)
-            if (equiv(dest, param->source->field))
-                return new IR::Vector<IR::Primitive>({ p, 
-                           create_pov_write(param->povBit->field, true)});
+        for (auto* param : dp->params) {
+            if (equiv(dest, param->source->field)) {
+                auto pov_write = create_pov_write(param->povBit->field, validate);
+                if (validate)
+                    return new IR::Vector<IR::Primitive>({ p, pov_write });
+                else
+                    return pov_write;
+            }
+        }
         return nullptr;
     }
-    IR::Vector<IR::Primitive>* validate_deparser_digest_pov(const IR::Primitive* p) {
+    IR::Node* insert_deparser_digest_pov_write(const IR::Primitive* p, bool validate) {
         auto *dest = p->operands.at(0);
         for (auto& item : dp->digests) {
             auto* digest = item.second;
             if (equiv(dest, digest->selector->field)) {
-                return new IR::Vector<IR::Primitive>({ p, 
-                           create_pov_write(digest->povBit->field, true)}); } }
+                auto pov_write = create_pov_write(digest->povBit->field, validate);
+                if (validate)
+                    return new IR::Vector<IR::Primitive>({ p, pov_write });
+                else
+                    return pov_write;
+            }
+        }
         return nullptr;
     }
-    IR::Primitive* invalidate_deparser_param_pov(const IR::Primitive* p) {
-        auto *dest = p->operands.at(0);
-        for (auto* param : dp->params)
-            if (equiv(dest, param->source->field))
-                return create_pov_write(param->povBit->field, false);
-        return nullptr;
-    }
-    IR::Primitive* invalidate_deparser_digest_pov(const IR::Primitive* p) {
-        auto *dest = p->operands.at(0);
-        for (auto& item : dp->digests) {
-            auto* digest = item.second;
-            if (equiv(dest, digest->selector->field)) {
-                return create_pov_write(digest->povBit->field, false); } }
-        return nullptr;
-    } 
     IR::Node *postorder(IR::Primitive *p) override {
         if (p->name == "modify_field") {
-            auto rv = validate_deparser_param_pov(p) ;
-            if (rv) return rv;
-
-            validate_deparser_digest_pov(p);
-            if (rv) return rv;
+            if (auto rv = insert_deparser_param_pov_write(p, true))
+                return rv;
+            if (auto rv = insert_deparser_digest_pov_write(p, true))
+                return rv;
         } else if (p->name == "invalidate") {
-            auto rv = invalidate_deparser_param_pov(p) ;
-            if (rv) return rv;
- 
-            rv = invalidate_deparser_digest_pov(p);
-            if (rv) return rv;
+            if (auto rv = insert_deparser_param_pov_write(p, false))
+                return rv;
+            if (auto rv = insert_deparser_digest_pov_write(p, false))
+                return rv;
         }
         return p; }
     IR::Node *postorder(IR::BFN::Extract *e) override {
