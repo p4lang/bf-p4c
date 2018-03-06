@@ -245,36 +245,56 @@ class STF2ptf(P4RuntimeTest, STFRunner):
             counter_entry.index.index = counterIndex
         try:
             foundCounter = False
-            for rep in self.stub.Read(rr):
-                for entity in rep.entities:
-                    counter = None
-                    if isDirect:
-                        counter = entity.direct_counter_entry
-                        if counter.table_entry.SerializeToString() != counter_entry.table_entry.SerializeToString():
-                            continue
-                    else:
-                        counter = entity.counter_entry
-                        if counter.counter_id != counterId or counter.index.index != counterIndex:
-                            continue
-                    foundCounter = True
-                    if chk[3][0] is not None:
-                        count_type = chk[3][0]
-                        compare = chk[3][1]
-                        val = int(chk[3][2])
-                        if count_type == 'packets':
-                            received = counter.data.packet_count
-                        else:
-                            received = counter.data.byte_count
-                            self._hasByteCounters = True
-                        condition = "{} {} {}".format(received, compare, val)
+            count_mode = chk[3][0]
+            if count_mode is not None:
+                compare_op = chk[3][1]
+                expected_val = int(chk[3][2])
+            received = 0
+            iteration = 1
+            condition = "{} {} {}".format(received, compare_op, expected_val)
+            while (not eval(condition)):
 
-                        self.assertTrue(eval(condition),
-                                        "{}: wrong {} count: expected {} not {}".format(counterName, count_type, val, received))
-                    else:
-                        self.assertTrue(counter.data.packet_count == 0,
-                                        "Wrong count of packets")
+                self._logger.info("iteration %d, received %d", iteration, received)
+                if iteration > 20:
+                    break
+
+                if iteration > 0:
+                    time.sleep(1)
+
+                for rep in self.stub.Read(rr):
+                    for entity in rep.entities:
+                        counter = None
+                        if isDirect:
+                            counter = entity.direct_counter_entry
+                            if counter.table_entry.SerializeToString() != counter_entry.table_entry.SerializeToString():
+                                continue
+                        else:
+                            counter = entity.counter_entry
+                            if counter.counter_id != counterId or counter.index.index != counterIndex:
+                                continue
+                        foundCounter = True
+                        if count_mode is not None:
+                            if count_mode == 'packets':
+                                received = counter.data.packet_count
+                            else:
+                                received = counter.data.byte_count
+                                self._hasByteCounters = True
+                condition = "{} {} {}".format(received, compare_op, expected_val)
+                iteration += 1
+
             if not foundCounter:
                 self.fail("Failed to retrieve counter {}".format(counterName))
+
+            if count_mode is not None:
+                self.assertTrue(eval(condition),
+                                "{}: wrong {} count: expected {} not {}".format(counterName,
+                                                                                count_mode,
+                                                                                expected_val,
+                                                                                received))
+            else:
+                self.assertTrue(counter.data.packet_count == 0,
+                                "Wrong count of packets")
+
         except Exception as e:
             self._logger.exception(e)
             self.fail("Failed to read counter:\n %s" % traceback.format_exc())
