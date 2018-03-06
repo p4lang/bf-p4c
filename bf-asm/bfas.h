@@ -3,7 +3,14 @@
 
 enum config_version_t { CONFIG_OLD=1, CONFIG_NEW=2, CONFIG_BOTH=3 };
 enum target_t { TOFINO=1, JBAY=2, TARGET_INDEX_LIMIT };
-enum binary_type_t { NO_BINARY, FOUR_PIPE, ONE_PIPE };
+enum binary_type_t { NO_BINARY,
+    FOUR_PIPE,  // binary replicating to all 4 pipes
+    ONE_PIPE,   // binary for one pipe with pipe offset addresses
+    PIPE0,      // binary with data just in pipe 0
+    PIPE1,      // binary with data just in pipe 1
+    PIPE2,      // binary with data just in pipe 2
+    PIPE3,      // binary with data just in pipe 3
+};
 extern struct option_t {
     config_version_t    version;
     target_t            target;

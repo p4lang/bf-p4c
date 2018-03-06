@@ -112,6 +112,7 @@ int main(int ac, char **av) {
         av = &arguments[0];
         ac = arguments.size(); }
     for (int i = 1; i < ac; i++) {
+        int     val, len;
         if (av[i][0] == '-' && av[i][1] == 0) {
             asm_parse_file("<stdin>", stdin);
         } else if (!strcmp(av[i], "--allpipes")) {
@@ -123,6 +124,9 @@ int main(int ac, char **av) {
             options.binary = NO_BINARY;
         } else if (!strcmp(av[i], "--singlepipe")) {
             options.binary = ONE_PIPE;
+        } else if (sscanf(av[i], "--pipe%d%n", &val, &len) > 0 && !av[i][len] &&
+                   val >= 0 && val < 4) {
+            options.binary = static_cast<binary_type_t>(PIPE0 + val);
         } else if (!strcmp(av[i], "--target")) {
             ++i;
             if (!av[i]) {
