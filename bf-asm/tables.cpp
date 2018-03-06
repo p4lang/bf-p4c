@@ -888,6 +888,15 @@ void Table::Actions::Action::set_action_handle(Table *tbl) {
     // must be same. p4_table stores a map of actions and their handles. If
     // action present store the same handle else assign a new one.
     auto p4_table = tbl->p4_table;
+    if (auto adt = tbl->to<ActionTable>()) {
+        auto mt = adt->get_match_table();
+        if (mt) {
+            // If action table is associated with an action profile store the
+            // actions in the p4_table of that action profile and not the match
+            // table
+            if (!(p4_table && 
+                (mt->action_profile() == p4_table->p4_name()))) 
+                p4_table = mt->p4_table ? mt->p4_table : p4_table; } }
     if (p4_table) {
         if (p4_table->action_handles.count(name) > 0)
             handle = p4_table->action_handles[name]; }
