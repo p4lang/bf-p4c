@@ -35,9 +35,17 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
                 type = STANDARD;
             else if (kv.value == "lpf")
                 type = LPF;
-            else if (kv.value == "red")
+            else if (kv.value == "wred")
                 type = RED;
             else error(kv.value.lineno, "Unknown meter type %s", value_desc(kv.value));
+        } else if (kv.key == "red_output") {
+            if (CHECKTYPE(kv.value, tMAP)) {
+                for (auto &v : kv.value.map) {
+                    if (CHECKTYPE(v.key, tSTR) && CHECKTYPE(v.value, tINT)) {
+                        if (v.key == "drop") red_drop_value = v.value.i;
+                        else if (v.key == "nodrop") red_nodrop_value = v.value.i;
+                        else error(kv.value.lineno, "Unknown meter red param: %s",
+                                v.key.s); } } }
         } else if (kv.key == "count") {
             if (kv.value == "bytes")
                 count = BYTES;
@@ -212,7 +220,9 @@ void MeterTable::write_regs(REGS &regs) {
             ++mapram, ++vpn; }
         if (&logical_row == home) {
             int meter_group_index = row/2U;
-            auto &meter_ctl = map_alu.meter_group[meter_group_index].meter.meter_ctl;
+            auto &meter = map_alu.meter_group[meter_group_index].meter;
+            auto &meter_ctl = meter.meter_ctl;
+            auto &red_value_ctl = meter.red_value_ctl;
             meter_ctl.meter_bytecount_adjust = 0; // FIXME
             meter_ctl.meter_rng_enable = 0; // FIXME
             auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group_index];
@@ -226,6 +236,8 @@ void MeterTable::write_regs(REGS &regs) {
                     meter_ctl.lpf_enable = 1;
                     meter_ctl.red_enable = 1;
                     delay_ctl.meter_alu_right_group_enable = 1;
+                    red_value_ctl.red_nodrop_value = red_nodrop_value;
+                    red_value_ctl.red_drop_value = red_drop_value;
                     break;
                 default:
                     meter_ctl.meter_enable = 1;

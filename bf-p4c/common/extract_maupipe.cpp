@@ -389,6 +389,9 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         if (args->size() == 2) {
             mtr->direct = true;
         } else if (args->size() == 3) {
+            // The order must be synced once we move to new extern - "Wred"
+            mtr->red_nodrop_value = args->at(0)->as<IR::Constant>().asInt();
+            mtr->red_drop_value = args->at(1)->as<IR::Constant>().asInt();
             mtr->size = args->at(2)->as<IR::Constant>().asInt();
         }
         return mtr;

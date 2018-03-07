@@ -2028,6 +2028,12 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     else
         imp_type = meter->implementation.name;
     out << indent << "type: " << imp_type << std::endl;
+    if (imp_type == "wred") {
+        out << indent << "red_output: { ";
+        out << " drop: " << meter->red_drop_value;
+        out << " , nodrop: " << meter->red_nodrop_value;
+        out << " } " << std::endl;
+    }
     cstring count_type;
     switch (meter->type) {
         case IR::MAU::DataAggregation::PACKETS:

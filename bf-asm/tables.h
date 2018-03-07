@@ -1225,6 +1225,8 @@ public:
 )
 
 DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
+    int red_nodrop_value = -1;
+    int red_drop_value = -1;
     enum { NONE=0, STANDARD=1, LPF=2, RED=3 }   type = NONE;
     enum { NONE_=0, PACKETS=1, BYTES=2 }        count = NONE_;
     std::vector<Layout>                         color_maprams;

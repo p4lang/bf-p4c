@@ -797,11 +797,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Unknown meter type wred"
-  extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "error: set requires 2 operands"
   extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
   )
