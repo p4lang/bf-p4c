@@ -143,7 +143,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                         if ((kv.value[i].lo & 7) != 0 || (kv.value[i].hi & 7) != 7)
                             error(kv.value.lineno, "Slice must be byte slice");
                         off += kv.value[i].lo;
-                        sz = kv.value[1].hi - kv.value[1].lo + 1;
+                        sz = kv.value[i].hi - kv.value[i].lo + 1;
                     } else {
                         error(kv.value[i].lineno, "Unexpected hash_dist %s",
                               value_desc(kv.value[i]));
@@ -181,8 +181,8 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
     }
 }
 
-void ActionBus::setup_slot(int lineno, Table *tbl, const char *name, int idx,
-                           Source src, int sz, int off) {
+void ActionBus::setup_slot(int lineno, Table *tbl, const char *name, unsigned idx,
+                           Source src, unsigned sz, unsigned off) {
     if (idx >= ACTION_DATA_BUS_BYTES) {
         error(lineno, "Action bus index out of range");
         return; }
