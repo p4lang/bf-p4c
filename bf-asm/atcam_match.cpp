@@ -172,6 +172,10 @@ void AlgTcamMatchTable::pass2() {
     // FIXME -- need a method of specifying these things in the asm code?
     // FIXME -- should at least check that these are sane
     for (unsigned i = 0; i < word_ixbar_group.size(); ++i) {
+        if (word_ixbar_group[i] < 0) {
+            // Word with no match data, only version/valid; used for direct lookup
+            // tables -- can it happen with an atcam table?
+            continue; }
         bitvec ixbar_use = input_xbar->hash_group_bituse(word_ixbar_group[i]);
         // Which 10-bit address group to use for this word -- use the lowest one with
         // a bit set in the hash group.  Can it be different for different words?

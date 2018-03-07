@@ -247,8 +247,9 @@ static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {
 
 void SRamMatchTable::setup_word_ixbar_group() {
     word_ixbar_group.resize(match_in_word.size());
-    for (unsigned i = 0; i < match_in_word.size(); i++)
-        word_ixbar_group[i] = find_in_ixbar(this, match_in_word[i]);
+    unsigned i = 0;
+    for (auto &match : match_in_word)
+        word_ixbar_group[i++] = match.empty() ? -1 : find_in_ixbar(this, match);
 }
 
 template<class REGS>
@@ -638,6 +639,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                             bits_in_byte = piece.hi + 1 - fmt_bit;
                         auto it = --match_by_bit.upper_bound(bit);
                         Phv::Slice sl(*it->second, bit-it->first, bit-it->first+bits_in_byte-1);
+                        assert(word_ixbar_group[word] >= 0);
                         int bus_loc = find_on_ixbar(sl, word_ixbar_group[word]);
                         assert(bus_loc >= 0 && bus_loc < 16);
                         for (unsigned b = 0; b < bits_in_byte; b++, fmt_bit++)
@@ -655,7 +657,13 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                     byteswizzle_ctl[byte][bit%8U] = 8; } } }
         if (using_match) {
             auto &vh_xbar_ctl = rams_row.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
-            setup_muxctl(vh_xbar_ctl,  word_ixbar_group[word]);
+            if (word_ixbar_group[word] >= 0) {
+                setup_muxctl(vh_xbar_ctl,  word_ixbar_group[word]);
+            } else {
+                // Need the bus for version/valid, but don't care what other data is on it.  So
+                // just set the enable without actually selecting an input -- if another table
+                // is sharing the bus, it will set it, otherwise we'll get ixbar group 0
+                vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1; }
             vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; }
         /* setup match central config to extract results of the match */
         unsigned bus = row.row*2 + row.bus;
