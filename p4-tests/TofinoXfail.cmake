@@ -42,12 +42,12 @@ endif() # HARLYN_STF_tofino
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 
-# # BRIG-103
-# p4c_add_xfail_reason("tofino"
-#   "instruction slot [0-9]+ used multiple times in action"
-#   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-#   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-#   )
+# Problem with the stkvalid encoding of header stacks.
+# BRIG-497
+p4c_add_xfail_reason("tofino"
+  "instruction slot [0-9]+ used multiple times in action"
+  testdata/p4_14_samples/instruct5.p4
+  )
 
 # This test fails because two fields are mutually exclusive in the parser, but
 # one is added in the MAU while the other is live.  This behavior matches glass
@@ -745,7 +745,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/issue655-bmv2.p4
     testdata/p4_16_samples/issue1000-bmv2.p4
-    testdata/p4_16_samples/issue774-4-bmv2.p4
     extensions/p4_tests/p4_16/multiple_apply1.p4
     extensions/p4_tests/p4_16/container_dependency.p4
     # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
@@ -995,11 +994,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Extracted range .* with size .* doesn't match destination container .* with size"
-  extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "error: Can't find .* on the input xbar"
   #extensions/p4_tests/p4_14/c1/COMPILER-352/netchain_one.p4
   )
@@ -1077,3 +1071,11 @@ p4c_add_xfail_reason("tofino"
   switch_dc_basic
   switch_l2
 )
+
+# BRIG-339
+# Brig does not currently support the experimental feature
+# `packet_in.extract<Type>(_)` for shifting out bits from the ingress buffer.
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expected packet was not received on device"
+  testdata/p4_16_samples/issue774-4-bmv2.p4
+  )

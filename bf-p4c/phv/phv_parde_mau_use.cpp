@@ -17,8 +17,8 @@ Visitor::profile_t Phv_Parde_Mau_Use::init_apply(const IR::Node *root) {
     in_dep = false;
     for (auto &x : use_i) for (auto &y : x) y.clear();
     for (auto &x : deparser_i) x.clear();
+    for (auto &x : extracted_i) x.clear();
     written_i.clear();
-    extracted_i.clear();
     used_alu_i.clear();
     return rv;
 }
@@ -34,7 +34,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Parser *p) {
 bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Extract *e) {
     auto* f = phv.field(e->dest->field);
     BUG_CHECK(f, "Extract to non-PHV destination: %1%", e);
-    extracted_i[f->id] = true;
+    extracted_i[thread][f->id] = true;
     return true;
 }
 
@@ -160,9 +160,12 @@ bool Phv_Parde_Mau_Use::is_used_parde(const PHV::Field *f) const {    // use in 
     return use_pd;
 }
 
-bool Phv_Parde_Mau_Use::is_extracted(const PHV::Field *f) const {
+bool Phv_Parde_Mau_Use::is_extracted(const PHV::Field *f, boost::optional<gress_t> gress) const {
     BUG_CHECK(f, "Null field");
-    return extracted_i[f->id];
+    if (!gress)
+        return extracted_i[INGRESS][f->id] || extracted_i[EGRESS][f->id];
+    else
+        return extracted_i[*gress][f->id];
 }
 
 //***********************************************************************************

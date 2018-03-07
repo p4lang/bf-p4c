@@ -354,6 +354,7 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
     // TODO(yumin): optional<bool> is not good.
     boost::optional<bool> prev_is_tphv = boost::none;
     bool lastNoPack = false;
+    bool break_at_next_byte_boundary = false;
 
     auto StartNewSliceList = [&](void) {
         slice_lists_i.insert(accumulator);
@@ -361,6 +362,7 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
         prev_is_tphv = boost::none;
         accumulator = new PHV::SuperCluster::SliceList();
         lastNoPack = false;
+        break_at_next_byte_boundary = false;
     };
 
     LOG5("Starting new slice list:");
@@ -390,14 +392,25 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
             LOG5("Starting new slice list (to isolate a no_pack field): "); }
 
         bool is_tphv = field->is_tphv_candidate(self.uses_i);
-        // constraint.
+
+        // Break off, if field is extracted in Phase 0, i.e. if field is
+        // bridged and also extracted in INGRESS.
+        // XXX(cole): This should work for bridged metadata extracted in Phase
+        // 0, but needs more thought for extracted header fields.  See
+        // BRIG-301.
+        break_at_next_byte_boundary |= self.uses_i.is_extracted(field) && field->bridged;
+
         if (accumulator_bits && (field->no_pack())) {
             // Break off the existing slice list if this field has a no_pack
             // Break at bottom as well
             StartNewSliceList();
             LOG5("Starting new slice list (for no_pack field):");
-        } else if (accumulator_bits % int(PHV::Size::b8) == 0 && prev_is_tphv
-            && prev_is_tphv.value() != is_tphv) {
+        } else if (accumulator_bits % int(PHV::Size::b8) == 0 && break_at_next_byte_boundary) {
+            // Break off, if previous one is phv/tphv but this one is not the same.
+            StartNewSliceList();
+            LOG5("Starting new slice list (at phase 0 field boundary):");
+        } else if (accumulator_bits % int(PHV::Size::b8) == 0 && prev_is_tphv &&
+                   *prev_is_tphv != is_tphv) {
             // Break off, if previous one is phv/tphv but this one is not the same.
             StartNewSliceList();
             LOG5("Starting new slice list (at PHV/TPHV boundary):");
@@ -409,12 +422,12 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
                     " is large):");
         } else if (accumulator_bits % int(PHV::Size::b8) == 0
                    && !self.uses_i.is_referenced(field)) {
+            LOG5("    ...breaking slice list before unreferenced field: " << field);
             // Break off, on unreferenced/referenced boundary.
-            // Break at bottom as well
+            // Break at bottom as well.
             StartNewSliceList();
             LOG5("Starting new slice list (after " << accumulator_bits << "b because the next field"
                     " is unreferenced):"); }
-
 
         int field_slice_list_size = 0;
         for (auto& slice : self.fields_to_slices_i.at(field)) {

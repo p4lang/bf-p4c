@@ -3,6 +3,7 @@
 
 #include "ir/ir.h"
 #include "bf-p4c/common/header_stack.h"
+#include "bf-p4c/ir/gress.h"
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/phv/phv.h"
@@ -21,7 +22,7 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     bitvec      used_alu_i;
 
     /// Fields extracted in the parser.
-    bitvec      extracted_i;
+    bitvec      extracted_i[2];
 
     /// Used to associate $stkvalid and $valid fields for header stacks.
     BFN::HeaderStackInfo* stacks;
@@ -61,7 +62,7 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     bool is_used_parde(const PHV::Field *f) const;
 
     /// @returns true if @f is extracted in the (ingress or egress) parser.
-    bool is_extracted(const PHV::Field *f) const;
+    bool is_extracted(const PHV::Field *f, boost::optional<gress_t> gress = boost::none) const;
 
  protected:
     const PhvInfo &phv;
