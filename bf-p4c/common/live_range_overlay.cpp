@@ -210,5 +210,5 @@ void LiveRangeOverlay::printLiveRanges(ordered_map<int, ordered_set<const IR::BF
             ss << "   |";
         LOG1(ss.str());
     }
-    LOG1(dashes);
+    LOG1(dashes.str());
 }

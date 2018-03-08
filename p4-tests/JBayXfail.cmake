@@ -50,6 +50,7 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/action_chain_limits.p4
     extensions/p4_tests/p4_14/adjust_instr5.p4
     extensions/p4_tests/p4_14/adjust_instr7.p4
+    extensions/p4_tests/p4_14/no_match_miss.p4
     # clot-phv interaction bug?
     testdata/p4_14_samples/exact_match_valid1.p4
   )
@@ -156,14 +157,6 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "Compiler Bug.*: .*: Cannot find declaration for"
   testdata/p4_14_samples/TLV_parsing.p4
-  )
-
-p4c_add_xfail_reason("jbay"
-  "Floating point exception"
-  # These tests start to fail after introducing PHV packing.
-  extensions/p4_tests/p4_14/adjust_instr3.p4
-  extensions/p4_tests/p4_14/action_default_multiple.p4
-  extensions/p4_tests/p4_14/no_match_miss.p4
   )
 
 p4c_add_xfail_reason("jbay"

@@ -27,7 +27,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     "mismatch from expected.*at byte 0x"
     extensions/p4_tests/p4_14/adjust_instr5.p4
     testdata/p4_14_samples/bigfield1.p4
-    extensions/p4_tests/p4_14/adjust_instr7.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -740,7 +739,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
-    extensions/p4_tests/p4_14/adjust_instr7.p4
     extensions/p4_tests/p4_14/no_match_miss.p4
     testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/issue655-bmv2.p4
