@@ -50,7 +50,7 @@ popd # p4c/extensions
 
 mkdir -p ${builddir}
 pushd ${builddir}
-cmake ${mydir} -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=ON -DENABLE_STF2PTF=ON $*
+cmake ${mydir} -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=ON $*
 popd # builddir
 
 if [ "$RUN_BOOTSTRAP_PTF" == "yes" ]; then

@@ -26,6 +26,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   p4c_add_xfail_reason("tofino"
     "mismatch from expected.*at byte 0x"
     extensions/p4_tests/p4_14/adjust_instr5.p4
+    extensions/p4_tests/p4_14/adjust_instr7.p4
     testdata/p4_14_samples/bigfield1.p4
     )
 
@@ -34,6 +35,18 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_14/adjust_instr3.p4
     extensions/p4_tests/p4_14/action_default_multiple.p4
     extensions/p4_tests/p4_14/no_match_miss.p4
+    )
+
+  # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
+  p4c_add_xfail_reason("tofino"
+    "expected packet[s]* on port .* not seen"
+    testdata/p4_14_samples/basic_routing.p4
+    testdata/p4_14_samples/gateway1.p4
+    testdata/p4_14_samples/gateway2.p4
+    testdata/p4_14_samples/gateway3.p4
+    testdata/p4_14_samples/gateway4.p4
+    testdata/p4_16_samples/issue774-4-bmv2.p4
+    testdata/p4_16_samples/issue1000-bmv2.p4
     )
 
 endif() # HARLYN_STF_tofino
@@ -613,15 +626,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue986-bmv2.p4
   )
 
-# Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
-p4c_add_xfail_reason("tofino"
-  "expected packet on port .* not seen"
-  testdata/p4_14_samples/gateway1.p4
-  testdata/p4_14_samples/gateway2.p4
-  testdata/p4_14_samples/gateway3.p4
-  testdata/p4_14_samples/gateway4.p4
-  )
-
 #END: XFAILS that match glass XFAILS
 
 # This code contains an implicit cast in an assignment in the parser; we need to
@@ -742,7 +746,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/no_match_miss.p4
     testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/issue655-bmv2.p4
-    testdata/p4_16_samples/issue1000-bmv2.p4
     extensions/p4_tests/p4_16/multiple_apply1.p4
     extensions/p4_tests/p4_16/container_dependency.p4
     # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
@@ -773,6 +776,21 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "AssertionError: Invalid match name .* for table .*"
     testdata/p4_14_samples/exact_match_mask1.p4
+    )
+
+
+  p4c_add_xfail_reason("tofino"
+    "stf2ptf.STF2ptf ... ERROR"
+    # Detailed: "KeyError: (0, 10)"
+    testdata/p4_14_samples/parser_dc_full.p4
+    # Detailed: "Error when adding match entry to target"
+    testdata/p4_14_samples/exact_match3.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Error when trying to push config to bf_switchd"
+    extensions/p4_tests/p4_14/sful_1bit.p4
+    extensions/p4_tests/p4_14/stateful2.p4
     )
 
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
@@ -1020,15 +1038,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "stf2ptf.STF2ptf ... ERROR"
-  # Detailed: "KeyError: (0, 10)"
-  testdata/p4_14_samples/parser_dc_full.p4
-  # Detailed: "Error when adding match entry to target" 
-  testdata/p4_14_samples/exact_match3.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "p4c CRASH with signal 6" 
+  "p4c CRASH with signal 6"
   extensions/p4_tests/p4_16/cast_widening_add.p4
   extensions/p4_tests/p4_16/atcam_match2.p4
   extensions/p4_tests/p4_16/multiple_apply2.p4
@@ -1054,21 +1064,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Error when trying to push config to bf_switchd"
-  extensions/p4_tests/p4_14/sful_1bit.p4
-  extensions/p4_tests/p4_14/stateful2.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_dc_basic
   switch_l2
 )
-
-# BRIG-339
-# Brig does not currently support the experimental feature
-# `packet_in.extract<Type>(_)` for shifting out bits from the ingress buffer.
-p4c_add_xfail_reason("tofino"
-  "AssertionError: Expected packet was not received on device"
-  testdata/p4_16_samples/issue774-4-bmv2.p4
-  )

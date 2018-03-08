@@ -66,7 +66,7 @@ RUN /usr/local/bin/ccache --zero-stats && \
     ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RELEASE \
                                  -DENABLE_P4C_GRAPHS=OFF \
                                  -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
-                                 -DENABLE_EBPF=OFF -DENABLE_STF2PTF=ON \
+                                 -DENABLE_EBPF=OFF -DENABLE_STF2PTF=OFF \
                                  && \
     cd build && \
     make && \
