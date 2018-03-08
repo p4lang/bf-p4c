@@ -753,7 +753,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     )
 
   p4c_add_xfail_reason("tofino"
-    "AssertionError: .*: wrong (packets|bytes) count: expected 8 not 68"
+    "AssertionError: .*: wrong (packets|bytes) count: expected [0-9]+ not [0-9]+"
     # counter3 fails because it receives 64 bytes: for PTF the test should be adjusted to send more than 8 bytes
     testdata/p4_14_samples/counter3.p4
     )
