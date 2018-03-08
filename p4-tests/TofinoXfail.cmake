@@ -1,5 +1,4 @@
 # Some of these failures are still P4 v1.0 front-end bugs.
-# 02-FlexCounter fails with Cannot unify Type(HashAlgorithm) to HashAlgorithm
 # Others are due to non-standard extensions to P4:
 # The *meter* tests use direct meters and execute_meter calls with 4 arguments (not in spec)
 # The *recircualte* tests use a different (non standard?) reciculate primitive
@@ -176,23 +175,23 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Cannot unify Type"
+  "error: No format in action table"
   extensions/p4_tests/p4_14/02-FlexCounterActionProfile.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "PHV allocation creates a container action impossible within a Tofino ALU"
   extensions/p4_tests/p4_14/test_config_172_stateful_heavy_hitter.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "the packing is too complicated due to either hash distribution or attached outputs combined with other action data"
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
-  extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
-  extensions/p4_tests/p4_14/test_config_308_hash_96b.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "In table .*, the number of bytes through hash is larger than the available amount 4"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
-  #extensions/p4_tests/p4_14/c2/COMPILER-408/case2364.p4
-  #extensions/p4_tests/p4_14/c2/COMPILER-443/case2514.p4
-  #extensions/p4_tests/p4_14/c2/COMPILER-466/case2563_with_nop.p4
-  #extensions/p4_tests/p4_14/c2/COMPILER-466/case2563_without_nop.p4
-  #extensions/p4_tests/p4_14/c2/COMPILER-475/case2600.p4
-  #extensions/p4_tests/p4_14/c2/COMPILER-510/case2682.p4
-  #extensions/p4_tests/p4_14/c2/COMPILER-514/balancer_one.p4
-  #extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
-  #extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
-  #extensions/p4_tests/p4_14/c2/COMPILER-502/case2675.p4
   )
 
 # BRIG-102
@@ -318,13 +317,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue512.p4
   )
 
-
-#BRIG-139
-p4c_add_xfail_reason("tofino"
-  "Cannot unify Type[(]HashAlgorithm[)] to HashAlgorithm"
-  extensions/p4_tests/p4_14/test_config_309_wide_dyn_selection.p4
-  extensions/p4_tests/p4_14/test_config_314_sym_hash.p4
-  )
 
 # p4c_add_xfail_reason("tofino"
 #   "constant value .* out of range for immediate"
@@ -927,10 +919,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1079-bmv2.p4
   )
 
-# Unsupported features
-# custom hash algorithms
+# missing argument in default_action -- test bug
 p4c_add_xfail_reason("tofino"
-  "warning: poly_0x11021_not_rev: unexpected algorithm"
+  "error: set_p: parameter p must be bound"
   extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
   )
 
@@ -1014,7 +1005,7 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-487
 p4c_add_xfail_reason("tofino"
-  "No hash dist .* in table .*"
+  "error: hash dist .* is not on the action bus"
   extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
   )
 

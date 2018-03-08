@@ -199,28 +199,17 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
 
 
 struct FormatHash {
-    safe_vector<Slice> match_data;
-    const Slice *ghost;
-    cstring alg;
-    FormatHash(const safe_vector<Slice>& md, const Slice *g, cstring a)
-        : match_data(md), ghost(g), alg(a) {}
+    safe_vector<Slice>          match_data;
+    const Slice                 *ghost;
+    IR::MAU::hash_function      func;
+    FormatHash(const safe_vector<Slice>& md, const Slice *g, IR::MAU::hash_function f)
+        : match_data(md), ghost(g), func(f) {}
 };
 
-// FIXME: This is a simple function for crc polynomial.  Probably needs to be expanded for
-// actual use of the assembly
-static cstring inline crc_poly(int number) {
-    if (number == 16)
-        return "0x8fdb";
-    else  // if (number == "32")
-        return "0xe89061db";
-}
-
-static bool checkEqual(cstring a, cstring b) {
-    return (strcasecmp(a.c_str(), b.c_str()) == 0);
-}
-
 std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
-    if (checkEqual(hash.alg, "exact_match")) {
+    if (hash.func.type == IR::MAU::hash_function::IDENTITY) {
+        out << "stripe(" << emit_vector(hash.match_data) << ")";
+    } else if (hash.func.type == IR::MAU::hash_function::RANDOM) {
         if (!hash.match_data.empty()) {
             out << "random(" << emit_vector(hash.match_data, ", ") << ")";
             if (hash.ghost) out << " ^ ";
@@ -228,18 +217,22 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
         if (hash.ghost) {
             out << *hash.ghost;
         }
-    } else if (checkEqual(hash.alg, "random")) {
-        out << "random(" << emit_vector(hash.match_data, ", ") << ")";
-    } else if (checkEqual(hash.alg, "crc16")) {
-        out << "stripe(crc(" << crc_poly(16) << ", " << emit_vector(hash.match_data, ", ") << "))";
-    } else if (checkEqual(hash.alg, "crc32")) {
-        out << "stripe(crc(" << crc_poly(32) << ", " << emit_vector(hash.match_data, ", ") << "))";
-    } else if (checkEqual(hash.alg, "identity")) {
-        out << hash.match_data[0];
-    } else if (checkEqual(hash.alg, "selector_identity")) {
-        out << "stripe(" << emit_vector(hash.match_data) << ")";
+    } else if (hash.func.type == IR::MAU::hash_function::CRC) {
+        out << "stripe(crc";
+        if (hash.func.reverse) out << "_rev";
+        out << "(0x" << hex(hash.func.poly) << ", ";
+        if (hash.func.init)
+            out << "0x" << hex(hash.func.init) << ", ";
+        out << emit_vector(hash.match_data, ", ") << ")";
+        // FIXME -- final_xor needs to go into the seed for the hash group
+        out << ")";
+    } else if (hash.func.type == IR::MAU::hash_function::XOR) {
+        // fixme -- should be able to implement this in a hash function
+        BUG("xor hashing algorithm not supported");
+    } else if (hash.func.type == IR::MAU::hash_function::CSUM) {
+        BUG("csum hashing algorithm not supported");
     } else {
-        BUG("Hashing Algorithm is not recognized");
+        BUG("unknown hashing algorithm %d", hash.func.type);
     }
     return out;
 }
@@ -373,7 +366,7 @@ void MauAsmOutput::emit_ixbar_hash_way(std::ostream &out, indent_t indent,
         out << indent << way_start;
         if (way_end != way_start)
             out << ".." << way_end;
-        out << ": " << FormatHash(match_data, ghost, "exact_match") << std::endl;
+        out << ": " << FormatHash(match_data, ghost, IR::MAU::hash_function::random()) << std::endl;
     }
 }
 
@@ -386,7 +379,7 @@ void MauAsmOutput::emit_ixbar_hash_way_select(std::ostream &out, indent_t indent
     out << indent << way_start;
     if (way_end != way_start)
         out << ".." << way_end;
-    out << ": " << FormatHash(match_data, ghost, "exact_match") << std::endl;
+    out << ": " << FormatHash(match_data, ghost, IR::MAU::hash_function::random()) << std::endl;
 }
 
 /** This function is necessary due to the limits of the driver's handling of ATCAM tables.
@@ -623,7 +616,8 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
                 ident_slice.push_back(adapted_sl);
 
                 out << indent << hash_lo << ".." << hash_hi;
-                out << ": " << FormatHash(ident_slice, nullptr, "identity") << std::endl;
+                out << ": " << FormatHash(ident_slice, nullptr, IR::MAU::hash_function::identity())
+                    << std::endl;
             }
             start_bit = bv.ffs(end_bit);
         }
@@ -644,15 +638,12 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
     }
 
     for (auto &select : use->select_use) {
-        auto alg = select.algorithm;
-        if (checkEqual(alg, "identity"))
-            alg = "selector_identity";
         if (select.mode == "resilient")
             out << indent << "0..50: "
-                << FormatHash(match_data, nullptr, alg) << std::endl;
+                << FormatHash(match_data, nullptr, select.algorithm) << std::endl;
         else if (select.mode == "fair")
             out << indent << "0..13: "
-                << FormatHash(match_data, nullptr, alg) << std::endl;
+                << FormatHash(match_data, nullptr, select.algorithm) << std::endl;
         else
             BUG("Unrecognized mode of the action selector");
     }
@@ -686,7 +677,7 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
 
     if (use->hash_dist_hash.allocated) {
         auto &hdh = use->hash_dist_hash;
-        if (checkEqual(hdh.algorithm, "identity")) {
+        if (hdh.algorithm.type == IR::MAU::hash_function::IDENTITY) {
             emit_ixbar_hash_dist_ident(out, indent, match_data, hdh, hd_expr);
             return;
         }

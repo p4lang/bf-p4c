@@ -13,7 +13,7 @@ CONVERT_PRIMITIVE(bypass_egress) {
     return structure->assign(primitive->srcInfo, flag, new IR::Constant(ftype, 1), ftype);
 #else
     // FIXME -- defer converting this to an assignment until converting to TNA works
-    structure->include("tofino/p4_14_prim.p4");
+    structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     return new IR::MethodCallStatement(primitive->srcInfo,
             IR::ID(primitive->srcInfo, "bypass_egress"), {});
 #endif
@@ -21,7 +21,7 @@ CONVERT_PRIMITIVE(bypass_egress) {
 
 CONVERT_PRIMITIVE(execute_meter, 5) {
     if (primitive->operands.size() != 4) return nullptr;
-    structure->include("tofino/p4_14_prim.p4");
+    structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     ExpressionConverter conv(structure);
     // FIXME -- convert this to a custom primitive so TNA translation can convert
     // FIXME -- it to an execute call on a TNA meter
@@ -35,7 +35,7 @@ CONVERT_PRIMITIVE(execute_meter, 5) {
 
 CONVERT_PRIMITIVE(invalidate) {
     if (primitive->operands.size() != 1) return nullptr;
-    structure->include("tofino/p4_14_prim.p4");
+    structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     ExpressionConverter conv(structure);
     auto arg = conv.convert(primitive->operands.at(0));
     return new IR::MethodCallStatement(primitive->srcInfo, IR::ID(primitive->srcInfo,
@@ -47,7 +47,7 @@ CONVERT_PRIMITIVE(recirculate, 5) {
     ExpressionConverter conv(structure);
     auto port = primitive->operands.at(0);
     if (!port->is<IR::Constant>() && !port->is<IR::ActionArg>()) return nullptr;
-    structure->include("tofino/p4_14_prim.p4");
+    structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     port = conv.convert(port);
     port = new IR::Cast(IR::Type::Bits::get(9), port);
     return new IR::MethodCallStatement(primitive->srcInfo, "recirculate_raw", { port });
@@ -55,7 +55,7 @@ CONVERT_PRIMITIVE(recirculate, 5) {
 
 CONVERT_PRIMITIVE(sample_e2e) {
     if (primitive->operands.size() < 2 || primitive->operands.size() > 3) return nullptr;
-    structure->include("tofino/p4_14_prim.p4");
+    structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     ExpressionConverter conv(structure);
     auto session = conv.convert(primitive->operands.at(0));
     auto length = conv.convert(primitive->operands.at(1));

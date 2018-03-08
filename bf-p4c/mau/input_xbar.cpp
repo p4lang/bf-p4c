@@ -1597,7 +1597,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     }
 
     alloc.select_use.emplace_back(hash_group);
-    alloc.select_use.back().algorithm = as->algorithm.name;
+    alloc.select_use.back().algorithm = as->algorithm;
     alloc.select_use.back().mode = as->mode.name;
     for (int i = 0; i < HASH_TABLES; i++) {
         if ((1U << i) & hash_table_input) {

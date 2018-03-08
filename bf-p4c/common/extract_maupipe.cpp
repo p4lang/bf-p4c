@@ -342,7 +342,8 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
             sel->mode = IR::ID("fair");
         BUG_CHECK(args->size() == 3, "%s Selector does not have the correct number of arguments",
                   sel->srcInfo);
-        sel->algorithm = args->at(0)->to<IR::Member>()->member;
+        if (!sel->algorithm.setup(args->at(0)))
+            BUG("invalid alorithm %s", args->at(0));
         auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
         ap->direct = false;
         ap->size = args->at(1)->as<IR::Constant>().asInt();

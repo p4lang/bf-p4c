@@ -2,6 +2,7 @@
 
 #emit
 struct TableResourceAlloc;
+#include "bf-p4c/mau/hash_function.h"
 #end
 #emit_impl
 #include "bf-p4c/mau/resource.h"
@@ -383,7 +384,7 @@ class StatefulAlu : Synth2Port {
 class Selector : AttachedMemory {
     ID type = {};
     ID mode = {};
-    ID algorithm = {};
+    hash_function algorithm = {};
     const char *kind() const override { return "selector"; }
     int num_groups = 0;
     int group_size = 0;
@@ -503,7 +504,7 @@ class HashDist : Expression {
 #nodbprint
     // Fields read by this HashDist
     Expression           field_list;
-    cstring              algorithm;
+    hash_function        algorithm;
     int                  bit_width = 0;
     // Pointer to the IR::Primitive that was used to generate this HashDist
     // (and then removed).  This is not visited as part of IR traversal.

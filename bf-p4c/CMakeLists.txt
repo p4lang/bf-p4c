@@ -30,6 +30,7 @@ set (BF_P4C_IR_SRCS
   ir/thread_visitor.cpp
   ir/tofino.cpp
   ir/tofino_write_context.cpp
+  mau/hash_function.cpp
   parde/clot.cpp
   parde/match_register.cpp
   phv/phv.cpp
@@ -42,6 +43,7 @@ set (BF_P4C_IR_HDRS
   ir/gress.h
   ir/thread_visitor.h
   ir/tofino_write_context.h
+  mau/hash_function.h
   parde/clot.h
   parde/match_register.h
   phv/phv.h
@@ -51,6 +53,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_HDRS}")
 set (BF_P4C_BACKEND_CONV_SRCS
   fromv1.0/lpf.cpp
   fromv1.0/primitives.cpp
+  fromv1.0/programStructure.cpp
   fromv1.0/stateful_alu.cpp
   fromv1.0/wred.cpp
   )
@@ -58,6 +61,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONV_SRCS}")
 
 set (BF_P4C_BACKEND_CONV_HDRS
   fromv1.0/lpf.h
+  fromv1.0/programStructure.h
   fromv1.0/stateful_alu.h
   fromv1.0/wred.h
   )

@@ -362,12 +362,11 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
             }
         }
 
-        cstring algorithm;
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto decl = glob->obj->to<IR::Declaration_Instance>();
-        if (auto *mem = decl->arguments->at(0)->to<IR::Member>()) {
-            algorithm = mem->member;
-        }
+        IR::MAU::hash_function algorithm;
+        if (!algorithm.setup(decl->arguments->at(0)))
+            BUG("invalid hash algorithm %s", decl->arguments->at(0));
         auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size),
                                          prim->operands[1], algorithm, prim);
         hd->bit_width = size;
@@ -465,15 +464,13 @@ void StatefulHashDistSetup::Scan::postorder(const IR::MAU::Instruction *instr) {
 
 IR::MAU::HashDist *StatefulHashDistSetup::create_hash_dist(const IR::Expression *expr,
                                                            const IR::Primitive *prim) {
-    cstring algorithm = "identity";
     auto hash_field = expr;
     if (auto c = expr->to<IR::Cast>())
         hash_field = c->expr;
 
     int size = hash_field->type->width_bits();
     auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), hash_field,
-                                     algorithm, prim);
-    hd->algorithm = algorithm;
+                                     IR::MAU::hash_function::identity(), prim);
     hd->bit_width = size;
     return hd;
 }

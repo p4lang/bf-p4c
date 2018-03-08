@@ -175,10 +175,10 @@ struct IXBar {
         safe_vector<Way>     way_use;
 
         struct Select {
-            int          group = -1;
-            unsigned     bit_mask = 0;
-            cstring      algorithm;
-            cstring      mode;
+            int                         group = -1;
+            unsigned                    bit_mask = 0;
+            IR::MAU::hash_function      algorithm;
+            cstring                     mode;
             explicit Select(int g) : group(g), bit_mask(0) {}
         };
         safe_vector<Select> select_use;
@@ -188,9 +188,9 @@ struct IXBar {
             int unit = -1;  // which of the two hash
             int group = -1;
             unsigned slice = 0;  // bitmask of the 3 hash distributions pre-units
-            unsigned long bit_mask = 0;
-            std::map<int, bitrange> bit_starts;
-            cstring algorithm;
+            unsigned long               bit_mask = 0;
+            std::map<int, bitrange>     bit_starts;
+            IR::MAU::hash_function      algorithm;
 
             void clear() {
                 allocated = false;

@@ -22,6 +22,7 @@
 #include "frontends/p4-14/typecheck.h"
 #include "frontends/common/applyOptionsPragmas.h"
 #include "frontends/common/parseInput.h"
+#include "fromv1.0/programStructure.h"
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "lib/compile_context.h"
@@ -136,6 +137,9 @@ int main(int ac, char **av) {
 
     options.setInputFile();
     Device::init(options.device);
+
+    // FIXME -- should be based on the architecture option
+    P4V1::Converter::createProgramStructure = P4V1::TNA_ProgramStructure::create;
 
     auto hook = options.getDebugHook();
 

@@ -1,287 +1,291 @@
 switch.p4:44:0:
-headers.p4:808:0: warning: "CPU_REASON_CODE_SFLOW" redefined
+headers.p4:816:0: warning: "CPU_REASON_CODE_SFLOW" redefined
  #define CPU_REASON_CODE_SFLOW       0x106 /* must match switch_hostif.h reson_code */
  ^
 switch.p4:41:0:
 cpu_reason_codes.h:31:0: note: this is the location of the previous definition
  #define CPU_REASON_CODE_SFLOW            0x4
  ^
-switch.p4:45:0:
-parser.p4:797:6: warning: missing terminating ' character
+switch.p4:46:0:
+parser.p4:920:6: warning: missing terminating ' character
      8'0;
       ^
-parser.p4:829:6: warning: missing terminating ' character
+parser.p4:952:6: warning: missing terminating ' character
      8'0;
       ^
-parser.p4:891:6: warning: missing terminating ' character
+switch.p4:46:0:
+parser.p4:1059:6: warning: missing terminating ' character
      8'0;
       ^
-parser.p4:1208:6: warning: missing terminating ' character
+parser.p4:1416:6: warning: missing terminating ' character
      8'0;
       ^
-l3.p4(212): warning: -1: negative value with unsigned type
-    add_to_field(ipv4.ttl, -1);
-                            ^
-l3.p4(220): warning: -1: negative value with unsigned type
-    add_to_field(ipv4.ttl, -1);
-                            ^
+nexthop.p4(328): warning: : Mulitple algorithms in a field list not supported in P4_16 -- using only the first
+     identity;
+     ^^^^^^^^
+port.p4(448): warning: : Mulitple algorithms in a field list not supported in P4_16 -- using only the first
+     identity;
+     ^^^^^^^^
 l3.p4(228): warning: -1: negative value with unsigned type
-    add_to_field(ipv6.hopLimit, -1);
-                                 ^
+    add_to_field(ipv4.ttl, -1);
+                            ^
 l3.p4(236): warning: -1: negative value with unsigned type
+    add_to_field(ipv4.ttl, -1);
+                            ^
+l3.p4(244): warning: -1: negative value with unsigned type
     add_to_field(ipv6.hopLimit, -1);
                                  ^
-l3.p4(244): warning: -1: negative value with unsigned type
+l3.p4(252): warning: -1: negative value with unsigned type
+    add_to_field(ipv6.hopLimit, -1);
+                                 ^
+l3.p4(260): warning: -1: negative value with unsigned type
     add_to_field(mpls[0].ttl, -1);
                                ^
 tunnel.p4(1109): warning: -14: negative value with unsigned type
     add(egress_metadata.payload_length, eg_intr_md.pkt_length, -14);
                                                                 ^^
-port.p4(597): warning: Could not infer type for egress_if_label, using bit<8>
-action set_egress_if_params_untagged(egress_if_label) {
-                                     ^^^^^^^^^^^^^^^
-port.p4(586): warning: Could not infer type for egress_if_label, using bit<8>
+port.p4(601): warning: Could not infer type for egress_if_label, using bit<8>
 action set_egress_if_params_tagged(vlan_id, egress_if_label) {
                                             ^^^^^^^^^^^^^^^
-port.p4(561): warning: Could not infer type for egress_if_label, using bit<8>
+port.p4(576): warning: Could not infer type for egress_if_label, using bit<8>
 action set_egress_if_params_double_tagged(s_tag, c_tag, egress_if_label) {
                                                         ^^^^^^^^^^^^^^^
-acl.p4(1410): warning: Could not infer type for session_id, using bit<8>
+acl.p4(1445): warning: Could not infer type for session_id, using bit<8>
 action egress_mirror_coal_hdr(session_id, id) {
                               ^^^^^^^^^^
-acl.p4(1410): warning: Could not infer type for id, using bit<8>
+acl.p4(1445): warning: Could not infer type for id, using bit<8>
 action egress_mirror_coal_hdr(session_id, id) {
                                           ^^
-acl.p4(1369): warning: Could not infer type for reason_code, using bit<8>
+acl.p4(1404): warning: Could not infer type for reason_code, using bit<8>
 action egress_mirror_and_drop(reason_code) {
                               ^^^^^^^^^^^
-port.p4(186): warning: Could not infer type for telemetry_port_lag_label, using bit<8>
-                                   telemetry_port_lag_label) {
-                                   ^^^^^^^^^^^^^^^^^^^^^^^^
+port.p4(187): warning: Could not infer type for dtel_port_lag_label, using bit<8>
+                                   dtel_port_lag_label) {
+                                   ^^^^^^^^^^^^^^^^^^^
 switch_config.p4(28): warning: Could not infer type for enable_flowlet, using bit<8>
 action set_config_parameters(enable_flowlet, switch_id) {
                              ^^^^^^^^^^^^^^
-port.p4(310): warning: Could not infer type for if_label, using bit<8>
+port.p4(312): warning: Could not infer type for if_label, using bit<8>
 action set_ingress_interface_properties(ingress_rid, ifindex, if_label) {
                                                               ^^^^^^^^
-acl.p4(374): warning: Could not infer type for acl_meter_index, using bit<8>
+acl.p4(365): warning: Could not infer type for acl_meter_index, using bit<8>
 action acl_deny(acl_stats_index, acl_meter_index, acl_copy_reason,
                                  ^^^^^^^^^^^^^^^
-acl.p4(375): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(366): warning: Could not infer type for ingress_cos, using bit<8>
                 nat_mode, ingress_cos, tc, color) {
                           ^^^^^^^^^^^
-acl.p4(375): warning: Could not infer type for tc, using bit<8>
+acl.p4(366): warning: Could not infer type for tc, using bit<8>
                 nat_mode, ingress_cos, tc, color) {
                                        ^^
-acl.p4(375): warning: Could not infer type for color, using bit<8>
+acl.p4(366): warning: Could not infer type for color, using bit<8>
                 nat_mode, ingress_cos, tc, color) {
                                            ^^^^^
-acl.p4(389): warning: Could not infer type for acl_meter_index, using bit<8>
+acl.p4(380): warning: Could not infer type for acl_meter_index, using bit<8>
 action acl_permit(acl_stats_index, acl_meter_index, acl_copy_reason,
                                    ^^^^^^^^^^^^^^^
-acl.p4(390): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(381): warning: Could not infer type for ingress_cos, using bit<8>
                   nat_mode, ingress_cos, tc, color) {
                             ^^^^^^^^^^^
-acl.p4(390): warning: Could not infer type for tc, using bit<8>
+acl.p4(381): warning: Could not infer type for tc, using bit<8>
                   nat_mode, ingress_cos, tc, color) {
                                          ^^
-acl.p4(390): warning: Could not infer type for color, using bit<8>
+acl.p4(381): warning: Could not infer type for color, using bit<8>
                   nat_mode, ingress_cos, tc, color) {
                                              ^^^^^
-acl.p4(426): warning: Could not infer type for acl_meter_index, using bit<8>
+acl.p4(417): warning: Could not infer type for acl_meter_index, using bit<8>
 action acl_redirect_nexthop(nexthop_index, acl_stats_index, acl_meter_index,
                                                             ^^^^^^^^^^^^^^^
-acl.p4(428): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(419): warning: Could not infer type for ingress_cos, using bit<8>
                             ingress_cos, tc, color) {
                             ^^^^^^^^^^^
-acl.p4(428): warning: Could not infer type for tc, using bit<8>
+acl.p4(419): warning: Could not infer type for tc, using bit<8>
                             ingress_cos, tc, color) {
                                          ^^
-acl.p4(428): warning: Could not infer type for color, using bit<8>
+acl.p4(419): warning: Could not infer type for color, using bit<8>
                             ingress_cos, tc, color) {
                                              ^^^^^
-acl.p4(443): warning: Could not infer type for acl_meter_index, using bit<8>
+acl.p4(434): warning: Could not infer type for acl_meter_index, using bit<8>
 action acl_redirect_ecmp(ecmp_index, acl_stats_index, acl_meter_index,
                                                       ^^^^^^^^^^^^^^^
-acl.p4(445): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(436): warning: Could not infer type for ingress_cos, using bit<8>
                          ingress_cos, tc, color) {
                          ^^^^^^^^^^^
-acl.p4(445): warning: Could not infer type for tc, using bit<8>
+acl.p4(436): warning: Could not infer type for tc, using bit<8>
                          ingress_cos, tc, color) {
                                       ^^
-acl.p4(445): warning: Could not infer type for color, using bit<8>
+acl.p4(436): warning: Could not infer type for color, using bit<8>
                          ingress_cos, tc, color) {
                                           ^^^^^
-acl.p4(412): warning: Could not infer type for acl_meter_index, using bit<8>
+acl.p4(403): warning: Could not infer type for acl_meter_index, using bit<8>
 action acl_mirror(session_id, acl_stats_index, acl_meter_index, nat_mode,
                                                ^^^^^^^^^^^^^^^
-acl.p4(413): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(404): warning: Could not infer type for ingress_cos, using bit<8>
                   ingress_cos, tc, color) {
                   ^^^^^^^^^^^
-acl.p4(413): warning: Could not infer type for tc, using bit<8>
+acl.p4(404): warning: Could not infer type for tc, using bit<8>
                   ingress_cos, tc, color) {
                                ^^
-acl.p4(413): warning: Could not infer type for color, using bit<8>
+acl.p4(404): warning: Could not infer type for color, using bit<8>
                   ingress_cos, tc, color) {
                                    ^^^^^
-acl.p4(374): warning: Could not infer type for acl_meter_index, using bit<8>
+acl.p4(365): warning: Could not infer type for acl_meter_index, using bit<8>
 action acl_deny(acl_stats_index, acl_meter_index, acl_copy_reason,
                                  ^^^^^^^^^^^^^^^
-acl.p4(375): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(366): warning: Could not infer type for ingress_cos, using bit<8>
                 nat_mode, ingress_cos, tc, color) {
                           ^^^^^^^^^^^
-acl.p4(375): warning: Could not infer type for tc, using bit<8>
+acl.p4(366): warning: Could not infer type for tc, using bit<8>
                 nat_mode, ingress_cos, tc, color) {
                                        ^^
-acl.p4(375): warning: Could not infer type for color, using bit<8>
+acl.p4(366): warning: Could not infer type for color, using bit<8>
                 nat_mode, ingress_cos, tc, color) {
                                            ^^^^^
-acl.p4(389): warning: Could not infer type for acl_meter_index, using bit<8>
+acl.p4(380): warning: Could not infer type for acl_meter_index, using bit<8>
 action acl_permit(acl_stats_index, acl_meter_index, acl_copy_reason,
                                    ^^^^^^^^^^^^^^^
-acl.p4(390): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(381): warning: Could not infer type for ingress_cos, using bit<8>
                   nat_mode, ingress_cos, tc, color) {
                             ^^^^^^^^^^^
-acl.p4(390): warning: Could not infer type for tc, using bit<8>
+acl.p4(381): warning: Could not infer type for tc, using bit<8>
                   nat_mode, ingress_cos, tc, color) {
                                          ^^
-acl.p4(390): warning: Could not infer type for color, using bit<8>
+acl.p4(381): warning: Could not infer type for color, using bit<8>
                   nat_mode, ingress_cos, tc, color) {
                                              ^^^^^
-acl.p4(426): warning: Could not infer type for acl_meter_index, using bit<8>
+acl.p4(417): warning: Could not infer type for acl_meter_index, using bit<8>
 action acl_redirect_nexthop(nexthop_index, acl_stats_index, acl_meter_index,
                                                             ^^^^^^^^^^^^^^^
-acl.p4(428): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(419): warning: Could not infer type for ingress_cos, using bit<8>
                             ingress_cos, tc, color) {
                             ^^^^^^^^^^^
-acl.p4(428): warning: Could not infer type for tc, using bit<8>
+acl.p4(419): warning: Could not infer type for tc, using bit<8>
                             ingress_cos, tc, color) {
                                          ^^
-acl.p4(428): warning: Could not infer type for color, using bit<8>
+acl.p4(419): warning: Could not infer type for color, using bit<8>
                             ingress_cos, tc, color) {
                                              ^^^^^
-acl.p4(443): warning: Could not infer type for acl_meter_index, using bit<8>
+acl.p4(434): warning: Could not infer type for acl_meter_index, using bit<8>
 action acl_redirect_ecmp(ecmp_index, acl_stats_index, acl_meter_index,
                                                       ^^^^^^^^^^^^^^^
-acl.p4(445): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(436): warning: Could not infer type for ingress_cos, using bit<8>
                          ingress_cos, tc, color) {
                          ^^^^^^^^^^^
-acl.p4(445): warning: Could not infer type for tc, using bit<8>
+acl.p4(436): warning: Could not infer type for tc, using bit<8>
                          ingress_cos, tc, color) {
                                       ^^
-acl.p4(445): warning: Could not infer type for color, using bit<8>
+acl.p4(436): warning: Could not infer type for color, using bit<8>
                          ingress_cos, tc, color) {
                                           ^^^^^
-acl.p4(412): warning: Could not infer type for acl_meter_index, using bit<8>
+acl.p4(403): warning: Could not infer type for acl_meter_index, using bit<8>
 action acl_mirror(session_id, acl_stats_index, acl_meter_index, nat_mode,
                                                ^^^^^^^^^^^^^^^
-acl.p4(413): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(404): warning: Could not infer type for ingress_cos, using bit<8>
                   ingress_cos, tc, color) {
                   ^^^^^^^^^^^
-acl.p4(413): warning: Could not infer type for tc, using bit<8>
+acl.p4(404): warning: Could not infer type for tc, using bit<8>
                   ingress_cos, tc, color) {
                                ^^
-acl.p4(413): warning: Could not infer type for color, using bit<8>
+acl.p4(404): warning: Could not infer type for color, using bit<8>
                   ingress_cos, tc, color) {
                                    ^^^^^
-acl.p4(704): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(709): warning: Could not infer type for ingress_cos, using bit<8>
                  ingress_cos, tc, color) {
                  ^^^^^^^^^^^
-acl.p4(704): warning: Could not infer type for tc, using bit<8>
+acl.p4(709): warning: Could not infer type for tc, using bit<8>
                  ingress_cos, tc, color) {
                               ^^
-acl.p4(704): warning: Could not infer type for color, using bit<8>
+acl.p4(709): warning: Could not infer type for color, using bit<8>
                  ingress_cos, tc, color) {
                                   ^^^^^
-acl.p4(723): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(728): warning: Could not infer type for ingress_cos, using bit<8>
                    ingress_cos, tc, color) {
                    ^^^^^^^^^^^
-acl.p4(723): warning: Could not infer type for tc, using bit<8>
+acl.p4(728): warning: Could not infer type for tc, using bit<8>
                    ingress_cos, tc, color) {
                                 ^^
-acl.p4(723): warning: Could not infer type for color, using bit<8>
+acl.p4(728): warning: Could not infer type for color, using bit<8>
                    ingress_cos, tc, color) {
                                     ^^^^^
-acl.p4(741): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(746): warning: Could not infer type for ingress_cos, using bit<8>
                              ingress_cos, tc, color) {
                              ^^^^^^^^^^^
-acl.p4(741): warning: Could not infer type for tc, using bit<8>
+acl.p4(746): warning: Could not infer type for tc, using bit<8>
                              ingress_cos, tc, color) {
                                           ^^
-acl.p4(741): warning: Could not infer type for color, using bit<8>
+acl.p4(746): warning: Could not infer type for color, using bit<8>
                              ingress_cos, tc, color) {
                                               ^^^^^
-acl.p4(762): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(767): warning: Could not infer type for ingress_cos, using bit<8>
                           ingress_cos, tc, color) {
                           ^^^^^^^^^^^
-acl.p4(762): warning: Could not infer type for tc, using bit<8>
+acl.p4(767): warning: Could not infer type for tc, using bit<8>
                           ingress_cos, tc, color) {
                                        ^^
-acl.p4(762): warning: Could not infer type for color, using bit<8>
+acl.p4(767): warning: Could not infer type for color, using bit<8>
                           ingress_cos, tc, color) {
                                            ^^^^^
-l3.p4(126): warning: Could not infer type for acl_label, using bit<8>
+l3.p4(144): warning: Could not infer type for acl_label, using bit<8>
 action fib_hit_nexthop(nexthop_index, acl_label) {
                                       ^^^^^^^^^
-l3.p4(135): warning: Could not infer type for acl_label, using bit<8>
+l3.p4(153): warning: Could not infer type for acl_label, using bit<8>
 action fib_hit_myip(nexthop_index, acl_label) {
                                    ^^^^^^^^^
-l3.p4(147): warning: Could not infer type for acl_label, using bit<8>
+l3.p4(163): warning: Could not infer type for acl_label, using bit<8>
 action fib_hit_ecmp(ecmp_index, acl_label) {
                                 ^^^^^^^^^
-acl.p4(704): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(709): warning: Could not infer type for ingress_cos, using bit<8>
                  ingress_cos, tc, color) {
                  ^^^^^^^^^^^
-acl.p4(704): warning: Could not infer type for tc, using bit<8>
+acl.p4(709): warning: Could not infer type for tc, using bit<8>
                  ingress_cos, tc, color) {
                               ^^
-acl.p4(704): warning: Could not infer type for color, using bit<8>
+acl.p4(709): warning: Could not infer type for color, using bit<8>
                  ingress_cos, tc, color) {
                                   ^^^^^
-acl.p4(723): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(728): warning: Could not infer type for ingress_cos, using bit<8>
                    ingress_cos, tc, color) {
                    ^^^^^^^^^^^
-acl.p4(723): warning: Could not infer type for tc, using bit<8>
+acl.p4(728): warning: Could not infer type for tc, using bit<8>
                    ingress_cos, tc, color) {
                                 ^^
-acl.p4(723): warning: Could not infer type for color, using bit<8>
+acl.p4(728): warning: Could not infer type for color, using bit<8>
                    ingress_cos, tc, color) {
                                     ^^^^^
-acl.p4(741): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(746): warning: Could not infer type for ingress_cos, using bit<8>
                              ingress_cos, tc, color) {
                              ^^^^^^^^^^^
-acl.p4(741): warning: Could not infer type for tc, using bit<8>
+acl.p4(746): warning: Could not infer type for tc, using bit<8>
                              ingress_cos, tc, color) {
                                           ^^
-acl.p4(741): warning: Could not infer type for color, using bit<8>
+acl.p4(746): warning: Could not infer type for color, using bit<8>
                              ingress_cos, tc, color) {
                                               ^^^^^
-acl.p4(762): warning: Could not infer type for ingress_cos, using bit<8>
+acl.p4(767): warning: Could not infer type for ingress_cos, using bit<8>
                           ingress_cos, tc, color) {
                           ^^^^^^^^^^^
-acl.p4(762): warning: Could not infer type for tc, using bit<8>
+acl.p4(767): warning: Could not infer type for tc, using bit<8>
                           ingress_cos, tc, color) {
                                        ^^
-acl.p4(762): warning: Could not infer type for color, using bit<8>
+acl.p4(767): warning: Could not infer type for color, using bit<8>
                           ingress_cos, tc, color) {
                                            ^^^^^
-l3.p4(126): warning: Could not infer type for acl_label, using bit<8>
+l3.p4(144): warning: Could not infer type for acl_label, using bit<8>
 action fib_hit_nexthop(nexthop_index, acl_label) {
                                       ^^^^^^^^^
-l3.p4(135): warning: Could not infer type for acl_label, using bit<8>
+l3.p4(153): warning: Could not infer type for acl_label, using bit<8>
 action fib_hit_myip(nexthop_index, acl_label) {
                                    ^^^^^^^^^
-l3.p4(147): warning: Could not infer type for acl_label, using bit<8>
+l3.p4(163): warning: Could not infer type for acl_label, using bit<8>
 action fib_hit_ecmp(ecmp_index, acl_label) {
                                 ^^^^^^^^^
-hashes.p4(95): warning: : Mulitple algorithms in a field list not supported in P4_16 -- using only the first
+hashes.p4(98): warning: : Mulitple algorithms in a field list not supported in P4_16 -- using only the first
         crc16;
         ^^^^^
-hashes.p4(174): warning: : Mulitple algorithms in a field list not supported in P4_16 -- using only the first
+hashes.p4(179): warning: : Mulitple algorithms in a field list not supported in P4_16 -- using only the first
         crc16;
         ^^^^^
-hashes.p4(239): warning: : Mulitple algorithms in a field list not supported in P4_16 -- using only the first
+hashes.p4(246): warning: : Mulitple algorithms in a field list not supported in P4_16 -- using only the first
         crc16;
         ^^^^^
 warning: The order of headers in deparser is not uniquely determined by parser!
-warning: .telemetry_selector_action_profile: unused instance
+warning: .dtel_selector_action_profile: unused instance

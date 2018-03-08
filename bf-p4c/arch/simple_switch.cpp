@@ -963,11 +963,11 @@ class ConstructSymbolTable : public Inspector {
         structure->unique_names.insert(hashName);
         structure->nameMap.emplace(node, hashName);
 
-        auto typeName = mce->arguments->at(1)->clone()->to<IR::Member>();
-        CHECK_NULL(typeName);
-        structure->typeNamesToDo.emplace(typeName, typeName);
-        LOG3("add " << typeName << " to translation map");
-        auto hashArgs = new IR::Vector<IR::Expression>({typeName});
+        auto algorithm = mce->arguments->at(1)->clone();
+        if (auto typeName = algorithm->to<IR::Member>()) {
+            structure->typeNamesToDo.emplace(typeName, typeName);
+            LOG3("add " << typeName << " to translation map"); }
+        auto hashArgs = new IR::Vector<IR::Expression>({algorithm});
         auto hashInst = new IR::Declaration_Instance(hashName, hashType, hashArgs);
 
         if (isIngress) {

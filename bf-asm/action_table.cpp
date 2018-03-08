@@ -116,10 +116,9 @@ void ActionTable::need_on_actionbus(HashDistribution *hd, int off, int size) {
             Table::need_on_actionbus(hd, off, size);
             return; } }
     for (auto *match_table : match_tables) {
-        for (auto &hash_dist : match_table->hash_dist) {
-            if (&hash_dist == hd) {
-                match_table->need_on_actionbus(hd, off, size);
-                return; } } }
+        if (match_table->find_hash_dist(hd->id) == hd) {
+            match_table->need_on_actionbus(hd, off, size);
+            return; } }
     assert(!"Can't find table associated with hash_dist");
 }
 
