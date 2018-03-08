@@ -246,17 +246,23 @@ class STF2ptf(P4RuntimeTest, STFRunner):
         try:
             foundCounter = False
             count_mode = chk[3][0]
+            received = -1
             if count_mode is not None:
                 compare_op = chk[3][1]
                 expected_val = int(chk[3][2])
-            received = 0
-            iteration = 1
-            condition = "{} {} {}".format(received, compare_op, expected_val)
-            while (not eval(condition)):
+                if count_mode != 'packets':
+                    self._hasByteCounters = True
+            else:
+                # the default test is 'packets == 0'
+                count_mode = 'packets'
+                compare_op = "=="
+                expected_val = 0
+
+            condition = "False"
+            iteration = 0
+            while (iteration < 20):
 
                 self._logger.info("iteration %d, received %d", iteration, received)
-                if iteration > 20:
-                    break
 
                 if iteration > 0:
                     time.sleep(1)
@@ -272,28 +278,31 @@ class STF2ptf(P4RuntimeTest, STFRunner):
                             counter = entity.counter_entry
                             if counter.counter_id != counterId or counter.index.index != counterIndex:
                                 continue
+
                         foundCounter = True
-                        if count_mode is not None:
-                            if count_mode == 'packets':
-                                received = counter.data.packet_count
-                            else:
-                                received = counter.data.byte_count
-                                self._hasByteCounters = True
-                condition = "{} {} {}".format(received, compare_op, expected_val)
+                        if count_mode == 'packets':
+                            received = counter.data.packet_count
+                        else:
+                            received = counter.data.byte_count
+
+                if foundCounter:
+                    condition = "{} {} {}".format(received, compare_op, expected_val)
+                    if eval(condition): # success!
+                        break
+                else:
+                    # no use to repeatedly count if we couldn't find the counter the first time
+                    break
+
                 iteration += 1
 
             if not foundCounter:
                 self.fail("Failed to retrieve counter {}".format(counterName))
 
-            if count_mode is not None:
-                self.assertTrue(eval(condition),
-                                "{}: wrong {} count: expected {} not {}".format(counterName,
-                                                                                count_mode,
-                                                                                expected_val,
-                                                                                received))
-            else:
-                self.assertTrue(counter.data.packet_count == 0,
-                                "Wrong count of packets")
+            self.assertTrue(eval(condition),
+                            "{}: wrong {} count: expected {} not {}".format(counterName,
+                                                                            count_mode,
+                                                                            expected_val,
+                                                                            received))
 
         except Exception as e:
             self._logger.exception(e)
