@@ -463,7 +463,13 @@ void Clustering::MakeSuperClusters::end_apply() {
     for (auto& kv : self.fields_to_slices_i) {
         bool is_metadata = kv.first->metadata || kv.first->pov;
         bool has_constraints = kv.first->alignment || kv.first->no_split() || kv.first->no_pack();
-        if (is_metadata && has_constraints) {
+
+        // XXX(cole): Bridged metadata is treated as a header, except in the
+        // egress pipeline, where it's treated as metadata.  We need to take
+        // care here not to add those fields to slice lists here, because they
+        // will already have been added when traversing headers.
+
+        if (is_metadata && has_constraints && !kv.first->bridged) {
             LOG5("Creating slice list for field " << kv.first);
             auto* list = new PHV::SuperCluster::SliceList();
             for (auto& slice : kv.second)
