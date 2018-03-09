@@ -118,7 +118,8 @@ struct TableFormat {
     // Match Bytes
     safe_vector<ByteInfo> match_bytes;
     safe_vector<ByteInfo> ghost_bytes;
-    int ghost_bit_bus;
+    std::set<int> fully_ghosted_search_buses;
+    safe_vector<int> ghost_bit_buses;
 
     bitvec total_use;  // Total bitvec for all entries in table format
     bitvec pre_match_total_use;

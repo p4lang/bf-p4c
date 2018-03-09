@@ -253,7 +253,6 @@ p4c_add_xfail_reason("tofino"
   "Can't fit table .* in .* by itself"
   extensions/p4_tests/p4_14/test_config_13_first_selection.p4
   extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
-  extensions/p4_tests/p4_14/test_config_129_various_exact_match_keys.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -391,7 +390,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Can't fit table .* in input xbar by itself"
-  extensions/p4_tests/p4_14/test_config_103_first_phase_0.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -844,12 +842,6 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
   )
 
-
-p4c_add_xfail_reason("tofino"
-  "Can't fit table .* in input xbar by itself"
-  extensions/p4_tests/p4_14/test_config_257_pa_problem_5.p4
-  extensions/p4_tests/p4_14/test_config_252_pa_required_packing.p4
-  )
 
 # BRIG-426, and maybe BRIG-421
 p4c_add_xfail_reason("tofino"
