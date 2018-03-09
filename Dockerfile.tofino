@@ -22,6 +22,7 @@ ENV P4C_DEPS autoconf \
 
 ENV P4C_RUNTIME_DEPS cpp \
                      cmake \
+                     ethtool \
                      libboost-iostreams1.58.0 \
                      libgc1c2 \
                      libgmp10 \

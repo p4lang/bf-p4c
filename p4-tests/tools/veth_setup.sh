@@ -8,6 +8,8 @@ let "vethpairs=$noOfVeths/2"
 last=`expr $vethpairs - 1`
 veths=`seq 0 1 $last`
 
+set -e
+
 for i in $veths; do
     intf0="veth$(($i*2))"
     intf1="veth$(($i*2+1))"

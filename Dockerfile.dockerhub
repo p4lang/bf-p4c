@@ -8,6 +8,7 @@ ENV P4C_DEPS automake \
              bison \
              build-essential \
              cmake \
+             ethtool \
              flex \
              g++ \
              libboost-dev \

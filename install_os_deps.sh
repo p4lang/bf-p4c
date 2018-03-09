@@ -28,7 +28,7 @@ install_linux_packages() {
     local nprocs=$(cat /proc/cpuinfo | grep processor | wc -l)
 
     # please keep this list in alphabetical order
-    apt_packages="automake autopoint bison curl doxygen flex g++ git \
+    apt_packages="automake autopoint bison curl doxygen ethtool flex g++ git \
                  libcli-dev libedit-dev libeditline-dev libevent-dev \
                  libgc-dev libgmp-dev libjson0 libjson0-dev libjudy-dev \
                  libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev \
