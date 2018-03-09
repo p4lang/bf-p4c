@@ -1291,6 +1291,18 @@ bool TableFormat::allocate_all_ternary_match() {
     if (!version_placed)
         ternary_version(index);
 
+    // For corner cases, i.e. sharing midbytes, where extra gaps in the TCAMs have to be
+    // added
+    for (size_t i = 0; i < use->tcam_use.size(); i += 2) {
+        if (use->tcam_use.size() - 1 == i)
+            break;
+        if (use->tcam_use[i].byte_group >= 0 && use->tcam_use[i+1].byte_group >= 0
+            && use->tcam_use[i].byte_group != use->tcam_use[i+1].byte_group) {
+            auto tcam = use->tcam_use[i];
+            use->tcam_use.insert(use->tcam_use.begin() + i, tcam);
+        }
+    }
+
     if ((use->tcam_use.size() % 2) == 1) {
         use->split_midbyte = use->tcam_use.back().byte_group;
     }
