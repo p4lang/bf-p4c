@@ -36,6 +36,7 @@ struct CollectBridgedFields : public Inspector,
 
     ordered_map<FieldRef, BridgedFieldInfo> fieldInfo;
     ordered_set<FieldRef> fieldsToBridge;
+    ordered_set<cstring> doNotBridge;
 
  private:
     CollectBridgedFields* clone() const override;
@@ -44,6 +45,7 @@ struct CollectBridgedFields : public Inspector,
     boost::optional<TnaContext> findTnaContext() const;
     bool analyzePathlikeExpression(const IR::Expression* expr);
 
+    bool preorder(const IR::Annotation* annot) override;
     bool preorder(const IR::Member* member) override;
     bool preorder(const IR::PathExpression* path) override;
     void end_apply() override;

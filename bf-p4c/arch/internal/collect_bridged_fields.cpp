@@ -209,6 +209,50 @@ bool CollectBridgedFields::analyzePathlikeExpression(const IR::Expression* expr)
     return false;
 }
 
+bool CollectBridgedFields::preorder(const IR::Annotation* annot) {
+    auto check_pragma_string = [] (const IR::StringLiteral* ir) {
+        if (!ir) {
+            ::warning("%1%", "@pragma pa_do_not_bridge's arguments must be string literals,"
+                      " skipped");
+            return false; }
+        return true;
+    };
+
+    auto pragmaName = annot->name.name;
+    if (pragmaName != "pa_do_not_bridge") return true;
+
+    LOG4("[CollectBridgedFields] Do Not Bridge pragma: " << annot);
+    auto& exprs = annot->expr;
+    // Check pragma arguments
+    if (exprs.size() != 2) {
+        ::warning("@pragma pa_do_not_bridge must have 2 arguments (gress and field name)"
+                ", only %1% argument found, skipped", exprs.size());
+        return true; }
+
+    auto gress = exprs[0]->to<IR::StringLiteral>();
+    auto field = exprs[1]->to<IR::StringLiteral>();
+    if (!check_pragma_string(gress) || !check_pragma_string(field))
+        return true;
+
+    // Check gress
+    if (gress->value != "ingress" && gress->value != "egress") {
+        ::warning("@pragma pa_do_not_bridge's first argument must either be ingress/egress, "
+                  "instead of %1%, skipped", gress);
+        return true; }
+
+    // Warning if an egress field is bridged. Bridge the ingress version in that case
+    if (gress->value == "egress")
+        ::warning("@pragma pa_do_not_bridge marks egress field %1% as not bridged, bridging "
+                  "ingress field instead", field);
+
+    // The fieldRef object names start with a . followed by the field name
+    cstring fieldName = "." + field->value;
+    doNotBridge.insert(fieldName);
+    LOG1("@pragma do_not_bridge set for " << field);
+
+    return true;
+}
+
 bool CollectBridgedFields::preorder(const IR::Member* member) {
     LOG4("[CollectBridgedFields] visit: " << member);
     return analyzePathlikeExpression(member);
@@ -223,8 +267,13 @@ void CollectBridgedFields::end_apply() {
     // it may be written in ingress.
     for (auto& fieldRef : mayReadUninitialized[EGRESS]) {
         if (mayWrite[INGRESS].count(fieldRef)) {
-            LOG1("Bridging field: " << fieldRef.first << fieldRef.second);
-            fieldsToBridge.emplace(fieldRef);
+            cstring fieldName = fieldRef.first + fieldRef.second;
+            if (doNotBridge.count(fieldRef.second)) {
+                LOG1("Not Bridging field: " << fieldName << " marked by pa_do_not_bridge");
+            } else {
+                LOG1("Bridging field: " << fieldName);
+                fieldsToBridge.emplace(fieldRef);
+            }
         }
     }
 }
