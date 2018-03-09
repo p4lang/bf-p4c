@@ -52,14 +52,14 @@ struct DumpParser : public Visitor {
     Visitor::profile_t init_apply(const IR::Node* root) override {
         auto rv = Visitor::init_apply(root);
 
-        CollectParserGraph cg;
+        CollectParserInfo cg;
         root->apply(cg);
 
         *out << "digraph parser {" << std::endl;
         *out << "size=\"8,5\"" << std::endl;
 
-        write_cluster(*out, cg.ingress());
-        write_cluster(*out, cg.egress());
+        for (auto g : cg.graphs())
+            write_cluster(*out, *(g.second));
 
         *out << "}" << std::endl;
 

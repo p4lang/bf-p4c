@@ -1279,6 +1279,7 @@ class ExtractorAllocator {
                     remainingBytes = remainingBytes.unionWith(remain);
                 }
 
+                extractedInterval |= byteInterval;
                 allocatedExtracts.push_back(extract);
             }
             extractClots.clear();

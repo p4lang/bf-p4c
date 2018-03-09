@@ -81,8 +81,7 @@ class ClotInfo {
 };
 
 class AllocateClot : public PassManager {
-    /*BuildParserOverlay2 parser_overlay;*/
-    CollectParserGraph parserGraph;
+    CollectParserInfo parserInfo;
 
  public:
     explicit AllocateClot(ClotInfo &clot, const PhvInfo &phv, PhvUse &uses);

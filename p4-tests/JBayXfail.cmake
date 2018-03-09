@@ -19,8 +19,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
 
   p4c_add_xfail_reason("jbay"
     "Assertion .*kMemoryCoreSplit.* failed."
-
-    # "jbay::MauSramRowReg::oflo_rd_b.* Assertion `(!kMemoryCoreSplit)"
     testdata/p4_14_samples/basic_routing.p4
     testdata/p4_14_samples/exact_match3.p4
     testdata/p4_14_samples/exact_match5.p4
@@ -67,7 +65,6 @@ endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 p4c_add_xfail_reason("jbay"
   "Ran out of tcam space in .* parser"
   testdata/p4_14_samples/issue583.p4
-  testdata/p4_14_samples/parser_dc_full.p4
   )
 
 p4c_add_xfail_reason("jbay"

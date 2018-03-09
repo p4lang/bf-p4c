@@ -112,10 +112,9 @@ class CollectClotInfo : public Inspector {
   these bytes towards its gap (or "credit" in the code).
 
   TODO
-      1) Add parser mutex state logic to reuse CLOT tag.
-      2) Currently, a field is either in CLOT or PHV. There might be cases that
+      1) Currently, a field is either in CLOT or PHV. There might be cases that
          it's beneficical to break a field into bytes.
-      3) Inter-state CLOT analysis: this is useful when the maximal gain for a CLOT
+      2) Inter-state CLOT analysis: this is useful when the maximal gain for a CLOT
          straddles the state boundary.
 
 */
@@ -126,19 +125,16 @@ class NaiveClotAlloc : public Visitor {
     static const int INTER_CLOTS_BYTE_GAP = 3;
 
     ClotInfo& clotInfo;
-    /*const BuildParserOverlay2& mutexStates;*/
-    const CollectParserGraph& parserGraph;
+    const CollectParserInfo& parserInfo;
 
     std::map<const IR::BFN::ParserState*, unsigned> tail_gap_credit_map;
     std::map<const IR::BFN::ParserState*, unsigned> head_gap_credit_map;
 
  public:
     explicit NaiveClotAlloc(ClotInfo& clotInfo,
-                            /*, const BuildParserOverlay2& mutexStates*/
-                            const CollectParserGraph& parserGraph) :
+                            const CollectParserInfo& parserInfo) :
         clotInfo(clotInfo),
-        /*, mutexStates(mutexStates),*/
-        parserGraph(parserGraph) { }
+        parserInfo(parserInfo) { }
 
     struct ClotAlloc {
         ClotAlloc(const IR::BFN::ParserState* state, unsigned unused, unsigned total) :
@@ -191,8 +187,9 @@ class NaiveClotAlloc : public Visitor {
     }
 
     unsigned calculate_gap_needed(const IR::BFN::ParserState* state, bool head_or_tail) {
-        auto& preds_or_succs = head_or_tail ? parserGraph.get(state->gress).predecessors() :
-                                              parserGraph.get(state->gress).successors();
+        const IR::BFN::Parser* parser = parserInfo.parser(state);
+        auto& preds_or_succs = head_or_tail ? parserInfo.graph(parser).predecessors() :
+                                              parserInfo.graph(parser).successors();
 
         auto& credit_map = head_or_tail ? tail_gap_credit_map : head_gap_credit_map;
 
@@ -212,7 +209,8 @@ class NaiveClotAlloc : public Visitor {
                     else  // s hasn't been allocated
                         credit = INTER_CLOTS_BYTE_GAP * 8;
 
-                    gap_needed_for_s = INTER_CLOTS_BYTE_GAP * 8 - credit;
+                    gap_needed_for_s =
+                        (unsigned)std::max(INTER_CLOTS_BYTE_GAP * 8 - static_cast<int>(credit), 0);
                 }
 
                 gap_needed = std::max(gap_needed, gap_needed_for_s);
@@ -310,7 +308,19 @@ class NaiveClotAlloc : public Visitor {
         // see if can find a mutex state and reuse clot
 
         int reuse_tag = 0;
-        // TODO add overlay logic here
+
+        const IR::BFN::Parser* parser = parserInfo.parser(ca.state);
+        auto& mutex_state_map = parserInfo.mutex(parser).mutex_state_map();
+        if (mutex_state_map.count(ca.state) > 0) {
+            for (auto s : mutex_state_map.at(ca.state)) {
+                if (clotInfo.parser_state_to_clots().count(s) > 0) {
+                    auto& clots = clotInfo.parser_state_to_clots().at(s);
+                    reuse_tag = clots[0]->tag;
+                    LOG3("can overlay with state " << s->name << " clot " << reuse_tag);
+                    break;
+                }
+            }
+        }
 
         for (auto f : to_be_allocated) {
             if (clot == nullptr) {
@@ -321,6 +331,7 @@ class NaiveClotAlloc : public Visitor {
 
                 clot->start = head_offset / 8;  // clot start is in byte, offset in bits
                 clotInfo.add(clot, ca.state);
+                LOG3("allocate clot " << clot->tag << " to " << ca.state->name);
             }
 
             if (!clotInfo.is_clot_candidate(f))
@@ -363,10 +374,10 @@ class NaiveClotAlloc : public Visitor {
 AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses) {
     addPasses({
         &uses,
-        &parserGraph,
+        &parserInfo,
         LOGGING(3) ? new DumpParser("before_clot_allocation.dot") : nullptr,
         new CollectClotInfo(phv, clotInfo),
-        new NaiveClotAlloc(clotInfo, parserGraph),
+        new NaiveClotAlloc(clotInfo, parserInfo),
     });
 }
 
