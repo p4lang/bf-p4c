@@ -187,40 +187,29 @@ class AddResubmitParser : public ParserModifier {
           auto* nextState =
                   packing.second->createExtractionState(INGRESS, nextStateName, finalState);
           transitions.push_back(
-                  new IR::BFN::Transition(match_t(8, packing.first, 0x07), 1, nextState));
+                  new IR::BFN::Transition(
+                      // mask is 0x07 because there can be at most 8 different resubmit sessions.
+                      match_t(Device::pardeSpec().bitResubmitTagSize(), packing.first, 0x07),
+                      Device::pardeSpec().byteResubmitTagSize(),
+                      nextState));
       }
 
-      auto select = new IR::BFN::Select(new IR::BFN::BufferRVal(StartLen(0, 8)));
       IR::Vector<IR::BFN::ParserPrimitive> extracts;
-      return new IR::BFN::ParserState("$resubmit", INGRESS, extracts, { select }, transitions);
+      if (packings->size()) {
+          auto select = new IR::BFN::Select(
+              new IR::BFN::BufferRVal(StartLen(0, Device::pardeSpec().bitResubmitTagSize())));
+          return new IR::BFN::ParserState("$resubmit", INGRESS, extracts, { select }, transitions);
+      } else {
+          transitions.push_back(
+              new IR::BFN::Transition(match_t(),
+                                      Device::pardeSpec().byteResubmitSize(), finalState));
+          return new IR::BFN::ParserState("$resubmit", INGRESS, extracts, { }, transitions);
+      }
   }
 
  private:
   const ResubmitPacking* packings;
 };
-
-std::pair<const IR::P4Control*, IR::BFN::Pipe*>
-extractResubmit(const IR::P4Control* deparser, IR::BFN::Pipe* pipe,
-        P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
-    CHECK_NULL(deparser);
-    CHECK_NULL(pipe);
-    CHECK_NULL(refMap);
-    CHECK_NULL(typeMap);
-
-    FindResubmit findResubmit(refMap, typeMap);
-    deparser->apply(findResubmit);
-
-    auto fieldPackings = new ResubmitPacking;
-    for (auto extract : findResubmit.extracts) {
-        auto packing = packResubmitFields(extract.second);
-        fieldPackings->emplace(extract.first, packing);
-    }
-
-    AddResubmitParser addResubmitParser(fieldPackings);
-    pipe->thread[INGRESS].parser = pipe->thread[INGRESS].parser->apply(addResubmitParser);
-
-    return std::make_pair(deparser, pipe);
-}
 
 ExtractResubmitFieldPackings::ExtractResubmitFieldPackings(P4::ReferenceMap *refMap,
                                                            P4::TypeMap *typeMap,
@@ -233,7 +222,6 @@ ExtractResubmitFieldPackings::ExtractResubmitFieldPackings(P4::ReferenceMap *ref
         new VisitFunctor([this, findResubmit, fieldPackings]() {
             for (auto extract : findResubmit->extracts) {
                 auto packing = packResubmitFields(extract.second);
-                LOG1("field packing" << packing);
                 fieldPackings->emplace(extract.first, packing);
             }
         }),
