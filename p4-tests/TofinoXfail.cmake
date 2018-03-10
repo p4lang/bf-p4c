@@ -1051,12 +1051,12 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "expecting ACTION or CONST or TABLE"
-  extensions/p4_tests/p4_16/ipv4_checksum.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_dc_basic
   switch_l2
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Could not find declaration for standard_metadata"
+  extensions/p4_tests/p4_16/int_transit.p4
 )

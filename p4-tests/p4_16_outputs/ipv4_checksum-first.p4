@@ -1,5 +1,6 @@
 #include <core.p4>
 #include <tofino.p4>
+#include <tna.p4>
 
 typedef bit<48> mac_addr_t;
 typedef bit<32> ipv4_addr_t;
@@ -101,8 +102,8 @@ parser SwitchEgressParser(packet_in pkt, out switch_header_t hdr, out switch_met
     }
 }
 
-control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t ig_md) {
-    checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum;
+control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t ig_md, in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
+    Checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum;
     apply {
         ipv4_checksum.update<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr }, hdr.ipv4.hdr_checksum);
         pkt.emit<ethernet_h>(hdr.ethernet);
@@ -112,12 +113,12 @@ control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in swit
     }
 }
 
-control SwitchEgressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t eg_md) {
+control SwitchEgressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t eg_md, in egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md) {
     apply {
     }
 }
 
-control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr, inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
+control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     switch_nexthop_t nexthop_index;
     action miss_() {
     }
@@ -128,8 +129,8 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
         hdr.ethernet.dst_addr = dmac;
     }
     action set_port(PortId_t port) {
-        ig_intr_md_for_tm.ucast_egress_port = port;
-        ig_intr_md_for_tm.bypass_egress = 1w1;
+        ig_intr_tm_md.ucast_egress_port = port;
+        ig_intr_tm_md.bypass_egress = true;
     }
     action rewrite_(mac_addr_t smac) {
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
@@ -167,7 +168,7 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
     }
     table rewrite {
         key = {
-            ig_intr_md_for_tm.ucast_egress_port: exact @name("ig_intr_md_for_tm.ucast_egress_port") ;
+            ig_intr_tm_md.ucast_egress_port: exact @name("ig_intr_tm_md.ucast_egress_port") ;
         }
         actions = {
             rewrite_();
@@ -184,7 +185,7 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
     }
 }
 
-control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr) {
+control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
     apply {
     }
 }

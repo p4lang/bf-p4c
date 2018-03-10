@@ -3,7 +3,6 @@
 
 const bit<16> ETHERTYPE_MPLS = 0x8847;
 const bit<16> ETHERTYPE_IPV4 = 0x800;
-typedef bit<9> PortId_t;
 struct metadata_t {
 }
 

@@ -231,7 +231,7 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "syntax error, unexpected IDENTIFIER, expecting ACTION or CONST or TABLE"
+  "p4c CRASH with signal 6"
   ipv4_checksum.p4
   )
 
@@ -244,4 +244,9 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "Can't fit table .* in input xbar by itself"
   tor.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "error: Could not find declaration for standard_metadata"
+  extensions/p4_tests/p4_16/int_transit.p4
   )
