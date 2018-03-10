@@ -43,6 +43,9 @@ struct ParserAsmSerializer : public ParserInspector {
             out << indent << "meta_opt: " << parser->epbConfig->fieldsEnabled
                 << std::endl;
 
+        if (parser->parserError)
+            out << indent << "parser_error: " << parser->parserError << std::endl;
+
         out << indent << "states:" << std::endl;
 
         return true;

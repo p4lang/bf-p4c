@@ -14,6 +14,8 @@ class PragmaAtomic : public Inspector {
     /// Used to print logging messages
     ordered_set<const PHV::Field*> fields;
 
+    bool add_constraint(cstring field_name);
+
     bool preorder(const IR::BFN::Pipe* pipe) override;
  public:
     explicit PragmaAtomic(PhvInfo& phv)

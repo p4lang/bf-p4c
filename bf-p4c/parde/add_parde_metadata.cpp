@@ -30,7 +30,7 @@ bool AddParserMetadataShims::preorder(IR::BFN::Parser *parser) {
         case EGRESS:  addEgressMetadata(parser);  break;
     }
 
-    return false;
+    return true;
 }
 
 void AddParserMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
@@ -63,6 +63,7 @@ void AddParserMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
         new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
     auto* globalTimestamp = gen_fieldref(egParserMeta, "global_tstamp");
     auto* globalVersion = gen_fieldref(egParserMeta, "global_ver");
+
     parser->start =
       new IR::BFN::ParserState("$entry_point", EGRESS,
         { new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)),
@@ -70,6 +71,23 @@ void AddParserMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
           new IR::BFN::Extract(globalVersion, new IR::BFN::BufferRVal(StartLen(480, 32))),
         }, { },
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
+}
+
+bool AddParserMetadataShims::preorder(IR::BFN::VerifyChecksum *verify) {
+    auto parser = findContext<IR::BFN::Parser>();
+    if (parser->gress == INGRESS) {
+        auto* igParserMeta =
+          getMetadataType(pipe, "ingress_intrinsic_metadata_from_parser");
+        auto* parserError = gen_fieldref(igParserMeta, "parser_err");
+        verify->parserError = new IR::BFN::FieldLVal(parserError);
+    } else {
+        auto* egParserMeta =
+          getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
+        auto* parserError = gen_fieldref(egParserMeta, "parser_err");
+        verify->parserError = new IR::BFN::FieldLVal(parserError);
+    }
+
+    return false;
 }
 
 bool AddDeparserMetadataShims::preorder(IR::BFN::Deparser *d) {

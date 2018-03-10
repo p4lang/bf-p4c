@@ -107,24 +107,24 @@ bool LiveRangeOverlay::happens_before(
     else if (u1->thread() == EGRESS && u2->thread() == INGRESS)
         return false;
 
-    if (dynamic_cast<const IR::BFN::ParserState *>(u1)) {
+    if (u1->is<IR::BFN::Parser>() || u1->is<IR::BFN::ParserState>()) {
         // Parser states are considered to happen at the same time for the
         // purpose of live range analysis.
-        if (dynamic_cast<const IR::BFN::ParserState *>(u2))
+        if (u2->is<IR::BFN::Parser>() || u2->is<IR::BFN::ParserState>())
             return false;
 
         // If u2 is not a parse state, it must be a table or deparser, which
         // happens after the u1 parse state.
-        if (dynamic_cast<const IR::MAU::Table *>(u2) ||
-            dynamic_cast<const IR::BFN::Deparser *>(u2))
+        if (u2->is<IR::MAU::Table>() ||
+            u2->is<IR::BFN::Deparser>())
             return true;
 
         BUG("Unexpected kind of BFN::Unit."); }
 
-    if (auto t1 = dynamic_cast<const IR::MAU::Table *>(u1)) {
-        if (dynamic_cast<const IR::BFN::ParserState *>(u2))
+    if (auto t1 = u1->to<IR::MAU::Table>()) {
+        if (u2->is<IR::BFN::Parser>() || u2->is<IR::BFN::ParserState>())
             return false;
-        if (auto t2 = dynamic_cast<const IR::MAU::Table *>(u2)) {
+        if (auto t2 = u2->to<IR::MAU::Table>()) {
             if (t1->logical_id == -1 && t2->logical_id == -1) {
                 return dg.happens_before(t1, t2);
             } else if (t1 ->logical_id == -1 || t2->logical_id == -1) {
@@ -133,15 +133,15 @@ bool LiveRangeOverlay::happens_before(
                 int t1_stage = static_cast<int>(t1->logical_id / 16);
                 int t2_stage = static_cast<int>(t2->logical_id / 16);
                 return t1_stage < t2_stage; } }
-        if (dynamic_cast<const IR::BFN::Deparser *>(u2))
+        if (u2->is<IR::BFN::Deparser>())
             return true;
         BUG("Unexpected kind of BFN::Unit."); }
 
-    if (dynamic_cast<const IR::BFN::Deparser *>(u1)) {
-        if (dynamic_cast<const IR::BFN::ParserState *>(u2) ||
-            dynamic_cast<const IR::MAU::Table *>(u2))
+    if (u1->is<IR::BFN::Deparser>()) {
+        if (u2->is<IR::BFN::Parser>() || u2->is<IR::BFN::ParserState>() ||
+            u2->is<IR::MAU::Table>())
             return false;
-        if (dynamic_cast<const IR::BFN::Deparser *>(u2))
+        if (u2->is<IR::BFN::Deparser>())
             return true; }
 
     BUG("Unexpected kind of BFN::Unit.");

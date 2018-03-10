@@ -24,12 +24,23 @@ class ElimUnused::Instructions : public Transform {
         return nullptr;
     }
 
+    IR::BFN::VerifyChecksum* preorder(IR::BFN::VerifyChecksum* verify) override {
+        auto unit = findOrigCtxt<IR::BFN::Unit>();
+        if (!unit) return verify;
+        if (verify->parserError &&
+            !self.defuse.getUses(unit, verify->parserError->field).empty())
+            return verify;
+
+        LOG1("ELIM UNUSED " << verify << " IN UNIT " << DBPrint::Brief << unit);
+        return nullptr;
+    }
+
     IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override {
         auto unit = findOrigCtxt<IR::BFN::Unit>();
         if (!unit) return i;
         if (!i->operands[0]) return i;
         if (!self.defuse.getUses(unit, i->operands[0]).empty()) return i;
-        LOG1("elim unused instruction " << i << " IN UNIT " << DBPrint::Brief << unit);
+        LOG1("ELIM UNUSED instruction " << i << " IN UNIT " << DBPrint::Brief << unit);
         return nullptr;
     }
 
@@ -70,10 +81,9 @@ class ElimUnused::Headers : public PardeTransform {
         if (next_single_transition->shift)
             transition->shift = *transition->shift + *next_single_transition->shift;
 
-        LOG1("ELIMINATING parser state " << next->name);
+        LOG1("ELIM UNUSED parser state " << next->name);
         return transition;
     }
-
 
     bool hasDefs(const IR::Expression* fieldRef) const {
         // XXX(seth): We should really be checking if any reaching definition
@@ -89,7 +99,7 @@ class ElimUnused::Headers : public PardeTransform {
         // The emit primitive is used if the POV bit being set somewhere.
         if (hasDefs(emit->povBit->field)) return emit;
 
-        LOG1("ELIMINATING emit " << emit << " IN UNIT " <<
+        LOG1("ELIM UNUSED emit " << emit << " IN UNIT " <<
              DBPrint::Brief << findContext<IR::BFN::Unit>());
         return nullptr;
     }
@@ -100,7 +110,7 @@ class ElimUnused::Headers : public PardeTransform {
         // The emit checksum primitive is used if the POV bit being set somewhere.
         if (hasDefs(emit->povBit->field)) return emit;
 
-        LOG1("ELIMINATING emit checksum " << emit << " IN UNIT " <<
+        LOG1("ELIM UNUSED emit checksum " << emit << " IN UNIT " <<
              DBPrint::Brief << findContext<IR::BFN::Unit>());
         return nullptr;
     }
@@ -113,7 +123,7 @@ class ElimUnused::Headers : public PardeTransform {
         // value from is never set.
         if (hasDefs(param->source->field)) return param;
 
-        LOG1("ELIMINATING deparser parameter " << param << " IN UNIT " <<
+        LOG1("ELIM UNUSED deparser parameter " << param << " IN UNIT " <<
              DBPrint::Brief << findContext<IR::BFN::Unit>());
         return nullptr;
     }

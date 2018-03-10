@@ -449,6 +449,16 @@ lowerParserChecksums(const std::vector<const IR::BFN::ParserPrimitive*>& checksu
     return loweredChecksums;
 }
 
+IR::Vector<IR::BFN::ContainerRef>
+lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
+            const IR::Vector<IR::BFN::FieldLVal>& fields);
+
+const IR::BFN::ContainerRef*
+lowerUnsplittableField(const PhvInfo& phv,
+                       const ClotInfo& clotInfo,
+                       const IR::BFN::FieldLVal* fieldRef,
+                       const char* unsplittableReason);
+
 /// Combine the high-level parser IR and the results of PHV allocation to
 /// produce a low-level, target-specific representation of the parser program.
 /// Note that the new IR is just constructed here; ReplaceParserIR is what
@@ -464,6 +474,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
     }
 
     LoweredParserIRStates loweredStates;
+    const IR::BFN::ContainerRef* igParserError = nullptr;
+    const IR::BFN::ContainerRef* egParserError = nullptr;
 
  private:
     /// @return a version of the provided state name which is safe to use in the
@@ -473,6 +485,20 @@ struct ComputeLoweredParserIR : public ParserInspector {
         if (auto prefix = name.findstr("::"))
             name = name.after(prefix) += 2;
         return name;
+    }
+
+    void postorder(const IR::BFN::VerifyChecksum* verify) override {
+        if (!verify->parserError)
+            return;
+
+        auto* loweredSource =
+            lowerUnsplittableField(phv, clotInfo, verify->parserError, "parser error");
+
+        auto parser = findContext<IR::BFN::Parser>();
+        if (parser->gress == INGRESS)
+            igParserError = loweredSource;
+        else
+            egParserError = loweredSource;
     }
 
     void postorder(const IR::BFN::ParserState* state) override {
@@ -595,18 +621,18 @@ struct ComputeLoweredParserIR : public ParserInspector {
 /// Replace the high-level parser IR version of each parser's root node with its
 /// lowered version. This has the effect of replacing the entire parse graph.
 struct ReplaceParserIR : public ParserTransform {
-    explicit ReplaceParserIR(const LoweredParserIRStates& loweredStates)
-      : loweredStates(loweredStates) { }
+    explicit ReplaceParserIR(const ComputeLoweredParserIR& computed)
+      : computed(computed) { }
 
  private:
     const IR::BFN::LoweredParser*
     preorder(IR::BFN::Parser* parser) override {
-        BUG_CHECK(loweredStates.find(parser->start) != loweredStates.end(),
+        BUG_CHECK(computed.loweredStates.find(parser->start) != computed.loweredStates.end(),
                   "Didn't lower the start state?");
         prune();
 
         auto* loweredParser =
-          new IR::BFN::LoweredParser(parser->gress, loweredStates.at(parser->start));
+          new IR::BFN::LoweredParser(parser->gress, computed.loweredStates.at(parser->start));
 
         // Record the amount of metadata which is prepended to the packet; this
         // is used to compensate so that e.g. counters record only bytes which
@@ -624,10 +650,15 @@ struct ReplaceParserIR : public ParserTransform {
               Device::pardeSpec().byteEgressMetadataSize(epbConfig);
         }
 
+        if (parser->gress == INGRESS && computed.igParserError)
+            loweredParser->parserError = computed.igParserError;
+        else if (parser->gress == EGRESS && computed.egParserError)
+            loweredParser->parserError = computed.egParserError;
+
         return loweredParser;
     }
 
-    const LoweredParserIRStates& loweredStates;
+    const ComputeLoweredParserIR& computed;
 };
 
 /// Generate a lowered version of the parser IR in this program and swap it in
@@ -637,7 +668,7 @@ struct LowerParserIR : public PassManager {
         auto* computeLoweredParserIR = new ComputeLoweredParserIR(phv, clotInfo);
         addPasses({
             computeLoweredParserIR,
-            new ReplaceParserIR(computeLoweredParserIR->loweredStates)
+            new ReplaceParserIR(*computeLoweredParserIR)
         });
     }
 };

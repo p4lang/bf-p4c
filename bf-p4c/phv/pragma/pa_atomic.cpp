@@ -4,6 +4,37 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "lib/log.h"
 
+// FIXME(zma) these should really be added to the include file
+// but because intrinsic metadata name may be changed during translation
+// stashing these here for now
+static const std::unordered_set<cstring> pa_atomic_from_arch = {
+    "ingress::ig_intr_md_from_prsr.parser_err",
+    "egress::eg_intr_md_from_prsr.parser_err"
+};
+
+bool PragmaAtomic::add_constraint(cstring field_name) {
+    // check field name
+    auto field = phv_i.field(field_name);
+    if (!field) {
+        ::warning("@pragma pa_atomic's argument "
+                  "%1% does not match any phv fields, skipped", field_name);
+        return false; }
+
+    // Make sure the field can fit into an available container fully
+    if (field->size > int(PHV::Size::b32)) {
+        ::warning("@pragma pa_atomic's argument %1% can not be atomic, "
+                  "because the size of field is greater than the size of "
+                  "the largest container", field_name);
+        return false; }
+
+    // set no_pack
+    fields.insert(field);
+    field->set_no_split(true);
+    LOG1("@pragma pa_atomic set " << field->name << " to be no_split");
+
+    return true;
+}
+
 bool PragmaAtomic::preorder(const IR::BFN::Pipe* pipe) {
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
@@ -37,26 +68,13 @@ bool PragmaAtomic::preorder(const IR::BFN::Pipe* pipe) {
                       "must be either ingress/egress, instead of %1%, skipped", gress);
             continue; }
 
-        // check field name
         auto field_name = gress->value + "::" + field_ir->value;
-        auto field = phv_i.field(field_name);
-        if (!field) {
-            ::warning("@pragma pa_atomic's argument "
-                      "%1% does not match any phv fields, skipped", field_name);
-            continue; }
-
-        // Make sure the field can fit into an available container fully
-        if (field->size > int(PHV::Size::b32)) {
-            ::warning("@pragma pa_atomic's argument %1% can not be atomic, "
-                      "because the size of field is greater than the size of "
-                      "the largest container", field_name);
-            continue; }
-
-        // set no_pack
-        fields.insert(field);
-        field->set_no_split(true);
-        LOG1("@pragma pa_atomic set " << field->name << " to be no_split");
+        add_constraint(field_name);
     }
+
+    for (auto field : pa_atomic_from_arch)
+        add_constraint(field);
+
     return true;
 }
 

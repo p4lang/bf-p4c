@@ -63,7 +63,7 @@ void FieldDefUse::read(const PHV::Field *f, const IR::BFN::Unit *unit,
                        const IR::Expression *e) {
     if (!f) return;
     auto &info = field(f);
-    LOG3("FieldDefUse(" << (void *)this << "): " << DBPrint::Brief << *unit <<
+    LOG3("FieldDefUse (" << (void *)this << "): " << DBPrint::Brief << *unit <<
          " reading " << f->name << " [" << e->id << "]");
     info.use.clear();
     locpair use(unit, e);

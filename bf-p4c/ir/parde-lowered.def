@@ -263,6 +263,9 @@ class LoweredParser : AbstractParser {
     /// The entry point to the parser.
     LoweredParserState start;
 
+    /// parser error
+    optional NullOK BFN::ContainerRef parserError;
+
     /// The set of PHV containers which may legally be written more than once by
     /// this parser.
     inline Vector<BFN::ContainerRef> multiwriteContainers;

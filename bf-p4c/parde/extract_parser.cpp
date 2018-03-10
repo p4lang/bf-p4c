@@ -325,12 +325,10 @@ struct RewriteParserStatements : public Transform {
          return rv;
     }
 
-    const IR::Vector<IR::BFN::ParserPrimitive>*
+    const IR::BFN::ParserPrimitive*
     rewriteVerifyChecksum() {
-        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
         auto* verify = new IR::BFN::VerifyChecksum();
-        rv->push_back(verify);
-        return rv;
+        return verify;
     }
 
     const IR::Vector<IR::BFN::ParserPrimitive>*
@@ -368,9 +366,9 @@ struct RewriteParserStatements : public Transform {
         }
 
         if (method->member == "verify") {
-            BUG_CHECK(call->arguments->size() == 0,
-                      "Wrong number of arguments for method call: %1%", statement);
-            return rewriteVerifyChecksum();
+            auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+            rv->push_back(rewriteVerifyChecksum());
+            return rv;
         }
 
         ::error("Unexpected method call in parser: %1%", statement->toString());
@@ -398,9 +396,21 @@ struct RewriteParserStatements : public Transform {
         if (rhs->is<IR::Cast>())
             rhs = rhs->to<IR::Cast>()->expr;
 
-        if (rhs->is<IR::Constant>())
+        if (auto mc = rhs->to<IR::MethodCallExpression>()) {
+            auto* method = mc->method->to<IR::Member>();
+            if (method && method->member == "verify")
+                return rewriteVerifyChecksum();
+        }
+
+        if (auto mem = s->left->to<IR::Member>()) {
+            if (mem->member == "ingress_parser_err"|| mem->member == "egress_parser_err")
+                return nullptr;
+        }
+
+        if (rhs->is<IR::Constant>()) {
             return new IR::BFN::Extract(s->srcInfo, s->left,
                      new IR::BFN::ConstantRVal(rhs->to<IR::Constant>()->value));
+        }
 
         if (auto* lookahead = rhs->to<IR::BFN::LookaheadExpression>()) {
             auto bits = lookahead->bitRange().shiftedByBits(currentBit);
@@ -409,20 +419,15 @@ struct RewriteParserStatements : public Transform {
         }
 
         // Allow slices if we'd allow the expression being sliced.
-        if (auto* slice = rhs->to<IR::Slice>())
+        if (auto* slice = rhs->to<IR::Slice>()) {
             if (canEvaluateInParser(slice->e0))
                 return new IR::BFN::Extract(s->srcInfo, s->left,
                                             new IR::BFN::ComputedRVal(rhs));
+        }
 
         if (!canEvaluateInParser(rhs)) {
             ::error("Assignment cannot be supported in the parser: %1%", rhs);
             return nullptr;
-        }
-
-        if (auto mc = rhs->to<IR::MethodCallExpression>()) {
-            auto* method = mc->method->to<IR::Member>();
-            if (method && method->member == "verify")
-                return nullptr;  // AssignementStatement -> VerifyChecksum?
         }
 
         return new IR::BFN::Extract(s->srcInfo, s->left,
