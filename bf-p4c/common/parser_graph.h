@@ -189,7 +189,7 @@ class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector 
     }
 
  private:
-    Visitor::profile_t init_apply(const IR::Node* root) {
+    Visitor::profile_t init_apply(const IR::Node* root) override {
         auto rv = Inspector::init_apply(root);
 
         for (auto m : _mutex)

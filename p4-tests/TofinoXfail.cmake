@@ -1057,6 +1057,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error: Could not find declaration for standard_metadata"
+  "Operands of arithmetic operations cannot be greater than 32b"
   extensions/p4_tests/p4_16/int_transit.p4
 )

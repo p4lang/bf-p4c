@@ -14,7 +14,7 @@ class JbayPhvAnalysis : public Inspector {
     const PhvInfo               &phv;
     const PhvUse                &uses;
     const DependencyGraph       &dg;
-    const FieldDefUse           &defuse;
+    // const FieldDefUse           &defuse;
     ActionPhvConstraints  &actions;
 
     enum field_uses_t {
@@ -115,8 +115,8 @@ class JbayPhvAnalysis : public Inspector {
 
  public:
     explicit JbayPhvAnalysis(const PhvInfo &p, const PhvUse &u, const DependencyGraph &g, const
-            FieldDefUse &du, ActionPhvConstraints &a)
-        : phv(p), uses(u), dg(g), defuse(du), actions(a) {}
+                             FieldDefUse &, ActionPhvConstraints &a)
+        : phv(p), uses(u), dg(g), /* defuse(du), */ actions(a) {}
 };
 
 

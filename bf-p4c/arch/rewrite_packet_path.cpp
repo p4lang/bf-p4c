@@ -193,13 +193,13 @@ struct FindResubmitData : public Inspector {
 struct FindRecirculateData : public Inspector {
     FindRecirculateData(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                         ProgramStructure *structure)
-        : refMap(refMap), typeMap(typeMap), structure(structure) {
+        : structure(structure), refMap(refMap), typeMap(typeMap) {
         setName("FindRecirculateData");
     }
     boost::optional<RecirculateMetadata> recirculate;
 
     void findRecirculateDataInParser(const IR::AssignmentStatement* node,
-                                     const IR::BFN::TranslatedP4Parser* parser) {
+                                     const IR::BFN::TranslatedP4Parser* /* parser */) {
         if (auto expr = node->right->to<IR::PathExpression>()) {
             if (expr->path->name == recirculate->paramNameInParser) {
                 LOG4("struct read " << expr->path->name);
@@ -225,7 +225,7 @@ struct FindRecirculateData : public Inspector {
     }
 
     void findRecirculateDataInDeparser(const IR::AssignmentStatement* node,
-                                       const IR::BFN::TranslatedP4Deparser *control) {
+                                       const IR::BFN::TranslatedP4Deparser * /* control */) {
         if (auto expr = node->left->to<IR::PathExpression>()) {
             if (expr->path->name == recirculate->paramNameInDeparser) {
                 LOG4("struct write " << expr->path->name);
@@ -762,4 +762,3 @@ TranslatePacketPath::TranslatePacketPath(P4::ReferenceMap* refMap, P4::TypeMap* 
 }  // namespace PSA
 
 }  // namespace BFN
-

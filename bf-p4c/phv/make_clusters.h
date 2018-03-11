@@ -67,12 +67,12 @@ class Clustering : public PassManager {
       */
     class ClearClusteringStructs : public Inspector {
         Clustering& self;
-        PhvInfo& phv_i;
+        // PhvInfo& phv_i;
 
         Visitor::profile_t init_apply(const IR::Node* node) override;
 
      public:
-        explicit ClearClusteringStructs(Clustering& self) : self(self), phv_i(self.phv_i) { }
+        explicit ClearClusteringStructs(Clustering& self) : self(self) /*, phv_i(self.phv_i) */ { }
     };
 
     /** Find validity bits involved in any MAU instruction other than

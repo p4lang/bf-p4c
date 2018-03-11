@@ -182,6 +182,13 @@ const IR::Node* EgressControlConverter::preorder(IR::P4Control *node) {
     tnaParams.emplace("ig_intr_md_for_tm", param->name);
     paramList->push_back(param);
 
+    // add ig_intr_md_from_prsr
+    path = new IR::Path("ingress_intrinsic_metadata_from_parser_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("ig_intr_md_from_prsr", IR::Direction::InOut, type);
+    tnaParams.emplace("ig_intr_md_from_prsr", param->name);
+    paramList->push_back(param);
+
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
@@ -525,6 +532,8 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
     auto expr = node->expr->to<IR::PathExpression>();
     if (!expr) return node;
     auto pathname = expr->path->name;
+    using PathAndMember = std::pair<cstring, cstring>;
+    static std::set<PathAndMember> reportedErrors;
 
     gress_t thread;
     if (auto* parser = findContext<IR::BFN::TranslatedP4Parser>()) {
@@ -565,8 +574,11 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
             LOG3("Translating " << node << " to " << result);
             return result;
         }
-        if (otherMap.count(MetadataField{pathname, membername, type->size}))
-            error("%s is not accessible in the %s pipe", node, toString(thread));
+        if (otherMap.count(MetadataField{pathname, membername, type->size})) {
+            auto wasReported = reportedErrors.insert(PathAndMember(pathname, membername));
+            if (wasReported.second)
+                error("%s is not accessible in the %s pipe", node, toString(thread));
+        }
     }
     LOG4("No translation found for " << node);
     return node;
@@ -1104,7 +1116,7 @@ const IR::Node* EgressControlConverter::preorder(IR::P4Control *node) {
     tnaParams.emplace("eg_intr_md_for_oport", param->name);
     paramList->push_back(param);
 
-    /// XXX(hanw) following two parameters are added and should be removed after
+    /// XXX(hanw) following three parameters are added and should be removed after
     /// the defuse analysis is moved to the midend and bridge metadata is implemented.
 
     // add ig_intr_md_from_prsr
@@ -1119,6 +1131,13 @@ const IR::Node* EgressControlConverter::preorder(IR::P4Control *node) {
     type = new IR::Type_Name(path);
     param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::InOut, type);
     tnaParams.emplace("ig_intr_md_for_tm", param->name);
+    paramList->push_back(param);
+
+    // add ig_intr_md_from_prsr
+    path = new IR::Path("ingress_intrinsic_metadata_from_parser_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("ig_intr_md_from_prsr", IR::Direction::InOut, type);
+    tnaParams.emplace("ig_intr_md_from_prsr", param->name);
     paramList->push_back(param);
 
     // add compiler generated struct

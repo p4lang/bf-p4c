@@ -638,6 +638,7 @@ control Egress<H, M, CG>(
     // following two arguments are bridged metadata
     inout ingress_intrinsic_metadata_t ig_intr_md,
     inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
+    inout ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     inout CG aux);
 
 control IngressDeparser<H, M, CG>(

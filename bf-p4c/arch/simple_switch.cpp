@@ -92,9 +92,11 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"eg_intr_md_for_dprsr", "drop_ctl", 3});
 
         structure->addMetadata(
-                INGRESS,
                 MetadataField{"ig_intr_md_from_parser_aux", "ingress_global_tstamp", 48},
                 MetadataField{"ig_intr_md_from_prsr", "global_tstamp", 48});
+
+        structure->addMetadata(MetadataField{"standard_metadata", "ingress_global_timestamp", 48},
+                               MetadataField{"ig_intr_md_from_prsr", "global_tstamp", 48});
 
         structure->addMetadata(
                 INGRESS,
@@ -105,6 +107,11 @@ class LoadTargetArchitecture : public Inspector {
                 EGRESS,
                 MetadataField{"eg_intr_md_from_parser_aux", "egress_parser_err", 16},
                 MetadataField{"eg_intr_md_from_prsr", "parser_err", 16});
+
+        structure->addMetadata(
+                EGRESS,
+                MetadataField{"standard_metadata", "egress_global_timestamp", 48},
+                MetadataField{"eg_intr_md_from_prsr", "global_tstamp", 48});
 
         structure->addMetadata(
                 EGRESS,

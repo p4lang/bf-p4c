@@ -74,7 +74,7 @@ std::ostream& operator<<(std::ostream& s, const AllocScore& score);
 class CoreAllocation {
     // Input.
     const SymBitMatrix& mutex_i;
-    const Clustering& clustering_i;
+    // const Clustering& clustering_i;
     const PhvUse& uses_i;
     const ClotInfo& clot_i;
 
@@ -85,13 +85,13 @@ class CoreAllocation {
 
  public:
     CoreAllocation(const SymBitMatrix& mutex,
-                   const Clustering& clustering,
+                   const Clustering&,
                    const PhvUse& uses,
                    const ClotInfo& clot,
                    PHV::Pragmas& pragmas,
                    PhvInfo& phv,
                    ActionPhvConstraints& actions)
-        : mutex_i(mutex), clustering_i(clustering), uses_i(uses), clot_i(clot),
+        : mutex_i(mutex), /* clustering_i(clustering), */ uses_i(uses), clot_i(clot),
           phv_i(phv), actions_i(actions), pragmas_i(pragmas) { }
 
     /// @returns true if @f can overlay all fields in @slices.

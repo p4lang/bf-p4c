@@ -832,7 +832,7 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
         Match(const value_t &);
     };
     enum range_match_t { TCAM_NORMAL=0, DIRTCAM_2B=1, DIRTCAM_4B_LO=2, DIRTCAM_4B_HI=3, NONE=4 };
-    enum byte_config_t { MIDBYTE_NIBBLE_LO=0, MIDBYTE_NIBBLE_HI=1 }; 
+    enum byte_config_t { MIDBYTE_NIBBLE_LO=0, MIDBYTE_NIBBLE_HI=1 };
     std::vector<Match>  match;
     int match_word(int word_group) {
         for (unsigned i = 0; i < match.size(); i++)
@@ -875,8 +875,8 @@ public:
         return indirect ? indirect->find_on_actionbus(n, off, size, len)
                         : Table::find_on_actionbus(n, off, size, len); }
     const Call &get_action() const override { return indirect ? indirect->get_action() : action; }
-    Actions *get_actions() override { return actions ? actions : 
-        (action ? action->actions : indirect ? indirect->actions ? indirect->actions : 
+    Actions *get_actions() override { return actions ? actions :
+        (action ? action->actions : indirect ? indirect->actions ? indirect->actions :
          indirect->action ? indirect->action->actions : 0 : 0); }
     const AttachedTables *get_attached() const override {
         return indirect ? indirect->get_attached() : &attached; }
@@ -1296,7 +1296,9 @@ public:
     void set_counter_mode(int mode) { if (!stateful_counter_mode) stateful_counter_mode = mode; }
     FOR_ALL_TARGETS(TARGET_OVERLOAD, static int parse_counter_mode, const value_t &)
     static int parse_counter_mode(const value_t &v) {
-        SWITCH_FOREACH_TARGET(options.target, return parse_counter_mode(TARGET(), v);) }
+        SWITCH_FOREACH_TARGET(options.target, return parse_counter_mode(TARGET(), v););
+        return 0;  // should not reach here, but avoid warning
+    }
 )
 
 #endif /* _tables_h_ */

@@ -515,12 +515,12 @@ struct ClosedRange {
     }
 
     bool operator==(ClosedRange other) const {
-        return other.lo == lo && other.hi == hi;
+        return (other.lo == lo) && (other.hi == hi);
     }
     bool operator!=(ClosedRange other) const { return !(*this == other); }
 
     /// @see HalfOpenRange::contains().
-    bool contains(int index) const { return index >= lo && index <= hi; }
+    bool contains(int index) const { return (index >= lo) && (index <= hi); }
 
     /// @see HalfOpenRange::contains().
     bool contains(ClosedRange other) const {

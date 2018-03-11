@@ -13,7 +13,7 @@ using ChecksumSourceMap = std::map<cstring, const ChecksumSources*>;
 using ParserStateChecksumMap = std::map<const IR::ParserState*,
     std::vector<const IR::MethodCallExpression*>>;
 
-
+#if 0  // Not used yet
 void showComputeChecksumUsage() {
     ::warning("Computed checksum controls may include only code with this form:");
     ::warning("  if (header.isValid()) {");
@@ -23,6 +23,7 @@ void showComputeChecksumUsage() {
     ::warning("    });");
     ::warning("  }");
 }
+#endif  // Not used
 
 /**
  * Analyze an assignment statement within a computed checksum control and try to
@@ -446,7 +447,7 @@ analyzeUpdateChecksumStatement(const IR::MethodCallStatement* statement) {
 
     const IR::ListExpression* sourceList = (*methodCall->arguments)[0]->to<IR::ListExpression>();
     auto destField = (*methodCall->arguments)[1]->to<IR::Member>();
-    const IR::HeaderRef* sourceHeader = destField->expr->to<IR::HeaderRef>();
+    // const IR::HeaderRef* sourceHeader = destField->expr->to<IR::HeaderRef>();
 
     auto* sources = new ChecksumSources;
     for (auto* source : sourceList->components) {

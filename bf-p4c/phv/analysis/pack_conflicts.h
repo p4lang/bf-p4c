@@ -16,7 +16,7 @@
 class PackConflicts : public Inspector {
  private:
     const PhvInfo                   &phv;
-    const DependencyGraph           &dg;
+    // const DependencyGraph           &dg;
     const TablesMutuallyExclusive   &mutex;
     const MauBacktracker            &bt;
     const ActionMutuallyExclusive   &amutex;
@@ -54,9 +54,9 @@ class PackConflicts : public Inspector {
     void updateNumPackConstraints();
 
  public:
-    PackConflicts(const PhvInfo &p, const DependencyGraph &d, const TablesMutuallyExclusive &m,
+    PackConflicts(const PhvInfo &p, const DependencyGraph &, const TablesMutuallyExclusive &m,
             const MauBacktracker &b, const ActionMutuallyExclusive &a) :
-        phv(p), dg(d), mutex(m), bt(b), amutex(a) {}
+        phv(p), /* dg(d), */ mutex(m), bt(b), amutex(a) {}
 
     bool hasPackConflict(const PHV::Field* f1, const PHV::Field* f2) const;
 

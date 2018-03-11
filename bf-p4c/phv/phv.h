@@ -77,7 +77,7 @@ class Type {
     }
 
     bool operator==(Type c) const {
-        return kind_ == c.kind_ && size_ == c.size_;
+        return (kind_ == c.kind_) && (size_ == c.size_);
     }
 
     bool operator!=(Type c) const {

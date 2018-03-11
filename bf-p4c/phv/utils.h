@@ -159,7 +159,7 @@ class Allocation {
      *   c[4:7]<--f2[0:3]
      *
      *   and
-     *   
+     *
      *   c[0:3]<--f1[0:3]
      *   c[4:7]<--f3[0:3]
      *
@@ -175,7 +175,7 @@ class Allocation {
     /** @returns a set of slices allocated to @c that are all live at the same time as @sl
       * The previous function (slicesByLiveness(c))  constructs a vector of sets of slices
       * that are live in the container at the same time; the same slice may be found in multiple
-      * sets in this case. 
+      * sets in this case.
       * By contrast, slicesByLiveness(c, sl) uses the mutex_i member to determine all the field
       * slices that are not mutually exclusive with the candidate slice, and returns a set of all
       * such slices.
@@ -333,6 +333,8 @@ class Transaction : public Allocation {
         this->mutex_i = mutex;
         this->count_by_status_i = parent_i->count_by_status_i;
     }
+    /// Destructor declaration. Does nothing but quiets warnings
+    virtual ~Transaction() {}
 
     /// Iterate through container-->allocation slices.
     /// @warning not yet implemented.

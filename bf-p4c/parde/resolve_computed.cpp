@@ -253,10 +253,12 @@ class VerifyParserRValsAreUnique : public ParserInspector {
 using ParserValueResolution = std::map<const IR::BFN::ComputedRVal*,
                                        const IR::BFN::ParserRVal*>;
 
+#if 0  // Not used
 static void print(const std::map<cstring, const IR::BFN::ParserRVal*>& defs) {
     for (auto d : defs)
         std::cout << d.first << " " << d.second << std::endl;
 }
+#endif
 
 /**
  * Walk the parser programs (each thread is treated separately) and try to

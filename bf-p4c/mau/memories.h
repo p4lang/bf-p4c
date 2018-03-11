@@ -68,7 +68,7 @@ struct Memories {
     Alloc2D<search_bus_info, SRAM_ROWS, 2>             sram_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     sram_match_bus;
-    int tcam_group_use[TCAM_ROWS][TCAM_COLUMNS] = {{-1}};
+    // int tcam_group_use[TCAM_ROWS][TCAM_COLUMNS] = {{-1}};
     int tcam_midbyte_use[TCAM_ROWS/2][TCAM_COLUMNS] = {{-1}};
     Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     payload_use;

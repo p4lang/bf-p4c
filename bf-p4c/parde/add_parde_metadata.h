@@ -17,7 +17,7 @@ class AddParserMetadataShims : public ParserModifier {
 
  private:
     bool preorder(IR::BFN::Parser *) override;
-    bool preorder(IR::BFN::VerifyChecksum *verify);
+    bool preorder(IR::BFN::VerifyChecksum *verify) override;
 
     void addIngressMetadata(IR::BFN::Parser *d);
     void addEgressMetadata(IR::BFN::Parser *d);

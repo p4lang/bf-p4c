@@ -290,7 +290,7 @@ void IR::BFN::ChecksumUnitConfig::dbprint(std::ostream &out) const {
     out << " }";
 }
 
-void IR::BFN::LoweredEmitClot::dbprint(std::ostream &out) const {
+void IR::BFN::LoweredEmitClot::dbprint(std::ostream & /* out */) const {
 /*
     out << "emit clot " << tag << " (" << byteLength << "B) { ";
 

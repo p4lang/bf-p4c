@@ -267,7 +267,7 @@ header egress_intrinsic_metadata_t {
 @__intrinsic_metadata
 struct egress_intrinsic_metadata_from_parser_t {
     bit<48> global_tstamp;              // Global timestamp (ns) taken upon
-                                        // arrival at ingress.
+                                        // arrival at egress.
 
     bit<32> global_ver;                 // Global version number taken upon
                                         // arrival at ingress.
