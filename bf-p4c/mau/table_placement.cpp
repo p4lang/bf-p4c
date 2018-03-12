@@ -428,7 +428,7 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
                                 safe_vector<TableResourceAlloc *> &prev_resources) {
     const IR::MAU::Selector *as = nullptr;
     for (auto at : curr->table->attached) {
-        if ((as = at->to<IR::MAU::Selector>()) != nullptr) break;
+        if ((as = at->attached->to<IR::MAU::Selector>()) != nullptr) break;
     }
     if (as == nullptr) return;
     auto loc = resource->memuse.find(curr->table->get_use_name(as));
@@ -462,7 +462,7 @@ static void coord_action_data_xbar(const TablePlacement::Placed *curr,
                                    safe_vector<TableResourceAlloc *> &prev_resources) {
     const IR::MAU::ActionData *ad = nullptr;
     for (auto at : curr->table->attached) {
-        if ((ad = at->to<IR::MAU::ActionData>()) != nullptr) break;
+        if ((ad = at->attached->to<IR::MAU::ActionData>()) != nullptr) break;
     }
     if (ad == nullptr) return;
     auto loc = resource->memuse.find(curr->table->get_use_name(ad));
