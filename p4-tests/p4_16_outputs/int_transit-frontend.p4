@@ -109,6 +109,7 @@ struct int_metadata_t {
     bit<16> insert_byte_cnt;
     bit<8>  int_hdr_word_len;
     bit<32> switch_id;
+    bit<5>  ins_cnt_tmp;
 }
 
 struct metadata_t {
@@ -132,7 +133,14 @@ parser ParserImpl(packet_in packet, out headers_t hdr, inout metadata_t meta, in
     }
     state parse_intl4_shim {
         packet.extract<intl4_shim_t>(hdr.intl4_shim);
+        transition select(hdr.intl4_shim.int_type) {
+            8w1: parse_int_header;
+            default: accept;
+        }
+    }
+    state parse_int_header {
         packet.extract<int_header_t>(hdr.int_header);
+        meta.int_metadata.ins_cnt_tmp = hdr.int_header.ins_cnt;
         transition accept;
     }
     state start {
@@ -168,19 +176,19 @@ control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metada
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i1") action int_egress_int_metadata_insert_int_set_header_0003_i1() {
         hdr.int_q_occupancy.setValid();
-        hdr.int_q_occupancy.q_id = 8w0xff;
-        hdr.int_q_occupancy.q_occupancy = 24w0xffffff;
+        hdr.int_q_occupancy.q_id = 8w0x0;
+        hdr.int_q_occupancy.q_occupancy = (bit<24>)standard_metadata.deq_qdepth;
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i2") action int_egress_int_metadata_insert_int_set_header_0003_i2() {
         hdr.int_hop_latency.setValid();
-        hdr.int_hop_latency.hop_latency = (bit<32>)(standard_metadata.egress_global_timestamp - standard_metadata.ingress_global_timestamp);
+        hdr.int_hop_latency.hop_latency = 32w0xffffffff;
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i3") action int_egress_int_metadata_insert_int_set_header_0003_i3() {
         hdr.int_q_occupancy.setValid();
-        hdr.int_q_occupancy.q_id = 8w0xff;
-        hdr.int_q_occupancy.q_occupancy = 24w0xffffff;
+        hdr.int_q_occupancy.q_id = 8w0x0;
+        hdr.int_q_occupancy.q_occupancy = (bit<24>)standard_metadata.deq_qdepth;
         hdr.int_hop_latency.setValid();
-        hdr.int_hop_latency.hop_latency = (bit<32>)(standard_metadata.egress_global_timestamp - standard_metadata.ingress_global_timestamp);
+        hdr.int_hop_latency.hop_latency = 32w0xffffffff;
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i4") action int_egress_int_metadata_insert_int_set_header_0003_i4() {
         hdr.int_port_ids.setValid();
@@ -189,25 +197,25 @@ control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metada
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i5") action int_egress_int_metadata_insert_int_set_header_0003_i5() {
         hdr.int_q_occupancy.setValid();
-        hdr.int_q_occupancy.q_id = 8w0xff;
-        hdr.int_q_occupancy.q_occupancy = 24w0xffffff;
+        hdr.int_q_occupancy.q_id = 8w0x0;
+        hdr.int_q_occupancy.q_occupancy = (bit<24>)standard_metadata.deq_qdepth;
         hdr.int_port_ids.setValid();
         hdr.int_port_ids.ingress_port_id = (bit<16>)standard_metadata.ingress_port;
         hdr.int_port_ids.egress_port_id = (bit<16>)standard_metadata.egress_port;
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i6") action int_egress_int_metadata_insert_int_set_header_0003_i6() {
         hdr.int_hop_latency.setValid();
-        hdr.int_hop_latency.hop_latency = (bit<32>)(standard_metadata.egress_global_timestamp - standard_metadata.ingress_global_timestamp);
+        hdr.int_hop_latency.hop_latency = 32w0xffffffff;
         hdr.int_port_ids.setValid();
         hdr.int_port_ids.ingress_port_id = (bit<16>)standard_metadata.ingress_port;
         hdr.int_port_ids.egress_port_id = (bit<16>)standard_metadata.egress_port;
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i7") action int_egress_int_metadata_insert_int_set_header_0003_i7() {
         hdr.int_q_occupancy.setValid();
-        hdr.int_q_occupancy.q_id = 8w0xff;
-        hdr.int_q_occupancy.q_occupancy = 24w0xffffff;
+        hdr.int_q_occupancy.q_id = 8w0x0;
+        hdr.int_q_occupancy.q_occupancy = (bit<24>)standard_metadata.deq_qdepth;
         hdr.int_hop_latency.setValid();
-        hdr.int_hop_latency.hop_latency = (bit<32>)(standard_metadata.egress_global_timestamp - standard_metadata.ingress_global_timestamp);
+        hdr.int_hop_latency.hop_latency = 32w0xffffffff;
         hdr.int_port_ids.setValid();
         hdr.int_port_ids.ingress_port_id = (bit<16>)standard_metadata.ingress_port;
         hdr.int_port_ids.egress_port_id = (bit<16>)standard_metadata.egress_port;
@@ -218,23 +226,23 @@ control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metada
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i9") action int_egress_int_metadata_insert_int_set_header_0003_i9() {
         hdr.int_q_occupancy.setValid();
-        hdr.int_q_occupancy.q_id = 8w0xff;
-        hdr.int_q_occupancy.q_occupancy = 24w0xffffff;
+        hdr.int_q_occupancy.q_id = 8w0x0;
+        hdr.int_q_occupancy.q_occupancy = (bit<24>)standard_metadata.deq_qdepth;
         hdr.int_switch_id.setValid();
         hdr.int_switch_id.switch_id = meta.int_metadata.switch_id;
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i10") action int_egress_int_metadata_insert_int_set_header_0003_i10() {
         hdr.int_hop_latency.setValid();
-        hdr.int_hop_latency.hop_latency = (bit<32>)(standard_metadata.egress_global_timestamp - standard_metadata.ingress_global_timestamp);
+        hdr.int_hop_latency.hop_latency = 32w0xffffffff;
         hdr.int_switch_id.setValid();
         hdr.int_switch_id.switch_id = meta.int_metadata.switch_id;
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i11") action int_egress_int_metadata_insert_int_set_header_0003_i11() {
         hdr.int_q_occupancy.setValid();
-        hdr.int_q_occupancy.q_id = 8w0xff;
-        hdr.int_q_occupancy.q_occupancy = 24w0xffffff;
+        hdr.int_q_occupancy.q_id = 8w0x0;
+        hdr.int_q_occupancy.q_occupancy = (bit<24>)standard_metadata.deq_qdepth;
         hdr.int_hop_latency.setValid();
-        hdr.int_hop_latency.hop_latency = (bit<32>)(standard_metadata.egress_global_timestamp - standard_metadata.ingress_global_timestamp);
+        hdr.int_hop_latency.hop_latency = 32w0xffffffff;
         hdr.int_switch_id.setValid();
         hdr.int_switch_id.switch_id = meta.int_metadata.switch_id;
     }
@@ -247,8 +255,8 @@ control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metada
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i13") action int_egress_int_metadata_insert_int_set_header_0003_i13() {
         hdr.int_q_occupancy.setValid();
-        hdr.int_q_occupancy.q_id = 8w0xff;
-        hdr.int_q_occupancy.q_occupancy = 24w0xffffff;
+        hdr.int_q_occupancy.q_id = 8w0x0;
+        hdr.int_q_occupancy.q_occupancy = (bit<24>)standard_metadata.deq_qdepth;
         hdr.int_port_ids.setValid();
         hdr.int_port_ids.ingress_port_id = (bit<16>)standard_metadata.ingress_port;
         hdr.int_port_ids.egress_port_id = (bit<16>)standard_metadata.egress_port;
@@ -257,7 +265,7 @@ control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metada
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i14") action int_egress_int_metadata_insert_int_set_header_0003_i14() {
         hdr.int_hop_latency.setValid();
-        hdr.int_hop_latency.hop_latency = (bit<32>)(standard_metadata.egress_global_timestamp - standard_metadata.ingress_global_timestamp);
+        hdr.int_hop_latency.hop_latency = 32w0xffffffff;
         hdr.int_port_ids.setValid();
         hdr.int_port_ids.ingress_port_id = (bit<16>)standard_metadata.ingress_port;
         hdr.int_port_ids.egress_port_id = (bit<16>)standard_metadata.egress_port;
@@ -266,10 +274,10 @@ control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metada
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0003_i15") action int_egress_int_metadata_insert_int_set_header_0003_i15() {
         hdr.int_q_occupancy.setValid();
-        hdr.int_q_occupancy.q_id = 8w0xff;
-        hdr.int_q_occupancy.q_occupancy = 24w0xffffff;
+        hdr.int_q_occupancy.q_id = 8w0x0;
+        hdr.int_q_occupancy.q_occupancy = (bit<24>)standard_metadata.deq_qdepth;
         hdr.int_hop_latency.setValid();
-        hdr.int_hop_latency.hop_latency = (bit<32>)(standard_metadata.egress_global_timestamp - standard_metadata.ingress_global_timestamp);
+        hdr.int_hop_latency.hop_latency = 32w0xffffffff;
         hdr.int_port_ids.setValid();
         hdr.int_port_ids.ingress_port_id = (bit<16>)standard_metadata.ingress_port;
         hdr.int_port_ids.egress_port_id = (bit<16>)standard_metadata.egress_port;
@@ -299,7 +307,7 @@ control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metada
             int_egress_int_metadata_insert_int_set_header_0003_i15();
         }
         default_action = int_egress_int_metadata_insert_int_set_header_0003_i0();
-        size = 16;
+        size = 17;
     }
     @name("egress.int_egress.int_metadata_insert.int_set_header_0407_i0") action int_egress_int_metadata_insert_int_set_header_0407_i0() {
     }
@@ -428,7 +436,7 @@ control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metada
             int_egress_int_metadata_insert_int_set_header_0407_i15();
         }
         default_action = int_egress_int_metadata_insert_int_set_header_0407_i0();
-        size = 16;
+        size = 17;
     }
     @name("egress.int_egress.int_outer_encap.int_update_ipv4") action int_egress_int_outer_encap_int_update_ipv4() {
         hdr.ipv4.total_len = hdr.ipv4.total_len + meta.int_metadata.insert_byte_cnt;
@@ -442,8 +450,8 @@ control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metada
     }
     @name("egress.int_egress.int_transit") action int_egress_int_transit(bit<32> switch_id) {
         meta.int_metadata.switch_id = switch_id;
-        meta.int_metadata.insert_byte_cnt = (bit<16>)hdr.int_header.ins_cnt << 2;
-        meta.int_metadata.int_hdr_word_len = (bit<8>)hdr.int_header.ins_cnt;
+        meta.int_metadata.insert_byte_cnt = (bit<16>)(hdr.int_header.ins_cnt << 2);
+        meta.int_metadata.int_hdr_word_len = (bit<8>)meta.int_metadata.ins_cnt_tmp;
     }
     @name("egress.int_egress.int_prep") table int_egress_int_prep_0 {
         key = {

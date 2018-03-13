@@ -225,7 +225,7 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "Operands of arithmetic operations cannot be greater than 32b"
+  "PHV allocation was not successful"
   extensions/p4_tests/p4_16/int_transit.p4
   )
 

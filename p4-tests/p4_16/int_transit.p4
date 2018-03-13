@@ -111,6 +111,7 @@ struct int_metadata_t {
     bit<16> insert_byte_cnt;
     bit<8> int_hdr_word_len;
     bit<32> switch_id;
+    bit<5> ins_cnt_tmp;
 }
 
 struct metadata_t {
@@ -151,10 +152,21 @@ parser ParserImpl(packet_in packet, out headers_t hdr, inout metadata_t meta,
 
     state parse_intl4_shim {
         packet.extract(hdr.intl4_shim);
-        transition parse_int_header;
+        // TODO(antonin): I do not need this transition but without it I run
+        // into BRIG-513
+        transition select(hdr.intl4_shim.int_type) {
+            1: parse_int_header;
+            default: accept;
+        }
     }
+
     state parse_int_header {
         packet.extract(hdr.int_header);
+        // extra metadata field necesaary to satisfy PH alignment constraints
+        // meta.int_metadata.insert_byte_cnt and
+        // meta.int_metadata.int_hdr_word_len cannot be assigned from the same
+        // source in int_egress.int_transit
+        meta.int_metadata.ins_cnt_tmp = hdr.int_header.ins_cnt;
         transition accept;
     }
 
@@ -211,14 +223,16 @@ control int_metadata_insert(inout headers_t hdr,
 
     action int_set_header_2() {
         hdr.int_hop_latency.setValid();
-        hdr.int_hop_latency.hop_latency =
-            (bit<32>) (standard_metadata.egress_global_timestamp - standard_metadata.ingress_global_timestamp);
+        hdr.int_hop_latency.hop_latency = 0xffffffff;
+        // See BRIG-511
+        // hdr.int_hop_latency.hop_latency =
+        //     (bit<32>) (standard_metadata.egress_global_timestamp - standard_metadata.ingress_global_timestamp);
     }
 
     action int_set_header_3() { // Queue ID + Queue occupancy, not supported
         hdr.int_q_occupancy.setValid();
-        hdr.int_q_occupancy.q_id = 0xff;
-        hdr.int_q_occupancy.q_occupancy = 0xffffff;
+        hdr.int_q_occupancy.q_id = 0x00;
+        hdr.int_q_occupancy.q_occupancy = (bit<24>) standard_metadata.deq_qdepth;
     }
 
     action int_set_header_4() {
@@ -332,7 +346,7 @@ control int_metadata_insert(inout headers_t hdr,
             int_set_header_0003_i15;
         }
         default_action = int_set_header_0003_i0();
-        size = 16;
+        size = 17;
     }
 
     action int_set_header_0407_i0() {
@@ -423,7 +437,7 @@ control int_metadata_insert(inout headers_t hdr,
             int_set_header_0407_i15;
         }
         default_action = int_set_header_0407_i0();
-        size = 16;
+        size = 17;
     }
 
     apply {
@@ -462,8 +476,8 @@ control int_egress(inout headers_t hdr, inout metadata_t meta,
                    inout standard_metadata_t standard_metadata) {
     action int_transit(bit<32> switch_id) {
         meta.int_metadata.switch_id = switch_id;
-        meta.int_metadata.insert_byte_cnt = (bit<16>) hdr.int_header.ins_cnt << 2;
-        meta.int_metadata.int_hdr_word_len = (bit<8>) hdr.int_header.ins_cnt;
+        meta.int_metadata.insert_byte_cnt = (bit<16>) (hdr.int_header.ins_cnt << 2);
+        meta.int_metadata.int_hdr_word_len = (bit<8>) meta.int_metadata.ins_cnt_tmp;
     }
     table int_prep {
         key = {}

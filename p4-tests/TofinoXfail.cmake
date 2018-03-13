@@ -1038,11 +1038,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Operands of arithmetic operations cannot be greater than 32b"
-  extensions/p4_tests/p4_16/int_transit.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "TypeError: None has type NoneType, but expected one of: int, long"
   extensions/p4_tests/p4_16/ipv4_checksum.p4
   )
