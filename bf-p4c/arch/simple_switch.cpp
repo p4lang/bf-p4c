@@ -115,6 +115,16 @@ class LoadTargetArchitecture : public Inspector {
 
         structure->addMetadata(
                 EGRESS,
+                MetadataField{"standard_metadata", "enq_qdepth", 19},
+                MetadataField{"eg_intr_md", "enq_qdepth", 19});
+
+        structure->addMetadata(
+                EGRESS,
+                MetadataField{"standard_metadata", "deq_qdepth", 19},
+                MetadataField{"eg_intr_md", "deq_qdepth", 19});
+
+        structure->addMetadata(
+                EGRESS,
                 MetadataField{"eg_intr_md_from_parser_aux", "clone_src", 4},
                 MetadataField{"compiler_generated_meta", "mirror_source", 8});
     }
