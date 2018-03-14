@@ -215,30 +215,8 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "AssertionError: Expected packet was not received on device"
-  easy.p4
-  easy_no_match.p4
-  easy_no_match_with_gateway.p4
-  adata_constant_out_of_range_for_immediate.p4
-  ingress_checksum.p4
-  ONLab_packetio.p4
-  )
-
-p4c_add_xfail_reason("jbay"
-  "TIMEOUT"
-  easy_exact.p4
-  ternary_match_constant_action_data.p4
-  )
-
-p4c_add_xfail_reason("jbay"
   "p4c CRASH with signal 6"
-  ipv4_checksum.p4
-  )
-
-p4c_add_xfail_reason("jbay"
-  "Rendezvous of RPC that terminated with"
-  easy_ternary.p4
-  ecmp_pi.p4
+  extensions/p4_tests/p4_16/ipv4_checksum.p4
   )
 
 p4c_add_xfail_reason("jbay"
@@ -250,3 +228,22 @@ p4c_add_xfail_reason("jbay"
   "Operands of arithmetic operations cannot be greater than 32b"
   extensions/p4_tests/p4_16/int_transit.p4
   )
+
+# These tests fail at runtime with the driver
+if (PTF_REQUIREMENTS_MET)
+p4c_add_xfail_reason("jbay"
+  "Rendezvous of RPC that terminated with"
+  extensions/p4_tests/p4_14/easy.p4
+  extensions/p4_tests/p4_14/easy_exact.p4
+  extensions/p4_tests/p4_14/easy_no_match.p4
+  extensions/p4_tests/p4_14/easy_no_match_with_gateway.p4
+  extensions/p4_tests/p4_14/easy_ternary.p4
+  extensions/p4_tests/p4_14/ecmp_pi.p4
+  extensions/p4_tests/p4_14/ternary_match_constant_action_data.p4
+  extensions/p4_tests/p4_16/adata_constant_out_of_range_for_immediate.p4
+  extensions/p4_tests/p4_16/ingress_checksum.p4
+  extensions/p4_tests/p4_16/ONLab_packetio.p4
+  extensions/p4_tests/p4_16/verify_checksum.p4
+  )
+
+endif() # PTF_REQUIREMENTS_MET

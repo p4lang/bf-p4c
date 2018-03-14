@@ -1,0 +1,29 @@
+set (LOGGING_SCHEMA_FILES
+  phv_schema
+  )
+
+set (LOGGING_SRCS)
+foreach(f IN LISTS LOGGING_SCHEMA_FILES)
+  list (APPEND LOGGING_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/${f}.json)
+  list (APPEND GEN_LOGGING_HDRS ${CMAKE_CURRENT_BINARY_DIR}/${f}.h)
+endforeach()
+
+set_source_files_properties(
+  ${GEN_LOGGING_HDRS} PROPERTIES GENERATED TRUE)
+
+set (GEN_LOGGING ${CMAKE_CURRENT_SOURCE_DIR}/generate_logging.py)
+add_custom_command(OUTPUT ${GEN_LOGGING_HDRS}
+  COMMAND ${GEN_LOGGING} -o ${CMAKE_CURRENT_BINARY_DIR} ${LOGGING_SRCS}
+  DEPENDS ${LOGGING_SRCS} ${GEN_LOGGING}
+  COMMENT "Generating logging code for ${LOGGING_SRCS}")
+
+add_custom_target(genLogging
+  DEPENDS ${GEN_LOGGING_HDRS})
+
+# need to find package rapidjson
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+add_executable(test_phv_logging test_phv.cpp)
+target_link_libraries(test_phv_logging)
+add_dependencies(test_phv_logging genLogging)
+
+add_test(test_phv_logging COMMAND ${CMAKE_CURRENT_BINARY_DIR}/test_phv_logging)

@@ -18,7 +18,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 set (HAVE_LIBBOOST_GRAPH 1)
 set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY}")
 
-
+add_subdirectory(logging)
 
 set (BF_P4C_IR_SRCS
   ir/dbprint-tofino.cpp
@@ -415,7 +415,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${P4C_BAREFOOT_SRCS}")
 build_unified(P4C_BAREFOOT_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 add_library(tofinobackend ${BF_P4C_SOURCES})
-add_dependencies(tofinobackend genIR)
+add_dependencies(tofinobackend genIR genLogging)
 
 add_executable(p4c-barefoot ${P4C_BAREFOOT_SRCS})
 target_link_libraries (p4c-barefoot tofinobackend ${P4C_LIBRARIES} ${P4C_LIB_DEPS})

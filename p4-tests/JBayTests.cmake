@@ -10,6 +10,8 @@ set (P16_EXCLUDE_PATTERNS "tofino.h")
 set (P16_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
 p4c_find_tests("${P16_FOR_TOFINO}" p16tests INCLUDE "${P16_INCLUDE_PATTERNS}" EXCLUDE "${P16_EXCLUDE_PATTERNS}")
 
+set (p16tests ${p16tests} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ipv4_checksum.p4)
+
 # p4-tests has all the includes at the same level with the programs.
 set (BFN_EXCLUDE_PATTERNS "tofino.p4")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/*/*.p4")
@@ -17,6 +19,9 @@ bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 
 file (GLOB STF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.stf")
 string (REGEX REPLACE "\\.stf;" ".p4;" STF_P4_TESTS "${STF_TESTS};")
+
+file (GLOB PTF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.ptf")
+string (REGEX REPLACE "\\.ptf;" ".p4;" PTF_P4_TESTS "${PTF_TESTS};")
 
 set (JBAY_TEST_SUITES
   ${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4
@@ -38,6 +43,7 @@ set (JBAY_TEST_SUITES
 #  ${v1tests}
   ${p16tests}
   ${STF_P4_TESTS}
+  ${PTF_P4_TESTS}
   )
 
 p4c_add_bf_backend_tests("jbay" "${JBAY_TEST_SUITES}")
@@ -45,52 +51,8 @@ p4c_add_bf_backend_tests("jbay" "${JBAY_TEST_SUITES}")
 set (testExtraArgs "${testExtraArgs} -jbay")
 
 p4c_add_ptf_test_with_ptfdir (
-    "jbay" easy.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy.ptf)
-
-p4c_add_ptf_test_with_ptfdir (
-    "jbay" easy_exact.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_exact.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_exact.ptf)
-
-p4c_add_ptf_test_with_ptfdir (
-    "jbay" easy_no_match.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_no_match.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_no_match.ptf)
-
-p4c_add_ptf_test_with_ptfdir (
-    "jbay" easy_no_match_with_gateway.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_no_match_with_gateway.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_no_match_with_gateway.ptf)
-
-p4c_add_ptf_test_with_ptfdir (
-    "jbay" easy_ternary.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_ternary.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/easy_ternary.ptf)
-
-p4c_add_ptf_test_with_ptfdir (
-    "jbay" ecmp_pi.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ecmp_pi.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ecmp_pi.ptf)
-
-p4c_add_ptf_test_with_ptfdir (
-    "jbay" ternary_match_constant_action_data.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ternary_match_constant_action_data.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ternary_match_constant_action_data.ptf)
-
-p4c_add_ptf_test_with_ptfdir (
-    "jbay" adata_constant_out_of_range_for_immediate.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/adata_constant_out_of_range_for_immediate.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/adata_constant_out_of_range_for_immediate.ptf)
-
-p4c_add_ptf_test_with_ptfdir (
     "jbay" fabric.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4
     "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf)
-
-p4c_add_ptf_test_with_ptfdir (
-    "jbay" ingress_checksum.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ingress_checksum.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ingress_checksum.ptf)
-
-p4c_add_ptf_test_with_ptfdir (
-    "jbay" ipv4_checksum.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ipv4_checksum.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ipv4_checksum.ptf)
-
-p4c_add_ptf_test_with_ptfdir (
-    "jbay" ONLab_packetio.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ONLab_packetio.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ONLab_packetio.ptf)
 
 p4c_add_ptf_test_with_ptfdir (
     "jbay" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
