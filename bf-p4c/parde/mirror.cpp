@@ -267,13 +267,13 @@ struct AddMirroredFieldListParser : public Transform {
                                       { select }, transitions);
   }
 
-//  Visitor::profile_t init_apply(const IR::Node *root) override {
-//      auto* egParserMeta =
-//          getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
-//      cloneDigestId = gen_fieldref(egParserMeta, "clone_digest_id");
-//      cloneSource = gen_fieldref(egParserMeta, "clone_src");
-//      return Transform::init_apply(root);
-//  }
+  Visitor::profile_t init_apply(const IR::Node *root) override {
+      auto* egParserMeta =
+          getMetadataType(pipe, "compiler_generated_meta");
+      cloneDigestId = gen_fieldref(egParserMeta, "clone_digest_id");
+      cloneSource = gen_fieldref(egParserMeta, "clone_src");
+      return Transform::init_apply(root);
+  }
 
  private:
   const IR::BFN::Pipe* pipe;

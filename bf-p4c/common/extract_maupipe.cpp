@@ -374,26 +374,29 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         setupParam(mtr, args);
         return mtr;
-    } else if (tname == "lpf") {
+    } else if (tname == "Lpf") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         mtr->implementation = IR::ID("lpf");
-        if (args->size() == 0) {
-            mtr->direct = true;
-        } else if (args->size() == 1) {
-            mtr->size = args->at(0)->as<IR::Constant>().asInt();
-        }
+        mtr->size = args->at(0)->as<IR::Constant>().asInt();
         return mtr;
-    } else if (tname == "wred") {
+    } else if (tname == "DirectLpf") {
+        auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
+        mtr->implementation = IR::ID("lpf");
+        mtr->direct = true;
+        return mtr;
+    } else if (tname == "Wred") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         mtr->implementation = IR::ID("wred");
-        if (args->size() == 2) {
-            mtr->direct = true;
-        } else if (args->size() == 3) {
-            // The order must be synced once we move to new extern - "Wred"
-            mtr->red_nodrop_value = args->at(0)->as<IR::Constant>().asInt();
-            mtr->red_drop_value = args->at(1)->as<IR::Constant>().asInt();
-            mtr->size = args->at(2)->as<IR::Constant>().asInt();
-        }
+        mtr->size = args->at(0)->as<IR::Constant>().asInt();
+        mtr->red_drop_value = args->at(1)->as<IR::Constant>().asInt();
+        mtr->red_nodrop_value = args->at(2)->as<IR::Constant>().asInt();
+        return mtr;
+    } else if (tname == "DirectWred") {
+        auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
+        mtr->implementation = IR::ID("wred");
+        mtr->direct = true;
+        mtr->red_drop_value = args->at(0)->as<IR::Constant>().asInt();
+        mtr->red_nodrop_value = args->at(1)->as<IR::Constant>().asInt();
         return mtr;
     }
 
@@ -859,50 +862,48 @@ class ExtractMetadata : public Inspector {
         if (gress == INGRESS) {
             // XXX(hanw) index must be consistent with tofino.p4
             int size = mau->getApplyParameters()->parameters.size();
-            if (size > 2) {
-                auto md = mau->getApplyParameters()->parameters.at(2);
-                rv->metadata.addUnique("ingress_intrinsic_metadata",
-                                       bindings->get(md)->obj->to<IR::Header>());
-            }
-            if (size > 3) {
-                // intrinsic_metadata_from_parser
-                auto md = mau->getApplyParameters()->parameters.at(3);
-                rv->metadata.addUnique("ingress_intrinsic_metadata_from_parser",
-                                       bindings->get(md)->obj->to<IR::Metadata>());
-            }
-            if (size > 4) {
-                auto md = mau->getApplyParameters()->parameters.at(4);
-                rv->metadata.addUnique("ingress_intrinsic_metadata_for_deparser",
-                                       bindings->get(md)->obj->to<IR::Metadata>());
-            }
-            if (size > 5) {
-                // intrinsic_metadata_for_tm
-                auto md = mau->getApplyParameters()->parameters.at(5);
-                rv->metadata.addUnique("ingress_intrinsic_metadata_for_tm",
+            auto md = mau->getApplyParameters()->parameters.at(2);
+            rv->metadata.addUnique("ingress_intrinsic_metadata",
+                                   bindings->get(md)->obj->to<IR::Header>());
+
+            // intrinsic_metadata_from_parser
+            md = mau->getApplyParameters()->parameters.at(3);
+            rv->metadata.addUnique("ingress_intrinsic_metadata_from_parser",
+                                   bindings->get(md)->obj->to<IR::Metadata>());
+
+            // intrinsic_metadata_from_deparser
+            md = mau->getApplyParameters()->parameters.at(4);
+            rv->metadata.addUnique("ingress_intrinsic_metadata_for_deparser",
+                                   bindings->get(md)->obj->to<IR::Metadata>());
+
+            // intrinsic_metadata_for_tm
+            md = mau->getApplyParameters()->parameters.at(5);
+            rv->metadata.addUnique("ingress_intrinsic_metadata_for_tm",
+                                   bindings->get(md)->obj->to<IR::Metadata>());
+
+            // compiler_generated_metadata
+            if (size > 6) {
+                md = mau->getApplyParameters()->parameters.at(6);
+                rv->metadata.addUnique("compiler_generated_meta",
                                        bindings->get(md)->obj->to<IR::Metadata>());
             }
         } else if (gress == EGRESS) {
             int size = mau->getApplyParameters()->parameters.size();
-            if (size > 2) {
-                auto md = mau->getApplyParameters()->parameters.at(2);
-                rv->metadata.addUnique("egress_intrinsic_metadata",
-                                       bindings->get(md)->obj->to<IR::Header>());
-            }
-            if (size > 3) {
-                auto md = mau->getApplyParameters()->parameters.at(3);
-                rv->metadata.addUnique("egress_intrinsic_metadata_from_parser",
-                                       bindings->get(md)->obj->to<IR::Metadata>());
-            }
-            if (size > 4) {
-                auto md = mau->getApplyParameters()->parameters.at(4);
-                rv->metadata.addUnique("egress_intrinsic_metadata_for_deparser",
-                                       bindings->get(md)->obj->to<IR::Metadata>());
-            }
-            if (size > 5) {
-                auto md = mau->getApplyParameters()->parameters.at(5);
-                rv->metadata.addUnique("egress_intrinsic_metadata_for_output_port",
-                                       bindings->get(md)->obj->to<IR::Metadata>());
-            }
+            auto md = mau->getApplyParameters()->parameters.at(2);
+            rv->metadata.addUnique("egress_intrinsic_metadata",
+                                   bindings->get(md)->obj->to<IR::Header>());
+
+            md = mau->getApplyParameters()->parameters.at(3);
+            rv->metadata.addUnique("egress_intrinsic_metadata_from_parser",
+                                   bindings->get(md)->obj->to<IR::Metadata>());
+
+            md = mau->getApplyParameters()->parameters.at(4);
+            rv->metadata.addUnique("egress_intrinsic_metadata_for_deparser",
+                                   bindings->get(md)->obj->to<IR::Metadata>());
+
+            md = mau->getApplyParameters()->parameters.at(5);
+            rv->metadata.addUnique("egress_intrinsic_metadata_for_output_port",
+                                   bindings->get(md)->obj->to<IR::Metadata>());
         }
     }
 
@@ -949,20 +950,20 @@ struct ExtractChecksum : public Inspector {
 };
 
 ExtractBackendPipe::ExtractBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                                       IR::BFN::Pipe *rv, ParamBinding *bindings) {
+                                       IR::BFN::Pipe *rv, ParamBinding *bindings, bool useTna) {
     setName("ExtractBackendPipe");
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
     addPasses({
         bindings,
         new ExtractMetadata(rv, bindings),
-        new ExtractPhase0(rv, refMap),
+        (useTna) ? nullptr : new ExtractPhase0(rv, refMap),
         simplifyReferences,
         new GetTofinoTables(refMap, typeMap, INGRESS, rv, converted),
         new GetTofinoTables(refMap, typeMap, EGRESS, rv, converted),
         new ExtractParde(rv),
         new ExtractChecksum(rv),
-        new ExtractResubmitFieldPackings(refMap, typeMap, &resubmitPackings),
-        new ExtractMirrorFieldPackings(refMap, typeMap, &mirrorPackings),
+        (useTna) ? nullptr : new ExtractResubmitFieldPackings(refMap, typeMap, &resubmitPackings),
+        (useTna) ? nullptr : new ExtractMirrorFieldPackings(refMap, typeMap, &mirrorPackings),
     });
 }
 
@@ -980,8 +981,8 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
     addPasses({
         new AttachTables(refMap, converted),  // add attached tables
         new ProcessParde(rv, useTna),         // add parde metadata
-        new PopulateResubmitStateWithFieldPackings(resubmitPackings),
-        new PopulateMirrorStateWithFieldPackings(rv, mirrorPackings),
+        (useTna) ? nullptr : new PopulateResubmitStateWithFieldPackings(resubmitPackings),
+        (useTna) ? nullptr : new PopulateMirrorStateWithFieldPackings(rv, mirrorPackings),
         /// followings two passes are necessary, because ProcessBackendPipe transforms the
         /// IR::BFN::Pipe objects. If all the above passes can be moved to an earlier midend
         /// pass, then the passes below can possibily be removed.
@@ -1001,7 +1002,7 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, BFN_Options& 
                    options.arch == "native");
     auto rv = new IR::BFN::Pipe();
     auto bindings = new ParamBinding(&typeMap);
-    ExtractBackendPipe extractBackendPipe(&refMap, &typeMap, rv, bindings);
+    ExtractBackendPipe extractBackendPipe(&refMap, &typeMap, rv, bindings, useTna);
     extractBackendPipe.addDebugHook(options.getDebugHook());
     program = program->apply(extractBackendPipe);
 

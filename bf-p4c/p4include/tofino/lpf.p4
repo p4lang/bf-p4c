@@ -1,4 +1,11 @@
-extern lpf<T> {
-    lpf(@optional bit<32> instance_count);
-    T execute(in T val, @optional in bit<32> index);
+/// LPF
+extern Lpf<T, I> {
+    Lpf(bit<32> size);
+    T execute(in T val, in I index);
+}
+
+/// Direct LPF
+extern DirectLpf<T> {
+    DirectLpf();
+    T execute(in T val);
 }

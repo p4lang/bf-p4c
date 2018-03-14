@@ -51,15 +51,26 @@ const IR::Declaration_Instance *P4V1::WREDConverter::convertExternInstance(
     if (!drop_value)
         drop_value = new IR::Constant(input_type, (1U << input_type->width_bits()) - 1);
     if (!no_drop_value) no_drop_value = new IR::Constant(input_type, 0);
-    auto ctor_args = new IR::Vector<IR::Expression>({ no_drop_value, drop_value });
-    if (instance_count) ctor_args->push_back(instance_count);
-    auto wred_type = new IR::Type_Specialized(new IR::Type_Name("wred"),
-                                new IR::Vector<IR::Type>({ input_type }));
+
+    auto args = new IR::Vector<IR::Expression>;
+    if (instance_count) args->push_back(instance_count);
+    args->push_back(drop_value);
+    args->push_back(no_drop_value);
+
     auto* externalName = new IR::StringLiteral(IR::ID("." + name));
     auto* annotations = new IR::Annotations({
-        new IR::Annotation(IR::ID("name"), { externalName })
-    });
-    return new IR::Declaration_Instance(ext->srcInfo, name, annotations, wred_type, ctor_args);
+        new IR::Annotation(IR::ID("name"), { externalName })});
+
+    if (instance_count) {
+        auto type = new IR::Type_Specialized(
+            new IR::Type_Name("Wred"),
+            new IR::Vector<IR::Type>({ input_type, IR::Type::Bits::get(32) }));
+        return new IR::Declaration_Instance(ext->srcInfo, name, annotations, type, args);
+    } else {
+        auto type = new IR::Type_Specialized(
+            new IR::Type_Name("DirectWred"), new IR::Vector<IR::Type>({ input_type }));
+        return new IR::Declaration_Instance(ext->srcInfo, name, annotations, type, args);
+    }
 }
 
 const IR::Statement *P4V1::WREDConverter::convertExternCall(P4V1::ProgramStructure *structure,

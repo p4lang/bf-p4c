@@ -465,15 +465,27 @@ extern DirectMeter {
 }
 
 /// LPF
-extern lpf<T> {
-    lpf(@optional bit<32> instance_count);
-    T execute(in T val, @optional in bit<32> index);
+extern Lpf<T, I> {
+    Lpf(bit<32> size);
+    T execute(in T val, in I index);
+}
+
+/// Direct LPF
+extern DirectLpf<T> {
+    DirectLpf();
+    T execute(in T val);
 }
 
 /// WRED
-extern wred<T> {
-    wred(T lower_bound, T upper_bound, @optional bit<32> instance_count);
-    T execute(in T val, @optional in bit<32> index);
+extern Wred<T, I> {
+    Wred(bit<32> size, bit<8> drop_value, bit<8> no_drop_value);
+    bit<8> execute(in T val, in I index);
+}
+
+/// Direct WRED
+extern DirectWred<T> {
+    DirectWred(bit<8> drop_value, bit<8> no_drop_value);
+    bit<8> execute(in T val);
 }
 
 /// Register

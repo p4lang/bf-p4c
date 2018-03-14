@@ -39,15 +39,23 @@ const IR::Declaration_Instance *P4V1::LpfConverter::convertExternInstance(
             error("%s: %s property is not an expression", prop->name, prop->value->srcInfo); }
     if (direct && instance_count)
         error("lpf %s specifies both 'direct' and 'instance_count'", ext);
-    auto ctor_args = new IR::Vector<IR::Expression>();
-    if (instance_count) ctor_args->push_back(instance_count);
-    auto lpf_type = new IR::Type_Specialized(new IR::Type_Name("lpf"),
-                                new IR::Vector<IR::Type>({ filt_type }));
+
     auto* externalName = new IR::StringLiteral(IR::ID("." + name));
     auto* annotations = new IR::Annotations({
-        new IR::Annotation(IR::ID("name"), { externalName })
-    });
-    return new IR::Declaration_Instance(ext->srcInfo, name, annotations, lpf_type, ctor_args);
+        new IR::Annotation(IR::ID("name"), { externalName })});
+    auto args = new IR::Vector<IR::Expression>();
+    if (instance_count) {
+        args->push_back(instance_count);
+        auto type = new IR::Type_Specialized(
+            new IR::Type_Name("Lpf"),
+            new IR::Vector<IR::Type>({ filt_type, IR::Type::Bits::get(32) }));
+        return new IR::Declaration_Instance(ext->srcInfo, name, annotations, type, args);
+    } else {
+        auto type = new IR::Type_Specialized(
+            new IR::Type_Name("DirectLpf"),
+            new IR::Vector<IR::Type>({ filt_type }));
+        return new IR::Declaration_Instance(ext->srcInfo, name, annotations, type, args);
+    }
 }
 
 const IR::Statement *P4V1::LpfConverter::convertExternCall(P4V1::ProgramStructure *structure,

@@ -103,6 +103,13 @@ class AnalyzeProgram : public Inspector {
         auto cgm = new IR::Type_Struct("compiler_generated_metadata_t", cgAnnotation);
         auto pktPath = new IR::StructField("packet_path", IR::Type::Bits::get(8));
         cgm->fields.push_back(pktPath);
+        // TODO(hanw): Map clone_src + clone_digest_id to packet_path
+        cgm->fields.push_back(
+            new IR::StructField("clone_src", IR::Type::Bits::get(4)));
+        cgm->fields.push_back(
+            new IR::StructField("clone_digest_id", IR::Type::Bits::get(4)));
+
+
         structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
     }
 

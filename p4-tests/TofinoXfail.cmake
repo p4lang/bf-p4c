@@ -651,6 +651,12 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
 )
 
+# BRIG BRIG-512
+p4c_add_xfail_reason("tofino"
+    "Hash table 0 column 0..15 duplicated"
+    extensions/p4_tests/p4_14/p4-tests/programs/meters/meters.p4
+)
+
 # START: XFAILs with translation
 # We fail to translate `resubmit()`.
 p4c_add_xfail_reason("tofino"

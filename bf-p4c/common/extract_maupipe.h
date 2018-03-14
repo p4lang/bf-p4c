@@ -93,7 +93,7 @@ class AttachTables : public PassManager {
 class ExtractBackendPipe : public PassManager {
  public:
     ExtractBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                       IR::BFN::Pipe* rv, ParamBinding *bindings);
+                       IR::BFN::Pipe* rv, ParamBinding *bindings, bool useTna);
 
     DeclarationConversions converted;
     ResubmitPacking resubmitPackings;

@@ -99,6 +99,11 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"ig_intr_md_from_prsr", "global_tstamp", 48});
 
         structure->addMetadata(
+                EGRESS,
+                MetadataField{"eg_intr_md_from_parser_aux", "egress_global_tstamp", 48},
+                MetadataField{"eg_intr_md_from_prsr", "global_tstamp", 48});
+
+        structure->addMetadata(
                 INGRESS,
                 MetadataField{"ig_intr_md_from_parser_aux", "ingress_parser_err", 16},
                 MetadataField{"ig_intr_md_from_prsr", "parser_err", 16});
@@ -126,7 +131,12 @@ class LoadTargetArchitecture : public Inspector {
         structure->addMetadata(
                 EGRESS,
                 MetadataField{"eg_intr_md_from_parser_aux", "clone_src", 4},
-                MetadataField{"compiler_generated_meta", "mirror_source", 8});
+                MetadataField{"compiler_generated_meta", "clone_src", 4});
+
+        structure->addMetadata(
+                EGRESS,
+                MetadataField{"eg_intr_md_from_parser_aux", "clone_digest_id", 4},
+                MetadataField{"compiler_generated_meta", "clone_digest_id", 4});
     }
 
     void analyzeTofinoModel() {
@@ -635,6 +645,11 @@ class AnalyzeProgram : public Inspector {
             new IR::StructField("mirror_id", IR::Type::Bits::get(10)));
         cgm->fields.push_back(
             new IR::StructField("mirror_source", IR::Type::Bits::get(8)));
+        cgm->fields.push_back(
+            new IR::StructField("clone_src", IR::Type::Bits::get(4)));
+        cgm->fields.push_back(
+            new IR::StructField("clone_digest_id", IR::Type::Bits::get(4)));
+
 
         structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
     }

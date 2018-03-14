@@ -334,8 +334,9 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
     } else if (prim->name == "Counter.count") {
         stateful.push_back(prim);  // needed to setup the index
         return nullptr;
-    } else if (prim->name == "lpf.execute" || prim->name == "wred.execute" ||
-               prim->name == "Meter.execute") {
+    } else if (prim->name == "Lpf.execute" || prim->name == "Wred.execute" ||
+               prim->name == "Meter.execute" || prim->name == "DirectLpf.execute" ||
+               prim->name == "DirectWred.execute") {
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto mtr = glob->obj->to<IR::MAU::Meter>();
         BUG_CHECK(mtr != nullptr, "%s: Cannot find associated meter for the method call %s",
@@ -390,7 +391,8 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     if (prim->name == "Counter.count" || prim->name == "DirectCounter.count")
         return IR::Type_Counter::get();
     if (prim->name == "Meter.execute" || prim->name == "DirectMeter.execute" ||
-        prim->name == "lpf.execute" || prim->name == "wred.execute")
+        prim->name == "Lpf.execute" || prim->name == "DirectLpf.execute" ||
+        prim->name == "Wred.execute" || prim->name == "DirectWred.execute")
         return IR::Type_Meter::get();
     if (prim->name.startsWith("register_action.") || prim->name.startsWith("selector_action."))
         return IR::Type_Register::get();
@@ -401,13 +403,14 @@ size_t index_operand(const IR::Primitive *prim) {
     if (prim->name.startsWith("Counter") || prim->name.startsWith("Meter")
         || prim->name.startsWith("register_action"))
         return 1;
-    else if (prim->name.startsWith("lpf") || prim->name.startsWith("wred"))
+    else if (prim->name.startsWith("Lpf") || prim->name.startsWith("Wred"))
         return 2;
     return 1;
 }
 
 size_t input_operand(const IR::Primitive *prim) {
-    if (prim->name.startsWith("lpf") || prim->name.startsWith("wred"))
+    if (prim->name.startsWith("Lpf") || prim->name.startsWith("Wred") ||
+            prim->name.startsWith("DirectLpf") || prim->name.startsWith("DirectWred"))
         return 1;
     else
         return -1;
