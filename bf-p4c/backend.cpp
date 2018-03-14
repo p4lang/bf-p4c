@@ -1,6 +1,7 @@
 #include "backend.h"
 #include <fstream>
 #include <set>
+#include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/common/check_header_refs.h"
 #include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/elim_unused.h"
@@ -129,7 +130,8 @@ Backend::Backend(const BFN_Options& options) :
     clot(uses),
     phv(mutually_exclusive_field_ids),
     uses(phv),
-    defuse(phv) {
+    defuse(phv),
+    bridged_fields(phv) {
     addPasses({
         new DumpPipe("Initial table graph"),
         new RemoveEmptyControls,
@@ -155,6 +157,13 @@ Backend::Backend(const BFN_Options& options) :
         new CollectPhvInfo(phv),
         new DoInstructionSelection(phv),
         new DumpPipe("After InstructionSelection"),
+        new CollectPhvInfo(phv),
+        &defuse,
+        new CollectNameAnnotations(phv),
+        &bridged_fields,  // Needs to be run after InstructionSelection & CollectNameAnnotations.
+        new ReplaceOriginalFieldWithBridged(phv, bridged_fields),  // Run before deadcode elim.
+        new CollectPhvInfo(phv),
+        &defuse,
         new AlpmSetup,
         new CollectPhvInfo(phv),
         &defuse,
@@ -165,7 +174,8 @@ Backend::Backend(const BFN_Options& options) :
         options.device == "jbay" ? nullptr : new MergeParserStates,
 #endif  // HAVE_JBAY
         &defuse,
-        new CollectNameAnnotations(phv),
+            // Following pass must run after CollectNameAnnotations, after any CollectPhvInfo.
+        new SetExternalNameForBridgedMetadata(phv, bridged_fields),
         new DumpPipe("Before phv_analysis"),
         new CheckForHeaders(),
 #if HAVE_JBAY

@@ -5,6 +5,7 @@
 #include "bf-p4c-options.h"
 
 #include "bf-p4c/common/field_defuse.h"
+#include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -21,6 +22,7 @@ class Backend : public PassManager {
     DependencyGraph deps;
     FieldDefUse defuse;
     TablesMutuallyExclusive mutex;
+    CollectBridgedFields bridged_fields;
 
  public:
     explicit Backend(const BFN_Options& options);

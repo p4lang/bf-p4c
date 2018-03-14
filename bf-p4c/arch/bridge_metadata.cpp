@@ -443,9 +443,6 @@ BridgeMetadata::BridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
         bridgeIngressToEgress,
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
-        new CopyPropagateBridgedMetadata(collectBridgedFields->fieldsToBridge,
-                          bridgeIngressToEgress->bridgedHeaderFieldNames,
-                          refMap, typeMap)
     });
 }
 
