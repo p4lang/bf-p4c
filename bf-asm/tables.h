@@ -563,7 +563,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 		             std::string &source, std::string &imm_name, int &start_bit);
     // Result physical buses should be setup for
     // Exact/Hash/MatchwithNoKey/ATCAM/Ternary tables
-    void add_result_physical_buses(json::map &stage_tbl);
+    virtual void add_result_physical_buses(json::map &stage_tbl);
     void canon_field_list(json::vector &field_list);
     void check_next();
     void check_next(Ref &next, Actions::Action *act = nullptr);
@@ -922,6 +922,7 @@ public:
         std::string def_act = Table::get_default_action();
         return !def_act.empty() ? def_act : indirect ? indirect->default_action : ""; }
     Format* get_format() override { return indirect ? indirect->format : format; }
+    void add_result_physical_buses(json::map &stage_tbl) override;
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",

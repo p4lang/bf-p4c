@@ -912,3 +912,12 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
 
 void TernaryIndirectTable::gen_tbl_cfg(json::vector &out) {
 }
+
+void TernaryMatchTable::add_result_physical_buses(json::map &stage_tbl) {
+    json::vector &result_physical_buses = stage_tbl["result_physical_buses"] = json::vector();
+    if (indirect) {
+        for (auto l : indirect->layout) {
+            result_physical_buses.push_back(l.row * 2 + l.bus); } }
+    else
+        result_physical_buses.push_back(indirect_bus);
+}
