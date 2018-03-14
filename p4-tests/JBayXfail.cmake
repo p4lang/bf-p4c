@@ -215,7 +215,7 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "p4c CRASH with signal 6"
+  "TypeError: None has type NoneType, but expected one of: int, long"
   extensions/p4_tests/p4_16/ipv4_checksum.p4
   )
 
@@ -231,19 +231,23 @@ p4c_add_xfail_reason("jbay"
 
 # These tests fail at runtime with the driver
 if (PTF_REQUIREMENTS_MET)
+
 p4c_add_xfail_reason("jbay"
-  "Rendezvous of RPC that terminated with"
+  "AssertionError: A packet was received on device .*, port .*, but we expected no packets"
   extensions/p4_tests/p4_14/easy.p4
-  extensions/p4_tests/p4_14/easy_exact.p4
-  extensions/p4_tests/p4_14/easy_no_match.p4
-  extensions/p4_tests/p4_14/easy_no_match_with_gateway.p4
-  extensions/p4_tests/p4_14/easy_ternary.p4
+  extensions/p4_tests/p4_16/verify_checksum.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "Error when creating group on target"
   extensions/p4_tests/p4_14/ecmp_pi.p4
-  extensions/p4_tests/p4_14/ternary_match_constant_action_data.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "AssertionError: Expected packet was not received on device .*, port .*"
   extensions/p4_tests/p4_16/adata_constant_out_of_range_for_immediate.p4
   extensions/p4_tests/p4_16/ingress_checksum.p4
   extensions/p4_tests/p4_16/ONLab_packetio.p4
-  extensions/p4_tests/p4_16/verify_checksum.p4
   )
 
 endif() # PTF_REQUIREMENTS_MET

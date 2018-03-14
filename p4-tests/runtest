@@ -219,7 +219,7 @@ if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; th
     # being, we grep for "v1model.p4" to determine whether a test uses the v1model
     # or TNA architecture.
     # XXX(zma) assuming tofino and jbay have same arch for now
-    if grep -q "tofino.p4" "$file"; then
+    if grep -q "tofino.p4\|tna.p4" "$file"; then
         P4C_ARGS="$P4C_ARGS --target ${device}-native-barefoot"
     elif grep -q "psa.p4" "$file"; then
         P4C_ARGS="$P4C_ARGS --target ${device}-psa-barefoot"
@@ -265,7 +265,7 @@ p4runtime_out=$testdir/${name}${out_ext}.out/p4info.proto.txt
 P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
 
 if $run_ptf || $run_stf2ptf; then
-    P4C_ARGS="$P4C_ARGS -DCPU_PORT=320 -Xlinker='--singlepipe' -Xassembler='--singlepipe'"
+    P4C_ARGS="$P4C_ARGS -DCPU_PORT=320 -Xlinker='--singlepipe' -Xassembler='--pipe0'"
     NUM_IFACES=8
     for ifaceIdx in $(seq 0 $(($NUM_IFACES-1))); do
         PORT_NAME="FP_PORT_${ifaceIdx}"

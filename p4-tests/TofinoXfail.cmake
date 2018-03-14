@@ -47,6 +47,10 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/gateway4.p4
     testdata/p4_16_samples/issue774-4-bmv2.p4
     testdata/p4_16_samples/issue1000-bmv2.p4
+    extensions/p4_tests/p4_16/cast_narrowing_set.p4
+    extensions/p4_tests/p4_16/multiple_apply1.p4
+    extensions/p4_tests/p4_16/cast_widening_set.p4
+    extensions/p4_tests/p4_16/container_dependency.p4
     )
 
 endif() # HARLYN_STF_tofino
@@ -491,8 +495,8 @@ p4c_add_xfail_reason("tofino"
   )
 p4c_add_xfail_reason("tofino"
   "warning: : Currently the Barefoot HW compiler cannot handle any non direct assignment instruction that has missized rvalues"
-  #extensions/p4_tests/p4_16/cast_narrowing_add.p4
-  #extensions/p4_tests/p4_16/cast_widening_add.p4
+  extensions/p4_tests/p4_16/cast_narrowing_add.p4
+  extensions/p4_tests/p4_16/cast_widening_add.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -744,8 +748,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/no_match_miss.p4
     testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/issue655-bmv2.p4
-    extensions/p4_tests/p4_16/multiple_apply1.p4
-    extensions/p4_tests/p4_16/container_dependency.p4
     # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
     testdata/p4_14_samples/gateway1.p4
     testdata/p4_14_samples/gateway2.p4
@@ -1030,27 +1032,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "p4c CRASH with signal 6"
-  extensions/p4_tests/p4_16/cast_widening_add.p4
-  extensions/p4_tests/p4_16/atcam_match2.p4
-  extensions/p4_tests/p4_16/multiple_apply2.p4
-  extensions/p4_tests/p4_16/atcam_match4.p4
-  extensions/p4_tests/p4_16/multiple_apply3.p4
-  extensions/p4_tests/p4_16/atcam_match_wide1.p4
-  extensions/p4_tests/p4_16/cast_narrowing_set.p4
-  extensions/p4_tests/p4_16/multiple_apply1.p4
-  extensions/p4_tests/p4_16/atcam_match1.p4
-  extensions/p4_tests/p4_16/cast_widening_set.p4
-  extensions/p4_tests/p4_16/atcam_match5.p4
-  extensions/p4_tests/p4_16/test_compiler_macro_defs.p4
-  extensions/p4_tests/p4_16/ipv4_checksum.p4
-  extensions/p4_tests/p4_16/container_dependency.p4
-  extensions/p4_tests/p4_16/default_actions.p4
-  extensions/p4_tests/p4_16/cast_narrowing_add.p4
-  extensions/p4_tests/p4_16/atcam_match3.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_dc_basic
   switch_l2
@@ -1060,3 +1041,8 @@ p4c_add_xfail_reason("tofino"
   "Operands of arithmetic operations cannot be greater than 32b"
   extensions/p4_tests/p4_16/int_transit.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "TypeError: None has type NoneType, but expected one of: int, long"
+  extensions/p4_tests/p4_16/ipv4_checksum.p4
+  )
