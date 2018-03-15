@@ -9,14 +9,16 @@ MESSAGE("-- Adding p4c-barefoot")
 set(BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE "5" CACHE STRING
     "Target unified compilation chunk size for bf-p4c (an integer or ALL)")
 
+set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
+find_package (OpenSSL REQUIRED)
 find_package (Boost REQUIRED COMPONENTS graph)
 add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
 if (ENABLE_JBAY)
   add_definitions("-DHAVE_JBAY=1")
 endif()
-include_directories(${Boost_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
 set (HAVE_LIBBOOST_GRAPH 1)
-set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY}")
+set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY};${OPENSSL_LIBRARIES}")
 
 add_subdirectory(logging)
 
@@ -108,6 +110,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/bridged_metadata_replacement.h
   common/check_header_alignment.h
   common/check_header_refs.h
+  common/collect_global_pragma.h
   common/copy_header_eliminator.h
   common/debug_info.h
   common/elim_unused.h
@@ -117,16 +120,16 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/header_stack.h
   common/live_range_overlay.h
   common/multiple_apply.h
-  common/rewrite.h
   common/param_binding.h
   common/parser_graph.h
   common/parser_overlay.h
   common/parser_critical_path.h
   common/path_linearizer.h
+  common/rewrite.h
+  common/run_id.h
   common/simplify_references.h
   common/slice.h
   common/type_categories.h
-  common/collect_global_pragma.h
   common/utils.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_HDRS}")

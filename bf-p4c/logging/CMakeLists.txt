@@ -21,9 +21,10 @@ add_custom_target(genLogging
   DEPENDS ${GEN_LOGGING_HDRS})
 
 # need to find package rapidjson
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..
+  ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(test_phv_logging test_phv.cpp)
-target_link_libraries(test_phv_logging)
+target_link_libraries(test_phv_logging ${OPENSSL_LIBRARIES})
 add_dependencies(test_phv_logging genLogging)
 
 add_test(test_phv_logging COMMAND ${CMAKE_CURRENT_BINARY_DIR}/test_phv_logging)

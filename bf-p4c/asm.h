@@ -8,6 +8,7 @@
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/asm_output.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "common/run_id.h"
 
 namespace BFN {
 
@@ -35,7 +36,9 @@ class AsmOutput : public Inspector {
             MauAsmOutput mauasm(phv);
             pipe->apply(mauasm);
 
-            *out << "version: 1.0.0" << std::endl;
+            *out << "version:" << std::endl
+                 << "  version: 1.0.0" << std::endl
+                 << "  run_id: " << RunId::getId() << std::endl;
             if (::errorCount() == 0) {
                 *out << PhvAsmOutput(phv)
                      << ParserAsmOutput(pipe, INGRESS)

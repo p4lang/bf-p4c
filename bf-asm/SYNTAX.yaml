@@ -669,3 +669,9 @@ deparser <thread>:
 resources: <filename>
     # Defines the name of the json file that has a description of the resources used by
     # the program. This is directly placed in context.json for other tools (e.g., p4i).
+version:
+    version: <number>
+       # semantic versioning number
+    run_id: <sha>
+       # defines an id that ties together all the files produced by the compiler
+       # part of the Version section

@@ -1,8 +1,8 @@
+#include <iostream>
 #include <libgen.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdio.h>
-#include <iostream>
 #include <string>
 
 #include "arch/simple_switch.h"
@@ -12,6 +12,7 @@
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
 #include "bf-p4c/visualization.h"
 #include "common/extract_maupipe.h"
+#include "common/run_id.h"
 #include "device.h"
 #include "frontends/p4/frontend.h"
 #include "frontends/p4/createBuiltins.h"
@@ -78,7 +79,7 @@ class OutputAsm : public PassManager {
                 Util::JsonObject ctxtJson;
                 const time_t now = time(NULL);
                 char build_date[1024];
-                strftime(build_date, 1024, "%x %X", localtime(&now));
+                strftime(build_date, 1024, "%c", localtime(&now));
 
                 char *program_name_ptr = basename(const_cast<char *>(_options.outputFile.c_str()));
                 if (!program_name_ptr)
@@ -93,9 +94,10 @@ class OutputAsm : public PassManager {
 
                 LOG2("ASM: context.json generation for failed compile: " << dir << "context.json");
                 ctxtJson.emplace("build_date", new Util::JsonValue(build_date));
-                ctxtJson.emplace("schema_version", new Util::JsonValue("1.3.3"));
+                ctxtJson.emplace("schema_version", new Util::JsonValue("1.3.9"));
                 ctxtJson.emplace("compiler_version", new Util::JsonValue(BF_P4C_VERSION));
                 ctxtJson.emplace("program_name", new Util::JsonValue(program_name));
+                ctxtJson.emplace("run_id", new Util::JsonValue(RunId::getId()));
                 ctxtJson.emplace("learn_quanta", new Util::JsonArray());
                 ctxtJson.emplace("dynamic_hash_calculations", new Util::JsonArray());
                 ctxtJson.emplace("parser", new Util::JsonObject());

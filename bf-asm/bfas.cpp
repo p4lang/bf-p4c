@@ -70,9 +70,9 @@ void output_all() {
     json::map ctxtJson;
     const time_t now = time(NULL);
     char build_date[1024];
-    strftime(build_date, 1024, "%x %X", localtime(&now));
+    strftime(build_date, 1024, "%c", localtime(&now));
     ctxtJson["build_date"] = build_date;
-    ctxtJson["schema_version"] = "1.3.3";
+    ctxtJson["schema_version"] = "1.3.9";
     ctxtJson["compiler_version"] = BF_P4C_VERSION;
     ctxtJson["program_name"] = asmfile_name;
     ctxtJson["learn_quanta"] = json::vector();
@@ -284,18 +284,26 @@ class Version : public Section {
     Version() : Section("version") {}
     void start(int lineno, VECTOR(value_t) args) {}
     void input(VECTOR(value_t) args, value_t data) {
-        if (!CHECKTYPE2(data, tINT, tVEC)) return;
-        if (data.type == tINT) {
-            if (data.i != MAJOR_VERSION)
-                error(data.lineno, "Version %ld not supported", data.i);
-        } else if (data.vec.size >= 2) {
-            if (CHECKTYPE(data[0], tINT) && CHECKTYPE(data[1], tINT) &&
-                (data[0].i != MAJOR_VERSION || data[1].i > MINOR_VERSION))
-                error(data.lineno, "Version %ld.%ld not supported", data[0].i, data[1].i);
-        } else
-            error(data.lineno, "Version not understood");
+        if (!CHECKTYPE(data, tMAP)) return;
+        for (auto &kv : MapIterChecked(data.map, true)) {
+            if (kv.key == "version" && (kv.value.type == tVEC || kv.value.type == tINT)) {
+                if (kv.value.type == tINT) {
+                    if (kv.value.i != MAJOR_VERSION)
+                        error(kv.value.lineno, "Version %ld not supported", kv.value.i);
+                } else if (kv.value.vec.size >= 2) {
+                    if (CHECKTYPE(kv.value[0], tINT) && CHECKTYPE(kv.value[1], tINT) &&
+                        (kv.value[0].i != MAJOR_VERSION || kv.value[1].i > MINOR_VERSION))
+                    error(kv.value.lineno, "Version %ld.%ld not supported",
+                          kv.value[0].i, kv.value[1].i);
+                } else
+                    error(kv.value.lineno, "Version not understood");
+            } else if (kv.key == "run_id" && kv.value.type == tSTR) {
+                _run_id = kv.value.s;
+            }
+        }
     }
     void process() {}
-    void output(json::map &) {}
+    void output(json::map &ctx_json) { ctx_json["run_id"] = _run_id; }
+    std::string _run_id;
     static Version singleton_version;
 } Version::singleton_version;

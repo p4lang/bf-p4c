@@ -5,6 +5,7 @@
 #include <fstream>
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
+#include "common/run_id.h"
 
 namespace Logging {
 
@@ -33,6 +34,10 @@ class Logger : public rapidjson::Document {
     virtual void log() {
         rapidjson::StringBuffer sb;
         Writer writer(sb);
+        writer.StartObject();
+        writer.Key("run_id");
+        writer.String(RunId::getId().c_str());
+        writer.EndObject();
         serialize(writer);
         _logFile << sb.GetString();
     }
