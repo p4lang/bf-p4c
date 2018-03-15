@@ -6,11 +6,11 @@
 
 class ElimUnused::Instructions : public Transform {
     ElimUnused &self;
-    IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override {
+    const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override {
         prune();
         return salu; }
 
-    IR::BFN::Extract* preorder(IR::BFN::Extract* extract) override {
+    const IR::BFN::Extract* preorder(IR::BFN::Extract* extract) override {
         auto unit = findOrigCtxt<IR::BFN::Unit>();
         if (!unit) return extract;
         if (!self.defuse.getUses(unit, extract->dest->field).empty())
@@ -24,7 +24,7 @@ class ElimUnused::Instructions : public Transform {
         return nullptr;
     }
 
-    IR::BFN::VerifyChecksum* preorder(IR::BFN::VerifyChecksum* verify) override {
+    const IR::BFN::VerifyChecksum* preorder(IR::BFN::VerifyChecksum* verify) override {
         auto unit = findOrigCtxt<IR::BFN::Unit>();
         if (!unit) return verify;
         if (verify->parserError &&
@@ -35,7 +35,7 @@ class ElimUnused::Instructions : public Transform {
         return nullptr;
     }
 
-    IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override {
+    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override {
         auto unit = findOrigCtxt<IR::BFN::Unit>();
         if (!unit) return i;
         if (!i->operands[0]) return i;
@@ -44,7 +44,25 @@ class ElimUnused::Instructions : public Transform {
         return nullptr;
     }
 
-    IR::GlobalRef *preorder(IR::GlobalRef *gr) override {
+    bool equiv(const IR::Expression *a, const IR::Expression *b) {
+        if (*a == *b) return true;
+        if (typeid(*a) != typeid(*b)) return false;
+        if (auto ca = a->to<IR::Cast>()) {
+            auto cb = b->to<IR::Cast>();
+            return ca->type == cb->type && equiv(ca->expr, cb->expr);
+        }
+        return false;
+    }
+
+    const IR::MAU::Instruction *postorder(IR::MAU::Instruction *i) override {
+        /// HACK(hanw): copy-propagation introduces set(a, a) instructions, which
+        /// is not deadcode eliminated because 'a' is still in-use in the control flow.
+        if (i->name == "set" && equiv(i->operands[0], i->operands[1]))
+            return nullptr;
+        return i;
+    }
+
+    const IR::GlobalRef *preorder(IR::GlobalRef *gr) override {
         prune();  // don't go through these.
         return gr; }
 
@@ -55,7 +73,7 @@ class ElimUnused::Instructions : public Transform {
 class ElimUnused::Headers : public PardeTransform {
     ElimUnused &self;
 
-    IR::BFN::Transition *postorder(IR::BFN::Transition *transition) override {
+    const IR::BFN::Transition *postorder(IR::BFN::Transition *transition) override {
         const auto* next = transition->next;
 
         if (!next)
@@ -93,7 +111,7 @@ class ElimUnused::Headers : public PardeTransform {
         return !self.defuse.getAllDefs(field->id).empty();
     }
 
-    IR::BFN::Emit* preorder(IR::BFN::Emit* emit) override {
+    const IR::BFN::Emit* preorder(IR::BFN::Emit* emit) override {
         prune();
 
         // The emit primitive is used if the POV bit being set somewhere.
@@ -104,7 +122,7 @@ class ElimUnused::Headers : public PardeTransform {
         return nullptr;
     }
 
-    IR::BFN::EmitChecksum* preorder(IR::BFN::EmitChecksum* emit) override {
+    const IR::BFN::EmitChecksum* preorder(IR::BFN::EmitChecksum* emit) override {
         prune();
 
         // The emit checksum primitive is used if the POV bit being set somewhere.
@@ -115,7 +133,7 @@ class ElimUnused::Headers : public PardeTransform {
         return nullptr;
     }
 
-    IR::BFN::DeparserParameter*
+    const IR::BFN::DeparserParameter*
     preorder(IR::BFN::DeparserParameter* param) override {
         prune();
 
