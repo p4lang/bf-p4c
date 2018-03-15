@@ -6,6 +6,7 @@
 #include "lib/symbitmatrix.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 /** @brief Find fields that have mutually exclusive live ranges.
  *
@@ -28,10 +29,11 @@
  */
 class LiveRangeOverlay : public Inspector {
  private:
-    PhvInfo         &phv;
-    DependencyGraph &dg;
-    FieldDefUse     &defuse;
-    SymBitMatrix    &overlay;
+    PhvInfo                 &phv;
+    DependencyGraph         &dg;
+    FieldDefUse             &defuse;
+    const PragmaNoOverlay   &noOverlay;
+    SymBitMatrix            &overlay;
 
     ordered_set<const IR::BFN::Unit *> all_ingress_units;
     ordered_set<const IR::BFN::Unit *> all_egress_units;
@@ -105,8 +107,14 @@ class LiveRangeOverlay : public Inspector {
     explicit LiveRangeOverlay(
         PhvInfo &phv,
         DependencyGraph &dg,
-        FieldDefUse &defuse)
-    : phv(phv), dg(dg), defuse(defuse), overlay(phv.field_mutex) { }
+        FieldDefUse &defuse,
+        const PHV::Pragmas& pragmas)
+    : phv(phv),
+      dg(dg),
+      defuse(defuse),
+      noOverlay(pragmas.pa_no_overlay()),
+      overlay(phv.field_mutex)
+    { }
 };
 
 #endif /* _LIVE_RANGE_OVERLAY_H_ */

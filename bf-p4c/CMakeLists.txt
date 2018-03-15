@@ -274,6 +274,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/pragma/pa_atomic.cpp
   phv/pragma/pa_container_size.cpp
   phv/pragma/pa_mutually_exclusive.cpp
+  phv/pragma/pa_no_overlay.cpp
   phv/pragma/pa_solitary.cpp
   )
 if (ENABLE_JBAY)
@@ -311,6 +312,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/pragma/pa_atomic.h
   phv/pragma/pa_container_size.h
   phv/pragma/pa_mutually_exclusive.h
+  phv/pragma/pa_no_overlay.h
   phv/pragma/pa_solitary.h
   phv/pragma/phv_pragmas.h
   )
@@ -479,6 +481,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_atomic.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_mutually_exclusive_pragma.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_no_overlay.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_size.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_solitary.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp

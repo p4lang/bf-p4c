@@ -5,6 +5,7 @@
 #include "bf-p4c/phv/pragma/pa_atomic.h"
 #include "bf-p4c/phv/pragma/pa_container_size.h"
 #include "bf-p4c/phv/pragma/pa_mutually_exclusive.h"
+#include "bf-p4c/phv/pragma/pa_no_overlay.h"
 #include "bf-p4c/phv/pragma/pa_solitary.h"
 
 namespace PHV {
@@ -14,6 +15,7 @@ constexpr const char* MUTUALLY_EXCLUSIVE = "pa_mutually_exclusive";
 constexpr const char* CONTAINER_SIZE     = "pa_container_size";
 constexpr const char* SOLITARY           = "pa_solitary";
 constexpr const char* ATOMIC             = "pa_atomic";
+constexpr const char* NO_OVERLAY         = "pa_no_overlay";
 
 }
 
@@ -23,6 +25,7 @@ class Pragmas : public PassManager {
     PragmaMutuallyExclusive     pa_mutually_exclusive_i;
     PragmaSolitary              pa_solitary_i;
     PragmaAtomic                pa_atomic_i;
+    PragmaNoOverlay             pa_no_overlay_i;
 
  public:
     const PragmaContainerSize& pa_container_sizes() const { return pa_container_sizes_i; }
@@ -37,18 +40,34 @@ class Pragmas : public PassManager {
     const PragmaAtomic& pa_atomic() const { return pa_atomic_i; }
     PragmaAtomic& pa_atomic()             { return pa_atomic_i; }
 
+    const PragmaNoOverlay& pa_no_overlay() const { return pa_no_overlay_i; }
+    PragmaNoOverlay& pa_no_overlay()             { return pa_no_overlay_i; }
+
     explicit Pragmas(PhvInfo& phv, const BFN_Options &options)
         : pa_container_sizes_i(phv), pa_mutually_exclusive_i(phv), pa_solitary_i(phv),
-        pa_atomic_i(phv) {
+          pa_atomic_i(phv), pa_no_overlay_i(phv) {
         addPasses({
             &pa_container_sizes_i,
             &pa_mutually_exclusive_i,
             options.use_pa_solitary ? &pa_solitary_i : nullptr,
-            &pa_atomic_i
+            &pa_atomic_i,
+            &pa_no_overlay_i
+        });
+    }
+
+    // Constructor only used for GTest.
+    explicit Pragmas(PhvInfo& phv)
+        : pa_container_sizes_i(phv), pa_mutually_exclusive_i(phv), pa_solitary_i(phv),
+          pa_atomic_i(phv), pa_no_overlay_i(phv) {
+        addPasses({
+            &pa_container_sizes_i,
+            &pa_mutually_exclusive_i,
+            &pa_solitary_i,
+            &pa_atomic_i,
+            &pa_no_overlay_i
         });
     }
 };
-
 
 }  // namespace PHV
 

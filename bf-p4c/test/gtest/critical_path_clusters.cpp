@@ -95,7 +95,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    FieldDefUse& defuse,
                                    Clustering& clustering,
                                    CalcParserCriticalPath& parser_critical_path) {
-    PragmaMutuallyExclusive* pragmas = new PragmaMutuallyExclusive(phv);
+    PHV::Pragmas* pragmas = new PHV::Pragmas(phv);
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),

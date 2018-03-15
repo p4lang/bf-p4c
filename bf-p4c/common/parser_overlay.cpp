@@ -1,7 +1,6 @@
 #include "parser_overlay.h"
 #include <sstream>
 #include <typeinfo>
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "ir/ir.h"
 #include "lib/log.h"
 
@@ -93,6 +92,12 @@ void ExcludeDeparsedIntrinsicMetadata::end_apply() {
         if (f.pov || f.deparsed_to_tm()) {
             LOG1("Marking field as never overlaid: " << f);
             neverOverlay.setbit(f.id); } }
+}
+
+void ExcludePragmaNoOverlayFields::end_apply() {
+    for (auto* f : pragma.getFields()) {
+        LOG1("Marking field as never overlaid because of pa_no_overlay: " << f);
+        neverOverlay.setbit(f->id); }
 }
 
 bool FindAddedHeaderFields::preorder(const IR::Primitive* prim) {

@@ -82,12 +82,17 @@ void LiveRangeOverlay::end_apply() {
     // Do not overlay intrinsic metadata or pov bits because they are unconditionally read in the
     // deparser.
     LOG4("mutually exclusive metadata:");
+    // Fields marked as no overlay by pa_no_overlay
     for (auto f1 : phv) {
         if ((!f1.metadata && !f1.alwaysPackable) || f1.pov || f1.deparsed_to_tm())
+            continue;
+        if (noOverlay.count(&f1))
             continue;
         for (auto f2 : phv) {
             if ((!f2.metadata && !f2.alwaysPackable) || f2.pov || f1.gress != f2.gress ||
                     f2.deparsed_to_tm())
+                continue;
+            if (noOverlay.count(&f2))
                 continue;
             if (!intersects(livemap[f1.id], livemap[f2.id])) {
                 LOG4("(" << f1.name << ", " << f2.name << ")");

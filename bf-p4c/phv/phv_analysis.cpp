@@ -45,7 +45,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                                    // refresh dependency graph for live range
                                    // analysis
             &defuse,               // refresh defuse
-            new LiveRangeOverlay(phv, deps, defuse),
+            new LiveRangeOverlay(phv, deps, defuse, pragmas),
                                    // produce pairs of fields that are never live
                                    // in the same stage
             new PHV_Field_Operations(phv),  // PHV field operations analysis

@@ -10,8 +10,8 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 namespace PHV {
 class Field;
@@ -154,13 +154,29 @@ class ExcludeDeparsedIntrinsicMetadata : public Inspector {
     const PhvInfo& phv;
     bitvec& neverOverlay;
 
-    void end_apply();
+    void end_apply() override;
 
  public:
     ExcludeDeparsedIntrinsicMetadata(
         const PhvInfo& phv,
         bitvec& neverOverlay)
     : phv(phv), neverOverlay(neverOverlay) { }
+};
+
+/** Mark fields specified by pa_no_overlay as never overlaid. These fields are excluded from
+  * BuildParserOverlay
+  */
+class ExcludePragmaNoOverlayFields : public Inspector {
+    bitvec&                   neverOverlay;
+    const PragmaNoOverlay&    pragma;
+
+    void end_apply() override;
+
+ public:
+    ExcludePragmaNoOverlayFields(
+        bitvec& neverOverlay,
+        const PragmaNoOverlay& p)
+    : neverOverlay(neverOverlay), pragma(p) { }
 };
 
 /** Find fields that appear in headers that may be added (with the `add_header`
@@ -197,19 +213,15 @@ class ParserOverlay : public PassManager {
  public:
     ParserOverlay(
             const PhvInfo& phv,
-            const PragmaMutuallyExclusive& pragmas) {
+            const PHV::Pragmas& pragmas) {
         addPasses({
             new ExcludeDeparsedIntrinsicMetadata(phv, neverOverlay),
+            new ExcludePragmaNoOverlayFields(neverOverlay, pragmas.pa_no_overlay()),
             // new FindAddedHeaderFields(phv, neverOverlay),
-            new BuildParserOverlay(phv, neverOverlay, pragmas),
-            new BuildMetadataOverlay(phv, neverOverlay, pragmas)
+            new BuildParserOverlay(phv, neverOverlay, pragmas.pa_mutually_exclusive()),
+            new BuildMetadataOverlay(phv, neverOverlay, pragmas.pa_mutually_exclusive())
         });
     }
-
-    ParserOverlay(
-        const PhvInfo& phv,
-        const PHV::Pragmas& pragmas)
-    : ParserOverlay(phv, pragmas.pa_mutually_exclusive()) { }
 };
 
 #endif /*_PARSER_OVERLAY_H_ */
