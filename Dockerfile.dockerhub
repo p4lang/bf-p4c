@@ -17,6 +17,7 @@ ENV P4C_DEPS automake \
              libfl-dev \
              libgc-dev \
              libgmp-dev \
+             libssl-dev \
              libtool \
              pkg-config \
              python-ipaddr \
