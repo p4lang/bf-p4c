@@ -254,7 +254,9 @@ void Phv::output(json::map &ctxt_json) {
                 if (field_size == 0)
                     field_size = phv_container_size;
                 phv_record["position_offset"] = get_position_offset(gress, field_name);
-                phv_record["field_name"] = field_name;
+                std::string fix_name(field_name);
+                stack_asm_name_to_p4(fix_name);  // convert name back to original P4 name
+                phv_record["field_name"] = fix_name;
                 phv_record["field_msb"] = field_lo + field_size - 1;
                 phv_record["field_lsb"] = field_lo;
                 // Field width is set to total field width irrespective of current
@@ -280,6 +282,7 @@ void Phv::output(json::map &ctxt_json) {
                     pov_header["bit_index"] = phv_lsb;
                     pov_header["position_offset"] = get_position_offset(gress, field_name);
                     remove_aug_names(field_name);
+                    stack_asm_name_to_p4(field_name);
                     pov_header["header_name"] = field_name;
                     // FIXME: Checks for reserved POV bits, not supported?
                     pov_header["hidden"] = false;;

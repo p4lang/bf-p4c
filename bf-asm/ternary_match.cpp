@@ -466,7 +466,9 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
     unsigned field_bytes = p ? field_width/8 : 1;
     for (int i = 0; i < field_bytes; i++) {
         json::map entry;
-        entry["field_name"] = name;
+        std::string fix_name(name);
+        stack_asm_name_to_p4(fix_name);  // convert name back to original P4 name
+        entry["field_name"] = fix_name;
         entry["lsb_mem_word_offset"] = lsb_offset;
         entry["lsb_mem_word_idx"] = lsb_idx;
         entry["msb_mem_word_idx"] = msb_idx;
@@ -568,6 +570,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             std::string source = "spec";
             std::string field_name = field.second.what.name();
             remove_aug_names(field_name);
+            stack_asm_name_to_p4(field_name);
             unsigned lsb_mem_word_offset = 0;
             if (field.second.hi > 40) {
                 // FIXME -- no longer needed if we always convert these to Group::BYTE?
@@ -612,6 +615,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
                 std::string source = "spec";
                 std::string field_name = field.second.what.name();
                 remove_aug_names(field_name);
+                stack_asm_name_to_p4(field_name);
                 int byte_lo = field.second.lo;
                 int field_lo = field.second.what.lobit();
                 int width = field.second.what.size();
@@ -630,7 +634,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     if (p4_params_list.empty()) {
         gen_match_fields_pvp(match_field_list, 0, false, -1);
     }
-    
+
     // Mark unused portion of format as a field with source 'zero'. This tells
     // the driver to dont care this field bits.
     //

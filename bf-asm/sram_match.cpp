@@ -787,6 +787,7 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
             int width = hi - lo + 1;
             std::string field_name = mw->second.name();
             remove_aug_names(field_name);
+            stack_asm_name_to_p4(field_name);
             field_list.push_back( json::map {
                     { "field_name", json::string(field_name) },
                     { "source", json::string(source) },

@@ -98,6 +98,7 @@ void MatchTable::pass1(int type) {
             // in p4 program.
             if (!p.bit_width_full)
                 p.bit_width_full = p.bit_width;
+            stack_asm_name_to_p4(p.name);
             bool found = remove_aug_names(p.name);
             if (found)
                 p.is_valid = true; } }
@@ -405,6 +406,7 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                 // FIXME -- if field_name is a raw register name, should lookup in PHV for alias?
                 // Make names compatible with PD Gen API
                 remove_aug_names(field_name);
+                stack_asm_name_to_p4(field_name);
                 field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
                 // Sanity check to see if field_name is also in p4_param_list.
                 if (!find_p4_param(field_name) && !p4_params_list.empty())

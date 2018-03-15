@@ -57,6 +57,7 @@ bool check_zero_string(const std::string& s);
 std::string get_filename(const char *s);
 
 bool remove_aug_names(std::string& name);
+void stack_asm_name_to_p4(std::string& name);
 
 bool gen_instfield_name(const std::string &fullname, std::string &instname,
      std::string &field_name);

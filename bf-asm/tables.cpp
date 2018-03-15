@@ -894,8 +894,8 @@ void Table::Actions::Action::set_action_handle(Table *tbl) {
             // If action table is associated with an action profile store the
             // actions in the p4_table of that action profile and not the match
             // table
-            if (!(p4_table && 
-                (mt->action_profile() == p4_table->p4_name()))) 
+            if (!(p4_table &&
+                (mt->action_profile() == p4_table->p4_name())))
                 p4_table = mt->p4_table ? mt->p4_table : p4_table; } }
     if (p4_table) {
         if (p4_table->action_handles.count(name) > 0)
@@ -1910,6 +1910,7 @@ void Table::common_tbl_cfg(json::map &tbl) {
         for (auto &p : p4_params_list) {
             unsigned start_bit = 0;
             json::map param;
+            stack_asm_name_to_p4(p.name);
             param["name"] = p.name;
             param["position"] = p.position;
             param["match_type"] = p.type;
