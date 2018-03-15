@@ -684,7 +684,13 @@ Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *) {
     return this;
 }
 int LoadConst::encode() {
-    return (src >> 10 << 15) | (0x8 << 10) | (src & 0x3ff);
+    if (options.target == TOFINO)
+        return (src >> 10 << 15) | (0x8 << 10) | (src & 0x3ff);
+#if HAVE_JBAY
+    else if (options.target == JBAY)
+        return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
+#endif
+    else { assert(0); return 0; }
 }
 bool LoadConst::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<LoadConst *>(a_)) {

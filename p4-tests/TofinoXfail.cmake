@@ -31,9 +31,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     )
 
   p4c_add_xfail_reason("tofino"
-    "Floating point exception"
-    extensions/p4_tests/p4_14/adjust_instr3.p4
-    extensions/p4_tests/p4_14/action_default_multiple.p4
+    "mismatch from expected(.*) at byte .*"
     extensions/p4_tests/p4_14/no_match_miss.p4
     )
 
@@ -1042,8 +1040,3 @@ p4c_add_xfail_reason("tofino"
   switch_dc_basic
   switch_l2
 )
-
-p4c_add_xfail_reason("tofino"
-  "TypeError: None has type NoneType, but expected one of: int, long"
-  extensions/p4_tests/p4_16/ipv4_checksum.p4
-  )

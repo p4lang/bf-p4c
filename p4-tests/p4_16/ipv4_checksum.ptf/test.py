@@ -71,7 +71,7 @@ class IPv4ChecksumTest(P4RuntimeTest):
         self.push_update_add_entry_to_action(
             req,
             'rewrite',
-            [self.Exact('ig_intr_md_for_tm.ucast_egress_port', stringify(eg_port, 2))],
+            [self.Exact('ig_intr_tm_md.ucast_egress_port', stringify(eg_port, 2))],
             'rewrite_',
             [('smac', mac_to_binary(rmac))])
 

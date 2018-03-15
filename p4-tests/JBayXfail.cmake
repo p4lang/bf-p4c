@@ -26,17 +26,11 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stateful3.p4
   )
 
-  p4c_add_xfail_reason("jbay"
-    "Assertion .*kInstrAluGrpSize.* failed."
-    testdata/p4_14_samples/parser_dc_full.p4
-  )
-
   # ingress_port isn't being setup properly (STF harness bug)
   p4c_add_xfail_reason("jbay"
     ".* expected packet.* on port .* not seen"
     testdata/p4_14_samples/repeater.p4
     extensions/p4_tests/p4_14/hash_calculation_32.p4
-    extensions/p4_tests/p4_14/pa_do_not_bridge.p4
     testdata/p4_14_samples/gateway1.p4
     testdata/p4_14_samples/gateway2.p4
     testdata/p4_14_samples/gateway3.p4
@@ -52,6 +46,7 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/no_match_miss.p4
     # clot-phv interaction bug?
     testdata/p4_14_samples/exact_match_valid1.p4
+    testdata/p4_14_samples/parser_dc_full.p4
   )
 
 endif() # HARLYN_STF
@@ -215,7 +210,7 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "TypeError: None has type NoneType, but expected one of: int, long"
+  "test.IPv4ChecksumTest ... FAIL"
   extensions/p4_tests/p4_16/ipv4_checksum.p4
   )
 
