@@ -1,10 +1,18 @@
 import ptf.testutils as testutils
+from ptf.testutils import group
+from ptf.mask import Mask
 import struct
 
 from p4 import p4runtime_pb2
 
 from base_test import P4RuntimeTest, autocleanup
 from base_test import stringify, ipv4_to_binary, mac_to_binary
+
+import scapy.main
+scapy.main.load_contrib("xnt")
+INT_META_HDR = scapy.contrib.xnt.INT_META_HDR
+INT_L45_HEAD = scapy.contrib.xnt.INT_L45_HEAD
+INT_L45_TAIL = scapy.contrib.xnt.INT_L45_TAIL
 
 # constants from fabric.p4
 FORWARDING_TYPE_BRIDGING = 0
@@ -24,6 +32,35 @@ class FabricTest(P4RuntimeTest):
         self.port1 = self.swports(1)
         self.port2 = self.swports(2)
         self.port3 = self.swports(3)
+
+    def setup_int(self):
+        self.send_request_add_entry_to_action(
+            "int_egress.int_prep", None, "int_egress.int_transit",
+            [("switch_id", stringify(1, 4))])
+
+        req = p4runtime_pb2.WriteRequest()
+        for i in xrange(16):
+            base = "int_set_header_0003_i"
+            mf = self.Exact("hdr.int_header.instruction_mask_0003",
+                            stringify(i, 1))
+            action = "int_metadata_insert." + base + str(i)
+            self.push_update_add_entry_to_action(
+                req,
+                "int_metadata_insert.int_inst_0003", [mf],
+                action, [])
+        self.write_request(req)
+
+        req = p4runtime_pb2.WriteRequest()
+        for i in xrange(16):
+            base = "int_set_header_0407_i"
+            mf = self.Exact("hdr.int_header.instruction_mask_0407",
+                            stringify(i, 1))
+            action = "int_metadata_insert." + base + str(i)
+            self.push_update_add_entry_to_action(
+                req,
+                "int_metadata_insert.int_inst_0407", [mf],
+                action, [])
+        self.write_request(req)
 
     def set_internal_vlan(self, ingress_port, vlan_valid = False,
                           vlan_id = 0, vlan_id_mask = 0,
@@ -305,6 +342,7 @@ class PacketOutTest(FabricTest):
         testutils.verify_packet(self, payload, port3)
         testutils.verify_no_other_packets(self)
 
+@group("spgw")
 class SpgwTest(FabricTest):
     def setUp(self):
         super(SpgwTest, self).setUp()
@@ -391,9 +429,12 @@ class SpgwUplinkTest(SpgwSimpleTest):
         testutils.send_packet(self, self.port1, str(pkt))
         testutils.verify_packet(self, exp_pkt, self.port2)
 
-class SpgwDownlinkMPLSTest(SpgwTest):
-    @autocleanup
-    def runTest(self):
+class SpgwMPLSTest(SpgwTest):
+    def setUp(self):
+        super(SpgwMPLSTest, self).setUp()
+
+        self.mpls_label = 204
+
         # internal vlan required for MPLS
         self.set_internal_vlan(self.port1, vlan_valid=False,
                                vlan_id=0, vlan_id_mask=0, new_vlan_id=4094)
@@ -402,9 +443,8 @@ class SpgwDownlinkMPLSTest(SpgwTest):
         self.add_forwarding_unicast_v4_entry(self.S1U_ENB_IPV4, 32, 1)
         self.add_forwarding_unicast_v4_entry(self.END_POINT_IPV4, 32, 2)
         self.add_next_hop_L3(1, self.port2, self.SWITCH_MAC_2, self.DMAC_2)
-        mpls_label = 204
         self.add_next_hop_mpls_v4(2, self.port1, self.SWITCH_MAC_1, self.DMAC_1,
-                                  mpls_label)
+                                  self.mpls_label)
 
         req = p4runtime_pb2.WriteRequest()
         req.device_id = self.device_id
@@ -430,17 +470,81 @@ class SpgwDownlinkMPLSTest(SpgwTest):
              ("s1u_sgw_addr", s1u_sgw_ipv4_)])
         self.write_request(req)
 
+class SpgwDownlinkMPLSTest(SpgwMPLSTest):
+    @autocleanup
+    def runTest(self):
         inner_udp = UDP(sport=5061, dport=5060) / ("\xab" * 128)
         pkt = Ether(src=self.DMAC_2, dst=self.SWITCH_MAC_2) /\
               IP(src=self.S1U_ENB_IPV4, dst=self.END_POINT_IPV4) /\
               inner_udp
         exp_pkt = Ether(src=self.SWITCH_MAC_1, dst=self.DMAC_1) /\
-                  MPLS(label=mpls_label, cos=0, s=1, ttl=64) /\
+                  MPLS(label=self.mpls_label, cos=0, s=1, ttl=64) /\
                   IP(tos=0, id=0x1513, flags=0, frag=0,
                      src=self.S1U_SGW_IPV4, dst=self.S1U_ENB_IPV4) /\
                   UDP(sport=2152, dport=2152, chksum=0) /\
                   self.make_gtp(20 + len(inner_udp), 1) /\
                   IP(src=self.S1U_ENB_IPV4, dst=self.END_POINT_IPV4, ttl=64) /\
                   inner_udp
+        testutils.send_packet(self, self.port2, str(pkt))
+        testutils.verify_packet(self, exp_pkt, self.port1)
+
+@group("int_transit")
+class SpgwDownlinkMPLS_INT_Test(SpgwMPLSTest):
+    @autocleanup
+    def runTest(self):
+        self.setup_int()
+
+        dport=5060
+
+        # int_type=hop-by-hop
+        int_shim = INT_L45_HEAD(int_type=1, length=4)
+        # ins_cnt: 5 = switch id + ports + q occupancy + ig port + eg port)
+        # max_hop_count: 3
+        # total_hop_count: 0
+        # instruction_mask_0003: 0xd = switch id (0), ports (1), q occupancy (3)
+        # instruction_mask_0407: 0xc = ig timestamp (4), eg timestamp (5)
+        int_header = "\x00\x05\x03\x00\xdc\x00\x00\x00"
+        # IP proto (UDP), UDP dport (4096)
+        int_tail = INT_L45_TAIL(next_proto=17, proto_param=dport)
+
+        payload = "\xab" * 128
+        inner_udp = UDP(sport=5061, dport=dport, chksum=0)
+        # IP tos is 0x04 to enable INT
+        pkt = Ether(src=self.DMAC_2, dst=self.SWITCH_MAC_2) /\
+              IP(tos=0x04, src=self.S1U_ENB_IPV4, dst=self.END_POINT_IPV4) /\
+              inner_udp /\
+              int_shim / int_header / int_tail /\
+              payload
+
+        exp_int_shim = INT_L45_HEAD(int_type=1, length=9)
+        # total_hop_count: 1
+        exp_int_header = "\x00\x05\x03\x01\xdc\x00\x00\x00"
+        # switch id: 1
+        exp_int_metadata = "\x00\x00\x00\x01"
+        # ig port: port2, eg port: port2
+        exp_int_metadata += stringify(self.port2, 2) + stringify(self.port1, 2)
+        # q id: 0, q occupancy: ?
+        exp_int_metadata += "\x00\x00\x00\x00"
+        # ig timestamp: ?
+        # eg timestamp: ?
+        exp_int_metadata += "\x00\x00\x00\x00" * 2
+
+        exp_int = exp_int_shim / exp_int_header / exp_int_metadata / int_tail
+
+        exp_pkt = Ether(src=self.SWITCH_MAC_1, dst=self.DMAC_1) /\
+                  MPLS(label=self.mpls_label, cos=0, s=1, ttl=64) /\
+                  IP(tos=0, id=0x1513, flags=0, frag=0,
+                     src=self.S1U_SGW_IPV4, dst=self.S1U_ENB_IPV4) /\
+                  UDP(sport=2152, dport=2152, chksum=0) /\
+                  self.make_gtp(20 + len(inner_udp) + len(exp_int) + len(payload), 1) /\
+                  IP(tos=0x04, src=self.S1U_ENB_IPV4, dst=self.END_POINT_IPV4, ttl=64) /\
+                  inner_udp /\
+                  exp_int /\
+                  payload
+        # We mask off the timestamps as well as the queue occupancy
+        exp_pkt = Mask(exp_pkt)
+        offset_metadata = 14 + 4 + 20 + 8 + 8 + 20 + 8 + 4 + 8
+        exp_pkt.set_do_not_care((offset_metadata + 9) * 8, 11 * 8)
+
         testutils.send_packet(self, self.port2, str(pkt))
         testutils.verify_packet(self, exp_pkt, self.port1)

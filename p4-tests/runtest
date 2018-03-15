@@ -406,7 +406,7 @@ if $run_pd ; then
                              --top-builddir $(findcmakecache) \
                              --pdtest $testout/$name.conf \
                              --device ${device} \
-                             $PTF_EXTRA_AGRS"
+                             $PTF_EXTRA_ARGS"
         run $PTF_CMD || die
         exit 0
     fi

@@ -78,8 +78,6 @@ endfunction()
 # add additional arguments to a test, after the call to add_test
 # We currently use this for specifying a set of tests, either by tag,
 # a sequence of tags, or a sequence of tests
-# \TODO: replace the hack of the fixed path with a better way to
-# look for the full test name.
 function(bfn_set_ptf_test_spec tag p4test ptf_test_spec)
   set_tests_properties("${tag}/${p4test}"
     PROPERTIES ENVIRONMENT "PTF_TEST_SPECS=${ptf_test_spec}")
@@ -104,6 +102,14 @@ macro(p4c_add_ptf_test_with_ptfdir device alias ts args ptfdir)
       ${p4test} "${args}")
   endif()
 endmacro(p4c_add_ptf_test_with_ptfdir)
+
+# same as p4c_add_ptf_test_with_ptfdir but takes an extra parameter,
+# ptf_test_spec, which can be used to specify the set of tests that will be run
+# by ptf.
+macro(p4c_add_ptf_test_with_ptfdir_and_spec device alias ts args ptfdir ptf_test_spec)
+  p4c_add_ptf_test_with_ptfdir(${device} ${alias} ${ts} ${args} ${ptfdir})
+  bfn_set_ptf_test_spec(${device} ${alias} ${ptf_test_spec})
+endmacro(p4c_add_ptf_test_with_ptfdir_and_spec)
 
 macro(simple_test_setup_check device)
   if (NOT ENABLE_STF2PTF)

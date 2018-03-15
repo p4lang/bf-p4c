@@ -112,7 +112,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
-if (PTF_REQUIREMENTS_MET) # P4Factory tests
+if (PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "AttributeError: Client instance has no attribute .*"
@@ -141,6 +141,18 @@ if (PTF_REQUIREMENTS_MET) # P4Factory tests
   #   extensions/p4_tests/p4_14/p4-tests/programs/exm_direct/exm_direct.p4
   #   extensions/p4_tests/p4_14/p4-tests/programs/meters/meters.p4
   #   )
+
+  # Needs https://github.com/barefootnetworks/bf-p4c-compilers/pull/1347
+  p4c_add_xfail_reason("tofino"
+    "PHV allocation was not successful"
+    fabric-DWITH_INT_TRANSIT
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Too much data for parse matcher, not enough register for BFN::Select"
+    fabric-DWITH_SPGW-DWITH_INT_TRANSIT
+    )
+
 endif() # PTF_REQUIREMENTS_MET
 
 
@@ -1081,4 +1093,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "SALU Selector Table not found"
   extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Unimplemented compiler support.*: metadata arrays not handled"
+  testdata/p4_16_samples/header-stack-ops-bmv2.p4
 )

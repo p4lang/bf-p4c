@@ -57,10 +57,25 @@ p4c_add_ptf_test_with_ptfdir (
     "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
 
 set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4)
-p4c_add_ptf_test_with_ptfdir (
-  "tofino" fabric.p4 ${ONOS_FABRIC_P4}
-  "${testExtraArgs} -DWITH_SPGW"
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf)
+# run all combinations of fabric.p4 by enabling / disabling SPGW and INT
+# transit. This is achieved by passing the names of the PTF groups whose tests
+# we want to run to the PTF runner.
+p4c_add_ptf_test_with_ptfdir_and_spec (
+    "tofino" fabric ${ONOS_FABRIC_P4}
+    "${testExtraArgs}"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf "all ^spgw ^int_transit")
+p4c_add_ptf_test_with_ptfdir_and_spec (
+    "tofino" fabric-DWITH_SPGW ${ONOS_FABRIC_P4}
+    "${testExtraArgs} -DWITH_SPGW"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf "all ^int_transit")
+p4c_add_ptf_test_with_ptfdir_and_spec (
+    "tofino" fabric-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
+    "${testExtraArgs} -DWITH_SPGW -DWITH_INT_TRANSIT"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf "all")
+p4c_add_ptf_test_with_ptfdir_and_spec (
+    "tofino" fabric-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
+    "${testExtraArgs} -DWITH_INT_TRANSIT"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf "all ^spgw")
 
 # subset of p4factory tests that we want to run as part of regressions
 # One # means it fails badly but should get it to run soon
