@@ -997,12 +997,6 @@ p4c_add_xfail_reason("tofino"
   #extensions/p4_tests/p4_14/c2/COMPILER-401/case2308_bugged.p4
   )
 
-# Translation code does not support standard_metadata.checksum_error
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for standard_metadata"
-  extensions/p4_tests/p4_16/verify_checksum.p4
-  )
-
 # BRIG-487
 p4c_add_xfail_reason("tofino"
   "error: hash dist .* is not on the action bus"
