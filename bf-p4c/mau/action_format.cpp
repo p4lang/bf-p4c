@@ -147,6 +147,39 @@ cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
     return ret_name;
 }
 
+/** Will determine which hash distribution unit is on the action bus at a particular 
+ *  byte offset.
+ */
+bool ActionFormat::Use::is_hash_dist(int byte_offset, const IR::MAU::HashDist **hd,
+        int &field_lo, int &field_hi) const {
+    bool in_hash_dist = false;
+    for (int i = 0; i < CONTAINER_TYPES; i++) {
+        if (hash_dist_layouts[i].getrange(i / (CONTAINER_SIZES[i] / 8), CONTAINER_SIZES[i] / 8)) {
+            in_hash_dist = true;
+            break;
+        }
+    }
+    if (!in_hash_dist)
+        return false;
+
+    bool found = false;
+
+    for (auto &hd_placement : hash_dist_placement) {
+        for (auto &adp : hd_placement.second) {
+            if (adp.start == byte_offset) {
+                found = true;
+                *hd = hd_placement.first;
+                field_lo = adp.arg_locs[0].field_bit;
+                field_hi = adp.arg_locs[0].field_hi();
+            }
+        }
+    }
+
+    BUG_CHECK(found, "Could not find associated hash distribution even though action format "
+                     "is set up to be hash dist");
+    return found;
+}
+
 /** Meter color reserved in the top byte of immediate */
 bool ActionFormat::Use::is_meter_color(int start_byte, bool immediate) const {
     return meter_reserved && immediate && start_byte == (IMMEDIATE_BYTES - 1);
@@ -156,23 +189,31 @@ bool ActionFormat::Use::is_meter_color(int start_byte, bool immediate) const {
  *   action format, based on where the lo and hi provided field_lo and field_hi
  */
 int ActionFormat::Use::find_hash_dist(const IR::MAU::HashDist *hd, int field_lo, int field_hi,
-        int &hash_lo, int &hash_hi) const {
+        int &hash_lo, int &hash_hi, int &section) const {
     BUG_CHECK(hash_dist_placement.find(hd) != hash_dist_placement.end(), "Hash Dist IR cannot "
               "be found within the action format");
     auto &hd_vec = hash_dist_placement.at(hd);
     bitvec field_bv = bitvec(field_lo, field_hi - field_lo + 1);
     int unit_index = -1;
     int bit_offset = -1;
+
     bool split_needed = false;
+
+    int min_start = ActionFormat::IMMEDIATE_BYTES;
+    for (auto &placement : hd_vec) {
+        min_start = std::min(min_start, placement.start);
+    }
+
     for (auto &placement : hd_vec) {
         auto &arg_loc = placement.arg_locs[0];
         bitvec arg_loc_bv(arg_loc.field_bit, arg_loc.data_loc.popcount());
         if ((arg_loc_bv & field_bv) == arg_loc_bv) {
-            int potential_unit_index = (placement.start * 8) / IXBar::HASH_DIST_BITS;
+            int potential_unit_index = ((placement.start - min_start) * 8) / IXBar::HASH_DIST_BITS;
             BUG_CHECK(unit_index == -1 || potential_unit_index == unit_index, "Hash distribution "
                       "illegally split over 16 bit boundary");
             unit_index = potential_unit_index;
             bit_offset = (placement.start * 8) % IXBar::HASH_DIST_BITS;
+            section = (placement.start * 8) / IXBar::HASH_DIST_BITS;
             if (placement.size == CONTAINER_SIZES[BYTE])
                 split_needed = true;
         } else if ((arg_loc_bv & field_bv).empty()) {

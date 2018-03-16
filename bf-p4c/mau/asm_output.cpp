@@ -960,7 +960,54 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         if (byte_sz > 1)
             out << ".." << (rs.location.byte + byte_sz - 1);
         out << " : ";
-        if (use.is_meter_color(rs.byte_offset, rs.immediate)) {
+
+        const IR::MAU::HashDist *hd = nullptr;
+        int lo = -1; int hi = -1;
+        // For emitting hash distribution sections on the action_bus directly.  Must find
+        // which slices of hash distribution are to go to which bytes, requiring coordination
+        // from the input xbar and action format allocation
+        if (immediate && use.is_hash_dist(rs.byte_offset, &hd, lo, hi)) {
+            const IXBar::HashDistUse *hd_use = nullptr;
+            auto &hash_dist_uses = tbl->resources->hash_dists;
+            for (auto &hash_dist_use : hash_dist_uses) {
+                if (hd == hash_dist_use.original_hd) {
+                    hd_use = &hash_dist_use;
+                    break;
+                }
+            }
+            BUG_CHECK(hd_use != nullptr, "Could not find hash distribution unit in link up "
+                                         "of tables");
+            safe_vector<int> units;
+            BUG_CHECK(hd_use->slices.size() <= 2, "Currently do not support more than 2 units "
+                      "of hash distribution per table");
+
+            int hash_lo = -1; int hash_hi = -1; int section = -1;
+            if (rs.location.type == ActionFormat::FULL && hd_use->slices.size() == 2) {
+                units.insert(units.end(), hd_use->slices.begin(), hd_use->slices.end());
+            } else {
+                int unit_index = use.find_hash_dist(hd, lo, hi, hash_lo, hash_hi, section);
+                units.push_back(hd_use->slices[unit_index]);
+            }
+
+            out << "hash_dist(";
+            size_t unit_index = 0;
+            for (auto unit : units) {
+                out << unit;
+                if (unit_index != units.size() - 1)
+                    out << ",";
+                unit_index++;
+            }
+            if (hash_lo >= 0 && hash_hi >= 0) {
+                out << ", " << hash_lo << ".." << hash_hi;
+            }
+            // 16 bit hash dist in a 32 bit slot have to determine whether the hash distribution
+            // unit goes in the lo section or the hi section
+            if (section >= 0) {
+                cstring lo_hi = section == 0 ? "lo" : "hi";
+                out << ", " << lo_hi;
+            }
+            out << ")";
+        } else if (use.is_meter_color(rs.byte_offset, rs.immediate)) {
             for (auto back_at : tbl->attached) {
                 auto at = back_at->attached;
                 auto *mtr = at->to<IR::MAU::Meter>();
@@ -1260,9 +1307,10 @@ class MauAsmOutput::EmitAction : public Inspector {
         BUG_CHECK(hd_use != nullptr, "Could not find hash distribution unit in link up of tables");
         safe_vector<int> units;
         int hash_lo = -1; int hash_hi = -1;
+        int section = -1;
         if (lo >= 0 && hi >= 0) {
             auto af = table->resources->action_format;
-            int unit_index = af.find_hash_dist(hd, lo, hi, hash_lo, hash_hi);
+            int unit_index = af.find_hash_dist(hd, lo, hi, hash_lo, hash_hi, section);
             units.push_back(hd_use->slices[unit_index]);
         } else {
             units.insert(units.end(), hd_use->slices.begin(), hd_use->slices.end());

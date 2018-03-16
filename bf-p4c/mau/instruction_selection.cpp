@@ -771,12 +771,48 @@ struct ValidateInvalidatePrimitive : public PassManager {
     }
 };
 
+bool SliceHashDistInstructions::preorder(IR::MAU::AttachedOutput *) {
+    return false;
+}
+
+bool SliceHashDistInstructions::preorder(IR::MAU::SaluAction *) {
+    return false;
+}
+
+bool SliceHashDistInstructions::preorder(IR::MAU::Instruction *) {
+    hash_dist_found = false;
+    return true;
+}
+
+bool SliceHashDistInstructions::preorder(IR::MAU::HashDist *hd) {
+    hash_dist_found = true;
+    hash_dist_width = hd->type->width_bits();
+    return false;
+}
+
+void SliceHashDistInstructions::postorder(IR::MAU::Instruction *instr) {
+    if (!hash_dist_found)
+        return;
+
+
+    if (!contains_if(instr->operands, [&](const IR::Expression *operand) {
+                     return operand->type->width_bits() != hash_dist_width; }))
+        return;
+
+    for (auto &operand : instr->operands) {
+        if (operand->type->width_bits() != hash_dist_width) {
+            operand = MakeSliceSource(operand, 0, hash_dist_width - 1, operand);
+        }
+    }
+}
+
 DoInstructionSelection::DoInstructionSelection(PhvInfo &phv) : PassManager {
     new ValidateInvalidatePrimitive(phv),
     new InstructionSelection(phv),
     new ConvertCastToSlice,
     new StatefulHashDistSetup(phv),
     new LPFSetup(phv),
+    new SliceHashDistInstructions,
     new CollectPhvInfo(phv),
     new PHV::ValidateActions(phv, false, false, false)
 } {}

@@ -160,7 +160,7 @@ p4c_add_xfail_reason("jbay"
 
 # BRIG-421
 p4c_add_xfail_reason("jbay"
-  "PHV allocation creates a container action impossible within a Tofino ALU"
+  "condition too complex"
   testdata/p4_14_samples/issue894.p4
 # PHV packs POV bits incorrectly
   )

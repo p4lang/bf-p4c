@@ -247,8 +247,10 @@ struct ActionFormat {
         cstring get_format_name(int start_byte, cont_type_t type, bool immediate, bitvec range,
             bool use_range, bool bitmasked_set = false) const;
         bool is_meter_color(int start_byte, bool immediate) const;
+        bool is_hash_dist(int byte_offset, const IR::MAU::HashDist **hd, int &field_lo,
+                          int &field_hi) const;
         int find_hash_dist(const IR::MAU::HashDist *hd, int field_lo, int field_hi,
-                           int &hash_lo, int &hash_hi) const;
+                           int &hash_lo, int &hash_hi, int &section) const;
     };
 
     struct failure : public Backtrack::trigger {

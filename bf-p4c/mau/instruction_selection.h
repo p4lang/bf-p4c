@@ -131,6 +131,20 @@ class LPFSetup : public PassManager {
         addPasses({ new Scan(*this), new Update(*this) }); }
 };
 
+class SliceHashDistInstructions : public MauModifier {
+    bool hash_dist_found = false;
+    int hash_dist_width = 0;
+
+    bool preorder(IR::MAU::Instruction *) override;
+    bool preorder(IR::MAU::HashDist *) override;
+    bool preorder(IR::MAU::AttachedOutput *) override;
+    bool preorder(IR::MAU::SaluAction *) override;
+    void postorder(IR::MAU::Instruction *) override;
+
+ public:
+    SliceHashDistInstructions() { }
+};
+
 class ConvertCastToSlice : public MauTransform, P4WriteContext {
     bool contains_cast = false;
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;

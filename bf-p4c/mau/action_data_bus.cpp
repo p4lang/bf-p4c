@@ -858,8 +858,15 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Actio
     auto &ad_xbar = alloc.action_data_xbar;
 
     // Immediate allocation
-    bool allocated = alloc_immediate(use->total_layouts[ActionFormat::IMMED],
-                                     ad_xbar, tbl->name);
+    bitvec immed_layouts[ActionFormat::CONTAINER_TYPES];
+    for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
+        immed_layouts[i].clear();
+        immed_layouts[i] |= use->total_layouts[ActionFormat::IMMED][i];
+        immed_layouts[i] |= use->hash_dist_layouts[i];
+    }
+
+
+    bool allocated = alloc_immediate(immed_layouts, ad_xbar, tbl->name);
     if (!allocated) return false;
 
     // Action data table allocation
