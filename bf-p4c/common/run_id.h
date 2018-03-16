@@ -1,17 +1,17 @@
-#ifndef _EXTENSIONS_BF_P4C_RUNID_H_
-#define _EXTENSIONS_BF_P4C_RUNID_H_
+#ifndef _EXTENSIONS_BF_P4C_COMMON_RUN_ID_H_
+#define _EXTENSIONS_BF_P4C_COMMON_RUN_ID_H_
 
 #include <openssl/sha.h>
+#include <ctime>
 #include <string>
-#include <time.h>
 
-class RunId
-{
+class RunId {
  public:
     static const std::string &getId() {
         static RunId instance;
         return instance._runId;
     }
+
  private:
     std::string _runId;
     RunId() {
@@ -25,7 +25,7 @@ class RunId
         SHA256_Final(hash, &sha256);
         char outputHash[65];
         for (int n = 0; n < SHA256_DIGEST_LENGTH; n++)
-            sprintf(outputHash + (n*2), "%02x", hash[n]);
+            snprintf(outputHash + (n*2), 64-(n*2), "%02x", hash[n]);
         outputHash[64] = 0;
         _runId = outputHash;
     }
@@ -36,4 +36,4 @@ class RunId
     void operator=(RunId const&)  = delete;
 };
 
-#endif  // _EXTENSIONS_BF_P4C_RUNID_H_
+#endif  /* _EXTENSIONS_BF_P4C_COMMON_RUN_ID_H_ */
