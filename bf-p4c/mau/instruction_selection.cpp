@@ -399,12 +399,14 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     BUG("Not a stateful primitive %s", prim);
 }
 
-size_t index_operand(const IR::Primitive *prim) {
+ssize_t index_operand(const IR::Primitive *prim) {
     if (prim->name.startsWith("Counter") || prim->name.startsWith("Meter")
         || prim->name.startsWith("register_action"))
         return 1;
     else if (prim->name.startsWith("Lpf") || prim->name.startsWith("Wred"))
         return 2;
+    else if (prim->name.startsWith("DirectLpf") || prim->name.startsWith("DirectWred"))
+        return -1;
     return 1;
 }
 
@@ -513,7 +515,11 @@ void StatefulHashDistSetup::Scan::postorder(const IR::MAU::Table *tbl) {
                 error("%s: %s is not a %s", prim->operands[0]->srcInfo, gref->obj, type);
             }
 
-            if (prim->operands.size() >= index_operand(prim) + 1) {
+            auto index_op = index_operand(prim);
+            if (index_op < 0)
+                continue;
+
+            if (prim->operands.size() >= size_t(index_op) + 1) {
                 if (auto hd = self.find_hash_dist(prim->operands[index_operand(prim)], prim)) {
                     HashDistKey hdk = std::make_pair(synth2port, tbl);
                     self.update_hd[hdk] = hd;

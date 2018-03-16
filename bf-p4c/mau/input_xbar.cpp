@@ -553,7 +553,10 @@ void IXBar::found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced
         for (auto &p : Values(fields.equal_range(need.field))) {
             if (ternary && p.byte == TERNARY_BYTES_PER_GROUP)
                 continue;
+
             if ((grp->group == p.group) && (use[p.group][p.byte].second == need.lo)) {
+                if (!grp->found.getbit(p.byte))
+                    continue;
                 if (!ternary && !grp->hash_open[p.byte / 8])
                     continue;
                 allocate_byte(nullptr, unalloced, nullptr, need, p.group, p.byte, i,
@@ -1876,6 +1879,7 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashD
         alloced.clear();
         return false;
     }
+
     unsigned hash_table_input = alloc.compute_hash_tables();
     int used_hash_group = -1;
     int hash_group_opts[HASH_DIST_UNITS] = {-1, -1};
@@ -2295,6 +2299,7 @@ void IXBar::update(cstring name, const Use &alloc) {
 
 void IXBar::update(cstring name, const TableResourceAlloc *rsrc) {
     update(name + "$register", rsrc->salu_ixbar);
+    update(name + "$meter", rsrc->meter_ixbar);
     update(name + "$select", rsrc->selector_ixbar);
     update(name + "$gw", rsrc->gateway_ixbar);
     update(name, rsrc->match_ixbar);
