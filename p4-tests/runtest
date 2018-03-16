@@ -371,6 +371,8 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
         || die
 fi
 
+PTF_EXTRA_ARGS="--default-negative-timeout=0.2 $PTF_TEST_SPECS"
+
 if $run_pd ; then
     p4builddir="$(dirname $0)/p4_14/p4-tests/p4-build"
     testout=$(realpath $testdir/$name${out_ext}.out)
@@ -404,7 +406,7 @@ if $run_pd ; then
                              --top-builddir $(findcmakecache) \
                              --pdtest $testout/$name.conf \
                              --device ${device} \
-                             $PTF_TEST_SPECS"
+                             $PTF_EXTRA_AGRS"
         run $PTF_CMD || die
         exit 0
     fi
@@ -415,7 +417,7 @@ if $run_ptf ; then
     if [ -d ${ptftestdir} ]; then
         PTF_CMD="$PTF_RUNNER --testdir $testdir/$name${out_ext}.out --name $name \
                 --ptfdir ${ptftestdir} --top-builddir $(findcmakecache) \
-                --device ${device}"
+                --device ${device} $PTF_EXTRA_ARGS"
     elif $run_stf2ptf && [ -r ${file%.p4}.stf ]; then
         mydir=$(dirname $0)
         export PYTHONPATH=${PYTHONPATH}:${mydir}/tools/stf
@@ -427,7 +429,8 @@ if $run_ptf ; then
         PTF_CMD="$PTF_RUNNER --testdir $testdir/$name${out_ext}.out --name $name \
                 --stftest ${stftest} \
                 --ptfdir ${mydir}/tools/stf --top-builddir $(findcmakecache) \
-                --device ${device}"
+                --device ${device} \
+                $PTF_EXTRA_ARGS"
     fi
     if [ -n "$PTF_CMD" ]; then
         run $PTF_CMD || die
