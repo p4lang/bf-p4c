@@ -502,6 +502,18 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocCCGF(
     return alloc_attempt;
 }
 
+boost::optional<PHV::Transaction>
+CoreAllocation::tryAllocSliceList(
+        const PHV::Allocation& alloc,
+        const PHV::ContainerGroup& group,
+        const PHV::SuperCluster& super_cluster,
+        const ordered_map<PHV::FieldSlice, int>& start_positions) const {
+    PHV::Allocation::ConditionalConstraints start_pos;
+    for (auto kv : start_positions)
+        start_pos.emplace(kv.first, PHV::Allocation::ConditionalConstraintData(kv.second));
+    return tryAllocSliceList(alloc, group, super_cluster, start_pos);
+}
+
 // FIELDSLICE LIST <--> CONTAINER GROUP allocation.
 // This function generally is used under two cases:
 // 1. Allocating the slice list of a super_cluster.
@@ -517,14 +529,14 @@ CoreAllocation::tryAllocSliceList(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
-        const ordered_map<PHV::FieldSlice, int>& start_positions) const {
+        const PHV::Allocation::ConditionalConstraints& start_positions) const {
     PHV::SuperCluster::SliceList slices;
     for (auto& kv : start_positions)
         slices.push_back(kv.first);
     if (LOGGING(5)) {
         LOG5("trying to allocate slices at container indices: ");
         for (auto& slice : slices)
-            LOG5("  " << start_positions.at(slice) << ": " << slice); }
+            LOG5("  " << start_positions.at(slice).bitPosition << ": " << slice); }
 
     // Check if any of these slices have already been allocated.  If so, record
     // where.  Because we have already finely sliced each field, we can check
@@ -554,9 +566,9 @@ CoreAllocation::tryAllocSliceList(
         previous_container = alloc_slice.container();
 
         // Check that previous allocations match the proposed bit positions in this allocation.
-        if (alloc_slice.container_slice().lo != start_positions.at(slice)) {
+        if (alloc_slice.container_slice().lo != start_positions.at(slice).bitPosition) {
             LOG5("    ...but " << alloc_slice << " has already been allocated and does not start "
-                 "at " << start_positions.at(slice));
+                 "at " << start_positions.at(slice).bitPosition);
             return boost::none; }
 
         // Record previous allocations for use later.
@@ -580,12 +592,12 @@ CoreAllocation::tryAllocSliceList(
         for (auto& slice : slices) {
             if (!acc) {
                 acc = slice;
-                min_start_pos = start_positions.at(slice);
+                min_start_pos = start_positions.at(slice).bitPosition;
                 continue; }
             if (slice.field() != acc->field()) {
                 LOG5("    ...but slice list contains CCGF slices of different fields");
                 return boost::none; }
-            min_start_pos = std::min(*min_start_pos, start_positions.at(slice)); }
+            min_start_pos = std::min(*min_start_pos, start_positions.at(slice).bitPosition); }
         PHV::Field* acc_field = phv_i.field(acc->field()->id);
         auto rst = tryAllocCCGF(alloc, group, acc_field, *min_start_pos);
         if (!rst) return boost::none;
@@ -622,7 +634,7 @@ CoreAllocation::tryAllocSliceList(
         // Generate candidate_slices if we choose this container.
         for (auto& field_slice : slices) {
             le_bitrange container_slice =
-                StartLen(start_positions.at(field_slice), field_slice.size());
+                StartLen(start_positions.at(field_slice).bitPosition, field_slice.size());
             // Field slice has a const Field*, so get the non-const version using the PhvInfo object
             candidate_slices.push_back(PHV::AllocSlice(phv_i.field(field_slice.field()->id),
                         c, field_slice.range(), container_slice)); }
@@ -671,7 +683,7 @@ CoreAllocation::tryAllocSliceList(
             if (LOGGING(5)) {
                 LOG5("    ...but only if the following placements are respected:");
                 for (auto kv : *action_constraints)
-                    LOG5("        " << kv.first << " @ " << kv.second); }
+                    LOG5("        " << kv.first << " @ " << kv.second.bitPosition); }
 
             // Find slice lists that contain slices in action_constraints.
             boost::optional<const PHV::SuperCluster::SliceList*> slice_list = boost::none;
@@ -721,7 +733,7 @@ CoreAllocation::tryAllocSliceList(
                         offset += slice.range().size();
                         continue; }
 
-                    int required_pos = action_constraints->at(slice);
+                    int required_pos = action_constraints->at(slice).bitPosition;
                     if (!absolute && required_pos < offset) {
                         // This is the first slice with an action alignment
                         // constraint.  Check that the constraint is >= the
@@ -744,15 +756,14 @@ CoreAllocation::tryAllocSliceList(
                 // conditional constraints are in slice_list, and the slice
                 // list must be placed with its first field starting at
                 // offset - size.
-                ordered_map<PHV::FieldSlice, int> slice_list_pos;
-                int required_offset = offset - size;
-                for (auto& slice : **slice_list) {
-                    slice_list_pos[slice] = required_offset;
-                    required_offset += slice.range().size(); }
-
                 // Update the action constraints with positions for all fields
                 // in the slice list.
-                action_constraints = slice_list_pos; } }
+                int required_offset = offset - size;
+                action_constraints->clear();
+                for (auto& slice : **slice_list) {
+                    (*action_constraints).emplace(slice,
+                        PHV::Allocation::ConditionalConstraintData(required_offset));
+                    required_offset += slice.range().size(); } } }
 
         // Create this alloc for calculating score.
         auto this_alloc = alloc_attempt.makeTransaction();

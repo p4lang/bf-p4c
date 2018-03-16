@@ -569,19 +569,20 @@ void ActionPhvConstraints::pack_slices_together(
         packing_constraints.makeUnion(*firstSlice, slice); }
 }
 
-boost::optional<ordered_map<PHV::FieldSlice, int>>
+boost::optional<PHV::Allocation::ConditionalConstraints>
 ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, const PHV::AllocSlice& slice) {
     std::vector<PHV::AllocSlice> slices;
     slices.push_back(slice);
     return can_pack(alloc, slices);
 }
 
-boost::optional<ordered_map<PHV::FieldSlice, int>> ActionPhvConstraints::can_pack(
+boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::can_pack(
         const PHV::Allocation& alloc,
         std::vector<PHV::AllocSlice>& slices) {
+    PHV::Allocation::ConditionalConstraints rv;
     // Allocating zero slices always succeeds...
     if (slices.size() == 0)
-        return ordered_map<PHV::FieldSlice, int>();
+        return rv;
 
     ordered_map<const IR::MAU::Action*, bool> usesActionDataConstant;
     ordered_map<const IR::MAU::Action*, bool> phvMustBeAligned;
@@ -876,7 +877,6 @@ boost::optional<ordered_map<PHV::FieldSlice, int>> ActionPhvConstraints::can_pac
     // packed together and directly aligned (not rotationally aligned) with
     // their destinations.  This is what glass does, but we should try to relax
     // this constraint in the future.
-    ordered_map<PHV::FieldSlice, int> rv;
 
     // All fields in rv must be placed in the same container.  If there are
     // overlaps based on required alignment, return boost::none.
@@ -917,7 +917,8 @@ boost::optional<ordered_map<PHV::FieldSlice, int>> ActionPhvConstraints::can_pac
         if (req_alignment.size() == 0)
             continue;
 
-        rv[packing_slice] = *req_alignment.begin(); }
+        int bitPosition = *(req_alignment.begin());
+        rv.emplace(packing_slice, PHV::Allocation::ConditionalConstraintData(bitPosition)); }
 
     return rv;
 }

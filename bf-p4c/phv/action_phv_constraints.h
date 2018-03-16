@@ -379,12 +379,12 @@ class ActionPhvConstraints : public Inspector {
      * all the other sources are put in the same set in the UnionFind. The
      * allocator needs to be aware of this case.
      */
-    boost::optional<ordered_map<PHV::FieldSlice, int>>
+    boost::optional<PHV::Allocation::ConditionalConstraints>
     can_pack(const PHV::Allocation& alloc, std::vector<PHV::AllocSlice>& slices);
 
     /// Convenience method that transforms @slice into a singleton slice list,
     /// which is passed to `can_pack` above.
-    boost::optional<ordered_map<PHV::FieldSlice, int>>
+    boost::optional<PHV::Allocation::ConditionalConstraints>
     can_pack(const PHV::Allocation& alloc, const PHV::AllocSlice& slice);
 
     /** Approximates a topographical sorting of field lists such that all source-only slice lists
