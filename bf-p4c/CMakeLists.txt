@@ -16,7 +16,7 @@ add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
 if (ENABLE_JBAY)
   add_definitions("-DHAVE_JBAY=1")
 endif()
-include_directories(${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
+include_directories(${BFN_P4C_SOURCE_DIR} ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
 set (HAVE_LIBBOOST_GRAPH 1)
 set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY};${OPENSSL_LIBRARIES}")
 

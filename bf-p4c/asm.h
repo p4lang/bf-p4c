@@ -2,6 +2,7 @@
 #define _EXTENSIONS_BF_P4C_ASM_H_
 
 #include <fstream>
+#include "bf-asm/version.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/mau/asm_output.h"
 #include "bf-p4c/parde/asm_output.h"
@@ -37,8 +38,8 @@ class AsmOutput : public Inspector {
             pipe->apply(mauasm);
 
             *out << "version:" << std::endl
-                 << "  version: 1.0.0" << std::endl
-                 << "  run_id: " << RunId::getId() << std::endl;
+                 << "  version: " << BFASM::Version::getVersion() << std::endl
+                 << "  run_id: \"" << RunId::getId() << "\"" << std::endl;
             if (::errorCount() == 0) {
                 *out << PhvAsmOutput(phv)
                      << ParserAsmOutput(pipe, INGRESS)

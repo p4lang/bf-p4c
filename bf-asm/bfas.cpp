@@ -282,28 +282,45 @@ int main(int ac, char **av) {
 
 class Version : public Section {
     Version() : Section("version") {}
+
     void start(int lineno, VECTOR(value_t) args) {}
+
     void input(VECTOR(value_t) args, value_t data) {
-        if (!CHECKTYPE(data, tMAP)) return;
-        for (auto &kv : MapIterChecked(data.map, true)) {
-            if (kv.key == "version" && (kv.value.type == tVEC || kv.value.type == tINT)) {
-                if (kv.value.type == tINT) {
-                    if (kv.value.i != MAJOR_VERSION)
-                        error(kv.value.lineno, "Version %ld not supported", kv.value.i);
-                } else if (kv.value.vec.size >= 2) {
-                    if (CHECKTYPE(kv.value[0], tINT) && CHECKTYPE(kv.value[1], tINT) &&
-                        (kv.value[0].i != MAJOR_VERSION || kv.value[1].i > MINOR_VERSION))
-                    error(kv.value.lineno, "Version %ld.%ld not supported",
-                          kv.value[0].i, kv.value[1].i);
+        if (data.type == tINT || data.type == tVEC) {  // version 1.0.0
+            parse_version(data);
+        } else if (data.type == tMAP) {  // version 1.0.1
+            for (auto &kv : MapIterChecked(data.map, true)) {
+                if (kv.key == "version" && (kv.value.type == tVEC || kv.value.type == tINT)) {
+                    parse_version(kv.value);
+                } else if (kv.key == "run_id" && kv.value.type == tSTR) {
+                    _run_id = kv.value.s;
                 } else
-                    error(kv.value.lineno, "Version not understood");
-            } else if (kv.key == "run_id" && kv.value.type == tSTR) {
-                _run_id = kv.value.s;
+                    warning(kv.key.lineno, "ignoring unknown item %s in version",
+                            value_desc(kv.key));
             }
+        } else {
+            error(data.lineno, "Invalid version section");
         }
     }
+
     void process() {}
+
     void output(json::map &ctx_json) { ctx_json["run_id"] = _run_id; }
+
+ private:
+    void parse_version(value_t data) {
+        if (data.type == tINT) {
+            if (data.i != MAJOR_VERSION)
+                error(data.lineno, "Version %ld not supported", data.i);
+        } else if (data.vec.size >= 2) {
+            if (CHECKTYPE(data[0], tINT) && CHECKTYPE(data[1], tINT) &&
+                (data[0].i != MAJOR_VERSION || data[1].i > MINOR_VERSION))
+                error(data.lineno, "Version %ld.%ld not supported",
+                      data[0].i, data[1].i);
+        } else
+            error(data.lineno, "Version not understood");
+    }
+
     std::string _run_id;
     static Version singleton_version;
 } Version::singleton_version;
