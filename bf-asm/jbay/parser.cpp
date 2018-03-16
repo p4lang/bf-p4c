@@ -245,8 +245,9 @@ template<> void Parser::State::Match::write_counter_config(
     // FIXME -- counter stack config
 }
 
-template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
-    for (auto st : all) st->write_config(regs, this);
+template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map &ctxt_json) {
+    for (auto st : all)
+        st->write_config(regs, this, ctxt_json[st->gress ? "egress" : "ingress"]);
     if (error_count > 0) return;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         int i = 0;

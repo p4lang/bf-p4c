@@ -30,7 +30,7 @@ class Parser : public Section {
     void input(VECTOR(value_t) args, value_t data);
     void process();
     void output(json::map &);
-    template<class REGS> void write_config(REGS &);
+    template<class REGS> void write_config(REGS &, json::map &);
     static Parser singleton_object;
 
     struct Checksum {
@@ -96,6 +96,7 @@ class Parser : public Section {
             void setup(value_t &);
             int setup_match_el(int, value_t &);
             void preserve_saved(unsigned mask);
+            template<class REGS> void write_config(REGS &, json::vector &);
         private:
             int add_byte(int, int, bool use_saved = false);
             int move_down(int);
@@ -164,7 +165,7 @@ class Parser : public Section {
             template<class REGS> int write_future_config(REGS &, Parser *, State *, int) const;
             template<class REGS> void write_lookup_config(REGS &, State *, int) const;
             template<class EA_REGS> void write_counter_config(EA_REGS &) const;
-            template<class REGS> void write_config(REGS &, Parser *, State *, Match *);
+            template<class REGS> void write_config(REGS &, Parser *, State *, Match *, json::map &);
         };
 
         std::string             name;
@@ -185,7 +186,7 @@ class Parser : public Section {
         void pass2(Parser *);
         template<class REGS>
         int write_lookup_config(REGS &, Parser *, State *, int, const std::vector<State *> &);
-        template<class REGS> void write_config(REGS &, Parser *);
+        template<class REGS> void write_config(REGS &, Parser *, json::vector &);
     };
 public:
     std::map<std::string, State>        states[2];

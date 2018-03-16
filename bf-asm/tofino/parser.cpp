@@ -318,8 +318,9 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
         regs.err_phv_cfg.timeout_iter_err_en = 1; }
 }
 
-template<> void Parser::write_config(Target::Tofino::parser_regs &regs) {
-    for (auto st : all) st->write_config(regs, this);
+template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::map &ctxt_json) {
+    for (auto st : all)
+        st->write_config(regs, this, ctxt_json[st->gress ? "egress" : "ingress"]);
     if (error_count > 0) return;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         int i = 0;

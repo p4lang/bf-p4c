@@ -32,7 +32,8 @@ class checked_array : public checked_array_base<T> {
     T data[S];
 public:
     checked_array() : disabled_(false) {};
-    template<class U> checked_array(U v) : disabled_(false) { for (auto &e : data) new(&e) T(v); }
+    template<class U> explicit checked_array(U v) : disabled_(false) {
+        for (auto &e : data) new(&e) T(v); }
     template<class U> checked_array(const std::initializer_list<U> &v) : disabled_(false) {
         auto it = v.begin();
         for (auto &e : data) {

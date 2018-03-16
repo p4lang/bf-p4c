@@ -363,7 +363,7 @@ function test_p4() {
         fi
     done
     if $diff; then
-        BFAS_OPTS="--gen-json -M"
+        BFAS_OPTS="--gen_json -M"
     else
         BFAS_OPTS=""
     fi

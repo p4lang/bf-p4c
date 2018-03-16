@@ -269,7 +269,7 @@ void Parser::output(json::map & ctxt_json) {
     SWITCH_FOREACH_TARGET(options.target,
         auto *regs = new TARGET::parser_regs;
         declare_registers(regs);
-        write_config(*regs);
+        write_config(*regs, ctxt_json["parser"]);
         gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
     )
 }
@@ -1242,7 +1242,7 @@ void Parser::PriorityUpdate::write_config(REGS &action_row) {
 }
 
 template <class REGS>
-void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state, Match *def) {
+void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state, Match *def, json::map &ctxt_json) {
     int row;
     int max_off = -1;
     if ((row = --pa->tcam_row_use[state->gress]) < 0) {
@@ -1250,6 +1250,7 @@ void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state, Ma
             error(state->lineno, "Ran out of tcam space in %sgress parser",
                   state->gress ? "e" : "in");
         return; }
+    ctxt_json["tcam_rows"].to<json::vector>().push_back(row);
 
     write_lookup_config(regs, state, row);
 
@@ -1306,9 +1307,22 @@ void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state, Ma
 }
 
 template <class REGS>
-void Parser::State::write_config(REGS &regs, Parser *pa) {
+void Parser::State::MatchKey::write_config(REGS &, json::vector &) {
+    // FIXME -- TBD -- probably needs to be different for tofino/jbay, so there will be
+    // FIXME -- template specializations for this in those files
+}
+
+template <class REGS>
+void Parser::State::write_config(REGS &regs, Parser *pa, json::vector &ctxt_json) {
     LOG2(gress << " state " << name << " (" << stateno << ')');
+    json::map state_cjson;
+    state_cjson["parser_name"] = name;
+    state_cjson["uses_pvs"] = false;
+    key.write_config(regs, state_cjson["match_registers"]);
     for (auto i = match.begin(); i != match.end(); i++)
-        i->write_config(regs, pa, this, def);
-    if (def) def->write_config(regs, pa, this, 0);
+        i->write_config(regs, pa, this, def, state_cjson);
+    if (def) def->write_config(regs, pa, this, 0, state_cjson);
+    for (auto idx : MatchIter(stateno)) {
+        state_cjson["parser_state_id"] = idx;
+        ctxt_json.push_back(state_cjson.clone()); }
 }
