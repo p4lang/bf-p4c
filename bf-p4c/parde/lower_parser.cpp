@@ -1139,9 +1139,52 @@ struct LowerDeparserIR : public PassManager {
     }
 };
 
+// Utils for splitting states.
+
+/// Shift all input packet extracts in the sequence to the left by the given
+/// amount. Works for both ExtractPhv and ExtractClot
+/// The coordinate system:
+/// [0............31]
+/// left..........right
+template<class T>
+T*
+leftShiftExtract(T* primitive, int byteDelta) {
+    const IR::BFN::LoweredPacketRVal* bufferSource =
+        primitive->source->template to<typename IR::BFN::LoweredPacketRVal>();
+
+    // Do not need to shift it's not packetRval
+    if (!bufferSource) return primitive;
+
+    const auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
+    BUG_CHECK(shiftedRange.lo >= 0, "Shifting extract to negative position.");
+    auto* clone = primitive->clone();
+    clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
+    return clone;
+}
+
+/// Shift all input packet extracts in the sequence to the left by the given
+/// amount.
+const IR::BFN::LoweredSave*
+leftShiftSave(const IR::BFN::LoweredSave* save, int byteDelta) {
+    auto* bufferSource = save->source;
+    const auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
+    BUG_CHECK(shiftedRange.lo >= 0, "Shifting save to negative position.");
+    auto* clone = save->clone();
+    clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
+    return clone;
+}
+
+
+
 /// Allocate sequences of parser primitives to one or more states while
 /// satisfying hardware constraints on the number of extractors available in a
 /// state.
+/// The idea is that, ExtractorAllocator will try to allocate extractor as much
+/// as possible for each state, and it will includes saves in that state as long as
+/// it is inside the input buffer. However, if the saves is trying to save something
+/// more than the input buffer size, and we can not shift input buffer more, those
+/// saves will be left for next state. This class will not do something like pulling extracts
+/// from next state, those should be done by state merging.
 class ExtractorAllocator {
  public:
     /** A group of primitives that needs to be executed when match happens.
@@ -1184,15 +1227,36 @@ class ExtractorAllocator {
     }
 
     /// @return true if we haven't allocated everything yet.
-    bool hasMore() const {
-        return !extractPhvs.empty() || !extractClots.empty() || !saves.empty();
+    bool hasMoreExtracts() const {
+        if (!extractPhvs.empty() || !extractClots.empty()) {
+            return true;
+        } else if (!saves.empty() && !hasOutOfBufferSaves()) {
+            return true;
+        } else {
+            return false;
+        }
     }
+
+    /// @return ture if we have saves that must be done in the next state.
+    bool hasOutOfBufferSaves() const {
+        for (const auto& save : saves) {
+            if (save->source->range.hiByte() > Device::pardeSpec().byteInputBufferSize() - 1)
+                return true;
+        }
+        return false;
+    }
+
+    /// @return all remaining saves.
+    const std::vector<const IR::BFN::LoweredSave*>& getRemainingSaves() const {
+        return saves; }
 
     /**
      * Allocate as many parser primitives as will fit into a single state,
      * respecting hardware limits.
      *
-     * Keep calling this until hasMore() returns false.
+     * Keep calling this until hasMoreExtracts() returns false.
+     * After that, you should call hasMoreSaves() and getRemainingSaves() if there is, and
+     * push them down to the next state to generate a data extractor state.
      *
      * @return a pair containing (1) the parser primitives that were allocated,
      * and (2) the shift that the new state should have.
@@ -1369,56 +1433,14 @@ class ExtractorAllocator {
             extractClots.push_back(leftShiftExtract(extract, byteActualShift));
 
         saves.clear();
-        for (auto* save : remainingSaves) {
-            // If there is no shift in this state, but the save is still out of input buffer,
-            // currently we can not support this.
-            // TODO(yumin): It can be supported if we split the next state, and push this save
-            // down to that state.
-            if (byteActualShift == 0) {
-                ::error("%1% is an impossible save for Tofino,"
-                        " lookahead more than 32 bytes", save);
-                continue; }
+        for (auto* save : remainingSaves)
             saves.push_back(leftShiftSave(save, byteActualShift));
-        }
 
         current_input_buffer = nw_byteinterval(
                 StartLen(0, current_input_buffer.hiByte() + 1 - byteActualShift));
 
         shifted += byteActualShift;
         return MatchPrimitives(allocatedExtracts, allocatedSaves, byteActualShift);
-    }
-
-    /// Shift all input packet extracts in the sequence to the left by the given
-    /// amount. Works for both ExtractPhv and ExtractClot
-    /// The coordinate system:
-    /// [0............31]
-    /// left..........right
-    template<class T>
-    T*
-    leftShiftExtract(T* primitive, int byteDelta) {
-        const IR::BFN::LoweredPacketRVal* bufferSource =
-            primitive->source->template to<typename IR::BFN::LoweredPacketRVal>();
-
-        // Do not need to shift it's not packetRval
-        if (!bufferSource) return primitive;
-
-        const auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
-        BUG_CHECK(shiftedRange.lo >= 0, "Shifting extract to negative position.");
-        auto* clone = primitive->clone();
-        clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
-        return clone;
-    }
-
-    /// Shift all input packet extracts in the sequence to the left by the given
-    /// amount.
-    const IR::BFN::LoweredSave*
-    leftShiftSave(const IR::BFN::LoweredSave* save, int byteDelta) {
-        auto* bufferSource = save->source;
-        const auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
-        BUG_CHECK(shiftedRange.lo >= 0, "Shifting save to negative position.");
-        auto* clone = save->clone();
-        clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
-        return clone;
     }
 
  private:
@@ -1445,6 +1467,195 @@ class SplitBigStates : public ParserModifier {
         return ParserModifier::init_apply(root);
     }
 
+    /// return true if all branch need to be splitted. Only in a rare case that only part of
+    /// matches need to split, which is caused by that they have late-in-buffer save that
+    /// has to be done in a new state.
+    bool needSplitState(const IR::BFN::LoweredParserState* state) {
+        bool allNeedSplitState = true;
+        for (const auto* match : state->match) {
+            ExtractorAllocator allocator(state->name, match);
+            allocator.allocateOneState();
+            if (!allocator.hasMoreExtracts()) {
+                allNeedSplitState = false; }
+        }
+        return allNeedSplitState;
+    }
+
+    /// return the index in the input buffer that primitives are common, if null, then
+    /// all are in common.
+    unsigned
+    calcEarliestConflict(const IR::BFN::LoweredParserState* state) {
+        using IndexRegister = std::pair<unsigned, MatchRegister>;
+        using SavedSet      = std::set<const IR::BFN::LoweredParserMatch*>;
+        std::map<IndexRegister, SavedSet> save_map;
+
+        unsigned earliest_conflict = (std::numeric_limits<unsigned>::max)();
+        // Since we assume all extractions are the same, we just need to check saves.
+        for (const auto* match : state->match) {
+            for (const auto* save : match->saves) {
+                auto range = save->source->extractedBytes();
+                for (int i = range.loByte(); i <= range.hiByte(); ++i) {
+                    save_map[std::make_pair(i, save->dest)].insert(match);
+                } } }
+
+        // Find the first location that not all matches save to the same register.
+        for (const auto& kv : save_map) {
+            if (kv.second.size() != state->match.size()) {
+                earliest_conflict = std::min(earliest_conflict, kv.first.first);
+            } }
+
+        // Also the first shift, though they are likely to be the same.
+        // This will catch the case when these is no save at all.
+        for (const auto* match : state->match) {
+            earliest_conflict = std::min(earliest_conflict, match->shift); }
+
+        return earliest_conflict;
+    }
+
+    /// return the closed range on the input buffer that this primitive needs.
+    std::pair<int, int> operatingRange(const IR::BFN::LoweredParserPrimitive* prim) {
+        if (auto* phv = prim->to<IR::BFN::LoweredExtractPhv>()) {
+            if (auto* source = phv->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
+                return { source->extractedBytes().loByte(),
+                         source->extractedBytes().hiByte() };
+            } else {
+                // For all other case, they do not need anything from input buffer.
+                return {0, 0};
+            }
+        } else if (auto* clot = prim->to<IR::BFN::LoweredExtractClot>()) {
+            return { clot->source->extractedBytes().loByte(),
+                     clot->source->extractedBytes().hiByte() };
+        } else if (auto* save = prim->to<IR::BFN::LoweredSave>()) {
+            return { save->source->extractedBytes().loByte(),
+                     save->source->extractedBytes().hiByte() };
+        } else if (/* auto* check_sum = */prim->to<IR::BFN::LoweredParserChecksum>()) {
+            // TODO(yumin): checksum.
+            return {0, 0};
+        } else {
+            BUG("Unknown primitives %1%", prim);
+            return {0, 0};
+        }
+    }
+
+    /// return true is this primitive does not need anything later than @p until.
+    bool validBefore(const IR::BFN::LoweredParserPrimitive* prim, int until) {
+        auto range = operatingRange(prim);
+        if (range.second < until) {
+            return true;
+        } else if (range.first < until && until < range.second) {
+            // TODO(yumin): this can be supported.
+            BUG("Unexpeted partial select/save in parser");
+            return false;
+        } else {
+            return false;
+        }
+    }
+
+    /// Remove all primitives that are already moved to common state.
+    IR::BFN::LoweredParserMatch*
+    truncateMatchBefore(const IR::BFN::LoweredParserMatch* match, int until) {
+        auto* new_match =
+            new IR::BFN::LoweredParserMatch(match->value, match->shift - until, match->next);
+        for (const auto* prim : match->statements) {
+            if (!validBefore(prim, until)) {
+                if (auto* phv = prim->to<IR::BFN::LoweredExtractPhv>()) {
+                    new_match->statements.push_back(leftShiftExtract(phv, until));
+                } else if (auto* clot = prim->to<IR::BFN::LoweredExtractClot>()) {
+                    new_match->statements.push_back(leftShiftExtract(clot, until));
+                } else {
+                    BUG("Unsupported primitive: %1%", prim);
+                }
+            }
+        }
+
+        for (const auto* prim : match->saves) {
+            if (!validBefore(prim, until)) {
+                new_match->saves.push_back(leftShiftSave(prim, until)); } }
+
+        // TODO(yumin): checksum.
+        for (const auto* prim : match->checksums) {
+            if (!validBefore(prim, until)) {
+                new_match->checksums.push_back(prim); } }
+
+        return new_match;
+    }
+
+    /// Add all common primitives to the target match.
+    void addCommonPrimitives(IR::BFN::LoweredParserMatch* target,
+                             const IR::BFN::LoweredParserMatch* source, int until) {
+        for (auto* prim : source->statements) {
+            if (validBefore(prim, until)) {
+                target->statements.push_back(prim); } }
+
+        for (auto* prim : source->saves) {
+            if (validBefore(prim, until)) {
+                target->saves.push_back(prim); } }
+
+        // TODO(yumin): checksum.
+        for (auto* prim : source->checksums) {
+            if (validBefore(prim, until)) {
+                target->checksums.push_back(prim); } }
+
+        target->shift = until;
+    }
+
+    /// Split out common primitives to a common state and return this state.
+    /// Splitted primitives will be removed from original state and shift are adjusted.
+    IR::BFN::LoweredParserState*
+    splitOutCommonState(IR::BFN::LoweredParserState* state, int until,
+                        const std::vector<const IR::BFN::LoweredSave*>& extra_saves) {
+        std::vector<const IR::BFN::LoweredParserPrimitive*> extracts;
+        std::vector<const IR::BFN::LoweredSave*> saves(extra_saves.begin(), extra_saves.end());
+
+        auto* common_state =
+            new IR::BFN::LoweredParserState(state->name + ".$common", state->gress);
+        auto* only_match =
+            new IR::BFN::LoweredParserMatch(match_t(), 0, state);
+        only_match->shift = until;
+        common_state->match.push_back(only_match);
+
+        // save common part to the only match.
+        addCommonPrimitives(only_match, *(state->match.begin()), until);
+        LOG5("Default Match Of Common State: " << only_match);
+
+        // remove common part in all branches and adjust shift
+        IR::Vector<IR::BFN::LoweredParserMatch> truncatedMatches;
+        for (auto* match : state->match) {
+            auto* truncated_match = truncateMatchBefore(match, until);
+            LOG5("Truncated Match: " << truncated_match);
+            truncatedMatches.push_back(truncated_match); }
+        state->match = truncatedMatches;
+        return common_state;
+    }
+
+    IR::BFN::LoweredParserState*
+    createCommonPrimitiveState(const IR::BFN::LoweredParserState* state,
+                               const std::vector<const IR::BFN::LoweredSave*>& extra_saves) {
+        // If this state does not need to split, and there is no extra saves, do not
+        // generate a common primitive state for it, because that would increase the number
+        // of states.
+        if (extra_saves.empty() && !needSplitState(state)) {
+            LOG1("Does not have extra saves nor need to split:" << state->name);
+            return state->clone(); }
+
+        // Foreach match, the only difference it could have is the different saves.
+        // So we find the first different save, and push every thing before into
+        // the new common state;
+        LOG5("Generating common state for: " << state->name);
+        int common_until = calcEarliestConflict(state);
+        LOG5("Common until: " << common_until);
+        return splitOutCommonState(state->clone(), common_until, extra_saves);
+    }
+
+    /// Add common state when needed. Then preorder on match will be executed on new state.
+    bool preorder(IR::BFN::LoweredParserState* state) override {
+        std::vector<const IR::BFN::LoweredSave*> extra_saves(leftover_saves[state]);
+        auto* common_primitive_state =
+            createCommonPrimitiveState(state, extra_saves);
+        *state = *common_primitive_state;
+        return true;
+    }
+
     bool preorder(IR::BFN::LoweredParserMatch* match) override {
         if (added.count(match))
             return true;
@@ -1461,7 +1672,7 @@ class SplitBigStates : public ParserModifier {
         // If there's still more, allocate as many followup states as we need.
         auto* finalState = match->next;
         auto* currentMatch = match;
-        while (allocator.hasMore()) {
+        while (allocator.hasMoreExtracts()) {
             // Create a new split state.
             auto newName = cstring::make_unique(stateNames, state->name + ".$split");
             stateNames.insert(newName);
@@ -1485,11 +1696,23 @@ class SplitBigStates : public ParserModifier {
             added.insert(newMatch);
         }
 
+        // If there is out-of-buffer saves, leave them to the next state.
+        if (allocator.hasOutOfBufferSaves()) {
+            for (const auto* save : allocator.getRemainingSaves()) {
+                LOG1("Found Remaining Saves:" << save <<
+                     " must be done before " << finalState->name); }
+            BUG_CHECK(leftover_saves[finalState].size() == 0,
+                      "Select on field from different parent branches is not supported.");
+            leftover_saves[finalState] = allocator.getRemainingSaves();
+        }
+
         return true;
     }
 
     std::set<cstring> stateNames;
     std::set<IR::BFN::LoweredParserMatch*> added;
+    std::map<const IR::BFN::LoweredParserState*,
+             std::vector<const IR::BFN::LoweredSave*>> leftover_saves;
 };
 
 /// Locate all containers that are written more than once by the parser (and
