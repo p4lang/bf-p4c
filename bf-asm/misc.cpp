@@ -64,24 +64,11 @@ bool remove_aug_names(std::string  &name) {
  * is the desired value to be output in context.json.
  */
 void stack_asm_name_to_p4(std::string& name) {
-  std::regex e ("\\$[0-9]+\\.");  //looks for $ followed by number followed by .
-  std::smatch m;
-  while (std::regex_search (name, m, e)) {
-    for (auto x:m) {
-      std::size_t found = name.find(x);
-      std::string digits(x);
-      name.replace(found, x.length(), "");  // delete $, number, .
-      std::size_t len = digits.length();
-      if (len > 1) {  // figure out stack index
-        digits.replace(len - 1, 1, "");  //remove trailing .
-        digits.replace(0, 1, "");  //remove $
-      }
-      std::string new_str = "[";
-      new_str.append(digits);
-      new_str.append("].");
-      name.insert(found, new_str);
-    }
-  }
+    std::regex re ("([a-z_][a-z0-9_]*)\\$([0-9])+\\.([a-z_][a-z0-9_]*)", std::regex::icase);
+    std::cmatch match;
+    bool found = std::regex_match(name.c_str(), match, re);
+    if (found)
+        name = match[1].str() + "[" + match[2].str() + "]." + match[3].str();
 }
 
 /* Given a p4 name, split into instance and field names if possible

@@ -30,7 +30,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     )
 
   p4c_add_xfail_reason("tofino"
-    "mismatch from expected(.*) at byte .*"
+    "Unknown table type action for table"
     extensions/p4_tests/p4_14/no_match_miss.p4
     )
 
@@ -48,6 +48,13 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_16/multiple_apply1.p4
     extensions/p4_tests/p4_16/cast_widening_set.p4
     extensions/p4_tests/p4_16/container_dependency.p4
+    )
+
+  # Temporary until we fix the naming in STF for BMV2
+  p4c_add_xfail_reason("tofino"
+    "no field extra"
+    testdata/p4_14_samples/action_chain1.p4
+    testdata/p4_16_samples/ternary2-bmv2.p4
     )
 
 endif() # HARLYN_STF_tofino

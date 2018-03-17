@@ -45,7 +45,13 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     # clot-phv interaction bug?
     testdata/p4_14_samples/exact_match_valid1.p4
     testdata/p4_14_samples/parser_dc_full.p4
-  )
+    )
+
+  # Temporary until we fix the naming in STF for BMV2
+  p4c_add_xfail_reason("jbay"
+    "no field extra"
+    testdata/p4_14_samples/action_chain1.p4
+    )
 
 endif() # HARLYN_STF
 
