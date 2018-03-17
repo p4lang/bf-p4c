@@ -884,6 +884,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
 
     // Find the copacking constraints.
     ordered_set<PHV::FieldSlice> copacking_set;
+    ordered_map<PHV::FieldSlice, PHV::Container> req_container;
     for (auto* set : copacking_constraints) {
         // Need to enforce alignment constraints when we have one unallocated PHV source and action
         // data writing to the container in the same action.
@@ -892,6 +893,10 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         if (copacking_set.size() > 0)
             LOG5("\t\t\t\tAction analysis produced more than one set of conditional packing "
                  "constraints.");
+        // copacking_set flattens the UnionFind data structure. Before flattening check if any of
+        // the sources in the same set is already allocated. If yes, set the container requirement
+        // for the unallocated sources in that set.
+        assign_containers_to_unallocated_sources(alloc, copacking_constraints, req_container);
         copacking_set.insert(set->begin(), set->end()); }
 
     // Find the right alignment for each slice in the copacking constraints.
@@ -918,7 +923,11 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
             continue;
 
         int bitPosition = *(req_alignment.begin());
-        rv.emplace(packing_slice, PHV::Allocation::ConditionalConstraintData(bitPosition)); }
+        if (req_container.count(packing_slice))
+            rv[packing_slice] = PHV::Allocation::ConditionalConstraintData(bitPosition,
+                    req_container[packing_slice]);
+        else
+            rv[packing_slice] = PHV::Allocation::ConditionalConstraintData(bitPosition); }
 
     return rv;
 }
@@ -1110,6 +1119,46 @@ ActionPhvConstraints::verify_two_container_alignment(
     return rm;
 }
 
+bool ActionPhvConstraints::assign_containers_to_unallocated_sources(
+        const PHV::Allocation& alloc,
+        const UnionFind<PHV::FieldSlice>& copacking_constraints,
+        ordered_map<PHV::FieldSlice, PHV::Container>& req_container) {
+    // For each set in copacking_constraints, check if any sources are allocated and if yes, all
+    // unallocated sources in that set have to have the same container number
+    for (auto* set : copacking_constraints) {
+        PHV::Container c;
+        ordered_set<PHV::FieldSlice> unallocated_slices;
+        // Find all allocated slices in each set
+        for (auto& slice : *set) {
+            ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(slice.field(),
+                    slice.range());
+            // If this is an unallocated source slice, then examine the next slice after adding it
+            // to the unallocated slices set
+            if (per_source_slices.size() == 0) {
+                unallocated_slices.insert(slice);
+                continue; }
+            // For each alloc slice, note the container used. If we encounter two different
+            // containers, then packing in a single container is not possible. Return false.
+            for (auto sl : per_source_slices) {
+                // No container allocated so far
+                if (c == PHV::Container()) {
+                    LOG6("\t\t\t\t\tSlice " << sl << " already allocated to container " <<
+                            sl.container());
+                    c = sl.container();
+                    continue; }
+                if (sl.container() != c) {
+                    LOG5("\t\t\t\t\tSlice " << sl << " allocated to container " << sl.container() <<
+                         " even though other slice(s) in the copacking set are allocated to " <<
+                         "container "  << c);
+                    return false; } } }
+        // If all slices are unallocated, go to the next set in copacking_constraints
+        if (c == PHV::Container()) continue;
+        for (auto& slice : unallocated_slices) {
+            LOG1("\t\t\t\t\tSlice " << slice << " must be allocated to container " << c);
+            req_container[slice] = c; } }
+
+    return true;
+}
 
 boost::optional<ActionPhvConstraints::OperandInfo>
 ActionPhvConstraints::ConstraintTracker::is_written(

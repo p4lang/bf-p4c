@@ -117,7 +117,10 @@ class Allocation {
             bitPosition(bit), rotationAllowed(rotate), container(c) { }
 
         explicit ConditionalConstraintData(int bit, bool rotate = false) :
-            bitPosition(bit), rotationAllowed(rotate) { }
+            bitPosition(bit), rotationAllowed(rotate), container(boost::none) { }
+
+        ConditionalConstraintData() :
+            bitPosition(-1), rotationAllowed(false), container(boost::none) { }
     };
 
     using ConditionalConstraints = ordered_map<PHV::FieldSlice, ConditionalConstraintData>;

@@ -41,8 +41,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     "mismatch from expected.* at byte .*"
     testdata/p4_14_samples/bigfield1.p4
     extensions/p4_tests/p4_14/action_chain_limits.p4
-    # extensions/p4_tests/p4_14/adjust_instr5.p4
-    # extensions/p4_tests/p4_14/adjust_instr7.p4
     extensions/p4_tests/p4_14/no_match_miss.p4
     # clot-phv interaction bug?
     testdata/p4_14_samples/exact_match_valid1.p4

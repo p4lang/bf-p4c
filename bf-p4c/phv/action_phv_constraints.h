@@ -333,6 +333,16 @@ class ActionPhvConstraints : public Inspector {
             ordered_map<size_t, ordered_set<PHV::AllocSlice>>& sources,
             const PHV::Container c) const;
 
+    /** For each set generated in @copacking_constraints, populate map @req_container with the
+      * unallocated field slice and the container to which it should be allocated (same as the
+      * container used by other allocated sources in that set).
+      * @returns false if any mutually unsatisfiable container requirements are found.
+      */
+    bool assign_containers_to_unallocated_sources(
+            const PHV::Allocation& alloc,
+            const UnionFind<PHV::FieldSlice>& copacking_constraints,
+            ordered_map<PHV::FieldSlice, PHV::Container>& req_container);
+
     /// (xxx)Deep [Artificial Constraint]: Right now action bus allocation requires any destination
     /// written by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
     /// destinations. To be removed when Evan lands his patch relaxing the above requirement.
