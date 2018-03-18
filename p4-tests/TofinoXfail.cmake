@@ -23,21 +23,13 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   )
 
   p4c_add_xfail_reason("tofino"
-    "mismatch from expected.*at byte 0x"
-    extensions/p4_tests/p4_14/adjust_instr5.p4
-    extensions/p4_tests/p4_14/adjust_instr7.p4
-    testdata/p4_14_samples/bigfield1.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Unknown table type action for table"
+    "mismatch from expected(.*) at byte .*"
     extensions/p4_tests/p4_14/no_match_miss.p4
     )
 
   # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
   p4c_add_xfail_reason("tofino"
     "expected packet[s]* on port .* not seen"
-    testdata/p4_14_samples/basic_routing.p4
     testdata/p4_14_samples/gateway1.p4
     testdata/p4_14_samples/gateway2.p4
     testdata/p4_14_samples/gateway3.p4
