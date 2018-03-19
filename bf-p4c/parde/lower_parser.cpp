@@ -1564,6 +1564,19 @@ class SplitBigStates : public ParserModifier {
         for (const auto* match : state->match) {
             earliest_conflict = std::min(earliest_conflict, match->shift); }
 
+        // If the conflicting point is in the middle of other primitives, move
+        // the conflicting point to lower position.
+        for (const auto* match : state->match) {
+            for (const auto* prim : match->statements) {
+                auto range = operatingRange(prim);
+                if (range && (*range).loByte() < earliest_conflict
+                    && earliest_conflict <= (*range).hiByte()) {
+                    earliest_conflict = (*range).loByte();
+                }
+            }
+            // TODO(yumin): checksum.
+        }
+
         return earliest_conflict;
     }
 
@@ -1595,9 +1608,8 @@ class SplitBigStates : public ParserModifier {
         if (!range) return true;
         if ((*range).hiByte() < until) {
             return true;
-        } else if ((*range).loByte() < until && until < (*range).hiByte()) {
-            // TODO(yumin): this can be supported.
-            BUG("Unexpeted partial select/save in parser");
+        } else if ((*range).loByte() < until && until <= (*range).hiByte()) {
+            BUG("Wrong earliest conflicting point calculation.");
             return false;
         } else {
             return false;
