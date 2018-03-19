@@ -71,6 +71,8 @@ struct ProgramStructure {
     ordered_set<cstring>                         errors;
     ordered_map<cstring, const IR::Type_Enum*>   enums;
 
+    TranslationMap                               action_profiles;
+    TranslationMap                               action_selectors;
     TranslationMap                               counters;
     TranslationMap                               direct_counters;
     TranslationMap                               meters;

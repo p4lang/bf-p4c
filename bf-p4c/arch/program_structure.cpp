@@ -135,6 +135,8 @@ void ProgramStructure::createParsers() {
 }
 
 void ProgramStructure::createControls() {
+    TRANSLATE_EXTERN_INSTANCE(action_profiles, ActionProfileConverter);
+    TRANSLATE_NODE(action_selectors, ActionSelectorConverter, convert);
     TRANSLATE_EXTERN_INSTANCE(counters, CounterConverter);
     TRANSLATE_EXTERN_INSTANCE(meters, MeterConverter);
     TRANSLATE_EXTERN_INSTANCE(direct_counters, DirectCounterConverter);

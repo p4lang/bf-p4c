@@ -315,42 +315,37 @@ cstring getTypeName(const IR::Type* type) {
 
 static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         cstring name, const IR::Type *type, const IR::Vector<IR::Expression> *args,
-        const IR::Annotations *annot, const IR::MAU::AttachedMemory **created_ap = nullptr) {
+        const IR::Annotations *annot, const P4::ReferenceMap *refMap,
+        const IR::MAU::AttachedMemory **created_ap = nullptr) {
     auto baseType = getBaseType(type);
     auto tname = getTypeName(baseType);
 
-    if (tname == "action_selector") {
+    if (tname == "ActionSelector") {
         auto sel = new IR::MAU::Selector(srcInfo, name, annot);
-        if (annot->getSingle("mode")) {
-            auto sel_mode = getAnnotID(annot, "mode");
-            if (sel_mode.name == "fair" || sel_mode.name == "resilient")
-                sel->mode = sel_mode;
-            else if (sel_mode.name == "non_resilient")
-                sel->mode = IR::ID("fair");
-            else
-                ::error("%s: Mode %s provided for the selector %s is unsupported",
-                        sel->srcInfo, sel_mode.name, sel->name);
-        } else {
-            ::warning("%s: No mode specified for the selection %s.  Assuming fair", sel->srcInfo,
-                       sel->name);
+        if (args->at(2)->to<IR::Member>()->member.name == "FAIR") {
             sel->mode = IR::ID("fair");
+        } else {
+            sel->mode = IR::ID("resilient");
         }
-        sel->type = getAnnotID(annot, "type");
+
+        // sel->type = getAnnotID(annot, "type");
         sel->num_groups = 4;
         sel->group_size = 120;
-        if (!sel->mode.name)
-            sel->mode = IR::ID("fair");
         BUG_CHECK(args->size() == 3, "%s Selector does not have the correct number of arguments",
                   sel->srcInfo);
-        if (!sel->algorithm.setup(args->at(0)))
+        auto path = args->at(1)->to<IR::PathExpression>()->path;
+        auto decl = refMap->getDeclaration(path)->to<IR::Declaration_Instance>();
+
+        if (!sel->algorithm.setup(decl->arguments->at(0)))
             BUG("invalid alorithm %s", args->at(0));
+
         auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
         ap->direct = false;
-        ap->size = args->at(1)->as<IR::Constant>().asInt();
+        ap->size = args->at(0)->as<IR::Constant>().asInt();
         // FIXME Need to reconstruct the field list from the table key?
         *created_ap = ap;
         return sel;
-    } else if (tname == "action_profile") {
+    } else if (tname == "ActionProfile") {
         auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
         ap->size = args->at(0)->as<IR::Constant>().asInt();
         return ap;
@@ -433,16 +428,16 @@ class FixP4Table : public Inspector {
                 unique_names.insert(tname);
                 obj = createAttached(cc->srcInfo, prop->externalName(tname),
                                      baseType, cc->arguments, prop->annotations,
-                                     &side_obj);
+                                     refMap, &side_obj);
             } else if (auto pe = pval->to<IR::PathExpression>()) {
                 auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
                 // The algorithm saves action selectors in the large map, rather than the action
-                // profile, because no action_profile will appear as a declaration within an
+                // profile, because no ActionProfile will appear as a declaration within an
                 // action.  Action selector will show up in a register selector_action
                 if (converted.count(&d) == 0) {
                     LOG3("Create attached " << d.externalName());
                     obj = createAttached(d.srcInfo, d.externalName(), d.type,
-                                         d.arguments, d.annotations, &side_obj);
+                                         d.arguments, d.annotations, refMap, &side_obj);
                     converted[&d] = obj;
                     if (side_obj)
                         assoc_profiles[&d] = side_obj;
@@ -500,8 +495,8 @@ bool AttachTables::findSaluDeclarations(const IR::Declaration_Instance *ext,
     auto regtype = reg ? reg->type->to<IR::Type_Specialized>() : nullptr;
     auto seltype = reg ? reg->type->to<IR::Type_Extern>() : nullptr;
     if ((!regtype || regtype->baseType->toString() != "register") &&
-        (!seltype || seltype->name != "action_selector")) {
-        error("%s: is not a register or action_selector", reg_arg->srcInfo);
+        (!seltype || seltype->name != "ActionSelector")) {
+        error("%s: is not a register or ActionSelector", reg_arg->srcInfo);
         return false;
     }
     *reg_ptr = reg;
@@ -633,7 +628,7 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
             gref->obj = obj;
         } else if (auto att = createAttached(di->srcInfo, di->externalName(),
                                              di->type, di->arguments, di->annotations,
-                                             nullptr)) {
+                                             refMap, nullptr)) {
             LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
             gref->obj = self.converted[di] = att;
             obj = att;

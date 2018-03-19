@@ -179,6 +179,22 @@ class RandomConverter : public ExternConverter {
     const IR::Node* postorder(IR::MethodCallStatement* node) override;
 };
 
+class ActionProfileConverter : public ExternConverter {
+ public:
+    explicit ActionProfileConverter(ProgramStructure* structure)
+    : ExternConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::Declaration_Instance* node) override;
+    const IR::Node* postorder(IR::ConstructorCallExpression* node) override;
+};
+
+class ActionSelectorConverter : public ExternConverter {
+ public:
+    explicit ActionSelectorConverter(ProgramStructure* structure)
+    : ExternConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::Declaration_Instance* node) override;
+    const IR::Node* postorder(IR::ConstructorCallExpression* node) override;
+};
+
 class CounterConverter : public ExternConverter {
  public:
     explicit CounterConverter(ProgramStructure* structure)

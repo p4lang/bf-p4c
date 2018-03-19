@@ -104,12 +104,18 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue281.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "error: Could not find declaration for action_.*"
+  testdata/p4_16_samples/action_profile-bmv2.p4
+  testdata/p4_16_samples/issue297-bmv2.p4
+  )
+
 # BRIG-108
 p4c_add_xfail_reason("tofino"
   "No format in action table"
   testdata/p4_14_samples/selector0.p4
-  testdata/p4_16_samples/action_profile-bmv2.p4
-  testdata/p4_16_samples/issue297-bmv2.p4
+  #testdata/p4_16_samples/action_profile-bmv2.p4
+  #testdata/p4_16_samples/issue297-bmv2.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
   )
 
@@ -184,12 +190,13 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "the packing is too complicated due to either hash distribution or attached outputs combined with other action data"
-  extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
+  "error: hash dist 0 is not on the action bus"
+  extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "In table .*, the number of bytes through hash is larger than the available amount 4"
+  extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
   )
 
@@ -443,7 +450,7 @@ p4c_add_xfail_reason("tofino"
     testdata/p4_16_samples/issue986-1-bmv2.p4
     )
 p4c_add_xfail_reason("tofino"
-    "error: : The hash offset must be a power of 2 in a hash calculation hash.get_hash"
+    "error: : The hash offset must be a power of 2 in a hash calculation Hash.get"
     testdata/p4_16_samples/issue1049-bmv2.p4
     )
 
@@ -684,10 +691,13 @@ p4c_add_xfail_reason("tofino"
 #   "resolve computed"
 #   extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
 #   )
+
 p4c_add_xfail_reason("tofino"
-  "hash offset must be a power of 2 in a hash calculation hash.get_hash"
+  "Only compile-time constants are supported for hash base offset and max value"
   testdata/p4_14_samples/flowlet_switching.p4
+  testdata/p4_16_samples/flowlet_switching-bmv2.p4
   )
+
 # ingress parser need access pkt_length
 p4c_add_xfail_reason("tofino"
   "error: standard_metadata.packet_length is not accessible in the ingress pipe"
@@ -796,7 +806,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated due to either hash distribution or attached outputs"
-  extensions/p4_tests/p4_14/test_config_96_hash_data.p4
+  #extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   testdata/p4_14_samples/meter1.p4
   testdata/p4_16_samples/named_meter_1-bmv2.p4
   )

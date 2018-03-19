@@ -414,17 +414,24 @@ extern priority {
     void set(in bit<3> prio);
 }
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // HASH ENGINE
-// -----------------------------------------------------------------------------
-extern hash<D, T, M> {
+// ----------------------------------------------------------------------------
+extern Hash<W> {
     /// Constructor
-    hash(HashAlgorithm_t algo);
+    Hash(HashAlgorithm_t algo);
 
-    /// compute the hash for data
-    ///  @base :
-    ///  @max :
-    T get_hash(in D data, @optional in T base, @optional in M max);
+    /// Compute the hash for data.
+    /// @param data : The data over which to calculate the hash.
+    /// @return The hash value.
+    W get<D>(in D data);
+
+    /// Compute the hash for data.
+    /// @param data : The data over which to calculate the hash.
+    /// @param base : Minimum return value.
+    /// @param max : The value use in modulo operation.
+    /// @return (base + (h % max)) where h is the hash value.
+    W get<D>(in D data, in W base, in W max);
 }
 
 /// Random number generator
@@ -543,12 +550,30 @@ extern stateful_alu<T, O, P> {
     O execute<I>(@optional in I index);
 }
 
-extern action_selector {
-    action_selector(HashAlgorithm_t algorithm, bit<32> size, bit<32> outputWidth);
+/// Register
+extern Register<T> {
+    /// Instantiate an array of <size> registers. The initial value is
+    /// undefined.
+    Register(bit<32> size);
+
+    /// Initialize an array of <size> registers and set their value to
+    /// initial_value.
+    Register(bit<32> size, T initial_value);
+}
+
+extern ActionSelector {
+    /// Construct an action selector of 'size' entries
+    ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
+
+    /// Stateful action selector.
+    ActionSelector(bit<32> size,
+                   Hash<_> hash,
+                   SelectorMode_t mode,
+                   Register<bit<1>> reg);
 }
 
 extern selector_action {
-    selector_action(action_selector sel);
+    selector_action(ActionSelector sel);
     abstract void apply(inout bit<1> value, @optional out bit<1> rv);
     bit<1> execute(@optional in bit<32> index);
 }
@@ -565,8 +590,9 @@ extern selector_action {
 //}
 
 
-extern action_profile {
-    action_profile(bit<32> size);
+extern ActionProfile {
+    /// Construct an action profile of 'size' entries.
+    ActionProfile(bit<32> size);
 }
 
 /// need to remove truncate from tofino.p4

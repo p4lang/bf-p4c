@@ -130,7 +130,7 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "error: : The hash offset must be a power of 2 in a hash calculation"
+  "Only compile-time constants are supported for hash base offset and max value"
   testdata/p4_14_samples/flowlet_switching.p4
   )
 

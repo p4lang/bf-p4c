@@ -350,10 +350,21 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
         auto mtr = glob->obj->to<IR::MAU::Meter>();
         return new IR::MAU::AttachedOutput(IR::Type::Bits::get(8), mtr);
     // Convert hash extern in tofino.p4
-    } else if (prim->name == "hash.get_hash") {
-        unsigned size = 1;
+    } else if (prim->name == "Hash.get") {
+        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        auto decl = glob->obj->to<IR::Declaration_Instance>();
+        auto type = decl->type->to<IR::Type_Specialized>()->arguments->at(0);
+        unsigned size = type->to<IR::Type_Bits>()->size;
+
         int op_size = prim->operands.size();
         if (op_size > 3) {
+            if (auto *constant = prim->operands[2]->to<IR::Constant>()) {
+                if (constant->asInt() != 0)
+                    error("%s: The initial offset for a hash "
+                          "calculation function has to be zero %s",
+                          prim->srcInfo, *prim);
+            }
+
             if (prim->operands[3]->to<IR::Constant>()) {
                 size = bitcount(prim->operands[3]->to<IR::Constant>()->asLong() - 1);
                 if ((1LL << size) != prim->operands[3]->to<IR::Constant>()->asLong())
@@ -362,22 +373,12 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
             }
         }
 
-        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
-        auto decl = glob->obj->to<IR::Declaration_Instance>();
         IR::MAU::hash_function algorithm;
         if (!algorithm.setup(decl->arguments->at(0)))
             BUG("invalid hash algorithm %s", decl->arguments->at(0));
         auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size),
                                          prim->operands[1], algorithm, prim);
         hd->bit_width = size;
-        if (op_size > 1) {
-            if (auto *constant = prim->operands[1]->to<IR::Constant>()) {
-                if (constant->asInt() != 0)
-                    error("%s: The initial offset for a hash "
-                          "calculation function has to be zero %s",
-                          prim->srcInfo, *prim);
-            }
-        }
         return hd;
     } else if (prim->name == "invalidate") {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate", prim->operands[0]);

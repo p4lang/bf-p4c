@@ -470,7 +470,7 @@ extern Hash<W> {
     /// @param base : Minimum return value.
     /// @param max : The value use in modulo operation.
     /// @return (base + (h % max)) where h is the hash value.
-    W get<D>(in D data, in W base, in bit<32> max);
+    W get<D>(in D data, in W base, in W max);
 }
 
 /// Random number generator.
@@ -602,17 +602,19 @@ extern DirectRegisterAction<T, U, P> {
 
 extern ActionSelector {
     /// Construct an action selector of 'size' entries
-    ActionSelector(bit<32> size, Hash<_> hash);
+    ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
 
     /// Stateful action selector.
-    ActionSelector(bit<32> size, Hash<bit<52>> hash, Register<bit<1>> reg);
+    ActionSelector(bit<32> size,
+                   Hash<_> hash,
+                   SelectorMode_t mode,
+                   Register<bit<1>> reg);
 }
 
 extern ActionProfile {
     /// Construct an action profile of 'size' entries.
     ActionProfile(bit<32> size);
 }
-
 
 extern Mirror {
     Mirror();
@@ -624,7 +626,6 @@ extern Mirror {
     /// or a struct containing fields with such types.
     void emit<T>(in MirrorId_t session_id, in T hdr);
 }
-
 
 /// Tofino supports packet resubmission at the end of ingress pipeline. When
 /// a packet is resubmitted, the original packet reference and some limited

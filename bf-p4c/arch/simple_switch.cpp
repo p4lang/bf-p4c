@@ -954,11 +954,9 @@ class ConstructSymbolTable : public Inspector {
         BUG_CHECK(mce != nullptr, "Malformed IR: method call expression cannot be nullptr");
 
         BUG_CHECK(mce->arguments->size() > 3, "hash extern must have at least 4 arguments");
-        auto typeArgs = new IR::Vector<IR::Type>({mce->typeArguments->at(2),
-                                                  mce->typeArguments->at(1),
-                                                  mce->typeArguments->at(3)});
+        auto typeArgs = new IR::Vector<IR::Type>({mce->typeArguments->at(0)});
 
-        auto hashType = new IR::Type_Specialized(new IR::Type_Name("hash"), typeArgs);
+        auto hashType = new IR::Type_Specialized(new IR::Type_Name("Hash"), typeArgs);
         auto hashName = cstring::make_unique(structure->unique_names, "hash", '_');
         structure->unique_names.insert(hashName);
         structure->nameMap.emplace(node, hashName);
@@ -1213,7 +1211,11 @@ class ConstructSymbolTable : public Inspector {
     }
 
     void process_extern_declaration(const IR::Declaration_Instance *node, cstring name) {
-        if (name == "counter") {
+        if (name == "action_profile") {
+            structure->action_profiles.emplace(node, node);
+        } else if (name == "action_selector") {
+            structure->action_selectors.emplace(node, node);
+        } else if (name == "counter") {
             structure->counters.emplace(node, node);
         } else if (name == "direct_counter") {
             structure->direct_counters.emplace(node, node);

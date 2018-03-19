@@ -24,6 +24,8 @@ const IR::Node* ControlConverter::postorder(IR::Member* node) {
 
 const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
     auto* orig = getOriginal<IR::Declaration_Instance>();
+    RETURN_TRANSLATED_NODE_IF_FOUND(action_profiles);
+    RETURN_TRANSLATED_NODE_IF_FOUND(action_selectors);
     RETURN_TRANSLATED_NODE_IF_FOUND(counters);
     RETURN_TRANSLATED_NODE_IF_FOUND(meters);
     RETURN_TRANSLATED_NODE_IF_FOUND(direct_counters);
@@ -635,25 +637,35 @@ const IR::Node* HashConverter::postorder(IR::MethodCallStatement* node) {
     BUG_CHECK(mce->arguments->size() > 4, "insufficient arguments to hash() function");
     auto pDest = mce->arguments->at(0);
     auto pBase = mce->arguments->at(2);
-    auto pData = mce->arguments->at(3);
     auto pMax = mce->arguments->at(4);
-    auto args = new IR::Vector<IR::Expression>( { pData, pBase, pMax });
+
+    // Check the max value
+    auto w = pDest->type->width_bits();
+    // Add data unconditionally.
+    auto args = new IR::Vector<IR::Expression>({ mce->arguments->at(3) });
+    if (pMax->to<IR::Constant>() == nullptr || pBase->to<IR::Constant>() == nullptr)
+       BUG("Only compile-time constants are supported for hash base offset and max value");
+
+    if (pMax->to<IR::Constant>()->asLong() < (1LL << w))  {
+        if (pBase->type->width_bits() != w)
+            pBase = new IR::Cast(IR::Type::Bits::get(w), pBase);
+        args->push_back(pBase);
+
+        if (pMax->type->width_bits() != w)
+            pMax = new IR::Cast(IR::Type::Bits::get(w), pMax);
+        args->push_back(pMax);
+    } else {
+        BUG_CHECK(pBase->to<IR::Constant>()->asInt() == 0,
+            "The base offset for a hash calculation must be zero");
+    }
 
     cstring hashName;
     auto it = structure->nameMap.find(orig);
     if (it != structure->nameMap.end()) {
         hashName = it->second; }
 
-    auto member = new IR::Member(new IR::PathExpression(hashName), "get_hash");
+    auto member = new IR::Member(new IR::PathExpression(hashName), "get");
 
-    auto dst_size = mce->typeArguments->at(0)->width_bits();
-    auto src_size = mce->typeArguments->at(1)->width_bits();
-    if (src_size != dst_size) {
-        WARNING("casting bit<" << src_size << "> to bit<" << dst_size << ">");
-        return new IR::AssignmentStatement(pDest,
-                   new IR::Cast(IR::Type::Bits::get(dst_size),
-                       new IR::MethodCallExpression(node->srcInfo, member, args)));
-    }
     return new IR::AssignmentStatement(pDest,
                new IR::MethodCallExpression(node->srcInfo, member, args));
 }
@@ -678,6 +690,81 @@ const IR::Node* RandomConverter::postorder(IR::MethodCallStatement* node) {
     auto call = new IR::MethodCallExpression(node->srcInfo, member, args);
     auto stmt = new IR::AssignmentStatement(dest, call);
     return stmt;
+}
+
+const IR::Node* ActionProfileConverter::postorder(IR::Declaration_Instance *node) {
+    if (auto type = node->type->to<IR::Type_Name>()) {
+        BUG_CHECK(type->path->name == "action_profile",
+                  "action_profile converter cannot be applied to %1%", type->path->name);
+
+        type = new IR::Type_Name("ActionProfile");
+        return new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
+                                            type, node->arguments);
+    } else {
+        BUG("unexpected type in action_profile declaration ", node);
+    }
+    return node;
+}
+
+const IR::Node* ActionProfileConverter::postorder(IR::ConstructorCallExpression *node) {
+    BUG("action_profile constructor call is not converted");
+    return node;
+}
+
+const IR::Node* ActionSelectorConverter::postorder(IR::Declaration_Instance *node) {
+    if (auto type = node->type->to<IR::Type_Name>()) {
+        BUG_CHECK(type->path->name == "action_selector",
+                  "action_selector converter cannot be applied to %1%", type->path->name);
+        auto declarations = new IR::IndexedVector<IR::Declaration>();
+
+        // Create a new instance of Hash<W>
+        auto typeArgs = new IR::Vector<IR::Type>();
+        auto w = node->arguments->at(2)->to<IR::Constant>()->asInt();
+        typeArgs->push_back(IR::Type::Bits::get(w));
+
+        auto args = new IR::Vector<IR::Expression>();
+        args->push_back(node->arguments->at(0));
+
+        auto specializedType = new IR::Type_Specialized(
+            new IR::Type_Name("Hash"), typeArgs);
+        auto hashName = cstring::make_unique(
+            structure->unique_names, node->name + "__hash_", '_');
+        structure->unique_names.insert(hashName);
+        declarations->push_back(
+            new IR::Declaration_Instance(hashName, specializedType, args));
+
+        args = new IR::Vector<IR::Expression>();
+        // size
+        args->push_back(node->arguments->at(1));
+        // hash
+        args->push_back(new IR::PathExpression(hashName));
+        // selector_mode
+        auto sel_mode = new IR::Member(
+            new IR::TypeNameExpression("SelectorMode_t"), "FAIR");
+        if (auto anno = node->annotations->getSingle("mode")) {
+            auto mode = anno->expr.at(0)->to<IR::StringLiteral>();
+            if (mode->value == "resilient")
+                sel_mode->member = IR::ID("RESILIENT");
+            else if (mode->value != "fair" && mode->value != "non_resilient")
+                BUG("Selector mode provided for the selector is not supported", node);
+        } else {
+            WARNING("No mode specified for the selector %s. Assuming fair" << node);
+        }
+        args->push_back(sel_mode);
+
+        type = new IR::Type_Name("ActionSelector");
+        declarations->push_back(new IR::Declaration_Instance(
+            node->srcInfo, node->name, node->annotations, type, args));
+        return declarations;
+    } else {
+        BUG("unexpected type in action_selector declaration ", node);
+    }
+    return node;
+}
+
+const IR::Node* ActionSelectorConverter::postorder(IR::ConstructorCallExpression *node) {
+    BUG("action_selector constructor call is not converted");
+    return node;
 }
 
 const IR::Node* CounterConverter::postorder(IR::Declaration_Instance *node) {

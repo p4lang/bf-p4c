@@ -61,6 +61,7 @@ class AttachTables : public PassManager {
 
     class DefineGlobalRefs : public MauModifier {
         AttachTables &self;
+        const P4::ReferenceMap *refMap;
         std::map<cstring, safe_vector<const IR::MAU::BackendAttached *>> attached;
         bool preorder(IR::MAU::Table *) override;
         bool preorder(IR::MAU::Action *) override;
@@ -71,7 +72,8 @@ class AttachTables : public PassManager {
         const IR::MAU::StatefulAlu *findAttachedSalu(const IR::Declaration_Instance *ext);
 
      public:
-        explicit DefineGlobalRefs(AttachTables &s) : self(s) {}
+        explicit DefineGlobalRefs(AttachTables &s, const P4::ReferenceMap *refMap) :
+            self(s), refMap(refMap) {}
     };
     bool findSaluDeclarations(const IR::Declaration_Instance *ext,
                               const IR::Declaration_Instance **reg_ptr,
@@ -83,7 +85,7 @@ class AttachTables : public PassManager {
         : refMap(rm), converted(con) {
         addPasses({
             new InitializeStatefulAlus(*this),
-            new DefineGlobalRefs(*this)
+            new DefineGlobalRefs(*this, refMap)
         });
         stop_on_error = false;
     }
