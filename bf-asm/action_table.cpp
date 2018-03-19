@@ -5,6 +5,9 @@
 #include "stage.h"
 #include "tables.h"
 
+/// See 6.2.8.4.3 of the MAU Micro-Architecture document.
+const unsigned MAX_AD_SHIFT = 5U;
+
 DEFINE_TABLE_TYPE(ActionTable)
 
 std::string ActionTable::find_field(Table::Format::Field *field) {
@@ -421,7 +424,7 @@ void ActionTable::write_regs(REGS &regs) {
             auto &ram_mux = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
             auto &adr_mux_sel = ram_mux.ram_unitram_adr_mux_select;
             if (SelectionTable *sel = get_selector()) {
-                int shift = fmt_log2size - 2;
+                int shift = std::min(fmt_log2size - 2, MAX_AD_SHIFT);
                 auto &shift_ctl = regs.rams.map_alu.mau_selector_action_adr_shift[row];
                 if (logical_row.row == sel->layout[0].row) {
                     /* we're on the home row of the selector, so use it directly */
