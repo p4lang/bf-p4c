@@ -61,7 +61,7 @@ class LoweredConstantRVal : LoweredParserRVal {
     dbprint { out << "constant " << constant; }
 
     /// The constant to extract.
-    int constant;
+    uint32_t constant;
 }
 
 abstract LoweredParserPrimitive { }

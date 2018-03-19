@@ -260,7 +260,9 @@ struct ExtractSimplifier {
                 const unsigned long mask = hiMask & loMask;
 
                 // Pull out the bits of the value that belong to this slice.
-                auto maskedValue = constantSource->constant->asInt() & mask;
+                // XXX(yumin): It is safe here to convert int with mask to unsigned
+                // here, and needed, because the following left shift might cause overflow.
+                uint32_t maskedValue = constantSource->constant->asInt() & mask;
 
                 // Place those bits at their offset within the container.
                 maskedValue <<= slice.container_bits()
@@ -271,10 +273,6 @@ struct ExtractSimplifier {
                       << maskedValue);
 
                 // Create an extract that writes just those bits.
-                // XXX(seth): This is necessary, but not sufficient, because we
-                // actually can't write the full width of the larger PHV
-                // containers in a single extract. We'll need to fix that up
-                // elsewhere.
                 auto* newSource =
                   new IR::BFN::LoweredConstantRVal(maskedValue);
                 auto* newExtract =
@@ -1250,6 +1248,56 @@ class ExtractorAllocator {
     const std::vector<const IR::BFN::LoweredSave*>& getRemainingSaves() const {
         return saves; }
 
+    /// @return the number of extractors that is needed to set @p value.
+    /// TODO(yumin): Tail..Head case is not considered here.
+    size_t extractConstModel(uint32_t value, uint32_t n_set_range) {
+        size_t n_needed = 0;
+        while (value) {
+            if (value & 1) {
+                n_needed++;
+                value >>= n_set_range;
+            } else {
+                value >>= 1; } }
+        return n_needed;
+    }
+
+    /** @return the minimal extractor needed to extrat this value by using @p sz extractor.
+     *  Extracting constant to phv is different from extracting from input buffer.
+     *    For 8-bit extractor, we can set any bit.
+     *    For 16-bit extractor, we can set any consequent 4 bits, using 4 bits as shifting.
+     *    For 32-bit extractor, we can set any consequent 3 bits, using 5 bits as shifting.
+     */
+    size_t extractConstBy(uint32_t value, PHV::Size sz) {
+        if (sz == PHV::Size::b8) {
+            return extractConstModel(value, 8);
+        } else if (sz == PHV::Size::b16) {
+            return extractConstModel(value, 4);
+        } else if (sz == PHV::Size::b32) {
+            return extractConstModel(value, 3);
+        } else {
+            BUG("unexpected container size: %1%", sz);
+            return 0;
+        }
+    }
+
+    std::pair<size_t, unsigned>
+    calcConstantExtractorUses(uint32_t value, size_t container_size) {
+        for (const auto sz : { PHV::Size::b32, PHV::Size::b16, PHV::Size::b8}) {
+            // can not use larger extractor on smaller container;
+            if (container_size < size_t(sz)) {
+                continue; }
+
+            size_t n = extractConstBy(value, sz);
+            if (container_size == size_t(sz) && n > 1) {
+                continue;
+            } else {
+                if (n > container_size / unsigned(sz)) {
+                    continue; }
+                return {size_t(sz), container_size / unsigned(sz)}; }
+        }
+        BUG("Impossible constant value write in parser: %1%", value);
+    }
+
     /**
      * Allocate as many parser primitives as will fit into a single state,
      * respecting hardware limits.
@@ -1276,20 +1324,27 @@ class ExtractorAllocator {
 
         if (Device::currentDevice() == "Tofino") {
             std::map<size_t, unsigned> allocatedExtractorsBySize;
-
             for (auto* extract : extractPhvs) {
-                bool extractorsAvail = true;
-                if (extract->dest) {
-                    const auto containerSize = extract->dest->container.size();
-                    if (allocatedExtractorsBySize[containerSize] ==
-                        pardeSpec.extractorSpec().at(containerSize))
-                        extractorsAvail = false;
+                nw_byteinterval byteInterval;
+                size_t use_extractor = 0;
+                unsigned n_extractor_used = 0;
+                if (auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>()) {
+                    use_extractor = extract->dest->container.size();
+                    n_extractor_used = 1;
+                    byteInterval = source->byteInterval();
+                } else if (auto* cons = extract->source->to<IR::BFN::LoweredConstantRVal>()) {
+                    int container_size = extract->dest->container.size();
+                    int value = cons->constant;
+                    std::tie(use_extractor, n_extractor_used) =
+                        calcConstantExtractorUses(value, container_size);
                 }
 
-                const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
-                                        ? extract->source->to<IR::BFN::LoweredPacketRVal>()
-                                                 ->byteInterval()
-                                        : nw_byteinterval();
+                bool extractorsAvail = true;
+                if (n_extractor_used &&
+                    allocatedExtractorsBySize[use_extractor] + n_extractor_used >
+                    pardeSpec.extractorSpec().at(use_extractor)) {
+                    extractorsAvail = false; }
+
                 if (!extractorsAvail ||
                     byteInterval.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
                     remainingPhvExtracts.push_back(extract);
@@ -1513,36 +1568,34 @@ class SplitBigStates : public ParserModifier {
     }
 
     /// return the closed range on the input buffer that this primitive needs.
-    std::pair<int, int> operatingRange(const IR::BFN::LoweredParserPrimitive* prim) {
+    boost::optional<nw_byterange> operatingRange(const IR::BFN::LoweredParserPrimitive* prim) {
         if (auto* phv = prim->to<IR::BFN::LoweredExtractPhv>()) {
             if (auto* source = phv->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
-                return { source->extractedBytes().loByte(),
-                         source->extractedBytes().hiByte() };
+                return source->extractedBytes();
             } else {
                 // For all other case, they do not need anything from input buffer.
-                return {0, 0};
+                return boost::none;
             }
         } else if (auto* clot = prim->to<IR::BFN::LoweredExtractClot>()) {
-            return { clot->source->extractedBytes().loByte(),
-                     clot->source->extractedBytes().hiByte() };
+            return clot->source->extractedBytes();
         } else if (auto* save = prim->to<IR::BFN::LoweredSave>()) {
-            return { save->source->extractedBytes().loByte(),
-                     save->source->extractedBytes().hiByte() };
+            return save->source->extractedBytes();
         } else if (/* auto* check_sum = */prim->to<IR::BFN::LoweredParserChecksum>()) {
             // TODO(yumin): checksum.
-            return {0, 0};
+            return boost::none;
         } else {
             BUG("Unknown primitives %1%", prim);
-            return {0, 0};
+            return boost::none;
         }
     }
 
     /// return true is this primitive does not need anything later than @p until.
     bool validBefore(const IR::BFN::LoweredParserPrimitive* prim, int until) {
         auto range = operatingRange(prim);
-        if (range.second < until) {
+        if (!range) return true;
+        if ((*range).hiByte() < until) {
             return true;
-        } else if (range.first < until && until < range.second) {
+        } else if ((*range).loByte() < until && until < (*range).hiByte()) {
             // TODO(yumin): this can be supported.
             BUG("Unexpeted partial select/save in parser");
             return false;
