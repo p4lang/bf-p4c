@@ -191,6 +191,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         cstring name;
         ActionDataInfo adi;
         TotalAlignment constant_alignment;
+        bitvec invalidate_write_bits;
         std::map<PHV::Container, TotalAlignment> phv_alignment;
 
         int counts[ActionParam::TOTAL_TYPES] = {0, 0, 0};
@@ -233,6 +234,12 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
         bool action_data_isolated() {
             return name != "set";
+        }
+
+        bool set_invalidate_write_bits(bitvec write) {
+            if (name != "invalidate") return false;
+            invalidate_write_bits = write;
+            return true;
         }
 
         bool constant_set = false;
@@ -303,6 +310,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     void postorder(const IR::MAU::Instruction *) override;
     void postorder(const IR::MAU::Action *) override;
 
+    bool initialize_invalidate_alignment(const ActionParam &write, ContainerAction &cont_action);
     bool initialize_alignment(const ActionParam &write, const ActionParam &read,
         ContainerAction &cont_action, cstring &error_message, PHV::Container container,
         cstring action_name);

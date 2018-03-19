@@ -299,6 +299,32 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
     return true;
 }
 
+/** The purpose of this function is to calculate the alignment of the write bits for the destination
+  * of an invalidate instruction. The invalidate instruction is special in that it does not have any
+  * source operands, and the alignment of the write bits must thus be set separately for this
+  * particular instruction. The function will return false if the total_write_bits member of
+  * @cont_action cannot be set.
+  */
+bool ActionAnalysis::initialize_invalidate_alignment(const ActionParam &write, ContainerAction
+        &cont_action) {
+    BUG_CHECK(cont_action.name == "invalidate", "Expected invalidate instruction");
+    bitrange range;
+    auto *field = phv.field(write.expr, &range);
+    BUG_CHECK(field, "Write in invalidate instruction has no PHV location");
+
+    int count = 0;
+    bitvec write_bits;
+    field->foreach_alloc(range, [&](const PHV::Field::alloc_slice &alloc) {
+        count++;
+        BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
+        write_bits.setrange(alloc.container_bit, alloc.width);
+    });
+
+    BUG_CHECK(count == 1, "ActionAnalysis did not split up container by container");
+
+    return cont_action.set_invalidate_write_bits(write_bits);
+}
+
 /** The purpose of this function is calculate the location of the alignments of both PHV
  *  and action data for a single FieldAction in a ContainerAction.  Before action data
  *  allocation (done by the ActionFormat structure), we just align the write_bits and
@@ -590,6 +616,8 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
         bool total_init = true;
         for (auto &field_action : cont_action.field_actions) {
             auto &write = field_action.write;
+            if (cont_action.name == "invalidate")
+                total_init &= initialize_invalidate_alignment(write, cont_action);
             for (auto &read : field_action.reads) {
                 cstring init_error_message;
                 bool init = initialize_alignment(write, read, cont_action, init_error_message,
@@ -830,6 +858,8 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(
 
     total_write_bits |= adi.ad_alignment.write_bits;
     total_write_bits |= constant_alignment.write_bits;
+    if (name == "invalidate")
+        total_write_bits |= invalidate_write_bits;
 
     if (total_write_bits != container_occupancy)
         return false;
