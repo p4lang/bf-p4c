@@ -4,6 +4,7 @@
 #include <boost/optional.hpp>
 
 #include "bf-p4c/device.h"
+#include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/clot_info.h"
@@ -76,6 +77,7 @@ class CoreAllocation {
     const SymBitMatrix& mutex_i;
     // const Clustering& clustering_i;
     const PhvUse& uses_i;
+    const FieldDefUse& defuse_i;
     const ClotInfo& clot_i;
 
     // Modified in this pass.
@@ -87,12 +89,13 @@ class CoreAllocation {
     CoreAllocation(const SymBitMatrix& mutex,
                    const Clustering&,
                    const PhvUse& uses,
+                   const FieldDefUse& defuse,
                    const ClotInfo& clot,
                    PHV::Pragmas& pragmas,
                    PhvInfo& phv,
                    ActionPhvConstraints& actions)
-        : mutex_i(mutex), /* clustering_i(clustering), */ uses_i(uses), clot_i(clot),
-          phv_i(phv), actions_i(actions), pragmas_i(pragmas) { }
+        : mutex_i(mutex), /* clustering_i(clustering), */ uses_i(uses), defuse_i(defuse),
+          clot_i(clot), phv_i(phv), actions_i(actions), pragmas_i(pragmas) { }
 
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
@@ -400,12 +403,13 @@ class AllocatePHV : public Inspector {
  public:
     AllocatePHV(const Clustering& clustering,
                 const PhvUse& uses,
+                const FieldDefUse& defuse,
                 const ClotInfo& clot,
                 PHV::Pragmas& pragmas,
                 PhvInfo& phv,
                 ActionPhvConstraints& actions,
                 const CalcCriticalPathClusters& critical_cluster)
-        : core_alloc_i(phv.field_mutex, clustering, uses, clot, pragmas, phv, actions),
+        : core_alloc_i(phv.field_mutex, clustering, uses, defuse, clot, pragmas, phv, actions),
           phv_i(phv), uses_i(uses),
           clustering_i(clustering), mutex_i(phv.field_mutex), pragmas_i(pragmas),
           actions_i(actions), critical_path_clusters_i(critical_cluster),

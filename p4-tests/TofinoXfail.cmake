@@ -261,7 +261,9 @@ p4c_add_xfail_reason("tofino"
   "Can't fit table .* in .* by itself"
   extensions/p4_tests/p4_14/test_config_13_first_selection.p4
   extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
-  )
+  # extensions/p4_tests/p4_14/test_config_103_first_phase_0.p4
+  # extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
+)
 
 p4c_add_xfail_reason("tofino"
   "Can't fit the minimum number of table .* entries within the memories"
@@ -500,6 +502,7 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
+  testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
@@ -1028,4 +1031,16 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_dc_basic
   switch_l2
+)
+
+# BRIG-515
+p4c_add_xfail_reason("tofino"
+  "error: No phv record"
+  testdata/p4_14_samples/mac_rewrite.p4
+)
+
+# BRIG-528
+p4c_add_xfail_reason("tofino"
+  "unexpected packet output on port .*"
+  extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
 )

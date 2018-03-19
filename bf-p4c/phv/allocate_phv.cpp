@@ -326,7 +326,7 @@ bool CoreAllocation::satisfies_constraints(
         return false; }
 
     // Check no pack for this field.
-    const auto& slices = alloc.slices(c);
+    const auto& slices = alloc.slicesByLiveness(c, slice);
     if (slices.size() > 0 && slice.field()->no_pack()) {
         LOG5("        constraint: slice has no_pack constraint but container has slices ");
         return false; }
@@ -338,40 +338,30 @@ bool CoreAllocation::satisfies_constraints(
                          "already placed in this container");
             return false; } }
 
-    // Are any (non-POV) slices extracted?
-    bool hasExtracted = std::any_of(slices.begin(), slices.end(), [&](const PHV::AllocSlice& s) {
-        return uses_i.is_extracted(s.field())
-               && !PHV::Allocation::mutually_exclusive(mutex_i, s.field(), slice.field())
-               && !s.field()->pov;
+    // pov bits are parser initialized as well.
+    bool hasUninitializedRead = std::any_of(
+            slices.begin(), slices.end(), [&] (const PHV::AllocSlice& s) {
+        return s.field()->pov || defuse_i.hasUninitializedRead(s.field()->id);
     });
 
-    // Are there any POV slices?
-    bool hasPOV = std::any_of(slices.begin(), slices.end(), [&](const PHV::AllocSlice& s) {
-        // POV fields are never mutually exclusive.
-        return s.field()->pov;
+    bool hasExtracted = std::any_of(slices.begin(), slices.end(), [&] (const PHV::AllocSlice& s) {
+        return !s.field()->pov && uses_i.is_extracted(s.field());
     });
 
-    // If `slice` is extracted, then check that no existing allocated field is
-    // also extracted.
-    if (!slice.field()->pov && uses_i.is_extracted(slice.field()) && hasExtracted) {
-        LOG5("        constraint: slice is extracted but container already contains extracted "
-             "slices");
+    bool isThisSliceExtracted = !slice.field()->pov && uses_i.is_extracted(slice.field());
+    bool isThisSliceUninitialized = (slice.field()->pov
+                                     || defuse_i.hasUninitializedRead(slice.field()->id));
+
+    if (hasExtracted && (isThisSliceUninitialized || isThisSliceExtracted)) {
+        LOG5("        constraint: container already contains extracted slices, "
+             "can not be packed, because: this slice is "
+             << (isThisSliceExtracted ? "extracted" : "uninitialized"));
         return false; }
 
-    // ...and also check that no other field is a POV field.  (POV fields are
-    // also extracted, but they're special in that they're written bit-by-bit
-    // rather than as a whole container, which allows POV fields to be packed
-    // together if necessary.)
-    if (!slice.field()->pov && uses_i.is_extracted(slice.field()) && hasPOV) {
-        LOG5("        constraint: slice is extracted but container already contains POV bits"
-             "(which are extracted)");
-        return false; }
-
-    // Similarly, if `slice` is a POV bit, then check that no existing
-    // allocated field is extracted.
-    if (slice.field()->pov && hasExtracted) {
-        LOG5("        constraint: slice is a POV slice but container already contains non-POV "
-             "extracted slices");
+    if (isThisSliceExtracted && (hasUninitializedRead || hasExtracted)) {
+        LOG5("        constraint: this slice is extracted, "
+             "can not be packed, because allocated fields has "
+             << (hasExtracted ? "extracted" : "uninitialized"));
         return false; }
 
     return true;

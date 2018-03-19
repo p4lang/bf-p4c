@@ -247,8 +247,23 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_16/ingress_checksum.p4
   extensions/p4_tests/p4_16/ONLab_packetio.p4
   extensions/p4_tests/p4_14/easy.p4
-  extensions/p4_tests/p4_14/easy_no_match_with_gateway.p4
-  extensions/p4_tests/p4_14/easy_no_match.p4
   )
 
 endif() # PTF_REQUIREMENTS_MET
+
+# BRIG-528
+p4c_add_xfail_reason("jbay"
+  "unexpected packet output on port .*"
+  extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
+)
+
+# BRIG-513
+p4c_add_xfail_reason("jbay"
+  "Ran out of constant output slots"
+  extensions/p4_tests/p4_14/metadata_mutex_1.p4
+)
+
+p4c_add_xfail_reason("jbay"
+  "AssertionError: A packet was received on device .*, port .*, but we expected no packets."
+  extensions/p4_tests/p4_14/easy.p4
+)

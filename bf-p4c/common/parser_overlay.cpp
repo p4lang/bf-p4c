@@ -36,8 +36,6 @@ void BuildMutex::mark(const PHV::Field* f) {
              << (!f->pov && !f->metadata ? "header " : "") << ")");
     }
     int new_field = f->id;
-    if (fields_encountered[new_field])
-        return;
     fields_encountered[new_field] = true;
     mutually_inclusive[new_field] |= fields_encountered;
 }

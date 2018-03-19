@@ -10,6 +10,24 @@
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 
+/** Represent the parser initialization that sets all fields to zero.
+ *  This is actually a dummy subclass of IR::Expression to work with
+ *  the locpair setup. NEVER insert this class to IR, because it is not
+ *  a IR node, because it is not registered in visiter classes.
+ */
+class ImplicitParserInit : public IR::Expression {
+ private:
+    IR::Expression* clone() const override {
+        auto* new_expr = new ImplicitParserInit(*this);
+        return new_expr; }
+
+ public:
+    explicit ImplicitParserInit(const PHV::Field* f)
+        : field(f) { }
+    const PHV::Field* field;
+    void dbprint(std::ostream & out) const override {
+        out << "ImplicitParserInit"; }
+};
 
 class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWriteContext {
  public:
@@ -28,6 +46,12 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     /// All uses and all defs for each field.
     ordered_map<int, LocPairSet>      &located_uses, &located_defs;
+
+    /// All implicit parser zero initialization for each field.
+    LocPairSet                        &parser_zero_inits;
+
+    // All fields that rely on parser zero initialization.
+    ordered_set<const PHV::Field*>    &uninitialized_fields;
 
     /// Intermediate data structure for computing def/use sets.
     struct info {
@@ -67,7 +91,9 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
       uses(*new std::remove_reference<decltype(uses)>::type),
       defs(*new std::remove_reference<decltype(defs)>::type),
       located_uses(*new std::remove_reference<decltype(located_uses)>::type),
-      located_defs(*new std::remove_reference<decltype(located_defs)>::type)
+      located_defs(*new std::remove_reference<decltype(located_defs)>::type),
+      parser_zero_inits(*new std::remove_reference<decltype(parser_zero_inits)>::type),
+      uninitialized_fields(*new std::remove_reference<decltype(uninitialized_fields)>::type)
     { joinFlows = true; visitDagOnce = false; }
 
     // TODO: unused?
@@ -96,6 +122,17 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     const LocPairSet &getAllUses(int fid) const {
         static const LocPairSet emptyset;
         return located_uses.count(fid) ? located_uses.at(fid) : emptyset; }
+    const ordered_set<const PHV::Field*> &getUninitializedFields() const {
+        return uninitialized_fields; }
+
+    bool hasUninitializedRead(int fid) const {
+        for (const auto& def : getAllDefs(fid)) {
+            auto* expr = def.second;
+            if (dynamic_cast<const ImplicitParserInit*>(expr) != nullptr)
+                if (getUses(def).size() > 0)
+                    return true; }
+        return false;
+    }
 };
 
 #endif /* _FIELD_DEFUSE_H_ */

@@ -37,6 +37,8 @@ Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     defuse.clear();
     located_uses.clear();
     located_defs.clear();
+    parser_zero_inits.clear();
+    uninitialized_fields.clear();
     return rv;
 }
 
@@ -93,8 +95,16 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
     if (unit->is<IR::BFN::ParserState>()) {
         // parser can't rewrite PHV (it ors), so need to treat it as a read for conflicts, but
         // we don't mark it as a use of previous writes, and don't clobber those previous writes.
-        if (!partial)
+        if (!partial) {
             info.use.clear();
+            // Though parser do OR value into phv, as long as it is not partial, the zero-init
+            // def should be remove, because this def will override the 0.
+            auto def_copy = info.def;
+            for (const auto& v : def_copy) {
+                if (parser_zero_inits.count(v)) {
+                    info.def.erase(v); } }
+        }
+
         info.use.emplace(unit, e);
         check_conflicts(info, unit->stage());
         for (auto def : info.def)
@@ -121,7 +131,28 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
          * clear everything mentioned in the egress parser.  We want to ensure that nothing
          * that might be set by the egress parser is considered for bridging -- if it might
          * be set but isn't, it should be left unset in the egress pipe (not bridged) */
-        p->apply(ClearBeforeEgress(*this)); }
+        p->apply(ClearBeforeEgress(*this));
+    }
+
+    for (const auto& f : phv) {
+        if (f.gress != p->gress) {
+            continue; }
+        // In the ingress, bridged_metadata is considered as a header field.
+        // For ingress ,all metadata are initializes in the beginning.
+        // for egress, only none bridged metadata are initializes at the beginning.
+        if (p->gress == INGRESS && (!f.metadata && !f.bridged)) {
+            continue; }
+        if (p->gress == EGRESS  && (!f.metadata || f.bridged)) {
+            continue; }
+        auto* parser_begin = p->start;
+        const PHV::Field* f_p = phv.field(f.id);
+        IR::Expression* dummy_expr = new ImplicitParserInit(f_p);
+        auto& info = field(f_p);
+        parser_zero_inits.emplace(parser_begin, dummy_expr);
+        info.def.emplace(parser_begin, dummy_expr);
+        located_defs[f.id].emplace(parser_begin, dummy_expr);
+    }
+
     return true;
 }
 
@@ -225,6 +256,16 @@ std::ostream &operator<<(std::ostream &out, const code &c) {
 }
 
 void FieldDefUse::end_apply(const IR::Node *) {
+    // Get all uninitialized fields
+    for (const auto& def : parser_zero_inits) {
+        auto uses = getUses(def);
+        if (uses.size()) {
+            auto* init = def.second->to<ImplicitParserInit>();
+            BUG_CHECK(init, "Defuse zero init IR type error.");
+            uninitialized_fields.insert(init->field);
+        }
+    }
+
     if (!LOGGING(2)) return;
     LOG2("FieldDefUse result:");
     int count = phv.num_fields();
@@ -244,4 +285,26 @@ void FieldDefUse::end_apply(const IR::Node *) {
         if (count < 40)
             std::clog << " " << phv.field(i)->name; }
     std::clog << std::endl;
+
+    LOG2("The number of uninitialized fields: " << uninitialized_fields.size());
+    for (const auto* f : uninitialized_fields) {
+        LOG2("---------------------------------");
+        LOG2("uninitialized field: " << f);
+        LocPairSet defs = getAllDefs(f->id);
+        LOG2(".......Defs: ");
+        for (const auto& kv : defs) {
+            auto* unit = kv.first;
+            auto* expr = kv.second;
+            LOG2("unit name, unit->name = " << DBPrint::Brief << *unit);
+            LOG2("in expression, expr = " << expr);
+        }
+        LocPairSet uses = getAllUses(f->id);
+        LOG2("......Uses: ");
+        for (const auto& kv : uses) {
+            auto* unit = kv.first;
+            auto* expr = kv.second;
+            LOG2("unit name, unit->name = " << DBPrint::Brief << *unit);
+            LOG2("in expression, expr = " << expr);
+        }
+    }
 }

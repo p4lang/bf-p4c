@@ -17,26 +17,13 @@ bool LiveRangeOverlay::may_happen_before(
 // read-after-write dependence from uw to ur such that uw may happen before
 // u and ur may happen after.
 bool LiveRangeOverlay::is_dead_at(const PHV::Field &f, const IR::BFN::Unit *u) const {
-    for (const FieldDefUse::locpair ur_loc : defuse.getAllUses(f.id)) {
-        const IR::BFN::Unit *ur = ur_loc.first;
-        if (defuse.getDefs(ur_loc).size() == 0) {
-            // Uninitialized read---live range begins "before" the parser, when
-            // the hardware implicitly initializes all metadata to zero.
-            // Hence, this field may be live if u may happen before ur.
-
-            // XXX(hanw): remove this..
-            // TODO: egress_spec is special and considered uninitialized until
-            // writen.  This should be changed to use Tofino native names.
-            if (strstr(f.name, "egress_spec"))
-                continue;
-
-            if (may_happen_before(u, ur))
-                return false; }
-        for (auto uw_loc : defuse.getDefs(ur_loc)) {
-            const IR::BFN::Unit *uw = uw_loc.first;
+    for (const FieldDefUse::locpair use : defuse.getAllUses(f.id)) {
+        const IR::BFN::Unit *use_unit = use.first;
+        for (auto def : defuse.getDefs(use)) {
+            const IR::BFN::Unit *def_unit = def.first;
             // If uw may happen before u and u may happen before ur, then f may
             // be live.
-            if (may_happen_before(uw, u) && may_happen_before(u, ur))
+            if (may_happen_before(def_unit, u) && may_happen_before(u, use_unit))
                 return false; } }
     return true;
 }
@@ -56,6 +43,7 @@ void LiveRangeOverlay::end_apply() {
         if (!f.metadata && !f.alwaysPackable)
             continue;
         LOG4("checking liveness of " << f.name);
+        livemap[f.id] = { };
         ordered_set<const IR::BFN::Unit *> *all_units;
         all_units = f.gress == INGRESS ? &all_ingress_units : &all_egress_units;
         for (const IR::BFN::Unit *u : *all_units) {
@@ -94,6 +82,8 @@ void LiveRangeOverlay::end_apply() {
                 continue;
             if (noOverlay.count(&f2))
                 continue;
+            BUG_CHECK(livemap.count(f1.id), "livemap not generated on %1%", f1);
+            BUG_CHECK(livemap.count(f2.id), "livemap not generated on %1%", f2);
             if (!intersects(livemap[f1.id], livemap[f2.id])) {
                 LOG4("(" << f1.name << ", " << f2.name << ")");
                 overlay(f1.id, f2.id) = true; } } }
@@ -150,19 +140,6 @@ bool LiveRangeOverlay::happens_before(
             return true; }
 
     BUG("Unexpected kind of BFN::Unit.");
-}
-
-void LiveRangeOverlay::get_uninitialized_reads(
-    ordered_map<int, FieldDefUse::LocPairSet> &out) const {
-    // If a field use does not have a def, then it is reading an unintialized
-    // value.
-    for (const PHV::Field &f : phv) {
-        for (const FieldDefUse::locpair use : defuse.getAllUses(f.id)) {
-            if (!defuse.getDefs(use).size()) {
-                LOG4("uninitialized read of " << f.name <<
-                     " at "<< DBPrint::Brief <<
-                     use.first << ":" << DBPrint::Brief << use.second);
-                out[f.id].insert(use); } } }
 }
 
 void LiveRangeOverlay::printLiveRanges(ordered_map<int, ordered_set<const IR::BFN::Unit*>>& lm) {

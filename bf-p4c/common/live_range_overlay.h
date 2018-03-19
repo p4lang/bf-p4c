@@ -67,7 +67,7 @@ class LiveRangeOverlay : public Inspector {
      *  - ingress happens before egress
      *  - parse states happen before tables
      *  - tables happen before deparsers
-     * 
+     *
      * For elements of the same kind:
      *  - parse states happen at the same time
      *  - if tables have not yet been assigned stages, then use the dependency
@@ -85,11 +85,6 @@ class LiveRangeOverlay : public Inspector {
     bool may_happen_before(const IR::BFN::Unit *x, const IR::BFN::Unit *y) const;
 
     bool is_dead_at(const PHV::Field &f, const IR::BFN::Unit *u) const;
-
-    /** Get the set of (unit, expr) locations where each field is read before
-     * being written.  Fields that are not read before written do not appear in
-     * this map. */
-    void get_uninitialized_reads(ordered_map<int, FieldDefUse::LocPairSet> &out) const;
 
     /** Visual representation of the live ranges calculated for various metadata fields. Uses
       * logging-level 1.

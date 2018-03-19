@@ -63,8 +63,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             options.jbay_analysis ? new JbayPhvAnalysis(phv, uses, deps, defuse, action_constraints)
                 : nullptr,
 #endif      // HAVE_JBAY
-            new AllocatePHV(clustering, uses, clot, pragmas, phv, action_constraints,
-                    critical_path_clusters),
+            new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
+                            critical_path_clusters),
 
             new PHV::ValidateAllocation(phv, clot, phv.field_mutex),
             new PHV::ValidateActions(phv, false, true, false)
