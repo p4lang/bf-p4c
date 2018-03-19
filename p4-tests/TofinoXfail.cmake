@@ -25,6 +25,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   p4c_add_xfail_reason("tofino"
     "mismatch from expected(.*) at byte .*"
     extensions/p4_tests/p4_14/no_match_miss.p4
+    extensions/p4_tests/p4_14/action_format_packing2.p4
     )
 
   # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline

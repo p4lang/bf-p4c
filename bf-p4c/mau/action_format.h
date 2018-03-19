@@ -67,29 +67,44 @@ struct ActionFormat {
     enum cont_type_t {BYTE, HALF, FULL, CONTAINER_TYPES};
     enum location_t {ADT, IMMED, LOCATIONS};
     enum bitmasked_t {NORMAL, BITMASKED, BITMASKED_TYPES};
+
+    enum ad_constraint_t { BITMASKED_SET,
+                           ISOLATED };
     static constexpr int CONTAINER_SIZES[3] = {8, 16, 32};
     static constexpr int IMMEDIATE_BYTES = 4;
 
-    /** Delineates where a specific container is contained within an action format, whether
-     *  it is an action data table or in the immediate.  The start tells what byte the
-     *  container begins at, and the size is how many bits the container needs
+    /** This data structure describes action data headed to a single ALU operation.
+     *  Thus, each struct has a container parameter, as each one can contain a container
+     *
+     *  Each action data operation is filled with at least one parameter.  This information
+     *  is contained within the ArgLoc, or exactly where each ActionArg / other information
+     *  headed to an ALU is individually stored
      */
-    struct ActionDataPlacement {
+    struct ActionDataForSingleALU {
         struct ArgLoc {
             cstring name;       ///< name of the arg
-            bitvec data_loc;    ///< The location within the container of this action data
-            int field_bit;      ///< The starting bit which the arg is allocating over
+            bitvec phv_loc;     ///< The bits which these act on in the phv container
+            bitvec slot_loc;    ///< The bits within the action data slot that we use
+            int field_bit;      ///< The starting bit of the argument
             bool single_loc = true;
+            // Constants
             bool is_constant = false;
             int constant_value = 0;
-            ArgLoc(cstring n, bitvec dl, int fb, bool sl)
-                : name(n), data_loc(dl), field_bit(fb), single_loc(sl) {}
+            ArgLoc(cstring n, bitvec pl, int fb, bool sl)
+                : name(n), phv_loc(pl), field_bit(fb), single_loc(sl) {}
             void set_as_constant(int cv) {
                 is_constant = true;
                 constant_value = cv;
             }
-            int field_hi() const { return field_bit + data_loc.popcount() - 1; }
-            int cont_lo() const { return data_loc.min().index(); }
+            int field_hi() const { return field_bit + phv_loc.popcount() - 1; }
+            int phv_cont_lo() const { return phv_loc.min().index(); }
+            int slot_lo() const { return slot_loc.min().index(); }
+
+            void dbprint(std::ostream &out) const {
+                out << name << "[" << field_bit << ":" << field_hi() << "]";
+                out << " PHV 0x" << phv_loc;
+                out << " slot 0x" << slot_loc;
+            }
 
             ActionAnalysis::ActionParam::speciality_t speciality
                 = ActionAnalysis::ActionParam::NO_SPECIAL;
@@ -100,7 +115,7 @@ struct ActionFormat {
                 cstring ret_name = name;
                 if (!single_loc) {
                     int lo = field_bit;
-                    int hi = field_bit + data_loc.popcount() - 1;
+                    int hi = field_hi();
                     ret_name = ret_name + + "." + std::to_string(lo) + "-" + std::to_string(hi);
                 }
                 return ret_name;
@@ -108,23 +123,43 @@ struct ActionFormat {
         };
 
         safe_vector<ArgLoc> arg_locs;
-        int size;          ///< Number of bits needed
-        bitvec range;      ///< Total mask
-        bool bitmasked_set = false;  ///< If the placement requires a mask as well
+        int alu_size = 0;
+        PHV::Container container;
+        bool container_valid = false;
+        bitvec phv_bits;      ///< Total mask
+        bitvec slot_bits;
+
+        unsigned constraints = 0;
         unsigned specialities = 0;
-        bool immediate = false;
 
-        bool operator==(const ActionDataPlacement &a) const;
 
+        bool is_constrained(ad_constraint_t adc) const {
+            return ((1U << adc) & constraints) != 0U;
+        }
+
+        void set_constraint(ad_constraint_t adc) {
+            constraints |= (1U << adc);
+        }
+
+        bool bitmasked_set = false;  ///< If the placement requires a mask as well
+
+        bool can_condense_into(const ActionDataForSingleALU &a) const;
+        bool contained_within(const ActionDataForSingleALU &a) const;
+        bool operator==(const ActionDataForSingleALU &a) const;
+        bool contained_exactly_within(const ActionDataForSingleALU &a) const;
+        void shift_slot_bits(int shift);
+        void set_slot_bits(const ActionDataForSingleALU &a);
         // Everything above is determined during initialization
 
         // Everything below is determined during the action_format algorithm
         int start = -1;    ///< Byte offset within the action data table
+        bool immediate = false;  ///< Whether the byte is within an adt or immediate
+
         cstring action_name;  ///< Potential rename if multiple action args within one placement
         cstring mask_name;  ///< A name that coordinates the mask to be setup in asm_output
 
         int gen_index() const {
-            return ceil_log2(size / 8);
+            return ceil_log2(alu_size / 8);
         }
 
         /** The alias needed in the format of the action for a placement */
@@ -144,7 +179,72 @@ struct ActionFormat {
             return mask_name;
         }
 
-        ActionDataPlacement() {}
+        bool placed() const {
+            return start >= 0;
+        }
+
+        void dbprint(std::ostream &out) const {
+            if (container_valid) {
+                out << "ALU:" << container.toString();
+            }
+
+            out << " PHV: 0x" << phv_bits << " Slot 0x" << slot_bits;
+            out << " ArgLocs: { ";
+            size_t index = 0;
+            for (auto arg_loc : arg_locs) {
+                out << arg_loc;
+                if (index != arg_locs.size() - 1)
+                    out << ", ";
+                index++;
+            }
+            out << " } ";
+
+            if (placed()) {
+                out << " Position: { Start Byte : " << start;
+                out << ", Immediate : " << immediate << " } ";
+            }
+        }
+    };
+
+    /** Used to describe a single location on a RAM for a section of Action Data.  Multiple ALUs
+     *  may use the same action data, i.e.:
+     *      hdr.f1 = param;
+     *      hdr.f2 = param;
+     *
+     *  If f1 and f2 are in different containers, then two separate ALUs are used.  However,
+     *  only one section of action data bit placement might be needed, as these ALUs can pull
+     *  from the same place.
+     *
+     *  The purpose of this is to separate the placement of Action Data on a RAM line from the
+     *  action data used within an ALU.
+     */
+    struct ActionDataFormatSlot {
+        safe_vector<ActionDataForSingleALU *> action_data_alus;
+        int slot_size;  ///> A size between 8, 16, and 32s
+        bool bitmasked_set;
+        unsigned global_constraints;
+        unsigned specialities;
+
+        bitvec balance[ActionFormat::CONTAINER_TYPES];
+        bitvec total_range;
+
+        bool is_constrained(ad_constraint_t adc) const {
+            return ((1U << adc) & global_constraints) != 0U;
+        }
+
+        void set_constraint(ad_constraint_t adc) {
+            global_constraints |= (1U << adc);
+        }
+
+        int gen_index() const {
+            return ceil_log2(slot_size / 8);
+        }
+        bool deletable = false;
+
+        int byte_start = -1;
+        bool immediate = false;
+
+        explicit ActionDataFormatSlot(ActionDataForSingleALU *ad_alu);
     };
 
     /** Used for a container by container analysis of laying out the action format of a table.
@@ -206,16 +306,100 @@ struct ActionFormat {
         ActionContainerInfo() {}
     };
 
+    /** During ActionAnalysis, the algorithm needs to find the location of particular action
+     *  arguments within a placement, in order to get the alignment information.
+     *  Instead of running an O(n) search everytime, the algorithm creates a map for a quick
+     *  lookup.  Again, because this pass can run before and after PHV allocation, the
+     *  container information might not be valid
+     */
+    struct ArgKey {
+        cstring name;
+        int field_bit = -1;
+        bool container_valid = false;
+        PHV::Container container;
+        int cont_bit = -1;
+        bool is_constant = false;
 
-    typedef safe_vector<ActionDataPlacement> SingleActionPlacement;
-    typedef std::map<cstring, safe_vector<ActionDataPlacement>> ArgFormat;
-    typedef std::map<std::pair<cstring, int>, safe_vector<int>> ArgPlacementData;
-    typedef std::map<std::pair<cstring, int>, cstring> ConstantRenames;
+        bool operator<(ArgKey ak) const {
+            if (is_constant && !ak.is_constant)
+                return false;
+            if (!is_constant && ak.is_constant)
+                return true;
+
+            if (!is_constant && !ak.is_constant) {
+                if (name != ak.name)
+                    return name < ak.name;
+            }
+
+            if (field_bit != ak.field_bit)
+                return field_bit < ak.field_bit;
+
+            if (container_valid && !ak.container_valid)
+                return false;
+            if (!container_valid && ak.container_valid)
+                return true;
+
+            if (container_valid && ak.container_valid) {
+                if (container != ak.container)
+                    return container < ak.container;
+                if (cont_bit != ak.cont_bit)
+                    return cont_bit < ak.cont_bit;
+            }
+            return false;
+        }
+
+        void dbprint(std::ostream &out) const {
+            if (is_constant)
+                out << "constant";
+            else
+                out << name;
+            out << " " << field_bit;
+            if (container_valid)
+                out << " : " << container.toString() << " " << cont_bit;
+        }
+
+
+        // One for holding action data information
+        void init(cstring n, int fb, bool cv, PHV::Container c, int cb) {
+            name = n;
+            field_bit = fb;
+            container_valid = cv;
+            container = c;
+            cont_bit = cb;
+        }
+
+        // One for holding information are where all constants converted to action data
+        void init_constant(PHV::Container c, int cb) {
+            field_bit = 0;
+            container_valid = true;
+            container = c;
+            cont_bit = cb;
+            is_constant = true;
+        }
+    };
+
+    // The vector locations for the action arguments, within a vector of vectors
+    struct ArgValue {
+        int placement_index;
+        int arg_index;
+
+        explicit ArgValue(int pi, int ai) : placement_index(pi), arg_index(ai) { }
+    };
+
+
+    typedef safe_vector<ActionDataForSingleALU> SingleActionALUPlacement;
+    typedef std::map<cstring, SingleActionALUPlacement> TotalALUPlacement;
+
+    typedef safe_vector<ActionDataFormatSlot> SingleActionSlotPlacement;
+    typedef std::map<cstring, SingleActionSlotPlacement> TotalSlotPlacement;
+    typedef std::map<ArgKey, safe_vector<ArgValue>> ArgPlacementData;
+    typedef std::map<ArgKey, ArgValue> ConstantRenames;
 
     int action_bytes[LOCATIONS] = {0, 0};
     int action_data_bytes = 0;
 
-    typedef std::map<const IR::MAU::HashDist *, safe_vector<ActionDataPlacement>> HashDistInfo;
+    typedef std::map<const IR::MAU::HashDist *, SingleActionALUPlacement> HashDistALUFormat;
+    typedef std::map<const IR::MAU::HashDist *, SingleActionSlotPlacement> HashDistSlotFormat;
 
     /** Contains all of the information on all the action data format and individual arguments
      *  Because we only currently have either only an action data table or action data through
@@ -225,10 +409,12 @@ struct ActionFormat {
      *  the meantime, we can keep them as separate structures.
      */
     struct Use {
-        ArgFormat action_data_format;
+        TotalALUPlacement action_data_format;
+        // Location of action arguments within the action data format
         std::map<cstring, ArgPlacementData> arg_placement;
+        // Location of constants within the action data format
         std::map<cstring, ConstantRenames> constant_locations;
-        HashDistInfo hash_dist_placement;
+        HashDistALUFormat hash_dist_placement;
 
         int action_data_bytes[LOCATIONS];
 
@@ -238,6 +424,7 @@ struct ActionFormat {
 
         bitvec full_layout_bitmasked;
         bool meter_reserved = false;
+        bool phv_alloc = true;
 
         void clear() {
             action_data_format.clear();
@@ -273,23 +460,30 @@ struct ActionFormat {
     ActionContainerInfo hash_counts;
     safe_vector<ActionContainerInfo> action_counts;
 
-    ArgFormat init_format;
-    HashDistInfo init_hash_dist_placement;
-    std::map<cstring, ConstantRenames> renames;
+    TotalALUPlacement init_alu_format;
+    TotalSlotPlacement init_slot_format;
+
+    // ArgFormat init_format;
+    HashDistALUFormat init_hd_alu_placement;
+    HashDistSlotFormat init_hd_slot_placement;
 
     bool split_started = false;
 
     bool analyze_all_actions();
+    void optimize_sharing();
+    void condense_action_data(SingleActionSlotPlacement &info);
+    void set_slot_bits(SingleActionSlotPlacement &info);
+
     void create_placement_non_phv(ActionAnalysis::FieldActionsMap &field_actions_map,
                                   cstring action_name);
     void create_placement_phv(ActionAnalysis::ContainerActionsMap &container_actions_map,
                               cstring action_name);
-    void create_from_actiondata(ActionDataPlacement &adp,
+    void create_from_actiondata(ActionDataForSingleALU &adp,
         const ActionAnalysis::ActionParam &read, int container_bit,
         const IR::MAU::HashDist **hd);
-    void create_from_constant(ActionDataPlacement &adp,
+    void create_from_constant(ActionDataForSingleALU &adp,
         const ActionAnalysis::ActionParam &read, int field_bit, int container_bit,
-        int &constant_to_ad_count, PHV::Container container, ConstantRenames &constant_renames);
+        int &constant_to_ad_count);
 
     void initialize_action_counts();
     bool initialize_hash_dist_counts();
@@ -312,17 +506,21 @@ struct ActionFormat {
 
     void align_hash_dist(bitvec hash_layouts_placed[CONTAINER_TYPES]);
     void align_action_data_layouts();
-    void reserve_meter_color(ArgFormat &format, ActionContainerInfo &aci,
-                             bitvec layouts_placed[CONTAINER_TYPES]);
-    void align_section(SingleActionPlacement &placement_vec, SingleActionPlacement &output_vec,
-        ActionContainerInfo &aci, location_t loc, bitmasked_t bm,
-        bitvec layouts_placed[CONTAINER_TYPES],
+    void reserve_meter_color(SingleActionSlotPlacement &placement_vec,
+        SingleActionSlotPlacement &output_vec, ActionContainerInfo &aci,
+        bitvec layouts_placed[CONTAINER_TYPES]);
+    void align_section(SingleActionSlotPlacement &placement_vec,
+        SingleActionSlotPlacement &output_vec, ActionContainerInfo &aci, location_t loc,
+        bitmasked_t bm, bitvec layouts_placed[CONTAINER_TYPES],
         int placed[BITMASKED_TYPES][CONTAINER_TYPES]);
-    void find_immed_last(ArgFormat &format, ActionContainerInfo &aci,
+    void find_immed_last(SingleActionSlotPlacement &placement_vec,
+        SingleActionSlotPlacement &output_vec, ActionContainerInfo &aci,
         bitvec layouts_placed[CONTAINER_TYPES], int placed[BITMASKED_TYPES][CONTAINER_TYPES]);
-    void sort_and_asm_name(safe_vector<ActionDataPlacement> &placement_vec);
-    void calculate_placement_data(safe_vector<ActionDataPlacement> &placement_vec,
-                                  ArgPlacementData &apd);
+    void verify_placement(SingleActionSlotPlacement &slot_placement,
+        SingleActionALUPlacement &alu_placement);
+    void determine_asm_name(SingleActionALUPlacement &placement_vec);
+    void calculate_placement_data(SingleActionALUPlacement &placement_vec,
+                                  ArgPlacementData &apd, ConstantRenames &cr);
     void calculate_immed_mask();
 
  public:

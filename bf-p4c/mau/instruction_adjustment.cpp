@@ -21,7 +21,6 @@ const IR::MAU::Action *SplitInstructions::preorder(IR::MAU::Action *act) {
     container_actions_map.clear();
     split_fields.clear();
     aa.set_container_actions_map(&container_actions_map);
-    aa.set_verbose();
     act->apply(aa);
     if (aa.misaligned_actiondata())
         throw ActionFormat::failure(act->name);
@@ -157,7 +156,7 @@ const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
         auto &cont_action = container_action_entry.second;
         if (cont_action.convert_constant_to_actiondata()) {
             proceed = true;
-            constant_containers.insert(container.toString());
+            constant_containers.insert(container);
         }
     }
     if (!proceed) {
@@ -177,8 +176,6 @@ const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
 const IR::MAU::Instruction *ConstantsToActionData::preorder(IR::MAU::Instruction *instr) {
     write_found = false;
     has_constant = false;
-    constant_renames_key.first = cstring::empty;
-    constant_renames_key.second = 0;
     return instr;
 }
 
@@ -209,18 +206,18 @@ void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
 
         int write_count = 0;
         int container_bit = 0;
+        PHV::Container container;
         cstring container_name;
         field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
             write_count++;
             container_bit = alloc.container_bit;
-            container_name = alloc.container.toString();
+            container = alloc.container;
         });
 
         if (write_count != 1)
             BUG("Splitting of writes did not work in ConstantsToActionData");
 
-        constant_renames_key.first = container_name;
-        constant_renames_key.second = container_bit;
+        constant_renames_key.init_constant(container, container_bit);
         write_found = true;
     }
 }
@@ -262,10 +259,11 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
     if (!write_found)
         BUG("No write found in an instruction in ConstantsToActionData?");
 
-    if (constant_containers.find(constant_renames_key.first) == constant_containers.end())
+    if (constant_containers.find(constant_renames_key.container) == constant_containers.end())
         return instr;
 
     auto &constant_renames = tbl->resources->action_format.constant_locations.at(action_name);
+    auto &action_format = tbl->resources->action_format.action_data_format.at(action_name);
     bool constant_found = constant_renames.find(constant_renames_key) != constant_renames.end();
 
     if (constant_found != has_constant)
@@ -274,7 +272,9 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
     if (!constant_found)
         return instr;
 
-    cstring constant_name = constant_renames.at(constant_renames_key);
+    auto value = constant_renames.at(constant_renames_key);
+    auto &placement = action_format[value.placement_index];
+    auto &arg_loc = placement.arg_locs[value.arg_index];
 
     for (size_t i = 0; i < instr->operands.size(); i++) {
         const IR::Constant *c = instr->operands[i]->to<IR::Constant>();
@@ -282,7 +282,7 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
             continue;
         int size = c->type->width_bits();
         auto *adc = new IR::MAU::ActionDataConstant(IR::Type::Bits::get(size),
-                                                    constant_name, c);
+                                                    arg_loc.name, c);
         instr->operands[i] = adc;
     }
     return instr;
@@ -304,6 +304,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     merged_fields.clear();
     ActionAnalysis aa(phv, true, true, tbl);
     aa.set_container_actions_map(&container_actions_map);
+    aa.set_verbose();
     act->apply(aa);
     if (aa.misaligned_actiondata())
         throw ActionFormat::failure(act->name);

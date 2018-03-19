@@ -75,7 +75,7 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
     auto &use = tbl->resources->action_format;
     auto orig_placement_vec = use.action_data_format.at(af->name);
 
-    safe_vector<ActionFormat::ActionDataPlacement> placement_vec;
+    ActionFormat::SingleActionALUPlacement placement_vec;
 
     for (auto placement : orig_placement_vec) {
         if (placement.specialities != 0)
@@ -93,7 +93,7 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
 
         auto type = static_cast<ActionFormat::cont_type_t>(placement.gen_index());
         out << ": " << use.get_format_name(placement.start, type, placement.immediate,
-                                           placement.range, (placement.arg_locs.size() == 1));
+                                           placement.slot_bits, (placement.arg_locs.size() == 1));
         if (placement.arg_locs.size() == 1 && placement.arg_locs[0].is_constant) {
             out << ", ";
             out << placement.arg_locs[0].get_asm_name();
@@ -109,8 +109,8 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
             for (auto &arg_loc : placement.arg_locs) {
                 out << arg_loc.get_asm_name();
                 out << ": " << placement.get_action_name()
-                    << "(" << arg_loc.data_loc.min().index()
-                    << ".." << arg_loc.data_loc.max().index() << ")";
+                    << "(" << arg_loc.slot_loc.min().index()
+                    << ".." << arg_loc.slot_loc.max().index() << ")";
 
                 if (arg_loc.is_constant) {
                     out << ", ";
@@ -132,11 +132,11 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
                 out << ", ";
             out << placement.get_mask_name();
             out << ": " << use.get_format_name(placement.start, type, placement.immediate,
-                                               placement.range, false,
+                                               placement.slot_bits, false,
                                                placement.bitmasked_set);
             out << ", ";
             out << placement.mask_name;
-            out << ": 0x" << hex(placement.range.getrange(0, placement.size));
+            out << ": 0x" << hex(placement.slot_bits.getrange(0, placement.alu_size));
             if (!last_entry)
                 out << ", ";
         }
@@ -155,10 +155,16 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
     if (placement_vec.size() == 0)
         return;
 
+    std::set<std::pair<int, int>> single_placements;
+
     size_t max_format = 0;
     for (auto &placement : placement_vec) {
-        if (!placement.immediate)
-            max_format++;
+        if (placement.immediate) continue;
+        auto single_placement = std::make_pair(placement.start, placement.alu_size);
+        if (single_placements.count(single_placement) > 0)
+            continue;
+        max_format++;
+        single_placements.insert(single_placement);
     }
     if (max_format == 0)
         return;
@@ -168,13 +174,19 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
     bool last_entry = false;
 
 
+    single_placements.clear();
+
     for (auto &placement : placement_vec) {
         if (placement.immediate) continue;
-        bitvec total_range(0, placement.size);
+        bitvec total_range(0, placement.alu_size);
+        auto single_placement = std::make_pair(placement.start, placement.alu_size);
+        if (single_placements.count(single_placement) > 0)
+            continue;
         auto type = static_cast<ActionFormat::cont_type_t>(placement.gen_index());
+
         out << use.get_format_name(placement.start, type, false, total_range, false);
         out << ": " << (8 * placement.start) << ".."
-            << (8 * placement.start + placement.size - 1);
+            << (8 * placement.start + placement.alu_size - 1);
         if (index + 1 == max_format)
             last_entry = true;
 
@@ -186,12 +198,12 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
                 out << ", ";
             out << use.get_format_name(placement.start, type, false, total_range, false,
                                        placement.bitmasked_set);
-            int mask_start = 8 * placement.start + placement.size;
-            out << ": " << mask_start << ".." << (mask_start + placement.size - 1);
+            int mask_start = 8 * placement.start + placement.alu_size;
+            out << ": " << mask_start << ".." << (mask_start + placement.alu_size - 1);
             if (!last_entry)
                 out << ", ";
         }
-
+        single_placements.insert(single_placement);
         index++;
     }
     out << " }" << std::endl;

@@ -100,8 +100,8 @@ class ConstantsToActionData : public MauTransform, TofinoWriteContext {
 
     bool has_constant = false;
     bool write_found = false;
-    ordered_set<cstring> constant_containers;
-    std::pair<cstring, int> constant_renames_key = std::make_pair(cstring::empty, 0);
+    ordered_set<PHV::Container> constant_containers;
+    ActionFormat::ArgKey constant_renames_key;
     cstring action_name;
 
  public:

@@ -1761,7 +1761,7 @@ bool IXBar::allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionForm
     bitvec immed_bitmask;
     for (auto &placement : hd_vec) {
         auto &arg_loc = placement.arg_locs[0];
-        immed_bitmask |= (placement.range << (placement.start * 8));
+        immed_bitmask |= (placement.slot_bits << (placement.start * 8));
         bitrange br = { arg_loc.field_bit, arg_loc.field_hi() };
         immed_bit_positions[placement.start * 8] = br;
     }

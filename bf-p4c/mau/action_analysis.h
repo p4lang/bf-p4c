@@ -25,6 +25,10 @@ struct TableResourceAlloc;
  *  selection are done on a field by field basis, and thus having a container view of the
  *  actions is necessary for having a correct view of the action data requirements, as well
  *  as reshaping the instructions from field by field to container by container
+ *
+ *  This pass can run before and after PHV allocation, and before and after table placement.
+ *  The pass is also designed to run when action format allocation is done before PHV
+ *  allocation, but a PHV allocation has been completed
  */
 class ActionAnalysis : public MauInspector, TofinoWriteContext {
  public:
@@ -227,6 +231,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                 error_code |= CONSTANT_MISMATCH;
         }
 
+        bool action_data_isolated() {
+            return name != "set";
+        }
+
         bool constant_set = false;
         long constant_used = 0;
 
@@ -301,6 +309,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool init_phv_alignment(const ActionParam &read, ContainerAction &cont_action,
                             bitvec write_bits, cstring &error_message);
     bool init_ad_alloc_alignment(const ActionParam &read, ContainerAction &cont_action,
+        bitvec write_bits, cstring action_name, PHV::Container container);
+    bool init_constant_alignment(const ActionParam &read, ContainerAction &cont_action,
         bitvec write_bits, cstring action_name, PHV::Container container);
     bool init_simple_alignment(const ActionParam &read, ContainerAction &cont_action,
         bitvec write_bits);

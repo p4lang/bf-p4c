@@ -343,9 +343,13 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
     bool initialized;
     if (read.type == ActionParam::PHV) {
         initialized = init_phv_alignment(read, cont_action, write_bits, error_message);
-    } else if (read.type == ActionParam::ACTIONDATA && ad_alloc) {
-        initialized = init_ad_alloc_alignment(read, cont_action, write_bits, action_name,
-                                              container);
+    } else if (ad_alloc) {
+        if (read.type == ActionParam::ACTIONDATA)
+            initialized = init_ad_alloc_alignment(read, cont_action, write_bits, action_name,
+                                                  container);
+        else
+            initialized = init_constant_alignment(read, cont_action, write_bits, action_name,
+                                                  container);
     } else {
         initialized = init_simple_alignment(read, cont_action, write_bits);
     }
@@ -418,7 +422,6 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
 
     // Information on where fields are stored
     auto action_data_format = action_format.action_data_format.at(action_name);
-    // const safe_vector<ActionFormat::ActionDataPlacement> *immediate_format = nullptr;
 
     bitrange read_range;
     ActionParam::type_t type = ActionParam::ACTIONDATA;
@@ -432,39 +435,85 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
     else if (type == ActionParam::CONSTANT)
         arg_name = action_arg->to<IR::MAU::ActionDataConstant>()->name;
 
-    auto pair = std::make_pair(arg_name, read_range.lo);
-    BUG_CHECK(placements.find(pair) != placements.end(), "Action argument is not found to be "
+
+    ActionFormat::ArgKey ak;
+    ak.init(arg_name, read_range.lo, action_format.phv_alloc, container,
+            write_bits.min().index());
+
+    BUG_CHECK(placements.find(ak) != placements.end(), "Action argument is not found to be "
               "allocated in the action format");
-    auto &arg_placement = placements.at(pair);
+    auto &arg_placement = placements.at(ak);
 
-    for (auto vector_loc : arg_placement) {
-        auto adp = action_data_format.at(vector_loc);
+    bool found = false;
+    for (auto arg_value : arg_placement) {
+        auto adp = action_data_format.at(arg_value.placement_index);
+        auto arg_loc = adp.arg_locs.at(arg_value.arg_index);
 
-        // Look through and ensure that the slice of the arg location is correct.
-        for (auto arg_loc : adp.arg_locs) {
-            if (arg_loc.name != arg_name) continue;
-            if (static_cast<size_t>(adp.size) != container.size()) continue;
-            int lo = arg_loc.is_constant ? 0 : arg_loc.field_bit;
-            int hi = lo + arg_loc.data_loc.popcount() - 1;
+        // These checks are for the scenario, when the action data placement is determined
+        // before phv allocation.  This will verify that the action format guessed is even
+        // possible.  If the argument can't be found, the algorithm will backtrack to the
+        // action format creation
+        if (static_cast<size_t>(adp.alu_size) != container.size()) continue;
+        int lo = arg_loc.is_constant ? 0 : arg_loc.field_bit;
+        int hi = arg_loc.field_hi();
+        if (!(lo <= read_range.lo && hi >= read_range.hi)) continue;
 
-            if (!(lo <= read_range.lo && hi >= read_range.hi)) continue;
-            auto &adi = cont_action.adi;
+        auto &adi = cont_action.adi;
 
-            if (cont_action.counts[ActionParam::ACTIONDATA] == 0) {
-                adi.initialize(adp.get_action_name(), adp.immediate, adp.start,
-                               adp.arg_locs.size());
-                adi.ad_alignment.add_alignment(write_bits, arg_loc.data_loc);
-                cont_action.counts[ActionParam::ACTIONDATA] = 1;
-            } else if (adi.start != adp.start || adi.immediate != adp.immediate) {
-                cont_action.counts[ActionParam::ACTIONDATA]++;
-            } else {
-                adi.field_affects++;
-                adi.ad_alignment.add_alignment(write_bits, arg_loc.data_loc);
-            }
-            return true;
+        if (cont_action.counts[ActionParam::ACTIONDATA] == 0) {
+            adi.initialize(adp.get_action_name(), adp.immediate, adp.start,
+                           adp.arg_locs.size());
+            adi.ad_alignment.add_alignment(write_bits, arg_loc.slot_loc);
+            cont_action.counts[ActionParam::ACTIONDATA] = 1;
+        } else if (adi.start != adp.start || adi.immediate != adp.immediate) {
+            cont_action.counts[ActionParam::ACTIONDATA]++;
+        } else {
+            adi.field_affects++;
+            adi.ad_alignment.add_alignment(write_bits, arg_loc.slot_loc);
         }
+        found = true;
     }
-    return false;
+    return found;
+}
+
+/** Handles a IR::Constant within an Instruction to determine whether the constant will
+ *  be converted to an ActionDataConstant or not.  If is the constant is to be converted,
+ *  the alignment must be pulled out of the table placement algorithm.
+ */
+bool ActionAnalysis::init_constant_alignment(const ActionParam &read,
+        ContainerAction &cont_action, bitvec write_bits, cstring action_name,
+        PHV::Container container) {
+    auto &action_format = tbl->resources->action_format;
+    auto &constant_renames = action_format.constant_locations.at(action_name);
+    auto action_data_format = action_format.action_data_format.at(action_name);
+
+    ActionFormat::ArgKey ak;
+    ak.init_constant(container, write_bits.min().index());
+
+    // If it is in this map, then this IR::Constant has to be converted to an
+    // IR::ActionDataConstant, which itself can have a particular location in the action format
+    // slot
+    if (constant_renames.find(ak) == constant_renames.end()) {
+        return init_simple_alignment(read, cont_action, write_bits);
+    }
+
+    auto arg_value = constant_renames.at(ak);
+
+    auto &adp = action_data_format.at(arg_value.placement_index);
+    auto &arg_loc = adp.arg_locs.at(arg_value.arg_index);
+
+    BUG_CHECK(arg_loc.is_constant, "Constant locations in the action data format located an "
+              "argument that is not a constant");
+
+    // FIXME: Duplicate code used, but creation of a function would currently require
+    // action_analysis.h to include action_format.h, which cannot happen as constructed currently
+    cont_action.constant_alignment.add_alignment(write_bits, arg_loc.slot_loc);
+    if (!cont_action.constant_set) {
+        cont_action.constant_used = read.expr->to<IR::Constant>()->asLong();
+        cont_action.constant_set = true;
+    }
+    cont_action.counts[ActionParam::CONSTANT]++;
+    return true;
 }
 
 /** For action data before PHV allocation or constants.  Just guarantees that the write bits

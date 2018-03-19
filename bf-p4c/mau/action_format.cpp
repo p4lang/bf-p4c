@@ -75,24 +75,145 @@ int ActionFormat::ActionContainerInfo::total(location_t loc, bitmasked_t bm,
         return counts[loc][type] - bitmasked_sets[loc][type] * 2;
 }
 
-bool ActionFormat::ActionDataPlacement::ArgLoc::operator==(
-        const ActionFormat::ActionDataPlacement::ArgLoc &a) const {
+bool ActionFormat::ActionDataForSingleALU::ArgLoc::operator==(
+        const ActionFormat::ActionDataForSingleALU::ArgLoc &a) const {
     if (name != a.name) return false;
     if (field_bit != a.field_bit) return false;
-    if (data_loc != a.data_loc) return false;
+    if (phv_loc != a.phv_loc) return false;
     return true;
 }
 
-bool ActionFormat::ActionDataPlacement::operator==(
-        const ActionFormat::ActionDataPlacement &a) const {
-    if (size != a.size) return false;
-    if (range != a.range) return false;
+bool ActionFormat::ActionDataForSingleALU::operator==(
+        const ActionFormat::ActionDataForSingleALU &a) const {
+    if (alu_size != a.alu_size) return false;
+    if (phv_bits != a.phv_bits) return false;
     for (auto arg_loc : arg_locs) {
+        if (std::find(a.arg_locs.begin(), a.arg_locs.end(), arg_loc) == a.arg_locs.end())
+            return false;
+    }
+
+    return true;
+}
+
+/** If all the arguments are contained within another ALU op, all at the same shift position 
+ */
+bool ActionFormat::ActionDataForSingleALU::contained_within(
+        const ActionFormat::ActionDataForSingleALU &a) const {
+    bool found = true;
+    bool shift_set = false;
+    int shift_offset = 0;
+
+    bitvec arg_loc_bits;
+    bitvec comp_arg_loc_bits;
+    for (auto &arg_loc : arg_locs) {
+        bool single_found = false;
+        for (auto comp_arg_loc : a.arg_locs) {
+            if (arg_loc.name != comp_arg_loc.name)
+                continue;
+            if (arg_loc.field_bit < comp_arg_loc.field_bit ||
+                arg_loc.field_hi() > comp_arg_loc.field_hi())
+                continue;
+
+            int arg_shift = arg_loc.phv_loc.min().index();
+            int comp_arg_shift = comp_arg_loc.phv_loc.min().index();
+
+            int field_diff = arg_loc.field_bit - comp_arg_loc.field_bit;
+            int potential_shift_offset = (arg_shift - comp_arg_shift) - field_diff;
+
+            if (!shift_set) {
+                shift_offset = potential_shift_offset;
+                shift_set = true;
+            } else if (shift_offset != potential_shift_offset) {
+                continue;
+            }
+            single_found = true;
+        }
+        found &= single_found;
+        if (!found)
+            break;
+    }
+    return found;
+}
+
+/** If all arguments are contained at the exact location in order to maintain alignment
+ *  with the PHV fields.
+ */
+bool ActionFormat::ActionDataForSingleALU::contained_exactly_within(
+        const ActionFormat::ActionDataForSingleALU &a) const {
+    for (auto &arg_loc : arg_locs) {
         if (std::find(a.arg_locs.begin(), a.arg_locs.end(), arg_loc) == a.arg_locs.end())
             return false;
     }
     return true;
 }
+
+/** Rules to condense:
+ *  ISOLATED into ISOLATED: Have to be exactly the same, because the action data will overwrite
+ *      the whole container
+ *  BITMASKED_SET into ISOLATED: Just has to be within exactly, as the bitmasked-set has to be
+ *      aligned, but the ISOLATED wouldn't have an impact on the mask.
+ *  BITMASKED_SET into BITMASKED_SET: Have to be equivalent, as the masks have to be exactly
+ *      equivalent
+ *  NONE into ALL: Just has to be contained within, because the data can be shifted around
+ */
+bool ActionFormat::ActionDataForSingleALU::can_condense_into(
+        const ActionFormat::ActionDataForSingleALU &a) const {
+    if (is_constrained(ISOLATED)) {
+        BUG_CHECK(a.is_constrained(ISOLATED), "Can only condense an isolated into a isolated");
+        return (*this) == a;
+    } else if (is_constrained(BITMASKED_SET)) {
+        BUG_CHECK(a.is_constrained(ISOLATED) || a.is_constrained(BITMASKED_SET), "Can only "
+                  "condense a bitmasked set into another bitmasked set or isolated");
+        if (a.is_constrained(ISOLATED))
+            return contained_exactly_within(a);
+        else
+            return (*this) == a;
+    } else {
+        return contained_within(a);
+    }
+}
+
+void ActionFormat::ActionDataForSingleALU::shift_slot_bits(int shift) {
+    slot_bits = phv_bits >> shift;
+    for (auto &arg_loc : arg_locs) {
+        arg_loc.slot_loc = arg_loc.phv_loc >> shift;
+    }
+}
+
+void ActionFormat::ActionDataForSingleALU::set_slot_bits(const ActionDataForSingleALU &a) {
+    for (auto &arg_loc : arg_locs) {
+        bool single_found = false;
+        for (auto &comp_arg_loc : a.arg_locs) {
+            if (arg_loc.name != comp_arg_loc.name)
+                continue;
+            if (arg_loc.field_bit < comp_arg_loc.field_bit ||
+                arg_loc.field_hi() > comp_arg_loc.field_hi())
+                continue;
+
+            single_found = true;
+            arg_loc.slot_loc = comp_arg_loc.slot_loc;
+            int diff;
+            if ((diff = arg_loc.field_bit - comp_arg_loc.field_bit) > 0) {
+                arg_loc.slot_loc.clrrange(arg_loc.slot_loc.min().index(), diff);
+            }
+            if ((diff = comp_arg_loc.field_hi() - arg_loc.field_hi()) > 0) {
+                arg_loc.slot_loc.clrrange(arg_loc.slot_loc.max().index() - diff + 1, diff);
+            }
+
+            BUG_CHECK((slot_bits & arg_loc.slot_loc).empty(), "Incorrectly overlapping action "
+                      "data when setting slot bits.");
+            slot_bits |= arg_loc.slot_loc;
+        }
+        BUG_CHECK(single_found, "Could not find the location of an argument");
+    }
+}
+
+ActionFormat::ActionDataFormatSlot::ActionDataFormatSlot(ActionDataForSingleALU *ad_alu)
+    : slot_size(ad_alu->alu_size), bitmasked_set(ad_alu->bitmasked_set),
+      global_constraints(ad_alu->constraints), specialities(ad_alu->specialities) {
+    action_data_alus.push_back(ad_alu);
+}
+
 
 /** General naming scheme used for finding information on either immediate or action data
  *  table location of a particular field, which needs to be coordinated in the action data
@@ -206,7 +327,7 @@ int ActionFormat::Use::find_hash_dist(const IR::MAU::HashDist *hd, int field_lo,
 
     for (auto &placement : hd_vec) {
         auto &arg_loc = placement.arg_locs[0];
-        bitvec arg_loc_bv(arg_loc.field_bit, arg_loc.data_loc.popcount());
+        bitvec arg_loc_bv(arg_loc.field_bit, arg_loc.slot_loc.popcount());
         if ((arg_loc_bv & field_bv) == arg_loc_bv) {
             int potential_unit_index = ((placement.start - min_start) * 8) / IXBar::HASH_DIST_BITS;
             BUG_CHECK(unit_index == -1 || potential_unit_index == unit_index, "Hash distribution "
@@ -214,7 +335,7 @@ int ActionFormat::Use::find_hash_dist(const IR::MAU::HashDist *hd, int field_lo,
             unit_index = potential_unit_index;
             bit_offset = (placement.start * 8) % IXBar::HASH_DIST_BITS;
             section = (placement.start * 8) / IXBar::HASH_DIST_BITS;
-            if (placement.size == CONTAINER_SIZES[BYTE])
+            if (placement.alu_size == CONTAINER_SIZES[BYTE])
                 split_needed = true;
         } else if ((arg_loc_bv & field_bv).empty()) {
             continue;
@@ -259,16 +380,13 @@ void ActionFormat::allocate_format(safe_vector<Use> &uses, bool immediate_allowe
  *  a best guess on the action data requirements, and fills out the ActionDataPlacement
  *  vector fo this action with the appropriate information.
  *
-    assert(have_action || (tbl->layout.action_data_bytes_in_table 
-                           tbl->layout.action_data_bytes_in_overhead));
  *  The information provided are what arguments are in what action data slot, and the
  *  necessary sizes of the action data slots.
  */
 void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &field_actions_map,
                                             cstring action_name) {
     // FIXME: Verification on some argument limitations still required
-    safe_vector<ActionDataPlacement> adp_vector;
-    ConstantRenames constant_renames;
+    safe_vector<ActionDataForSingleALU> adp_vector;
     for (auto &field_action_info : field_actions_map) {
         auto &field_action = field_action_info.second;
         for (auto &read : field_action.reads) {
@@ -292,7 +410,7 @@ void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &fie
                         container_size = CONTAINER_SIZES[BYTE];
                     data_location.setrange(0, diff);
                 }
-                ActionDataPlacement adp;
+                ActionDataForSingleALU adp;
                 cstring arg_name;
                 if (auto *sl = read.expr->to<IR::Slice>())
                     arg_name = sl->e0->to<IR::ActionArg>()->name;
@@ -300,21 +418,20 @@ void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &fie
                     arg_name = read.expr->to<IR::ActionArg>()->name;
 
                 adp.arg_locs.emplace_back(arg_name, data_location, 0, single_loc);
-                adp.size = container_size;
-                adp.range = data_location;
+                adp.alu_size = container_size;
+                adp.phv_bits = data_location;
                 adp_vector.push_back(adp);
                 bits_allocated += data_location.popcount();
             }
         }
     }
 
-    init_format[action_name] = adp_vector;
-    renames[action_name] = constant_renames;
+    init_alu_format[action_name] = adp_vector;
 }
 
 /** Creates an ActionDataPlacement from an ActionArg, correctly verified from the PHV allocation
  */
-void ActionFormat::create_from_actiondata(ActionDataPlacement &adp,
+void ActionFormat::create_from_actiondata(ActionDataForSingleALU &adp,
         const ActionAnalysis::ActionParam &read, int container_bit,
         const IR::MAU::HashDist **hd) {
     bitvec data_location;
@@ -324,6 +441,7 @@ void ActionFormat::create_from_actiondata(ActionDataPlacement &adp,
         single_loc = false;
         field_bit = sl->getL();
     }
+
     data_location.setrange(container_bit, read.size());
     cstring arg_name;
     if (read.speciality == ActionAnalysis::ActionParam::HASH_DIST) {
@@ -338,32 +456,29 @@ void ActionFormat::create_from_actiondata(ActionDataPlacement &adp,
             read.speciality);
     }
 
-    adp.arg_locs.emplace_back(arg_name, data_location, field_bit,
-                              single_loc);
+    adp.arg_locs.emplace_back(arg_name, data_location, field_bit, single_loc);
     adp.arg_locs.back().speciality = read.speciality;
 
     if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL)
         adp.specialities |= 1 << read.speciality;
-    adp.range |= data_location;
+    adp.phv_bits |= data_location;
 }
 
 /** Creates an ActionDataPlacement from a Constant that has to be converted into ActionData.
  *  This constant will later be converted to a ActionDataConstant in the InstructionAdjustment
  *  pass.
  */
-void ActionFormat::create_from_constant(ActionDataPlacement &adp,
+void ActionFormat::create_from_constant(ActionDataForSingleALU &adp,
          const ActionAnalysis::ActionParam &read, int field_bit, int container_bit,
-         int &constant_to_ad_count, PHV::Container container, ConstantRenames &constant_renames) {
+         int &constant_to_ad_count) {
     bitvec data_location;
     bool single_loc = true;
 
     data_location.setrange(container_bit, read.size());
-    auto constant_key = std::make_pair(container.toString(), container_bit);
     auto arg_name = "$constant" + std::to_string(constant_to_ad_count);
     adp.arg_locs.emplace_back(arg_name, data_location, field_bit,
                               single_loc);
-    adp.range |= data_location;
-    constant_renames[constant_key] = arg_name;
+    adp.phv_bits |= data_location;
     constant_to_ad_count++;
 
     int constant_value = read.expr->to<IR::Constant>()->asInt();
@@ -381,22 +496,28 @@ void ActionFormat::create_from_constant(ActionDataPlacement &adp,
  */
 void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &container_actions_map,
                                         cstring action_name) {
-    safe_vector<ActionDataPlacement> adp_vector;
+    safe_vector<ActionDataForSingleALU> adp_vector;
     int constant_to_ad_count = 0;
-    ConstantRenames constant_renames;
     for (auto &container_action_info : container_actions_map) {
         auto container = container_action_info.first;
         auto &cont_action = container_action_info.second;
-        ActionDataPlacement adp;
+        ActionDataForSingleALU adp;
+        adp.container_valid = true;
         // Every instruction in the container process has to have its action data stored
         // in the same action data slot
         bool initialized = false;
         const IR::MAU::HashDist *hd = nullptr;
+        if (cont_action.action_data_isolated())
+            adp.set_constraint(ISOLATED);
+        if (cont_action.to_bitmasked_set)
+            adp.set_constraint(BITMASKED_SET);
+
         for (auto &field_action : cont_action.field_actions) {
             bitrange bits;
             auto *write_field = phv.field(field_action.write.expr, &bits);
             le_bitrange container_bits;
             int write_count = 0;
+
 
             write_field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
                 write_count++;
@@ -405,6 +526,7 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
                 if (!alloc.container)
                     ERROR("Phv field " << write_field->name << " written in action "
                           << action_name << " is not allocated?");
+                adp.container = alloc.container;
             });
 
             if (write_count > 1)
@@ -421,34 +543,26 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
                 } else if (read.type == ActionAnalysis::ActionParam::CONSTANT
                     && cont_action.convert_constant_to_actiondata()) {
                     create_from_constant(adp, read, bits.lo, container_bits.lo,
-                                         constant_to_ad_count, container,
-                                         constant_renames);
+                                         constant_to_ad_count);
                     initialized = true;
                 }
             }
         }
         if (hd) {
-           adp.size = container.size();
+           adp.alu_size = container.size();
            if (cont_action.to_bitmasked_set)
                P4C_UNIMPLEMENTED("Can't yet handle a hash distribution unit in a bitmasked-set");
-           auto &hash_dist_vec = init_hash_dist_placement[hd];
-           if (std::find(hash_dist_vec.begin(), hash_dist_vec.end(), adp) != hash_dist_vec.end())
-               continue;
+           auto &hash_dist_vec = init_hd_alu_placement[hd];
            hash_dist_vec.push_back(adp);
         } else if (initialized) {
-            adp.size = container.size();
+            adp.alu_size = container.size();
             if (cont_action.to_bitmasked_set)
                 adp.bitmasked_set = true;
-            // FIXME: This is a hack to get switch_l2 to fit quickly.  This could be done
-            // in a much better analysis of sharing action data
-            if (std::find(adp_vector.begin(), adp_vector.end(), adp) != adp_vector.end())
-                continue;
             adp_vector.push_back(adp);
         }
     }
 
-    init_format[action_name] = adp_vector;
-    renames[action_name] = constant_renames;
+    init_alu_format[action_name] = adp_vector;
 }
 
 /** Performs the argument analyzer and initializes the vector of ActionContainerInfo
@@ -471,8 +585,143 @@ bool ActionFormat::analyze_all_actions() {
         else
             create_placement_phv(container_actions_map, action->name);
     }
+
+
+    optimize_sharing();
     initialize_action_counts();
-    return initialize_hash_dist_counts();
+    bool hash_fits = initialize_hash_dist_counts();
+    return hash_fits;
+}
+
+/** The purpose of this function is to potentially share action bits on a RAM between multiple
+ *  ALU operation, as well as set at what bit position each Action Argument is going to be
+ *
+ *  Action Arguments come with 3 levels of constraints:
+ * 
+ *  ISOLATED - the action argument is headed to a non-set operation, and thus cannot be packed
+ *      with any other argument.  The argument must be aligned with it's PHV operation
+ *  BITMASKED_SET - the action arguments must be placed at the location of their PHV, as the
+ *      bitmasked_set operation has no ability to move anything around
+ *  NONE - the argument is used in a set operation, and can be moved anywhere within the container
+ *         as long as the bits are in the same position post-shift
+ */
+void ActionFormat::optimize_sharing() {
+    init_slot_format.clear();
+    SingleActionSlotPlacement empty_sasp;
+    for (auto &single_action : init_alu_format) {
+        init_slot_format[single_action.first] = empty_sasp;
+        for (auto &alu_ad : single_action.second) {
+            init_slot_format[single_action.first].emplace_back(&alu_ad);
+        }
+    }
+
+    for (auto &single_action : init_slot_format) {
+        condense_action_data(single_action.second);
+        set_slot_bits(single_action.second);
+    }
+}
+
+/** This function tries to combine ActionDataFormatSlots if the parameters in those particular slots
+ *  overlap.  Initially all ActionDataForSingleALU is given it's own slot on the memory algorithm
+ *  and then if the parameters overlap correctly, the slots are combined.  This deals with
+ *  the following example:
+ *
+ *      hdr.f1 = param1;
+ *      hdr.f2 = param1;
+ *
+ *  These two ActionDataForSingleALU functions would be combined into one ActionDataFormatSlot
+ *  after this function is completed.
+ *
+ *  Currently this function only combines the action data if they are in the same slot size,
+ *  meaning that hdr.f1 and hdr.f2 have to be in the same container size.
+ *
+ *  Furthermore, the algorithm only will condense less constrained slots into more constrained
+ *  slots, i.e. an ISOLATED can only be condensed into another ISOLATED, and a no constrained
+ *  can be condensed into anything
+ */
+void ActionFormat::condense_action_data(SingleActionSlotPlacement &info) {
+    for (size_t i = 0; i < info.size(); i++) {
+        for (size_t j = 0; j < info.size(); j++) {
+            if (i == j) continue;
+            // Trying to fully condense the original slot on the comparison slot
+            auto &orig_sap = info[i];
+            auto &comp_sap = info[j];
+
+            if (comp_sap.deletable) continue;
+            // Do not condense a more constrained slot on a less constrained slot
+            if (orig_sap.global_constraints > comp_sap.global_constraints)
+                continue;
+            if (orig_sap.slot_size != comp_sap.slot_size)
+                continue;
+
+            bool can_condense = true;
+            for (auto &alu_ad : orig_sap.action_data_alus) {
+                for (auto &comp_alu_ad : comp_sap.action_data_alus) {
+                    if (alu_ad->constraints > comp_alu_ad->constraints) continue;
+                    can_condense &= alu_ad->can_condense_into(*comp_alu_ad);
+                    if (!can_condense)
+                        break;
+                }
+                if (!can_condense)
+                    break;
+            }
+
+            if (!can_condense)
+                continue;
+
+            comp_sap.action_data_alus.insert(comp_sap.action_data_alus.end(),
+                                             orig_sap.action_data_alus.begin(),
+                                             orig_sap.action_data_alus.end());
+            comp_sap.global_constraints |= orig_sap.global_constraints;
+
+            // Mark as removable, as the slot has been condensed
+            orig_sap.deletable = true;
+            break;
+        }
+    }
+
+    auto it = info.begin();
+    while (it != info.end()) {
+        if (it->deletable) {
+            it = info.erase(it);
+        } else {
+            it++;
+        }
+    }
+}
+
+/** Sets the location of each of the arguments in an AD ALU.  This does not yet potentially
+ *  combine sets of the same size.
+ */
+void ActionFormat::set_slot_bits(SingleActionSlotPlacement &info) {
+    for (auto &sap : info) {
+        // Find the most constrained ALU op, and build the action data information from there
+        ActionDataForSingleALU *most_const = nullptr;
+        for (auto ad_alu : sap.action_data_alus) {
+            if (most_const == nullptr) {
+                most_const = ad_alu;
+            } else {
+                if (ad_alu->constraints > most_const->constraints)
+                    most_const = ad_alu;
+                else if (ad_alu->phv_bits.popcount() > most_const->phv_bits.popcount())
+                    most_const = ad_alu;
+            }
+        }
+
+        if (most_const->constraints == 0U && most_const->specialities == 0U) {
+            int shift = most_const->phv_bits.min().index();
+            most_const->shift_slot_bits(shift);
+        } else {
+            most_const->shift_slot_bits(0);
+        }
+
+        for (auto ad_alu : sap.action_data_alus) {
+            if (ad_alu != most_const) {
+                ad_alu->set_slot_bits(*most_const);
+            }
+            sap.total_range |= ad_alu->slot_bits;
+        }
+    }
 }
 
 /** Calculate how much action data space is needed per actions.
@@ -484,23 +733,20 @@ void ActionFormat::initialize_action_counts() {
     for (auto action : Values(tbl->actions)) {
         ActionContainerInfo aci;
         aci.action = action->name;
-        auto &placement_vec = init_format.at(action->name);
+        auto &placement_vec = init_slot_format.at(action->name);
         for (auto &placement : placement_vec) {
             bool valid_container_size = false;
             for (int i = 0; i < CONTAINER_TYPES; i++) {
-                valid_container_size |= placement.size == CONTAINER_SIZES[i];
+                valid_container_size |= placement.slot_size == CONTAINER_SIZES[i];
             }
             BUG_CHECK(valid_container_size, "Action data packed in slot that is not a valid "
-                                            "size: %d", placement.size);
+                                            "size: %d", placement.slot_size);
             int index = placement.gen_index();
             if ((placement.specialities & (1 << ActionAnalysis::ActionParam::METER_COLOR)) != 0) {
                 BUG_CHECK(index == BYTE, "Due to complexity in action bus, can only currently "
                           "handle meter color in an 8 bit ALU operation, and nothing else.");
                 aci.meter_reserved = true;
                 meter_color = true;
-                if (placement.bitmasked_set && placement.arg_locs.size() == 1)
-                P4C_UNIMPLEMENTED("Currently too difficult of an operation on meter color "
-                                  "to handle within the compiler");
                 continue;
             }
 
@@ -512,18 +758,25 @@ void ActionFormat::initialize_action_counts() {
                 aci.bitmasked_sets[ADT][index]++;
             }
             aci.minmaxes[bm_type][index] = std::min(aci.minmaxes[bm_type][index],
-                                                placement.range.max().index() + 1);
+                                                    placement.total_range.max().index() + 1);
         }
         aci.finalize_min_maxes();
         init_action_counts.push_back(aci);
     }
 }
 
-/** Because all hash can not be enabled per action, but instead used for all actions, the
+/** Because all hash can not be enabled per action, but instead used for all actions, the);
  *  hash distribution units are reserved separately from all actions.
  */
 bool ActionFormat::initialize_hash_dist_counts() {
-    for (auto &hd_vec : Values(init_hash_dist_placement)) {
+    for (auto &hd_vec_pair : init_hd_alu_placement) {
+        for (auto &alu_hd : hd_vec_pair.second) {
+             alu_hd.shift_slot_bits(0);
+             init_hd_slot_placement[hd_vec_pair.first].emplace_back(&alu_hd);
+        }
+    }
+
+    for (auto &hd_vec : Values(init_hd_slot_placement)) {
         for (auto &adp : hd_vec) {
             int index = adp.gen_index();
             hash_counts.counts[IMMED][index]++;
@@ -608,9 +861,9 @@ void ActionFormat::setup_use(safe_vector<Use> &uses) {
     use = &(uses.back());
     use->action_data_bytes[ADT] = action_bytes[ADT];
     use->action_data_bytes[IMMED] = action_bytes[IMMED];
+    use->phv_alloc = alloc_done;
     LOG2("Action data bytes IMMED: " << use->action_data_bytes[IMMED] << " ADT: "
-         << use->action_data_bytes[IMMED]);
-    use->constant_locations = renames;
+         << use->action_data_bytes[ADT]);
     calculate_maximum();
 }
 
@@ -933,8 +1186,6 @@ void ActionFormat::space_all_table_containers() {
         BUG_CHECK(aci.total_bytes(ADT) <= max_bytes, "Somehow have more bytes than "
                   "possibly allocate");
     }
-
-
     int max_small_bytes = offset_constraints_and_total_layouts();
     space_8_and_16_containers(max_small_bytes);
     space_32_containers();
@@ -1060,33 +1311,34 @@ void ActionFormat::space_all_immediate_containers(int start_byte) {
  *  for it
  */
 void ActionFormat::align_hash_dist(bitvec hash_layouts_placed[CONTAINER_TYPES]) {
-    auto hash_dist_placement = init_hash_dist_placement;
+    auto hd_slot_placement = init_hd_slot_placement;
     int placed[BITMASKED_TYPES][CONTAINER_TYPES] = {{0, 0, 0}, {0, 0, 0}};
 
-    for (auto &hd_info : hash_dist_placement) {
+    for (auto &hd_info : hd_slot_placement) {
+        SingleActionSlotPlacement output_vec;
         auto hd = hd_info.first;
         auto hd_vec = hd_info.second;
-        auto &output_vec = use->hash_dist_placement[hd];
         align_section(hd_vec, output_vec, hash_counts, IMMED, NORMAL, hash_layouts_placed,
                       placed);
+        verify_placement(output_vec, use->hash_dist_placement[hd]);
     }
 }
 
 /** Simple placement of the upper byte of immediate for each action tthat requires a meter color.
  */
-void ActionFormat::reserve_meter_color(ArgFormat &format, ActionContainerInfo &aci,
-                                       bitvec layouts_placed[CONTAINER_TYPES]) {
+void ActionFormat::reserve_meter_color(SingleActionSlotPlacement &placement_vec,
+        SingleActionSlotPlacement &output_vec, ActionContainerInfo &aci,
+        bitvec layouts_placed[CONTAINER_TYPES]) {
     if (!aci.meter_reserved)
         return;
     int byte_sz = CONTAINER_SIZES[BYTE];
-    auto &placement_vec = format[aci.action];
     auto it = placement_vec.begin();
     while (it != placement_vec.end()) {
         if (it->specialities & (1 << ActionAnalysis::ActionParam::METER_COLOR)) {
-            it->start = IMMEDIATE_BYTES - 1;
+            it->byte_start = IMMEDIATE_BYTES - 1;
             it->immediate = true;
             layouts_placed[BYTE].setrange(IMMEDIATE_BYTES - 1, byte_sz);
-            use->action_data_format.at(aci.action).push_back(*it);
+            output_vec.push_back(*it);
             it = placement_vec.erase(it);
             return;
         }
@@ -1100,9 +1352,10 @@ void ActionFormat::reserve_meter_color(ArgFormat &format, ActionContainerInfo &a
  *  set object are allocated before all others, as those fields are required to be allocated
  *  in pairs.
  */
-void ActionFormat::align_section(SingleActionPlacement &placement_vec,
-        SingleActionPlacement &output_vec, ActionContainerInfo &aci, location_t loc, bitmasked_t bm,
-        bitvec layouts_placed[CONTAINER_TYPES], int placed[BITMASKED_TYPES][CONTAINER_TYPES]) {
+void ActionFormat::align_section(SingleActionSlotPlacement &placement_vec,
+        SingleActionSlotPlacement &output_vec, ActionContainerInfo &aci, location_t loc,
+        bitmasked_t bm, bitvec layouts_placed[CONTAINER_TYPES],
+        int placed[BITMASKED_TYPES][CONTAINER_TYPES]) {
     int multiplier = static_cast<int>(bm) + 1;
 
     auto it = placement_vec.begin();
@@ -1140,7 +1393,7 @@ void ActionFormat::align_section(SingleActionPlacement &placement_vec,
         } while (found == false && lookup < max);
         BUG_CHECK(found, "Could not match up action data allocation byte");
 
-        it->start = init_byte;
+        it->byte_start = init_byte;
         it->immediate = loc == IMMED ? true : false;
         layouts_placed[index].setrange(init_byte, byte_sz * multiplier);
         placed[bm][index]++;
@@ -1155,7 +1408,8 @@ void ActionFormat::align_section(SingleActionPlacement &placement_vec,
  *  action data that has the lowest lsb, and allocate that particular slice of action data
  *  last in order to better maximize packing.
  */
-void ActionFormat::find_immed_last(ArgFormat &format, ActionContainerInfo &aci,
+void ActionFormat::find_immed_last(SingleActionSlotPlacement &placement_vec,
+        SingleActionSlotPlacement &output_vec, ActionContainerInfo &aci,
         bitvec layouts_placed[CONTAINER_TYPES], int placed[BITMASKED_TYPES][CONTAINER_TYPES]) {
     int max = 0;
     int max_index = CONTAINER_TYPES;
@@ -1176,7 +1430,6 @@ void ActionFormat::find_immed_last(ArgFormat &format, ActionContainerInfo &aci,
     auto byte_sz = CONTAINER_SIZES[max_index] / 8;
     int init_byte = max - byte_sz + 1;
 
-    auto &placement_vec = format[aci.action];
     auto it = placement_vec.begin();
     bool found = false;
     while (it != placement_vec.end() && !found) {
@@ -1189,16 +1442,16 @@ void ActionFormat::find_immed_last(ArgFormat &format, ActionContainerInfo &aci,
             it++;
             continue;
         }
-        if (it->range.max().index() + 1 != aci.minmaxes[NORMAL][max_index]) {
+        if (it->total_range.max().index() + 1 != aci.minmaxes[NORMAL][max_index]) {
             it++;
             continue;
         }
-        it->start = init_byte;
+        it->byte_start = init_byte;
         it->immediate = true;
         layouts_placed[index].setrange(init_byte, byte_sz);
         placed[NORMAL][index]++;
 
-        use->action_data_format.at(aci.action).push_back(*it);
+        output_vec.push_back(*it);
         it = placement_vec.erase(it);
         found = true;
     }
@@ -1211,44 +1464,83 @@ void ActionFormat::find_immed_last(ArgFormat &format, ActionContainerInfo &aci,
  *  spots with the associated action data.
  */
 void ActionFormat::align_action_data_layouts() {
-    ArgFormat format = init_format;
+    TotalSlotPlacement format = init_slot_format;
     bitvec hash_layouts_placed[CONTAINER_TYPES];
     align_hash_dist(hash_layouts_placed);
 
+
     for (auto aci : action_counts) {
-        safe_vector<ActionDataPlacement> adp_vector;
-        use->action_data_format[aci.action] = adp_vector;
+        SingleActionSlotPlacement output_vec;
         for (int i = IMMED; i >= ADT; i--) {
             int placed[BITMASKED_TYPES][CONTAINER_TYPES] = {{0, 0, 0}, {0, 0, 0}};
             auto loc = static_cast<location_t>(i);
             bitvec layouts_placed[CONTAINER_TYPES];
-            auto &output_vec = use->action_data_format[aci.action];
             if (i == IMMED) {
                 for (int i = 0; i < CONTAINER_TYPES; i++) {
                     layouts_placed[i] |= hash_layouts_placed[i];
                 }
             }
             if (i == IMMED)
-                reserve_meter_color(format, aci, layouts_placed);
+                reserve_meter_color(format[aci.action], output_vec, aci, layouts_placed);
             align_section(format[aci.action], output_vec, aci, loc, BITMASKED, layouts_placed,
                           placed);
             if (i == IMMED)
-                find_immed_last(format, aci, layouts_placed, placed);
+                find_immed_last(format[aci.action], output_vec, aci, layouts_placed, placed);
             align_section(format[aci.action], output_vec, aci, loc, NORMAL, layouts_placed,
                           placed);
         }
+        verify_placement(output_vec, use->action_data_format[aci.action]);
     }
 
     for (auto aci : action_counts) {
         BUG_CHECK(format.at(aci.action).empty(), "Did not fully allocate the action data for "
                   "an action %s", aci.action);
-        sort_and_asm_name(use->action_data_format.at(aci.action));
+        determine_asm_name(use->action_data_format.at(aci.action));
+        use->arg_placement[aci.action] = ArgPlacementData();
+        use->constant_locations[aci.action] = ConstantRenames();
         calculate_placement_data(use->action_data_format.at(aci.action),
-                                 use->arg_placement[aci.action]);
+                                 use->arg_placement[aci.action],
+                                 use->constant_locations[aci.action]);
     }
     calculate_immed_mask();
 }
 
+
+
+void ActionFormat::verify_placement(SingleActionSlotPlacement &slot_placement,
+        SingleActionALUPlacement &alu_placement) {
+    std::sort(slot_placement.begin(), slot_placement.end(),
+        [=](const ActionDataFormatSlot &a, const ActionDataFormatSlot &b) {
+        // std::sort() in libc++ can compare an element with itself,
+        // breaking our assertions below, so exit early in that case.
+        if (&a == &b) return false;
+
+        if (a.immediate == b.immediate) {
+            if (a.byte_start == b.byte_start) {
+                BUG("Two containers in the same action are at the same place?");
+            }
+
+            if ((a.byte_start + a.slot_size / 8 - 1 > b.byte_start
+                    && b.byte_start > a.byte_start)
+                || (b.byte_start + b.slot_size / 8 - 1 > a.byte_start
+                    && a.byte_start > b.byte_start)) {
+                BUG("Two containers overlap in the same action");
+            }
+        }
+        if (a.immediate != b.immediate)
+            return !a.immediate;
+        return a.byte_start < b.byte_start;
+    });
+
+
+    for (auto &slot : slot_placement) {
+        for (auto &alu : slot.action_data_alus) {
+            alu_placement.push_back(*alu);
+            alu_placement.back().immediate = slot.immediate;
+            alu_placement.back().start = slot.byte_start;
+        }
+    }
+}
 
 
 /** This sorts the action data from lowest to highest bit position for easiest assembly output.
@@ -1257,27 +1549,7 @@ void ActionFormat::align_action_data_layouts() {
  *  action data section, this must be renamed uniquely within the action for the assembler.
  *  Thus a unique asm_name could potentially be needed, and thus could be generated.
  */
-void ActionFormat::sort_and_asm_name(safe_vector<ActionDataPlacement> &placement_vec) {
-    std::sort(placement_vec.begin(), placement_vec.end(),
-            [](const ActionDataPlacement &a, const ActionDataPlacement &b) {
-        // std::sort() in libc++ can compare an element with itself,
-        // breaking our assertions below, so exit early in that case.
-        if (&a == &b) return false;
-
-        if (a.immediate == b.immediate) {
-            if (a.start == b.start) {
-                BUG("Two containers in the same action are at the same place?");
-            }
-
-            if ((a.start + a.size / 8 - 1 > b.start && b.start > a.start)
-                || (b.start + b.size / 8 - 1 > a.start && a.start > b.start)) {
-                BUG("Two containers overlap in the same action");
-            }
-        }
-        if (a.immediate != b.immediate)
-            return !a.immediate;
-        return a.start < b.start;
-    });
+void ActionFormat::determine_asm_name(SingleActionALUPlacement &placement_vec) {
     int index = 0;
     int mask_index = 0;
     for (auto &placement : placement_vec) {
@@ -1296,17 +1568,39 @@ void ActionFormat::sort_and_asm_name(safe_vector<ActionDataPlacement> &placement
 /** A way to perform an easy lookup of where the action data parameter is contained within the
  *  entire action data placement
  */
-void ActionFormat::calculate_placement_data(safe_vector<ActionDataPlacement> &placement_vec,
-                                            ArgPlacementData &apd) {
-    int index = 0;
-    for (auto &container : placement_vec) {
-        for (auto arg_loc : container.arg_locs) {
-            int bit_location = arg_loc.field_bit;
+void ActionFormat::calculate_placement_data(SingleActionALUPlacement &placement_vec,
+                                            ArgPlacementData &apd, ConstantRenames &cr) {
+    int placement_index = 0;
+    for (auto &placement : placement_vec) {
+        int arg_index = 0;
+        for (auto arg_loc : placement.arg_locs) {
+            ArgValue av(placement_index, arg_index);
+            ArgKey ak;
+            int field_bit = arg_loc.field_bit;
             if (arg_loc.is_constant)
-                bit_location = 0;
-            apd[std::make_pair(arg_loc.name, bit_location)].push_back(index);
+                field_bit = 0;
+
+            ak.init(arg_loc.name, field_bit, placement.container_valid,
+                    placement.container, arg_loc.phv_cont_lo());
+            apd[ak].push_back(av);
+            arg_index++;
         }
-        index++;
+        placement_index++;
+    }
+
+    placement_index = 0;
+    for (auto &placement : placement_vec) {
+        int arg_index = 0;
+        for (auto &arg_loc : placement.arg_locs) {
+            ArgValue av(placement_index, arg_index);
+            arg_index++;
+            if (!arg_loc.is_constant)
+                continue;
+            ArgKey ak;
+            ak.init_constant(placement.container, arg_loc.phv_cont_lo());
+            cr.emplace(ak, av);
+        }
+        placement_index++;
     }
 }
 
@@ -1318,10 +1612,10 @@ void ActionFormat::calculate_immed_mask() {
         for (auto &placement : placement_vec) {
             if (!placement.immediate) continue;
             if (placement.specialities != 0) continue;
-            use->immediate_mask |= (placement.range << (placement.start * 8));
+            use->immediate_mask |= (placement.slot_bits << (placement.start * 8));
             if (placement.bitmasked_set) {
-                int mask_start = placement.start + placement.size / 8;
-                use->immediate_mask |= (placement.range << (mask_start * 8));
+                int mask_start = placement.start + placement.alu_size / 8;
+                use->immediate_mask |= (placement.slot_bits << (mask_start * 8));
             }
         }
     }
