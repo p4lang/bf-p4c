@@ -442,13 +442,13 @@ PHV::ConcreteAllocation::alloc_status(PHV::Container c) const {
 
 /// @returns a summary of the status of each container by type and gress.
 cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
-    std::map<boost::optional<gress_t>,
-        std::map<PHV::Type,
-            std::map<ContainerAllocStatus,
-                int>>> alloc_status;
-
-    std::map<PHV::Container, int> partial_containers_stat;
-    int total_unalloacted_bits = 0;
+    ordered_map<boost::optional<gress_t>,
+        ordered_map<PHV::Type,
+          ordered_map<ContainerAllocStatus, int>>> alloc_status;
+    ordered_map<PHV::Container, int> partial_containers_stat;
+    ordered_map<PHV::Container, int> containers_used;
+    int total_allocated_bits = 0;
+    int total_unallocated_bits = 0;
     int valid_ingress_unallocated_bits = 0;
     int valid_egress_unallocated_bits = 0;
 
@@ -457,18 +457,22 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
     for (auto kv : container_status_i) {
         PHV::Container c = kv.first;
         ContainerAllocStatus status = ContainerAllocStatus::EMPTY;
+        containers_used[c] = 0;
         bitvec allocatedBits;
         auto& slices = kv.second.slices;
-        for (auto slice : slices)
+        for (auto slice : slices) {
             allocatedBits |= bitvec(slice.container_slice().lo, slice.container_slice().size());
+            total_allocated_bits += slice.width(); }
         if (allocatedBits == bitvec(0, c.size())) {
             status = ContainerAllocStatus::FULL;
+            containers_used[c] = c.size();
         } else if (!allocatedBits.empty()) {
             int used = std::accumulate(allocatedBits.begin(),
                                        allocatedBits.end(), 0,
                                        [] (int a, int) { return a + 1; });
             partial_containers_stat[c] = c.size() - used;
-            total_unalloacted_bits += partial_containers_stat[c];
+            containers_used[c] = used;
+            total_unallocated_bits += partial_containers_stat[c];
             if (slices.size() > 1
                 || (slices.size() == 1 && !slices.begin()->field()->no_pack())) {
                 if (kv.second.gress == INGRESS) {
@@ -481,6 +485,7 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
 
     // Print container status.
     std::stringstream ss;
+    ss << "Total width of fields allocated: " << total_allocated_bits << std::endl;
     ss << "CONTAINER STATUS (after allocation so far):" << std::endl;
     ss << boost::format("%1% %|10t| %2% %|20t| %3% %|30t| %4%\n")
         % "GRESS" % "TYPE" % "STATUS" % "COUNT";
@@ -512,7 +517,7 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
     ss << std::endl;
 
     // Compute overlay status.
-    std::map<PHV::Container, int> overlay_result;
+    ordered_map<PHV::Container, int> overlay_result;
     int overlay_statistics[2][2] = {{0}};
     for (auto kv : container_status_i) {
         PHV::Container c = kv.first;
@@ -544,7 +549,7 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
 
     // Output Partial Containers
     ss << "======== PARTIAL CONTAINERS STAT ==========" << std::endl;
-    ss << "TOTAL UNALLOCATED BITS: " << total_unalloacted_bits << std::endl;
+    ss << "TOTAL UNALLOCATED BITS: " << total_unallocated_bits << std::endl;
     ss << "VALID INGRESS UNALLOCATED BITS: " << valid_ingress_unallocated_bits << std::endl;
     ss << "VALID EGRESS UNALLOCATED BITS: " << valid_egress_unallocated_bits << std::endl;
     for (const auto& kv : partial_containers_stat) {
@@ -554,7 +559,7 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
 
     // compute tphv fields allocated on phv fields
     int total_tphv_on_phv = 0;
-    std::map<PHV::Container, int> tphv_on_phv;
+    ordered_map<PHV::Container, int> tphv_on_phv;
     for (auto kv : container_status_i) {
         PHV::Container c = kv.first;
         if (c.is(PHV::Kind::tagalong)) {
@@ -574,6 +579,149 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
         for (const auto& slice : slices(kv.first)) {
             if (slice.field()->is_tphv_candidate(uses)) {
                 ss << slice << std::endl; } } }
+
+    ss << getOccupancyMetrics(containers_used);
+
+    return ss.str();
+}
+
+std::vector<cstring> PHV::ConcreteAllocation::getGroupNamesBySize(
+        const std::pair<int, int>& groupDesc, cstring type) const {
+    std::vector<cstring> rv;
+    // Every string is of format [B/W/H][a-b]. In this case, a is represented by firstIndexInGroup
+    // and b is represented by lastIndexInGroup
+    unsigned firstIndexInGroup = 0;
+    unsigned lastIndexInGroup = groupDesc.second - 1;
+    unsigned totalContainers = groupDesc.first * groupDesc.second;
+    while (lastIndexInGroup < totalContainers) {
+        cstring groupName = type + std::to_string(firstIndexInGroup) + "--" + type +
+            std::to_string(lastIndexInGroup);
+        rv.push_back(groupName);
+        firstIndexInGroup += groupDesc.second;
+        lastIndexInGroup += groupDesc.second; }
+    return rv;
+}
+
+cstring
+PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, int>& used) const {
+    const auto& phvSpec = Device::phvSpec();
+    ordered_map<bitvec, PHV::Allocation::GroupInfo> groups;
+    std::vector<cstring> groupIDList;
+
+    // Extract MAU group specific information from phvSpec
+    std::pair<int, int> numBytes = phvSpec.mauGroupNumAndSize(PHV::Type::B);
+    std::pair<int, int> numHalfs = phvSpec.mauGroupNumAndSize(PHV::Type::H);
+    std::pair<int, int> numWords = phvSpec.mauGroupNumAndSize(PHV::Type::W);
+
+    // Extract all group names into a vector. Order is W->B->H.
+    // Format is [B/W/H][a-b] where a or b  are the indexes of the containers that form the range of
+    // containers in this group. E.g. B0-B15.
+    std::vector<cstring> wordGroupNames = getGroupNamesBySize(numWords, "W");
+    groupIDList.insert(groupIDList.end(), wordGroupNames.begin(), wordGroupNames.end());
+    std::vector<cstring> byteGroupNames = getGroupNamesBySize(numBytes, "B");
+    groupIDList.insert(groupIDList.end(), byteGroupNames.begin(), byteGroupNames.end());
+    std::vector<cstring> halfGroupNames = getGroupNamesBySize(numHalfs, "H");
+    groupIDList.insert(groupIDList.end(), halfGroupNames.begin(), halfGroupNames.end());
+
+    for (auto cid : Device::phvSpec().physicalContainers()) {
+        PHV::Container c = Device::phvSpec().idToContainer(cid);
+        if (boost::optional<bitvec> mauGroup = phvSpec.mauGroup(cid)) {
+            int groupID = -1;
+            // groupID represents the unique string that identifies an MAU group
+            // It is used to index into the groupIDList vector to eventually print the group name
+            size_t numContainers = 0;
+            if (c.type() == PHV::Type::B) {
+                groupID = (c.index() / numBytes.second) + numWords.first;
+                numContainers = numBytes.second;
+            } else if (c.type() == PHV::Type::H) {
+                groupID = (c.index() / numHalfs.second) + numWords.first + numBytes.first;
+                numContainers = numHalfs.second;
+            } else if (c.type() == PHV::Type::W) {
+                groupID = c.index() / numWords.second;
+                numContainers = numWords.second;
+            } else {
+                // xxx(Deep): Handle non-normal PHV containers
+                continue; }
+            bool containerUsed = (used.at(c) != 0);
+            if (groups.count(mauGroup.get()))
+                groups[mauGroup.get()].update(containerUsed, used.at(c));
+            else
+                groups[mauGroup.get()] = PHV::Allocation::GroupInfo(c.size(), groupID,
+                        containerUsed, used.at(c), numContainers); } }
+
+    std::stringstream ss;
+    std::stringstream dashes;
+    for (size_t i = 0; i < 85; i++)
+        dashes << "-";
+    dashes << std::endl;
+
+    // Set up the column headings for the groupwise occupancy metrics
+    ss << std::endl << "PHV Groups Allocation State" << std::endl;
+    ss << dashes.str();
+    ss << "|" << boost::format("%=20s") % "PHV Group" << "|" << boost::format("%=20s") %
+        "Containers Used" << "|" << boost::format("%=20s") % "Bits Used" << "|" <<
+        boost::format("%=20s") % "Available Bits" << "|" << std::endl;
+    ss << "|" << boost::format("%=20s") % "(Size)" << "|" << boost::format("%=20s") % "(%)" << "|"
+        << boost::format("%=20s") % "(%)" << "|" << boost::format("%=20s") % "" << "|" << std::endl;
+    ss << dashes.str();
+
+    auto tContainersUsed = 0, tBitsUsed = 0, tTotalBits = 0, tTotalContainers = 0;
+    for (auto containerType : Device::phvSpec().containerTypes()) {
+        // Calculate total size-wise
+        auto sz_containersUsed = 0, sz_bitsUsed = 0, sz_totalBits = 0, sz_totalContainers = 0;
+        auto size = 0;
+        std::stringstream blankLine;
+        blankLine << "|" << boost::format("%=20s") % "" << "|" << boost::format("%=20s") % "" << "|"
+            << boost::format("%=20s") % "" << "|" << boost::format("%=20s") % "" << "|" <<
+            std::endl;
+
+        for (auto mauGroup : Device::phvSpec().mauGroups(containerType)) {
+            size = (size == 0) ? groups[mauGroup].size : size;
+            sz_containersUsed += groups[mauGroup].containersUsed;
+            sz_bitsUsed += groups[mauGroup].bitsUsed;
+            auto totalBits = groups[mauGroup].totalContainers * groups[mauGroup].size;
+            sz_totalBits += totalBits;
+            sz_totalContainers += groups[mauGroup].totalContainers;
+            std::stringstream group, containers, bits;
+            group << groupIDList[groups[mauGroup].groupID];
+            containers << boost::format("%2d") % groups[mauGroup].containersUsed <<
+                boost::format(" (%=6.3g%%)") % (100.0 * groups[mauGroup].containersUsed /
+                        groups[mauGroup].totalContainers);
+            bits << boost::format("%3d") % groups[mauGroup].bitsUsed << boost::format(" (%=6.3g%%)")
+                % (100.0 * groups[mauGroup].bitsUsed / totalBits);
+            ss << "|" << boost::format("%=20s") % group.str() << "|" << boost::format("%=20s") %
+                    containers.str() << "|" << boost::format("%=20s") % bits.str() << "|" <<
+                    boost::format("%=20s") % totalBits << "|" << std::endl; }
+
+        if (Device::phvSpec().mauGroups(containerType).size() != 0) {
+            // Size wise occupancy metrics
+            // Ensure that these lines appears only for B, H, and W; not for TB, TH, TW
+            tContainersUsed += sz_containersUsed;
+            tBitsUsed += sz_bitsUsed;
+            tTotalBits += sz_totalBits;
+            tTotalContainers += sz_totalContainers;
+            std::stringstream group, containers, bits;
+            group << "Usage for " << size << "b";
+            containers << boost::format("%2d") % sz_containersUsed << boost::format(" (%=6.3g%%)") %
+                (100.0 * sz_containersUsed / sz_totalContainers);
+            bits << boost::format("%3d") % sz_bitsUsed << boost::format(" (%=6.3g%%)") % (100.0 *
+                    sz_bitsUsed / sz_totalBits);
+            ss << blankLine.str();
+            ss << "|" << boost::format("%=20s") % group.str() << "|" << boost::format("%=20s") %
+                containers.str() << "|" << boost::format("%=20s") % bits.str() << "|" <<
+                boost::format("%=20s") % sz_totalBits << "|" << std::endl;
+            ss << dashes.str(); } }
+
+    std::stringstream containers, bits;
+    containers << boost::format("%2d") % tContainersUsed << boost::format(" (%=6.3g%%)") % (100.0 *
+            tContainersUsed / tTotalContainers);
+    bits << boost::format("%4d") % tBitsUsed << boost::format(" (%=6.3g%%)") % (100.0 * tBitsUsed /
+            tTotalBits);
+    ss << "|" << boost::format("%=20s") % "Overall PHV Usage" << "|" << boost::format("%=20s") %
+        containers.str() << "|" << boost::format("%=20s") % bits.str() << "|" <<
+        boost::format("%=20s") % tTotalBits << "|" << std::endl;
+
+    ss << dashes.str();
 
     return ss.str();
 }
@@ -637,9 +785,9 @@ PHV::Transaction::slices(const PHV::Field* f, le_bitrange range) const {
 }
 
 cstring PHV::Transaction::getTransactionSummary() const {
-    std::map<boost::optional<gress_t>,
-        std::map<PHV::Type,
-            std::map<ContainerAllocStatus,
+    ordered_map<boost::optional<gress_t>,
+        ordered_map<PHV::Type,
+            ordered_map<ContainerAllocStatus,
                 int>>> alloc_status;
 
     // Compute status.
@@ -692,6 +840,10 @@ cstring PHV::Transaction::getTransactionSummary() const {
 
 cstring PHV::Transaction::getSummary(const PhvUse& /* uses */) const {
     P4C_UNIMPLEMENTED("Transaction::getSummary()");
+}
+
+cstring PHV::Transaction::getOccupancyMetrics(const ordered_map<PHV::Container, int>& used) const {
+    P4C_UNIMPLEMENTED("Transaction::getOccupancyMetrics()");
 }
 
 bool PHV::AlignedCluster::operator==(const PHV::AlignedCluster& other) const {
@@ -1099,61 +1251,6 @@ bool PHV::SuperCluster::contains(const PHV::FieldSlice& slice) const {
             return true;
     return false;
 }
-
-void PHV::Allocation::print_occupancy() const {
-    if (!LOGGING(2)) return;
-    const auto& phvSpec = Device::phvSpec();
-    std::set<PHV::Container> containers_used;
-    std::map<bitvec, size_t> groups_usage;
-    std::map<bitvec, size_t> groups_containers;
-    std::map<bitvec, int> groups_to_ids;
-
-    // Extract MAU group specific information from phvSpec
-    std::pair<int, int> numBytes = phvSpec.mauGroupNumAndSize(PHV::Type::B);
-    std::pair<int, int> numHalfs = phvSpec.mauGroupNumAndSize(PHV::Type::H);
-    std::pair<int, int> numWords = phvSpec.mauGroupNumAndSize(PHV::Type::W);
-
-    for (auto cid : Device::phvSpec().physicalContainers()) {
-        PHV::Container c = Device::phvSpec().idToContainer(cid);
-
-        // Calculate bits used in this container.
-        int bitsUsed = 0;
-        for (auto& mutually_live_slices : this->slicesByLiveness(c)) {
-            int used = 0;
-            for (auto& slice : mutually_live_slices)
-                used += slice.width();
-            bitsUsed = std::max(bitsUsed, used); }
-
-        if (boost::optional<bitvec> mau_group = phvSpec.mauGroup(cid)) {
-            groups_containers[mau_group.get()] += 1;
-            groups_usage[mau_group.get()] += bitsUsed;
-            // Group numbers go from Words -> Bytes -> Halfwords
-            // In Tofino, this is (0-3) -> (4-7) -> (8-13)
-            if (c.type() == PHV::Type::B)
-                groups_to_ids[mau_group.get()] = (c.index() / numBytes.second) + numWords.first;
-            else if (c.type() == PHV::Type::H)
-                groups_to_ids[mau_group.get()] = (c.index() / numHalfs.second) + (numWords.first
-                        + numBytes.first);
-            else if (c.type() == PHV::Type::W)
-                groups_to_ids[mau_group.get()] = (c.index() / numWords.second); } }
-
-    LOG2("\nPHV Groups Allocation State:\n");
-    LOG2("-----------------------------------------------------");
-    LOG2("|     PHV Group     |   Containers   |   Bits Used  |");
-    LOG2("|  (container bits) |      Used      |              |");
-    LOG2("-----------------------------------------------------");
-
-    // Print PHV groups
-    for (auto container_type : Device::phvSpec().containerTypes()) {
-        for (auto mau_group : Device::phvSpec().mauGroups(container_type)) {
-            LOG2("|\t\t" << groups_to_ids[mau_group] << " (" << container_type << ")\t\t|\t\t" <<
-                    groups_containers[mau_group] << "\t\t|\t\t" << groups_usage[mau_group] <<
-                    "\t\t|"); }
-        // Ensure that the line appears only for B, H, and W; not for TB, TH, TW
-        if (Device::phvSpec().mauGroups(container_type).size() != 0)
-            LOG2("-----------------------------------------------------"); }
-}
-
 
 /// @returns true if all slices lists and slices are smaller than 32b and no
 /// slice list contains more than one slice per aligned cluster.

@@ -1083,7 +1083,7 @@ void AllocatePHV::end_apply() {
         clearSlices(phv_i);
         bindSlices(alloc, phv_i);
         phv_i.set_done();
-        LOG1("ALLOCATION SUCCESSFUL:");
+        LOG1("PHV ALLOCATION SUCCESSFUL");
         LOG2(alloc);
         LOG2(alloc.getSummary(uses_i));
     } else {
