@@ -45,6 +45,7 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/exact_match_valid1.p4
     testdata/p4_14_samples/parser_dc_full.p4
     extensions/p4_tests/p4_14/action_format_packing2.p4
+    extensions/p4_tests/p4_16/brig-532.p4
     )
 
   # Temporary until we fix the naming in STF for BMV2
