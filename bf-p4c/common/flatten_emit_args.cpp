@@ -10,12 +10,21 @@ void FlattenEmitArgs::postorder(IR::MethodCallExpression* mc) {
     auto type = dname->type->to<IR::Type_Extern>();
     if (!type) return;
 
-    if (type->name != "mirror_packet" && type->name != "resubmit_packet"
-        && type->name != "learning_packet") return;
+    if (type->name != "Mirror" && type->name != "Resubmit"
+        && type->name != "Digest") return;
 
-    auto* arg = mc->arguments->at(0);
+    // HACK(Han): after the P4-14 to TNA refactor, we should
+    // derive these indices from the TNA model.
+    // Assume the following syntax
+    //   mirror.emit(session_id, field_list);
+    //   resubmit.emit(field_list);
+    //   digest.emit(field_list);
+    int field_list_index = (type->name == "Mirror") ? 1 : 0;
+    auto* arg = mc->arguments->at(field_list_index);
     if (auto* args = arg->to<IR::ListExpression>()) {
         auto* flattened_args = new IR::Vector<IR::Expression>();
+        if (type->name == "Mirror")
+            flattened_args->push_back(mc->arguments->at(0));
         flattened_args->push_back(flatten_args(args));
         mc->arguments = flattened_args;
         LOG4("Flattened arguments: " << mc);
