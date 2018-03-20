@@ -1,5 +1,6 @@
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/ir/bitrange.h"
 #include "lib/log.h"
 
 bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
@@ -44,24 +45,37 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
     dst_i = nullptr;
     // get pointer to inst
     if (!inst->operands.empty()) {
-        dst_i = const_cast<PHV::Field*> (phv.field(inst->operands[0]));
+        bitrange dest_bits;
+        dst_i = phv.field(inst->operands[0], &dest_bits);
+        int dst_size = 0;
         if (dst_i) {
             // insert operation in field.operations with tuple3<operation, mode>
             // most of the information in the tuple is for debugging purpose
             auto op = std::make_tuple(is_move_op, inst->name, PHV::Field_Ops::W);
             dst_i->operations().push_back(op);
-        }
+            dst_size = dest_bits.size(); }
+
         // get src operands (if more than 1?)
         if (inst->operands.size() > 1) {
             // iterate 1+
             for (auto operand = ++inst->operands.begin();
                     operand != inst->operands.end();
                     ++operand) {
-                PHV::Field* field = phv.field(*operand);
+                bitrange field_bits;
+                PHV::Field* field = phv.field(*operand, &field_bits);
                 if (field) {
                     // insert operation in field.operations with tuple3
                     auto op = std::make_tuple(is_move_op, inst->name, PHV::Field_Ops::R);
                     field->operations().push_back(op);
+
+                    // For non-move operations, if the source field is smaller in size than the
+                    // destination field, we need to set the no_pack property for the source field
+                    // so that the missing bits (in the source compared to the destination) do not
+                    // contain any value that can affect the result of the operation
+                    if (!is_move_op && dst_i && field_bits.size() < dst_size) {
+                        LOG1("    ...setting no pack because " << field->name << " is a source of "
+                             "a non-MOVE operation to a larger field " << dst_i->name);
+                        field->set_no_pack(true); }
 
                     // XXX(cole) [Artificial Constraint]: Require SALU operands
                     // to be placed in the bottom bits of their PHV containers.
