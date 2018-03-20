@@ -189,6 +189,9 @@ void SRamMatchTable::verify_format() {
             auto mw = --match_by_bit.upper_bound(bit);
             int lo = bit - mw->first;
             while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
+                if ((piece.lo + mw->first - bit) % 8U != (mw->second->lo % 8U))
+                    error(mw->second.lineno, "bit within byte misalignment matching %s in "
+                          "match group %d of table %s", mw->second.name(), i, name());
                 int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
                 assert((unsigned)piece.lo/128 < fmt_width);
                 //merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
