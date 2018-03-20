@@ -195,7 +195,7 @@ Backend::Backend(const BFN_Options& options) :
         // so after this point it's not safe to run CollectPhvInfo, FieldDefUse,
         // or any other pass that walks over the IR to find references to
         // fields.
-        new LowerParser(phv, clot),
+        new LowerParser(phv, clot, defuse),
 
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),

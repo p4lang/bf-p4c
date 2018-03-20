@@ -270,6 +270,10 @@ class LoweredParser : AbstractParser {
     /// this parser.
     inline Vector<BFN::ContainerRef> multiwriteContainers;
 
+    /// The set of PHV containers which has uninitialized metadata field so that
+    /// set $validity bits is required in this parser.
+    inline Vector<BFN::ContainerRef> initZeroContainers;
+
     /// The amount of data, in bytes, which this parser program expects to be
     /// prepended to the packet by the hardware or by compiler-generated code,
     /// but which is not part of the packet itself.

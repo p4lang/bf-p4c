@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "bf-p4c/common/debug_info.h"
+#include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/bitrange.h"
@@ -1809,6 +1810,34 @@ class ComputeMultiwriteContainers : public ParserModifier {
     std::map<PHV::Container, unsigned> writes;
 };
 
+/// Compute containers that have fields relying on parser zero initialization. Those containers
+/// $validity bits shoule be set to 1 by parser to avoid a TCAM match issue.
+class ComputeInitZeroContainers : public ParserModifier {
+    void postorder(IR::BFN::LoweredParser* parser) override {
+        ordered_set<PHV::Container> zero_init_containers;
+        for (const auto& f : phv) {
+            // XXX(yumin): Deparser parameters are initialized to invalid instead of zero.
+            if (f.deparsed_to_tm() && f.no_pack()) continue;
+            if (f.gress != parser->gress) continue;
+
+            if (defuse.hasUninitializedRead(f.id)) {
+                f.foreach_alloc([&] (const PHV::Field::alloc_slice& alloc) {
+                    zero_init_containers.insert(alloc.container);
+                }); }
+        }
+
+        for (auto& c : zero_init_containers)
+            parser->initZeroContainers.push_back(new IR::BFN::ContainerRef(c));
+    }
+
+ public:
+    ComputeInitZeroContainers(const PhvInfo& phv, const FieldDefUse& defuse)
+        : phv(phv), defuse(defuse) { }
+
+    const PhvInfo& phv;
+    const FieldDefUse& defuse;
+};
+
 /// Compute the number of bytes which must be available for each parser match to
 /// avoid a stall.
 class ComputeBufferRequirements : public ParserModifier {
@@ -1849,12 +1878,13 @@ class ComputeBufferRequirements : public ParserModifier {
 
 }  // namespace
 
-LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot) {
+LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse) {
     addPasses({
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
         new SplitBigStates,
         new ComputeMultiwriteContainers,
+        new ComputeInitZeroContainers(phv, defuse),
         new ComputeBufferRequirements,
     });
 }
