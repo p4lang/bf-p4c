@@ -753,10 +753,26 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
                 if (fieldInfo) fieldInfo->set_no_split(true);
             }
 
+            /* HACK: Mirroring in P4_14 is currently handled through the Mirror
+             * extern, which in turn is implemented in the backend by
+             * synthesizing a parser that assumes mirrored fields are allocated
+             * to the bottom bits of the smallest PHV containers large enough to
+             * hold them.
+             * 
+             * This hack forces PHV allocation to match that assumption.
+             * However, adding no_pack and no_split means we will fail to
+             * allocate any mirrored fields larger than 32b.
+             * 
+             * The long-term solution is to change P4_14-->P4_16 conversion to
+             * translate mirroring to TNA.
+             */
             for (auto* mirroredField : fieldList->sources) {
                 PHV::Field* mirror = phv.field(mirroredField->field);
                 if (mirror) {
                     mirror->mirror_field_list = {f, fieldListIndex};
+                    mirror->set_deparsed_to_tm(true);
+                    mirror->set_no_pack(true);
+                    mirror->set_no_split(true);
                     LOG1("\t\t" << mirror);
                 } else {
                     LOG1("\t\t" << "-f?"); }

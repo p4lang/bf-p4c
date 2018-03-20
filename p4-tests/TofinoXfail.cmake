@@ -1046,3 +1046,8 @@ p4c_add_xfail_reason("tofino"
   "unexpected packet output on port .*"
   extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
 )
+
+p4c_add_xfail_reason("tofino"
+    "Slice size greater than container size"
+  extensions/p4_tests/p4_14/test_config_303_static_table.p4
+)

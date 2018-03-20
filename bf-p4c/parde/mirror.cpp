@@ -155,9 +155,14 @@ FieldPacking* packMirroredFieldList(const MirroredFieldList* fieldList) {
             packing->padToAlignment(8);
             continue;
         }
-        if ((source->member == "mirror_type" ||  source->member == "mirror_source") &&
+        if ((source->member == "mirror_type") &&
               (type->name == "ingress_intrinsic_metadata_for_deparser_t" ||
                type->name == "egress_intrinsic_metadata_for_deparser_t")) {
+            packing->padToAlignment(8);
+            continue;
+        }
+        if ((source->member == "mirror_source") &&
+            (type->name == "compiler_generated_metadata_t")) {
             packing->padToAlignment(8);
             continue;
         }
