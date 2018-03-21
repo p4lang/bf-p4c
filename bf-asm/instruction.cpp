@@ -304,6 +304,46 @@ struct operand {
           // TODO: What about algorithm?
         }
     };
+    struct RandomGen : Base {
+        Table           *table;
+        RandomNumberGen rng;
+        int             lo = 0, hi = -1;
+        RandomGen(Table *t, const VECTOR(value_t) &v) : Base(v[0].lineno), table(t), rng(0) {
+            if (v.size > 1 && CHECKTYPE(v[1], tINT)) rng.unit = v[1].i;
+            if (rng.unit < 0 || rng.unit > 1)
+                error(v[0].lineno, "invalid random number generator");
+            if (v.size > 2 && CHECKTYPE(v[2], tRANGE)) {
+                lo = v[2].lo;
+                hi = v[2].hi;
+                if (lo < 0 || hi > 31 || hi < lo)
+                    error(v[2].lineno, "invalid random number generator slice"); } }
+        bool equiv(const Base *a_) const override {
+            if (auto *a = dynamic_cast<const RandomGen *>(a_)) {
+                return rng == a->rng && lo == a->lo && hi == a->hi;
+            } else return false; }
+        RandomGen *clone() override { return new RandomGen(*this); }
+        void pass2(int group) const override {
+            unsigned size = group_size[group];
+            if (hi >= 0 && lo/size != hi/size)
+                error(lineno, "invalid slice of rng %d for use with %d bit PHV", rng.unit, size);
+            if (table->find_on_actionbus(rng, lo, size/8U))
+                table->need_on_actionbus(rng, lo, size/8U); }
+        int bits(int group) override {
+            int size = group_size[group]/8U;
+            int byte = table->find_on_actionbus(rng, 0, size);
+            if (byte < 0) {
+                error(lineno, "rng %d is not on the action bus", rng.unit);
+                return -1; }
+            if (size == 2) byte -= 32;
+            if (byte >= 0 || byte < 32*size)
+                return ACTIONBUS_OPERAND + byte/size;
+            error(lineno, "action bus entry %d(rng %d) out of range for %d-bit access",
+                  size == 2 ? byte+32 : byte, rng.unit, size*8);
+            return -1; }
+        void dbprint(std::ostream &out) const override {
+            out << "rng " << rng.unit << '(' << lo << ".." << hi << ')'; }
+        void gen_prim_cfg(json::map& out) override { /* what should this be? */ }
+    };
     struct Named : Base {
         std::string     name;
         std::string     p4name;
@@ -388,6 +428,8 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
         int lo = -1, hi = -1;
         if (v.type == tCMD) {
             if (v == "hash_dist" && (op = HashDist::parse(tbl, v.vec)))
+                return;
+            if (v == "rng" && (op = new RandomGen(tbl, v.vec)))
                 return;
             if (v.vec.size > 1 && v[1] == "color") {
                 // FIXME -- mark the Named as being table color rather than table output?

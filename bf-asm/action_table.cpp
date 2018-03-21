@@ -83,6 +83,25 @@ int ActionTable::find_on_actionbus(const char *name, int off, int size, int *len
             return rv; }
     return -1;
 }
+int ActionTable::find_on_actionbus(HashDistribution *hd, int off, int size) {
+    int rv;
+    if (action_bus && (rv = action_bus->find(hd, off, size)) >= 0)
+        return rv;
+    for (auto *match_table : match_tables) {
+        if (match_table->find_hash_dist(hd->id) == hd) {
+            if ((rv = match_table->find_on_actionbus(hd, off, size)) >= 0)
+                return rv; } }
+    return -1;
+}
+int ActionTable::find_on_actionbus(RandomNumberGen rng, int off, int size) {
+    int rv;
+    if (action_bus && (rv = action_bus->find(rng, off, size)) >= 0)
+        return rv;
+    for (auto *match_table : match_tables) {
+        if ((rv = match_table->find_on_actionbus(rng, off, size)) >= 0)
+            return rv; }
+    return -1;
+}
 
 void ActionTable::need_on_actionbus(Format::Field *f, int off, int size) {
     if (f->fmt == format) {
@@ -123,6 +142,18 @@ void ActionTable::need_on_actionbus(HashDistribution *hd, int off, int size) {
             match_table->need_on_actionbus(hd, off, size);
             return; } }
     assert(!"Can't find table associated with hash_dist");
+}
+
+void ActionTable::need_on_actionbus(RandomNumberGen rng, int off, int size) {
+    int attached_count = 0;
+    for (auto *match_table : match_tables) {
+        match_table->need_on_actionbus(rng, off, size);
+        ++attached_count; }
+    // FIXME -- if its attached to more than one match table (mutex match tables that
+    // share actions in an attached action data table, then it needs to be allocated
+    // to the same slot of the action bus in all of the match tables.  Not sure if we do that
+    // properly
+    assert(attached_count == 1);
 }
 
 void ActionTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) {

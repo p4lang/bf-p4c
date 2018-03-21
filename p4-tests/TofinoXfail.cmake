@@ -192,11 +192,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: hash dist 0 is not on the action bus"
-  extensions/p4_tests/p4_14/test_config_96_hash_data.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "In table .*, the number of bytes through hash is larger than the available amount 4"
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
@@ -812,7 +807,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated due to either hash distribution or attached outputs"
-  #extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   testdata/p4_14_samples/meter1.p4
   testdata/p4_16_samples/named_meter_1-bmv2.p4
   )
@@ -1010,12 +1004,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Trying to accumulate too many fields in CCGF"
   #extensions/p4_tests/p4_14/c2/COMPILER-401/case2308_bugged.p4
-  )
-
-# BRIG-487
-p4c_add_xfail_reason("tofino"
-  "error: hash dist .* is not on the action bus"
-  extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
   )
 
 p4c_add_xfail_reason("tofino"

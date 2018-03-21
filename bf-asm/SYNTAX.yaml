@@ -23,6 +23,10 @@
 #                   Denotes a single bit
 #   <matcher>    ::= half | byte0 | byte1
 #            denotes one of the parser match units
+#   <operands>   ::= <operand> { , <operand> }
+#   <operand>    ::= <phv-location> | <field> | <constant>
+#                  | hash_dist <unit> [ <lo>..<hi> ]
+#                  | rng <unit> [ <lo>..<hi> ]
 #
 phv [<thread>]:
     # Defines PHV alias names for registers.  <thread> is 'ingress' or
@@ -444,7 +448,6 @@ stage <constant> <thread>:
                 # Param order specifying param name and width for context json (p4_parameters)
             [- default_action: '{' allowed: true|false, reason: <string> '}' ]
             - <instruction> <operands>
-
         p4: # information about P4 level tables and control plane API
             # same as exact_match p4 info
         context_json: #anything

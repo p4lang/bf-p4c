@@ -37,6 +37,12 @@ class Synth2Port;
 class Stage;
 struct HashCol;
 
+struct RandomNumberGen {
+    int         unit;
+    RandomNumberGen(int u) : unit(u) {}
+    bool operator==(const RandomNumberGen &a) const { return unit == a.unit; }
+};
+
 class Table {
 public:
     struct Layout {
@@ -529,6 +535,8 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
         { if (format) format->apply_to_field(n, fn); }
     int find_on_ixbar(Phv::Slice sl, int group);
     virtual HashDistribution *find_hash_dist(int unit);
+    // FIXME -- refactor find/need_on_actionbus to take an ActionBus::Source rather
+    // than being overloaded in all these different ways
     virtual int find_on_actionbus(Format::Field *f, int off, int size);
     virtual void need_on_actionbus(Format::Field *f, int off, int size);
     virtual int find_on_actionbus(const char *n, int off, int size, int *len = 0);
@@ -537,6 +545,8 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual void need_on_actionbus(Table *attached, int off, int size);
     virtual int find_on_actionbus(HashDistribution *hd, int off, int size);
     virtual void need_on_actionbus(HashDistribution *hd, int off, int size);
+    virtual int find_on_actionbus(RandomNumberGen rng, int off, int size);
+    virtual void need_on_actionbus(RandomNumberGen rng, int off, int size);
     static bool allow_bus_sharing(Table *t1, Table *t2);
     virtual Call &action_call() { return action; }
     virtual Actions *get_actions() { return actions; }
@@ -864,6 +874,12 @@ public:
     int find_on_actionbus(Format::Field *f, int off, int size) override {
         return indirect ? indirect->find_on_actionbus(f, off, size)
                         : Table::find_on_actionbus(f, off, size); }
+    int find_on_actionbus(HashDistribution *hd, int off, int size) override {
+        return indirect ? indirect->find_on_actionbus(hd, off, size)
+                        : Table::find_on_actionbus(hd, off, size); }
+    int find_on_actionbus(RandomNumberGen rng, int off, int size) override {
+        return indirect ? indirect->find_on_actionbus(rng, off, size)
+                        : Table::find_on_actionbus(rng, off, size); }
     void need_on_actionbus(Format::Field *f, int off, int size) override {
         indirect ? indirect->need_on_actionbus(f, off, size)
                  : Table::need_on_actionbus(f, off, size); }
@@ -873,6 +889,9 @@ public:
     void need_on_actionbus(HashDistribution *hd, int off, int size) override {
         indirect ? indirect->need_on_actionbus(hd, off, size)
                  : Table::need_on_actionbus(hd, off, size); }
+    void need_on_actionbus(RandomNumberGen rng, int off, int size) override {
+        indirect ? indirect->need_on_actionbus(rng, off, size)
+                 : Table::need_on_actionbus(rng, off, size); }
     int find_on_actionbus(const char *n, int off, int size, int *len = 0) override {
         return indirect ? indirect->find_on_actionbus(n, off, size, len)
                         : Table::find_on_actionbus(n, off, size, len); }
@@ -1055,9 +1074,12 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn) override;
     int find_on_actionbus(Format::Field *f, int off, int size) override;
     int find_on_actionbus(const char *n, int off, int size, int *len) override;
+    int find_on_actionbus(HashDistribution *hd, int off, int size) override;
+    int find_on_actionbus(RandomNumberGen rng, int off, int size) override;
     void need_on_actionbus(Format::Field *f, int off, int size) override;
     void need_on_actionbus(Table *attached, int off, int size) override;
     void need_on_actionbus(HashDistribution *hd, int off, int size) override;
+    void need_on_actionbus(RandomNumberGen rng, int off, int size) override;
     table_type_t table_type() const override { return ACTION; }
     int unitram_type() override { return UnitRam::ACTION; }
     void pad_format_fields();

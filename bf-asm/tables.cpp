@@ -1459,6 +1459,15 @@ void Table::need_on_actionbus(HashDistribution *hd, int off, int size) {
     action_bus->need_alloc(this, hd, off, size);
 }
 
+int Table::find_on_actionbus(RandomNumberGen rng, int off, int size) {
+    return action_bus ? action_bus->find(rng, off, size) : -1;
+}
+
+void Table::need_on_actionbus(RandomNumberGen rng, int off, int size) {
+    if (!action_bus) action_bus = new ActionBus();
+    action_bus->need_alloc(this, rng, off, size);
+}
+
 int Table::find_on_ixbar(Phv::Slice sl, int group) {
     if (input_xbar)
         if (auto *i = input_xbar->find_exact(sl, group)) {

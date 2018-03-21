@@ -7,12 +7,14 @@
 class ActionBus {
     static struct MeterBus_t {} MeterBus;
     struct Source {
-        enum { None, Field, HashDist, TableOutput, TableColor, NameRef, ColorRef }     type;
+        enum { None, Field, HashDist, RandomGen, TableOutput, TableColor, NameRef, ColorRef }
+                                                        type;
         union {
             Table::Format::Field                        *field;
             HashDistribution                            *hd;
             Table                                       *table;
             Table::Ref                                  *name_ref;
+            RandomNumberGen                             rng;
         };
         Source() : type(None) { field = nullptr; }
         Source(Table::Format::Field *f) : type(Field) { field = f; }
@@ -20,6 +22,7 @@ class ActionBus {
         Source(Table *t) : type(TableOutput) { table = t; }
         Source(Table::Ref *t) : type(NameRef) { name_ref = t; }
         Source(MeterBus_t) : type(NameRef) { name_ref = nullptr; }
+        Source(RandomNumberGen r) : type(RandomGen) { field = nullptr; rng = r; }
         bool operator==(const Source &a) const {
             return type == a.type && field == a.field; }
         bool operator<(const Source &a) const {
@@ -79,12 +82,14 @@ public:
     void alloc_field(Table *, Source src, unsigned offset, unsigned sizes_needed);
     void need_alloc(Table *tbl, Table::Format::Field *f, unsigned off, unsigned size);
     void need_alloc(Table *tbl, HashDistribution *hd, unsigned off, unsigned size);
+    void need_alloc(Table *tbl, RandomNumberGen rng, unsigned off, unsigned size);
     void need_alloc(Table *tbl, Table *attached, unsigned off, unsigned size);
     int find(Table::Format::Field *f, int off, int size);
     int find(const char *name, int off, int size, int *len = 0);
     int find(const std::string &name, int off, int size, int *len = 0) {
         return find(name.c_str(), off, size, len); }
     int find(HashDistribution *hd, int off, int size);
+    int find(RandomNumberGen rng, int off, int size);
     unsigned size() {
         unsigned rv = 0;
         for (auto &slot : by_byte) rv += slot.second.size;

@@ -23,6 +23,9 @@ std::ostream &operator<<(std::ostream &out, const ActionBus::Source &src) {
     case ActionBus::Source::HashDist:
         out << "HashDist(" << src.hd->hash_group << ", " << src.hd->id << ")";
         break;
+    case ActionBus::Source::RandomGen:
+        out << "rng " << src.rng.unit;
+        break;
     case ActionBus::Source::TableOutput:
         out << "TableOutput(" << (src.table ? src.table->name() : "0") << ")";
         break;
@@ -86,8 +89,8 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
         unsigned off = 0, sz = 0;
         if (kv.value.type == tCMD) {
             assert(kv.value.vec.size > 0 && kv.value[0].type == tSTR);
-            if (kv.value == "hash_dist") {
-                if (!CHECKTYPE(kv.value[1], tINT))
+            if (kv.value == "hash_dist" || kv.value == "rng") {
+                if (!PCHECKTYPE(kv.value.vec.size > 1, kv.value[1], tINT))
                     continue;
                 name = kv.value[0].s;
                 name_ref = nullptr;
@@ -148,6 +151,11 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                         error(kv.value[i].lineno, "Unexpected hash_dist %s",
                               value_desc(kv.value[i]));
                         break; } }
+            } else if (kv.value.type == tCMD && kv.value == "rng") {
+                src = Source(RandomNumberGen(kv.value[1].i));
+                if (kv.value.vec.size > 2 && CHECKTYPE(kv.value[2], tRANGE)) {
+                    off = kv.value[2].lo;
+                    sz = kv.value[2].hi + 1 - off; }
             } else if (name_ref) {
                 src = Source(new Table::Ref(*name_ref));
                 if (kv.value.type == tCMD && kv.value[1] == "color") {
@@ -363,17 +371,26 @@ bool ActionBus::check_sharing(Table *tbl1, Table *tbl2) {
 }
 
 void ActionBus::need_alloc(Table *tbl, Table::Format::Field *f, unsigned off, unsigned size) {
-    LOG3("need_alloc " << tbl->find_field(f) << " off=" << off << " size=0x" << hex(size));
+    LOG3("need_alloc(" << tbl->name() << ") " << tbl->find_field(f) << " off=" << off <<
+         " size=0x" << hex(size));
     need_place[f][off] |= size;
     byte_use.setrange((f->immed_bit(0) + off)/8U, size);
 }
 void ActionBus::need_alloc(Table *tbl, HashDistribution *hd, unsigned off, unsigned size) {
-    LOG3("need_alloc hash_dist " << hd->id << " off=" << off << " size=0x" << hex(size));
+    LOG3("need_alloc(" << tbl->name() << ") hash_dist " << hd->id << " off=" << off <<
+         " size=0x" << hex(size));
     need_place[hd][off] |= size;
     byte_use.setrange(off/8U, size);
 }
+void ActionBus::need_alloc(Table *tbl, RandomNumberGen rng, unsigned off, unsigned size) {
+    LOG3("need_alloc(" << tbl->name() << ") rng " << rng.unit << " off=" << off <<
+         " size=0x" << hex(size));
+    need_place[rng][off] |= size;
+    byte_use.setrange(off/8U, size);
+}
 void ActionBus::need_alloc(Table *tbl, Table *attached, unsigned off, unsigned size) {
-    LOG3("need_alloc table " << attached->name() << " off=" << off << " size=0x" << hex(size));
+    LOG3("need_alloc(" << tbl->name() << ") table " << attached->name() << " off=" << off <<
+         " size=0x" << hex(size));
     attached->set_output_used();
     need_place[attached][off] |= size;
     byte_use.setrange(off/8U, size);
@@ -516,10 +533,10 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
                   "action bus", src.toString(tbl).c_str());
             return; }
         unsigned start = (lo/8U) % step;
-        if (!(sizes_needed & 4)) bytes = 1;
-        if ((can_merge && (use = find_merge(tbl, lo, bytes, 1)) >= 0) ||
-            (use = find_free(tbl, start, 31, step, lo/8U, bytes)) >= 0)
-            do_alloc(tbl, src, use, lo/8U, bytes, offset);
+        int bytes_needed = (sizes_needed & 4) ? bytes : 1;
+        if ((can_merge && (use = find_merge(tbl, lo, bytes_needed, 1)) >= 0) ||
+            (use = find_free(tbl, start, 31, step, lo/8U, bytes_needed)) >= 0)
+            do_alloc(tbl, src, use, lo/8U, bytes_needed, offset);
         else
             error(lineno, "Can't allocate space on 8-bit part of action bus for %s",
                   src.toString(tbl).c_str()); }
@@ -568,6 +585,13 @@ void ActionBus::pass3(Table *tbl) {
     for (auto &d : need_place)
         for (auto &bits : d.second)
             alloc_field(tbl, d.first, bits.first, bits.second);
+    int rnguse = -1;
+    for (auto &slot : by_byte) {
+        for (auto &d : slot.second.data) {
+            if (d.first.type == Source::RandomGen) {
+                if (rnguse >= 0 && rnguse != d.first.rng.unit)
+                    error(lineno, "Can't use both rng units in a single table");
+                rnguse = d.first.rng.unit; } } }
 }
 
 static int slot_sizes[] = {
@@ -608,6 +632,14 @@ int ActionBus::find(HashDistribution *hd, int off, int size) {
     return -1;
 }
 
+int ActionBus::find(RandomNumberGen rng, int off, int size) {
+    for (auto &slot : by_byte)
+        if (slot.second.data.count(rng)) {
+            if (!(size & slot_sizes[slot.first/32U])) continue;
+            return slot.first + off/8; }
+    return -1;
+}
+
 template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
                                                        unsigned home_row, unsigned action_slice) {
     LOG2("--- ActionBus write_action_regs(" << tbl->name() << ", " << home_row << ", " <<
@@ -622,6 +654,7 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
             // meter bus output; the rest of this ActionBus is for immediate data (set
             // up by write_immed_regs below)
             continue; }
+        LOG5("    " << el.first << ": " << el.second);
         unsigned byte = el.first;
         assert(byte == el.second.byte);
         unsigned slot = Stage::action_bus_slot_map[byte];
@@ -650,7 +683,7 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
                 data_size = el.second.size;
                 srcname = "table " + data.first.table->name_;
             } else {
-                // HashDist only works in write_immed_regs
+                // HashDist and RandomGen only work in write_immed_regs
                 assert(0); }
             LOG3("    byte " << byte << " (slot " << slot << "): " << srcname <<
                  " (" << data.second << ".." << (data.second + data_size - 1) << ")" <<
@@ -776,15 +809,21 @@ template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
     LOG2("--- ActionBus write_immed_regs(" << tbl->name() << ")");
     auto &adrdist = regs.rams.match.adrdist;
     int tid = tbl->logical_id;
+    unsigned rngmask = 0;
     for (auto &f : by_byte) {
         if (f.second.is_table_output()) continue;
+        LOG5("    " << f.first << ": " << f.second);
         int slot = Stage::action_bus_slot_map[f.first];
         unsigned off = 0;
+        unsigned size = f.second.size;
         if (!f.second.data.empty()) {
             off = f.second.data.begin()->second;
             if (f.second.data.begin()->first.type == Source::Field)
-                off -= f.second.data.begin()->first.field->immed_bit(0); }
-        unsigned size = f.second.size;
+                off -= f.second.data.begin()->first.field->immed_bit(0);
+            for (auto &d : f.second.data) {
+                if (d.first.type == Source::RandomGen) {
+                    rngmask |= d.first.rng.unit << 4;
+                    rngmask |= ((1 << (size/8)) - 1) << d.second/8; } } }
         switch(Stage::action_bus_slot_size[slot]) {
         case 8:
             for (unsigned b = off/8; b <= (off + size - 1)/8; b++) {
@@ -805,6 +844,10 @@ template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
             break;
         default:
             assert(0); } }
+    if (rngmask) {
+        regs.rams.match.adrdist.immediate_data_rng_enable = 1;
+        regs.rams.match.adrdist.immediate_data_rng_logical_map_ctl[tbl->logical_id/4]
+            .set_subfield(rngmask, 5 * (tbl->logical_id%4U), 5); }
 }
 FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void ActionBus::write_immed_regs, mau_regs &, Table *)
 
@@ -819,6 +862,9 @@ std::string ActionBus::Source::toString(Table *tbl) const {
         return tbl->find_field(field);
     case HashDist:
         tmp << "hash_dist " << hd->id;
+        return tmp.str();
+    case RandomGen:
+        tmp << "rng " << rng.unit;
         return tmp.str();
     case TableOutput:
         return table->name();
