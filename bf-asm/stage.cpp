@@ -370,8 +370,12 @@ void Stage::output(json::map &ctxt_json) {
         if (table->logical_id >= 0)
             table->gen_name_lookup(table_names[std::to_string(table->logical_id)]); }
     write_regs(*regs);
-    if (options.condense_json)
+    if (options.condense_json) {
         regs->disable_if_zero();
+        // if any part of the gf matrix is enabled, we can't elide any part of it when
+        // generating .cfg.json, as otherwise walle will generate an invalid block write
+        if (options.gen_json && !regs->dp.xbar_hash.hash.galois_field_matrix.disabled())
+            regs->dp.xbar_hash.hash.galois_field_matrix.enable(); }
     // Enable mapram_config and imem regs -
     // These are cached by the driver, so if they are disabled they wont go
     // into tofino.bin as dma block writes and driver will complain
