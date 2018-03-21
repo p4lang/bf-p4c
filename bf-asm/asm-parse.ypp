@@ -226,7 +226,15 @@ map_element
 
 list_element
         : '-' key ':' value '\n' { $$ = singleton_map($2, $4); }
+        | '-' key ':' value '\n' INDENT map_elements UNINDENT {
+            VECTOR_insert($7, 0);
+            $7.data[0] = pair_t($2, $4);
+            $$ = VAL($7); }
         | '-' '?' value ':' value '\n' { $$ = singleton_map($3, $5); }
+        | '-' '?' value ':' value '\n' INDENT map_elements UNINDENT {
+            VECTOR_insert($8, 0);
+            $8.data[0] = pair_t($3, $5);
+            $$ = VAL($8); }
         | '-' value '\n' { $$ = $2; }
         | '-' ID comma_params '\n' { $$ = command($2, $3, yychar == '\n' ? 2 : 1); }
         | '-' ID comma_params ',' '\n' linewrapped_value_list
