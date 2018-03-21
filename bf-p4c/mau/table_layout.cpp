@@ -113,13 +113,17 @@ void TableLayout::check_for_alpm(IR::MAU::Table::Layout &, const IR::MAU::Table 
 void TableLayout::check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("ternary")) {
-        auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
-        ERROR_CHECK(pragma_val != nullptr, "%s: Cannot interpret the ternary pragma on table %s",
-                    tbl->srcInfo, tbl->name);
-        if (pragma_val->asInt() == 1)
-            layout.ternary = true;
-        else
-            ::warning("Pragma ternary ignored for table %s because value is not 1", tbl->name);
+        if (s->expr.size() <= 0) {
+            ::warning("Pragma ternary ignored for table %s because value is undefined", tbl->name);
+        } else {
+            auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
+            ERROR_CHECK(pragma_val != nullptr,
+                "%s: Cannot interpret the ternary pragma on table %s", tbl->srcInfo, tbl->name);
+            if (pragma_val->asInt() == 1)
+                layout.ternary = true;
+            else
+                ::warning("Pragma ternary ignored for table %s because value is not 1", tbl->name);
+        }
     } else {
         for (auto ixbar_read : tbl->match_key) {
             if (ixbar_read->match_type.name == "ternary" || ixbar_read->match_type.name == "lpm") {
