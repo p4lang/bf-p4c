@@ -204,6 +204,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
             auto container = alloc.container;
             if (container_actions_map->find(container) == container_actions_map->end()) {
                 ContainerAction cont_action;
+                cont_action.name = instr->name;
                 container_actions_map->emplace(container, cont_action);
             }
             if (!split) {

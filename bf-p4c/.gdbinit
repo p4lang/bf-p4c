@@ -354,17 +354,19 @@ class PHVBitPrinter(object):
     def to_string(self):
         return self.val['first']['str'].string() + "[" + str(self.val['second']) + "]"
 
+
 class PHVContainerPrinter(object):
     "Print a PHV::Container object"
+    container_kinds = [ "", "T", "D", "M", ]
+    container_sizes = { 8: "B", 16: "H", 32: "W" }
     def __init__(self, val):
         self.val = val
     def to_string(self):
-        sz = self.val['log2sz_']
-        if sz == 3:
+        tk = int(self.val['type_']['kind_'])
+        ts = int(self.val['type_']['size_'])
+        if tk < 0 or tk >= len(container_types) or not ts in container_sizes:
             return "<invalid PHV::Container>"
-        rv = "BHW"[int(sz)] + str(self.val['index_'])
-        if self.val['tagalong_']:
-            rv = "T" + rv;
+        rv = container_types[tk] + container_sizes[ts] + str(self.val['index_'])
         return rv;
 
 class SlicePrinter(object):

@@ -472,6 +472,7 @@ class Instruction : Primitive {
     Instruction(cstring op, const std::vector<Expression> &args) : Primitive(op) {
         for (auto a : args) operands.push_back(a); }
     bool isOutput(int operand_index) const override { return operand_index == 0; }
+    validate { BUG_CHECK(name, "empty name in instruction"); }
 }
 
 /// The Action part of an action table -- basically a single VLIW instruction, which is a
