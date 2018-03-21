@@ -315,6 +315,27 @@ const IR::Node* EgressDeparserConverter::preorder(IR::P4Control* node) {
     tnaParams.emplace("eg_intr_md_for_dprsr", param->name);
     paramList->push_back(param);
 
+    // add eg_intr_md_from_prsr
+    path = new IR::Path("egress_intrinsic_metadata_from_parser_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("eg_intr_md_from_prsr", IR::Direction::In, type);
+    tnaParams.emplace("eg_intr_md_from_prsr", param->name);
+    paramList->push_back(param);
+
+    // add eg_intr_md
+    path = new IR::Path("egress_intrinsic_metadata_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("eg_intr_md", IR::Direction::In, type);
+    tnaParams.emplace("eg_intr_md", param->name);
+    paramList->push_back(param);
+
+    // add ig_intr_md_for_tm
+    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::In, type);
+    tnaParams.emplace("ig_intr_md_for_tm", param->name);
+    paramList->push_back(param);
+
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
@@ -1342,6 +1363,27 @@ const IR::Node* EgressDeparserConverter::preorder(IR::P4Control* node) {
     auto type = new IR::Type_Name(path);
     param = new IR::Parameter("eg_intr_md_for_dprsr", IR::Direction::In, type);
     tnaParams.emplace("eg_intr_md_for_dprsr", param->name);
+    paramList->push_back(param);
+
+    // add eg_intr_md_from_prsr
+    path = new IR::Path("egress_intrinsic_metadata_from_parser_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("eg_intr_md_from_prsr", IR::Direction::In, type);
+    tnaParams.emplace("eg_intr_md_from_prsr", param->name);
+    paramList->push_back(param);
+
+    // add eg_intr_md
+    path = new IR::Path("egress_intrinsic_metadata_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("eg_intr_md", IR::Direction::In, type);
+    tnaParams.emplace("eg_intr_md", param->name);
+    paramList->push_back(param);
+
+    // add ig_intr_md_for_tm
+    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::In, type);
+    tnaParams.emplace("ig_intr_md_for_tm", param->name);
     paramList->push_back(param);
 
     // add compiler generated struct

@@ -692,6 +692,9 @@ control EgressDeparser<H, M, CG>(
     inout H hdr,
     in M metadata,
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs,
+    in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+    in egress_intrinsic_metadata_t eg_intr_md,
+    in ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
     inout CG aux);
 
 package Switch<IH, IM, EH, EM, CG>(
