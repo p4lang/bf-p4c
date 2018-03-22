@@ -1193,8 +1193,7 @@ bool Memories::find_ternary_stretch(int TCAMs_necessary, int &row, int &col,
                         && midbyte != tcam_midbyte_use[i / 2][j]) {
                         continue;
                     }
-                    if (tcam_midbyte_use[i / 2][j] == midbyte)
-                        split_first = true;
+                    split_first = true;
                 }
             }
 
