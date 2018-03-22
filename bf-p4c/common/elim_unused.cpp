@@ -108,7 +108,10 @@ class ElimUnused::Headers : public PardeTransform {
         // could be setting it to something other than zero.
         auto* field = self.phv.field(fieldRef);
         if (!field) return true;
-        return !self.defuse.getAllDefs(field->id).empty();
+        for (const auto& def : self.defuse.getAllDefs(field->id)) {
+            if (!def.second->is<ImplicitParserInit>()) {
+                return true; } }
+        return false;
     }
 
     const IR::BFN::Emit* preorder(IR::BFN::Emit* emit) override {

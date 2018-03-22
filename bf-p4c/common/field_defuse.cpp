@@ -137,6 +137,12 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
     for (const auto& f : phv) {
         if (f.gress != p->gress) {
             continue; }
+
+        // Some DeparserParameters are not initialized by parser, i.e. fields that are
+        // f.deparsed_to_tm() && f.no_pack(). However, they should be treated as
+        // implicitly initialized to an invalid value, instead of not initialized,
+        // for the correctness of overlay analysis.
+
         // In the ingress, bridged_metadata is considered as a header field.
         // For ingress ,all metadata are initializes in the beginning.
         // for egress, only none bridged metadata are initializes at the beginning.

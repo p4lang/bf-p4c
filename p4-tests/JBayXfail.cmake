@@ -220,11 +220,6 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "Can't fit table .* in input xbar by itself"
-  tor.p4
-  )
-
-p4c_add_xfail_reason("jbay"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/int_transit.p4
   )
@@ -248,6 +243,8 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_16/ingress_checksum.p4
   extensions/p4_tests/p4_16/ONLab_packetio.p4
   extensions/p4_tests/p4_14/easy.p4
+  extensions/p4_tests/p4_14/easy_no_match_with_gateway.p4
+  extensions/p4_tests/p4_14/easy_no_match.p4
   )
 
 endif() # PTF_REQUIREMENTS_MET
@@ -258,13 +255,8 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
 )
 
-# BRIG-513
+# BRIG-546
 p4c_add_xfail_reason("jbay"
-  "Ran out of constant output slots"
-  extensions/p4_tests/p4_14/metadata_mutex_1.p4
-)
-
-p4c_add_xfail_reason("jbay"
-  "AssertionError: A packet was received on device .*, port .*, but we expected no packets."
-  extensions/p4_tests/p4_14/easy.p4
+  "ERROR:PTF runner:Error when pushing P4 config to switchd"
+  tor.p4
 )

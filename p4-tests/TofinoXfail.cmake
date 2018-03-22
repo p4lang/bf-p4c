@@ -498,7 +498,6 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
-  testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
@@ -1023,12 +1022,6 @@ p4c_add_xfail_reason("tofino"
   switch_l2
 )
 
-# BRIG-515
-p4c_add_xfail_reason("tofino"
-  "error: No phv record"
-  testdata/p4_14_samples/mac_rewrite.p4
-)
-
 # BRIG-528
 p4c_add_xfail_reason("tofino"
   "unexpected packet output on port .*"
@@ -1038,4 +1031,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
     "Slice size greater than container size"
   extensions/p4_tests/p4_14/test_config_303_static_table.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "SALU Selector Table not found"
+  extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
 )
