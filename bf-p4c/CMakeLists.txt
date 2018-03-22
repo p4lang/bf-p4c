@@ -314,7 +314,6 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/validate_allocation.h
   phv/analysis/critical_path_clusters.h
   phv/analysis/field_interference.h
-  phv/analysis/jbay_phv_analysis.h
   phv/analysis/pack_conflicts.h
   phv/pragma/pa_atomic.h
   phv/pragma/pa_container_size.h
@@ -323,6 +322,10 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/pragma/pa_solitary.h
   phv/pragma/phv_pragmas.h
   )
+if (ENABLE_JBAY)
+  list (APPEND BF_P4C_BACKEND_PHV_HDRS
+    phv/analysis/jbay_phv_analysis.h)
+endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_HDRS}")
 
 set (BF_P4C_BACKEND_ARCH_SRCS
