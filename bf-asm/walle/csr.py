@@ -948,16 +948,19 @@ class address_map(csr_composite_object):
         """
         width = 0
         for obj in self.objs:
+            obj_end = obj.offset * 8
             if type(obj) is reg:
-                width += obj.width * product(obj.count)
+                obj_end += obj.width * product(obj.count)
             elif type(obj) is address_map_instance or type(obj) is group:
                 try:
                     multiplier = product(obj.count) * obj.stride
                 except:
                     multiplier = 1
-                width += obj.min_width() * multiplier
+                obj_end += obj.min_width() * multiplier
             else:
                 raise CsrException("Unrecognized object in address map ('"+type(obj)+"')")
+            if obj_end > width:
+                width = obj_end
 
         width /= 8
 
