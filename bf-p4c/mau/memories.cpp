@@ -601,7 +601,7 @@ Memories::SRAM_group *Memories::find_best_candidate(SRAM_group *placed_wa, int r
 
     loc = 0;
     for (auto emw : exact_match_ways) {
-        auto group_bus = emw->build_search_bus(0);
+        auto group_bus = emw->build_search_bus(placed_wa->width - 1);
         if ((!bus[0].free() && bus[0] == group_bus) || (!bus[1].free() && bus[1] == group_bus))
             return emw;
         loc++;
@@ -666,7 +666,8 @@ int Memories::select_search_bus(SRAM_group *group, int width_sect, int row) {
 /* Picks an empty/most open row, and begins to fill it in within a way */
 bool Memories::find_best_row_and_fill_out(unsigned column_mask) {
     SRAM_group *way = exact_match_ways[0];
-    safe_vector<std::pair<int, int>> available_rams = available_SRAMs_per_row(column_mask, way, 0);
+    safe_vector<std::pair<int, int>> available_rams
+        = available_SRAMs_per_row(column_mask, way, way->width - 1);
     // No memories left to place anything
     if (available_rams.size() == 0)
         return false;
@@ -1047,7 +1048,7 @@ bool Memories::find_best_partition_for_atcam(unsigned partition_mask) {
     auto part = atcam_partitions[0];
 
     safe_vector<std::pair<int, int>> available_rams
-        = available_SRAMs_per_row(partition_mask, part, 0);
+        = available_SRAMs_per_row(partition_mask, part, part->width - 1);
     if (available_rams.size() == 0) {
         return false;
     }
