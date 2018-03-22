@@ -557,29 +557,16 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         forAllMatching<IR::BFN::Select>(&state->selects,
                       [&](const IR::BFN::Select* select) {
+            // Load match register from previous result.
+            BUG_CHECK(select->reg.size() > 0, "Match register not allocated.");
+            auto* loweredSelect =
+                new IR::BFN::LoweredSelect(select->reg);
             if (auto* bufferSource = select->source->to<IR::BFN::BufferlikeRVal>()) {
-                // XXX(seth): For now we don't perform any further
-                // transformations on selects (like we do for extracts in e.g.
-                // SplitBigStates), so in this context we can treat `PacketRVal`s
-                // and `BufferRVal`s like they live in the same coordinate
-                // system. We need to change that, though; it doesn't work
-                // correctly in general.
                 const auto bufferRange =
-                  bufferSource->range().toUnit<RangeUnit::Byte>();
-                // Load match register from previous result.
-                BUG_CHECK(select->reg.size() > 0, "Match register not allocated.");
-                auto* loweredSelect =
-                    new IR::BFN::LoweredSelect(select->reg);
-                loweredSelect->debug.info.push_back(debugInfoFor(select, bufferRange));
-                loweredState->select.push_back(loweredSelect);
-                return;
-            }
-
-            // This Select isn't matching on the input buffer; if we haven't
-            // been able to eliminate it by this point, it's a construction we
-            // can't handle. Report it in the debug info.
-            loweredState->debug.info.push_back("unhandled: " +
-                                               cstring::to_cstring(select));
+                    bufferSource->range().toUnit<RangeUnit::Byte>();
+                loweredSelect->debug.info.push_back(debugInfoFor(select, bufferRange)); }
+            loweredState->select.push_back(loweredSelect);
+            return;
         });
 
         for (auto* transition : state->transitions) {

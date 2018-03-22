@@ -248,32 +248,54 @@ class VerifyParserRValsAreUnique : public ParserInspector {
     std::set<const IR::BFN::ParserRVal*> visitedParserRVals;
 };
 
-/// A mapping from a computed r-value to the r-value we evaluated it to. Ideally
-/// we evaluated it to a simple r-value which is implementable on the hardware.
-using ParserValueResolution = std::map<const IR::BFN::ComputedRVal*,
-                                       const IR::BFN::ParserRVal*>;
+/// Verify that every parser state have unique name.
+/// This is a requirement for the correctness from CopyPropagateParserValues to
+/// InsertSaveAndSelect, as state name is used to check equalilty between state*.
+class VerifyStateNamessAreUnique : public ParserInspector {
+    bool preorder(const IR::BFN::ParserState* state) override {
+        cstring name = cstring::to_cstring(state->gress) + state->name;
+        BUG_CHECK(visitedNames.count(name) == 0,
+                  "Duplicated parser state name appears: %1%", name);
+        visitedNames.insert(name);
+        return false;
+    }
 
-#if 0  // Not used
-static void print(const std::map<cstring, const IR::BFN::ParserRVal*>& defs) {
-    for (auto d : defs)
-        std::cout << d.first << " " << d.second << std::endl;
+    std::set<cstring> visitedNames;
+};
+
+/// Represent a ParserRval and the state where it is defined.
+struct ParserRValDef {
+    const IR::BFN::ParserState* state;
+    const IR::BFN::ParserRVal* rval;
+    ParserRValDef(const IR::BFN::ParserState* state,
+                  const IR::BFN::ParserRVal* rval)
+        : state(state), rval(rval) { }
+    ParserRValDef() : state(nullptr), rval(nullptr) { }
+};
+
+/// A mapping from a computed r-value to the r-values we evaluated it to.
+/// For one computedRVal, it can have multiple definition parserRVal.
+using ParserValueResolution =
+    std::map<const IR::BFN::ComputedRVal*, std::vector<ParserRValDef>>;
+
+std::ostream& operator<<(std::ostream& s, const ParserValueResolution& mapping) {
+    for (const auto& kv : mapping) {
+        s << "For " << kv.first << " multiple defs found: " << "\n";
+        for (const auto& def : kv.second) {
+            s << def.state->name << ", " << def.rval << "\n"; } }
+    return s;
 }
-#endif
 
 /**
  * Walk the parser programs (each thread is treated separately) and try to
  * simplify r-values by replacing any uses of l-values with their definition.
  *
- * XXX(seth): This is slated for demolition. I want to replace this with a copy
- * propagation pass that walks over the entire program, rather than just the
- * parser.
- *
  * @pre Every `ParserRVal` in each of the parser programs is a unique object.
- * @post Any `ComputedRVal` which can be evaluated unambiguously to a simple
- * r-value (i.e. a `PacketRVal` or `ConstantRVal`) is replaced. Any
- * `ComputedRVal` which remains is either too complex to evaluate, contains uses
- * of l-values that were reached by more than one definition, or contains uses
- * of l-values that were not reached by any definition at all.
+ * @post Any `ComputedRVal` which can either be evaluated unambiguously to a simple
+ * r-value (i.e. a `PacketRVal` or `ConstantRVal`), or remain the same but have a mapping
+ * that maps it to multiple place that it were defined, only if it is for select. Any
+ * `ComputedRVal` which remains (without having a mapping) is either too complex to
+ *  evaluate, or contains uses of l-values that were not reached by any definition at all.
  */
 struct CopyPropagateParserValues : public ParserInspector {
     ParserValueResolution resolvedValues;
@@ -281,7 +303,7 @@ struct CopyPropagateParserValues : public ParserInspector {
  private:
     /// A map from l-values (identified by strings) to the r-value most recently
     /// assigned to them.
-    using ReachingDefs = std::map<cstring, const IR::BFN::ParserRVal*>;
+    using ReachingDefs = std::map<cstring, ParserRValDef>;
 
     bool preorder(const IR::BFN::Parser* parser) override {
         ReachingDefs initialDefs;
@@ -294,30 +316,29 @@ struct CopyPropagateParserValues : public ParserInspector {
 
         ReachingDefs updated;
         for (auto& def : defs) {
-            auto lVal = def.first;
-            auto* rVal = def.second;
+            cstring lVal = def.first;
+            auto* rVal = def.second.rval;
 
             // Values that don't come from the input packet don't need to
             // change; they're invariant under shifting.
             if (!rVal->is<IR::BFN::PacketRVal>()) {
-                updated[lVal] = rVal;
-                continue;
-            }
+                updated.emplace(lVal, def.second);
+                continue; }
 
             // Values from the input packet need their offsets to be shifted
             // to the left to compensate for the fact that the transition is
             // shifting the input buffer to the right.
             auto* clone = rVal->to<IR::BFN::PacketRVal>()->clone();
             clone->range_ = clone->range_.shiftedByBytes(-byteShift);
-            updated[lVal] = clone;
+            updated.emplace(lVal, ParserRValDef(def.second.state, clone));
         }
 
         return updated;
     }
 
-    void propagateToUse(const IR::BFN::ComputedRVal* value,
+    void propagateToUse(const IR::BFN::ParserState* state,
+                        const IR::BFN::ComputedRVal* value,
                         const ReachingDefs& defs) {
-        // Drop any cast which may be applied to this computed value.
         // XXX(seth): This obviously isn't sound, but it's consistent with what
         // we're doing elsewhere in the parser code. This is just a hack until
         // we eliminate casts correctly in an earlier pass.
@@ -344,12 +365,13 @@ struct CopyPropagateParserValues : public ParserInspector {
         // Does some definition for this computed value reach this point?
         if (defs.find(sourceName) == defs.end()) {
             // No reaching definition; just "propagate" the original value.
-            resolvedValues[value] = value->clone();
+            resolvedValues[value] = { ParserRValDef(state, value->clone()) };
             return;
         }
 
         // We found a definition; propagate it here.
-        auto* resolvedValue = defs.at(sourceName)->clone();
+        auto& rvalRef = defs.at(sourceName);
+        auto* resolvedValue = rvalRef.rval->clone();
 
         if (size_cast_to) {
             auto* buf = resolvedValue->to<IR::BFN::BufferlikeRVal>();
@@ -365,7 +387,7 @@ struct CopyPropagateParserValues : public ParserInspector {
                 dynamic_cast<IR::BFN::BufferlikeRVal*>(resolvedValue);
             if (!bufferlikeValue) {
                 // We can't simplify slices of other kinds of r-values for now.
-                resolvedValues[value] = value->clone();
+                resolvedValues[value] = { ParserRValDef(state, value->clone()) };
                 return;
             }
 
@@ -382,7 +404,7 @@ struct CopyPropagateParserValues : public ParserInspector {
             if (sliceOfValue.empty()) {
                 ::error("Computed value resolves to a zero-width slice: %1%",
                         value->source);
-                resolvedValues[value] = value->clone();
+                resolvedValues[value] = { ParserRValDef(state, value->clone()) };
                 return;
             }
 
@@ -393,29 +415,28 @@ struct CopyPropagateParserValues : public ParserInspector {
 
         // If there's no other reaching definition, we know we're OK.
         if (resolvedValues.find(value) == resolvedValues.end()) {
-            resolvedValues[value] = resolvedValue;
+            resolvedValues[value] = { ParserRValDef(rvalRef.state, resolvedValue) };
             return;
         }
 
         // We've seen another definition already.
-        auto* previousResolution = resolvedValues[value];
+        auto& previousResolution = resolvedValues[value];
 
         // If the previous definition is a computed r-value, we've already
         // encountered some kind of failure; just keep it that way.
-        if (previousResolution->is<IR::BFN::ComputedRVal>()) return;
+        if (previousResolution.size() == 1
+            && previousResolution.front().rval->is<IR::BFN::ComputedRVal>()) return;
 
         // We found a previous definition that was valid on its own; we just
-        // need to make sure it matches the new one. For the generated code to
-        // be correct, we need to ensure that every reaching definition is
-        // equivalent.
-        if (*previousResolution == *resolvedValue) return;
+        // need to make sure we are not adding duplicated defs.
+        bool duplicated = false;
+        for (const auto& def : previousResolution) {
+            if (def.state == rvalRef.state && *def.rval == *resolvedValue) {
+                duplicated = true;
+                break; } }
 
-        // The two definitions don't match; that means that we can't resolve
-        // this value to a simple r-value unambiguously. Forget the previously
-        // encountered definition *and* this new one; just "propagate" the
-        // original value.
-        ::error("Cannot resolve computed value unambiguously: %1%", value);
-        resolvedValues[value] = value->clone();
+        if (!duplicated) {
+            resolvedValues[value].push_back(ParserRValDef(rvalRef.state, resolvedValue)); }
     }
 
     void propagateToState(const IR::BFN::ParserState* state,
@@ -433,14 +454,12 @@ struct CopyPropagateParserValues : public ParserInspector {
             // (And regardless of our success, record the new definition for
             // `dest`.)
             if (auto* computed = extract->source->to<IR::BFN::ComputedRVal>()) {
-                propagateToUse(computed, defs);
-                defs[dest] = resolvedValues[computed];
-                return;
-            }
-
-            // The source is a simple r-value; just record the new definition
-            // for `dest` and move on.
-            defs[dest] = extract->source;
+                propagateToUse(state, computed, defs);
+                defs[dest] = resolvedValues[computed].back();
+            } else {
+                // The source is a simple r-value; just record the new definition
+                // for `dest` and move on.
+                defs[dest] = ParserRValDef(state, extract->source); }
         });
 
         forAllMatching<IR::BFN::Select>(&state->selects,
@@ -448,7 +467,7 @@ struct CopyPropagateParserValues : public ParserInspector {
             // If the source of this select is a computed r-value, its
             // expression may use a definition we've seen. Try to simplify it.
             if (auto* computed = select->source->to<IR::BFN::ComputedRVal>())
-                propagateToUse(computed, defs);
+                propagateToUse(state, computed, defs);
         });
 
         // Recursively propagate the definitions which have reached this point
@@ -459,9 +478,12 @@ struct CopyPropagateParserValues : public ParserInspector {
     }
 };
 
+/// Replace computed value with rval if it has only one definition. Others will be saved
+/// in the multiDefValues. After this pass, a computedRVal is either replaced, or it has an
+/// entry in the multiDefValues.
 struct ApplyParserValueResolutions : public ParserTransform {
     explicit ApplyParserValueResolutions(const ParserValueResolution& resolvedValues)
-      : resolvedValues(resolvedValues) { }
+        : resolvedValues(resolvedValues) { }
 
  private:
     IR::BFN::ParserRVal* preorder(IR::BFN::ComputedRVal* value) override {
@@ -469,29 +491,19 @@ struct ApplyParserValueResolutions : public ParserTransform {
         auto* original = getOriginal<IR::BFN::ComputedRVal>();
         BUG_CHECK(resolvedValues.find(original) != resolvedValues.end(),
                   "No resolution for computed value: %1%", value);
-        return resolvedValues.at(original)->clone();
+        if (resolvedValues.at(original).size() == 1) {
+            return resolvedValues.at(original).front().rval->clone();
+        } else {
+            // XXX(yumin): no change is made and returns same pointer,
+            // save the original instead of the parameter.
+            multiDefValues[original] = resolvedValues.at(original);
+            return value; }
     }
 
     const ParserValueResolution& resolvedValues;
-};
 
-class ResolveComputedValues : public PassManager {
  public:
-    ResolveComputedValues() {
-        auto* copyPropagate = new CopyPropagateParserValues;
-        addPasses({
-            copyPropagate,
-            new ApplyParserValueResolutions(copyPropagate->resolvedValues)
-        });
-    }
-};
-
-class CheckResolvedHeaderStackExpressions : public ParserInspector {
-    bool preorder(const IR::BFN::UnresolvedStackRef* stackRef) {
-        ::error("Couldn't resolve header stack reference in state %1%: %2%",
-                findContext<IR::BFN::ParserState>()->name, stackRef);
-        return false;
-    }
+    ParserValueResolution multiDefValues;
 };
 
 class CheckResolvedParserExpressions : public ParserTransform {
@@ -552,11 +564,64 @@ class CheckResolvedParserExpressions : public ParserTransform {
     const IR::BFN::Select*
     preorder(IR::BFN::Select* select) override {
         prune();
-        if (!select->source->is<IR::BFN::ComputedRVal>()) return select;
-        ::error("Couldn't resolve computed value for select in state %1%: %2%",
-                findContext<IR::BFN::ParserState>()->name,
-                select->source->to<IR::BFN::ComputedRVal>()->source);
-        return nullptr;
+        if (!select->source->is<IR::BFN::ComputedRVal>())
+            return select;
+
+        auto* original = getOriginal<IR::BFN::Select>()->source->to<IR::BFN::ComputedRVal>();
+        if (!multiDefValues.count(original)) {
+            ::error("Couldn't resolve computed value for select in state %1%: %2%",
+                    findContext<IR::BFN::ParserState>()->name,
+                    original->source);
+            return nullptr;
+        }
+
+        // Update mapping.
+        auto* newComputed = select->source->to<IR::BFN::ComputedRVal>();
+        updatedDefValues[newComputed] = multiDefValues.at(original);
+
+        if (LOGGING(4)) {
+            LOG4("Found computed value with multiple possible data source: ");
+            for (const auto& def : multiDefValues.at(original)) {
+                LOG4("State: " << def.state->name << ", Rval: " << def.rval); } }
+
+        return select;
+    }
+
+ public:
+    explicit CheckResolvedParserExpressions(const ParserValueResolution& multiDefValues)
+        : multiDefValues(multiDefValues) { }
+
+    const ParserValueResolution& multiDefValues;
+    ParserValueResolution updatedDefValues;
+};
+
+class ResolveComputedValues : public PassManager {
+ public:
+    ResolveComputedValues() {
+        // XXX(yumin): both applyResolution and checkResolved may change IR, so multiDefValues
+        // are updated in visitFunctor by the new values produced by each pass.
+        auto* copyPropagate   = new CopyPropagateParserValues();
+        auto* applyResolution = new ApplyParserValueResolutions(copyPropagate->resolvedValues);
+        auto* checkResolved   = new CheckResolvedParserExpressions(multiDefValues);
+        addPasses({
+            copyPropagate,
+            applyResolution,
+            new VisitFunctor([this, applyResolution] () {
+                multiDefValues = applyResolution->multiDefValues; }),
+            checkResolved,
+            new VisitFunctor([this, checkResolved] () {
+                multiDefValues = checkResolved->updatedDefValues; }),
+        });
+    }
+
+    ParserValueResolution multiDefValues;
+};
+
+class CheckResolvedHeaderStackExpressions : public ParserInspector {
+    bool preorder(const IR::BFN::UnresolvedStackRef* stackRef) {
+        ::error("Couldn't resolve header stack reference in state %1%: %2%",
+                findContext<IR::BFN::ParserState>()->name, stackRef);
+        return false;
     }
 };
 
@@ -596,9 +661,6 @@ class CheckResolvedParserExpressions : public ParserTransform {
  * fields extracted in earlier stage, it might not compile. However, the case is rare,
  * because it does not compile in previous implementation.
  *
- * TODO(yumin): if select on something does not show up in the first 32 bytes of the header
- * currently implementation is not able to do, those it's possible by splitting this header.
- *
 */
 class ComputeSaveAndSelect: public ParserInspector {
     using State = IR::BFN::ParserState;
@@ -607,40 +669,80 @@ class ComputeSaveAndSelect: public ParserInspector {
 
     struct UnresolvedSelect {
         UnresolvedSelect(const StateSelect* s, unsigned shifts,
-                         const std::set<MatchRegister>& used)
-            : select(s), byte_shifted(shifts), used_by_others(used) { }
+                         const std::set<MatchRegister>& used,
+                         boost::optional<ParserRValDef> prefer = boost::none)
+            : select(s), byte_shifted(shifts),
+              used_by_others(used), preferred_source(prefer) { }
 
         const StateSelect* select;
         unsigned byte_shifted;
         // MatchRegisters that has been used on the path by other selects.
         // Any save before that state need to update this.
         std::set<MatchRegister> used_by_others;
+        // Used when select has unresolved source, i.e. IR::BFN::ComputedRVal.
+        // In that case, it means that the source has multiple defs so we have to
+        // trace it back to the state of each def and insert save at that state.
+        boost::optional<ParserRValDef> preferred_source;
 
         // The absolute offset that this select match on for current state's
         // input buffer.
         nw_bitrange source() const {
-            if (auto* buf = select->source->to<IR::BFN::BufferlikeRVal>()) {
+            const IR::BFN::BufferlikeRVal* buf = nullptr;
+            if (preferred_source) {
+                buf = (*preferred_source).rval->to<IR::BFN::BufferlikeRVal>();
+            } else {
+                buf = select->source->to<IR::BFN::BufferlikeRVal>(); }
+
+            if (buf) {
                 return buf->range().shiftedByBytes(byte_shifted);
             } else {
                 ::error("select on a field that is impossible to implement for hardware, "
                         "likely selecting on a field that is written by constants: %1%", select);
                 return nw_bitrange(); }
         }
+
+        bool
+        isExtractedEarlier(const State* state) const {
+            // For multipledef selects, only when state maches, source is meaningful.
+            if (preferred_source) {
+                return state->gress != (*preferred_source).state->gress
+                       || (*preferred_source).state->name != state->name;
+            } else {
+                return source().lo < 0; }
+        }
     };
 
+    // For unresolved computed values.
+    const ParserValueResolution& multiDefValues;
     std::map<const State*, std::vector<UnresolvedSelect>> state_unresolved_selects;
     ordered_set<const State*> unprocessed_states;
 
     void postorder(const State* state) override {
         // Mark state_unresolved_selects for this state
         for (const auto* select : state->selects) {
-            state_unresolved_selects[state].push_back(
-                    UnresolvedSelect(select, 0, { })); }
+            if (auto* computed = select->source->to<IR::BFN::ComputedRVal>()) {
+                LOG3("Select on multi-defined rvalue: " << select);
+                for (auto& def : multiDefValues.at(computed)) {
+                    LOG3("  ..Defined at : " << def.state->name << ", " << def.rval);
+                    state_unresolved_selects[state].push_back(
+                            UnresolvedSelect(select, 0, { }, def)); }
+
+            } else {
+                state_unresolved_selects[state].push_back(
+                        UnresolvedSelect(select, 0, { }));
+            }
+        }
         unprocessed_states.insert(state);
         calcSaves(state);
     }
 
     void calcSaves(const State* state) {
+        // For multi-def sources, we need to calculate the corrected_source and used_regs
+        // across different branches.
+        std::map<const StateSelect*, nw_bitrange> corrected_source;
+        std::map<const StateSelect*, std::set<MatchRegister>> used_by_other_path;
+        calcCorrectSourceAndUsedReg(state, corrected_source, used_by_other_path);
+
         // For each transition branch, calculate the saves and corresponding select.
         for (const auto* transition : state->transitions) {
             BUG_CHECK(transition->shift, "State %1% has unset shift?", state->name);
@@ -676,8 +778,12 @@ class ComputeSaveAndSelect: public ParserInspector {
                  });
 
             for (const auto& unresolved : unresolved_selects) {
+                // Wrongly trace-backed resolve.
+                if (corrected_source.count(unresolved.select)
+                    && unresolved.source() != corrected_source.at(unresolved.select)) {
+                    continue; }
                 nw_byterange source = unresolved.source().toUnit<RangeUnit::Byte>();
-                if (isExtractedEarlier(unresolved)) {
+                if (unresolved.isExtractedEarlier(state)) {
                     early_stage_extracted.push_back(unresolved);
                     continue; }
 
@@ -717,6 +823,9 @@ class ComputeSaveAndSelect: public ParserInspector {
                         while (match_reg_itr < registers.size()) {
                             auto& reg = registers[match_reg_itr++];
                             if (used_registers.count(reg) || unresolved.used_by_others.count(reg)) {
+                                continue; }
+                            if (used_by_other_path.count(unresolved.select)
+                                && used_by_other_path[unresolved.select].count(reg)) {
                                 continue; }
                             accumulated_regs.push_back(reg);
                             i += reg.size;
@@ -798,12 +907,6 @@ class ComputeSaveAndSelect: public ParserInspector {
         return match_range.shiftedByBytes(-loByte);
     }
 
-    bool
-    isExtractedEarlier(const UnresolvedSelect& select) {
-        if (select.source().lo < 0) return true;
-        return false;
-    }
-
     std::vector<UnresolvedSelect>
     calcUnresolvedSelects(const State* next_state, unsigned shift_bytes) {
         // For the state_unresolved_selects from children state,
@@ -816,6 +919,63 @@ class ComputeSaveAndSelect: public ParserInspector {
 
         return rst;
     }
+
+    void
+    calcCorrectSourceAndUsedReg(
+            const State* state,
+            std::map<const StateSelect*, nw_bitrange>& corrected_source,
+            std::map<const StateSelect*, std::set<MatchRegister>>& used_regs) {
+        // Count all selects.
+        std::map<std::pair<const StateSelect*, nw_bitrange>, int> select_count;
+        for (const auto* transition : state->transitions) {
+            BUG_CHECK(transition->shift, "State %1% has unset shift?", state->name);
+            BUG_CHECK(*transition->shift >= 0, "State %1% has negative shift %2%?",
+                      state->name, *transition->shift);
+
+            auto next_state = transition->next;
+            unsigned shift_bytes = *transition->shift;
+            if (!next_state) continue;
+
+            // Get unresolved selects by merge all child state's unresolved selects.
+            auto unresolved_selects = calcUnresolvedSelects(next_state, shift_bytes);
+            for (const auto& select : unresolved_selects) {
+                if (select.isExtractedEarlier(state)) continue;
+                select_count[{select.select, select.source()}]++; }
+        }
+
+        // Find out selects that show up more than once, calculate right source and
+        // a prefered register for them.
+        auto registers = Device::pardeSpec().matchRegisters();
+        for (const auto& kv : select_count) {
+            if (kv.second <= 1)
+                continue;
+            const auto* select_use = kv.first.first;
+            auto& source = kv.first.second;
+
+            BUG_CHECK(corrected_source.count(kv.first.first)
+                      ? corrected_source.at(select_use) == source : true,
+                      "Inconsistent corrected sources");
+            corrected_source[select_use] = source;
+
+            // Merge all used register set.
+            std::set<MatchRegister> merged_use;
+            for (const auto* transition : state->transitions) {
+                if (!transition->next)
+                    continue;
+                auto next_state = transition->next;
+                unsigned shift_bytes = *transition->shift;
+                auto unresolved_selects = calcUnresolvedSelects(next_state, shift_bytes);
+
+                for (const auto& select : unresolved_selects) {
+                    if (select.select == select_use && source == select.source()) {
+                        merged_use.insert(select.used_by_others.begin(),
+                                          select.used_by_others.end()); } } }
+            used_regs[select_use] = merged_use; }
+    }
+
+ public:
+    explicit ComputeSaveAndSelect(const ParserValueResolution& m)
+        : multiDefValues(m) { }
 
  public:
     // The saves need to be executed on this transition.
@@ -987,8 +1147,8 @@ struct AdjustMatchValue : public ParserModifier {
 };
 
 struct InsertSaveAndSelect : public PassManager {
-    InsertSaveAndSelect() {
-        auto* computeSaveAndSelect = new ComputeSaveAndSelect();
+    explicit InsertSaveAndSelect(const ParserValueResolution& multiDefValues) {
+        auto* computeSaveAndSelect = new ComputeSaveAndSelect(multiDefValues);
         addPasses({
             computeSaveAndSelect,
             new WriteBackSaveAndSelect(*computeSaveAndSelect),
@@ -1000,13 +1160,14 @@ struct InsertSaveAndSelect : public PassManager {
 }  // namespace
 
 ResolveComputedParserExpressions::ResolveComputedParserExpressions() {
+    auto* resolveComputedValues = new ResolveComputedValues();
     addPasses({
         new VerifyAssignedShifts,
         new ResolveNextAndLast,
         new VerifyParserRValsAreUnique,
-        new ResolveComputedValues,
-        new CheckResolvedParserExpressions,
-        new InsertSaveAndSelect,
+        new VerifyStateNamessAreUnique,
+        resolveComputedValues,
+        new InsertSaveAndSelect(resolveComputedValues->multiDefValues),
     });
 }
 
