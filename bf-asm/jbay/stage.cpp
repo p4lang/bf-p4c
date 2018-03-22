@@ -69,8 +69,12 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
         * Otherwise, MAU stage 0 is configured as match-dependent on Parser-Arbiter */
         regs.dp.match_ie_input_mux_sel |= 3;
     }
-    merge.mpr_stage = stageno;
-    merge.pred_stage_id = stageno;
+
+	merge.pred_stage_id = stageno;
+	for (gress_t gress : Range(INGRESS, EGRESS)) {
+		merge.mpr_stage_id[gress] = stageno;
+	}
+
     if (stageno != AsmStage::numstages()-1) {
         merge.mpr_bus_dep.mpr_bus_dep_egress = this[1].stage_dep[EGRESS] != MATCH_DEP;
         merge.mpr_bus_dep.mpr_bus_dep_ingress = this[1].stage_dep[INGRESS] != MATCH_DEP;
