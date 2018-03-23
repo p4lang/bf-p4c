@@ -35,6 +35,9 @@ def warn(msg, *args, **kwargs):
 def info(msg, *args, **kwargs):
     logger.info(msg, *args, **kwargs)
 
+def debug(msg, *args, **kwargs):
+    logger.debug(msg, *args, **kwargs)
+
 def get_parser():
     parser = argparse.ArgumentParser(description='PTF Test Runner for Harlyn')
     parser.add_argument('--testdir', help='Location of test outputs',
@@ -43,6 +46,8 @@ def get_parser():
                         type=str, action='store', required=True)
     parser.add_argument('--ptfdir', help='Directory containing PTF tests',
                         type=str, action="store", required=False)
+    parser.add_argument('--pdtest', help='Directory containing the PD conf file',
+                        type=str, action="store", required=False, default=None)
     parser.add_argument('--top-builddir', help='Build directory root',
                         type=str, action="store", required=False)
     parser.add_argument('--stftest', help='STF file',
@@ -71,6 +76,8 @@ def get_parser():
     parser.add_argument('--device', help='Target device',
                          choices=['tofino', 'jbay'], default='tofino',
                          type=str, action='store', required=False)
+    parser.add_argument('--xml-output', action='store_true', required=False,
+                        help='Generate output in JUnit XML format')
     return parser
 
 NUM_IFACES = 8
@@ -184,6 +191,50 @@ def run_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
         return False
     return p.returncode == 0
 
+def run_pd_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform, port_map,
+                 extra_args=[]):
+    ifaces = []
+    # find p4ptfutils
+    ptfutils = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'p4testutils')
+    if 'PYTHONPATH' in os.environ:
+        os.environ['PYTHONPATH'] += ":" + ptfutils
+    else:
+        os.environ['PYTHONPATH'] = ptfutils
+    # find pd generated python files
+    site_pkg = os.path.join('lib', 'python2.7', 'site-packages', device+'pd')
+    os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg)
+    # res_pd_rpc -- bf-drivers still uses tofino to install res_pd_rpc: 'tofino' should be device
+    res_pd_rpc = os.path.join('/usr', 'local', 'lib', 'python2.7', 'dist-packages', 'tofino')
+    os.environ['PYTHONPATH'] += ":" + res_pd_rpc
+    debug('PYTHONPATH={}'.format(os.environ['PYTHONPATH']))
+
+    for iface_idx, iface_name in port_map.items():
+        ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])
+    cmd = [PTF]
+    cmd.extend(['--test-dir', ptfdir])
+    cmd.extend(ifaces)
+    test_params = 'arch=\'{}\''.format(device.title())
+    test_params += ';target=\'asic-model\''
+    test_params += ';config_file=\'{}\''.format(config_file)
+    test_params += ';num_pipes=4'
+    test_params += ';thrift_server=\'localhost\''
+    test_params += ';use_pi=\'False\''
+    if platform is not None:
+        test_params += ';pltfm=\'{}\''.format(platform)
+    cmd.append('--test-params={}'.format(test_params))
+    cmd.extend(extra_args)
+    info("Executing PTF command: {}".format(' '.join(cmd)))
+
+    try:
+        # we want the ptf output to be sent to stdout
+        p = subprocess.Popen(cmd)
+        p.wait()
+    except:
+        error("Error when running PTF tests")
+        return False
+    return p.returncode == 0
+
+
 # model uses the context json to lookup names when logging
 def start_model(model, out=None, context_json=None, port_map_path=None, device=None):
     cmd = [model]
@@ -193,17 +244,23 @@ def start_model(model, out=None, context_json=None, port_map_path=None, device=N
         cmd.extend(['-f', port_map_path])
     if device is not None and 'jbay' in device:
         cmd.extend(['--chip-type=4']) # default CHIPTYPE=4 for Jbay
+    debug("Starting model: {}".format(' '.join(cmd)))
     return subprocess.Popen(cmd, stdout=out, stderr=out)
 
-def start_switchd(switchd, status_port, conf_path, out=None, device=None):
+def start_switchd(switchd, status_port, conf_path, with_pd = None, out=None, device=None):
     cmd = [switchd]
-    cmd.extend(['--status-port', str(status_port)])
     cmd.extend(['--install-dir', '/usr/local'])
     cmd.extend(['--conf-file', conf_path])
     if device is not None and 'jbay' in device:
         cmd.extend(['--skip-hld', 'krt'])
-    cmd.append('--skip-p4')
+    cmd.extend(['--status-port', str(status_port)])
+    if with_pd is None:
+        cmd.append('--skip-p4')
+    else:
+        cmd.extend(['--no-pi'])
+        cmd.extend(['--init-mode', 'cold'])
     cmd.append('--background')
+    debug("Starting model: {}".format(' '.join(cmd)))
     return subprocess.Popen(cmd, stdout=out, stderr=out)
 
 # From
@@ -287,11 +344,16 @@ def main():
     if unknown_args and args.update_config_only:
         error("Extra args not supported with --update-config-only and will be ignored")
     extra_ptf_args = unknown_args
+    if args.xml_output:
+        extra_ptf_args.extend(['--xunit', '--xunit-dir', args.testdir])
 
-    compiler_out_dir = args.testdir
+    if args.pdtest is not None:
+        compiler_out_dir = os.path.join(args.testdir, 'share', args.device+'pd', args.name)
+    else:
+        compiler_out_dir = args.testdir
 
     p4info_path = os.path.join(compiler_out_dir, 'p4info.proto.txt')
-    if not os.path.exists(p4info_path):
+    if args.pdtest is None and not os.path.exists(p4info_path):
         error("P4Info file {} not found".format(p4info_path))
         sys.exit(1)
 
@@ -311,6 +373,13 @@ def main():
         sys.exit(1)
 
     port_map_path = args.port_map
+    # TODO: map the ports in the test directory. Right now it gives an error:
+    # Error when parsing JSON port mapping file .../emulation/ports.json
+    # since those files have "PortToVeth" not "PortToIf"
+    #
+    # if args.pdtest is not None and args.port_map is None:
+    #    port_map_path = os.path.join(args.ptfdir, 'ports.json')
+
     if port_map_path is not None and not os.path.exists(port_map_path):
         error("Provided port mapping file {} not found".format(port_map_path))
         sys.exit(1)
@@ -359,9 +428,15 @@ def main():
     PTF = findbin(top_builddir, 'PTF')
 
     if args.test_only:
-        success = run_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
-                                port_map, args.stftest, args.platform,
-                                extra_ptf_args)
+        success = False
+        if args.pdtest is None:
+            success = run_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
+                                    port_map, args.stftest, args.platform,
+                                    extra_ptf_args)
+        else:
+            success = run_pd_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
+                                   args.testdir, args.platform, port_map,
+                                   extra_ptf_args)
         if not success:
             error("Error when running PTF tests")
             sys.exit(1)
@@ -387,13 +462,17 @@ def main():
                                   device=device)
             processes["model"] = model_p
 
-            conf_path = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), device + '.conf')
+            if args.pdtest is not None:
+                conf_path = args.pdtest
+            else:
+                conf_path = os.path.join(
+                    os.path.dirname(os.path.realpath(__file__)), device + '.conf')
             assert(os.path.exists(conf_path))
 
             switchd_status_port = 6789
-            switchd_p = start_switchd(BF_SWITCHD, switchd_status_port, 
-                                      conf_path, out=switchd_out,
+            switchd_p = start_switchd(BF_SWITCHD, switchd_status_port,
+                                      conf_path, args.pdtest,
+                                      out=switchd_out,
                                       device=device)
             processes["switchd"] = switchd_p
 
@@ -402,16 +481,21 @@ def main():
                 error("Error when starting model & switchd")
                 return False
 
-            success = update_config(args.name, args.grpc_addr,
+            if args.pdtest is not None:
+                success = run_pd_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
+                                       args.testdir, args.platform, port_map,
+                                       extra_ptf_args)
+            else:
+                success = update_config(args.name, args.grpc_addr,
                                     p4info_path, bin_path, cxt_json_path)
-            if not success:
-                error("Error when pushing P4 config to switchd")
-                return False
+                if not success:
+                    error("Error when pushing P4 config to switchd")
+                    return False
 
-            success = run_ptf_tests(PTF, args.grpc_addr, args.ptfdir,
-                                    p4info_path, port_map,
-                                    args.stftest, args.platform,
-                                    extra_ptf_args)
+                success = run_ptf_tests(PTF, args.grpc_addr, args.ptfdir,
+                                        p4info_path, port_map,
+                                        args.stftest, args.platform,
+                                        extra_ptf_args)
             if not success:
                 error("Error when running PTF tests")
                 return False

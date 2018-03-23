@@ -112,6 +112,16 @@ general, `$PTF_DIR` corresponds to `p4-tests/p4_<version>/<prog_name>.ptf`.
     sudo ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> --ptfdir $PTF_DIR --test-only
     ```
 
+1. **Run PD tests**
+    ```bash
+    sudo ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> --ptfdir ${PTF_DIR} --pdtest <prog_config_file>
+    ```
+    Where `<prog_config_file>` is the .conf file generated for this run.
+    It can be manually generated using:
+    ```bash
+    ./p4-tests/gen_pd_conf.py --name <prog_name> --testdir $P4C_OUTPUT --device <tofino|jbay>
+    ```
+
 Any extra argument that you pass to ptf_runner.py will be forwarded to PTF. In
 practice this is convenient when you want to run a single PTF test in the
 test suite for that P4 program. For example:
@@ -130,6 +140,7 @@ with `--stftest`:
 Often you may need to run bf_switchd in GDB. Because of the P4Runtime gRPC
 server, you will need to ignore `SIG36` by typing `handle SIG36 noprint nostop`
 at the GDB prompt.
+
 
 Adding a P4 test program:
 =========================

@@ -62,6 +62,29 @@ function(bfn_find_tests input_files test_list exclude patterns)
   set(${test_list} ${inputList} PARENT_SCOPE)
 endfunction()
 
+function(bfn_add_p4factory_tests tag test_list)
+  # and they have the ptf tests in a separate directory
+  foreach(__t IN LISTS ${test_list})
+    file (RELATIVE_PATH p4test ${P4C_SOURCE_DIR} ${__t})
+    string (REPLACE "p4-tests/programs" "p4-tests/ptf-tests" ptfpath ${__t})
+    get_filename_component (ptfdir ${ptfpath} DIRECTORY)
+    message("adding PTF test ${p4test}")
+    p4c_add_ptf_test_with_ptfdir (${tag} ${p4test} ${__t} "${testExtraArgs} -pd" ${ptfdir})
+    set_tests_properties("${tag}/${p4test}" PROPERTIES
+      ENVIRONMENT "PTF_TEST_SPECS=")
+  endforeach()
+endfunction()
+
+# add additional arguments to a test, after the call to add_test
+# We currently use this for specifying a set of tests, either by tag,
+# a sequence of tags, or a sequence of tests
+# \TODO: replace the hack of the fixed path with a better way to
+# look for the full test name.
+function(bfn_set_ptf_test_spec tag p4test ptf_test_spec)
+  set_tests_properties("${tag}/${p4test}"
+    PROPERTIES ENVIRONMENT "PTF_TEST_SPECS=${ptf_test_spec}")
+endfunction()
+
 # call this macro to register a PTF test with a custom PTF test directory; by
 # default the behavior is to look for a directory with the same name as the P4
 # program and a .ptf extension, which may not always be convenient when adding

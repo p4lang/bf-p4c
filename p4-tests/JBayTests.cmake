@@ -12,11 +12,6 @@ p4c_find_tests("${P16_FOR_TOFINO}" p16tests INCLUDE "${P16_INCLUDE_PATTERNS}" EX
 
 set (p16tests ${p16tests} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ipv4_checksum.p4)
 
-# p4-tests has all the includes at the same level with the programs.
-set (BFN_EXCLUDE_PATTERNS "tofino.p4")
-set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/*/*.p4")
-bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
-
 file (GLOB STF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.stf")
 string (REGEX REPLACE "\\.stf;" ".p4;" STF_P4_TESTS "${STF_TESTS};")
 
@@ -57,5 +52,12 @@ p4c_add_ptf_test_with_ptfdir (
 p4c_add_ptf_test_with_ptfdir (
     "jbay" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
     "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
+
+# p4-tests has all the includes at the same level with the programs.
+# For JBay we only add emulation
+set (BFN_EXCLUDE_PATTERNS "tofino.p4")
+set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/emulation/*.p4")
+bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
+bfn_add_p4factory_tests("jbay" BFN_TESTS_LIST)
 
 include(JBayXfail.cmake)

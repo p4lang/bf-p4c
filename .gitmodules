@@ -29,3 +29,6 @@
 [submodule "scripts/pkg-src/archlinux/grpc"]
 	path = scripts/pkg-src/archlinux/grpc
 	url = https://aur.archlinux.org/grpc
+[submodule "p4-tests/p4testutils"]
+	path = p4-tests/p4testutils
+	url = git@github.com:barefootnetworks/ptf-utils.git

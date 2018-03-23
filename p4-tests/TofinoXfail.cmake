@@ -53,6 +53,97 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 
 endif() # HARLYN_STF_tofino
 
+# Tests that run packets:
+# Better to have these at the beginning of the file so that we
+# do not overwrite any of the compilation errors.
+
+if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
+  # STF2PTF tests that fail
+
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: Expected packet was not received on device"
+    extensions/p4_tests/p4_14/no_match_miss.p4
+    testdata/p4_16_samples/issue635-bmv2.p4
+    testdata/p4_16_samples/issue655-bmv2.p4
+    # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
+    testdata/p4_14_samples/gateway1.p4
+    testdata/p4_14_samples/gateway2.p4
+    testdata/p4_14_samples/gateway3.p4
+    testdata/p4_14_samples/gateway4.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: .*: wrong (packets|bytes) count: expected [0-9]+ not [0-9]+"
+    # counter3 fails because it receives 64 bytes: for PTF the test should be adjusted to send more than 8 bytes
+    testdata/p4_14_samples/counter3.p4
+    )
+
+  # P4runtime p4info.proto gen
+  p4c_add_xfail_reason("tofino"
+    "Match field .* is too complicated to represent in P4Runtime"
+    testdata/p4_14_samples/exact_match_mask1.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "error: instruction slot [0-9]+ used multiple times in action push"
+    testdata/p4_14_samples/instruct5.p4
+    )
+
+# BRIG-241
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: Invalid match name .* for table .*"
+    testdata/p4_14_samples/exact_match_mask1.p4
+    )
+
+
+  p4c_add_xfail_reason("tofino"
+    "stf2ptf.STF2ptf ... ERROR"
+    # Detailed: "KeyError: (0, 10)"
+    testdata/p4_14_samples/parser_dc_full.p4
+    # Detailed: "Error when adding match entry to target"
+    testdata/p4_14_samples/exact_match3.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Error when trying to push config to bf_switchd"
+    extensions/p4_tests/p4_14/sful_1bit.p4
+    extensions/p4_tests/p4_14/stateful2.p4
+    )
+
+endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
+
+if (PTF_REQUIREMENTS_MET) # P4Factory tests
+
+  p4c_add_xfail_reason("tofino"
+    "AttributeError: Client instance has no attribute .*"
+    extensions/p4_tests/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4
+    extensions/p4_tests/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4
+    extensions/p4_tests/p4_14/p4-tests/programs/exm_smoke_test/exm_smoke_test.p4
+    extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: Expected packet was not received on device"
+    extensions/p4_tests/p4_14/p4-tests/programs/emulation/emulation.p4
+    extensions/p4_tests/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4
+    extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4
+    extensions/p4_tests/p4_14/p4-tests/programs/resubmit/resubmit.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "SALU Selector Table not found?"
+    extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
+    )
+
+  # Timeouts -- need a better way to handle timeouts!!
+  # p4c_add_xfail_reason("tofino"
+  #   "Test time = 500.*sec"
+  #   extensions/p4_tests/p4_14/p4-tests/programs/exm_direct/exm_direct.p4
+  #   extensions/p4_tests/p4_14/p4-tests/programs/meters/meters.p4
+  #   )
+endif() # PTF_REQUIREMENTS_MET
+
+
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 
@@ -201,11 +292,13 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "IR structure not yet handled by the ActionAnalysis pass"
   extensions/p4_tests/p4_14/test_config_235_funnel_shift.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/opcode_test/opcode_test.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   extensions/p4_tests/p4_14/p4-tests/programs/multicast_scale/multicast_scale.p4
   switch_l2
   )
@@ -316,6 +409,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-271
 p4c_add_xfail_reason("tofino"
   "error: : conditional assignment not supported"
+  extensions/p4_tests/p4_14/p4-tests/programs/entry_read_from_hw/entry_read_from_hw.p4
   extensions/p4_tests/p4_14/test_config_219_modify_field_conditionally.p4
   testdata/p4_16_samples/issue232-bmv2.p4
   testdata/p4_16_samples/issue420.p4
@@ -382,10 +476,10 @@ p4c_add_xfail_reason("tofino"
 #   extensions/p4_tests/p4_14/c1/COMPILER-499/case2560_min_2.p4
 #   )
 
-p4c_add_xfail_reason("tofino"
-  "Multiple synth2port require overflow"
-  extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-  )
+# p4c_add_xfail_reason("tofino"
+#   "Multiple synth2port require overflow"
+#   extensions/p4_tests/p4_14/p4-tests/programs/entry_read_from_hw/entry_read_from_hw.p4
+#   )
 
 p4c_add_xfail_reason("tofino"
   "Can't fit table .* in input xbar by itself"
@@ -461,6 +555,7 @@ p4c_add_xfail_reason("tofino"
   "parameter .* must be bound"
 #  extensions/p4_tests/p4_14/test_config_291_default_action.p4
 #  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/mod_field_conditionally/mod_field_conditionally.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -739,60 +834,10 @@ p4c_add_xfail_reason("tofino"
 
 # END: XFAILs with translation
 
-if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
-  # STF2PTF tests that fail
-
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: Expected packet was not received on device"
-    extensions/p4_tests/p4_14/no_match_miss.p4
-    testdata/p4_16_samples/issue635-bmv2.p4
-    testdata/p4_16_samples/issue655-bmv2.p4
-    # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
-    testdata/p4_14_samples/gateway1.p4
-    testdata/p4_14_samples/gateway2.p4
-    testdata/p4_14_samples/gateway3.p4
-    testdata/p4_14_samples/gateway4.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: .*: wrong (packets|bytes) count: expected [0-9]+ not [0-9]+"
-    # counter3 fails because it receives 64 bytes: for PTF the test should be adjusted to send more than 8 bytes
-    testdata/p4_14_samples/counter3.p4
-    )
-
-  # P4runtime p4info.proto gen
-  p4c_add_xfail_reason("tofino"
-    "Match field .* is too complicated to represent in P4Runtime"
-    testdata/p4_14_samples/exact_match_mask1.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "error: instruction slot [0-9]+ used multiple times in action push"
-    testdata/p4_14_samples/instruct5.p4
-    )
-
-# BRIG-241
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: Invalid match name .* for table .*"
-    testdata/p4_14_samples/exact_match_mask1.p4
-    )
-
-
-  p4c_add_xfail_reason("tofino"
-    "stf2ptf.STF2ptf ... ERROR"
-    # Detailed: "KeyError: (0, 10)"
-    testdata/p4_14_samples/parser_dc_full.p4
-    # Detailed: "Error when adding match entry to target"
-    testdata/p4_14_samples/exact_match3.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Error when trying to push config to bf_switchd"
-    extensions/p4_tests/p4_14/sful_1bit.p4
-    extensions/p4_tests/p4_14/stateful2.p4
-    )
-
-endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
+p4c_add_xfail_reason("tofino"
+  "error: : No size count in action"
+  extensions/p4_tests/p4_14/p4-tests/programs/ecc/ecc.p4
+  )
 
 # XXX(cole): Temporarily override previous XFAILs with new failures related to
 # PHV allocation.

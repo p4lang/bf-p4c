@@ -67,7 +67,7 @@ WORKDIR /bfn/bf-p4c-compilers
 ENV LDFLAGS="-Wl,-s"
 RUN /usr/local/bin/ccache --zero-stats && \
     ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RELEASE \
-                                 -DENABLE_P4C_GRAPHS=OFF \
+                                 -DENABLE_JBAY=OFF -DENABLE_P4C_GRAPHS=OFF \
                                  -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
                                  -DENABLE_EBPF=OFF -DENABLE_STF2PTF=OFF \
                                  && \
@@ -76,14 +76,12 @@ RUN /usr/local/bin/ccache --zero-stats && \
     make install && \
     /usr/local/bin/ccache -p --show-stats && \
     pip uninstall -y pyinstaller && \
-    apt-get purge -y $P4C_DEPS && \
     apt-get autoremove --purge -y && \
     rm -rf ~/.cache/* ~/.ccache/* /var/cache/apt/* /var/lib/apt/lists/* && \
     rm -rf bf-asm/walle/build/* && \
     rm -rf bf-asm/simple_test_harness/jbay_test_harness && \
     find . -name '*.o' -type f -delete && \
-    find . -name '*.a' -type f -delete && \
-    find . -name '*.json' -type f -delete
+    find . -name '*.a' -type f -delete
 
 WORKDIR /bfn/
 RUN (test "$IMAGE_TYPE" = "release" && rm -rf bf-p4c-compilers) || \

@@ -33,7 +33,7 @@ env:
     - TEST_SUITE="cpplint|gtest"
       TARGET=""
       IMAGE_TAG="bf-p4c-compilers"
-      DOCKERFILE="Dockerfile.tofino"
+      DOCKERFILE="Dockerfile.jbay"
 
 before_install:
   - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
