@@ -392,8 +392,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 value.lo = 16w0;
         }
     };
-    @name(".e5_lpf") lpf<bit<32>>() e5_lpf_1;
-    @name(".e6_lpf") lpf<bit<32>>() e6_lpf_1;
+    @name(".e5_lpf") DirectLpf<bit<32>>() e5_lpf_1;
+    @name(".e6_lpf") DirectLpf<bit<32>>() e6_lpf_1;
     @name(".t1_alu") register_action<t1_alu_layout, int<32>>(t1_reg) t1_alu = {
         void apply(inout t1_alu_layout value, out int<32> rv) {
             rv = value.hi;
@@ -410,8 +410,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 value.lo = 16w0;
         }
     };
-    @name(".t5_lpf") lpf<bit<32>>() t5_lpf_1;
-    @name(".t6_lpf") lpf<bit<32>>() t6_lpf_1;
+    @name(".t5_lpf") DirectLpf<bit<32>>() t5_lpf_1;
+    @name(".t6_lpf") DirectLpf<bit<32>>() t6_lpf_1;
     @name(".vp5_alu") register_action<vp5_alu_layout, bit<32>>(vp5_reg) vp5_alu = {
         void apply(inout vp5_alu_layout value, out bit<32> rv) {
             rv = 32w0;

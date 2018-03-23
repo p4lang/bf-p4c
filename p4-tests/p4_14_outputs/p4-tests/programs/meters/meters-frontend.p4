@@ -319,10 +319,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".meter_3") direct_meter<bit<8>>(MeterType.bytes) meter_1;
     @name(".meter_0") meter(32w500, MeterType.bytes) meter_2;
     @meter_pre_color_aware_per_flow_enable(1) @name(".meter_2") meter(32w500, MeterType.bytes) meter_3;
-    @name(".meter_lpf") lpf<bit<32>>(32w500) meter_lpf;
-    @name(".meter_lpf_direct") lpf<bit<32>>() meter_lpf_direct;
-    @name(".meter_lpf_tcam") lpf<bit<32>>(32w500) meter_lpf_tcam;
-    @name(".meter_lpf_tcam_direct") lpf<bit<32>>() meter_lpf_tcam_direct;
+    @name(".meter_lpf") Lpf<bit<32>, bit<32>>(32w500) meter_lpf;
+    @name(".meter_lpf_direct") DirectLpf<bit<32>>() meter_lpf_direct;
+    @name(".meter_lpf_tcam") Lpf<bit<32>, bit<32>>(32w500) meter_lpf_tcam;
+    @name(".meter_lpf_tcam_direct") DirectLpf<bit<32>>() meter_lpf_tcam_direct;
     @name(".count_color") action count_color_0(bit<32> color_idx) {
         colorCntr.count(color_idx);
     }

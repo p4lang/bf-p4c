@@ -270,8 +270,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.vlan_tag.pri = value_1;
         hdr.ipv4.ttl = value_2;
     }
-    @name(".egress_port") action egress_port(bit<9> egress_port) {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+    @name(".set_md") action set_md(bit<9> level2_exclusion_id, bit<5> qid, bit<3> cos, bit<16> rid, bit<13> level1_mcast_hash) {
+        hdr.ig_intr_md_for_tm.level2_exclusion_id = level2_exclusion_id;
+        hdr.ig_intr_md_for_tm.qid = qid;
+        hdr.ig_intr_md_for_tm.ingress_cos = cos;
+        hdr.ig_intr_md_for_tm.rid = rid;
+        hdr.ig_intr_md_for_tm.level1_mcast_hash = level1_mcast_hash;
+    }
+    @name(".set_egr_port") action set_egr_port(bit<9> val) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = val;
+    }
+    @name(".drop_packet") action drop_packet() {
+        mark_to_drop();
     }
     @use_hash_action(1) @name(".hash_action_ha_exm") table hash_action_ha_exm {
         actions = {
@@ -286,18 +296,37 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 8192;
         default_action = hash_action_ha(12w1947, 3w5, 8w45);
     }
-    @name(".set_eg_port") table set_eg_port {
+    @name(".port_tbl") table port_tbl {
         actions = {
-            egress_port();
+            set_md();
+            @defaultonly NoAction();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = egress_port(9w2);
+        default_action = NoAction();
+    }
+    @name(".set_eg") table set_eg {
+        actions = {
+            set_egr_port();
+            drop_packet();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ig_intr_md_for_tm.level2_exclusion_id: exact @name("ig_intr_md_for_tm.level2_exclusion_id") ;
+            hdr.ig_intr_md_for_tm.qid                : exact @name("ig_intr_md_for_tm.qid") ;
+            hdr.ig_intr_md_for_tm.ingress_cos        : exact @name("ig_intr_md_for_tm.ingress_cos") ;
+            hdr.ig_intr_md_for_tm.rid                : exact @name("ig_intr_md_for_tm.rid") ;
+            hdr.ig_intr_md_for_tm.level1_mcast_hash  : exact @name("ig_intr_md_for_tm.level1_mcast_hash") ;
+        }
+        size = 288;
+        default_action = NoAction();
     }
     apply {
-        set_eg_port.apply();
+        if (1w0 == hdr.ig_intr_md.resubmit_flag) 
+            port_tbl.apply();
+        set_eg.apply();
         if (hdr.tcp.srcPort == 16w9000) 
             hash_action_ha_exm.apply();
     }

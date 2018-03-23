@@ -210,8 +210,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<8> tmp_1;
     bit<8> tmp_2;
     @meter_per_flow_enable(1) @name(".meter_0") meter(32w500, MeterType.bytes) meter_1;
-    @name(".meter_2") wred<bit<8>>(8w63, 8w127) meter_2;
-    @name(".meter_3") lpf<bit<8>>() meter_3;
+    @name(".meter_2") DirectWred<bit<8>>(8w127, 8w63) meter_2;
+    @name(".meter_3") DirectLpf<bit<8>>() meter_3;
     @name(".action_0") action action_3(bit<8> param0) {
         execute_meter_with_color<meter, bit<32>, bit<4>>(meter_1, 32w7, hdr.pkt.color_0, hdr.pkt.pre_color_0);
     }

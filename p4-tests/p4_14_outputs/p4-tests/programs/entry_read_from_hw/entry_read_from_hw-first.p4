@@ -212,6 +212,7 @@ struct headers {
     @name(".vlan_tag") 
     vlan_tag_t                                     vlan_tag;
 }
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -263,12 +264,99 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".act_profile_2") action_profile(32w2048) act_profile_2;
 
+@name(".act_profile_3") action_profile(32w2048) act_profile_3;
+
+@name(".act_profile_4") action_profile(32w2048) act_profile_4;
+
+@name(".act_profile_5") action_profile(32w2048) act_profile_5;
+
+@name(".act_profile_6") action_profile(32w2048) act_profile_6;
+#include <tofino/p4_14_prim.p4>
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @meter_pre_color_aware_per_flow_enable(1) @name(".meter_1") meter(32w500, MeterType.bytes) meter_1;
+    @meter_pre_color_aware_per_flow_enable(1) @name(".meter_2") meter(32w500, MeterType.bytes) meter_2;
+    @name(".act_12") action act_12(bit<48> srcMac, bit<48> dstMac, bit<32> meterIdx) {
+        hdr.ethernet.srcAddr = srcMac;
+        hdr.ethernet.dstAddr = dstMac;
+        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_1, meterIdx, hdr.ipv4.diffserv, hdr.ipv4.diffserv);
+    }
+    @name(".act_22") action act_22(bit<32> ipsrcAddr, bit<16> tcpSport) {
+        hdr.ipv4.srcAddr = ipsrcAddr;
+        hdr.tcp.srcPort = tcpSport;
+    }
+    @name(".act_61") action act_61(bit<32> ipsrcAddr, bit<48> dstMac, bit<32> meterIdx) {
+        hdr.ipv4.srcAddr = ipsrcAddr;
+        hdr.ethernet.dstAddr = dstMac;
+        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_2, meterIdx, hdr.ipv4.diffserv, hdr.ipv4.diffserv);
+    }
+    @name(".act_62") action act_62(bit<32> ipsrcAddr, bit<32> ipdstAddr) {
+        hdr.ipv4.srcAddr = ipsrcAddr;
+        hdr.ipv4.dstAddr = ipdstAddr;
+    }
+    @name(".exm_with_indirect_meter") table exm_with_indirect_meter {
+        actions = {
+            act_12();
+            act_22();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
+        }
+        size = 2048;
+        implementation = act_profile_5;
+        default_action = NoAction();
+    }
+    @name(".tcam_with_indirect_meter") table tcam_with_indirect_meter {
+        actions = {
+            act_61();
+            act_62();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
+        }
+        size = 2048;
+        implementation = act_profile_6;
+        default_action = NoAction();
+    }
     apply {
+        exm_with_indirect_meter.apply();
+        tcam_with_indirect_meter.apply();
     }
 }
 
+@name(".r") register<bit<32>>(32w2048) r;
+
+@name(".r1") register<bit<32>>(32w2048) r1;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name(".cntr") counter(32w2048, CounterType.packets) cntr;
+    @name(".cntr1") counter(32w2048, CounterType.packets) cntr1;
+    @name(".r1_alu1") register_action<bit<32>, bit<32>>(r1) r1_alu1 = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
+            value = value + 32w1;
+        }
+    };
+    @name(".r1_alu2") register_action<bit<32>, bit<32>>(r1) r1_alu2 = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
+            value = value + 32w100;
+        }
+    };
+    @name(".r_alu1") register_action<bit<32>, bit<32>>(r) r_alu1 = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
+            value = value + 32w1;
+        }
+    };
+    @name(".r_alu2") register_action<bit<32>, bit<32>>(r) r_alu2 = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
+            value = value + 32w100;
+        }
+    };
     @name(".atcam_action") action atcam_action(bit<48> dstMac, bit<32> ipSrc) {
         hdr.ethernet.dstAddr = dstMac;
         hdr.ipv4.srcAddr = ipSrc;
@@ -304,6 +392,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.dstAddr = dstMac;
         hdr.ipv4.dstAddr = ipdstAddr;
     }
+    @name(".act_1") action act_1(bit<48> srcMac, bit<48> dstMac, bit<32> statsIdx, bit<32> stfulIdx) {
+        hdr.ethernet.srcAddr = srcMac;
+        hdr.ethernet.dstAddr = dstMac;
+        cntr.count(statsIdx);
+        r_alu1.execute(stfulIdx);
+    }
+    @name(".act_2") action act_2(bit<32> ipsrcAddr, bit<16> tcpSport, bit<32> stfulIdx) {
+        hdr.ipv4.srcAddr = ipsrcAddr;
+        hdr.tcp.srcPort = tcpSport;
+        r_alu2.execute(stfulIdx);
+    }
+    @name(".act_3") action act_3(bit<48> dstMac, bit<32> ipdstAddr, bit<32> statsIdx) {
+        hdr.ethernet.dstAddr = dstMac;
+        hdr.ipv4.dstAddr = ipdstAddr;
+        cntr.count(statsIdx);
+    }
     @name(".wide_action") action wide_action(bit<48> dstMac, bit<48> srcMac, bit<32> ipsrcAddr, bit<32> ipdstAddr, bit<16> srcPort, bit<16> dstPort) {
         hdr.ethernet.dstAddr = dstMac;
         hdr.ethernet.srcAddr = srcMac;
@@ -336,6 +440,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".tcam_act_3") action tcam_act_3(bit<48> dstMac, bit<32> ipdstAddr) {
         hdr.ethernet.dstAddr = dstMac;
         hdr.ipv4.dstAddr = ipdstAddr;
+    }
+    @name(".act_11") action act_11(bit<48> srcMac, bit<48> dstMac, bit<32> statsIdx, bit<32> stfulIdx) {
+        hdr.ethernet.srcAddr = srcMac;
+        hdr.ethernet.dstAddr = dstMac;
+        cntr1.count(statsIdx);
+        r1_alu1.execute(stfulIdx);
+    }
+    @name(".act_21") action act_21(bit<32> ipsrcAddr, bit<16> tcpSport, bit<32> stfulIdx) {
+        hdr.ipv4.srcAddr = ipsrcAddr;
+        hdr.tcp.srcPort = tcpSport;
+        r1_alu2.execute(stfulIdx);
+    }
+    @name(".act_31") action act_31(bit<48> dstMac, bit<32> ipdstAddr, bit<32> statsIdx) {
+        hdr.ethernet.dstAddr = dstMac;
+        hdr.ipv4.dstAddr = ipdstAddr;
+        cntr1.count(statsIdx);
     }
     @atcam_partition_index("vlan_tag.vlan_id") @name(".atcam_tbl") table atcam_tbl {
         actions = {
@@ -387,6 +507,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 16384;
         implementation = act_profile_1;
+        default_action = NoAction();
+    }
+    @name(".exm_with_indirect_action_and_stats") table exm_with_indirect_action_and_stats {
+        actions = {
+            act_1();
+            act_2();
+            act_3();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
+        }
+        size = 8192;
+        implementation = act_profile_3;
         default_action = NoAction();
     }
     @name(".exm_with_wide_action_data") table exm_with_wide_action_data {
@@ -482,11 +616,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = act_profile_2;
         default_action = NoAction();
     }
+    @name(".tcam_with_indirect_action_and_stats") table tcam_with_indirect_action_and_stats {
+        actions = {
+            act_11();
+            act_21();
+            act_31();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ethernet.srcAddr: ternary @name("ethernet.srcAddr") ;
+            hdr.ethernet.dstAddr: ternary @name("ethernet.dstAddr") ;
+        }
+        size = 2048;
+        implementation = act_profile_4;
+        default_action = NoAction();
+    }
     apply {
         exm_with_direct_action.apply();
         tcam_with_direct_action.apply();
         exm_with_indirect_action.apply();
         tcam_with_indirect_action.apply();
+        exm_with_indirect_action_and_stats.apply();
+        tcam_with_indirect_action_and_stats.apply();
         exm_with_wide_action_data.apply();
         exm_valid.apply();
         tcam_valid.apply();

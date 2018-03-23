@@ -1,6 +1,0 @@
-ha.p4(196): warning: egress_port shadows .egress_port
-action egress_port(egress_port) {
-                   ^^^^^^^^^^^
-ha.p4(196)
-action egress_port(egress_port) {
-^
