@@ -276,29 +276,30 @@ void IR::BFN::LoweredDigest::dbprint(std::ostream &out) const {
     out << unindent;
 }
 
-void IR::BFN::ChecksumInput::dbprint(std::ostream &out) const {
+void IR::BFN::ChecksumPhvInput::dbprint(std::ostream &out) const {
     out << source;
+    if (povBit) out << " if " << povBit;
+}
+
+void IR::BFN::ChecksumClotInput::dbprint(std::ostream &out) const {
+    out << clot;
     if (povBit) out << " if " << povBit;
 }
 
 void IR::BFN::ChecksumUnitConfig::dbprint(std::ostream &out) const {
     out << "checksum unit " << unit << " {";
 
-    for (auto* input : inputs)
-        out << endl << indent << *input << unindent;
+    for (auto* phv : phvs)
+        out << endl << indent << *phv << unindent;
+
+    for (auto* clot : clots)
+        out << endl << indent << clot << unindent;
 
     out << " }";
 }
 
-void IR::BFN::LoweredEmitClot::dbprint(std::ostream & /* out */) const {
-/*
-    out << "emit clot " << tag << " (" << byteLength << "B) { ";
-
-    for (auto* phvOverride : overrides)
-        out << endl << indent << *phvOverride << unindent;
-
-    out << " }";
-*/
+void IR::BFN::LoweredEmitClot::dbprint(std::ostream &out) const {
+    out << "emit clot " << clot->clot;
 }
 
 void IR::BFN::LoweredDeparser::dbprint(std::ostream &out) const {

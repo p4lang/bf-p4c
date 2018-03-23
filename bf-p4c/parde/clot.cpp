@@ -19,14 +19,14 @@ cstring Clot::toString() const {
 Clot::Clot(cstring name) {
     std::string str(name);
 
-    if (str.length() <= 4 || str.substr(0, 4) != "CLOT" || !isdigit(str[4]))
-        BUG("Invalid CLOT '%s'", name);
+    if (str.length() <= 5 || str.substr(0, 4) != "clot" || !isdigit(str[5]))
+        BUG("Invalid clot '%s'", name);
 
     char* end = nullptr;
-    auto v = std::strtol(str.substr(4).c_str(), &end, 10);
+    auto v = std::strtol(str.substr(5).c_str(), &end, 10);
 
     if (*end)
-        BUG("Invalid CLOT '%s'", name);
+        BUG("Invalid clot '%s'", name);
 
     tag = v;
 }
@@ -74,7 +74,7 @@ void Clot::toJSON(JSONGenerator& json) const {
 }
 
 std::ostream& operator<<(std::ostream& out, const Clot c) {
-    return out << "CLOT" << c.tag;
+    return out << "clot " << c.tag;
 }
 
 JSONGenerator& operator<<(JSONGenerator& out, const Clot c) {

@@ -419,12 +419,16 @@ int write_jbay_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int pov,
     entry.swap = swap;
     entry.pov = pov;
     switch (mask ^ (swap*3)) {
+    // reset value for zero_m_s_b and zero_l_s_b is 1 (flipped from Tofino reset value)
     case 1:
-        entry.zero_m_s_b = 1;
+        entry.zero_m_s_b = 0;
         return 1;
     case 2:
-        entry.zero_l_s_b = 1;
+        entry.zero_l_s_b = 0;
         return 1;
+    case 3:
+        entry.zero_m_s_b = 0;
+        entry.zero_l_s_b = 0;
     default:
         return 0; }
 }
@@ -452,24 +456,40 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
         pov_cfg.byte_sel[byte++] = bit/8U; }
 
     int swap = 0;
+    unsigned phv_entry_idx = 0;
+    unsigned tag_idx = 0;
     for (auto &val : data) {
-        unsigned mask = (1 << ((val->hi+1)/8U)) - (1 << (val->lo/8U));
-        auto &remap = jbay_phv2cksum[val->reg.deparser_id()];
         if (!val.pov) continue;
         int povbit = pov_map.at(pov.at(&val.pov->reg) + val.pov->lo);
-        if (remap[1] >= 0)
-            swap ^= write_jbay_checksum_entry(phv_entries.entry[remap[1]], mask >> 2, swap, povbit,
+        if (val.tag >= 0) {
+            if (tag_idx == 16)
+                error(-1, "Ran out of clot entries in deparser checksum unit %d", unit);
+            csum.clot_entry[tag_idx].pov = povbit;
+            csum.clot_entry[tag_idx].vld = 1; 
+            csum.tags[tag_idx].tag = val.tag;
+            tag_idx++;
+        } else {
+            unsigned mask = (1 << ((val->hi+1)/8U)) - (1 << (val->lo/10U));
+            auto &remap = jbay_phv2cksum[val->reg.deparser_id()];
+            if (remap[1] >= 0) {
+                swap ^= write_jbay_checksum_entry(phv_entries.entry[remap[1]], mask >> 2, swap, povbit,
+                                                  val.lineno, val->reg.name, unit);
+                if (phv_entry_idx == 8)
+                    error(-1, "Ran out of phv entries in deparser checksum unit %d", unit);
+                csum.phv_entry[phv_entry_idx].pov = pov_map.begin()->second;
+                csum.phv_entry[phv_entry_idx].vld = 1;
+                phv_entry_idx++;
+            } else assert(mask >> 2 == 0);
+            swap ^= write_jbay_checksum_entry(phv_entries.entry[remap[0]], mask & 3, swap, povbit,
                                               val.lineno, val->reg.name, unit);
-        else assert(mask >> 2 == 0);
-        swap ^= write_jbay_checksum_entry(phv_entries.entry[remap[0]], mask & 3, swap, povbit,
-                                          val.lineno, val->reg.name, unit); }
+            if (phv_entry_idx == 8)
+                error(-1, "Ran out of phv entries in deparser checksum unit %d", unit);
+            csum.phv_entry[phv_entry_idx].pov = pov_map.begin()->second;
+            csum.phv_entry[phv_entry_idx].vld = 1;
+            phv_entry_idx++;
+        }
+    }
 
-    // FIXME -- CLOT support
-    // csm.clot_entry = ???
-
-    // FIXME -- the checksum outputs are actually the checksums of any set of units?
-    csum.phv_entry[unit].pov = pov_map.begin()->second; // FIXME which POV bit to use?
-    csum.phv_entry[unit].vld = 1;
     // FIXME -- use/set csum.csum_constant and csum.zeros_as_ones?
 }
 

@@ -123,11 +123,16 @@ class LoweredExtractClot : LoweredParserPrimitive {
 class LoweredParserChecksum : LoweredParserPrimitive {
     dbprint { out << " parser checksum "; }
 
+    unsigned unit_id;
+
     unsigned mask;
     unsigned swap;
     bool start;
     bool end;
-    bool type;
+    unsigned type;  // 0 = verify, 1 = residue, 2 = clot
+
+    optional Clot clot_dest;
+    optional NullOK BFN::ContainerRef phv_dest; 
 }
 
 /// A lowered save operation, representing save a bits from input buffer to matchRegisters.
@@ -391,7 +396,7 @@ class LoweredDigest {
 }
 
 /// An input to a checksum unit.
-class ChecksumInput {
+class ChecksumPhvInput {
     /// A container whose contents will be included in the checksum.
     BFN::ContainerRef source;
 
@@ -399,6 +404,11 @@ class ChecksumInput {
     /// easier to safely compute a checksum involving headers which may be
     /// present in different combinations. On Tofino, this is always null.
     optional NullOK BFN::ContainerBitRef povBit;
+}
+
+class ChecksumClotInput {
+    Clot clot;
+    BFN::ContainerBitRef povBit;
 }
 
 /// A configuration for a checksum unit.
@@ -409,8 +419,11 @@ class ChecksumUnitConfig {
     /// on JBay, both threads share the same checksum units.
     unsigned unit;
 
-    /// The inputs to this checksum unit.
-    optional inline Vector<ChecksumInput> inputs;
+    /// The phv inputs to this checksum unit
+    optional inline Vector<ChecksumPhvInput> phvs;
+
+    /// clot inputs
+    optional inline Vector<ChecksumClotInput> clots;
 }
 
 /// The lowered representation of the deparser. This representation is

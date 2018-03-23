@@ -134,8 +134,8 @@ struct ParserAsmSerializer : public ParserInspector {
         outputSave(match->saves);
 
         for (auto* ck : match->checksums) {
-            if (auto* verify = ck->to<IR::BFN::LoweredParserChecksum>())
-                outputChecksum(verify);
+            if (auto* csum = ck->to<IR::BFN::LoweredParserChecksum>())
+                outputChecksum(csum);
         }
 
         if (match->shift != 0)
@@ -206,12 +206,40 @@ struct ParserAsmSerializer : public ParserInspector {
     }
 
     void outputChecksum(const IR::BFN::LoweredParserChecksum* csum) {
-        cstring type = csum->type ? "residual" : "verify";
-        out << indent << "checksum 0 " << type << ":" << std::endl;
+        cstring type;
+        switch (csum->type) {
+            case 0: type = "verify";   break;
+            case 1: type = "residual"; break;
+            case 2: type = "clot";     break;
+            default: BUG("Unknown parser checksum type");
+        }
+        out << indent << "checksum " << csum->unit_id << ":" << std::endl;
         AutoIndent indentCsum(indent, 1);
+        out << indent << "type: " << type << std::endl;
+
+        // TODO(zma) these low level bit encoding can be pushed down into the
+        // assembler by using some syntax sugar in the assembly
         out << indent << "mask: " << csum->mask << std::endl;
         out << indent << "swap: " << csum->swap << std::endl;
-        out << indent << "end: " << csum->end << std::endl;
+        out << indent << "end:  " << csum->end  << std::endl;
+
+        auto parser = findContext<IR::BFN::LoweredParser>();
+        if (csum->type == 0) {
+            // XXX(zma) checksum error can have its own container dest,
+            // we use parser error to be consistent with glass
+            if (parser->parserError) {
+                out << indent << "dest: " << parser->parserError << std::endl;
+            }
+        } else if (csum->type == 1 && csum->phv_dest) {
+            out << indent << "dest: " << csum->phv_dest << std::endl;
+        } else if (csum->type == 2) {
+            out << indent << "dest: " << csum->clot_dest << std::endl;
+        }
+
+        if (csum->type == 0 && parser->parserError) {
+            // XXX(zma) again, hard-coded to be consistent with glass for now
+            out << indent << "dst_bit: 12" << std::endl;
+        }
     }
 
     std::ostream& out;

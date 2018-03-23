@@ -121,13 +121,19 @@ struct OutputChecksums : public Inspector {
         out << indent << "checksum " << checksum->unit << ":" << std::endl;
 
         AutoIndent checksumIndent(indent);
-        for (auto* input : checksum->inputs) {
+        for (auto* input : checksum->phvs) {
             out << indent << "- " << input->source;
             if (input->povBit) out << ": " << input->povBit;
             outputDebugInfo(out, indent, input->source, input->povBit);
             out << std::endl;
         }
 
+#if HAVE_JBAY
+        for (auto* input : checksum->clots) {
+            out << indent << "- clot " << input->clot.tag << ": " << input->povBit;
+            out << std::endl;
+        }
+#endif
         return false;
     }
 

@@ -268,3 +268,4 @@ class BFN::ContainerBitRef : BFN::Reference {
     /// strongly typed representation of bit indices right now.
     le_bitrange bit;
 }
+

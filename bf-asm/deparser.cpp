@@ -248,7 +248,12 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                             checksum[gress][unit].emplace_back(gress, ent);
                     } else {
                         for (auto &ent : kv.value.map)
-                            checksum[gress][unit].emplace_back(gress, ent.key, ent.value); } }
+                            if (ent.key == "clot")
+                                checksum[gress][unit].emplace_back(gress, ent.key[1].i, ent.value);
+                            else
+                                checksum[gress][unit].emplace_back(gress, ent.key, ent.value);
+                    }
+                }
             } else if (auto *itype = ::get(Intrinsic::Type::all[options.target][gress],
                                            value_desc(&kv.key))) {
                 intrinsics.emplace_back(itype, kv.key.lineno);

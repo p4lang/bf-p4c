@@ -22,6 +22,7 @@
 
 #define PER_TARGET_CONSTANTS(M) \
     M(const char *, name) \
+    M(int, PARSER_CHECKSUM_UNITS) \
     M(int, DEPARSER_CHECKSUM_UNITS) M(int, DEPARSER_MAX_POV_BYTES) \
     M(int, MAU_BASE_DELAY) M(int, MAU_BASE_PREDICATION_DELAY) \
     M(int, NUM_MAU_STAGES) \
@@ -84,6 +85,7 @@ class Target::Tofino : public Target {
         ::Tofino::regs_all_deparser_header_phase        header;
     };
     enum {
+        PARSER_CHECKSUM_UNITS = 2,
         NUM_MAU_STAGES = 12,
         ACTION_INSTRUCTION_MAP_WIDTH = 7,
         DEPARSER_CHECKSUM_UNITS = 6,
@@ -151,6 +153,7 @@ class Target::JBay : public Target {
     typedef ::JBay::regs_match_action_stage_        mau_regs;
     typedef ::JBay::regs_deparser                   deparser_regs;
     enum {
+        PARSER_CHECKSUM_UNITS = 5,
         NUM_MAU_STAGES = 20,
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
         DEPARSER_CHECKSUM_UNITS = 8,

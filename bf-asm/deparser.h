@@ -15,12 +15,15 @@ class Deparser : public Section {
 public:
     struct Val {
         /* a phv reference with optional associated POV phv reference */
-        Phv::Ref   val, pov;
+        Phv::Ref   val;
+        int        tag = -1;
+        Phv::Ref   pov;
         const int &lineno = val.lineno;
         Val() {}
         Val(gress_t gr, const value_t &v) : val(gr, v) {}
         Val(gress_t gr, const value_t &v, const value_t &p) : val(gr, v), pov(gr, p) {}
-        Val &operator=(const Val &a) { val = a.val; pov = a.pov; return *this; }
+        Val(gress_t gr, int t, const value_t &p) : tag(t), pov(gr, p) {}
+        Val &operator=(const Val &a) { val = a.val; tag = a.tag; pov = a.pov; return *this; }
         explicit operator bool() const { return bool(val); }
         Phv::Slice operator*() const { return *val; }
         Phv::Slice operator->() const { return *val; }

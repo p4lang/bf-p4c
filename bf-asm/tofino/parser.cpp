@@ -2,6 +2,13 @@
 
 #include "misc.h"
 
+template <> void Parser::Checksum::write_config(Target::Tofino::parser_regs &regs, Parser *parser) {
+         if (unit == 0) write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
+    else if (unit == 1) write_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
+    else
+        error(lineno, "invalid unit for parser checksum");
+}
+
 template <> void Parser::CounterInit::write_config(Target::Tofino::parser_regs &regs,
                                                    gress_t gress, int idx) {
     auto &ctr_init_ram = regs.memory[gress].ml_ctr_init_ram[idx];

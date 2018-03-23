@@ -1,5 +1,15 @@
 /* parser template specializations for jbay -- #included directly in top-level parser.cpp */
 
+template <> void Parser::Checksum::write_config(Target::JBay::parser_regs &regs, Parser *parser) {
+         if (unit == 0) write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
+    else if (unit == 1) write_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
+    else if (unit == 2) write_row_config(regs.memory[gress].po_csum_ctrl_2_row[addr]);
+    else if (unit == 3) write_row_config(regs.memory[gress].po_csum_ctrl_3_row[addr]);
+    else if (unit == 4) write_row_config(regs.memory[gress].po_csum_ctrl_4_row[addr]);
+    else
+        error(lineno, "invalid unit for parser checksum");
+}
+
 template <> void Parser::CounterInit::write_config(Target::JBay::parser_regs &regs,
                                                    gress_t gress, int idx) {
     auto &ctr_init_ram = regs.memory[gress].ml_ctr_init_ram[idx];
@@ -357,3 +367,4 @@ void Parser::gen_configuration_cache(Target::JBay::parser_regs &regs, json::vect
         add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str);
     }
 }
+

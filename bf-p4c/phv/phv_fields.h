@@ -734,20 +734,26 @@ class PhvInfo {
         return struct_info(hr->toString()); }
     size_t num_fields() const { return all_fields.size(); }
 
-     std::vector<PHV::Field::alloc_slice>
-     get_alloc(const IR::Expression* f) const {
-         CHECK_NULL(f);
-         std::vector<PHV::Field::alloc_slice> slices;
+    std::vector<PHV::Field::alloc_slice>
+    get_alloc(const IR::Expression* f) const {
+        CHECK_NULL(f);
+        std::vector<PHV::Field::alloc_slice> slices;
 
-         auto* phv_field = field(f);
-         if (!phv_field) return slices;
+        auto* phv_field = field(f);
+        return get_alloc(phv_field);
+    }
 
-         phv_field->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-             slices.push_back(alloc);
-         });
+    std::vector<PHV::Field::alloc_slice>
+    get_alloc(const PHV::Field* phv_field) const {
+        std::vector<PHV::Field::alloc_slice> slices;
+        if (!phv_field) return slices;
 
-         return slices;
-     }
+        phv_field->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+            slices.push_back(alloc);
+        });
+
+        return slices;
+    }
 
     iterator<safe_vector<PHV::Field *>::iterator> begin() { return by_id.begin(); }
     iterator<safe_vector<PHV::Field *>::iterator> end() { return by_id.end(); }

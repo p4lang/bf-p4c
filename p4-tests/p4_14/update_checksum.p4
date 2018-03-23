@@ -21,9 +21,28 @@ header_type data_t {
         h1 : 16;
         b1 : 8;
         b2 : 8;
+        cksum : 16;
     }
 }
 header data_t data;
+
+field_list my_checksum_list {
+        data.f1;
+        data.f2;
+}
+
+field_list_calculation my_checksum {
+    input {
+        my_checksum_list;
+    }
+    algorithm : csum16;
+    output_width : 16;
+}
+
+calculated_field data.cksum  {
+    update my_checksum;
+}
+
 
 parser start {
     extract(data);
@@ -49,3 +68,4 @@ table test1 {
 control ingress {
     apply(test1);
 }
+

@@ -277,25 +277,34 @@ void Parser::output(json::map & ctxt_json) {
 Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno), gress(gress) {
     if (!CHECKTYPE2(data.key, tSTR, tCMD)) return;
     if (!CHECKTYPE(data.value, tMAP)) return;
-    if (data.key.type == tCMD)
-        for (int i = 1; i < data.key.vec.size; ++i) {
-            if (i == 1 && data.key[i].type == tINT) {
-                if ((unit = data.key[i].i) > 1)
-                    error(lineno, "invalid checksum unit %d", unit); }
-            else if (data.key[i] == "start") start = true;
-            else if (data.key[i] == "end") end = true;
-            else if (data.key[i] == "verify") residual = false;
-            else if (data.key[i] == "residual") residual = true;
-            else error(data.key[i].lineno, "Syntax error"); }
+    if (data.key.vec.size == 2) {
+        if ((unit = data.key[1].i) >= Target::PARSER_CHECKSUM_UNITS())
+            error(lineno, "invalid parser checksum unit %d", unit);
+     } else { error(data.key.lineno, "Syntax error"); }
     for (auto &kv : MapIterChecked(data.value.map, true)) {
-        if (kv.key == "addr") {
+        if (kv.key == "type") {
+            if (CHECKTYPE(kv.value, tSTR)) {
+                     if (kv.value == "verify")   type = 0;
+                else if (kv.value == "residual") type = 1;
+                else if (kv.value == "clot")     type = 2;
+                else error(kv.value.lineno, "Unknown parser checksum type");
+            }
+        } else if (kv.key == "start") {
+            if (CHECKTYPE(kv.value, tINT)) start = kv.value.i;
+        } else if (kv.key == "end") {
+            if (CHECKTYPE(kv.value, tINT)) end = kv.value.i;
+        } else if (kv.key == "addr") {
             if (CHECKTYPE(kv.value, tINT)) addr = kv.value.i;
         } else if (kv.key == "add") {
             if (CHECKTYPE(kv.value, tINT)) add = kv.value.i;
         } else if (kv.key == "dest") {
-            dest = Phv::Ref(gress, kv.value);
-        } else if (kv.key == "end") {
-            if (CHECKTYPE(kv.value, tINT)) end_pos = kv.value.i;
+            if (kv.value.type == tCMD && kv.value == "clot" && kv.value.vec.size == 2)
+                tag = kv.value[1].i;
+            else dest = Phv::Ref(gress, kv.value);
+        } else if (kv.key == "dst_bit") {
+            if (CHECKTYPE(kv.value, tINT)) dst_bit_hdr_end_pos = kv.value.i;
+        } else if (kv.key == "end_pos") {
+            if (CHECKTYPE(kv.value, tINT)) dst_bit_hdr_end_pos = kv.value.i;
         } else if (kv.key == "mask") {
             if (CHECKTYPE(kv.value, tINT)) mask = kv.value.i;
         } else if (kv.key == "shift") {
@@ -312,7 +321,7 @@ bool Parser::Checksum::equiv(const Checksum &a) const {
         if (dest != a.dest) return false;
     } else if (dest || a.dest) return false;
     return add == a.add && mask == a.mask && swap == a.swap && start == a.start &&
-           end == a.end && shift == a.shift && residual == a.residual;
+           end == a.end && shift == a.shift && type == a.type;
 }
 
 void Parser::Checksum::pass1(Parser *parser) {
@@ -350,7 +359,7 @@ template<class ROW>
 void Parser::Checksum::write_row_config(ROW &row) {
     row.add = add;
     if (dest) row.dst = dest->reg.parser_id();
-    row.dst_bit_hdr_end_pos = end_pos;
+    row.dst_bit_hdr_end_pos = dst_bit_hdr_end_pos;
     row.hdr_end = end;
     int rsh = 0;
     for (auto &el : row.mask)
@@ -360,17 +369,7 @@ void Parser::Checksum::write_row_config(ROW &row) {
     rsh = 0;
     for (auto &el : row.swap)
          el = (swap >> rsh++) & 1;
-    row.type = residual;
-}
-
-template <class REGS>
-void Parser::Checksum::write_config(REGS &regs, Parser *parser) {
-    if (unit == 0)
-        write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
-    else if (unit == 1)
-        write_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
-    else
-        error(lineno, "invalid unit for checksum");
+    row.type = type;
 }
 
 Parser::CounterInit::CounterInit(value_t &data) : lineno(data.lineno) {

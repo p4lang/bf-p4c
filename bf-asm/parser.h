@@ -37,8 +37,11 @@ class Parser : public Section {
         int             lineno, addr = -1, unit = -1;
         gress_t         gress;
         Phv::Ref        dest;
-        unsigned        add = 0, mask = 0, swap = 0, end_pos = 0;
-        bool            start = false, end = false, shift = false, residual = false;
+        int             tag = -1;
+        unsigned        add = 0, mask = 0, swap = 0;
+        unsigned        dst_bit_hdr_end_pos = 0;
+        bool            start = false, end = false, shift = false;
+        unsigned        type = 0; // 0 = verify, 1 = residual, 2 = clot
         Checksum(gress_t, pair_t);
         bool equiv(const Checksum &) const;
         void pass1(Parser *);
