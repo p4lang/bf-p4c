@@ -343,6 +343,23 @@ class ActionPhvConstraints : public Inspector {
             const UnionFind<PHV::FieldSlice>& copacking_constraints,
             ordered_map<PHV::FieldSlice, PHV::Container>& req_container);
 
+    //  (xxx)Deep [Specific Case Alert]: This will probably be subsumed by another function that
+    //  handles the general case of producing conditional constraints for n unallocated sources
+    //  packed into 2 containers.
+    /** For cases where we have exactly two unallocated source PHV slices and no action
+      * data/constant source (any number of allocated slices are okay), we need to enforce an
+      * alignment for one of the source PHV slices. We choose to enforce the alignment constraint
+      * for the source slice with the smaller width (which likely has more wiggle room for placement
+      * within a container). This function returns the smaller of two unallocated slices found in
+      * @copacking_constraints. It also uses @alloc to check that the two slices present are indeed,
+      * unallocated.  @returns boost::none, if there are more than two unallocated source slices in
+      * @copacking_constraints.
+      */
+    boost::optional<PHV::FieldSlice> get_smaller_source_slice(
+            const PHV::Allocation& alloc,
+            const UnionFind<PHV::FieldSlice>& copacking_constraints,
+            const ordered_set<PHV::FieldSlice>& container_state);
+
     /// (xxx)Deep [Artificial Constraint]: Right now action bus allocation requires any destination
     /// written by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
     /// destinations. To be removed when Evan lands his patch relaxing the above requirement.
