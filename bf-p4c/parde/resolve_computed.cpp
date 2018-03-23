@@ -718,6 +718,7 @@ class ComputeSaveAndSelect: public ParserInspector {
     ordered_set<const State*> unprocessed_states;
 
     void postorder(const State* state) override {
+        LOG4(">> Inserting Saves on " << state->name);
         // Mark state_unresolved_selects for this state
         for (const auto* select : state->selects) {
             if (auto* computed = select->source->to<IR::BFN::ComputedRVal>()) {
@@ -761,6 +762,7 @@ class ComputeSaveAndSelect: public ParserInspector {
                 continue;
 
             unprocessed_states.erase(next_state);
+            LOG4("For transition to: " << next_state->name);
 
             // Get unresolved selects by merge all child state's unresolved selects.
             auto unresolved_selects = calcUnresolvedSelects(next_state, shift_bytes);
@@ -777,6 +779,7 @@ class ComputeSaveAndSelect: public ParserInspector {
                      return l.source().size() < r.source().size();
                  });
 
+            std::set<const StateSelect*> resolved_in_this_transition;
             for (const auto& unresolved : unresolved_selects) {
                 // Wrongly trace-backed resolve.
                 if (corrected_source.count(unresolved.select)
@@ -847,9 +850,13 @@ class ComputeSaveAndSelect: public ParserInspector {
                 if (!reg_choice) {
                     // throw error message saying that it's impossible.
                     ::error("Too much data for parse matcher, not enough register for %1%",
-                            unresolved.select);
+                            unresolved.select->p4Source);
                     return;
                 }
+
+                if (LOGGING(4)) {
+                    for (const auto& reg : *reg_choice)
+                        LOG4("Assingin " << reg << " to " << unresolved.select->p4Source); }
 
                 // Assign registers and update match_saves
                 // TODO(yumin): if it's the last byte, we can't use half register on it.
@@ -865,6 +872,7 @@ class ComputeSaveAndSelect: public ParserInspector {
                     }
                     save_range_itr = save_range_itr.shiftedByBytes(r.size);
                 }
+                resolved_in_this_transition.insert(unresolved.select);
                 select_registers[unresolved.select] = *reg_choice;
                 select_masks[unresolved.select]     = calcMask(unresolved.source(), source);
                 used_registers.insert((*reg_choice).begin(), (*reg_choice).end());
@@ -876,9 +884,14 @@ class ComputeSaveAndSelect: public ParserInspector {
             // state, it should be added because those remaining_unresolved selects 'start to live'
             // in next state as well.
             for (const auto& remaining_unresolved : early_stage_extracted) {
+                // If the select is resolved in this state, parent defs go over this state
+                // does not need to be saved, like the W => W => R situation.
+                if (resolved_in_this_transition.count(remaining_unresolved.select)) {
+                    continue; }
                 auto unresolved = remaining_unresolved;
                 unresolved.used_by_others.insert(used_registers.begin(), used_registers.end());
                 state_unresolved_selects[state].push_back(unresolved);
+                LOG4("Add Unresolved in `" << state->name << "` " << unresolved.select);
             }
         }  // for transition
     }

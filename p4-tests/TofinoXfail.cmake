@@ -146,10 +146,6 @@ if (PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "PHV allocation was not successful"
     fabric-DWITH_INT_TRANSIT
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Too much data for parse matcher, not enough register for BFN::Select"
     fabric-DWITH_SPGW-DWITH_INT_TRANSIT
     )
 

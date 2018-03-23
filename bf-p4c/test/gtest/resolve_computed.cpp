@@ -134,8 +134,10 @@ TEST_F(ResolveComputedTest, TwoPathSameDef) {
     auto* run = new ResolveComputedParserExpressions();
     auto* check = new VerifyRegisterAssigned();
     auto* resolved = test->pipe->apply(*run);
-    resolved->apply(*check);
-    EXPECT_EQ(check->has_unallocated, false) << check->logs;
+    EXPECT_TRUE(resolved);
+    if (resolved) {
+        resolved->apply(*check);
+        EXPECT_EQ(check->has_unallocated, false) << check->logs; }
 }
 
 TEST_F(ResolveComputedTest, TwoDef) {
@@ -186,8 +188,10 @@ TEST_F(ResolveComputedTest, TwoDef) {
     auto* run = new ResolveComputedParserExpressions();
     auto* check = new VerifyRegisterAssigned();
     auto* resolved = test->pipe->apply(*run);
-    resolved->apply(*check);
-    EXPECT_EQ(check->has_unallocated, false) << check->logs;
+    EXPECT_TRUE(resolved);
+    if (resolved) {
+        resolved->apply(*check);
+        EXPECT_EQ(check->has_unallocated, false) << check->logs; }
 }
 
 TEST_F(ResolveComputedTest, TwoPathSameDefLargeField) {
@@ -234,8 +238,57 @@ TEST_F(ResolveComputedTest, TwoPathSameDefLargeField) {
     auto* run = new ResolveComputedParserExpressions();
     auto* check = new VerifyRegisterAssigned();
     auto* resolved = test->pipe->apply(*run);
-    resolved->apply(*check);
-    EXPECT_EQ(check->has_unallocated, false) << check->logs;
+    EXPECT_TRUE(resolved);
+    if (resolved) {
+        resolved->apply(*check);
+        EXPECT_EQ(check->has_unallocated, false) << check->logs; }
+}
+
+TEST_F(ResolveComputedTest, Parent) {
+    auto test = createParserCriticalPathTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    state start {
+        packet.extract(headers.h1);
+        meta.f1 = headers.h1.f1;
+        transition select(headers.h1.f1) {
+            0x01: parse_bri;
+            0x02: parse_end;
+        }
+    }
+
+    state parse_bri {
+        packet.extract(headers.brg);
+        meta.f1 = headers.brg.f1;
+        transition parse_end;
+    }
+
+    state parse_end {
+        transition select(meta.f1) {
+            0: parse_after1;
+            1: parse_after2;
+        }
+    }
+
+    state parse_after1 {
+        packet.extract(headers.junk1);
+        transition accept;
+    }
+
+    state parse_after2 {
+        packet.extract(headers.junk2);
+        transition accept;
+    }
+
+    )"));
+    ASSERT_TRUE(test);
+
+    auto* run = new ResolveComputedParserExpressions();
+    auto* check = new VerifyRegisterAssigned();
+    auto* resolved = test->pipe->apply(*run);
+    EXPECT_TRUE(resolved);
+    if (resolved) {
+        resolved->apply(*check);
+        EXPECT_EQ(check->has_unallocated, false) << check->logs; }
 }
 
 }  // namespace Test
