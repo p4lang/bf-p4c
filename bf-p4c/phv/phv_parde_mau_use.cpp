@@ -142,12 +142,11 @@ bool Phv_Parde_Mau_Use::is_used_mau(const PHV::Field *f) const {      // use in 
     return use_mau;
 }
 
-bool Phv_Parde_Mau_Use::is_used_alu(const PHV::Field *f) const {      // use in mau
+bool Phv_Parde_Mau_Use::is_used_alu(const PHV::Field *f) const {      // use in alu
     BUG_CHECK(f, "Null field");
-    bool use_mau = use_i[1][f->gress][f->id];
-    return use_mau;
+    bool use_alu = used_alu_i[f->id];
+    return use_alu;
 }
-
 
 bool Phv_Parde_Mau_Use::is_written_mau(const PHV::Field *f) const {
     BUG_CHECK(f, "Null field");
@@ -179,6 +178,7 @@ bool Phv_Parde_Mau_Use::is_extracted(const PHV::Field *f, boost::optional<gress_
 bool PhvUse::preorder(const IR::BFN::Deparser *d) {
     thread = d->gress;
     in_dep = true;
+    in_mau = false;
 
     revisit_visited();
     visit(d->digests, "digests");
@@ -192,7 +192,7 @@ bool PhvUse::preorder(const IR::BFN::Deparser *d) {
 
 bool PhvUse::preorder(const IR::BFN::DeparserParameter*) {
     // Treat fields which are used to set intrinsic deparser parameters as if
-    // they're used in the MAU, because they can't go in TPHV.
+    // they're used in the MAU, because they can't go in TPHV or CLOT.
     in_mau = true;
     return true;
 }
@@ -203,7 +203,7 @@ void PhvUse::postorder(const IR::BFN::DeparserParameter*) {
 
 bool PhvUse::preorder(const IR::BFN::Digest*) {
     // Treat fields which are used in digests as if they're used in the MAU,
-    // because they can't go in TPHV.
+    // because they can't go in TPHV or CLOT.
     in_mau = true;
     return true;
 }
