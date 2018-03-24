@@ -20,11 +20,15 @@ class VerifyRegisterAssigned : public ParserInspector {
     bool preorder(const IR::BFN::Select* select) override {
         if (select->reg.size() == 0) {
             has_unallocated = true;
-            logs << "unallocated select: " << select << "\n"; }
+            _logs << "unallocated select: " << select << "\n"; }
         return true; }
+
+ private:
+    std::stringstream _logs;
+
  public:
     bool has_unallocated = false;
-    std::stringstream logs;
+    std::string logs() const { return _logs.str(); }
 };
 
 boost::optional<TofinoPipeTestCase>
@@ -137,7 +141,7 @@ TEST_F(ResolveComputedTest, TwoPathSameDef) {
     EXPECT_TRUE(resolved);
     if (resolved) {
         resolved->apply(*check);
-        EXPECT_EQ(check->has_unallocated, false) << check->logs; }
+        EXPECT_EQ(check->has_unallocated, false) << check->logs(); }
 }
 
 TEST_F(ResolveComputedTest, TwoDef) {
@@ -191,7 +195,7 @@ TEST_F(ResolveComputedTest, TwoDef) {
     EXPECT_TRUE(resolved);
     if (resolved) {
         resolved->apply(*check);
-        EXPECT_EQ(check->has_unallocated, false) << check->logs; }
+        EXPECT_EQ(check->has_unallocated, false) << check->logs(); }
 }
 
 TEST_F(ResolveComputedTest, TwoPathSameDefLargeField) {
@@ -241,7 +245,7 @@ TEST_F(ResolveComputedTest, TwoPathSameDefLargeField) {
     EXPECT_TRUE(resolved);
     if (resolved) {
         resolved->apply(*check);
-        EXPECT_EQ(check->has_unallocated, false) << check->logs; }
+        EXPECT_EQ(check->has_unallocated, false) << check->logs(); }
 }
 
 TEST_F(ResolveComputedTest, Parent) {
@@ -288,7 +292,7 @@ TEST_F(ResolveComputedTest, Parent) {
     EXPECT_TRUE(resolved);
     if (resolved) {
         resolved->apply(*check);
-        EXPECT_EQ(check->has_unallocated, false) << check->logs; }
+        EXPECT_EQ(check->has_unallocated, false) << check->logs(); }
 }
 
 }  // namespace Test

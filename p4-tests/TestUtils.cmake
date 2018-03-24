@@ -68,7 +68,6 @@ function(bfn_add_p4factory_tests tag test_list)
     file (RELATIVE_PATH p4test ${P4C_SOURCE_DIR} ${__t})
     string (REPLACE "p4-tests/programs" "p4-tests/ptf-tests" ptfpath ${__t})
     get_filename_component (ptfdir ${ptfpath} DIRECTORY)
-    message("adding PTF test ${p4test}")
     p4c_add_ptf_test_with_ptfdir (${tag} ${p4test} ${__t} "${testExtraArgs} -pd" ${ptfdir})
     set_tests_properties("${tag}/${p4test}" PROPERTIES
       ENVIRONMENT "PTF_TEST_SPECS=")

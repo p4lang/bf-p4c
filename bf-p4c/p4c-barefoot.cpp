@@ -2,9 +2,9 @@
 #include <limits.h>
 #include <signal.h>
 #include <stdio.h>
+#include <sys/stat.h>
 #include <iostream>
 #include <string>
-#include <sys/stat.h>
 
 #include "arch/simple_switch.h"
 #include "asm.h"

@@ -86,7 +86,7 @@ void CounterTable::pass1() {
     for (auto &l : lrt) {
         if (l.threshold > MAX_LRT_THRESHOLD)
             error(l.lineno, "lrt threshold too large");
-        else if (l.threshold & 0xf != 0)
+        else if ((l.threshold & 0xf) != 0)
             error(l.lineno, "lrt threshold must be a mulitple of 16");
         if (type & BYTES) {
             if (l.interval > MAX_LRT_BYTE_INTERVAL)

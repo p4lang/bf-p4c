@@ -62,7 +62,7 @@ set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos/pipelines/fabric/s
 # we want to run to the PTF runner.
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric ${ONOS_FABRIC_P4}
-    "${testExtraArgs}"
+    "${testExtraArgs} "
     ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf "all ^spgw ^int_transit")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric-DWITH_SPGW ${ONOS_FABRIC_P4}
