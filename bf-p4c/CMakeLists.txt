@@ -388,6 +388,18 @@ set (BF_P4C_IR_DEF_FILES
 # publish IR_DEF_FILES upstream
 set (IR_DEF_FILES ${IR_DEF_FILES} ${BF_P4C_IR_DEF_FILES} PARENT_SCOPE)
 
+# do not add to cpp lint. They are added as part of the p4c-graphs backend
+set (BF_P4C_GRAPHS_HDRS
+  ${P4C_SOURCE_DIR}/backends/graphs/controls.h
+  ${P4C_SOURCE_DIR}/backends/graphs/graphs.h
+  ${P4C_SOURCE_DIR}/backends/graphs/parsers.h
+  )
+set (BF_P4C_GRAPHS_SRCS
+  ${P4C_SOURCE_DIR}/backends/graphs/controls.cpp
+  ${P4C_SOURCE_DIR}/backends/graphs/graphs.cpp
+  ${P4C_SOURCE_DIR}/backends/graphs/parsers.cpp
+  )
+
 set (p4include_HEADERS
   p4include/psa.p4
   p4include/tofino.p4
@@ -424,6 +436,7 @@ set (BF_P4C_SOURCES
 set (P4C_BAREFOOT_SRCS
   p4c-barefoot.cpp
   ${BF_P4C_BACKEND_CONV_SRCS}
+  ${BF_P4C_GRAPHS_SRCS}
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${P4C_BAREFOOT_SRCS}")
 build_unified(P4C_BAREFOOT_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})

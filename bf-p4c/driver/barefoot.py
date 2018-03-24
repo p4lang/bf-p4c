@@ -49,6 +49,9 @@ class BarefootBackend(BackendDriver):
     def add_command_line_options(self):
         # BackendDriver.add_command_line_options(self)
         self._argGroup = self._argParser.add_argument_group("Barefoot Networks specific options")
+        self._argGroup.add_argument("--create-graphs",
+                                    help="Create parse and table flow graphs",
+                                    action="store_true", default=False)
         self._argGroup.add_argument("-s", dest="run_post_compiler",
                                     help="Only run assembler",
                                     action="store_true", default=False)
@@ -107,6 +110,9 @@ class BarefootBackend(BackendDriver):
             self.enable_commands(['assembler'])
         if opts.skip_linker:
             self.add_command_option('assembler', "--no-bin")
+
+        if opts.create_graphs:
+            self.add_command_option('compiler', '--create-graphs')
 
         if opts.validate_output and os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self.add_command_option('verifier', "{}/context.json".format(output_dir))

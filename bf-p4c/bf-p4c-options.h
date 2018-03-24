@@ -24,6 +24,7 @@ class BFN_Options : public CompilerOptions {
     bool jbay_analysis = false;
     bool use_pa_solitary = false;
     float phv_scale_factor = 1;
+    bool create_graphs = false;
 
     BFN_Options();
 

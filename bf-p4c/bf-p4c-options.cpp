@@ -32,6 +32,9 @@ BFN_Options::BFN_Options() {
     registerOption("-g", nullptr,
         [this](const char *) { debugInfo = true; return true; },
         "generate debug information");
+    registerOption("--create-graphs", nullptr,
+        [this](const char *) { create_graphs = true; return true; },
+        "Create parse and table flow graphs");
     registerOption("--no-dead-code-elimination", nullptr,
         [this](const char *) { no_deadcode_elimination = true; return true; },
         "do not use dead code elimination");

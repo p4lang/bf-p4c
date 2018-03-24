@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <string>
+#include <sys/stat.h>
 
 #include "arch/simple_switch.h"
 #include "asm.h"
@@ -23,6 +24,8 @@
 #include "frontends/common/applyOptionsPragmas.h"
 #include "frontends/common/parseInput.h"
 #include "fromv1.0/programStructure.h"
+#include "backends/graphs/controls.h"
+#include "backends/graphs/parsers.h"
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "lib/compile_context.h"
@@ -165,6 +168,29 @@ int main(int ac, char **av) {
     if (!program)
         return 1;
     log_dump(program, "After midend");
+
+    // generate graphs
+    // In principle this should not fail, so we call it before the backend
+    if (options.create_graphs) {
+        char *dir_name_ptr = dirname(const_cast<char *>(options.outputFile.c_str()));
+        std::string graphsDir(dir_name_ptr ? dir_name_ptr : ".");
+        graphsDir += "/graphs";
+        int rc = mkdir(graphsDir.c_str(), 0755);
+        if (rc != 0 && errno != EEXIST) {
+            std::cerr << "Failed to create directory: " << graphsDir << std::endl;
+            return 1;
+        }
+        LOG2("Generating graphs under " << graphsDir);
+        auto toplevel = midend.toplevel;
+        if (toplevel != nullptr) {
+            LOG2("Generating control graphs");
+            graphs::ControlGraphs cgen(&midend.refMap, &midend.typeMap, graphsDir);
+            toplevel->getMain()->apply(cgen);
+        }
+        LOG2("Generating parser graphs");
+        graphs::ParserGraphs pgg(&midend.refMap, &midend.typeMap, graphsDir);
+        program->apply(pgg);
+    }
 
     auto maupipe = BFN::extract_maupipe(program, options);
 
