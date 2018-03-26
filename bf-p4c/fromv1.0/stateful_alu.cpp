@@ -56,6 +56,7 @@ class CreateSaluApplyFunction : public Inspector {
             return c; }
         const IR::Expression *postorder(IR::AttribLocal *attr) override {
             int idx = 0;
+            IR::Path *var = nullptr;
             if (attr->name == "condition_lo") {
                 BUG_CHECK(self.cond_lo, "condition_lo not specified");
                 return self.cond_lo;
@@ -63,13 +64,17 @@ class CreateSaluApplyFunction : public Inspector {
                 BUG_CHECK(self.cond_hi, "condition_hi not specified");
                 return self.cond_hi;
             } else if (attr->name == "register_lo") {
+                var = new IR::Path("in_value");
                 idx = 0;
             } else if (attr->name == "register_hi") {
+                var = new IR::Path("in_value");
                 idx = 1;
             } else if (attr->name == "alu_lo") {
+                var = new IR::Path("value");
                 idx = 0;
                 self.defer_out = true;
             } else if (attr->name == "alu_hi") {
+                var = new IR::Path("value");
                 idx = 1;
                 self.defer_out = true;
             } else if (attr->name == "set_bit" || attr->name == "set_bitc") {
@@ -84,6 +89,7 @@ class CreateSaluApplyFunction : public Inspector {
                 if (self.utype->width_bits() != 1)
                     error("%s only allowed in 1 bit registers", attr->name);
                 idx = 0;
+                var = new IR::Path("in_value");
             } else if (attr->name == "math_unit") {
                 auto *mu = new IR::PathExpression(IR::ID(attr->srcInfo, self.math_unit_name));
                 return new IR::MethodCallExpression(attr->srcInfo,
@@ -104,8 +110,7 @@ class CreateSaluApplyFunction : public Inspector {
                 BUG("Unrecognized AttribLocal %s", attr);
                 return attr; }
             return self.makeRegFieldMember(
-                    new IR::PathExpression(attr->srcInfo, self.utype, new IR::Path("value")),
-                    idx); }
+                    new IR::PathExpression(attr->srcInfo, self.rtype, var), idx); }
 
      public:
         explicit RewriteExpr(CreateSaluApplyFunction &self) : self(self) {}
@@ -188,6 +193,9 @@ class CreateSaluApplyFunction : public Inspector {
     : structure(s), rtype(rtype), utype(utype), math_unit_name(mu),
       rewrite({ new RewriteExpr(*this), new TypeCheck }) {
         body = new IR::BlockStatement({
+            new IR::Declaration_Variable("in_value", rtype),
+            new IR::AssignmentStatement(new IR::PathExpression("in_value"),
+                                        new IR::PathExpression("value")),
             new IR::AssignmentStatement(new IR::PathExpression("rv"),
                                         new IR::Constant(utype, 0)) });
         if (auto st = rtype->to<IR::Type_StructLike>())

@@ -38,6 +38,9 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
   # knet_mgr_test.p4(10): error: add_cpu_header: parameter fabric_color must be bound
   extensions/p4_tests/p4_14/p4-tests/programs/knet_mgr_test/knet_mgr_test.p4
+  # tofino hash function extensions not supported with p4test
+  extensions/p4_tests/p4_14/brig-540.p4
+  extensions/p4_tests/p4_14/brig-540-2.p4
   )
 
 # p4-tests has all the includes at the same level with the programs.

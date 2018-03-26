@@ -20,7 +20,7 @@ fi
 # to capture known failures due to test timeout for XFAIL
 TIMEOUT=${P4C_TIMEOUT:-490}
 TIME_COMMAND="" # don't time commands
-verbose=true
+verbose=false
 debug=false
 debug_bfas=false
 debug_p4c=false
@@ -113,6 +113,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "p4c test runner options"
         echo >&2 "   -v             verbose -- print commands before running them"
         echo >&2 "   -gdb           run p4c-barefoot under gdb"
+        echo >&2 "   -dbas          run bfas under gdb"
         echo >&2 "   -time          time commands as they run"
         echo >&2 "   -to <sec>      timeout programs after <sec> seconds (default 30)"
         echo >&2 "   -ptf           run PTF tests if available"

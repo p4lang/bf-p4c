@@ -1,43 +1,79 @@
 #include "stateful_alu.h"
 
+std::ostream &operator<<(std::ostream &out, CreateSaluInstruction::LocalVar::use_t u) {
+    static const char *use_names[] = { "NONE", "ALUHI", "MEMLO", "MEMHI", "MEMALL" };
+    if (u < sizeof(use_names)/sizeof(use_names[0]))
+        return out << use_names[u];
+    else
+        return out << "<invalid " << u << ">"; }
+std::ostream &operator<<(std::ostream &out, CreateSaluInstruction::etype_t e) {
+    static const char *names[] = { "NONE", "IF", "VALUE", "OUTPUT" };
+    if (e < sizeof(names)/sizeof(names[0]))
+        return out << names[e];
+    else
+        return out << "<invalid " << e << ">"; }
+
 /// Check a name to see if it is a reference to an argument of register_action::apply,
 /// or a reference to the local var we put in alu_hi.
+/// or a reference to a copy of an in argument
 /// If so, process it as an operand and return true
 bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field) {
+    LOG4("applyArg(" << pe << ", " << field << ") etype = " << etype);
+    assert(dest == nullptr || etype != NONE);
     IR::Expression *e = nullptr;
     int idx = 0, field_idx = 0;
-    if (pe->path->name.name == alu_hi_var) {
-        alu_write[(field_idx = 1)] = true;
+    if (locals.count(pe->path->name.name)) {
+        auto &local = locals.at(pe->path->name.name);
+        if (etype == NONE)
+            dest = &local;
+        switch (local.use) {
+        case LocalVar::NONE:
+            // if this becomes a real instruction (not an elided copy), this
+            // local will become alu_hi, so fall through
+        case LocalVar::ALUHI:
+            field_idx = 1;
+            break;
+        case LocalVar::MEMHI:
+            field_idx = 1;
+        case LocalVar::MEMLO:
+            if (etype == NONE)
+                error("%s: register_action too complex", pe->srcInfo);
+        case LocalVar::MEMALL:
+            break;
+        default:
+            BUG("invalide use in CreateSaluInstruction::LocalVar %s %d", local.name, local.use); }
     } else {
         if (!params) return false;
-        const IR::Type_StructLike *stype = nullptr;
         for (auto p : params->parameters) {
             if (p->name == pe->path->name) {
-                stype = p->type->to<IR::Type_StructLike>();
                 break; }
             ++idx; }
-        if (size_t(idx) >= params->parameters.size()) return false;
-        if (field && stype) {
-            for (auto f : stype->fields) {
-                if (f->name == field)
-                    break;
-                ++field_idx; } }
+        if (size_t(idx) >= params->parameters.size()) return false; }
+    if (field_idx == 0 && field && regtype->is<IR::Type_StructLike>()) {
+        for (auto f : regtype->to<IR::Type_StructLike>()->fields) {
+            if (f->name == field)
+                break;
+            ++field_idx; }
         BUG_CHECK(field_idx < 2, "bad field name in register layout"); }
     cstring name = field_idx ? "hi" : "lo";
     switch (idx) {
     case 0:  /* first parameter to apply:  inout value; */
         if (etype == NONE) {
-            alu_write[field_idx] = true;
+            if (!dest || dest->use == LocalVar::ALUHI)
+                alu_write[field_idx] = true;
             etype = VALUE; }
         if (!opcode) opcode = "alu_a";
         if (etype == OUTPUT)
             name = (alu_write[field_idx] ? "alu_" : "mem_") + name;
-        e = new IR::MAU::SaluReg(pe->type, name);
+        e = new IR::MAU::SaluReg(pe->type, name, field_idx > 0);
         break;
     case 1:  /* second parameter to apply:  out rv; */
-        if (etype == NONE) etype = OUTPUT;
+        if (etype == NONE)
+            etype = OUTPUT;
+        else
+            error("Reading out param %s in register_action not supported", pe);
         if (!opcode) opcode = "output";
-        return true;
+        break;
     default:
         return false; }
 
@@ -62,16 +98,34 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
 bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
     BUG_CHECK(operands.empty(), "recursion failure");
     etype = NONE;
+    dest = nullptr;
     opcode = cstring();
     visit(as->left, "left");
     BUG_CHECK(operands.size() == (etype != OUTPUT) || ::errorCount() > 0, "recursion failure");
-    if (etype == NONE) {
+    if (etype == NONE)
         error("Can't assign to %s in register action", as->left);
-    } else {
+    else
         visit(as->right);
-        if (::errorCount() == 0) {
-            BUG_CHECK(operands.size() > (etype != OUTPUT), "recursion failure");
-            createInstruction(); } }
+    if (::errorCount() == 0) {
+        BUG_CHECK(operands.size() > (etype != OUTPUT), "recursion failure");
+        if (dest && dest->use != LocalVar::ALUHI) {
+            BUG_CHECK(etype == VALUE, "assert failure");
+            LocalVar::use_t use = LocalVar::NONE;
+            if (auto src = operands.back()->to<IR::MAU::SaluReg>()) {
+                if (dest->pair) {
+                    use = LocalVar::MEMALL;
+                } else if (src->hi) {
+                    use = LocalVar::MEMHI;
+                } else {
+                    use = LocalVar::MEMLO; }
+            } else {
+                use = LocalVar::ALUHI; }
+            if (use == LocalVar::NONE || (dest->use != LocalVar::NONE && dest->use != use))
+                error("%s: register_action too complex", as->srcInfo);
+            dest->use = use;
+            LOG3("local " << dest->name << " use " << dest->use); }
+        if (!dest || dest->use == LocalVar::ALUHI)
+            createInstruction(); }
     operands.clear();
     return false;
 }
@@ -91,6 +145,7 @@ bool CreateSaluInstruction::preorder(const IR::IfStatement *s) {
         error("%s: nested conditionals not supported in register action", s->srcInfo);
         return false; }
     etype = IF;
+    dest = nullptr;
     visit(s->condition, "condition");
     BUG_CHECK(pred_operands.size() == 1, "recursion failure");
     etype = NONE;
@@ -104,8 +159,7 @@ bool CreateSaluInstruction::preorder(const IR::IfStatement *s) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::PathExpression *pe) {
-    if (!applyArg(pe, cstring()))
-        BUG("Unrecognized PathExpression %s in salu", pe);
+    applyArg(pe, cstring());
     return false;
 }
 
@@ -193,9 +247,10 @@ const IR::Expression *CreateSaluInstruction::reuseCmp(const IR::MAU::Instruction
         if (!equiv(operands.at(i), cmp->operands.at(i+1)))
             return nullptr;
     if (opcode == cmp->name)
-        return new IR::MAU::SaluReg(IR::Type::Bits::get(1), idx ? "cmphi" : "cmplo");
+        return new IR::MAU::SaluReg(IR::Type::Bits::get(1), idx ? "cmphi" : "cmplo", idx > 0);
     if (negate_op.at(opcode) == cmp->name)
-        return new IR::LNot(new IR::MAU::SaluReg(IR::Type::Bits::get(1), idx ? "cmphi" : "cmplo"));
+        return new IR::LNot(new IR::MAU::SaluReg(IR::Type::Bits::get(1),
+                                                 idx ? "cmphi" : "cmplo", idx > 0));
     return nullptr;
 }
 
@@ -218,9 +273,11 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
                     operands.clear();
                     return false; } }
             cstring name = idx ? "hi" : "lo";
-            operands.insert(operands.begin(), new IR::MAU::SaluReg(IR::Type::Bits::get(1), name));
+            operands.insert(operands.begin(),
+                new IR::MAU::SaluReg(IR::Type::Bits::get(1), name, idx > 0));
             cmp_instr.push_back(createInstruction());
-            pred_operands.push_back(new IR::MAU::SaluReg(IR::Type::Bits::get(1), "cmp" + name));
+            pred_operands.push_back(
+                new IR::MAU::SaluReg(IR::Type::Bits::get(1), "cmp" + name, idx > 0));
             LOG4("Relation pred_operand: " << pred_operands.back());
             operands.clear(); }
     } else {
@@ -351,7 +408,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             if (output_cmpl) opcode += 'c';
             onebit = new IR::MAU::Instruction(opcode);
             rv = output = new IR::MAU::Instruction("output",
-                new IR::MAU::SaluReg(operands.at(0)->type, "alu_lo"));
+                new IR::MAU::SaluReg(operands.at(0)->type, "alu_lo", false));
             break; }
         if (predicate)
             operands.insert(operands.begin(), predicate);
@@ -364,7 +421,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             opcode = output_cmpl ? "read_bitc" : "read_bit";
             onebit = new IR::MAU::Instruction(opcode);
             rv = output = new IR::MAU::Instruction("output",
-                new IR::MAU::SaluReg(operands.at(0)->type, "alu_lo"));
+                new IR::MAU::SaluReg(operands.at(0)->type, "alu_lo", false));
             break;
         } else if (auto k = operands.at(0)->to<IR::Constant>()) {
             if (k->value == 0) {
@@ -376,16 +433,16 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
                 // registers properly, but we currently have no way of specifying them in the
                 // assembler.  The default (0) value works out for a 1 bit output, but by
                 // using them we could generate other values (any power of 2?)
-                operands.at(0) = new IR::MAU::SaluReg(k->type, "predicate");
-            } else if (!salu->dual && !alu_hi_var) {
+                operands.at(0) = new IR::MAU::SaluReg(k->type, "predicate", false);
+            } else if (!salu->dual) {
                 // FIXME -- can't output general constant!  Perhaps have an optimization pass
                 // that deals with this better, but for now, see if we can use alu_hi to
                 // to output the constant and use that instead
-                alu_hi_var = "--output--";
+                locals.emplace("--output--", LocalVar("--output--", false, LocalVar::ALUHI));
                 action->action.push_back(new IR::MAU::Instruction(
-                        "alu_a", new IR::MAU::SaluReg(k->type, "hi"), k));
+                        "alu_a", new IR::MAU::SaluReg(k->type, "hi", true), k));
                 LOG3("  add " << *action->action.back());
-                operands.at(0) = new IR::MAU::SaluReg(k->type, "alu_hi");
+                operands.at(0) = new IR::MAU::SaluReg(k->type, "alu_hi", true);
             } else {
                 error("%s: can't output a constant from a register action",
                       operands.at(0)->srcInfo); } }
@@ -401,10 +458,12 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
 
 bool CreateSaluInstruction::preorder(const IR::Declaration_Variable *v) {
     auto vt = v->type->to<IR::Type::Bits>();
-    if (salu->dual || alu_hi_var || !vt || vt->size != salu->width) {
-        error("register action can't support local var %s", v);
+    if (vt && vt->size == salu->width) {
+        locals.emplace(v->name, LocalVar(v->name, false));
+    } else if (v->type == regtype) {
+        locals.emplace(v->name, LocalVar(v->name, true));
     } else {
-        alu_hi_var = v->name; }
+        error("register action can't support local var %s", v); }
     return false;
 }
 
@@ -413,12 +472,6 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
     LOG3("Creating action " << di->name << " for stateful table " << salu->name);
     action = new IR::MAU::SaluAction(di->srcInfo, di->name);
     salu->instruction.addUnique(di->name, action);
-    predicate = nullptr;
-    onebit = nullptr;
-    output = nullptr;
-    math = IR::MAU::StatefulAlu::MathUnit();
-    math_function = nullptr;
-    math_input = nullptr;
     visit(di->properties, "properties");    // for P4_14 stateful_alu
     visit(di->initializer, "initializer");  // for P4_16 abstract function
     if (cmp_instr.size() > 2)
@@ -437,13 +490,12 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
             salu->math = math; }
     if (math_function && !math_function->expr)
         error("%s: math unit requires math_input", di->srcInfo);
-    action = nullptr;
-    predicate = nullptr;
-    onebit = nullptr;
-    output = nullptr;
-    math = IR::MAU::StatefulAlu::MathUnit();
-    math_function = nullptr;
-    math_input = nullptr;
+    int alu_hi_use = salu->dual ? 1 : 0;
+    for (auto &local : Values(locals))
+        if (local.use == LocalVar::ALUHI)
+            alu_hi_use++;
+    if (alu_hi_use > 1)
+        error("%s: too many locals in register action", di->srcInfo);
     return false;
 }
 

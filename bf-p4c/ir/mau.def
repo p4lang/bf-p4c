@@ -541,7 +541,8 @@ class AttachedOutput : Expression {
 /// reference to a fixed Stateful ALU resource -- these can only appear in SALU Instructions
 class SaluReg : Expression {
     cstring     name;
-    dbprint { out << name; }
+    bool        hi;     // corresponds to the high half of the alus
+    dbprint { out << name << (hi ? " {hi}" : ""); }
 }
 class SaluMathFunction : Operation_Unary {
     stringOp = "math_unit";
