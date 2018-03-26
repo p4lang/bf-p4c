@@ -63,6 +63,27 @@ class LayoutChoices {
 };
 
 class TableLayout : public MauModifier, Backtrack {
+    // In order to know how many field sections can be packed together into the same byte
+    struct MatchByteKey {
+        cstring name;
+        int lo;
+        int ixbar_multiplier;
+        int match_multiplier;
+
+        MatchByteKey(cstring n, int l, int im, int mm)
+            : name(n), lo(l), ixbar_multiplier(im), match_multiplier(mm) { }
+
+        bool operator<(const MatchByteKey &mbk) const {
+            if (name != mbk.name) return name < mbk.name;
+            if (lo != mbk.lo) return lo < mbk.lo;
+            if (ixbar_multiplier < mbk.ixbar_multiplier)
+                return ixbar_multiplier < mbk.ixbar_multiplier;
+            if (match_multiplier < mbk.match_multiplier)
+                return match_multiplier < mbk.match_multiplier;
+            return false;
+        }
+    };
+
     static constexpr int MIN_PACK = 1;
     static constexpr int MAX_PACK = 9;
     // FIXME: Technically this is 5, but need to update version bit information

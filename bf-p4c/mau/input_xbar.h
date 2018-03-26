@@ -51,6 +51,60 @@ struct IXBar {
         }
     };
 
+
+    enum byte_speciality_t {
+        NONE,
+        // Byte has to appear twice in the match for S0Q1 and S1Q0, but only once on the IXBar
+        ATCAM_DOUBLE,
+        // Byte does not have to appear on the match, as it is the partition index
+        ATCAM_INDEX,
+        // TCAM byte encoded with the 4b_lo_range match
+        RANGE_LO,
+        // TCAM byte encoded with the 4b_hi_range match
+        RANGE_HI,
+        BYTE_SPECIALITIES
+    };
+
+    /** Information on a single stretch of field within a Input XBar Byte, which comes
+     *  from the P4 program, i.e. say the following was a key:
+     *
+     *      key { hdr.nibble1 : exact;  hdr.nibble2 : exact; }
+     *
+     *  where hdr.nibble1 and hdr.nibble2 are both 4 bit fields in the same Container Byte,
+     *  i.e. H0(0..7).  Then each P4 field would have a FieldInfo, and the Use::Byte would
+     *  have a vector of two FieldInfo objects.
+     */
+    struct FieldInfo {
+        cstring field;  ///> name of the field
+        int lo;         ///> lo field bit in that byte
+        int hi;         ///> hi field bit in that byte
+        int cont_lo;    ///> mod 8 location in the container that the bitrange of field begins
+
+        FieldInfo(cstring n, int l, int h, int cl) : field(n), lo(l), hi(h), cont_lo(cl) { }
+        bool operator==(const FieldInfo &fi) const {
+            return field == fi.field && lo == fi.lo && hi == fi.hi;
+        }
+        bool operator<(const FieldInfo &fi) const {
+            if (field != fi.field) return field < fi.field;
+            if (lo != fi.lo) return lo < fi.lo;
+            if (hi != fi.hi) return hi < fi.hi;
+            return false;
+        }
+
+        bool operator!=(const FieldInfo &fi) const {
+            return !((*this) == fi);
+        }
+
+        int width() const {
+            return hi - lo + 1;
+        }
+
+        bitvec cont_loc() const {
+            return bitvec(cont_lo, width());
+        }
+    };
+
+
  private:
     /** IXBar tracks the use of all the input xbar bytes in a single stage.  Each byte use is set
      * to record the name of the field it will be getting and the bit offset within the field.
@@ -93,7 +147,6 @@ struct IXBar {
     std::unordered_set<const IR::Attached *>                attached_tables;
     enum byte_type_t { NO_BYTE_TYPE, ATCAM, PARTITION_INDEX, RANGE };
 
-
     /** IXbar::Use tracks the input xbar use of a single table */
     struct Use {
         /* everything is public so anyone can read it, but only IXBar should write to this */
@@ -108,23 +161,23 @@ struct IXBar {
         // enum use_type_t { Match, Gateway, Selector, StatefulAlu, HashDist, NotSet } use_type;
         /* tracking individual bytes (or parts of bytes) placed on the ixbar */
         struct Byte {
-            cstring     field;
-            int         lo, hi;
+            cstring     name;
+            int         lo;
             Loc         loc;
             // the PHV container bits the match will be performed on
             bitvec      bit_use;
             // flags describing alignment and gateway use/requirements
             int         flags = 0;
+            unsigned specialities = 0;
+            safe_vector<FieldInfo> field_bytes;
 
-            // If the byte has to appear twice in the match format for atcam as it is a ternary
-            bool        atcam_double = false;
-            // If the byte is part of the partition index of an atcam table
-            bool        atcam_index = false;
+            void set_spec(byte_speciality_t bs) {
+                specialities |= (1 << bs);
+            }
 
-            // If the byte is to be a range match, with the lo nibble used
-            bool        range_lo = false;
-            // If the byte is to be a range match, with the hi nibble used
-            bool        range_hi = false;
+            bool is_spec(byte_speciality_t bs) const {
+                return specialities & (1 << bs);
+            }
 
             // Which search bus this byte belongs to.  Used rather than groups in table format
             // as the Byte can appear once on the input xbar
@@ -132,22 +185,26 @@ struct IXBar {
             // Given a byte appearing multiple times within the match format, which one it is
             int         match_index = 0;
 
-            Byte(cstring f, int l, int h) : field(f), lo(l), hi(h) {}
-            Byte(cstring f, int l, int h, int g, int gb) : field(f), lo(l), hi(h), loc(g, gb) {}
+            Byte(cstring n, int l) : name(n), lo(l) {}
+            Byte(cstring n, int l, int g, int gb) : name(n), lo(l), loc(g, gb) {}
             Byte(const Byte &) = default;
-            operator std::pair<cstring, int>() const { return std::make_pair(field, lo); }
+            operator std::pair<cstring, int>() const { return std::make_pair(name, lo); }
             bool operator==(const std::pair<cstring, int> &a) const {
-                return field == a.first && lo == a.second; }
+                return name == a.first && lo == a.second; }
             bool operator==(const Byte &b) const {
-                return field == b.field && lo == b.lo && hi == b.hi;
+                return name == b.name && lo == b.lo;
             }
             bool operator<(const Byte &b) const {
-                if (field != b.field) return field < b.field;
+                if (name != b.name) return name < b.name;
                 if (lo != b.lo) return lo < b.lo;
-                if (hi != b.hi) return hi < b.hi;
-                return match_index < b.match_index;
+                if (match_index != b.match_index) return match_index < b.match_index;
+                // Sort by specialities to prevent combining bytes that have different
+                // specialities in create_alloc
+                if (specialities != b.specialities) return specialities < b.specialities;
+                if (field_bytes != b.field_bytes) return field_bytes < b.field_bytes;
+                return false;
             }
-            bool is_range() const { return range_lo || range_hi; }
+            bool is_range() const { return is_spec(RANGE_LO) || is_spec(RANGE_HI); }
             void unallocate() { search_bus = -1;  loc.group = -1;  loc.byte = -1; }
         };
         safe_vector<Byte>    use;
@@ -238,6 +295,15 @@ struct IXBar {
         int search_buses_single() const;
         int gateway_group() const;
     };
+
+    /** The purpose of this structure is to capture that multiple stretch of fields can
+     *  be contained within the same container byte.  In the add_use function, each FieldInfo
+     *  object will be created, and linked to a corresponding container byte.  Later, in the
+     *  create_alloc function, these individual FieldInfo object will be used to create at least
+     *  a single byte, (and maybe more due to overlay issues), that the compiler needs to allocate
+     *  for an input xbar.
+     */
+    typedef std::map<Use::Byte, safe_vector<FieldInfo>> ContByteConversion;
 
     struct HashDistUse {
         enum HashDistType { COUNTER_ADR, METER_ADR, ACTION_ADR, IMMEDIATE, PRECOLOR,
@@ -421,7 +487,7 @@ struct IXBar {
     void free_mid_bytes(mid_byte_use *mb_grp, safe_vector<Use::Byte *> &unalloced,
         safe_vector<Use::Byte *> &alloced, int &match_bytes_placed, int search_bus,
         bool &version_placed);
-    void allocate_byte(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
+    void allocate_byte(bitvec *bv, safe_vector<IXBar::Use::Byte *> &unalloced,
         safe_vector<IXBar::Use::Byte *> *alloced, IXBar::Use::Byte &need, int group,
         int byte, size_t &index, int &free_bytes, int &ixbar_bytes_placed,
         int &match_bytes_placed, int search_bus);
@@ -441,9 +507,10 @@ struct IXBar {
         bool ternary);
     void layout_option_calculation(const LayoutOption *layout_option,
                                    size_t &start, size_t &last);
-    void field_management(const IR::Expression *field, IXBar::Use &alloc,
-        std::map<cstring, bitvec> &fields_needed, bool hash_dist, cstring name, const PhvInfo &phv,
+    void field_management(ContByteConversion &map_alloc, const IR::Expression *field,
+        std::map<cstring, bitvec> &fields_needed, cstring name, bool hash_dist, const PhvInfo &phv,
         bool is_atcam = false, bool partition = false);
+    void create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc);
     bool allocHashDistAddress(const IR::MAU::HashDist *hd, const unsigned used_hash_dist_groups,
         const unsigned long used_hash_dist_bits, const unsigned &hash_table_input,
         unsigned &slice, unsigned long &bit_mask, std::map<int, bitrange> &bit_starts,
@@ -456,10 +523,25 @@ struct IXBar {
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {
     return out << '(' << l.group << ',' << l.byte << ')'; }
 
+inline std::ostream &operator<<(std::ostream &out, const IXBar::FieldInfo &fi) {
+    out << fi.field << "[" << fi.lo << ".." << fi.hi << "]";
+    return out;
+}
+
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Use::Byte &b) {
-    out << b.field << '[' << b.lo << ".." << b.hi << ']';
+    out << b.name << '[' << b.lo << ".." << (b.lo + 7) << ']';
     if (b.loc) out << b.loc;
+    out << " 0x" << b.bit_use;
     if (b.flags) out << " flags=" << hex(b.flags);
-    return out; }
+    out << " { ";
+    size_t index = 0;
+    for (auto fi : b.field_bytes) {
+        out << fi;
+        if (index == b.field_bytes.size())
+            out << ", ";
+    }
+    out << " }";
+    return out;
+}
 
 #endif /* BF_P4C_MAU_INPUT_XBAR_H_ */

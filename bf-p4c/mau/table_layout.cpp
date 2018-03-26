@@ -163,49 +163,58 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
     safe_vector<int> byte_sizes;
     bool partition_found = false;
 
+    /** Because the input xbar allocates by container bytes, the estimate should also be
+     *  based on container bytes rather than field bytes.  The point of this byte_impact
+     *  maps is to build container bytes and run analysis on that.
+     */
+    std::map<MatchByteKey, safe_vector<le_bitrange>> byte_impacts;
     for (auto ixbar_read : tbl->match_key) {
         if (ixbar_read->match_type.name == "selector") continue;
         bitrange bits = { 0, 0 };
         auto *field = phv.field(ixbar_read->expr, &bits);
-        int bytes = 0;
         int match_multiplier = 1;
         int ixbar_multiplier = 1;
+
+        int bytes = 0;
         if (field) {
             /* FIXME -- if a field is allocated to non-contiguous bits of a byte,
              * this will count that byte twice, when it is only needed once.  The
              * match layout in asm_output will likewise lay it out twice, so this
              * is consistent.  Should fix PHV alloc to not make such bad allocations */
-             bool is_partition = false;
-             if (layout.atcam) {
-                 if (field->name == partition_index) {
-                     match_multiplier = 0;
-                     is_partition = true;
-                     partition_found = true;
-                     ERROR_CHECK(ixbar_read->match_type.name == "exact", "%s: The partition index "
-                                 "of algorithmic TCAM table %s must be an exact field");
-                 } else if (ixbar_read->match_type.name == "ternary" ||
-                            ixbar_read->match_type.name == "lpm") {
-                     match_multiplier = 2;
-                 }
-             }
+            bool is_partition = false;
+            if (layout.atcam) {
+                if (field->name == partition_index) {
+                    match_multiplier = 0;
+                    is_partition = true;
+                    partition_found = true;
+                    ERROR_CHECK(ixbar_read->match_type.name == "exact", "%s: The partition index "
+                                "of algorithmic TCAM table %s must be an exact field");
+                } else if (ixbar_read->match_type.name == "ternary" ||
+                           ixbar_read->match_type.name == "lpm") {
+                    match_multiplier = 2;
+                }
+            }
 
-             if (ixbar_read->match_type.name == "range") {
-                 ixbar_multiplier = 2;
-                 match_multiplier = 2;
-             }
+            if (ixbar_read->match_type.name == "range") {
+                ixbar_multiplier = 2;
+                match_multiplier = 2;
+            }
 
-
+            // FIXME: This will currently not work before PHV allocation, because the
+            // foreach_byte over alloc_slices only works if the alloc_slice has been allocated
+            // If we move PHV allocation back to after Table Placement, this will need to
+            // change
             field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
+                cstring name = sl.container.toString();
+                int lo = (sl.container_bit / 8) * 8;
+                MatchByteKey mbk(name, lo, ixbar_multiplier, match_multiplier);
+                byte_impacts[mbk].push_back(sl.container_bits());
                 bytes++;
-                byte_sizes.push_back(sl.width);
             });
 
             if (bytes == 0)  // FIXME: Better sanity check needed?
                 ERROR("Field " << field->name << " allocated to tagalong but used in MAU pipe");
 
-            layout.ixbar_bytes += bytes * ixbar_multiplier;
-            layout.match_bytes += bytes * match_multiplier;
-            layout.match_width_bits += bits.size() * match_multiplier;
             if (is_partition) {
                 layout.partition_bits = bits.size();
                 // If partition count is set and requires less bits than
@@ -218,6 +227,32 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
             }
         } else {
             BUG("unexpected reads expression %s", ixbar_read->expr);
+        }
+    }
+
+    for (auto entry : byte_impacts) {
+        safe_vector<bitvec> individual_bytes;
+        auto &mbk = entry.first;
+
+        for (auto range : entry.second) {
+            bitvec entry_range(range.lo, range.size());
+            auto it = individual_bytes.begin();
+            while (it != individual_bytes.end()) {
+                if ((*it & entry_range).empty())
+                    break;
+                it++;
+            }
+            if (it == individual_bytes.end())
+                individual_bytes.push_back(entry_range);
+            else
+                *it |= entry_range;
+        }
+
+        for (auto bv : individual_bytes) {
+            layout.ixbar_bytes += mbk.ixbar_multiplier;
+            layout.match_bytes += mbk.match_multiplier;
+            layout.match_width_bits += bv.popcount() * mbk.match_multiplier;
+            byte_sizes.push_back(bv.popcount());
         }
     }
 

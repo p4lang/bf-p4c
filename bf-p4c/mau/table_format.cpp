@@ -1219,9 +1219,9 @@ bool TableFormat::allocate_match_with_algorithm() {
  *     - Each full byte of range match will need a 4b_lo and a 4b_hi 
  */
 void TableFormat::initialize_dirtcam_value(bitvec &dirtcam, const IXBar::Use::Byte &byte) {
-    if (byte.range_lo) {
+    if (byte.is_spec(IXBar::RANGE_LO)) {
         dirtcam.setbit(byte.loc.byte * 2 + 1);  // 4b_lo encoding
-    } else if (byte.range_hi) {
+    } else if (byte.is_spec(IXBar::RANGE_HI)) {
         dirtcam.setrange(byte.loc.byte * 2, 2);  // 4b_hi_encoding
     } else {
         dirtcam.setbit(byte.loc.byte * 2);  // 2b_encoding

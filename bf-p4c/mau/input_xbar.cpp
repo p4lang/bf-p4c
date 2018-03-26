@@ -94,10 +94,10 @@ IXBar::Use::TotalBytes IXBar::Use::atcam_match() const {
     TotalBytes single_match;
     single_match.emplace_back(new safe_vector<Byte>());
     for (auto byte : use) {
-        if (byte.atcam_index)
+        if (byte.is_spec(ATCAM_INDEX))
             continue;
         single_match[0]->push_back(byte);
-        if (byte.atcam_double) {
+        if (byte.is_spec(ATCAM_DOUBLE)) {
             auto repeat_byte = byte;
             repeat_byte.match_index = 1;
             single_match[0]->push_back(repeat_byte);
@@ -111,7 +111,7 @@ IXBar::Use::TotalBytes IXBar::Use::atcam_match() const {
 safe_vector<IXBar::Use::Byte> IXBar::Use::atcam_partition(int *hash_group) const {
     safe_vector<IXBar::Use::Byte> partition;
     for (auto byte : use) {
-        if (!byte.atcam_index)
+        if (!byte.is_spec(ATCAM_INDEX))
             continue;
         partition.push_back(byte);
     }
@@ -271,7 +271,7 @@ bool IXBar::calculate_sizes(safe_vector<Use::Byte> &alloc_use, bool ternary,
         int &total_bytes_needed, int &groups_needed, int &mid_bytes_needed) {
     if (groups_needed == 0) {
         for (auto byte : alloc_use) {
-            if (byte.atcam_double)
+            if (byte.is_spec(ATCAM_DOUBLE))
                 total_bytes_needed += 2;
             else
                 total_bytes_needed++;
@@ -465,7 +465,7 @@ void IXBar::calculate_found(safe_vector<IXBar::Use::Byte *> &unalloced,
     }
 
     for (auto &need : unalloced) {
-        for (auto &p : Values(fields.equal_range(need->field))) {
+        for (auto &p : Values(fields.equal_range(need->name))) {
             if (ternary && p.byte == 5) {
                 if (need->is_range())
                     continue;
@@ -546,11 +546,11 @@ void IXBar::found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced
             break;
         if (match_bytes_placed >= total_match_bytes)
             break;
-        int match_bytes_added = need.atcam_double ? 2 : 1;
+        int match_bytes_added = need.is_spec(ATCAM_DOUBLE) ? 2 : 1;
         if (match_bytes_placed + match_bytes_added > total_match_bytes)
             continue;
 
-        for (auto &p : Values(fields.equal_range(need.field))) {
+        for (auto &p : Values(fields.equal_range(need.name))) {
             if (ternary && p.byte == TERNARY_BYTES_PER_GROUP)
                 continue;
 
@@ -559,7 +559,7 @@ void IXBar::found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced
                     continue;
                 if (!ternary && !grp->hash_open[p.byte / 8])
                     continue;
-                allocate_byte(nullptr, unalloced, nullptr, need, p.group, p.byte, i,
+                allocate_byte(&grp->found, unalloced, nullptr, need, p.group, p.byte, i,
                               found_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
                 break;
             }
@@ -586,12 +586,13 @@ void IXBar::found_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *
             break;
         if (match_bytes_placed >= total_match_bytes)
             break;
-        for (auto &p : Values(fields.equal_range(need.field))) {
+        for (auto &p : Values(fields.equal_range(need.name))) {
             if (!(ternary && p.byte == TERNARY_BYTES_PER_GROUP))
                 continue;
             if ((mb_grp->group == p.group/2) && (byte_group_use[p.group/2].second == need.lo)) {
                 allocate_byte(nullptr, unalloced, nullptr, need, p.group, p.byte, i,
                                found_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
+                mb_grp->found = false;
                 if (need.bit_use.getslice(4, 4).popcount() == 0 ||
                     need.bit_use.getslice(0, 4).popcount() > 0)
                     version_placed = true;
@@ -622,7 +623,7 @@ void IXBar::free_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
         if (match_bytes_placed >= total_match_bytes)
             break;
         auto &need = *(unalloced[i]);
-        int match_bytes_added = need.atcam_double ? 2 : 1;
+        int match_bytes_added = need.is_spec(ATCAM_DOUBLE) ? 2 : 1;
         if (match_bytes_placed + match_bytes_added > total_match_bytes)
             continue;
 
@@ -632,7 +633,8 @@ void IXBar::free_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
             if (align_flags[(byte+align) & 3] & need.flags) {
                  continue;
             }
-            allocate_byte(grp, unalloced, &alloced, need, grp->group, byte, i, free_bytes,
+
+            allocate_byte(&grp->free, unalloced, &alloced, need, grp->group, byte, i, free_bytes,
                           ixbar_bytes_placed, match_bytes_placed, search_bus);
             chosen_byte = byte;
             found = true;
@@ -706,15 +708,15 @@ void IXBar::free_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *>
  *  algorithm.  If it is not shared, move the byte to the alloced list to be filled in
  *  to the IXBar local objects later
  */
-void IXBar::allocate_byte(grp_use *grp, safe_vector<Use::Byte *> &unalloced,
+void IXBar::allocate_byte(bitvec *bv, safe_vector<Use::Byte *> &unalloced,
                           safe_vector<Use::Byte *> *alloced, Use::Byte &need, int group, int byte,
                           size_t &index, int &avail_bytes, int &ixbar_bytes_placed,
                           int &match_bytes_placed, int search_bus) {
     need.loc.group = group;
     need.loc.byte = byte;
     need.search_bus = search_bus;
-    if (grp != nullptr)
-        grp->free[byte] = false;
+    if (bv != nullptr)
+        (*bv)[byte] = false;
     if (alloced)
         alloced->push_back(unalloced[index]);
 
@@ -722,7 +724,7 @@ void IXBar::allocate_byte(grp_use *grp, safe_vector<Use::Byte *> &unalloced,
     index--;
     avail_bytes--;
     ixbar_bytes_placed++;
-    if (need.atcam_double)
+    if (need.is_spec(ATCAM_DOUBLE))
         match_bytes_placed += 2;
     else
         match_bytes_placed++;
@@ -734,7 +736,7 @@ void IXBar::fill_out_use(safe_vector<IXBar::Use::Byte *> &alloced, bool ternary)
     auto &use = this->use(ternary);
     auto &fields = this->fields(ternary);
     for (auto &need : alloced) {
-        fields.emplace(need->field, need->loc);
+        fields.emplace(need->name, need->loc);
         if (ternary && need->loc.byte == 5) {
             byte_group_use[need->loc.group/2] = *(need);
         } else {
@@ -1004,36 +1006,43 @@ int need_align_flags[4][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
 };
 
 /* Add the pre-allocated bytes to the Use structure */
-static void add_use(IXBar::Use &alloc, const PHV::Field *field,
+static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *field,
                     const bitrange *bits = nullptr, int flags = 0,
                     IXBar::byte_type_t byte_type = IXBar::NO_BYTE_TYPE,
                     unsigned extra_align = 0) {
     bool ok = false;
-    int index = 0;
+    int index;
+    // FIXME: This will currently not work before PHV allocation, because the foreach_byte
+    // over alloc_slices only works if the slices have been allocated, according to Cole.
+    // If we want to move TablePlacement before PHV allocation in the future, this will have
+    // to change
     field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
         ok = true;  // FIXME -- better sanity check?
-        IXBar::Use::Byte byte(field->name, sl.field_bit, sl.field_hi());
+        IXBar::FieldInfo fi(field->name, sl.field_bit, sl.field_hi(), sl.container_bit % 8);
+        // FIXME: before PHV allocation
+        IXBar::Use::Byte byte(sl.container.toString(), (sl.container_bit/8U) * 8U);
+
         byte.bit_use.setrange(sl.container_bit % 8, sl.width);
         byte.flags =
             flags | need_align_flags[sl.container.log2sz()][(sl.container_bit/8U) & 3]
                   | need_align_flags[extra_align][index & 3];
         if (byte_type == IXBar::ATCAM) {
-            byte.atcam_double = true;
+            byte.set_spec(IXBar::ATCAM_DOUBLE);
         } else if (byte_type == IXBar::PARTITION_INDEX) {
-            byte.atcam_index = true;
+            byte.set_spec(IXBar::ATCAM_INDEX);
         }
 
         if (byte_type == IXBar::RANGE) {
             if ((sl.container_bit % 8) < 4) {
-                alloc.use.push_back(byte);
-                alloc.use.back().range_lo = true;
+                byte.set_spec(IXBar::RANGE_LO);
+                map_alloc[byte].push_back(fi);
             }
             if ((sl.container_hi() % 8) > 3) {
-                alloc.use.push_back(byte);
-                alloc.use.back().range_hi = true;
+                byte.set_spec(IXBar::RANGE_HI);
+                map_alloc[byte].push_back(fi);
             }
         } else {
-            alloc.use.push_back(byte);
+            map_alloc[byte].push_back(fi);
         }
         index++;
     });
@@ -1072,18 +1081,20 @@ IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
     return hash_matrix_reqs(groups_required, bits_required, false);
 }
 
+
 /* This is for adding fields to be allocated in the ixbar allocation scheme.  Used by
    match tables, selectors, and hash distribution */
-void IXBar::field_management(const IR::Expression *field, IXBar::Use &alloc,
-        std::map<cstring, bitvec> &fields_needed, bool hash_dist, cstring name,
-        const PhvInfo &phv, bool is_atcam, bool partition) {
+void IXBar::field_management(ContByteConversion &map_alloc, const IR::Expression *field,
+        std::map<cstring, bitvec> &fields_needed, cstring name, bool hash_dist, const PhvInfo &phv,
+        bool is_atcam, bool partition) {
     const PHV::Field *finfo = nullptr;
     bitrange bits = { };
     if (auto list = field->to<IR::ListExpression>()) {
         if (!hash_dist)
             BUG("A field list is somehow contained within the reads in table %s", name);
         for (auto comp : list->components)
-             field_management(comp, alloc, fields_needed, hash_dist, name, phv);
+             field_management(map_alloc, comp, fields_needed, name, hash_dist, phv, is_atcam,
+                              partition);
         return;
     }
     if (field->is<IR::Mask>())
@@ -1115,18 +1126,69 @@ void IXBar::field_management(const IR::Expression *field, IXBar::Use &alloc,
             return;
         fields_needed[finfo->name] |= field_bits;
     } else {
-         fields_needed[finfo->name] = field_bits;
+        fields_needed[finfo->name] = field_bits;
     }
-    add_use(alloc, finfo, &bits, 0, byte_type);
+    add_use(map_alloc, finfo, &bits, 0, byte_type);
+}
+
+/** In order to prevent some overlay bugs by the driver, this guarantees that if a table matches
+ *  on multiple overlaid bits, that these bits appear twice in the match key.  One could in
+ *  theory have a ternary match table that has the following:
+ *
+ *  key {
+ *       h1.f1 : ternary;
+ *       h2.f1 : ternary;
+ *  }
+ *
+ *  where if h1.f1 and h2.f1 are never live at the same time, could be that a don't care
+ *  match is always turned on for at least one of the two fields.  This could potentially
+ *  be a save on logical tables.
+ *
+ *  However, the driver currently writes the fields in the order in the context JSON, not in
+ *  the order of write don't care before do care, and in this instance, if these fields
+ *  were overlaid on the match, could potentially overwrite one of the fields.
+ *
+ *  Thus currently, the fields have to appear multiple times within the match, and as of
+ *  right now, also need to appear multiple times on the IXBar.  In some cases this might
+ *  not be true.  For ternary table, a single byte in the match must be a single byte in the
+ *  ixbar.  However, for exact match, a byte can be swizzled multiple times, which we take
+ *  advantage of in an ATCAM match to save room.  However the compiler will not do this for
+ *  multiple appearances of overlaid fields.
+ *
+ *  Furthermore, each byte is classified by a byte_speciaility_t.  Bytes with different
+ *  specialities themselves will not be overlaid during the allocation process.  This management
+ *  just becomes difficult 
+ *
+ */
+void IXBar::create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc) {
+    for (auto &entry : map_alloc) {
+        safe_vector<IXBar::Use::Byte> created_bytes;
+        for (auto &fi : entry.second) {
+            bool add_byte = true;
+            int index = 0;
+            for (auto c_byte : created_bytes) {
+                if ((c_byte.bit_use & fi.cont_loc()).popcount() == 0) {
+                    add_byte = false;
+                    break;
+                }
+                index++;
+            }
+            if (add_byte)
+                created_bytes.emplace_back(entry.first);
+            created_bytes[index].field_bytes.push_back(fi);
+            created_bytes[index].bit_use |= fi.cont_loc();
+        }
+        alloc.use.insert(alloc.use.end(), created_bytes.begin(), created_bytes.end());
+    }
 }
 
 /* This visitor is used by stateful tables to find the fields needed and add them to the
  * use info */
 class FindFieldsToAlloc : public Inspector {
-    const PhvInfo       &phv;
-    IXBar::Use          &alloc;
-    std::set<cstring>   &fields_needed;
-    unsigned            extra_align;  // log2 of the salu size in bytes (0 = 8 bits, etc)
+    const PhvInfo              &phv;
+    IXBar::ContByteConversion  &map_alloc;
+    std::set<cstring>          &fields_needed;
+    unsigned                   extra_align;  // log2 of the salu size in bytes (0 = 8 bits, etc)
     bool preorder(const IR::MAU::SaluAction *a) override {
         visit(a->action, "action");  // just visit the action instructions
         return false; }
@@ -1135,7 +1197,7 @@ class FindFieldsToAlloc : public Inspector {
         if (auto *finfo = phv.field(e, &bits)) {
             if (!fields_needed.count(finfo->name)) {
                 fields_needed.insert(finfo->name);
-                add_use(alloc, finfo, &bits, 0, IXBar::NO_BYTE_TYPE, extra_align); }
+                add_use(map_alloc, finfo, &bits, 0, IXBar::NO_BYTE_TYPE, extra_align); }
             return false; }
         return true; }
     bool preorder(const IR::MAU::HashDist *) override {
@@ -1144,8 +1206,9 @@ class FindFieldsToAlloc : public Inspector {
     }
 
  public:
-    FindFieldsToAlloc(const PhvInfo &phv, IXBar::Use &alloc, std::set<cstring> &fn, unsigned ea)
-    : phv(phv), alloc(alloc), fields_needed(fn), extra_align(ea) {}
+    FindFieldsToAlloc(const PhvInfo &phv, IXBar::ContByteConversion &ma, std::set<cstring> &fn,
+                      unsigned ea)
+    : phv(phv), map_alloc(ma), fields_needed(fn), extra_align(ea) {}
 };
 
 bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
@@ -1154,12 +1217,15 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
                        hash_matrix_reqs &hm_reqs) {
     alloc.ternary = ternary;
     if (tbl->match_key.empty()) return true;
+    ContByteConversion map_alloc;
     std::map<cstring, bitvec> fields_needed;
     for (auto ixbar_read : tbl->match_key) {
         if (ixbar_read->match_type.name == "selector") continue;
-        field_management(ixbar_read, alloc, fields_needed, false, tbl->name, phv,
+        field_management(map_alloc, ixbar_read, fields_needed, tbl->name, false, phv,
                          tbl->layout.atcam);
     }
+
+    create_alloc(map_alloc, alloc);
     LOG3("need " << alloc.use.size() << " bytes for table " << tbl->name);
 
     bool rv = find_alloc(alloc.use, ternary, alloced, hm_reqs);
@@ -1375,6 +1441,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
 bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &match_alloc,
                            bool second_try) {
     if (tbl->match_key.empty()) return true;
+    ContByteConversion map_alloc;
     Use alloc;
     std::map<cstring, bitvec> fields_needed;
     safe_vector<Use::Byte *> alloced;
@@ -1389,9 +1456,10 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
 
     for (auto ixbar_read : tbl->match_key) {
         if (ixbar_read->match_type.name == "selector") continue;
-        field_management(ixbar_read, alloc, fields_needed, false, tbl->name, phv,
+        field_management(map_alloc, ixbar_read, fields_needed, tbl->name, false, phv,
                          tbl->layout.atcam, true);
     }
+    create_alloc(map_alloc, alloc);
     BUG_CHECK(alloc.use.size() > 0, "No partition index found");
 
     bool rv = find_alloc(alloc.use, false, alloced, hm_reqs);
@@ -1469,6 +1537,8 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     tbl->apply(collect);
     if (collect.info.empty()) return true;
 
+    ContByteConversion map_alloc;
+
     for (auto &info : collect.info) {
         int flags = 0;
 
@@ -1480,8 +1550,11 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             flags |= IXBar::Use::NeedRange;
             hash_bus_bits += info.first->size;
         }
-        add_use(alloc, info.first, &info.second.bits, flags, NO_BYTE_TYPE); }
+        add_use(map_alloc, info.first, &info.second.bits, flags, NO_BYTE_TYPE);
+    }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;
+
+    create_alloc(map_alloc, alloc);
 
     hash_matrix_reqs hm_reqs;
     if (second_try) {
@@ -1559,11 +1632,13 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
 bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl,
                           const PhvInfo &phv, Use &alloc, cstring name) {
     safe_vector<IXBar::Use::Byte *>  alloced;
+    ContByteConversion map_alloc;
     std::map<cstring, bitvec>        fields_needed;
     for (auto ixbar_read : tbl->match_key) {
         if (ixbar_read->match_type.name != "selector") continue;
-        field_management(ixbar_read->expr, alloc, fields_needed, false, tbl->name, phv);
+        field_management(map_alloc, ixbar_read->expr, fields_needed, tbl->name, false, phv);
     }
+    create_alloc(map_alloc, alloc);
 
     LOG3("need " << alloc.use.size() << " bytes for table " << tbl->name);
     hash_matrix_reqs hm_reqs = hash_matrix_reqs::max(false);
@@ -1628,6 +1703,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const PhvInfo &phv, Use &alloc
     if (mtr->input == nullptr)
         return true;
 
+    ContByteConversion map_alloc;
     safe_vector<IXBar::Use::Byte *> alloced;
     std::set<cstring> fields_needed;
     unsigned byte_mask = ((1U << LPF_INPUT_BYTES) - 1);
@@ -1637,10 +1713,12 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const PhvInfo &phv, Use &alloc
     if (auto *finfo = phv.field(mtr->input, &bits)) {
         if (!fields_needed.count(finfo->name)) {
             fields_needed.insert(finfo->name);
-            add_use(alloc, finfo, &bits, 0, IXBar::NO_BYTE_TYPE);
+            add_use(map_alloc, finfo, &bits, 0, IXBar::NO_BYTE_TYPE);
         }
     }
 
+
+    create_alloc(map_alloc, alloc);
     hash_matrix_reqs hm_reqs;
     if (!find_alloc(alloc.use, false, alloced, hm_reqs, byte_mask)) {
         alloc.clear();
@@ -1652,6 +1730,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const PhvInfo &phv, Use &alloc
 
 bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const PhvInfo &phv, Use &alloc) {
     std::set <cstring> fields_needed;
+    ContByteConversion map_alloc;
     unsigned extra_align = 0;
     if (salu->width > 1) {
         /* To use the stateful_meter_alu_data path, any fields read must be aligned
@@ -1663,12 +1742,13 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const PhvInfo &phv, 
         extra_align = floor_log2(salu->width) - 3;
         if (salu->dual) extra_align--;
         BUG_CHECK(extra_align <= 2, "Bad SatefulAlu width"); }
-    salu->apply(FindFieldsToAlloc(phv, alloc, fields_needed, extra_align));
+    salu->apply(FindFieldsToAlloc(phv, map_alloc, fields_needed, extra_align));
     unsigned width = salu->width/8U;
     if (!salu->dual) width *= 2;
     unsigned byte_mask = (1U << width) - 1;
     if (Device::currentDevice() == "Tofino")
         byte_mask <<= TOFINO_METER_ALU_BYTE_OFFSET;
+    create_alloc(map_alloc, alloc);
     if (alloc.use.size() == 0) return true;
     if (alloc.use.size() > width) {
         // can't possibly fit
@@ -1858,11 +1938,13 @@ bool IXBar::allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionForm
 bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashDistType hdt,
                           const PhvInfo &phv, const ActionFormat::Use *af, IXBar::Use &alloc,
                           bool second_try, cstring name) {
+    ContByteConversion               map_alloc;
     std::map<cstring, bitvec>        fields_needed;
     safe_vector <IXBar::Use::Byte *> alloced;
     fields_needed.clear();
 
-    field_management(hd->field_list, alloc, fields_needed, true, name, phv);
+    field_management(map_alloc, hd->field_list, fields_needed, name, true, phv);
+    create_alloc(map_alloc, alloc);
     int hash_slices_needed = (hd->bit_width + HASH_DIST_BITS - 1) / hd->bit_width;
     hash_matrix_reqs hm_reqs;
 
@@ -1926,6 +2008,7 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashD
     hash_group_use[used_hash_group] |= hash_table_input;
     hash_dist_groups[unit] = used_hash_group;
 
+
     alloc.ternary = false;
     alloc.hash_dist_hash.allocated = true;
     alloc.hash_dist_hash.algorithm = hd->algorithm;
@@ -1934,6 +2017,7 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashD
     alloc.hash_dist_hash.bit_mask = bit_mask;
     alloc.hash_dist_hash.bit_starts = bit_starts;
     alloc.hash_dist_hash.group = used_hash_group;
+
     return rv;
 }
 
@@ -2214,13 +2298,10 @@ void IXBar::update(cstring name, const Use &alloc) {
                 BUG("conflicting ixbar allocation");
             }
             use[byte.loc] = byte; }
-        fields.emplace(byte.field, byte.loc); }
+        fields.emplace(byte.name, byte.loc); }
     for (auto &bits : alloc.bit_use) {
         const Loc *loc = nullptr;
         for (int b = 0; b < bits.width; b++) {
-            if ((!loc || loc->byte != (b + bits.lo)/8) &&
-                !(loc = findExactByte(bits.field, (b + bits.lo)/8)))
-                BUG("ixbar hashing bits from %s, but they're not on the bus", bits.field);
             for (auto ht : bitvec(alloc.hash_table_inputs[bits.group])) {
                 if (hash_single_bit_use.at(ht, b + bits.bit)) {
                     BUG("conflicting ixbar hash bit allocation");

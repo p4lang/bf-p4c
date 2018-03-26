@@ -150,7 +150,7 @@ void Visualization::gen_xbar(unsigned int stageNo, Util::JsonObject *stage) {
                       if (use) {
                           // e.g.: "detail": "{unused[3:0], ethHdr.dmac[27:24]}"
                           snprintf(buffer, sizeof(buffer), "{%s[%d:%d]}",
-                                   use._usedByte.field.c_str(), use._usedByte.hi,
+                                   use._usedByte.name.c_str(), use._usedByte.lo + 7,
                                    use._usedByte.lo);
                       }
                       usagesToCtxJson(byte_repr, use._table,

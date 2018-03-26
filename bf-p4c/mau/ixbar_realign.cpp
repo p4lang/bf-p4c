@@ -2,8 +2,8 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/hex.h"
 
-class IXBarRealign::GetCurrentUse : public MauInspector {
-    IXBarRealign        &self;
+class IXBarVerify::GetCurrentUse : public MauInspector {
+    IXBarVerify        &self;
     bool preorder(const IR::Expression *) override { return false; }
     bool preorder(const IR::MAU::Table *t) override {
         BUG_CHECK(t->logical_id >= 0, "Table not placed");
@@ -13,123 +13,77 @@ class IXBarRealign::GetCurrentUse : public MauInspector {
         self.stage[stage].update(t);
         return true; }
  public:
-    explicit GetCurrentUse(IXBarRealign &s) : self(s) {}
+    explicit GetCurrentUse(IXBarVerify &s) : self(s) {}
 };
 
-static std::function<std::ostream &(std::ostream&)>
-use_info(const PhvInfo &phv, std::pair<cstring, int> use) {
-    return [=](std::ostream &out) -> std::ostream & {
-        out << use.first << '[' << use.second << ']';
-        auto *field = phv.field(use.first);
-        auto &alloc = field->for_bit(use.second);
-        out << "  " << alloc.field_bit << ".." << alloc.field_hi() << " in " << alloc.container
-            << "(" << alloc.container_bit << ".." << alloc.container_hi() << ')';
-        return out; };
-}
-
-IXBarRealign::Realign::Realign(const PhvInfo &phv, int stage, const IXBar &ixbar) {
-    for (int grp = 0; grp < IXBar::EXACT_GROUPS; ++grp) {
-        unsigned inuse = 0, do_remap = 0;
-        for (int i = 0; i < IXBar::EXACT_BYTES_PER_GROUP; ++i) {
-            remap[grp][i] = 0;
-            auto &use = ixbar.exact_use.at(grp, i);
-            if (!use.first) continue;
-            auto *field = phv.field(use.first);
-            BUG_CHECK(field, "%s on ixbar but not in phv?", use.first);
-            auto &alloc = field->for_bit(use.second);
-            unsigned mask = (1 << alloc.container.log2sz()) - 1;
-            int byte = (use.second - alloc.field_bit + alloc.container_bit)/8;
-            if (((i ^ byte) & mask) == 0) {
-                remap[grp][i] = i;
-                inuse |= 1 << i;
-            } else {
-                remap[grp][i] = mask + (byte << 4);
-                do_remap |= 1 << i; } }
-        if (!do_remap) continue;
-        need_remap = true;
-        LOG2("need realignment for stage " << stage << " group " << grp <<
-             " inuse=" << hex(inuse) << " do_remap=" << hex(do_remap));
-        for (int i = 0; i < IXBar::EXACT_BYTES_PER_GROUP; ++i, do_remap >>= 1) {
-            if (!(do_remap & 1)) continue;
-            LOG3("  remap " << i << ": " << use_info(phv, ixbar.exact_use.at(grp, i)));
-            int byte = remap[grp][i] >> 4;
-            int step = (remap[grp][i] & 0xf) + 1;
-            bool done = false;
-            for (int j = byte; j < IXBar::EXACT_BYTES_PER_GROUP; j += step) {
-                if (!((inuse >> j) & 1)) {
-                    LOG3("  remap to " << j);
-                    remap[grp][i] = j;
-                    inuse |= 1 << j;
-                    done = true;
-                    break; } }
-            if (!done) {
-                LOG2("Failed to remap ixbar for alignment");
-                throw IXBar::failure(stage, grp); } } }
-    for (int grp = 0; grp < IXBar::TERNARY_GROUPS; ++grp) {
-        int off = (grp * 11 + 1)/2U;
-        for (int i = 0; i < IXBar::TERNARY_BYTES_PER_GROUP; ++i) {
-            auto &use = ixbar.ternary_use.at(grp, i);
-            if (!use.first) continue;
-            auto *field = phv.field(use.first);
-            BUG_CHECK(field, "%s on ixbar but not in phv?", use.first);
-            auto &alloc = field->for_bit(use.second);
-            unsigned mask = (1 << alloc.container.log2sz()) - 1;
-            int byte = (use.second - alloc.field_bit + alloc.container_bit)/8;
-            if ((((i + off) ^ byte) & mask) != 0) {
-                LOG2("Ternary ixbar needs realignment stage " << stage << " group " << grp);
-                LOG2("......field = " << field << " " << alloc);
-                throw IXBar::failure(stage, grp); } } }
-}
-
-bool IXBarRealign::Realign::remap_use(IXBar::Use &use) {
-    if (use.ternary) return false;
-    bool rv = false;
+/** For each ixbar byte, this verifies that each IXBar::Use::Byte coordinates to a single
+ *  byte within a PHV container.  Furthermore it verifies that each byte is at it's correct
+ *  alignment.  Currently the algorithm does not take advantage of the TCAM byte swizzle,
+ *  and would have to be expanded, as TCAM bytes don't have to be at their alignment
+ */
+void IXBarVerify::verify_format(const IXBar::Use &use) {
     for (auto &byte : use.use) {
-        int nbyte = remap[byte.loc.group][byte.loc.byte];
-        if (nbyte != byte.loc.byte) {
-            byte.loc.byte = nbyte;
-            rv = true; } }
-    return rv;
-}
+        bitvec byte_use;
+        PHV::Container container;
+        size_t mod_4_offset = -1;
+        bool container_set = false;
+        for (auto fi : byte.field_bytes) {
+            auto *field = phv.field(fi.field);
+            bool byte_found = false;
+            bool single_byte = true;
+            field->foreach_byte([&](const PHV::Field::alloc_slice &alloc) {
+                if (fi.lo < alloc.field_bit || fi.hi > alloc.field_hi())
+                    return;
 
-void IXBarRealign::verify_format(const IXBar::Use &use) {
-    for (auto &byte : use.use) {
-        auto *field = phv.field(byte.field);
-        bool valid_byte = false;
-        field->foreach_byte([&](const PHV::Field::alloc_slice &alloc) {
-            if (byte.lo < alloc.field_bit || byte.hi > alloc.field_hi())
-                return;
-            int container_start = (alloc.container_bit % 8) + byte.lo - alloc.field_bit;
-            bitvec cont_use(container_start, byte.hi - byte.lo + 1);
-            if (cont_use == byte.bit_use)
-                valid_byte = true;
-        });
-        if (!valid_byte)
-            throw IXBar::failure(-1, byte.loc.group);
+                size_t potential_mod4_offset = alloc.container_bit / 8;
+                if (!container_set) {
+                    container = alloc.container;
+                    mod_4_offset = potential_mod4_offset;
+                } else if (container != alloc.container
+                           || mod_4_offset != potential_mod4_offset) {
+                    single_byte = false;
+                    return;
+                }
+
+                int container_start = (alloc.container_bit % 8) + fi.lo - alloc.field_bit;
+                if (container_start != fi.cont_lo)
+                    return;
+                byte_found = true;
+                BUG_CHECK((byte_use & fi.cont_loc()).empty(), "Overlapping field bit "
+                          "information on an input xbar byte: %s", byte);
+                byte_use |= fi.cont_loc();
+            });
+            if (!byte_found || !single_byte)
+                throw IXBar::failure(-1, byte.loc.group);
+        }
+
+        if (!use.ternary) {
+            if ((byte.loc.byte % (container.size() / 8)) != mod_4_offset)
+                throw IXBar::failure(-1, byte.loc.group);
+        } else {
+            size_t byte_offset = byte.loc.group * IXBar::TERNARY_BYTES_PER_GROUP;
+            byte_offset += (byte.loc.group + 1) / 2;
+            byte_offset += byte.loc.byte;
+            if ((byte_offset % (container.size() / 8)) != mod_4_offset)
+                throw IXBar::failure(-1, byte.loc.group);
+        }
     }
 }
 
-Visitor::profile_t IXBarRealign::init_apply(const IR::Node *root) {
+Visitor::profile_t IXBarVerify::init_apply(const IR::Node *root) {
     auto rv = MauModifier::init_apply(root);
     stage.clear();
-    stage_fix.clear();
     root->apply(GetCurrentUse(*this));
-    int stageno = 0;
-    for (auto &ixbar : stage)
-        stage_fix.emplace_back(phv, stageno++, ixbar);
     return rv;
 }
 
-void IXBarRealign::postorder(IR::MAU::Table *tbl) {
-    auto &remap = stage_fix[tbl->stage()];
+void IXBarVerify::postorder(IR::MAU::Table *tbl) {
     verify_format(tbl->resources->gateway_ixbar);
     verify_format(tbl->resources->match_ixbar);
     verify_format(tbl->resources->selector_ixbar);
     verify_format(tbl->resources->salu_ixbar);
-    if (remap.need_remap) {
-        auto rsrc = new TableResourceAlloc(*tbl->resources);
-        if (remap.remap_use(rsrc->gateway_ixbar) || remap.remap_use(rsrc->match_ixbar)
-            || remap.remap_use(rsrc->selector_ixbar) || remap.remap_use(rsrc->salu_ixbar))
-            tbl->resources = rsrc;
+    verify_format(tbl->resources->meter_ixbar);
+    for (auto hash_dist_use : tbl->resources->hash_dists) {
+        verify_format(hash_dist_use.use);
     }
 }
