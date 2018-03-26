@@ -99,7 +99,7 @@ struct ActionFormat {
             int field_hi() const { return field_bit + phv_loc.popcount() - 1; }
             int phv_cont_lo() const { return phv_loc.min().index(); }
             int slot_lo() const { return slot_loc.min().index(); }
-
+            int width() const { return phv_loc.popcount(); }
             void dbprint(std::ostream &out) const {
                 out << name << "[" << field_bit << ":" << field_hi() << "]";
                 out << " PHV 0x" << phv_loc;
@@ -398,9 +398,26 @@ struct ActionFormat {
     int action_bytes[LOCATIONS] = {0, 0};
     int action_data_bytes = 0;
 
+    /** The algorithm to find locations for Hash Distribution or Random Numbers will have to be
+     *  changed in order to handle the possible combination of IR nodes.  The major issue
+     *  is that either these IR nodes never can be changed after TableLayout runs, or
+     *  that these data structures need to be updated anytime these IR nodes either can be
+     *  shared or collapse
+     *
+     *  Currently each individual Hash.get(...) and random.get(...) is translated into its
+     *  own IR::Node, and each individual IR node receives its own placement.  However, plenty
+     *  of optimizations can exist where either HashDist units can be shared between actions
+     *  or even different tables in where this data gets allocated.  The same can be said
+     *  with Random Number resources.  As programs get more complicated, the ability of the
+     *  compiler to handle these optimizations will depend significantly on how the state
+     *  of their allocations is captured across the ActionFormat, InputXbar and ActionDataBus.
+     *  This is all to keep in mind for the next design of these algorithms.
+     */
     typedef std::map<const IR::MAU::HashDist *, SingleActionALUPlacement> HashDistALUFormat;
     typedef std::map<const IR::MAU::HashDist *, SingleActionSlotPlacement> HashDistSlotFormat;
 
+    typedef std::map<const IR::MAU::RandomNumber *, SingleActionALUPlacement> RandNumALUFormat;
+    typedef std::map<const IR::MAU::RandomNumber *, SingleActionSlotPlacement> RandNumSlotFormat;
     /** Contains all of the information on all the action data format and individual arguments
      *  Because we only currently have either only an action data table or action data through
      *  immediate, this structure contains both of these structures.  Eventually, like GLASS,
@@ -415,12 +432,15 @@ struct ActionFormat {
         // Location of constants within the action data format
         std::map<cstring, ConstantRenames> constant_locations;
         HashDistALUFormat hash_dist_placement;
+        RandNumALUFormat rand_num_placement;
 
         int action_data_bytes[LOCATIONS];
 
         bitvec immediate_mask;
         bitvec total_layouts[LOCATIONS][CONTAINER_TYPES];
         bitvec hash_dist_layouts[CONTAINER_TYPES];
+        bitvec rand_num_layouts[CONTAINER_TYPES];
+        bitvec global_param_layouts[CONTAINER_TYPES];
 
         bitvec full_layout_bitmasked;
         bool meter_reserved = false;
@@ -438,6 +458,10 @@ struct ActionFormat {
                           int &field_hi) const;
         int find_hash_dist(const IR::MAU::HashDist *hd, int field_lo, int field_hi,
                            int &hash_lo, int &hash_hi, int &section) const;
+        bool is_rand_num(int byte_offset, const IR::MAU::RandomNumber **rn) const;
+        void find_rand_num(const IR::MAU::RandomNumber *rn, int field_lo, int field_hi,
+                           int &rng_lo, int &rng_hi) const;
+        bool in_layouts(int byte_offset, const bitvec layouts[CONTAINER_TYPES]) const;
     };
 
     struct failure : public Backtrack::trigger {
@@ -457,15 +481,18 @@ struct ActionFormat {
     bool meter_color = false;
     ActionContainerInfo max_total;
     safe_vector<ActionContainerInfo> init_action_counts;
-    ActionContainerInfo hash_counts;
+    // For Hash Distribution and Random Number
+    ActionContainerInfo global_params;
     safe_vector<ActionContainerInfo> action_counts;
 
     TotalALUPlacement init_alu_format;
     TotalSlotPlacement init_slot_format;
 
-    // ArgFormat init_format;
     HashDistALUFormat init_hd_alu_placement;
     HashDistSlotFormat init_hd_slot_placement;
+
+    RandNumALUFormat init_rn_alu_placement;
+    RandNumSlotFormat init_rn_slot_placement;
 
     bool split_started = false;
 
@@ -480,13 +507,13 @@ struct ActionFormat {
                               cstring action_name);
     void create_from_actiondata(ActionDataForSingleALU &adp,
         const ActionAnalysis::ActionParam &read, int container_bit,
-        const IR::MAU::HashDist **hd);
+        const IR::MAU::HashDist **hd, const IR::MAU::RandomNumber **rn);
     void create_from_constant(ActionDataForSingleALU &adp,
         const ActionAnalysis::ActionParam &read, int field_bit, int container_bit,
         int &constant_to_ad_count);
 
     void initialize_action_counts();
-    bool initialize_hash_dist_counts();
+    bool initialize_global_params_counts();
     void calculate_maximum();
     bool new_action_format(bool immediate_allowed, bool &finished);
     void setup_use(safe_vector<Use> &uses);
@@ -498,13 +525,13 @@ struct ActionFormat {
     int check_full_bitmasked(ActionContainerInfo &aci, int max_small_bytes);
     void space_32_containers();
 
-    int space_hash_dist();
+    int space_global_params();
     void space_all_immediate_containers(int start_byte);
     void space_individ_immed(ActionContainerInfo &aci, int start_byte);
     void space_32_immed(ActionContainerInfo &aci);
     void space_all_meter_color();
 
-    void align_hash_dist(bitvec hash_layouts_placed[CONTAINER_TYPES]);
+    void align_global_params(bitvec global_params_layouts[CONTAINER_TYPES]);
     void align_action_data_layouts();
     void reserve_meter_color(SingleActionSlotPlacement &placement_vec,
         SingleActionSlotPlacement &output_vec, ActionContainerInfo &aci,
@@ -517,7 +544,7 @@ struct ActionFormat {
         SingleActionSlotPlacement &output_vec, ActionContainerInfo &aci,
         bitvec layouts_placed[CONTAINER_TYPES], int placed[BITMASKED_TYPES][CONTAINER_TYPES]);
     void verify_placement(SingleActionSlotPlacement &slot_placement,
-        SingleActionALUPlacement &alu_placement);
+        SingleActionALUPlacement &alu_placement, SingleActionSlotPlacement &orig_placement);
     void determine_asm_name(SingleActionALUPlacement &placement_vec);
     void calculate_placement_data(SingleActionALUPlacement &placement_vec,
                                   ArgPlacementData &apd, ConstantRenames &cr);

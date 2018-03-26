@@ -60,11 +60,12 @@ const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
             BUG("No ActionDataConstant should be a member of a Slice");
     }
     if (e->is<IR::ActionArg>() || e->is<IR::MAU::ActionDataConstant>()
-        || e->is<IR::MAU::AttachedOutput>() || e->is<IR::MAU::HashDist>()) {
+        || e->is<IR::MAU::AttachedOutput>() || e->is<IR::MAU::HashDist>()
+        || e->is<IR::MAU::RandomNumber>()) {
         if (bits_out)
             *bits_out = bits;
         if ((e->is<IR::ActionArg>() || e->is<IR::MAU::AttachedOutput>()
-            || e->is<IR::MAU::HashDist>()) && type)
+            || e->is<IR::MAU::HashDist>() || e->is<IR::MAU::RandomNumber>()) && type)
             *type = ActionParam::ACTIONDATA;
         if (e->is<IR::MAU::ActionDataConstant>() && type)
             *type = ActionParam::CONSTANT;
@@ -138,6 +139,11 @@ bool ActionAnalysis::preorder(const IR::MAU::HashDist *hd) {
 bool ActionAnalysis::preorder(const IR::MAU::AttachedOutput *ao) {
     auto speciality = classify_attached_output(ao);
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, ao, speciality);
+    return false;
+}
+
+bool ActionAnalysis::preorder(const IR::MAU::RandomNumber *rn) {
+    field_action.reads.emplace_back(ActionParam::ACTIONDATA, rn, ActionParam::RANDOM);
     return false;
 }
 
@@ -1031,8 +1037,9 @@ void ActionAnalysis::ContainerAction::verify_speciality(PHV::Container container
     }
     if (ad_params > 1 && speciality_found)
         P4C_UNIMPLEMENTED("In the ALU operation over container %s in action %s, the packing is "
-                          "too complicated due to either hash distribution or attached outputs "
-                          "combined with other action data", container.toString(), action_name);
+                          "too complicated due to a too complex container instruction with a "
+                          "speciality action data combined with other action data: %s",
+                          container.toString(), action_name, *this);
 }
 
 /** Due to shifts being fairly unique when it comes to action constraints, a separate function

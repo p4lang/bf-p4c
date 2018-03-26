@@ -976,6 +976,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         out << " : ";
 
         const IR::MAU::HashDist *hd = nullptr;
+        const IR::MAU::RandomNumber *rn = nullptr;
         int lo = -1; int hi = -1;
         // For emitting hash distribution sections on the action_bus directly.  Must find
         // which slices of hash distribution are to go to which bytes, requiring coordination
@@ -1021,6 +1022,12 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
                 out << ", " << lo_hi;
             }
             out << ")";
+        } else if (immediate && use.is_rand_num(rs.byte_offset, &rn)) {
+            auto rng_use = action_data_xbar.rng_locs.at(rn);
+            out << "rng(" << rng_use.unit << ", ";
+            int lo = (rs.location.byte * 8) % 8;
+            int hi = lo + byte_sz * 8 - 1;
+            out << lo << ".." << hi << ")";
         } else if (use.is_meter_color(rs.byte_offset, rs.immediate)) {
             for (auto back_at : tbl->attached) {
                 auto at = back_at->attached;
@@ -1344,6 +1351,31 @@ class MauAsmOutput::EmitAction : public Inspector {
         sep = ", ";
     }
 
+
+    void handle_random_number(const IR::Expression *expr) {
+        int lo = -1;  int hi = -1;
+        const IR::MAU::RandomNumber *rn = nullptr;
+        if (auto sl = expr->to<IR::Slice>()) {
+            rn = sl->e0->to<IR::MAU::RandomNumber>();
+            lo = sl->getL();
+            hi = sl->getH();
+        } else {
+            rn = expr->to<IR::MAU::RandomNumber>();
+            lo = 0;
+            hi = rn->type->width_bits() - 1;
+        }
+        assert(sep);
+        BUG_CHECK(rn != nullptr, "Printing an invalid random number in the assembly");
+        out << sep << "rng(";
+        auto unit = table->resources->action_data_xbar.rng_locs.at(rn).unit;
+        out << unit << ", ";
+        auto af = table->resources->action_format;
+        int rng_lo = -1;  int rng_hi = -1;
+        af.find_rand_num(rn, lo, hi, rng_lo, rng_hi);
+        out << rng_lo << ".." << rng_hi << ")";
+        sep = ", ";
+    }
+
     bool preorder(const IR::Slice *sl) override {
         assert(sep);
         if (self.phv.field(sl)) {
@@ -1352,6 +1384,8 @@ class MauAsmOutput::EmitAction : public Inspector {
         } else if (sl->e0->is<IR::MAU::HashDist>()) {
             handle_hash_dist(sl);
             return false;
+        } else if (sl->e0->is<IR::MAU::RandomNumber>()) {
+            handle_random_number(sl);
         }
         visit(sl->e0);
         if (sl->e0->is<IR::ActionArg>()) {
@@ -1409,6 +1443,10 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::MAU::HashDist *hd) override {
         handle_hash_dist(hd);
         return false; }
+    bool preorder(const IR::MAU::RandomNumber *rn) override {
+        handle_random_number(rn);
+        return false;
+    }
     bool preorder(const IR::LNot *) override {
         out << sep << "!";
         sep = "";

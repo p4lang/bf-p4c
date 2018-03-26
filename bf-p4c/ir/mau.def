@@ -502,7 +502,10 @@ class SaluAction : ActionFunction {
  *  as well as a calculated hash to be used by PHV
  */
 class HashDist : Expression {
-#nodbprint
+
+    dbprint {
+        out << "hash_dist(" << field_list << ", " << algorithm << ", " << bit_width << ")";
+    }
     // Fields read by this HashDist
     Expression           field_list;
     hash_function        algorithm;
@@ -523,6 +526,10 @@ class ActionDataConstant : Expression {
     Constant constant;
 
     ActionDataConstant { type = constant->type; }
+}
+
+class RandomNumber : Expression {
+    dbprint { out << "rng(" << type << ")"; }
 }
 
 /// A use of an attached table output; an operand of an instruction

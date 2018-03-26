@@ -291,8 +291,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "In table .*, the number of bytes through hash is larger than the available amount 4"
-  extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
+  "In table .*, the number of bytes required to go through the immediate pathway"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
   )
 
@@ -588,7 +587,7 @@ p4c_add_xfail_reason("tofino"
   )
 # bug in instruction selection
 p4c_add_xfail_reason("tofino"
-  "visitor returned invalid type MAU::HashDist"
+  "visitor returned invalid type Cast"
   testdata/p4_16_samples/issue430-bmv2.p4
   )
 p4c_add_xfail_reason("tofino"
@@ -857,17 +856,6 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "the packing is too complicated due to either hash distribution or attached outputs"
-  testdata/p4_14_samples/meter1.p4
-  testdata/p4_16_samples/named_meter_1-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error: set requires 2 operands"
-  extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
-  )
-
 # BRIG-219
 p4c_add_xfail_reason("tofino"
   "PHV allocation creates a container action impossible within a Tofino ALU"
@@ -911,11 +899,6 @@ p4c_add_xfail_reason("tofino"
 #   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
 #   )
 
-p4c_add_xfail_reason("tofino"
-  "the packing is too complicated"
-  testdata/p4_14_samples/meter.p4
-  testdata/p4_16_samples/named_meter_bmv2.p4
-  )
 
 p4c_add_xfail_reason("tofino"
   "Operands of arithmetic operations cannot be greater than 32b, but field .* has .*"
@@ -947,20 +930,24 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: hash expression width mismatch"
-  )
-
-# missing support for meter in backend
-p4c_add_xfail_reason("tofino"
-  "the packing is too complicated due to either hash distribution or attached outputs combined with other action data"
+  "the packing is too complicated .* speciality action data combined with other action data"
+  extensions/p4_tests/p4_14/test_config_96_hash_data.p4
+  extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
+  extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
+  extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
+  testdata/p4_14_samples/meter1.p4
+  testdata/p4_16_samples/named_meter_1-bmv2.p4
+  testdata/p4_16_samples/named_meter_bmv2.p4
+  testdata/p4_14_samples/issue894.p4
+  testdata/p4_14_samples/meter.p4
+  testdata/p4_14_samples/meter.p4
+  extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   )
 
 # missing support for random in extract_maupipe
 p4c_add_xfail_reason("tofino"
   "source of modify_field invalid"
-  extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
-  extensions/p4_tests/p4_14/test_config_214_full_stats.p4
   )
 
 #-------- New tests, new failures

@@ -47,14 +47,16 @@ struct ActionDataBus {
     static constexpr int IMMED_SECT = 4;
     static constexpr int CSR_RANGE = 16;
     static constexpr int CSR_SECTION[ActionFormat::CONTAINER_TYPES] = {4, 3, 2};
+    static constexpr int RANDOM_NUMBER_GENERATORS = 2;
 
  private:
     Alloc2D<cstring, ActionFormat::CONTAINER_TYPES, OUTPUTS> cont_use;
     Alloc1D<cstring, ADB_BYTES> total_use;
-
+    Alloc2D<cstring, RANDOM_NUMBER_GENERATORS, IMMED_SECT> rng_use;
 
     bitvec cont_in_use[ActionFormat::CONTAINER_TYPES];
     bitvec total_in_use;
+    bitvec rng_in_use[RANDOM_NUMBER_GENERATORS];
 
     safe_vector<std::pair<int, int>> immed_starts;
     std::set<cstring> atcam_updates;
@@ -119,6 +121,16 @@ struct ActionDataBus {
         bool empty() const {
             return action_data_locs.empty() && clobber_locs.empty();
         }
+
+        struct RandomNumberGenerator {
+            int unit;
+            bitvec bytes;
+
+            RandomNumberGenerator(int u, bitvec b)
+                : unit(u), bytes(b) { }
+        };
+
+        ordered_map<const IR::MAU::RandomNumber *, RandomNumberGenerator> rng_locs;
     };
 
     /** Location Algorithm: For finding an allocation within the correct type region */
@@ -181,6 +193,8 @@ struct ActionDataBus {
     bool alloc_shared_immed(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES], cstring name);
     bool alloc_immediate(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES], Use &use,
                          cstring name);
+    bool alloc_rng(const bitvec rand_num_layouts[ActionFormat::CONTAINER_TYPES], Use &use,
+                   const ActionFormat::RandNumALUFormat &format, cstring name);
 
  public:
     bool alloc_action_data_bus(const IR::MAU::Table *tbl, const ActionFormat::Use *use,
@@ -188,6 +202,7 @@ struct ActionDataBus {
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
     void update(cstring name, const Use::ReservedSpace &rs);
+    void update(cstring name, const Use::RandomNumberGenerator &rng);
     void update_profile(const IR::MAU::Table *tbl);
     void update(const IR::MAU::Table *tbl);
 };

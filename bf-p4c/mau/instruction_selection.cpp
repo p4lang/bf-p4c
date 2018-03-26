@@ -91,6 +91,7 @@ bool InstructionSelection::checkSrc1(const IR::Expression *e) {
     if (e->is<IR::BoolLiteral>()) return true;
     if (e->is<IR::ActionArg>()) return true;
     if (e->is<IR::MAU::HashDist>()) return true;
+    if (e->is<IR::MAU::RandomNumber>()) return true;
     if (e->is<IR::MAU::AttachedOutput>()) return true;
     return phv.field(e);
 }
@@ -379,7 +380,16 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
         auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size),
                                          prim->operands[1], algorithm, prim);
         hd->bit_width = size;
-        return hd;
+        return new IR::Cast(IR::Type::Bits::get(size), hd);
+    } else if (prim->name == "random.get") {
+        auto max_value = prim->operands[1]->to<IR::Constant>()->value;
+        max_value += mpz_class(1);
+        int one_pos = mpz_scan1(max_value.get_mpz_t(), 0);
+        if ((mpz_class(1) << one_pos) != max_value)
+            error("%s: The random declaration %s max size must be a power of two",
+                  prim->srcInfo, prim);
+        auto rn = new IR::MAU::RandomNumber(prim->srcInfo, IR::Type::Bits::get(one_pos));
+        return new IR::Cast(IR::Type::Bits::get(one_pos), rn);
     } else if (prim->name == "invalidate") {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate", prim->operands[0]);
     } else {
@@ -772,48 +782,12 @@ struct ValidateInvalidatePrimitive : public PassManager {
     }
 };
 
-bool SliceHashDistInstructions::preorder(IR::MAU::AttachedOutput *) {
-    return false;
-}
-
-bool SliceHashDistInstructions::preorder(IR::MAU::SaluAction *) {
-    return false;
-}
-
-bool SliceHashDistInstructions::preorder(IR::MAU::Instruction *) {
-    hash_dist_found = false;
-    return true;
-}
-
-bool SliceHashDistInstructions::preorder(IR::MAU::HashDist *hd) {
-    hash_dist_found = true;
-    hash_dist_width = hd->type->width_bits();
-    return false;
-}
-
-void SliceHashDistInstructions::postorder(IR::MAU::Instruction *instr) {
-    if (!hash_dist_found)
-        return;
-
-
-    if (!contains_if(instr->operands, [&](const IR::Expression *operand) {
-                     return operand->type->width_bits() != hash_dist_width; }))
-        return;
-
-    for (auto &operand : instr->operands) {
-        if (operand->type->width_bits() != hash_dist_width) {
-            operand = MakeSliceSource(operand, 0, hash_dist_width - 1, operand);
-        }
-    }
-}
-
 DoInstructionSelection::DoInstructionSelection(PhvInfo &phv) : PassManager {
     new ValidateInvalidatePrimitive(phv),
     new InstructionSelection(phv),
     new ConvertCastToSlice,
     new StatefulHashDistSetup(phv),
     new LPFSetup(phv),
-    new SliceHashDistInstructions,
     new CollectPhvInfo(phv),
     new PHV::ValidateActions(phv, false, false, false)
 } {}

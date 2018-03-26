@@ -831,6 +831,63 @@ bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CON
     return true;
 }
 
+/** The Random Number Generator is specified within section 6.2.5.2 Additional Action
+ *  Outputs.  Specifically, each MAU stage can generate 64 bits of random numbers, divided
+ *  into 2 32 bit sections.  Any byte of either 32 bit section can be muxed into any logical
+ *  tables 32 bit immediate action data.
+ *
+ *  Currently, every RandomNumber IR structure gets it's own section of 64 bits of Random
+ *  Number Generation.  This is to guarantee that each Random Number is different, which
+ *  is semantically what each random.get should mean from a P4 level.  However, this
+ *  is too restrictive.  The guarantee should be that each packet would have it's own
+ *  set of random number.  Therefore if two mutually exclusive tables both require a Random
+ *  Number, they could share the section of Random Number Generator, as this random number
+ *  would be on separate packets.
+ *
+ *  Fortunately, the random.get is rarely used in P4, so these optimizations are low
+ *  priority for the time being.
+ */
+bool ActionDataBus::alloc_rng(const bitvec rand_num_layouts[ActionFormat::CONTAINER_TYPES],
+                              Use &use, const ActionFormat::RandNumALUFormat &format,
+                              cstring name) {
+    bitvec total_layout;
+    for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
+        total_layout |= rand_num_layouts[i];
+    }
+
+    if (total_layout.empty())
+        return true;
+
+    bool found = false;
+    int rng_index;
+    for (rng_index = 0; rng_index < RANDOM_NUMBER_GENERATORS; rng_index++) {
+        if ((rng_in_use[rng_index] & total_layout).empty()) {
+            found = true;
+            break;
+        }
+    }
+
+    if (!found)
+        return false;
+
+    for (auto bit : total_layout) {
+        rng_use[rng_index][bit] = name;
+    }
+    rng_in_use[rng_index] |= total_layout;
+
+    for (auto &rng_entry : format) {
+        auto *rn = rng_entry.first;
+        auto &rn_vec = rng_entry.second;
+        bitvec rn_layout;
+        for (auto &alu_plac : rn_vec) {
+            rn_layout.setrange(alu_plac.start, alu_plac.alu_size / 8);
+        }
+        Use::RandomNumberGenerator rng(rng_index, rn_layout);
+        use.rng_locs.emplace(rn, rng);
+    }
+    return true;
+}
+
 /** Total allocation of the action data bus for a particular table.  Again, based on the
  *  current fact that actions are either contained in the immediate or in an action data
  *  table, the algorithm performs them separately.  Once it can be simultaneous, the algorithm
@@ -863,6 +920,7 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Actio
         immed_layouts[i].clear();
         immed_layouts[i] |= use->total_layouts[ActionFormat::IMMED][i];
         immed_layouts[i] |= use->hash_dist_layouts[i];
+        immed_layouts[i] |= use->rand_num_layouts[i];
     }
 
 
@@ -872,6 +930,9 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Actio
     // Action data table allocation
     allocated = alloc_ad_table(use->total_layouts[ActionFormat::ADT],
                                     use->full_layout_bitmasked, ad_xbar, tbl->name);
+    if (!allocated) return false;
+
+    allocated = alloc_rng(use->rand_num_layouts, ad_xbar, use->rand_num_placement, tbl->name);
     if (!allocated) return false;
 
     LOG2("Action data bus for " << tbl->name);
@@ -898,6 +959,17 @@ void ActionDataBus::update(cstring name, const Use::ReservedSpace &rs) {
     cont_in_use[rs.location.type].setbit(output);
 }
 
+void ActionDataBus::update(cstring name, const Use::RandomNumberGenerator &rng) {
+    for (auto bit : rng.bytes) {
+        if (!rng_use[rng.unit][bit].isNull()) {
+            BUG("Conflicting allocation in the random number generator between %s and %s at "
+                "unit %d and byte %d", name, rng_use[rng.unit][bit], rng.unit, bit);
+        }
+        rng_use[rng.unit][bit] = name;
+    }
+    rng_in_use[rng.unit] |= rng.bytes;
+}
+
 /** The update procedure for all previously allocated tables in a stage.  This fills in the
  *  bitvecs correctly in order to be tested against in the allocation of the current table.
  */
@@ -908,6 +980,10 @@ void ActionDataBus::update(cstring name, const Use &alloc) {
 
     for (auto &rs : alloc.clobber_locs) {
         update(name, rs);
+    }
+
+    for (auto &rng : alloc.rng_locs) {
+        update(name, rng.second);
     }
 }
 
