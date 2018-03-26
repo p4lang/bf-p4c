@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include "../bf-p4c/version.h" // for BF_P4C_VERSION
 #include "misc.h"
+#include "version.h"
 
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   0
@@ -294,6 +295,22 @@ class Version : public Section {
                     parse_version(kv.value);
                 } else if (kv.key == "run_id" && kv.value.type == tSTR) {
                     _run_id = kv.value.s;
+                } else if (kv.key == "compiler") {
+                    if (kv.value.type == tSTR)
+                        _compiler = kv.value.s;
+                    else if (kv.value.type == tINT)
+                        _compiler = std::to_string(kv.value.i);
+                    else if (kv.value.type == tVEC) {
+                        const char *sep = "";
+                        for (auto &el : kv.value.vec) {
+                            _compiler += sep;
+                            if (el.type == tSTR)
+                                _compiler += el.s;
+                            else if (el.type == tINT)
+                                _compiler += std::to_string(el.i);
+                            else
+                                error(el.lineno, "can't understand compiler version");
+                            sep = "."; } }
                 } else
                     warning(kv.key.lineno, "ignoring unknown item %s in version",
                             value_desc(kv.key));
@@ -305,7 +322,10 @@ class Version : public Section {
 
     void process() {}
 
-    void output(json::map &ctx_json) { ctx_json["run_id"] = _run_id; }
+    void output(json::map &ctx_json) {
+        if (!_compiler.empty())
+            ctx_json["compiler_version"] = _compiler;
+        ctx_json["run_id"] = _run_id; }
 
  private:
     void parse_version(value_t data) {
@@ -321,6 +341,6 @@ class Version : public Section {
             error(data.lineno, "Version not understood");
     }
 
-    std::string _run_id;
+    std::string _run_id, _compiler;
     static Version singleton_version;
 } Version::singleton_version;

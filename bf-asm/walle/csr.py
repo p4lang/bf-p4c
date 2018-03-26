@@ -831,6 +831,11 @@ class csr_composite_object (csr_object):
                 outfile.write("%sbool disabled_;\n" % indent)
             if args.enable_disable or self.need_ctor():
                 self.gen_ctor(outfile, args, namestr, indent)
+            if self.top_level():
+                outfile.write('%sstatic constexpr const char *_reg_version = "%s";\n' %
+                              (indent, schema['_reg_version']))
+                outfile.write('%sstatic constexpr const char *_schema_hash = "%s";\n' %
+                              (indent, schema['_schema_hash']))
         for el in sorted(self.children(), key=lambda a: a.name):
             if el.disabled(): continue
             typ = el.singleton_obj()

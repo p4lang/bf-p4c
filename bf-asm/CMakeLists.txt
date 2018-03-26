@@ -69,6 +69,16 @@ set (REFLOW_SOURCES reflow.cpp)
 build_unified(REFLOW_SOURCES ALL)
 add_executable (reflow ${REFLOW_SOURCES})
 
+# b2j
+set (B2J_SOURCES b2j.cpp json.cpp bson.cpp)
+build_unified(B2J_SOURCES ALL)
+add_executable (b2j ${B2J_SOURCES})
+
+# j2b
+set (J2B_SOURCES j2b.cpp json.cpp bson.cpp)
+build_unified(J2B_SOURCES ALL)
+add_executable (j2b ${J2B_SOURCES})
+
 # mksizes
 set (MKSIZES_SOURCES mksizes.cpp)
 build_unified(MKSIZES ALL)
@@ -78,9 +88,10 @@ set (BFAS_COMMON_SOURCES
   action_bus.cpp
   action_table.cpp
   asm-types.cpp
+  atcam_match.cpp
   attached_table.cpp
   bfas.cpp
-  atcam_match.cpp
+  bson.cpp
   counter.cpp
   crash.cpp
   deparser.cpp

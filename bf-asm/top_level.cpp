@@ -1,5 +1,8 @@
 #include "bfas.h"
 #include "top_level.h"
+#include "bson.h"
+#include "binary_output.h"
+#include "version.h"
 
 TopLevel *TopLevel::all = nullptr;
 
@@ -41,7 +44,7 @@ TopLevelTarget<TARGET>::~TopLevelTarget() {
 }
 
 template<class TARGET>
-void TopLevelTarget<TARGET>::output(json::map &) {
+void TopLevelTarget<TARGET>::output(json::map &ctxt_json) {
     for (int i = 0; i < 4; i++) {
         if (options.binary >= PIPE0 && options.binary != PIPE0 + i) {
             this->mem_top.pipes[i].disable();
@@ -49,8 +52,6 @@ void TopLevelTarget<TARGET>::output(json::map &) {
         } else {
             this->mem_top.pipes[i].set("memories.pipe", &this->mem_pipe);
             this->reg_top.pipes[i].set("regs.pipe", &this->reg_pipe); } }
-    //this->reg_top.macs.disable();
-    //this->reg_top.serdes.disable();
     if (options.condense_json) {
         this->mem_top.disable_if_zero();
         this->mem_pipe.disable_if_zero();
@@ -64,6 +65,17 @@ void TopLevelTarget<TARGET>::output(json::map &) {
             this->reg_pipe.emit_json(*open_output("regs.pipe.cfg.json")); }
         if (options.binary != NO_BINARY) {
             auto binfile = open_output("%s.bin", TARGET::name);
+            json::map header;
+            header["asm_version"] = BFASM::Version::getVersion();
+            if (ctxt_json["compiler_version"])
+                header["compiler_version"] = ctxt_json["compiler_version"]->clone();
+            header["reg_version"] = TARGET::top_level_regs::_regs_top::_reg_version;
+            if (ctxt_json["run_id"])
+                header["run_id"] = ctxt_json["run_id"]->clone();
+            if (ctxt_json["program_name"])
+                header["program_name"] = ctxt_json["program_name"]->clone();
+            header["target"] = Target::name();
+            *binfile << binout::tag('H') << json::binary(header);
             if (options.binary != ONE_PIPE) {
                 this->mem_top.emit_binary(*binfile, 0);
                 this->reg_top.emit_binary(*binfile, 0);
