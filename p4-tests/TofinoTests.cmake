@@ -22,13 +22,13 @@ p4c_add_test_label("tofino" "17Q4Goal" "switch_msdc")
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "switch_l2" ${switchtest} "${testExtraArgs} -DL2_PROFILE")
 
-set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main")
+set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main|common_v1_test")
 set (V1_EXCLUDE_PATTERNS "package" "extern")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
 p4c_find_tests("${P4TESTS_FOR_TOFINO}" v1tests INCLUDE "${V1_SEARCH_PATTERNS}" EXCLUDE "${V1_EXCLUDE_PATTERNS}")
 
-set (P16_INCLUDE_PATTERNS "include.*(v1model|psa|tofino|tna).p4" "main")
+set (P16_INCLUDE_PATTERNS "include.*(v1model|psa|tofino|tna).p4" "main|common_v1_test")
 set (P16_EXCLUDE_PATTERNS "tofino.h")
 set (P16_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
 p4c_find_tests("${P16_FOR_TOFINO}" p16tests INCLUDE "${P16_INCLUDE_PATTERNS}" EXCLUDE "${P16_EXCLUDE_PATTERNS}")

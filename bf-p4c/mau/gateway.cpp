@@ -378,7 +378,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
     if (!match_field) {
         match_field = field;
         match_field_bits = bits;
-        LOG4("  match_field = " << field->name << bits);
+        LOG4("  match_field = " << field->name << ' ' << bits);
         if (bits.size() == 1 && !getParent<IR::Operation::Relation>()) {
             auto &match_info = fields.info.at(match_field);
             LOG4("  match_info = " << match_info);
@@ -388,24 +388,31 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
                 else
                     match.word0 &= ~(1ULL << off.first >> shift); } }
     } else {
+        LOG4("  xor_field = " << field->name << ' ' << bits);
         size_t size = std::max(bits.size(), match_field_bits.size());
         uint64_t mask = (1ULL << size) - 1;
         mask &= andmask & ~ormask;
+        mask <<= match_field_bits.lo;
         auto &field_info = fields.info.at(field);
         auto &match_info = fields.info.at(match_field);
+        LOG4("  match_info = " << match_info << ", mask=0x" << hex(mask) << " shift=" << shift);
+        LOG4("  xor_match_info = " << field_info);
         auto it = field_info.offsets.begin();
         auto end = field_info.offsets.end();
         for (auto &off : match_info.offsets) {
             if (it == end || it->first != off.first || it->second.size() != off.second.size() ||
                 it->second.lo - field_info.bits.lo != off.second.lo - match_info.bits.lo) {
                 BUG("field equality comparison misaligned in gateway"); }
-            uint64_t elmask = ((1ULL << off.second.size()) - 1) <<
-                              (off.second.lo - match_info.bits.lo);
-            elmask &= mask;
-            int lo = off.first + match_field_bits.lo;
-            elmask <<= lo;
-            match.word1 &= ~(elmask >> shift);
-            ++it; }
+            it++;
+            uint64_t elmask = ((1ULL << off.second.size()) - 1) << off.second.lo;
+            if ((elmask &= mask) == 0) continue;
+            int shft = off.first - off.second.lo - shift;
+            LOG6("    elmask=0x" << hex(elmask) << " shft=" << shft);
+            if (shft >= 0)
+                match.word1 &= ~(elmask << shft);
+            else
+                match.word1 &= ~(elmask >> -shft);
+            LOG6("    match now " << match); }
         match_field = nullptr; }
     return false;
 }
@@ -428,16 +435,23 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
         if ((val & mask & ~andmask) || (~val & mask & ormask))
             BUG("masked comparison in gateway can never match");
         mask &= andmask & ~ormask;
+        mask <<= match_field_bits.lo;
+        val <<= match_field_bits.lo;
         auto &match_info = fields.info.at(match_field);
-        LOG4("  match_info = " << match_info);
+        LOG4("  match_info = " << match_info << ", val=" << val << " mask=0x" << hex(mask) <<
+             " shift=" << shift);
         for (auto &off : match_info.offsets) {
-            uint64_t elmask = ((1ULL << off.second.size()) - 1) <<
-                              (off.second.lo - match_info.bits.lo);
-            elmask &= mask;
-            int lo = off.first - shift;
-            elmask <<= lo;
-            match.word0 &= ~(val << lo) | ~elmask;
-            match.word1 &= (val << lo) | ~elmask; }
+            uint64_t elmask = ((1ULL << off.second.size()) - 1) << off.second.lo;
+            if ((elmask &= mask) == 0) continue;
+            int shft = off.first - off.second.lo - shift;
+            LOG6("    elmask=0x" << hex(elmask) << " shft=" << shft);
+            if (shft >= 0) {
+                match.word0 &= ~(val << shft) | ~(elmask << shft);
+                match.word1 &= (val << shft) | ~(elmask << shft);
+            } else {
+                match.word0 &= ~(val >> -shft) | ~(elmask >> -shft);
+                match.word1 &= (val >> -shft) | ~(elmask >> -shft); }
+            LOG6("    match now " << match); }
         match_field = nullptr;
     } else {
         BUG("Invalid context for constant in BuildGatewayMatch"); }
