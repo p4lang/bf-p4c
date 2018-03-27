@@ -368,6 +368,7 @@ struct CopyPropagateParserValues : public ParserInspector {
             if (!resolvedValues.count(value)) {
                 resolvedValues[value] = { ParserRValDef(state, value->clone()) };
             } else {
+                resolvedValues[value].push_back(ParserRValDef(state, value->clone()));
                 ::warning("Select on field that might be uninitialized "
                           "in some parser path: %1%", value->source); }
             return;
@@ -431,7 +432,6 @@ struct CopyPropagateParserValues : public ParserInspector {
         // encountered some kind of failure; just keep it that way.
         if (previousResolution.size() == 1
             && previousResolution.front().rval->is<IR::BFN::ComputedRVal>()) {
-            previousResolution.clear();
             ::warning("Select on field that might be uninitialized "
                       "in some parser path: %1%", value->source); }
 
@@ -701,6 +701,8 @@ class ComputeSaveAndSelect: public ParserInspector {
         nw_bitrange source() const {
             const IR::BFN::BufferlikeRVal* buf = nullptr;
             if (preferred_source) {
+                if (preferred_source.value().rval->is<IR::BFN::ComputedRVal>()) {
+                    return nw_bitrange(-1, -1); }
                 buf = (*preferred_source).rval->to<IR::BFN::BufferlikeRVal>();
             } else {
                 buf = select->source->to<IR::BFN::BufferlikeRVal>(); }
@@ -717,6 +719,9 @@ class ComputeSaveAndSelect: public ParserInspector {
         isExtractedEarlier(const State* state) const {
             // For multipledef selects, only when state maches, source is meaningful.
             if (preferred_source) {
+                // An undefined use.
+                if (preferred_source.value().rval->is<IR::BFN::ComputedRVal>()) {
+                    return true; }
                 return state->gress != (*preferred_source).state->gress
                        || (*preferred_source).state->name != state->name;
             } else {
@@ -868,7 +873,7 @@ class ComputeSaveAndSelect: public ParserInspector {
 
                 if (LOGGING(4)) {
                     for (const auto& reg : *reg_choice)
-                        LOG4("Assingin " << reg << " to " << unresolved.select->p4Source); }
+                        LOG4("Assign " << reg << " to " << unresolved.select->p4Source); }
 
                 // Assign registers and update match_saves
                 // TODO(yumin): if it's the last byte, we can't use half register on it.
