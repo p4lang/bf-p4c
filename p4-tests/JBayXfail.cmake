@@ -69,7 +69,7 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "Ran out of phv entries in deparser checksum unit"
+  "invalid parser checksum unit"
   testdata/p4_14_samples/parser_dc_full.p4
   )
 
@@ -221,7 +221,7 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "test.IPv4ChecksumTest ... FAIL"
+  "test.IPv4ChecksumTest ... ERROR"
   extensions/p4_tests/p4_16/ipv4_checksum.p4
   )
 

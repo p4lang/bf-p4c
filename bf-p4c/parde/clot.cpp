@@ -31,12 +31,16 @@ Clot::Clot(cstring name) {
     tag = v;
 }
 
-unsigned Clot::length() const {
-    unsigned len = 0;
+unsigned Clot::length_in_bits() const {
+    unsigned rv = 0;
     for (auto f : all_fields)
-        len += f->size;
-    BUG_CHECK(len % 8 == 0, "clot not byte aligned?");
-    return len / 8;
+        rv += f->size;
+    return rv;
+}
+
+unsigned Clot::length_in_bytes() const {
+    BUG_CHECK(length_in_bits() % 8 == 0, "clot not byte aligned?");
+    return length_in_bits() / 8;
 }
 
 unsigned Clot::offset(const PHV::Field* field) const {

@@ -206,7 +206,7 @@ class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector 
         for (auto g : _graphs)
             g.second->merge_with(*(other._graphs.at(g.first)));
 
-        for (auto m : _mutex)
+        for (auto& m : _mutex)
             merge_mutex(m.second, other._mutex.at(m.first));
 
         _state_to_parser.insert(other._state_to_parser.begin(),
@@ -235,7 +235,7 @@ class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector 
             if (t->next)
                 g->add_transition(state, t->next);
 
-        auto mutex = _mutex.at(parser);
+        auto& mutex = _mutex.at(parser);
         add_mutex(mutex, state);
 
         return true;
@@ -284,7 +284,7 @@ class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector 
         for (auto g : _graphs)
             g.second->map_to_boost_graph();
 
-        for (auto m : _mutex)
+        for (auto& m : _mutex)
             calculate_mutex(m.second);
     }
 

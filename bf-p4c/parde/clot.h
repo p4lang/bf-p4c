@@ -13,8 +13,7 @@ class JSONLoader;
 
 class Clot {
  public:
-    Clot() { tag = ++tagCnt; }
-    explicit Clot(unsigned t) { tag = t; }
+    Clot() { tag = tagCnt++; }
     explicit Clot(cstring);
 
     cstring toString() const;
@@ -31,8 +30,11 @@ class Clot {
 
     unsigned start = 0;  // start byte offset in the packet
 
+    /// num of bits covered in this clot
+    unsigned length_in_bits() const;
+
     /// num of bytes covered in this clot
-    unsigned length() const;
+    unsigned length_in_bytes() const;
 
     /// byte offset of field with in clot
     unsigned offset(const PHV::Field* f) const;

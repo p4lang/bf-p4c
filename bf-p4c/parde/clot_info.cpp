@@ -121,7 +121,8 @@ class CollectClotInfo : public Inspector {
 class NaiveClotAlloc : public Visitor {
     static const int MAX_CLOTS_PER_STATE = 2;  // TODO(zma) move to pardeSpec
     static const int MAX_BYTES_PER_CLOT = 64;
-    static const int TOTAL_CLOTS_AVAIL = 16;
+    static const int TOTAL_CLOTS_AVAIL = 64;
+    static const int MAX_CLOTS_LIVE = 16;
     static const int INTER_CLOTS_BYTE_GAP = 3;
 
     ClotInfo& clotInfo;
@@ -129,6 +130,8 @@ class NaiveClotAlloc : public Visitor {
 
     std::map<const IR::BFN::ParserState*, unsigned> tail_gap_credit_map;
     std::map<const IR::BFN::ParserState*, unsigned> head_gap_credit_map;
+
+    unsigned num_live_clots = 0;
 
  public:
     explicit NaiveClotAlloc(ClotInfo& clotInfo,
@@ -232,73 +235,82 @@ class NaiveClotAlloc : public Visitor {
         LOG3(head_gap_needed << " bits of head gap needed");
         LOG3(tail_gap_needed << " bits of tail gap needed");
 
-        // FIXME(zma) state larger than 64 bytes
-        if (ca.total_bytes > MAX_BYTES_PER_CLOT)
-            return false;
-
-        std::vector<const PHV::Field*> to_be_allocated;
-
-        for (auto f : clotInfo.all_fields_[ca.state])
-            to_be_allocated.push_back(f);
+        auto& fields_in_state = clotInfo.all_fields_[ca.state];
 
         unsigned head_offset = 0;
         unsigned tail_offset = 0;
 
-        // skip through first fields until head gap is satisfied
-        unsigned to_delete = 0;
-        unsigned skipped_bits = 0;
+        unsigned head_index = 0;
+        unsigned tail_index = fields_in_state.size() - 1;
 
-        for (auto f : to_be_allocated) {
-            if (head_gap_needed > skipped_bits) {
-                skipped_bits += f->size;
-                head_offset += f->size;
-                to_delete++;
-            }
+        // skip through first fields until head gap is satisfied
+
+        for (unsigned i = head_index; i <= tail_index && (head_gap_needed > head_offset); i++) {
+            auto f = fields_in_state.at(i);
+            head_offset += f->size;
+            head_index++;
         }
-        for (unsigned i = 0; i < to_delete; ++i)
-            to_be_allocated.erase(to_be_allocated.begin());
 
         // skip through last fields until tail gap is satisfied
-        to_delete = 0;
-        skipped_bits = 0;
 
-        for (auto it = to_be_allocated.rbegin(); it != to_be_allocated.rend(); ++it) {
-            if (tail_gap_needed > skipped_bits) {
-                skipped_bits += (*it)->size;
-                tail_offset += (*it)->size;
-                to_delete++;
-            }
+        for (unsigned i = tail_index; i > head_index && (tail_gap_needed > tail_offset); i--) {
+            auto f = fields_in_state.at(i);
+            tail_offset += f->size;
+            tail_index--;
         }
-        for (unsigned i = 0; i < to_delete; ++i)
-            to_be_allocated.pop_back();
 
         // now see if we can earn some credit on head/tail
+
         unsigned head_gap_credit = 0;
         unsigned tail_gap_credit = 0;
 
-        to_delete = 0;
-        for (auto f : to_be_allocated) {
+        for (unsigned i = head_index; i < tail_index; i++) {
+            auto f = fields_in_state.at(i);
             if (clotInfo.is_clot_candidate(f))
                 break;
-            head_gap_credit += f->size;
             head_offset += f->size;
-            to_delete++;
+            head_gap_credit += f->size;
+            head_index++;
         }
-        for (unsigned i = 0; i < to_delete; ++i)
-            to_be_allocated.erase(to_be_allocated.begin());
 
-        to_delete = 0;
-        for (auto it = to_be_allocated.rbegin(); it != to_be_allocated.rend(); ++it) {
-            if (clotInfo.is_clot_candidate((*it)))
+        for (unsigned i = tail_index; i > head_index; i--) {
+            auto f = fields_in_state.at(i);
+            if (clotInfo.is_clot_candidate(f))
                 break;
-            tail_gap_credit += (*it)->size;
-            tail_offset += (*it)->size;
-            to_delete++;
+            tail_offset += f->size;
+            tail_gap_credit += f->size;
+            tail_index--;
         }
-        for (unsigned i = 0; i < to_delete; ++i)
-            to_be_allocated.pop_back();
 
-        // FIXME rollback or skip forward to find byte boundary
+        // TODO(zma) In many cases, it's a win to rollback on head
+        // and skip forward on tail to find byte boundary to maximize CLOT
+        // contiguity. This involves doube allocating the head/tail fields
+        // to both CLOTs and PHV. This also means setting additional packing/slicing
+        // constraints on PHV allocation, as deparser can only deparse whole containers.
+
+        // For now, skip forward or rollback to find byte boundary
+
+        for (unsigned i = head_index; i < tail_index; i++) {
+            if (head_offset % 8 == 0)
+                break;
+            auto f = fields_in_state.at(i);
+            head_offset += f->size;
+            head_gap_credit += f->size;
+            head_index++;
+        }
+
+        for (unsigned i = tail_index; i > head_index; i--) {
+            if (tail_offset % 8 == 0)
+                break;
+            auto f = fields_in_state.at(i);
+            tail_offset += f->size;
+            tail_gap_credit += f->size;
+            tail_index--;
+        }
+
+        if (head_gap_needed > head_offset || tail_gap_needed > tail_offset)
+            return false;
+
         if (head_offset % 8 != 0 || tail_offset % 8 != 0)
             return false;
 
@@ -306,8 +318,7 @@ class NaiveClotAlloc : public Visitor {
         Clot* clot = nullptr;
 
         // see if can find a mutex state and reuse clot
-
-        int reuse_tag = 0;
+        int overlay_tag = -1;
 
         const IR::BFN::Parser* parser = parserInfo.parser(ca.state);
         auto& mutex_state_map = parserInfo.mutex(parser).mutex_state_map();
@@ -315,24 +326,29 @@ class NaiveClotAlloc : public Visitor {
             for (auto s : mutex_state_map.at(ca.state)) {
                 if (clotInfo.parser_state_to_clots().count(s) > 0) {
                     auto& clots = clotInfo.parser_state_to_clots().at(s);
-                    reuse_tag = clots[0]->tag;
-                    LOG3("can overlay with state " << s->name << " clot " << reuse_tag);
+                    overlay_tag = clots[0]->tag;
+                    LOG3("can overlay with state " << s->name << " clot " << overlay_tag);
                     break;
                 }
             }
         }
 
-        for (auto f : to_be_allocated) {
+        for (unsigned i = head_index; i <= tail_index; i++) {
+            auto f = fields_in_state.at(i);
+
             if (clot == nullptr) {
-                if (reuse_tag > 0)
-                    clot = new Clot(reuse_tag);
-                else
-                    clot = new Clot();
+                if (overlay_tag == -1)
+                    num_live_clots++;
+
+                clot = new Clot();
 
                 clot->start = head_offset / 8;  // clot start is in byte, offset in bits
                 clotInfo.add(clot, ca.state);
                 LOG3("allocate clot " << clot->tag << " to " << ca.state->name);
             }
+
+            if (clot->length_in_bits() + f->size > MAX_BYTES_PER_CLOT * 8)
+                break;
 
             if (!clotInfo.is_clot_candidate(f))
                 clot->phv_fields.push_back(f);
@@ -351,7 +367,8 @@ class NaiveClotAlloc : public Visitor {
 
     void allocate(const std::vector<ClotAlloc>& req) {
         for (unsigned i = 0; i < req.size(); ++i) {
-            if (clotInfo.num_clots_allocated() == TOTAL_CLOTS_AVAIL)
+            if (clotInfo.num_clots_allocated() == TOTAL_CLOTS_AVAIL ||
+                num_live_clots == MAX_CLOTS_LIVE)
                 break;
 
             allocate(req[i]);
