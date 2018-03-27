@@ -1,6 +1,13 @@
 #ifndef _bfas_h_
 #define _bfas_h_
 
+#include <string>
+#include "stdarg.h"
+#include "stdio.h"
+#include <iostream>
+#include <memory>
+
+
 enum config_version_t { CONFIG_OLD=1, CONFIG_NEW=2, CONFIG_BOTH=3 };
 enum target_t { TOFINO=1, JBAY=2, TARGET_INDEX_LIMIT };
 enum binary_type_t { NO_BINARY,
@@ -21,18 +28,13 @@ extern struct option_t {
     bool                debug_info;
     bool                werror;
     bool                disable_power_gating;
+    std::string         stage_dependency_pattern;
 } options;
 
 extern unsigned unique_action_handle;
 struct value_t;
 
-#include <string>
 extern std::string asmfile_name;
-
-#include "stdarg.h"
-#include "stdio.h"
-#include <iostream>
-#include <memory>
 
 int asm_parse_file(const char *name, FILE *in);
 

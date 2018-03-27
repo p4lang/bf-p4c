@@ -125,6 +125,14 @@ int main(int ac, char **av) {
             options.binary = NO_BINARY;
         } else if (!strcmp(av[i], "--singlepipe")) {
             options.binary = ONE_PIPE;
+        } else if (!strcmp(av[i], "--stage_dependency_pattern")) {
+          ++i;
+          if (!av[i]) {
+            std::cerr << "No stage dependency pattern specified " << std::endl;
+            error_count++;
+            break;
+          }
+          options.stage_dependency_pattern = av[i];
         } else if (sscanf(av[i], "--pipe%d%n", &val, &len) > 0 && !av[i][len] &&
                    val >= 0 && val < 4) {
             options.binary = static_cast<binary_type_t>(PIPE0 + val);

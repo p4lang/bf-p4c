@@ -166,6 +166,18 @@ void AsmStage::output(json::map &ctxt_json) {
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         bitvec set_regs = stage[0].action_set[gress];
         for (unsigned i = 1; i < stage.size(); i++) {
+#if HAVE_JBAY
+            /* Allow to set any stage as match dependent based on a pattern
+             * for DV team - Should never be used for normal compilation */
+            if (options.target == JBAY && !options.stage_dependency_pattern.empty()) {
+                if ((options.stage_dependency_pattern.size() > i) &&
+                    (options.stage_dependency_pattern.at(i) == '1')) {
+                        LOG1("setting stage " << i << " " << gress
+                            << " as match dependent on previous stage");
+                        stage[i].stage_dep[gress] = Stage::MATCH_DEP;
+                }
+            }
+#endif
             if (!stage[i].stage_dep[gress]) {
                 if (stage[i].match_use[gress].intersects(set_regs)) {
                     LOG1("stage " << i << " " << gress << " is match dependent on previous stage");

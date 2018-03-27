@@ -99,6 +99,8 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
             regs.dp.phv_egress_thread[i][j] = regs.dp.phv_egress_thread_imem[i][j] =
                 eg_use.getrange(10*phv_use_transpose[i][j], 10); } }
 
+    /* Things following are for debug/bringup only : not for normal flows  */
+
     if (options.disable_power_gating) {
         disable_jbay_power_gating(regs);
     }
