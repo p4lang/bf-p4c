@@ -1103,13 +1103,14 @@ void AllocatePHV::formatAndThrowError(
 
     msg << "PHV allocation was not successful "
         << "(" << unallocated.size() << " cluster groups remaining)" << std::endl;
+    msg << "SuperClusters unallocated: " << std::endl;
+    for (auto* sc : unallocated)
+        msg << sc;
+    msg << std::endl;
 
     if (LOGGING(3)) {
         msg << "Fields successfully allocated: " << std::endl;
-        msg << alloc << std::endl;
-        msg << "SuperClusters unallocated: " << std::endl;
-        for (auto* sc : unallocated)
-            msg << sc; }
+        msg << alloc << std::endl; }
     for (auto* super_cluster : unallocated) {
         for (auto* rotational_cluster : super_cluster->clusters()) {
             for (auto* cluster : rotational_cluster->clusters()) {
