@@ -28,11 +28,6 @@ bool TableFormat::analyze_layout_option() {
 
     if (!tbl->layout.atcam) {
         ghost_bits_count = RAM_GHOST_BITS + floor_log2(min_way_size);
-    } else {
-       auto partition = match_ixbar.atcam_partition();
-       for (auto byte : partition) {
-           use->ghost_bits[byte] = byte.bit_use;
-       }
     }
 
     int per_RAM = layout_option.way.match_groups / layout_option.way.width;
@@ -683,6 +678,13 @@ bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &
  *  4 total PHV bytes to match on.
  */
 void TableFormat::choose_ghost_bits() {
+    if (tbl->layout.atcam) {
+        auto partition = match_ixbar.atcam_partition();
+        for (auto byte : partition) {
+            use->ghost_bits[byte] = byte.bit_use;
+        }
+    }
+
     safe_vector<IXBar::Use::Byte> potential_ghost;
 
     for (auto byte : single_match) {
@@ -1137,7 +1139,6 @@ bool TableFormat::allocate_match() {
  */
 bool TableFormat::allocate_match_with_algorithm() {
     choose_ghost_bits();
-
     for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
         allocate_full_fits(width_sect);
     }
