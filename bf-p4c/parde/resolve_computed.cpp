@@ -365,7 +365,11 @@ struct CopyPropagateParserValues : public ParserInspector {
         // Does some definition for this computed value reach this point?
         if (defs.find(sourceName) == defs.end()) {
             // No reaching definition; just "propagate" the original value.
-            resolvedValues[value] = { ParserRValDef(state, value->clone()) };
+            if (!resolvedValues.count(value)) {
+                resolvedValues[value] = { ParserRValDef(state, value->clone()) };
+            } else {
+                ::warning("Select on field that might be uninitialized "
+                          "in some parser path: %1%", value->source); }
             return;
         }
 
@@ -387,7 +391,8 @@ struct CopyPropagateParserValues : public ParserInspector {
                 dynamic_cast<IR::BFN::BufferlikeRVal*>(resolvedValue);
             if (!bufferlikeValue) {
                 // We can't simplify slices of other kinds of r-values for now.
-                resolvedValues[value] = { ParserRValDef(state, value->clone()) };
+                if (!resolvedValues.count(value))
+                    resolvedValues[value] = { ParserRValDef(state, value->clone()) };
                 return;
             }
 
@@ -425,7 +430,10 @@ struct CopyPropagateParserValues : public ParserInspector {
         // If the previous definition is a computed r-value, we've already
         // encountered some kind of failure; just keep it that way.
         if (previousResolution.size() == 1
-            && previousResolution.front().rval->is<IR::BFN::ComputedRVal>()) return;
+            && previousResolution.front().rval->is<IR::BFN::ComputedRVal>()) {
+            previousResolution.clear();
+            ::warning("Select on field that might be uninitialized "
+                      "in some parser path: %1%", value->source); }
 
         // We found a previous definition that was valid on its own; we just
         // need to make sure we are not adding duplicated defs.
@@ -445,27 +453,31 @@ struct CopyPropagateParserValues : public ParserInspector {
 
         ReachingDefs defs(reachingDefs);
 
-        forAllMatching<IR::BFN::Extract>(&state->statements,
-                      [&](const IR::BFN::Extract* extract) {
-            auto dest = extract->dest->field->toString();
+        // The source is a simple r-value; just record the new definition
+        // for `dest` and move on.
+        forAllMatching<IR::BFN::Extract>(
+            &state->statements, [&] (const IR::BFN::Extract* extract) {
+                auto dest = extract->dest->field->toString();
+                if (!extract->source->is<IR::BFN::ComputedRVal>()) {
+                    defs[dest] = ParserRValDef(state, extract->source); }
+            });
 
-            // If the source of this extract is a computed r-value, its
-            // expression may use a definition we've seen. Try to simplify it.
-            // (And regardless of our success, record the new definition for
-            // `dest`.)
-            if (auto* computed = extract->source->to<IR::BFN::ComputedRVal>()) {
-                propagateToUse(state, computed, defs);
-                defs[dest] = resolvedValues[computed].back();
-            } else {
-                // The source is a simple r-value; just record the new definition
-                // for `dest` and move on.
-                defs[dest] = ParserRValDef(state, extract->source); }
-        });
+        // If the source of this extract is a computed r-value, its
+        // expression may use a definition we've seen. Try to simplify it.
+        // (And regardless of our success, record the new definition for
+        // `dest`.)
+        forAllMatching<IR::BFN::Extract>(
+            &state->statements, [&](const IR::BFN::Extract* extract) {
+                auto dest = extract->dest->field->toString();
+                if (auto* computed = extract->source->to<IR::BFN::ComputedRVal>()) {
+                    propagateToUse(state, computed, defs);
+                    defs[dest] = resolvedValues[computed].back(); }
+            });
 
+        // If the source of this select is a computed r-value, its
+        // expression may use a definition we've seen. Try to simplify it.
         forAllMatching<IR::BFN::Select>(&state->selects,
                       [&](const IR::BFN::Select* select) {
-            // If the source of this select is a computed r-value, its
-            // expression may use a definition we've seen. Try to simplify it.
             if (auto* computed = select->source->to<IR::BFN::ComputedRVal>())
                 propagateToUse(state, computed, defs);
         });
