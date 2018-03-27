@@ -2300,7 +2300,6 @@ void IXBar::update(cstring name, const Use &alloc) {
             use[byte.loc] = byte; }
         fields.emplace(byte.name, byte.loc); }
     for (auto &bits : alloc.bit_use) {
-        const Loc *loc = nullptr;
         for (int b = 0; b < bits.width; b++) {
             for (auto ht : bitvec(alloc.hash_table_inputs[bits.group])) {
                 if (hash_single_bit_use.at(ht, b + bits.bit)) {

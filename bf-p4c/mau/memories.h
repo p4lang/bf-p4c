@@ -13,6 +13,7 @@ struct Memories {
     /* track memory allocations within a single stage */
     static constexpr int SRAM_ROWS = 8;
     static constexpr int SRAM_COLUMNS = 10;
+    static constexpr int LOGICAL_TABLES = 16;
     static constexpr int LEFT_SIDE_COLUMNS = 4;
     static constexpr int RIGHT_SIDE_COLUMNS = SRAM_COLUMNS - LEFT_SIDE_COLUMNS;
     static constexpr int LEFT_SIDE_RAMS = LEFT_SIDE_COLUMNS * SRAM_ROWS;
@@ -85,6 +86,7 @@ struct Memories {
     Alloc1D<cstring, METER_ALUS>                       meter_alus;
 
     struct mem_info {
+        int logical_tables = 0;
         int match_tables = 0;
         int match_bus_min = 0;
         int atcam_tables = 0;

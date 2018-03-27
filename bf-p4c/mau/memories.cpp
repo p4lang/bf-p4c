@@ -374,10 +374,12 @@ bool Memories::analyze_tables(mem_info &mi) {
     for (auto *ta : tables) {
         if (ta->provided_entries == -1 || ta->provided_entries == 0) {
             auto name = ta->table->get_use_name(nullptr, true);
-            if (ta->table_link != nullptr)
+            if (ta->table_link != nullptr) {
                 name = ta->table_link->table->get_use_name(nullptr, true);
-            else
+            } else {
                 mi.independent_gw_tables++;
+                mi.logical_tables++;
+            }
             (*ta->memuse)[name].type = Use::GATEWAY;
             gw_tables.push_back(ta);
             LOG4("Gateway table for " << ta->table->name);
@@ -398,9 +400,11 @@ bool Memories::analyze_tables(mem_info &mi) {
                 no_match_miss_tables.push_back(ta);
             }
             mi.no_match_tables++;
+            mi.logical_tables++;
         } else if (table->layout.atcam) {
             atcam_tables.push_back(ta);
             mi.atcam_tables++;
+            mi.logical_tables += ta->layout_option->logical_tables();
             int width = ta->layout_option->way.width;
             int groups = ta->layout_option->way.match_groups;
             for (size_t i = 0; i < ta->layout_option->partition_sizes.size(); i++) {
@@ -417,6 +421,7 @@ bool Memories::analyze_tables(mem_info &mi) {
             (*ta->memuse)[name].type = Use::EXACT;
             exact_tables.push_back(ta);
             mi.match_tables++;
+           mi.logical_tables++;
             int width = ta->layout_option->way.width;
             int groups = ta->layout_option->way.match_groups;
             int depth = mems_needed(entries, SRAM_DEPTH, groups, false);
@@ -427,6 +432,7 @@ bool Memories::analyze_tables(mem_info &mi) {
            LOG4("Ternary match table " << name);
            (*ta->memuse)[name].type = Use::TERNARY;
            ternary_tables.push_back(ta);
+           mi.logical_tables++;
            mi.ternary_tables++;
            int bytes = table->layout.match_bytes;
            int TCAMs_needed = 0;
@@ -465,7 +471,8 @@ bool Memories::mem_info::constraint_check() const {
         || stats_tables > Memories::STATS_ALUS
         || meter_tables + stateful_tables + selector_tables > Memories::METER_ALUS
         || meter_RAMs + stats_RAMs + stateful_RAMs + selector_RAMs + idletime_RAMs >
-           Memories::MAPRAM_COLUMNS * Memories::SRAM_ROWS) {
+           Memories::MAPRAM_COLUMNS * Memories::SRAM_ROWS
+        || logical_tables > Memories::LOGICAL_TABLES) {
         return false;
     }
     return true;
