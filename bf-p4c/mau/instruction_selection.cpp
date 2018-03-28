@@ -428,6 +428,7 @@ size_t input_operand(const IR::Primitive *prim) {
         return -1;
 }
 
+
 bool StatefulHashDistSetup::Scan::preorder(const IR::MAU::Action *act) {
     self.remove_tempvars.clear();
     if (act->stateful.empty())
@@ -495,10 +496,13 @@ const IR::MAU::HashDist *StatefulHashDistSetup::find_hash_dist(const IR::Express
     if (auto *c = expr->to<IR::Cast>())
         return find_hash_dist(c->expr, prim);
     const IR::MAU::HashDist *hd = nullptr;
-    if (auto *tv = expr->to<IR::TempVar>())
+
+    auto tv = expr->to<IR::TempVar>();
+    if (tv != nullptr && stateful_alu_from_hash_dists.count(tv->name)) {
         hd = stateful_alu_from_hash_dists.at(tv->name);
-    else if (phv.field(expr))
+    } else if (phv.field(expr)) {
         hd = create_hash_dist(expr, prim);
+    }
     return hd;
 }
 
