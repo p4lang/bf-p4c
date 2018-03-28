@@ -289,6 +289,9 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
                 else if (kv.value == "clot")     type = 2;
                 else error(kv.value.lineno, "Unknown parser checksum type");
             }
+            if (kv.value == "clot") {
+                if (unit < 2 || unit > 4)
+                    error(kv.value.lineno, "CLOT can only use checksum engine 2-4"); }
         } else if (kv.key == "start") {
             if (CHECKTYPE(kv.value, tINT)) start = kv.value.i;
         } else if (kv.key == "end") {
@@ -359,6 +362,7 @@ template<class ROW>
 void Parser::Checksum::write_row_config(ROW &row) {
     row.add = add;
     if (dest) row.dst = dest->reg.parser_id();
+    else if (tag >= 0) row.dst = tag;
     row.dst_bit_hdr_end_pos = dst_bit_hdr_end_pos;
     row.hdr_end = end;
     int rsh = 0;
@@ -907,6 +911,9 @@ Parser::State::Match::Clot::Clot(Parser &prsr, gress_t gress, const value_t &tag
         } else if (kv.key == "max_length") {
             if (CHECKTYPE(kv.value, tINT))
                 max_length = kv.value.i;
+        } else if (kv.key == "checksum") {
+            if (CHECKTYPE(kv.value, tINT))
+                csum_unit = kv.value.i;
         } else
             error(kv.key.lineno, "Unknown CLOT key %s", value_desc(kv.key)); }
     if (start < 0)

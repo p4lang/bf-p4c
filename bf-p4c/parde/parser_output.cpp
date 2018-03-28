@@ -121,6 +121,11 @@ struct ParserAsmSerializer : public ParserInspector {
 
         AutoIndent indentMatch(indent);
 
+        for (auto* ck : match->checksums) {
+            if (auto* csum = ck->to<IR::BFN::LoweredParserChecksum>())
+                outputChecksum(csum);
+        }
+
         for (auto* stmt : match->statements) {
             if (auto* extract = stmt->to<IR::BFN::LoweredExtractPhv>())
                 outputExtractPhv(extract);
@@ -130,13 +135,7 @@ struct ParserAsmSerializer : public ParserInspector {
                 BUG("unknown lowered parser primitive type");
         }
 
-
         outputSave(match->saves);
-
-        for (auto* ck : match->checksums) {
-            if (auto* csum = ck->to<IR::BFN::LoweredParserChecksum>())
-                outputChecksum(csum);
-        }
 
         if (match->shift != 0)
             out << indent << "shift: " << match->shift << std::endl;
@@ -195,11 +194,16 @@ struct ParserAsmSerializer : public ParserInspector {
     }
 
     void outputExtractClot(const IR::BFN::LoweredExtractClot* extract) {
-        out << indent << "clot " << extract->dest.tag << " : ";
+        out << indent << "clot " << extract->dest.tag << " :" << std::endl;
+        AutoIndent ai(indent, 1);
 
         if (auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>()) {
             auto bytes = source->extractedBytes();
-            out << Range(bytes.lo, bytes.hi) << std::endl;
+            out << indent << "start: " << bytes.lo << std::endl;
+            out << indent << "length: " << bytes.hi - bytes.lo + 1 << std::endl;
+            if (clot_tag_to_checksum_unit.count(extract->dest.tag))
+                out << indent << "checksum: " << clot_tag_to_checksum_unit.at(extract->dest.tag)
+                    << std::endl;
         } else {
             BUG("Can't generate assembly for: %1%", extract);
         }
@@ -221,7 +225,8 @@ struct ParserAsmSerializer : public ParserInspector {
         // assembler by using some syntax sugar in the assembly
         out << indent << "mask: " << csum->mask << std::endl;
         out << indent << "swap: " << csum->swap << std::endl;
-        out << indent << "end:  " << csum->end  << std::endl;
+        out << indent << "start: " << csum->start  << std::endl;
+        out << indent << "end: " << csum->end  << std::endl;
 
         auto parser = findContext<IR::BFN::LoweredParser>();
         if (csum->type == 0) {
@@ -234,6 +239,8 @@ struct ParserAsmSerializer : public ParserInspector {
             out << indent << "dest: " << csum->phv_dest << std::endl;
         } else if (csum->type == 2) {
             out << indent << "dest: " << csum->clot_dest << std::endl;
+
+            clot_tag_to_checksum_unit[csum->clot_dest.tag] = csum->unit_id;
         }
 
         if (csum->type == 0 && parser->parserError) {
@@ -241,6 +248,10 @@ struct ParserAsmSerializer : public ParserInspector {
             out << indent << "dst_bit: 12" << std::endl;
         }
     }
+
+    // XXX(zma) really a work-around due to lack of reference support of clot
+    // in assembler
+    std::map<unsigned, unsigned> clot_tag_to_checksum_unit;
 
     std::ostream& out;
     indent_t indent;

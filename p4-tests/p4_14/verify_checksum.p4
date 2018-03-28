@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <tofino/intrinsic_metadata.p4>
+
 header_type data_t {
     fields {
         f1 : 32;
@@ -40,9 +42,8 @@ field_list_calculation my_checksum {
 }
 
 calculated_field data.cksum  {
-    update my_checksum;
+    verify my_checksum;
 }
-
 
 parser start {
     extract(data);
@@ -66,5 +67,7 @@ table test1 {
 }
 
 control ingress {
-    apply(test1);
+    if (ig_intr_md_from_parser_aux.ingress_parser_err & 0x1000 != 0x1000) {
+        apply(test1);
+    }
 }

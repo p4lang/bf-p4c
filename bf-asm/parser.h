@@ -152,6 +152,7 @@ class Parser : public Section {
                 bool            load_length = false;
                 int             start = -1, length = -1, length_shift = -1, length_mask = -1;
                 int             max_length = -1;
+                int             csum_unit = -1;
                 Clot(Parser &prsr, gress_t gress, const value_t &tag, const value_t &data);
                 bool parse_length(const value_t &exp, int what=0);
                 template<class PO_ROW> void write_config(PO_ROW &, int) const;

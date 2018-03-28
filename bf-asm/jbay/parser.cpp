@@ -247,6 +247,7 @@ template<> void Parser::State::Match::Clot::write_config(
         po_row.clot_len_src[idx] = length-1;
         po_row.clot_type[idx] = 0;
         po_row.clot_en_len_shr[idx] = 1; }
+    po_row.clot_has_csum[idx] = csum_unit > 0;
 }
 
 template<> void Parser::State::Match::write_counter_config(
