@@ -131,8 +131,12 @@ if (PTF_REQUIREMENTS_MET)
     "AssertionError: Expected packet was not received on device"
     extensions/p4_tests/p4_14/p4-tests/programs/emulation/emulation.p4
     extensions/p4_tests/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4
-    extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4
     extensions/p4_tests/p4_14/p4-tests/programs/resubmit/resubmit.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    ".*InvalidTableOperation.*"
+    extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -223,13 +227,6 @@ p4c_add_xfail_reason("tofino"
   #testdata/p4_16_samples/action_profile-bmv2.p4
   #testdata/p4_16_samples/issue297-bmv2.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
-  )
-
-# BRIG-109
-p4c_add_xfail_reason("tofino"
-  "Couldn't resolve computed value for"
-  # XXX(seth): This code just uses packet_in.lookahead() in a way which isn't supported yet.
-  testdata/p4_16_samples/issue355-bmv2.p4
   )
 
 # Too big a select key (96 bits) for tofino to match in one parser state.  Could be split into

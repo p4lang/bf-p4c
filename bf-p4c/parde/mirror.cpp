@@ -13,15 +13,12 @@ namespace BFN {
 namespace {
 
 /**
- * Analyze the `mirror_packet.add_metadata()` method within the deparser block,
+ * Analyze the `mirror.emit()` method within the deparser block,
  * and try to extract the field list.
  *
- * `mirror_packet.emit()` (which is used by `tofino.p4`) is also accepted as a
- * synonym for `mirror_packet.add_metadata()`.
- *
- * @param statement  The `add_metadata()` method call to analyze.
+ * @param statement  The `emit()` method call to analyze.
  * @return a MirroredFieldList vector containing the mirrored fields, or
- * boost::none if the `add_metadata()` call was invalid.
+ * boost::none if the `emit()` call was invalid.
  */
 boost::optional<MirroredFieldList*>
 analyzeMirrorStatement(const IR::MethodCallStatement* statement) {
@@ -30,7 +27,7 @@ analyzeMirrorStatement(const IR::MethodCallStatement* statement) {
         return boost::none;
     }
     auto member = methodCall->method->to<IR::Member>();
-    if (!member || (member->member != "add_metadata" && member->member != "emit")) {
+    if (!member || member->member != "emit") {
         return boost::none;
     }
     if (methodCall->arguments->size() != 2) {
@@ -106,11 +103,13 @@ struct FindMirroredFieldLists : public Inspector {
         auto* mi = P4::MethodInstance::resolve(call, refMap, typeMap);
         if (auto* em = mi->to<P4::ExternMethod>()) {
             cstring externName = em->actualExternType->name;
-            if (externName != "mirror_packet") return false;
+            LOG5("externName: " << externName);
+            if (externName != "Mirror") return false;
         }
+
         auto* ifStatement = findContext<IR::IfStatement>();
         if (!ifStatement) {
-            ::warning("Expected mirror_packet to be used within an `if` "
+            ::warning("Expected mirror to be used within an `if` "
                       "statement");
             return false;
         }
@@ -267,9 +266,14 @@ struct AddMirroredFieldListParser : public Transform {
                                     fieldListState));
       }
 
-      auto* select = new IR::BFN::Select(new IR::BFN::BufferRVal(StartLen(0, 8)));
-      return new IR::BFN::ParserState("$mirrored", INGRESS, { },
-                                      { select }, transitions);
+      // Add a default match for the case where there are no field lists in
+      // this mirrored packet.
+      transitions.push_back(
+          new IR::BFN::Transition(match_t(), 1, finalState));
+
+      auto *select = new IR::BFN::Select(new IR::BFN::BufferRVal(StartLen(0, 8)));
+      return new IR::BFN::ParserState("$mirrored", EGRESS, {},
+                                      {select}, transitions);
   }
 
   Visitor::profile_t init_apply(const IR::Node *root) override {
