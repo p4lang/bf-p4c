@@ -264,6 +264,17 @@ stage <constant> <thread>:
         context_json:
             # any keys/vector/values here are converted to json and output into
             # the context.json info for this table verbatim
+        static_entries:
+            # List of static entries as described in the p4 program. These are
+            # passed on directly to the driver through context json. The
+            # match_key_fields_values and action_parameters_values follow the
+            # same order as the p4_param_order list in the table and action
+            # sections
+            - priority: <int>
+              match_key_fields_values: [ <int>, ..., <int> ]
+              action: <action_name>
+              is_default_entry: <bool>
+              action_parameters_values: [ <int>, ..., <int> ]
     exact_match <name> [<logical_id>]:
         # Exact match table
         row: <vector>

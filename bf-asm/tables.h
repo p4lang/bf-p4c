@@ -395,6 +395,15 @@ public:
         void add_action_format(Table *, json::map &);
         bool has_hash_dist() { return ( table->table_type() == HASH_ACTION ); }
     };
+    
+    struct static_entry {
+        int priority;
+        std::vector<int> match_key_fields_values;
+        std::string action;
+        bool is_default_entry;
+        std::vector<int> action_parameters_values;
+    };
+    typedef std::vector<static_entry>  static_entries;
 public:
     const char *name() const { return name_.c_str(); }
     const char *p4_name() const { if(p4_table) return p4_table->p4_name(); return ""; }
@@ -502,6 +511,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     std::unique_ptr<json::map>  context_json;
     unsigned                    default_next_table_id = 0xFF;
     unsigned                    default_next_table_mask = 0x0;
+    static_entries              static_entries_list;
 
     static std::map<std::string, Table *>       all;
 
@@ -682,6 +692,7 @@ public:
             unsigned hash_table_id, json::vector &hash_bits);
     virtual void add_hash_functions(json::map &stage_tbl);
     void add_all_reference_tables(json::map &tbl, Table *math_table=nullptr);
+    void add_static_entries(json::map &tbl); 
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \

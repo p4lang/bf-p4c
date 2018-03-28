@@ -208,6 +208,7 @@ static const IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4:
     auto rv = new IR::MAU::Action;
     rv->srcInfo = ac->srcInfo;
     rv->name = ac->externalName();
+    rv->internal_name = ac->name;
     ActionArgSetup aas;
     size_t arg_idx = 0;
     for (auto param : *ac->parameters->getEnumerator()) {

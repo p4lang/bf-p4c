@@ -1746,6 +1746,62 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
     }
 }
 
+void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
+        const IR::MAU::Table *tbl) const {
+    auto entries_list = tbl->match_table->getEntries();
+    if (entries_list == nullptr)
+        return;
+
+    for (auto k : tbl->match_key) {
+        if (k->match_type.name != "exact")
+            P4C_UNIMPLEMENTED("Static entries are only supported for exact-match tables");
+    }
+
+    out << indent++ << "static_entries:" << std::endl;
+    for (auto entry : entries_list->entries) {
+        auto method_call = entry->action->to<IR::MethodCallExpression>();
+        BUG_CHECK(method_call, "Action is not specified for a static entry");
+
+        auto path = method_call->method->to<IR::PathExpression>()->path;
+        size_t key_index = 0, param_index = 0;
+        out << indent++ << "- priority: 0" << std::endl;
+        out << indent << "match_key_fields_values: [";
+        for (auto key : entry->getKeys()->components) {
+            if (auto b = key->to<IR::BoolLiteral>()) {
+                out << (b->value ? 1 : 0);
+            } else if (key->to<IR::Constant>()) {
+                out << key;
+            } else {
+                P4C_UNIMPLEMENTED("Static entries are only supported for match keys with "
+                        "bit-string type");
+            }
+
+            if (key_index++ < entry->getKeys()->components.size() - 1)
+                out << ", ";
+        }
+        out << "]" << std::endl;
+
+        for (auto action : Values(tbl->actions)) {
+            if (action->internal_name == path->name) {
+                out << indent << "action: " << canon_name(action->name) << std::endl;
+                break;
+            }
+        }
+
+        out << indent << "is_default_entry: false" <<  std::endl;
+        if (method_call->arguments->size() > 0) {
+            out << indent << "action_parameters_values: [";
+            for (auto param : *method_call->arguments) {
+                out << param;
+                if (param_index++ < method_call->arguments->size() - 1)
+                    out << ", ";
+            }
+            out << "]" << std::endl;
+        }
+        indent--;
+    }
+}
+
 void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl) const {
     out << indent << "number_partitions: "
@@ -1864,6 +1920,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             out << indent << "next: " << next_hit << std::endl;
         }
     }
+
+    emit_static_entries(out, indent, tbl);
 
     if (!tbl->layout.ternary && !tbl->layout.no_match_miss_path())
         emit_action_data_bus(out, indent, tbl, true);

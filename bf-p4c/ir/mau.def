@@ -481,6 +481,7 @@ class Action : ActionFunction {
     bool miss_action_only = false;
     bool init_default = false;
     bool default_allowed = false;
+    cstring internal_name = "";
     cstring disallowed_reason = "none";
     inline Vector<Expression> default_params = {};
     // Separate stateful primitives from actions, as they aren't instructions

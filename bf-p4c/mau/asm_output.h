@@ -97,6 +97,7 @@ class MauAsmOutput : public MauInspector {
     void emit_ternary_match(std::ostream &out, indent_t, const TableFormat::Use &use) const;
     void emit_atcam_match(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage, gress_t gress) const;
+    void emit_static_entries(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl) const;
     std::string find_indirect_index(const IR::MAU::AttachedMemory *am, bool index_only,
             const IR::MAU::HashDist *hd, const IR::MAU::Table *tbl) const;
     void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;

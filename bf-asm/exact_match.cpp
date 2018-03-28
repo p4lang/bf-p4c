@@ -128,6 +128,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         match_attributes["match_type"] = "match_with_no_key";
         stage_tbl["stage_table_type"] = "match_with_no_key";
         stage_tbl["size"] = 1024; }
+    add_static_entries(tbl);
 }
 
 // Generate hash_functions node in cjson.

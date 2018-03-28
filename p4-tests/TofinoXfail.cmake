@@ -625,16 +625,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue134-bmv2.p4
 )
 
-# no support for static entries
-p4c_add_xfail_reason("tofino"
-  "Table entries are not yet implemented in this backend"
-  testdata/p4_16_samples/table-entries-exact-bmv2.p4
-  testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
-  testdata/p4_16_samples/table-entries-priority-bmv2.p4
-  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
-  testdata/p4_16_samples/table-entries-valid-bmv2.p4
-  )
-
 # These programs include non-byte-aligned headers, which are not supported on
 # Tofino.
 # XXX(seth): We're obviously losing some test coverage here; perhaps we should
