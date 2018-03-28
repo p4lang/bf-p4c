@@ -694,15 +694,19 @@ control Hephzibah(inout headers hdr, inout metadata meta, inout standard_metadat
 control Homeacre(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Donegal") register_action<bit<1>, bit<1>>(Robinette) Donegal = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };
     @name(".Sitka") register_action<bit<1>, bit<1>>(Steger) Sitka = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };
@@ -1232,6 +1236,8 @@ control Puyallup(inout headers hdr, inout metadata meta, inout standard_metadata
     @name(".Marquand") direct_counter(CounterType.packets_and_bytes) Marquand;
     @name(".Chaumont") register_action<bit<1>, bit<1>>(Grants) Chaumont = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
             value = 1w1;
         }

@@ -961,13 +961,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Rockville_tmp_2;
     @name(".Tavistock") register_action<bit<1>, bit<1>>(Goessel) _Tavistock_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Rockville_in_value_1;
+            _Rockville_in_value_1 = value;
+            value = _Rockville_in_value_1;
             rv = value;
         }
     };
     @name(".Westboro") register_action<bit<1>, bit<1>>(Venice) _Westboro_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Rockville_in_value_2;
+            _Rockville_in_value_2 = value;
+            value = _Rockville_in_value_2;
             rv = value;
         }
     };
@@ -1047,6 +1051,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".LaHoma") direct_counter(CounterType.packets_and_bytes) _LaHoma_0;
     @name(".Veteran") register_action<bit<1>, bit<1>>(Linville) _Veteran_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> _Hebbville_in_value_0;
             rv = 1w0;
             value = 1w1;
         }

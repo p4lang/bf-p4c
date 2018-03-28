@@ -378,17 +378,21 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @meter_sweep_interval(0) @name(".t4_meter") direct_meter<bit<8>>(MeterType.packets) t4_meter_1;
     @name(".e1_alu") register_action<e1_alu_layout, int<32>>(e1_reg) e1_alu = {
         void apply(inout e1_alu_layout value, out int<32> rv) {
-            rv = value.hi;
-            value.hi = value.hi + 32s1;
-            if (value.lo != (int<32>)(bit<32>)hdr.ethernet.etherType) 
+            e1_alu_layout in_value;
+            in_value = value;
+            rv = in_value.hi;
+            value.hi = in_value.hi + 32s1;
+            if (in_value.lo != (int<32>)(bit<32>)hdr.ethernet.etherType) 
                 value.lo = 32s0;
         }
     };
     @name(".e2_alu") register_action<e2_alu_layout, bit<16>>(e2_reg) e2_alu = {
         void apply(inout e2_alu_layout value, out bit<16> rv) {
+            e2_alu_layout in_value_14;
+            in_value_14 = value;
             rv = 16w0;
-            value.hi = value.hi + 16w1;
-            if (value.lo != hdr.ethernet.etherType) 
+            value.hi = in_value_14.hi + 16w1;
+            if (in_value_14.lo != hdr.ethernet.etherType) 
                 value.lo = 16w0;
         }
     };
@@ -396,17 +400,21 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".e6_lpf") DirectLpf<bit<32>>() e6_lpf_1;
     @name(".t1_alu") register_action<t1_alu_layout, int<32>>(t1_reg) t1_alu = {
         void apply(inout t1_alu_layout value, out int<32> rv) {
-            rv = value.hi;
-            value.hi = value.hi + 32s1;
-            if (value.lo != (int<32>)(bit<32>)hdr.ethernet.etherType) 
+            t1_alu_layout in_value_15;
+            in_value_15 = value;
+            rv = in_value_15.hi;
+            value.hi = in_value_15.hi + 32s1;
+            if (in_value_15.lo != (int<32>)(bit<32>)hdr.ethernet.etherType) 
                 value.lo = 32s0;
         }
     };
     @name(".t2_alu") register_action<t2_alu_layout, bit<16>>(t2_reg) t2_alu = {
         void apply(inout t2_alu_layout value, out bit<16> rv) {
+            t2_alu_layout in_value_16;
+            in_value_16 = value;
             rv = 16w0;
-            value.hi = value.hi + 16w1;
-            if (value.lo != hdr.ethernet.etherType) 
+            value.hi = in_value_16.hi + 16w1;
+            if (in_value_16.lo != hdr.ethernet.etherType) 
                 value.lo = 16w0;
         }
     };
@@ -414,34 +422,42 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".t6_lpf") DirectLpf<bit<32>>() t6_lpf_1;
     @name(".vp5_alu") register_action<vp5_alu_layout, bit<32>>(vp5_reg) vp5_alu = {
         void apply(inout vp5_alu_layout value, out bit<32> rv) {
+            vp5_alu_layout in_value_17;
+            in_value_17 = value;
             rv = 32w0;
-            if (value.lo == 32w0xffffffff) 
-                value.hi = value.hi + 32w1;
-            value.lo = value.lo + 32w1;
+            if (in_value_17.lo == 32w0xffffffff) 
+                value.hi = in_value_17.hi + 32w1;
+            value.lo = in_value_17.lo + 32w1;
         }
     };
     @name(".vp6_alu") register_action<vp6_alu_layout, bit<32>>(vp6_reg) vp6_alu = {
         void apply(inout vp6_alu_layout value, out bit<32> rv) {
+            vp6_alu_layout in_value_18;
+            in_value_18 = value;
             rv = 32w0;
-            if (value.lo == 32w0xffffffff) 
-                value.hi = value.hi + 32w1;
-            value.lo = value.lo + 32w1;
+            if (in_value_18.lo == 32w0xffffffff) 
+                value.hi = in_value_18.hi + 32w1;
+            value.lo = in_value_18.lo + 32w1;
         }
     };
     @name(".vpp5_alu") register_action<vpp5_alu_layout, bit<32>>(vpp5_reg) vpp5_alu = {
         void apply(inout vpp5_alu_layout value, out bit<32> rv) {
+            vpp5_alu_layout in_value_19;
+            in_value_19 = value;
             rv = 32w0;
-            if (value.lo == 32w0xffffffff) 
-                value.hi = value.hi + 32w1;
-            value.lo = value.lo + 32w1;
+            if (in_value_19.lo == 32w0xffffffff) 
+                value.hi = in_value_19.hi + 32w1;
+            value.lo = in_value_19.lo + 32w1;
         }
     };
     @name(".vpp6_alu") register_action<vpp6_alu_layout, bit<32>>(vpp6_reg) vpp6_alu = {
         void apply(inout vpp6_alu_layout value, out bit<32> rv) {
+            vpp6_alu_layout in_value_20;
+            in_value_20 = value;
             rv = 32w0;
-            if (value.lo == 32w0xffffffff) 
-                value.hi = value.hi + 32w1;
-            value.lo = value.lo + 32w1;
+            if (in_value_20.lo == 32w0xffffffff) 
+                value.hi = in_value_20.hi + 32w1;
+            value.lo = in_value_20.lo + 32w1;
         }
     };
     @name(".eg_dummy_action") action eg_dummy_action_0() {
@@ -1076,51 +1092,59 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @meter_per_flow_enable(1) @meter_pre_color_aware_per_flow_enable(1) @meter_sweep_interval(0) @name(".m1") meter(32w20480, MeterType.bytes) m1_0;
     @name(".sel_res_alu") register_action<bit<16>, bit<16>>(sel_res_reg) sel_res_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            bit<16> in_value_21;
             rv = 16w0;
             value = (bit<16>)hdr.ig_intr_md_for_tm.ucast_egress_port;
         }
     };
     @name(".set_mrk_hi_alu") register_action<bit<16>, bit<16>>(mrk_hi_reg) set_mrk_hi_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            bit<16> in_value_22;
             value = meta.md.etherType_hi;
             rv = value;
         }
     };
     @name(".set_mrk_lo_alu") register_action<bit<16>, bit<16>>(mrk_lo_reg) set_mrk_lo_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            bit<16> in_value_23;
             value = hdr.ethernet.etherType & 16w0xff;
             rv = value;
         }
     };
     @name(".stateful_selection_alu") selector_action(sel_tbl_ap) stateful_selection_alu = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value_24;
             rv = 1w0;
             value = 1w0;
         }
     };
     @name(".stats_key_alu1") register_action<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu1 = {
         void apply(inout stats_key_alu1_layout value, out bit<32> rv) {
-            rv = value.lo;
-            if (value.hi < 32w2) 
-                value.hi = value.hi + 32w1;
-            if (value.hi >= 32w2) 
+            stats_key_alu1_layout in_value_25;
+            in_value_25 = value;
+            rv = in_value_25.lo;
+            if (in_value_25.hi < 32w2) 
+                value.hi = in_value_25.hi + 32w1;
+            if (in_value_25.hi >= 32w2) 
                 value.hi = 32w0;
-            if (value.hi >= 32w2 && value.lo < 32w2099) 
-                value.lo = value.lo + 32w1;
-            if (value.lo >= 32w2099) 
+            if (in_value_25.hi >= 32w2 && in_value_25.lo < 32w2099) 
+                value.lo = in_value_25.lo + 32w1;
+            if (in_value_25.lo >= 32w2099) 
                 value.lo = 32w100;
         }
     };
     @name(".stats_key_alu3") register_action<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu3 = {
         void apply(inout stats_key_alu1_layout value, out bit<32> rv) {
-            rv = value.lo;
-            if (value.hi < 32w2) 
-                value.hi = value.hi + 32w1;
-            if (value.hi >= 32w2) 
+            stats_key_alu1_layout in_value_26;
+            in_value_26 = value;
+            rv = in_value_26.lo;
+            if (in_value_26.hi < 32w2) 
+                value.hi = in_value_26.hi + 32w1;
+            if (in_value_26.hi >= 32w2) 
                 value.hi = 32w0;
-            if (value.hi >= 32w2 && value.lo < 32w11) 
-                value.lo = value.lo + 32w1;
-            if (value.lo >= 32w11) 
+            if (in_value_26.hi >= 32w2 && in_value_26.lo < 32w11) 
+                value.lo = in_value_26.lo + 32w1;
+            if (in_value_26.lo >= 32w11) 
                 value.lo = 32w0;
         }
     };

@@ -191,6 +191,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".bfd_cnt_rx_alu") register_action<bit<8>, bit<8>>(bfd_cnt) bfd_cnt_rx_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            bit<8> in_value;
+            in_value = value;
             rv = 8w0;
             value = 8w0;
         }
@@ -198,10 +200,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".bfd_cnt_tx_alu") register_action<bit<8>, bit<8>>(bfd_cnt) bfd_cnt_tx_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> alu_hi;
+            bit<8> in_value;
+            in_value = value;
             rv = 8w0;
             alu_hi = 8w1;
-            value = value + 8w1;
-            if (value > 8w3) 
+            value = in_value + 8w1;
+            if (in_value > 8w3) 
                 rv = alu_hi;
         }
     };

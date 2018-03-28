@@ -2,7 +2,18 @@
 #include <v1model.p4>
 
 struct md_t {
-    bit<1>  run_eg;
+    bit<1>  run_eg_0;
+    bit<1>  run_eg_1;
+    bit<1>  run_eg_2;
+    bit<1>  run_eg_3;
+    bit<1>  run_eg_4;
+    bit<1>  run_eg_5;
+    bit<1>  run_eg_6;
+    bit<1>  run_eg_7;
+    bit<1>  run_eg_8;
+    bit<1>  run_eg_9;
+    bit<1>  run_eg_a;
+    bit<1>  run_eg_b;
     bit<1>  run_t1;
     bit<1>  run_t2;
     bit<32> key0;
@@ -166,24 +177,244 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".cntr") counter(32w29696, CounterType.packets_and_bytes) cntr;
-    @name(".mtr") meter(32w4096, MeterType.packets) mtr;
-    @name(".egr_tbl_action") action egr_tbl_action(bit<32> cntr_index, bit<32> meter_index) {
-        cntr.count((bit<32>)cntr_index);
-        mtr.execute_meter((bit<32>)meter_index, hdr.ig_intr_md_for_tm.packet_color);
+    @name(".cntr_0") counter(32w29696, CounterType.packets_and_bytes) cntr_0;
+    @name(".cntr_1") counter(32w29696, CounterType.packets_and_bytes) cntr_1;
+    @name(".cntr_2") counter(32w29696, CounterType.packets_and_bytes) cntr_2;
+    @name(".cntr_3") counter(32w29696, CounterType.packets_and_bytes) cntr_3;
+    @name(".cntr_4") counter(32w29696, CounterType.packets_and_bytes) cntr_4;
+    @name(".cntr_5") counter(32w29696, CounterType.packets_and_bytes) cntr_5;
+    @name(".cntr_6") counter(32w29696, CounterType.packets_and_bytes) cntr_6;
+    @name(".cntr_7") counter(32w29696, CounterType.packets_and_bytes) cntr_7;
+    @name(".cntr_8") counter(32w29696, CounterType.packets_and_bytes) cntr_8;
+    @name(".cntr_9") counter(32w29696, CounterType.packets_and_bytes) cntr_9;
+    @name(".cntr_a") counter(32w29696, CounterType.packets_and_bytes) cntr_a;
+    @name(".cntr_b") counter(32w29696, CounterType.packets_and_bytes) cntr_b;
+    @name(".mtr_0") meter(32w4096, MeterType.packets) mtr_0;
+    @name(".mtr_1") meter(32w4096, MeterType.packets) mtr_1;
+    @name(".mtr_2") meter(32w4096, MeterType.packets) mtr_2;
+    @name(".mtr_3") meter(32w4096, MeterType.packets) mtr_3;
+    @name(".mtr_4") meter(32w4096, MeterType.packets) mtr_4;
+    @name(".mtr_5") meter(32w4096, MeterType.packets) mtr_5;
+    @name(".mtr_6") meter(32w4096, MeterType.packets) mtr_6;
+    @name(".mtr_7") meter(32w4096, MeterType.packets) mtr_7;
+    @name(".mtr_8") meter(32w4096, MeterType.packets) mtr_8;
+    @name(".mtr_9") meter(32w4096, MeterType.packets) mtr_9;
+    @name(".mtr_a") meter(32w4096, MeterType.packets) mtr_a;
+    @name(".mtr_b") meter(32w4096, MeterType.packets) mtr_b;
+    @name(".egr_tbl_action_0") action egr_tbl_action_0(bit<32> cntr_index, bit<32> meter_index) {
+        cntr_0.count((bit<32>)cntr_index);
+        mtr_0.execute_meter((bit<32>)meter_index, hdr.eg_intr_md_for_oport.drop_ctl);
     }
-    @name(".egr_tbl") table egr_tbl {
+    @name(".egr_tbl_action_1") action egr_tbl_action_1(bit<32> cntr_index, bit<32> meter_index) {
+        cntr_1.count((bit<32>)cntr_index);
+        mtr_1.execute_meter((bit<32>)meter_index, hdr.eg_intr_md_for_oport.drop_ctl);
+    }
+    @name(".egr_tbl_action_2") action egr_tbl_action_2(bit<32> cntr_index, bit<32> meter_index) {
+        cntr_2.count((bit<32>)cntr_index);
+        mtr_2.execute_meter((bit<32>)meter_index, hdr.eg_intr_md_for_oport.drop_ctl);
+    }
+    @name(".egr_tbl_action_3") action egr_tbl_action_3(bit<32> cntr_index, bit<32> meter_index) {
+        cntr_3.count((bit<32>)cntr_index);
+        mtr_3.execute_meter((bit<32>)meter_index, hdr.eg_intr_md_for_oport.drop_ctl);
+    }
+    @name(".egr_tbl_action_4") action egr_tbl_action_4(bit<32> cntr_index, bit<32> meter_index) {
+        cntr_4.count((bit<32>)cntr_index);
+        mtr_4.execute_meter((bit<32>)meter_index, hdr.eg_intr_md_for_oport.drop_ctl);
+    }
+    @name(".egr_tbl_action_5") action egr_tbl_action_5(bit<32> cntr_index, bit<32> meter_index) {
+        cntr_5.count((bit<32>)cntr_index);
+        mtr_5.execute_meter((bit<32>)meter_index, hdr.eg_intr_md_for_oport.drop_ctl);
+    }
+    @name(".egr_tbl_action_6") action egr_tbl_action_6(bit<32> cntr_index, bit<32> meter_index) {
+        cntr_6.count((bit<32>)cntr_index);
+        mtr_6.execute_meter((bit<32>)meter_index, hdr.eg_intr_md_for_oport.drop_ctl);
+    }
+    @name(".egr_tbl_action_7") action egr_tbl_action_7(bit<32> cntr_index, bit<32> meter_index) {
+        cntr_7.count((bit<32>)cntr_index);
+        mtr_7.execute_meter((bit<32>)meter_index, hdr.eg_intr_md_for_oport.drop_ctl);
+    }
+    @name(".egr_tbl_action_8") action egr_tbl_action_8(bit<32> cntr_index, bit<32> meter_index) {
+        cntr_8.count((bit<32>)cntr_index);
+        mtr_8.execute_meter((bit<32>)meter_index, hdr.eg_intr_md_for_oport.drop_ctl);
+    }
+    @name(".egr_tbl_action_9") action egr_tbl_action_9(bit<32> cntr_index, bit<32> meter_index) {
+        cntr_9.count((bit<32>)cntr_index);
+        mtr_9.execute_meter((bit<32>)meter_index, hdr.eg_intr_md_for_oport.drop_ctl);
+    }
+    @name(".egr_tbl_action_a") action egr_tbl_action_a(bit<32> cntr_index, bit<32> meter_index) {
+        cntr_a.count((bit<32>)cntr_index);
+        mtr_a.execute_meter((bit<32>)meter_index, hdr.eg_intr_md_for_oport.drop_ctl);
+    }
+    @name(".egr_tbl_action_b") action egr_tbl_action_b(bit<32> cntr_index, bit<32> meter_index) {
+        cntr_b.count((bit<32>)cntr_index);
+        mtr_b.execute_meter((bit<32>)meter_index, hdr.eg_intr_md_for_oport.drop_ctl);
+    }
+    @name(".egr_tbl_0") table egr_tbl_0 {
         actions = {
-            egr_tbl_action;
+            egr_tbl_action_0;
         }
         key = {
             meta.md.key0: ternary;
         }
-        size = 147456;
+        size = 1228;
+    }
+    @name(".egr_tbl_1") table egr_tbl_1 {
+        actions = {
+            egr_tbl_action_1;
+        }
+        key = {
+            meta.md.key0: ternary;
+        }
+        size = 1228;
+    }
+    @name(".egr_tbl_2") table egr_tbl_2 {
+        actions = {
+            egr_tbl_action_2;
+        }
+        key = {
+            meta.md.key0: ternary;
+        }
+        size = 1228;
+    }
+    @name(".egr_tbl_3") table egr_tbl_3 {
+        actions = {
+            egr_tbl_action_3;
+        }
+        key = {
+            meta.md.key0: ternary;
+        }
+        size = 1228;
+    }
+    @name(".egr_tbl_4") table egr_tbl_4 {
+        actions = {
+            egr_tbl_action_4;
+        }
+        key = {
+            meta.md.key0: ternary;
+        }
+        size = 1228;
+    }
+    @name(".egr_tbl_5") table egr_tbl_5 {
+        actions = {
+            egr_tbl_action_5;
+        }
+        key = {
+            meta.md.key0: ternary;
+        }
+        size = 1228;
+    }
+    @name(".egr_tbl_6") table egr_tbl_6 {
+        actions = {
+            egr_tbl_action_6;
+        }
+        key = {
+            meta.md.key0: ternary;
+        }
+        size = 1228;
+    }
+    @name(".egr_tbl_7") table egr_tbl_7 {
+        actions = {
+            egr_tbl_action_7;
+        }
+        key = {
+            meta.md.key0: ternary;
+        }
+        size = 1228;
+    }
+    @name(".egr_tbl_8") table egr_tbl_8 {
+        actions = {
+            egr_tbl_action_8;
+        }
+        key = {
+            meta.md.key0: ternary;
+        }
+        size = 1228;
+    }
+    @name(".egr_tbl_9") table egr_tbl_9 {
+        actions = {
+            egr_tbl_action_9;
+        }
+        key = {
+            meta.md.key0: ternary;
+        }
+        size = 1228;
+    }
+    @name(".egr_tbl_a") table egr_tbl_a {
+        actions = {
+            egr_tbl_action_a;
+        }
+        key = {
+            meta.md.key0: ternary;
+        }
+        size = 1228;
+    }
+    @name(".egr_tbl_b") table egr_tbl_b {
+        actions = {
+            egr_tbl_action_b;
+        }
+        key = {
+            meta.md.key0: ternary;
+        }
+        size = 1228;
     }
     apply {
-        if (1w1 == meta.md.run_eg) {
-            egr_tbl.apply();
+        if (1w1 == meta.md.run_eg_0) {
+            egr_tbl_0.apply();
+        }
+        else {
+            if (1w1 == meta.md.run_eg_1) {
+                egr_tbl_1.apply();
+            }
+            else {
+                if (1w1 == meta.md.run_eg_2) {
+                    egr_tbl_2.apply();
+                }
+                else {
+                    if (1w1 == meta.md.run_eg_3) {
+                        egr_tbl_3.apply();
+                    }
+                    else {
+                        if (1w1 == meta.md.run_eg_4) {
+                            egr_tbl_4.apply();
+                        }
+                        else {
+                            if (1w1 == meta.md.run_eg_5) {
+                                egr_tbl_5.apply();
+                            }
+                            else {
+                                if (1w1 == meta.md.run_eg_6) {
+                                    egr_tbl_6.apply();
+                                }
+                                else {
+                                    if (1w1 == meta.md.run_eg_7) {
+                                        egr_tbl_7.apply();
+                                    }
+                                    else {
+                                        if (1w1 == meta.md.run_eg_8) {
+                                            egr_tbl_8.apply();
+                                        }
+                                        else {
+                                            if (1w1 == meta.md.run_eg_9) {
+                                                egr_tbl_9.apply();
+                                            }
+                                            else {
+                                                if (1w1 == meta.md.run_eg_a) {
+                                                    egr_tbl_a.apply();
+                                                }
+                                                else {
+                                                    if (1w1 == meta.md.run_eg_b) {
+                                                        egr_tbl_b.apply();
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -211,71 +442,93 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".reg_9") register<bit<32>>(32w36864) reg_9;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".ing_mtr") meter(32w10240, MeterType.packets) ing_mtr;
+    @name(".ing_mtr") meter(32w8192, MeterType.packets) ing_mtr;
     @name(".reg_alu_0") register_action<bit<32>, bit<32>>(reg_0) reg_alu_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".reg_alu_1") register_action<bit<32>, bit<32>>(reg_1) reg_alu_1 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".reg_alu_10") register_action<bit<32>, bit<32>>(reg_10) reg_alu_10 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".reg_alu_2") register_action<bit<32>, bit<32>>(reg_2) reg_alu_2 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".reg_alu_3") register_action<bit<32>, bit<32>>(reg_3) reg_alu_3 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".reg_alu_4") register_action<bit<32>, bit<32>>(reg_4) reg_alu_4 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".reg_alu_5") register_action<bit<32>, bit<32>>(reg_5) reg_alu_5 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".reg_alu_6") register_action<bit<32>, bit<32>>(reg_6) reg_alu_6 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".reg_alu_7") register_action<bit<32>, bit<32>>(reg_7) reg_alu_7 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".reg_alu_8") register_action<bit<32>, bit<32>>(reg_8) reg_alu_8 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".reg_alu_9") register_action<bit<32>, bit<32>>(reg_9) reg_alu_9 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".set_egr_port") action set_egr_port() {
@@ -284,8 +537,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".drop_pkt") action drop_pkt() {
         mark_to_drop();
     }
-    @name(".set_md") action set_md(bit<1> run_eg, bit<1> run_t1, bit<1> run_t2, bit<32> key0) {
-        meta.md.run_eg = run_eg;
+    @name(".set_md") action set_md(bit<1> run_eg_0, bit<1> run_eg_1, bit<1> run_eg_2, bit<1> run_eg_3, bit<1> run_eg_4, bit<1> run_eg_5, bit<1> run_eg_6, bit<1> run_eg_7, bit<1> run_eg_8, bit<1> run_eg_9, bit<1> run_eg_a, bit<1> run_eg_b, bit<1> run_t1, bit<1> run_t2, bit<32> key0) {
+        meta.md.run_eg_0 = run_eg_0;
+        meta.md.run_eg_1 = run_eg_1;
+        meta.md.run_eg_2 = run_eg_2;
+        meta.md.run_eg_3 = run_eg_3;
+        meta.md.run_eg_4 = run_eg_4;
+        meta.md.run_eg_5 = run_eg_5;
+        meta.md.run_eg_6 = run_eg_6;
+        meta.md.run_eg_7 = run_eg_7;
+        meta.md.run_eg_8 = run_eg_8;
+        meta.md.run_eg_9 = run_eg_9;
+        meta.md.run_eg_a = run_eg_a;
+        meta.md.run_eg_b = run_eg_b;
         meta.md.run_t1 = run_t1;
         meta.md.run_t2 = run_t2;
         meta.md.key0 = key0;
@@ -675,68 +939,90 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         if (1w1 == meta.md.run_t1) {
             t1_0.apply();
         }
-        if (1w1 == meta.md.run_t2) {
-            t2_0.apply();
+        else {
+            if (1w1 == meta.md.run_t2) {
+                t2_0.apply();
+            }
         }
         if (1w1 == meta.md.run_t1) {
             t1_1.apply();
         }
-        if (1w1 == meta.md.run_t2) {
-            t2_1.apply();
+        else {
+            if (1w1 == meta.md.run_t2) {
+                t2_1.apply();
+            }
         }
         if (1w1 == meta.md.run_t1) {
             t1_2.apply();
         }
-        if (1w1 == meta.md.run_t2) {
-            t2_2.apply();
+        else {
+            if (1w1 == meta.md.run_t2) {
+                t2_2.apply();
+            }
         }
         if (1w1 == meta.md.run_t1) {
             t1_3.apply();
         }
-        if (1w1 == meta.md.run_t2) {
-            t2_3.apply();
+        else {
+            if (1w1 == meta.md.run_t2) {
+                t2_3.apply();
+            }
         }
         if (1w1 == meta.md.run_t1) {
             t1_4.apply();
         }
-        if (1w1 == meta.md.run_t2) {
-            t2_4.apply();
+        else {
+            if (1w1 == meta.md.run_t2) {
+                t2_4.apply();
+            }
         }
         if (1w1 == meta.md.run_t1) {
             t1_5.apply();
         }
-        if (1w1 == meta.md.run_t2) {
-            t2_5.apply();
+        else {
+            if (1w1 == meta.md.run_t2) {
+                t2_5.apply();
+            }
         }
         if (1w1 == meta.md.run_t1) {
             t1_6.apply();
         }
-        if (1w1 == meta.md.run_t2) {
-            t2_6.apply();
+        else {
+            if (1w1 == meta.md.run_t2) {
+                t2_6.apply();
+            }
         }
         if (1w1 == meta.md.run_t1) {
             t1_7.apply();
         }
-        if (1w1 == meta.md.run_t2) {
-            t2_7.apply();
+        else {
+            if (1w1 == meta.md.run_t2) {
+                t2_7.apply();
+            }
         }
         if (1w1 == meta.md.run_t1) {
             t1_8.apply();
         }
-        if (1w1 == meta.md.run_t2) {
-            t2_8.apply();
+        else {
+            if (1w1 == meta.md.run_t2) {
+                t2_8.apply();
+            }
         }
         if (1w1 == meta.md.run_t1) {
             t1_9.apply();
         }
-        if (1w1 == meta.md.run_t2) {
-            t2_9.apply();
+        else {
+            if (1w1 == meta.md.run_t2) {
+                t2_9.apply();
+            }
         }
         if (1w1 == meta.md.run_t1) {
             t1_10.apply();
         }
-        if (1w1 == meta.md.run_t2) {
-            t2_10.apply();
+        else {
+            if (1w1 == meta.md.run_t2) {
+                t2_10.apply();
+            }
         }
         if (meta.md.t1_hit == 1w1 || meta.md.t2_hit == 1w1 || meta.md.run_t1 == 1w0 && meta.md.run_t2 == 1w0) {
             set_dest.apply();

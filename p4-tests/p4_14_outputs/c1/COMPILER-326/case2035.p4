@@ -559,15 +559,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control Addison(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Kewanee") register_action<bit<1>, bit<1>>(Hernandez) Kewanee = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };
     @name(".Valdosta") register_action<bit<1>, bit<1>>(Mayday) Valdosta = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = ~value;
         }
     };

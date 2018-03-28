@@ -555,6 +555,8 @@ control HpHSVC(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control IFycyA(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".tOUEnP") register_action<bit<1>, bit<1>>(QUINJI) tOUEnP = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
             value = 1w1;
         }
@@ -814,15 +816,19 @@ control OqQwzQ(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control TDPRYG(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".fcVprY") register_action<bit<1>, bit<1>>(GBdGiH) fcVprY = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };
     @name(".vOaDPT") register_action<bit<1>, bit<1>>(yevXhQ) vOaDPT = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };

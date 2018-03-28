@@ -285,6 +285,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ipv4.srcAddr = ipsrcAddr;
         hdr.tcp.srcPort = tcpSport;
     }
+    @name(".mod_field") action mod_field(bit<8> cond, bit<48> value) {
+        hdr.ethernet.srcAddr = (cond != 8w0 ? value : hdr.ethernet.srcAddr);
+    }
     @name(".act_61") action act_61(bit<32> ipsrcAddr, bit<48> dstMac, bit<32> meterIdx) {
         hdr.ipv4.srcAddr = ipsrcAddr;
         hdr.ethernet.dstAddr = dstMac;
@@ -307,6 +310,17 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         implementation = act_profile_5;
         default_action = NoAction();
     }
+    @name(".mod_field_conditionally_tbl") table mod_field_conditionally_tbl {
+        actions = {
+            mod_field();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
+        }
+        size = 2048;
+        default_action = NoAction();
+    }
     @name(".tcam_with_indirect_meter") table tcam_with_indirect_meter {
         actions = {
             act_61();
@@ -323,6 +337,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     apply {
         exm_with_indirect_meter.apply();
         tcam_with_indirect_meter.apply();
+        mod_field_conditionally_tbl.apply();
     }
 }
 
@@ -335,26 +350,34 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".cntr1") counter(32w2048, CounterType.packets) cntr1;
     @name(".r1_alu1") register_action<bit<32>, bit<32>>(r1) r1_alu1 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".r1_alu2") register_action<bit<32>, bit<32>>(r1) r1_alu2 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w100;
+            value = in_value + 32w100;
         }
     };
     @name(".r_alu1") register_action<bit<32>, bit<32>>(r) r_alu1 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".r_alu2") register_action<bit<32>, bit<32>>(r) r_alu2 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w100;
+            value = in_value + 32w100;
         }
     };
     @name(".atcam_action") action atcam_action(bit<48> dstMac, bit<32> ipSrc) {

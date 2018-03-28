@@ -1191,13 +1191,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Oakford_tmp_2;
     @name(".Saluda") register_action<bit<1>, bit<1>>(Gregory) _Saluda_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Oakford_in_value_1;
+            _Oakford_in_value_1 = value;
+            value = _Oakford_in_value_1;
             rv = ~value;
         }
     };
     @name(".SomesBar") register_action<bit<1>, bit<1>>(Argentine) _SomesBar_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Oakford_in_value_2;
+            _Oakford_in_value_2 = value;
+            value = _Oakford_in_value_2;
             rv = value;
         }
     };

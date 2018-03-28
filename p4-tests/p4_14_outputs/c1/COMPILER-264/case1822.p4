@@ -858,15 +858,19 @@ control DuQuoin(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Halaula(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Fajardo") register_action<bit<1>, bit<1>>(Onamia) Fajardo = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };
     @name(".Gastonia") register_action<bit<1>, bit<1>>(Mahopac) Gastonia = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };
@@ -1151,6 +1155,8 @@ control Parshall(inout headers hdr, inout metadata meta, inout standard_metadata
     @name(".Norborne") direct_counter(CounterType.packets_and_bytes) Norborne;
     @name(".Challenge") register_action<bit<1>, bit<1>>(Ashville) Challenge = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
             value = 1w1;
         }

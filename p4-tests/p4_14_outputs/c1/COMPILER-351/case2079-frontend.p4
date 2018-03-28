@@ -1026,13 +1026,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Amber_tmp_2;
     @name(".Moxley") register_action<bit<1>, bit<1>>(Shidler) _Moxley_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Amber_in_value_1;
+            _Amber_in_value_1 = value;
+            value = _Amber_in_value_1;
             rv = ~value;
         }
     };
     @name(".Shorter") register_action<bit<1>, bit<1>>(Jefferson) _Shorter_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Amber_in_value_2;
+            _Amber_in_value_2 = value;
+            value = _Amber_in_value_2;
             rv = value;
         }
     };

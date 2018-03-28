@@ -1942,15 +1942,19 @@ control Hollymead(inout headers hdr, inout metadata meta, inout standard_metadat
 control Howland(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".FulksRun") register_action<bit<1>, bit<1>>(Servia) FulksRun = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = ~value;
         }
     };
     @name(".Oilmont") register_action<bit<1>, bit<1>>(Verdery) Oilmont = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };

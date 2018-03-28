@@ -454,11 +454,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".counter_alu") register_action<counter_alu_layout, int<32>>(port_cntr) counter_alu = {
         void apply(inout counter_alu_layout value, out int<32> rv) {
+            counter_alu_layout in_value_2;
+            in_value_2.lo = value.lo;
+            in_value_2.hi = value.hi;
             rv = 32s0;
             if (value.lo < 32s0 && value.lo + meta.md.offset >= 32s0) 
                 value.hi = value.hi + 32s1;
             if (value.lo >= 32s0 && value.lo + meta.md.offset < 32s0) 
-                value.hi = value.hi + -32s1;
+                value.hi = in_value_2.hi + -32s1;
             value.lo = value.lo + meta.md.offset;
         }
     };
@@ -480,12 +483,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value_20;
+            in_value_20 = value;
             rv = 32w0;
             if (value >= 32w10) 
                 value = 32w1;
-            if (value < 32w10) 
-                value = value + 32w1;
-            if (value >= 32w10 || hdr.ig_intr_md_for_tm.copy_to_cpu != 1w0) 
+            if (in_value_20 < 32w10) 
+                value = in_value_20 + 32w1;
+            if (in_value_20 >= 32w10 || hdr.ig_intr_md_for_tm.copy_to_cpu != 1w0) 
                 rv = 32w1;
         }
     };

@@ -250,51 +250,63 @@ struct flow_cache_2_way_2_alu_layout {
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".flow_cache_1_way_1_alu") register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_alu = {
         void apply(inout flow_cache_1_way_1_alu_layout value, out bit<32> rv) {
+            flow_cache_1_way_1_alu_layout in_value;
+            in_value = value;
             rv = 32w0;
             value.lo = 32w1;
-            if (value.lo == hdr.ipv4.dstAddr && value.hi == hdr.ipv4.srcAddr) 
+            if (in_value.lo == hdr.ipv4.dstAddr && in_value.hi == hdr.ipv4.srcAddr) 
                 rv = value.lo;
         }
     };
     @name(".flow_cache_1_way_1_learn_alu") register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_learn_alu = {
         void apply(inout flow_cache_1_way_1_alu_layout value, out bit<32> rv) {
+            flow_cache_1_way_1_alu_layout in_value;
+            in_value = value;
             rv = 32w0;
-            if (value.lo == 32w0 && value.hi == 32w0) 
+            if (in_value.lo == 32w0 && in_value.hi == 32w0) 
                 value.hi = hdr.ipv4.srcAddr;
-            if (value.lo == 32w0 && value.hi == 32w0) 
+            if (in_value.lo == 32w0 && in_value.hi == 32w0) 
                 value.lo = hdr.ipv4.dstAddr;
         }
     };
     @name(".flow_cache_1_way_2_alu") register_action<flow_cache_1_way_2_alu_layout, bit<32>>(flow_cache_1_way_2) flow_cache_1_way_2_alu = {
         void apply(inout flow_cache_1_way_2_alu_layout value, out bit<32> rv) {
+            flow_cache_1_way_2_alu_layout in_value;
+            in_value = value;
             rv = 32w0;
             value.lo = 32w1;
-            if (value.lo == hdr.ipv4.dstAddr && value.hi == hdr.ipv4.srcAddr) 
+            if (in_value.lo == hdr.ipv4.dstAddr && in_value.hi == hdr.ipv4.srcAddr) 
                 rv = value.lo;
         }
     };
     @name(".flow_cache_2_way_1_alu") register_action<flow_cache_2_way_1_alu_layout, bit<16>>(flow_cache_2_way_1) flow_cache_2_way_1_alu = {
         void apply(inout flow_cache_2_way_1_alu_layout value, out bit<16> rv) {
+            flow_cache_2_way_1_alu_layout in_value;
+            in_value = value;
             rv = 16w0;
-            value.lo = value.lo;
-            if (value.hi == meta.meta.port_numbers) 
+            value.lo = in_value.lo;
+            if (in_value.hi == meta.meta.port_numbers) 
                 rv = value.lo;
         }
     };
     @name(".flow_cache_2_way_1_learn_alu") register_action<flow_cache_2_way_1_alu_layout, bit<16>>(flow_cache_2_way_1) flow_cache_2_way_1_learn_alu = {
         void apply(inout flow_cache_2_way_1_alu_layout value, out bit<16> rv) {
+            flow_cache_2_way_1_alu_layout in_value;
+            in_value = value;
             rv = 16w0;
-            if (value.lo == 16w0 && value.hi == 16w0) 
+            if (in_value.lo == 16w0 && in_value.hi == 16w0) 
                 value.hi = meta.meta.port_numbers;
-            if (value.lo == 16w0 && value.hi == 16w0) 
+            if (in_value.lo == 16w0 && in_value.hi == 16w0) 
                 value.lo = meta.meta.proto_idx_pair1;
         }
     };
     @name(".flow_cache_2_way_2_alu") register_action<flow_cache_2_way_2_alu_layout, bit<16>>(flow_cache_2_way_2) flow_cache_2_way_2_alu = {
         void apply(inout flow_cache_2_way_2_alu_layout value, out bit<16> rv) {
+            flow_cache_2_way_2_alu_layout in_value;
+            in_value = value;
             rv = 16w0;
-            value.lo = value.lo;
-            if (value.hi == meta.meta.port_numbers) 
+            value.lo = in_value.lo;
+            if (in_value.hi == meta.meta.port_numbers) 
                 rv = value.lo;
         }
     };

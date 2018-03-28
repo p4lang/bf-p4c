@@ -189,10 +189,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".bfd_cnt_tx_alu") register_action<sample_t, bit<8>>(bfd_cnt) bfd_cnt_tx_alu = {
         void apply(inout sample_t value, out bit<8> rv) {
+            sample_t in_value_2;
+            in_value_2.a = value.a;
+            in_value_2.b = value.b;
             rv = 8w0;
             value.b = 8w1;
             value.a = value.a + 8w1;
-            if (value.a > 8w3) 
+            if (in_value_2.a > 8w3) 
                 rv = 8w1;
         }
     };

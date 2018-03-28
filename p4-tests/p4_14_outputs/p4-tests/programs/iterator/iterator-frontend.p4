@@ -196,8 +196,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".cntr") @min_width(32) counter(32w1000, CounterType.packets_and_bytes) cntr;
     @name(".r0_alu") register_action<bit<32>, bit<32>>(r0) r0_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".n") action n_1() {

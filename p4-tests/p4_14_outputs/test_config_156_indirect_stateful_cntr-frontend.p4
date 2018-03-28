@@ -179,7 +179,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<16> tmp_0;
     @name(".cntr") register_action<bit<16>, bit<16>>(stateful_cntr) cntr = {
         void apply(inout bit<16> value, out bit<16> rv) {
-            value = value + 16w1;
+            bit<16> in_value;
+            in_value = value;
+            value = in_value + 16w1;
             rv = value;
         }
     };

@@ -7,7 +7,7 @@ action hop(ttl, egress_port) {
 default_entry.p4(325)
 action egress_port(egress_port) {
 ^
-default_entry.p4(329): warning: egress_port shadows .egress_port
+default_entry.p4(333): warning: egress_port shadows .egress_port
 action custom_action_3(egress_port, dstAddr, dstIp)
                        ^^^^^^^^^^^
 default_entry.p4(325)

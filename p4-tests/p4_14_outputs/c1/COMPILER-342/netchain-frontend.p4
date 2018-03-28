@@ -265,7 +265,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bool tmp_4;
     @name(".kv_alu") register_action<bit<32>, bit<32>>(kv_register) kv_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            rv = value;
+            bit<32> in_value;
+            in_value = value;
+            rv = in_value;
         }
     };
     @name(".set_egr_port") action set_egr_port_0(bit<9> port) {

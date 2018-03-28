@@ -1452,13 +1452,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Calabasas_tmp_2;
     @name(".Olene") register_action<bit<1>, bit<1>>(Lowes) _Olene_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Calabasas_in_value_1;
+            _Calabasas_in_value_1 = value;
+            value = _Calabasas_in_value_1;
             rv = value;
         }
     };
     @name(".Portal") register_action<bit<1>, bit<1>>(Simla) _Portal_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Calabasas_in_value_2;
+            _Calabasas_in_value_2 = value;
+            value = _Calabasas_in_value_2;
             rv = ~value;
         }
     };

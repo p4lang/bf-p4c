@@ -1390,13 +1390,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Walcott_tmp_2;
     @name(".Montegut") register_action<bit<1>, bit<1>>(Dillsboro) _Montegut_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Walcott_in_value_1;
+            _Walcott_in_value_1 = value;
+            value = _Walcott_in_value_1;
             rv = value;
         }
     };
     @name(".Plains") register_action<bit<1>, bit<1>>(Honuapo) _Plains_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Walcott_in_value_2;
+            _Walcott_in_value_2 = value;
+            value = _Walcott_in_value_2;
             rv = ~value;
         }
     };

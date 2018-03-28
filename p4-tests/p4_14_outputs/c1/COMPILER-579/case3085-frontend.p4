@@ -1438,13 +1438,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Ranchito_tmp_2;
     @name(".Fittstown") register_action<bit<1>, bit<1>>(Sagamore) _Fittstown_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Ranchito_in_value_1;
+            _Ranchito_in_value_1 = value;
+            value = _Ranchito_in_value_1;
             rv = value;
         }
     };
     @name(".Wheaton") register_action<bit<1>, bit<1>>(Oxford) _Wheaton_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Ranchito_in_value_2;
+            _Ranchito_in_value_2 = value;
+            value = _Ranchito_in_value_2;
             rv = ~value;
         }
     };

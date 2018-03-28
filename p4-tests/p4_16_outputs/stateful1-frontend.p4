@@ -2,15 +2,15 @@
 #include <v1model.p4>
 #include <tofino/stateful_alu.p4>
 
+struct metadata {
+}
+
 header data_t {
     bit<32> f1;
     bit<32> f2;
     bit<16> h1;
     bit<8>  b1;
     bit<8>  b2;
-}
-
-struct metadata {
 }
 
 struct headers {

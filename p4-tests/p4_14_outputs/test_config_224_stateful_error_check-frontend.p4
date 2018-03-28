@@ -172,12 +172,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".b_test") register_action<bit<8>, bit<8>>(r_test) b_test = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> alu_hi;
-            if (value == 8w1) 
+            bit<8> in_value;
+            in_value = value;
+            if (in_value == 8w1) 
                 alu_hi = 8w1;
-            if (value == 8w0x0) 
+            if (in_value == 8w0x0) 
                 alu_hi = 8w2;
-            if (value != 8w0x0) 
-                value = value + 8w255;
+            if (in_value != 8w0x0) 
+                value = in_value + 8w255;
             rv = alu_hi;
         }
     };

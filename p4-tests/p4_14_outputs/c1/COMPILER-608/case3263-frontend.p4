@@ -1373,13 +1373,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Bogota_tmp_2;
     @name(".Booth") register_action<bit<1>, bit<1>>(Kapaa) _Booth_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Bogota_in_value_1;
+            _Bogota_in_value_1 = value;
+            value = _Bogota_in_value_1;
             rv = value;
         }
     };
     @name(".Union") register_action<bit<1>, bit<1>>(Pathfork) _Union_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Bogota_in_value_2;
+            _Bogota_in_value_2 = value;
+            value = _Bogota_in_value_2;
             rv = ~value;
         }
     };

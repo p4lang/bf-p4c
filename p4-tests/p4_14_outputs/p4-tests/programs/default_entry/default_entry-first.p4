@@ -323,6 +323,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         next_hop_ipv4(egress_port, srcmac, dstmac);
         execute_meter_with_color<meter, bit<32>, bit<8>>(meter_2, idx, hdr.ipv4.diffserv, hdr.ipv4.diffserv);
     }
+    @name(".keyless_set_egr") action keyless_set_egr() {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = 9w0;
+    }
     @name(".custom_action_2") action custom_action_2(bit<8> ttl) {
         hdr.ipv4.ttl = ttl;
     }
@@ -424,6 +427,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meters = meter_1;
         default_action = NoAction();
     }
+    @name(".pure_keyless") table pure_keyless {
+        actions = {
+            keyless_set_egr();
+        }
+        default_action = keyless_set_egr();
+    }
     @name(".tcam_dir") table tcam_dir {
         actions = {
             act_1();
@@ -463,6 +472,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ipv4_routing_select.apply();
         tcam_dir.apply();
         tcam_indr.apply();
+        if (hdr.ig_intr_md_for_tm.ucast_egress_port != 9w0) 
+            pure_keyless.apply();
     }
 }
 

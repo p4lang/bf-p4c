@@ -649,15 +649,19 @@ control Cataract(inout headers hdr, inout metadata meta, inout standard_metadata
 control Chunchula(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Salamatof") register_action<bit<1>, bit<1>>(Midas) Salamatof = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };
     @name(".Sisters") register_action<bit<1>, bit<1>>(Lucien) Sisters = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = ~value;
         }
     };

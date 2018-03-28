@@ -275,20 +275,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".c3") counter(32w500, CounterType.packets) c3;
     @name(".alu1") register_action<bit<32>, bit<32>>(r1) alu1 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".alu2") register_action<bit<32>, bit<32>>(r2) alu2 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".alu3") register_action<bit<32>, bit<32>>(r3) alu3 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
-            value = value + 32w1;
+            value = in_value + 32w1;
         }
     };
     @name(".local_recirc") action local_recirc(bit<8> local_port) {

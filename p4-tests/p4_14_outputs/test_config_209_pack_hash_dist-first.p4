@@ -177,6 +177,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".alu_0") register_action<bit<8>, bit<8>>(reg_0) alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            bit<8> in_value;
+            in_value = value;
             rv = 8w0;
             value = 8w15;
             rv = value;
@@ -184,6 +186,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".alu_1") register_action<bit<8>, bit<8>>(reg_1) alu_1 = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            bit<8> in_value;
+            in_value = value;
             rv = 8w0;
             value = 8w0x30;
             rv = value;

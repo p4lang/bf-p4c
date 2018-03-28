@@ -179,12 +179,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
             if (value >= 32w10) 
                 value = 32w1;
-            if (value < 32w10) 
-                value = value + 32w1;
-            if (value >= 32w10 || hdr.ig_intr_md_for_tm.copy_to_cpu != 1w0) 
+            if (in_value < 32w10) 
+                value = in_value + 32w1;
+            if (in_value >= 32w10 || hdr.ig_intr_md_for_tm.copy_to_cpu != 1w0) 
                 rv = 32w1;
         }
     };

@@ -274,29 +274,36 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 #include <tofino/p4_14_prim.p4>
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp_3;
-    bit<8> tmp_5;
+    bit<8> tmp_4;
+    bit<48> tmp_6;
+    bit<8> tmp_7;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_1() {
+    }
+    @name(".NoAction") action NoAction_18() {
     }
     @meter_pre_color_aware_per_flow_enable(1) @name(".meter_1") meter(32w500, MeterType.bytes) meter_1;
     @meter_pre_color_aware_per_flow_enable(1) @name(".meter_2") meter(32w500, MeterType.bytes) meter_2;
     @name(".act_12") action act(bit<48> srcMac, bit<48> dstMac, bit<32> meterIdx) {
         hdr.ethernet.srcAddr = srcMac;
         hdr.ethernet.dstAddr = dstMac;
-        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_1, meterIdx, tmp_3, hdr.ipv4.diffserv);
-        hdr.ipv4.diffserv = tmp_3;
+        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_1, meterIdx, tmp_4, hdr.ipv4.diffserv);
+        hdr.ipv4.diffserv = tmp_4;
     }
     @name(".act_22") action act_0(bit<32> ipsrcAddr, bit<16> tcpSport) {
         hdr.ipv4.srcAddr = ipsrcAddr;
         hdr.tcp.srcPort = tcpSport;
     }
+    @name(".mod_field") action mod_field_0(bit<8> cond, bit<48> value) {
+        tmp_6 = (cond != 8w0 ? value : tmp_6);
+        tmp_6 = (!(cond != 8w0) ? hdr.ethernet.srcAddr : tmp_6);
+    }
     @name(".act_61") action act_4(bit<32> ipsrcAddr, bit<48> dstMac, bit<32> meterIdx) {
         hdr.ipv4.srcAddr = ipsrcAddr;
         hdr.ethernet.dstAddr = dstMac;
-        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_2, meterIdx, tmp_5, hdr.ipv4.diffserv);
-        hdr.ipv4.diffserv = tmp_5;
+        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_2, meterIdx, tmp_7, hdr.ipv4.diffserv);
+        hdr.ipv4.diffserv = tmp_7;
     }
     @name(".act_62") action act_5(bit<32> ipsrcAddr, bit<32> ipdstAddr) {
         hdr.ipv4.srcAddr = ipsrcAddr;
@@ -315,22 +322,34 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         implementation = act_profile_5;
         default_action = NoAction_0();
     }
+    @name(".mod_field_conditionally_tbl") table mod_field_conditionally_tbl {
+        actions = {
+            mod_field_0();
+            @defaultonly NoAction_1();
+        }
+        key = {
+            hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
+        }
+        size = 2048;
+        default_action = NoAction_1();
+    }
     @name(".tcam_with_indirect_meter") table tcam_with_indirect_meter {
         actions = {
             act_4();
             act_5();
-            @defaultonly NoAction_1();
+            @defaultonly NoAction_18();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
         }
         size = 2048;
         implementation = act_profile_6;
-        default_action = NoAction_1();
+        default_action = NoAction_18();
     }
     apply {
         exm_with_indirect_meter.apply();
         tcam_with_indirect_meter.apply();
+        mod_field_conditionally_tbl.apply();
     }
 }
 
@@ -339,10 +358,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".r1") register<bit<32>>(32w2048) r1;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".NoAction") action NoAction_17() {
-    }
-    @name(".NoAction") action NoAction_18() {
-    }
     @name(".NoAction") action NoAction_19() {
     }
     @name(".NoAction") action NoAction_20() {
@@ -364,6 +379,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_28() {
     }
     @name(".NoAction") action NoAction_29() {
+    }
+    @name(".NoAction") action NoAction_30() {
+    }
+    @name(".NoAction") action NoAction_31() {
     }
     @name(".cntr") counter(32w2048, CounterType.packets) cntr;
     @name(".cntr1") counter(32w2048, CounterType.packets) cntr1;
@@ -517,7 +536,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @atcam_partition_index("vlan_tag.vlan_id") @name(".atcam_tbl") table atcam_tbl {
         actions = {
             atcam_action_0();
-            @defaultonly NoAction_17();
+            @defaultonly NoAction_19();
         }
         key = {
             hdr.tcp.isValid()   : ternary @name("tcp.$valid$") ;
@@ -525,38 +544,38 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr    : ternary @name("ipv4.dstAddr") ;
         }
         size = 100000;
-        default_action = NoAction_17();
+        default_action = NoAction_19();
     }
     @name(".exm_valid") table exm_valid {
         actions = {
             hop_ipv4_0();
-            @defaultonly NoAction_18();
+            @defaultonly NoAction_20();
         }
         key = {
             hdr.ipv4.isValid(): exact @name("ipv4.$valid$") ;
             hdr.tcp.isValid() : exact @name("tcp.$valid$") ;
         }
-        default_action = NoAction_18();
+        default_action = NoAction_20();
     }
     @name(".exm_with_direct_action") table exm_with_direct_action {
         actions = {
             direct_action_exm();
             direct_action_exm_0();
             direct_action_exm_4();
-            @defaultonly NoAction_19();
+            @defaultonly NoAction_21();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 16384;
-        default_action = NoAction_19();
+        default_action = NoAction_21();
     }
     @name(".exm_with_indirect_action") table exm_with_indirect_action {
         actions = {
             exm_act();
             exm_act_0();
             exm_act_4();
-            @defaultonly NoAction_20();
+            @defaultonly NoAction_22();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
@@ -564,27 +583,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 16384;
         implementation = act_profile_1;
-        default_action = NoAction_20();
+        default_action = NoAction_22();
     }
     @name(".exm_with_indirect_action_and_stats") table exm_with_indirect_action_and_stats {
         actions = {
             act_6();
             act_7();
             act_8();
-            @defaultonly NoAction_21();
+            @defaultonly NoAction_23();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 8192;
         implementation = act_profile_3;
-        default_action = NoAction_21();
+        default_action = NoAction_23();
     }
     @name(".exm_with_wide_action_data") table exm_with_wide_action_data {
         actions = {
             wide_action_0();
             nop_0();
-            @defaultonly NoAction_22();
+            @defaultonly NoAction_24();
         }
         key = {
             hdr.ipv4.dstAddr    : exact @name("ipv4.dstAddr") ;
@@ -592,39 +611,39 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.vlan_tag.vlan_id: exact @name("vlan_tag.vlan_id") ;
         }
         size = 16384;
-        default_action = NoAction_22();
+        default_action = NoAction_24();
     }
     @name(".lpm") table lpm_0 {
         actions = {
             direct_action_tcam();
             direct_action_tcam_4();
             direct_action_tcam_9();
-            @defaultonly NoAction_23();
+            @defaultonly NoAction_25();
         }
         key = {
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         size = 8192;
-        default_action = NoAction_23();
+        default_action = NoAction_25();
     }
     @name(".tcam_range_1") table tcam_range_1 {
         actions = {
             nop_3();
             hop_ipv4_4();
-            @defaultonly NoAction_24();
+            @defaultonly NoAction_26();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
             hdr.tcp.dstPort : range @name("tcp.dstPort") ;
         }
         size = 1024;
-        default_action = NoAction_24();
+        default_action = NoAction_26();
     }
     @name(".tcam_range_2") table tcam_range_2 {
         actions = {
             nop_4();
             hop_ipv4_5();
-            @defaultonly NoAction_25();
+            @defaultonly NoAction_27();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
@@ -632,38 +651,38 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.srcPort : range @name("tcp.srcPort") ;
         }
         size = 1024;
-        default_action = NoAction_25();
+        default_action = NoAction_27();
     }
     @name(".tcam_valid") table tcam_valid {
         actions = {
             hop_ipv4_6();
-            @defaultonly NoAction_26();
+            @defaultonly NoAction_28();
         }
         key = {
             hdr.ipv4.isValid(): exact @name("ipv4.$valid$") ;
             hdr.tcp.isValid() : ternary @name("tcp.$valid$") ;
         }
-        default_action = NoAction_26();
+        default_action = NoAction_28();
     }
     @name(".tcam_with_direct_action") table tcam_with_direct_action {
         actions = {
             direct_action_tcam_0();
             direct_action_tcam_8();
             direct_action_tcam_10();
-            @defaultonly NoAction_27();
+            @defaultonly NoAction_29();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
         }
         size = 8192;
-        default_action = NoAction_27();
+        default_action = NoAction_29();
     }
     @name(".tcam_with_indirect_action") table tcam_with_indirect_action {
         actions = {
             tcam_act();
             tcam_act_0();
             tcam_act_4();
-            @defaultonly NoAction_28();
+            @defaultonly NoAction_30();
         }
         key = {
             hdr.ethernet.srcAddr: ternary @name("ethernet.srcAddr") ;
@@ -671,14 +690,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 8192;
         implementation = act_profile_2;
-        default_action = NoAction_28();
+        default_action = NoAction_30();
     }
     @name(".tcam_with_indirect_action_and_stats") table tcam_with_indirect_action_and_stats {
         actions = {
             act_9();
             act_10();
             act_13();
-            @defaultonly NoAction_29();
+            @defaultonly NoAction_31();
         }
         key = {
             hdr.ethernet.srcAddr: ternary @name("ethernet.srcAddr") ;
@@ -686,7 +705,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 2048;
         implementation = act_profile_4;
-        default_action = NoAction_29();
+        default_action = NoAction_31();
     }
     apply {
         exm_with_direct_action.apply();

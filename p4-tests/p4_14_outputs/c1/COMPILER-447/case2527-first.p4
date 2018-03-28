@@ -1918,15 +1918,19 @@ control Suamico(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Tiverton(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Cedonia") register_action<bit<1>, bit<1>>(Hulbert) Cedonia = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };
     @name(".Riverlea") register_action<bit<1>, bit<1>>(Noyack) Riverlea = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = ~value;
         }
     };

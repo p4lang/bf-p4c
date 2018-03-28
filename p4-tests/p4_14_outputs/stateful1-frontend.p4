@@ -33,8 +33,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<16> tmp_0;
     @name(".sful") register_action<bit<16>, bit<16>>(accum) sful = {
         void apply(inout bit<16> value, out bit<16> rv) {
-            rv = value;
-            value = value + (bit<16>)hdr.data.b1;
+            bit<16> in_value;
+            in_value = value;
+            rv = in_value;
+            value = in_value + (bit<16>)hdr.data.b1;
         }
     };
     @name(".addb1") action addb1_0(bit<9> port) {

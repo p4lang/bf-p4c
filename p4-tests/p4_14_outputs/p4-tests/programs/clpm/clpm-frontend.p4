@@ -200,8 +200,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".salu0") register_action<bit<16>, bit<16>>(reg0) salu0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            bit<16> in_value;
+            in_value = value;
             rv = 16w0;
-            value = value + 16w1;
+            value = in_value + 16w1;
         }
     };
     @name(".lpm_hit") action lpm_hit_0(bit<9> egress_port) {

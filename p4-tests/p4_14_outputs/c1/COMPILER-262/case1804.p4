@@ -679,15 +679,19 @@ control Haines(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control KentPark(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Sherack") register_action<bit<1>, bit<1>>(Chaffey) Sherack = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };
     @name(".Spiro") register_action<bit<1>, bit<1>>(Buenos) Spiro = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };
@@ -978,6 +982,8 @@ control Kinde(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 control Laneburg(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Powderly") register_action<bit<1>, bit<1>>(Ingleside) Powderly = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
             value = 1w1;
         }

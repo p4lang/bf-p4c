@@ -514,6 +514,8 @@ control Achille(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".BigBay") direct_counter(CounterType.packets_and_bytes) BigBay;
     @name(".Sunrise") register_action<bit<1>, bit<1>>(Pueblo) Sunrise = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
             value = 1w1;
         }
@@ -923,15 +925,19 @@ control Lapoint(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Ottertail(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Flourtown") register_action<bit<1>, bit<1>>(Patchogue) Flourtown = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };
     @name(".Lordstown") register_action<bit<1>, bit<1>>(LaConner) Lordstown = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };

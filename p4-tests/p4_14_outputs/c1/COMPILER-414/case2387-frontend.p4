@@ -1073,13 +1073,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Victoria_tmp_2;
     @name(".Kekoskee") register_action<bit<1>, bit<1>>(Merrill) _Kekoskee_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Victoria_in_value_1;
+            _Victoria_in_value_1 = value;
+            value = _Victoria_in_value_1;
             rv = ~value;
         }
     };
     @name(".Woodsboro") register_action<bit<1>, bit<1>>(Illmo) _Woodsboro_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Victoria_in_value_2;
+            _Victoria_in_value_2 = value;
+            value = _Victoria_in_value_2;
             rv = value;
         }
     };

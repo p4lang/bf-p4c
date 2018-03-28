@@ -1582,13 +1582,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Ludowici_tmp_2;
     @name(".Matador") register_action<bit<1>, bit<1>>(Vesuvius) _Matador_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Ludowici_in_value_1;
+            _Ludowici_in_value_1 = value;
+            value = _Ludowici_in_value_1;
             rv = value;
         }
     };
     @name(".Moose") register_action<bit<1>, bit<1>>(Spenard) _Moose_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Ludowici_in_value_2;
+            _Ludowici_in_value_2 = value;
+            value = _Ludowici_in_value_2;
             rv = ~value;
         }
     };

@@ -168,7 +168,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<32> tmp_0;
     @name(".sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            value = value + 32w1;
+            bit<32> in_value;
+            in_value = value;
+            value = in_value + 32w1;
             rv = value;
         }
     };

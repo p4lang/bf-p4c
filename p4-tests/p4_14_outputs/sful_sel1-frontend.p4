@@ -37,12 +37,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".port_down") selector_action(sel_profile) port_down = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
             rv = 1w0;
             value = 1w1;
         }
     };
     @name(".port_up") selector_action(sel_profile) port_up = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value_2;
             rv = 1w0;
             value = 1w0;
         }

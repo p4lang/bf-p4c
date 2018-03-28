@@ -51,12 +51,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".sful") register_action<pair32_t, bit<32>>(accum) sful = {
         void apply(inout pair32_t value, out bit<32> rv) {
+            pair32_t in_value;
+            in_value.lo = value.lo;
+            in_value.hi = value.hi;
             rv = value.lo;
             value.hi = value.hi + 32w1;
             if (hdr.data.f2 > 32w1000 && hdr.data.f2 < 32w2000) 
                 value.lo = value.lo + hdr.data.f3;
             if (hdr.data.f2 <= 32w1000 && hdr.data.f2 < 32w2000) 
-                value.lo = value.lo - hdr.data.f3;
+                value.lo = in_value.lo - hdr.data.f3;
         }
     };
     @name(".act1") action act1_0(bit<9> port) {

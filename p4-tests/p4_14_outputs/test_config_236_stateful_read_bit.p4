@@ -171,8 +171,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".bbox_0") register_action<bit<1>, bit<1>>(reg_0) bbox_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            rv = value;
+            rv = in_value;
         }
     };
     @name(".action_0") action action_0(bit<32> idx) {

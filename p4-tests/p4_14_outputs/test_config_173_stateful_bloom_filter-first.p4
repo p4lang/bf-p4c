@@ -235,6 +235,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
             value = 1w1;
             rv = ~value;
@@ -242,6 +244,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
             value = 1w1;
             rv = ~value;
@@ -249,6 +253,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
             value = 1w1;
             rv = ~value;

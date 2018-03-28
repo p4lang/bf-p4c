@@ -2527,15 +2527,19 @@ control Rowden(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control Shickley(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Baskett") register_action<bit<1>, bit<1>>(Flaxton) Baskett = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = ~value;
         }
     };
     @name(".Sunrise") register_action<bit<1>, bit<1>>(Proctor) Sunrise = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };

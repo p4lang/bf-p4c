@@ -199,12 +199,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".sampler_alu") register_action<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            bit<8> in_value_4;
+            in_value_4 = value;
             rv = 8w0;
             if (value == 8w10) 
                 value = 8w1;
-            if (value != 8w10) 
-                value = value + 8w1;
-            if (value == 8w10) 
+            if (in_value_4 != 8w10) 
+                value = in_value_4 + 8w1;
+            if (in_value_4 == 8w10) 
                 rv = value;
         }
     };

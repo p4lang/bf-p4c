@@ -1452,13 +1452,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Snowflake_tmp_2;
     @name(".ShadeGap") register_action<bit<1>, bit<1>>(Bosworth) _ShadeGap_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Snowflake_in_value_1;
+            _Snowflake_in_value_1 = value;
+            value = _Snowflake_in_value_1;
             rv = ~value;
         }
     };
     @name(".ShowLow") register_action<bit<1>, bit<1>>(Tuttle) _ShowLow_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Snowflake_in_value_2;
+            _Snowflake_in_value_2 = value;
+            value = _Snowflake_in_value_2;
             rv = value;
         }
     };

@@ -182,11 +182,13 @@ struct cntr_1_layout {
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".cntr_1") register_action<cntr_1_layout, bit<16>>(stateful_cntr_1, cntr_1_math_unit) cntr_1 = {
         void apply(inout cntr_1_layout value, out bit<16> rv) {
+            cntr_1_layout in_value;
+            in_value = value;
             rv = 16w0;
             if (hdr.pkt.field_e_16 == 16w7) 
-                value.lo = value.lo + 16w1;
+                value.lo = in_value.lo + 16w1;
             if (!(hdr.pkt.field_e_16 == 16w7)) 
-                value.lo = value.hi ^ cntr_1_math_unit.execute(hdr.pkt.field_f_16);
+                value.lo = in_value.hi ^ cntr_1_math_unit.execute(hdr.pkt.field_f_16);
             if (hdr.pkt.field_e_16 == 16w7) 
                 rv = value.lo;
         }

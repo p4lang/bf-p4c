@@ -801,13 +801,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _KentPark_tmp_2;
     @name(".Sherack") register_action<bit<1>, bit<1>>(Chaffey) _Sherack_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _KentPark_in_value_1;
+            _KentPark_in_value_1 = value;
+            value = _KentPark_in_value_1;
             rv = value;
         }
     };
     @name(".Spiro") register_action<bit<1>, bit<1>>(Buenos) _Spiro_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _KentPark_in_value_2;
+            _KentPark_in_value_2 = value;
+            value = _KentPark_in_value_2;
             rv = value;
         }
     };
@@ -875,6 +879,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Powderly") register_action<bit<1>, bit<1>>(Ingleside) _Powderly_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> _Laneburg_in_value_0;
             rv = 1w0;
             value = 1w1;
         }

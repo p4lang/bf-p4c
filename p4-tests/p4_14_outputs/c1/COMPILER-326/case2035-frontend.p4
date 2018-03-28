@@ -1077,13 +1077,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Addison_tmp_2;
     @name(".Kewanee") register_action<bit<1>, bit<1>>(Hernandez) _Kewanee_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Addison_in_value_1;
+            _Addison_in_value_1 = value;
+            value = _Addison_in_value_1;
             rv = value;
         }
     };
     @name(".Valdosta") register_action<bit<1>, bit<1>>(Mayday) _Valdosta_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Addison_in_value_2;
+            _Addison_in_value_2 = value;
+            value = _Addison_in_value_2;
             rv = ~value;
         }
     };

@@ -2572,15 +2572,19 @@ control Lovilia(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Ludowici(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Matador") register_action<bit<1>, bit<1>>(Vesuvius) Matador = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = value;
         }
     };
     @name(".Moose") register_action<bit<1>, bit<1>>(Spenard) Moose = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            bit<1> in_value;
+            in_value = value;
             rv = 1w0;
-            value = value;
+            value = in_value;
             rv = ~value;
         }
     };

@@ -267,7 +267,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".NoAction") action NoAction_3() {
+    @name(".NoAction") action NoAction_4() {
+    }
+    @name(".NoAction") action NoAction_5() {
     }
     @name(".hash_action_ha") action hash_action_ha_0(bit<12> value_0, bit<3> value_1, bit<8> value_2) {
         hdr.vlan_tag.vlan_id = value_0;
@@ -287,7 +289,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".drop_packet") action drop_packet_0() {
         mark_to_drop();
     }
-    @use_hash_action(1) @name(".hash_action_ha_exm") table hash_action_ha_exm {
+    @name(".tcam_range_action") action tcam_range_action_0(bit<9> val, bit<12> value_0, bit<3> value_1, bit<8> value_2) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = val;
+        hdr.vlan_tag.vlan_id = value_0;
+        hdr.vlan_tag.pri = value_1;
+        hdr.ipv4.ttl = value_2;
+    }
+    @name(".nop") action nop_0() {
+    }
+    @use_hash_action(1) @stage(3) @name(".hash_action_ha_exm") table hash_action_ha_exm {
         actions = {
             hash_action_ha_0();
         }
@@ -300,7 +310,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 8192;
         default_action = hash_action_ha_0(12w1947, 3w5, 8w45);
     }
-    @name(".port_tbl") table port_tbl {
+    @phase0(1) @name(".port_tbl") table port_tbl {
         actions = {
             set_md_0();
             @defaultonly NoAction_0();
@@ -311,11 +321,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_0();
     }
-    @name(".set_eg") table set_eg {
+    @stage(1) @name(".set_eg") table set_eg {
         actions = {
             set_egr_port_0();
             drop_packet_0();
-            @defaultonly NoAction_3();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.ig_intr_md_for_tm.level2_exclusion_id: exact @name("ig_intr_md_for_tm.level2_exclusion_id") ;
@@ -325,7 +335,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ig_intr_md_for_tm.level1_mcast_hash  : exact @name("ig_intr_md_for_tm.level1_mcast_hash") ;
         }
         size = 288;
-        default_action = NoAction_3();
+        default_action = NoAction_4();
+    }
+    @command_line("--no-dead-code-elimination") @entries_with_ranges(1) @immediate(1) @stage(4) @name(".tcam_range") table tcam_range {
+        actions = {
+            tcam_range_action_0();
+            nop_0();
+            @defaultonly NoAction_5();
+        }
+        key = {
+            hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
+            hdr.tcp.dstPort : range @name("tcp.dstPort") ;
+            hdr.ipv4.ttl    : range @name("ipv4.ttl") ;
+        }
+        size = 1024;
+        default_action = NoAction_5();
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 
@@ -333,6 +357,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         set_eg.apply();
         if (hdr.tcp.srcPort == 16w9000) 
             hash_action_ha_exm.apply();
+        tcam_range.apply();
     }
 }
 

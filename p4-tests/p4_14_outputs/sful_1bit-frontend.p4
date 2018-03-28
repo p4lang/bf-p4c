@@ -40,26 +40,34 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> tmp_6;
     @name(".sful1") register_action<bit<1>, bit<1>>(reg) sful1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            bit<1> in_value;
+            in_value = value;
+            rv = in_value;
             value = 1w1;
         }
     };
     @name(".sful2") register_action<bit<1>, bit<1>>(reg) sful2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            bit<1> in_value_4;
+            in_value_4 = value;
+            rv = in_value_4;
             value = 1w0;
         }
     };
     @name(".sful3") register_action<bit<1>, bit<1>>(reg) sful3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
-            value = value;
+            bit<1> in_value_5;
+            in_value_5 = value;
+            rv = in_value_5;
+            value = in_value_5;
         }
     };
     @name(".sful4") register_action<bit<1>, bit<1>>(reg) sful4 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = ~value;
-            value = value;
+            bit<1> in_value_6;
+            in_value_6 = value;
+            rv = ~in_value_6;
+            value = in_value_6;
         }
     };
     @name(".output") action output_0(bit<9> port) {

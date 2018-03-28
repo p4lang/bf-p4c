@@ -238,6 +238,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".kv_alu") register_action<bit<32>, bit<32>>(kv_register) kv_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> in_value;
+            in_value = value;
             rv = 32w0;
             if (hdr.kv.op == 8w1) 
                 value = hdr.kv.value;

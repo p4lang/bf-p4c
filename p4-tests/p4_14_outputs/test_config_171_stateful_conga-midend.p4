@@ -238,9 +238,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".conga_update_alu") register_action<conga_state_layout, bit<8>>(conga_state) conga_update_alu = {
         void apply(inout conga_state_layout value, out bit<8> rv) {
+            conga_state_layout in_value_2;
+            in_value_2.next_hop = value.next_hop;
+            in_value_2.utilization = value.utilization;
             if (value.next_hop > meta.conga_meta.util) 
                 value.utilization = meta.conga_meta.next_hop;
-            if (value.next_hop > meta.conga_meta.util || value.utilization == meta.conga_meta.next_hop) 
+            if (value.next_hop > meta.conga_meta.util || in_value_2.utilization == meta.conga_meta.next_hop) 
                 value.next_hop = meta.conga_meta.util;
             rv = value.utilization;
         }

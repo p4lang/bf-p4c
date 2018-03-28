@@ -1601,7 +1601,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     bit<1> _Gabbs_tmp_0;
     @name(".Lenwood") register_action<bit<1>, bit<1>>(Godley) _Lenwood_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Gabbs_in_value_0;
+            _Gabbs_in_value_0 = value;
+            value = _Gabbs_in_value_0;
             rv = ~value;
         }
     };
@@ -1635,7 +1637,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     bit<1> _Nevis_tmp_0;
     @name(".Giltner") register_action<bit<1>, bit<1>>(Pearce) _Giltner_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Nevis_in_value_0;
+            _Nevis_in_value_0 = value;
+            value = _Nevis_in_value_0;
             rv = ~value;
         }
     };
@@ -2088,13 +2092,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Counce__Chatcolet_tmp_2;
     @name(".Kenmore") register_action<bit<1>, bit<1>>(Norma) _Kenmore = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Counce__Chatcolet_in_value_1;
+            _Counce__Chatcolet_in_value_1 = value;
+            value = _Counce__Chatcolet_in_value_1;
             rv = ~value;
         }
     };
     @name(".Spivey") register_action<bit<1>, bit<1>>(Lesley) _Spivey = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            value = value;
+            bit<1> _Counce__Chatcolet_in_value_2;
+            _Counce__Chatcolet_in_value_2 = value;
+            value = _Counce__Chatcolet_in_value_2;
             rv = value;
         }
     };

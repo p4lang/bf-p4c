@@ -283,7 +283,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".drop_packet") action drop_packet() {
         mark_to_drop();
     }
-    @use_hash_action(1) @name(".hash_action_ha_exm") table hash_action_ha_exm {
+    @name(".tcam_range_action") action tcam_range_action(bit<9> val, bit<12> value_0, bit<3> value_1, bit<8> value_2) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = val;
+        hdr.vlan_tag.vlan_id = value_0;
+        hdr.vlan_tag.pri = value_1;
+        hdr.ipv4.ttl = value_2;
+    }
+    @name(".nop") action nop() {
+    }
+    @use_hash_action(1) @stage(3) @name(".hash_action_ha_exm") table hash_action_ha_exm {
         actions = {
             hash_action_ha;
         }
@@ -296,7 +304,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 8192;
         default_action = hash_action_ha(1947, 5, 45);
     }
-    @name(".port_tbl") table port_tbl {
+    @phase0(1) @name(".port_tbl") table port_tbl {
         actions = {
             set_md;
         }
@@ -305,7 +313,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 288;
     }
-    @name(".set_eg") table set_eg {
+    @stage(1) @name(".set_eg") table set_eg {
         actions = {
             set_egr_port;
             drop_packet;
@@ -319,6 +327,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 288;
     }
+    @command_line("--no-dead-code-elimination") @entries_with_ranges(1) @immediate(1) @stage(4) @name(".tcam_range") table tcam_range {
+        actions = {
+            tcam_range_action;
+            nop;
+        }
+        key = {
+            hdr.ipv4.dstAddr: ternary;
+            hdr.tcp.dstPort : range;
+            hdr.ipv4.ttl    : range;
+        }
+        size = 1024;
+    }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) {
             port_tbl.apply();
@@ -327,6 +347,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         if (hdr.tcp.srcPort == 16w9000) {
             hash_action_ha_exm.apply();
         }
+        tcam_range.apply();
     }
 }
 

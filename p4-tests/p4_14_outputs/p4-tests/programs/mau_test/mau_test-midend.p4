@@ -1097,27 +1097,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".stats_key_alu1") register_action<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu1 = {
         void apply(inout stats_key_alu1_layout value, out bit<32> rv) {
+            stats_key_alu1_layout in_value_25;
+            in_value_25.lo = value.lo;
+            in_value_25.hi = value.hi;
             rv = value.lo;
             if (value.hi < 32w2) 
                 value.hi = value.hi + 32w1;
-            if (value.hi >= 32w2) 
+            if (in_value_25.hi >= 32w2) 
                 value.hi = 32w0;
-            if (value.hi >= 32w2 && value.lo < 32w2099) 
+            if (in_value_25.hi >= 32w2 && value.lo < 32w2099) 
                 value.lo = value.lo + 32w1;
-            if (value.lo >= 32w2099) 
+            if (in_value_25.lo >= 32w2099) 
                 value.lo = 32w100;
         }
     };
     @name(".stats_key_alu3") register_action<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu3 = {
         void apply(inout stats_key_alu1_layout value, out bit<32> rv) {
+            stats_key_alu1_layout in_value_26;
+            in_value_26.lo = value.lo;
+            in_value_26.hi = value.hi;
             rv = value.lo;
             if (value.hi < 32w2) 
                 value.hi = value.hi + 32w1;
-            if (value.hi >= 32w2) 
+            if (in_value_26.hi >= 32w2) 
                 value.hi = 32w0;
-            if (value.hi >= 32w2 && value.lo < 32w11) 
+            if (in_value_26.hi >= 32w2 && value.lo < 32w11) 
                 value.lo = value.lo + 32w1;
-            if (value.lo >= 32w11) 
+            if (in_value_26.lo >= 32w11) 
                 value.lo = 32w0;
         }
     };

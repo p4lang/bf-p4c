@@ -187,12 +187,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         void apply(inout cntr_1_layout value, out bit<16> rv) {
             bit<16> tmp_3;
             bit<16> tmp_4;
+            cntr_1_layout in_value;
+            in_value = value;
             rv = 16w0;
             if (hdr.pkt.field_e_16 == 16w7) 
-                value.lo = value.lo + 16w1;
+                value.lo = in_value.lo + 16w1;
             if (hdr.pkt.field_e_16 != 16w7) {
                 tmp_3 = cntr_1_math_unit.execute(hdr.pkt.field_f_16);
-                tmp_4 = value.hi ^ tmp_3;
+                tmp_4 = in_value.hi ^ tmp_3;
                 value.lo = tmp_4;
             }
             if (hdr.pkt.field_e_16 == 16w7) 
