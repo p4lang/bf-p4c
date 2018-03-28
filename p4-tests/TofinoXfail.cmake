@@ -129,7 +129,6 @@ if (PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
-    extensions/p4_tests/p4_14/p4-tests/programs/emulation/emulation.p4
     extensions/p4_tests/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4
     extensions/p4_tests/p4_14/p4-tests/programs/resubmit/resubmit.p4
     )
@@ -1036,11 +1035,6 @@ p4c_add_xfail_reason("tofino"
   "Trying to accumulate too many fields in CCGF"
   #extensions/p4_tests/p4_14/c2/COMPILER-401/case2308_bugged.p4
   )
-
-p4c_add_xfail_reason("tofino"
-  "AssertionError: A packet was received on device"
-  extensions/p4_tests/p4_16/verify_checksum.p4
-)
 
 # Should fail because meaningless invalidate operand.
 p4c_add_xfail_reason("tofino"

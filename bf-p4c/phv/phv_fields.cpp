@@ -675,6 +675,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         // other fields, writes to those other fields would change the
         // hidden container validity bit and break the program.
         f->set_no_pack(true);
+        f->set_read_container_valid_bit(true);
         LOG1(".....Deparser No-Pack Constraint '" << param->name
               << "' on field..... " << f);
     }
@@ -700,6 +701,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         // in the parser, instead of using the validity bit of container, which implies
         // the no_pack here.
         f->set_no_pack(true);
+        f->set_read_container_valid_bit(true);
         LOG1(".....Deparser Constraint " << entry->name << " 'digest' on field..... " << f);
 
         if (entry->name == "resubmit") {

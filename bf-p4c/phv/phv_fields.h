@@ -390,6 +390,7 @@ class Field {
     //
     bool            header_stack_pov_ccgf_i = false;   /// header stack pov owner
     bool            simple_header_pov_ccgf_i = false;  /// simple header ccgf
+    bool            read_container_valid_bit_i = false;  /// $valid is used for some purpose
     Field *ccgf_i = nullptr;           /// container contiguous group fields (ccgf)
                                        // (i) header stack povs: container FULL, no holes
                                        //     only when .$push exists -- see allocatePOV()
@@ -464,6 +465,9 @@ class Field {
 
     bool deparsed_to_tm() const                            { return deparsed_to_tm_i; }
     void set_deparsed_to_tm(bool b)                        { deparsed_to_tm_i = b; }
+
+    bool read_container_valid_bit() const                  { return read_container_valid_bit_i; }
+    void set_read_container_valid_bit(bool b)              { read_container_valid_bit_i = b; }
 
     void set_num_pack_conflicts(size_t no)                 { numNoPack = no; }
 

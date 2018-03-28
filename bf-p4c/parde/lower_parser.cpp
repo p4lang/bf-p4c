@@ -1901,6 +1901,8 @@ class SplitBigStates : public ParserModifier {
 
 /// Locate all containers that are written more than once by the parser (and
 /// hence need the "multiwrite" bit set).
+/// Must run after ComputeInitZeroContainers, because those containers probably
+/// need to be on the multi_write list, if packed with other field wrote in parser.
 class ComputeMultiwriteContainers : public ParserModifier {
     bool preorder(IR::BFN::LoweredParserMatch* match) override {
         for (auto* stmt : match->statements)
@@ -1911,6 +1913,11 @@ class ComputeMultiwriteContainers : public ParserModifier {
     }
 
     void postorder(IR::BFN::LoweredParser* parser) override {
+        // Init Zero fields set container valid it 1, so if where is any write,
+        // the container should be set as multi_write.
+        for (auto& c : parser->initZeroContainers) {
+            writes[c->container]++; }
+
         // Mark any container that's written more than once as multiwrite. (At
         // this point, we assume that earlier passes have verified that the
         // program is correct, so multiple writes must be intentional.)
@@ -1934,8 +1941,8 @@ class ComputeInitZeroContainers : public ParserModifier {
     void postorder(IR::BFN::LoweredParser* parser) override {
         ordered_set<PHV::Container> zero_init_containers;
         for (const auto& f : phv) {
-            // XXX(yumin): Deparser parameters are initialized to invalid instead of zero.
-            if (f.deparsed_to_tm() && f.no_pack()) continue;
+            // XXX(yumin): fields that reads $valid should not be initialized.
+            if (f.read_container_valid_bit()) continue;
             if (f.gress != parser->gress) continue;
 
             if (defuse.hasUninitializedRead(f.id)) {
@@ -2001,8 +2008,8 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
         new SplitBigStates,
-        new ComputeMultiwriteContainers,
         new ComputeInitZeroContainers(phv, defuse),
+        new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.
         new ComputeBufferRequirements,
     });
 }
