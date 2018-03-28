@@ -51,6 +51,11 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/ternary2-bmv2.p4
     )
 
+  p4c_add_xfail_reason("tofino"
+    "corrupt table config json"
+    extensions/p4_tests/p4_14/wide_action1.p4
+  )
+
 endif() # HARLYN_STF_tofino
 
 # Tests that run packets:

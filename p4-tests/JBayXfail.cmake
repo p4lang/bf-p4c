@@ -49,6 +49,11 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/update_checksum.p4
     )
 
+  p4c_add_xfail_reason("jbay"
+    "corrupt table config json"
+    extensions/p4_tests/p4_14/wide_action1.p4
+  )
+
   # Temporary until we fix the naming in STF for BMV2
   p4c_add_xfail_reason("jbay"
     "no field extra"
