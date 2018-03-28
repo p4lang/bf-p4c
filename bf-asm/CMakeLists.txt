@@ -231,7 +231,7 @@ add_executable (bfas ${BFAS_SOURCES})
 target_link_libraries (bfas ${BFASM_LIBS} ${BFASM_LIB_DEPS})
 
 install (TARGETS bfas
-  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+  RUNTIME DESTINATION bin)
 
 add_custom_target(check-asm
   COMMAND export BUILDDIR=${BFASM_BINARY_DIR} && cd ${BFASM_SOURCE_DIR}/test &&
