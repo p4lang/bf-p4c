@@ -371,8 +371,10 @@ void ActionTable::write_regs(REGS &regs) {
         auto &switch_ctl = regs.rams.array.switchbox.row[row].ctl;
         auto &map_alu_row =  regs.rams.map_alu.row[row];
         if (home_row != home_rows.end() && *home_row == logical_row.row) {
-            /* FIXME -- won't work if new home row starts in the middle of this row */
-            home = nullptr;
+            if (idx + logical_row.cols.size() <=  depth) {
+                /* This is a second home row for this width slice, so does not
+                 * (cannot?) overflow to the row above */
+                home = nullptr; }
             ++home_row; }
         if (home) {
             // FIXME use DataSwitchboxSetup for this somehow?
@@ -426,10 +428,6 @@ void ActionTable::write_regs(REGS &regs) {
             auto &ram = regs.rams.array.row[row].ram[col];
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
             if (!home) {
-                /* FIXME -- this probably won't work if this isn't the first RAM used by this
-                 * table on this logical row (boundary between groups falls within a logical row)
-                 * as we'll then be trying to use the same physical bus for both groups
-                 * Should have issued an error earlier in this case?  */
                 home = &logical_row;
                 home_switch_ctl = &switch_ctl;
                 action_bus->write_action_regs(regs, this, logical_row.row, word);
@@ -442,7 +440,8 @@ void ActionTable::write_regs(REGS &regs) {
                     icxbar[mtab->logical_id].address_distr_to_logical_rows |=
                         1U << logical_row.row; }
             ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::NONE;
-            ram.unit_ram_ctl.match_ram_read_data_mux_select = home == &logical_row ? 4 : 2;
+            ram.unit_ram_ctl.match_ram_read_data_mux_select =
+                home == &logical_row ? UnitRam::DataMux::ACTION : UnitRam::DataMux::OVERFLOW;
             unitram_config.unitram_type = UnitRam::ACTION;
             if (!no_vpns)
                 unitram_config.unitram_vpn = *vpn++;
@@ -516,7 +515,7 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
         auto *fmt = ::get(action_formats, act.name);
         add_pack_format(stage_tbl, fmt ? fmt : format, true, true, &act); }
     stage_tbl["memory_resource_allocation"] =
-        gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
+        gen_memory_resource_allocation_tbl_cfg("sram", layout);
     if (actions)
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     tbl["how_referenced"] = indirect ? "indirect" : "direct";
