@@ -528,6 +528,7 @@ inline std::ostream &operator<<(std::ostream &out, const IXBar::FieldInfo &fi) {
     return out;
 }
 
+std::ostream &operator<<(std::ostream &, const IXBar::Use &);
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Use::Byte &b) {
     out << b.name << '[' << b.lo << ".." << (b.lo + 7) << ']';
     if (b.loc) out << b.loc;

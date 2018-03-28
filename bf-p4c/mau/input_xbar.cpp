@@ -1011,7 +1011,7 @@ static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *fiel
                     IXBar::byte_type_t byte_type = IXBar::NO_BYTE_TYPE,
                     unsigned extra_align = 0) {
     bool ok = false;
-    int index;
+    int index = 0;
     // FIXME: This will currently not work before PHV allocation, because the foreach_byte
     // over alloc_slices only works if the slices have been allocated, according to Cole.
     // If we want to move TablePlacement before PHV allocation in the future, this will have
@@ -1732,6 +1732,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const PhvInfo &phv, 
     std::set <cstring> fields_needed;
     ContByteConversion map_alloc;
     unsigned extra_align = 0;
+    LOG3("IXBar::allocStateful(" << salu->name << ")");
     if (salu->width > 1) {
         /* To use the stateful_meter_alu_data path, any fields read must be aligned
          * properly on the ixbar for the size of the stateful alu.  We only do this
@@ -1759,6 +1760,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const PhvInfo &phv, 
     if (!find_alloc(alloc.use, false, xbar_alloced, hm_reqs, byte_mask)) {
         alloc.clear();
         return false; }  // FIXME -- need to allocate hash table space if it turns out we need it
+    LOG3("allocStateful succeeded: " << alloc);
     fill_out_use(xbar_alloced, false);
     return true;
 }
