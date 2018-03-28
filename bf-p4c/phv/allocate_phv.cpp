@@ -292,9 +292,8 @@ bool CoreAllocation::satisfies_constraints(std::vector<PHV::AllocSlice> slices) 
     for (auto& slice : slices) {
         bool isDeparsedOrMau = uses_i.is_deparsed(slice.field()) ||
             uses_i.is_used_mau(slice.field());
-        bool isClot = clot_i.allocated(slice.field());
         bool alwaysPackable = slice.field()->alwaysPackable;
-        if (isDeparsedOrMau && !isClot && !alwaysPackable)
+        if (isDeparsedOrMau && !alwaysPackable)
             used.push_back(slice); }
     auto NotAdjacent = [](const PHV::AllocSlice& left, const PHV::AllocSlice& right) {
             return left.field() != right.field() ||
@@ -473,7 +472,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocCCGF(
             member->size, offset);
 
         // Only allocate referenced fields.
-        if (uses_i.is_referenced(member) && !clot_i.allocated(member)) {
+        if (uses_i.is_referenced(member)) {
             LOG5("    ...attempt allocating CCGF member at offset " << offset << ": " << member);
             alloc_attempt.allocate(
                 PHV::AllocSlice(member, *candidate,
@@ -525,6 +524,9 @@ CoreAllocation::tryAllocSliceList(
     PHV::SuperCluster::SliceList slices;
     for (auto& kv : start_positions)
         slices.push_back(kv.first);
+
+    PHV::Transaction alloc_attempt = alloc.makeTransaction();
+    int container_size = int(group.type().size());
 
     // Set previous_container to the container returned as part of start_positions
     boost::optional<PHV::Container> previous_container = boost::none;
@@ -582,9 +584,6 @@ CoreAllocation::tryAllocSliceList(
         if (!satisfies_constraints(group, slice)) {
             LOG5("    ...but slice " << slice << " doesn't satisfy slice<-->group constraints");
             return boost::none; } }
-
-    PHV::Transaction alloc_attempt = alloc.makeTransaction();
-    int container_size = int(group.type().size());
 
     // XXX(cole): If the list is entirely comprised of a CCGF, allocate it.
     bool all_ccgf = std::all_of(slices.begin(), slices.end(),
@@ -776,11 +775,10 @@ CoreAllocation::tryAllocSliceList(
         auto this_alloc = alloc_attempt.makeTransaction();
         for (auto& slice : candidate_slices) {
             bool is_referenced = uses_i.is_referenced(slice.field());
-            bool is_clot = clot_i.allocated(slice.field());
             bool is_allocated =
                 previous_allocations.find(PHV::FieldSlice(slice.field(), slice.field_slice()))
                     != previous_allocations.end();
-            if (is_referenced && !is_clot && !is_allocated) {
+            if (is_referenced && !is_allocated) {
                 this_alloc.allocate(slice);
             } else if (!is_referenced) {
                 LOG5("NOT ALLOCATING unreferenced field: " << slice); } }
@@ -821,12 +819,45 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& container_group,
         PHV::SuperCluster& super_cluster) const {
+    // Make a new transaction.
+    PHV::Transaction alloc_attempt = alloc.makeTransaction();
+
+#ifdef HAVE_JBAY
+    // In JBay, a clot-candidate field may sometimes be allocated to a PHV
+    // container, eg. if it is adjacent to a field that must be packed into a
+    // larger container, in which case the clot candidate would be used as
+    // padding.
+    //
+    // XXX(cole): Right now, if any slice of a field is allocated to PHV, then
+    // the entire field must be.  Conversely, if a super cluster is entirely
+    // made up of clot candidates, and each candidate is an entire field (not a
+    // slice), then don't bother allocating that super cluster; its fields can
+    // be allocated to a clot.
+
+    // Clot candidates, by definition, aren't involved in MAU operations
+    // and so will only have one slice list.
+    if (super_cluster.slice_lists().size() == 1) {
+        auto* slices = *super_cluster.slice_lists().begin();
+        bool allClotCandidates = std::all_of(slices->begin(), slices->end(),
+            [&](const PHV::FieldSlice& slice) {
+                return clot_i.allocated(slice.field())
+                    && slice.size() == slice.field()->size; });
+        if (allClotCandidates) {
+            LOG5("Skipping CLOT-allocated super cluster: " << super_cluster);
+            return alloc_attempt;
+        } else if (LOGGING(3)) {
+            // Log any remaining clot-candidate fields that will be allocated to PHV.
+            LOG3("The following clot-candidate slices will be allocated to PHV:");
+            for (auto* rotationalCluster : super_cluster.clusters())
+                for (auto* alignedCluster : rotationalCluster->clusters())
+                    for (auto& slice : *alignedCluster)
+                        if (clot_i.allocated(slice.field()))
+                            LOG3(slice); } }
+#endif
+
     // Check container group/cluster group constraints.
     if (!satisfies_constraints(container_group, super_cluster))
         return boost::none;
-
-    // Make a new transaction.
-    PHV::Transaction alloc_attempt = alloc.makeTransaction();
 
     // Try to allocate slice lists together, storing the offsets required of each
     // slice's cluster.
