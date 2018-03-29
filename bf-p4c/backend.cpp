@@ -1,6 +1,7 @@
 #include "backend.h"
 #include <fstream>
 #include <set>
+#include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/common/check_header_refs.h"
 #include "bf-p4c/common/extract_maupipe.h"
@@ -157,6 +158,7 @@ Backend::Backend(const BFN_Options& options) :
         new CollectPhvInfo(phv),
         new DoInstructionSelection(phv),
         new DumpPipe("After InstructionSelection"),
+        new Alias(phv),   // Interpret the pa_alias pragmas
         new CollectPhvInfo(phv),
         &defuse,
         new CollectNameAnnotations(phv),

@@ -349,6 +349,7 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                             if (w.key == "type") p.type = w.value.s;
                             else if (w.key == "size") p.bit_width = w.value.i;
                             else if (w.key == "full_size") p.bit_width_full = w.value.i;
+                            else if (w.key == "alias") p.alias = w.value.s;
                             else error(lineno, "Incorrect param type %s in p4_param_order", w.key.s); } }
                     p4_params_list.emplace_back(p); } } }
     } else if (kv.key == "context_json") {
@@ -1965,6 +1966,8 @@ void Table::common_tbl_cfg(json::map &tbl) {
             gen_instfield_name(p.name, instname, fieldname);
             param["instance_name"] = instname;
             param["field_name"] = fieldname;
+            if (!p.alias.empty())
+                param["alias"] = p.alias;
             params.push_back(std::move(param));
             if (p.type == "range")
                 tbl["uses_range"] = true;

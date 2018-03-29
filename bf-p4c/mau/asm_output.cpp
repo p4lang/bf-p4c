@@ -1736,12 +1736,38 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         if (ixbar_read->match_type.name == "selector") continue;
         if (p4_param_index != ixbar_read->p4_param_order) continue;
         auto *expr = ixbar_read->expr;
+        auto* mem = expr->to<IR::BFN::AliasMember>();
+        auto* old_expr = expr;
         if (ixbar_read->from_mask)
             expr = expr->to<IR::Slice>()->e0;
-        out << indent << canon_name(phv.field(expr)->externalName()) << ": ";
+        auto* sl = expr->to<IR::Slice>();
+        auto size = expr->type->width_bits();
+        if (sl)
+            mem = sl->e0->to<IR::BFN::AliasMember>();
+
+        if (mem) {
+            auto anno = mem->getAnnotations();
+            if (auto s = anno->getSingle("alias")) {
+                ERROR_CHECK(s->expr.size() >= 1, "%s: The alias annotation does not have a value",
+                        s);
+                auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
+                ERROR_CHECK(pragma_val != nullptr, "The alias annotation value is not a string");
+                LOG1(pragma_val->value);
+                const PHV::Field* aliasingField = phv.field(pragma_val->value);
+                ERROR_CHECK(aliasingField, "Field %s not found", pragma_val->value);
+                out << indent << canon_name(phv.field(pragma_val->value)->externalName()) << ": ";
+            } else {
+                ::error("No alias annotation found for AliasMember");
+            }
+        } else {
+            out << indent << canon_name(phv.field(expr)->externalName()) << ": ";
+        }
         out << "{ type: " << ixbar_read->match_type.name << ", ";
-        out << "size: " << expr->type->width_bits() << ", ";
-        out << "full_size: " << phv.field(expr)->size << " }" << std::endl;
+        out << "size: " << size << ", ";
+        out << "full_size: " << phv.field(expr)->size;
+        if (mem)
+            out << ", alias: " << canon_name(phv.field(old_expr)->externalName());
+        out << " }" << std::endl;
         p4_param_index++;
     }
 }

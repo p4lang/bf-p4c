@@ -84,6 +84,7 @@ set(EXTENSION_P4_14_CONV_SOURCES ${EXTENSION_P4_14_CONV_SOURCES} ${QUAL_BF_P4C_P
 
 
 set (BF_P4C_BACKEND_COMMON_SRCS
+  common/alias.cpp
   common/asm_output.cpp
   common/bridged_metadata_replacement.cpp
   common/check_header_alignment.cpp
@@ -109,6 +110,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_SRCS}")
 build_unified(BF_P4C_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_COMMON_HDRS
+  common/alias.h
   common/autoindent.h
   common/blockmap.h
   common/bridged_metadata_replacement.h
@@ -278,6 +280,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/analysis/critical_path_clusters.cpp
   phv/analysis/field_interference.cpp
   phv/analysis/pack_conflicts.cpp
+  phv/pragma/pa_alias.cpp
   phv/pragma/pa_atomic.cpp
   phv/pragma/pa_container_size.cpp
   phv/pragma/pa_mutually_exclusive.cpp
@@ -315,6 +318,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/analysis/critical_path_clusters.h
   phv/analysis/field_interference.h
   phv/analysis/pack_conflicts.h
+  phv/pragma/pa_alias.h
   phv/pragma/pa_atomic.h
   phv/pragma/pa_container_size.h
   phv/pragma/pa_mutually_exclusive.h

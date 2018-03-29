@@ -16,6 +16,7 @@ constexpr const char* CONTAINER_SIZE     = "pa_container_size";
 constexpr const char* SOLITARY           = "pa_solitary";
 constexpr const char* ATOMIC             = "pa_atomic";
 constexpr const char* NO_OVERLAY         = "pa_no_overlay";
+constexpr const char* ALIAS              = "pa_alias";
 
 }
 

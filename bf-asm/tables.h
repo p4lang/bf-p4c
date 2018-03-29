@@ -298,6 +298,7 @@ public:
 
     struct p4_param {
         std::string name;
+        std::string alias;
         unsigned position;
         unsigned bit_width;
         unsigned bit_width_full;

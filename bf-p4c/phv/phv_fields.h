@@ -115,6 +115,11 @@ class Field {
     /// True if this Field is a validity bit.
     bool            pov;
 
+    /// return True if this field is a packet field
+    bool isPacketField() const {
+        return (!metadata && !pov);
+    }
+
     /** Represents a slice (range of bits) of a PHV::Field.  Constraints on the
      * field that are related to position, like alignment, are tailored for
      * each slice.
@@ -662,6 +667,14 @@ class PhvInfo {
 
     const SymBitMatrix& mutex() const { return field_mutex; }
 
+    const ordered_map<cstring, cstring>& getAliasMap() const {
+        return aliasMap;
+    }
+
+    void setAliasEntry(cstring first, cstring second) {
+        aliasMap[first] = second;
+    }
+
  private:  // class PhvInfo
     //
     std::map<cstring, PHV::Field>            all_fields;
@@ -675,8 +688,13 @@ class PhvInfo {
     // TODO: what about header unions?
     std::map<cstring, StructInfo>       simple_headers;
 
-    /// Mapping from containers to the fields using those containers
+    /// Mapping from containers to the fields using those containers.
     std::map<PHV::Container, ordered_set<const PHV::Field *>> container_to_fields;
+
+    /// When two fields are aliased, the source is replaced with the destination throughout the
+    /// backend, except in assembly generation, when the source is emitted using information about
+    /// the destination stored in the following map.
+    ordered_map<cstring, cstring> aliasMap;
 
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
