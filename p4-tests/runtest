@@ -126,16 +126,10 @@ while [ $# -gt 1 ]; do
         exit 0
         ;;
     -db|-gdb)
-        if $verbose && ! $debug; then
-            P4C_ARGS="$P4C_ARGS -v"
-        fi
         debug=true
         debug_p4c=true
         ;;
     -dbas)
-        if $verbose && ! $debug; then
-            P4C_ARGS="$P4C_ARGS -v"
-        fi
         debug=true
         debug_bfas=true
         ;;
@@ -172,7 +166,7 @@ while [ $# -gt 1 ]; do
         run_ptf=true
         run_stf=false
         ;;
-    -v) if $verbose || $debug; then
+    -v) if $verbose; then
             P4C_ARGS="$P4C_ARGS $1"
         fi
         verbose=true
@@ -211,13 +205,6 @@ name=$(basename $file .p4)
 # turn on compiler debug info, regardless
 P4C_ARGS="$P4C_ARGS -g"
 
-if $debug; then
-    # we need to invoke the debugger directly on the backend executable
-    P4C=./p4c-barefoot
-    uppercase_device=$(echo $device | tr '[:lower:]' '[:upper:]')
-    P4C_ARGS="$P4C_ARGS -D__TARGET_${uppercase_device}__"
-fi
-
 if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
     # XXX(cole): This is a hack.  There are some P4_16 tests written against the
     # v1model architecture; in the future, this will be deprecated, and only
@@ -237,20 +224,10 @@ if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; th
     else
         P4C_ARGS="$P4C_ARGS --target ${device}-v1model-barefoot"
     fi
-
-    if $debug; then
-        P4C_ARGS="$P4C_ARGS --p4v 16"
-    else
-        P4C_ARGS="$P4C_ARGS -x p4-16"
-    fi
+    P4C_ARGS="$P4C_ARGS -x p4-16"
 else
-     P4C_ARGS="$P4C_ARGS --target ${device}-v1model-barefoot"
-
-    if $debug; then
-        P4C_ARGS="$P4C_ARGS --p4v 14"
-    else
-        P4C_ARGS="$P4C_ARGS -x p4-14"
-    fi
+    P4C_ARGS="$P4C_ARGS --target ${device}-v1model-barefoot"
+    P4C_ARGS="$P4C_ARGS -x p4-14"
 fi
 
 if [ "$ptftestdir" != "" ] && [ ! -d ${ptftestdir} ]; then
@@ -285,34 +262,30 @@ if [ ! -x $P4C ]; then
     die "Can't find $P4C"
 fi
 
-
-if $debug; then
-    if $verbose; then
-        echo "$DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name${out_ext}.bfa"
-    fi
-    if $debug_p4c; then
-        $DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name${out_ext}.bfa
-    else
-        $P4C $P4C_ARGS $file -o $testdir/$name${out_ext}.bfa
-    fi
-
-    BFAS=../bf-asm/bfas
-    if [ ! -x $BFAS ]; then
-        die "Can't find $BFAS"
-    fi
-    if $debug_bfas; then
-        exec $DEBUGGER_COMMAND $BFAS -t ${device} $testdir/$name${out_ext}.bfa
-    else
-        exec $BFAS -t ${device} $testdir/$name${out_ext}.bfa
-    fi
-fi
-
 # if we don't have PTF or STF tests to run, we can skip the linking step
 # to save time
 if ! $run_ptf && ! $has_stf ; then
     P4C_ARGS="$P4C_ARGS --no-link"
 fi
 
+if $debug; then
+    $P4C -# $P4C_ARGS $file -o $testdir/${name}${out_ext}.out | while read cmd rest; do
+        if [[ -z $rest && $cmd =~ :$ ]]; then
+            continue # skip the label
+        elif $debug_p4c && [[ $cmd =~ p4c-barefoot ]]; then
+            db="$DEBUGGER_COMMAND"
+        elif $debug_bfas && [[ $cmd =~ bfas ]]; then
+            db="$DEBUGGER_COMMAND"
+        else
+            db=""
+        fi
+        if $verbose; then
+            echo $db $cmd $rest
+        fi
+        </dev/tty $db $cmd $rest
+    done
+    exit
+fi
 
 if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
     if run $P4C $P4C_ARGS $file -o $testdir/${name}${out_ext}.out; then
