@@ -524,22 +524,27 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                 LOG2(" - can't place as its already done");
                 return nullptr; }
             set_entries -= p->entries;
+            if (p->stage == rv->stage) {
+                LOG2("Cannot place multiple sections of an individual table in the same stage");
+                rv->stage++;
+                continue;
+            }
         } else if (p->stage == rv->stage) {
-             if (forced_placement)
-                 continue;
-             if (deps->happens_before(p->table, rv->table) && !mutex.action(p->table, rv->table)) {
-                 rv->stage++;
-                 LOG2(" - dependency between " << p->table->name << " and table advances stage");
-             } else if (rv->gw && deps->happens_before(p->table, rv->gw)) {
-                 rv->stage++;
-                 LOG2(" - dependency between " << p->table->name << " and gateway advances stage");
-             } else if (deps->container_conflict(p->table, rv->table)) {
-                 if (!ignoreContainerConflicts)
-                    rv->stage++;
-                 LOG2(" - action dependency between " << p->table->name << " and table " <<
-                         rv->table->name << " due to PHV allocation advances stage to " <<
-                         rv->stage);
-             }
+            if (forced_placement)
+                continue;
+            if (deps->happens_before(p->table, rv->table) && !mutex.action(p->table, rv->table)) {
+                rv->stage++;
+                LOG2(" - dependency between " << p->table->name << " and table advances stage");
+            } else if (rv->gw && deps->happens_before(p->table, rv->gw)) {
+                rv->stage++;
+                LOG2(" - dependency between " << p->table->name << " and gateway advances stage");
+            } else if (deps->container_conflict(p->table, rv->table)) {
+                if (!ignoreContainerConflicts)
+                   rv->stage++;
+                LOG2(" - action dependency between " << p->table->name << " and table " <<
+                        rv->table->name << " due to PHV allocation advances stage to " <<
+                        rv->stage);
+            }
         }
     }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
