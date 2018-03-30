@@ -6,6 +6,7 @@ import errno
 from functools import wraps
 import logging
 import os
+import pexpect
 import re
 import shutil
 import signal
@@ -57,6 +58,8 @@ def get_parser():
                         type=str, action="store",
                         default='localhost:50051')
     parser.add_argument('--keep-logs', help='Keep logs even if test passes',
+                        action='store_true', default=False)
+    parser.add_argument('--verbose-model-log', help='Dump verbose model log',
                         action='store_true', default=False)
     parser.add_argument('--update-config-only',
                         help='Only push the config to bf_switchd',
@@ -158,7 +161,7 @@ def update_config(name, grpc_addr, p4info_path, bin_path, cxt_json_path):
         return False
     return True
 
-def run_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
+def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
                   platform, extra_args=[]):
     ifaces = []
     # find base_test.py
@@ -191,7 +194,7 @@ def run_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
         return False
     return p.returncode == 0
 
-def run_pd_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform, port_map,
+def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform, port_map,
                  extra_args=[]):
     ifaces = []
     # find p4ptfutils
@@ -336,6 +339,12 @@ def sanitize_args(args):
         error("Invalid --top-builddir")
         sys.exit(1)
 
+def enable_verbose_model_log():
+    child = pexpect.spawn('telnet localhost 8000')
+    child.logfile = sys.stdout
+    child.expect(">")
+    child.sendline("rmt-set-log-flags\r")
+
 def main():
     args, unknown_args = get_parser().parse_known_args()
 
@@ -351,6 +360,9 @@ def main():
         compiler_out_dir = os.path.join(args.testdir, 'share', args.device+'pd', args.name)
     else:
         compiler_out_dir = args.testdir
+
+    if os.getenv('VERBOSE_MODEL_LOG') is not None:
+        args.verbose_model_log = True
 
     p4info_path = os.path.join(compiler_out_dir, 'p4info.proto.txt')
     if args.pdtest is None and not os.path.exists(p4info_path):
@@ -430,11 +442,11 @@ def main():
     if args.test_only:
         success = False
         if args.pdtest is None:
-            success = run_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
+            success = run_pi_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
                                     port_map, args.stftest, args.platform,
                                     extra_ptf_args)
         else:
-            success = run_pd_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
+            success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
                                    args.testdir, args.platform, port_map,
                                    extra_ptf_args)
         if not success:
@@ -481,8 +493,11 @@ def main():
                 error("Error when starting model & switchd")
                 return False
 
+            if args.verbose_model_log:
+                enable_verbose_model_log()
+
             if args.pdtest is not None:
-                success = run_pd_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
+                success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
                                        args.testdir, args.platform, port_map,
                                        extra_ptf_args)
             else:
@@ -492,7 +507,7 @@ def main():
                     error("Error when pushing P4 config to switchd")
                     return False
 
-                success = run_ptf_tests(PTF, args.grpc_addr, args.ptfdir,
+                success = run_pi_ptf_tests(PTF, args.grpc_addr, args.ptfdir,
                                         p4info_path, port_map,
                                         args.stftest, args.platform,
                                         extra_ptf_args)

@@ -22,6 +22,7 @@ install_python_packages() {
     $SUDO pip install jsonschema || die "Failed to install needed packages"
     $SUDO pip install pyinstaller==3.2.1 || die "Failed to install needed packages"
     $SUDO pip install thrift || die "Failed to install needed packages"  # need this one instead
+    $SUDO pip install pexpect || die "Failed to install needed packages"
 }
 
 install_linux_packages() {
