@@ -111,7 +111,7 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
     else
         ta = new table_alloc(t, &resources->gateway_ixbar, nullptr, &resources->memuse, lo,
                              entries);
-    LOG2("Adding table " << ta->table->name);
+    LOG2("Adding table " << ta->table->name << " with " << entries << " entries");
     tables.push_back(ta);
     if (gw != nullptr)  {
         auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, nullptr, &resources->memuse,

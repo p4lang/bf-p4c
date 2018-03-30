@@ -281,6 +281,7 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
                 layout.match_bytes--;
             }
         }
+        layout.match_width_bits -= TableFormat::RAM_GHOST_BITS;
     }
 }
 
@@ -321,7 +322,7 @@ void TableLayout::setup_action_layout(IR::MAU::Table *tbl) {
     safe_vector<ActionFormat::Use> uses;
     ActionFormat af(tbl, phv, alloc_done);
     // Action Profiles cannot have any immediate data
-    af.allocate_format(uses, tbl->layout.indirect_action_addr_bits == 0);
+    af.allocate_format(uses, tbl->layout.action_addr_bits == 0);
     lc.total_action_formats[tbl->name] = uses;
     tbl->layout.action_data_bytes = af.action_data_bytes;
 }
@@ -332,18 +333,35 @@ void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl) {
     if (get_hit_actions(tbl) == 1)
         tbl->layout.overhead_bits++;
 
+    int index = 0;
     for (auto &use : lc.get_action_formats(tbl)) {
         IR::MAU::Table::Layout layout = tbl->layout;
-        layout.action_data_bytes_in_overhead = use.action_data_bytes[ActionFormat::IMMED];
         layout.action_data_bytes_in_table = use.action_data_bytes[ActionFormat::ADT];
-        layout.overhead_bits += 8 * layout.action_data_bytes_in_overhead;
-        LayoutOption lo(layout);
+        layout.immediate_bits = use.immediate_bits();
+        layout.overhead_bits += use.immediate_bits();
+        LayoutOption lo(layout, index);
         lc.total_layout_options[tbl->name].push_back(lo);
+        index++;
     }
 }
 
+/**
+ * Responsible for the calculation of the potential layouts to try, and later adapt
+ * if necessary in the try_place_table algorithm.
+ *
+ * Constraints generally come from the following:
+ *    1. 128 bits maximally can be packed per RAM
+ *    2. 16 individual bytes / (with some exceptions for the upper nibbles), can be
+ *       matched in the algorithm.
+ *    3. 64 bits of overhead are allowed maximally per RAM.  Overhead is any information
+ *       that has to head to match central.
+ *    4. At most 5 entries can be packed per RAM line.
+ *
+ * Lastly, the width <= 8, as that is the maximal width of the RAM array on which to
+ * perform a wide match. 
+ */
 void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_in_table,
-                                    int action_data_bytes_in_overhead) {
+                                    int immediate_bits, int index) {
     auto annot = tbl->match_table->getAnnotations();
     int pack_val = 0;
     if (auto s = annot->getSingle("pack")) {
@@ -367,36 +385,55 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_i
         if (pack_val > 0 && entry_count != pack_val)
             continue;
 
-        int overhead_estimate = 8 * action_data_bytes_in_overhead + tbl->layout.overhead_bits;
-        int total_match_bytes = entry_count * tbl->layout.match_bytes;
-        int extra_bits = ((overhead_estimate + TableFormat::VERSION_BITS) * entry_count);
-        int extra_bytes = (extra_bits + 7) / 8;
+        int single_overhead_bits = immediate_bits + tbl->layout.overhead_bits;
+        int single_entry_bits = single_overhead_bits;
+        single_entry_bits += TableFormat::VERSION_BITS;
+        single_entry_bits += tbl->layout.match_width_bits;
 
-        // FIXME: This is a hack to get the jenkins test to fully work.  The algorithm is
-        // currently not adaptive enough to make a change once this has been selected, and
-        // it uses this heuristic, which is calculated too early.  This has to be tuned
-        // during table placement, which cannot be done yet.  Literally needed one more byte
-        // for this particular pack
-        if (entry_count > MAX_ENTRIES_PER_ROW)
-            extra_bytes++;
+        int total_bits = entry_count * single_entry_bits;
+        int total_bytes = entry_count * tbl->layout.match_bytes;
+        int total_overhead_bits = entry_count * single_overhead_bits;
 
-        int width = (total_match_bytes + extra_bytes + TableFormat::SINGLE_RAM_BYTES - 1)
-                    / TableFormat::SINGLE_RAM_BYTES;
+        int bit_limit_width = (total_bits + TableFormat::SINGLE_RAM_BITS - 1)
+                              / TableFormat::SINGLE_RAM_BITS;
+        int byte_limit_width = (total_bytes + TableFormat::SINGLE_RAM_BYTES - 1)
+                               / TableFormat::SINGLE_RAM_BYTES;
+        int overhead_width = (total_overhead_bits + TableFormat::OVERHEAD_BITS - 1)
+                             / TableFormat::OVERHEAD_BITS;
+        int pack_width = (entry_count + MAX_ENTRIES_PER_ROW - 1)
+                          / MAX_ENTRIES_PER_ROW;
+        int width = std::max({ bit_limit_width, byte_limit_width, overhead_width, pack_width });
 
-        while (entry_count / width > MAX_ENTRIES_PER_ROW)
-            width++;
-        while (overhead_estimate * entry_count > width * TableFormat::OVERHEAD_BITS)
-            width++;
+        int mod_value;
+        int min_value = 0;
+
+        if (width > entry_count) {
+            mod_value = width % entry_count;
+            min_value = entry_count;
+        } else {
+            mod_value = entry_count % width;
+            min_value = width;
+         }
+
+        // Skip potential doubling of layouts: i.e. if the layout is 2 entries per RAM row,
+        // and 1 RAM wide, then there is no point to adding the double, 4 entries per RAM row,
+        // and 2 RAM wide.  This is the same packing, and wider matches are more constrained
+        if (mod_value == 0 && min_value != 1 && pack_val == 0)
+            continue;
 
         if (width > Memories::SRAM_ROWS) break;
 
+        LOG2(" Potential Layout Option: { pack : " << entry_count << ", width : " << width
+             << ", action data table bytes : " << action_data_bytes_in_table
+             << ", immediate bits : " << immediate_bits << " }");
         IR::MAU::Table::Layout layout = tbl->layout;
         IR::MAU::Table::Way way;
         layout.action_data_bytes_in_table = action_data_bytes_in_table;
-        layout.action_data_bytes_in_overhead = action_data_bytes_in_overhead;
-        layout.overhead_bits += action_data_bytes_in_overhead * 8;
-        way.match_groups = entry_count; way.width = width;
-        LayoutOption lo(layout, way);
+        layout.immediate_bits = immediate_bits;
+        layout.overhead_bits += immediate_bits;
+        way.match_groups = entry_count;
+        way.width = width;
+        LayoutOption lo(layout, way, index);
         lc.total_layout_options[tbl->name].push_back(lo);
     }
 }
@@ -404,9 +441,11 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_i
 /* Setting up the potential layouts for exact match, with different numbers of entries per row,
    different ram widths, and immediate data on and off */
 void TableLayout::setup_layout_options(IR::MAU::Table *tbl) {
+    int index = 0;
     for (auto &use : lc.get_action_formats(tbl)) {
         setup_exact_match(tbl, use.action_data_bytes[ActionFormat::ADT],
-                          use.action_data_bytes[ActionFormat::IMMED]);
+                          use.immediate_bits(), index);
+        index++;
     }
 }
 
@@ -442,10 +481,10 @@ void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
     auto uses = lc.get_action_formats(tbl);
     auto &use = uses.back();
     IR::MAU::Table::Layout layout = tbl->layout;
-    layout.action_data_bytes_in_overhead = use.action_data_bytes[ActionFormat::IMMED];
+    layout.immediate_bits = use.immediate_bits();
     layout.action_data_bytes_in_table = use.action_data_bytes[ActionFormat::ADT];
-    layout.overhead_bits += 8 * layout.action_data_bytes_in_overhead;
-    LayoutOption lo(layout);
+    layout.overhead_bits += use.immediate_bits();
+    LayoutOption lo(layout, uses.size() - 1);
     lc.total_layout_options[tbl->name].push_back(lo);
 }
 
@@ -545,7 +584,7 @@ class VisitAttached : public Inspector {
             error("%s: No size count in %s %s", ad->srcInfo, ad->kind(), ad->name);
         int vpn_bits_needed = std::max(10, ceil_log2(ad->size)) + 1;
         layout.overhead_bits += vpn_bits_needed;
-        layout.indirect_action_addr_bits = vpn_bits_needed;
+        layout.action_addr_bits = vpn_bits_needed;
         return false;
     }
     bool preorder(const IR::MAU::IdleTime *) override {

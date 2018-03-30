@@ -28,20 +28,16 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
     match_width_bits += a.match_width_bits;
     if (a.action_data_bytes > action_data_bytes)
         action_data_bytes = a.action_data_bytes;
-    overhead_bits += 8 * (a.action_data_bytes_in_overhead -
-                          action_data_bytes_in_overhead);
-    if (a.action_data_bytes_in_overhead >= action_data_bytes_in_overhead) {
-        action_data_bytes_in_overhead = a.action_data_bytes_in_overhead;
-        overhead_bits -= 8 * action_data_bytes_in_overhead;
-    } else {
-        overhead_bits -= 8 * a.action_data_bytes_in_overhead; }
+
+
     if (a.action_data_bytes_in_table > action_data_bytes_in_table)
         action_data_bytes_in_table = a.action_data_bytes_in_table;
 
     overhead_bits += a.overhead_bits;
+    immediate_bits += a.immediate_bits;
     meter_addr_bits += a.meter_addr_bits;
     counter_addr_bits += a.counter_addr_bits;
-    indirect_action_addr_bits += a.indirect_action_addr_bits;
+    action_addr_bits += a.action_addr_bits;
     ghost_bytes += a.ghost_bytes;
     partition_bits += partition_bits;
     partition_count += partition_count;

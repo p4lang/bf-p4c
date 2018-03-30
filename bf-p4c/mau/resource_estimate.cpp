@@ -458,19 +458,8 @@ void StageUseEstimate::fill_estimate_from_option(int &entries) {
     entries = preferred()->entries;
 }
 
-/* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
-StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
-                                   const LayoutChoices *lc,
-                                   ordered_set<const IR::MAU::AttachedMemory *> sa /* Defaulted */,
-                                   bool table_placement)
-    : shared_attached(sa) {
-    // Because the table is const, the layout options must be copied into the Object
-    logical_ids = 1;
-    layout_options.clear();
-    layout_options = lc->get_layout_options(tbl);
-    action_formats = lc->get_action_formats(tbl);
-    exact_ixbar_bytes = tbl->layout.ixbar_bytes;
-    // FIXME: This is a quick hack to handle tables with only a default action
+void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl,
+        int &entries, bool table_placement) {
     if (layout_options.size() == 1 && layout_options[0].layout.no_match_data()) {
         entries = 512;
         preferred_index = 0;
@@ -493,6 +482,48 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
     } else {  // gw
         entries = 0;
     }
+}
+
+
+/* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
+StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
+                                   const LayoutChoices *lc,
+                                   ordered_set<const IR::MAU::AttachedMemory *> sa /* Defaulted */,
+                                   bool table_placement)
+    : shared_attached(sa) {
+    // Because the table is const, the layout options must be copied into the Object
+    logical_ids = 1;
+    layout_options.clear();
+    layout_options = lc->get_layout_options(tbl);
+    action_formats = lc->get_action_formats(tbl);
+    exact_ixbar_bytes = tbl->layout.ixbar_bytes;
+    determine_initial_layout_option(tbl, entries, table_placement);
+    // FIXME: This is a quick hack to handle tables with only a default action
+}
+
+bool StageUseEstimate::adjust_choices(const IR::MAU::Table *tbl, int &entries) {
+    if (tbl->gateway_only() || tbl->layout.no_match_data())
+        return false;
+
+    if (tbl->layout.ternary) {
+        preferred_index++;
+        if (preferred_index == layout_options.size())
+            return false;
+        return true;
+    }
+
+    if (layout_options[0].previously_widened) {
+        return false;
+    } else {
+        layout_options[0].way.width++;
+        layout_options[0].previously_widened = true;
+    }
+
+    for (auto &lo : layout_options) {
+        lo.clear_mems();
+    }
+    determine_initial_layout_option(tbl, entries, false);
+    return true;
 }
 
 int StageUseEstimate::stages_required() const {
@@ -775,6 +806,7 @@ void StageUseEstimate::srams_left_best_option(int srams_left) {
         if (b.srams > srams_left && a.srams <= srams_left)
             return true;
         if ((t = a.way.width - b.way.width) != 0) return t < 0;
+        if ((t = a.entries - b.entries) != 0) return t > 0;
         if ((t = a.way.match_groups - b.way.match_groups) != 0) return t < 0;
         if (!a.layout.direct_ad_required() && b.layout.direct_ad_required())
             return true;

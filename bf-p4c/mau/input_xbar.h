@@ -278,6 +278,11 @@ struct IXBar {
 
             GroupInfo(int sb, int ig, int by, int b)
                 : search_bus(sb), ixbar_group(ig), bytes(by), bits(b) { }
+
+            void dbprint(std::ostream &out) const {
+                out << "Search bus: " << search_bus << ", IXBar group: " << ixbar_group
+                    << ", Bytes : " << bytes << ", Bits : " << bits;
+            }
         };
 
         struct TotalInfo {

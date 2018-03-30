@@ -1752,7 +1752,6 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
                         s);
                 auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
                 ERROR_CHECK(pragma_val != nullptr, "The alias annotation value is not a string");
-                LOG1(pragma_val->value);
                 const PHV::Field* aliasingField = phv.field(pragma_val->value);
                 ERROR_CHECK(aliasingField, "Field %s not found", pragma_val->value);
                 out << indent << canon_name(phv.field(pragma_val->value)->externalName()) << ": ";
@@ -1962,7 +1961,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             out << indent << at->kind() << ": " << name << std::endl;
         } else if (auto ad = at->to<IR::MAU::ActionData>()) {
             bool ad_check = tbl->layout.action_data_bytes_in_table > 0;
-            ad_check |= tbl->layout.indirect_action_addr_bits > 0;
+            ad_check |= tbl->layout.action_addr_bits > 0;
             BUG_CHECK(ad_check, "Action Data Table %s misconfigured", ad->name);
             have_action = true; } }
     assert(have_indirect == (tbl->layout.ternary || tbl->layout.no_match_miss_path()));

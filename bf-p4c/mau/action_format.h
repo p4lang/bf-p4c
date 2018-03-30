@@ -462,6 +462,9 @@ struct ActionFormat {
         void find_rand_num(const IR::MAU::RandomNumber *rn, int field_lo, int field_hi,
                            int &rng_lo, int &rng_hi) const;
         bool in_layouts(int byte_offset, const bitvec layouts[CONTAINER_TYPES]) const;
+        int immediate_bits() const {
+            return immediate_mask.max().index() + 1;
+        }
     };
 
     struct failure : public Backtrack::trigger {

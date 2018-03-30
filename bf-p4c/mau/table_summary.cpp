@@ -117,9 +117,9 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
         ordered_set<const IR::MAU::AttachedMemory *> sa;
         LayoutChoices lc;
         if (t->layout.ternary || t->layout.no_match_data())
-            lo.emplace_back(t->layout);
+            lo.emplace_back(t->layout, 0);
         else
-            lo.emplace_back(t->layout, t->ways[0]);
+            lo.emplace_back(t->layout, t->ways[0], 0);
         action_formats.push_back(t->resources->action_format);
         lc.total_layout_options[t->name] = lo;
         lc.total_action_formats[t->name] = action_formats;

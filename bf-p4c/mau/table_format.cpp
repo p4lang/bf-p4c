@@ -22,7 +22,8 @@
  */
 bool TableFormat::analyze_layout_option() {
     // FIXME: In total needs some information variable passed about ghosting
-
+    LOG3("  Layout option { pack : " << layout_option.way.match_groups << ", width : "
+         << layout_option.way.width << " }");
     int min_way_size = *std::min_element(layout_option.way_sizes.begin(),
                                          layout_option.way_sizes.end());
 
@@ -32,6 +33,9 @@ bool TableFormat::analyze_layout_option() {
 
     int per_RAM = layout_option.way.match_groups / layout_option.way.width;
     auto total_info = match_ixbar.bits_per_search_bus();
+
+    for (auto gi : total_info[0].all_group_info)
+         LOG4("   Group info " << gi);
 
     for (int i = 0; i < layout_option.way.match_groups; i++) {
         use->match_groups.emplace_back();
@@ -63,7 +67,10 @@ bool TableFormat::analyze_layout_option() {
         });
 
         for (auto sb : search_bus_per_width) {
-            ixbar_groups.push_back(hi.all_group_info[sb].ixbar_group);
+            if (sb >= 0)
+                ixbar_groups.push_back(hi.all_group_info[sb].ixbar_group);
+            else
+                ixbar_groups.push_back(-1);
         }
         use->ixbar_group_per_width[hi.hash_group] = ixbar_groups;
     }
@@ -72,6 +79,8 @@ bool TableFormat::analyze_layout_option() {
         bool result_bus_needed = overhead_groups_per_RAM[i] > 0;
         use->result_bus_needed.push_back(result_bus_needed);
     }
+    LOG3("  Search buses per word " << search_bus_per_width);
+    LOG3("  Overhead groups per word " << overhead_groups_per_RAM);
 
     // Unsure if more code will be required here in the future
     return true;
@@ -84,6 +93,7 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM,
     // This checks to see if the algorithm  can possibly ghost off any extra search buses
     // to leave at most one search bus.  If that's the case, then choose_ghost_bits will
     // prioritize those search buses
+    skinny = true;
     if (match_ixbar.search_buses_single() > 1) {
         std::sort(sizes.begin(), sizes.end(),
             [](const IXBar::Use::GroupInfo &a, const IXBar::Use::GroupInfo &b) {
@@ -137,6 +147,7 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM,
 /* Specifically for the allocation of groups that require multiple RAMs.  Determine where
    the overhead has to be, and which RAMs contain the particular match groups */
 bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> &sizes) {
+    skinny = false;
     size_t RAM_per = (layout_option.way.width + layout_option.way.match_groups - 1)
                      / layout_option.way.match_groups;
     if (layout_option.way.width % layout_option.way.match_groups == 0
@@ -149,11 +160,6 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> 
         return false;  // FIXME: Again, can potentially be saved by ghosting off certain bits
     }
 
-    // Too much overhead means that even though only one hash group requires wide group
-    if (sizes.size() < RAM_per) {
-        sizes.insert(sizes.begin(), sizes[0]);
-    }
-
     // Whichever one has the least amount of bits will be the group in which the overhead
     // will be stored.  This is because we can ghost the most bits off in that section
     std::sort(sizes.begin(), sizes.end(),
@@ -163,8 +169,13 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> 
         return a.search_bus < b.search_bus;
     });
 
+    bool search_bus_on_overhead = true;
     int full_RAMs = layout_option.way.match_groups * (sizes.size() - 1);
     int overhead_RAMs = layout_option.way.width - full_RAMs;
+    if (overhead_RAMs > layout_option.way.match_groups) {
+        overhead_RAMs = layout_option.way.match_groups;
+        search_bus_on_overhead = false;
+    }
     if (overhead_RAMs * MAX_SHARED_GROUPS < layout_option.way.match_groups)
         return false;
 
@@ -181,7 +192,10 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> 
     int total = 0;
     for (int i = 0; i < overhead_RAMs; i++) {
         overhead_groups_per_RAM[i] = 1;
-        search_bus_per_width[i] = sizes[0].search_bus;
+        if (search_bus_on_overhead)
+            search_bus_per_width[i] = sizes[0].search_bus;
+        else
+            search_bus_per_width[i] = -1;
         total++;
     }
 
@@ -194,16 +208,33 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> 
     }
 
     // Assign a search bus to the non overhead groups
-    auto it = sizes.begin() + 1;
+    auto it = sizes.begin();
+    if (search_bus_on_overhead)
+        it++;
+
     int match_groups_set = 0;
     for (int i = overhead_RAMs; i < layout_option.way.width; i++) {
-        if (match_groups_set == layout_option.way.match_groups) {
+        if (it == sizes.end()) {
+            match_groups_set = -1;
+            LOG4("  Layout option wider than the number of ixbar groups");
+        } else if (match_groups_set == layout_option.way.match_groups) {
             it++;
             match_groups_set = 0;
         }
-        search_bus_per_width[i] = it->search_bus;
+
+        int search_bus = 0;
+        if (it != sizes.end()) {
+            search_bus = it->search_bus;
+        } else {
+            search_bus = -1;
+            LOG4("   WARNING: Allocating an extra RAM with neither overhead nor match");
+        }
+
+        search_bus_per_width[i] = search_bus;
         match_groups_set++;
     }
+
+
     return true;
 }
 
@@ -242,7 +273,9 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> 
  */
 bool TableFormat::find_format(Use *u) {
     use = u;
-    LOG3("Find format for table " << tbl->name);
+    LOG1("Find format for table " << tbl->name);
+    LOG3("  Layout option action { adt_bytes: " << layout_option.layout.action_data_bytes_in_table
+         << ", immediate_bits: " << layout_option.layout.immediate_bits << " }");
     if (layout_option.layout.ternary) {
         LOG3("Ternary table?");
         overhead_groups_per_RAM.push_back(1);
@@ -270,16 +303,14 @@ bool TableFormat::find_format(Use *u) {
 
     if (!analyze_layout_option())
         return false;
-    LOG3("Layout option");
     if (!allocate_overhead()) {
         return false;
     }
 
     if (!allocate_match())
         return false;
-    LOG3("Match");
+    LOG3("Match and Version");
     verify();
-    LOG3("Everything is verified?");
     return true;
 }
 
@@ -423,7 +454,7 @@ bool TableFormat::allocate_all_indirect_ptrs() {
                      return false;
              }
 
-             if ((total = layout_option.layout.indirect_action_addr_bits) != 0) {
+             if ((total = layout_option.layout.action_addr_bits) != 0) {
                  if (!allocate_indirect_ptr(total, INDIRECT_ACTION, group, i))
                      return false;
              }
@@ -438,7 +469,7 @@ bool TableFormat::allocate_all_indirect_ptrs() {
    bit field has 7 free bits which can potentially be allocated into.  Thus the spaces
    are left open for space to be filled by either instr selection or match bytes */
 bool TableFormat::allocate_all_immediate() {
-    if (layout_option.layout.action_data_bytes_in_overhead == 0)
+    if (layout_option.layout.immediate_bits == 0)
         return true;
     use->immed_mask = immediate_mask;
 
@@ -449,7 +480,7 @@ bool TableFormat::allocate_all_immediate() {
         for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
             size_t start = total_use.ffz(end);
             bitvec immediate_shift = immediate_mask << start;
-            if (start >= OVERHEAD_BITS + i * SINGLE_RAM_BITS)
+            if (start + immediate_mask.popcount() >= OVERHEAD_BITS + i * SINGLE_RAM_BITS)
                 return false;
             total_use |= immediate_shift;
             use->match_groups[group].mask[IMMEDIATE] |= immediate_shift;
@@ -486,8 +517,8 @@ bool TableFormat::allocate_all_instr_selection() {
     // ternary in which case always a ternary indirect is used to specify
     // actions
     if (instr_select == 0) {
-        if (tbl->layout.ternary)
-            ++instr_select;
+        if (tbl->layout.ternary || tbl->layout.no_match_miss_path())
+            instr_select++;
         else
             return true;
     }
@@ -765,7 +796,6 @@ void TableFormat::choose_ghost_bits() {
  *  overhead is as well as whether the match is skinny or wide
  */
 int TableFormat::determine_group(int width_sect, int groups_allocated) {
-    bool skinny = match_ixbar.search_buses_single() == 1;
     if (skinny) {
         int overhead_groups_seen = 0;
         for (int i = 0; i < layout_option.way.width; i++) {
@@ -778,6 +808,9 @@ int TableFormat::determine_group(int width_sect, int groups_allocated) {
             }
         }
     }
+
+    if (search_bus_per_width[width_sect] == -1)
+        return -1;
 
     int search_bus_seen = 0;
     for (int i = 0; i < layout_option.way.width; i++) {
@@ -1146,8 +1179,10 @@ bool TableFormat::allocate_match_with_algorithm() {
     // Determine if everything is fully allocated
     safe_vector<int> search_bus_alloc(match_ixbar.search_buses_single(), 0);
     for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
-        search_bus_alloc[search_bus_per_width[width_sect]]
-            += full_match_groups_per_RAM[width_sect];
+        int search_bus = search_bus_per_width[width_sect];
+        if (search_bus < 0)
+            continue;
+        search_bus_alloc[search_bus] += full_match_groups_per_RAM[width_sect];
     }
 
     bool split_match = false;

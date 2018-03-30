@@ -303,7 +303,6 @@ p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/multicast_scale/multicast_scale.p4
   switch_l2
   )
 
@@ -347,21 +346,11 @@ p4c_add_xfail_reason("tofino"
   )
 
 
-
-# failure due to too restrictive constraint of full words in action data bus allocation
-# also: BRIG-56, BRIG-182
 p4c_add_xfail_reason("tofino"
-  "Can't fit table .* in .* by itself"
-  extensions/p4_tests/p4_14/test_config_13_first_selection.p4
+  "Could not place table : "
   extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
-  # extensions/p4_tests/p4_14/test_config_103_first_phase_0.p4
-  # extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Can't fit the minimum number of table .* entries within the memories"
-  extensions/p4_tests/p4_14/dileep8.p4
-)
 
 # p4c_add_xfail_reason("tofino"
 #   "error: No format field or table named"
@@ -989,11 +978,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_14/brig-11.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error: Match overhead field immediate.* not in bottom 64 bits"
-  extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4
   )
 
 # BRIG-400

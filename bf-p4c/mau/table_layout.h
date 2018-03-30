@@ -14,10 +14,13 @@ class LayoutOption {
     int entries = 0;
     int srams = 0, maprams = 0, tcams = 0;
     int select_bus_split = -1;
+    int action_format_index = -1;
+    bool previously_widened = false;
     LayoutOption() {}
-    explicit LayoutOption(const IR::MAU::Table::Layout l) : layout(l) {}
-    LayoutOption(const IR::MAU::Table::Layout l, const IR::MAU::Table::Way w)
-                : layout(l), way(w) {}
+    explicit LayoutOption(const IR::MAU::Table::Layout l, int i)
+        : layout(l), action_format_index(i) {}
+    LayoutOption(const IR::MAU::Table::Layout l, const IR::MAU::Table::Way w, int i)
+        : layout(l), way(w), action_format_index(i) {}
     void clear_mems() {
         srams = 0;
         maprams = 0;
@@ -104,7 +107,7 @@ class TableLayout : public MauModifier, Backtrack {
     void setup_match_layout(IR::MAU::Table::Layout &, const IR::MAU::Table *);
     void setup_gateway_layout(IR::MAU::Table::Layout &, IR::MAU::Table *);
     void setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_in_table,
-                           int action_data_bytes_in_overhead);
+                           int immediate_bits, int index);
     void setup_layout_options(IR::MAU::Table *tbl);
     void setup_action_layout(IR::MAU::Table *tbl);
     void setup_ternary_layout_options(IR::MAU::Table *tbl);

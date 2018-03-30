@@ -8,6 +8,7 @@ struct StageUseEstimate {
     static constexpr int MIN_WAYS = 1;
     static constexpr int MAX_WAYS = 8;
 
+    typedef ordered_set<const IR::MAU::AttachedMemory *> StageAttached;
     int logical_ids = 0;
     int srams = 0;
     int tcams = 0;
@@ -16,8 +17,8 @@ struct StageUseEstimate {
     int ternary_ixbar_groups = 0;
     safe_vector<LayoutOption> layout_options;
     safe_vector<ActionFormat::Use> action_formats;
-    ordered_set<const IR::MAU::AttachedMemory *> shared_attached;
-    int preferred_index;
+    StageAttached shared_attached;
+    size_t preferred_index;
     StageUseEstimate() {}
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
         logical_ids += a.logical_ids;
@@ -28,9 +29,7 @@ struct StageUseEstimate {
         ternary_ixbar_groups += a.ternary_ixbar_groups;
         return *this; }
     StageUseEstimate(const IR::MAU::Table *, int &, const LayoutChoices *lc,
-                     ordered_set<const IR::MAU::AttachedMemory *> sad
-                         = ordered_set<const IR::MAU::AttachedMemory *>(),
-                     bool table_placement = false);
+                     StageAttached sad = StageAttached(), bool table_placement = false);
 
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }
@@ -69,13 +68,13 @@ struct StageUseEstimate {
         auto option = preferred();
         if (option == nullptr)
             return nullptr;
-        int bytes = option->layout.action_data_bytes_in_table;
-        for (auto &format : action_formats) {
-            if (bytes == format.action_data_bytes[ActionFormat::ADT])
-                return &format;
-        }
-        return nullptr;
+        return &action_formats[option->action_format_index];
     }
+
+    void determine_initial_layout_option(const IR::MAU::Table *tbl, int &entries,
+                                         bool table_placement);
+    bool adjust_choices(const IR::MAU::Table *tbl, int &entries);
+
     void calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left, int &entries);
     void calculate_for_leftover_tcams(const IR::MAU::Table *tbl, int srams_left, int tcams_left,
                                       int &entries);

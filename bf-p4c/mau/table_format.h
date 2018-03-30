@@ -154,6 +154,7 @@ struct TableFormat {
     int ghost_bits_count = 0;
     const bitvec immediate_mask;
     bool gw_linked;
+    bool skinny = false;
     // bitvec ghost_start;
     bool allocate_overhead();
     bool allocate_all_indirect_ptrs();

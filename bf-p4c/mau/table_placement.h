@@ -4,6 +4,8 @@
 #include <map>
 #include "bf-p4c/mau/mau_visitor.h"
 #include "lib/ordered_set.h"
+#include "bf-p4c/mau/resource.h"
+#include "bf-p4c/mau/resource_estimate.h"
 
 struct DependencyGraph;
 class TablesMutuallyExclusive;
@@ -31,6 +33,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     bool ignoreContainerConflicts = false;
     bool forced_placement = false;
     bool alloc_done = false;
+    cstring error_message;
     profile_t init_apply(const IR::Node *root) override;
     bool backtrack(trigger &) override;
     IR::MAU::Table *break_up_atcam(IR::MAU::Table *);
@@ -44,6 +47,16 @@ class TablePlacement : public MauTransform, public Backtrack {
     bool is_better(const Placed *a, const Placed *b);
     Placed *try_place_table(const IR::MAU::Table *t, const Placed *done,
                             const StageUseEstimate &current);
+    bool try_alloc_ixbar(Placed *next, const Placed *done, TableResourceAlloc *alloc);
+    bool try_alloc_format(Placed *next, TableResourceAlloc *resources, bool gw_linked);
+    bool try_alloc_mem(Placed *next, const Placed *done, TableResourceAlloc *resources,
+        safe_vector<TableResourceAlloc *> &prev_resources);
+    bool try_alloc_adb(Placed *next, const Placed *done, TableResourceAlloc *resources);
+    bool pick_layout_option(Placed *next, const Placed *done, TableResourceAlloc *resources,
+                            StageUseEstimate::StageAttached &shared_attached);
+    bool shrink_estimate(Placed *next, const Placed *done, TableResourceAlloc *resources,
+                         int &srams_left, int &tcams_left, int min_entries);
+
     const Placed *place_table(ordered_set<const GroupPlace *>&work, const Placed *pl);
     int get_provided_stage(const IR::MAU::Table *tbl);
     std::multimap<cstring, const Placed *> table_placed;
