@@ -7,9 +7,7 @@ set (TOFINO_MUST_PASS_TESTS
   extensions/p4_tests/p4_14/easy_no_match.p4
   extensions/p4_tests/p4_14/ecmp_pi.p4
   extensions/p4_tests/p4_14/p4-tests/programs/basic_swithching/basic_switching_one.p4
-  # CC: it compiles, but fails the packet test
-  # I've been struggling with this for two days!!
-  # extensions/p4_tests/p4_14/p4-tests/programs/emulation/emulation.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/emulation/emulation.p4
   extensions/p4_tests/p4_14/p4-tests/programs/multicast_test/multicast_test.p4
   extensions/p4_tests/p4_14/p4-tests/programs/pcie_pkt_test/pcie_pkt_test.p4
   extensions/p4_tests/p4_14/ternary_match_constant_action_data.p4
