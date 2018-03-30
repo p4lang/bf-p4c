@@ -30,12 +30,14 @@ class AddJBayMetadataPOV : public Transform {
     IR::BFN::DeparserParameter *
     postorder(IR::BFN::DeparserParameter *param) override {
         param->povBit =
-          new IR::BFN::FieldLVal(new IR::TempVar(IR::Type::Bits::get(1), true));
+          new IR::BFN::FieldLVal(new IR::TempVar(IR::Type::Bits::get(1), true,
+                                                 param->source->field->toString() + ".$valid"));
         return param; }
     IR::BFN::Digest *
     postorder(IR::BFN::Digest *digest) override {
         digest->povBit =
-          new IR::BFN::FieldLVal(new IR::TempVar(IR::Type::Bits::get(1), true));
+          new IR::BFN::FieldLVal(new IR::TempVar(IR::Type::Bits::get(1), true,
+                                                 digest->selector->field->toString() + ".$valid"));
         return digest; }
     static IR::Primitive* create_pov_write(const IR::Expression *povBit, bool validate) {
         return new IR::Primitive("modify_field", povBit,
