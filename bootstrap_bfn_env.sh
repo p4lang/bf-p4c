@@ -215,7 +215,7 @@ popd >/dev/null
 
 # build the drivers only on Linux
 if [ $(uname -s) == 'Linux' ]; then
-    install_bf_repo "bf-drivers" "$(which bf_switchd)" "--disable-thrift --with-avago --without-kdrv --with-build-model --enable-pi"
+    install_bf_repo "bf-drivers" "$(which bf_switchd)" "--enable-thrift --with-avago --without-kdrv --with-build-model --enable-pi --without-cint-binding"
 fi
 
 ### Model setup
