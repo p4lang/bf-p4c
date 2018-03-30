@@ -38,11 +38,29 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
             assert(stage_dep[gress] == ACTION_DEP);
             merge.predication_ctl[gress].start_table_fifo_delay0 = 0;
             merge.predication_ctl[gress].start_table_fifo_enable = 0; }
-        if (stageno != 0)
+        if (stageno == 0) {
+            /* debug only: set stage 0 as match dependent on stage -1*/
+          if (!options.stage_dependency_pattern.empty() &&
+              (options.stage_dependency_pattern.at(stageno) == '1')) {
+                LOG1("setting stage " << stageno << " " << gress
+                        << " as match dependent on previous stage");
+                regs.dp.cur_stage_dependency_on_prev[gress] = 0;
+          }
+        } else
             regs.dp.cur_stage_dependency_on_prev[gress] = stage_dep[gress] != MATCH_DEP;
-        if (stageno != AsmStage::numstages()-1)
+
+        /* debug only: set the last stage as match dependent on maxstages+1 */
+        if (stageno == AsmStage::numstages()-1) {
+          if (!options.stage_dependency_pattern.empty() &&
+              (options.stage_dependency_pattern.size() > stageno) &&
+              (options.stage_dependency_pattern.at(stageno) == '1')) {
+                LOG1("setting stage " << stageno << " " << gress
+                        << " as match dependent on previous stage");
+                regs.dp.next_stage_dependency_on_cur[gress] = 0;
+          }
+        } else if (stageno != AsmStage::numstages()-1) {
             regs.dp.next_stage_dependency_on_cur[gress] = this[1].stage_dep[gress] != MATCH_DEP;
-        else if (AsmStage::numstages() < Target::JBay::NUM_MAU_STAGES)
+        } else if (AsmStage::numstages() < Target::JBay::NUM_MAU_STAGES)
             regs.dp.next_stage_dependency_on_cur[gress] = 1;
         /* FIXME -- making this depend on the dependency of the next stage seems wrong */
         auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
@@ -70,10 +88,10 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
         regs.dp.match_ie_input_mux_sel |= 3;
     }
 
-	merge.pred_stage_id = stageno;
-	for (gress_t gress : Range(INGRESS, EGRESS)) {
-		merge.mpr_stage_id[gress] = stageno;
-	}
+    merge.pred_stage_id = stageno;
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+        merge.mpr_stage_id[gress] = stageno;
+    }
 
     if (stageno != AsmStage::numstages()-1) {
         merge.mpr_bus_dep.mpr_bus_dep_egress = this[1].stage_dep[EGRESS] != MATCH_DEP;
