@@ -71,7 +71,7 @@ bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
 }
 
 bool MatchTable::is_attached(const Table *tbl) const {
-    return tbl && (tbl == gateway || tbl == idletime || attached.is_attached(tbl));
+    return tbl && (tbl == gateway || tbl == idletime || get_attached()->is_attached(tbl));
 }
 
 void MatchTable::pass0() {

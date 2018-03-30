@@ -148,8 +148,10 @@ template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable 
 
     unsigned stats_adr_default = 0;
     unsigned stats_adr_mask = ((1U <<  STAT_ADDRESS_BITS) - 1) & ~counter_masks[format->groups()];
-    unsigned pfe = per_flow_enable_bit;
+    unsigned pfe = per_flow_enable_bit();
     if (per_flow_enable) {
+        auto addr = match->find_address_field(this);
+        auto address_bits = addr ? addr->size : 0;
         stats_adr_mask = ((1U <<  address_bits) - 1) << (counter_shifts[format->groups()]);
         pfe += counter_shifts[format->groups()];
     } else {
@@ -276,7 +278,7 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
     add_alu_index(stage_tbl, "stats_alu_index");
     tbl["enable_pfe"] = per_flow_enable;
-    tbl["pfe_bit_position"] = per_flow_enable_bit;
+    tbl["pfe_bit_position"] = per_flow_enable_bit();
     if (auto *f = lookup_field("bytes"))
         tbl["byte_counter_resolution"] = f->size;
     else

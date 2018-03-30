@@ -535,6 +535,7 @@ extern register_action<T, U> {
         reg.write(index, value);
         return rv;
     } */
+    U execute_log(); /* execute at an index that increments each time */
 }
 
 /// stateful alu defined but not yet supported, the one supported in backend is

@@ -417,6 +417,7 @@ public:
     virtual void pass2() = 0;
     virtual void pass3() = 0;
 #define VIRTUAL_TARGET_METHODS(TARGET) \
+    virtual void write_action_regs(Target::TARGET::mau_regs &, const Actions::Action *) {}      \
     virtual void write_merge_regs(Target::TARGET::mau_regs &, int type, int bus) { assert(0); } \
     virtual void write_merge_regs(Target::TARGET::mau_regs &, MatchTable *match, int type,      \
                                   int bus, const std::vector<Call::Arg> &args) { assert(0); }   \
@@ -426,6 +427,9 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 #define FORWARD_VIRTUAL_TABLE_WRITE_REGS(TARGET)                                           \
     void write_regs(Target::TARGET::mau_regs &regs) override {                             \
                 write_regs<Target::TARGET::mau_regs>(regs); }
+#define FORWARD_VIRTUAL_TABLE_WRITE_ACTION_REGS(TARGET)                                    \
+    void write_action_regs(Target::TARGET::mau_regs &regs, const Actions::Action *act)     \
+        override { write_action_regs<Target::TARGET::mau_regs>(regs, act); }
 #define FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS(TARGET)                                     \
     void write_merge_regs(Target::TARGET::mau_regs &regs, int type, int bus) override {    \
         write_merge_regs<Target::TARGET::mau_regs>(regs, type, bus); }
@@ -461,7 +465,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual void set_output_used() { assert(0); }
     virtual const Call &get_action() const { return action; }
     virtual bool is_attached(const Table *) const { assert(0); return false; }
-    virtual Format::Field *find_address_field(AttachedTable *) const { assert(0); return 0; }
+    virtual Format::Field *find_address_field(const AttachedTable *) const { assert(0); return 0; }
     virtual Format::Field *get_per_flow_enable_param(MatchTable *) const { assert(0); return 0; }
     virtual Format::Field *get_meter_address_param(MatchTable *) const { assert(0); return 0; }
     virtual Format::Field *get_meter_type_param(MatchTable *) const { assert(0); return 0; }
@@ -639,8 +643,9 @@ struct AttachedTables {
     SelectionTable *get_selector() const;
     MeterTable* get_meter(std::string name = "") const;
     StatefulTable *get_stateful(std::string name = "") const;
-    Table::Format::Field *find_address_field(AttachedTable *tbl) const;
-    bool is_attached(const Table *) const;
+    Table::Format::Field *find_address_field(const AttachedTable *tbl) const;
+    const Table::Call *get_call(const Table *) const;
+    bool is_attached(const Table *tbl) const { return get_call(tbl) != nullptr; }
     void pass0(MatchTable *self);
     void pass1(MatchTable *self);
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *self, int type, int bus);
@@ -679,11 +684,12 @@ public:
     bool is_alpm() {
         if (p4_table) return p4_table->is_alpm(); return false; }
     bool is_attached(const Table *tbl) const override;
+    const Table::Call *get_call(const Table *tbl) const { return get_attached()->get_call(tbl); }
     const AttachedTables *get_attached() const override { return &attached; }
     const GatewayTable *get_gateway() const override { return gateway; }
     MatchTable *get_match_table() override { return this; }
     std::set<MatchTable *> get_match_tables() override { return std::set<MatchTable *>{this}; }
-    Format::Field *find_address_field(AttachedTable *tbl) const override {
+    Format::Field *find_address_field(const AttachedTable *tbl) const override {
         return attached.find_address_field(tbl); }
     void gen_name_lookup(json::map &out) override;
     bool run_at_eop() override { return attached.run_at_eop(); }
@@ -922,7 +928,7 @@ public:
         return indirect ? indirect->get_meter() : 0; }
     bool is_attached(const Table *tbl) const override {
         return indirect ? indirect->is_attached(tbl) : MatchTable::is_attached(tbl); }
-    Format::Field *find_address_field(AttachedTable *tbl) const override {
+    Format::Field *find_address_field(const AttachedTable *tbl) const override {
         return indirect ? indirect->find_address_field(tbl) : attached.find_address_field(tbl); }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
             const char *type, std::vector<Layout> &layout, bool skip_spare_bank=false) override;
@@ -999,7 +1005,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     StatefulTable *get_stateful() const override { return attached.get_stateful(); }
     MeterTable* get_meter() const override { return attached.get_meter(); }
     bool is_attached(const Table *tbl) const override { return attached.is_attached(tbl); }
-    Format::Field *find_address_field(AttachedTable *tbl) const override {
+    Format::Field *find_address_field(const AttachedTable *tbl) const override {
         return attached.find_address_field(tbl); }
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
         attached.write_merge_regs(regs, match_table, type, bus); }
@@ -1018,8 +1024,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
     bool                        direct = false, indirect = false;
     bool                        per_flow_enable = false;
     std::string                 per_flow_enable_param = "";
-    unsigned                    per_flow_enable_bit = 0;
-    unsigned                    address_bits;
+    virtual unsigned            per_flow_enable_bit(MatchTable *m = nullptr) const;
     table_type_t set_match_table(MatchTable *m, bool indirect) override {
         if ((indirect && direct) || (!indirect && this->indirect))
             error(lineno, "Table %s is accessed with direct and indirect indices", name());
@@ -1191,6 +1196,7 @@ public:
     int unitram_type() override { return UnitRam::SELECTOR; }
     StatefulTable *get_stateful() const override { return bound_stateful; }
     void set_stateful(StatefulTable *s) override { bound_stateful = s; }
+    unsigned per_flow_enable_bit(MatchTable *m = nullptr) const;
 )
 
 class IdletimeTable : public Table {
@@ -1304,6 +1310,8 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
 #if HAVE_JBAY
     bool setup_jbay(const pair_t &kv);
 #endif
+    template<class REGS> void write_action_regs(REGS &regs, const Actions::Action *);
+    FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_ACTION_REGS)
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
     template<class REGS> void write_logging_regs(REGS &regs);
@@ -1338,13 +1346,16 @@ public:
     int get_const(long v);
     bool is_dual_mode() { return dual_mode; }
     int home_row() const override { return layout.at(0).row | 3; }
+    unsigned per_flow_enable_bit(MatchTable *m = nullptr) const;
     void set_output_used() override { output_used = true; }
-    void set_counter_mode(int mode) { if (!stateful_counter_mode) stateful_counter_mode = mode; }
     FOR_ALL_TARGETS(TARGET_OVERLOAD, static int parse_counter_mode, const value_t &)
     static int parse_counter_mode(const value_t &v) {
         SWITCH_FOREACH_TARGET(options.target, return parse_counter_mode(TARGET(), v););
         return 0;  // should not reach here, but avoid warning
     }
+    FOR_ALL_TARGETS(TARGET_OVERLOAD, void set_counter_mode, int)
+    void set_counter_mode(int mode) {
+        SWITCH_FOREACH_TARGET(options.target, set_counter_mode(TARGET(), mode);); }
 )
 
 #endif /* _tables_h_ */

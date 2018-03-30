@@ -9,15 +9,9 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot - ALU2LO];
     auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
-    auto &salu_instr_output_alu = meter_group.stateful.salu_instr_output_alu[act->code];
     salu.salu_op = opc->opcode & 0xf;
     salu.salu_arith = opc->opcode >> 4;
     salu.salu_pred = predication_encode & Target::Tofino::STATEFUL_PRED_MASK;
-    if (tbl->is_dual_mode()) {
-        salu_instr_common.salu_datasize = tbl->format->log2size - 1;
-        salu_instr_common.salu_op_dual = 1; }
-    else {
-        salu_instr_common.salu_datasize = tbl->format->log2size; }
     if (srca) {
         if (auto m = srca.to<operand::Memory>()) {
             salu.salu_asrc_memory = 1;

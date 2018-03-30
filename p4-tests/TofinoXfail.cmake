@@ -798,11 +798,6 @@ p4c_add_xfail_reason("tofino"
   "Due to complexity in action bus, can only currently handle meter color in an 8 bit ALU operation"
   extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4
   )
-# missing support for stateful logging
-p4c_add_xfail_reason("tofino"
-  "Interface register_action does not have a method named execute_log"
-  extensions/p4_tests/p4_14/test_config_206_stateful_logging.p4
-  )
 
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for x"

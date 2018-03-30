@@ -13,11 +13,6 @@ void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
     salu.salu_op = opc->opcode & 0xf;
     salu.salu_arith = opc->opcode >> 4;
     salu.salu_pred = predication_encode;
-    if (tbl->is_dual_mode()) {
-        salu_instr_common.salu_datasize = tbl->format->log2size - 1;
-        salu_instr_common.salu_op_dual = 1; }
-    else {
-        salu_instr_common.salu_datasize = tbl->format->log2size; }
     if (srca) {
         if (auto m = srca.to<operand::Memory>()) {
             salu.salu_asrc_input = m->field->bit(0) > 0 ? 1 : 0;

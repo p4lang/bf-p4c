@@ -1232,13 +1232,16 @@ class MauAsmOutput::EmitAction : public Inspector {
                 // FIXME -- arguments that we generally want to ignore here.  Should have removed
                 // FIXME -- them earlier when we did whatever we needed to do for them, but for
                 // FIXME -- now we just ignore ones that make no sense
-                if (auto *k = prim->operands.at(i)->to<IR::Constant>())
+                if (auto *k = prim->operands.at(i)->to<IR::Constant>()) {
                     out << sep << k->value;
-                else if (auto *a = prim->operands.at(i)->to<IR::ActionArg>())
+                    sep = ", ";
+                } else if (auto *a = prim->operands.at(i)->to<IR::ActionArg>()) {
                     out << sep << a->name;
-                else
-                    continue;
-                sep = ", "; }
+                    sep = ", ";
+                } else if (auto *c = prim->operands.at(i)->to<IR::Cast>()) {
+                    if (auto *a = c->expr->to<IR::ActionArg>()) {
+                        out << sep << a->name;
+                        sep = ", "; } } }
             out << ')' << std::endl;
             is_empty = false; }
         if (is_empty)
@@ -2026,12 +2029,12 @@ class MauAsmOutput::UnattachedName : public MauInspector {
  *  now within the actual IR for Hash Distribution
  */
 std::string MauAsmOutput::find_indirect_index(const IR::MAU::AttachedMemory *at_mem,
-        bool index_only, const IR::MAU::HashDist *hd, const IR::MAU::Table *tbl) const {
-    if (hd != nullptr) {
+        bool index_only, const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const {
+    if (ba && ba->hash_dist) {
         auto hash_dist_uses = tbl->resources->hash_dists;
         const IXBar::HashDistUse *hd_use = nullptr;
         for (auto &hash_dist_use : hash_dist_uses) {
-            if (hd == hash_dist_use.original_hd) {
+            if (ba->hash_dist == hash_dist_use.original_hd) {
                 hd_use = &hash_dist_use;
                 break;
             }
@@ -2045,6 +2048,10 @@ std::string MauAsmOutput::find_indirect_index(const IR::MAU::AttachedMemory *at_
     } else if (at_mem->is<IR::MAU::Meter>() || at_mem->is<IR::MAU::Selector>()) {
         return "meter_addr";
     } else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
+        if (ba && ba->stateful_log) {
+            if (salu->instruction.size() > 1 && !index_only)
+                return "meter_type, counter";
+            return "counter"; }
         if (salu->instruction.size() > 1 && !index_only)
             return "meter_type, meter_addr";
         else
@@ -2085,7 +2092,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         out << indent << at_mem->kind() << ": ";
         out << find_attached_name(tbl, at_mem);
         if (at_mem->indexed())
-            out << '(' << find_indirect_index(at_mem, false, back_at->hash_dist, tbl) << ')';
+            out << '(' << find_indirect_index(at_mem, false, back_at, tbl) << ')';
         out << std::endl;
     }
 

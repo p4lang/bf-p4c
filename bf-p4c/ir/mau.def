@@ -298,10 +298,17 @@ class Table : BFN::Unit {
 }
 
 
+// attachement of an AttachedMemory table to a match table -- different match tables
+// may attach the same AttachedMemory table with different BackendAttached, as long as
+// the match tables are mutually exclusive
 class BackendAttached {
     NullOK HashDist hash_dist = nullptr;
+    bool stateful_log = false;
     AttachedMemory attached;
-#nodbprint
+    dbprint {
+        out << *attached;
+        if (hash_dist) out << " hd=" << *hash_dist;
+        if (stateful_log) out << " {log}"; }
 }
 
 abstract AttachedMemory : Attached {

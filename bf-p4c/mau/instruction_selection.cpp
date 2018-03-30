@@ -318,16 +318,13 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
             return new IR::Vector<IR::Expression>({s1, s2}); }
     } else if (prim->name == "register_action.execute" ||
                prim->name == "register_action.execute_log" ||
-               prim->name == "selector_action.execute" ||
-               prim->name == "selector_action.execute_log") {
-        bool direct_access = false;
-        if (prim->operands.size() == 1 && prim->name == "register_action.execute")
-            direct_access = true;
+               prim->name == "selector_action.execute") {
+        bool direct_access = (prim->operands.size() == 1 && !prim->name.endsWith("_log"));
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
-        if (prim->operands.size() > 1 || salu->instruction.size() > 1)
+        if (!direct_access || salu->instruction.size() > 1)
             stateful.push_back(prim);  // needed to setup the index and/or type properly
-        if (salu->direct != direct_access)
+        if (prim->name.startsWith("register") && salu->direct != direct_access)
             error("%s: %sdirect access to %sdirect register", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
@@ -429,7 +426,7 @@ size_t input_operand(const IR::Primitive *prim) {
 }
 
 
-bool StatefulHashDistSetup::Scan::preorder(const IR::MAU::Action *act) {
+bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::Action *act) {
     self.remove_tempvars.clear();
     if (act->stateful.empty())
         return false;
@@ -451,30 +448,68 @@ bool StatefulHashDistSetup::Scan::preorder(const IR::MAU::Action *act) {
     return true;
 }
 
-bool StatefulHashDistSetup::Scan::preorder(const IR::MAU::Instruction *) {
+bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::Instruction *) {
     self.saved_tempvar = nullptr;
     self.saved_hashdist = nullptr;
     return true;
 }
 
-bool StatefulHashDistSetup::Scan::preorder(const IR::TempVar *tv) {
+bool StatefulAttachmentSetup::Scan::preorder(const IR::TempVar *tv) {
     if (self.remove_tempvars.count(tv->name))
         self.saved_tempvar = tv;
     return true;
 }
 
-bool StatefulHashDistSetup::Scan::preorder(const IR::MAU::HashDist *hd) {
+bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::HashDist *hd) {
     self.saved_hashdist = hd;
     return true;
 }
 
-void StatefulHashDistSetup::Scan::postorder(const IR::MAU::Instruction *instr) {
+void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Instruction *instr) {
     if (self.saved_tempvar && self.saved_hashdist) {
         self.stateful_alu_from_hash_dists[self.saved_tempvar->name] = self.saved_hashdist;
         self.remove_instr.insert(instr); }
 }
 
-IR::MAU::HashDist *StatefulHashDistSetup::create_hash_dist(const IR::Expression *expr,
+void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
+    const IR::Attached *obj = nullptr;
+    use_t use = NO_USE;
+    if (prim->name == "register_action.execute" || prim->name == "selector_action.execute") {
+        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
+        BUG_CHECK(obj, "invalid object");
+        use = prim->operands.size() == 1 ? DIRECT : INDIRECT;
+    } else if (prim->name == "register_action.execute_log") {
+        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
+        BUG_CHECK(obj, "invalid object");
+        use = LOG;
+    } else if (prim->name == "Lpf.execute" || prim->name == "Wred.execute" ||
+               prim->name == "Meter.execute") {
+        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Meter>();
+        BUG_CHECK(obj, "invalid object");
+        use = INDIRECT;
+    } else if (prim->name == "DirectLpf.execute" || prim->name == "DirectWred.execute" ||
+               prim->name == "DirectMeter.execute") {
+        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Meter>();
+        BUG_CHECK(obj, "invalid object");
+        use = DIRECT;
+    } else if (prim->name == "Counter.count") {
+        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Counter>();
+        BUG_CHECK(obj, "invalid object");
+        use = INDIRECT;
+    } else if (prim->name == "DirectCounter.count") {
+        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Counter>();
+        BUG_CHECK(obj, "invalid object");
+        use = DIRECT;
+    }
+    if (obj) {
+        auto *act = findContext<IR::MAU::Action>();
+        use_t &prev_use = self.action_use[act][obj];
+        if (prev_use && prev_use != use)
+            error("Inconsistent use of %s in action %s", obj, act);
+        prev_use = use; }
+}
+
+IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const IR::Expression *expr,
                                                            const IR::Primitive *prim) {
     auto hash_field = expr;
     if (auto c = expr->to<IR::Cast>())
@@ -491,7 +526,7 @@ IR::MAU::HashDist *StatefulHashDistSetup::create_hash_dist(const IR::Expression 
  *  FIXME: Currently v1model always casts these particular parameters to a size.  Perhaps
  *  these casts will be gone by the time we reach extract_maupipe.
  */
-const IR::MAU::HashDist *StatefulHashDistSetup::find_hash_dist(const IR::Expression *expr,
+const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expression *expr,
                                                                const IR::Primitive *prim) {
     if (auto *c = expr->to<IR::Cast>())
         return find_hash_dist(c->expr, prim);
@@ -512,7 +547,7 @@ const IR::MAU::HashDist *StatefulHashDistSetup::find_hash_dist(const IR::Express
  *  addressed by this TempVar.  This pass combines these instructions into one instruction,
  *  and correctly saves the HashDist IR into these attached tables
  */
-void StatefulHashDistSetup::Scan::postorder(const IR::MAU::Table *tbl) {
+void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Table *tbl) {
     for (auto act : Values(tbl->actions)) {
         for (auto prim : act->stateful) {
             // typechecking should have verified
@@ -541,7 +576,7 @@ void StatefulHashDistSetup::Scan::postorder(const IR::MAU::Table *tbl) {
     }
 }
 
-const IR::MAU::Table *StatefulHashDistSetup::Update::postorder(IR::MAU::Table *tbl) {
+const IR::MAU::Table *StatefulAttachmentSetup::Update::postorder(IR::MAU::Table *tbl) {
     for (auto act : Values(tbl->actions)) {
         for (auto prim : act->stateful) {
             auto gref = prim->operands[0]->to<IR::GlobalRef>();
@@ -563,22 +598,26 @@ const IR::MAU::Table *StatefulHashDistSetup::Update::postorder(IR::MAU::Table *t
     return tbl;
 }
 
-const IR::MAU::Table *StatefulHashDistSetup::Update::preorder(IR::MAU::Table *tbl) {
-    orig_tbl = getOriginal()->to<IR::MAU::Table>();
-    return tbl;
-}
-
 const IR::MAU::BackendAttached *
-        StatefulHashDistSetup::Update::preorder(IR::MAU::BackendAttached *ba) {
-    HashDistKey hdk = std::make_pair(ba->attached, orig_tbl);
+        StatefulAttachmentSetup::Update::preorder(IR::MAU::BackendAttached *ba) {
+    auto *tbl = findOrigCtxt<IR::MAU::Table>();
+    HashDistKey hdk = std::make_pair(ba->attached, tbl);
     if (auto hd = ::get(self.update_hd, hdk)) {
-        ba->hash_dist = hd;
-    }
+        ba->hash_dist = hd; }
+    use_t use = NO_USE;
+    for (auto act : Values(tbl->actions)) {
+        if (auto use2 = self.action_use[act][ba->attached]) {
+            if (use && use != use2) {
+                error("inconsistent use of %s in table %s", ba->attached, tbl);
+                break; }
+            use = use2; } }
+    if (use == LOG)
+        ba->stateful_log = true;
     prune();
     return ba;
 }
 
-const IR::MAU::Instruction *StatefulHashDistSetup::Update::preorder(IR::MAU::Instruction *inst) {
+const IR::MAU::Instruction *StatefulAttachmentSetup::Update::preorder(IR::MAU::Instruction *inst) {
     if (self.remove_instr.count(getOriginal())) return nullptr;
     return inst;
 }
@@ -790,7 +829,7 @@ DoInstructionSelection::DoInstructionSelection(PhvInfo &phv) : PassManager {
     new ValidateInvalidatePrimitive(phv),
     new InstructionSelection(phv),
     new ConvertCastToSlice,
-    new StatefulHashDistSetup(phv),
+    new StatefulAttachmentSetup(phv),
     new LPFSetup(phv),
     new CollectPhvInfo(phv),
     new PHV::ValidateActions(phv, false, false, false)

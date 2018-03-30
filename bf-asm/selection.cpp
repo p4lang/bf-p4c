@@ -123,13 +123,18 @@ void SelectionTable::pass3() {
     LOG1("### Selection table " << name() << " pass3");
 }
 
+unsigned SelectionTable::per_flow_enable_bit(MatchTable *match) const {
+    if (!per_flow_enable)
+        return SELECTOR_PER_FLOW_ENABLE_START_BIT;
+    else
+        return AttachedTable::per_flow_enable_bit(match);
+}
+
 template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
     setup_physical_alu_map(regs, type, bus, meter_group());
-    if (!per_flow_enable)
-        per_flow_enable_bit = SELECTOR_PER_FLOW_ENABLE_START_BIT;
-    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit;
+    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit(match);
     //if (match->action_call())
     //    /*merge.mau_selector_action_entry_size[type][bus] = match->action_call()->format->log2size - 3*/;
     //else if (options.match_compiler)
@@ -141,7 +146,7 @@ template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTabl
     merge.mau_meter_adr_type_position[type][bus] = SELECTOR_METER_TYPE_START_BIT;
     if (match->action_call().args.size() > 1) {
         /* FIXME -- regs need to stabilize */
-        merge.mau_meter_adr_mask[type][bus] = ((1U << per_flow_enable_bit) - 1) << 7; }
+        merge.mau_meter_adr_mask[type][bus] = ((1U << per_flow_enable_bit(match)) - 1) << 7; }
     merge.mau_meter_adr_default[type][bus] = (METER_SELECTOR << SELECTOR_METER_TYPE_START_BIT)
         | (per_flow_enable ? 0 : (1U << SELECTOR_PER_FLOW_ENABLE_START_BIT));
     //if (!hash_dist.empty()) {

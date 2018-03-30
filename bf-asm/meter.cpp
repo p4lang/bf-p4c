@@ -176,10 +176,11 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
     } else
         merge.mau_meter_adr_mask[type][bus] |= meter_adr_mask;
     if (per_flow_enable) {
-        merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit + address_shift();
+        merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] =
+            per_flow_enable_bit(match) + address_shift();
         if (uses_colormaprams())
             merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus] =
-                per_flow_enable_bit + IDLETIME_HUFFMAN_BITS; }
+                per_flow_enable_bit(match) + IDLETIME_HUFFMAN_BITS; }
     unsigned meter_adr_type = METER_ADDRESS_BITS - METER_TYPE_BITS;
     if (color_aware_per_flow_enable)
         meter_adr_type = ptr_bits - METER_TYPE_BITS + METER_LOWER_HUFFMAN_BITS;
@@ -465,7 +466,7 @@ void MeterTable::gen_tbl_cfg(json::vector &out) {
     tbl["enable_color_aware"] = color_aware;
     tbl["enable_color_aware_pfe"] = color_aware_per_flow_enable;
     tbl["enable_pfe"] = per_flow_enable;
-    tbl["pfe_bit_position"] = per_flow_enable_bit;
+    tbl["pfe_bit_position"] = per_flow_enable_bit();
     tbl["color_aware_pfe_address_type_bit_position"] = 0; //FIXME
     stage_tbl["default_lower_huffman_bits_included"] = METER_LOWER_HUFFMAN_BITS;
     add_alu_index(stage_tbl, "meter_alu_index");

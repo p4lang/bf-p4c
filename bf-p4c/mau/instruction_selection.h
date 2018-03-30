@@ -13,8 +13,8 @@ class PhvInfo;
  *  Currently the following classes exist to perform the conversion:
  *    - InstructionSelection: generic all-purpose class for handling the complete translation
  *      between frontend IR and backend.
- *    - StatefulHashDistSetup: specifically to create or possibly link IR::MAU::HashDist units
- *      with their associated IR::MAU::BackendAttached tables
+ *    - StatefulAttachmentSetup: specifically to create or possibly link IR::MAU::HashDist units
+ *      with their associated IR::MAU::BackendAttached tables, or setup other attachment modes
  *    - ConvertCastsToSlices: Conversion of all IR::Casts to IR::Slices as expressions.
  *      Specifically on assignment, will extend or possibly not extend the value that is being
  *      written
@@ -61,7 +61,7 @@ class InstructionSelection : public MauTransform {
  *  addressed by this TempVar.  This pass combines these instructions into one instruction,
  *  and correctly saves the HashDist IR into these attached tables
  */
-class StatefulHashDistSetup : public PassManager {
+class StatefulAttachmentSetup : public PassManager {
     const PhvInfo &phv;
     const IR::TempVar *saved_tempvar;
     const IR::MAU::HashDist *saved_hashdist;
@@ -70,6 +70,8 @@ class StatefulHashDistSetup : public PassManager {
     ordered_set<const IR::Node *> remove_instr;
     ordered_map<cstring, const IR::MAU::HashDist *> stateful_alu_from_hash_dists;
     ordered_map<HashDistKey, const IR::MAU::HashDist *> update_hd;
+    enum use_t { NO_USE, DIRECT, INDIRECT, LOG };
+    ordered_map<const IR::MAU::Action *, ordered_map<const IR::Attached *, use_t>>   action_use;
 
     profile_t init_apply(const IR::Node *root) override {
         remove_tempvars.clear();
@@ -78,32 +80,31 @@ class StatefulHashDistSetup : public PassManager {
         update_hd.clear();
         return PassManager::init_apply(root); }
     class Scan : public MauInspector, TofinoWriteContext {
-        StatefulHashDistSetup &self;
+        StatefulAttachmentSetup &self;
         bool preorder(const IR::MAU::Action *) override;
         bool preorder(const IR::MAU::Instruction *) override;
         bool preorder(const IR::TempVar *) override;
         bool preorder(const IR::MAU::HashDist *) override;
         void postorder(const IR::MAU::Instruction *) override;
+        void postorder(const IR::Primitive *) override;
         void postorder(const IR::MAU::Table *) override;
      public:
-        explicit Scan(StatefulHashDistSetup &self) : self(self) {}
+        explicit Scan(StatefulAttachmentSetup &self) : self(self) {}
     };
     class Update : public MauTransform {
-        StatefulHashDistSetup &self;
-        const IR::MAU::Table *orig_tbl = nullptr;
-        const IR::MAU::Table *preorder(IR::MAU::Table *) override;
+        StatefulAttachmentSetup &self;
         const IR::MAU::Table *postorder(IR::MAU::Table *) override;
         const IR::MAU::BackendAttached *preorder(IR::MAU::BackendAttached *ba) override;
         const IR::MAU::Instruction *preorder(IR::MAU::Instruction *sp) override;
      public:
-        explicit Update(StatefulHashDistSetup &self) : self(self) {}
+        explicit Update(StatefulAttachmentSetup &self) : self(self) {}
     };
 
     const IR::MAU::HashDist *find_hash_dist(const IR::Expression *expr, const IR::Primitive *prim);
     IR::MAU::HashDist *create_hash_dist(const IR::Expression *e, const IR::Primitive *prim);
 
  public:
-    explicit StatefulHashDistSetup(const PhvInfo &p) : phv(p) {
+    explicit StatefulAttachmentSetup(const PhvInfo &p) : phv(p) {
         addPasses({ new Scan(*this), new Update(*this) }); }
 };
 

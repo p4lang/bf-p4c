@@ -13,48 +13,42 @@
 void AttachedTable::pass1() {
     if (default_action.empty()) default_action = get_default_action();
     // Per Flow Enable - Validate and Set pfe and address bits
-    bool pfe_set = false;
-    if (per_flow_enable && !per_flow_enable_param.empty()) {
-        for (auto m : match_tables) {
-            auto addr = m->find_address_field(this);
-            address_bits = addr ? addr->size : 0;
-            unsigned pfe_bit = 0;
-            if (auto f = m->lookup_field(per_flow_enable_param)) {
-                // Get pfe bit position from format entry
-                // This value is then adjusted based on address
-                if (f->size == 1)
-                    pfe_bit = f->bit(0);
-                else
-                    error(lineno, "pfe bit %s is not a 1 bit in table %s format",
-                          per_flow_enable_param.c_str(), m->name());
-                if (addr) {
-                    pfe_bit -= addr->bit(0);
-                    for (int i = m->format ? m->format->groups() - 1 : 0; i >= 1; --i) {
-                        // For multiple entries check if each of the pfe bits are in the same
-                        // position relative to address
-                        if (f->by_group[i]->bit(0) - addr->by_group[i]->bit(0) != pfe_bit)
-                            error(lineno, "PFE bit position not in the same relative location to "
-                                  "address in other entries in table format - %s(%i)",
-                                  per_flow_enable_param.c_str(), i); }
-                } else
-                    pfe_bit = 0; // we use the primary shift to get at the pfe bit
-            } else if (per_flow_enable_param == "false") {
-                per_flow_enable = false;
-                continue;
-            } else if (per_flow_enable_param == "true" && addr) {
-                pfe_bit = addr->bit(addr->size-1) - addr->bit(0) + default_pfe_adjust();
-            } else {
-                error(lineno, "no format found for per_flow_enable param %s",
-                      per_flow_enable_param.c_str());
-                continue; }
-            if (pfe_set) {
-                if (pfe_bit != per_flow_enable_bit) {
-                    // FIXME -- this should be ok, but we can't handle it currently
-                    error(lineno, "pfe_bit %s at different locations in different match tables",
-                          per_flow_enable_param.c_str()); }
-            } else {
-                per_flow_enable_bit = pfe_bit;
-                pfe_set = true; } } }
+    if (per_flow_enable_param == "false")
+        per_flow_enable = false;
+}
+
+unsigned AttachedTable::per_flow_enable_bit(MatchTable *m) const {
+    if (!per_flow_enable || per_flow_enable_param.empty()) return 0;
+    unsigned pfe_bit = 0;
+    if (m) {
+        auto addr = m->find_address_field(this);
+        auto address_bits = addr ? addr->size : 0;
+        if (auto f = m->lookup_field(per_flow_enable_param)) {
+            // Get pfe bit position from format entry
+            // This value is then adjusted based on address
+            if (f->size == 1)
+                pfe_bit = f->bit(0);
+            else
+                error(lineno, "pfe bit %s is not a 1 bit in table %s format",
+                      per_flow_enable_param.c_str(), m->name());
+            if (addr)
+                pfe_bit -= addr->bit(0);
+            else
+                pfe_bit = 0; // we use the primary shift to get at the pfe bit
+        } else if (per_flow_enable_param == "true" && addr) {
+            pfe_bit = addr->bit(addr->size-1) - addr->bit(0) + default_pfe_adjust();
+        } else {
+            error(lineno, "can't find per_flow_enable param %s in format for %s",
+                  per_flow_enable_param.c_str(), m->name()); }
+    } else for (auto mt : match_tables) {
+        auto bit = per_flow_enable_bit(mt);
+        if (bit && pfe_bit && bit != pfe_bit) {
+            // FIXME -- this should be ok, but we can't handle it currently
+            warning(lineno, "pfe_bit %s at different locations in different match tables,"
+                    " which will cause driver problems", per_flow_enable_param.c_str());
+        } else {
+            pfe_bit = bit; } }
+    return pfe_bit;
 }
 
 // ---------------
@@ -89,7 +83,7 @@ MeterTable* AttachedTables::get_meter(std::string name) const {
             return dynamic_cast<MeterTable*>((Table *)s); }
     return nullptr; }
 
-Table::Format::Field *AttachedTables::find_address_field(AttachedTable *tbl) const {
+Table::Format::Field *AttachedTables::find_address_field(const AttachedTable *tbl) const {
     if (selector == tbl && selector.args.size() > 0)
         return selector.args.at(0).field();
     for (auto &s : stats)
@@ -116,15 +110,15 @@ bool AttachedTables::run_at_eop() {
     return false;
 }
 
-bool AttachedTables::is_attached(const Table *tbl) const {
-    if (selector == tbl) return true;
+const Table::Call *AttachedTables::get_call(const Table *tbl) const {
+    if (selector == tbl) return &selector;
     for (auto &s : stats)
-        if (s == tbl) return true;
+        if (s == tbl) return &s;
     for (auto &m : meters)
-        if (m == tbl) return true;
+        if (m == tbl) return &m;
     for (auto &s : statefuls)
-        if (s == tbl) return true;
-    return false;
+        if (s == tbl) return &s;
+    return nullptr;
 }
 
 void AttachedTables::pass0(MatchTable *self) {

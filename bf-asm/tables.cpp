@@ -53,6 +53,7 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
         return; }
     Ref::operator=(val[0]);
     for (int i = 1; i < val.vec.size; i++) {
+        int mode;
         if (val[i].type == tINT)
             args.emplace_back(val[i].i);
         else if (val[i].type == tCMD && val[i] == "hash_dist") {
@@ -62,10 +63,7 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
                 else
                     error(val[i].lineno, "hash_dist %ld not defined in table %s", val[i][1].i,
                           tbl->name()); }
-        } else if (val[i] == "counter") {
-            int mode = StatefulTable::parse_counter_mode(val);
-            if (mode < 0)
-                error(val.lineno, "invalid mode %s", value_desc(val));
+        } else if ((mode = StatefulTable::parse_counter_mode(val[i])) >= 0) {
             args.emplace_back(Arg::Counter, mode);
         } else if (!CHECKTYPE(val[i], tSTR)) {
             ;  // syntax error message emit by CHEKCTYPE
@@ -1141,6 +1139,7 @@ void Table::Actions::stateful_pass2(Table *tbl) {
 template<class REGS> void Table::Actions::write_regs(REGS &regs, Table *tbl) {
     for (auto &act : *this) {
         LOG2("# action " << act.name << " code=" << act.code << " addr=" << act.addr);
+        tbl->write_action_regs(regs, &act);
         for (auto *inst : act.instr)
             inst->write_regs(regs, tbl, &act); }
 }

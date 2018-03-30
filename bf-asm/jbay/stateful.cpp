@@ -21,7 +21,10 @@ enum {
     FUNCTION_FIFO = 2 << FUNCTION_SHIFT,
     FUNCTION_STACK = 3 << FUNCTION_SHIFT,
     FUNCTION_BLOOM_CLR = 4 << FUNCTION_SHIFT,
+    FUNCTION_MASK = 0xf << FUNCTION_SHIFT,
 };
+
+static const char *function_names[] = { "none", "log", "fifo", "stack", "bloom" };
 
 static int decode_push_pop(const value_t &v) {
     static const std::map<std::string, int> modes = {
@@ -90,13 +93,30 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
 }
 
 int StatefulTable::parse_counter_mode(Target::JBay target, const value_t &v) {
-    if (v != "counter") return -1;
-    if (v.type == tSTR) return PUSH_ALL + FUNCTION_LOG;
-    if (v.type != tCMD || v.vec.size != 2) return -1;
-    static const std::map<std::string, int> modes = {
-        { "hit", PUSH_HIT }, { "miss", PUSH_MISS }, { "gateway", PUSH_GATEWAY } };
-    if (!modes.count(v[1].s)) return -1;
-    return modes.at(v[1].s) + FUNCTION_LOG;
+    int rv = 0;
+    if (v == "counter") rv = FUNCTION_LOG;
+    else if (v == "fifo") rv = FUNCTION_FIFO;
+    else if (v == "stack") rv = FUNCTION_STACK;
+    else return -1;
+    if (v.type == tSTR) rv |= PUSH_ALL;
+    else if (v.type != tCMD || v.vec.size != 2) return -1;
+    else {
+        static const std::map<std::string, int> modes = {
+            { "hit", PUSH_HIT }, { "miss", PUSH_MISS }, { "gateway", PUSH_GATEWAY } };
+        if (!modes.count(v[1].s)) return -1;
+        rv |= modes.at(v[1].s); }
+    return rv;
+}
+
+void StatefulTable::set_counter_mode(Target::JBay target, int mode) {
+    mode &= FUNCTION_MASK;
+    assert(mode > 0 && (mode >> FUNCTION_SHIFT) <= FUNCTION_BLOOM_CLR);
+    if (stateful_counter_mode && stateful_counter_mode != mode)
+        error(lineno, "Incompatible uses (%s and %s) of stateful alu counters",
+              function_names[stateful_counter_mode >> FUNCTION_SHIFT],
+              function_names[mode >> FUNCTION_SHIFT]);
+    else
+        stateful_counter_mode = mode;
 }
 
 template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) {
@@ -104,12 +124,19 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
     auto &merge =  regs.rams.match.merge;
     unsigned meter_group = layout.at(0).row/4U;
     for (MatchTable *m : match_tables) {
+        int mode = stateful_counter_mode;
+        if (auto *call = m->get_call(this))
+            if (call->args.size() >= 2 || call->args.at(1).type == Call::Arg::Counter)
+                mode = call->args.at(1).count_mode();
         merge.mau_stateful_log_counter_ctl[m->logical_id/8U][0].set_subfield(
-            stateful_counter_mode & PUSHPOP_MASK , 3*(m->logical_id % 8U), 3);
+            mode & PUSHPOP_MASK , 3*(m->logical_id % 8U), 3);
         merge.mau_stateful_log_counter_ctl[m->logical_id/8U][1].set_subfield(
-            (stateful_counter_mode >> PUSHPOP_BITS) & PUSHPOP_MASK , 3*(m->logical_id % 8U), 3);
-        for (auto &rep : merge.mau_stateful_log_ctl_ixbar_map[m->logical_id/8U])
-            rep[0].set_subfield(meter_group, 2*(m->logical_id % 8U), 2); }
+            (mode >> PUSHPOP_BITS) & PUSHPOP_MASK , 3*(m->logical_id % 8U), 3);
+        for (auto &rep : merge.mau_stateful_log_ctl_ixbar_map[m->logical_id/8U]) {
+            if (mode & PUSHPOP_MASK)
+                rep[0].set_subfield(meter_group | 0x4, 3*(m->logical_id % 8U), 3);
+            if ((mode >> PUSHPOP_BITS) & PUSHPOP_MASK)
+                rep[1].set_subfield(meter_group | 0x4, 3*(m->logical_id % 8U), 3); } }
     auto &ctl2 = merge.mau_stateful_log_counter_ctl2[meter_group];
     ctl2.slog_counter_function = stateful_counter_mode >> FUNCTION_SHIFT;
     ctl2.slog_instruction_width = format->log2size - 3;
