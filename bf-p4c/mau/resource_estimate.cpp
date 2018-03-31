@@ -976,7 +976,7 @@ void RangeEntries::postorder(const IR::MAU::Table *tbl) {
         }
     }
     if (range_entries < 0) {
-        range_entries = table_entries * (RANGE_ENTRY_PERCENTAGE / 100);
+        range_entries = (table_entries * RANGE_ENTRY_PERCENTAGE) / 100;
     }
     total_TCAM_lines = range_entries * max_entry_TCAM_lines + (table_entries - range_entries);
 }

@@ -602,6 +602,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             RangeEntries re(phv, set_entries);
             t->apply(re);
             set_entries = re.TCAM_lines();
+        } else if (t->layout.alpm && t->layout.atcam) {
+            // According to Henry Wang, alpm requires one extra entry per partition
+            set_entries += t->layout.partition_count;
         }
     }
     for (auto *p = done; p; p = p->prev) {
