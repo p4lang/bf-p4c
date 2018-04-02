@@ -1,5 +1,4 @@
 #include "bf-p4c/arch/native.h"
-#include "bf-p4c/arch/converters.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/typeChecking/typeChecker.h"

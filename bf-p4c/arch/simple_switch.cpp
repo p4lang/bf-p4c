@@ -730,7 +730,7 @@ class ConstructSymbolTable : public Inspector {
         auto mem = new IR::Member(path, "digest_type");
         auto idx = new IR::Constant(IR::Type::Bits::get(3), digestIndex++);
         auto stmt = new IR::AssignmentStatement(mem, idx);
-        structure->digestCalls.emplace(node, stmt);
+        structure->_map.emplace(node, stmt);
 
         BUG_CHECK(mce->typeArguments->size() == 1, "Expected 1 type parameter for %1%",
                   mce->method);
@@ -839,7 +839,7 @@ class ConstructSymbolTable : public Inspector {
             block->components.push_back(new IR::AssignmentStatement(mirrorId,
                                                                     castedMirrorIdValue));
 
-            structure->cloneCalls.emplace(node, block);
+            structure->_map.emplace(node, block);
         }
 
         /*
@@ -897,15 +897,13 @@ class ConstructSymbolTable : public Inspector {
                     new IR::PathExpression("ig_intr_md_for_dprsr"), "drop_ctl");
             auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
             auto stmt = new IR::AssignmentStatement(path, val);
-            structure->dropCalls.emplace(node, stmt);
+            structure->_map.emplace(node, stmt);
         } else if (control->name == structure->getBlockName(ProgramStructure::EGRESS)) {
             auto path = new IR::Member(
                     new IR::PathExpression("eg_intr_md_for_dprsr"), "drop_ctl");
             auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
             auto stmt = new IR::AssignmentStatement(path, val);
-            structure->dropCalls.emplace(node, stmt);
-        } else {
-            BUG("mark_to_drop() can only be used in ingress or egress");
+            structure->_map.emplace(node, stmt);
         }
     }
 
@@ -939,8 +937,42 @@ class ConstructSymbolTable : public Inspector {
         } else {
             assign = new IR::AssignmentStatement(meterColor, methodCall);
         }
-        LOG1("assign " << assign);
-        structure->executeMeterCalls.emplace(node, assign);
+        structure->_map.emplace(node, assign);
+    }
+
+    void convertHashPrimitive(const IR::MethodCallStatement *node, cstring hashName) {
+        auto mce = node->methodCall->to<IR::MethodCallExpression>();
+        BUG_CHECK(mce->arguments->size() > 4, "insufficient arguments to hash() function");
+        auto pDest = mce->arguments->at(0);
+        auto pBase = mce->arguments->at(2);
+        auto pMax = mce->arguments->at(4);
+
+        // Check the max value
+        auto w = pDest->type->width_bits();
+        // Add data unconditionally.
+        auto args = new IR::Vector<IR::Expression>({ mce->arguments->at(3) });
+        if (pMax->to<IR::Constant>() == nullptr || pBase->to<IR::Constant>() == nullptr)
+            BUG("Only compile-time constants are supported for hash base offset and max value");
+
+        if (pMax->to<IR::Constant>()->asLong() < (1LL << w))  {
+            if (pBase->type->width_bits() != w)
+                pBase = new IR::Cast(IR::Type::Bits::get(w), pBase);
+            args->push_back(pBase);
+
+            if (pMax->type->width_bits() != w)
+                pMax = new IR::Cast(IR::Type::Bits::get(w), pMax);
+            args->push_back(pMax);
+        } else {
+            BUG_CHECK(pBase->to<IR::Constant>()->asInt() == 0,
+                      "The base offset for a hash calculation must be zero");
+        }
+
+        auto member = new IR::Member(new IR::PathExpression(hashName), "get");
+
+        auto result = new IR::AssignmentStatement(pDest,
+            new IR::MethodCallExpression(node->srcInfo, member, args));
+
+        structure->_map.emplace(node, result);
     }
 
     /// hash function is converted to an instance of hash extern in the enclosed control block
@@ -959,8 +991,9 @@ class ConstructSymbolTable : public Inspector {
         auto hashType = new IR::Type_Specialized(new IR::Type_Name("Hash"), typeArgs);
         auto hashName = cstring::make_unique(structure->unique_names, "hash", '_');
         structure->unique_names.insert(hashName);
-        structure->nameMap.emplace(node, hashName);
+        convertHashPrimitive(node, hashName);
 
+        // create hash instance
         auto algorithm = mce->arguments->at(1)->clone();
         if (auto typeName = algorithm->to<IR::Member>()) {
             structure->typeNamesToDo.emplace(typeName, typeName);
@@ -993,7 +1026,7 @@ class ConstructSymbolTable : public Inspector {
         auto mem = new IR::Member(path, "resubmit_type");
         auto idx = new IR::Constant(IR::Type::Bits::get(3), resubmitIndex++);
         auto stmt = new IR::AssignmentStatement(mem, idx);
-        structure->resubmitCalls.emplace(node, stmt);
+        structure->_map.emplace(node, stmt);
 
         /*
          * In the ingress deparser, add the following code
@@ -1040,6 +1073,22 @@ class ConstructSymbolTable : public Inspector {
         structure->ingressDeparserStatements.push_back(cond);
     }
 
+    void convertRandomPrimitive(const IR::MethodCallStatement *node, cstring randName) {
+        auto mce = node->methodCall->to<IR::MethodCallExpression>();
+
+        auto dest = mce->arguments->at(0);
+        // ignore lower bound
+        auto hi = mce->arguments->at(2);
+        auto args = new IR::Vector<IR::Expression>();
+        args->push_back(hi);
+
+        auto method = new IR::PathExpression(randName);
+        auto member = new IR::Member(method, "get");
+        auto call = new IR::MethodCallExpression(node->srcInfo, member, args);
+        auto stmt = new IR::AssignmentStatement(dest, call);
+        structure->_map.emplace(node, stmt);
+    }
+
     void cvtRandomFunction(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
         BUG_CHECK(control != nullptr, "random() must be used in a control block");
@@ -1054,7 +1103,7 @@ class ConstructSymbolTable : public Inspector {
         auto param = new IR::Vector<IR::Expression>();
         auto randName = cstring::make_unique(structure->unique_names, "random", '_');
         structure->unique_names.insert(randName);
-        structure->nameMap.emplace(node, randName);
+        convertRandomPrimitive(node, randName);
 
         auto randInst = new IR::Declaration_Instance(randName, type, param);
 
@@ -1210,41 +1259,153 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
-    void process_extern_declaration(const IR::Declaration_Instance *node, cstring name) {
-        if (name == "action_profile") {
-            structure->action_profiles.emplace(node, node);
-        } else if (name == "action_selector") {
-            structure->action_selectors.emplace(node, node);
-        } else if (name == "counter") {
-            structure->counters.emplace(node, node);
-        } else if (name == "direct_counter") {
-            structure->direct_counters.emplace(node, node);
-        } else if (name == "meter") {
-            structure->meters.emplace(node, node);
-        } else if (name == "direct_meter") {
-            structure->direct_meters.emplace(node, node);
+    void cvtActionProfile(const IR::Declaration_Instance* node) {
+        auto type = node->type->to<IR::Type_Name>();
+        BUG_CHECK(type->path->name == "action_profile",
+                  "action_profile converter cannot be applied to %1%", type->path->name);
+
+        type = new IR::Type_Name("ActionProfile");
+        auto result = new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
+                                                   type, node->arguments);
+        structure->_map.emplace(node, result);
+    }
+
+    void cvtActionSelector(const IR::Declaration_Instance* node) {
+        auto type = node->type->to<IR::Type_Name>();
+        BUG_CHECK(type->path->name == "action_selector",
+                  "action_selector converter cannot be applied to %1%", type->path->name);
+        auto declarations = new IR::IndexedVector<IR::Declaration>();
+
+        // Create a new instance of Hash<W>
+        auto typeArgs = new IR::Vector<IR::Type>();
+        auto w = node->arguments->at(2)->to<IR::Constant>()->asInt();
+        typeArgs->push_back(IR::Type::Bits::get(w));
+
+        auto args = new IR::Vector<IR::Expression>();
+        args->push_back(node->arguments->at(0));
+
+        auto specializedType = new IR::Type_Specialized(
+            new IR::Type_Name("Hash"), typeArgs);
+        auto hashName = cstring::make_unique(
+            structure->unique_names, node->name + "__hash_", '_');
+        structure->unique_names.insert(hashName);
+        declarations->push_back(
+            new IR::Declaration_Instance(hashName, specializedType, args));
+
+        args = new IR::Vector<IR::Expression>();
+        // size
+        args->push_back(node->arguments->at(1));
+        // hash
+        args->push_back(new IR::PathExpression(hashName));
+        // selector_mode
+        auto sel_mode = new IR::Member(
+            new IR::TypeNameExpression("SelectorMode_t"), "FAIR");
+        if (auto anno = node->annotations->getSingle("mode")) {
+            auto mode = anno->expr.at(0)->to<IR::StringLiteral>();
+            if (mode->value == "resilient")
+                sel_mode->member = IR::ID("RESILIENT");
+            else if (mode->value != "fair" && mode->value != "non_resilient")
+                BUG("Selector mode provided for the selector is not supported", node);
         } else {
-            WARNING("TypeName " << node << "is not converted");
+            WARNING("No mode specified for the selector %s. Assuming fair" << node);
         }
+        args->push_back(sel_mode);
+
+        type = new IR::Type_Name("ActionSelector");
+        declarations->push_back(new IR::Declaration_Instance(
+            node->srcInfo, node->name, node->annotations, type, args));
+        structure->_map.emplace(node, declarations);
+    }
+
+    void cvtCounterDecl(const IR::Declaration_Instance* node) {
+        auto type = node->type->to<IR::Type_Name>();
+        if (!type) return;
+        auto typeArgs = new IR::Vector<IR::Type>();
+        // type<W>
+        if (auto anno = node->annotations->getSingle("min_width")) {
+            auto min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
+            typeArgs->push_back(IR::Type::Bits::get(min_width));
+        } else {
+            auto min_width = IR::Type::Bits::get(32);
+            typeArgs->push_back(min_width);
+            WARNING("Could not infer min_width for counter %s, using bit<32>" << node);
+        }
+        // type<S>
+        if (auto s = node->arguments->at(0)->to<IR::Constant>()) {
+            typeArgs->push_back(s->type->to<IR::Type_Bits>());
+        }
+
+        auto specializedType = new IR::Type_Specialized(new IR::Type_Name("Counter"), typeArgs);
+        auto decl = new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
+                                                 specializedType, node->arguments);
+        structure->_map.emplace(node, decl);
+    }
+
+    void cvtMeterDecl(const IR::Declaration_Instance* node) {
+        auto type = node->type->to<IR::Type_Name>();
+        if (!type) return;
+        auto typeArgs = new IR::Vector<IR::Type>();
+        if (auto s = node->arguments->at(0)->to<IR::Constant>()) {
+            typeArgs->push_back(s->type->to<IR::Type_Bits>());
+        }
+        auto specializedType = new IR::Type_Specialized(new IR::Type_Name("Meter"), typeArgs);
+        auto decl = new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
+                                                 specializedType, node->arguments);
+        structure->_map.emplace(node, decl);
+    }
+
+    void cvtDirectMeterDecl(const IR::Declaration_Instance* node) {
+        auto decl = new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
+                                                 new IR::Type_Name("DirectMeter"), node->arguments);
+        structure->_map.emplace(node, decl);
+    }
+
+    void cvtDirectCounterDecl(const IR::Declaration_Instance *node) {
+        auto typeArgs = new IR::Vector<IR::Type>();
+        if (auto anno = node->annotations->getSingle("min_width")) {
+            auto min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
+            typeArgs->push_back(IR::Type::Bits::get(min_width));
+        } else {
+            auto min_width = IR::Type::Bits::get(32);
+            typeArgs->push_back(min_width);
+            WARNING("Could not infer min_width for counter %s, using bit<32>" << node);
+        }
+        auto specializedType = new IR::Type_Specialized(
+            new IR::Type_Name("DirectCounter"), typeArgs);
+        auto decl = new IR::Declaration_Instance(
+            node->srcInfo, node->name, node->annotations, specializedType, node->arguments);
+        structure->_map.emplace(node, decl);
+    }
+
+    void cvtExternDeclaration(const IR::Declaration_Instance *node, cstring name) {
+        if (name == "counter") {
+            cvtCounterDecl(node);
+        } else if (name == "direct_counter") {
+            cvtDirectCounterDecl(node);
+        } else if (name == "meter") {
+            cvtMeterDecl(node);
+        } else if (name == "direct_meter") {
+            cvtDirectMeterDecl(node);
+        } else if (name == "action_profile") {
+            cvtActionProfile(node);
+        } else if (name == "action_selector") {
+            cvtActionSelector(node);
+        }
+        // TODO: register
     }
 
     void postorder(const IR::Declaration_Instance *node) override {
-        if (auto ts = node->type->to<IR::Type_Specialized>()) {
-            if (auto typeName = ts->baseType->to<IR::Type_Name>()) {
-                if (typeName->path->name == "V1Switch") {
-                    BUG_CHECK(ts->arguments->size() == 2, "expect V1Switch with 2 type arguments");
-                    auto type_h = ts->arguments->at(0)->to<IR::Type_Name>();
-                    auto type_m = ts->arguments->at(1)->to<IR::Type_Name>();
-                    structure->type_h = type_h->path->name;
-                    structure->type_m = type_m->path->name;
-                } else {
-                    process_extern_declaration(node, typeName->path->name);
-                }
+        if (node->type->is<IR::Type_Specialized>()) {
+            auto type = node->type->to<IR::Type_Specialized>()->baseType;
+            if (type->path->name == "V1Switch") {
+                auto type_h = node->type->to<IR::Type_Specialized>()->arguments->at(0);
+                auto type_m = node->type->to<IR::Type_Specialized>()->arguments->at(1);
+                structure->type_h = type_h->to<IR::Type_Name>()->path->name;
+                structure->type_m = type_m->to<IR::Type_Name>()->path->name;
             }
-        } else if (auto typeName = node->type->to<IR::Type_Name>()) {
-            process_extern_declaration(node, typeName->path->name);
-        } else {
-            WARNING("Declaration instance " << node << " is not converted");
+            cvtExternDeclaration(node, type->path->name);
+        } else if (auto type = node->type->to<IR::Type_Name>()) {
+            cvtExternDeclaration(node, type->path->name);
         }
     }
 
@@ -1255,24 +1416,24 @@ class ConstructSymbolTable : public Inspector {
         if (auto em = mi->to<P4::ExternMethod>()) {
             cstring name = em->actualExternType->name;
             if (name == "direct_meter") {
-                structure->directMeterCalls.emplace(node, node);
+                DirectMeterConverter cvt(structure);
+                structure->_map.emplace(node, node->apply(cvt));
             } else if (name == "meter") {
-                structure->meterCalls.emplace(node, node);
-            } else {
-                WARNING("extern method " << name << " not converted");
+                MeterConverter cvt(structure);
+                structure->_map.emplace(node, node->apply(cvt));
             }
+            // Counter method needs no translation
+            // TODO register
         } else if (auto ef = mi->to<P4::ExternFunction>()) {
             cstring name = ef->method->name;
             if (name == "hash") {
                 cvtHashFunction(node);
-                structure->hashCalls.emplace(node, node);
             } else if (name == "resubmit") {
                 cvtResubmitFunction(node);
             } else if (name == "mark_to_drop" || name == "drop") {
                 cvtDropFunction(node);
             } else if (name == "random") {
                 cvtRandomFunction(node);
-                structure->randomCalls.emplace(node, node);
             } else if (name == "digest") {
                 cvtDigestFunction(node);
             } else if (name == "clone") {
@@ -1283,13 +1444,7 @@ class ConstructSymbolTable : public Inspector {
                 cvtUpdateChecksum(node);
             } else if (name == "execute_meter_with_color") {
                 cvtExecuteMeterFunctiion(node);
-            } else {
-                WARNING("Unsupported extern function" << node);
             }
-        } else if (mi->is<P4::BuiltInMethod>()) {
-            WARNING("built-in method " << node << " is not converted");
-        } else {
-            WARNING("method call " << node << " not converted");
         }
     }
 
@@ -1419,11 +1574,6 @@ class ConstructSymbolTable : public Inspector {
             if (checksum)
                 implementVerifyChecksum(*checksum, state->name, collectExtractMembers.extracts);
         }
-    }
-
-    // debug
-    void postorder(const IR::P4Program *node) override {
-        LOG3("program before translation " << node);
     }
 };
 

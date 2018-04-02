@@ -1,6 +1,6 @@
 #include "ir/ir.h"
 #include "lib/ordered_set.h"
-#include "program_structure.h"
+#include "psa_program_structure.h"
 #include "rewrite_packet_path.h"
 
 namespace BFN {
@@ -135,7 +135,7 @@ struct CloneMetadata {
 };
 
 struct FindResubmitData : public Inspector {
-    explicit FindResubmitData(ProgramStructure *structure)
+    explicit FindResubmitData(PSA::ProgramStructure *structure)
         : structure(structure) {
         setName("FindResubmitData");
     }
@@ -157,7 +157,7 @@ struct FindResubmitData : public Inspector {
 
     bool preorder(const IR::BFN::TranslatedP4Deparser* node) override {
         // only process ingress deparser to find assignments on resubmit metadata.
-        if (node->name != structure->getBlockName(ProgramStructure::INGRESS_DEPARSER))
+        if (node->name != structure->getBlockName(PSA::ProgramStructure::INGRESS_DEPARSER))
             return false;
 
         resubmit->paramNameInDeparser = structure->psaPacketPathNames.at("deparser::resubmit_md");
@@ -185,14 +185,14 @@ struct FindResubmitData : public Inspector {
     }
 
  private:
-    ProgramStructure *structure;
+    PSA::ProgramStructure *structure;
 };
 
 /// @pre assume that all structs are flattened, and the IR::Member is a member
 /// of a struct / header.
 struct FindRecirculateData : public Inspector {
     FindRecirculateData(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                        ProgramStructure *structure)
+                        PSA::ProgramStructure *structure)
         : structure(structure), refMap(refMap), typeMap(typeMap) {
         setName("FindRecirculateData");
     }
@@ -316,13 +316,13 @@ struct FindRecirculateData : public Inspector {
     }
 
  private:
-    ProgramStructure *structure;
+    PSA::ProgramStructure *structure;
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
 };
 
 struct FindCloneData : public Inspector {
-    explicit FindCloneData(ProgramStructure *structure, gress_t gress)
+    explicit FindCloneData(PSA::ProgramStructure *structure, gress_t gress)
         : structure(structure) {
         setName("FindCloneData");
 
@@ -373,7 +373,7 @@ struct FindCloneData : public Inspector {
     }
 
  private:
-    ProgramStructure *structure;
+    PSA::ProgramStructure *structure;
     cstring packetPath;
 };
 
@@ -742,7 +742,7 @@ struct RewriteCloneIfPresent : public Transform {
 }  // namespace
 
 TranslatePacketPath::TranslatePacketPath(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                                         ProgramStructure *structure) {
+                                         PSA::ProgramStructure *structure) {
     auto findResubmitData = new FindResubmitData(structure);
     auto findRecircData = new FindRecirculateData(refMap, typeMap, structure);
     auto findCloneI2EData = new FindCloneData(structure, gress_t::INGRESS);

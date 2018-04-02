@@ -51,22 +51,22 @@ class AnalyzeProgram : public Inspector {
     }
 
  public:
-    explicit AnalyzeProgram(ProgramStructure* structure) : structure(structure)
+    explicit AnalyzeProgram(PSA::ProgramStructure* structure) : structure(structure)
     { CHECK_NULL(structure); setName("AnalyzePsaProgram"); }
 
     bool preorder(const IR::P4Program*) override {
         analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
-            "ingress", "ip", ProgramStructure::INGRESS_PARSER);
+            "ingress", "ip", PSA::ProgramStructure::INGRESS_PARSER);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-            "ingress", "ig", ProgramStructure::INGRESS);
+            "ingress", "ig", PSA::ProgramStructure::INGRESS);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-            "ingress", "id", ProgramStructure::INGRESS_DEPARSER);
+            "ingress", "id", PSA::ProgramStructure::INGRESS_DEPARSER);
         analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
-            "egress", "ep", ProgramStructure::EGRESS_PARSER);
+            "egress", "ep", PSA::ProgramStructure::EGRESS_PARSER);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-            "egress", "eg", ProgramStructure::EGRESS);
+            "egress", "eg", PSA::ProgramStructure::EGRESS);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-            "egress", "ed", ProgramStructure::EGRESS_DEPARSER);
+            "egress", "ed", PSA::ProgramStructure::EGRESS_DEPARSER);
         return true;
     }
     void postorder(const IR::Type_Action* node) override
@@ -114,7 +114,7 @@ class AnalyzeProgram : public Inspector {
     }
 
     void process_packet_path_params(const IR::P4Parser* node) {
-        if (node->name == structure->getBlockName(ProgramStructure::INGRESS_PARSER)) {
+        if (node->name == structure->getBlockName(PSA::ProgramStructure::INGRESS_PARSER)) {
             LOG1("create parser resubmit metadata");
             auto param = node->getApplyParameters()->getParameter(4);
             structure->psaPacketPathNames.emplace("parser::resubmit_md", param->name);
@@ -122,7 +122,7 @@ class AnalyzeProgram : public Inspector {
             param = node->getApplyParameters()->getParameter(5);
             structure->psaPacketPathNames.emplace("parser::recirc_md", param->name);
             structure->psaPacketPathTypes.emplace("parser::recirc_md", param->type);
-        } else if (node->name == structure->getBlockName(ProgramStructure::EGRESS_PARSER)) {
+        } else if (node->name == structure->getBlockName(PSA::ProgramStructure::EGRESS_PARSER)) {
             LOG1("create parser clone metadata");
             auto param = node->getApplyParameters()->getParameter(5);
             structure->psaPacketPathNames.emplace("parser::clone_i2e_md", param->name);
@@ -134,7 +134,7 @@ class AnalyzeProgram : public Inspector {
     }
 
     void process_packet_path_params(const IR::P4Control* node) {
-        if (node->name == structure->getBlockName(ProgramStructure::INGRESS_DEPARSER)) {
+        if (node->name == structure->getBlockName(PSA::ProgramStructure::INGRESS_DEPARSER)) {
             LOG1("create egress parser resubmit metadata");
             auto param = node->getApplyParameters()->getParameter(1);
             structure->psaPacketPathNames.emplace("deparser::clone_i2e_md", param->name);
@@ -142,7 +142,7 @@ class AnalyzeProgram : public Inspector {
             param = node->getApplyParameters()->getParameter(2);
             structure->psaPacketPathNames.emplace("deparser::resubmit_md", param->name);
             structure->psaPacketPathTypes.emplace("deparser::resubmit_md", param->type);
-        } else if (node->name == structure->getBlockName(ProgramStructure::EGRESS_DEPARSER)) {
+        } else if (node->name == structure->getBlockName(PSA::ProgramStructure::EGRESS_DEPARSER)) {
             LOG1("create egress deparser recirc/clone metadata");
             auto param = node->getApplyParameters()->getParameter(1);
             structure->psaPacketPathNames.emplace("deparser::clone_e2e_md", param->name);
@@ -154,33 +154,19 @@ class AnalyzeProgram : public Inspector {
     }
 
  private:
-    ProgramStructure* structure;
+    PSA::ProgramStructure* structure;
 };
 
 class ConstructSymbolTable : public Inspector {
-    ProgramStructure* structure;
+    PSA::ProgramStructure* structure;
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
 
  public:
-    explicit ConstructSymbolTable(ProgramStructure* structure,
+    explicit ConstructSymbolTable(PSA::ProgramStructure* structure,
                                   P4::ReferenceMap *refMap, P4::TypeMap *typeMap)
             : structure(structure), refMap(refMap), typeMap(typeMap) {
         CHECK_NULL(structure); setName("ConstructPsaSymbolTable");
-    }
-
-    void process_extern_declaration(const IR::Declaration_Instance* node, cstring name) {
-        if (name == "Counter") {
-            structure->counters.emplace(node, node);
-        } else if (name == "DirectCounter") {
-            structure->direct_counters.emplace(node, node);
-        } else if (name == "Meter") {
-            structure->meters.emplace(node, node);
-        } else if (name == "DirectMeter") {
-            structure->direct_meters.emplace(node, node);
-        } else {
-            WARNING("TypeName " << node << "is not converted");
-        }
     }
 
     void postorder(const IR::Member* node) override {
@@ -194,11 +180,11 @@ class ConstructSymbolTable : public Inspector {
                 auto it = toTranslateInControl.find(path->name);
                 if (it != toTranslateInControl.end()) {
                     if (gress->name == structure->getBlockName(
-                            ProgramStructure::INGRESS)) {
+                            PSA::ProgramStructure::INGRESS)) {
                         structure->pathsThread.emplace(node, INGRESS);
                         structure->pathsToDo.emplace(node, node);
                     } else if (gress->name == structure->getBlockName(
-                            ProgramStructure::EGRESS)) {
+                            PSA::ProgramStructure::EGRESS)) {
                         structure->pathsThread.emplace(node, EGRESS);
                         structure->pathsToDo.emplace(node, node);
                     } else {
@@ -254,14 +240,8 @@ class ConstructSymbolTable : public Inspector {
                     auto type_em = ts->arguments->at(1)->to<IR::Type_Name>();
                     structure->type_eh = type_eh->path->name;
                     structure->type_em = type_em->path->name;
-                } else {
-                    process_extern_declaration(node, typeName->path->name);
                 }
             }
-        } else if (auto typeName = node->type->to<IR::Type_Name>()) {
-            process_extern_declaration(node, typeName->path->name);
-        } else {
-            WARNING("Declaration instance " << node << " is not converted");
         }
     }
 
@@ -298,10 +278,10 @@ class ConstructSymbolTable : public Inspector {
 };
 
 class LoadTargetArchitecture : public Inspector {
-    ProgramStructure* structure;
+    PSA::ProgramStructure* structure;
 
  public:
-    explicit LoadTargetArchitecture(ProgramStructure* structure) : structure(structure) {
+    explicit LoadTargetArchitecture(PSA::ProgramStructure* structure) : structure(structure) {
         setName("PsaLoadTargetArchitecture");
         CHECK_NULL(structure);
     }
@@ -398,24 +378,25 @@ PortableSwitchTranslation::PortableSwitchTranslation(
     setName("Translation");
     addDebugHook(options.getDebugHook());
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
-    auto structure = new BFN::PSA::ProgramStructure;
+    auto structure = new PSA::ProgramStructure;
     addPasses({
         new P4::ConvertEnums(refMap, typeMap, new PSA::PacketPathTo8Bits),
         new P4::TypeChecking(refMap, typeMap, true),
         evaluator,
         new VisitFunctor([structure, evaluator]() {
             structure->toplevel = evaluator->getToplevelBlock(); }),
-        new BFN::TranslationFirst(),
-        new BFN::PSA::NormalizeProgram(),
-        new BFN::PSA::LoadTargetArchitecture(structure),
-        new BFN::PSA::AnalyzeProgram(structure),
-        new BFN::PSA::ConstructSymbolTable(structure, refMap, typeMap),
-        new BFN::GenerateTofinoProgram(structure),
-        new BFN::TranslationLast(),
-        new BFN::AddIntrinsicMetadata,
-        new BFN::PSA::TranslatePacketPath(refMap, typeMap, structure),
+        new TranslationFirst(),
+        new PSA::NormalizeProgram(),
+        new PSA::LoadTargetArchitecture(structure),
+        new PSA::AnalyzeProgram(structure),
+        new PSA::ConstructSymbolTable(structure, refMap, typeMap),
+        new GenerateTofinoProgram(structure),
+        new TranslationLast(),
+        new AddIntrinsicMetadata,
+        new PSA::TranslatePacketPath(refMap, typeMap, structure),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
     });
 }
+
 }  // namespace BFN
