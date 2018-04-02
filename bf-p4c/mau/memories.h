@@ -206,7 +206,8 @@ struct Memories {
         bool direct = false;  // Whether the attached table is directly or indirectly addressed
         const IR::MAU::AttachedMemory *attached = nullptr;
         int recent_home_row = -1;  // For swbox users, most recent row to oflow to
-        enum type_t { EXACT, ACTION, STATS, METER, REGISTER, SELECTOR, TIND, IDLETIME, ATCAM } type;
+        enum type_t { EXACT, ACTION, STATS, METER, REGISTER, SELECTOR, TIND, IDLETIME, ATCAM,
+                      GROUP_TYPES } type;
 
         // Color Mapram Requirements, necessary for METER groups
         struct color_mapram_group {
@@ -290,10 +291,7 @@ struct Memories {
             : ta(t), depth(d), number(n), type(ty) {}
         SRAM_group(table_alloc *t, int d, int w, int n, int h, type_t ty)
             : ta(t), depth(d), width(w), number(n), hash_group(h), type(ty) {}
-        void dbprint(std::ostream &out) const {
-            out << ta->table->name << " way #" << number << " depth: " << depth
-                << " width: " << width << " placed: " << placed;
-        }
+        void dbprint(std::ostream &out) const;
         search_bus_info build_search_bus(int width_sect) {
             return search_bus_info(ta->table->name, width_sect, hash_group, logical_table);
         }

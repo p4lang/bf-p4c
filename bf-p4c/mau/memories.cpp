@@ -11,6 +11,11 @@ static const char *use_type_to_str[] = {
 };
 
 
+static const char *sram_group_type_to_str[] = {
+    "Exact", "Action", "Stats", "Meter", "Register", "Selector", "Tind", "Idletime", "Atcam"
+};
+
+
 cstring Memories::SRAM_group::get_name() const {
     if (ta->table->layout.atcam) {
         if (type == ATCAM)
@@ -24,6 +29,12 @@ cstring Memories::SRAM_group::get_name() const {
     if (type == ACTION && attached == nullptr)
         return ta->table->get_use_name(nullptr, false, IR::MAU::Table::AD_NAME);
     return ta->table->get_use_name(attached);
+}
+
+void Memories::SRAM_group::dbprint(std::ostream &out) const {
+    out << "SRAM group: " << ta->table->name << ", type: " << sram_group_type_to_str[type]
+        << ", width: " << width << ", number: " << number;
+    out << " { is placed: " << placed << ", to place: " << depth << "}";
 }
 
 bool Memories::SRAM_group::same_wide_action(const SRAM_group &a) {
@@ -1630,26 +1641,32 @@ void Memories::determine_cand_order(swbox_fill candidates[SWBOX_TYPES],
 
     if (side == RIGHT) {
         if (best_fits[SYNTH] && best_fits[SYNTH].group->left_to_place() == RAMs_avail[SYNTH]
-        && !bus_used[ACTION] && !bus_used[SYNTH] && !bus_used[OFLOW])
+        && !bus_used[ACTION] && !bus_used[SYNTH] && !bus_used[OFLOW]) {
             init_candidate(candidates, order, bus_used, SYNTH, order_i, best_fits[SYNTH], true);
+        }
 
-        if (curr_oflow && curr_oflow.group->type != SRAM_group::ACTION && !bus_used[OFLOW])
+        if (curr_oflow && curr_oflow.group->type != SRAM_group::ACTION && !bus_used[OFLOW]) {
             init_candidate(candidates, order, bus_used, OFLOW, order_i, curr_oflow, false);
-        if (nexts[SYNTH] && !bus_used[SYNTH])
+        }
+        if (nexts[SYNTH] && !bus_used[SYNTH]) {
             init_candidate(candidates, order, bus_used, SYNTH, order_i, nexts[SYNTH], true);
+        }
     }
 
 
     if (best_fits[ACTION] && best_fits[ACTION].group->left_to_place() == RAMs_avail[ACTION]
-        && !bus_used[ACTION] && !bus_used[SYNTH] && !bus_used[OFLOW])
+        && !bus_used[ACTION] && !bus_used[SYNTH] && !bus_used[OFLOW]) {
         init_candidate(candidates, order, bus_used, ACTION, order_i, best_fits[ACTION], false);
+    }
 
 
-    if (curr_oflow && curr_oflow.group->type == SRAM_group::ACTION && !bus_used[OFLOW])
+    if (curr_oflow && curr_oflow.group->type == SRAM_group::ACTION && !bus_used[OFLOW]) {
         init_candidate(candidates, order, bus_used, OFLOW, order_i, curr_oflow, false);
+    }
 
-    if (nexts[ACTION] && !bus_used[ACTION])
+    if (nexts[ACTION] && !bus_used[ACTION]) {
         init_candidate(candidates, order, bus_used, ACTION, order_i, nexts[ACTION], false);
+    }
 }
 
 /** Is a test within best candidates to see if even though sel unplaced is not yet finished,
@@ -1744,6 +1761,7 @@ void Memories::set_up_RAM_counts(swbox_fill candidates[SWBOX_TYPES],
                                  int RAMs[SWBOX_TYPES]) {
     int RAMs_used = 0;
     int maprams_used = 0;
+    bool synth_oflow_fully_placed = true;
     for (int i = 0; i < SWBOX_TYPES; i++) {
         if (order[i] == SWBOX_TYPES) continue;
         auto &candidate = candidates[order[i]];
@@ -1755,6 +1773,9 @@ void Memories::set_up_RAM_counts(swbox_fill candidates[SWBOX_TYPES],
 
         int RAMs_needed = candidate.group->left_to_place();
         RAMs[i] = std::min(RAMs_needed, RAMs_avail[type] - RAMs_used);
+
+        if (order[i] == OFLOW && type == SYNTH && RAMs_needed > RAMs[i])
+            synth_oflow_fully_placed = false;
         BUG_CHECK(RAMs[i] >= 0, "Cannot have negative RAMs available");
         RAMs_used += RAMs[i];
         if (type == SYNTH)
@@ -1765,7 +1786,12 @@ void Memories::set_up_RAM_counts(swbox_fill candidates[SWBOX_TYPES],
         if (order[i] != SWBOX_TYPES) {
             auto &candidate = candidates[order[i]];
             if (RAMs[i] > 0) continue;
-            if (!candidate.group->cm.all_placed()) continue;
+            if (!candidate.group->cm.all_placed()) {
+                if (order[i] == OFLOW)
+                    continue;
+                if (order[i] == SYNTH && synth_oflow_fully_placed)
+                    continue;
+            }
             candidate.clear();
         }
     }
@@ -2466,8 +2492,9 @@ bool Memories::allocate_all_swbox_users() {
 
             bool candidate_found = false;
             for (int k = 0; k < SWBOX_TYPES; k++) {
-                if (candidates[k])
+                if (candidates[k]) {
                     candidate_found = true;
+                }
             }
 
             if (!candidate_found)
