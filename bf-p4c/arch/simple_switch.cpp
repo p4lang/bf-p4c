@@ -657,32 +657,45 @@ class AnalyzeProgram : public Inspector {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-class CollectVerifyChecksums : public Inspector {
-    P4::ReferenceMap *refMap;
-    P4::TypeMap *typeMap;
-    std::vector<const IR::MethodCallStatement*> verifyChecksums;
-
- public:
-    CollectVerifyChecksums(P4::ReferenceMap *refMap, P4::TypeMap *typeMap)
-            : refMap(refMap), typeMap(typeMap) {
-        setName("CollectVerifyChecksums");
+static boost::optional<ChecksumSourceMap::value_type>
+analyzeVerifyOrUpdateChecksum(const IR::MethodCallStatement *statement, cstring which) {
+    auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
+    if (!methodCall) {
+        ::warning("Expected a non-empty method call expression: %1%", statement);
+        return boost::none;
     }
-
-    const std::vector<const IR::MethodCallStatement*>& get() { return verifyChecksums; }
-
-    void postorder(const IR::MethodCallStatement *node) override {
-        auto mce = node->methodCall->to<IR::MethodCallExpression>();
-        CHECK_NULL(mce);
-        auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
-        if (auto ef = mi->to<P4::ExternFunction>()) {
-            if (ef->method->name == "verify_checksum") {
-                verifyChecksums.push_back(node);
-            }
-        }
+    auto method = methodCall->method->to<IR::PathExpression>();
+    if (!method || (method->path->name != which)) {
+        ::warning("Expected an %1% statement in %2%", statement, which);
+        return boost::none;
     }
-};
+    if (methodCall->arguments->size() != 4) {
+        ::warning("Expected 4 arguments for %1% statement: %2%", statement, which);
+        return boost::none;
+    }
+    auto destField = (*methodCall->arguments)[2]->to<IR::Member>();
+    CHECK_NULL(destField);
 
-//////////////////////////////////////////////////////////////////////////////////////////////
+    return ChecksumSourceMap::value_type(destField, methodCall);
+}
+
+static IR::Declaration_Instance*
+getVerifyOrUpdateChecksumDeclaration(ProgramStructure *structure,
+                                     ChecksumSourceMap::value_type csum) {
+    auto typeArgs = new IR::Vector<IR::Type>();
+    typeArgs->push_back(csum.second->arguments->at(2)->type);
+    auto inst = new IR::Type_Specialized(new IR::Type_Name("checksum"), typeArgs);
+
+    auto csum_name = cstring::make_unique(structure->unique_names, "checksum", '_');
+    structure->unique_names.insert(csum_name);
+    auto args = new IR::Vector<IR::Expression>();
+    auto hashAlgo = new IR::Member(
+            new IR::TypeNameExpression("HashAlgorithm_t"), "CRC16");
+    args->push_back(hashAlgo);
+    auto decl = new IR::Declaration_Instance(csum_name, inst, args);
+
+    return decl;
+}
 
 class ConstructSymbolTable : public Inspector {
     ProgramStructure *structure;
@@ -693,15 +706,12 @@ class ConstructSymbolTable : public Inspector {
     unsigned igCloneIndex;
     unsigned egCloneIndex;
     std::set<cstring> globals;
-    const std::vector<const IR::MethodCallStatement*>& verifyChecksums;
 
  public:
     ConstructSymbolTable(ProgramStructure *structure,
-                         P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                         const std::vector<const IR::MethodCallStatement*>& verifyChecksums)
+                         P4::ReferenceMap *refMap, P4::TypeMap *typeMap)
             : structure(structure), refMap(refMap), typeMap(typeMap),
-              resubmitIndex(0), digestIndex(0), igCloneIndex(0), egCloneIndex(0),
-              verifyChecksums(verifyChecksums) {
+              resubmitIndex(0), digestIndex(0), igCloneIndex(0), egCloneIndex(0) {
         CHECK_NULL(structure);
         setName("ConstructSymbolTable");
     }
@@ -1114,47 +1124,8 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
-    boost::optional<ChecksumSourceMap::value_type>
-    analyzeVerifyOrUpdateChecksum(const IR::MethodCallStatement *statement, cstring which) {
-        auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
-        if (!methodCall) {
-            ::warning("Expected a non-empty method call expression: %1%", statement);
-            return boost::none;
-        }
-        auto method = methodCall->method->to<IR::PathExpression>();
-        if (!method || (method->path->name != which)) {
-            ::warning("Expected an %1% statement in %2%", statement, which);
-            return boost::none;
-        }
-        if (methodCall->arguments->size() != 4) {
-            ::warning("Expected 4 arguments for %1% statement: %2%", statement, which);
-            return boost::none;
-        }
-        auto destField = (*methodCall->arguments)[2]->to<IR::Member>();
-        CHECK_NULL(destField);
-
-        return ChecksumSourceMap::value_type(destField, methodCall);
-    }
-
-    const IR::Declaration_Instance*
-    getVerifyOrUpdateChecksumDeclaration(ChecksumSourceMap::value_type csum) {
-        auto typeArgs = new IR::Vector<IR::Type>();
-        typeArgs->push_back(csum.second->arguments->at(2)->type);
-        auto inst = new IR::Type_Specialized(new IR::Type_Name("checksum"), typeArgs);
-
-        auto csum_name = cstring::make_unique(structure->unique_names, "checksum", '_');
-        structure->unique_names.insert(csum_name);
-        auto args = new IR::Vector<IR::Expression>();
-        auto hashAlgo = new IR::Member(
-                new IR::TypeNameExpression("HashAlgorithm_t"), "CRC16");
-        args->push_back(hashAlgo);
-        auto decl = new IR::Declaration_Instance(csum_name, inst, args);
-
-        return decl;
-    }
-
     void implementUpdateChecksum(ChecksumSourceMap::value_type csum) {
-        auto* decl = getVerifyOrUpdateChecksumDeclaration(csum);
+        auto* decl = getVerifyOrUpdateChecksumDeclaration(structure, csum);
 
         structure->ingressDeparserDeclarations.push_back(decl);
         structure->egressDeparserDeclarations.push_back(decl);
@@ -1470,6 +1441,42 @@ class ConstructSymbolTable : public Inspector {
             }
         }
     }
+};
+
+class CollectVerifyChecksums : public Inspector {
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
+    std::vector<const IR::MethodCallStatement*> verifyChecksums;
+
+ public:
+    CollectVerifyChecksums(P4::ReferenceMap *refMap, P4::TypeMap *typeMap)
+            : refMap(refMap), typeMap(typeMap) {
+        setName("CollectVerifyChecksums");
+    }
+
+    const std::vector<const IR::MethodCallStatement*>& get() { return verifyChecksums; }
+
+    void postorder(const IR::MethodCallStatement *node) override {
+        auto mce = node->methodCall->to<IR::MethodCallExpression>();
+        CHECK_NULL(mce);
+        auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
+        if (auto ef = mi->to<P4::ExternFunction>()) {
+            if (ef->method->name == "verify_checksum") {
+                verifyChecksums.push_back(node);
+            }
+        }
+    }
+};
+
+class InsertVerifyChecksums : public Inspector {
+ public:
+    InsertVerifyChecksums(const std::vector<const IR::MethodCallStatement*>& csums,
+                          ProgramStructure *structure)
+        : verifyChecksums(csums), structure(structure) { }
+
+ private:
+    const std::vector<const IR::MethodCallStatement*>& verifyChecksums;
+    ProgramStructure *structure;
 
     struct CollectExtractMembers : public Inspector {
         CollectExtractMembers() {}
@@ -1515,22 +1522,23 @@ class ConstructSymbolTable : public Inspector {
 
     void implementVerifyChecksum(ChecksumSourceMap::value_type csum, cstring stateName,
                                  const std::vector<const IR::Member*>& extracts) {
-        auto *decl = getVerifyOrUpdateChecksumDeclaration(csum);
-
-        structure->ingressParserDeclarations.push_back(decl);
-        structure->egressParserDeclarations.push_back(decl);
-
         auto fieldlist = csum.second->arguments->at(1);
         auto dest_field = csum.second->arguments->at(2);
 
         // check if any of the fields or dest belong to extracts
 
-        std::vector<IR::Statement*> ingressStmts;
-        std::vector<IR::Statement*> egressStmts;
+        IR::Declaration_Instance* decl = nullptr;
 
         for (auto extract : extracts) {
             for (auto f : fieldlist->to<IR::ListExpression>()->components) {
                 if (belongsTo(f->to<IR::Member>(), extract)) {
+                    if (decl == nullptr) {
+                        decl = getVerifyOrUpdateChecksumDeclaration(structure, csum);
+
+                        structure->ingressParserDeclarations.push_back(decl);
+                        structure->egressParserDeclarations.push_back(decl);
+                    }
+
                     auto addCall = new IR::MethodCallStatement(csum.second->srcInfo,
                         new IR::Member(new IR::PathExpression(decl->name), "add"), {f});
                     structure->ingressParserStatements[stateName].push_back(addCall);
@@ -1539,6 +1547,8 @@ class ConstructSymbolTable : public Inspector {
             }
 
             if (belongsTo(dest_field->to<IR::Member>(), extract)) {
+                BUG_CHECK(decl, "No fields have been added before verify?");
+
                 auto methodCall = new IR::Member(new IR::PathExpression(decl->name), "verify");
                 auto verifyCall = new IR::MethodCallExpression(csum.second->srcInfo,
                                                                methodCall, {});
@@ -1577,6 +1587,18 @@ class ConstructSymbolTable : public Inspector {
     }
 };
 
+class TranslateVerifyChecksums : public PassManager {
+ public:
+    explicit TranslateVerifyChecksums(ProgramStructure *structure,
+                                      P4::ReferenceMap* refMap,
+                                      P4::TypeMap* typeMap) {
+        auto collectVerifyChecksums = new BFN::V1::CollectVerifyChecksums(refMap, typeMap);
+
+        addPasses({collectVerifyChecksums,
+                   new BFN::V1::InsertVerifyChecksums(collectVerifyChecksums->get(), structure)});
+    }
+};
+
 }  // namespace V1
 
 /// The general work flow of architecture translation consists of the following steps:
@@ -1591,7 +1613,6 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
     addDebugHook(options.getDebugHook());
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto structure = new BFN::V1::ProgramStructure;
-    auto collectVerifyChecksums = new BFN::V1::CollectVerifyChecksums(refMap, typeMap);
     addPasses({
         new P4::TypeChecking(refMap, typeMap, true),
         new RemoveExternMethodCallsExcludedByAnnotation,
@@ -1603,9 +1624,8 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new BFN::V1::LoadTargetArchitecture(structure),
         new BFN::V1::RemoveNodesWithNoMapping(),
         new BFN::V1::AnalyzeProgram(structure),
-        collectVerifyChecksums,
-        new BFN::V1::ConstructSymbolTable(structure, refMap, typeMap,
-                                          collectVerifyChecksums->get()),
+        new BFN::V1::TranslateVerifyChecksums(structure, refMap, typeMap),
+        new BFN::V1::ConstructSymbolTable(structure, refMap, typeMap),
         new BFN::GenerateTofinoProgram(structure),
         new BFN::TranslationLast(),
         new BFN::AddIntrinsicMetadata,
