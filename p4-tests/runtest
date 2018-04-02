@@ -40,10 +40,20 @@ die() {
 
 run() {
     if $verbose; then
-        echo "$@"
+        echo "$TIME_COMMAND $TIMEOUT_COMMAND $TIMEOUT $@"
     fi
-    $TIME_COMMAND $TIMEOUT_COMMAND $TIMEOUT "$@"
+
+    # `timeout` can't be killed by ctrl^c when run inside a bash script, so we
+    # need to run it in the background, record the pid, then kill it on INT.
+    trap 'kill -INT -$pid' INT
+    $TIME_COMMAND $TIMEOUT_COMMAND $TIMEOUT "$@" &
+    pid=$!
+    wait $pid
     status=$?
+
+    # Clear the trap for the INT signal.
+    trap - INT
+
     if [ $status -eq 124 ]; then
         echo >&2 $1 TIMEOUT
     elif [ $status -gt 128 ]; then
