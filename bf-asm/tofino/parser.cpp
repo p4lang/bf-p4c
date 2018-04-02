@@ -5,8 +5,7 @@
 template <> void Parser::Checksum::write_config(Target::Tofino::parser_regs &regs, Parser *parser) {
          if (unit == 0) write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
     else if (unit == 1) write_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
-    else
-        error(lineno, "invalid unit for parser checksum");
+    else error(lineno, "invalid unit for parser checksum");
 }
 
 template <> void Parser::CounterInit::write_config(Target::Tofino::parser_regs &regs,
@@ -157,6 +156,26 @@ phv_8b_slots[] = {
     { phv_8b_3, 1U << phv_8b_3, 0, 8 },
     { 0, 0 }
 };
+
+template <>
+void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, void *_map, unsigned &used) const
+{   
+    if (type != 0) return;
+
+    // checksum verification requires the last extractor to be a dummy (to work around a RTL bug)
+    // see MODEL-210 for discussion.
+
+    tofino_phv_output_map *map = (tofino_phv_output_map *)_map;
+    phv_use_slots *usable_slots;
+
+         if (dest->reg.size == 8)  usable_slots = phv_8b_slots;
+    else if (dest->reg.size == 16) usable_slots = phv_16b_slots;
+    else if (dest->reg.size == 32) usable_slots = phv_32b_slots;
+
+    auto &slot = usable_slots[3];
+    *map[slot.idx].dst = dest->reg.parser_id();
+    used |= slot.usemask;
+}
 
 template <>
 int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs &regs, void *_map, unsigned &used) const

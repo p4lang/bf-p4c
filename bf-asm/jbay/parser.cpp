@@ -6,8 +6,13 @@ template <> void Parser::Checksum::write_config(Target::JBay::parser_regs &regs,
     else if (unit == 2) write_row_config(regs.memory[gress].po_csum_ctrl_2_row[addr]);
     else if (unit == 3) write_row_config(regs.memory[gress].po_csum_ctrl_3_row[addr]);
     else if (unit == 4) write_row_config(regs.memory[gress].po_csum_ctrl_4_row[addr]);
-    else
-        error(lineno, "invalid unit for parser checksum");
+    else error(lineno, "invalid unit for parser checksum");
+}
+
+template <>
+void Parser::Checksum::write_output_config(Target::JBay::parser_regs &regs, void *_map, unsigned &used) const
+{
+    // TODO
 }
 
 template <> void Parser::CounterInit::write_config(Target::JBay::parser_regs &regs,

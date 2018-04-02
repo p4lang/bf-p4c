@@ -162,7 +162,10 @@ def update_config(name, grpc_addr, p4info_path, bin_path, cxt_json_path):
     return True
 
 def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
-                  platform, extra_args=[]):
+                  platform, verbose_model_log, extra_args=[]):
+    if verbose_model_log:
+        enable_verbose_model_log()
+
     ifaces = []
     # find base_test.py
     pypath = os.path.dirname(os.path.abspath(__file__))
@@ -195,7 +198,10 @@ def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
     return p.returncode == 0
 
 def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform, port_map,
-                 extra_args=[]):
+                     verbose_model_log, extra_args=[]):
+    if verbose_model_log:
+        enable_verbose_model_log()
+
     ifaces = []
     # find p4ptfutils
     ptfutils = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'p4testutils')
@@ -443,11 +449,11 @@ def main():
         success = False
         if args.pdtest is None:
             success = run_pi_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
-                                    port_map, args.stftest, args.platform,
+                                    port_map, args.stftest, args.platform, args.verbose_model_log,
                                     extra_ptf_args)
         else:
             success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
-                                   args.testdir, args.platform, port_map,
+                                   args.testdir, args.platform, port_map, args.verbose_model_log,
                                    extra_ptf_args)
         if not success:
             error("Error when running PTF tests")
@@ -493,12 +499,9 @@ def main():
                 error("Error when starting model & switchd")
                 return False
 
-            if args.verbose_model_log:
-                enable_verbose_model_log()
-
             if args.pdtest is not None:
                 success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
-                                       args.testdir, args.platform, port_map,
+                                       args.testdir, args.platform, port_map, args.verbose_model_log,
                                        extra_ptf_args)
             else:
                 success = update_config(args.name, args.grpc_addr,
@@ -509,7 +512,7 @@ def main():
 
                 success = run_pi_ptf_tests(PTF, args.grpc_addr, args.ptfdir,
                                         p4info_path, port_map,
-                                        args.stftest, args.platform,
+                                        args.stftest, args.platform, args.verbose_model_log,
                                         extra_ptf_args)
             if not success:
                 error("Error when running PTF tests")
