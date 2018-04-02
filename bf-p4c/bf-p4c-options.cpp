@@ -8,7 +8,8 @@
 #include "version.h"
 
 BFN_Options::BFN_Options() {
-    target = "tofino-v1model-barefoot";
+    target = "tofino";
+    arch   = "v1model";
     compilerVersion = BF_P4C_VERSION;
 
     registerOption("--trivpa", nullptr,
@@ -68,14 +69,15 @@ BFN_Options::BFN_Options() {
         "use phv solitary pragma");
 }
 
+using Target = std::pair<cstring, cstring>;
 std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
-    static const std::unordered_set<cstring> supportedTargets = {
-        "tofino-v1model-barefoot",
-        "tofino-native-barefoot",
-        "tofino-psa-barefoot",
+    static const ordered_set<Target> supportedTargets = {
+        {"tofino", "v1model"},
+        {"tofino", "tna"},
+        {"tofino", "psa"},
 #if HAVE_JBAY
-        "jbay-v1model-barefoot",
-        "jbay-native-barefoot",
+        {"jbay", "v1model"},
+        {"jbay", "tna"},
 #endif /* HAVE_JBAY */
     };
 
@@ -84,25 +86,16 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
     static bool processed = false;
 
     if (!processed) {
-        if (!supportedTargets.count(target)) {
-            ::error("Target '%s' is not supported", target);
+        Target t = { target, arch };
+        if (!supportedTargets.count(t)) {
+            ::error("Target '%s-%s' is not supported", target, arch);
             return remainingOptions;
         }
 
-        std::vector<std::string> splits;
-        std::string target_str(target.c_str());
-        boost::split(splits, target_str, [](char c){return c == '-';});
-        if (splits.size() != 3)
-            BUG("Invalid target %s", target);
-
-        device = splits[0];
-        arch   = splits[1];
-        vendor = splits[2];
-
-        if (device == "tofino")
+        if (target == "tofino")
             preprocessor_options += " -D__TARGET_TOFINO__";
 #if HAVE_JBAY
-        else if (device == "jbay")
+        else if (target == "jbay")
             preprocessor_options += " -D__TARGET_JBAY__";
 #endif
         processed = true;

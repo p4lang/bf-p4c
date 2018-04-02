@@ -142,7 +142,7 @@ Backend::Backend(const BFN_Options& options) :
         new CollectPhvInfo(phv),
         &defuse,
 #if HAVE_JBAY
-        options.device == "jbay" ? new AddJBayMetadataPOV(phv) : nullptr,
+        options.target == "jbay" ? new AddJBayMetadataPOV(phv) : nullptr,
 #endif  // HAVE_JBAY
         new ResolveComputedParserExpressions,
         new CollectPhvInfo(phv),
@@ -173,7 +173,7 @@ Backend::Backend(const BFN_Options& options) :
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         new CollectPhvInfo(phv),
 #if HAVE_JBAY
-        options.device == "jbay" ? nullptr : new MergeParserStates,
+        options.target == "jbay" ? nullptr : new MergeParserStates,
 #endif  // HAVE_JBAY
         &defuse,
             // Following pass must run after CollectNameAnnotations, after any CollectPhvInfo.
@@ -181,7 +181,7 @@ Backend::Backend(const BFN_Options& options) :
         new DumpPipe("Before phv_analysis"),
         new CheckForHeaders(),
 #if HAVE_JBAY
-        options.device == "jbay" && options.use_clot ? new AllocateClot(clot, phv, uses) : nullptr,
+        options.target == "jbay" && options.use_clot ? new AllocateClot(clot, phv, uses) : nullptr,
 #endif  // HAVE_JBAY
         new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps),  // phv analysis after last
                                                                  // CollectPhvInfo pass

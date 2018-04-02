@@ -996,7 +996,7 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, BFN_Options& 
     program = program->apply(evaluator);
 
     bool useTna = (options.langVersion == CompilerOptions::FrontendVersion::P4_16 &&
-                   options.arch == "native");
+                   options.arch == "tna");
     auto rv = new IR::BFN::Pipe();
     auto bindings = new ParamBinding(&typeMap);
     ExtractBackendPipe extractBackendPipe(&refMap, &typeMap, rv, bindings, useTna);

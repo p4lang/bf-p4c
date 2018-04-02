@@ -139,7 +139,7 @@ int main(int ac, char **av) {
         return 1;
 
     options.setInputFile();
-    Device::init(options.device);
+    Device::init(options.target);
 
     // FIXME -- should be based on the architecture option
     P4V1::Converter::createProgramStructure = P4V1::TNA_ProgramStructure::create;

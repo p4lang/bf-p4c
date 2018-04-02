@@ -114,13 +114,13 @@ if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; th
     # XXX(zma) assuming tofino and jbay have same arch for now
     # XXX (calin): these arguments should be passed in by the caller
     if grep -q "tofino.p4" "$file"; then
-        P4C_ARGS="$P4C_ARGS --target ${device}-native-barefoot"
+        P4C_ARGS="$P4C_ARGS --target ${device} --arch tna"
     else
-        P4C_ARGS="$P4C_ARGS --target ${device}-v1model-barefoot"
+        P4C_ARGS="$P4C_ARGS --target ${device} --arch v1model"
     fi
     P4C_ARGS="$P4C_ARGS -x p4-16"
 else
-    P4C_ARGS="$P4C_ARGS --target ${device}-v1model-barefoot"
+    P4C_ARGS="$P4C_ARGS --target ${device} --arch v1model"
     P4C_ARGS="$P4C_ARGS -x p4-14"
 fi
 

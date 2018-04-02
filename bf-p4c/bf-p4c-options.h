@@ -7,10 +7,6 @@
 
 class BFN_Options : public CompilerOptions {
  public:
-    cstring device = "tofino";
-    cstring arch   = "v1model";
-    cstring vendor = "barefoot";
-
     bool trivial_phvalloc = false;
     bool phv_interference = true;
     bool cluster_interference = true;

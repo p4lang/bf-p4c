@@ -29,8 +29,8 @@ else:
     bfas = find_file(os.environ['P4C_BIN_DIR'], 'bfas')
 
 class BarefootBackend(BackendDriver):
-    def __init__(self, target, argParser):
-        BackendDriver.__init__(self, target, argParser)
+    def __init__(self, target, arch, argParser):
+        BackendDriver.__init__(self, target, arch, argParser)
         # commands
         self.add_command('preprocessor', 'cc')
         self.add_command('compiler',
@@ -66,9 +66,10 @@ class BarefootBackend(BackendDriver):
         self.add_command_option('preprocessor', "-D" + targetDefine)
         self.add_command_option('preprocessor', p4c_version.macro_defs)
 
-    def config_compiler(self, triplet, targetDefine):
+    def config_compiler(self, target, arch, targetDefine):
         self.add_command_option('compiler', "--nocpp")
-        self.add_command_option('compiler', "--target " + triplet)
+        self.add_command_option('compiler', "--target " + target)
+        self.add_command_option('compiler', "--arch " + arch)
         self.add_command_option('compiler', "-D" + targetDefine)
         self.add_command_option('compiler', p4c_version.macro_defs)
 

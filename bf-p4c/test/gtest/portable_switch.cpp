@@ -199,6 +199,7 @@ createPSATest(TestArgs& args) {
 
 
     auto& options = BFNContext::get().options();
+    options.target = "tofino";
     options.arch = "psa";
 
     return T::create(source);
