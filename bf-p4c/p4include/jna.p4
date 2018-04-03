@@ -16,14 +16,14 @@
  *
  */
 
-#ifndef _TOFINO_NATIVE_ARCHITECTURE_P4_
-#define _TOFINO_NATIVE_ARCHITECTURE_P4_
+#ifndef _JBAY_NATIVE_ARCHITECTURE_P4_
+#define _JBAY_NATIVE_ARCHITECTURE_P4_
 
 #include "core.p4"
-#include "tofino.p4"
+#include "jbay.p4"
 
 // The following declarations provide a template for the programmable blocks in
-// Tofino.
+// JBay.
 
 parser IngressParser<H, M>(
     packet_in pkt,
@@ -73,4 +73,4 @@ package Switch<IH, IM, EH, EM>(
     Egress<EH, EM> egress,
     EgressDeparser<EH, EM> egress_deparser);
 
-#endif  /* _TOFINO_NATIVE_ARCHITECTURE_P4_ */
+#endif  /* _JBAY_NATIVE_ARCHITECTURE_P4_ */

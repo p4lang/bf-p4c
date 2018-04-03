@@ -422,6 +422,14 @@ set (p4include_HEADERS
   p4include/tofino/wred.p4
   )
 
+if (ENABLE_JBAY)
+set (p4include_HEADERS
+  ${p4include_HEADERS}
+  p4include/jbay.p4
+  p4include/jna.p4
+  )
+endif (ENABLE_JBAY)
+
 set (p4_14include_HEADERS
   p4_14include/tofino/constants.p4
   p4_14include/tofino/intrinsic_metadata.p4
