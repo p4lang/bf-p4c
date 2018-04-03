@@ -54,6 +54,12 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/action_chain1.p4
     )
 
+  # Maybe BRIG-527?
+  p4c_add_xfail_reason("jbay"
+    "jbay_test_harness: .* Assertion .* failed"
+    extensions/p4_tests/p4_14/em_ghost3.p4
+    )
+
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -265,3 +271,17 @@ p4c_add_xfail_reason("jbay"
   "ERROR:PTF runner:Error when pushing P4 config to switchd"
   tor.p4
 )
+
+# BRIG-527
+p4c_add_xfail_reason("jbay"
+  "The following clot-candidate slices have been allocated to PHV"
+  testdata/p4_14_samples/exact_match7.p4
+  testdata/p4_14_samples/gateway5.p4
+  extensions/p4_tests/p4_14/action_format_packing1.p4
+  extensions/p4_tests/p4_14/action_format_packing2.p4
+  extensions/p4_tests/p4_14/sful_1bit.p4
+  extensions/p4_tests/p4_14/em_ghost3.p4
+  extensions/p4_tests/p4_14/em_ghost4.p4
+  extensions/p4_tests/p4_14/ternary_match_constant_action_data.p4
+  tor.p4
+  )

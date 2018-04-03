@@ -24,6 +24,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
         return n_tphv_on_phv_bits < other.n_tphv_on_phv_bits; }
 
     int weight_factor = 2;
+    int delta_clot_bits = 0;
     int delta_wasted_bits = 0;
     int delta_packing_bits = 0;
     int delta_overlay_bits = 0;
@@ -37,6 +38,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
 
         // Add this score.
         if (score.find(kind) != score.end()) {
+            delta_clot_bits += penalty * score.at(kind).n_clot_bits;
             delta_wasted_bits += penalty * score.at(kind).n_wasted_bits;
             delta_packing_bits += bonus * score.at(kind).n_packing_bits;
             delta_overlay_bits += bonus * score.at(kind).n_overlay_bits;
@@ -46,6 +48,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
 
         // Subtract other score.
         if (other.score.find(kind) != other.score.end()) {
+            delta_clot_bits -= penalty * other.score.at(kind).n_clot_bits;
             delta_wasted_bits -= penalty * other.score.at(kind).n_wasted_bits;
             delta_packing_bits -= bonus * other.score.at(kind).n_packing_bits;
             delta_overlay_bits -= bonus * other.score.at(kind).n_overlay_bits;
@@ -55,16 +58,19 @@ bool AllocScore::operator>(const AllocScore& other) const {
                 penalty * other.score.at(kind).container_imbalance; }
     }
 
-    // A AllocScore has several metrics, some are positive while some are negative.
-    // The delta is `others - mine`, so that:
-    // if delta == 0, then the metic are the same.
-    // if delta >  0, then the metic is higher than other's.
-    // if delta <  0, then the metric is lower than other's.
-    // For positive metrics (overlay_bits, packing_bits...), the higher is better.
-    // For negative metrics (wasted_bits, inc_container...), the lower is better.
+    // An AllocScore has several metrics, some are positive while some are negative.
+    // The delta is `other - mine`, so that:
+    //   if delta == 0, then the metic is the same.
+    //   if delta >  0, then the metic is higher than other's.
+    //   if delta <  0, then the metric is lower than other's.
+    // For positive metrics (overlay_bits, packing_bits...), higher is better.
+    // For negative metrics (wasted_bits, inc_container...), lower is better.
     // Operator> return true if this score is better.
+    if (delta_clot_bits != 0) {
+        // This score is better if it has fewer clot bits.
+        return delta_clot_bits < 0; }
     if (delta_wasted_bits != 0) {
-        // This score has less wasted bits.
+        // This score has fewer wasted bits.
         return delta_wasted_bits < 0; }
     if (delta_overlay_bits != 0) {
         // This score has more overlay bits.
@@ -76,7 +82,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
         // This score requires more new containers.
         return delta_inc_containers < 0; }
     if (delta_set_gress != 0) {
-        // This score pins less containers to a new gress.
+        // This score pins fewer containers to a new gress.
         return delta_set_gress < 0; }
 
     return false;
@@ -99,6 +105,7 @@ AllocScore AllocScore::make_lowest() {
  * + container_imbalance: the sum of the difference between free 8b, 16b, and 32b containers.
  */
 AllocScore::AllocScore(const PHV::Transaction& alloc,
+                       const ClotInfo& clot,
                        const PhvUse& uses) : AllocScore() {
     const auto* parent = alloc.getParent();
 
@@ -114,10 +121,12 @@ AllocScore::AllocScore(const PHV::Transaction& alloc,
         if (slices.size() == 0)
             continue;
 
-        // calc n_wasted_bits
+        // calc n_wasted_bits and n_clot_bits
         for (const auto& slice : slices) {
-            if (slice.field()->no_pack()) {
-                score[kind].n_wasted_bits += (container.size() - slice.width()); } }
+            if (slice.field()->no_pack())
+                score[kind].n_wasted_bits += (container.size() - slice.width());
+            if (clot.allocated(slice.field()))
+                score[kind].n_clot_bits += slice.width(); }
 
         if (kind == PHV::Kind::normal) {
             for (const auto& slice : slices) {
@@ -180,6 +189,9 @@ std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
         any_positive_score = true;
         s << "[";
         s << "tphv: " << (kind == PHV::Kind::tagalong) << ", ";
+#ifdef HAVE_JBAY
+        s << "clot_bits: " << score.score.at(kind).n_clot_bits << ", ";
+#endif
         s << "wasted_bits: " << score.score.at(kind).n_wasted_bits << ", ";
         s << "overlay_bits: " << score.score.at(kind).n_overlay_bits << ", ";
         s << "packing_bits: " << score.score.at(kind).n_packing_bits << ", ";
@@ -797,7 +809,7 @@ CoreAllocation::tryAllocSliceList(
             LOG5("    ...and conditional constraints are satisfied");
             this_alloc.commit(*action_alloc); }
 
-        auto score = AllocScore(this_alloc, uses_i);
+        auto score = AllocScore(this_alloc, clot_i, uses_i);
         LOG5("    ...SLICE LIST score: " << score);
 
         // update the best
@@ -814,6 +826,31 @@ CoreAllocation::tryAllocSliceList(
     return alloc_attempt;
 }
 
+static bool isClotSuperCluster(const ClotInfo& clots, const PHV::SuperCluster& sc) {
+#ifdef HAVE_JBAY
+    // In JBay, a clot-candidate field may sometimes be allocated to a PHV
+    // container, eg. if it is adjacent to a field that must be packed into a
+    // larger container, in which case the clot candidate would be used as
+    // padding.
+
+    // XXX(cole): It's possible that part of a clot-candidate will be allocated
+    // to PHV and part to the clot, eg. a 12b field where 4b are in PHV and 8b
+    // are drawn from the clot.  This is permissible in theory, but the rest of
+    // the compiler doesn't yet support fields partially allocated to the PHV.
+
+    // Clot candidates, by definition, aren't involved in MAU operations
+    // and so will only have one slice list.
+    if (sc.slice_lists().size() == 1) {
+        auto* slices = *sc.slice_lists().begin();
+        bool allClotCandidates = std::all_of(slices->begin(), slices->end(),
+            [&](const PHV::FieldSlice& slice) { return clots.allocated(slice.field()); });
+        if (allClotCandidates)
+            return true; }
+#endif
+
+    return false;
+}
+
 // SUPERCLUSTER <--> CONTAINER GROUP allocation.
 boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
         const PHV::Allocation& alloc,
@@ -822,38 +859,9 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
     // Make a new transaction.
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
 
-#ifdef HAVE_JBAY
-    // In JBay, a clot-candidate field may sometimes be allocated to a PHV
-    // container, eg. if it is adjacent to a field that must be packed into a
-    // larger container, in which case the clot candidate would be used as
-    // padding.
-    //
-    // XXX(cole): Right now, if any slice of a field is allocated to PHV, then
-    // the entire field must be.  Conversely, if a super cluster is entirely
-    // made up of clot candidates, and each candidate is an entire field (not a
-    // slice), then don't bother allocating that super cluster; its fields can
-    // be allocated to a clot.
-
-    // Clot candidates, by definition, aren't involved in MAU operations
-    // and so will only have one slice list.
-    if (super_cluster.slice_lists().size() == 1) {
-        auto* slices = *super_cluster.slice_lists().begin();
-        bool allClotCandidates = std::all_of(slices->begin(), slices->end(),
-            [&](const PHV::FieldSlice& slice) {
-                return clot_i.allocated(slice.field())
-                    && slice.size() == slice.field()->size; });
-        if (allClotCandidates) {
-            LOG5("Skipping CLOT-allocated super cluster: " << super_cluster);
-            return alloc_attempt;
-        } else if (LOGGING(3)) {
-            // Log any remaining clot-candidate fields that will be allocated to PHV.
-            LOG3("The following clot-candidate slices will be allocated to PHV:");
-            for (auto* rotationalCluster : super_cluster.clusters())
-                for (auto* alignedCluster : rotationalCluster->clusters())
-                    for (auto& slice : *alignedCluster)
-                        if (clot_i.allocated(slice.field()))
-                            LOG3(slice); } }
-#endif
+    if (isClotSuperCluster(clot_i, super_cluster)) {
+        LOG5("Skipping CLOT-allocated super cluster: " << super_cluster);
+        return alloc_attempt; }
 
     // Check container group/cluster group constraints.
     if (!satisfies_constraints(container_group, super_cluster))
@@ -970,7 +978,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
                 }  // for slices
 
                 if (failed) continue;
-                auto score = AllocScore(this_alloc, uses_i);
+                auto score = AllocScore(this_alloc, clot_i, uses_i);
                 if (!best_alloc || score > best_score) {
                     best_alloc = std::move(this_alloc);
                     best_score = score; } }
@@ -1101,9 +1109,17 @@ void AllocatePHV::end_apply() {
     std::list<PHV::SuperCluster*> cluster_groups = make_cluster_groups();
     std::stringstream report;
 
+    // Remove super clusters that are entirely allocated to CLOTs.
+    ordered_set<PHV::SuperCluster*> to_remove;
+    for (auto* sc : cluster_groups)
+        if (isClotSuperCluster(clot_i, *sc))
+            to_remove.insert(sc);
+    for (auto* sc : to_remove)
+        cluster_groups.remove(sc);
+
     AllocationStrategy *strategy =
         new BruteForceAllocationStrategy(core_alloc_i, report,
-                                         critical_path_clusters_i, field_interference_i);
+                                         critical_path_clusters_i, field_interference_i, clot_i);
     auto result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
 
     // Later we can try different strategies,
@@ -1120,6 +1136,21 @@ void AllocatePHV::end_apply() {
     } else {
         formatAndThrowError(alloc, result.remaining_clusters);
     }
+
+#ifdef HAVE_JBAY
+    // Fail if CLOT-candidate fields have been allocated to PHV.
+    ordered_set<const PHV::Field*> clotCandidates;
+    for (auto& f : phv_i)
+        if (clot_i.allocated(&f) && f.alloc_i.size())
+            clotCandidates.insert(&f);
+    if (clotCandidates.size()) {
+        std::stringstream msg;
+        msg << "The following clot-candidate slices have been allocated to PHV, "
+            << "which is currently unsupported:" << std::endl;
+        for (auto* f : clotCandidates)
+            msg << f << std::endl;
+        P4C_UNIMPLEMENTED("%s", msg.str()); }
+#endif
 }
 
 void AllocatePHV::formatAndThrowError(
@@ -1580,6 +1611,12 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
             LOG4("    ...but there are no valid slicings");
         while (!slice_it.done()) {
             auto slicing_alloc = rst.makeTransaction();
+
+            if (LOGGING(4)) {
+                LOG4("Trying to allocate these SUPERCLUSTER slices:");
+                for (auto* sc : *slice_it)
+                    LOG4(sc); }
+
             // Place all slices, then get score for that placement.
             bool succeeded = true;
             for (auto* sc : *slice_it) {
@@ -1590,7 +1627,7 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                     LOG4(container_group);
                     if (auto partial_alloc =
                             core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc)) {
-                        AllocScore score = AllocScore(*partial_alloc, core_alloc_i.uses());
+                        AllocScore score = AllocScore(*partial_alloc, clot_i, core_alloc_i.uses());
                         LOG4("    ...SUPERCLUSTER score: " << score);
                         if (!best_slice_alloc || score > best_slice_score) {
                             best_slice_score = score;
@@ -1598,6 +1635,7 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
 
                 // Break if this slice couldn't be placed.
                 if (best_slice_alloc == boost::none) {
+                    LOG4("...but these SUPERCLUSTER slices could not be placed.");
                     succeeded = false;
                     break; }
 
@@ -1605,12 +1643,17 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                 slicing_alloc.commit(*best_slice_alloc); }
 
             // If allocation succeeded, check the score.
-            auto slicing_score = AllocScore(slicing_alloc, core_alloc_i.uses());
-            LOG4("Best SUPERCLUSTER score: " << slicing_score);
+            auto slicing_score = AllocScore(slicing_alloc, clot_i, core_alloc_i.uses());
+            if (LOGGING(4)) {
+                LOG4("Best SUPERCLUSTER score for this slicing: " << slicing_score);
+                LOG4("For the following SUPERCLUSTER slices: ");
+                for (auto* sc : *slice_it)
+                    LOG4(sc); }
             if (succeeded && (!best_alloc || slicing_score > best_score)) {
                 best_score = slicing_score;
                 best_alloc = slicing_alloc;
                 best_slicing = *slice_it;
+                LOG4("...and this is the best score seen so far.");
             }
 
             // Try the next slice.

@@ -1048,3 +1048,9 @@ p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*: metadata arrays not handled"
   testdata/p4_16_samples/header-stack-ops-bmv2.p4
 )
+
+# BRIG-561
+p4c_add_xfail_reason("tofino"
+  "Currently non contiguous byte allocation in table format?"
+  extensions/p4_tests/p4_14/test_config_215_nondphv.p4
+)

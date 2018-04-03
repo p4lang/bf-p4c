@@ -351,6 +351,9 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
     // fields in network order, not little Endian order.
     PHV::SuperCluster::SliceList *accumulator = new PHV::SuperCluster::SliceList();
     int accumulator_bits = 0;
+
+    // This tracks whether the slice list so far is a TPHV candidate, with
+    // boost::none indicating that the slice list hasn't been started yet.
     // TODO(yumin): optional<bool> is not good.
     boost::optional<bool> prev_is_tphv = boost::none;
     bool lastNoPack = false;
@@ -406,20 +409,37 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
             StartNewSliceList();
             LOG5("Starting new slice list (for no_pack field):");
         } else if (accumulator_bits % int(PHV::Size::b8) == 0 && break_at_next_byte_boundary) {
-            // Break off, if previous one is phv/tphv but this one is not the same.
             StartNewSliceList();
             LOG5("Starting new slice list (at phase 0 field boundary):");
+
+/* XXX(cole): This heuristic proactively breaks a slice list at a PHV/TPHV
+ * boundary to encourage TPHV-eligible fields to be packed in TPHV containers.
+ * However, that precludes packing TPHV fields with adjacent PHV fields in PHV
+ * containers, which is sometimes necessary when MAU operations require small
+ * header fields to be placed in larger containers.
+ *
+ * Remove it for now, because it causes problems with fabric + INT.
+
         } else if (accumulator_bits % int(PHV::Size::b8) == 0 && prev_is_tphv &&
                    *prev_is_tphv != is_tphv) {
             // Break off, if previous one is phv/tphv but this one is not the same.
             StartNewSliceList();
-            LOG5("Starting new slice list (at PHV/TPHV boundary):");
+            LOG5("Starting new slice list (at " << (is_tphv ? "PHV-->TPHV" : "TPHV-->PHV") <<
+                 " boundary):");
+
+ */
+
+/* XXX(cole): This heuristic proactively breaks big headers into 32b chunks,
+ * which cuts down on the combinatorial space of slicing headers.
+
         } else if (accumulator_bits % int(PHV::Size::b8) == 0
                    && accumulator_bits + field->size > int(PHV::Size::b32)) {
             // Break off, if this field is a large field.
             StartNewSliceList();
             LOG5("Starting new slice list (after " << accumulator_bits << "b because the next field"
                     " is large):");
+*/
+
         } else if (accumulator_bits % int(PHV::Size::b8) == 0
                    && !self.uses_i.is_referenced(field)) {
             LOG5("    ...breaking slice list before unreferenced field: " << field);
@@ -435,8 +455,13 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
             accumulator->push_back(slice);
             field_slice_list_size += slice.size(); }
         accumulator_bits += field->size;
-        prev_is_tphv = is_tphv;
         lastNoPack = field->no_pack();
+
+        // We use AND because all slices in a slice list must be TPHV
+        // candidates for the slice list to be a TPHV candidate.  Note that a
+        // mix of PHV/TPHV candidates may be in the same slice list if the
+        // boundary is not byte-aligned.
+        prev_is_tphv = prev_is_tphv.get_value_or(true) && is_tphv;
 
         BUG_CHECK(field_slice_list_size == field->size,
                   "Fine grained slicing of field %1% (size %2%) produced slices adding up to %3%b",

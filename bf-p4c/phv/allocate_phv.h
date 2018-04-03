@@ -40,6 +40,10 @@ struct AllocScore {
         int n_inc_containers;
         int n_wasted_bits;  // if no_pack but taking a container larger than it.
 
+        // The number of CLOT-eligible bits that have been allocated to PHV
+        // (JBay only).
+        int n_clot_bits;
+
         // The difference in the number of PHV containers available by size.
         // Lower is better, as it indicates that roughly the same number of 8b,
         // 16b, and 32b containers remain.
@@ -55,7 +59,7 @@ struct AllocScore {
      * @p alloc: new allocation
      * @p group: the container group where allocations were made to.
      */
-    AllocScore(const PHV::Transaction& alloc, const PhvUse& uses);
+    AllocScore(const PHV::Transaction& alloc, const ClotInfo& clot, const PhvUse& uses);
 
     bool operator>(const AllocScore& other) const;
     static AllocScore make_lowest();
@@ -276,6 +280,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
  private:
     const CalcCriticalPathClusters& critical_path_clusters_i;
     const FieldInterference& field_interference_i;
+    const ClotInfo& clot_i;
     // XXX(yumin): not used right now
     // Update this everytime after slicing.
     // FieldInterference::SliceColorMap slice_to_color_i;
@@ -284,9 +289,10 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     BruteForceAllocationStrategy(const CoreAllocation& alloc,
                                  std::ostream& out,
                                  const CalcCriticalPathClusters& cpc,
-                                 const FieldInterference& f)
+                                 const FieldInterference& f,
+                                 const ClotInfo& clot)
         : AllocationStrategy(alloc, out)
-        , critical_path_clusters_i(cpc), field_interference_i(f) { }
+        , critical_path_clusters_i(cpc), field_interference_i(f), clot_i(clot) { }
 
     AllocResult
     tryAllocation(const PHV::Allocation &alloc,
@@ -358,6 +364,7 @@ class AllocatePHV : public Inspector {
     CoreAllocation core_alloc_i;
     PhvInfo& phv_i;
     const PhvUse& uses_i;
+    const ClotInfo& clot_i;
     const Clustering& clustering_i;
     const SymBitMatrix& mutex_i;
     PHV::Pragmas& pragmas_i;
@@ -410,7 +417,7 @@ class AllocatePHV : public Inspector {
                 ActionPhvConstraints& actions,
                 const CalcCriticalPathClusters& critical_cluster)
         : core_alloc_i(phv.field_mutex, clustering, uses, defuse, clot, pragmas, phv, actions),
-          phv_i(phv), uses_i(uses),
+          phv_i(phv), uses_i(uses), clot_i(clot),
           clustering_i(clustering), mutex_i(phv.field_mutex), pragmas_i(pragmas),
           actions_i(actions), critical_path_clusters_i(critical_cluster),
           field_interference_i(phv.field_mutex, uses) { }
