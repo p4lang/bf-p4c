@@ -25,6 +25,7 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
     atcam |= a.atcam;
     has_range |= a.has_range;
     ixbar_bytes += a.ixbar_bytes;
+    ixbar_width_bits += a.ixbar_width_bits;
     match_width_bits += a.match_width_bits;
     if (a.action_data_bytes > action_data_bytes)
         action_data_bytes = a.action_data_bytes;

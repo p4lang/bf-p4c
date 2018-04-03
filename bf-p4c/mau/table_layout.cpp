@@ -251,6 +251,7 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
         for (auto bv : individual_bytes) {
             layout.ixbar_bytes += mbk.ixbar_multiplier;
             layout.match_bytes += mbk.match_multiplier;
+            layout.ixbar_width_bits += bv.popcount() * mbk.ixbar_multiplier;
             layout.match_width_bits += bv.popcount() * mbk.match_multiplier;
             byte_sizes.push_back(bv.popcount());
         }
@@ -330,6 +331,7 @@ void TableLayout::setup_action_layout(IR::MAU::Table *tbl) {
 /* Setting up the potential layouts for ternary, either with or without immediate
    data if immediate is possible */
 void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl) {
+    LOG2("Setup TCAM match layouts " << tbl->name);
     if (get_hit_actions(tbl) == 1)
         tbl->layout.overhead_bits++;
 
@@ -441,6 +443,7 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_i
 /* Setting up the potential layouts for exact match, with different numbers of entries per row,
    different ram widths, and immediate data on and off */
 void TableLayout::setup_layout_options(IR::MAU::Table *tbl) {
+    LOG2("Determining SRAM match layouts " << tbl->name);
     int index = 0;
     for (auto &use : lc.get_action_formats(tbl)) {
         setup_exact_match(tbl, use.action_data_bytes[ActionFormat::ADT],
@@ -466,6 +469,7 @@ class GetHashDistReqs : public MauInspector {
    together in order to pass many of the test cases.  This needs to have some standardization
    within the assembly so that all tables that do not require match can possibly work */
 void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
+    LOG2("Determining no match table layouts " << tbl->name);
     GetHashDistReqs ghdr;
     tbl->attached.apply(ghdr);
     tbl->actions.apply(ghdr);
@@ -636,7 +640,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     setup_action_layout(tbl);
     if (tbl->layout.gateway)
         return true;
-    else if (tbl->layout.match_width_bits == 0)
+    else if (tbl->layout.no_match_data())
         setup_layout_option_no_match(tbl);
     else if (tbl->layout.ternary)
         setup_ternary_layout_options(tbl);
