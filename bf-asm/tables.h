@@ -593,12 +593,13 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     p4_param *find_p4_param(std::string s) {
         remove_name_tail_range(s);
         for (auto &p : p4_params_list)
-            if (p.name == s) return &p;
+            if ((p.name == s) || (p.alias == s)) return &p;
         return nullptr; }
     p4_param *find_p4_param(std::string s, std::string t) {
         remove_name_tail_range(s);
         for (auto &p : p4_params_list)
-            if ((p.name == s) && (p.type == t)) return &p;
+            if (((p.name == s) || (p.alias == s)) 
+                    && (p.type == t)) return &p;
         return nullptr; }
     p4_param *find_p4_param_type(std::string &s) {
         for (auto &p : p4_params_list)
