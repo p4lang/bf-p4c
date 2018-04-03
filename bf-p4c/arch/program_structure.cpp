@@ -66,17 +66,6 @@ cstring ProgramStructure::getBlockName(cstring name) {
     return blockname;
 }
 
-#define TRANSLATE_NODE(NODE, CONVERTER, METHOD) do { \
-    for (auto &v : NODE) {                                 \
-        CONVERTER cvt(this);                               \
-        v.second = cvt.METHOD(v.first);                    \
-        LOG3("translated " << v.first << " to " << v.second);  \
-        _map.emplace(v.first, v.second); } \
-    } while (false)
-
-#define TRANSLATE_STATEMENT(NODE, CONVERTER)            \
-    TRANSLATE_NODE(NODE, CONVERTER, convert)
-
 void ProgramStructure::createTofinoArch() {
     for (auto decl : targetTypes) {
         if (decl->is<IR::Type_Error>())

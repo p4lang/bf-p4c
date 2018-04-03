@@ -334,18 +334,19 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_HDRS}")
 
 set (BF_P4C_BACKEND_ARCH_SRCS
   arch/bridge_metadata.cpp
-  arch/v1_converters.cpp
-  arch/psa_converters.cpp
   arch/internal/collect_bridged_fields.cpp
   arch/native.cpp
   arch/phase0.cpp
   arch/portable_switch.cpp
   arch/program_structure.cpp
-  arch/v1_program_structure.cpp
+  arch/psa_converters.cpp
+  arch/psa_model.cpp
   arch/psa_program_structure.cpp
   arch/remove_set_metadata.cpp
   arch/rewrite_packet_path.cpp
   arch/simple_switch.cpp
+  arch/v1_converters.cpp
+  arch/v1_program_structure.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
 build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -353,18 +354,19 @@ build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 set (BF_P4C_BACKEND_ARCH_HDRS
   arch/architecture.h
   arch/bridge_metadata.h
-  arch/v1_converters.h
-  arch/psa_converters.h
   arch/internal/collect_bridged_fields.h
   arch/native.h
   arch/phase0.h
   arch/portable_switch.h
   arch/program_structure.h
-  arch/v1_program_structure.h
+  arch/psa_converters.h
+  arch/psa_model.h
   arch/psa_program_structure.h
   arch/remove_set_metadata.h
   arch/rewrite_packet_path.h
   arch/simple_switch.h
+  arch/v1_converters.h
+  arch/v1_program_structure.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")
 

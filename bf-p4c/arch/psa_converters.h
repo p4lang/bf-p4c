@@ -3,7 +3,7 @@
 
 #include <cmath>
 #include "ir/ir.h"
-#include "bf-p4c/arch/v1_program_structure.h"
+#include "bf-p4c/arch/psa_program_structure.h"
 #include "frontends/p4/cloner.h"
 #include "frontends/p4/coreLibrary.h"
 #include "lib/safe_vector.h"
@@ -22,10 +22,6 @@ class ExpressionConverter : public Transform {
     const IR::Expression* convert(const IR::Node* node) {
         auto result = node->apply(*this);
         return result->to<IR::Expression>();
-    }
-    const IR::Member* convertMember(const IR::Node* node) {
-        auto result = node->apply(*this);
-        return result->to<IR::Member>();
     }
 };
 
@@ -63,7 +59,6 @@ class ParserConverter : public Transform {
  public:
     explicit ParserConverter(ProgramStructure* structure)
         : structure(structure) { CHECK_NULL(structure); }
-    const IR::Node* postorder(IR::Member* node) override;
     const IR::P4Parser* convert(const IR::Node* node) {
         auto conv = node->apply(*this);
         auto result = conv->to<IR::P4Parser>();
@@ -94,7 +89,6 @@ class ControlConverter : public Transform {
  public:
     explicit ControlConverter(ProgramStructure* structure)
         : structure(structure) { CHECK_NULL(structure); }
-    const IR::Node* postorder(IR::Member* node) override;
     const IR::P4Control* convert(const IR::Node* node) {
         auto conv = node->apply(*this);
         auto result = conv->to<IR::P4Control>();

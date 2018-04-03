@@ -5,6 +5,17 @@ namespace BFN {
 
 namespace V1 {
 
+#define TRANSLATE_NODE(NODE, CONVERTER, METHOD) do { \
+    for (auto &v : NODE) {                                 \
+        CONVERTER cvt(this);                               \
+        v.second = cvt.METHOD(v.first);                    \
+        LOG3("translated " << v.first << " to " << v.second);  \
+        _map.emplace(v.first, v.second); } \
+    } while (false)
+
+#define TRANSLATE_STATEMENT(NODE, CONVERTER)            \
+    TRANSLATE_NODE(NODE, CONVERTER, convert)
+
 void ProgramStructure::createParsers() {
     TRANSLATE_STATEMENT(priorityCalls, ParserPriorityConverter);
     TRANSLATE_STATEMENT(parserCounterCalls, ParserCounterConverter);

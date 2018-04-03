@@ -14,14 +14,6 @@ namespace V1 {
         return it_##NAME->second; }                                 \
     } while (false)
 
-const IR::Node* ControlConverter::postorder(IR::Member* node) {
-    auto* orig = getOriginal<IR::Member>();
-    RETURN_TRANSLATED_NODE_IF_FOUND(membersToDo);
-    RETURN_TRANSLATED_NODE_IF_FOUND(pathsToDo);
-    RETURN_TRANSLATED_NODE_IF_FOUND(typeNamesToDo);
-    return node;
-}
-
 const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
     auto* orig = getOriginal<IR::Declaration_Instance>();
     if (structure->_map.count(orig)) {
@@ -42,14 +34,6 @@ const IR::Node* ParserConverter::postorder(IR::AssignmentStatement* node) {
     auto* orig = getOriginal<IR::AssignmentStatement>();
     RETURN_TRANSLATED_NODE_IF_FOUND(priorityCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(parserCounterCalls);
-    return node;
-}
-
-const IR::Node* ParserConverter::postorder(IR::Member* node) {
-    auto* orig = getOriginal<IR::Member>();
-    RETURN_TRANSLATED_NODE_IF_FOUND(pathsToDo);
-    RETURN_TRANSLATED_NODE_IF_FOUND(typeNamesToDo);
-    RETURN_TRANSLATED_NODE_IF_FOUND(parserCounterSelects);
     return node;
 }
 

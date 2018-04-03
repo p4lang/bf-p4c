@@ -348,7 +348,7 @@ struct FindCloneData : public Inspector {
         return true;
     }
 
-    bool preorder(const IR::BFN::TranslatedP4Deparser* node) override {
+    bool preorder(const IR::BFN::TranslatedP4Deparser*) override {
         clone->paramNameInDeparser = structure->psaPacketPathNames.at("deparser::" + packetPath);
         return true;
     }
@@ -360,7 +360,7 @@ struct FindCloneData : public Inspector {
         LOG1("found assignment " << node);
         /// if not resubmit_md
         BUG_CHECK(structure->psaPacketPathNames.count("deparser::" + packetPath) != 0,
-          +                  "No clone metadata found in the P4 program");
+                  "No clone metadata found in the P4 program");
 
         if (auto expr = node->left->to<IR::PathExpression>()) {
             if (expr->path->name == structure->psaPacketPathNames.at("deparser::" + packetPath)) {
@@ -542,7 +542,6 @@ struct RewriteRecirculateIfPresent : public Transform {
     }
 
     const IR::Member *preorder(IR::Member *node) override {
-        auto membername = node->member.name;
         auto expr = node->expr->to<IR::PathExpression>();
         if (!expr) return node;
         auto pathname = expr->path->name;
@@ -576,8 +575,6 @@ struct RewriteRecirculateIfPresent : public Transform {
     }
 
     const IR::Statement *preorder(IR::AssignmentStatement *node) override {
-        gress_t thread;
-        LOG1("assignment " << node);
         auto orig = getOriginal<IR::AssignmentStatement>();
         if (auto *control = findOrigCtxt<IR::BFN::TranslatedP4Deparser>()) {
             if (orig == recirculate->structWriteToReplace) {
@@ -692,7 +689,6 @@ struct RewriteCloneIfPresent : public Transform {
     }
 
     const IR::Statement *preorder(IR::AssignmentStatement *node) override {
-        gress_t thread;
         auto orig = getOriginal<IR::AssignmentStatement>();
         if (auto *control = findOrigCtxt<IR::BFN::TranslatedP4Control>()) {
             if (orig == clone->structWriteToReplace) {
@@ -743,6 +739,7 @@ struct RewriteCloneIfPresent : public Transform {
 
 TranslatePacketPath::TranslatePacketPath(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                          PSA::ProgramStructure *structure) {
+    setName("TranslatePacketPath");
     auto findResubmitData = new FindResubmitData(structure);
     auto findRecircData = new FindRecirculateData(refMap, typeMap, structure);
     auto findCloneI2EData = new FindCloneData(structure, gress_t::INGRESS);

@@ -1,17 +1,20 @@
 #ifndef BF_P4C_ARCH_PSA_MODEL_H_
 #define BF_P4C_ARCH_PSA_MODEL_H_
 
-#include <common/model.h>
+#include "frontends/common/model.h"
+#include "frontends/p4/coreLibrary.h"
 
 namespace BFN {
 
-namespace Psa {
+namespace PSA {
 
 // The following should be kept in sync with tna.p4
 struct PacketPathType_Model : public ::Model::Enum_Model {
     PacketPathType_Model() : ::Model::Enum_Model("PSA_PacketPath_t"),
-    normal("NORMAL"), normal_unicast("NORMAL_UNICAST"), normal_multicast("NORMAL_MULTICAST"),
-    clone_i2e("CLONE_I2E"), clone_e2e("CLONE_E2E"), resubmit("RESUBMIT"), recirculate("RECIRCULATE") { }
+    normal("NORMAL"), normal_unicast("NORMAL_UNICAST"),
+    normal_multicast("NORMAL_MULTICAST"),
+    clone_i2e("CLONE_I2E"), clone_e2e("CLONE_E2E"), resubmit("RESUBMIT"),
+    recirculate("RECIRCULATE") { }
     ::Model::Elem normal;
     ::Model::Elem normal_unicast;
     ::Model::Elem normal_multicast;
@@ -62,7 +65,7 @@ struct HashAlgorithmType_Model : public ::Model::Enum_Model {
 };
 
 struct IngressParserInputMetaType_Model : public ::Model::Type_Model {
-    explicit IngressParserInputMetaType_Model() :
+    IngressParserInputMetaType_Model() :
         ::Model::Type_Model("psa_ingress_parser_input_metadata_t"),
         ingress_port("ingress_port"),
         packet_path("packet_path") {}
@@ -71,7 +74,7 @@ struct IngressParserInputMetaType_Model : public ::Model::Type_Model {
 };
 
 struct EgressParserInputMetaType_Model : public ::Model::Type_Model {
-    explicit EgressParserInputMetaType_Model() :
+    EgressParserInputMetaType_Model() :
         ::Model::Type_Model("psa_egress_parser_input_metadata_t"),
         egress_port("egress_port"),
         packet_path("packet_path") {}
@@ -80,7 +83,7 @@ struct EgressParserInputMetaType_Model : public ::Model::Type_Model {
 };
 
 struct IngressInputMetaType_Model : public ::Model::Type_Model {
-    explicit IngressInputMetaType_Model() :
+    IngressInputMetaType_Model() :
         ::Model::Type_Model("psa_ingress_input_metadata_t"),
         ingress_port("ingress_port"),
         packet_path("packet_path"), ingress_timestamp("ingress_timestamp"),
@@ -92,7 +95,7 @@ struct IngressInputMetaType_Model : public ::Model::Type_Model {
 };
 
 struct IngressOutputMetaType_Model : public ::Model::Type_Model {
-    explicit IngressOutputMetaType_Model() :
+    IngressOutputMetaType_Model() :
         ::Model::Type_Model("psa_ingress_output_metadata_t"),
         class_of_service("class_of_service"),
         clone("clone"), clone_session_id("clone_session_id"),
@@ -108,7 +111,7 @@ struct IngressOutputMetaType_Model : public ::Model::Type_Model {
 };
 
 struct EgressInputMetaType_Model : public ::Model::Type_Model {
-    explicit EgressInputMetaType_Model() :
+    EgressInputMetaType_Model() :
         ::Model::Type_Model("psa_egress_input_metadata_t"),
         class_of_service("class_of_service"),
         egress_port("egress_port"), packet_path("packet_path"),
@@ -123,14 +126,14 @@ struct EgressInputMetaType_Model : public ::Model::Type_Model {
 };
 
 struct EgressDeparserInputMetaType_Model : public ::Model::Type_Model {
-    explicit EgressDeparserInputMetaType_Model() :
+    EgressDeparserInputMetaType_Model() :
         ::Model::Type_Model("psa_egress_deparser_input_metadata_t"),
         egress_port("egress_port") { }
     ::Model::Elem egress_port;
 };
 
 struct EgressOutputMetaType_Model : public ::Model::Type_Model {
-    explicit EgressOutputMetaType_Model() :
+    EgressOutputMetaType_Model() :
         ::Model::Type_Model("psa_egress_output_metadata_t"),
         clone("clone"), clone_session_id("clone_session_id"), drop("drop") { }
     ::Model::Elem clone;
@@ -229,12 +232,6 @@ struct Register_Model : public ::Model::Extern_Model {
     ::Model::Elem write;
 };
 
-struct Random_Model : public ::Model::Extern_Model {
-    Random_Model() :
-        Extern_Model("Random"), read("read") {}
-    ::Model::Elem read;
-};
-
 struct ActionProfile_Model : public ::Model::Extern_Model {
     ActionProfile_Model() : Extern_Model("ActionProfile"),
                             sizeType(IR::Type_Bits::get(32)), sizeParam("size") {}
@@ -247,7 +244,7 @@ struct ActionSelector_Model : public ::Model::Extern_Model {
                              hashType(),
                              sizeType(IR::Type_Bits::get(32)), sizeParam("size"),
                              outputWidthType(IR::Type_Bits::get(32)),
-                             outputWidthParam("outputWidth")) { }
+                             outputWidthParam("outputWidth") { }
     HashAlgorithmType_Model hashType;
     const IR::Type* sizeType;
     ::Model::Elem sizeParam;
@@ -391,7 +388,7 @@ struct EgressDeparserModel : public ::Model::Elem {
 };
 
 struct Pipeline : public ::Model::Elem {
-    Pipeline(cstring name) :
+    explicit Pipeline(cstring name) :
         Model::Elem(name),
         ingressParser("ingress_parser"),
         ingress("ingress"),
@@ -418,6 +415,9 @@ class PsaModel : public ::Model::Model {
         Model::Model("1.0"), file("psa.p4"),
         headersType("headers"),
         metadataType("metadata"),
+        resubmitMetaType("resubmit_meta"), recircMetaType("recirc_meta"),
+        cloneI2EMetaType("clone_i2e_meta"),
+        cloneE2EMetaType("clone_e2e_meta"), bridgeMetaType("bridge_meta"),
         compilerGeneratedType("compiler_generated_meta"),
         ingress_parser(headersType, metadataType, igParserInputMetaType, resubmitMetaType,
                        recircMetaType),
@@ -482,7 +482,7 @@ class PsaModel : public ::Model::Model {
     static PsaModel instance;
 };
 
-}  // namespace Psa
+}  // namespace PSA
 
 }  // namespace BFN
 

@@ -1,17 +1,11 @@
-#include "psa_converters.h"
-#include "psa_program_structure.h"
+#include "bf-p4c/arch/psa_converters.h"
+#include "bf-p4c/arch/psa_program_structure.h"
+#include "bf-p4c/arch/program_structure.h"
 #include "lib/ordered_map.h"
 
 namespace BFN {
 
 namespace PSA {
-
-const IR::Node* ParserConverter::postorder(IR::Member* node) {
-    auto *orig = getOriginal<IR::Member>();
-    RETURN_TRANSLATED_NODE_IF_FOUND(pathsToDo);
-    RETURN_TRANSLATED_NODE_IF_FOUND(typeNamesToDo);
-    return node;
-}
 
 const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     auto parser = node->apply(cloner);
@@ -140,14 +134,6 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
                                                   parser->parserLocals, parser->states,
                                                   tnaParams, EGRESS);
     return result;
-}
-
-const IR::Node* ControlConverter::postorder(IR::Member* node) {
-    auto* orig = getOriginal<IR::Member>();
-    RETURN_TRANSLATED_NODE_IF_FOUND(membersToDo);
-    RETURN_TRANSLATED_NODE_IF_FOUND(pathsToDo);
-    RETURN_TRANSLATED_NODE_IF_FOUND(typeNamesToDo);
-    return node;
 }
 
 const IR::Node* IngressControlConverter::preorder(IR::P4Control* node) {
@@ -486,6 +472,14 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
         }
     } else if (node->type->to<IR::Type_Enum>()) {
         auto it = nameMap.find(MetadataField{pathname, membername, 0});
+        if (it != nameMap.end()) {
+            auto expr = new IR::PathExpression(it->second.structName);
+            auto result = new IR::Member(node->srcInfo, expr, it->second.fieldName);
+            LOG3("Translating " << node << " to " << result);
+            return result;
+        }
+    } else if (node->type->to<IR::Type_Boolean>()) {
+        auto it = nameMap.find(MetadataField{pathname, membername, 1});
         if (it != nameMap.end()) {
             auto expr = new IR::PathExpression(it->second.structName);
             auto result = new IR::Member(node->srcInfo, expr, it->second.fieldName);

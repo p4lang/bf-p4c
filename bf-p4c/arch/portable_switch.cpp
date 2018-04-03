@@ -5,6 +5,7 @@
 #include "rewrite_packet_path.h"
 #include "lib/bitops.h"
 #include "midend/convertEnums.h"
+#include "midend/copyStructures.h"
 
 namespace BFN {
 
@@ -282,7 +283,7 @@ class LoadTargetArchitecture : public Inspector {
 
  public:
     explicit LoadTargetArchitecture(PSA::ProgramStructure* structure) : structure(structure) {
-        setName("PsaLoadTargetArchitecture");
+        setName("LoadTargetArchitecture");
         CHECK_NULL(structure);
     }
 
@@ -304,13 +305,20 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"ostd", "class_of_service", 3},
                                MetadataField{"ig_intr_md_for_tm", "ingress_cos", 3});
         structure->addMetadata(INGRESS,
-                               MetadataField{"ostd", "drop", 3},
+                               MetadataField{"ostd", "drop", 1},
                                MetadataField{"ig_intr_md_for_tm", "drop_ctl", 3});
         structure->addMetadata(INGRESS, MetadataField{"ostd", "multicast_group", 16},
                                MetadataField{"ig_intr_md_for_tm", "mcast_grp_a", 16});
         structure->addMetadata(INGRESS,
                                MetadataField{"ostd", "egress_port", 9},
                                MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", 9});
+        structure->addMetadata(INGRESS, MetadataField{"ostd", "resubmit", 1},
+                               MetadataField{"ig_intr_md_for_dprsr", "resubmit_type", 3});
+        structure->addMetadata(INGRESS, MetadataField{"ostd", "clone", 1},
+                               MetadataField{"ig_intr_md_for_dprsr", "mirror_type", 3});
+        structure->addMetadata(INGRESS,
+                               MetadataField{"istd", "packet_path", 0},
+                               MetadataField{"compiler_generated_meta", "packet_path", 0});
 
         structure->addMetadata(EGRESS,
                                MetadataField{"istd", "egress_port", 9},
@@ -322,16 +330,15 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"istd", "parser_error", 3},
                                MetadataField{"eg_intr_md_from_prsr", "egress_parser_err", 3});
         structure->addMetadata(EGRESS,
-                               MetadataField{"ostd", "drop", 3},
+                               MetadataField{"ostd", "drop", 1},
                                MetadataField{"eg_intr_md_for_oport", "drop_ctl", 3});
-
-        /// XXX(hanw): fix enum translation
-        structure->addMetadata(INGRESS,
-                               MetadataField{"istd", "packet_path", 0},
-                               MetadataField{"compiler_generated_meta", "packet_path", 0});
+        structure->addMetadata(EGRESS, MetadataField{"ostd", "clone", 1},
+                               MetadataField{"ig_intr_md_for_dprsr", "mirror_type", 3});
         structure->addMetadata(EGRESS,
                                MetadataField{"istd", "packet_path", 0},
                                MetadataField{"compiler_generated_meta", "packet_path", 0});
+        structure->addMetadata(MetadataField{"ostd", "clone_session_id", 10},
+                               MetadataField{"compiler_generated_meta", "clone_session_id", 10});
     }
 
     void setup_psa_typedef() {
@@ -381,6 +388,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
     auto structure = new PSA::ProgramStructure;
     addPasses({
         new P4::ConvertEnums(refMap, typeMap, new PSA::PacketPathTo8Bits),
+        new P4::CopyStructures(refMap, typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
         evaluator,
         new VisitFunctor([structure, evaluator]() {

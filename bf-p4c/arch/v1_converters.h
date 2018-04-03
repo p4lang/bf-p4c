@@ -23,10 +23,6 @@ class ExpressionConverter : public Transform {
         auto result = node->apply(*this);
         return result->to<IR::Expression>();
     }
-    const IR::Member* convertMember(const IR::Node* node) {
-        auto result = node->apply(*this);
-        return result->to<IR::Member>();
-    }
 };
 
 class StatementConverter : public Transform {
@@ -44,13 +40,12 @@ class StatementConverter : public Transform {
 
 class ControlConverter : public Transform {
  protected:
-    V1::ProgramStructure* structure;
+    ProgramStructure* structure;
     P4::ClonePathExpressions cloner;
 
  public:
-    explicit ControlConverter(V1::ProgramStructure* structure)
+    explicit ControlConverter(ProgramStructure* structure)
     : structure(structure) { CHECK_NULL(structure); }
-    const IR::Node* postorder(IR::Member* node) override;
     const IR::Node* postorder(IR::MethodCallStatement* node) override;
     // REM
     const IR::Node* postorder(IR::Declaration_Instance* node) override;
@@ -101,7 +96,6 @@ class ParserConverter : public Transform {
     explicit ParserConverter(ProgramStructure* structure)
     : structure(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::AssignmentStatement* node) override;
-    const IR::Node* postorder(IR::Member* node) override;
     const IR::P4Parser* convert(const IR::Node* node) {
         auto conv = node->apply(*this);
         auto result = conv->to<IR::P4Parser>();
@@ -212,24 +206,22 @@ class PathExpressionConverter : public ExpressionConverter {
 
 class ParserPriorityConverter : public StatementConverter {
  public:
-    explicit ParserPriorityConverter(V1::ProgramStructure* structure)
+    explicit ParserPriorityConverter(ProgramStructure* structure)
     : StatementConverter(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::AssignmentStatement* node) override;
 };
 
 class ParserCounterConverter : public StatementConverter {
  public:
-    explicit ParserCounterConverter(V1::ProgramStructure *structure)
+    explicit ParserCounterConverter(ProgramStructure *structure)
     : StatementConverter(structure) { CHECK_NULL(structure); }
-
     const IR::Node* postorder(IR::AssignmentStatement *node) override;
 };
 
 class ParserCounterSelectionConverter : public StatementConverter {
  public:
-    explicit ParserCounterSelectionConverter(V1::ProgramStructure* structure)
+    explicit ParserCounterSelectionConverter(ProgramStructure* structure)
     : StatementConverter(structure) { CHECK_NULL(structure); }
-
     const IR::Node* postorder(IR::Member* node) override;
 };
 
