@@ -175,6 +175,10 @@ struct IXBar {
                 specialities |= (1 << bs);
             }
 
+            void clear_spec(byte_speciality_t bs) {
+                specialities &= ~(1 << bs);
+            }
+
             bool is_spec(byte_speciality_t bs) const {
                 return specialities & (1 << bs);
             }

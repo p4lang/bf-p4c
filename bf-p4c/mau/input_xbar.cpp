@@ -1038,6 +1038,7 @@ static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *fiel
                 map_alloc[byte].push_back(fi);
             }
             if ((sl.container_hi() % 8) > 3) {
+                byte.clear_spec(IXBar::RANGE_LO);
                 byte.set_spec(IXBar::RANGE_HI);
                 map_alloc[byte].push_back(fi);
             }
