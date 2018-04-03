@@ -375,12 +375,14 @@ header pktgen_recirc_header_t {
 // and calculate the residual (checksum minus the header field
 // contribution) for checksums that include the payload.
 // Checksum engine only supports 16-bit ones' complement checksums.
-extern checksum<W> {
-    checksum(HashAlgorithm_t algorithm);
+extern Checksum<W> {
+    Checksum(HashAlgorithm_t algorithm);
     void add<T>(in T data);
+    void subtract<T>(in T data);
     bool verify();
-    void update<T>(in T data, out W csum, @optional in W residul_csum);
-    W residual_checksum<T>(in T data);
+    W get();
+    W update<T>(in T data);
+    W update<T>(in T data, in W residul_csum);
 }
 
 // -----------------------------------------------------------------------------

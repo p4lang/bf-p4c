@@ -939,7 +939,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: : Read-only value used for out/inout parameter"
+  "error: Expression .* cannot be the target of an assignment"
   testdata/p4_16_samples/issue1079-bmv2.p4
   )
 

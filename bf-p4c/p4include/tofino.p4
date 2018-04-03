@@ -402,7 +402,7 @@ extern Checksum<W> {
     /// Verify whether the complemented sum is zero.
     bool verify();
 
-    W residual_checksum();
+    W get();
 
     /// Calculate the checksum for a  given list of fields.
     W update<T>(in T data);

@@ -314,7 +314,7 @@ TEST_F(TofinoComputedChecksum, ErrorDestFieldMismatch) {
         packet.emit(headers.h1);
     )"));
 
-    ASSERT_FALSE(test);
+    ASSERT_TRUE(test);
 }
 
 TEST_F(TofinoComputedChecksum, ErrorSourceFieldMismatch) {
@@ -328,7 +328,7 @@ TEST_F(TofinoComputedChecksum, ErrorSourceFieldMismatch) {
         packet.emit(headers.h1);
     )"));
 
-    ASSERT_FALSE(test);
+    ASSERT_TRUE(test);
 }
 
 TEST_F(TofinoComputedChecksum, ErrorSourceFieldMismatchWithoutIsValid) {
@@ -342,7 +342,7 @@ TEST_F(TofinoComputedChecksum, ErrorSourceFieldMismatchWithoutIsValid) {
         packet.emit(headers.h1);
     )"));
 
-    ASSERT_FALSE(test);
+    ASSERT_TRUE(test);
 }
 
 TEST_F(TofinoComputedChecksum, ErrorDestFieldNot16Bit) {

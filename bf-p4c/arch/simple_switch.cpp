@@ -684,13 +684,13 @@ getVerifyOrUpdateChecksumDeclaration(ProgramStructure *structure,
                                      ChecksumSourceMap::value_type csum) {
     auto typeArgs = new IR::Vector<IR::Type>();
     typeArgs->push_back(csum.second->arguments->at(2)->type);
-    auto inst = new IR::Type_Specialized(new IR::Type_Name("checksum"), typeArgs);
+    auto inst = new IR::Type_Specialized(new IR::Type_Name("Checksum"), typeArgs);
 
     auto csum_name = cstring::make_unique(structure->unique_names, "checksum", '_');
     structure->unique_names.insert(csum_name);
     auto args = new IR::Vector<IR::Expression>();
     auto hashAlgo = new IR::Member(
-            new IR::TypeNameExpression("HashAlgorithm_t"), "CRC16");
+            new IR::TypeNameExpression("HashAlgorithm_t"), "CSUM16");
     args->push_back(hashAlgo);
     auto decl = new IR::Declaration_Instance(csum_name, inst, args);
 
@@ -905,13 +905,13 @@ class ConstructSymbolTable : public Inspector {
         if (control->name == structure->getBlockName(ProgramStructure::INGRESS)) {
             auto path = new IR::Member(
                     new IR::PathExpression("ig_intr_md_for_dprsr"), "drop_ctl");
-            auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
+            auto val = new IR::Constant(IR::Type::Bits::get(3), 7);
             auto stmt = new IR::AssignmentStatement(path, val);
             structure->_map.emplace(node, stmt);
         } else if (control->name == structure->getBlockName(ProgramStructure::EGRESS)) {
             auto path = new IR::Member(
                     new IR::PathExpression("eg_intr_md_for_dprsr"), "drop_ctl");
-            auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
+            auto val = new IR::Constant(IR::Type::Bits::get(3), 7);
             auto stmt = new IR::AssignmentStatement(path, val);
             structure->_map.emplace(node, stmt);
         }
@@ -1133,13 +1133,24 @@ class ConstructSymbolTable : public Inspector {
         auto fieldlist = csum.second->arguments->at(1);
         auto dest_field = csum.second->arguments->at(2);
 
-        auto* updateCall = new IR::MethodCallStatement(
+        auto* updateCall = new IR::MethodCallExpression(
                 csum.second->srcInfo,
                 new IR::Member(new IR::PathExpression(decl->name), "update"),
-                {fieldlist, dest_field});
+                {fieldlist});
 
-        structure->ingressDeparserStatements.push_back(updateCall);
-        structure->egressDeparserStatements.push_back(updateCall);
+        auto stmt = new IR::AssignmentStatement(dest_field, updateCall);
+        if (auto boolLiteral = csum.second->arguments->at(0)->to<IR::BoolLiteral>()) {
+            if (boolLiteral->value) {
+                // Do not add the if-statement if the condition is always true.
+                structure->ingressDeparserStatements.push_back(stmt);
+                structure->egressDeparserStatements.push_back(stmt);
+            } else { return; }
+        } else {
+            auto cond = new IR::IfStatement(csum.second->arguments->at(0), stmt, nullptr);
+
+            structure->ingressDeparserStatements.push_back(cond);
+            structure->egressDeparserStatements.push_back(cond);
+        }
     }
 
     void cvtUpdateChecksum(const IR::MethodCallStatement *method) {
