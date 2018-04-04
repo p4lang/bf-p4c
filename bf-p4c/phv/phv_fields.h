@@ -63,6 +63,9 @@ enum class Field_Ops { NONE = 0, R = 1, W = 2, RW = 3 };
 
 class Field {
  public:
+    /// This suffix is added to the name of the privatized (TPHV) copy of a field.
+    static constexpr char const *PRIVATIZE_SUFFIX = "$tphv";
+
     /** Field name, following this scheme:
      *   - "header.field"
      *   - "header.field[i]" where "i" is a positive integer
@@ -385,6 +388,11 @@ class Field {
     size_t          numNoPack = 0;                     /// Number of fields with which this field
                                                        /// cannot be packed
 
+    bool            privatizable_i = false;            /// true for the PHV version of a
+                                                       /// privatized field
+    bool            privatized_i = false;              /// true for the TPHV version of a
+                                                       /// privatized field
+
     //
     // operations on this field
     //
@@ -473,12 +481,34 @@ class Field {
 
     bool read_container_valid_bit() const                  { return read_container_valid_bit_i; }
     void set_read_container_valid_bit(bool b)              { read_container_valid_bit_i = b; }
+    bool privatizable() const                              { return privatizable_i; }
+    void set_privatizable(bool b)                          { privatizable_i = b; }
+    bool privatized() const                                { return privatized_i; }
+    void set_privatized(bool b)                            { privatized_i = b; }
 
     void set_num_pack_conflicts(size_t no)                 { numNoPack = no; }
 
     size_t num_pack_conflicts() const                      { return numNoPack; }
 
     bool constrained(bool packing_constraint = false) const;
+
+    /// If a field is privatized (TPHV copy of header field), @returns the name of the PHV field
+    /// (name of the privatized field less the PHV::Field::PRIVATIZE_SUFFIX).
+    /// If field is not privatized, return empty string.
+    boost::optional<cstring> getPHVPrivateFieldName() const {
+        if (!privatized_i) return boost::none;
+        size_t strLength = name.size();
+        LOG1("Length of suffix: " << strLength);
+        strLength -= strlen(PHV::Field::PRIVATIZE_SUFFIX);  // Ignore PHV::Field::PRIVATIZE_SUFFIX
+        return name.substr(0, strLength);
+    }
+
+    /// @returns the name of the privatized copy (TPHV copy) of the field.
+    boost::optional<cstring> getTPHVPrivateFieldName() const {
+        if (!privatizable_i) return boost::none;
+        cstring tphvName = name + PRIVATIZE_SUFFIX;
+        return tphvName;
+    }
 
     /// Get the external name of this field.  If PHV::Field::externalName is
     /// not boost::none, use that; otherwise, use PHV::Field::name.

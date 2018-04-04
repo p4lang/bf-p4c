@@ -24,6 +24,13 @@ class PragmaContainerSize : public Inspector {
     std::map<const PHV::Field*, std::vector<PHV::Size>> pa_container_sizes_i;
     std::map<PHV::FieldSlice, PHV::Size> field_slice_req_i;
 
+    profile_t init_apply(const IR::Node* root) override {
+        profile_t rv = Inspector::init_apply(root);
+        pa_container_sizes_i.clear();
+        field_slice_req_i.clear();
+        return rv;
+    }
+
     /** Get global pragma pa_container_size.
      */
     bool preorder(const IR::BFN::Pipe* pipe) override;

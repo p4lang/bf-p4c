@@ -13,8 +13,14 @@ struct ParserCriticalPathResult {
     /// the second is the bits extracted in that state.
     std::vector<std::pair<const IR::BFN::ParserState*, int>> path;
     int length;
-    ParserCriticalPathResult()
-        : path(), length(0) {}
+
+    ParserCriticalPathResult() : path(), length(0) {}
+
+    // Clear the state stored in the ParserCriticalPathResult struct.
+    void clear() {
+        path.clear();
+        length = 0;
+    }
 };
 
 /** Produces a ParserCriticalPathResult that contains names and statistics of states
@@ -28,10 +34,20 @@ struct ParserCriticalPathResult {
 class ParserCriticalPath : public BFN::ControlFlowVisitor,
                            public ParserInspector {
  private:
-    bool preorder(const IR::BFN::AbstractParser* parser) override
-    { return gress_ == parser->gress; };
-    bool preorder(const IR::BFN::ParserPrimitive*) override
-    { return false; };
+    profile_t init_apply(const IR::Node* root) override {
+        profile_t rv = Inspector::init_apply(root);
+        result.clear();
+        return rv;
+    }
+
+    bool preorder(const IR::BFN::AbstractParser* parser) override {
+        return gress_ == parser->gress;
+    };
+
+    bool preorder(const IR::BFN::ParserPrimitive*) override {
+        return false;
+    };
+
     bool preorder(const IR::BFN::ParserState* state) override;
 
     void flow_merge(Visitor &) override;

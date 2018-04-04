@@ -1,5 +1,13 @@
 #include "bridged_metadata_replacement.h"
 
+Visitor::profile_t CollectBridgedFields::init_apply(const IR::Node* root) {
+    profile_t rv = Inspector::init_apply(root);
+    orig_to_bridged.clear();
+    bridged_to_orig.clear();
+    bridged_to_external_name.clear();
+    return rv;
+}
+
 void CollectBridgedFields::postorder(const IR::MAU::Instruction* inst) {
     if (inst->name == "set") {
         BUG_CHECK(inst->operands.size() == 2, "The number of set operands is not 2.");

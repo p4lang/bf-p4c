@@ -2172,6 +2172,8 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
     if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
     if (field.deparsed_to_tm()) out << " deparsed_to_tm";
     if (field.exact_containers()) out << " exact_containers";
+    if (field.privatized()) out << " TPHV-priv";
+    if (field.privatizable()) out << " PHV-priv";
     out << " [" << fs.range().lo << ":" << fs.range().hi << "]";
     return out;
 }

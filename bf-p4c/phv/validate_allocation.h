@@ -25,16 +25,34 @@ namespace PHV {
  */
 class ValidateAllocation final : public Inspector {
  public:
-    ValidateAllocation(const PhvInfo& phv, const ClotInfo& clot,
-                       const SymBitMatrix& mutually_exclusive_field_ids)
-        : phv(phv), clot(clot), mutually_exclusive_field_ids(mutually_exclusive_field_ids) { }
+    ValidateAllocation(PhvInfo& phv, const ClotInfo& clot,
+                       const SymBitMatrix& mutually_exclusive_field_ids,
+                       ordered_set<cstring>& f)
+        : phv(phv), clot(clot), mutually_exclusive_field_ids(mutually_exclusive_field_ids),
+          doNotPrivatize(f) { }
 
  private:
-    const PhvInfo& phv;
+    using Slice = PHV::Field::alloc_slice;
+
+    PhvInfo& phv;
     const ClotInfo& clot;
 
     const SymBitMatrix& mutually_exclusive_field_ids;
     bool preorder(const IR::BFN::Pipe* pipe) override;
+
+    /// List of all privatized fields that cause PHV allocation to fail; grows monotonically every
+    /// time PHV allocation fails because of privatization, until every privatizable field is
+    /// included.
+    ordered_set<cstring>& doNotPrivatize;
+
+    /// Checks if privatization needs to be rolled back and chooses one of two mechanisms
+    /// (replacement of uses of privatized fields or backtracking) to roll it back.
+    void checkAndThrowPrivatizeException(
+            const std::map<PHV::Container, std::vector<Slice>>& allocations) const;
+
+    /// returns true if a backtrack exception must be thrown, instead of invoking UndoPrivatization.
+    bool throwBacktrackException(
+            const std::map<PHV::Container, std::vector<Slice>>& allocations) const;
 };
 
 class ValidateActions final : public MauInspector {

@@ -67,6 +67,9 @@ BFN_Options::BFN_Options() {
     registerOption("--use-pa-solitary", nullptr,
         [this](const char *) { use_pa_solitary = true; return true; },
         "use phv solitary pragma");
+    registerOption("--no-phv-privatization", nullptr,
+        [this](const char *) { privatization = false; return true; },
+        "do not use TPHV/PHV privatization");
 }
 
 using Target = std::pair<cstring, cstring>;

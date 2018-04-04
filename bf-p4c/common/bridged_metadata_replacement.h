@@ -24,6 +24,7 @@ class CollectBridgedFields : public Inspector {
         return true;
     }
 
+    profile_t init_apply(const IR::Node* root) override;
     void postorder(const IR::MAU::Instruction* inst) override;
     void end_apply() override;
 

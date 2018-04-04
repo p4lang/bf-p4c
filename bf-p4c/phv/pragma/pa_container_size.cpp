@@ -55,10 +55,19 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
                       "%1% does not match any phv fields, skipped", field_name);
             continue; }
 
+        // If there is a pa_container_size pragma on the field, then also apply it to its privatized
+        // (TPHV) version.
+        boost::optional<cstring> tphvName = field->getTPHVPrivateFieldName();
+        const PHV::Field* privatized_field = tphvName ?  phv_i.field(*tphvName) : nullptr;
+        if (privatized_field)
+            LOG1("Privatized field in pragma: " << privatized_field);
+
         if (pa_container_sizes_i.count(field)) {
             ::warning("@pragma pa_container_size %1% is overriding previous pragmas: ",
                       annotation); }
         pa_container_sizes_i[field] = {};
+        if (privatized_field)
+            pa_container_sizes_i[privatized_field] = {};
 
         bool failed = false;
         for (size_t i = 2; i < exprs.size(); ++i) {
@@ -73,10 +82,14 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
                 failed = true;
                 break;
             } else {
-                pa_container_sizes_i[field].push_back(*container_size); } }
+                pa_container_sizes_i[field].push_back(*container_size);
+                if (privatized_field)
+                    pa_container_sizes_i[privatized_field].push_back(*container_size); } }
 
         if (failed) {
             pa_container_sizes_i.erase(field);
+            if (privatized_field)
+                pa_container_sizes_i.erase(privatized_field);
             continue; }
     }
     LOG1(*this);

@@ -23,6 +23,10 @@ class Backend : public PassManager {
     FieldDefUse defuse;
     TablesMutuallyExclusive mutex;
     CollectBridgedFields bridged_fields;
+    /// List of field names which should not be privatized. Detected by ValidateAllocation pass and
+    /// used by Privatization (when invoked due to backtracking) or UndoPrivatization to prevent
+    /// privatization.
+    ordered_set<cstring> doNotPrivatize;
 
  public:
     explicit Backend(const BFN_Options& options);

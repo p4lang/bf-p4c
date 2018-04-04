@@ -402,6 +402,10 @@ class AllocatePHV : public Inspector {
      */
     static std::list<PHV::ContainerGroup *> makeDeviceContainerGroups();
 
+    /// @returns true if the only unallocated fields are all TempVars (TPHV fields) introduced by
+    /// privatization (field->privatized() == true).
+    bool onlyPrivatizedFieldsUnallocated(std::list<PHV::SuperCluster*>& unallocated) const;
+
     /// Throw a pretty-printed ::error when allocation fails.
     void formatAndThrowError(
         const PHV::Allocation& alloc,

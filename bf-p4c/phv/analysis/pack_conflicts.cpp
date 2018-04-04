@@ -42,7 +42,7 @@ void PackConflicts::end_apply() {
             ordered_set<int> stage = bt.inSameStage(t1, t2);
             if (!stage.empty()) {
                 LOG4("\tGenerate no pack conditions for table " << t1->name << " and table " <<
-                        t2->name << " in stage " << stage);
+                        t2->name);
                 generateNoPackConstraints(t1, t2); } } }
     LOG3("Total packing conditions: " << totalNumSet);
     updateNumPackConstraints();

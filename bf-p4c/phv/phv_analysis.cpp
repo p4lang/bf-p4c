@@ -65,9 +65,6 @@ PHV_AnalysisPass::PHV_AnalysisPass(
 #endif      // HAVE_JBAY
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
                             critical_path_clusters),
-
-            new PHV::ValidateAllocation(phv, clot, phv.field_mutex),
-            new PHV::ValidateActions(phv, false, true, false)
         }); }
 
     setName("PHV Analysis");

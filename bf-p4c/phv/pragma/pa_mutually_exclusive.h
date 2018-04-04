@@ -18,6 +18,12 @@ class PragmaMutuallyExclusive : public Inspector {
 
     ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> pa_mutually_exclusive_i;
 
+    profile_t init_apply(const IR::Node* root) override {
+        profile_t rv = Inspector::init_apply(root);
+        pa_mutually_exclusive_i.clear();
+        return rv;
+    }
+
     /** Get global pragma pa_mutually_exclusive.
      */
     bool preorder(const IR::BFN::Pipe* pipe) override;

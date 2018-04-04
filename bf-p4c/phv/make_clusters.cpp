@@ -394,7 +394,11 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
             StartNewSliceList();
             LOG5("Starting new slice list (to isolate a no_pack field): "); }
 
-        bool is_tphv = field->is_tphv_candidate(self.uses_i);
+        // Privatizable fields are the PHV copies of fields duplicated in TPHVs. So, slice creation
+        // has to start a new slice whenever it encounters a privatizable field. By construction,
+        // privatizable fields only being at a byte-aligned offset within a header, so this is a
+        // safe place to slice clusters.
+        bool is_tphv = field->is_tphv_candidate(self.uses_i) || field->privatizable();
 
         // Break off, if field is extracted in Phase 0, i.e. if field is
         // bridged and also extracted in INGRESS.

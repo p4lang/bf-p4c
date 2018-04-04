@@ -500,6 +500,9 @@ PHV::Field::is_ccgf() const {
 }
 
 bool PHV::Field::is_tphv_candidate(const PhvUse& uses) const {
+    // Privatized fields are the TPHV copies of header fields. Therefore, privatized fields are
+    // always TPHV candidates.
+    if (privatized_i) return true;
     return !uses.is_used_mau(this) && !pov && !metadata && !deparsed_to_tm_i;
 }
 
@@ -642,6 +645,14 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
             f->set_exact_containers(true);
             f->set_no_pack(true);
             f->set_no_split(true);
+        }
+        // A field that ends with PHV::Field::PRIVATIZE_SUFFIX is the TPHV copy of a header field,
+        // produced during the Privatization pass. This field must be marked appropriately as
+        // privatized.
+        if (tv->name.endsWith(PHV::Field::PRIVATIZE_SUFFIX)) {
+            PHV::Field* f = phv.field(tv);
+            BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
+            f->set_privatized(true);
         }
 
         return false;
@@ -945,6 +956,19 @@ class MarkDeparsedFields : public Inspector {
         // XXX(cole): These two constraints will be subsumed by deparser schema.
         src_field->set_deparsed(true);
         src_field->set_exact_containers(true);
+
+        if (!src_field->privatized()) return false;
+
+        // The original PHV copy of privatized fields must be explicitly identified as privatizable
+        // and its exact containers property must be set to true.
+        boost::optional<cstring> newString = src_field->getPHVPrivateFieldName();
+        if (!newString)
+            BUG("Did not find PHV version of privatized field %1%", src_field->name);
+        auto* phv_field = phv_i.field(*newString);
+        BUG_CHECK(phv_field, "PHV version of privatized field %1% not found", src_field->name);
+        phv_field->set_exact_containers(true);
+        phv_field->set_privatizable(true);
+
         return false;
     }
 
@@ -1049,6 +1073,8 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
     if (field.deparsed_to_tm()) out << " deparsed_to_tm";
     if (field.exact_containers()) out << " exact_containers";
+    if (field.privatized()) out << " TPHV-priv";
+    if (field.privatizable()) out << " PHV-priv";
     if (field.header_stack_pov_ccgf()) out << " header_stack_pov_ccgf";
     if (field.simple_header_pov_ccgf()) out << " simple_header_pov_ccgf";
     if (field.ccgf()) out << " ccgf=" << field.ccgf()->id << ':' << field.ccgf()->name;
@@ -1153,7 +1179,8 @@ const IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const IR::Node *n, const c
               (uses.is_used_parde(&f) ? "P" : " ") <<
               (uses.is_used_mau(&f) ? "M" : " ") <<
               (uses.is_referenced(&f) ? "R" : " ") <<
-              (uses.is_deparsed(&f) ? "D" : " ") << ") " << f.externalName()); }
+              (uses.is_deparsed(&f) ? "D" : " ") << ") " << /*f.externalName()*/
+              f); }
     LOG1("");
 
     LOG1("--- PHV FIELDS WIDTH HISTOGRAM----------------------------");

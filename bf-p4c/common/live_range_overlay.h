@@ -38,6 +38,13 @@ class LiveRangeOverlay : public Inspector {
     ordered_set<const IR::BFN::Unit *> all_ingress_units;
     ordered_set<const IR::BFN::Unit *> all_egress_units;
 
+    profile_t init_apply(const IR::Node* root) override {
+        profile_t rv = Inspector::init_apply(root);
+        all_ingress_units.clear();
+        all_egress_units.clear();
+        return rv;
+    }
+
     void postorder(const IR::MAU::Table *u) override {
         if (u->gress == INGRESS)
             all_ingress_units.insert(u);

@@ -39,8 +39,8 @@ void LiveRangeOverlay::end_apply() {
     ordered_map<int, ordered_set<const IR::BFN::Unit *>> livemap;
     for (const PHV::Field &f : phv) {
         // Only consider for live range overlay if the field is non-bridged metadata or a bridged
-        // metadata padding field
-        if (!f.metadata && !f.alwaysPackable)
+        // metadata padding field or is a privatizable field (PHV copy of a privatized field).
+        if (!f.metadata && !f.alwaysPackable && !f.privatizable())
             continue;
         LOG4("checking liveness of " << f.name);
         livemap[f.id] = { };
@@ -48,9 +48,11 @@ void LiveRangeOverlay::end_apply() {
         all_units = f.gress == INGRESS ? &all_ingress_units : &all_egress_units;
         for (const IR::BFN::Unit *u : *all_units) {
             if (f.alwaysPackable) {
+                // Bridged metadata padding field is valid only in ingress deparser and egress
+                // parser.
                 bool isEgressParser = u->is<IR::BFN::ParserState>() && u->thread() ==  EGRESS;
-                bool isIngressParser = u->is<IR::BFN::ParserState>() && u->thread() == INGRESS;
-                if (isEgressParser || isIngressParser) {
+                bool isIngressDeparser = u->is<IR::BFN::Deparser>() && u->thread() == INGRESS;
+                if (isEgressParser || isIngressDeparser) {
                     LOG4("    live at " << DBPrint::Brief << u);
                     livemap[f.id].insert(u);
                 } else {
@@ -72,13 +74,14 @@ void LiveRangeOverlay::end_apply() {
     LOG4("mutually exclusive metadata:");
     // Fields marked as no overlay by pa_no_overlay
     for (auto f1 : phv) {
-        if ((!f1.metadata && !f1.alwaysPackable) || f1.pov || f1.deparsed_to_tm())
+        if ((!f1.metadata && !f1.alwaysPackable && !f1.privatizable()) || f1.pov ||
+                f1.deparsed_to_tm())
             continue;
         if (noOverlay.count(&f1))
             continue;
         for (auto f2 : phv) {
-            if ((!f2.metadata && !f2.alwaysPackable) || f2.pov || f1.gress != f2.gress ||
-                    f2.deparsed_to_tm())
+            if ((!f2.metadata && !f2.alwaysPackable && !f2.privatizable()) || f2.pov ||
+                 f1.gress != f2.gress || f2.deparsed_to_tm())
                 continue;
             if (noOverlay.count(&f2))
                 continue;

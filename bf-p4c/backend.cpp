@@ -34,6 +34,8 @@
 #include "bf-p4c/phv/create_thread_local_instances.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_analysis.h"
+#include "bf-p4c/phv/privatization.h"
+#include "bf-p4c/phv/validate_allocation.h"
 
 namespace BFN {
 
@@ -161,6 +163,10 @@ Backend::Backend(const BFN_Options& options) :
         new Alias(phv),   // Interpret the pa_alias pragmas
         new CollectPhvInfo(phv),
         &defuse,
+        options.privatization ? new Privatization(phv, deps, doNotPrivatize, defuse) : nullptr,
+                                  // For read-only fields, generate private TPHV and PHV copies.
+        new CollectPhvInfo(phv),
+        &defuse,
         new CollectNameAnnotations(phv),
         &bridged_fields,  // Needs to be run after InstructionSelection & CollectNameAnnotations.
         new ReplaceOriginalFieldWithBridged(phv, bridged_fields),  // Run before deadcode elim.
@@ -185,6 +191,13 @@ Backend::Backend(const BFN_Options& options) :
 #endif  // HAVE_JBAY
         new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps),  // phv analysis after last
                                                                  // CollectPhvInfo pass
+
+        new PHV::ValidateAllocation(phv, clot, phv.field_mutex, doNotPrivatize),
+                                // Validate results of PHV allocation
+        options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,
+                                // Undo results of privatization for the doNotPrivatize fields
+        new PHV::ValidateActions(phv, false, true, false),
+        options.privatization ? &defuse : nullptr,
         new TableAllocPass(options, phv, defuse, deps),
         new TableSummary,
         new IXBarVerify(phv),

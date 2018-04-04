@@ -6,6 +6,7 @@
 
 Visitor::profile_t PragmaAlias::init_apply(const IR::Node* root) {
     pa_alias_i.clear();
+    fieldsWithExpressions.clear();
     return Inspector::init_apply(root);
 }
 

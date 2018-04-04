@@ -14,6 +14,12 @@ class PragmaAtomic : public Inspector {
     /// Used to print logging messages
     ordered_set<const PHV::Field*> fields;
 
+    profile_t init_apply(const IR::Node* root) override {
+        profile_t rv = Inspector::init_apply(root);
+        fields.clear();
+        return rv;
+    }
+
     bool add_constraint(cstring field_name);
 
     bool preorder(const IR::BFN::Pipe* pipe) override;

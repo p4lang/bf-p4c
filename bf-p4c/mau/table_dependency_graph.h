@@ -203,8 +203,8 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     typedef struct { ordered_set<const IR::MAU::Table*> read, write; } access_t;
 
  private:
-    PhvInfo                                              &phv;
-    DependencyGraph                                      &dg;
+    const PhvInfo&                                        phv;
+    DependencyGraph&                                      dg;
     std::map<cstring, access_t>                           access;
     std::map<PHV::Container, cont_write_t>                cont_write;
 
@@ -245,7 +245,7 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     class UpdateAttached;
 
  public:
-    explicit FindDependencyGraph(PhvInfo &phv, DependencyGraph& out)
+    explicit FindDependencyGraph(const PhvInfo &phv, DependencyGraph& out)
     : phv(phv), dg(out) { joinFlows = true; }
 };
 

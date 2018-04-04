@@ -1126,11 +1126,23 @@ void AllocatePHV::end_apply() {
     // and commit result only when it reaches our expectation.
     alloc.commit(result.transaction);
 
+    // If only privatized fields are unallocated, mark allocation as done.
+    // The rollback of unallocated privatized fields will happen in ValidateAllocation.
     if (result.remaining_clusters.size() == 0) {
         clearSlices(phv_i);
         bindSlices(alloc, phv_i);
         phv_i.set_done();
         LOG1("PHV ALLOCATION SUCCESSFUL");
+        LOG2(alloc);
+        LOG2(alloc.getSummary(uses_i));
+    } else if (onlyPrivatizedFieldsUnallocated(result.remaining_clusters)) {
+        LOG1("PHV ALLOCATION SUCCESSFUL FOR NON-PRIVATIZED FIELDS");
+        clearSlices(phv_i);
+        bindSlices(alloc, phv_i);
+        phv_i.set_done();
+        LOG1("SuperClusters with Privatized Fields unallocated: ");
+        for (auto* sc : result.remaining_clusters)
+            LOG1(sc);
         LOG2(alloc);
         LOG2(alloc.getSummary(uses_i));
     } else {
@@ -1151,6 +1163,18 @@ void AllocatePHV::end_apply() {
             msg << f << std::endl;
         P4C_UNIMPLEMENTED("%s", msg.str()); }
 #endif
+}
+
+bool AllocatePHV::onlyPrivatizedFieldsUnallocated(
+        std::list<PHV::SuperCluster*>& unallocated) const {
+    bool onlyPrivatizedFieldsUnallocated = true;
+    for (auto* super_cluster : unallocated)
+        for (auto* rotational_cluster : super_cluster->clusters())
+            for (auto* cluster : rotational_cluster->clusters())
+                for (auto& slice : cluster->slices())
+                    if (!slice.field()->privatized())
+                        return false;
+    return true;
 }
 
 void AllocatePHV::formatAndThrowError(

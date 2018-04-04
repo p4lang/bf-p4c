@@ -289,6 +289,12 @@ class ParserState : Unit {
                 const Vector<Transition>& transitions)
         : name(n), gress(gr), statements(statements), selects(selects),
           transitions(transitions) { }
+     ParserState(cstring n, gress_t gr,
+                const Vector<ParserPrimitive>& statements,
+                const Vector<Select>& selects,
+                const Vector<Transition>& transitions)
+        : name(n), gress(gr), statements(statements), selects(selects),
+          transitions(transitions) { }
     int stage() const override { return -1; }
     gress_t thread() const override { return gress; }
     toString { return name; }

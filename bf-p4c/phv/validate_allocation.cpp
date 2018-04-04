@@ -10,7 +10,9 @@
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
+#include "bf-p4c/phv/privatization.h"
 #include "bf-p4c/mau/action_analysis.h"
+#include "bf-p4c/parde/lower_parser.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/log.h"
@@ -26,11 +28,12 @@ namespace PHV {
 bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     BUG_CHECK(phv.alloc_done(),
               "Calling ValidateAllocation without performing PHV allocation");
+    /// To be set to true if privatization causes PHV allocation to fail.
+    bool throwPrivatizeException = false;
 
     const auto& phvSpec = Device::phvSpec();
 
     // A mapping from PHV containers to the field slices that they contain.
-    using Slice = PHV::Field::alloc_slice;
     std::map<PHV::Container, std::vector<Slice>> allocations;
 
     // The set of reserved container ids for each thread.
@@ -54,9 +57,19 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        ERROR_CHECK(!field.alloc_i.empty() || clot.clot(&field),
+        if (field.privatized() && (field.alloc_i.empty() && !clot.clot(&field))) {
+            boost::optional<cstring> privatizedFieldName = field.getPHVPrivateFieldName();
+            if (!privatizedFieldName)
+                BUG("Did not find PHV name of privatized field %1%", field.name);
+            doNotPrivatize.insert(*privatizedFieldName);
+            LOG1("Do not privatize " << *privatizedFieldName << " as it is unallocated.");
+            throwPrivatizeException = true;
+            continue;
+        } else {
+            ERROR_CHECK(!field.alloc_i.empty() || clot.clot(&field),
                     "No PHV or CLOT allocation for referenced field %1%",
                     cstring::to_cstring(field));
+        }
 
         ERROR_CHECK(!field.bridged || field.deparsed_i || field.gress == EGRESS,
                     "Ingress field is bridged, but not deparsed: %1%",
@@ -335,10 +348,19 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             for (auto* deparsed : deparsedHeaderFields)
                 for (auto* nonDeparsed : nonDeparsedFields) {
                     if (deparsed->bridged) continue;
-                    ERROR_CHECK(mutually_exclusive_field_ids(deparsed->id, nonDeparsed->id),
+                    if (nonDeparsed->privatizable()) {
+                        if (mutually_exclusive_field_ids(deparsed->id, nonDeparsed->id))
+                            continue;
+                        doNotPrivatize.insert(nonDeparsed->name);
+                        throwPrivatizeException = true;
+                        ::warning("Deparsed container %1% mixes deparsed header field %2% with "
+                                  "non-deparsed field %3%", container,
+                                  cstring::to_cstring(deparsed), cstring::to_cstring(nonDeparsed));
+                    } else {
+                        ERROR_CHECK(mutually_exclusive_field_ids(deparsed->id, nonDeparsed->id),
                                 "Deparsed container %1% mixes deparsed header field %2% with "
                                 "non-deparsed field %3%", container, cstring::to_cstring(deparsed),
-                                cstring::to_cstring(nonDeparsed)); }
+                                cstring::to_cstring(nonDeparsed)); } }
         }
 
         // Verify that the allocations for each field don't overlap. (Note that
@@ -485,9 +507,36 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         });
     });
 
+    if (throwPrivatizeException)
+        checkAndThrowPrivatizeException(allocations);
+
     return false;
 }
 
+void ValidateAllocation::checkAndThrowPrivatizeException(
+        const std::map<PHV::Container, std::vector<Slice>>& allocations) const {
+    // If privatized fields flout deparser requirements, raise a backtrack exception.
+    bool backtrack = throwBacktrackException(allocations);
+    if (backtrack) {
+        LOG1("   Reinvoking privatization pass");
+        throw PrivatizationTrigger::failure(doNotPrivatize); }
+}
+
+bool ValidateAllocation::throwBacktrackException(
+        const std::map<PHV::Container, std::vector<Slice>>& allocations) const {
+    bool anyFieldOverlaid = false;
+    for (cstring fName : doNotPrivatize) {
+        const PHV::Field* f = phv.field(fName);
+        BUG_CHECK(f, "Privatized field %1% not found", fName);
+        f->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+            for (auto& slice : allocations.at(alloc.container)) {
+                if (slice.field == alloc.field) continue;
+                if (alloc.container_bits().overlaps(slice.container_bits()))
+                    anyFieldOverlaid = true; }
+        });
+    }
+    return anyFieldOverlaid;
+}
 
 bool ValidateActions::preorder(const IR::MAU::Action *act) {
     auto tbl = findContext<IR::MAU::Table>();

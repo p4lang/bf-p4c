@@ -154,6 +154,12 @@ class ExcludeDeparsedIntrinsicMetadata : public Inspector {
     const PhvInfo& phv;
     bitvec& neverOverlay;
 
+    profile_t init_apply(const IR::Node* root) {
+        profile_t rv = Inspector::init_apply(root);
+        phv.field_mutex.clear();
+        return rv;
+    }
+
     void end_apply() override;
 
  public:
