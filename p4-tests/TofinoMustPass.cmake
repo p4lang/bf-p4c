@@ -15,4 +15,6 @@ set (TOFINO_MUST_PASS_TESTS
   extensions/p4_tests/p4_16/hash_driven_stats.p4
   extensions/p4_tests/p4_16/ONLab_packetio.p4
   extensions/p4_tests/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4
+  switch_msdc
+  switch_ent_dc_aggr
   )
