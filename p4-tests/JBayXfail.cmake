@@ -283,6 +283,7 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_14/em_ghost3.p4
   extensions/p4_tests/p4_14/em_ghost4.p4
   extensions/p4_tests/p4_14/ternary_match_constant_action_data.p4
-  extensions/p4_tests/p4_16/brig-532.p4
+  # Disable when privatization is disabled.
+  # extensions/p4_tests/p4_16/brig-532.p4
   tor.p4
   )
