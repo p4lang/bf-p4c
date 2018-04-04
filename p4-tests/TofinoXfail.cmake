@@ -146,10 +146,10 @@ if (PTF_REQUIREMENTS_MET)
   #   extensions/p4_tests/p4_14/p4-tests/programs/meters/meters.p4
   #   )
 
-  # Needs https://github.com/barefootnetworks/bf-p4c-compilers/pull/1347
+  # Inner UDP length field is "corrupted" for test.SpgwDownlinkMPLS_INT_Test.
+  # See BRIG-578
   p4c_add_xfail_reason("tofino"
-    "PHV allocation was not successful"
-    fabric-DWITH_INT_TRANSIT
+    "Expected packet was not received on device"
     fabric-DWITH_SPGW-DWITH_INT_TRANSIT
     )
 
