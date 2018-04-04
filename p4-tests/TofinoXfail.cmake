@@ -134,11 +134,6 @@ if (PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4
     )
 
-  p4c_add_xfail_reason("tofino"
-    "SALU Selector Table not found?"
-    extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
-    )
-
   # Timeouts -- need a better way to handle timeouts!!
   # p4c_add_xfail_reason("tofino"
   #   "Test time = 500.*sec"
@@ -1037,11 +1032,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
     "Slice size greater than container size"
   extensions/p4_tests/p4_14/test_config_303_static_table.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "SALU Selector Table not found"
-  extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
 )
 
 p4c_add_xfail_reason("tofino"
