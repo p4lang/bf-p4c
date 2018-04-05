@@ -1003,12 +1003,42 @@ bool CollectNameAnnotations::preorder(const IR::MAU::Table* t) {
     return true;
 }
 
+/** The timestamp and version fields are located in a special part of the input
+ * buffer, and PHV allocation needs to take care when allocating these fields:
+ * Their start/end bits can't be placed too deep within a PHV container,
+ * because that would cause the extractor to read off the end of the buffer.
+ *  
+ * That is, both timestamp and version have both a validContainerStart range
+ * (like extracted fields) but also a dual validContainerEnd range.
+ *  
+ * However, rather than implement that for just two fields, this pass instead
+ * sets the exact_containers requirement for these fields, sidestepping the
+ * problem.
+ */
+class MarkTimestampAndVersion : public Inspector {
+    PhvInfo& phv_i;
+
+    void end_apply() {
+        for (auto& f : phv_i) {
+            cstring name = f.name;
+            bool isTstamp = name.endsWith("ig_intr_md_from_prsr.global_tstamp");
+            bool isVersion = name.endsWith("ig_intr_md_from_prsr.global_ver");
+            if (isTstamp || isVersion) {
+                LOG2("Setting exact_containers for " << f.name);
+                f.set_exact_containers(true); } }
+    }
+
+ public:
+    explicit MarkTimestampAndVersion(PhvInfo& phv) : phv_i(phv) { }
+};
+
 CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
     addPasses({
         new CollectPhvFields(phv),
         new AllocatePOVBits(phv),
         new ComputeFieldAlignments(phv),
-        new MarkDeparsedFields(phv)
+        new MarkDeparsedFields(phv),
+        new MarkTimestampAndVersion(phv)
     });
 }
 //
