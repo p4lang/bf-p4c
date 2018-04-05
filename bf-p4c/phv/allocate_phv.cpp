@@ -1258,7 +1258,6 @@ void AllocatePHV::end_apply() {
 
 bool AllocatePHV::onlyPrivatizedFieldsUnallocated(
         std::list<PHV::SuperCluster*>& unallocated) const {
-    bool onlyPrivatizedFieldsUnallocated = true;
     for (auto* super_cluster : unallocated)
         for (auto* rotational_cluster : super_cluster->clusters())
             for (auto* cluster : rotational_cluster->clusters())

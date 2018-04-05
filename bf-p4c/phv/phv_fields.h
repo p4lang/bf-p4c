@@ -832,6 +832,12 @@ class PhvInfo {
       * Note that one common bitvec is used to represent all fields that may be in a container
       */
     bitvec bits_allocated(const PHV::Container, const ordered_set<const PHV::Field*>&) const;
+
+    /** @returns the alias source name, if the given expression is either a IR::BFN::AliasMember type
+      * or is a slice with a IR::BFN::AliasMember object as the underlying base expression.
+      * @returns boost::none otherwise.
+      */
+    boost::optional<cstring> get_alias_name(const IR::Expression* expr) const;
 };
 
 /**
@@ -857,6 +863,20 @@ class PhvInfo {
  */
 struct CollectPhvInfo : public PassManager {
     explicit CollectPhvInfo(PhvInfo& phv);
+};
+
+/**
+  * @brief Create allocation objects (PHV::Field::alloc_slice) for alias source fields in
+  * preparation for assembly output
+  * @pre PhvAnalysis_Pass has been run so that allocation objects are available.
+  */
+class AddAliasAllocation : public Inspector {
+ private:
+    PhvInfo& phv;
+    profile_t init_apply(const IR::Node* root) override;
+
+ public:
+    explicit AddAliasAllocation(PhvInfo& p) : phv(p) { }
 };
 
 void dump(const PhvInfo *);

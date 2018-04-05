@@ -197,6 +197,7 @@ Backend::Backend(const BFN_Options& options) :
         options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,
                                 // Undo results of privatization for the doNotPrivatize fields
         new PHV::ValidateActions(phv, false, true, false),
+        new AddAliasAllocation(phv),
         options.privatization ? &defuse : nullptr,
         new TableAllocPass(options, phv, defuse, deps),
         new TableSummary,

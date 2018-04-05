@@ -259,11 +259,11 @@ void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &
             continue;
         for (auto &fi : b.field_bytes) {
             if (b.loc.byte == byte_loc && ternary) {
-                Slice sl(phv, fi.field, fi.lo, fi.hi);
+                Slice sl(phv, fi.get_use_name(), fi.lo, fi.hi);
                 auto n = midbytes[b.loc.group/2].emplace(sl.bytealign(), sl);
                 BUG_CHECK(n.second, "duplicate byte use in ixbar");
             } else {
-                Slice sl(phv, fi.field, fi.lo, fi.hi);
+                Slice sl(phv, fi.get_use_name(), fi.lo, fi.hi);
                 auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
                 BUG_CHECK(n.second, "duplicate byte use in ixbar");
             }
@@ -1513,8 +1513,7 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
             } else if (matched_bits != cont_loc) {
                 lo += (matched_bits.min().index() - cont_loc.min().index());
             }
-
-            Slice sl(phv, fi.field, lo, hi);
+            Slice sl(phv, fi.get_use_name(), lo, hi);
 
             if (sl.bytealign() != (matched_bits.min().index() % 8))
                 BUG("Byte alignment for matching does not match up properly");
@@ -1550,7 +1549,7 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
                 continue;
             else if (ghosted_bits != cont_loc)
                 hi -= (cont_loc.max().index() - ghosted_bits.min().index());
-            Slice sl(phv, fi.field, lo, hi);
+            Slice sl(phv, fi.get_use_name(), lo, hi);
             if (sl.bytealign() != (ghosted_bits.min().index() % 8))
                 BUG("Byte alignment for ghosting does not match up properly");
             ghost_bits.push_back(sl);
@@ -1749,26 +1748,18 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             mem = sl->e0->to<IR::BFN::AliasMember>();
 
         if (mem) {
-            auto anno = mem->getAnnotations();
-            if (auto s = anno->getSingle("alias")) {
-                ERROR_CHECK(s->expr.size() >= 1, "%s: The alias annotation does not have a value",
-                        s);
-                auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
-                ERROR_CHECK(pragma_val != nullptr, "The alias annotation value is not a string");
-                const PHV::Field* aliasingField = phv.field(pragma_val->value);
-                ERROR_CHECK(aliasingField, "Field %s not found", pragma_val->value);
-                out << indent << canon_name(phv.field(pragma_val->value)->externalName()) << ": ";
-            } else {
-                ::error("No alias annotation found for AliasMember");
-            }
+            cstring aliasSourceName = mem->getAliasSource();
+            BUG_CHECK(aliasSourceName != cstring(), "No alias source name for AliasMember %1%",
+                      mem);
+            const PHV::Field* aliasSourceField = phv.field(aliasSourceName);
+            ERROR_CHECK(aliasSourceField, "Field %s not found", aliasSourceName);
+            out << indent << canon_name(aliasSourceField->externalName()) << ": ";
         } else {
             out << indent << canon_name(phv.field(expr)->externalName()) << ": ";
         }
         out << "{ type: " << ixbar_read->match_type.name << ", ";
         out << "size: " << size << ", ";
         out << "full_size: " << phv.field(expr)->size;
-        if (mem)
-            out << ", alias: " << canon_name(phv.field(old_expr)->externalName());
         out << " }" << std::endl;
         p4_param_index++;
     }

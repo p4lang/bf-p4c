@@ -301,6 +301,28 @@ bitvec PhvInfo::bits_allocated(
     return ret_bitvec;
 }
 
+boost::optional<cstring> PhvInfo::get_alias_name(const IR::Expression* expr) const {
+    if (auto mem = expr->to<IR::BFN::AliasMember>()) {
+        cstring aliasSourceName = mem->getAliasSource();
+        BUG_CHECK(aliasSourceName != cstring(), "No alias source name for AliasMember %1%",
+                mem);
+        const PHV::Field* aliasSourceField = field(aliasSourceName);
+        BUG_CHECK(aliasSourceField, "Field %s not found", aliasSourceName);
+        return aliasSourceName;
+    } else if (auto sl = expr->to<IR::Slice>()) {
+        auto expr = sl->e0;
+        if (auto mem = expr->to<IR::BFN::AliasMember>()) {
+            cstring aliasSourceName = mem->getAliasSource();
+            BUG_CHECK(aliasSourceName != cstring(), "No alias source name for AliasMember %1%",
+                    mem);
+            const PHV::Field* aliasSourceField = field(aliasSourceName);
+            BUG_CHECK(aliasSourceField, "Field %s not found", aliasSourceName);
+            return aliasSourceName;
+        }
+    }
+    return boost::none;
+}
+
 //
 //***********************************************************************************
 //
@@ -975,6 +997,33 @@ class MarkDeparsedFields : public Inspector {
  public:
     explicit MarkDeparsedFields(PhvInfo& phv) : phv_i(phv) { }
 };
+
+Visitor::profile_t AddAliasAllocation::init_apply(const IR::Node* root) {
+    profile_t rv = Inspector::init_apply(root);
+    for (auto kv : phv.getAliasMap()) {
+        PHV::Field* aliasSource = phv.field(kv.first);
+        PHV::Field* aliasDest = phv.field(kv.second);
+        BUG_CHECK(aliasSource, "Alias source %1% not found");
+        BUG_CHECK(aliasDest, "Alias destination %1% not found");
+        aliasDest->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+            aliasSource->alloc_i.emplace_back(
+                aliasSource,
+                alloc.container,
+                alloc.field_bit,
+                alloc.container_bit,
+                alloc.width);
+            phv.add_container_to_field_entry(alloc.container, aliasSource);
+        });
+    }
+
+    // Later passes assume that PHV allocation is sorted in field bit order
+    // MSB first
+    for (auto& f : phv) {
+        std::sort(f.alloc_i.begin(), f.alloc_i.end(),
+                [](PHV::Field::alloc_slice l, PHV::Field::alloc_slice r) {
+                return l.field_bit > r.field_bit; }); }
+    return rv;
+}
 
 bool CollectNameAnnotations::preorder(const IR::MAU::Table* t) {
     if (t->match_table) {

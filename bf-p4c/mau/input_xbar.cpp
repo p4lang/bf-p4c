@@ -1005,10 +1005,11 @@ int need_align_flags[4][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
     { 0, 0, 0, 0, },  // Not yet allocated -- assume no alignment required
 };
 
+
 /* Add the pre-allocated bytes to the Use structure */
 static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *field,
-                    const bitrange *bits = nullptr, int flags = 0,
-                    IXBar::byte_type_t byte_type = IXBar::NO_BYTE_TYPE,
+                    boost::optional<cstring> aliasSourceName, const bitrange *bits = nullptr,
+                    int flags = 0, IXBar::byte_type_t byte_type = IXBar::NO_BYTE_TYPE,
                     unsigned extra_align = 0) {
     bool ok = false;
     int index = 0;
@@ -1018,7 +1019,8 @@ static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *fiel
     // to change
     field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
         ok = true;  // FIXME -- better sanity check?
-        IXBar::FieldInfo fi(field->name, sl.field_bit, sl.field_hi(), sl.container_bit % 8);
+        IXBar::FieldInfo fi(field->name, sl.field_bit, sl.field_hi(), sl.container_bit % 8,
+                aliasSourceName);
         // FIXME: before PHV allocation
         IXBar::Use::Byte byte(sl.container.toString(), (sl.container_bit/8U) * 8U);
 
@@ -1116,6 +1118,7 @@ void IXBar::field_management(ContByteConversion &map_alloc, const IR::Expression
         field = read->expr;
     }
 
+    boost::optional<cstring> aliasSourceName = phv.get_alias_name(field);
     finfo = phv.field(field, &bits);
     BUG_CHECK(finfo, "unexpected field %s", field);
     bitvec field_bits(bits.lo, bits.hi - bits.lo + 1);
@@ -1129,7 +1132,7 @@ void IXBar::field_management(ContByteConversion &map_alloc, const IR::Expression
     } else {
         fields_needed[finfo->name] = field_bits;
     }
-    add_use(map_alloc, finfo, &bits, 0, byte_type);
+    add_use(map_alloc, finfo, aliasSourceName, &bits, 0, byte_type);
 }
 
 /** In order to prevent some overlay bugs by the driver, this guarantees that if a table matches
@@ -1194,11 +1197,14 @@ class FindFieldsToAlloc : public Inspector {
         visit(a->action, "action");  // just visit the action instructions
         return false; }
     bool preorder(const IR::Expression *e) override {
+        boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
         bitrange bits;
         if (auto *finfo = phv.field(e, &bits)) {
             if (!fields_needed.count(finfo->name)) {
                 fields_needed.insert(finfo->name);
-                add_use(map_alloc, finfo, &bits, 0, IXBar::NO_BYTE_TYPE, extra_align); }
+                add_use(map_alloc, finfo, aliasSourceName, &bits, 0, IXBar::NO_BYTE_TYPE,
+                        extra_align);
+            }
             return false; }
         return true; }
     bool preorder(const IR::MAU::HashDist *) override {
@@ -1551,7 +1557,15 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             flags |= IXBar::Use::NeedRange;
             hash_bus_bits += info.first->size;
         }
-        add_use(map_alloc, info.first, &info.second.bits, flags, NO_BYTE_TYPE);
+        cstring aliasSourceName;
+        if (collect.info_to_uses.count(&info.second)) {
+            LOG5("Found gateway alias source name");
+            aliasSourceName = collect.info_to_uses[&info.second];
+        }
+        if (aliasSourceName)
+            add_use(map_alloc, info.first, aliasSourceName, &info.second.bits, flags, NO_BYTE_TYPE);
+        else
+            add_use(map_alloc, info.first, boost::none, &info.second.bits, flags, NO_BYTE_TYPE);
     }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;
 
@@ -1710,11 +1724,12 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const PhvInfo &phv, Use &alloc
     unsigned byte_mask = ((1U << LPF_INPUT_BYTES) - 1);
     if (Device::currentDevice() == "Tofino")
         byte_mask <<= TOFINO_METER_ALU_BYTE_OFFSET;
+    boost::optional<cstring> aliasSourceName = phv.get_alias_name(mtr->input);
     bitrange bits;
     if (auto *finfo = phv.field(mtr->input, &bits)) {
         if (!fields_needed.count(finfo->name)) {
             fields_needed.insert(finfo->name);
-            add_use(map_alloc, finfo, &bits, 0, IXBar::NO_BYTE_TYPE);
+            add_use(map_alloc, finfo, aliasSourceName, &bits, 0, IXBar::NO_BYTE_TYPE);
         }
     }
 

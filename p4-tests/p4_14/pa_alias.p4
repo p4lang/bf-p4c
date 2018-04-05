@@ -64,6 +64,6 @@ table setting_port {
 }
 
 control ingress {
-  apply(test1);
   apply(setting_port);
+  apply(test1);
 }

@@ -258,4 +258,13 @@ class BFN::AliasMember : IR::Member, IAnnotated {
 #novalidate
     Annotations getAnnotations() const override { return annotations; }
     dbprint { out << member << ", alias: " << annotations; }
+    cstring getAliasSource() const {
+        if (auto s = annotations->getSingle("alias")) {
+            BUG_CHECK(s->expr.size() == 1, "%s: The alias annotation does not have a value", s);
+            auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
+            BUG_CHECK(pragma_val != nullptr, "The alias annotation value is not a string");
+            return pragma_val->value;
+        }
+        return cstring();
+    }
 }

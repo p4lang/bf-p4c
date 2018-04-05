@@ -44,8 +44,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     # clot-phv interaction bug?
     extensions/p4_tests/p4_14/action_format_packing2.p4
     extensions/p4_tests/p4_16/brig-532.p4
-    # stf needs to recognize alias parameter in assembly/context json
-    extensions/p4_tests/p4_14/pa_alias.p4
     )
 
   # Temporary until we fix the naming in STF for BMV2

@@ -79,8 +79,24 @@ struct IXBar {
         int lo;         ///> lo field bit in that byte
         int hi;         ///> hi field bit in that byte
         int cont_lo;    ///> mod 8 location in the container that the bitrange of field begins
+        boost::optional<cstring> aliasSource;
+                        ///> name of alias source field, if present
 
-        FieldInfo(cstring n, int l, int h, int cl) : field(n), lo(l), hi(h), cont_lo(cl) { }
+        FieldInfo(cstring n, int l, int h, int cl, boost::optional<cstring> a)
+            : field(n), lo(l), hi(h), cont_lo(cl) {
+            if (a)
+                aliasSource = *a;
+            else
+                aliasSource = boost::none;
+        }
+
+        cstring get_use_name() const {
+            if (aliasSource == boost::none)
+                return field;
+            else
+                return *aliasSource;
+        }
+
         bool operator==(const FieldInfo &fi) const {
             return field == fi.field && lo == fi.lo && hi == fi.hi;
         }

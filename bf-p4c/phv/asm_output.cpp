@@ -24,32 +24,14 @@ void emit_phv_field(std::ostream &out, PHV::Field &field, cstring& sectionHeader
         emit_alloc(out, alloc, field, sectionHeaderInOut);
 }
 
-void emit_aliased_phv_field(
-        std::ostream &out,
-        PHV::Field &aliasSource,
-        cstring& sectionHeaderInOut,
-        const PHV::Field* aliasDestination) {
-    for (auto& alloc : aliasDestination->alloc_i)
-        emit_alloc(out, alloc, aliasSource, sectionHeaderInOut);
-}
-
 std::ostream &operator<<(std::ostream &out, const PhvAsmOutput &phvasm) {
     cstring ingressSectionHeader = "phv ingress:\n";
-    auto aliasMap = phvasm.phv.getAliasMap();
     for (auto &f : phvasm.phv) {
         if (f.gress == INGRESS) {
-            if (aliasMap.count(f.name)) {
-                const PHV::Field* aliasDestination = phvasm.phv.field(aliasMap.at(f.name));
-                emit_aliased_phv_field(out, f, ingressSectionHeader, aliasDestination);
-            } else {
-                emit_phv_field(out, f, ingressSectionHeader); } } }
+            emit_phv_field(out, f, ingressSectionHeader); } }
     cstring egressSectionHeader = "phv egress:\n";
     for (auto &f : phvasm.phv) {
         if (f.gress == EGRESS) {
-            if (aliasMap.count(f.name)) {
-                const PHV::Field* aliasDestination = phvasm.phv.field(aliasMap.at(f.name));
-                emit_aliased_phv_field(out, f, egressSectionHeader, aliasDestination);
-            } else {
-                emit_phv_field(out, f, egressSectionHeader); } } }
+            emit_phv_field(out, f, egressSectionHeader); } }
     return out;
 }

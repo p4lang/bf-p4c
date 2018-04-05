@@ -26,7 +26,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     "mismatch from expected(.*) at byte .*"
     extensions/p4_tests/p4_14/no_match_miss.p4
     extensions/p4_tests/p4_14/action_format_packing2.p4
-    extensions/p4_tests/p4_14/pa_alias.p4
     extensions/p4_tests/p4_16/brig-532.p4
     )
 

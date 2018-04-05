@@ -195,6 +195,7 @@ const IR::MAU::Table *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
 
 
 bool CollectGatewayFields::preorder(const IR::Expression *e) {
+    boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
     bitrange bits;
     auto finfo = phv.field(e, &bits);
     if (!finfo) return true;
@@ -215,6 +216,10 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
             info.xor_with = xor_match;
         } else {
             xor_match = finfo; } }
+    if (aliasSourceName != boost::none) {
+        info_to_uses[&info] = *aliasSourceName;
+        LOG5("Adding entry to info_to_uses: " << &info << " : " << *aliasSourceName);
+    }
     return false; }
 
 bool CollectGatewayFields::compute_offsets() {
