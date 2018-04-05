@@ -76,6 +76,19 @@ class PhvSpec {
     /// @return a string representation of the provided @set of containers.
     cstring containerSetToString(const bitvec& set) const;
 
+    /** The JBay parser treats the PHV as 256 x 16b containers, where each
+     * extractor can write to the upper/lower/both 8b segments of each 16b
+     * container.  MAU, on the other hand, views PHV as groups of 8b, 16b, and
+     * 32b containers.
+     *
+     * As a result, if an even/odd pair of 8b PHV containers holds extracted
+     * fields, then they need to be assigned to the same thread.
+     *
+     * @return the ids of every container in the same parser group as the
+     * provided container.
+     */
+    virtual bitvec parserGroup(unsigned id) const = 0;
+
     /// @return the ids of every container in the same deparser group as the
     /// provided container.
     bitvec deparserGroup(unsigned id) const;
@@ -138,6 +151,9 @@ class TofinoPhvSpec : public PhvSpec {
  public:
     TofinoPhvSpec();
 
+    /// @see PhvSpec::parserGroup(unsigned id).
+    bitvec parserGroup(unsigned id) const override;
+
     const bitvec& individuallyAssignedContainers() const override;
 };
 
@@ -145,6 +161,9 @@ class TofinoPhvSpec : public PhvSpec {
 class JBayPhvSpec : public PhvSpec {
  public:
     JBayPhvSpec();
+
+    /// @see PhvSpec::parserGroup(unsigned id).
+    bitvec parserGroup(unsigned id) const override;
 
     const bitvec& individuallyAssignedContainers() const override;
 };

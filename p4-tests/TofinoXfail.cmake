@@ -344,8 +344,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Could not place table : "
   extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
-)
-
+  )
 
 # p4c_add_xfail_reason("tofino"
 #   "error: No format field or table named"

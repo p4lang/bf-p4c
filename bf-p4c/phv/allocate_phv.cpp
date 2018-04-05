@@ -30,7 +30,14 @@ bool AllocScore::operator>(const AllocScore& other) const {
     int delta_overlay_bits = 0;
     int delta_inc_containers = 0;
     int delta_set_gress = 0;
+    int delta_set_parser_group_gress = 0;
+    int delta_set_deparser_group_gress = 0;
     int delta_container_imbalance = 0;
+
+    // The number of deparser group containers assigned to a gress different
+    // than their deparser group (because they only container non-deparsed
+    // fields).  More is better.
+    int delta_mismatched_gress = 0;
 
     for (auto kind : { PHV::Kind::normal, PHV::Kind::tagalong }) {
         int penalty = kind == PHV::Kind::normal ? weight_factor : 1;
@@ -44,6 +51,9 @@ bool AllocScore::operator>(const AllocScore& other) const {
             delta_overlay_bits += bonus * score.at(kind).n_overlay_bits;
             delta_inc_containers += penalty * score.at(kind).n_inc_containers;
             delta_set_gress += penalty * score.at(kind).n_set_gress;
+            delta_set_parser_group_gress += penalty * score.at(kind).n_set_parser_group_gress;
+            delta_set_deparser_group_gress += penalty * score.at(kind).n_set_deparser_group_gress;
+            delta_mismatched_gress += bonus * score.at(kind).n_mismatched_deparser_gress;
             delta_container_imbalance += penalty * score.at(kind).container_imbalance; }
 
         // Subtract other score.
@@ -54,6 +64,11 @@ bool AllocScore::operator>(const AllocScore& other) const {
             delta_overlay_bits -= bonus * other.score.at(kind).n_overlay_bits;
             delta_inc_containers -= penalty * other.score.at(kind).n_inc_containers;
             delta_set_gress -= penalty * other.score.at(kind).n_set_gress;
+            delta_set_parser_group_gress -=
+                penalty * other.score.at(kind).n_set_parser_group_gress;
+            delta_set_deparser_group_gress -=
+                penalty * other.score.at(kind).n_set_deparser_group_gress;
+            delta_mismatched_gress -= bonus * other.score.at(kind).n_mismatched_deparser_gress;
             delta_container_imbalance -=
                 penalty * other.score.at(kind).container_imbalance; }
     }
@@ -84,6 +99,16 @@ bool AllocScore::operator>(const AllocScore& other) const {
     if (delta_set_gress != 0) {
         // This score pins fewer containers to a new gress.
         return delta_set_gress < 0; }
+    if (delta_set_deparser_group_gress != 0) {
+        // This score pins less containers to a new deparser group gress.
+        return delta_set_deparser_group_gress < 0; }
+    if (delta_set_parser_group_gress != 0) {
+        // This score pins fewer containers to a new parser group gress.
+        return delta_set_parser_group_gress < 0; }
+    if (delta_mismatched_gress != 0) {
+        // This score allocates more non-deparsed fields to deparser groups of
+        // a different gress.
+        return delta_mismatched_gress > 0; }
 
     return false;
 }
@@ -114,6 +139,8 @@ AllocScore::AllocScore(const PHV::Transaction& alloc,
         const auto& container = kv.first;
         const auto kind = container.type().kind();
         const auto& gress = kv.second.gress;
+        const auto& parserGroupGress = kv.second.parserGroupGress;
+        const auto& deparserGroupGress = kv.second.deparserGroupGress;
         const auto& slices = kv.second.slices;
         bitvec parent_alloc_vec = calcContainerAllocVec(parent->slices(container));
 
@@ -158,7 +185,17 @@ AllocScore::AllocScore(const PHV::Transaction& alloc,
 
         // gress
         if (!parent->gress(container) && gress) {
-            score[kind].n_set_gress++; }
+            score[kind].n_set_gress++;
+            if (gress != deparserGroupGress)
+                score[kind].n_mismatched_deparser_gress++; }
+
+        // Parser group gress
+        if (!parent->parserGroupGress(container) && parserGroupGress) {
+            score[kind].n_set_parser_group_gress++; }
+
+        // Deparser group gress
+        if (!parent->deparserGroupGress(container) && deparserGroupGress) {
+            score[kind].n_set_deparser_group_gress++; }
 
         // container imbalance
         // XXX(cole): This currently weights packing into 32b containers
@@ -331,9 +368,26 @@ bool CoreAllocation::satisfies_constraints(
     PHV::Container c = slice.container();
 
     // Check gress.
-    if (alloc.gress(c) && *alloc.gress(c) != f->gress) {
-        LOG5("        constraint: container " << c << " is " << *alloc.gress(c) <<
+    auto containerGress = alloc.gress(c);
+    if (containerGress && *containerGress != f->gress) {
+        LOG5("        constraint: container " << c << " is " << *containerGress <<
                     " but slice needs " << f->gress);
+        return false; }
+
+    // Check parser group gress.
+    auto parserGroupGress = alloc.parserGroupGress(c);
+    bool isExtracted = uses_i.is_extracted(f);
+    if (isExtracted && parserGroupGress && *parserGroupGress != f->gress) {
+        LOG5("        constraint: container " << c << " has parser group gress " <<
+             *parserGroupGress << " but slice needs " << f->gress);
+        return false; }
+
+    // Check deparser group gress.
+    auto deparserGroupGress = alloc.deparserGroupGress(c);
+    bool isDeparsed = uses_i.is_deparsed(f);
+    if (isDeparsed && deparserGroupGress && *deparserGroupGress != f->gress) {
+        LOG5("        constraint: container " << c << " has deparser group gress " <<
+             *deparserGroupGress << " but slice needs " << f->gress);
         return false; }
 
     // Check no pack for this field.
@@ -378,13 +432,28 @@ bool CoreAllocation::satisfies_constraints(
     return true;
 }
 
-/* static */
 bool CoreAllocation::satisfies_CCGF_constraints(
         const PHV::Allocation& alloc,
-        const PHV::Field *f, PHV::Container c) {
+        const PHV::Field *f, PHV::Container c) const {
+    // Check gress.
     if (alloc.gress(c) && *alloc.gress(c) != f->gress) {
         LOG5("    ...but CCGF gress does not match container gress");
         return false; }
+
+    // Check parser group gress.
+    auto parserGroupGress = alloc.parserGroupGress(c);
+    bool isExtracted = uses_i.is_extracted(f);
+    if (isExtracted && parserGroupGress && *parserGroupGress != f->gress) {
+        LOG5("    ...but CCGF is deparsed and does not match parser group gress");
+        return false; }
+
+    // Check deparser group gress.
+    auto deparserGroupGress = alloc.deparserGroupGress(c);
+    bool isDeparsed = uses_i.is_deparsed(f);
+    if (isDeparsed && deparserGroupGress && *deparserGroupGress != f->gress) {
+        LOG5("    ...but CCGF is deparsed and does not match deparser group gress");
+        return false; }
+
     return true;
 }
 
@@ -1092,8 +1161,30 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
         f.alloc_i = merged_alloc; }
 }
 
+/// Log (at LOGGING(3)) the device-specific PHV resources.
+static void log_device_stats() {
+    if (!LOGGING(3))
+        return;
+
+    const PhvSpec& phvSpec = Device::phvSpec();
+    int numContainers = 0;
+    int numIngress = 0;
+    int numEgress = 0;
+    for (auto id : phvSpec.physicalContainers()) {
+        numContainers++;
+        if (phvSpec.ingressOnly().getbit(id))
+            numIngress++;
+        if (phvSpec.egressOnly().getbit(id))
+            numEgress++; }
+    LOG3("There are " << numContainers << " containers.");
+    LOG3("Ingress only: " << numIngress);
+    LOG3("Egress  only: " << numEgress);
+}
+
 void AllocatePHV::end_apply() {
     LOG1("--- BEGIN PHV ALLOCATION ----------------------------------------------------");
+    log_device_stats();
+
     // HACK WARNING:
     // The meter hack, all destination of meter color go to 8-bit container.
     // TODO(yumin): remove this once this hack is removed in mau.
@@ -1285,12 +1376,14 @@ std::vector<bitvec> BruteForceAllocationStrategy::calc_slicing_schemas(
 
     auto gress = sc->gress();
     int size = sc->max_width();
+    bool hasDeparsed = sc->deparsed();
 
     // available spots suggested slicing
     bitvec suggested_slice_schema;
     int covered_size = 0;
     for (const auto& spot : boost::adaptors::reverse(spots)) {
         if (spot.gress && spot.gress != gress) continue;
+        if (hasDeparsed && spot.deparserGroupGress && spot.deparserGroupGress != gress) continue;
         if (spot.n_bits >= size) continue;
         if (!sc->okIn(spot.container.type().kind())) continue;
         covered_size += spot.n_bits;

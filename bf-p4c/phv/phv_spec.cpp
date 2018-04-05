@@ -264,6 +264,10 @@ TofinoPhvSpec::TofinoPhvSpec() {
     };
 }
 
+bitvec TofinoPhvSpec::parserGroup(unsigned id) const {
+    return bitvec(id, 1);
+}
+
 const bitvec& TofinoPhvSpec::individuallyAssignedContainers() const {
     if (individually_assigned_containers_i) return individually_assigned_containers_i;
     bitvec containers = range(PHV::Type::B, 56, 8)
@@ -299,6 +303,17 @@ JBayPhvSpec::JBayPhvSpec() {
         { PHV::Type::H, { 4 } },
         { PHV::Type::W, { 2 } }
     };
+}
+
+bitvec JBayPhvSpec::parserGroup(unsigned id) const {
+    if (idToContainer(id).is(PHV::Size::b8)) {
+        // Return the even/odd pair.
+        const auto containerType = idToContainerType(id % numContainerTypes());
+        const unsigned index =  id / numContainerTypes();
+        bool isEven = index % 2 == 0;
+        return range(containerType, isEven ? index : index - 1, 2);
+    }
+    return bitvec(id, 1);
 }
 
 const bitvec& JBayPhvSpec::individuallyAssignedContainers() const {

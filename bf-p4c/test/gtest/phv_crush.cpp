@@ -280,7 +280,10 @@ TEST_F(TofinoPhvCrush, clusterAlignment) {
 
 TEST_F(TofinoPhvCrush, makeDeviceAllocation) {
     const PhvSpec& phvSpec = Device::phvSpec();
-    auto alloc = PHV::ConcreteAllocation(SymBitMatrix());
+    auto mutex = SymBitMatrix();
+    auto info = PhvInfo(mutex);
+    auto uses = PhvUse(info);
+    auto alloc = PHV::ConcreteAllocation(mutex, uses);
 
     // Check that all physical containers are accounted for and unallocated.
     for (auto cid : phvSpec.physicalContainers()) {
@@ -303,17 +306,48 @@ TEST_F(TofinoPhvCrush, makeDeviceAllocation) {
 
 TEST_F(TofinoPhvCrush, Transaction) {
     const PhvSpec& phvSpec = Device::phvSpec();
-    auto alloc = PHV::ConcreteAllocation(SymBitMatrix());
+    auto mutex = SymBitMatrix();
+    auto info = PhvInfo(mutex);
+    auto uses = PhvUse(info);
+    auto alloc = PHV::ConcreteAllocation(mutex, uses);
+
+    EXPECT_NE(phvSpec.ingressOnly() | phvSpec.egressOnly(), phvSpec.physicalContainers());
+
+    bitvec mauGroup0 = phvSpec.mauGroups(PHV::Type::B)[2];
+    bitvec depGroup0 = phvSpec.deparserGroup(*mauGroup0.min());
+    EXPECT_NE(-1, depGroup0.min());
+    EXPECT_NE(*depGroup0.min(), *depGroup0.max());
+    EXPECT_EQ(bitvec(), (phvSpec.ingressOnly() | phvSpec.egressOnly()) & depGroup0);
+
+    bitvec mauGroup1 = phvSpec.mauGroups(PHV::Type::B)[3];
+    bitvec depGroup1 = phvSpec.deparserGroup(*mauGroup1.min());
+    EXPECT_NE(-1, depGroup1.min());
+    EXPECT_NE(*depGroup1.min(), *depGroup1.max());
+    EXPECT_EQ(bitvec(), (phvSpec.ingressOnly() | phvSpec.egressOnly()) & depGroup1);
+
+    EXPECT_NE(mauGroup0, mauGroup1);
+    EXPECT_NE(*mauGroup0.min(), *mauGroup1.min());
 
     std::vector<PHV::Container> containers;
-    for (auto cid : phvSpec.physicalContainers()) {
-        if (phvSpec.ingressOnly()[cid] || phvSpec.egressOnly()[cid])
-            continue;
-        containers.push_back(phvSpec.idToContainer(cid)); }
+    for (auto cid : depGroup0)
+        containers.push_back(phvSpec.idToContainer(cid));
+    EXPECT_LT(1U, containers.size());
 
-    PHV::Container c1 = containers[0];
-    PHV::Container c2 = containers[1];
-    PHV::Container c3 = containers[34];
+    PHV::Container c0 = containers[0];
+    PHV::Container c1 = containers[1];
+    PHV::Container c2 = containers[2];
+    PHV::Container c3 = phvSpec.idToContainer(*depGroup1.min());
+
+    PHV::Field f0;
+    f0.id = 0;
+    f0.size = 8;
+    f0.name = "foo.bar";
+    f0.gress = EGRESS;
+    f0.offset = 0;
+    f0.metadata = true;
+    f0.bridged = false;
+    f0.pov = false;
+    PHV::AllocSlice s0(&f0, c0, 0, 0, 8);
 
     PHV::Field f1;
     f1.id = 1;
@@ -326,6 +360,8 @@ TEST_F(TofinoPhvCrush, Transaction) {
     f1.pov = false;
     PHV::AllocSlice s1(&f1, c1, 0, 0, 8);
 
+    uses.deparser_i[INGRESS][f1.id] = true;
+
     // Allocation is empty.
     EXPECT_EQ(boost::none, alloc.gress(c3));
     EXPECT_EQ(0U, alloc.slices(c3).size());
@@ -335,8 +371,11 @@ TEST_F(TofinoPhvCrush, Transaction) {
     alloc.allocate(s1);
 
     EXPECT_EQ(INGRESS, alloc.gress(c1));
-    EXPECT_EQ(INGRESS, alloc.gress(c2));
+    EXPECT_EQ(boost::none, alloc.gress(c2));
+    EXPECT_EQ(INGRESS, alloc.deparserGroupGress(c1));
+    EXPECT_EQ(INGRESS, alloc.deparserGroupGress(c2));
     EXPECT_EQ(boost::none, alloc.gress(c3));
+    EXPECT_EQ(boost::none, alloc.deparserGroupGress(c3));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc.slices(c1));
     EXPECT_EQ(1U, alloc.slicesByLiveness(c1).size());
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc.slicesByLiveness(c1).back());
@@ -347,7 +386,10 @@ TEST_F(TofinoPhvCrush, Transaction) {
 
     EXPECT_EQ(INGRESS, alloc.gress(c1));
     EXPECT_EQ(INGRESS, alloc_attempt.gress(c1));
-    EXPECT_EQ(INGRESS, alloc_attempt.gress(c2));
+    EXPECT_EQ(boost::none, alloc_attempt.gress(c2));
+    EXPECT_EQ(INGRESS, alloc.deparserGroupGress(c1));
+    EXPECT_EQ(INGRESS, alloc_attempt.deparserGroupGress(c1));
+    EXPECT_EQ(INGRESS, alloc_attempt.deparserGroupGress(c2));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc.slices(c1));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc_attempt.slices(c1));
 
@@ -356,6 +398,17 @@ TEST_F(TofinoPhvCrush, Transaction) {
     EXPECT_EQ(boost::none, alloc_attempt.gress(c3));
     EXPECT_EQ(0U, alloc.slices(c3).size());
     EXPECT_EQ(0U, alloc_attempt.slices(c3).size());
+
+    // Allocate s0, which is not deparsed, and hence should not change the
+    // gress nor deparserGroupGress of c1 or c2.
+    alloc_attempt.allocate(s0);
+
+    EXPECT_EQ(EGRESS, alloc_attempt.gress(c0));
+    EXPECT_EQ(INGRESS, alloc_attempt.gress(c1));
+    EXPECT_EQ(boost::none, alloc_attempt.gress(c2));
+    EXPECT_EQ(INGRESS, alloc_attempt.deparserGroupGress(c0));
+    EXPECT_EQ(INGRESS, alloc_attempt.deparserGroupGress(c1));
+    EXPECT_EQ(INGRESS, alloc_attempt.deparserGroupGress(c2));
 
     PHV::Field f2;
     f2.id = 2;
@@ -377,7 +430,7 @@ TEST_F(TofinoPhvCrush, Transaction) {
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc.slices(c1));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc_attempt.slices(c1));
 
-    EXPECT_EQ(INGRESS, alloc.gress(c2));
+    EXPECT_EQ(boost::none, alloc.gress(c2));
     EXPECT_EQ(INGRESS, alloc_attempt.gress(c2));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({ }), alloc.slices(c2));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s3}), alloc_attempt.slices(c2));
@@ -396,7 +449,7 @@ TEST_F(TofinoPhvCrush, Transaction) {
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc.slices(c1));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1, s2}), alloc_attempt.slices(c1));
 
-    EXPECT_EQ(INGRESS, alloc.gress(c2));
+    EXPECT_EQ(boost::none, alloc.gress(c2));
     EXPECT_EQ(INGRESS, alloc_attempt.gress(c2));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({ }), alloc.slices(c2));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s3}), alloc_attempt.slices(c2));
@@ -437,7 +490,9 @@ TEST_F(TofinoPhvCrush, slicesByLiveness) {
 
     SymBitMatrix mutex;
     mutex[1][2] = true;
-    auto alloc = PHV::ConcreteAllocation(mutex);
+    auto info = PhvInfo(mutex);
+    auto uses = PhvUse(info);
+    auto alloc = PHV::ConcreteAllocation(mutex, uses);
 
     std::vector<PHV::Container> containers;
     for (auto cid : phvSpec.physicalContainers()) {
@@ -479,7 +534,10 @@ class JBayPhvCrush : public JBayBackendTest {};
 
 TEST_F(JBayPhvCrush, makeDeviceAllocation) {
     const PhvSpec& phvSpec = Device::phvSpec();
-    auto alloc = PHV::ConcreteAllocation(SymBitMatrix());
+    auto mutex = SymBitMatrix();
+    auto info = PhvInfo(mutex);
+    auto uses = PhvUse(info);
+    auto alloc = PHV::ConcreteAllocation(mutex, uses);
 
     // Check that all physical containers are accounted for and unallocated.
     for (auto cid : phvSpec.physicalContainers()) {

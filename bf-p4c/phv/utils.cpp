@@ -2,7 +2,9 @@
 #include <boost/optional/optional_io.hpp>
 #include <iostream>
 #include <numeric>
+#include "bf-p4c/device.h"
 #include "bf-p4c/lib/union_find.hpp"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
 
 static int cluster_id_g = 0;                // global counter for assigning cluster ids
 
@@ -93,6 +95,8 @@ void PHV::Allocation::addStatus(PHV::Container c, const ContainerStatus& status)
     // Update container status.
     auto& this_status = container_status_i[c];
     this_status.gress = status.gress;
+    this_status.parserGroupGress = status.parserGroupGress;
+    this_status.deparserGroupGress = status.deparserGroupGress;
     this_status.slices |= status.slices;
 
     // Update field status.
@@ -125,8 +129,13 @@ void PHV::Allocation::addStatus(PHV::Container c, const ContainerStatus& status)
 }
 
 void PHV::Allocation::addSlice(PHV::Container c, AllocSlice slice) {
+    // Get the current status in container_status_i, or its ancestors, if any.
+    ContainerStatus status = this->getStatus(c).get_value_or(ContainerStatus());
+    status.slices.insert(slice);
+    container_status_i[c] = status;
+
+    // Update field status.
     field_status_i[slice.field()].insert(slice);
-    container_status_i[c].slices.insert(slice);
 
     // Update the allocation status of the container.
     if (container_status_i[c].alloc_status != PHV::Allocation::ContainerAllocStatus::FULL) {
@@ -153,7 +162,24 @@ void PHV::Allocation::addSlice(PHV::Container c, AllocSlice slice) {
 }
 
 void PHV::Allocation::setGress(PHV::Container c, GressAssignment gress) {
-    container_status_i[c].gress = gress;
+    // Get the current status in container_status_i, or its ancestors, if any.
+    ContainerStatus status = this->getStatus(c).get_value_or(ContainerStatus());
+    status.gress = gress;
+    container_status_i[c] = status;
+}
+
+void PHV::Allocation::setParserGroupGress(PHV::Container c, GressAssignment parserGroupGress) {
+    // Get the current status in container_status_i, or its ancestors, if any.
+    ContainerStatus status = this->getStatus(c).get_value_or(ContainerStatus());
+    status.parserGroupGress = parserGroupGress;
+    container_status_i[c] = status;
+}
+
+void PHV::Allocation::setDeparserGroupGress(PHV::Container c, GressAssignment deparserGroupGress) {
+    // Get the current status in container_status_i, or its ancestors, if any.
+    ContainerStatus status = this->getStatus(c).get_value_or(ContainerStatus());
+    status.deparserGroupGress = deparserGroupGress;
+    container_status_i[c] = status;
 }
 
 PHV::Allocation::MutuallyLiveSlices
@@ -161,7 +187,7 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) 
     PHV::Allocation::MutuallyLiveSlices rs;
     auto slices = this->slices(c);
     for (auto& slice : slices) {
-        if (!PHV::Allocation::mutually_exclusive(mutex_i, slice.field(), sl.field()))
+        if (!PHV::Allocation::mutually_exclusive(*mutex_i, slice.field(), sl.field()))
             rs.insert(slice); }
     return rs;
 }
@@ -173,7 +199,7 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c,
     auto existingSlices = this->slices(c);
     for (auto& slice : existingSlices) {
         for (auto sl : slices) {
-            if (!PHV::Allocation::mutually_exclusive(mutex_i, slice.field(), sl.field()))
+            if (!PHV::Allocation::mutually_exclusive(*mutex_i, slice.field(), sl.field()))
                 rs.insert(slice); } }
     return rs;
 }
@@ -206,7 +232,7 @@ PHV::Allocation::slicesByLiveness(PHV::Container c) const {
                 bool all_live = true;
                 for (int fid2 : bv) {
                     if (PHV::Allocation::mutually_exclusive(
-                            mutex_i, fid_to_slice.at(fid)->field(),
+                            *mutex_i, fid_to_slice.at(fid)->field(),
                                      fid_to_slice.at(fid2)->field())) {
                         all_live = false;
                         break; } }
@@ -248,31 +274,54 @@ int PHV::Allocation::empty_containers(PHV::Size size) const {
 void PHV::Allocation::allocate(PHV::AllocSlice slice) {
     auto& phvSpec = Device::phvSpec();
     unsigned slice_cid = phvSpec.containerToId(slice.container());
+    auto containerGress = this->gress(slice.container());
+    auto parserGroupGress = this->parserGroupGress(slice.container());
+    auto deparserGroupGress = this->deparserGroupGress(slice.container());
+    bool isDeparsed = uses_i->is_deparsed(slice.field());
 
-    // Check and update gress for all containers in this deparser group.
-    if (!this->gress(slice.container())) {
+    // If the container has been pinned to a gress, check that the gress
+    // matches that of the slice.  Otherwise, pin it.
+    if (containerGress) {
+        BUG_CHECK(*containerGress == slice.field()->gress,
+            "Trying to allocate field %1% with gress %2% to container %3% with gress %4%",
+            slice.field()->name, slice.field()->gress, slice.container(),
+            this->gress(slice.container()));
+    } else {
+        this->setGress(slice.container(), slice.field()->gress);
+    }
+
+    // If the slice is extracted, check (and maybe set) the parser group gress.
+    if (uses_i->is_extracted(slice.field())) {
+        if (parserGroupGress) {
+            BUG_CHECK(*parserGroupGress == slice.field()->gress,
+                "Trying to allocate field %1% with gress %2% to container %3% with "
+                "parser group gress %4%", slice.field()->name, slice.field()->gress,
+                slice.container(), *parserGroupGress);
+        } else {
+            for (unsigned cid : phvSpec.parserGroup(slice_cid)) {
+            auto c = phvSpec.idToContainer(cid);
+            auto cGress = this->parserGroupGress(c);
+            BUG_CHECK(!cGress || *cGress == slice.field()->gress,
+                "Container %1% already has parser group gress set to %2%",
+                c, *this->parserGroupGress(c));
+            this->setParserGroupGress(c, slice.field()->gress); } } }
+
+    // If the slice is deparsed but the deparser group gress has not yet been
+    // set, then set it for each container in the deparser group.
+    if (isDeparsed && !deparserGroupGress) {
         for (unsigned cid : phvSpec.deparserGroup(slice_cid)) {
             auto c = phvSpec.idToContainer(cid);
-            auto opt_gress = this->gress(c);
-            BUG_CHECK(!opt_gress || *opt_gress == slice.field()->gress,
-                "Trying to allocate field %1% with gress %2% to container %3% with gress %4%",
-                slice.field()->name, slice.field()->gress, slice.container(),
-                this->gress(c));
-            LOG5("    ...maybe assigning " << c << " to " << slice.field()->gress);
-            this->setGress(c, slice.field()->gress); } }
-
-    auto gress = this->gress(slice.container());
-    BUG_CHECK(gress && *gress == slice.field()->gress,
-        "Trying to allocate field %1% with gress %2% to container %3% with gress %4%",
-        slice.field()->name, slice.field()->gress, slice.container(),
-        this->gress(slice.container()));
-
-    // Update gress.  XXX(cole): This is subtle and should probably be
-    // refactored; in order to avoid code duplication, allocate() uses virtual
-    // accessors, eg. this->gress() and this->setGress(), effectively
-    // parameterizing allocation.  However, when inserting a new value into a
-    // Transaction, we need to set the gress, even if it's already been set.
-    this->setGress(slice.container(), slice.field()->gress);
+            auto cGress = this->deparserGroupGress(c);
+            BUG_CHECK(!cGress || *cGress == slice.field()->gress,
+                "Container %1% already has deparser group gress set to %2%",
+                c, *this->deparserGroupGress(c));
+            this->setDeparserGroupGress(c, slice.field()->gress); }
+    } else if (isDeparsed) {
+        // Otherwise, check that the slice gress (which is equal to the
+        // container's gress at this point) matches the deparser group gress.
+        BUG_CHECK(slice.field()->gress == *deparserGroupGress,
+            "Cannot allocate %1%, because container is already assigned to %2% but has a "
+            "deparser group assigned to %3%", slice, slice.field()->gress, *deparserGroupGress); }
 
     // Update allocation.
     this->addSlice(slice.container(), slice);
@@ -282,23 +331,16 @@ void PHV::Allocation::commit(Transaction& view) {
     // XXX(cole): Add Allocation identifiers and check that this transaction
     // came from this Allocation.
 
-    for (auto kv : view.getTransactionStatus()) {
-        // Fail if any part of this field slice has already been allocated.
-        for (auto& slice : kv.second.slices) {
-            const auto& existing_alloc = slices(slice.field(), slice.field_slice());
-            BUG_CHECK(existing_alloc.size() == 0, "Trying to allocate slice %1%, but other "
-                      "overlapping slices of this field have already been allocated: %2%",
-                      cstring::to_cstring(slice), cstring::to_cstring(existing_alloc)); }
-
-        // Merge the status from the view.
-        this->addStatus(kv.first, kv.second); }
+    // Merge the status from the view.
+    for (auto kv : view.getTransactionStatus())
+        this->addStatus(kv.first, kv.second);
 
     // Clear the view.
     view.clearTransactionStatus();
 }
 
 PHV::Transaction PHV::Allocation::makeTransaction() const {
-    return Transaction(mutex_i, this);
+    return Transaction(*this);
 }
 
 /// @returns a pretty-printed representation of this Allocation.
@@ -339,9 +381,11 @@ PHV::Allocation::available_spots() const {
         PHV::Container c = Device::phvSpec().idToContainer(cid);
         auto slices = this->slices(c);
         auto gress = this->gress(c);
+        auto parserGroupGress = this->parserGroupGress(c);
+        auto deparserGroupGress = this->deparserGroupGress(c);
         // Empty
         if (slices.size() == 0) {
-            rst.insert(AvailableSpot(c, gress, c.size()));
+            rst.insert(AvailableSpot(c, gress, parserGroupGress, deparserGroupGress, c.size()));
             continue; }
         // calculate allocate bitvec
         bitvec allocatedBits;
@@ -358,7 +402,8 @@ PHV::Allocation::available_spots() const {
             int used = std::accumulate(allocatedBits.begin(),
                                        allocatedBits.end(), 0,
                                        [] (int a, int) { return a + 1; });
-            rst.insert(AvailableSpot(c, gress, c.size() - used)); }
+            rst.insert(AvailableSpot(c, gress, parserGroupGress, deparserGroupGress,
+                                     c.size() - used)); }
     }
     return rst;
 }
@@ -367,8 +412,11 @@ PHV::Allocation::available_spots() const {
  * containers that the Device pins to a particular gress are
  * initialized to that gress.
  */
-PHV::ConcreteAllocation::ConcreteAllocation(const SymBitMatrix& mutex, bitvec containers) {
-    this->mutex_i = mutex;
+PHV::ConcreteAllocation::ConcreteAllocation(
+        const SymBitMatrix& mutex,
+        const PhvUse& uses,
+        bitvec containers)
+        : PHV::Allocation(mutex, uses) {
     auto& phvSpec = Device::phvSpec();
     for (auto cid : containers) {
         PHV::Container c = phvSpec.idToContainer(cid);
@@ -376,15 +424,24 @@ PHV::ConcreteAllocation::ConcreteAllocation(const SymBitMatrix& mutex, bitvec co
         // Initialize container status with hard-wired gress info and
         // an empty alloc slice list.
         boost::optional<gress_t> gress = boost::none;
-        if (phvSpec.ingressOnly()[phvSpec.containerToId(c)])
+        boost::optional<gress_t> parserGroupGress = boost::none;
+        boost::optional<gress_t> deparserGroupGress = boost::none;
+        if (phvSpec.ingressOnly()[phvSpec.containerToId(c)]) {
             gress = INGRESS;
-        else if (phvSpec.egressOnly()[phvSpec.containerToId(c)])
+            parserGroupGress = INGRESS;
+            deparserGroupGress = INGRESS;
+        } else if (phvSpec.egressOnly()[phvSpec.containerToId(c)]) {
             gress = EGRESS;
-        container_status_i[c] = { gress, { }, PHV::Allocation::ContainerAllocStatus::EMPTY }; }
+            parserGroupGress = EGRESS;
+            deparserGroupGress = EGRESS; }
+        container_status_i[c] =
+            { gress, parserGroupGress, deparserGroupGress, { },
+              PHV::Allocation::ContainerAllocStatus::EMPTY }; }
 }
 
-PHV::ConcreteAllocation::ConcreteAllocation(const SymBitMatrix& mutex)
-: PHV::ConcreteAllocation::ConcreteAllocation(mutex, Device::phvSpec().physicalContainers()) { }
+PHV::ConcreteAllocation::ConcreteAllocation(const SymBitMatrix& mutex, const PhvUse& uses)
+: PHV::ConcreteAllocation::ConcreteAllocation(mutex, uses, Device::phvSpec().physicalContainers())
+{ }
 
 /// @returns true if this allocation owns @c.
 bool PHV::ConcreteAllocation::contains(PHV::Container c) const {
@@ -424,20 +481,43 @@ PHV::ConcreteAllocation::slices(const PHV::Field* f, le_bitrange range) const {
     return rv;
 }
 
+boost::optional<PHV::Allocation::ContainerStatus>
+PHV::ConcreteAllocation::getStatus(PHV::Container c) const {
+    if (container_status_i.find(c) != container_status_i.end())
+        return container_status_i.at(c);
+    return boost::none;
+}
+
 /// @returns the container status of @c and fails if @c is not present.
-PHV::Allocation::GressAssignment PHV::ConcreteAllocation::gress(PHV::Container c) const {
-    BUG_CHECK(container_status_i.find(c) != container_status_i.end(),
-              "Trying to get gress for container %1% not in Allocation",
+PHV::Allocation::GressAssignment PHV::Allocation::gress(PHV::Container c) const {
+    auto status = this->getStatus(c);
+    BUG_CHECK(status, "Trying to get gress for container %1% not in Allocation",
               cstring::to_cstring(c));
-    return container_status_i.at(c).gress;
+    return status->gress;
+}
+
+PHV::Allocation::GressAssignment
+PHV::Allocation::parserGroupGress(PHV::Container c) const {
+    auto status = this->getStatus(c);
+    BUG_CHECK(status, "Trying to get parser group gress for container %1% not in Allocation",
+              cstring::to_cstring(c));
+    return status->parserGroupGress;
+}
+
+PHV::Allocation::GressAssignment
+PHV::Allocation::deparserGroupGress(PHV::Container c) const {
+    auto status = this->getStatus(c);
+    BUG_CHECK(status, "Trying to get deparser group gress for container %1% not in Allocation",
+              cstring::to_cstring(c));
+    return status->deparserGroupGress;
 }
 
 PHV::Allocation::ContainerAllocStatus
-PHV::ConcreteAllocation::alloc_status(PHV::Container c) const {
-    BUG_CHECK(container_status_i.find(c) != container_status_i.end(),
-              "Trying to get allocation status for container %1% not in Allocation",
+PHV::Allocation::alloc_status(PHV::Container c) const {
+    auto status = this->getStatus(c);
+    BUG_CHECK(status, "Trying to get allocation status for container %1% not in Allocation",
               cstring::to_cstring(c));
-    return container_status_i.at(c).alloc_status;
+    return status->alloc_status;
 }
 
 /// @returns a summary of the status of each container by type and gress.
@@ -756,16 +836,11 @@ ordered_set<PHV::AllocSlice> PHV::Transaction::slices(PHV::Container c, le_bitra
     return rv;
 }
 
-PHV::Allocation::GressAssignment PHV::Transaction::gress(PHV::Container c) const {
+boost::optional<PHV::Allocation::ContainerStatus>
+PHV::Transaction::getStatus(PHV::Container c) const {
     if (container_status_i.find(c) != container_status_i.end())
-        return container_status_i.at(c).gress;
-    return parent_i->gress(c);
-}
-
-PHV::Allocation::ContainerAllocStatus PHV::Transaction::alloc_status(PHV::Container c) const {
-    if (container_status_i.find(c) != container_status_i.end())
-        return container_status_i.at(c).alloc_status;
-    return parent_i->alloc_status(c);
+        return container_status_i.at(c);
+    return parent_i->getStatus(c);
 }
 
 ordered_set<PHV::AllocSlice>
@@ -860,6 +935,7 @@ void PHV::AlignedCluster::initialize_constraints() {
     num_constraints_i = 0;
     aggregate_size_i = 0;
     alignment_i = boost::none;
+    hasDeparsedFields_i = false;
 
     for (auto& slice : slices_i) {
         // XXX(cole): These constraints will be subsumed by deparser schema.
@@ -867,6 +943,8 @@ void PHV::AlignedCluster::initialize_constraints() {
         max_width_i = std::max(max_width_i, slice.size());
         aggregate_size_i += slice.size();
         gress_i = slice.gress();
+        if (slice.field()->deparsed() || slice.field()->deparsed_to_tm())
+            hasDeparsedFields_i = true;
 
         auto s_alignment = slice.alignment();
         if (alignment_i && s_alignment && *alignment_i != *s_alignment) {
@@ -1091,7 +1169,8 @@ PHV::RotationalCluster::RotationalCluster(ordered_set<PHV::AlignedCluster*> clus
         gress_i = cluster->gress();
         max_width_i = std::max(max_width_i, cluster->max_width());
         num_constraints_i += cluster->num_constraints();
-        aggregate_size_i += cluster->aggregate_size(); }
+        aggregate_size_i += cluster->aggregate_size();
+        hasDeparsedFields_i |= cluster->deparsed(); }
 }
 
 bool PHV::RotationalCluster::operator==(const PHV::RotationalCluster& other) const {
@@ -1181,7 +1260,8 @@ PHV::SuperCluster::SuperCluster(
         gress_i = cluster->gress();
         max_width_i = std::max(max_width_i, cluster->max_width());
         num_constraints_i += cluster->num_constraints();
-        aggregate_size_i += cluster->aggregate_size(); }
+        aggregate_size_i += cluster->aggregate_size();
+        hasDeparsedFields_i |= cluster->deparsed(); }
 }
 
 void PHV::SuperCluster::calc_pack_conflicts() {
@@ -1982,28 +2062,56 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation& alloc) {
         P4C_UNIMPLEMENTED("<<(PHV::Transaction)");
         return out; }
 
-    for (auto kv : alloc) {
-        if (kv.second.slices.size() == 0) {
-            out << boost::format("%1%(%2%)\n")
-                 % cstring::to_cstring(kv.first)
-                 % cstring::to_cstring(kv.second.gress);
-            continue; }
+    auto& phvSpec = Device::phvSpec();
 
-        for (auto slice : kv.second.slices) {
-            std::stringstream container_slice;
-            std::stringstream field_slice;
-            if (slice.container_slice().size() != int(slice.container().size()))
-                container_slice << "[" << slice.container_slice().lo << ":" <<
-                slice.container_slice().hi << "]";
-            if (slice.field_slice().size() != slice.field()->size)
-                field_slice << "[" << slice.field_slice().lo << ":" <<
-                slice.field_slice().hi << "]";
-            out << boost::format("%1%(%2%)%3% %|25t| <-- %|30t|%4%%5%\n")
-                 % cstring::to_cstring(slice.container())
-                 % cstring::to_cstring(kv.second.gress)
-                 % container_slice.str()
-                 % cstring::to_cstring(slice.field())
-                 % field_slice.str(); } }
+    // Use this vector to control the order in which containers are printed,
+    // i.e. MAU groups (ordered by group) first.
+    std::vector<bitvec> order;
+
+    // Track container IDs already in order.
+    bitvec seen;
+
+    // Print containers by MAU group, then TPHV collection, then by ID for any
+    // remaining.
+    for (auto typeAndGroup : phvSpec.mauGroups()) {
+        for (auto group : typeAndGroup.second) {
+            seen |= group;
+            order.push_back(group); } }
+    for (auto tagalong : phvSpec.tagalongGroups()) {
+        seen |= tagalong;
+        order.push_back(tagalong); }
+    order.push_back(phvSpec.physicalContainers() - seen);
+
+    for (bitvec group : order) {
+        for (auto cid : group) {
+            auto container = phvSpec.idToContainer(cid);
+            auto slices = alloc.slices(container);
+            auto gress = alloc.gress(container);
+            bool hardwired = phvSpec.ingressOnly()[cid] || phvSpec.egressOnly()[cid];
+
+            if (slices.size() == 0) {
+                out << boost::format("%1%(%2%%3%)\n")
+                     % cstring::to_cstring(container)
+                     % cstring::to_cstring(gress)
+                     % (hardwired ? "-HW" : "");
+                continue; }
+
+            for (auto slice : slices) {
+                std::stringstream container_slice;
+                std::stringstream field_slice;
+                if (slice.container_slice().size() != int(slice.container().size()))
+                    container_slice << "[" << slice.container_slice().lo << ":" <<
+                    slice.container_slice().hi << "]";
+                if (slice.field_slice().size() != slice.field()->size)
+                    field_slice << "[" << slice.field_slice().lo << ":" <<
+                    slice.field_slice().hi << "]";
+                out << boost::format("%1%(%2%%6%)%3% %|25t| <-- %|30t|%4%%5%\n")
+                     % cstring::to_cstring(slice.container())
+                     % cstring::to_cstring(gress)
+                     % container_slice.str()
+                     % cstring::to_cstring(slice.field())
+                     % field_slice.str()
+                     % (hardwired ? "-HW" : ""); } } }
     return out;
 }
 

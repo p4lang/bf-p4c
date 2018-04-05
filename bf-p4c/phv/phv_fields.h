@@ -10,6 +10,7 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/phv/field_alignment.h"
 #include "bf-p4c/phv/phv.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"

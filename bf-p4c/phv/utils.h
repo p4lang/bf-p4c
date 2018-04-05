@@ -96,8 +96,17 @@ class Allocation {
     using GressAssignment = boost::optional<gress_t>;
     using MutuallyLiveSlices = ordered_set<AllocSlice>;
     enum class ContainerAllocStatus { EMPTY, PARTIAL, FULL };
+
+    /// This struct tracks PHV container state that can change during the
+    /// course of allocation, such as the thread to which this container must be
+    /// assigned, or the field slices that have been allocated to it.  Because
+    /// PHV allocation queries container status many, many times, this struct
+    /// also contains a derived `alloc_status`, which summarizes the state of
+    /// the container.
     struct ContainerStatus {
         GressAssignment gress;
+        GressAssignment parserGroupGress;
+        GressAssignment deparserGroupGress;
         ordered_set<AllocSlice> slices;
         ContainerAllocStatus alloc_status;
     };
@@ -150,10 +159,18 @@ class Allocation {
         }
     };
 
-    SymBitMatrix mutex_i;
+    // These are copied from parent to child on creating a transaction, and
+    // from child to parent on committing.
+    const SymBitMatrix* mutex_i;
+    const PhvUse* uses_i;
+    ordered_map<PHV::Size, ordered_map<ContainerAllocStatus, int>> count_by_status_i;
+
+    // For efficiency, these are NOT copied from parent to child.  Changes in
+    // the child are copied back to the parent on commit.
     ordered_map<PHV::Container, ContainerStatus> container_status_i;
     ordered_map<const PHV::Field*, FieldStatus>  field_status_i;
-    ordered_map<PHV::Size, ordered_map<ContainerAllocStatus, int>> count_by_status_i;
+
+    Allocation(const SymBitMatrix& mutex, const PhvUse& uses) : mutex_i(&mutex), uses_i(&uses) { }
 
  private:
     /// Uniform abstraction for setting container state.  For internal use
@@ -167,6 +184,19 @@ class Allocation {
     /// Uniform abstraction for setting container state.  For internal use
     /// only.  @c must exist in this Allocation.
     virtual void setGress(PHV::Container c, GressAssignment gress);
+
+    /// Uniform abstraction for setting container state.  For internal use
+    /// only.  @c must exist in this Allocation.
+    virtual void setParserGroupGress(PHV::Container c, GressAssignment gress);
+
+    /// Uniform abstraction for setting container state.  For internal use
+    /// only.  @c must exist in this Allocation.
+    virtual void setDeparserGroupGress(PHV::Container c, GressAssignment gress);
+
+    /// Uniform abstraction for accessing a container state.
+    /// @returns the ContainerStatus of this allocation, if present.  Failing
+    ///          that, check its ancestors.  If @c has no status yet, return boost::none.
+    virtual boost::optional<ContainerStatus> getStatus(PHV::Container c) const = 0;
 
     friend class Transaction;
 
@@ -251,10 +281,20 @@ class Allocation {
     }
 
     /// @returns the container status of @c and fails if @c is not present.
-    virtual GressAssignment gress(PHV::Container c) const = 0;
+    virtual GressAssignment gress(PHV::Container c) const;
+
+    /// @returns the gress of @c's parser group, if any.  If a container
+    /// holds extracted fields, then its gress must match that of its parser
+    /// group.
+    virtual GressAssignment parserGroupGress(PHV::Container c) const;
+
+    /// @returns the gress of @c's deparser group, if any.  If a container
+    /// holds deparsed fields, then its gress must match that of its deparser
+    /// group.
+    virtual GressAssignment deparserGroupGress(PHV::Container c) const;
 
     /// @returns the allocation status of @c and fails if @c is not present.
-    virtual ContainerAllocStatus alloc_status(PHV::Container c) const = 0;
+    virtual ContainerAllocStatus alloc_status(PHV::Container c) const;
 
     /// @returns the number of empty containers of size @size.
     int empty_containers(PHV::Size size) const;
@@ -292,11 +332,16 @@ class Allocation {
     struct AvailableSpot {
         PHV::Container container;
         GressAssignment gress;
+        GressAssignment parserGroupGress;
+        GressAssignment deparserGroupGress;
         int n_bits;
         AvailableSpot(const PHV::Container& c,
                       const GressAssignment& gress,
+                      const GressAssignment& parserGroupGress,
+                      const GressAssignment& deparserGroupGress,
                       int n_bits)
-            : container(c), gress(gress), n_bits(n_bits)
+            : container(c), gress(gress), parserGroupGress(parserGroupGress),
+              deparserGroupGress(deparserGroupGress), n_bits(n_bits)
             { }
         bool operator<(const AvailableSpot& other) const {
             return n_bits < other.n_bits; }
@@ -311,14 +356,19 @@ class ConcreteAllocation : public PHV::Allocation {
      * containers that the Device pins to a particular gress are
      * initialized to that gress.
      */
-    ConcreteAllocation(const SymBitMatrix&, bitvec containers);
+    ConcreteAllocation(const SymBitMatrix&, const PhvUse&, bitvec containers);
+
+    /// Uniform abstraction for accessing a container state.
+    /// @returns the ContainerStatus of this allocation, if present.  Failing
+    ///          that, check its ancestors.  If @c has no status yet, return boost::none.
+    boost::optional<ContainerStatus> getStatus(PHV::Container c) const override;
 
  public:
     /** @returns an allocation initialized with the containers present in
      * Device::phvSpec, with the gress set for any hard-wired containers, but
      * no slices allocated.
      */
-    explicit ConcreteAllocation(const SymBitMatrix&);
+    explicit ConcreteAllocation(const SymBitMatrix&, const PhvUse&);
 
     /// Iterate through container-->allocation slices.
     const_iterator begin() const override { return container_status_i.begin(); }
@@ -341,12 +391,6 @@ class ConcreteAllocation : public PHV::Allocation {
     /// allocated) or contain slices that do not fully cover all bits of @f (if
     /// @f is only partially allocated).
     ordered_set<PHV::AllocSlice> slices(const PHV::Field* f, le_bitrange range) const override;
-
-    /// @returns the container status of @c and fails if @c is not present.
-    GressAssignment gress(PHV::Container c) const override;
-
-    /// @returns the allocation status of @c and fails if @c is not present.
-    ContainerAllocStatus alloc_status(PHV::Container c) const override;
 
     /// @returns a summary of the status of each container by type and gress.
     cstring getSummary(const PhvUse& uses) const override;
@@ -375,14 +419,16 @@ class ConcreteAllocation : public PHV::Allocation {
 class Transaction : public Allocation {
     const Allocation* parent_i;
 
+    /// Uniform abstraction for accessing a container state.
+    /// @returns the ContainerStatus of this allocation, if present.  Failing
+    ///          that, check its ancestors.  If @c has no status yet, return boost::none.
+    boost::optional<ContainerStatus> getStatus(PHV::Container c) const override;
+
  public:
-    /// Constructor.  @parent cannot be null.
-    Transaction(SymBitMatrix mutex, const Allocation* parent)
-    : parent_i(parent) {
-        BUG_CHECK(parent != nullptr, "Creating transaction with null parent");
-        BUG_CHECK(parent != this, "Creating transaction with self as parent");
-        this->mutex_i = mutex;
-        this->count_by_status_i = parent_i->count_by_status_i;
+    /// Constructor.
+    explicit Transaction(const Allocation& parent)
+    : Allocation(*parent.mutex_i, *parent.uses_i), parent_i(&parent) {
+        BUG_CHECK(&parent != this, "Creating transaction with self as parent");
     }
     /// Destructor declaration. Does nothing but quiets warnings
     virtual ~Transaction() {}
@@ -412,12 +458,6 @@ class Transaction : public Allocation {
     /// allocated) or contain slices that do not fully cover all bits of @f (if
     /// @f is only partially allocated).
     ordered_set<PHV::AllocSlice> slices(const PHV::Field* f, le_bitrange range) const override;
-
-    /// @returns the container status of @c and fails if @c is not present.
-    GressAssignment gress(PHV::Container c) const override;
-
-    /// @returns the allocation status of @c and fails if @c is not present.
-    ContainerAllocStatus alloc_status(PHV::Container c) const override;
 
     /// @returns a summary of the status of each container by type and gress.
     /// @warning not yet implemented.
@@ -464,6 +504,10 @@ class ClusterStats {
 
     /// @returns the sum of the widths of slices in this cluster.
     virtual size_t aggregate_size() const = 0;
+
+    /// @returns true if any slice in the cluster is deparsed (either to the
+    /// wire or the TM).
+    virtual bool deparsed() const = 0;
 
     /// @returns true if this cluster contains @f.
     virtual bool contains(const PHV::Field* f) const = 0;
@@ -518,6 +562,7 @@ class AlignedCluster : public ClusterStats {
     int max_width_i;
     int num_constraints_i;
     size_t aggregate_size_i;
+    bool hasDeparsedFields_i;
 
     /// If any slice in the cluster needs its alignment adjusted to satisfy a
     /// PARDE constraint, then all slices do.
@@ -620,6 +665,10 @@ class AlignedCluster : public ClusterStats {
     /// @returns the sum of the widths of slices in this cluster.
     size_t aggregate_size() const override  { return aggregate_size_i; }
 
+    /// @returns true if any slice in the cluster is deparsed (either to the
+    /// wire or the TM).
+    bool deparsed() const override { return hasDeparsedFields_i; }
+
     /// @returns true if this cluster contains @f.
     bool contains(const PHV::Field* f) const override;
 
@@ -662,6 +711,7 @@ class RotationalCluster : public ClusterStats {
     int max_width_i = 0;
     int num_constraints_i = 0;
     size_t aggregate_size_i = 0;
+    bool hasDeparsedFields_i = false;
 
  public:
     explicit RotationalCluster(ordered_set<PHV::AlignedCluster*> clusters);
@@ -696,6 +746,10 @@ class RotationalCluster : public ClusterStats {
 
     /// @returns the aggregate size of all slices in all clusters in this group.
     size_t aggregate_size() const override { return aggregate_size_i; }
+
+    /// @returns true if any slice in the cluster is deparsed (either to the
+    /// wire or the TM).
+    bool deparsed() const override { return hasDeparsedFields_i; }
 
     /// @returns true if this cluster contains @f.
     bool contains(const PHV::Field* f) const override;
@@ -772,6 +826,7 @@ class SuperCluster : public ClusterStats {
     int num_constraints_i = 0;
     size_t aggregate_size_i = 0;
     size_t num_pack_conflicts_i = 0;
+    bool hasDeparsedFields_i = false;
 
  public:
     SuperCluster(
@@ -832,6 +887,10 @@ class SuperCluster : public ClusterStats {
 
     /// calculates the value of num_pack_conflicts_i (to be performed after PackConflicts analysis)
     void calc_pack_conflicts();
+
+    /// @returns true if any slice in the cluster is deparsed (either to the
+    /// wire or the TM).
+    bool deparsed() const override { return hasDeparsedFields_i; }
 
     /// @returns true if this cluster contains @f.
     bool contains(const PHV::Field* f) const override;

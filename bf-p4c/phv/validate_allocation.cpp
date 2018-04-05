@@ -97,8 +97,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
             assignedContainers[phvSpec.containerToId(slice.container)] = true;
             allocations[slice.container].emplace_back(slice);
-            threadAssignments[field.gress] |=
-                phvSpec.deparserGroup(phvSpec.containerToId(slice.container));
+
+            threadAssignments[field.gress].setbit(phvSpec.containerToId(slice.container));
 
             // Verify that the field doesn't contain any overlapping slices.
             // (Note that this is checking overlapping with respect to the
@@ -157,19 +157,57 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         std::stringstream message;
         for (gress_t gress : { INGRESS, EGRESS }) {
-            if (!fields[gress].empty()) {
+            if (!fields[gress].empty())
                 message << gress << " fields: " << fields[gress] << ". ";
-            } else {
-                auto group = phvSpec.deparserGroup(phvSpec.containerToId(container));
-                message << "Part of container deparser group assigned to "
-                        << gress << ": " << phvSpec.containerSetToString(group)
-                        << ". ";
-            }
-        }
+            else if (phvSpec.ingressOnly()[id] && gress == EGRESS)
+                message << "Container is hard-wired to INGRESS. ";
+            else if (phvSpec.egressOnly()[id] && gress == INGRESS)
+                message << "Container is hard-wired to EGRESS. ";
+            else
+                BUG("Inconsistent thread count?"); }
 
         ::error("Container %1% is assigned to both INGRESS and EGRESS. %2%",
-                container, message.str());
-    }
+                container, message.str()); }
+
+    // Check for consistent container thread assignment within deparser groups.
+    std::set<unsigned> visitedCIDs;
+    for (auto& field : phv) {
+        if (!uses.is_referenced(&field) || clot.clot(&field)) continue;
+        if (!field.deparsed()) continue;
+        for (auto& slice : field.alloc_i) {
+            auto this_cid = phvSpec.containerToId(slice.container);
+            if (visitedCIDs.count(this_cid)) continue;
+
+            auto deparserGroup = phvSpec.deparserGroup(this_cid);
+            auto writtenDeparserGroup = deparserGroup;
+
+            // Find the containers in this deparser group with deparsed fields.
+            bool hasGress[2] = { false, false };
+            for (auto cid : deparserGroup) {
+                visitedCIDs.insert(cid);
+                auto container = phvSpec.idToContainer(cid);
+
+                bool hasDeparsed = false;
+                for (auto slice : allocations[container]) {
+                    if (!slice.field->deparsed()) continue;
+                    hasDeparsed = true;
+                    hasGress[slice.field->gress] = true; }
+                if (!hasDeparsed)
+                    writtenDeparserGroup.clrbit(cid); }
+
+            if (hasGress[INGRESS] && hasGress[EGRESS]) {
+                std::stringstream message;
+                for (auto cid : writtenDeparserGroup) {
+                    auto container = phvSpec.idToContainer(cid);
+                    message << "    Container " << container
+                            << (phvSpec.ingressOnly()[cid] ? "(hardwired INGRESS)" : "")
+                            << (phvSpec.egressOnly()[cid] ? "(hardwired EGRESS)" : "")
+                            << " with field slices" << std::endl;
+                    for (auto slice : allocations[container])
+                        message << "        " << slice.field << " " << slice.field_bits()
+                                << std::endl; }
+                ::error("Containers are in the same deparser group but assigned fields of "
+                        "both INGRESS and EGRESS:\n%1%", message.str()); } } }
 
     std::vector<const PHV::Field*> deparseSequence;
     std::map<const PHV::Field*, std::vector<size_t>> deparseOccurrences;

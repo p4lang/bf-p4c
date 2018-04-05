@@ -35,6 +35,8 @@ struct AllocScore {
     using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
     struct ScoreByKind {
         int n_set_gress;
+        int n_set_parser_group_gress;
+        int n_set_deparser_group_gress;
         int n_overlay_bits;
         int n_packing_bits;  // how many wasted bits in partial container get used.
         int n_inc_containers;
@@ -43,6 +45,10 @@ struct AllocScore {
         // The number of CLOT-eligible bits that have been allocated to PHV
         // (JBay only).
         int n_clot_bits;
+
+        // The number of containers in a deparser group allocated to
+        // non-deparsed fields of a different gress than the deparser group.
+        int n_mismatched_deparser_gress;
 
         // The difference in the number of PHV containers available by size.
         // Lower is better, as it indicates that roughly the same number of 8b,
@@ -132,10 +138,10 @@ class CoreAllocation {
 
     /// @returns true if @c satisfies CCGF constraints on CCGF field @f given
     /// allocation @alloc.
-    static bool satisfies_CCGF_constraints(
+    bool satisfies_CCGF_constraints(
         const PHV::Allocation& alloc,
         const PHV::Field *f,
-        PHV::Container c);
+        PHV::Container c) const;
 
     /// @returns true if @container_group and @cluster_group satisfy constraints.
     /// XXX(cole): figure out what, if any, constraints should go here.
@@ -395,7 +401,7 @@ class AllocatePHV : public Inspector {
 
     /// @returns a concrete allocation.
     PHV::ConcreteAllocation make_concrete_allocation() const {
-        return PHV::ConcreteAllocation(mutex_i); }
+        return PHV::ConcreteAllocation(mutex_i, uses_i); }
 
     /** @returns the container groups available on this Device.  All fields in
      * a cluster must be allocated to the same container group.

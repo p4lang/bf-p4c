@@ -262,7 +262,7 @@ endif() # PTF_REQUIREMENTS_MET
 
 # BRIG-528
 p4c_add_xfail_reason("jbay"
-  "unexpected packet output on port .*"
+  ".* expected packet on port .* not seen"
   extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
 )
 
@@ -287,3 +287,11 @@ p4c_add_xfail_reason("jbay"
   # extensions/p4_tests/p4_16/brig-532.p4
   tor.p4
   )
+
+# This test is tailored to fill Tofino's PHV.  It is expected to fail on JBay
+# until the compiler can take full advantage of all PHV container types.  (And
+# maybe even after that.)
+p4c_add_xfail_reason("jbay"
+  "PHV allocation was not successful"
+  extensions/p4_tests/p4_14/deparser_group_allocation_1.p4
+)
