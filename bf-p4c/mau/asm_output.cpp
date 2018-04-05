@@ -2210,7 +2210,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
 
     auto name = tbl->get_use_name(meter);
     out << indent++ << "meter " << name << ":" << std::endl;
-    out << indent << "p4: { name: " << canon_name(meter->name) << " }" << std::endl;
+    out << indent << "p4: { name: " << canon_name(meter->name);
+    if (!meter->direct)
+        out << ", size: " << meter->size;
+    out << " }" << std::endl;
     if (meter->input)
         self.emit_ixbar(out, indent, &tbl->resources->meter_ixbar, nullptr, nullptr, nullptr,
                         false);
@@ -2252,7 +2255,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     }
     cstring name = tbl->get_use_name(as);
     out << indent++ << "selection " << name << ":" << std::endl;
-    out << indent << "p4: { name: " << canon_name(as->name) << " }" << std::endl;
+    out << indent << "p4: { name: " << canon_name(as->name);
+    if (!as->direct && as->size != 0)
+        out << ", size: " << as->size;
+    out << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar,
                     nullptr, nullptr, nullptr, false);
@@ -2310,7 +2316,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
 
     auto name = tbl->get_use_name(salu);
     out << indent++ << "stateful " << name << ':' << std::endl;
-    out << indent << "p4: { name: " << canon_name(salu->name) << " }" << std::endl;
+    out << indent << "p4: { name: " << canon_name(salu->name);
+    if (!salu->direct)
+        out << ", size: " << salu->size;
+    out << " }" << std::endl;
     if (salu->selector)
         self.emit_memory(out, indent, *self.selector_memory.at(salu->selector));
     else
