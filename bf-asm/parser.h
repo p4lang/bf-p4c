@@ -48,7 +48,7 @@ class Parser : public Section {
         void pass2(Parser *);
         template<class REGS> void write_config(REGS &, Parser *);
         template<class REGS>
-        void write_output_config(REGS &, void *, unsigned &) const;
+        void write_output_config(REGS &, Parser *, void *, unsigned &) const;
     private:
         template <typename ROW> void write_row_config(ROW &row_regs);
     };

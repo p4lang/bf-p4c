@@ -158,7 +158,7 @@ phv_8b_slots[] = {
 };
 
 template <>
-void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, void *_map, unsigned &used) const
+void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Parser *pa, void *_map, unsigned &used) const
 {   
     if (type != 0) return;
 
@@ -173,8 +173,11 @@ void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, vo
     else if (dest->reg.size == 32) usable_slots = phv_32b_slots;
 
     auto &slot = usable_slots[3];
-    *map[slot.idx].dst = dest->reg.parser_id();
+    int id = dest->reg.parser_id();
+    *map[slot.idx].dst = id;
     used |= slot.usemask;
+
+    pa->phv_allow_multi_write[id] = 1;
 }
 
 template <>

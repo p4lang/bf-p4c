@@ -1295,7 +1295,7 @@ void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state, Ma
         priority.write_config(action_row);
     void *output_map = pa->setup_phv_output_map(regs, state->gress, row);
     unsigned used = 0;
-    for (auto &c : csum) c.write_output_config(regs, output_map, used);
+    for (auto &c : csum) c.write_output_config(regs, pa, output_map, used);
     for (auto &s : set) s.write_output_config(regs, output_map, used);
     if (def) for (auto &s : def->set) s.write_output_config(regs, output_map, used);
     for (auto &s : save)

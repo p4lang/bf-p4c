@@ -10,7 +10,7 @@ template <> void Parser::Checksum::write_config(Target::JBay::parser_regs &regs,
 }
 
 template <>
-void Parser::Checksum::write_output_config(Target::JBay::parser_regs &regs, void *_map, unsigned &used) const
+void Parser::Checksum::write_output_config(Target::JBay::parser_regs &regs, Parser *pa, void *_map, unsigned &used) const
 {
     // TODO
 }
