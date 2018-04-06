@@ -42,8 +42,6 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".noop") action noop_0() {
     }
-    @name(".noop") action noop_2() {
-    }
     @name(".set_test1") action set_test1_0(bit<12> param, bit<9> port) {
         hdr.write_values.x1 = param;
         hdr.write_values.x2 = param;
@@ -68,19 +66,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = noop_0();
     }
-    @name(".test1_result") table test1_result {
+    @name(".test1_result2") table test1_result2 {
         actions = {
             xor_result_0();
-            noop_2();
         }
-        key = {
-            hdr.read_values.f1: exact @name("read_values.f1") ;
-        }
-        default_action = noop_2();
+        default_action = xor_result_0();
     }
     apply {
-        test1.apply();
-        test1_result.apply();
+        switch (test1.apply().action_run) {
+            xor_test1_0: {
+                test1_result2.apply();
+            }
+        }
+
     }
 }
 

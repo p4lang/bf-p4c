@@ -81,25 +81,16 @@ table test1_result {
     default_action : noop;
 }
 
-/*
 table test1_result2 {
     actions {
         xor_result;
     }
     default_action : xor_result;
 }
-*/
 
 control ingress {
-    apply(test1);
-    apply(test1_result);
-// FIXME: The following control flow didn't work, will fix in later PR.
-/*
     apply(test1) {
-        xor_test1 { apply(test1_result2) };
+        xor_test1 { apply(test1_result2); }
     }
-
- */
-
 }
 

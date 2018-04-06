@@ -41,6 +41,7 @@ template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs,
         if (n.name == "END") {
             if (tbl->hit_next.size() == 1)
                 *map_data[0] = 0xFF;
+            hit_next_index++;
             continue; }
         if (auto acts = tbl->get_actions()) {
             for (auto &act : *acts) {
