@@ -2363,14 +2363,13 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     /* iterate on the "attached" vector on all the tables in the current gress and stage until
      * we find the salu->selector we are looking for */
     if (salu->selector) {
-        auto sel = salu->selector->to<IR::MAU::Selector>();
         const IR::MAU::Table *seltbl = nullptr;
         auto ti = self.by_stage.find(std::make_pair(gress, stage));
         if (ti != self.by_stage.end()) {
             for (auto itbl : ti->second) {
                 for (auto at : itbl.tableInfo->attached) {
                     auto at_mem = at->attached;
-                    if (at_mem == sel) {
+                    if (at_mem == salu->selector) {
                         seltbl = itbl.tableInfo;
                         break;
                     }
@@ -2380,7 +2379,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
             }
         }
         if (!seltbl) {
-            BUG("SALU Selector Table not found?");
+            BUG("SALU Selector Table %s not found in stage %d with table %s", salu->selector->name,
+                stage, tbl->name);
         } else {
             out << indent << "selection_table: " << seltbl->get_use_name(salu->selector)
               << std::endl;
