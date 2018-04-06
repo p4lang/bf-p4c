@@ -25,6 +25,7 @@ for i in $veths; do
        /sbin/ethtool --offload $intf0 "$TOE_OPTION" off &> /dev/null
        /sbin/ethtool --offload $intf1 "$TOE_OPTION" off &> /dev/null
     done
-    sysctl net.ipv6.conf.$intf0.disable_ipv6=1 &> /dev/null
-    sysctl net.ipv6.conf.$intf1.disable_ipv6=1 &> /dev/null
+    # do not fail if ipv6 is disabled system-wide
+    sysctl net.ipv6.conf.$intf0.disable_ipv6=1 &> /dev/null || true
+    sysctl net.ipv6.conf.$intf1.disable_ipv6=1 &> /dev/null || true
 done
