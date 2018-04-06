@@ -1239,21 +1239,6 @@ void AllocatePHV::end_apply() {
     } else {
         formatAndThrowError(alloc, result.remaining_clusters);
     }
-
-#ifdef HAVE_JBAY
-    // Fail if CLOT-candidate fields have been allocated to PHV.
-    ordered_set<const PHV::Field*> clotCandidates;
-    for (auto& f : phv_i)
-        if (clot_i.allocated(&f) && f.alloc_i.size())
-            clotCandidates.insert(&f);
-    if (clotCandidates.size()) {
-        std::stringstream msg;
-        msg << "The following clot-candidate slices have been allocated to PHV, "
-            << "which is currently unsupported:" << std::endl;
-        for (auto* f : clotCandidates)
-            msg << f << std::endl;
-        P4C_UNIMPLEMENTED("%s", msg.str()); }
-#endif
 }
 
 bool AllocatePHV::onlyPrivatizedFieldsUnallocated(

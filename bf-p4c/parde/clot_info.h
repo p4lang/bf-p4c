@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_PARDE_CLOT_INFO_H_
 
 #include "clot.h"
+#include "lib/ordered_map.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -15,8 +16,10 @@ class ClotInfo {
 
     PhvUse &uses;
 
-    // XXX(zma) fix non determinism
-    std::map<const IR::BFN::ParserState*, std::vector<const PHV::Field*>> all_fields_;
+    ordered_map<const IR::BFN::ParserState*,
+                std::vector<const PHV::Field*>> parser_state_to_fields_;
+
+    ordered_map<const PHV::Field*, const IR::BFN::ParserState*> field_to_parser_state_;
 
     std::vector<const Clot*> clots_;
     std::map<const Clot*, const IR::BFN::ParserState*> clot_to_parser_state_;
@@ -71,7 +74,9 @@ class ClotInfo {
     }
 
     void clear() {
-        all_fields_.clear();
+        parser_state_to_fields_.clear();
+        field_to_parser_state_.clear();
+
         clots_.clear();
         clot_to_parser_state_.clear();
         parser_state_to_clots_.clear();

@@ -35,7 +35,7 @@ void ClotInfo::dbprint(std::ostream &out) const {
     unsigned total_unused_bits = 0;
 
     out << "all unsed fields :" << std::endl;
-    for (auto kv : all_fields_) {
+    for (auto kv : parser_state_to_fields_) {
         for (auto f : kv.second) {
             if (is_clot_candidate(f)) {
                 out << "    " << f->name << " : " << f->size << std::endl;
@@ -47,7 +47,7 @@ void ClotInfo::dbprint(std::ostream &out) const {
 
     out << std::endl;
     out << "unallocated fields :" << std::endl;
-    for (auto kv : all_fields_) {
+    for (auto kv : parser_state_to_fields_) {
         for (auto f : kv.second) {
             if (is_clot_candidate(f) && !allocated(f))
                 out << "    " << f->name << " : " << f->size << std::endl;
@@ -58,10 +58,6 @@ void ClotInfo::dbprint(std::ostream &out) const {
     out << "total unused bits : " << total_unused_bits << std::endl;
     out << "total clot fields : " << total_allocated_clot_fields << std::endl;
     out << "total clot bits : " << total_allocated_clot_bits << std::endl;
-}
-
-static unsigned num_bytes(unsigned bits) {
-    return (bits + 7) / 8;
 }
 
 class CollectClotInfo : public Inspector {
@@ -82,8 +78,10 @@ class CollectClotInfo : public Inspector {
     bool preorder(const IR::BFN::Extract* extract) override {
         auto* state = findContext<IR::BFN::ParserState>();
         if (extract->source->is<IR::BFN::PacketRVal>()) {
-            if (auto f = phv.field(extract->dest->field))
-                clotInfo.all_fields_[state].push_back(f);
+            if (auto f = phv.field(extract->dest->field)) {
+                clotInfo.parser_state_to_fields_[state].push_back(f);
+                clotInfo.field_to_parser_state_[f] = state;
+            }
         }
         return false;
     }
@@ -113,7 +111,7 @@ class CollectClotInfo : public Inspector {
 
   TODO
       1) Currently, a field is either in CLOT or PHV. There might be cases that
-         it's beneficical to break a field into bytes.
+         it's beneficical to break a field into slices.
       2) Inter-state CLOT analysis: this is useful when the maximal gain for a CLOT
          straddles the state boundary.
 
@@ -131,6 +129,11 @@ class NaiveClotAlloc : public Visitor {
     std::map<const IR::BFN::ParserState*, unsigned> tail_gap_credit_map;
     std::map<const IR::BFN::ParserState*, unsigned> head_gap_credit_map;
 
+    std::map<const IR::BFN::ParserState*,
+             std::map<const PHV::Field*, std::set<unsigned>>> field_to_byte_idx;
+    std::map<const IR::BFN::ParserState*,
+             std::map<unsigned, std::set<const PHV::Field*>>> byte_idx_to_field;
+
     unsigned num_live_clots = 0;
 
  public:
@@ -141,36 +144,95 @@ class NaiveClotAlloc : public Visitor {
 
     struct ClotAlloc {
         ClotAlloc(const IR::BFN::ParserState* state, unsigned unused, unsigned total) :
-            state(state), unused_bytes(unused), total_bytes(total) {}
+            state(state), unused_bits(unused), total_bits(total) {}
 
         const IR::BFN::ParserState* state;
-        unsigned unused_bytes = 0;
-        unsigned total_bytes = 0;
+        unsigned unused_bits = 0;
+        unsigned total_bits = 0;
         bool operator<(const ClotAlloc& rhs) const {
-            if (unused_bytes < rhs.unused_bytes) return true;
-            if (unused_bytes > rhs.unused_bytes) return false;
-            if (total_bytes < rhs.total_bytes) return true;
-            if (total_bytes > rhs.total_bytes) return false;
+            if (unused_bits < rhs.unused_bits) return true;
+            if (unused_bits > rhs.unused_bits) return false;
+            if (total_bits < rhs.total_bits) return true;
+            if (total_bits > rhs.total_bits) return false;
             return state->id < rhs.state->id;
         }
     };
 
+    // figure out which fields live in which bytes
+    void compute_field_byte_map() {
+        for (auto kv : clotInfo.parser_state_to_fields_) {
+            auto state = kv.first;
+            auto& fields_in_state = kv.second;
+            unsigned bits = 0;
+
+            for (auto f : fields_in_state) {
+                unsigned start_byte =  bits / 8;
+                unsigned end_byte = (bits + f->size - 1) / 8;
+
+                for (unsigned i = start_byte; i <= end_byte; i++) {
+                    field_to_byte_idx[state][f].insert(i);
+                    byte_idx_to_field[state][i].insert(f);
+                }
+
+                bits += f->size;
+            }
+        }
+
+        if (LOGGING(4)) {
+            for (auto kv : field_to_byte_idx) {
+                std::cout << "state: " << kv.first->name << std::endl;
+                for (auto fb : kv.second) {
+                    std::cout << fb.first->name << " in byte";
+                    for (auto id : fb.second)
+                        std::cout << " " << id;
+                    std::cout << std::endl;
+                }
+            }
+
+            for (auto kv : byte_idx_to_field) {
+                std::cout << "state: " << kv.first->name << std::endl;
+                for (auto bf : kv.second) {
+                    std::cout << "Byte " << bf.first << " has:";
+                    for (auto f : bf.second)
+                        std::cout << " " << f->name;
+                    std::cout << std::endl;
+                }
+            }
+        }
+    }
+
+    bool is_packed_with_phv_field(const PHV::Field* f) {
+        auto state = clotInfo.field_to_parser_state_.at(f);
+        for (auto id : field_to_byte_idx.at(state).at(f)) {
+            for (auto ff : byte_idx_to_field.at(state).at(id)) {
+                if (!clotInfo.is_clot_candidate(ff))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool can_allocate_to_clot(const PHV::Field* f) {
+        return clotInfo.is_clot_candidate(f) && !is_packed_with_phv_field(f);
+    }
+
     std::array<std::vector<ClotAlloc>, 2> compute_requirement() {
        std::array<std::vector<ClotAlloc>, 2> req;
 
-       for (auto& hdrs : clotInfo.all_fields_) {
+       for (auto& hdrs : clotInfo.parser_state_to_fields_) {
            auto* state = hdrs.first;
 
-           unsigned state_unused_bytes = 0;
-           unsigned state_total_bytes = 0;
+           unsigned state_unused_bits = 0;
+           unsigned state_total_bits = 0;
 
            for (auto f : hdrs.second) {
-               if (clotInfo.is_clot_candidate(f))
-                   state_unused_bytes += num_bytes(f->size);
-               state_total_bytes += num_bytes(f->size);
+               if (can_allocate_to_clot(f))
+                   state_unused_bits += f->size;
+               state_total_bits += f->size;
            }
 
-           ClotAlloc ca(state, state_unused_bytes, state_total_bytes);
+           ClotAlloc ca(state, state_unused_bits, state_total_bits);
            req[state->gress].push_back(ca);
        }
 
@@ -184,7 +246,7 @@ class NaiveClotAlloc : public Visitor {
 
        for (auto i : {0, 1} )
            for (auto ca : req[i])
-                LOG3("state " << ca.state->name << " has " << ca.unused_bytes << " unused bytes");
+                LOG3("state " << ca.state->name << " has " << ca.unused_bits << " unused bytes");
 
        return req;
     }
@@ -224,9 +286,9 @@ class NaiveClotAlloc : public Visitor {
     }
 
     bool allocate(const ClotAlloc& ca) {
-        LOG3("try allocate " << ca.state->name << ", unused = " << ca.unused_bytes);
+        LOG3("try allocate " << ca.state->name << ", unused = " << ca.unused_bits);
 
-        if (ca.unused_bytes == 0)
+        if (ca.unused_bits == 0)
             return false;
 
         unsigned head_gap_needed = calculate_gap_needed(ca.state, true  /* head */);
@@ -235,7 +297,7 @@ class NaiveClotAlloc : public Visitor {
         LOG3(head_gap_needed << " bits of head gap needed");
         LOG3(tail_gap_needed << " bits of tail gap needed");
 
-        auto& fields_in_state = clotInfo.all_fields_[ca.state];
+        auto& fields_in_state = clotInfo.parser_state_to_fields_[ca.state];
 
         unsigned head_offset = 0;
         unsigned tail_offset = 0;
@@ -266,7 +328,7 @@ class NaiveClotAlloc : public Visitor {
 
         for (unsigned i = head_index; i < tail_index; i++) {
             auto f = fields_in_state.at(i);
-            if (clotInfo.is_clot_candidate(f))
+            if (can_allocate_to_clot(f))
                 break;
             head_offset += f->size;
             head_gap_credit += f->size;
@@ -275,7 +337,7 @@ class NaiveClotAlloc : public Visitor {
 
         for (unsigned i = tail_index; i > head_index; i--) {
             auto f = fields_in_state.at(i);
-            if (clotInfo.is_clot_candidate(f))
+            if (can_allocate_to_clot(f))
                 break;
             tail_offset += f->size;
             tail_gap_credit += f->size;
@@ -350,7 +412,7 @@ class NaiveClotAlloc : public Visitor {
             if (clot->length_in_bits() + f->size > MAX_BYTES_PER_CLOT * 8)
                 break;
 
-            if (!clotInfo.is_clot_candidate(f))
+            if (!can_allocate_to_clot(f))
                 clot->phv_fields.push_back(f);
 
             clot->all_fields.push_back(f);
@@ -376,6 +438,8 @@ class NaiveClotAlloc : public Visitor {
     }
 
     const IR::Node *apply_visitor(const IR::Node *n, const char *) override {
+        compute_field_byte_map();
+
         std::array<std::vector<ClotAlloc>, 2> req = compute_requirement();
 
         allocate(req[0]);  // ingress
