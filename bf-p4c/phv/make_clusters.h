@@ -12,6 +12,7 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/lib/union_find.hpp"
 #include "bf-p4c/phv/utils.h"
+#include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/mau/gateway.h"
 
 namespace PHV {
@@ -39,6 +40,7 @@ class PhvInfo;
 class Clustering : public PassManager {
     PhvInfo& phv_i;
     PhvUse& uses_i;
+    const PackConflicts& conflicts_i;
 
     /// Holds all aligned clusters.  Every slice is in exactly one cluster.
     std::list<PHV::AlignedCluster *> aligned_clusters_i;
@@ -206,6 +208,7 @@ class Clustering : public PassManager {
     class MakeSuperClusters : public Inspector {
         Clustering& self;
         PhvInfo& phv_i;
+        const PackConflicts& conflicts_i;
 
         /// Track headers already visited, by tracking the IDs of the first
         /// fields.
@@ -227,12 +230,12 @@ class Clustering : public PassManager {
 
      public:
         explicit MakeSuperClusters(Clustering &self)
-        : self(self), phv_i(self.phv_i) { }
+        : self(self), phv_i(self.phv_i), conflicts_i(self.conflicts_i) { }
     };
 
  public:
-    Clustering(PhvInfo &p, PhvUse &u)
-    : phv_i(p), uses_i(u) {
+    Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c)
+    : phv_i(p), uses_i(u), conflicts_i(c) {
         addPasses({
             new ClearClusteringStructs(*this),      // clears pre-existing maps
             new FindComplexValidityBits(*this),     // populates complex_validity_bits_i

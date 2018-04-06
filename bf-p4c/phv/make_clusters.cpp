@@ -549,6 +549,17 @@ void Clustering::MakeSuperClusters::end_apply() {
         // NB: Use references to mutate the appropriate list/counter.
         auto& current_list = f.gress == INGRESS ? ingress_list : egress_list;
         int& current_list_bits = f.gress == INGRESS ? ingress_list_bits : egress_list_bits;
+
+        // Check if any no-pack constraints have been inferred on the candidate field f and any
+        // other field already in the slice list.
+        bool any_pack_conflicts = std::any_of(current_list->begin(), current_list->end(),
+                [&](const PHV::FieldSlice& slice) {
+                    return conflicts_i.hasPackConflict(&f, slice.field());
+                });
+        if (any_pack_conflicts) {
+            LOG5("Ignoring POV bit " << f.name << " because of a pack conflict");
+            continue; }
+
         current_list->push_back(PHV::FieldSlice(&f));
         current_list_bits += f.size;
 

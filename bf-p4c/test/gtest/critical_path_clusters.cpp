@@ -14,7 +14,12 @@
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
+#include "bf-p4c/phv/mau_backtracker.h"
+#include "bf-p4c/mau/action_mutex.h"
+#include "bf-p4c/mau/table_mutex.h"
+#include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
+#include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/pragma/pa_mutually_exclusive.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
@@ -94,6 +99,9 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    PhvUse& uses,
                                    FieldDefUse& defuse,
                                    Clustering& clustering,
+                                   MauBacktracker& table_alloc,
+                                   DependencyGraph& deps,
+                                   PackConflicts& conflicts,
                                    CalcParserCriticalPath& parser_critical_path) {
     PHV::Pragmas* pragmas = new PHV::Pragmas(phv);
     PassManager quick_backend = {
@@ -102,11 +110,14 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
         new DoInstructionSelection(phv),
         &defuse,
         new ElimUnused(phv, defuse),
+        &table_alloc,
         &uses,
         pragmas,
         new ParserOverlay(phv, *pragmas),
         &parser_critical_path,
+        new FindDependencyGraph(phv, deps),
         &defuse,
+        &conflicts,
         new PHV_Field_Operations(phv),
         &clustering,
     };
@@ -167,14 +178,21 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
 
     SymBitMatrix mutex;
     PhvInfo phv(mutex);
+    MauBacktracker table_alloc(phv.field_mutex);
+    DependencyGraph deps;
+    TablesMutuallyExclusive table_mutex;
+    ActionMutuallyExclusive action_mutex;
+    PackConflicts conflicts(phv, deps, table_mutex, table_alloc, action_mutex);
     CalcParserCriticalPath parser_critical_path(phv);
     FieldDefUse defuse(phv);
     PhvUse uses(phv);
-    Clustering clustering(phv, uses);
+    Clustering clustering(phv, uses, conflicts);
 
     auto *post_pm_pipe = runMockPasses(test->pipe, phv, uses,
                                        defuse,
                                        clustering,
+                                       table_alloc,
+                                       deps, conflicts,
                                        parser_critical_path);
 
     auto *cluster_cp = new CalcCriticalPathClusters(parser_critical_path);
