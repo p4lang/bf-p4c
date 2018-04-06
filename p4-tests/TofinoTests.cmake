@@ -15,7 +15,7 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
   "switch_ent_dc_general" ${switchtest} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
 p4c_add_test_label("tofino" "17Q4Goal" "switch_ent_dc_general")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "switch_ent_dc_aggr" ${switchtest} "${testExtraArgs} -DENT_DC_AGGR_PROFILE")
 p4c_add_test_label("tofino" "17Q4Goal" "switch_ent_dc_aggr")
 
@@ -25,6 +25,11 @@ p4c_add_test_label("tofino" "17Q4Goal" "switch_msdc")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "switch_l2" ${switchtest} "${testExtraArgs} -DL2_PROFILE")
+
+set  (SWITCH_P4_16 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch/p4_16src/switch.p4)
+file (RELATIVE_PATH switch_test ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "switch_p4_16" ${switch_test} "${testExtraArgs} -nop4info")
 
 set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main|common_v1_test")
 set (V1_EXCLUDE_PATTERNS "package" "extern")

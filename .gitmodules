@@ -32,3 +32,6 @@
 [submodule "p4-tests/p4testutils"]
 	path = p4-tests/p4testutils
 	url = git@github.com:barefootnetworks/ptf-utils.git
+[submodule "p4-tests/p4_16/switch"]
+	path = p4-tests/p4_16/switch
+	url = git@github.com:barefootnetworks/switch.git

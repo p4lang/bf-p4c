@@ -30,6 +30,7 @@ run_ptf=false
 run_pd=false
 ptftestdir=""
 device="tofino"
+p4info=true
 
 die() {
     if [ $# -gt 0 ]; then
@@ -128,6 +129,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "   -to <sec>      timeout programs after <sec> seconds (default 30)"
         echo >&2 "   -ptf           run PTF tests if available"
         echo >&2 "   -pd            run PTF PD tests if available"
+        echo >&2 "   -nop4info      not generate p4info"
         echo >&2 "   -ptfdir <dir>  directory containing PTF tests"
         echo >&2 "   -tofino        target tofino"
         echo >&2 "   -jbay          target jbay"
@@ -158,6 +160,9 @@ while [ $# -gt 1 ]; do
         ;;
     -pd)
         run_pd=true
+        ;;
+    -nop4info)
+        p4info=false
         ;;
     -ptfdir)
         ptftestdir=$2
@@ -256,8 +261,10 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     has_stf=true
 fi
 
-p4runtime_out=$testdir/${name}${out_ext}.out/p4info.proto.txt
-P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
+if $p4info; then
+    p4runtime_out=$testdir/${name}${out_ext}.out/p4info.proto.txt
+    P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
+fi
 
 if $run_ptf || $run_stf2ptf; then
     P4C_ARGS="$P4C_ARGS -DCPU_PORT=320 -Xlinker='--singlepipe' -Xassembler='--pipe0'"
