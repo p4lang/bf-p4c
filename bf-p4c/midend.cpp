@@ -1,7 +1,5 @@
 #include "midend.h"
-#include "arch/native.h"
-#include "arch/simple_switch.h"
-#include "arch/portable_switch.h"
+
 #include "frontends/common/constantFolding.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/evaluator/evaluator.h"
@@ -33,6 +31,7 @@
 #include "common/blockmap.h"
 #include "common/check_header_alignment.h"
 #include "common/flatten_emit_args.h"
+#include "bf-p4c/arch/arch.h"
 
 namespace BFN {
 
@@ -142,12 +141,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new BFN::CheckHeaderAlignment(&typeMap),
         new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
         new P4::RemoveActionParameters(&refMap, &typeMap),
-        (options.arch == "v1model") ?
-            new BFN::SimpleSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
-        (options.arch == "tna") ?
-            new BFN::LowerTofinoToStratum(&refMap, &typeMap, options /*map*/) : nullptr,
-        (options.arch == "psa") ?
-        new BFN::PortableSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
+        new BFN::ArchTranslation(&refMap, &typeMap, options),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::SimplifyKey(&refMap, &typeMap,
                             new P4::OrPolicy(

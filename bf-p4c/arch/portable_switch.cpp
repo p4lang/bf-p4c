@@ -1,6 +1,6 @@
 #include <cmath>
 #include "bf-p4c/device.h"
-#include "architecture.h"
+#include "intrinsic_metadata.h"
 #include "portable_switch.h"
 #include "rewrite_packet_path.h"
 #include "lib/bitops.h"

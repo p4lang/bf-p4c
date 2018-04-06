@@ -335,9 +335,10 @@ endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_HDRS}")
 
 set (BF_P4C_BACKEND_ARCH_SRCS
+  arch/arch.cpp
   arch/bridge_metadata.cpp
   arch/internal/collect_bridged_fields.cpp
-  arch/native.cpp
+  arch/jbay_native.cpp
   arch/phase0.cpp
   arch/portable_switch.cpp
   arch/program_structure.cpp
@@ -347,6 +348,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/remove_set_metadata.cpp
   arch/rewrite_packet_path.cpp
   arch/simple_switch.cpp
+  arch/tofino_native.cpp
   arch/v1_converters.cpp
   arch/v1_program_structure.cpp
   )
@@ -354,10 +356,11 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
 build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_ARCH_HDRS
-  arch/architecture.h
+  arch/arch.h
+  arch/intrinsic_metadata.h
   arch/bridge_metadata.h
   arch/internal/collect_bridged_fields.h
-  arch/native.h
+  arch/jbay_native.h
   arch/phase0.h
   arch/portable_switch.h
   arch/program_structure.h
@@ -367,6 +370,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/remove_set_metadata.h
   arch/rewrite_packet_path.h
   arch/simple_switch.h
+  arch/tofino_native.h
   arch/v1_converters.h
   arch/v1_program_structure.h
   )

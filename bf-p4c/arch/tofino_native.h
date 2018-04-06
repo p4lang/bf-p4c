@@ -1,5 +1,5 @@
-#ifndef BF_P4C_ARCH_NATIVE_H_
-#define BF_P4C_ARCH_NATIVE_H_
+#ifndef BF_P4C_ARCH_TOFINO_NATIVE_H_
+#define BF_P4C_ARCH_TOFINO_NATIVE_H_
 
 #include "ir/ir.h"
 
@@ -44,4 +44,4 @@ struct LowerTofinoToStratum : public PassManager {
 
 }  // namespace BFN
 
-#endif /* BF_P4C_ARCH_NATIVE_H_ */
+#endif /* BF_P4C_ARCH_TOFINO_NATIVE_H_ */

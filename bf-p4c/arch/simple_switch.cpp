@@ -12,6 +12,7 @@
 #include "program_structure.h"
 #include "remove_set_metadata.h"
 #include "simple_switch.h"
+#include "intrinsic_metadata.h"
 
 namespace BFN {
 
@@ -1627,28 +1628,28 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
     addPasses({
         new P4::TypeChecking(refMap, typeMap, true),
         new RemoveExternMethodCallsExcludedByAnnotation,
-        new BFN::V1::NormalizeProgram(),
+        new V1::NormalizeProgram(),
         evaluator,
         new VisitFunctor([structure, evaluator]() {
             structure->toplevel = evaluator->getToplevelBlock(); }),
         new TranslationFirst(),
-        new BFN::V1::LoadTargetArchitecture(structure),
-        new BFN::V1::RemoveNodesWithNoMapping(),
-        new BFN::V1::AnalyzeProgram(structure),
-        new BFN::V1::TranslateVerifyChecksums(structure, refMap, typeMap),
-        new BFN::V1::ConstructSymbolTable(structure, refMap, typeMap),
-        new BFN::GenerateTofinoProgram(structure),
-        new BFN::TranslationLast(),
-        new BFN::AddIntrinsicMetadata,
+        new V1::LoadTargetArchitecture(structure),
+        new V1::RemoveNodesWithNoMapping(),
+        new V1::AnalyzeProgram(structure),
+        new V1::TranslateVerifyChecksums(structure, refMap, typeMap),
+        new V1::ConstructSymbolTable(structure, refMap, typeMap),
+        new GenerateTofinoProgram(structure),
+        new TranslationLast(),
+        new AddIntrinsicMetadata,
         new P4::ClonePathExpressions,
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
-        new BFN::RemoveSetMetadata(refMap, typeMap),
-        new BFN::TranslatePhase0(refMap, typeMap),
+        new RemoveSetMetadata(refMap, typeMap),
+        new TranslatePhase0(refMap, typeMap),
         new P4::ClonePathExpressions,
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
-        new BFN::BridgeMetadata(refMap, typeMap),
+        new BridgeMetadata(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
     });

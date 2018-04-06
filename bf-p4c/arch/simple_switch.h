@@ -17,28 +17,19 @@
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/arch/v1_program_structure.h"
 #include "bf-p4c/arch/v1_converters.h"
-#include "bf-p4c/arch/architecture.h"
+#include "bf-p4c/arch/arch.h"
 
 namespace BFN {
-
-enum class Target { Unknown, Simple, Tofino, Portable };
-enum class BlockType { Unknown, Parser, Ingress, Egress, Deparser};
-
-std::ostream& operator<<(std::ostream& out, BlockType block);
-bool operator>>(cstring s, BlockType& blockType);
-
 
 class SimpleSwitchTranslation : public PassManager {
  public:
     V1::ProgramStructure structure;
-    Target   target;
     const IR::ToplevelBlock   *toplevel = nullptr;
 
     SimpleSwitchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, BFN_Options& options);
 
     const IR::ToplevelBlock* getToplevelBlock() { CHECK_NULL(toplevel); return toplevel; }
 };
-
 
 }  // namespace BFN
 

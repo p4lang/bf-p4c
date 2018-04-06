@@ -16,7 +16,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/arch/psa_program_structure.h"
-#include "bf-p4c/arch/architecture.h"
+#include "bf-p4c/arch/arch.h"
 
 namespace BFN {
 
