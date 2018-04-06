@@ -278,4 +278,5 @@ void CollectBridgedFields::end_apply() {
     }
 }
 
+
 }  // namespace BFN

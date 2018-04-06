@@ -7,6 +7,14 @@ namespace BFN {
 
 namespace PSA {
 
+const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
+    auto* orig = getOriginal<IR::Declaration_Instance>();
+    if (structure->_map.count(orig)) {
+        auto result = structure->_map.at(orig);
+        return result; }
+    return node;
+}
+
 const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     auto parser = node->apply(cloner);
     auto params = parser->type->getApplyParameters();
@@ -453,7 +461,13 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
         BUG_CHECK(!nameMap.empty(), "metadata translation map cannot be empty");
         auto it = nameMap.find(MetadataField{pathname, membername, type->size});
         if (it != nameMap.end()) {
-            auto expr = new IR::PathExpression(it->second.structName);
+            IR::Expression* expr;
+            if (it->second.isCG) {
+                auto path = new IR::PathExpression("compiler_generated_meta");
+                expr = new IR::Member(path, it->second.structName);
+            } else {
+                expr = new IR::PathExpression(it->second.structName);
+            }
             auto member = new IR::Member(node->srcInfo, expr, it->second.fieldName);
             member->type = IR::Type::Bits::get(it->second.width);
 

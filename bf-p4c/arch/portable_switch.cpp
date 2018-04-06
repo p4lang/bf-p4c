@@ -5,6 +5,7 @@
 #include "rewrite_packet_path.h"
 #include "lib/bitops.h"
 #include "midend/convertEnums.h"
+#include "bridge_metadata.h"
 #include "midend/copyStructures.h"
 
 namespace BFN {
@@ -24,18 +25,6 @@ class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
     unsigned enumSize(unsigned /* size */) const override { return 8; }
 };
 
-/// @pre: assume no nested control block or parser block,
-///       as a result, all declarations within a control block have different names.
-/// @post: all user provided names for metadata are converted to standard names
-///       assumed by the translation map in latter pass.
-class NormalizeProgram : public Transform {
-    ordered_map<cstring, std::vector<const IR::Node *> *> namescopes;
-    ordered_map<cstring, cstring> renameMap;
-    ordered_map<cstring, cstring> aliasMap;
- public:
-    NormalizeProgram() {}
-};
-
 class AnalyzeProgram : public Inspector {
     template<class P4Type, class BlockType>
     void analyzeArchBlock(cstring gressName, cstring blockName, cstring type) {
@@ -52,7 +41,9 @@ class AnalyzeProgram : public Inspector {
     }
 
  public:
-    explicit AnalyzeProgram(PSA::ProgramStructure* structure) : structure(structure)
+    explicit AnalyzeProgram(PSA::ProgramStructure* structure,
+                            P4::ReferenceMap *refMap, P4::TypeMap *typeMap)
+        : structure(structure), refMap(refMap), typeMap(typeMap)
     { CHECK_NULL(structure); setName("AnalyzePsaProgram"); }
 
     bool preorder(const IR::P4Program*) override {
@@ -87,12 +78,10 @@ class AnalyzeProgram : public Inspector {
     void postorder(const IR::Type_Enum* node) override
     { structure->enums.emplace(node->name, node); }
     void postorder(const IR::P4Parser* node) override {
-        LOG1("process parser " << node);
         structure->parsers.emplace(node->name, node);
         process_packet_path_params(node);
     }
     void postorder(const IR::P4Control* node) override {
-        LOG1("process control " << node);
         structure->controls.emplace(node->name, node);
         process_packet_path_params(node);
     }
@@ -101,15 +90,31 @@ class AnalyzeProgram : public Inspector {
     void end_apply() override {
         auto* cgAnnotation = new IR::Annotations({
              new IR::Annotation(IR::ID("__compiler_generated"), { })});
+
         auto cgm = new IR::Type_Struct("compiler_generated_metadata_t", cgAnnotation);
-        auto pktPath = new IR::StructField("packet_path", IR::Type::Bits::get(8));
-        cgm->fields.push_back(pktPath);
+        cgm->fields.push_back(
+            new IR::StructField("mirror_id", IR::Type::Bits::get(10)));
+        cgm->fields.push_back(
+            new IR::StructField("packet_path", IR::Type::Bits::get(8)));
         // TODO(hanw): Map clone_src + clone_digest_id to packet_path
         cgm->fields.push_back(
             new IR::StructField("clone_src", IR::Type::Bits::get(4)));
         cgm->fields.push_back(
             new IR::StructField("clone_digest_id", IR::Type::Bits::get(4)));
+        // add bridged_metadata header
+        cgm->fields.push_back(
+            new IR::StructField("bridged_metadata",
+                typeMap->getTypeType(
+                    structure->psaPacketPathTypes.at("deparser::bridge_md"), true)));
 
+        cgm->fields.push_back(new IR::StructField("drop", IR::Type::Boolean::get()));
+        cgm->fields.push_back(new IR::StructField("resubmit", IR::Type::Boolean::get()));
+        cgm->fields.push_back(new IR::StructField("clone_i2e", IR::Type::Boolean::get()));
+        cgm->fields.push_back(new IR::StructField("clone_e2e", IR::Type::Boolean::get()));
+
+        for (auto f : bridged_fields) {
+            cgm->fields.push_back(f);
+        }
 
         structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
     }
@@ -125,7 +130,19 @@ class AnalyzeProgram : public Inspector {
             structure->psaPacketPathTypes.emplace("parser::recirc_md", param->type);
         } else if (node->name == structure->getBlockName(PSA::ProgramStructure::EGRESS_PARSER)) {
             LOG1("create parser clone metadata");
-            auto param = node->getApplyParameters()->getParameter(5);
+            auto param = node->getApplyParameters()->getParameter(4);
+            structure->psaPacketPathNames.emplace("parser::bridge_md", param->name);
+            structure->psaPacketPathTypes.emplace("parser::bridge_md", param->type);
+            // add translation for bridged metadata
+            auto bridge_md_type = typeMap->getTypeType(param->type, true);
+            for (auto f : bridge_md_type->to<IR::Type_StructLike>()->fields) {
+                structure->addMetadata(EGRESS,
+                    MetadataField{param->name, f->name, f->type->width_bits()},
+                    MetadataField{"^bridged_metadata", f->name,
+                        f->type->width_bits(), true /* isCG */});
+            }
+            structure->bridgedType = bridge_md_type;
+            param = node->getApplyParameters()->getParameter(5);
             structure->psaPacketPathNames.emplace("parser::clone_i2e_md", param->name);
             structure->psaPacketPathTypes.emplace("parser::clone_i2e_md", param->type);
             param = node->getApplyParameters()->getParameter(6);
@@ -143,6 +160,19 @@ class AnalyzeProgram : public Inspector {
             param = node->getApplyParameters()->getParameter(2);
             structure->psaPacketPathNames.emplace("deparser::resubmit_md", param->name);
             structure->psaPacketPathTypes.emplace("deparser::resubmit_md", param->type);
+            param = node->getApplyParameters()->getParameter(3);
+            structure->psaPacketPathNames.emplace("deparser::bridge_md", param->name);
+            structure->psaPacketPathTypes.emplace("deparser::bridge_md", param->type);
+            // add translation for bridged metadata
+            auto bridge_md_type = typeMap->getTypeType(param->type, true);
+            for (auto f : bridge_md_type->to<IR::Type_StructLike>()->fields) {
+                structure->addMetadata(INGRESS,
+                    MetadataField{param->name, f->name, f->type->width_bits()},
+                    MetadataField{"^bridged_metadata", f->name,
+                                  f->type->width_bits(), true /* isCG */});
+                bridged_fields.emplace(new IR::StructField(f->name,
+                            IR::Type::Bits::get(f->type->width_bits())));
+            }
         } else if (node->name == structure->getBlockName(PSA::ProgramStructure::EGRESS_DEPARSER)) {
             LOG1("create egress deparser recirc/clone metadata");
             auto param = node->getApplyParameters()->getParameter(1);
@@ -156,6 +186,9 @@ class AnalyzeProgram : public Inspector {
 
  private:
     PSA::ProgramStructure* structure;
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
+    ordered_set<IR::StructField*> bridged_fields;
 };
 
 class ConstructSymbolTable : public Inspector {
@@ -224,17 +257,61 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
+    void cvtActionSelector(const IR::Declaration_Instance* node) {
+        auto declarations = new IR::IndexedVector<IR::Declaration>();
+
+        // Create a new instance of Hash<W>
+        auto typeArgs = new IR::Vector<IR::Type>();
+        auto w = node->arguments->at(2)->to<IR::Constant>()->asInt();
+        typeArgs->push_back(IR::Type::Bits::get(w));
+
+        auto args = new IR::Vector<IR::Expression>();
+        args->push_back(node->arguments->at(0));
+
+        auto specializedType = new IR::Type_Specialized(
+            new IR::Type_Name("Hash"), typeArgs);
+        auto hashName = cstring::make_unique(
+            structure->unique_names, node->name + "__hash_", '_');
+        structure->unique_names.insert(hashName);
+        declarations->push_back(
+            new IR::Declaration_Instance(hashName, specializedType, args));
+
+        args = new IR::Vector<IR::Expression>();
+        // size
+        args->push_back(node->arguments->at(1));
+        // hash
+        args->push_back(new IR::PathExpression(hashName));
+        // selector_mode
+        auto sel_mode = new IR::Member(
+            new IR::TypeNameExpression("SelectorMode_t"), "FAIR");
+        if (auto anno = node->annotations->getSingle("mode")) {
+            auto mode = anno->expr.at(0)->to<IR::StringLiteral>();
+            if (mode->value == "resilient")
+                sel_mode->member = IR::ID("RESILIENT");
+            else if (mode->value != "fair" && mode->value != "non_resilient")
+                BUG("Selector mode provided for the selector is not supported", node);
+        } else {
+            WARNING("No mode specified for the selector %s. Assuming fair" << node);
+        }
+        args->push_back(sel_mode);
+
+        declarations->push_back(new IR::Declaration_Instance(
+            node->srcInfo, node->name, node->annotations, node->type, args));
+        structure->_map.emplace(node, declarations);
+    }
+
     void postorder(const IR::Declaration_Instance* node) override {
         if (auto ts = node->type->to<IR::Type_Specialized>()) {
             if (auto typeName = ts->baseType->to<IR::Type_Name>()) {
-                if (typeName->path->name == "IngressPipeline") {
+                auto name = typeName->path->name;
+                if (name == "IngressPipeline") {
                     ERROR_CHECK(ts->arguments->size() == 6,
                               "expect IngressPipeline with 6 type arguments");
                     auto type_ih = ts->arguments->at(0)->to<IR::Type_Name>();
                     auto type_im = ts->arguments->at(1)->to<IR::Type_Name>();
                     structure->type_ih = type_ih->path->name;
                     structure->type_im = type_im->path->name;
-                } else if (typeName->path->name == "EgressPipeline") {
+                } else if (name == "EgressPipeline") {
                     ERROR_CHECK(ts->arguments->size() == 6,
                               "expect IngressPipeline with 6 type arguments");
                     auto type_eh = ts->arguments->at(0)->to<IR::Type_Name>();
@@ -242,6 +319,11 @@ class ConstructSymbolTable : public Inspector {
                     structure->type_eh = type_eh->path->name;
                     structure->type_em = type_em->path->name;
                 }
+            }
+        } else if (auto typeName = node->type->to<IR::Type_Name>()) {
+            auto name = typeName->path->name;
+            if (name == "ActionSelector") {
+                cvtActionSelector(node);
             }
         }
     }
@@ -306,16 +388,16 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"ig_intr_md_for_tm", "ingress_cos", 3});
         structure->addMetadata(INGRESS,
                                MetadataField{"ostd", "drop", 1},
-                               MetadataField{"ig_intr_md_for_tm", "drop_ctl", 3});
+                               MetadataField{"compiler_generated_meta", "drop", 1});
         structure->addMetadata(INGRESS, MetadataField{"ostd", "multicast_group", 16},
                                MetadataField{"ig_intr_md_for_tm", "mcast_grp_a", 16});
         structure->addMetadata(INGRESS,
                                MetadataField{"ostd", "egress_port", 9},
                                MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", 9});
         structure->addMetadata(INGRESS, MetadataField{"ostd", "resubmit", 1},
-                               MetadataField{"ig_intr_md_for_dprsr", "resubmit_type", 3});
+                               MetadataField{"compiler_generated_meta", "resubmit", 1});
         structure->addMetadata(INGRESS, MetadataField{"ostd", "clone", 1},
-                               MetadataField{"ig_intr_md_for_dprsr", "mirror_type", 3});
+                               MetadataField{"compiler_generated_meta", "clone_i2e", 1});
         structure->addMetadata(INGRESS,
                                MetadataField{"istd", "packet_path", 0},
                                MetadataField{"compiler_generated_meta", "packet_path", 0});
@@ -331,14 +413,14 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"eg_intr_md_from_prsr", "egress_parser_err", 3});
         structure->addMetadata(EGRESS,
                                MetadataField{"ostd", "drop", 1},
-                               MetadataField{"eg_intr_md_for_oport", "drop_ctl", 3});
+                               MetadataField{"compiler_generated_meta", "drop", 1});
         structure->addMetadata(EGRESS, MetadataField{"ostd", "clone", 1},
-                               MetadataField{"ig_intr_md_for_dprsr", "mirror_type", 3});
+                               MetadataField{"compiler_generated_meta", "clone_e2e", 1});
         structure->addMetadata(EGRESS,
                                MetadataField{"istd", "packet_path", 0},
                                MetadataField{"compiler_generated_meta", "packet_path", 0});
         structure->addMetadata(MetadataField{"ostd", "clone_session_id", 10},
-                               MetadataField{"compiler_generated_meta", "clone_session_id", 10});
+                               MetadataField{"compiler_generated_meta", "mirror_id", 10});
     }
 
     void setup_psa_typedef() {
@@ -394,17 +476,19 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new VisitFunctor([structure, evaluator]() {
             structure->toplevel = evaluator->getToplevelBlock(); }),
         new TranslationFirst(),
-        new PSA::NormalizeProgram(),
         new PSA::LoadTargetArchitecture(structure),
-        new PSA::AnalyzeProgram(structure),
+        new PSA::AnalyzeProgram(structure, refMap, typeMap),
         new PSA::ConstructSymbolTable(structure, refMap, typeMap),
         new GenerateTofinoProgram(structure),
         new TranslationLast(),
         new AddIntrinsicMetadata,
         new PSA::TranslatePacketPath(refMap, typeMap, structure),
+        new AddPsaBridgeMetadata(refMap, typeMap, structure),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
     });
 }
+
+
 
 }  // namespace BFN

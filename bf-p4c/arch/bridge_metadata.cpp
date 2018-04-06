@@ -5,17 +5,18 @@
 #include <algorithm>
 #include <string>
 #include <functional>
-
-#include "bf-p4c/arch/internal/collect_bridged_fields.h"
-#include "bf-p4c/common/path_linearizer.h"
-#include "frontends/common/resolveReferences/referenceMap.h"
-#include "frontends/p4/typeChecking/typeChecker.h"
-#include "frontends/common/resolveReferences/resolveReferences.h"
-#include "frontends/p4/typeMap.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
+
+#include "frontends/common/resolveReferences/referenceMap.h"
+#include "frontends/p4/typeChecking/typeChecker.h"
+#include "frontends/common/resolveReferences/resolveReferences.h"
+#include "frontends/p4/typeMap.h"
+#include "bf-p4c/arch/psa_program_structure.h"
+#include "bf-p4c/arch/internal/collect_bridged_fields.h"
+#include "bf-p4c/common/path_linearizer.h"
 
 namespace BFN {
 namespace {
@@ -279,162 +280,9 @@ struct BridgeIngressToEgress : public Transform {
     cstring cgMetadataStructName;
 };
 
-using TnaParams = CollectBridgedFields::TnaParams;
-
-struct CopyPropagateBridgedMetadata : public Transform {
-    CopyPropagateBridgedMetadata(const ordered_set<FieldRef>& bmMap,
-                  const ordered_map<FieldRef, cstring>& bridgedHeaderFieldNames,
-                  P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
-        : bmMap(bmMap), bridgedHeaderFieldNames(bridgedHeaderFieldNames),
-          refMap(refMap), typeMap(typeMap) {}
-
-    using TnaParams = ordered_map<cstring, cstring>;
-    using TnaContext = std::pair<gress_t, const TnaParams&>;
-
-    profile_t init_apply(const IR::Node* root) override {
-        for (auto kv : bmMap) {
-            LOG4("path of bridged fields : " << kv.first << " " << kv.second);
-        }
-        return Transform::init_apply(root);
-    }
-
-    boost::optional<CopyPropagateBridgedMetadata::TnaContext> findTnaContext() const {
-        if (auto* control = findContext<IR::BFN::TranslatedP4Control>())
-            return TnaContext(control->thread, control->tnaParams);
-        else if (auto* parser = findContext<IR::BFN::TranslatedP4Parser>())
-            return TnaContext(parser->thread, parser->tnaParams);
-        else if (auto* deparser = findContext<IR::BFN::TranslatedP4Deparser>())
-            return TnaContext(deparser->thread, deparser->tnaParams);
-        else
-            return boost::none;
-    }
-
-    boost::optional<cstring>
-    containingTnaParam(const LinearPath& linearPath, const TnaParams& tnaParams,
-                       P4::ReferenceMap* refMap) {
-        auto* topLevelPath = linearPath.components[0]->to<IR::PathExpression>();
-        BUG_CHECK(topLevelPath, "Path-like expression tree was rooted in "
-            "non-path expression: %1%", linearPath.components[0]);
-        auto* decl = refMap->getDeclaration(topLevelPath->path);
-        BUG_CHECK(decl, "No declaration for top level path in path-like "
-            "expression: %1%", topLevelPath);
-        auto* param = decl->to<IR::Parameter>();
-        if (!param) return boost::none;
-        for (auto& item : tnaParams) {
-            cstring tnaParam = item.first;
-            cstring p4Param = item.second;
-            if (param->name == p4Param) return tnaParam;
-        }
-        return boost::none;
-    }
-
-    bool isMetadataType(const IR::Type* type) {
-        if (type->is<IR::Type_Struct>()) return true;
-        if (auto* annotated = type->to<IR::IAnnotated>()) {
-            auto* intrinsicMetadata = annotated->getAnnotation("intrinsic_metadata");
-            if (intrinsicMetadata) return true;
-        }
-        return false;
-    }
-
-    bool isMetadataOrPrimitiveType(const IR::Type* type) {
-        return isMetadataType(type) || type->is<IR::Type_Bits>() ||
-               type->is<IR::Type_InfInt>() || type->is<IR::Type_Boolean>();
-    }
-
-    bool isMetadata(const LinearPath& path, P4::TypeMap* typeMap) {
-        auto* lastComponent = path.components.back();
-        return std::all_of(path.components.begin(), path.components.end(),
-                           [&](const IR::Expression* component) {
-            LOG2("isMetadata? checking component: " << component);
-            auto* type = typeMap->getType(component);
-            BUG_CHECK(type, "Couldn't find type for: %1%", component);
-            LOG3("isMetadata? type is: " << type);
-            if (component == lastComponent) return isMetadataOrPrimitiveType(type);
-            return isMetadataType(type);
-        });
-    }
-
-    const IR::Node* analyzePathlikeExpression(IR::Expression* expr) {
-        // a field is either a path expressin or a member
-        if (!expr->is<IR::PathExpression>() && !expr->is<IR::Member>())
-            return expr;
-
-        auto tnaContext = findTnaContext();
-        if (!tnaContext) {
-            LOG4("[CollectBridgedFields]  no TNA context!");
-            return expr;
-        }
-
-        auto* orig = getOriginal<IR::Expression>();
-        PathLinearizer linearizer;
-        orig->apply(linearizer);
-        if (!linearizer.linearPath) {
-            LOG2("Won't replace complex or invalid expression: " << expr);
-            return expr;
-        }
-
-        auto& linearPath = *linearizer.linearPath;
-        if (!isMetadata(linearPath, typeMap)) {
-            LOG2("Won't bridge non-metadata expression: " << expr);
-            return expr;
-        }
-
-        const gress_t currentThread = tnaContext->first;
-        const TnaParams& visibleTnaParams = tnaContext->second;
-
-        auto tnaParam = containingTnaParam(linearPath, visibleTnaParams, refMap);
-        if (!tnaParam) {
-            LOG2("Won't bridge metadata which isn't a subobject of a TNA "
-                     "standard parameter: " << expr);
-            return expr;
-        }
-
-        using sliced = boost::adaptors::sliced;
-
-        std::string fullPathStr;
-        auto& components = linearPath.components;
-        for (auto* component : components | sliced(1, components.size())) {
-            fullPathStr.push_back('.');
-            if (auto* path = component->to<IR::PathExpression>())
-                fullPathStr.append(path->path->name.name.c_str());
-            else if (auto* member = component->to<IR::Member>())
-                fullPathStr.append(member->member.name.c_str());
-            else
-                BUG("Unexpected path-like expression component: %1%", component);
-        }
-
-        cstring fullPath(fullPathStr);
-        FieldRef fieldRef(*tnaParam, fullPath);
-        if (bmMap.find(fieldRef) != bmMap.end()) {
-            LOG4("Need to replace expression " << expr);
-            auto cgMetadataParam = tnaContext->second.at("compiler_generated_meta");
-            auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                          IR::ID("^bridged_metadata"));
-            auto* fieldMember =
-                new IR::Member(member, bridgedHeaderFieldNames.at(fieldRef));
-            return fieldMember;
-        }
-        return expr;
-    }
-
-    const IR::Node* postorder(IR::Member* member) override {
-        return analyzePathlikeExpression(member);
-    }
-
-    const IR::Node* postorder(IR::PathExpression* path) override {
-        return analyzePathlikeExpression(path);
-    }
-
-    const ordered_set<FieldRef>& bmMap;
-    const ordered_map<FieldRef, cstring>& bridgedHeaderFieldNames;
-    P4::ReferenceMap* refMap;
-    P4::TypeMap* typeMap;
-};
-
 }  // namespace
 
-BridgeMetadata::BridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+AddTnaBridgeMetadata::AddTnaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
     auto* collectBridgedFields = new CollectBridgedFields(refMap, typeMap);
     auto* bridgeIngressToEgress = new BridgeIngressToEgress(collectBridgedFields->fieldsToBridge,
             collectBridgedFields->fieldInfo, refMap, typeMap);
@@ -445,5 +293,313 @@ BridgeMetadata::BridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
         new P4::TypeChecking(refMap, typeMap, true),
     });
 }
+
+namespace {
+
+struct PsaBridgeIngressToEgress : public Transform {
+    PsaBridgeIngressToEgress(P4::ReferenceMap* refMap,
+                             P4::TypeMap* typeMap,
+                             PSA::ProgramStructure* structure)
+        : structure(structure), refMap(refMap), typeMap(typeMap) {}
+
+    profile_t init_apply(const IR::Node* root) override {
+        // Construct the bridged metadata header type.
+        IR::IndexedVector<IR::StructField> fields;
+
+        // We always need to bridge at least one byte of metadata; it's used to
+        // indicate to the egress parser that it's dealing with bridged metadata
+        // rather than mirrored data. (We could pack more information in there,
+        // too, but we don't right now.)
+        fields.push_back(new IR::StructField("^bridged_metadata_indicator",
+                                             IR::Type::Bits::get(8)));
+
+        // The rest of the fields come from CollectBridgedFields.
+        unsigned padFieldId = 0;
+        for (auto& bridgedField : structure->bridgedType->to<IR::Type_StructLike>()->fields) {
+            const int nextByteBoundary = 8 * ((bridgedField->type->width_bits() + 7) / 8);
+            const int alignment = nextByteBoundary - bridgedField->type->width_bits();
+            if (alignment != 0) {
+                cstring padFieldName = "__pad_";
+                padFieldName += cstring::to_cstring(padFieldId++);
+                auto* fieldAnnotations = new IR::Annotations({
+                    new IR::Annotation(IR::ID("hidden"), { }) });
+                fields.push_back(new IR::StructField(padFieldName,
+                    fieldAnnotations, IR::Type::Bits::get(alignment)));
+            }
+
+            fields.push_back(bridgedField);
+        }
+
+        auto* layoutKind = new IR::StringLiteral(IR::ID("flexible"));
+        bridgedHeaderType =
+            new IR::Type_Header(bridged_metadata_header, new IR::Annotations({
+                 new IR::Annotation(IR::ID("layout"), {layoutKind})}), fields);
+
+        return Transform::init_apply(root);
+    }
+
+    IR::Type_StructLike* preorder(IR::Type_StructLike* type) override {
+        prune();
+        if (type->name != "compiler_generated_metadata_t") return type;
+
+        LOG1("Will inject the new field");
+
+        // Inject the new field. This will give us access to the bridged
+        // metadata type everywhere in the program.
+        type->fields.push_back(new IR::StructField("^bridged_metadata",
+                                                   new IR::Type_Name(bridged_metadata_header)));
+        return type;
+    }
+
+    IR::ParserState* preorder(IR::ParserState* state) override {
+        prune();
+        if (state->name == "__ingress_metadata")
+            return updateIngressMetadataState(state);
+        else if (state->name == "__bridged_metadata")
+            return updateBridgedMetadataState(state);
+        return state;
+    }
+
+    IR::ParserState* updateIngressMetadataState(IR::ParserState* state) {
+        auto* tnaContext = findContext<IR::BFN::TranslatedP4Parser>();
+        BUG_CHECK(tnaContext, "Parser state %1% not within translated parser?",
+                  state->name);
+        if (tnaContext->thread != INGRESS) return state;
+
+        auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
+
+        // Add "compiler_generated_meta.^bridged_metadata.^bridged_metadata_indicator = 0;".
+        {
+            auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
+                                          IR::ID("^bridged_metadata"));
+            auto* fieldMember =
+                new IR::Member(member, IR::ID("^bridged_metadata_indicator"));
+            auto* value = new IR::Constant(IR::Type::Bits::get(8), 0);
+            auto* assignment = new IR::AssignmentStatement(fieldMember, value);
+            state->components.push_back(assignment);
+        }
+
+        // Add "md.^bridged_metadata.setValid();"
+        {
+            auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
+            auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
+                                          IR::ID("^bridged_metadata"));
+            auto* method = new IR::Member(member, IR::ID("setValid"));
+            auto* args = new IR::Vector<IR::Expression>;
+            auto* callExpr = new IR::MethodCallExpression(method, args);
+            state->components.push_back(new IR::MethodCallStatement(callExpr));
+        }
+
+        return state;
+    }
+
+    IR::ParserState* updateBridgedMetadataState(IR::ParserState* state) {
+        auto* tnaContext = findContext<IR::BFN::TranslatedP4Parser>();
+        BUG_CHECK(tnaContext, "Parser state %1% not within translated parser?",
+                  state->name);
+        if (tnaContext->thread != EGRESS) return state;
+
+        // Add "pkt.extract(md.^bridged_metadata);"
+        auto packetInParam = tnaContext->tnaParams.at("pkt");
+        auto* method = new IR::Member(new IR::PathExpression(packetInParam),
+                                      IR::ID("extract"));
+
+        auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
+        auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
+                                      IR::ID("^bridged_metadata"));
+        auto* args = new IR::Vector<IR::Expression>({ member });
+        auto* callExpr = new IR::MethodCallExpression(method, args);
+        state->components.push_back(new IR::MethodCallStatement(callExpr));
+
+        return state;
+    }
+
+
+    IR::BFN::TranslatedP4Deparser*
+    preorder(IR::BFN::TranslatedP4Deparser* deparser) override {
+        prune();
+        if (deparser->thread != INGRESS)
+            return deparser;
+        return updateIngressDeparser(deparser);
+    }
+
+    IR::BFN::TranslatedP4Deparser*
+    updateIngressDeparser(IR::BFN::TranslatedP4Deparser* control) {
+        // Add "pkt.emit(md.^bridged_metadata);" as the first statement in the
+        // ingress deparser.
+        auto packetOutParam = control->tnaParams.at("pkt");
+        auto* method = new IR::Member(new IR::PathExpression(packetOutParam),
+                                      IR::ID("emit"));
+
+        auto cgMetadataParam = control->tnaParams.at("compiler_generated_meta");
+        auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
+                                      IR::ID("^bridged_metadata"));
+        auto* args = new IR::Vector<IR::Expression>({ member });
+        auto* callExpr = new IR::MethodCallExpression(method, args);
+
+        auto* body = control->body->clone();
+        body->components.insert(body->components.begin(),
+                                new IR::MethodCallStatement(callExpr));
+        control->body = body;
+        return control;
+    }
+
+    const IR::P4Program* postorder(IR::P4Program *program) override {
+        LOG4("Injecting declaration for bridge metadata type: " << bridgedHeaderType);
+        program->declarations.insert(program->declarations.begin(), bridgedHeaderType);
+        return program;
+    }
+
+    PSA::ProgramStructure* structure;
+    P4::ReferenceMap* refMap;
+    P4::TypeMap* typeMap;
+
+    const IR::Type_Header* bridgedHeaderType = nullptr;
+};
+
+// Find the assignment to bridged metadata from ingress deparser
+// and move them to the end of ingress.
+struct FindBridgeMetadataAssignment : public Transform {
+    FindBridgeMetadataAssignment(P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
+        : refMap(refMap), typeMap(typeMap) { }
+
+    const IR::Parameter* getContainingParameter(const LinearPath& path,
+                                                P4::ReferenceMap* refMap) {
+        auto* topLevelPath = path.components[0]->to<IR::PathExpression>();
+        BUG_CHECK(topLevelPath, "Path-like expression tree was rooted in "
+            "non-path expression: %1%", path.components[0]);
+        auto* decl = refMap->getDeclaration(topLevelPath->path);
+        BUG_CHECK(decl, "No declaration for top level path in path-like "
+            "expression: %1%", topLevelPath);
+        return decl->to<IR::Parameter>();
+    }
+
+    bool isHeaderType(const IR::Type* type) {
+        BUG_CHECK(!type->is<IR::Type_Name>(), "Trying to categorize a Type_Name; "
+            "you can avoid this problem by getting types from a TypeMap");
+        return type->is<IR::Type_Header>();
+    }
+
+    bool isBridgedMetadata(const IR::Type* type) {
+        BUG_CHECK(!type->is<IR::Type_Name>(), "Trying to categorize a Type_Name; "
+            "you can avoid this problem by getting types from a TypeMap");
+        if (!isHeaderType(type))
+            return false;
+        auto headerType = type->to<IR::Type_Header>();
+        LOG1("header type " << headerType);
+        return headerType->name == "^bridged_metadata_header";
+    }
+
+    bool isCompilerGeneratedType(const IR::Type* type) {
+        BUG_CHECK(!type->is<IR::Type_Name>(), "Trying to categorize a Type_Name; "
+            "you can avoid this problem by getting types from a TypeMap");
+        auto* annotated = type->to<IR::IAnnotated>();
+        if (!annotated) return false;
+        auto* intrinsicMetadata = annotated->getAnnotation("__compiler_generated");
+        return bool(intrinsicMetadata);
+    }
+
+    IR::Node* postorder(IR::AssignmentStatement* assignment) override {
+        auto ctxt = findOrigCtxt<IR::BFN::TranslatedP4Deparser>();
+        if (!ctxt) {
+            return assignment;
+        }
+        PathLinearizer linearizer;
+        assignment->left->apply(linearizer);
+
+        // If the destination of the write isn't a path-like expression, or if it's
+        // too complex to analyze, err on the side of caution and don't remove it.
+        if (!linearizer.linearPath) {
+            LOG4("Won't remove ingress deparser assignment to complex object: "
+                     << assignment);
+            return assignment;
+        }
+
+        auto& path = *linearizer.linearPath;
+        auto* param = getContainingParameter(path, refMap);
+        if (!param) {
+            LOG4("Won't remove ingress deparser assignment to local object: "
+                     << assignment);
+            return assignment;
+        }
+        auto* paramType = typeMap->getType(param);
+        BUG_CHECK(paramType, "No type for param: %1%", param);
+        LOG4("param type " << paramType);
+        if (!isCompilerGeneratedType(paramType)) {
+            LOG4("Won't remove ingress deparser assignment to non compiler-generated object: "
+                     << assignment);
+            return assignment;
+        }
+
+        if (path.components.size() < 2)
+            return assignment;
+        auto* nextToLastComponent = path.components[path.components.size() - 2];
+        auto* nextToLastComponentType = typeMap->getType(nextToLastComponent);
+        BUG_CHECK(nextToLastComponentType, "No type for path component: %1%",
+                  nextToLastComponent);
+
+        if (!isBridgedMetadata(nextToLastComponentType)) {
+            LOG4("Won't remove ingress deparser assignment to non-bridged metadata: "
+                 << assignment);
+            return assignment;
+        }
+
+        // This is a write to bridged metadata; remove it.
+        LOG4("Removing ingress deparser assignment to bridged metadata: " << assignment);
+        bridgedFieldAssignments.push_back(assignment);
+        return nullptr;
+    }
+
+    P4::ReferenceMap* refMap;
+    P4::TypeMap* typeMap;
+    IR::IndexedVector<IR::StatOrDecl> bridgedFieldAssignments;
+};
+
+struct MoveBridgeMetadataAssignment : public Transform {
+    explicit MoveBridgeMetadataAssignment(
+            IR::IndexedVector<IR::StatOrDecl>* bridgedFieldAssignments)
+    : bridgedFieldAssignments(bridgedFieldAssignments) { }
+
+    IR::BFN::TranslatedP4Control*
+    preorder(IR::BFN::TranslatedP4Control* control) override {
+        prune();
+        if (control->thread != INGRESS)
+            return control;
+        return updateIngressControl(control);
+    }
+
+    IR::BFN::TranslatedP4Control*
+    updateIngressControl(IR::BFN::TranslatedP4Control* control) {
+        // Inject code to copy all of the bridged fields into the bridged
+        // metadata header. This will run at the very end of the ingress
+        // control, so it'll get the final values of the fields.
+        auto* body = control->body->clone();
+        body->components.append(*bridgedFieldAssignments);
+        control->body = body;
+        return control;
+    }
+
+    IR::IndexedVector<IR::StatOrDecl>* bridgedFieldAssignments;
+};
+
+}  // namespace
+
+AddPsaBridgeMetadata::AddPsaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+                                           PSA::ProgramStructure* structure) {
+    auto* bridgeIngressToEgress = new PsaBridgeIngressToEgress(refMap, typeMap, structure);
+    auto* findBridgedMetaAssignments = new FindBridgeMetadataAssignment(refMap, typeMap);
+    addPasses({
+        bridgeIngressToEgress,
+        new P4::ClearTypeMap(typeMap),
+        new P4::TypeChecking(refMap, typeMap, true),
+        findBridgedMetaAssignments,
+        new MoveBridgeMetadataAssignment(&findBridgedMetaAssignments->bridgedFieldAssignments),
+        new P4::ClearTypeMap(typeMap),
+        new P4::TypeChecking(refMap, typeMap, true),
+    });
+}
+
+// move assignment to normal.ingress_port normal.ingress_port to the end of ingress.
+// insert emit(^bridged_metadata);
 
 }  // namespace BFN

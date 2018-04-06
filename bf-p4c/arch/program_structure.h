@@ -26,11 +26,21 @@ struct MetadataField {
     int width;
     int offset;
 
+    // indicate the field is in a header or struct that is a member of
+    // the compiler_generated_meta.
+    bool isCG;
+
     MetadataField(cstring structName, cstring fieldName, int width) :
-        structName(structName), fieldName(fieldName), width(width), offset(0) {}
+        structName(structName), fieldName(fieldName), width(width), offset(0), isCG(false) {}
 
     MetadataField(cstring structName, cstring fieldName, int width, int offset) :
-        structName(structName), fieldName(fieldName), width(width), offset(offset) {}
+        structName(structName), fieldName(fieldName), width(width), offset(offset), isCG(false) {}
+
+    MetadataField(cstring structName, cstring fieldName, int width, bool isCG) :
+        structName(structName), fieldName(fieldName), width(width), offset(0), isCG(isCG) {}
+
+    MetadataField(cstring structName, cstring fieldName, int width, int offset, bool isCG) :
+        structName(structName), fieldName(fieldName), width(width), offset(offset), isCG(isCG) {}
 
     bool operator<(const MetadataField &other) const {
         if (structName != other.structName)

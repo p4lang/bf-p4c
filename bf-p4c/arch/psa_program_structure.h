@@ -28,6 +28,8 @@ struct ProgramStructure : BFN::ProgramStructure {
     ordered_map<cstring, cstring> psaPacketPathNames;
     ordered_map<cstring, const IR::Type *> psaPacketPathTypes;
 
+    const IR::Type* bridgedType;
+
     void createParsers() override;
     void createControls() override;
     void createMain() override;

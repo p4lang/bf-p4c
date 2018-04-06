@@ -651,7 +651,6 @@ class AnalyzeProgram : public Inspector {
         cgm->fields.push_back(
             new IR::StructField("clone_digest_id", IR::Type::Bits::get(4)));
 
-
         structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
     }
 };
@@ -1649,7 +1648,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new P4::ClonePathExpressions,
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
-        new BridgeMetadata(refMap, typeMap),
+        new BFN::AddTnaBridgeMetadata(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
     });

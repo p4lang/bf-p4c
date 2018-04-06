@@ -1,4 +1,3 @@
-
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/evaluator/evaluator.h"
@@ -6,7 +5,7 @@
 #include "bf-p4c/arch/tofino_native.h"
 #include "bf-p4c/bf-p4c-options.h"
 
-namespace {
+namespace BFN {
 
 /// @return true if `control` is the instantiation of the given standard control.
 /// The standard control is identified by the name of the corresponding parameter
@@ -27,10 +26,6 @@ bool isStandardControl(cstring standardControlName,
       standardControlBlock->to<IR::ControlBlock>()->container;
     return control == standardControl;
 }
-
-}  // namespace
-
-namespace BFN {
 
 /// Restore all `@optional` parameters to the controls specified by the
 /// architecture.

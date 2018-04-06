@@ -86,6 +86,10 @@ createPSATest(TestArgs& args) {
 %CLONE_E2E_DATA%
         }
 
+        struct bridged_metadata_t {
+
+        }
+
         struct headers {
             ethernet_t ethernet;
             ipv4_t ipv4;
@@ -120,7 +124,7 @@ createPSATest(TestArgs& args) {
             out headers parsed_hdr,
             inout metadata meta,
             in psa_egress_parser_input_metadata_t istd,
-            in metadata normal_meta,
+            in bridged_metadata_t normal_meta,
             in clone_i2e_metadata_t clone_i2e_meta,
             in clone_e2e_metadata_t clone_e2e_meta)
         {
@@ -150,7 +154,7 @@ createPSATest(TestArgs& args) {
             packet_out packet,
             out clone_i2e_metadata_t clone_i2e_meta,
             out resubmit_metadata_t resub_meta,
-            out metadata normal_meta,
+            out bridged_metadata_t normal_meta,
             inout headers hdr,
             in metadata meta,
             in psa_ingress_output_metadata_t istd)
