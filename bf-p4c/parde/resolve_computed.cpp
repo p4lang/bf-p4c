@@ -801,6 +801,7 @@ class ComputeSaveAndSelect: public ParserInspector {
                 // Wrongly trace-backed resolve.
                 if (corrected_source.count(unresolved.select)
                     && unresolved.source() != corrected_source.at(unresolved.select)) {
+                    LOG4("Ignore wrongly trace-backed resolve: " << unresolved.select);
                     continue; }
                 nw_byterange source = unresolved.source().toUnit<RangeUnit::Byte>();
                 if (unresolved.isExtractedEarlier(state)) {
@@ -957,6 +958,7 @@ class ComputeSaveAndSelect: public ParserInspector {
             std::map<const StateSelect*, std::set<MatchRegister>>& used_regs) {
         // Count all selects.
         std::map<std::pair<const StateSelect*, nw_bitrange>, int> select_count;
+        ordered_set<const StateSelect*> selects;
         for (const auto* transition : state->transitions) {
             BUG_CHECK(transition->shift, "State %1% has unset shift?", state->name);
             BUG_CHECK(*transition->shift >= 0, "State %1% has negative shift %2%?",
@@ -970,21 +972,36 @@ class ComputeSaveAndSelect: public ParserInspector {
             auto unresolved_selects = calcUnresolvedSelects(next_state, shift_bytes);
             for (const auto& select : unresolved_selects) {
                 if (select.isExtractedEarlier(state)) continue;
+                selects.insert(select.select);
                 select_count[{select.select, select.source()}]++; }
         }
 
-        // Find out selects that show up more than once, calculate right source and
-        // a prefered register for them.
-        auto registers = Device::pardeSpec().matchRegisters();
-        for (const auto& kv : select_count) {
-            if (kv.second <= 1)
-                continue;
-            const auto* select_use = kv.first.first;
-            auto& source = kv.first.second;
+        // Find out selects that show up more than once, calculate right source.
+        ordered_map<const StateSelect*, nw_bitrange> temp_corrected_source;
+        for (const auto* select : selects) {
+            int max_count = -1;
+            for (const auto& kv : select_count) {
+            LOG4("Select-Count: " << kv.first.first << " on "
+                 << kv.first.second << " c: " << kv.second);
+                if (kv.second <= 1) continue;
+                if (select != kv.first.first) continue;
+                if (kv.second > max_count) {
+                    temp_corrected_source[select] = kv.first.second;
+                    max_count = kv.second;
+                    LOG4("Corrected Souce of `" << select << "` ..is.. " << kv.first.second);
+                }
+            }
+        }
 
-            BUG_CHECK(corrected_source.count(kv.first.first)
+        // Calc a prefered register for them.
+        auto registers = Device::pardeSpec().matchRegisters();
+        for (const auto& kv : temp_corrected_source) {
+            const auto* select_use = kv.first;
+            auto& source = kv.second;
+
+            BUG_CHECK(corrected_source.count(select_use)
                       ? corrected_source.at(select_use) == source : true,
-                      "Inconsistent corrected sources");
+                      "Parser bug in calculating source for: %1%", select_use->p4Source);
             corrected_source[select_use] = source;
 
             // Merge all used register set.
