@@ -76,11 +76,13 @@ class CollectClotInfo : public Inspector {
     }
 
     bool preorder(const IR::BFN::Extract* extract) override {
-        auto* state = findContext<IR::BFN::ParserState>();
-        if (extract->source->is<IR::BFN::PacketRVal>()) {
+        auto state = findContext<IR::BFN::ParserState>();
+        auto rval = extract->source->to<IR::BFN::PacketRVal>();
+        if (rval) {
             if (auto f = phv.field(extract->dest->field)) {
                 clotInfo.parser_state_to_fields_[state].push_back(f);
                 clotInfo.field_to_parser_state_[f] = state;
+                clotInfo.field_range_[f] = rval->range();
             }
         }
         return false;
@@ -117,11 +119,11 @@ class CollectClotInfo : public Inspector {
 
 */
 class NaiveClotAlloc : public Visitor {
-    static const int MAX_CLOTS_PER_STATE = 2;  // TODO(zma) move to pardeSpec
-    static const int MAX_BYTES_PER_CLOT = 64;
-    static const int TOTAL_CLOTS_AVAIL = 64;
-    static const int MAX_CLOTS_LIVE = 16;
-    static const int INTER_CLOTS_BYTE_GAP = 3;
+    static const unsigned MAX_CLOTS_PER_STATE = 2;  // TODO(zma) move to pardeSpec
+    static const unsigned MAX_BYTES_PER_CLOT = 64;
+    static const unsigned TOTAL_CLOTS_AVAIL = 64;
+    static const unsigned MAX_CLOTS_LIVE = 16;
+    static const unsigned INTER_CLOTS_BYTE_GAP = 3;
 
     ClotInfo& clotInfo;
     const CollectParserInfo& parserInfo;
@@ -274,8 +276,7 @@ class NaiveClotAlloc : public Visitor {
                     else  // s hasn't been allocated
                         credit = INTER_CLOTS_BYTE_GAP * 8;
 
-                    gap_needed_for_s =
-                        (unsigned)std::max(INTER_CLOTS_BYTE_GAP * 8 - static_cast<int>(credit), 0);
+                    gap_needed_for_s = std::max(INTER_CLOTS_BYTE_GAP * 8 - credit, 0u);
                 }
 
                 gap_needed = std::max(gap_needed, gap_needed_for_s);
@@ -299,11 +300,15 @@ class NaiveClotAlloc : public Visitor {
 
         auto& fields_in_state = clotInfo.parser_state_to_fields_[ca.state];
 
-        unsigned head_offset = 0;
-        unsigned tail_offset = 0;
+        if (fields_in_state.size() == 0)
+            return false;
 
         unsigned head_index = 0;
         unsigned tail_index = fields_in_state.size() - 1;
+
+        auto head_field = fields_in_state[head_index];
+        unsigned head_offset = (clotInfo.field_range_.at(head_field)).lo;
+        unsigned tail_offset = 0;
 
         // skip through first fields until head gap is satisfied
 
@@ -346,7 +351,7 @@ class NaiveClotAlloc : public Visitor {
 
         // TODO(zma) In many cases, it's a win to rollback on head
         // and skip forward on tail to find byte boundary to maximize CLOT
-        // contiguity. This involves doube allocating the head/tail fields
+        // contiguity. This involves double allocating the head/tail fields
         // to both CLOTs and PHV. This also means setting additional packing/slicing
         // constraints on PHV allocation, as deparser can only deparse whole containers.
 

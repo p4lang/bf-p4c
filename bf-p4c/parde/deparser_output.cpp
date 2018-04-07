@@ -97,8 +97,7 @@ struct OutputDictionary : public Inspector {
 
         unsigned clot_offset = emit->clot.start;
         for (auto c : containers) {
-            // TODO(zma) check if c exists
-            auto range = clot.container_range_.at(c);
+            auto range = clot.container_range().at(c);
             range = range.shiftedByBytes(-clot_offset);
             out << indent << range.lo << " : " << c << std::endl;
         }

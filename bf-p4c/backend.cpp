@@ -178,9 +178,7 @@ Backend::Backend(const BFN_Options& options) :
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         new CollectPhvInfo(phv),
-#if HAVE_JBAY
-        options.target == "jbay" ? nullptr : new MergeParserStates,
-#endif  // HAVE_JBAY
+        new MergeParserStates,
         &defuse,
             // Following pass must run after CollectNameAnnotations, after any CollectPhvInfo.
         new SetExternalNameForBridgedMetadata(phv, bridged_fields),

@@ -257,5 +257,6 @@ MergeParserStates::MergeParserStates() {
         collectStateUses,
         computeMergeableState,
         new WriteBackMergedState(*computeMergeableState),
+        LOGGING(3) ? new DumpParser("merge_parser_states.dot") : nullptr
     });
 }

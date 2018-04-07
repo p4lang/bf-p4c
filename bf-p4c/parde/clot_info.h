@@ -25,12 +25,11 @@ class ClotInfo {
     std::map<const Clot*, const IR::BFN::ParserState*> clot_to_parser_state_;
     std::map<const IR::BFN::ParserState*, std::vector<const Clot*>> parser_state_to_clots_;
 
- public:
-    explicit ClotInfo(PhvUse& uses) : uses(uses) {}
+    std::map<PHV::Container, nw_byterange> container_range_;
+    std::map<const PHV::Field*, nw_bitrange> field_range_;
 
  public:
-    // TODO(zma) encapsulate this properly
-    std::map<PHV::Container, nw_byterange> container_range_;
+    explicit ClotInfo(PhvUse& uses) : uses(uses) {}
 
  public:
     const std::vector<const Clot*>& clots() const { return clots_; }
@@ -39,6 +38,10 @@ class ClotInfo {
 
     const std::map<const IR::BFN::ParserState*, std::vector<const Clot*>>&
         parser_state_to_clots() const { return parser_state_to_clots_; }
+
+    std::map<PHV::Container, nw_byterange>& container_range() { return container_range_; }
+    const std::map<PHV::Container, nw_byterange>& container_range() const {
+        return container_range_; }
 
     void add(const Clot* cl, const IR::BFN::ParserState* state) {
         clots_.push_back(cl);
