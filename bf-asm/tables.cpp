@@ -193,7 +193,14 @@ void Table::setup_logical_id() {
         stage->logical_id_use[logical_id] = this; }
 }
 
-void Table::setup_maprams(VECTOR(value_t) *rams) {
+void Table::setup_maprams(value_t &v) {
+    if (!CHECKTYPE2(v, tINT, tVEC)) return;
+    VECTOR(value_t) *rams = &v.vec, single_ram;
+    if (v.type == tINT) {
+        // treat as a vector of length 1
+        rams = &single_ram;
+        single_ram.size = single_ram.capacity = 1;
+        single_ram.data = &v; }
     auto r = rams->begin();
     for (auto &row : layout) {
         if (r == rams->end()) {
@@ -867,7 +874,7 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                             for (auto &p : a.value.map) {
                                 if (CHECKTYPE(p.key, tSTR) && CHECKTYPE(p.value, tINT))
                                     p4_params_list.emplace_back(p.key.s, position++, p.value.i); } }
-                    } else if (a.key == "default_action") {
+                    } else if (a.key == "default_action" || a.key == "default_only_action") {
                         if CHECKTYPE(a.value, tMAP) {
                             for (auto &p : a.value.map) {
                                 if (CHECKTYPE(p.key, tSTR) && CHECKTYPE(p.value, tSTR)) {
@@ -875,6 +882,7 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                                         default_allowed = get_bool(p.value);
                                     else if (p.key == "reason")
                                         default_disallowed_reason = p.value.s; } } }
+                        default_only = a.key == "default_only_action";
                     } else if (CHECKTYPE3(a.value, tSTR, tCMD, tINT)) {
                         if (a.value.type == tINT) {
                             auto k = alias.find(a.key.s);
@@ -939,9 +947,11 @@ void Table::Actions::Action::set_action_handle(Table *tbl) {
 
 void Table::Actions::Action::pass1(Table *tbl) {
     set_action_handle(tbl);
-    if ((tbl->get_default_action() == name) &&
-        (!tbl->default_action_handle))
-        tbl->default_action_handle = handle;
+    if (tbl->get_default_action() == name) {
+        if (!tbl->default_action_handle)
+            tbl->default_action_handle = handle;
+        if (tbl->default_only_action)
+           default_only = true; }
     /* SALU actions always have addr == -1 (so iaddr == -1) */
     int iaddr = -1;
     if (addr >= 0) {
@@ -1050,11 +1060,12 @@ void Table::Actions::pass2(Table *tbl) {
             code = -1;
     } else {
         int non_nop_actions = 0;
-        for (auto &act : *this)
+        for (auto &act : *this) {
+            if (act.default_only) continue;
             if (act.instr.empty())
                 code = 1;   // nop action -- always uses code 0
             else
-                ++non_nop_actions;  // FIXME -- should combine identical actions
+                ++non_nop_actions; }  // FIXME -- should combine identical actions
         if (code + non_nop_actions > ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
             code = -1; }
 
@@ -1076,25 +1087,24 @@ void Table::Actions::pass2(Table *tbl) {
                 break; } }
         if (act.addr < 0)
             error(act.lineno, "Can't find an available instruction address");
-        if (act.code < 0) {
+        if (act.code < 0 && !act.default_only) {
             if (code < 0 && !code_use[act.addr])
                 act.code = act.addr;
             else if (act.instr.empty() && !have_next_hit_map)
                 act.code = 0;
             else
                 act.code = code; }
-        else if (code < 0 && act.code != act.addr) {
+        else if (code < 0 && act.code != act.addr && !act.default_only) {
             error(act.lineno, "Action code must be the same as action instruction address "
                   "when there are more than %d actions", ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH);
             if (act.code < 0)
                 warning(act.lineno, "Code %d is already in use by another action", act.addr); }
         if (act.code >= 0)
             code_use[act.code] = true;
-        if (act.name != tbl->default_action || !tbl->default_only_action) {
-            if (act.code >= code_limit)
-                error(act.lineno, "Action code %d for %s too large for action specifier in "
-                      "table %s", act.code, act.name.c_str(), limit_match_table->name());
-            if (act.code > max_code) max_code = act.code; }
+        if (act.code >= code_limit)
+            error(act.lineno, "Action code %d for %s too large for action specifier in "
+                  "table %s", act.code, act.name.c_str(), limit_match_table->name());
+        if (act.code > max_code) max_code = act.code;
         while (code >= 0 && code_use[code]) code++; }
     actions.sort([](const value_type &a, const value_type &b) -> bool {
         return a.second.code < b.second.code; });

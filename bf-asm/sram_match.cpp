@@ -59,24 +59,25 @@ void SRamMatchTable::verify_format() {
                           i, j, bit > 20 ? "nibble" : "byte", bit, word);
                     break; }
         for (auto it = format->begin(i); it != format->end(i); it++) {
+            Format::Field &f = it->second;
             if (it->first == "match" || it->first == "version" || it->first == "proxy_hash")
                 continue;
-            if (it->second.bits.size() != 1) {
+            if (f.bits.size() != 1) {
                 error(format->lineno, "Can't deal with split field %s", it->first.c_str());
                 continue; }
             unsigned limit = it->first == "next" ? 40 : 64;
-            unsigned word = it->second.bits[0].lo/128;
+            unsigned word = f.bit(0)/128;
             if (info.overhead_word < 0) {
                 info.overhead_word = word;
-                info.overhead_bit = it->second.bits[0].lo%128;
+                info.overhead_bit = f.bit(0)%128;
                 info.match_group[word] = -1;
             } else if (info.overhead_word != (int)word)
                 error(format->lineno, "Match overhead group %d split across words", i);
-            else if (word != it->second.bits[0].hi/128 || it->second.bits[0].hi%128 >= limit)
+            else if (word != f.bit(f.size-1)/128 || f.bit(f.size-1)%128 >= limit)
                 error(format->lineno, "Match overhead field %s(%d) not in bottom %d bits",
                       it->first.c_str(), i, limit);
-            if ((unsigned)info.overhead_bit > it->second.bits[0].lo%128)
-                info.overhead_bit = it->second.bits[0].lo%128; } }
+            if ((unsigned)info.overhead_bit > f.bit(0)%128)
+                info.overhead_bit = f.bit(0)%128; } }
     if (word_info.empty()) {
         word_info.resize(fmt_width);
         if (format->field("next")) {
@@ -111,9 +112,9 @@ void SRamMatchTable::verify_format() {
                     if (!next && hit_next.size() > 1)
                         next = format->field("action", grp);
                     if (next) {
-                        if (next->bits[0].lo/128 != i) continue;
+                        if (next->bit(0)/128 != i) continue;
                         static unsigned limit[5] = { 0, 8, 32, 32, 32 };
-                        unsigned bit = next->bits[0].lo%128U;
+                        unsigned bit = next->bit(0)%128U;
                         if (!j && bit)
                             error(mgm_lineno, "Next(%d) field must start at bit %d to be in "
                                   "match group 0", grp, i*128);
@@ -159,7 +160,7 @@ void SRamMatchTable::verify_format() {
                     for (auto group : word_info[word])
                         if ((group_info[group].tofino_mask[word] >> (14 + (nibble^1))) & 1) {
                             if (auto *version = format->field("version", group)) {
-                                if (version->bits[0].lo == word*128 + (nibble^1)*4 + 112) {
+                                if (version->bit(0) == word*128 + (nibble^1)*4 + 112) {
                                     LOG1("      skip group " << group << " (version)");
                                     continue; } }
                             group_info[group].tofino_mask[word] |= 1 << (14 + nibble);
@@ -380,6 +381,7 @@ void SRamMatchTable::common_sram_checks() {
 }
 
 void SRamMatchTable::pass1() {
+    // FIXME -- factor this code with TernaryIndirectTablle::pass1 -- lots of duplication
     MatchTable::pass1(0);
     if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
     else p4_table->check(this);
@@ -401,7 +403,13 @@ void SRamMatchTable::pass1() {
         actions->pass1(this);
     } else if (action.args.size() == 0) {
         if (auto *sel = lookup_field("action"))
-            action.args.push_back(sel); }
+            action.args.push_back(sel);
+    } else if (action.args[0].type == Call::Arg::Name) {
+        // FIXME -- should check to make sure its an action name
+    } else if (action.args[0].type == Call::Arg::Const && action.args[0].value() == 0) {
+        // ok
+    } else if (action.args[0].type != Call::Arg::Field) {
+        error(action.lineno, "first argument to 'action' must be a field or action name"); }
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
@@ -523,8 +531,8 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             for (auto &piece : match->bits)
                 match_mask.clrrange(piece.lo, piece.hi+1-piece.lo); }
         if (Format::Field *version = format->field("version", i)) {
-            match_mask.clrrange(version->bits[0].lo, version->size);
-            version_nibble_mask.clrrange(version->bits[0].lo/4, 1); } }
+            match_mask.clrrange(version->bit(0), version->size);
+            version_nibble_mask.clrrange(version->bit(0)/4, 1); } }
     Format::Field *next = format ? format->field("next") : nullptr;
     if (format && !next && hit_next.size() > 1)
         next = format->field("action");
@@ -574,7 +582,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             if (next) {
                 for (int group : word_info[way.word]) {
                     if (group_info[group].overhead_word != way.word) continue;
-                    int pos = (next->by_group[group]->bits[0].lo % 128) - 1;
+                    int pos = (next->by_group[group]->bit(0) % 128) - 1;
                     auto &n = ram.match_next_table_bitpos;
                     switch(group_info[group].word_group) {
                     case 0: break;
@@ -650,12 +658,13 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                         bit += bits_in_byte; } }
                 assert(bit == match->size); }
             if (Format::Field *version = format->field("version", i)) {
-                if (version->bits[0].lo/128U != word) continue;
+                if (version->bit(0)/128U != word) continue;
                 // don't need to enable vh_xbar just for version/valid, but do need to enable
                 // at least one word of vh_xbar always, so use this one if there's no match
                 if (!format->field("match", i))
                     using_match = true;
-                for (unsigned bit = version->bits[0].lo; bit <= version->bits[0].hi; bit++) {
+                for (unsigned j = 0; j < version->size; ++j) {
+                    unsigned bit = version->bit(j);
                     unsigned byte = (bit%128)/8;
                     byteswizzle_ctl[byte][bit%8U] = 8; } } }
         if (using_match) {
@@ -696,13 +705,13 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             int group = word_info[word][word_group];
             if (group_info[group].overhead_word == (int)word) {
                 if (format->immed) {
-                    assert(format->immed->by_group[group]->bits[0].lo/128U == word);
+                    assert(format->immed->by_group[group]->bit(0)/128U == word);
                     merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
-                        format->immed->by_group[group]->bits[0].lo % 128; }
-                if (!action.args.empty() && action.args[0]) {
-                    assert(action.args[0].field()->by_group[group]->bits[0].lo/128U == word);
+                        format->immed->by_group[group]->bit(0) % 128; }
+                if (!action.args.empty() && action.args[0].type == Call::Arg::Field) {
+                    assert(action.args[0].field()->by_group[group]->bit(0)/128U == word);
                     merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
-                        action.args[0].field()->by_group[group]->bits[0].lo % 128; } }
+                        action.args[0].field()->by_group[group]->bit(0) % 128; } }
             /* FIXME -- factor this where possible with ternary match code */
             if (action) {
                 unsigned action_log2size = 0;
@@ -713,13 +722,13 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
                         69 - lo_huffman_bits;
                 } else if (group_info[group].overhead_word == (int)word) {
-                    assert(action.args[1].field()->by_group[group]->bits[0].lo/128U == word);
+                    assert(action.args[1].field()->by_group[group]->bit(0)/128U == word);
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
-                        action.args[1].field()->by_group[group]->bits[0].lo%128 + 5 - lo_huffman_bits; } }
+                        action.args[1].field()->by_group[group]->bit(0)%128 + 5 - lo_huffman_bits; } }
             if (attached.selector) {
                 if (group_info[group].overhead_word == (int)word) {
                     merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
-                        attached.selector.args[0].field()->by_group[group]->bits[0].lo%128 + 23 -
+                        attached.selector.args[0].field()->by_group[group]->bit(0)%128 + 23 -
                             get_selector()->address_shift(); } }
             if (idletime)
                 merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =

@@ -403,7 +403,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
                 merge.mau_actiondata_adr_mask[1][indirect_bus] =
                     ((1U << action.args[1].size()) - 1) << lo_huffman_bits;
                 merge.mau_actiondata_adr_tcam_shiftcount[indirect_bus] =
-                    action.args[1].field()->bits[0].lo + 5 - lo_huffman_bits; } }
+                    action.args[1].field()->bit(0) + 5 - lo_huffman_bits; } }
         attached.write_tcam_merge_regs(regs, this, indirect_bus, 0);
     }
     if (actions) actions->write_regs(regs, this);
@@ -797,6 +797,7 @@ Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m, bool in
 }
 
 void TernaryIndirectTable::pass1() {
+    // FIXME -- factor this code with SRamMatchTable::pass1 -- lots of duplication
     LOG1("### Ternary indirect table " << name() << " pass1");
     alloc_busses(stage->tcam_indirect_bus_use);
     alloc_vpns();
@@ -813,7 +814,13 @@ void TernaryIndirectTable::pass1() {
         actions->pass1(this);
     } else if (action.args.size() == 0) {
         if (auto *sel = lookup_field("action"))
-            action.args.push_back(sel); }
+            action.args.push_back(sel);
+    } else if (action.args[0].type == Call::Arg::Name) {
+        // FIXME -- should check to make sure its an action name
+    } else if (action.args[0].type == Call::Arg::Const && action.args[0].value() == 0) {
+        // ok
+    } else if (action.args[0].type != Call::Arg::Field) {
+        error(action.lineno, "first argument to 'action' must be a field or action name"); }
     attached.pass1(match_table);
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
@@ -874,10 +881,10 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
         merge.tind_bus_prop[bus].tcam_piped = 1;
         merge.tind_bus_prop[bus].thread = gress;
         merge.tind_bus_prop[bus].enabled = 1;
-        if (action.args.size() > 0 && action.args[0])
-            merge.mau_action_instruction_adr_tcam_shiftcount[bus] = action.args[0].field()->bits[0].lo;
+        if (action.args.size() > 0 && action.args[0].type == Call::Arg::Field)
+            merge.mau_action_instruction_adr_tcam_shiftcount[bus] = action.args[0].field()->bit(0);
         if (format->immed)
-            merge.mau_immediate_data_tcam_shiftcount[bus] = format->immed->bits[0].lo;
+            merge.mau_immediate_data_tcam_shiftcount[bus] = format->immed->bit(0);
         if (action) {
             unsigned action_log2size = 0;
             if (auto adt = action->to<ActionTable>())
@@ -893,7 +900,7 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
                 merge.mau_actiondata_adr_mask[1][bus] =
                     ((1U << action.args[1].size()) - 1) << lo_huffman_bits;
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
-                    action.args[1].field()->bits[0].lo + 5 - lo_huffman_bits; } }
+                    action.args[1].field()->bit(0) + 5 - lo_huffman_bits; } }
         if (attached.selector) {
             if (attached.selector.args.size() == 1)
                 merge.mau_selectorlength_default[1][bus] = 1;
@@ -903,7 +910,7 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
                     width += attached.selector.args[2].size();
                 merge.mau_selectorlength_mask[1][bus] = (1 << width) - 1; }
             merge.mau_meter_adr_tcam_shiftcount[bus] =
-                attached.selector.args[0].field()->bits[0].lo%128 + 23 - get_selector()->address_shift(); }
+                attached.selector.args[0].field()->bit(0)%128 + 23 - get_selector()->address_shift(); }
         if (match_table->idletime)
             merge.mau_idletime_adr_tcam_shiftcount[bus] =
                     66 + format->log2size - match_table->idletime->precision_shift();

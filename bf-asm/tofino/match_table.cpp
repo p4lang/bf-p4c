@@ -54,7 +54,7 @@ template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs,
                         if (next_table_encodings.count(n->name()) > 0) {
                             act.next_table_encode = next_table_encodings[n->name()];
                             *map_data[act.next_table_encode] = n->table_id(); } 
-                    } else {
+                    } else if (act.code >= 0) {
                         // If action bits are used the instruction index is used
                         // to index in both instruction map data and 
                         assert(act.code < 8);

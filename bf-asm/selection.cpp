@@ -46,8 +46,7 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
             if (hash_dist.size() > 1)
                 error(kv.key.lineno, "More than one hast_dist in a selection table not supported");
         } else if (kv.key == "maprams") {
-            if (CHECKTYPE(kv.value, tVEC))
-                setup_maprams(&kv.value.vec);
+            setup_maprams(kv.value);
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
                 p4_table = P4Table::get(P4Table::Selection, kv.value.map);

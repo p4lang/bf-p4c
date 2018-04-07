@@ -140,7 +140,7 @@ class DefaultActionInit : public MauModifier {
             args = mc->arguments;
         }
         // Indicates that this action is to be used only as a miss
-        auto def_only_annot = elem->annotations->getSingle("default_only");
+        auto def_only_annot = elem->annotations->getSingle("defaultonly");
 
         auto path = default_action->to<IR::PathExpression>();
         if (!path)

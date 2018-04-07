@@ -21,8 +21,7 @@ bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
     else if (CHECKTYPE(kv.value, tVEC))
         setup_vpns(layout, &kv.value.vec, true);
     } else if (kv.key == "maprams") {
-        if (CHECKTYPE(kv.value, tVEC))
-            setup_maprams(&kv.value.vec);
+        setup_maprams(kv.value);
     } else if (kv.key == "global_binding") {
         global_binding = get_bool(kv.value);
     } else if (kv.key == "per_flow_enable") {

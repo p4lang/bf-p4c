@@ -71,7 +71,7 @@ protected:
                       const value_t *bus, const char *subname = "");
     void setup_logical_id();
     void setup_actions(value_t &);
-    void setup_maprams(VECTOR(value_t) *);
+    void setup_maprams(value_t &);
     void setup_vpns(std::vector<Layout> &, VECTOR(value_t) *, bool allow_holes = false);
     virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name)
     { assert(0); }
@@ -337,6 +337,7 @@ public:
             unsigned                            handle = 0;
             p4_params                           p4_params_list;
             bool                                default_allowed = false;
+            bool                                default_only = false;
             std::string                         default_disallowed_reason = "";
             std::vector<Call>                   attached;
             int                                 next_table_encode = 0;

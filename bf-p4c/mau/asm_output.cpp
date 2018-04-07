@@ -1202,11 +1202,11 @@ class MauAsmOutput::EmitAction : public Inspector {
                 alias[aa->name] = self.find_indirect_index(at, true, nullptr, table); } }
         out << indent << canon_name(act->name) << ":" << std::endl;
         action_context_json(act);
-        out << indent << "- default_action: { "
+        out << indent << "- default_" << (act->miss_action_only ? "only_" : "") << "action: {"
             << " allowed: " << std::boolalpha << act->default_allowed;
-            if (!act->default_allowed)
-                out << ", reason: " << act->disallowed_reason;
-            out << " }" << std::endl;
+        if (!act->default_allowed)
+            out << ", reason: " << act->disallowed_reason;
+        out << " }" << std::endl;
         is_empty = true;
         if (table->layout.action_data_bytes > 0) {
             self.emit_action_data_alias(out, indent, table, act);
@@ -1739,7 +1739,6 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         if (p4_param_index != ixbar_read->p4_param_order) continue;
         auto *expr = ixbar_read->expr;
         auto* mem = expr->to<IR::BFN::AliasMember>();
-        auto* old_expr = expr;
         if (ixbar_read->from_mask)
             expr = expr->to<IR::Slice>()->e0;
         auto* sl = expr->to<IR::Slice>();
@@ -1924,6 +1923,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             sep = ", ";
         }
         for (auto act : Values(tbl->actions)) {
+            if (act->miss_action_only) continue;
             out << sep << next_for(tbl, act->name, default_next);
             sep = ", ";
         }
@@ -2096,12 +2096,12 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
     }
 
     if (!tbl->gateway_only()) {
-        out << indent << "default_action: ";
         bool found_def_act = false;
         for (auto act : Values(tbl->actions)) {
             if (!act->init_default) continue;
             found_def_act = true;
-            out << canon_name(act->name) << std::endl;
+            out << indent << "default_" << (act->miss_action_only ? "only_" : "") << "action: "
+                << canon_name(act->name) << std::endl;
             if (act->default_params.size() == 0)
                 break;
             BUG_CHECK(act->default_params.size() == act->args.size(), "Wrong number of params "

@@ -22,8 +22,13 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/basic_routing.p4
     testdata/p4_14_samples/exact_match3.p4
     testdata/p4_14_samples/exact_match5.p4
-    testdata/p4_14_samples/counter4.p4
     extensions/p4_tests/p4_14/stateful3.p4
+  )
+
+  # counter indexing problem?
+  p4c_add_xfail_reason("jbay"
+    "no field idx related to table tab1"
+    testdata/p4_14_samples/counter4.p4
   )
 
   # ingress_port isn't being setup properly (STF harness bug)
