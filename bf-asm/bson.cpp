@@ -67,14 +67,13 @@ std::istream &operator>>(std::istream &in, bson_wrap<json::vector> o) {
             std::cerr << "incorrect key in array" << std::endl;
         switch (type) {
         case 0x02: {
-            auto eos = in.tellg();
-            eos += get32(in) + 4;
+            uint32_t len = get32(in) - 1;
             std::string val;
-            getline(in, val, '\0');
+            val.resize(len);
+            in.read(&val[0], len);
             out.push_back(val.c_str());
-            if (in.tellg() != eos) {
-                // length screwup
-                std::cerr << "incorrect length for bson string" << std::endl;
+            if (in.get() != 0) {
+                std::cerr << "missing NUL in bson string" << std::endl;
                 in.setstate(std::ios::failbit); }
             break; }
         case 0x03: {
@@ -110,7 +109,7 @@ std::istream &operator>>(std::istream &in, bson_wrap<json::vector> o) {
         default:
             std::cerr << "unhandled bson tag " << hex(type) << std::endl;
             break; } }
-    if (in && in.tellg() != end) {
+    if (start != -1 && in && in.tellg() != end) {
         std::cerr << "incorrect length for object" << std::endl; }
     return in;
 }
@@ -132,14 +131,13 @@ std::istream &operator>>(std::istream &in, bson_wrap<json::map> o) {
             std::cerr << "duplicate key in map" << std::endl;
         switch (type) {
         case 0x02: {
-            auto eos = in.tellg();
-            eos += get32(in) + 4;
+            uint32_t len = get32(in) - 1;
             std::string val;
-            getline(in, val, '\0');
+            val.resize(len);
+            in.read(&val[0], len);
             out[key] = val;
-            if (in.tellg() != eos) {
-                // length screwup
-                std::cerr << "incorrect length for bson string" << std::endl;
+            if (in.get() != 0) {
+                std::cerr << "missing NUL in bson string" << std::endl;
                 in.setstate(std::ios::failbit); }
             break; }
         case 0x03: {
@@ -175,7 +173,7 @@ std::istream &operator>>(std::istream &in, bson_wrap<json::map> o) {
         default:
             std::cerr << "unhandled bson tag " << hex(type) << std::endl;
             break; } }
-    if (in && in.tellg() != end) {
+    if (start != -1 && in && in.tellg() != end) {
         std::cerr << "incorrect length for object" << std::endl; }
     return in;
 }

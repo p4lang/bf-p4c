@@ -60,7 +60,7 @@ build_unified(JSONDIFF_SOURCES ALL)
 add_executable (json_diff ${JSONDIFF_SOURCES})
 
 # bfdumpbin
-set (BFDUMPBIN_SOURCES bfdumpbin.cpp)
+set (BFDUMPBIN_SOURCES bfdumpbin.cpp fdstream.cpp json.cpp bson.cpp)
 build_unified(BFDUMPBIN_SOURCES ALL)
 add_executable (bfdumpbin ${BFDUMPBIN_SOURCES})
 
