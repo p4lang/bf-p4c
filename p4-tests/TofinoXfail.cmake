@@ -1036,3 +1036,8 @@ p4c_add_xfail_reason("tofino"
   "Currently non contiguous byte allocation in table format?"
   extensions/p4_tests/p4_14/test_config_215_nondphv.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "TTransportException: TSocket read 0 bytes"
+  extensions/p4_tests/p4_14/p4-tests/programs/pcie_pkt_test/pcie_pkt_test.p4
+)
