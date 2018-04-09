@@ -260,6 +260,7 @@ class Table : BFN::Unit {
             auto &clone(v.flow_clone());
             v.flow_dead();
             auto &default_action(clone.flow_clone());
+            default_action.flow_dead();
             for (auto &action : Values(actions)) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(action);

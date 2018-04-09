@@ -36,6 +36,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/gateway2.p4
     testdata/p4_14_samples/gateway3.p4
     testdata/p4_14_samples/gateway4.p4
+    testdata/p4_14_samples/instruct5.p4
     testdata/p4_16_samples/issue774-4-bmv2.p4
     testdata/p4_16_samples/issue1000-bmv2.p4
     extensions/p4_tests/p4_16/cast_narrowing_set.p4
@@ -86,7 +87,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "error: instruction slot [0-9]+ used multiple times in action push"
-    testdata/p4_14_samples/instruct5.p4
+    # testdata/p4_14_samples/instruct5.p4
     )
 
 # BRIG-241
@@ -157,7 +158,7 @@ p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 # BRIG-497
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
-  testdata/p4_14_samples/instruct5.p4
+  # testdata/p4_14_samples/instruct5.p4
   )
 
 # This test fails because two fields are mutually exclusive in the parser, but
@@ -166,7 +167,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   extensions/p4_tests/p4_14/overlay_add_header.p4
-  extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
 # packing valid bits incorrectly
   )
 
@@ -552,12 +552,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Tofino does not allow stats to use different address schemes on one table"
   testdata/p4_14_samples/counter.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Constant lookup does not match the ActionFormat"
-  extensions/p4_tests/p4_14/test_config_222_small_tag_stack.p4
-  testdata/p4_14_samples/action_inline.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1033,11 +1027,28 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Currently non contiguous byte allocation in table format?"
+  "Extract to non-PHV destination:.*stkvalid"
+  extensions/p4_tests/p4_16/brig-42.p4
+)
+
+# BRIG-583
+p4c_add_xfail_reason("tofino"
+  "shift value .* out of range"
+  fabric-DWITH_SPGW
+)
+
+# Flaky.
+p4c_add_xfail_reason("tofino"
+  "Currently non contiguous byte allocation in table format"
   extensions/p4_tests/p4_14/test_config_215_nondphv.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "TTransportException: TSocket read 0 bytes"
   extensions/p4_tests/p4_14/p4-tests/programs/pcie_pkt_test/pcie_pkt_test.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "expected packet on port .* not seen"
+  extensions/p4_tests/p4_16/stack_valid.p4
 )

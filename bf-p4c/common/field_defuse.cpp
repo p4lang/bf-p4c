@@ -168,6 +168,23 @@ bool FieldDefUse::preorder(const IR::BFN::LoweredParser*) {
     return false;
 }
 
+bool FieldDefUse::preorder(const IR::Primitive* prim) {
+    // XXX(yumin): consider h.f1 = h.f1 + 1; When we visit it,
+    // we should first visit the source on the RHS, as how hardware does.
+    // The h.f1 on RHS is an use of previous def, and the one on LHS is a
+    // write that clears the previous defs from this point.
+    // TODO(yumin): The long-term fix for this is to change the order of visiting when
+    // visiting IR::Primitive to the evaluation order defined in spec,
+    // to make control flow visit correct.
+    if (prim->operands.size() > 0) {
+        for (size_t i = 1; i < prim->operands.size(); ++i) {
+            visit(prim->operands[i], "operands", i);
+        }
+        visit(prim->operands[0], "dest", 0);
+    }
+    return false;
+}
+
 bool FieldDefUse::preorder(const IR::Expression *e) {
     bitrange bits;
     auto *f = phv.field(e, &bits);
@@ -180,7 +197,7 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
 
     if (auto unit = findContext<IR::BFN::Unit>()) {
         if (isWrite()) {
-           /* this is a temporary fix to make sure that we dont overwrite the 
+           /* this is a temporary fix to make sure that we dont overwrite the
             * previous assignment. This needs to be enhanced to deal with range
             * being non-contiguous and overwrite if the range is contiguous
             */

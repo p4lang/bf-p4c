@@ -44,6 +44,8 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     # clot-phv interaction bug?
     extensions/p4_tests/p4_14/action_format_packing2.p4
     extensions/p4_tests/p4_16/brig-532.p4
+    testdata/p4_14_samples/instruct5.p4
+    testdata/p4_14_samples/bridge1.p4
     )
 
   # Temporary until we fix the naming in STF for BMV2
@@ -98,7 +100,6 @@ p4c_add_xfail_reason("jbay"
 
 p4c_add_xfail_reason("jbay"
   "PHV allocation creates a container action impossible within a Tofino ALU"
-  testdata/p4_14_samples/action_inline.p4
   extensions/p4_tests/p4_14/overlay_add_header.p4
   )
 
@@ -208,7 +209,7 @@ p4c_add_xfail_reason("jbay"
 # but is known to be incorrect.
 p4c_add_xfail_reason("jbay"
   "instruction slot [0-9]+ used multiple times in action"
-  testdata/p4_14_samples/instruct5.p4
+  # testdata/p4_14_samples/instruct5.p4
   )
 
 p4c_add_xfail_reason("jbay"
@@ -257,6 +258,7 @@ endif() # PTF_REQUIREMENTS_MET
 p4c_add_xfail_reason("jbay"
   ".* expected packet on port .* not seen"
   extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
+  extensions/p4_tests/p4_16/stack_valid.p4
 )
 
 # BRIG-546

@@ -76,9 +76,11 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     void access_field(const PHV::Field *);
     bool preorder(const IR::BFN::Parser *p) override;
     bool preorder(const IR::BFN::LoweredParser *p) override;
+    bool preorder(const IR::Primitive* prim) override;
     bool preorder(const IR::Expression *e) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;
+    void flow_dead() override { defuse.clear(); }
     FieldDefUse(const FieldDefUse &) = default;
     FieldDefUse(FieldDefUse &&) = default;
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse::info &);
@@ -94,7 +96,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
       located_defs(*new std::remove_reference<decltype(located_defs)>::type),
       parser_zero_inits(*new std::remove_reference<decltype(parser_zero_inits)>::type),
       uninitialized_fields(*new std::remove_reference<decltype(uninitialized_fields)>::type)
-    { joinFlows = true; visitDagOnce = false; }
+      { joinFlows = true; visitDagOnce = false; }
 
     // TODO: unused?
     // const SymBitMatrix &conflicts() { return conflict; }

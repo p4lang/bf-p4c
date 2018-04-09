@@ -289,7 +289,7 @@ FindDependencyGraph::calc_topological_stage() {
     typename DependencyGraph::Graph::vertex_iterator v, v_end;
     typename DependencyGraph::Graph::edge_iterator out, out_end;
 
-    // Current in-degress of vertices
+    // Current in-degree of vertices
     std::map<DependencyGraph::Graph::vertex_descriptor, int> n_depending_on;
 
     // Build initial n_depending_on, and happens_after_map
