@@ -41,7 +41,9 @@ template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs,
         if (n.name == "END") {
             if (tbl->hit_next.size() == 1)
                 *map_data[0] = 0xFF;
-            hit_next_index++;
+            // If table has gateway, do not increment for first index reserved for gateway
+            if (!((hit_next_index == 0) && (tbl->get_gateway())))
+                hit_next_index++;
             continue; }
         if (auto acts = tbl->get_actions()) {
             for (auto &act : *acts) {
