@@ -138,10 +138,6 @@ Visitor::profile_t Clustering::MakeAlignedClusters::init_apply(const IR::Node *r
     // Initialize union_find_i with pointers to all field slices.
     for (auto& by_field : self.fields_to_slices_i) {
         for (auto& slice : by_field.second) {
-            // Skip stack POV fields; these are allocated with stkvalid.
-            if (slice.field()->ccgf() && !slice.field()->is_ccgf()) {
-                LOG5("Skipping stack POV field slice " << slice);
-                continue; }
             LOG5("Creating AlignedCluster singleton containing field slice " << slice);
             union_find_i.insert(slice); } }
     return rv;
@@ -532,16 +528,12 @@ void Clustering::MakeSuperClusters::end_apply() {
 
         // Skip valid bits for header stacks, which are allocated with
         // $stkvalid.
-        if (f.ccgf())
+        if (f.size > 1)
             continue;
 
         // Skip valid bits involved in complex instructions, because they have
         // complicated packing constraints.
         if (self.complex_validity_bits_i.find(&f) != self.complex_validity_bits_i.end())
-            continue;
-
-        // If this validity bit is part of a header stack, skip it.
-        if (f.header_stack_pov_ccgf() || f.ccgf())
             continue;
 
         LOG5("Creating POV BIT LIST with " << f);

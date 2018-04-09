@@ -36,7 +36,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/gateway2.p4
     testdata/p4_14_samples/gateway3.p4
     testdata/p4_14_samples/gateway4.p4
-    testdata/p4_14_samples/instruct5.p4
     testdata/p4_16_samples/issue774-4-bmv2.p4
     testdata/p4_16_samples/issue1000-bmv2.p4
     extensions/p4_tests/p4_16/cast_narrowing_set.p4
@@ -83,11 +82,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "Match field .* is too complicated to represent in P4Runtime"
     testdata/p4_14_samples/exact_match_mask1.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "error: instruction slot [0-9]+ used multiple times in action push"
-    # testdata/p4_14_samples/instruct5.p4
     )
 
 # BRIG-241
@@ -154,20 +148,12 @@ endif() # PTF_REQUIREMENTS_MET
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 
-# Problem with the stkvalid encoding of header stacks.
-# BRIG-497
-p4c_add_xfail_reason("tofino"
-  "instruction slot [0-9]+ used multiple times in action"
-  # testdata/p4_14_samples/instruct5.p4
-  )
-
 # This test fails because two fields are mutually exclusive in the parser, but
 # one is added in the MAU while the other is live.  This behavior matches glass
 # but is known to be incorrect.
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   extensions/p4_tests/p4_14/overlay_add_header.p4
-# packing valid bits incorrectly
   )
 
 # BRIG-104
@@ -558,6 +544,7 @@ p4c_add_xfail_reason("tofino"
   "Expected type T in digest to be a typeName"
   testdata/p4_16_samples/issue430-1-bmv2.p4
   )
+
 # bug in instruction selection
 p4c_add_xfail_reason("tofino"
   "visitor returned invalid type Cast"
@@ -1026,11 +1013,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/header-stack-ops-bmv2.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Extract to non-PHV destination:.*stkvalid"
-  extensions/p4_tests/p4_16/brig-42.p4
-)
-
 # BRIG-583
 p4c_add_xfail_reason("tofino"
   "shift value .* out of range"
@@ -1048,7 +1030,15 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/pcie_pkt_test/pcie_pkt_test.p4
 )
 
+# BRIG-584
 p4c_add_xfail_reason("tofino"
-  "expected packet on port .* not seen"
-  extensions/p4_tests/p4_16/stack_valid.p4
+  "Unimplemented compiler support.*: Cannot extract to a field slice in the parser"
+  extensions/p4_tests/p4_16/extract_slice.p4
+)
+
+# This will be fixed once PR 1693 in the switch repository is merged and the
+# submodule refpoint is updated in p4-tests.
+p4c_add_xfail_reason("tofino"
+  "Header stack elements must be initialized"
+  switch_p4_16
 )

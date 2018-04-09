@@ -62,3 +62,118 @@ void ElimUnusedHeaderStackInfo::Elim::postorder(IR::BFN::Pipe* pipe) {
         LOG5("ElimUnusedHeaderStackInfo: Removing stack " << hs);
         pipe->headerStackInfo->info.erase(hs); }
 }
+
+IR::Node* RemovePushInitialization::preorder(IR::MAU::Action* act) {
+    // Maps the header to a bitmap of the indicies just pushed, which we use to
+    // track whether all newly pushed items are initialized.  A '1' means
+    // pushed but not initialized, which is cleared when an initialization is
+    // found.
+    ordered_map<cstring, bitvec> pushed_inits;
+    ordered_map<cstring, const IR::Primitive*> push_prims;
+    IR::Vector<IR::Primitive> to_keep;
+
+    for (auto* prim : act->action) {
+        to_keep.push_back(prim);
+        if (prim->name == "push_front") {
+            // If this is the first push to this field in this action, add it
+            // to pushed_inits.  Otherwise, shift the bitvec to account for
+            // the newly pushed elements.
+            cstring dst = prim->operands[0]->toString();
+            int pushAmount = prim->operands[1]->to<IR::Constant>()->asInt();
+            LOG5("Found " << dst << " with " << pushAmount <<
+                 " pushed elements that need to be initialized: " << prim);
+            if (pushed_inits.find(dst) == pushed_inits.end()) {
+                pushed_inits[dst] = bitvec(0, pushAmount);
+            } else {
+                pushed_inits[dst] <<= pushAmount;
+                pushed_inits[dst].setrange(0, pushAmount);
+                push_prims[dst] = prim; }
+        } else if (prim->name == "modify_field") {
+            // If this sets the validity of a header stack element, check that
+            // it's a newly-added element, and mark it for removal.
+            if (auto* dst = prim->operands[0]->to<IR::Member>()) {
+                if (dst->member.toString() != "$valid") continue;
+                if (auto* ref = dst->expr->to<IR::HeaderStackItemRef>()) {
+                    if (auto* idxNode = ref->index()->to<IR::Constant>()) {
+                        if (auto* src = prim->operands[1]->to<IR::Constant>()) {
+                            if (src->asInt() != 1) continue;
+                            auto stkName = ref->base()->toString();
+                            if (pushed_inits.find(stkName) == pushed_inits.end())
+                                continue;
+                            int idx = idxNode->asInt();
+                            auto& inits = pushed_inits.at(stkName);
+                            if (inits.getbit(idx)) {
+                                to_keep.pop_back();
+                                inits.clrbit(idx); } } } } } } }
+
+    for (auto& kv : pushed_inits) {
+        if (kv.second != bitvec()) {
+            std::stringstream msg;
+            for (auto idx : kv.second)
+                msg << idx << " ";
+            P4C_UNIMPLEMENTED("Header stack elements must be initialized in the action in which "
+                              "they are pushed.  %1% is pushed but indices %3%are not "
+                              "initialized in action %2%",
+                              kv.first, cstring::to_cstring(act), msg.str()); } }
+
+    // Remove setValid of pushed elements; validity is set automatically as
+    // part of the push operation.
+    act->action = to_keep;
+    LOG4("New action with validity initialization removed: " << act);
+    return act;
+}
+
+IR::Node* ValidToStkvalid::preorder(IR::BFN::Pipe* pipe) {
+    LOG5("ENTERING ValidToStkvalid");
+    stack_info_ = pipe->headerStackInfo;
+    BUG_CHECK(stack_info_, "No header stack info.  Running ValidToStkvalid "
+              "before CollectHeaderStackInfo?");
+    return pipe;
+}
+
+IR::Node* ValidToStkvalid::postorder(IR::Member* member) {
+    auto* ref = member->expr->to<IR::HeaderStackItemRef>();
+    // Skip everything but header stack validity fields (hdr[x].$valid).
+    if (!ref || member->member.toString() != "$valid")
+        return member;
+
+    auto* stk = ref->baseRef();
+    auto info = stack_info_->at(stk->name.toString());
+
+    auto* idxNode = ref->index()->to<IR::Constant>();
+    BUG_CHECK(idxNode, "Found a header stack with a non-constant reference in "
+              "the back end: %1%", cstring::to_cstring(member));
+    int idx = idxNode->asInt();
+
+    // Translate the idx to the bit position in $stkvalid corresponding to this
+    // element's validity bit.  See the comment for HeaderPushPop for details
+    // on the stkvalid encoding.
+    int stkvalidIdx = info.maxpop + info.size - 1 - idx;
+
+    auto* stkvalid = new IR::Member(member->srcInfo,
+                                    IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
+                                    ref->base(),
+                                    "$stkvalid");
+    auto* slice = new IR::Slice(stkvalid, stkvalidIdx, stkvalidIdx);
+
+    LOG5("Replacing " << member << " with " << slice);
+    return slice;
+}
+
+IR::Node* ValidToStkvalid::postorder(IR::BFN::Extract* extract) {
+    // Check whether the destination is an extraction to a $stkvalid slice.  If
+    // so, get the bit being written to.
+    auto* slice = extract->dest->field->to<IR::Slice>();
+    if (!slice) return extract;
+    auto* member = slice->e0->to<IR::Member>();
+    if (!member || member->member.toString() != "$stkvalid") return extract;
+    auto* src = extract->source->to<IR::BFN::ConstantRVal>();
+    if (!src || src->constant->asInt() != 1) return extract;
+    int dst = slice->getL();
+
+    // Replace the slice with $stkvalid, and shift the value being assigned to
+    // the offset of the destination bit.
+    extract->dest = new IR::BFN::FieldLVal(member);
+    extract->source = new IR::BFN::ConstantRVal(1 << dst);
+    return extract;
+}

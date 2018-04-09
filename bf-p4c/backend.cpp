@@ -154,9 +154,11 @@ Backend::Backend(const BFN_Options& options) :
         new CreateThreadLocalInstances,
         new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances, but
                                      // cannot be run after InstructionSelection.
+        new RemovePushInitialization,
         new StackPushShims,
         new CollectPhvInfo(phv),  // Needs to be rerun after CreateThreadLocalInstances.
         new HeaderPushPop,
+        new ValidToStkvalid,
         new CollectPhvInfo(phv),
         new DoInstructionSelection(phv),
         new DumpPipe("After InstructionSelection"),

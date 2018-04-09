@@ -49,7 +49,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     # clot-phv interaction bug?
     extensions/p4_tests/p4_14/action_format_packing2.p4
     extensions/p4_tests/p4_16/brig-532.p4
-    testdata/p4_14_samples/instruct5.p4
     testdata/p4_14_samples/bridge1.p4
     )
 
@@ -209,14 +208,6 @@ p4c_add_xfail_reason("jbay"
   testdata/p4_14_samples/parser_value_set2.p4
   )
 
-# This test fails because two fields are mutually exclusive in the parser, but
-# one is added in the MAU while the other is live.  This behavior matches glass
-# but is known to be incorrect.
-p4c_add_xfail_reason("jbay"
-  "instruction slot [0-9]+ used multiple times in action"
-  # testdata/p4_14_samples/instruct5.p4
-  )
-
 p4c_add_xfail_reason("jbay"
   "Error when trying to push config to bf_switchd"
   extensions/p4_tests/p4_16/hash_driven_stats.p4
@@ -263,7 +254,6 @@ endif() # PTF_REQUIREMENTS_MET
 p4c_add_xfail_reason("jbay"
   ".* expected packet on port .* not seen"
   extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
-  extensions/p4_tests/p4_16/stack_valid.p4
 )
 
 # BRIG-546
@@ -278,4 +268,10 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_14/deparser_group_allocation_1.p4
+)
+
+# BRIG-584
+p4c_add_xfail_reason("jbay"
+  "Unimplemented compiler support.*: Cannot extract to a field slice in the parser"
+  extensions/p4_tests/p4_16/extract_slice.p4
 )

@@ -787,19 +787,15 @@ class PhvInfo {
         return struct_info(hr->toString()); }
     size_t num_fields() const { return all_fields.size(); }
 
-    std::vector<PHV::Field::alloc_slice>
-    get_alloc(const IR::Expression* f) const {
+    std::vector<PHV::Field::alloc_slice> get_alloc(const IR::Expression* f) const {
         CHECK_NULL(f);
-        std::vector<PHV::Field::alloc_slice> slices;
-
         auto* phv_field = field(f);
+        BUG_CHECK(phv_field, "No PHV field for expression %1%", f);
         return get_alloc(phv_field);
     }
 
-    std::vector<PHV::Field::alloc_slice>
-    get_alloc(const PHV::Field* phv_field) const {
+    std::vector<PHV::Field::alloc_slice> get_alloc(const PHV::Field* phv_field) const {
         std::vector<PHV::Field::alloc_slice> slices;
-        if (!phv_field) return slices;
 
         phv_field->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
             slices.push_back(alloc);
