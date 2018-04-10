@@ -14,7 +14,72 @@
 
 namespace BFN {
 
-namespace {
+struct ParserPragmas : public Inspector {
+    static bool checkNumArgs(cstring pragma, const IR::Vector<IR::Expression>& exprs,
+                             unsigned expected) {
+        if (exprs.size() != expected) {
+            ::warning("@pragma %1% must have %2% argument, %3% are found, skipped",
+                       pragma, expected, exprs.size());
+            return false;
+        }
+
+        return true;
+    }
+
+    static bool checkGress(cstring pragma, const IR::StringLiteral* gress) {
+        if (!gress || (gress->value != "ingress" && gress->value != "egress")) {
+            ::warning("@pragma %1% must be applied to ingress/egress", pragma);
+            return false;
+        }
+        return true;
+    }
+
+    bool preorder(const IR::Annotation *annot) {
+        auto pragma_name = annot->name.name;
+        auto p = findContext<IR::BFN::TranslatedP4Parser>();
+        auto ps = findContext<IR::ParserState>();
+
+        if (!p || !ps)
+            return false;
+
+        if (pragma_name == "terminate_parsing") {
+            auto& exprs = annot->expr;
+            if (!checkNumArgs(pragma_name, exprs, 1))
+                return false;
+
+            auto gress = exprs[0]->to<IR::StringLiteral>();
+            if (!checkGress(pragma_name, gress))
+                return false;
+
+            if (gress->value == toString(p->thread)) {
+                terminate_parsing.insert(ps);
+            }
+        } else if (pragma_name == "force_shift") {
+            auto& exprs = annot->expr;
+            if (!checkNumArgs(pragma_name, exprs, 2))
+                return false;
+
+            auto gress = exprs[0]->to<IR::StringLiteral>();
+            if (!checkGress(pragma_name, gress))
+                return false;
+
+            auto shift_amt = exprs[1]->to<IR::Constant>();
+            if (!shift_amt || shift_amt->asInt() <= 0) {
+                ::warning("@pragma force_shift must have positive shift amount(bits)");
+                return false;
+            }
+
+            if (gress->value == toString(p->thread)) {
+                force_shift[ps] = shift_amt->asInt();
+            }
+        }
+
+        return false;
+    }
+
+    std::set<const IR::ParserState*> terminate_parsing;
+    std::map<const IR::ParserState*, unsigned> force_shift;
+};
 
 /// A helper type that represents a transition in the parse graph that led to
 /// the current state.
@@ -151,46 +216,46 @@ struct AutoPushTransition {
     bool isValid;
 };
 
-class GetTofinoParser {
+class GetBackendParser {
  public:
-    static const IR::BFN::Parser*
-    extract(gress_t gress, const IR::P4Parser* parser);
+    explicit GetBackendParser(const ParserPragmas& pg) : parserPragmas(pg) { }
+
+    const IR::BFN::Parser* extract(const IR::BFN::TranslatedP4Parser* parser);
 
     bool addTransition(IR::BFN::ParserState* state, match_t matchVal, int shift, cstring nextState);
 
  private:
-    explicit GetTofinoParser(gress_t gress) : gress(gress) { }
-
     IR::BFN::ParserState* getState(cstring name);
 
     TransitionStack                             transitionStack;
-    gress_t                                     gress = INGRESS;
+
     std::map<cstring, IR::BFN::ParserState *>   states;
     std::map<cstring, cstring>                  p4StateNameToStateName;
+
+    const ParserPragmas& parserPragmas;
 };
 
-/* static */ const IR::BFN::Parser*
-GetTofinoParser::extract(gress_t gress, const IR::P4Parser* parser) {
-    GetTofinoParser getter(gress);
-
-    forAllMatching<IR::ParserState>(parser,
-                  [&](const IR::ParserState* state) {
+const IR::BFN::Parser*
+GetBackendParser::extract(const IR::BFN::TranslatedP4Parser* parser) {
+    forAllMatching<IR::ParserState>(parser, [&](const IR::ParserState* state) {
         auto stateName = state->controlPlaneName();
-        getter.p4StateNameToStateName.emplace(state->name, stateName);
+        p4StateNameToStateName.emplace(state->name, stateName);
         if (state->name == "accept" || state->name == "reject")
             return false;
-        getter.states[stateName] =
-          new IR::BFN::ParserState(state, stateName, gress);
+        states[stateName] =
+          new IR::BFN::ParserState(state,
+                                   createThreadName(parser->thread, stateName),
+                                   parser->thread);
         return true;
     });
 
-    BUG_CHECK(getter.p4StateNameToStateName.count("start"),
+    BUG_CHECK(p4StateNameToStateName.count("start"),
               "No entry point in parser?");
-    auto* startState = getter.getState(getter.p4StateNameToStateName.at("start"));
-    return new IR::BFN::Parser(gress, startState);
+    auto* startState = getState(p4StateNameToStateName.at("start"));
+    return new IR::BFN::Parser(parser->thread, startState);
 }
 
-bool GetTofinoParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,
+bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,
     int shift, cstring nextState) {
     auto* transition = new IR::BFN::Transition(matchVal, shift);
     state->transitions.push_back(transition);
@@ -208,25 +273,11 @@ bool GetTofinoParser::addTransition(IR::BFN::ParserState* state, match_t matchVa
     return true;
 }
 
-
-}  // namespace
-
 struct RewriteParserStatements : public Transform {
     std::map<cstring, const IR::BFN::PacketRVal*> extractedFields;
 
     RewriteParserStatements(cstring stateName, gress_t gress)
         : stateName(stateName), gress(gress) { }
-
-    /// @return the cumulative shift in bytes from all of the statements
-    /// rewritten up to this point. This includes both extracts and `advance()`
-    /// calls.
-    int byteTotalShift() const {
-        nw_bitinterval bitsAdvanced(0, currentBit);
-        if (!bitsAdvanced.isHiAligned())
-            ::warning("Parser state %1% does not end on a byte boundary; "
-                      "adding padding.", stateName);
-        return bitsAdvanced.nextByte();
-    }
 
     /// @return the cumulative shift in bits from all statements rewritten up to
     /// this point.
@@ -495,8 +546,6 @@ static match_t buildMatch(int match_size, const IR::Expression *key,
     return match_t();
 }
 
-namespace {
-
 const IR::Node* rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
                                   nw_bitrange& bitrange) {
     // We can transform a LookaheadExpression immediately to a concrete select
@@ -522,12 +571,7 @@ const IR::Node* rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift
     return new IR::BFN::Select(new IR::BFN::ComputedRVal(selectExpr), selectExpr);
 }
 
-}  // namespace
-
-IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
-    // If the state isn't found, immediately return null; at runtime, parsing
-    // will terminate here. That's normal if we're transitioning to a terminal
-    // state; otherwise, we'll report an error.
+IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
     if (states.count(name) == 0) {
         if (name != "accept" && name != "reject")
             ::error("No definition for parser state %1%", name);
@@ -543,7 +587,9 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
         // state, which we'll convert again.
         auto originalName = state->p4State->controlPlaneName();
         auto unrolledName = cstring::make_unique(states, originalName);
-        state = new IR::BFN::ParserState(state->p4State, unrolledName, gress);
+        state = new IR::BFN::ParserState(state->p4State,
+                                         createThreadName(state->gress, unrolledName),
+                                         state->gress);
         states[unrolledName] = state;
     } else if (!state->transitions.empty()) {
         // We've already generated the matches for this state, so we know we've
@@ -556,13 +602,21 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
 
     // Lower the parser statements from the frontend IR to the Tofino IR.
     RewriteParserStatements rewriteStatements(state->p4State->controlPlaneName(),
-                                              gress);
+                                              state->gress);
     for (auto* statement : state->p4State->components)
         state->statements.pushBackOrAppend(statement->apply(rewriteStatements));
 
     // Compute the new state's shift.
     auto bitShift = rewriteStatements.bitTotalShift();
-    auto shift = rewriteStatements.byteTotalShift();
+
+    if (parserPragmas.force_shift.count(state->p4State))
+        bitShift += parserPragmas.force_shift.at(state->p4State);
+
+    nw_bitinterval bitsAdvanced(0, bitShift);
+    if (!bitsAdvanced.isHiAligned())
+        ::warning("Parser state %1% does not end on a byte boundary; "
+                  "adding padding.", state->p4State->controlPlaneName());
+    auto shift = bitsAdvanced.nextByte();
 
 #if HAVE_JBAY
     /* This is a hack - JBay's EPB buffer is tapped off at 4 byte intervals rather
@@ -585,13 +639,19 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
     // case 1: no select
     if (!state->p4State->selectExpression) return state;
 
-    // case 2: unconditional transition, e.g. accept/reject
+    // case 2: @pragma terminate_parsing applied on this state
+    if (parserPragmas.terminate_parsing.count(state->p4State)) {
+        addTransition(state, match_t(), shift, "accept");
+        return state;
+    }
+
+    // case 3: unconditional transition, e.g. accept/reject
     if (auto* path = state->p4State->selectExpression->to<IR::PathExpression>()) {
         bool ok = addTransition(state, match_t(), shift, path->path->name);
         return ok ? state : nullptr;
     }
 
-    // case 3: we have a select expression. Lower it to Tofino IR.
+    // case 4: we have a select expression. Lower it to Tofino IR.
     auto* p4Select = state->p4State->selectExpression->to<IR::SelectExpression>();
 
     BUG_CHECK(p4Select, "Invalid select expression %1%", state->p4State->selectExpression);
@@ -601,7 +661,6 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
 
     // FIXME multiple exprs can share match if they reside in same byte
     // FIXME duplicated match exprs, is this legal in the language?
-    // FIXME non byte aligned select expression
 
     int matchSize = 0;
 
@@ -621,9 +680,19 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
     return state;
 }
 
-void BFN::ExtractParser::postorder(const IR::BFN::TranslatedP4Parser* parser) {
-    gress_t thread = parser->thread;
-    rv->thread[thread].parser = BFN::GetTofinoParser::extract(thread, parser);
+void ExtractParser::postorder(const IR::BFN::TranslatedP4Parser* parser) {
+    ParserPragmas pg;
+    parser->apply(pg);
+
+    GetBackendParser gp(pg);
+    rv->thread[parser->thread].parser = gp.extract(parser);
+}
+
+void ExtractParser::end_apply() {
+    if (LOGGING(3)) {
+        DumpParser dp("extract_parser.dot");
+        rv->apply(dp);
+    }
 }
 
 /// XXX(hanw): This pass must be applied to IR::BFN::Pipe. It modifies the

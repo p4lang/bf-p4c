@@ -72,23 +72,6 @@ class CheckUnimplementedFeatures : public Inspector {
   }
 };
 
-struct DumpPipe : public Inspector {
-    const char *heading;
-    DumpPipe() : heading(nullptr) {}
-    explicit DumpPipe(const char *h) : heading(h) {}
-    bool preorder(const IR::Node *pipe) override {
-        if (Log::verbose() || LOGGING(1)) {
-            if (heading)
-                std::cout << "-------------------------------------------------" << std::endl
-                          << heading << std::endl
-                          << "-------------------------------------------------" << std::endl;
-            if (LOGGING(2))
-                dump(pipe);
-            else
-                std::cout << *pipe << std::endl; }
-        return false; }
-};
-
 void force_link_dump(const IR::Node *n) { dump(n); }
 
 static void debug_hook(const char *, unsigned, const char *pass, const IR::Node *n) {
@@ -216,7 +199,7 @@ Backend::Backend(const BFN_Options& options) :
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),
     });
-    setName("Tofino backend");
+    setName("Barefoot backend");
 
     if (LOGGING(4))
         addDebugHook(debug_hook);

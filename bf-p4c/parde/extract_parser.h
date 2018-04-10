@@ -23,10 +23,11 @@ class P4Parser;
 namespace BFN {
 
 /// Transform frontend parser and deparser into IR::BFN::Parser and IR::BFN::Deparser
-class ExtractParser: public ParserInspector {
+class ExtractParser : public ParserInspector {
  public:
     explicit ExtractParser(IR::BFN::Pipe *rv) : rv(rv) { setName("ExtractParser"); }
-    void postorder(const IR::BFN::TranslatedP4Parser* parser);
+    void postorder(const IR::BFN::TranslatedP4Parser* parser) override;
+    void end_apply() override;
     IR::BFN::Pipe *rv;
 };
 

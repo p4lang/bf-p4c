@@ -10,6 +10,10 @@ cstring toString(gress_t gress) {
   BUG("Unexpected *gress value");
 }
 
+cstring createThreadName(gress_t gress, cstring name) {
+    return toString(gress) + "::" + name;
+}
+
 std::ostream& operator<<(std::ostream& out, gress_t gress) {
     return out << toString(gress);
 }

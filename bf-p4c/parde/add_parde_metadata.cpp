@@ -46,7 +46,7 @@ void AddParserMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
     auto* globalVersion = gen_fieldref(igParserMeta, "global_ver");
 
     parser->start =
-      new IR::BFN::ParserState("$entry_point", INGRESS,
+      new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"), parser->gress,
         { new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)),
           new IR::BFN::Extract(bridgedMetadataIndicator, new IR::BFN::ConstantRVal(0)),
           new IR::BFN::Extract(globalTimestamp, new IR::BFN::BufferRVal(StartLen(432, 48))),
@@ -65,7 +65,7 @@ void AddParserMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
     auto* globalVersion = gen_fieldref(egParserMeta, "global_ver");
 
     parser->start =
-      new IR::BFN::ParserState("$entry_point", EGRESS,
+      new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"), parser->gress,
         { new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)),
           new IR::BFN::Extract(globalTimestamp, new IR::BFN::BufferRVal(StartLen(432, 48))),
           new IR::BFN::Extract(globalVersion, new IR::BFN::BufferRVal(StartLen(480, 32))),

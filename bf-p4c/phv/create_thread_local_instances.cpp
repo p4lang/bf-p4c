@@ -29,12 +29,6 @@ struct CreateInstancesForThread : public Modifier, ThreadVisitor {
         return false;
     }
 
-    /// Prepend "thread-name::" to every parse state.
-    bool preorder(IR::BFN::ParserState *ps) override {
-        ps->name = cstring::to_cstring(VisitingThread(this)) + "::" + ps->name;
-        return true;
-    }
-
     /// Prepend "thread-name::" to TempVars.
     bool preorder(IR::TempVar *var) override {
         var->name = cstring::to_cstring(VisitingThread(this)) + "::" + var->name;

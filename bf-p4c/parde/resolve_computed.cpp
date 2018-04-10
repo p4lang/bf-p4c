@@ -923,7 +923,7 @@ class ComputeSaveAndSelect: public ParserInspector {
                       "More than one starting state for %1%", gress);
             auto* transition = new IR::BFN::Transition(match_t(), 0, state);
             auto* init_state = new IR::BFN::ParserState(
-                    "$_save_init_state", gress, { }, { }, { transition });
+                    createThreadName(gress, "$_save_init_state"), gress, { }, { }, { transition });
             calcSaves(init_state);
             if (transition_saves.count(transition)
                 && transition_saves[transition].size() > 0) {

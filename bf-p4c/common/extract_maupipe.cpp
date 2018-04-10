@@ -674,7 +674,7 @@ static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool 
     return nullptr;
 }
 
-class GetTofinoTables : public MauInspector {
+class GetBackendTables : public MauInspector {
     P4::ReferenceMap                            *refMap;
     P4::TypeMap                                 *typeMap;
     gress_t                                     gress;
@@ -690,7 +690,7 @@ class GetTofinoTables : public MauInspector {
         return seqs.at(n); }
 
  public:
-    GetTofinoTables(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+    GetBackendTables(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                     gress_t gr, IR::BFN::Pipe *p, DeclarationConversions &con)
     : refMap(refMap), typeMap(typeMap), gress(gr), pipe(p), converted(con) {}
 
@@ -925,6 +925,7 @@ class ExtractPhase0 : public Inspector {
     P4::ReferenceMap *refMap;
 };
 
+
 class ExtractParde : public PassManager {
  public:
     explicit ExtractParde(IR::BFN::Pipe* rv) {
@@ -955,8 +956,8 @@ ExtractBackendPipe::ExtractBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
         new ExtractMetadata(rv, bindings),
         (useTna) ? nullptr : new ExtractPhase0(rv, refMap),
         simplifyReferences,
-        new GetTofinoTables(refMap, typeMap, INGRESS, rv, converted),
-        new GetTofinoTables(refMap, typeMap, EGRESS, rv, converted),
+        new GetBackendTables(refMap, typeMap, INGRESS, rv, converted),
+        new GetBackendTables(refMap, typeMap, EGRESS, rv, converted),
         new ExtractParde(rv),
         new ExtractChecksum(rv),
         (useTna) ? nullptr : new ExtractResubmitFieldPackings(refMap, typeMap, &resubmitPackings),
