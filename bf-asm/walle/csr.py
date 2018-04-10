@@ -1013,6 +1013,20 @@ class address_map(csr_composite_object):
                 if type(obj) is reg:
                     if obj.count == (1,):
                         chip_obj = obj.generate_binary(data[obj.name], cache, path)
+                        reset_value = obj.get_reset_value()
+
+                        if chip_obj is not None and reset_value is not None:
+                            # Check if a non-zero value to put into the binary file is the same as the reset (initial) value.
+                            # (We will continue to write zero values, for caution's sake.
+                            #  Would block writes work if leave out subsection?)
+                            # If the non-zero value is the reset value, do not output it in the binary file.
+                            # We are having too many problems where the driver is clearing things (like interrupt enables)
+                            # before the binary file is loaded, and then the binary file re-enables them.
+                            # See DRV-1389
+                            if reset_value == chip_obj.orig_value:
+                                # print "Skipping setting %s, because it has the same value (%s) as its reset value of %s." % (obj.name, str(chip_obj), hex(reset_value))
+                                continue
+
                         if chip_obj != None:
                             reg_values.append(chip_obj)
                     elif data[obj.name] != 0:
@@ -1253,6 +1267,19 @@ class reg(csr_composite_object):
         self.offset = offset
         self.width = width
         self.fields = []
+
+    def __str__(self):
+        f = "("
+        for x in self.fields:
+            f += "%s, " % str(x.name)
+        f += ")"
+        return "%s has fields %s" % (self.name, f)
+
+    def get_reset_value(self):
+        rv = 0
+        for f in self.fields:
+            rv |= (f.default[0] << f.lsb)
+        return rv
 
     def generate_binary(self, data, cache, path, mem=None):
         if data == 0:
@@ -1512,7 +1539,7 @@ class field(csr_object):
                 outfile.write("ubits<%d>" % size)
 
     def __str__(self):
-        return "name = %s  count = %s  msb = %s  lsb = %s  parent = %s" % (str(self.name), str(self.count), str(self.msb), str(self.lsb), str(self.parent))
+        return "name = %s  count = %s  msb = %s  lsb = %s  default = %s  parent = %s" % (str(self.name), str(self.count), str(self.msb), str(self.lsb), str(self.default), str(self.parent))
 
     def print_as_text(self, indent):
         print "%sfield %s%s: [%d:%d]%s" % (

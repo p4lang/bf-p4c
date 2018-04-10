@@ -29,10 +29,11 @@ class direct_reg(chip_object):
     def __init__(self, addr, value, src_key=None):
         chip_object.__init__(self, addr, src_key)
         self.value=struct.pack("<I",value)
+        self.orig_value = value
 
     def __str__(self):
         # TODO
-        return hex(self.addr) + ": <TODO>"
+        return hex(self.addr) + ": " + hex(self.orig_value)
 
     def deepcopy(self):
         return copy(self)
@@ -61,10 +62,11 @@ class indirect_reg(chip_object):
         self.value=bytearray.fromhex(hexstr)
         self.value = self.value.rjust(self.width/8,chr(0))
         self.value.reverse()
+        self.orig_value = value
 
     def __str__(self):
         # TODO
-        return hex(self.addr) + ": <TODO>"
+        return hex(self.addr) + ": " + hex(self.orig_value)
 
     def deepcopy(self):
         return copy(self)
