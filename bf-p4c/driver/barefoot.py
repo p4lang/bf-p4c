@@ -60,8 +60,6 @@ class BarefootBackend(BackendDriver):
                                     action="store_true", default=False)
         self._argGroup.add_argument("--validate-output", action="store_true", default=False,
                                     help="run context.json validation")
-        self._argGroup.add_argument("--bf-rt-schema", action="store",
-                                    help="Generate and write BF-RT JSON schema  to the specified file")
 
     def config_preprocessor(self, targetDefine):
         self.add_command_option('preprocessor', "-E -x c")
@@ -116,9 +114,6 @@ class BarefootBackend(BackendDriver):
 
         if opts.create_graphs:
             self.add_command_option('compiler', '--create-graphs')
-
-        if opts.bf_rt_schema is not None:
-            self.add_command_option('compiler', '--bf-rt-schema', opts.bf_rt_schema)
 
         if opts.validate_output and os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self.add_command_option('verifier', "{}/context.json".format(output_dir))

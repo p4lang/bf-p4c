@@ -1,4 +1,3 @@
-#include "bf-p4c/control-plane/bfruntime.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
 
 #include "bf-p4c/bf-p4c-options.h"
@@ -11,8 +10,7 @@ void generateP4Runtime(const IR::P4Program* program,
                        const BFN_Options& options) {
     // If the user didn't ask for us to generate P4Runtime, skip the analysis.
     if (options.p4RuntimeFile.isNullOrEmpty() &&
-        options.p4RuntimeEntriesFile.isNullOrEmpty() &&
-        options.bfRtSchema.isNullOrEmpty())
+        options.p4RuntimeEntriesFile.isNullOrEmpty())
         return;
 
     if (Log::verbose())
@@ -39,16 +37,6 @@ void generateP4Runtime(const IR::P4Program* program,
         }
 
         p4Runtime.serializeEntriesTo(out, options.p4RuntimeFormat);
-    }
-
-    if (!options.bfRtSchema.isNullOrEmpty()) {
-        std::ostream* out = openFile(options.bfRtSchema, false);
-        if (!out) {
-            ::error("Couldn't open BF-RT schema file: %1%", options.bfRtSchema);
-            return;
-        }
-
-        BFRT::serializeBfRtSchema(out, p4Runtime);
     }
 }
 

@@ -23,8 +23,6 @@ class BFN_Options : public CompilerOptions {
     bool create_graphs = false;
     bool privatization = false;
 
-    cstring bfRtSchema = "";
-
     BFN_Options();
 
     /// Process the command line arguments and set options accordingly.
