@@ -92,16 +92,16 @@ function test_bfa() {
     if $BFAS -t $targ --gen_json --singlepipe -vvvvl tmp-$name.out/bfas.config.log $name -o tmp-$name.out; then
         pushd tmp-$name.out >/dev/null
         if [ -r tofino.bin ]; then
-            $BFDUMPBIN -L tofino.bin | $filter_zero | $do_sort >bfas.dump
+            $BFDUMPBIN -H -L tofino.bin | $filter_zero | $do_sort >bfas.dump
         elif [ -r jbay.bin ]; then
-            $BFDUMPBIN -L jbay.bin | $filter_zero | $do_sort >bfas.dump
+            $BFDUMPBIN -H -L jbay.bin | $filter_zero | $do_sort >bfas.dump
         else
             echo " no binary?"
             rv=1
         fi
         if (( rv == 0 )); then
             $BFLINK -s -o walle.bin *.cfg.json >&2
-            $BFDUMPBIN -L walle.bin | $filter_zero | $do_sort >walle.dump
+            $BFDUMPBIN -H -L walle.bin | $filter_zero | $do_sort >walle.dump
             if diff -u bfas.dump walle.dump >&2; then
                 echo " PASS"
             else

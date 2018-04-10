@@ -30,7 +30,7 @@ class register_reference {
     REG                 *tree = nullptr;
     std::string         name;
 public:
-    mutable bool        read = false, write = false, disabled = false;
+    mutable bool        read = false, write = false, disabled_ = false;
     register_reference() {}
     register_reference(const register_reference &) = default;
     register_reference(register_reference &&) = default;
@@ -39,7 +39,7 @@ public:
     ~register_reference() {}
 
     register_reference &set(const char *a, REG *r) {
-        if (disabled)
+        if (disabled_)
             ERROR("Writing disabled register value in " << this);
         if (write)
             ERRWARN(name != a || r != tree, "Overwriting \"" << name << "\" with \"" << a <<
@@ -53,16 +53,20 @@ public:
     REG *operator->() const { read = true; return tree; }
     explicit operator bool() const { return tree != nullptr; }
     bool modified() const { return write; }
+    void set_modified(bool v = true) { write = v; }
     void rewrite() { write = false; }
     //friend std::ostream &operator<<(std::ostream &out, const register_reference<REG> &u);
-    void enable() { disabled = false; }
+    void enable() { disabled_ = false; }
+    bool disabled() const { return disabled_; }
+    bool disable_if_unmodified() { return false; }
     bool disable_if_zero() { return false; }
+    bool disable_if_reset_value() { return false; }
     bool disable() {
         if (!name.empty()) {
             ERROR("Disabling modified register in " << this);
             return false; }
         tree = nullptr;
-        disabled = true;
+        disabled_ = true;
         return true; }
     void log() const { LOG1(this << " = \"" << name << "\""); }
 };

@@ -232,7 +232,12 @@ class csr_composite_object (csr_object):
         for a in argdecls:
             if not first:
                 outfile.write(", ")
-            outfile.write(a)
+            if type(a) is tuple:
+                outfile.write(a[0])
+                if args.gen_decl != 'defn':
+                    outfile.write(" = " + a[1])
+            else:
+                outfile.write(a)
             first = False
         outfile.write(")")
         if suffix != '':
@@ -256,7 +261,7 @@ class csr_composite_object (csr_object):
                                       "emit_json", argdecls, "const"):
             return
         indent += "  "
-        if args.enable_disable:
+        if args.enable_disable and not self.top_level():
             outfile.write("%sif (disabled_) {\n" % indent)
             outfile.write('%s  out << "0";\n' % indent)
             outfile.write("%s  return; }\n" % indent)
@@ -351,10 +356,13 @@ class csr_composite_object (csr_object):
         outfile.write("%s}\n" % indent)
 
     def gen_emit_binary_method(self, outfile, args, classname, indent):
-        def field_name(child):
+        def child_name(child):
             name = child.name
             if name in args.cpp_reserved:
                 name += '_'
+            return name
+        def field_name(child):
+            name = child_name(child)
             if child.count != (1,):
                 for i in range(0, len(child.count)):
                     name += "[j%d]" % i
@@ -364,7 +372,8 @@ class csr_composite_object (csr_object):
                 ["std::ostream &out", "uint64_t a"], "const"):
             return
         indent += "  "
-        outfile.write("%sif (disabled_) return;\n" % indent)
+        if args.enable_disable:
+            outfile.write("%sif (disabled_) return;\n" % indent)
         root_parent = self.parent
         while type(root_parent) is not str:
             root_parent = root_parent.parent
@@ -387,14 +396,20 @@ class csr_composite_object (csr_object):
                 width_unit = 32
                 address_unit = 1
                 type_tag = 'R'
+            if args.enable_disable:
+                outfile.write("%sif (!%s.disabled()) {\n" % (indent, child_name(a)))
+                indent += '  '
             if indirect and type(a) is reg:
                 outfile.write("%sout << binout::tag('%s') << binout::byte8" % (indent, type_tag) +
                               "(a + 0x%x) << binout::byte4(%d) << binout::byte4(%d);\n" %
                               (a.offset//address_unit, width_unit,
                                product(a.count) * a.width // width_unit))
             if a.count != (1,):
-                outfile.write("%s%saddr = a;\n" % (indent, addr_decl))
-                addr_decl = ""
+                if args.enable_disable:
+                    outfile.write("%sauto addr = a;\n" % indent)
+                else:
+                    outfile.write("%s%saddr = a;\n" % (indent, addr_decl))
+                    addr_decl = "";
                 addr_var = "addr"
                 for idx_num, idx in enumerate(a.count):
                     outfile.write('%sfor (int j%d = 0; j%d < %d; j%d++) { \n' %
@@ -402,6 +417,13 @@ class csr_composite_object (csr_object):
                     indent += '  '
             single = a.singleton_obj()
             if not indirect and single != a:
+                # FIXME -- should check each element being written singly to see if its
+                #  disabled and not write it if so?  The generate_binary code does not
+                #  do that, so we don't emit C++ code to do it either.
+                #  Would it cause problems for register arrays that are actually wideregs
+                #  under the hood?  See 3.2.1.1 in the Tofino Switch Architecture doc.
+                #outfile.write("%sif (!%s.disabled()) {\n" % (indent, field_name(a)))
+                #indent += '  '
                 if single.msb >= 64:
                     for w in range(single.msb//32 + 1, -1, -1):
                         outfile.write("%sout << binout::tag('R') << binout::byte4" % indent +
@@ -415,6 +437,8 @@ class csr_composite_object (csr_object):
                     outfile.write("%sout << binout::tag('R') << binout::byte4" % indent +
                                   "(%s + 0x%x) << binout::byte4(%s);\n" %
                                   (addr_var, a.offset//address_unit, field_name(a)))
+                #indent = indent[2:]
+                #outfile.write("%s}\n" % indent)
             else:
                 outfile.write(indent)
                 if a.top_level():
@@ -428,6 +452,9 @@ class csr_composite_object (csr_object):
                 for i in range(0, len(a.count)):
                     indent = indent[2:]
                     outfile.write("%s}\n" % indent)
+            if args.enable_disable:
+                indent = indent[2:]
+                outfile.write("%s}\n" % indent)
         indent = indent[2:]
         outfile.write("%s}\n" % indent)
 
@@ -640,6 +667,35 @@ class csr_composite_object (csr_object):
         indent = indent[2:]
         outfile.write("%s}\n" % indent)
 
+    def gen_set_modified_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "void", classname, "set_modified",
+                                      [("bool v", "true")], ""):
+            return
+        indent += "  "
+        for a in sorted(self.children(), key=lambda a: a.name):
+            if a.disabled(): continue
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            if not args.checked_array:
+                if a.count != (1,):
+                    for index_num, idx in enumerate(a.count):
+                        outfile.write("%sfor (int i%d = 0; i%d < %d; i%d++)\n" %
+                                      (indent, index_num, index_num, idx, index_num))
+                        indent += "  "
+                outfile.write("%s%s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(".set_modified(v);\n")
+                if a.count != (1,):
+                    indent = indent[2*len(a.count):]
+            else:
+                outfile.write("%s%s.set_modified(v);\n" % (indent, field_name))
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
     def gen_disable_method(self, outfile, args, classname, indent):
         outfile.write(indent)
         if self.gen_method_declarator(outfile, args, "bool", classname, "disable", [], ""):
@@ -671,6 +727,72 @@ class csr_composite_object (csr_object):
                     indent = indent[2*len(a.count):]
             else:
                 outfile.write("%sif (%s.disable()) rv = true;\n" % (indent, field_name))
+        outfile.write("%sif (rv) disabled_ = true;\n" % indent)
+        outfile.write("%sreturn rv;\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
+    def gen_disable_if_reset_value_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "bool", classname,
+                                      "disable_if_reset_value", [], ""):
+            return
+        indent += "  "
+        outfile.write("%sbool rv = true;\n" % indent)
+        for a in sorted(self.children(), key=lambda a: a.name):
+            if a.disabled(): continue
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            if not args.checked_array:
+                if a.count != (1,):
+                    for index_num, idx in enumerate(a.count):
+                        outfile.write("%sfor (int i%d = 0; i%d < %d; i%d++)\n" %
+                                      (indent, index_num, index_num, idx, index_num))
+                        indent += "  "
+                outfile.write("%sif (!%s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(".disable_if_reset_value()) rv = false;\n")
+                if a.count != (1,):
+                    indent = indent[2*len(a.count):]
+            else:
+                outfile.write("%sif (!%s.disable_if_reset_value()) rv = false;\n" %
+                              (indent, field_name))
+        outfile.write("%sif (rv) disabled_ = true;\n" % indent)
+        outfile.write("%sreturn rv;\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
+    def gen_disable_if_unmodified_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "bool", classname,
+                                      "disable_if_unmodified", [], ""):
+            return
+        indent += "  "
+        outfile.write("%sbool rv = true;\n" % indent)
+        for a in sorted(self.children(), key=lambda a: a.name):
+            if a.disabled(): continue
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            if not args.checked_array:
+                if a.count != (1,):
+                    for index_num, idx in enumerate(a.count):
+                        outfile.write("%sfor (int i%d = 0; i%d < %d; i%d++)\n" %
+                                      (indent, index_num, index_num, idx, index_num))
+                        indent += "  "
+                outfile.write("%sif (!%s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(".disable_if_unmodified()) rv = false;\n")
+                if a.count != (1,):
+                    indent = indent[2*len(a.count):]
+            else:
+                outfile.write("%sif (!%s.disable_if_unmodified()) rv = false;\n" %
+                              (indent, field_name))
         outfile.write("%sif (rv) disabled_ = true;\n" % indent)
         outfile.write("%sreturn rv;\n" % indent)
         indent = indent[2:]
@@ -829,6 +951,7 @@ class csr_composite_object (csr_object):
             outfile.write("struct %s {\n" % namestr)
             if args.enable_disable:
                 outfile.write("%sbool disabled_;\n" % indent)
+                outfile.write("%sbool disabled() const { return disabled_; }\n" % indent)
             if args.enable_disable or self.need_ctor():
                 self.gen_ctor(outfile, args, namestr, indent)
             if self.top_level():
@@ -887,7 +1010,10 @@ class csr_composite_object (csr_object):
             self.gen_dump_unread_method(outfile, args, classname, indent)
         if args.enable_disable:
             self.gen_modified_method(outfile, args, classname, indent)
+            self.gen_set_modified_method(outfile, args, classname, indent)
             self.gen_disable_method(outfile, args, classname, indent)
+            self.gen_disable_if_reset_value_method(outfile, args, classname, indent)
+            self.gen_disable_if_unmodified_method(outfile, args, classname, indent)
             self.gen_disable_if_zero_method(outfile, args, classname, indent)
             self.gen_enable_method(outfile, args, classname, indent)
         if args.gen_decl != 'defn':

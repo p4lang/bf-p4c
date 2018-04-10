@@ -13,25 +13,31 @@ void print_regname(std::ostream &out, const void *addr, const void *end);
 struct widereg_base;
 
 struct widereg_base {
-    bitvec              value;
+    bitvec              value, reset_value;
     mutable bool        read, write;
-    mutable bool        disabled;
+    mutable bool        disabled_;
 
-    widereg_base() : read(false), write(false), disabled(false) {}
-    widereg_base(bitvec v) : value(v), read(false), write(false), disabled(false) {}
-    widereg_base(uintptr_t v) : value(v), read(false), write(false), disabled(false) {}
-    widereg_base(intptr_t v) : value(v), read(false), write(false), disabled(false) {}
-    widereg_base(int v) : value(v), read(false), write(false), disabled(false) {}
+    widereg_base() : read(false), write(false), disabled_(false) {}
+    widereg_base(bitvec v) : value(v), reset_value(v), read(false), write(false), disabled_(false) {}
+    widereg_base(uintptr_t v) : value(v), reset_value(v), read(false), write(false),
+                                disabled_(false) {}
+    widereg_base(intptr_t v) : value(v), reset_value(v), read(false), write(false),
+                               disabled_(false) {}
+    widereg_base(int v) : reset_value(v), value(v), read(false), write(false), disabled_(false) {}
     operator bitvec() const { read = true; return value; }
     bool modified() const { return write; }
+    void set_modified(bool v = true) { write = v; }
+    bool disabled() const { return disabled_; }
+    bool disable_if_unmodified() { return write ? false : (disabled_ = true); }
     bool disable_if_zero() const { return value.empty() && !write; }
+    bool disable_if_reset_value() { return value == reset_value ? disabled_ = true : false; }
     bool disable() const {
         if (write) {
             ERROR("Disabling modified register in " << this);
             return false; }
-        disabled = true;
-        return disabled; };
-    void enable() const { disabled = false; }
+        disabled_ = true;
+        return disabled_; };
+    void enable() const { disabled_ = false; }
     void rewrite() { write = false; }
     virtual bitvec operator=(bitvec v) = 0;
     virtual unsigned size() = 0;
@@ -66,7 +72,7 @@ template<int N> struct widereg : widereg_base {
     widereg(const widereg &) = delete;
     widereg(widereg &&) = default;
     bitvec operator=(bitvec v) {
-        if (disabled)
+        if (disabled_)
             ERROR("Writing disabled register value in " << this);
         if (write)
             ERRWARN(value != v, "Overwriting " << value << " with " << v << " in " << this);
@@ -82,7 +88,7 @@ template<int N> struct widereg : widereg_base {
         *this = v.value; v.read = true; return v; }
     unsigned size() { return N; }
     const widereg &operator|=(bitvec v) {
-        if (disabled)
+        if (disabled_)
             ERROR("Writing disabled register value in " << this);
         if (write && (value & v))
             ERRWARN(value != (v|value), "Overwriting " << value << " with " << (v|value) <<
@@ -92,7 +98,7 @@ template<int N> struct widereg : widereg_base {
         log("|=", v);
         return check(); }
     const widereg &set_subfield(uintptr_t v, unsigned bit, unsigned size) {
-        if (disabled)
+        if (disabled_)
             ERROR("Writing disabled register value in " << this);
         if (bit + size > N)
             ERROR("subfield " << bit << ".." << (bit+size-1) <<

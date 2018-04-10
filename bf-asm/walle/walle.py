@@ -179,7 +179,8 @@ def parse_template_args(args, params):
 
     if args.enable_disable:
         args.cpp_reserved = args.cpp_reserved.copy()
-        args.cpp_reserved.update(["disable", "disable_if_zero", "enable", "modified"])
+        args.cpp_reserved.update(["disable", "disabled", "disable_if_unmodified",
+                                  "disable_if_zero", "enable", "modified", "set_modified"])
 
 def read_template_file(template_file, args, schema):
     with open(template_file, "rb") as template_objects_file:

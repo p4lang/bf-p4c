@@ -9,6 +9,7 @@
 
 struct {
     bool        oneLine;
+    bool        noHeader;
 } options;
 
 int dump_bin (std::istream &in) {
@@ -19,8 +20,9 @@ int dump_bin (std::istream &in) {
         if ((atom_typ >> 24) == 'H') {
             json::map hdr;
             if (!(in >> json::binary(hdr))) return -1;
-            for (auto &el : hdr)
-                std::cout << el.first << " = " << el.second << std::endl;
+            if (!options.noHeader)
+                for (auto &el : hdr)
+                    std::cout << el.first << " = " << el.second << std::endl;
         } else if ((atom_typ >> 24) == 'R') {
             // R block -- writing a single 32-bit register via 32-bit PCIe address
             uint32_t reg_addr = 0, reg_data = 0;
@@ -123,6 +125,9 @@ int main(int ac, char **av) {
         if (*av[i] == '-') {
             for (char *arg = av[i]+1; *arg;)
                 switch (*arg++) {
+                case 'H':
+                    options.noHeader = true;
+                    break;
                 case 'L':
                     options.oneLine = true;
                     break;

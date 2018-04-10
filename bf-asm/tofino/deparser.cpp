@@ -292,7 +292,9 @@ void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
         int idx = i + TAGALONG_THREAD_BASE + gress * Target::Tofino::DEPARSER_CHECKSUM_UNITS;
         tagalong_unit[idx].zero_l_s_b = 0;
         tagalong_unit[idx].zero_m_s_b = 0;
-        tagalong_unit[idx].swap = 0; }
+        tagalong_unit[idx].swap = 0;
+        main_unit.set_modified();
+        tagalong_unit.set_modified(); }
 }
 
 template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
@@ -348,8 +350,8 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
         digest.type->setregs(regs, *this, digest);
 
     if (options.condense_json) {
-        regs.input.disable_if_zero();
-        regs.header.disable_if_zero(); }
+        regs.input.disable_if_reset_value();
+        regs.header.disable_if_reset_value(); }
     if (error_count == 0 && options.gen_json) {
         regs.input.emit_json(*open_output("regs.all.deparser.input_phase.cfg.json"));
         regs.header.emit_json(*open_output("regs.all.deparser.header_phase.cfg.json")); }

@@ -407,11 +407,11 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
         // FIXME -- removing the uninitialized memory causes problems?
         // FIXME -- walle gets the addresses wrong.  Might also require explicit
         // FIXME -- zeroing in the driver on real hardware
-        // regs.memory[INGRESS].disable_if_zero();
-        // regs.memory[EGRESS].disable_if_zero();
-        regs.ingress.disable_if_zero();
-        regs.egress.disable_if_zero();
-        regs.merge.disable_if_zero(); }
+        // regs.memory[INGRESS].disable_if_reset_value();
+        // regs.memory[EGRESS].disable_if_reset_value();
+        regs.ingress.disable_if_reset_value();
+        regs.egress.disable_if_reset_value();
+        regs.merge.disable_if_reset_value(); }
     if (error_count == 0 && options.gen_json) {
         regs.memory[INGRESS].emit_json(
             *open_output("memories.all.parser.ingress.cfg.json"), "ingress");

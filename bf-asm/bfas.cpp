@@ -121,6 +121,8 @@ int main(int ac, char **av) {
         } else if (!strcmp(av[i], "--gen_json")) {
             options.gen_json = true;
             options.binary = NO_BINARY;
+        } else if (!strcmp(av[i], "--no-condense")) {
+            options.condense_json = false;
         } else if (!strcmp(av[i], "--no-bin")) {
             options.binary = NO_BINARY;
         } else if (!strcmp(av[i], "--singlepipe")) {

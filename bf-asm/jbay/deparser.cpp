@@ -589,7 +589,7 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     JBAY_DISABLE_REGBITS(DISBALE_IF_NOT_SET)
 
     if (options.condense_json)
-        regs.disable_if_zero();
+        regs.disable_if_reset_value();
     if (error_count == 0 && options.gen_json)
         regs.emit_json(*open_output("regs.deparser.cfg.json"));
     TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.dprsrreg.set("regs.deparser", &regs);

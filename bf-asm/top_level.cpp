@@ -53,10 +53,10 @@ void TopLevelTarget<TARGET>::output(json::map &ctxt_json) {
             this->mem_top.pipes[i].set("memories.pipe", &this->mem_pipe);
             this->reg_top.pipes[i].set("regs.pipe", &this->reg_pipe); } }
     if (options.condense_json) {
-        this->mem_top.disable_if_zero();
-        this->mem_pipe.disable_if_zero();
-        this->reg_top.disable_if_zero();
-        this->reg_pipe.disable_if_zero(); }
+        this->mem_top.disable_if_reset_value();
+        this->mem_pipe.disable_if_reset_value();
+        this->reg_top.disable_if_reset_value();
+        this->reg_pipe.disable_if_reset_value(); }
     if (error_count == 0) {
         if (options.gen_json) {
             this->mem_top.emit_json(*open_output("memories.top.cfg.json"));

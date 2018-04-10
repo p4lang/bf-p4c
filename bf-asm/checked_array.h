@@ -20,6 +20,7 @@ public:
     virtual T *begin() = 0;
     virtual T *end() = 0;
     virtual bool modified() const = 0;
+    virtual void set_modified(bool v = true) = 0;
     virtual bool disabled() const = 0;
     virtual bool disable() = 0;
     virtual bool disable_if_zero() = 0;
@@ -53,6 +54,9 @@ public:
         for (size_t i = 0; i < S; i++)
             if (data[i].modified()) return true;
         return false; }
+    void set_modified(bool v = true) {
+        for (size_t i = 0; i < S; i++)
+            data[i].set_modified(v); }
     bool disabled() const { return disabled_; }
     bool disable() {
         bool rv = true;
@@ -64,10 +68,24 @@ public:
         disabled_ = false;
         for (size_t i = 0; i < S; i++)
             data[i].enable(); }
+    bool disable_if_unmodified() {
+        bool rv = true;
+        for (size_t i = 0; i < S; i++)
+            if (!data[i].disable_if_unmodified()) rv = false;
+        /* Can't actually disable arrays, as walle doesn't like it, but allow
+         * containing object to be disabled */
+        return rv; }
     bool disable_if_zero() {
         bool rv = true;
         for (size_t i = 0; i < S; i++)
             if (!data[i].disable_if_zero()) rv = false;
+        /* Can't actually disable arrays, as walle doesn't like it, but allow
+         * containing object to be disabled */
+        return rv; }
+    bool disable_if_reset_value() {
+        bool rv = true;
+        for (size_t i = 0; i < S; i++)
+            if (!data[i].disable_if_reset_value()) rv = false;
         /* Can't actually disable arrays, as walle doesn't like it, but allow
          * containing object to be disabled */
         return rv; }
