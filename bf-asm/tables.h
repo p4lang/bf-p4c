@@ -505,7 +505,8 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     std::string                 default_action;
     unsigned                    default_action_handle = 0;
     int                         default_action_lineno = -1;
-    std::map<std::string,unsigned>   default_action_parameters;
+    typedef std::map<std::string, unsigned> default_action_params;
+    default_action_params       default_action_parameters;
     bool                        default_only_action = false;
     std::vector<Ref>            hit_next;
     Ref                         miss_next;
@@ -617,6 +618,8 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     int get_padding_format_width();
     virtual std::string get_default_action() {
         return (!default_action.empty()) ? default_action : action ? action->default_action : ""; }
+    virtual default_action_params* get_default_action_parameters() {
+        return (!default_action_parameters.empty()) ? &default_action_parameters : action ? &action->default_action_parameters : nullptr; }
     virtual unsigned get_default_action_handle() {
         return default_action_handle > 0 ? default_action_handle : action ? action->default_action_handle : 0; }
     int get_format_field_size(std::string s) {
@@ -964,6 +967,10 @@ public:
         return !def_act.empty() ? def_act : indirect ? indirect->default_action : ""; }
     Format* get_format() override { return indirect ? indirect->format : format; }
     void add_result_physical_buses(json::map &stage_tbl) override;
+    default_action_params* get_default_action_parameters() override {
+        if (!default_action_parameters.empty()) return &default_action_parameters;
+        auto def_action_params = indirect ? indirect->get_default_action_parameters() : nullptr;
+        return def_action_params; }
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",
@@ -1076,8 +1083,13 @@ public:
         for (auto m : match_tables) {
             std::string def_action = m->get_default_action();
             if (!def_action.empty()) return def_action; }
-        return "";
-    }
+        return ""; }
+    default_action_params* get_default_action_parameters() override {
+        if (!default_action_parameters.empty()) return &default_action_parameters;
+        for (auto m : match_tables) {
+            if (auto def_action_params = m->get_default_action_parameters())
+                if (!def_action_params->empty()) return def_action_params; }
+        return nullptr; }
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",

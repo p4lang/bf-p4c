@@ -1006,9 +1006,10 @@ void Table::Actions::Action::pass1(Table *tbl) {
                     a.second.name.c_str(), a.second.lo, a.second.hi, tbl->name()); }
     //Update default value for params if default action parameters present
     for (auto &p : p4_params_list) {
-        if (tbl->default_action_parameters.count(p.name) > 0) {
-            p.default_value = tbl->default_action_parameters[p.name];
-            p.defaulted = true; } }
+        if (auto def_act_params = tbl->get_default_action_parameters()) {
+            if (def_act_params->count(p.name) > 0) {
+                p.default_value = (*def_act_params)[p.name];
+                p.defaulted = true; } } }
     for (auto &c : attached) {
         if (!c) {
             error(c.lineno, "Unknown instruction or table %s", c.name.c_str());
