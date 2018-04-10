@@ -214,13 +214,11 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
             if (info.gress == gress) {
                 add(stack.name + ".$stkvalid", gress, stack.size + stack.maxpush + stack.maxpop,
                     size[gress], true, true);
-                size[gress] -= stack.size + stack.maxpush + stack.maxpop;
                 PHV::Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
                 pov_stk->set_no_split(true);
                 LOG3("Creating HEADER STACK " << pov_stk); } }
 
-        BUG_CHECK(size[gress] == 0, "%1% more bits of POV expected but not created in %2%",
-                  size[gress], cstring::to_cstring(gress)); }
+        assert(size[gress] == 0); }
 }
 
 //
