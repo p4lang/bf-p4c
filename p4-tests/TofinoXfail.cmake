@@ -110,11 +110,23 @@ endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 if (PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
+    "IR structure not yet handled by the ActionAnalysis pass"
+    extensions/p4_tests/p4_14/p4-tests/programs/opcode_test/opcode_test.p4
+    )
+  
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: .* != .*"
+    #extensions/p4_tests/p4_14/p4-tests/programs/multicast_test/multicast_test.p4
+    extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
     "AttributeError: Client instance has no attribute .*"
+    extensions/p4_tests/p4_14/p4-tests/programs/alpm_test/alpm_test.p4
     extensions/p4_tests/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4
-    extensions/p4_tests/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4
     extensions/p4_tests/p4_14/p4-tests/programs/exm_smoke_test/exm_smoke_test.p4
     extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
+    extensions/p4_tests/p4_14/p4-tests/programs/smoke_large_tbls/smoke_large_tbls.p4
     )
 
   p4c_add_xfail_reason("tofino"

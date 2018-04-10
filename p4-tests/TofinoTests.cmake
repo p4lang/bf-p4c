@@ -59,7 +59,7 @@ set (TOFINO_TEST_SUITES
   ${v1tests}
   )
 
-p4c_add_bf_backend_tests("tofino" "${TOFINO_TEST_SUITES}")
+p4c_add_bf_backend_tests("tofino" "base" "${TOFINO_TEST_SUITES}")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
@@ -90,7 +90,7 @@ p4c_add_ptf_test_with_ptfdir_and_spec (
 # One # means it fails badly but should get it to run soon
 # Two # means it is not required for switch, but we should still try to compile
 set (P4FACTORY_REGRESSION_TESTS
-  # alpm_test
+  alpm_test
   basic_ipv4
   basic_switching
   # # # bf-diags
@@ -107,19 +107,20 @@ set (P4FACTORY_REGRESSION_TESTS
   # # multicast_scale
   multicast_test
   # # multi-device
-  # opcode_test_signed_and_saturating
+  opcode_test
   # opcode_test_signed
   # opcode_test_saturating
-  # opcode_test
+  # opcode_test_signed_and_saturating
   pcie_pkt_test
   # # pctr
-  perf_test_alpm  # (a.k.a alpm-pd-perf)
   # # pgrs
+  perf_test_alpm   # (a.k.a alpm-pd-perf)
   # # pvs
   resubmit
-  # smoke_large_tbls
+  smoke_large_tbls
   stful
   )
+
 # p4-tests has all the includes at the same level with the programs.
 set (BFN_EXCLUDE_PATTERNS "tofino.p4")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/*/*.p4")
@@ -130,18 +131,68 @@ foreach (t IN LISTS P4FACTORY_REGRESSION_TESTS)
   list (APPEND P4F_PTF_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/${t}/${t}.p4")
 endforeach()
-bfn_add_p4factory_tests("tofino" P4F_PTF_TESTS)
+bfn_add_p4factory_tests("tofino" "smoketest" P4F_PTF_TESTS)
 
 # Pick a single test for the tests that are timing out:
 set (P4FACTORY_PROGRAMS_PATH "extensions/p4_tests/p4_14/p4-tests/programs")
+bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/alpm_test/alpm_test.p4"
+  "all
+   ^test.TestCapacity 
+   ^test.TestStateRestoreLarge")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/basic_ipv4/basic_ipv4.p4"
-  "test.TestExm4way3Entries test.TestExm6way4Entries")
+  "test.TestAddHdr 
+   test.TestAddRemPort 
+   test.TestAddRoute 
+   test.TestAllHit 
+   test.TestAllStage 
+   test.TestDeepADT 
+   test.TestRange 
+   test.TestRangeTernaryValid 
+   test.TestSelector 
+   test.TestTcamDuplicateEntries 
+   test.TestTcamEntries 
+   test.TestTcamMove 
+   ^test.TestTernaryValidMatch 
+   test.TestExm4way3Entries 
+   test.TestExm6way4Entries")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_indirect_1/exm_indirect_1.p4"
-  "test.TestExmHashAction2")
+  "test.TestActSelIterators 
+   test.TestDirectStats 
+   test.TestDirectStatsPkts28Bytes36 
+   test.TestDirectStatsPkts32bits 
+   test.TestIndirectStatPkt64bits 
+   test.TestIndirectStatsPkts32bits 
+   test.TestSelector 
+   test.TestSelectorScopes
+   test.TestExmHashAction2")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/multicast_test/multicast_test.p4"
-  "test.TestEcmp")
+  "test.TestBasic 
+   test.TestYid 
+   test.TestXid 
+   test.TestEcmp 
+   ^test.TestLag 
+   ^test.TestBackup 
+   test.TestGetEntry 
+   test.TestRegAccess")
+bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/smoke_large_tbls/smoke_large_tbls.p4"
+  "test.TestAtcam 
+   test.TestAtcamTernaryValid")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/stful/stful.p4"
-  "test.TestPhase0Iterator")
+  "test.TestDirectHashCounter 
+   test.TestDirectStateRestore 
+   test.TestDirectTcamCounter_default 
+   test.TestDirectTcamCounter_move 
+   ^test.TestDirectTcamCounter_twoStage 
+   test.TestGetEntry 
+   test.TestIndirectHashSampler 
+   test.TestInDirectTcamCounter_entries 
+   test.TestInDirectTcamCounter_rdwr 
+   test.TestNoKeySymSet 
+   test.TestOneBit 
+   test.TestPhase0Iterator 
+   test.TestPktGenClear 
+   test.TestResetAPIs 
+   test.TestTwoInstrNoIdx")
 
 # for all other p4factory tests, add them as compile only.
 set (P4F_COMPILE_ONLY)
@@ -151,7 +202,7 @@ foreach (t IN LISTS ALL_BFN_TESTS)
     list (APPEND P4F_COMPILE_ONLY ${t})
   endif()
 endforeach()
-p4c_add_bf_backend_tests("tofino" "${P4F_COMPILE_ONLY}")
+p4c_add_bf_backend_tests("tofino" "smoketest" "${P4F_COMPILE_ONLY}")
 
 include(TofinoMustPass.cmake)
 include(TofinoXfail.cmake)

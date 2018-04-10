@@ -364,6 +364,22 @@ fi
 
 PTF_EXTRA_ARGS="--default-negative-timeout=0.2 $PTF_TEST_SPECS"
 
+clean_process() {
+    process_name=$1
+    # Check if process exists
+    if $verbose ; then
+        echo "Checking if $process_name is still running:"
+    fi
+    process_running=`ps -ef | grep $process_name | grep -v grep | awk '{print $2}'`
+    if $verbose ; then
+        echo "Is $process_name running: $process_running"
+    fi
+    if [ "$process_running" != "no process found" ]; then
+        # Try to kill the process
+        sudo killall $process_name
+    fi
+}
+
 if $run_pd ; then
     p4builddir="$(dirname $0)/p4_14/p4-tests/p4-build"
     testout=$(realpath $testdir/$name${out_ext}.out)
@@ -399,6 +415,9 @@ if $run_pd ; then
                              --device ${device} \
                              $PTF_EXTRA_ARGS"
         run $PTF_CMD || die
+        clean_process "ptf_runner"
+        clean_process "bf_switchd"
+        clean_process "tofino-model"
         exit 0
     fi
 fi

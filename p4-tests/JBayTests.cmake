@@ -41,7 +41,7 @@ set (JBAY_TEST_SUITES
   ${PTF_P4_TESTS}
   )
 
-p4c_add_bf_backend_tests("jbay" "${JBAY_TEST_SUITES}")
+p4c_add_bf_backend_tests("jbay" "base" "${JBAY_TEST_SUITES}")
 
 set (testExtraArgs "${testExtraArgs} -jbay")
 
@@ -58,6 +58,6 @@ p4c_add_ptf_test_with_ptfdir (
 set (BFN_EXCLUDE_PATTERNS "tofino.p4")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/emulation/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
-bfn_add_p4factory_tests("jbay" BFN_TESTS_LIST)
+bfn_add_p4factory_tests("jbay" "smoketest" BFN_TESTS_LIST)
 
 include(JBayXfail.cmake)

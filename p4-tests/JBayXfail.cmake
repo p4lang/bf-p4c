@@ -7,7 +7,6 @@ set (JBAY_XFAIL_TESTS
 # All ptf tests xfail due to lack of jbay driver support...
 p4c_add_xfail_reason("jbay"
   "ERROR:PTF runner:Error when running PTF tests"
-  extensions/p4_tests/p4_16/hash_driven_stats.p4
   extensions/p4_tests/p4_16/ONLab_packetio.p4
   extensions/p4_tests/p4_16/ingress_checksum.p4
   extensions/p4_tests/p4_16/adata_constant_out_of_range_for_immediate.p4
@@ -209,12 +208,6 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "Error when trying to push config to bf_switchd"
-  extensions/p4_tests/p4_16/hash_driven_stats.p4
-  fabric.p4
-  )
-
-p4c_add_xfail_reason("jbay"
   "test.IPv4ChecksumTest ... FAIL"
   # needs tna to jna translation
   extensions/p4_tests/p4_16/ipv4_checksum.p4
@@ -246,6 +239,8 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_14/easy.p4
   extensions/p4_tests/p4_14/easy_no_match_with_gateway.p4
   extensions/p4_tests/p4_14/easy_no_match.p4
+  fabric.p4
+  tor.p4
   )
 
 endif() # PTF_REQUIREMENTS_MET
@@ -256,10 +251,9 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
 )
 
-# BRIG-546
 p4c_add_xfail_reason("jbay"
-  "ERROR:PTF runner:Error when pushing P4 config to switchd"
-  tor.p4
+  "Rendezvous of RPC that terminated with"
+  extensions/p4_tests/p4_16/hash_driven_stats.p4
 )
 
 # This test is tailored to fill Tofino's PHV.  It is expected to fail on JBay

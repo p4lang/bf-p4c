@@ -62,7 +62,7 @@ function(bfn_find_tests input_files test_list exclude patterns)
   set(${test_list} ${inputList} PARENT_SCOPE)
 endfunction()
 
-function(bfn_add_p4factory_tests tag test_list)
+function(bfn_add_p4factory_tests tag label test_list)
   # and they have the ptf tests in a separate directory
   foreach(__t IN LISTS ${test_list})
     file (RELATIVE_PATH p4test ${P4C_SOURCE_DIR} ${__t})
@@ -71,6 +71,8 @@ function(bfn_add_p4factory_tests tag test_list)
     p4c_add_ptf_test_with_ptfdir (${tag} ${p4test} ${__t} "${testExtraArgs} -pd" ${ptfdir})
     set_tests_properties("${tag}/${p4test}" PROPERTIES
       ENVIRONMENT "PTF_TEST_SPECS=")
+    set_tests_properties("${tag}/${p4test}" PROPERTIES TIMEOUT 1000)
+    p4c_add_test_label(${tag} ${label} ${p4test})
   endforeach()
 endfunction()
 
@@ -166,7 +168,7 @@ macro(packet_test_setup_check device)
   endif()
 endmacro(packet_test_setup_check)
 
-macro(p4c_add_bf_backend_tests device tests)
+macro(p4c_add_bf_backend_tests device label tests)
   set (testExtraArgs)
   # do not add the device directly to testExtraArgs
   # this is used later to add other tests for multiple configurations.
@@ -193,6 +195,14 @@ macro(p4c_add_bf_backend_tests device tests)
   p4c_add_tests (${device} ${P4C_RUNTEST} "${tests}"
      "" "${testExtraArgs} -${device}")
 
+  # If label is not empty, add it to the tests
+  foreach (ts "${tests}")
+    file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
+    foreach (__p4file ${__testfiles})
+      p4c_add_test_label(${device} ${label} ${__p4file})
+    endforeach()
+  endforeach()
+
   if (PTF_REQUIREMENTS_MET)
     # PTF tests cannot be run in parallel with other tests, so we set the SERIAL
     # property for them
@@ -215,7 +225,6 @@ macro(p4c_add_bf_backend_tests device tests)
           p4c_test_set_name(__testname ${device} ${__p4file})
           set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
           p4c_add_test_label(${device} "ptf" ${__p4file})
-          # MESSAGE(STATUS "Added PTF test: ${__testname}")
           math (EXPR __ptfCounter "${__ptfCounter} + 1")
         endif()
       endforeach() # __p4file
