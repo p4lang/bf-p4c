@@ -282,9 +282,10 @@ class Table : BFN::Unit {
             v.flow_dead(); }
         std::set<cstring> gw_next;
         for (auto &gw : gateway_rows) {
-            if (gw.second && next.count(gw.second) && !gw_next.count(gw.second)) {
+            if (gw.second && !gw_next.count(gw.second)) {
                 auto &clone2(gateway_inhibit.flow_clone());
-                clone2.visit(next.at(gw.second), gw.second);
+                if (next.count(gw.second)) {
+                    clone2.visit(next.at(gw.second), gw.second); }
                 v.flow_merge(clone2);
                 gw_next.emplace(gw.second); } }
         // FIXME -- attached tables are not properly visited here in the control-flow order,

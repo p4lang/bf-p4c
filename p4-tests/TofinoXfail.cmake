@@ -1025,12 +1025,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/header-stack-ops-bmv2.p4
 )
 
-# BRIG-583
-p4c_add_xfail_reason("tofino"
-  "shift value .* out of range"
-  fabric-DWITH_SPGW
-)
-
 # Flaky.
 p4c_add_xfail_reason("tofino"
   "Currently non contiguous byte allocation in table format"
