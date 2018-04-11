@@ -32,8 +32,17 @@ const IR::Node* ControlConverter::postorder(IR::MethodCallStatement* node) {
 
 const IR::Node* ParserConverter::postorder(IR::AssignmentStatement* node) {
     auto* orig = getOriginal<IR::AssignmentStatement>();
-    RETURN_TRANSLATED_NODE_IF_FOUND(priorityCalls);
-    RETURN_TRANSLATED_NODE_IF_FOUND(parserCounterCalls);
+    if (structure->_map.count(orig)) {
+        auto result = structure->_map.at(orig);
+        return result; }
+    return node;
+}
+
+const IR::Node* ParserConverter::postorder(IR::Member* node) {
+    auto* orig = getOriginal<IR::Member>();
+    if (structure->_map.count(orig)) {
+        auto result = structure->_map.at(orig);
+        return result; }
     return node;
 }
 
@@ -682,50 +691,58 @@ const IR::Node* DirectMeterConverter::postorder(IR::MethodCallStatement* node) {
 
 const IR::Node* ParserPriorityConverter::postorder(IR::AssignmentStatement* node) {
     auto stmt = getOriginal<IR::AssignmentStatement>();
-    auto name = cstring::make_unique(structure->unique_names, "packet_priority", '_');
-    structure->unique_names.insert(name);
-    structure->nameMap.emplace(stmt, name);
-
-    auto type = new IR::Type_Name("priority");
-    auto inst = new IR::Declaration_Instance(name, type, new IR::Vector<IR::Expression>());
-    structure->ingressParserDeclarations.push_back(inst);
-    structure->egressParserDeclarations.push_back(inst->clone());
-
-    auto member = new IR::Member(new IR::PathExpression(name), "set");
+    auto parserPriority = new IR::PathExpression("ig_prsr_ctrl_priority");
+    auto member = new IR::Member(parserPriority, "set");
     auto result = new IR::MethodCallStatement(node->srcInfo, member, { node->right });
     return result;
 }
 
 const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
     auto stmt = getOriginal<IR::AssignmentStatement>();
-    auto left = stmt->left;
-    cstring base_name;
-    if (auto member = left->to<IR::Member>())
-        base_name = member->member;
-    else
-        base_name = "parser_counter";
-    auto name = cstring::make_unique(structure->unique_names, base_name, '_');
-    structure->unique_names.insert(name);
-    structure->parserCounterNames.emplace(base_name, name);
+    auto parserCounter = new IR::PathExpression("ig_prsr_ctrl_parser_counter");
+    auto right = stmt->right;
 
-    auto type = new IR::Type_Name("parser_counter");
-    auto inst = new IR::Declaration_Instance(name, type, new IR::Vector<IR::Expression>());
-    structure->ingressParserDeclarations.push_back(inst);
-    structure->egressParserDeclarations.push_back(inst->clone());
+    // Remove any casts around the source of the assignment.
+    if (auto cast = right->to<IR::Cast>()) {
+        if (auto type = cast->destType->to<IR::Type_Bits>()) {
+            right = cast->expr;
+        }
+    }
 
-    P4C_UNIMPLEMENTED("parser counter translation is not implemented");
-    return nullptr;
+    IR::MethodCallStatement *methodCall;
+    if (right->to<IR::Constant>() || right->to<IR::Member>()) {
+        // Load operation
+        methodCall = new IR::MethodCallStatement(
+            stmt->srcInfo, new IR::Member(parserCounter, "set"), {stmt->right});
+    } else if (auto add = right->to<IR::Add>()) {
+        // Add operaton.
+        auto member = add->left->to<IR::Member>();
+        BUG_CHECK(member != nullptr, "Expression for parser counter is not supported %1%",
+                  stmt->srcInfo);
+
+        auto pathExpr = member->expr->to<IR::PathExpression>();
+        if (pathExpr) {
+            auto path = pathExpr->path->to<IR::Path>();
+            if (path->name == "ig_prsr_ctrl" && member->member == "parser_counter")
+                return new IR::MethodCallStatement(
+                    stmt->srcInfo, new IR::Member(parserCounter, "increment"), {add->right});
+        }
+
+        methodCall =  new IR::MethodCallStatement(
+                stmt->srcInfo,
+                new IR::Member(parserCounter, "set"),
+                {new IR::Cast(IR::Type::Bits::get(8), right)});
+    }
+
+    return methodCall;
 }
 
 const IR::Node* ParserCounterSelectionConverter::postorder(IR::Member* node) {
     auto member = getOriginal<IR::Member>();
-    auto base_name = member->member;
-    auto it = structure->parserCounterNames.find(base_name);
-    if (it == structure->parserCounterNames.end())
-        return node;
-    auto method = new IR::Member(new IR::PathExpression(it->second), "is_zero");
-    auto result = new IR::MethodCallStatement(node->srcInfo, method, {});
-    return result;
+    auto parserCounter = new IR::PathExpression("ig_prsr_ctrl_parser_counter");
+    auto methodCall =  new IR::MethodCallExpression(
+        node->srcInfo, new IR::Member(parserCounter, "get"), {});
+    return methodCall;
 }
 
 }  // namespace V1

@@ -19,12 +19,6 @@ struct ProgramStructure : BFN::ProgramStructure {
     // maintain symbol tables for program transformation
     ChecksumSourceMap                            checksums;
 
-    // parser related translations
-    TranslationMap                               priorityCalls;
-    TranslationMap                               parserCounterCalls;
-    SimpleNameMap                                parserCounterNames;
-    TranslationMap                               parserCounterSelects;
-
     /// user program specific info
     cstring type_h;
     cstring type_m;

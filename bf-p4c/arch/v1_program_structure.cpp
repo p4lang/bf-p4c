@@ -17,10 +17,6 @@ namespace V1 {
     TRANSLATE_NODE(NODE, CONVERTER, convert)
 
 void ProgramStructure::createParsers() {
-    TRANSLATE_STATEMENT(priorityCalls, ParserPriorityConverter);
-    TRANSLATE_STATEMENT(parserCounterCalls, ParserCounterConverter);
-    TRANSLATE_STATEMENT(parserCounterSelects, ParserCounterSelectionConverter);
-
     IngressParserConverter cvt_i(this);
     auto ingressParser = parsers.at(getBlockName(ProgramStructure::INGRESS_PARSER));
     ingressParser = cvt_i.convert(ingressParser);

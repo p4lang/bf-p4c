@@ -276,10 +276,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/ipv4_options.p4
   )
 
-# BRIG-141
 p4c_add_xfail_reason("tofino"
-  "Unimplemented compiler support.*: parser counter translation is not implemented"
-#   extensions/p4_tests/p4_14/c1/COMPILER-384/case2240.p4
+  "Expression for parser counter is not supported"
+  #   extensions/p4_tests/p4_14/c1/COMPILER-384/case2240.p4
   extensions/p4_tests/p4_14/p4-tests/programs/pctr/pctr.p4
   )
 
@@ -791,9 +790,9 @@ p4c_add_xfail_reason("tofino"
   "Could not find declaration for smeta"
   testdata/p4_16_samples/issue677-bmv2.p4
   )
-# missing support in translation: parser counter
+# missing support in backend: parser counter
 p4c_add_xfail_reason("tofino"
-  "parser counter translation is not implemented"
+  "warning: can't find field 'ig_prsr_ctrl_parser_counter.get'"
   extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
   )
 p4c_add_xfail_reason("tofino"
@@ -1057,4 +1056,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "expected packet on port .* not seen"
   extensions/p4_tests/p4_16/stack_valid.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Couldn't resolve computed value for select in state .*"
+  extensions/p4_tests/p4_16/ipv6_tlv.p4
 )

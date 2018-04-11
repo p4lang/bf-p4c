@@ -652,6 +652,27 @@ class AnalyzeProgram : public Inspector {
             new IR::StructField("clone_digest_id", IR::Type::Bits::get(4)));
 
         structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
+
+        // Add an instance of parser counter
+        {
+            auto typeArgs = new IR::Vector<IR::Type>({IR::Type::Bits::get(8)});
+            auto type = new IR::Type_Specialized(
+                new IR::Type_Name("ParserCounter"), typeArgs);
+            auto decl = new IR::Declaration_Instance(
+                "ig_prsr_ctrl_parser_counter", type,
+                new IR::Vector<IR::Expression>());
+            structure->ingressParserDeclarations.push_back(decl);
+            structure->egressParserDeclarations.push_back(decl);
+        }
+
+        // Add an instance of parser priority
+        {
+            auto type = new IR::Type_Name("ParserPriority");
+            auto decl = new IR::Declaration_Instance(
+                "ig_prsr_ctrl_priority", type, new IR::Vector<IR::Expression>());
+            structure->ingressParserDeclarations.push_back(decl);
+            structure->egressParserDeclarations.push_back(decl);
+        }
     }
 };
 
@@ -1214,16 +1235,20 @@ class ConstructSymbolTable : public Inspector {
                     return;
                 if (auto type = expr->type->to<IR::Type_Name>()) {
                     if (type->path->name == "ingress_parser_control_signals") {
-                        auto stmt = findContext<IR::AssignmentStatement>();
-                        if (stmt && node->member == "priority") {
-                            structure->priorityCalls.emplace(stmt, stmt);
-                        } else if (stmt && node->member == "parser_counter") {
-                            structure->parserCounterCalls.emplace(stmt, stmt);
-                        }
+                        if (auto stmt = findContext<IR::AssignmentStatement>()) {
+                            if (node->member == "parser_counter") {
+                                ParserCounterConverter cvt(structure);
+                                structure->_map.emplace(stmt, stmt->apply(cvt));
+                            } else if (node->member == "priority") {
+                                ParserPriorityConverter cvt(structure);
+                                structure->_map.emplace(stmt, stmt->apply(cvt));
+                            }
                         // handle parser counter in select() expression
-                        auto select = findContext<IR::SelectExpression>();
-                        if (select) {
-                            structure->parserCounterSelects.emplace(node, node);
+                        } else if (auto select = findContext<IR::SelectExpression>()) {
+                            ParserCounterSelectionConverter cvt(structure);
+                            structure->_map.emplace(node, node->apply(cvt));
+                        } else {
+                            BUG("Invalid expression for parser counter");
                         }
                     }
                 } else if (expr->type->is<IR::Type_Struct>()) {

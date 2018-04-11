@@ -405,6 +405,11 @@ struct RewriteParserStatements : public Transform {
             return nullptr;
         }
 
+        if (method->member == "increment" || method->member == "decrement") {
+            WARNING("parser counter is not yet implemented");
+            return nullptr;
+        }
+
         if (method->member == "add") {
             BUG_CHECK(call->arguments->size() == 1,
                       "Wrong number of arguments for method call: %1%", statement);

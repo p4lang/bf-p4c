@@ -96,6 +96,7 @@ class ParserConverter : public Transform {
     explicit ParserConverter(ProgramStructure* structure)
     : structure(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::AssignmentStatement* node) override;
+    const IR::Node* postorder(IR::Member* node) override;
     const IR::P4Parser* convert(const IR::Node* node) {
         auto conv = node->apply(*this);
         auto result = conv->to<IR::P4Parser>();

@@ -388,31 +388,47 @@ extern Checksum<W> {
 // -----------------------------------------------------------------------------
 // PARSER COUNTER/PRIORITY/VALUE SET
 // -----------------------------------------------------------------------------
+extern ParserCounter<W> {
+    // Constructor
+    ParserCounter();
 
-extern parser_counter {
-    parser_counter();
     /// Load the counter with an immediate value or a header field.
-    ///   @max : Maximum permitted value for counter (pre rotate/mask/add).
-    ///   @rotate : Rotate the source field right by this number of bits.
-    ///   @mask : Mask the rotated source field by 2**(MASK+1) - 1.
-    ///   @add : Constant to add to the rotated and masked lookup field.
-    void set(in int<8> value,
-            @optional in int<8> max,
-            @optional in bit<3> rotate,
-            @optional in bit<3> mask,
-            @optional in int<8> add);
+    void set(in W value);
+
+    /// Load the counter with an immediate value or a header field.
+    /// @param max : Maximum permitted value for counter (pre rotate/mask/add).
+    /// @param rotate : Rotate the source field right by this number of bits.
+    /// @param mask : Mask the rotated source field by 2**(MASK+1) - 1.
+    /// @param add : Constant to add to the rotated and masked lookup field.
+    void set(in W value,
+             in W max,
+             in W rotate,
+             in W mask,
+             in W add);
+
+    /// Get the parser counter value. Can only be used in the select expression
+    /// in a parser state and can only checks if the counter is zero or
+    /// negative.
+    /// @return : restricted parser counter value.
+    W get();
 
     /// Add an immediate value to the parser counter.
-    void increment(in int<8> value);
-    bool is_zero();
-    bool is_neg();
+    /// @param value : Constant to add to the counter.
+    void increment(in W value);
+
+    /// Subtract an immediate value from the parser counter.
+    /// @param value : Constant to subtract from the counter.
+    void decrement(in W value);
 }
 
-// Parser priority
-// The ingress parser drops the packet based on priority if the input buffer is
-// indicating congestion; egress parser does not perform any dropping.
-extern priority {
-    priority();
+// Tofino ingress parser compare the priority with a configurable!!! threshold
+// to determine to whether drop the packet if the input buffer is congested.
+// Egress parser does not perform any dropping.
+extern ParserPriority {
+    /// Constructor
+    ParserPriority();
+
+    /// Set a new priority for the packet.
     void set(in bit<3> prio);
 }
 

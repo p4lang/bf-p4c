@@ -26,6 +26,7 @@
 // Action selector
 // Digest
 // Coalesce mirroring
+// Parser priority threshold, default_prio
 
 // ----------------------------------------------------------------------------
 // COMMON TYPES
@@ -421,6 +422,9 @@ extern ParserCounter<W> {
     ParserCounter();
 
     /// Load the counter with an immediate value or a header field.
+    void set(in W value);
+
+    /// Load the counter with an immediate value or a header field.
     /// @param max : Maximum permitted value for counter (pre rotate/mask/add).
     /// @param rotate : Rotate the source field right by this number of bits.
     /// @param mask : Mask the rotated source field by 2**(MASK+1) - 1.
@@ -440,14 +444,18 @@ extern ParserCounter<W> {
     /// Add an immediate value to the parser counter.
     /// @param value : Constant to add to the counter.
     void increment(in W value);
+
+    /// Subtract an immediate value from the parser counter.
+    /// @param value : Constant to subtract from the counter.
+    void decrement(in W value);
 }
 
 // Tofino ingress parser compare the priority with a configurable!!! threshold
 // to determine to whether drop the packet if the input buffer is congested.
 // Egress parser does not perform any dropping.
-extern Priority {
+extern ParserPriority {
     /// Constructor
-    Priority();
+    ParserPriority();
 
     /// Set a new priority for the packet.
     void set(in bit<3> prio);
