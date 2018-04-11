@@ -82,19 +82,19 @@ void TableSummary::throwBacktrackException() {
             ::warning("Source of merged gateway does not have stage allocated"); } }
 
     // First round
-    // First round of table placement places tables in less than 12 stages, no backtracking invoked
-    // If first round of table placement places tables in more than 12 stages, then a
-    // NoContainerConflictTrigger() is thrown which redoes table placement, ignoring container
+    // First round of table placement places tables in less than device stages, no backtracking
+    // invoked If first round of table placement places tables in more than device stages, then
+    // a NoContainerConflictTrigger() is thrown which redoes table placement, ignoring container
     // conflicts (second round of table placement)
-    if (numInvoked == 1 && maxStage > NUM_STAGES) {
+    if (numInvoked == 1 && maxStage > Device::numStages()) {
         LOG1("Invoking table placement without container conflicts");
         throw NoContainerConflictTrigger::failure(true); }
 
     // Right now we only do one backtracking round
-    // If second round of table placement fits in less than 12 stages, then trigger a
+    // If second round of table placement fits in less than device stages, then trigger a
     // PHVTrigger::failure to initiate a second round of PHV allocation with additional no pack
     // constraints between fields written in the same stage.
-    if (numInvoked == 2 && maxStage <= NUM_STAGES) {
+    if (numInvoked == 2 && maxStage <= Device::numStages()) {
         LOG1("Invoking reallocation of PHVs");
         throw PHVTrigger::failure(tableAlloc); }
 }

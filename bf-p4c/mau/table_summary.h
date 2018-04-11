@@ -5,6 +5,7 @@
 #include <map>
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/resource.h"
+#include "bf-p4c/device.h"
 
 struct PHVTrigger {
     struct failure : public Backtrack::trigger {
@@ -23,7 +24,6 @@ struct NoContainerConflictTrigger {
 
 class TableSummary: public MauInspector {
     static constexpr int NUM_LOGICAL_TABLES_PER_STAGE = 16;
-    static constexpr int NUM_STAGES = 12;
     static int numInvoked;
 
     /// The total number of stages allocated by Table Placement

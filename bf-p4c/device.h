@@ -30,6 +30,7 @@ class Device {
      */
     static void reinitialize(cstring name);
 
+
     static const Device& get() {
        BUG_CHECK(instance_ != nullptr, "No device specified");
        return *instance_;
@@ -39,6 +40,7 @@ class Device {
 
     static const PhvSpec& phvSpec() { return Device::get().getPhvSpec(); }
     static const PardeSpec& pardeSpec() { return Device::get().getPardeSpec(); }
+    static int numStages() { return Device::get().getNumStages(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -47,6 +49,7 @@ class Device {
 
     virtual const PhvSpec& getPhvSpec() const = 0;
     virtual const PardeSpec& getPardeSpec() const = 0;
+    virtual int getNumStages() const = 0;
 
     cstring name_;
 
@@ -61,6 +64,7 @@ class TofinoDevice : public Device {
 
  public:
     TofinoDevice() : Device("Tofino"), parde_() {}
+    int getNumStages() const { return 12; }
 
     const PhvSpec& getPhvSpec() const { return phv_; }
     const PardeSpec& getPardeSpec() const { return parde_; }
@@ -73,6 +77,7 @@ class JBayDevice : public Device {
 
  public:
     JBayDevice() : Device("JBay"), parde_() {}
+    int getNumStages() const { return 20; }
 
     const PhvSpec& getPhvSpec() const { return phv_; }
     const PardeSpec& getPardeSpec() const { return parde_; }
