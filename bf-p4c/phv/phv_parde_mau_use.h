@@ -83,6 +83,8 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
         BUG_CHECK(stacks, "No header stack info.  Running PhvUse before CollectHeaderStackInfo?");
         return true;
     }
+
+    void end_apply() override;
 };
 
 /// Consider additional cases specific to Phv Allocation, e.g., treat

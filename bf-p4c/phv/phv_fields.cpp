@@ -203,23 +203,53 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
                 size[gress] -= field.size;
                 field.offset = size[gress]; } }
 
-        // Create fields for (non-header stack) validity bits.
+        // Create fields for validity bits.
         for (auto hdr : simple_headers)
             if (hdr.second.gress == gress)
                 add(hdr.first + ".$valid", gress, 1, --size[gress], false, true);
 
-        // Create header stack POVs, including header stack validity bits.
+        // Create header stack CCGFs.
         for (auto &stack : stacks) {
+            safe_vector<PHV::Field *> pov_fields;  // accumulate member povs of header stk pov
             StructInfo info = struct_info(stack.name);
             if (info.gress == gress) {
+                if (stack.maxpush) {
+                    size[gress] -= stack.maxpush;
+                    add(stack.name + ".$push", gress, stack.maxpush, size[gress], true, true);
+                    pov_fields.push_back(&all_fields[stack.name + ".$push"]);
+                }
+                char buffer[16];
+                for (int i = 0; i < stack.size; ++i) {
+                    snprintf(buffer, sizeof(buffer), "[%d]", i);
+                    add(stack.name + buffer + ".$valid", gress, 1, --size[gress], false, true);
+                    pov_fields.push_back(&all_fields[stack.name + buffer + ".$valid"]);
+                }
+                if (stack.maxpop) {
+                    size[gress] -= stack.maxpop;
+                    add(stack.name + ".$pop", gress, stack.maxpop, size[gress], true, true);
+                    pov_fields.push_back(&all_fields[stack.name + ".$pop"]);
+                }
                 add(stack.name + ".$stkvalid", gress, stack.size + stack.maxpush + stack.maxpop,
                     size[gress], true, true);
+                // do not push ".$stkvalid" as a member
+                // members are slices of owner ".stkvalid"'s allocation span
                 PHV::Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
+                for (auto &f : pov_fields) {
+                    pov_stk->ccgf_fields().push_back(f);
+                    f->set_ccgf(pov_stk);
+                    BUG_CHECK(f->validContainerRange() == nw_bitrange(ZeroToMax()),
+                        "POV bit with absolute container offset"); }
+                pov_stk->set_header_stack_pov_ccgf(true);
                 pov_stk->set_no_split(true);
-                LOG3("Creating HEADER STACK " << pov_stk); } }
-
-        assert(size[gress] == 0); }
-}
+                LOG3("Creating HEADER STACK CCGF " << pov_stk);
+                BUG_CHECK(pov_stk->ccgf_fields().size() > 0,
+                    "Creating .$stkvalid CCGF with no members: %1%",
+                    cstring::to_cstring(pov_stk));
+            }
+        }
+        assert(size[gress] == 0);
+    }
+}  // allocatePOV
 
 //
 //***********************************************************************************

@@ -818,13 +818,7 @@ computeControlPlaneFormat(const PhvInfo& phv,
 /// ContainerBitRef. Checks that the allocation for the POV bit field is sane.
 const IR::BFN::ContainerBitRef*
 lowerPovBit(const PhvInfo& phv, const IR::BFN::FieldLVal* fieldRef) {
-    le_bitrange range;
-    auto* field = phv.field(fieldRef->field, &range);
-
-    std::vector<alloc_slice> slices;
-    field->foreach_alloc(&range, [&](const PHV::Field::alloc_slice& alloc) {
-        slices.push_back(alloc);
-    });
+    std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
 
     BUG_CHECK(!slices.empty(), "POV bit %1% didn't receive a PHV allocation",
               fieldRef->field);

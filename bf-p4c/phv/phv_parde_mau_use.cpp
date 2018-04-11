@@ -82,6 +82,41 @@ bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
     return true;
 }
 
+void Phv_Parde_Mau_Use::end_apply() {
+    // Header stacks have two aliases for POV bits: stack.$stkvalid aliases
+    // with stack.$push, stack.$pop, and stack[N].$valid for all N.  $stkvalid
+    // is used in push/pop operations, whereas $valid is used in the
+    // parser/deparser and isValid().  When any $valid field is used, treat
+    // $stkvalid as used in the same way.
+    for (auto gress : { INGRESS, EGRESS }) {
+        for (auto stack : *stacks) {
+            PhvInfo::StructInfo info = phv.struct_info(stack.name);
+            if (info.gress != gress)
+                continue;
+            char buffer[16];
+            for (int i = 0; i < stack.size; ++i) {
+                snprintf(buffer, sizeof(buffer), "[%d]", i);
+                auto* valid = phv.field(stack.name + buffer + ".$valid");
+                auto* stkvalid = phv.field(stack.name + ".$stkvalid");
+
+                // Sanity check.  These should be added in PhvInfo::allocatePOV.
+                BUG_CHECK(valid, "No PHV field for %1%?", stack.name + buffer + ".$valid");
+                BUG_CHECK(stkvalid, "No PHV field for %1%?", stack.name + ".$stkvalid");
+
+                // However valid is used, so too is stkvalid.
+                // XXX(cole): Define |= for nonconst_bitref.
+                use_i[PARDE][gress][stkvalid->id] = use_i[PARDE][gress][stkvalid->id]
+                                                  | use_i[PARDE][gress][valid->id];
+                use_i[MAU][gress][stkvalid->id]   = use_i[MAU][gress][stkvalid->id]
+                                                  | use_i[MAU][gress][valid->id];
+                deparser_i[gress][stkvalid->id]   = deparser_i[gress][stkvalid->id]
+                                                  | deparser_i[gress][valid->id];
+                written_i[stkvalid->id]           = written_i[stkvalid->id]
+                                                  | written_i[valid->id];
+                used_alu_i[stkvalid->id]          = used_alu_i[stkvalid->id]
+                                                  | used_alu_i[valid->id]; } } }
+}
+
 //
 // Phv_Parde_Mau_Use routines that check use_i[]
 //

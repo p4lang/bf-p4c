@@ -84,13 +84,9 @@ struct OutputDictionary : public Inspector {
         AutoIndent autoIndent(indent);
         out << indent << "clot " << emit->clot.tag << ":" << std::endl;
 
-        le_bitrange range;
-        auto* povField = phv.field(emit->povBit->field, &range);
+        auto povBit = phv.field(emit->povBit->field);
         AutoIndent fieldIndent(indent);
-        out << indent << "pov: " << canon_name(trim_asm_name(povField->externalName()));
-        if (range.size() != povField->size)
-            out << "(" << range.lo << ")";
-        out << std::endl;
+        out << indent << "pov: " << canon_name(trim_asm_name(povBit->externalName())) << std::endl;
 
         std::set<PHV::Container> containers;
         for (auto f : emit->clot.phv_fields) {
