@@ -191,10 +191,6 @@ bitvec PhvSpec::deparserGroup(unsigned id) const {
     if (individuallyAssignedContainers()[id])
         return range(containerType, index, 1);
 
-    // Return a singleton for invalid containers; they have no deparser group.
-    if (!physicalContainers()[id])
-        return range(containerType, index, 1);
-
     // We also treat overflow containers (i.e., containers which don't exist in
     // hardware) as being individually assigned.
     if (!physicalContainers()[id])
@@ -205,6 +201,11 @@ bitvec PhvSpec::deparserGroup(unsigned id) const {
 
     // Outside of the exceptional cases above, containers are assigned to
     // threads in groups. The grouping depends on the type of container.
+
+    auto find = deparserGroupSize.find(containerType);
+
+    if (find == deparserGroupSize.end())
+        return bitvec();
 
     unsigned groupSize = deparserGroupSize.at(containerType);
     return range(containerType, (index / groupSize) * groupSize, groupSize);
@@ -278,16 +279,27 @@ const bitvec& TofinoPhvSpec::individuallyAssignedContainers() const {
 }
 
 #if HAVE_JBAY
-// TODO(zma) add dark and mochas
 JBayPhvSpec::JBayPhvSpec() {
     addType(PHV::Type::B);
     addType(PHV::Type::H);
     addType(PHV::Type::W);
+    addType(PHV::Type::MB);
+    addType(PHV::Type::MH);
+    addType(PHV::Type::MW);
+    addType(PHV::Type::DB);
+    addType(PHV::Type::DH);
+    addType(PHV::Type::DW);
 
     mauGroupSpec = {
-        { PHV::Type::B, std::make_pair(4, 12) },
-        { PHV::Type::H, std::make_pair(6, 12) },
-        { PHV::Type::W, std::make_pair(4, 12) }
+        { PHV::Type::B,  std::make_pair(4, 12) },
+        { PHV::Type::MB, std::make_pair(4, 4)  },
+        { PHV::Type::DB, std::make_pair(4, 4)  },
+        { PHV::Type::H,  std::make_pair(6, 12) },
+        { PHV::Type::MH, std::make_pair(6, 4)  },
+        { PHV::Type::DH, std::make_pair(6, 4)  },
+        { PHV::Type::W,  std::make_pair(4, 12) },
+        { PHV::Type::MW, std::make_pair(4, 4)  },
+        { PHV::Type::DW, std::make_pair(4, 4)  }
     };
 
     ingressOnlyMauGroupIds = { };
@@ -299,9 +311,12 @@ JBayPhvSpec::JBayPhvSpec() {
     numTagalongCollections = 0;
 
     deparserGroupSize = {
-        { PHV::Type::B, { 4 } },
-        { PHV::Type::H, { 4 } },
-        { PHV::Type::W, { 2 } }
+        { PHV::Type::B,  { 4 } },
+        { PHV::Type::MB, { 4 } },
+        { PHV::Type::H,  { 4 } },
+        { PHV::Type::MH, { 4 } },
+        { PHV::Type::W,  { 2 } },
+        { PHV::Type::MW, { 2 } }
     };
 }
 

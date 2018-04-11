@@ -1068,6 +1068,10 @@ std::list<PHV::ContainerGroup *> AllocatePHV::makeDeviceContainerGroups() {
 
     // Build MAU groups
     for (const PHV::Type t : phvSpec.containerTypes()) {
+        // XXX(zma) we don't have an allocator for these yet
+        if (t.kind() == PHV::Kind::mocha || t.kind() == PHV::Kind::dark)
+            continue;
+
         for (auto group : phvSpec.mauGroups(t)) {
             // Get type of group
             if (group.empty())

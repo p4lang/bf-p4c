@@ -75,9 +75,32 @@ void CheckPhvContainerTypes() {
     EXPECT_EQ(c, phvSpec.idToContainer(phvSpec.containerToId(c)));
     checkRange(c);
 
+    c = "MW31";
+    EXPECT_TRUE(static_cast<bool>(c));
+    EXPECT_EQ(Type("MW"), c.type());
+    EXPECT_EQ(2u, c.log2sz());
+    EXPECT_EQ(31u, c.index());
+    EXPECT_EQ(c, PHV::Container(Type("MW"), 31));
+    EXPECT_EQ(c, phvSpec.idToContainer(phvSpec.containerToId(c)));
+    checkRange(c);
+
+    c = "DB0";
+    EXPECT_TRUE(static_cast<bool>(c));
+    EXPECT_EQ(Type("DB"), c.type());
+    EXPECT_EQ(0u, c.log2sz());
+    EXPECT_EQ(0u, c.index());
+    EXPECT_EQ(c, PHV::Container(Type("DB"), 0));
+    EXPECT_EQ(c, phvSpec.idToContainer(phvSpec.containerToId(c)));
+    checkRange(c);
+
     EXPECT_ANY_THROW(PHV::Container("X1"));
     EXPECT_ANY_THROW(PHV::Container("B"));  // XXX(seth)
     EXPECT_ANY_THROW(PHV::Container("W-1"));
+    EXPECT_ANY_THROW(PHV::Container("MD1"));
+    EXPECT_ANY_THROW(PHV::Container("MDB1"));
+    EXPECT_ANY_THROW(PHV::Container("BD1"));
+    EXPECT_ANY_THROW(PHV::Container("M9"));
+    EXPECT_ANY_THROW(PHV::Container("D666"));
 }
 
 void CheckJBayPhvContainerResources() {
@@ -101,6 +124,8 @@ void CheckPhvContainerJSON() {
         PHV::Container("B0"),
         PHV::Container("H33"),
         PHV::Container("W55"),
+        PHV::Container("MW5"),
+        PHV::Container("DB6"),
     };
 
     for (PHV::Container inputContainer : inputs) {

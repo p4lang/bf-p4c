@@ -4,7 +4,6 @@
 #include <iostream>
 #include <sstream>
 
-#include "lib/exceptions.h"
 #include "lib/cstring.h"
 #include "ir/ir.h"
 #include "ir/json_loader.h"
@@ -19,6 +18,12 @@ Type::Type(Type::TypeEnum te) {
         case Type::TB: kind_ = Kind::tagalong; size_ = Size::b8;  break;
         case Type::TH: kind_ = Kind::tagalong; size_ = Size::b16; break;
         case Type::TW: kind_ = Kind::tagalong; size_ = Size::b32; break;
+        case Type::MB: kind_ = Kind::mocha;    size_ = Size::b8;  break;
+        case Type::MH: kind_ = Kind::mocha;    size_ = Size::b16; break;
+        case Type::MW: kind_ = Kind::mocha;    size_ = Size::b32; break;
+        case Type::DB: kind_ = Kind::dark;     size_ = Size::b8;  break;
+        case Type::DH: kind_ = Kind::dark;     size_ = Size::b16; break;
+        case Type::DW: kind_ = Kind::dark;     size_ = Size::b32; break;
         default: BUG("Unknown PHV type"); }
 }
 
@@ -27,6 +32,8 @@ Type::Type(const char* name) {
 
     switch (*n) {
         case 'T': kind_ = Kind::tagalong; n++; break;
+        case 'M': kind_ = Kind::mocha;    n++; break;
+        case 'D': kind_ = Kind::dark;     n++; break;
         default:  kind_ = Kind::normal; }
 
     switch (*n++) {
@@ -39,7 +46,7 @@ Type::Type(const char* name) {
         BUG("Invalid PHV type '%s'", name);
 }
 
-unsigned Type::log2sz() const {  // TODO(zma) get rid of this function
+unsigned Type::log2sz() const {
     switch (size_) {
        case Size::b8:   return 0;
        case Size::b16:  return 1;
@@ -86,6 +93,8 @@ std::ostream& operator<<(std::ostream& out, const PHV::Kind k) {
     switch (k) {
         case PHV::Kind::normal:   return out << "";
         case PHV::Kind::tagalong: return out << "T";
+        case PHV::Kind::mocha:    return out << "M";
+        case PHV::Kind::dark:     return out << "D";
         default:    BUG("Unknown PHV container kind");
     }
 }

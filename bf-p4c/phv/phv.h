@@ -3,6 +3,7 @@
 
 #include <iosfwd>
 #include <limits>
+#include "lib/exceptions.h"
 #include "lib/ordered_set.h"
 
 class bitvec;
@@ -12,18 +13,49 @@ class JSONLoader;
 
 namespace PHV {
 
-enum class Kind : unsigned short {  // all possible PHV kinds in BFN devices
-    normal   = 0,  // PHV
-    tagalong = 1,  // TPHV
-    mocha    = 2,  // MOCHA
-    dark     = 3   // DARK
+// all possible PHV container kinds in BFN devices
+enum class Kind : unsigned short {
+    tagalong = 0,
+    dark     = 1,
+    mocha    = 2,
+    normal   = 3
 };
+
+// all possible contexts a PHV container can participate in
+enum class Context : unsigned short {
+    parde = 0,
+    ixbar = 1,
+    vliw  = 2
+};
+
+inline std::vector<Context> all_contexts(Kind kind) {
+    switch (kind) {
+        case PHV::Kind::normal:   return { Context::parde,
+                                           Context::ixbar,
+                                           Context::vliw };
+
+        case PHV::Kind::tagalong: return { Context::parde };
+
+        case PHV::Kind::mocha:    return { Context::parde,
+                                           Context::ixbar,
+                                           Context::vliw };  // move only
+
+        case PHV::Kind::dark:     return { Context::vliw };  // move only
+
+        default:    BUG("Unknown PHV container kind");
+    }
+}
+
+// TODO With the addition of mocha/dark, the PHV kind is no longer a strict
+// order (i.e. normal > tagalong). The function below needs to be re-written
+// in conjunction with its use in phv allocation.
 
 /** Provides a partial ordering over PHV container kinds, denoting subset
  * inclusion over the set of capabilities each kind supports.  For example,
  * `tagalong < normal`, because tagalong containers don't support reads/writes
  * in the MAU, whereas normal containers do.
  */
+/*
 inline bool operator<(Kind left, Kind right) {
     // No containers support more operations than normal containers.
     if (left == Kind::normal) return false;
@@ -34,11 +66,13 @@ inline bool operator<(Kind left, Kind right) {
     // All other container types are incomparable.
     return false;
 }
+*/
 inline bool operator<=(Kind left, Kind right) {
     return left == right || left < right;
 }
 
-enum class Size : unsigned short {  // all possible PHV sizes in BFN devices
+// all possible PHV container sizes in BFN devices
+enum class Size : unsigned short {
     null = 0,
     b8   = 8,
     b16  = 16,
@@ -50,13 +84,19 @@ class Type {
     Size        size_;
 
  public:
-    enum TypeEnum {  // Enumeration of all possible types in BFN devices:
-        B,           //     8-bit  normal
-        H,           //     16-bit normal
-        W,           //     32-bit normal
-        TB,          //     8-bit  tagalong
-        TH,          //     16-bit tagalong
-        TW           //     32-bit tagalong
+    enum TypeEnum {  // all possible PHV container types in BFN devices
+        B,           //     8-b  normal
+        H,           //     16-b  |
+        W,           //     32-b _|
+        TB,          //     8-b  tagalong
+        TH,          //     16-b  |
+        TW,          //     32-b _|
+        MB,          //     8-b  mocha
+        MH,          //     16-b  |
+        MW,          //     32-b _|
+        DB,          //     8-b  dark
+        DH,          //     16-b  |
+        DW           //     32-b _|
     };
 
     Type() : kind_(Kind::normal), size_(Size::null) {}
@@ -159,9 +199,9 @@ std::ostream& operator<<(std::ostream& out, const PHV::Kind k);
 std::ostream& operator<<(std::ostream& out, const PHV::Size sz);
 std::ostream& operator<<(std::ostream& out, const PHV::Type t);
 std::ostream& operator<<(std::ostream& out, const PHV::Container c);
-JSONGenerator& operator<<(JSONGenerator& out, const PHV::Container c);
 std::ostream& operator<<(std::ostream& out, ordered_set<const PHV::Container *>& c_set);
 
+JSONGenerator& operator<<(JSONGenerator& out, const PHV::Container c);
 }  // namespace PHV
 
 #endif /* BF_P4C_PHV_PHV_H_ */
