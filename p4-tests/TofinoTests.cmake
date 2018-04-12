@@ -1,35 +1,81 @@
 set (tofino_timeout 500)
 
+# Switch On Release 7.0
+set  (SWITCH_7.0_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-7.0/p4src/switch.p4)
+set  (isXFail TRUE)
+file (RELATIVE_PATH switch_7.0_test ${P4C_SOURCE_DIR} ${SWITCH_7.0_P4})
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
+  "switch_7.0_ent_fin_leaf" ${switch_7.0_test} "${testExtraArgs} -DENT_FIN_LEAF_PROFILE")
+p4c_add_test_label("tofino" "17Q4Goal" "switch_7.0_ent_fin_leaf")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "switch_7.0_dc_basic" ${switch_7.0_test} "${testExtraArgs} -DDC_BASIC_PROFILE")
+p4c_add_test_label("tofino" "17Q4Goal" "switch_7.0_dc_basic")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
+  "switch_7.0_ent_dc_general" ${switch_7.0_test} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
+p4c_add_test_label("tofino" "17Q4Goal" "switch_7.0_ent_dc_general")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "switch_7.0_ent_dc_aggr" ${switch_7.0_test} "${testExtraArgs} -DENT_DC_AGGR_PROFILE")
+p4c_add_test_label("tofino" "17Q4Goal" "switch_7.0_ent_dc_aggr")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "switch_7.0_msdc" ${switch_7.0_test} "${testExtraArgs} -DMSDC_PROFILE")
+p4c_add_test_label("tofino" "17Q4Goal" "switch_7.0_msdc")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "switch_7.0_l2" ${switch_7.0_test} "${testExtraArgs} -DL2_PROFILE")
+
+# Switch P4-14 On Master (refpoint must be periodically updated) 
 set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
 set  (isXFail TRUE)
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-  "switch_ent_fin_leaf" ${switchtest} "${testExtraArgs} -DENT_FIN_LEAF_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_ent_fin_leaf")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
   "switch_dc_basic" ${switchtest} "${testExtraArgs} -DDC_BASIC_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_dc_basic")
+p4c_add_test_label("tofino" "18Q2Goal" "switch_dc_basic")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
+    "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs} -DENT_FIN_POSTCARD_PROFILE")
+p4c_add_test_label("tofino" "18Q2Goal" "switch_ent_fin_postcard")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
   "switch_ent_dc_general" ${switchtest} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_ent_dc_general")
+p4c_add_test_label("tofino" "18Q2Goal" "switch_ent_dc_general")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_ent_dc_aggr" ${switchtest} "${testExtraArgs} -DENT_DC_AGGR_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_ent_dc_aggr")
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE 
+    "switch_msdc" ${switchtest} "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG")
+p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_msdc" ${switchtest} "${testExtraArgs} -DMSDC_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_msdc")
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+    "switch_msdc_ipv4" ${switchtest} "${testExtraArgs} -DMSDC_IPV4_PROFILE")
+p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_ipv4")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_l2" ${switchtest} "${testExtraArgs} -DL2_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+    "switch_msdc_l3" ${switchtest} "${testExtraArgs} -DMSDC_L3_PROFILE")
+p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_l3")
 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+    "switch_msdc_spine_int" ${switchtest} "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE")
+p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_spine_int")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+    "switch_msdc_leaf_int" ${switchtest} "${testExtraArgs} -DMSDC_LEAF_DTEL_INT_PROFILE")
+p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_spine_int")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+    "switch_msdc_l3_heavy_int_leaf" ${switchtest} "${testExtraArgs} -DMSDC_L3_HEAVY_INT_LEAF_PROFILE")
+p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_l3_heavy_int_leaf")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+    "switch_msdc_generic_int_leaf" ${switchtest} "${testExtraArgs} -DMSDC_GENERIC_INT_LEAF_PROFILE")
+p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_generic_int_leaf")
+
+# Switch P4-16
 set  (SWITCH_P4_16 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch/p4_16src/switch.p4)
-file (RELATIVE_PATH switch_test ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
+file (RELATIVE_PATH switch_p4_16_test ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_p4_16" ${switch_test} "${testExtraArgs} -nop4info")
+  "switch_p4_16" ${switch_p4_16_test} "${testExtraArgs} -nop4info")
 
 set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main|common_v1_test")
 set (V1_EXCLUDE_PATTERNS "package" "extern")

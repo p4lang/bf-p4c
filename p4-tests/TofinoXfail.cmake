@@ -44,13 +44,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_16/container_dependency.p4
     )
 
-  # Temporary until we fix the naming in STF for BMV2
-  p4c_add_xfail_reason("tofino"
-    "no field extra"
-    testdata/p4_14_samples/action_chain1.p4
-    testdata/p4_16_samples/ternary2-bmv2.p4
-    )
-
 endif() # HARLYN_STF_tofino
 
 # Tests that run packets:
@@ -307,7 +300,7 @@ p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-  switch_l2
+  switch_7.0_l2
   )
 
 # BRIG-113
@@ -1017,14 +1010,15 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
-  switch_dc_basic
-  switch_l2
+  switch_7.0_dc_basic
+  switch_7.0_l2
 )
 
 # BRIG-528
 p4c_add_xfail_reason("tofino"
   "unexpected packet output on port .*"
   extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
+  extensions/p4_tests/p4_16/stack_valid.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1049,13 +1043,8 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "TTransportException: TSocket read 0 bytes"
-  extensions/p4_tests/p4_14/p4-tests/programs/pcie_pkt_test/pcie_pkt_test.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "expected packet on port .* not seen"
-  extensions/p4_tests/p4_16/stack_valid.p4
+  testdata/p4_14_samples/action_chain1.p4
 )
 
 p4c_add_xfail_reason("tofino"

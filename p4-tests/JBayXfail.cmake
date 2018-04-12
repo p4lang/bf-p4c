@@ -44,12 +44,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/bridge1.p4
     )
 
-  # Temporary until we fix the naming in STF for BMV2
-  p4c_add_xfail_reason("jbay"
-    "no field extra"
-    testdata/p4_14_samples/action_chain1.p4
-    )
-
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -250,7 +244,7 @@ endif() # PTF_REQUIREMENTS_MET
 p4c_add_xfail_reason("jbay"
   ".* expected packet on port .* not seen"
   extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
-  extensions/p4_tests/p4_16/stack_valid.p4
+  testdata/p4_14_samples/action_chain1.p4
 )
 
 p4c_add_xfail_reason("jbay"
@@ -271,3 +265,9 @@ p4c_add_xfail_reason("jbay"
    testdata/p4_14_samples/counter5.p4
    extensions/p4_tests/p4_14/stateful3.p4   
 )
+
+p4c_add_xfail_reason("jbay"
+  "unexpected packet output on port .*"
+  extensions/p4_tests/p4_16/stack_valid.p4
+)
+
