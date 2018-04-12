@@ -16,7 +16,8 @@ add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
 if (ENABLE_JBAY)
   add_definitions("-DHAVE_JBAY=1")
 endif()
-include_directories(${BFN_P4C_SOURCE_DIR} ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
+include_directories(${BFN_P4C_SOURCE_DIR} ${P4C_BINARY_DIR}/control-plane
+  ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
 set (HAVE_LIBBOOST_GRAPH 1)
 set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY};${OPENSSL_LIBRARIES}")
 
@@ -141,12 +142,14 @@ set (BF_P4C_BACKEND_COMMON_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_HDRS}")
 
 set (BF_P4C_BACKEND_CONTROL_PLANE_SRCS
+  control-plane/bfruntime.cpp
   control-plane/tofino_p4runtime.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONTROL_PLANE_SRCS}")
 build_unified(BF_P4C_BACKEND_CONTROL_PLANE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_CONTROL_PLANE_HDRS
+  control-plane/bfruntime.h
   control-plane/tofino_p4runtime.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONTROL_PLANE_HDRS}")

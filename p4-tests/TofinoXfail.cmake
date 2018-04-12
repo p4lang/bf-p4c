@@ -667,6 +667,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Header present in IR not under Member"
   testdata/p4_16_samples/issue907-bmv2.p4
+  testdata/p4_16_samples/issue1210.p4
   )
 
 # BEGIN: XFAILS that match glass XFAILS

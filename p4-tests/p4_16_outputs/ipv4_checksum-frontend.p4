@@ -4,7 +4,7 @@
 
 typedef bit<48> mac_addr_t;
 typedef bit<32> ipv4_addr_t;
-typedef bit<16> switch_nexthop_t;
+typedef bit<128> ipv6_addr_t;
 header ethernet_h {
     mac_addr_t dst_addr;
     mac_addr_t src_addr;
@@ -24,6 +24,17 @@ header ipv4_h {
     bit<16>     hdr_checksum;
     ipv4_addr_t src_addr;
     ipv4_addr_t dst_addr;
+}
+
+header ipv6_h {
+    bit<4>      version;
+    bit<8>      traffic_class;
+    bit<20>     flow_label;
+    bit<16>     payload_len;
+    bit<8>      next_hdr;
+    bit<8>      hop_limit;
+    ipv6_addr_t src_addr;
+    ipv6_addr_t dst_addr;
 }
 
 header tcp_h {
@@ -46,6 +57,7 @@ header udp_h {
     bit<16> checksum;
 }
 
+typedef bit<16> switch_nexthop_t;
 struct switch_header_t {
     ethernet_h ethernet;
     ipv4_h     ipv4;
@@ -60,12 +72,9 @@ parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_me
     state start {
         pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md);
         transition select(ig_intr_md.resubmit_flag) {
-            1w1: parse_resubmit;
             1w0: parse_port_metadata;
+            1w1: reject;
         }
-    }
-    state parse_resubmit {
-        transition reject;
     }
     state parse_port_metadata {
         pkt.advance(32w64);
@@ -93,25 +102,16 @@ parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_me
     }
 }
 
-parser SwitchEgressParser(packet_in pkt, out switch_header_t hdr, out switch_metadata_t eg_md, out egress_intrinsic_metadata_t eg_intr_md) {
-    state start {
-        transition accept;
-    }
-}
-
 control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t ig_md, in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
+    bit<16> tmp_0;
     @name("SwitchIngressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum;
     apply {
-        ipv4_checksum.update<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr }, hdr.ipv4.hdr_checksum);
+        tmp_0 = ipv4_checksum.update<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
+        hdr.ipv4.hdr_checksum = tmp_0;
         pkt.emit<ethernet_h>(hdr.ethernet);
         pkt.emit<ipv4_h>(hdr.ipv4);
         pkt.emit<udp_h>(hdr.udp);
         pkt.emit<tcp_h>(hdr.tcp);
-    }
-}
-
-control SwitchEgressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t eg_md, in egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md) {
-    apply {
     }
 }
 
@@ -188,10 +188,21 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
     }
 }
 
-control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
+parser EmptyEgressParser_0(packet_in pkt, out switch_header_t hdr, out switch_metadata_t eg_md, out egress_intrinsic_metadata_t eg_intr_md) {
+    state start {
+        transition accept;
+    }
+}
+
+control EmptyEgress_0(inout switch_header_t hdr, inout switch_metadata_t eg_md, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
     apply {
     }
 }
 
-Switch<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) main;
+control EmptyEgressDeparser_0(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t eg_md, in egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md) {
+    apply {
+    }
+}
+
+Switch<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), EmptyEgressParser_0(), EmptyEgress_0(), EmptyEgressDeparser_0()) main;
 

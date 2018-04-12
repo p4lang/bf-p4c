@@ -98,17 +98,35 @@ control EmptyEgress<H, M>(inout H hdr, inout M eg_md, in egress_intrinsic_metada
 }
 
 typedef bit<16> switch_nexthop_t;
+header ipv6_srh_h {
+    bit<8>  next_hdr;
+    bit<8>  hdr_ext_len;
+    bit<8>  routing_type;
+    bit<8>  segment_left;
+    bit<8>  last_entry;
+    bit<8>  flags;
+    bit<16> tag;
+}
+
+header segment_id_h {
+    ipv6_addr_t sid;
+}
+
 struct switch_header_t {
-    ethernet_h ethernet;
-    ipv4_h     ipv4;
-    tcp_h      tcp;
-    udp_h      udp;
+    ethernet_h      ethernet;
+    ipv4_h          ipv4;
+    ipv6_h          ipv6;
+    ipv6_srh_h      ipv6_srh;
+    segment_id_h[5] ipv6_srh_segment_list;
+    tcp_h           tcp;
+    udp_h           udp;
 }
 
 struct switch_metadata_t {
 }
 
 parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+    ParserCounter<bit<8>>() counter;
     state start {
         pkt.extract(ig_intr_md);
         transition select(ig_intr_md.resubmit_flag) {
@@ -123,16 +141,28 @@ parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_me
     state parse_ethernet {
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.ether_type) {
-            0x800: parse_ipv4;
+            0x8100: parse_ipv6;
             default: reject;
         }
     }
-    state parse_ipv4 {
-        pkt.extract(hdr.ipv4);
-        transition select(hdr.ipv4.protocol) {
-            6: parse_tcp;
-            17: parse_udp;
+    state parse_ipv6 {
+        pkt.extract(hdr.ipv6);
+        transition select(hdr.ipv6.next_hdr) {
+            43: parse_ipv6_srh;
             default: accept;
+        }
+    }
+    state parse_ipv6_srh {
+        pkt.extract(hdr.ipv6_srh);
+        counter.set(hdr.ipv6_srh.segment_left, 0xff, 0, 0xff, 1);
+        transition parse_ipv6_srh_segment_list;
+    }
+    state parse_ipv6_srh_segment_list {
+        pkt.extract(hdr.ipv6_srh_segment_list.next);
+        counter.decrement(0x1);
+        transition select(counter.get()) {
+            0: accept;
+            default: parse_ipv6_srh_segment_list;
         }
     }
     state parse_udp {
@@ -157,65 +187,20 @@ control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in swit
 }
 
 control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    switch_nexthop_t nexthop_index;
-    action miss_() {
-    }
-    action set_nexthop(switch_nexthop_t index) {
-        nexthop_index = index;
-    }
-    action set_nexthop_info(mac_addr_t dmac) {
-        hdr.ethernet.dst_addr = dmac;
-    }
-    action set_port(PortId_t port) {
+    action forward(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
-        ig_intr_tm_md.bypass_egress = true;
     }
-    action rewrite_(mac_addr_t smac) {
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
-        hdr.ethernet.src_addr = smac;
-    }
-    table fib {
+    table srv6 {
         key = {
-            hdr.ipv4.dst_addr: exact;
+            hdr.ipv6_srh.isValid(): exact;
         }
         actions = {
-            miss_;
-            set_nexthop;
-        }
-        const default_action = miss_;
-    }
-    table nexthop {
-        key = {
-            nexthop_index: exact;
-        }
-        actions = {
-            set_nexthop_info;
-        }
-    }
-    table dmac {
-        key = {
-            hdr.ethernet.dst_addr: exact;
-        }
-        actions = {
-            set_port;
-            miss_;
-        }
-        const default_action = miss_;
-    }
-    table rewrite {
-        key = {
-            ig_intr_tm_md.ucast_egress_port: exact;
-        }
-        actions = {
-            rewrite_;
+            NoAction;
+            forward;
         }
     }
     apply {
-        nexthop_index = 0;
-        fib.apply();
-        nexthop.apply();
-        dmac.apply();
-        rewrite.apply();
+        srv6.apply();
     }
 }
 

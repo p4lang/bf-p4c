@@ -57,18 +57,36 @@ header udp_h {
     bit<16> checksum;
 }
 
-typedef bit<16> switch_nexthop_t;
+header ipv6_srh_h {
+    bit<8>  next_hdr;
+    bit<8>  hdr_ext_len;
+    bit<8>  routing_type;
+    bit<8>  segment_left;
+    bit<8>  last_entry;
+    bit<8>  flags;
+    bit<16> tag;
+}
+
+header segment_id_h {
+    ipv6_addr_t sid;
+}
+
 struct switch_header_t {
-    ethernet_h ethernet;
-    ipv4_h     ipv4;
-    tcp_h      tcp;
-    udp_h      udp;
+    ethernet_h      ethernet;
+    ipv4_h          ipv4;
+    ipv6_h          ipv6;
+    ipv6_srh_h      ipv6_srh;
+    segment_id_h[5] ipv6_srh_segment_list;
+    tcp_h           tcp;
+    udp_h           udp;
 }
 
 struct switch_metadata_t {
 }
 
 parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+    bit<8> tmp_1;
+    @name("SwitchIngressParser.counter") ParserCounter<bit<8>>() counter;
     state start {
         pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md);
         transition select(ig_intr_md.resubmit_flag) {
@@ -81,25 +99,30 @@ parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_me
         pkt.advance(32w64);
         pkt.extract<ethernet_h>(hdr.ethernet);
         transition select(hdr.ethernet.ether_type) {
-            16w0x800: parse_ipv4;
+            16w0x8100: parse_ipv6;
             default: reject;
         }
     }
-    state parse_ipv4 {
-        pkt.extract<ipv4_h>(hdr.ipv4);
-        transition select(hdr.ipv4.protocol) {
-            8w6: parse_tcp;
-            8w17: parse_udp;
+    state parse_ipv6 {
+        pkt.extract<ipv6_h>(hdr.ipv6);
+        transition select(hdr.ipv6.next_hdr) {
+            8w43: parse_ipv6_srh;
             default: accept;
         }
     }
-    state parse_udp {
-        pkt.extract<udp_h>(hdr.udp);
-        transition accept;
+    state parse_ipv6_srh {
+        pkt.extract<ipv6_srh_h>(hdr.ipv6_srh);
+        counter.set(hdr.ipv6_srh.segment_left, 8w0xff, 8w0, 8w0xff, 8w1);
+        transition parse_ipv6_srh_segment_list;
     }
-    state parse_tcp {
-        pkt.extract<tcp_h>(hdr.tcp);
-        transition accept;
+    state parse_ipv6_srh_segment_list {
+        pkt.extract<segment_id_h>(hdr.ipv6_srh_segment_list.next);
+        counter.decrement(8w0x1);
+        tmp_1 = counter.get();
+        transition select(tmp_1) {
+            8w0: accept;
+            default: parse_ipv6_srh_segment_list;
+        }
     }
     state noMatch {
         verify(false, error.NoMatch);
@@ -122,11 +145,11 @@ struct tuple_0 {
 }
 
 control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t ig_md, in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
-    bit<16> tmp_0;
+    bit<16> tmp_2;
     @name("SwitchIngressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum;
     @hidden action act() {
-        tmp_0 = ipv4_checksum.update<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
-        hdr.ipv4.hdr_checksum = tmp_0;
+        tmp_2 = ipv4_checksum.update<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
+        hdr.ipv4.hdr_checksum = tmp_2;
         pkt.emit<ethernet_h>(hdr.ethernet);
         pkt.emit<ipv4_h>(hdr.ipv4);
         pkt.emit<udp_h>(hdr.udp);
@@ -144,84 +167,23 @@ control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in swit
 }
 
 control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    switch_nexthop_t nexthop_index;
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".NoAction") action NoAction_3() {
-    }
-    @name("SwitchIngress.miss_") action miss() {
-    }
-    @name("SwitchIngress.miss_") action miss_2() {
-    }
-    @name("SwitchIngress.set_nexthop") action set_nexthop_0(switch_nexthop_t index) {
-        nexthop_index = index;
-    }
-    @name("SwitchIngress.set_nexthop_info") action set_nexthop_info_0(mac_addr_t dmac) {
-        hdr.ethernet.dst_addr = dmac;
-    }
-    @name("SwitchIngress.set_port") action set_port_0(PortId_t port) {
+    @name("SwitchIngress.forward") action forward_0(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
-        ig_intr_tm_md.bypass_egress = true;
     }
-    @name("SwitchIngress.rewrite_") action rewrite_0(mac_addr_t smac) {
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
-        hdr.ethernet.src_addr = smac;
-    }
-    @name("SwitchIngress.fib") table fib {
+    @name("SwitchIngress.srv6") table srv6 {
         key = {
-            hdr.ipv4.dst_addr: exact @name("hdr.ipv4.dst_addr") ;
+            hdr.ipv6_srh.isValid(): exact @name("hdr.ipv6_srh.$valid$") ;
         }
         actions = {
-            miss();
-            set_nexthop_0();
-        }
-        const default_action = miss();
-    }
-    @name("SwitchIngress.nexthop") table nexthop {
-        key = {
-            nexthop_index: exact @name("nexthop_index") ;
-        }
-        actions = {
-            set_nexthop_info_0();
-            @defaultonly NoAction_0();
+            NoAction_0();
+            forward_0();
         }
         default_action = NoAction_0();
     }
-    @name("SwitchIngress.dmac") table dmac_1 {
-        key = {
-            hdr.ethernet.dst_addr: exact @name("hdr.ethernet.dst_addr") ;
-        }
-        actions = {
-            set_port_0();
-            miss_2();
-        }
-        const default_action = miss_2();
-    }
-    @name("SwitchIngress.rewrite") table rewrite_2 {
-        key = {
-            ig_intr_tm_md.ucast_egress_port: exact @name("ig_intr_tm_md.ucast_egress_port") ;
-        }
-        actions = {
-            rewrite_0();
-            @defaultonly NoAction_3();
-        }
-        default_action = NoAction_3();
-    }
-    @hidden action act_0() {
-        nexthop_index = 16w0;
-    }
-    @hidden table tbl_act_0 {
-        actions = {
-            act_0();
-        }
-        const default_action = act_0();
-    }
     apply {
-        tbl_act_0.apply();
-        fib.apply();
-        nexthop.apply();
-        dmac_1.apply();
-        rewrite_2.apply();
+        srv6.apply();
     }
 }
 
