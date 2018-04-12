@@ -881,10 +881,6 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     // their destinations.  This is what glass does, but we should try to relax
     // this constraint in the future.
 
-    // All fields in rv must be placed in the same container.  If there are
-    // overlaps based on required alignment, return boost::none.
-    bitvec placements;
-
     // Find the copacking constraints.
     ordered_set<PHV::FieldSlice> copacking_set;
     ordered_map<PHV::FieldSlice, PHV::Container> req_container;
@@ -914,6 +910,10 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
             copacking_set.insert(*alignedSlice);
             LOG5("\t\t\t\tEnforcing alignment constraint on smaller slice: " << *alignedSlice); } }
 
+    // All fields in rv must be placed in the same container.  If there are
+    // overlaps based on required alignment, return boost::none.
+    ordered_map<const PHV::FieldSlice, le_bitrange> placements;
+
     // Find the right alignment for each slice in the copacking constraints.
     // XXX(cole): We probably already computed this somewhere...
     for (auto& packing_slice : copacking_set) {
@@ -938,6 +938,21 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
             continue;
 
         int bitPosition = *(req_alignment.begin());
+
+        // Check that no other slices are also required to be at this bit
+        // position, unless they're mutually exclusive and can be overlaid.
+        for (auto& kv : placements) {
+            bool isMutex = PHV::Allocation::mutually_exclusive(phv.field_mutex,
+                                                               kv.first.field(),
+                                                               packing_slice.field());
+            if (kv.second.overlaps(StartLen(bitPosition, packing_slice.size())) && !isMutex) {
+                LOG5("\t\t\tPacking failed because " << packing_slice << " and " << kv.first << " "
+                     "slice would (conservatively) need to be aligned at the same position in the "
+                     "same container.");
+                return boost::none; } }
+        placements[packing_slice] = StartLen(bitPosition, packing_slice.size());
+
+        // Set the required bit position.
         if (req_container.count(packing_slice))
             rv[packing_slice] = PHV::Allocation::ConditionalConstraintData(bitPosition,
                     req_container[packing_slice]);
