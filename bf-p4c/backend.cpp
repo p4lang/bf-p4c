@@ -84,8 +84,7 @@ class TableAllocPass : public PassManager {
     LayoutChoices           lc;
 
  public:
-    TableAllocPass(const BFN_Options& options, PhvInfo& phv, FieldDefUse &defuse,
-        DependencyGraph &deps) {
+    TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps) {
             addPasses({
                 new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
                 new TableLayout(phv, lc),
@@ -102,10 +101,7 @@ class TableAllocPass : public PassManager {
                 new TablePlacement(&deps, mutex, phv, lc, options.forced_placement),
                 new CheckTableNameDuplicate,
                 new TableFindSeqDependencies,  // not needed?
-                new CheckTableNameDuplicate,
-                &defuse,
-                (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
-                &mutex
+                new CheckTableNameDuplicate
             });
 
                 setName("Table Alloc");
@@ -180,7 +176,7 @@ Backend::Backend(const BFN_Options& options) :
         new PHV::ValidateActions(phv, false, true, false),
         new AddAliasAllocation(phv),
         options.privatization ? &defuse : nullptr,
-        new TableAllocPass(options, phv, defuse, deps),
+        new TableAllocPass(options, phv, deps),
         new TableSummary,
         new IXBarVerify(phv),
         new TotalInstructionAdjustment(phv),
