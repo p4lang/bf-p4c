@@ -331,7 +331,7 @@ public:
             std::string                         name;
             std::string                         rng_param_name = "";
             int                                 lineno = -1, addr = -1, code = -1;
-            std::map<std::string, alias_t>      alias;
+            std::multimap<std::string, alias_t> alias;
             std::vector<Instruction *>          instr;
             bitvec                              slot_use;
             unsigned                            handle = 0;

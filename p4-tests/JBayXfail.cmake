@@ -46,7 +46,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/action_chain_limits.p4
     extensions/p4_tests/p4_14/no_match_miss.p4
     # clot-phv interaction bug?
-    extensions/p4_tests/p4_14/action_format_packing2.p4
     extensions/p4_tests/p4_16/brig-532.p4
     testdata/p4_14_samples/instruct5.p4
     testdata/p4_14_samples/bridge1.p4

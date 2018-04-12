@@ -810,19 +810,27 @@ Table::Actions::Action::reverse_alias() const {
 
 std::string Table::Actions::Action::alias_lookup(int lineno, std::string name,
                                                  int &lo, int &hi) const {
+    bool err = false;
     while (alias.count(name)) {
-        auto &a = alias.at(name);
-        if (lo >= 0 && a.name != "hash_dist") {
-            if (a.lo >= 0) {
-                lo += a.lo;
-                hi += a.lo;
-                if (a.hi >= 0 && hi > a.hi)
-                    error(lineno, "invalid bitslice of %s", name.c_str()); }
-        } else {
-            lo = a.lo;
-            hi = a.hi; }
-        name = a.name;
-        lineno = a.lineno; }
+        for (auto &a : ValuesForKey(alias, name)) {
+            // FIXME -- need better handling of multiple aliases...
+            if (lo >= 0 && a.name != "hash_dist") {
+                if (a.lo >= 0) {
+                    if (a.hi >= 0 && hi + a.lo > a.hi) {
+                        err = true;
+                        continue; }
+                    lo += a.lo;
+                    hi += a.lo; }
+            } else {
+                lo = a.lo;
+                hi = a.hi; }
+            name = a.name;
+            lineno = a.lineno;
+            err = false;
+            break; }
+        if (err) {
+            error(lineno, "invalid bitslice of %s", name.c_str());
+            break; } }
     return name;
 }
 
@@ -975,9 +983,9 @@ void Table::Actions::Action::pass1(Table *tbl) {
                       iaddr, inst->slot);
             tbl->stage->imem_use[iaddr][inst->slot] = 1; } }
     for (auto &a : alias) {
-        while (alias.count(a.second.name)) {
+        while (alias.count(a.second.name) == 1) {
             // the alias refers to something else in the alias list
-            auto &rec = alias.at(a.second.name);
+            auto &rec = alias.find(a.second.name)->second;
             if (rec.name == a.first) {
                 error(a.second.lineno, "recursive alias %s", a.first.c_str());
                 break; }
