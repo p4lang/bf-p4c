@@ -28,14 +28,14 @@ agreement with Barefoot Networks, Inc.
 #define PARSER_ERROR_CTR_RANGE      0x0004
 #define PARSER_ERROR_TIMEOUT_USER   0x0008
 #define PARSER_ERROR_TIMEOUT_HW     0x0010
-#define PARSER_ERROR_SRC_ERR        0x0020
-#define PARSER_ERROR_DST_ERR        0x0040
-#define PARSER_ERROR_PIPE_OWNER     0x0080
+#define PARSER_ERROR_SRC_EXT        0x0020
+#define PARSER_ERROR_DST_CONT       0x0040
+#define PARSER_ERROR_PHV_OWNER      0x0080
 #define PARSER_ERROR_MULTIWRITE     0x0100
-#define PARSER_ERROR_CTR_RAM        0x0200
-#define PARSER_ERROR_ACTION_RAM     0x0400
-#define PARSER_ERROR_CHKSUM_RAM     0x0800
-#define PARSER_ERROR_FCS            0x1000
+#define PARSER_ERROR_ARAM_SBE       0x0200
+#define PARSER_ERROR_ARAM_MBE       0x0400
+#define PARSER_ERROR_FCS            0x0800
+#define PARSER_ERROR_CSUM           0x1000
 
 #define PARSER_ERROR_ARRAY_OOB      0xC000
 /////////////////////////////////////////////////////////////

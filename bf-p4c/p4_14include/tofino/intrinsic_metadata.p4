@@ -27,7 +27,7 @@ agreement with Barefoot Networks, Inc.
 header_type ingress_parser_control_signals {
     fields {
         priority : 3;                   // set packet priority
-        _pad     : 5;
+        _pad1 : 5;
         parser_counter : 8;             // parser counter
     }
 }
@@ -349,10 +349,9 @@ header_type egress_intrinsic_metadata_from_parser_aux_t {
         clone_digest_id : 4;            // value indicating the digest ID,
                                         // based on the field list ID.
 
-        clone_src : 4;                  // value indicating whether or not this
-                                        // is a cloned packet, and if so, where
-                                        // it came from.
-                                        // (see #defines in glass's constants.p4)
+        clone_src : 4;                  // value indicating whether or not a
+                                        // packet is a cloned copy
+                                        // (see #defines in constants.p4)
 
         coalesce_sample_count : 8;      // if clone_src indicates this packet
                                         // is coalesced, the number of samples
@@ -442,14 +441,11 @@ header_type egress_intrinsic_metadata_for_output_port_t {
                                         // Ethernet header.
         force_tx_error : 1;             // force a hardware transmission error
 
-        drop_ctl : 3;                   // disable packet replication:
+        drop_ctl : 3;                   // disable packet output:
                                         //    - bit 0 disables unicast,
-                                        //      multicast, and resubmit
-                                        //    - bit 1 disables copy-to-cpu
-                                        //    - bit 2 disables mirroring
-                                        // TODO: which of these actually apply
-                                        //       for egress?
-
+                                        //      multicast, and resubmit (discards all regular unicast packets)
+                                        //    - bit 1 disables copy-to-cpu (unused in egress)
+                                        //    - bit 2 disables mirroring (packet will not be egress mirrored)
     }
 }
 

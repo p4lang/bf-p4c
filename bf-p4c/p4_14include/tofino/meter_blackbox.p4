@@ -86,6 +86,9 @@ blackbox_type meter {
     */
     method execute (out bit<32> destination, optional in int index){}
 
+    /* Same as execute, but destination field is OR'd with meter result. */
+    method execute_with_or (out bit<32> destination, optional in int index){}
+
     /*  Same as execute, but the precolor attribute specifies the minimum color the packet
         may be tagged with.
         Pre-color encoding (which is not programmable):
@@ -95,6 +98,9 @@ blackbox_type meter {
         3 = red
      */
     method execute_with_pre_color (out bit<32> destination, in bit<32> precolor, optional in int index){}
+
+    /* Same as execute_with_pre_color, but destination field is OR'd with meter result.  */
+    method execute_with_pre_color_with_or(out bit<32> destination, in bit<32> precolor, optional in int index){}
 }
 
 /***************************************************************************/
