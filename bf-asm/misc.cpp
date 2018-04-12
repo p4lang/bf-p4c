@@ -64,7 +64,7 @@ bool remove_aug_names(std::string  &name) {
  * is the desired value to be output in context.json.
  */
 void stack_asm_name_to_p4(std::string& name) {
-    std::regex re ("([a-z_][a-z0-9_]*)\\$([0-9])+\\.([a-z_][a-z0-9_]*)", std::regex::icase);
+    std::regex re ("([a-z_][a-z0-9_]*)\\$([0-9])+\\.", std::regex::icase);
     std::cmatch match;
     bool found = std::regex_match(name.c_str(), match, re);
     if (found)

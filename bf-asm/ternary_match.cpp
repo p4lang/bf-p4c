@@ -628,7 +628,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
                         byte_lo = 0; } }
                 if (width > 4) width = 4;
                 gen_entry_cfg(match_field_list, field_name, 41 + byte_lo, match_index - word,
-                    match_index - word, source, field_lo, width, match[word].word_group); }
+                    match_index - word, source, field_lo, width, match[word].byte_group); }
             break; } }
     // For keyless table, just add parity & payload bits
     if (p4_params_list.empty()) {
