@@ -235,6 +235,7 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
         if (Log::verbose())
             std::cout << dg; }
 
+    void flow_dead() override;
     void flow_merge(Visitor &v) override;
 
     void all_bfs(boost::default_bfs_visitor* vis);

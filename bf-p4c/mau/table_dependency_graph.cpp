@@ -261,6 +261,11 @@ inline std::set<T> &operator |=(std::set<T> &s, const std::set<T> &a) {
     s.insert(a.begin(), a.end());
     return s; }
 
+void FindDependencyGraph::flow_dead() {
+    access.clear();
+    cont_write.clear();
+}
+
 void FindDependencyGraph::flow_merge(Visitor &v) {
     for (auto &a : dynamic_cast<FindDependencyGraph &>(v).access) {
         access[a.first].read |= a.second.read;
