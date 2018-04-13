@@ -82,7 +82,7 @@ void CounterTable::pass1() {
         for (int r = (row.row + 1) | 1; r < prev_row; r += 2)
             need_bus(lineno, stage->overflow_bus_use, r, "Overflow");
         prev_row = row.row; }
-    AttachedTable::pass1();
+    Synth2Port::pass1();
     for (auto &l : lrt) {
         if (l.threshold > MAX_LRT_THRESHOLD)
             error(l.lineno, "lrt threshold too large");

@@ -88,7 +88,7 @@ void MeterTable::pass1() {
         for (int r = (row.row + 1) | 1; r < prev_row; r += 2)
             need_bus(lineno, stage->overflow_bus_use, r, "Overflow");
         prev_row = row.row; }
-    AttachedTable::pass1();
+    Synth2Port::pass1();
 }
 
 void MeterTable::pass2() {

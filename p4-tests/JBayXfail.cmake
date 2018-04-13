@@ -16,14 +16,6 @@ p4c_add_xfail_reason("jbay"
 # the reasons need more characterization
 if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
 
-  p4c_add_xfail_reason("jbay"
-    "Assertion .*kMemoryCoreSplit.* failed."
-    testdata/p4_14_samples/basic_routing.p4
-    testdata/p4_14_samples/exact_match3.p4
-    testdata/p4_14_samples/exact_match5.p4
-    extensions/p4_tests/p4_14/stateful3.p4
-  )
-
   # counter indexing problem?
   p4c_add_xfail_reason("jbay"
     "no field idx related to table tab1"
@@ -39,6 +31,7 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/gateway2.p4
     testdata/p4_14_samples/gateway3.p4
     testdata/p4_14_samples/gateway4.p4
+    testdata/p4_14_samples/basic_routing.p4
   )
 
   p4c_add_xfail_reason("jbay"
@@ -271,4 +264,10 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_14/deparser_group_allocation_1.p4
+)
+
+p4c_add_xfail_reason("jbay"
+  "Cannot have partially placed synth2port table that isn't overflow"
+   testdata/p4_14_samples/counter5.p4
+   extensions/p4_tests/p4_14/stateful3.p4   
 )

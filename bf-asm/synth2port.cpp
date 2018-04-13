@@ -41,6 +41,7 @@ bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
 
 void Synth2Port::pass1() {
     LOG1("### Synth2Port table " << name() << " pass1");
+    AttachedTable::pass1();
 }
 
 void Synth2Port::pass2() {

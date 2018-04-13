@@ -1,3 +1,4 @@
+#include "bf-p4c/device.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/resource.h"
@@ -1632,7 +1633,7 @@ void Memories::init_candidate(swbox_fill candidates[SWBOX_TYPES], switchbox_t or
  *  largest candidate as choices, for synth2port, then for action.  One can put a best fit only
  *  because the overflow can just skip over this particular row.
  */
-void Memories::determine_cand_order(swbox_fill candidates[SWBOX_TYPES],
+void Memories::determine_candidates_order(swbox_fill candidates[SWBOX_TYPES],
                                     swbox_fill best_fits[OFLOW], swbox_fill &curr_oflow,
                                     swbox_fill nexts[OFLOW], int RAMs_avail[OFLOW],
                                     RAM_side_t side, switchbox_t order[SWBOX_TYPES]) {
@@ -1809,6 +1810,9 @@ void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFL
                                swbox_fill &curr_oflow, swbox_fill &sel_oflow,
                                bool stats_available, bool meter_available, RAM_side_t side,
                                int RAMs_avail[OFLOW]) {
+    // TODO(zma) pick candidate that can be fully placed in this half (JBAY)
+    // for (Synth2Port, Selector, Meter w/ color mapram)
+
     int min_left = 0;
     int min_diff = 0;
     if (side == RIGHT) {
@@ -1881,7 +1885,7 @@ void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFL
             continue;
         }
         // Operates under the assumption that next synth will be attempted before next action.
-        // Assumed from the determine_cand_order algorithm
+        // Assumed from the determine_candidates_order algorithm
         if (action_table->sel.sel_linked() && !action_table->sel.sel_any_placed()) {
             if (!(nexts[SYNTH] && nexts[SYNTH].group == action_table->sel.sel_group)) {
                 continue;
@@ -1930,14 +1934,14 @@ void Memories::fill_out_masks(swbox_fill candidates[SWBOX_TYPES], switchbox_t or
  *  best_candidates function based on what is currently available.  These may be limited due to
  *  table currently used in overflow.
  *
- *  The function determine_cand_order selects the potential candidates for this row.  The function
+ *  The function determine_candidates_order selects the potential candidates for this row.  The function
  *  set_up_RAM_counts then determine the number of RAMs each of these candidates get.  Finally,
  *  fill_out_masks and color_mapram_candidates determine which RAMs/maprams go to which candidate.
  *
  *  Unfortunately the functions are not entirely independent, and corner cases will give rise
  *  to particular lines within each function.  Hopefull this is detailed throughout the comments.
  */
-void Memories::find_action_candidates(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
+void Memories::find_swbox_candidates(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
                                       bool stats_available, bool meter_available,
                                       swbox_fill &curr_oflow, swbox_fill &sel_oflow) {
     if (action_bus_users.empty() && synth_bus_users.empty()) {
@@ -1985,7 +1989,7 @@ void Memories::find_action_candidates(int row, RAM_side_t side, swbox_fill candi
     }
     */
 
-    determine_cand_order(candidates, best_fits, curr_oflow, nexts, RAMs_avail, side, order);
+    determine_candidates_order(candidates, best_fits, curr_oflow, nexts, RAMs_avail, side, order);
     int RAMs[SWBOX_TYPES] = {0, 0, 0};
     set_up_RAM_counts(candidates, order, RAMs_avail, RAMs);
     fill_out_masks(candidates, order, RAMs, row, side);
@@ -2073,7 +2077,7 @@ void Memories::color_mapram_candidates(swbox_fill candidates[SWBOX_TYPES], RAM_s
 /** This converts the swbox_fill masks to allocations within the Memories::Use object.  Also
  *  links wide action tables underneath the same Use objects
  */
-void Memories::swbox_side(swbox_fill candidates[SWBOX_TYPES], int row, RAM_side_t side) {
+void Memories::fill_swbox_side(swbox_fill candidates[SWBOX_TYPES], int row, RAM_side_t side) {
     for (int i = 0; i < SWBOX_TYPES; i++) {
         auto sb_type = static_cast<switchbox_t>(i);
         auto &candidate = candidates[i];
@@ -2487,7 +2491,7 @@ bool Memories::allocate_all_swbox_users() {
             }
 
             // Determine the candidates to place as well as what RAMs each candidate will have
-            find_action_candidates(i, side, candidates, stats_available, meter_available,
+            find_swbox_candidates(i, side, candidates, stats_available, meter_available,
                                    curr_oflow, sel_oflow);
 
             bool candidate_found = false;
@@ -2501,7 +2505,7 @@ bool Memories::allocate_all_swbox_users() {
                 continue;
 
             // Fill out the Use structures based on the candidates
-            swbox_side(candidates, i, side);
+            fill_swbox_side(candidates, i, side);
             calculate_curr_oflow(candidates, curr_oflow, synth_oflow, side);
         }
         calculate_sel_oflow(candidates, sel_oflow);
@@ -2523,6 +2527,12 @@ bool Memories::allocate_all_swbox_users() {
                 curr_oflow.group->depth++;
             curr_oflow.clear();
         }
+
+#ifdef HAVE_JBAY
+        // JBay has no overflow bus between logical row 7 and 8
+        if ((Device::currentDevice() == "JBay") && i == 4)
+            curr_oflow.clear();
+#endif /* HAVE_JBAY */
     }
 
     if (!action_bus_users.empty() || !synth_bus_users.empty()) {

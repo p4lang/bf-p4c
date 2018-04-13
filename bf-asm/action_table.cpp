@@ -278,10 +278,15 @@ void ActionTable::pass1() {
             if (home < home_end && *home == row.row) {
                 home++;
                 need_bus(lineno, stage->action_data_use, row.row, "Action data");
-            } else if (!home && home_rows.back() - row.row > 10) {
+            } else if (!home) {
+                if ((home_rows.back() - row.row > 10)
                 /* can't go over >10 rows for timing */
-                home_rows.push_back(row.row);
-                need_bus(lineno, stage->action_data_use, row.row, "Action data");
+#ifdef HAVE_JBAY
+                    || (options.target == JBAY && prev_row >= 8 && row.row < 8)
+                /* can't flow between logical row 7 and 8 in JBay*/
+#endif /* HAVE_JBAY */
+                    ) { home_rows.push_back(row.row);
+                      need_bus(lineno, stage->action_data_use, row.row, "Action data"); }
             } else if (home && home[-1] - row.row > 10) {
                 error(home_lineno, "Can't propagate over more than 10 rows to home row");
             } else {
@@ -292,6 +297,7 @@ void ActionTable::pass1() {
         prev_row = row.row; }
     action_bus->pass1(this);
     if (actions) actions->pass1(this);
+    AttachedTable::pass1();
 }
 
 void ActionTable::pass2() {

@@ -15,6 +15,11 @@ void AttachedTable::pass1() {
     // Per Flow Enable - Validate and Set pfe and address bits
     if (per_flow_enable_param == "false")
         per_flow_enable = false;
+
+#ifdef HAVE_JBAY
+    if (options.target == JBAY && stage->overflow_bus_use[7])
+        error(layout[0].lineno, "table %s, JBay has no overflow bus between logical row 7 and 8", name());
+#endif /* HAVE_JBAY */
 }
 
 unsigned AttachedTable::per_flow_enable_bit(MatchTable *m) const {

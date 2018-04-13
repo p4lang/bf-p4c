@@ -439,7 +439,7 @@ struct Memories {
     void find_swbox_bus_users();
     void swbox_bus_selectors_indirects();
     void swbox_bus_meters_counters();
-    void find_action_candidates(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
+    void find_swbox_candidates(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
                                 bool stats_available, bool meter_available,
                                 swbox_fill &curr_oflow, swbox_fill &sel_oflow);
     void adjust_RAMs_available(swbox_fill &curr_oflow, int RAMs_avail[OFLOW], int row,
@@ -453,7 +453,7 @@ struct Memories {
     void init_candidate(swbox_fill candidates[SWBOX_TYPES], switchbox_t order[SWBOX_TYPES],
                         bool bus_used[SWBOX_TYPES], switchbox_t type, int &order_index,
                         swbox_fill choice, bool test_action_bus);
-    void determine_cand_order(swbox_fill candidates[SWBOX_TYPES], swbox_fill best_fits[OFLOW],
+    void determine_candidates_order(swbox_fill candidates[SWBOX_TYPES], swbox_fill best_fits[OFLOW],
                               swbox_fill &curr_oflow, swbox_fill nexts[OFLOW],
                               int RAMs_avail[OFLOW], RAM_side_t side,
                               switchbox_t order[SWBOX_TYPES]);
@@ -464,7 +464,7 @@ struct Memories {
     void fill_color_mapram_use(swbox_fill &candidate, int row, RAM_side_t side);
     void fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, switchbox_t type);
     void remove_placed_group(swbox_fill &candidate, RAM_side_t side);
-    void swbox_side(swbox_fill candidates[SWBOX_TYPES], int row, RAM_side_t side);
+    void fill_swbox_side(swbox_fill candidates[SWBOX_TYPES], int row, RAM_side_t side);
     void calculate_curr_oflow(swbox_fill candidates[SWBOX_TYPES], swbox_fill &curr_oflow,
                               swbox_fill &synth_oflow, RAM_side_t side);
     void calculate_sel_oflow(swbox_fill candidates[SWBOX_TYPES], swbox_fill &sel_oflow);

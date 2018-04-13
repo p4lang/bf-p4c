@@ -179,7 +179,7 @@ void StatefulTable::pass1() {
         if (r.check() && (r->table_type() != STATEFUL || r->stage != stage))
             error(r.lineno, "%s is not a stateful table in the same stage as %s",
                   r->name(), name());
-    AttachedTable::pass1();
+    Synth2Port::pass1();
 }
 
 int StatefulTable::get_const(long v) {
