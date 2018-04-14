@@ -235,6 +235,19 @@ public:
         decltype(fmt[0].end()) end(int grp=0) { return fmt[grp].end(); }
         decltype(fmt[0].cbegin()) begin(int grp=0) const { return fmt[grp].begin(); }
         decltype(fmt[0].cend()) end(int grp=0) const { return fmt[grp].end(); }
+        bool is_wide_format() const {
+            return (log2size >= 7 || groups() > 1) ? true : false; }
+        int get_entries_per_table_word() const {
+            if (is_wide_format()) return groups();
+            return log2size ? (1U << (ceil_log2(MEM_WORD_WIDTH) - log2size)) : 0; }
+        int get_mem_units_per_table_word() const {
+            return is_wide_format() ? ((size - 1)/MEM_WORD_WIDTH) + 1 : 1; }
+        int get_table_word_width() const {
+            return is_wide_format() ?
+                MEM_WORD_WIDTH * get_mem_units_per_table_word() : MEM_WORD_WIDTH; }
+        int get_padding_format_width() const {
+            return is_wide_format() ? get_mem_units_per_table_word() * MEM_WORD_WIDTH
+                                        : (1U << log2size); }
     };
 
     struct Call : Ref { /* a Ref with arguments */
@@ -397,7 +410,7 @@ public:
         void add_action_format(Table *, json::map &);
         bool has_hash_dist() { return ( table->table_type() == HASH_ACTION ); }
     };
-    
+
     struct static_entry {
         int priority;
         std::vector<int> match_key_fields_values;
@@ -604,18 +617,13 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     p4_param *find_p4_param(std::string s, std::string t) {
         remove_name_tail_range(s);
         for (auto &p : p4_params_list)
-            if (((p.name == s) || (p.alias == s)) 
+            if (((p.name == s) || (p.alias == s))
                     && (p.type == t)) return &p;
         return nullptr; }
     p4_param *find_p4_param_type(std::string &s) {
         for (auto &p : p4_params_list)
             if (p.type == s) return &p;
         return nullptr; }
-    bool is_wide_format();
-    int get_entries_per_table_word();
-    int get_mem_units_per_table_word();
-    int get_table_word_width();
-    int get_padding_format_width();
     virtual std::string get_default_action() {
         return (!default_action.empty()) ? default_action : action ? action->default_action : ""; }
     virtual default_action_params* get_default_action_parameters() {
@@ -705,7 +713,7 @@ public:
             unsigned hash_table_id, json::vector &hash_bits);
     virtual void add_hash_functions(json::map &stage_tbl);
     void add_all_reference_tables(json::map &tbl, Table *math_table=nullptr);
-    void add_static_entries(json::map &tbl); 
+    void add_static_entries(json::map &tbl);
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
