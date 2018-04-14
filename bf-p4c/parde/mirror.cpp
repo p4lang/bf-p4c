@@ -218,7 +218,9 @@ struct AddMirroredFieldListParser : public Transform {
   }
 
   const IR::BFN::ParserState* preorder(IR::BFN::ParserState* state) override {
-      if (state->name != "$mirrored") return state;
+      auto parser = findOrigCtxt<IR::BFN::Parser>();
+      if (!parser) return state;
+      if (state->name != createThreadName(parser->gress, "$mirrored")) return state;
 
       LOG1("add mirror state");
       // This is the '$mirrored' placeholder state. Generate code to extract
@@ -272,7 +274,7 @@ struct AddMirroredFieldListParser : public Transform {
           new IR::BFN::Transition(match_t(), 1, finalState));
 
       auto *select = new IR::BFN::Select(new IR::BFN::BufferRVal(StartLen(0, 8)));
-      return new IR::BFN::ParserState("$mirrored", EGRESS, {},
+      return new IR::BFN::ParserState(createThreadName(EGRESS, "$mirrored"), EGRESS, {},
                                       {select}, transitions);
   }
 

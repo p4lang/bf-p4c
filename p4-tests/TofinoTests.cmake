@@ -239,6 +239,11 @@ bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/stful/stful.p4"
    test.TestPktGenClear 
    test.TestResetAPIs 
    test.TestTwoInstrNoIdx")
+bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/mirror_test/mirror_test.p4"
+   "test.TestBasicForwarding
+   test.TestBasicIngMir
+   test.TestBasicEgrMir
+   test.TestBatching")
 
 # for all other p4factory tests, add them as compile only.
 set (P4F_COMPILE_ONLY)
