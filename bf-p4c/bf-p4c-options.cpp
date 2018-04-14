@@ -70,6 +70,9 @@ BFN_Options::BFN_Options() {
     registerOption("--no-phv-privatization", nullptr,
         [this](const char *) { privatization = false; return true; },
         "do not use TPHV/PHV privatization");
+    registerOption("--always-init-metadata", nullptr,
+        [this](const char *) { always_init_metadata = true; return true; },
+        "Insert a table to init metadata in the beginning of pipeline");
     registerOption("--bf-rt-schema", "file",
         [this](const char *arg) { bfRtSchema = arg; return true; },
         "Generate and write BF-RT JSON schema to the specified file.");

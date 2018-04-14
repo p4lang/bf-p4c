@@ -8,6 +8,7 @@
 #include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/live_range_overlay.h"
+#include "bf-p4c/common/metadata_init.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/mau/empty_controls.h"
@@ -161,11 +162,16 @@ Backend::Backend(const BFN_Options& options) :
         &defuse,
             // Following pass must run after CollectNameAnnotations, after any CollectPhvInfo.
         new SetExternalNameForBridgedMetadata(phv, bridged_fields),
-        new DumpPipe("Before phv_analysis"),
         new CheckForHeaders(),
 #if HAVE_JBAY
         options.target == "jbay" && options.use_clot ? new AllocateClot(clot, phv, uses) : nullptr,
 #endif  // HAVE_JBAY
+        &defuse,
+        new FindDependencyGraph(phv, deps),
+        new MetadataInitialization(options.always_init_metadata, phv, defuse, deps),
+        &defuse,
+        (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
+        new DumpPipe("Before phv_analysis"),
         new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps),  // phv analysis after last
                                                                  // CollectPhvInfo pass
 

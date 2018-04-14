@@ -22,6 +22,7 @@ class BFN_Options : public CompilerOptions {
     float phv_scale_factor = 1;
     bool create_graphs = false;
     bool privatization = false;
+    bool always_init_metadata = false;
 
     cstring bfRtSchema = "";
 

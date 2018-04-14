@@ -96,6 +96,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/flatten_emit_args.cpp
   common/header_stack.cpp
   common/live_range_overlay.cpp
+  common/metadata_init.cpp
   common/multiple_apply.cpp
   common/rewrite.cpp
   common/param_binding.cpp
@@ -126,6 +127,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/flatten_emit_args.h
   common/header_stack.h
   common/live_range_overlay.h
+  common/metadata_init.h
   common/multiple_apply.h
   common/param_binding.h
   common/parser_graph.h
@@ -552,6 +554,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/vertex_weighted_coloring.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/metadata_init.cpp
   )
 
 set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)
