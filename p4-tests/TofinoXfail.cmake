@@ -111,7 +111,7 @@ if (PTF_REQUIREMENTS_MET)
     "IR structure not yet handled by the ActionAnalysis pass"
     extensions/p4_tests/p4_14/p4-tests/programs/opcode_test/opcode_test.p4
     )
-  
+
   p4c_add_xfail_reason("tofino"
     "AssertionError: .* != .*"
     #extensions/p4_tests/p4_14/p4-tests/programs/multicast_test/multicast_test.p4
@@ -131,6 +131,8 @@ if (PTF_REQUIREMENTS_MET)
     "AssertionError: Expected packet was not received on device"
     extensions/p4_tests/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4
     extensions/p4_tests/p4_14/p4-tests/programs/resubmit/resubmit.p4
+    04-simple_l3_nexthop
+    05-simple_l3_arping
     )
 
   p4c_add_xfail_reason("tofino"
@@ -150,6 +152,30 @@ if (PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "Expected packet was not received on device"
     fabric-DWITH_SPGW-DWITH_INT_TRANSIT
+    )
+
+  # Barefoot Academy tests
+  p4c_add_xfail_reason("tofino"
+    "ERROR: test.Test4"
+    01-simple_l3
+    03-simple_l3_rewrite
+    07-simple_l3_ind_cntr
+    )
+  # fails also with Glass.
+  p4c_add_xfail_reason("tofino"
+    "ERROR: test.MirrorTest1"
+    11-simple_l3_mirror
+    )
+  # broken test: https://github.com/barefootnetworks/p4examples/issues/5
+  p4c_add_xfail_reason("tofino"
+    "SyntaxError: invalid syntax"
+    30-p4calc
+    )
+
+  # broken test: https://github.com/barefootnetworks/p4examples/issues/6
+  p4c_add_xfail_reason("tofino"
+    "ImportError: No module named simple_l3.p4_pd_rpc.ttypes"
+    06-simple_l3_dir_cntr
     )
 
 endif() # PTF_REQUIREMENTS_MET

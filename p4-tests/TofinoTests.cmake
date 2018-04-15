@@ -27,11 +27,11 @@ p4c_add_test_label("tofino" "17Q4Goal" "switch_7.0_msdc")
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "switch_7.0_l2" ${switch_7.0_test} "${testExtraArgs} -DL2_PROFILE")
 
-# Switch P4-14 On Master (refpoint must be periodically updated) 
+# Switch P4-14 On Master (refpoint must be periodically updated)
 set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
 set  (isXFail TRUE)
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
   "switch_dc_basic" ${switchtest} "${testExtraArgs} -DDC_BASIC_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_dc_basic")
 
@@ -43,31 +43,31 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
   "switch_ent_dc_general" ${switchtest} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_ent_dc_general")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc" ${switchtest} "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
     "switch_msdc_ipv4" ${switchtest} "${testExtraArgs} -DMSDC_IPV4_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_ipv4")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
     "switch_msdc_l3" ${switchtest} "${testExtraArgs} -DMSDC_L3_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_l3")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
     "switch_msdc_spine_int" ${switchtest} "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_spine_int")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
     "switch_msdc_leaf_int" ${switchtest} "${testExtraArgs} -DMSDC_LEAF_DTEL_INT_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_spine_int")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
     "switch_msdc_l3_heavy_int_leaf" ${switchtest} "${testExtraArgs} -DMSDC_L3_HEAVY_INT_LEAF_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_l3_heavy_int_leaf")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail} 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
     "switch_msdc_generic_int_leaf" ${switchtest} "${testExtraArgs} -DMSDC_GENERIC_INT_LEAF_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_generic_int_leaf")
 
@@ -183,61 +183,61 @@ bfn_add_p4factory_tests("tofino" "smoketest" P4F_PTF_TESTS)
 set (P4FACTORY_PROGRAMS_PATH "extensions/p4_tests/p4_14/p4-tests/programs")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/alpm_test/alpm_test.p4"
   "all
-   ^test.TestCapacity 
+   ^test.TestCapacity
    ^test.TestStateRestoreLarge")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/basic_ipv4/basic_ipv4.p4"
-  "test.TestAddHdr 
-   test.TestAddRemPort 
-   test.TestAddRoute 
-   test.TestAllHit 
-   test.TestAllStage 
-   test.TestDeepADT 
-   test.TestRange 
-   test.TestRangeTernaryValid 
-   test.TestSelector 
-   test.TestTcamDuplicateEntries 
-   test.TestTcamEntries 
-   test.TestTcamMove 
-   ^test.TestTernaryValidMatch 
-   test.TestExm4way3Entries 
+  "test.TestAddHdr
+   test.TestAddRemPort
+   test.TestAddRoute
+   test.TestAllHit
+   test.TestAllStage
+   test.TestDeepADT
+   test.TestRange
+   test.TestRangeTernaryValid
+   test.TestSelector
+   test.TestTcamDuplicateEntries
+   test.TestTcamEntries
+   test.TestTcamMove
+   ^test.TestTernaryValidMatch
+   test.TestExm4way3Entries
    test.TestExm6way4Entries")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_indirect_1/exm_indirect_1.p4"
-  "test.TestActSelIterators 
-   test.TestDirectStats 
-   test.TestDirectStatsPkts28Bytes36 
-   test.TestDirectStatsPkts32bits 
-   test.TestIndirectStatPkt64bits 
-   test.TestIndirectStatsPkts32bits 
-   test.TestSelector 
+  "test.TestActSelIterators
+   test.TestDirectStats
+   test.TestDirectStatsPkts28Bytes36
+   test.TestDirectStatsPkts32bits
+   test.TestIndirectStatPkt64bits
+   test.TestIndirectStatsPkts32bits
+   test.TestSelector
    test.TestSelectorScopes
    test.TestExmHashAction2")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/multicast_test/multicast_test.p4"
-  "test.TestBasic 
-   test.TestYid 
-   test.TestXid 
-   test.TestEcmp 
-   ^test.TestLag 
-   ^test.TestBackup 
-   test.TestGetEntry 
+  "test.TestBasic
+   test.TestYid
+   test.TestXid
+   test.TestEcmp
+   ^test.TestLag
+   ^test.TestBackup
+   test.TestGetEntry
    test.TestRegAccess")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/smoke_large_tbls/smoke_large_tbls.p4"
-  "test.TestAtcam 
+  "test.TestAtcam
    test.TestAtcamTernaryValid")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/stful/stful.p4"
-  "test.TestDirectHashCounter 
-   test.TestDirectStateRestore 
-   test.TestDirectTcamCounter_default 
-   test.TestDirectTcamCounter_move 
-   ^test.TestDirectTcamCounter_twoStage 
-   test.TestGetEntry 
-   test.TestIndirectHashSampler 
-   test.TestInDirectTcamCounter_entries 
-   test.TestInDirectTcamCounter_rdwr 
-   test.TestNoKeySymSet 
-   test.TestOneBit 
-   test.TestPhase0Iterator 
-   test.TestPktGenClear 
-   test.TestResetAPIs 
+  "test.TestDirectHashCounter
+   test.TestDirectStateRestore
+   test.TestDirectTcamCounter_default
+   test.TestDirectTcamCounter_move
+   ^test.TestDirectTcamCounter_twoStage
+   test.TestGetEntry
+   test.TestIndirectHashSampler
+   test.TestInDirectTcamCounter_entries
+   test.TestInDirectTcamCounter_rdwr
+   test.TestNoKeySymSet
+   test.TestOneBit
+   test.TestPhase0Iterator
+   test.TestPktGenClear
+   test.TestResetAPIs
    test.TestTwoInstrNoIdx")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/mirror_test/mirror_test.p4"
    "test.TestBasicForwarding
@@ -254,6 +254,27 @@ foreach (t IN LISTS ALL_BFN_TESTS)
   endif()
 endforeach()
 p4c_add_bf_backend_tests("tofino" "smoketest" "${P4F_COMPILE_ONLY}")
+
+# Barefoot academy tests
+set (BA_TESTS_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ba-101/labs/*/solution/p4src/*.p4")
+p4c_find_tests("${BA_TESTS_FOR_TOFINO}" ba_tests INCLUDE "__TARGET_TOFINO__")
+# message("BA-101 tests: ${ba_tests}")
+foreach(t IN LISTS ba_tests)
+  get_filename_component(__td ${t} DIRECTORY)
+  string (REGEX REPLACE "ba-101/labs/([0-9]+[a-z0-9_-]+)/solution.*" "\\1" __t ${__td})
+  if (CMAKE_MATCH_1)
+    set (testname ${CMAKE_MATCH_1})
+  endif()
+  set (ptfdir "${__td}/../ptf-tests")
+  if (EXISTS ${ptfdir})
+    p4c_add_ptf_test_with_ptfdir ("tofino" ${testname} ${t} "${testExtraArgs} -pd" ${ptfdir})
+  else()
+    file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} ${t})
+    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ${testname} ${testfile} "${testExtraArgs}")
+  endif()
+  p4c_add_test_label("tofino" "BA-101" ${testname})
+endforeach()
+
 
 include(TofinoMustPass.cmake)
 include(TofinoXfail.cmake)

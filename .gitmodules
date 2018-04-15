@@ -38,3 +38,6 @@
 [submodule "p4-tests/p4_14/switch"]
 	path = p4-tests/p4_14/switch
 	url = git@github.com:barefootnetworks/switch
+[submodule "p4-tests/p4examples"]
+	path = p4-tests/p4examples
+	url = git@github.com:barefootnetworks/p4examples
