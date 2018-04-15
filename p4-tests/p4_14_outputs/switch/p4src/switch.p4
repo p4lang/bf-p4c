@@ -525,7 +525,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
 
 header ingress_parser_control_signals {
     bit<3> priority;
-    bit<5> _pad;
+    bit<5> _pad1;
     bit<8> parser_counter;
 }
 
@@ -639,8 +639,8 @@ header nvgre_t {
 
 header pktgen_generic_header_t {
     bit<3>  _pad0;
-    bit<3>  app_id;
     bit<2>  pipe_id;
+    bit<3>  app_id;
     bit<8>  key_msb;
     bit<16> batch_id;
     bit<16> packet_id;
@@ -648,8 +648,8 @@ header pktgen_generic_header_t {
 
 header pktgen_port_down_header_t {
     bit<3>  _pad0;
-    bit<3>  app_id;
     bit<2>  pipe_id;
+    bit<3>  app_id;
     bit<15> _pad1;
     bit<9>  port_num;
     bit<16> packet_id;
@@ -657,16 +657,16 @@ header pktgen_port_down_header_t {
 
 header pktgen_recirc_header_t {
     bit<3>  _pad0;
-    bit<3>  app_id;
     bit<2>  pipe_id;
+    bit<3>  app_id;
     bit<24> key;
     bit<16> packet_id;
 }
 
 header pktgen_timer_header_t {
     bit<3>  _pad0;
-    bit<3>  app_id;
     bit<2>  pipe_id;
+    bit<3>  app_id;
     bit<8>  _pad1;
     bit<16> batch_id;
     bit<16> packet_id;
@@ -4021,7 +4021,7 @@ control process_mac(inout headers hdr, inout metadata meta, inout standard_metad
             meta.ingress_metadata.bd   : exact;
             meta.l2_metadata.lkp_mac_da: exact;
         }
-        size = 1024;
+        size = 4096;
         default_action = nop();
     }
     @name(".smac") table smac {
@@ -4035,7 +4035,7 @@ control process_mac(inout headers hdr, inout metadata meta, inout standard_metad
             meta.ingress_metadata.bd   : exact;
             meta.l2_metadata.lkp_mac_sa: exact;
         }
-        size = 1024;
+        size = 4096;
     }
     apply {
         if (meta.ingress_metadata.bypass_lookups & 16w0x80 == 16w0 && meta.ingress_metadata.port_type == 2w0) {

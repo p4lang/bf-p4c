@@ -115,7 +115,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
 
 header ingress_parser_control_signals {
     bit<3> priority;
-    bit<5> _pad;
+    bit<5> _pad1;
     bit<8> parser_counter;
 }
 
@@ -295,9 +295,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ipv4.srcAddr = ipsrcAddr;
         hdr.tcp.srcPort = tcpSport;
     }
-    @name(".mod_field") action mod_field_0(bit<8> cond, bit<48> value) {
-        tmp_6 = (cond != 8w0 ? value : tmp_6);
-        tmp_6 = (!(cond != 8w0) ? hdr.ethernet.srcAddr : tmp_6);
+    @name(".mod_field") action mod_field_0(bool cond, bit<48> value) {
+        tmp_6 = (cond ? value : tmp_6);
+        tmp_6 = (!cond ? hdr.ethernet.srcAddr : tmp_6);
     }
     @name(".act_61") action act_4(bit<32> ipsrcAddr, bit<48> dstMac, bit<32> meterIdx) {
         hdr.ipv4.srcAddr = ipsrcAddr;

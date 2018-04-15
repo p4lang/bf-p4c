@@ -66,19 +66,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = noop();
     }
-    @name(".test1_result") table test1_result {
+    @name(".test1_result2") table test1_result2 {
         actions = {
             xor_result;
-            noop;
         }
-        key = {
-            hdr.read_values.f1: exact;
-        }
-        default_action = noop();
+        default_action = xor_result();
     }
     apply {
-        test1.apply();
-        test1_result.apply();
+        switch (test1.apply().action_run) {
+            xor_test1: {
+                test1_result2.apply();
+            }
+        }
+
     }
 }
 

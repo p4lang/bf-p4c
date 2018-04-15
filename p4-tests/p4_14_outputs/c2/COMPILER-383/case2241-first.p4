@@ -109,14 +109,14 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
 
 header ingress_parser_control_signals {
     bit<3> priority;
-    bit<5> _pad;
+    bit<5> _pad1;
     bit<8> parser_counter;
 }
 
 header pktgen_generic_header_t {
     bit<3>  _pad0;
-    bit<3>  app_id;
     bit<2>  pipe_id;
+    bit<3>  app_id;
     bit<8>  key_msb;
     bit<16> batch_id;
     bit<16> packet_id;
@@ -124,8 +124,8 @@ header pktgen_generic_header_t {
 
 header pktgen_port_down_header_t {
     bit<3>  _pad0;
-    bit<3>  app_id;
     bit<2>  pipe_id;
+    bit<3>  app_id;
     bit<15> _pad1;
     bit<9>  port_num;
     bit<16> packet_id;
@@ -133,16 +133,16 @@ header pktgen_port_down_header_t {
 
 header pktgen_recirc_header_t {
     bit<3>  _pad0;
-    bit<3>  app_id;
     bit<2>  pipe_id;
+    bit<3>  app_id;
     bit<24> key;
     bit<16> packet_id;
 }
 
 header pktgen_timer_header_t {
     bit<3>  _pad0;
-    bit<3>  app_id;
     bit<2>  pipe_id;
+    bit<3>  app_id;
     bit<8>  _pad1;
     bit<16> batch_id;
     bit<16> packet_id;

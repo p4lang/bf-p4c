@@ -117,7 +117,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
 
 header ingress_parser_control_signals {
     bit<3> priority;
-    bit<5> _pad;
+    bit<5> _pad1;
     bit<8> parser_counter;
 }
 
