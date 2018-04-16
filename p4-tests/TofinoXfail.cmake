@@ -948,11 +948,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "error: Unsupported primitive count_from_hash"
-  extensions/p4_tests/p4_14/p4-tests/programs/hash_driven/hash_driven.p4
-  )
-
 # dynamic hash
 p4c_add_xfail_reason("tofino"
   "Unknown method execute_from_hash in wred"

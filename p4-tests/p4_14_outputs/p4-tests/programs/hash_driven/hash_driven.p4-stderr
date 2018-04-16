@@ -1,0 +1,6 @@
+hash_driven.p4(225): warning: Could not infer type for idx, using bit<8>
+action meter_or_action(egress_port, idx){
+                                    ^^^
+hash_driven.p4(218): warning: -1: negative value with unsigned type
+    add(ipv4.ttl, ipv4.ttl, -1);
+                             ^

@@ -29,8 +29,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
   extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
-  # count_with_hash primitive unsupported
-  extensions/p4_tests/p4_14/p4-tests/programs/hash_driven/hash_driven.p4
   # proprietary algorithms for hash
   extensions/p4_tests/p4_14/p4-tests/programs/dyn_hash/dyn_hash.p4
   extensions/p4_tests/p4_14/p4-tests/programs/exm_direct/exm_direct.p4
