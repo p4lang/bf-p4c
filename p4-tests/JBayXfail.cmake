@@ -16,12 +16,6 @@ p4c_add_xfail_reason("jbay"
 # the reasons need more characterization
 if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
 
-  # counter indexing problem?
-  p4c_add_xfail_reason("jbay"
-    "no field idx related to table tab1"
-    testdata/p4_14_samples/counter4.p4
-  )
-
   # ingress_port isn't being setup properly (STF harness bug)
   p4c_add_xfail_reason("jbay"
     ".* expected packet.* on port .* not seen"
@@ -37,7 +31,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("jbay"
     "mismatch from expected.* at byte .*"
     extensions/p4_tests/p4_14/action_chain_limits.p4
-    extensions/p4_tests/p4_14/no_match_miss.p4
     # clot-phv interaction bug?
     extensions/p4_tests/p4_16/brig-532.p4
     testdata/p4_14_samples/instruct5.p4

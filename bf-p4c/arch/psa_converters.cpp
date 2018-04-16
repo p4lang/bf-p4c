@@ -15,6 +15,15 @@ const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
     return node;
 }
 
+const IR::Node* ControlConverter::postorder(IR::IfStatement* node) {
+    auto* orig = getOriginal<IR::IfStatement>();
+    if (structure->_map.count(orig)) {
+        LOG1(" delete " << orig);
+        auto result = structure->_map.at(orig);
+        return result; }
+    return node;
+}
+
 const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     auto parser = node->apply(cloner);
     auto params = parser->type->getApplyParameters();
@@ -144,7 +153,7 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     return result;
 }
 
-const IR::Node* IngressControlConverter::preorder(IR::P4Control* node) {
+const IR::Node* IngressControlConverter::postorder(IR::P4Control* node) {
     auto params = node->type->getApplyParameters();
     BUG_CHECK(params->size() == 4, "%1% Expected 4 parameters for ingress", node);
 
@@ -200,13 +209,17 @@ const IR::Node* IngressControlConverter::preorder(IR::P4Control* node) {
     controlLocals->append(structure->ingressDeclarations);
     controlLocals->append(node->controlLocals);
 
+    auto body = new IR::IndexedVector<IR::StatOrDecl>();
+    body->append(node->body->components);
+    body->append(structure->ingressStatements);
+
     auto result = new IR::BFN::TranslatedP4Control(node->srcInfo, "ingress", controlType,
-                                                   node->constructorParams, *controlLocals,
-                                                   node->body, tnaParams, INGRESS);
+         node->constructorParams, *controlLocals,
+         new IR::BlockStatement(node->body->annotations, *body), tnaParams, INGRESS);
     return result;
 }
 
-const IR::Node* EgressControlConverter::preorder(IR::P4Control *node) {
+const IR::Node* EgressControlConverter::postorder(IR::P4Control *node) {
     auto params = node->type->getApplyParameters();
     BUG_CHECK(params->size() == 4, "%1% Expected 4 parameters for egress", node);
 
@@ -286,13 +299,17 @@ const IR::Node* EgressControlConverter::preorder(IR::P4Control *node) {
     controlLocals->append(structure->egressDeclarations);
     controlLocals->append(node->controlLocals);
 
+    auto body = new IR::IndexedVector<IR::StatOrDecl>();
+    body->append(node->body->components);
+    body->append(structure->egressStatements);
+
     auto result = new IR::BFN::TranslatedP4Control(node->srcInfo, "egress", controlType,
-                                                   node->constructorParams, *controlLocals,
-                                                   node->body, tnaParams, EGRESS);
+        node->constructorParams, *controlLocals,
+        new IR::BlockStatement(node->body->annotations, *body), tnaParams, EGRESS);
     return result;
 }
 
-const IR::Node* IngressDeparserConverter::preorder(IR::P4Control* node) {
+const IR::Node* IngressDeparserConverter::postorder(IR::P4Control* node) {
     auto deparser = node->apply(cloner);
     auto params = deparser->type->getApplyParameters();
     BUG_CHECK(params->size() == 7, "%1% Expected 7 parameters for deparser", deparser);
@@ -356,7 +373,7 @@ const IR::Node* IngressDeparserConverter::preorder(IR::P4Control* node) {
     return result;
 }
 
-const IR::Node* EgressDeparserConverter::preorder(IR::P4Control* node) {
+const IR::Node* EgressDeparserConverter::postorder(IR::P4Control* node) {
     auto deparser = node->apply(cloner);
 
     auto params = deparser->type->getApplyParameters();

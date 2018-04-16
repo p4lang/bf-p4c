@@ -96,16 +96,30 @@ struct ProgramStructure {
     ordered_map<cstring, cstring> blockNames;
 
     cstring getBlockName(cstring name);
+    bool isIngressParser(const IR::P4Parser* parser);
+    bool isIngress(const IR::P4Control* control);
+    bool isIngressDeparser(const IR::P4Control* control);
+    bool isEgressParser(const IR::P4Parser* parser);
+    bool isEgress(const IR::P4Control* control);
+    bool isEgressDeparser(const IR::P4Control* control);
 
+    // additional declarations created by the translation pass and to be
+    // prepended to each block.
+    std::vector<const IR::Declaration *> ingressParserDeclarations;
+    std::vector<const IR::Declaration *> egressParserDeclarations;
     std::vector<const IR::Declaration *> ingressDeclarations;
     std::vector<const IR::Declaration *> egressDeclarations;
     std::vector<const IR::Declaration *> ingressDeparserDeclarations;
     std::vector<const IR::Declaration *> egressDeparserDeclarations;
+
+    // additional statement created by the translation pass and to be
+    // appended to each block.
+    std::vector<const IR::StatOrDecl *> ingressStatements;
+    std::vector<const IR::StatOrDecl *> egressStatements;
     std::vector<const IR::StatOrDecl *> ingressDeparserStatements;
     std::vector<const IR::StatOrDecl *> egressDeparserStatements;
-    std::vector<const IR::Declaration *> ingressParserDeclarations;
-    std::vector<const IR::Declaration *> egressParserDeclarations;
 
+    // key is parser state name.
     ordered_map<cstring, std::vector<const IR::StatOrDecl *>> ingressParserStatements;
     ordered_map<cstring, std::vector<const IR::StatOrDecl *>> egressParserStatements;
 

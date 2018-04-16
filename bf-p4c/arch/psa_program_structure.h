@@ -14,6 +14,43 @@ namespace BFN {
 
 namespace PSA {
 
+// structure to describe the info related to resubmit/clone/recirc in a PSA program
+struct PacketPathInfo {
+    /// The name of the resubmit_metadata in ingress parser param.
+    cstring paramNameInParser;
+
+    /// The name of the resubmit_metadata in egress deparser param.
+    cstring paramNameInDeparser;
+
+    /// name in compiler_generated_meta
+    cstring generatedName;
+
+    /// Map user-defined name to arch-defined param name in source block.
+    ordered_map<cstring, cstring> srcParams;
+
+    /// Map arch-defined param name to user-defined name in dest block.
+    ordered_map<cstring, cstring> dstParams;
+
+    /// A P4 type for the resubmit data, based on the type of the parameter to
+    /// the parser.
+    const IR::Type* p4Type = nullptr;
+    // the statements in deparser to emit resubmit metadata, in PSA, the emit
+    // is represented with assignments to out parameter in the deparser block.
+    // the source typically has the following code pattern.
+    // if (psa_resubmit(istd)) {
+    //    resub_meta = user_meta.resub_meta;
+    // }
+    std::vector<const IR::IfStatement*> ifStatements;
+
+    ordered_map<const IR::StatOrDecl*, std::vector<const IR::Node*>> fieldLists;
+};
+
+using ParamInfo = ordered_map<cstring, cstring>;
+
+struct PsaBlockInfo {
+    ParamInfo psaParams;
+};
+
 struct ProgramStructure : BFN::ProgramStructure {
     cstring type_ih;
     cstring type_im;
@@ -29,6 +66,19 @@ struct ProgramStructure : BFN::ProgramStructure {
     ordered_map<cstring, const IR::Type *> psaPacketPathTypes;
 
     const IR::Type* bridgedType;
+
+    PacketPathInfo resubmit;
+    PacketPathInfo clone_i2e;
+    PacketPathInfo clone_e2e;
+    PacketPathInfo recirculate;
+    PacketPathInfo bridge;
+
+    PsaBlockInfo ingress_parser;
+    PsaBlockInfo ingress;
+    PsaBlockInfo ingress_deparser;
+    PsaBlockInfo egress_parser;
+    PsaBlockInfo egress;
+    PsaBlockInfo egress_deparser;
 
     void createParsers() override;
     void createControls() override;

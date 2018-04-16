@@ -90,6 +90,7 @@ class ControlConverter : public Transform {
     explicit ControlConverter(ProgramStructure* structure)
         : structure(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::Declaration_Instance* node) override;
+    const IR::Node* postorder(IR::IfStatement* node) override;
     const IR::P4Control* convert(const IR::Node* node) {
         auto conv = node->apply(*this);
         auto result = conv->to<IR::P4Control>();
@@ -102,28 +103,28 @@ class IngressControlConverter : public ControlConverter {
  public:
     explicit IngressControlConverter(ProgramStructure* structure)
         : ControlConverter(structure) { CHECK_NULL(structure); }
-    const IR::Node* preorder(IR::P4Control* node) override;
+    const IR::Node* postorder(IR::P4Control* node) override;
 };
 
 class EgressControlConverter : public ControlConverter {
  public:
     explicit EgressControlConverter(ProgramStructure* structure)
         : ControlConverter(structure) { CHECK_NULL(structure); }
-    const IR::Node* preorder(IR::P4Control* node) override;
+    const IR::Node* postorder(IR::P4Control* node) override;
 };
 
 class IngressDeparserConverter : public ControlConverter {
  public:
     explicit IngressDeparserConverter(ProgramStructure* structure)
         : ControlConverter(structure) { CHECK_NULL(structure); }
-    const IR::Node* preorder(IR::P4Control* node) override;
+    const IR::Node* postorder(IR::P4Control* node) override;
 };
 
 class EgressDeparserConverter : public ControlConverter {
  public:
     explicit EgressDeparserConverter(ProgramStructure* structure)
         : ControlConverter(structure) { CHECK_NULL(structure); }
-    const IR::Node* preorder(IR::P4Control* node) override;
+    const IR::Node* postorder(IR::P4Control* node) override;
 };
 
 

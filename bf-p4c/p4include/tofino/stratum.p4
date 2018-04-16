@@ -26,7 +26,7 @@ agreement with Barefoot Networks, Inc.
 #include "core.p4"
 
 
-enum PacketPath_t {
+enum PSA_PacketPath_t {
     NORMAL,     /// Packet received by ingress that is none of the cases below.
     NORMAL_UNICAST,   /// Normal packet received by egress which is unicast
     NORMAL_MULTICAST, /// Normal packet received by egress which is multicast

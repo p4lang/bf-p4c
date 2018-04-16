@@ -875,8 +875,8 @@ P4_SOURCE(R"()"),
 P4_SOURCE(R"(
         state start {
           transition select(istd.packet_path) {
-            PacketPath_t.RESUBMIT: copy_resubmit_meta;
-            PacketPath_t.NORMAL: packet_in_parsing;
+            PSA_PacketPath_t.RESUBMIT: copy_resubmit_meta;
+            PSA_PacketPath_t.NORMAL: packet_in_parsing;
           }
         }
         state copy_resubmit_meta {
@@ -903,8 +903,8 @@ P4_SOURCE(R"(
 P4_SOURCE(R"(
         state start {
           transition select(istd.packet_path) {
-            PacketPath_t.RESUBMIT: copy_resubmit_meta;
-            PacketPath_t.NORMAL: packet_in_parsing;
+            PSA_PacketPath_t.RESUBMIT: copy_resubmit_meta;
+            PSA_PacketPath_t.NORMAL: packet_in_parsing;
           }
         }
         state copy_resubmit_meta {
@@ -932,8 +932,8 @@ P4_SOURCE(R"(
 P4_SOURCE(R"(
         state start {
           transition select(istd.packet_path) {
-            PacketPath_t.RESUBMIT: copy_resubmit_meta;
-            PacketPath_t.NORMAL: packet_in_parsing;
+            PSA_PacketPath_t.RESUBMIT: copy_resubmit_meta;
+            PSA_PacketPath_t.NORMAL: packet_in_parsing;
           }
         }
         state copy_resubmit_meta {
@@ -963,8 +963,8 @@ P4_SOURCE(R"(
 
         state __start {
           transition select(istd.packet_path) {
-            PacketPath_t.RESUBMIT: copy_resubmit_meta;
-            PacketPath_t.NORMAL: packet_in_parsing;
+            PSA_PacketPath_t.RESUBMIT: copy_resubmit_meta;
+            PSA_PacketPath_t.NORMAL: packet_in_parsing;
           }
         }
         state copy_resubmit_meta {
@@ -993,8 +993,8 @@ P4_SOURCE(R"(
         }
         state __start {
           transition select(istd.packet_path) {
-            PacketPath_t.RESUBMIT: copy_resubmit_meta;
-            PacketPath_t.NORMAL: packet_in_parsing;
+            PSA_PacketPath_t.RESUBMIT: copy_resubmit_meta;
+            PSA_PacketPath_t.NORMAL: packet_in_parsing;
           }
         }
         state copy_resubmit_meta {
@@ -1020,8 +1020,8 @@ P4_SOURCE(R"(
 P4_SOURCE(R"(
         state start {
           transition select(istd.packet_path) {
-            PacketPath_t.RESUBMIT: copy_resubmit_meta_0;
-            PacketPath_t.NORMAL: packet_in_parsing;
+            PSA_PacketPath_t.RESUBMIT: copy_resubmit_meta_0;
+            PSA_PacketPath_t.NORMAL: packet_in_parsing;
           }
         }
         state copy_resubmit_meta_0 {
@@ -1054,8 +1054,8 @@ P4_SOURCE(R"(
 P4_SOURCE(R"(
         state start {
           transition select(istd.packet_path) {
-            PacketPath_t.RESUBMIT: copy_resubmit_meta_0;
-            PacketPath_t.NORMAL: packet_in_parsing;
+            PSA_PacketPath_t.RESUBMIT: copy_resubmit_meta_0;
+            PSA_PacketPath_t.NORMAL: packet_in_parsing;
           }
         }
         state copy_resubmit_meta_0 {
@@ -1100,8 +1100,8 @@ P4_SOURCE(R"(
         }
         state start {
           transition select(istd.packet_path) {
-            PacketPath_t.RESUBMIT: copy_resubmit_meta_0;
-            PacketPath_t.NORMAL: packet_in_parsing;
+            PSA_PacketPath_t.RESUBMIT: copy_resubmit_meta_0;
+            PSA_PacketPath_t.NORMAL: packet_in_parsing;
           }
         }
         state resubmit_data_is_0 {
@@ -1160,8 +1160,8 @@ TEST_F(PortableSwitchTest, RecirculateHeaderAssignment) {
         P4_SOURCE(R"(
     state start {
       transition select(istd.packet_path) {
-        PacketPath_t.RECIRCULATE: copy_recirculate_meta;
-        PacketPath_t.NORMAL: packet_in_parsing;
+        PSA_PacketPath_t.RECIRCULATE: copy_recirculate_meta;
+        PSA_PacketPath_t.NORMAL: packet_in_parsing;
       }
     }
     state copy_recirculate_meta {
@@ -1187,8 +1187,8 @@ TEST_F(PortableSwitchTest, RecirculateFieldAssignment) {
         P4_SOURCE(R"(
     state start {
       transition select(istd.packet_path) {
-        PacketPath_t.RECIRCULATE: copy_recirc_meta;
-        PacketPath_t.NORMAL: packet_in_parsing;
+        PSA_PacketPath_t.RECIRCULATE: copy_recirc_meta;
+        PSA_PacketPath_t.NORMAL: packet_in_parsing;
       }
     }
     state copy_recirc_meta {
@@ -1214,8 +1214,8 @@ TEST_F(PortableSwitchTest, DISABLED_RecirculateNestedStruct) {
         P4_SOURCE(R"(
     state start {
       transition select(istd.packet_path) {
-        PacketPath_t.RECIRCULATE: copy_recirc_meta;
-        PacketPath_t.NORMAL: packet_in_parsing;
+        PSA_PacketPath_t.RECIRCULATE: copy_recirc_meta;
+        PSA_PacketPath_t.NORMAL: packet_in_parsing;
       }
     }
     state copy_recirc_meta {
@@ -1246,8 +1246,8 @@ TEST_F(PortableSwitchTest, RecirculateReorderFieldAssignment) {
         P4_SOURCE(R"(
     state start {
       transition select(istd.packet_path) {
-        PacketPath_t.RECIRCULATE: copy_recirc_meta;
-        PacketPath_t.NORMAL: packet_in_parsing;
+        PSA_PacketPath_t.RECIRCULATE: copy_recirc_meta;
+        PSA_PacketPath_t.NORMAL: packet_in_parsing;
       }
     }
     state copy_recirc_meta {
@@ -1274,8 +1274,8 @@ TEST_F(PortableSwitchTest, RecirculateMultipleExtractState) {
         P4_SOURCE(R"(
     state start {
       transition select(istd.packet_path) {
-        PacketPath_t.RECIRCULATE: copy_recirc_meta;
-        PacketPath_t.NORMAL: packet_in_parsing;
+        PSA_PacketPath_t.RECIRCULATE: copy_recirc_meta;
+        PSA_PacketPath_t.NORMAL: packet_in_parsing;
       }
     }
     state copy_recirc_meta {
@@ -1306,8 +1306,8 @@ TEST_F(PortableSwitchTest, RecirculateUnusedPacketPath) {
         P4_SOURCE(R"(
     state start {
       transition select(istd.packet_path) {
-        PacketPath_t.RECIRCULATE: copy_recirc_meta;
-        PacketPath_t.NORMAL: packet_in_parsing;
+        PSA_PacketPath_t.RECIRCULATE: copy_recirc_meta;
+        PSA_PacketPath_t.NORMAL: packet_in_parsing;
       }
     }
     state copy_recirc_meta {
@@ -1332,8 +1332,8 @@ TEST_F(PortableSwitchTest, RecirculateWritePartialHeader) {
         P4_SOURCE(R"(
     state start {
       transition select(istd.packet_path) {
-        PacketPath_t.RECIRCULATE: copy_recirc_meta;
-        PacketPath_t.NORMAL: packet_in_parsing;
+        PSA_PacketPath_t.RECIRCULATE: copy_recirc_meta;
+        PSA_PacketPath_t.NORMAL: packet_in_parsing;
       }
     }
     state copy_recirc_meta {
@@ -1360,8 +1360,8 @@ TEST_F(PortableSwitchTest, RecirculateReadPartialHeader) {
         P4_SOURCE(R"(
     state start {
       transition select(istd.packet_path) {
-        PacketPath_t.RECIRCULATE: copy_recirc_meta;
-        PacketPath_t.NORMAL: packet_in_parsing;
+        PSA_PacketPath_t.RECIRCULATE: copy_recirc_meta;
+        PSA_PacketPath_t.NORMAL: packet_in_parsing;
       }
     }
     state copy_recirc_meta {
@@ -1403,8 +1403,8 @@ TEST_F(PortableSwitchTest, CloneAssignHeader) {
         P4_SOURCE(R"(
     state start {
       transition select(istd.packet_path) {
-        PacketPath_t.CLONE_I2E: copy_clone_meta;
-        PacketPath_t.NORMAL: packet_in_parsing;
+        PSA_PacketPath_t.CLONE_I2E: copy_clone_meta;
+        PSA_PacketPath_t.NORMAL: packet_in_parsing;
       }
     }
     state copy_clone_meta {
@@ -1430,8 +1430,8 @@ TEST_F(PortableSwitchTest, CloneAssignFields) {
         P4_SOURCE(R"(
     state start {
       transition select(istd.packet_path) {
-        PacketPath_t.CLONE_I2E: copy_clone_meta;
-        PacketPath_t.NORMAL: packet_in_parsing;
+        PSA_PacketPath_t.CLONE_I2E: copy_clone_meta;
+        PSA_PacketPath_t.NORMAL: packet_in_parsing;
       }
     }
     state copy_clone_meta {
@@ -1459,8 +1459,8 @@ TEST_F(PortableSwitchTest, CloneReorderFields) {
         P4_SOURCE(R"(
     state start {
       transition select(istd.packet_path) {
-        PacketPath_t.CLONE_I2E: copy_clone_meta;
-        PacketPath_t.NORMAL: packet_in_parsing;
+        PSA_PacketPath_t.CLONE_I2E: copy_clone_meta;
+        PSA_PacketPath_t.NORMAL: packet_in_parsing;
       }
     }
     state copy_clone_meta {
@@ -1488,8 +1488,8 @@ TEST_F(PortableSwitchTest, CloneEmptyFirstState) {
     }
     state __start {
       transition select(istd.packet_path) {
-        PacketPath_t.CLONE_I2E: copy_clone_meta;
-        PacketPath_t.NORMAL: packet_in_parsing;
+        PSA_PacketPath_t.CLONE_I2E: copy_clone_meta;
+        PSA_PacketPath_t.NORMAL: packet_in_parsing;
       }
     }
     state copy_clone_meta {
@@ -1517,8 +1517,8 @@ TEST_F(PortableSwitchTest, DISABLED_CloneExtractBeforeCheckPacketPath) {
         }
         state __start {
           transition select(istd.packet_path) {
-            PacketPath_t.CLONE_I2E: copy_clone_meta;
-            PacketPath_t.NORMAL: packet_in_parsing;
+            PSA_PacketPath_t.CLONE_I2E: copy_clone_meta;
+            PSA_PacketPath_t.NORMAL: packet_in_parsing;
           }
         }
         state copy_clone_meta {
@@ -1542,8 +1542,8 @@ TEST_F(PortableSwitchTest, CloneMultipleExtractState) {
         P4_SOURCE(R"(
         state start {
           transition select(istd.packet_path) {
-            PacketPath_t.CLONE_I2E: copy_clone_meta_0;
-            PacketPath_t.NORMAL: packet_in_parsing;
+            PSA_PacketPath_t.CLONE_I2E: copy_clone_meta_0;
+            PSA_PacketPath_t.NORMAL: packet_in_parsing;
           }
         }
         state copy_clone_meta_0 {
@@ -1573,8 +1573,8 @@ TEST_F(PortableSwitchTest, CloneCopyAndSelectOnField) {
         P4_SOURCE(R"(
         state start {
           transition select(istd.packet_path) {
-            PacketPath_t.CLONE_I2E: copy_clone_meta_0;
-            PacketPath_t.NORMAL: packet_in_parsing;
+            PSA_PacketPath_t.CLONE_I2E: copy_clone_meta_0;
+            PSA_PacketPath_t.NORMAL: packet_in_parsing;
           }
         }
         state copy_clone_meta_0 {
@@ -1617,8 +1617,8 @@ TEST_F(PortableSwitchTest, CloneSelectOnField) {
         }
         state start {
           transition select(istd.packet_path) {
-            PacketPath_t.CLONE_I2E: copy_clone_meta_0;
-            PacketPath_t.NORMAL: packet_in_parsing;
+            PSA_PacketPath_t.CLONE_I2E: copy_clone_meta_0;
+            PSA_PacketPath_t.NORMAL: packet_in_parsing;
           }
         }
         state clone_data_is_0 {

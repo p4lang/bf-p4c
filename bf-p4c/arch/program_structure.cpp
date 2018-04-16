@@ -66,6 +66,30 @@ cstring ProgramStructure::getBlockName(cstring name) {
     return blockname;
 }
 
+bool ProgramStructure::isIngressParser(const IR::P4Parser* parser) {
+    return parser->name == getBlockName(ProgramStructure::INGRESS_PARSER);
+}
+
+bool ProgramStructure::isIngress(const IR::P4Control* control) {
+    return control->name == getBlockName(ProgramStructure::INGRESS);
+}
+
+bool ProgramStructure::isIngressDeparser(const IR::P4Control* control) {
+    return control->name == getBlockName(ProgramStructure::INGRESS_DEPARSER);
+}
+
+bool ProgramStructure::isEgressParser(const IR::P4Parser* parser) {
+    return parser->name == getBlockName(ProgramStructure::EGRESS_PARSER);
+}
+
+bool ProgramStructure::isEgress(const IR::P4Control* control) {
+    return control->name == getBlockName(ProgramStructure::EGRESS);
+}
+
+bool ProgramStructure::isEgressDeparser(const IR::P4Control* control) {
+    return control->name == getBlockName(ProgramStructure::EGRESS_DEPARSER);
+}
+
 void ProgramStructure::createTofinoArch() {
     for (auto decl : targetTypes) {
         if (decl->is<IR::Type_Error>())

@@ -19,16 +19,6 @@ void ProgramStructure::createParsers() {
 
 
 void ProgramStructure::createControls() {
-    auto convert = [&](cstring name, ExternConverter &cvt) {
-        if (methodcalls.count(name) == 0)
-            return;
-        auto methodcall = methodcalls[name];
-        for (auto &n : methodcall) {
-            auto result = cvt.convert(n.first);
-            n.second = result;
-        }
-    };
-
     IngressControlConverter cvt_i(this);
     auto ingress = controls.at(getBlockName(ProgramStructure::INGRESS));
     ingress = cvt_i.convert(ingress);

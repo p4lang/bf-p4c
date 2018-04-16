@@ -589,6 +589,8 @@ AddPsaBridgeMetadata::AddPsaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap
     auto* bridgeIngressToEgress = new PsaBridgeIngressToEgress(refMap, typeMap, structure);
     auto* findBridgedMetaAssignments = new FindBridgeMetadataAssignment(refMap, typeMap);
     addPasses({
+        new P4::ClearTypeMap(typeMap),
+        new P4::TypeChecking(refMap, typeMap, true),
         bridgeIngressToEgress,
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
@@ -598,8 +600,5 @@ AddPsaBridgeMetadata::AddPsaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap
         new P4::TypeChecking(refMap, typeMap, true),
     });
 }
-
-// move assignment to normal.ingress_port normal.ingress_port to the end of ingress.
-// insert emit(^bridged_metadata);
 
 }  // namespace BFN
