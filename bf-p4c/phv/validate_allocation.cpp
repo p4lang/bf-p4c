@@ -586,6 +586,7 @@ bool ValidateActions::preorder(const IR::MAU::Action *act) {
     else
         aa.set_field_actions_map(&field_actions_map);
     aa.set_error_verbose();
+    aa.set_verbose();
     act->apply(aa);
     warning_found |= aa.warning_found();
     return false;

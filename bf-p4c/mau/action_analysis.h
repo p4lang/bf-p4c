@@ -34,6 +34,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
  public:
     static constexpr int LOADCONST_MAX = 20;
     static constexpr int CONST_SRC_MAX = 3;
+    static constexpr int JBAY_CONST_SRC_MIN = 2;
     static constexpr int MAX_PHV_SOURCES = 2;
     /** A way to encapsulate the information contained within a single operand of an instruction,
      *  whether the instruction is read from or written to.  Also contains the information on
@@ -98,9 +99,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
      *  for verification and combining the PHV fields into MultiOperands.
      */
     struct Alignment {
-        bitvec write_bits;
-        bitvec read_bits;
-        Alignment(bitvec wb, bitvec rb) : write_bits(wb), read_bits(rb) {}
+        le_bitrange write_bits;
+        le_bitrange read_bits;
+        Alignment(le_bitrange wb, le_bitrange rb) : write_bits(wb), read_bits(rb) {}
     };
 
     /** Information on all PHV reads affecting a single container.  Again used for verification
@@ -115,15 +116,21 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bitvec read_bits;
         bool is_src1 = false;
 
-        void add_alignment(const bitvec &wb, const bitvec &rb) {
+        void add_alignment(le_bitrange wb, le_bitrange rb) {
             indiv_alignments.emplace_back(wb, rb);
-            write_bits |= wb;
-            read_bits |= rb;
+            write_bits.setrange(wb.lo, wb.size());
+            read_bits.setrange(rb.lo, rb.size());
         }
 
         bool equiv_bit_totals() const { return write_bits.popcount() == read_bits.popcount(); }
         bool aligned() const {
             return (write_bits - read_bits).empty() && (read_bits - write_bits).empty();
+        }
+
+        int bitrange_size() const {
+            BUG_CHECK(write_bits.is_contiguous(), "Converting a bitvec to a bitrange requires "
+                      "the bitrange to be continuous");
+            return write_bits.max().index() - write_bits.min().index() + 1;
         }
     };
     /** Information on the action data field contained within the instruction.  The action data
@@ -132,7 +139,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
      */
     struct ActionDataInfo {
         bool initialized = false;
-        TotalAlignment ad_alignment;
+        TotalAlignment alignment;
 
         cstring action_data_name;
         bool immediate = false;
@@ -151,6 +158,26 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
     };
 
+    /** Information on where a particular constant is used within a container instruction
+     */
+    struct ConstantPosition {
+        unsigned value;
+        le_bitrange range;
+        ConstantPosition(unsigned v, le_bitrange r) : value(v), range(r) { }
+    };
+
+    /** Information on all constants within a single container instruction
+     */
+    struct ConstantInfo {
+        bool initialized = false;
+        TotalAlignment alignment;
+        safe_vector<ConstantPosition> positions;
+        unsigned build_constant();
+        unsigned build_shiftable_constant();
+        // built as part of the check_constant_to_actiondata function
+        unsigned constant_value;
+        unsigned valid_instruction_constant(int container_size) const;
+    };
 
 
     /** Information on all of the individual reads and writes within a single PHV container
@@ -186,11 +213,12 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                             PHV_AND_ACTION_DATA = (1 << 14),
                             PARTIAL_OVERWRITE = (1 << 15),
                             MULTIPLE_SHIFTS = (1 << 16),
-                            ILLEGAL_ACTION_DATA = (1 << 17) };
+                            ILLEGAL_ACTION_DATA = (1 << 17),
+                            REFORMAT_CONSTANT = (1 << 18) };
         unsigned error_code = NO_PROBLEM;
         cstring name;
         ActionDataInfo adi;
-        TotalAlignment constant_alignment;
+        ConstantInfo ci;
         bitvec invalidate_write_bits;
         std::map<PHV::Container, TotalAlignment> phv_alignment;
 
@@ -219,7 +247,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return ad_sources() > 0;
         }
 
-        bool partial_overwrite() {
+        bool partial_overwrite() const {
             return (error_code & PARTIAL_OVERWRITE) != 0;
         }
 
@@ -236,14 +264,11 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return name != "set";
         }
 
-        bool set_invalidate_write_bits(bitvec write) {
+        bool set_invalidate_write_bits(le_bitrange write) {
             if (name != "invalidate") return false;
-            invalidate_write_bits = write;
+            invalidate_write_bits.setrange(write.lo, write.size());
             return true;
         }
-
-        bool constant_set = false;
-        long constant_used = 0;
 
         // FIXME: Can potentially use rotational shifts at some point
         // bool is_contig_rotate(bitvec check, int &shift, int size);
@@ -264,10 +289,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                               PHV::Container container);
 
         bitvec total_write() const;
-        bool convert_constant_to_actiondata() {
+        bool convert_constant_to_actiondata() const {
             return (error_code & CONSTANT_TO_ACTION_DATA) != 0;
         }
-
         friend std::ostream &operator<<(std::ostream &out, const ContainerAction&);
     };
 
@@ -316,15 +340,18 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         ContainerAction &cont_action, cstring &error_message, PHV::Container container,
         cstring action_name);
     bool init_phv_alignment(const ActionParam &read, ContainerAction &cont_action,
-                            bitvec write_bits, cstring &error_message);
+                            le_bitrange write_bits, cstring &error_message);
     bool init_ad_alloc_alignment(const ActionParam &read, ContainerAction &cont_action,
-        bitvec write_bits, cstring action_name, PHV::Container container);
+        le_bitrange write_bits, cstring action_name, PHV::Container container);
     bool init_constant_alignment(const ActionParam &read, ContainerAction &cont_action,
-        bitvec write_bits, cstring action_name, PHV::Container container);
+        le_bitrange write_bits, cstring action_name, PHV::Container container);
     bool init_simple_alignment(const ActionParam &read, ContainerAction &cont_action,
-        bitvec write_bits);
+        le_bitrange write_bits);
+    void initialize_constant(const ActionParam &read, ContainerAction &cont_action,
+        le_bitrange write_bits, le_bitrange read_bits);
 
-    bool tofino_instruction_constant(int value, int max_shift, int container_size);
+    bool valid_instruction_constant(unsigned value, int max_shift, int min_shift,
+                                    int complement_size);
     void check_constant_to_actiondata(ContainerAction &cont_action, PHV::Container container);
 
     void verify_P4_action_for_tofino(cstring action_name);
@@ -333,7 +360,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
  public:
     const IR::Expression *isActionParam(const IR::Expression *expr,
-        bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
+        le_bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
 
     bool misaligned_actiondata() {
         return action_data_misaligned;

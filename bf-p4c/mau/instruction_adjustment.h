@@ -48,6 +48,18 @@ class Field;
  */
 
 
+/** Responsible for splitting all field instructions over multiple containers into multiple
+ *  field instructions over a single container, for example, let's say the program has
+ *  the following field instruction:
+ *     -set hdr.f1, hdr.f2
+ *
+ *  where hdr.f1 is in two PHV containers.  This will split this into
+ *
+ *     -set hdr.f1(A..B), hdr.f2(A..B)
+ *     -set hdr.f1(C..D), hdr.f2(C..D)
+ *
+ *  where A..B and C..D are the write ranges of f1 within its associated container
+ */
 class SplitInstructions : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
     const IR::MAU::Table *tbl;
@@ -78,6 +90,10 @@ class SplitInstructions : public MauTransform, TofinoWriteContext {
         aa(phv, true, true, tbl) {}
 };
 
+/** Responsible for converting IR::Constant to IR::MAU::ActionDataConstants when necessary.
+ *  If a constant is not able to be saved within an instruction, this will turn the constant
+ *  into an action data slot location
+ */
 class ConstantsToActionData : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
     const IR::MAU::Table *tbl;
@@ -108,6 +124,19 @@ class ConstantsToActionData : public MauTransform, TofinoWriteContext {
     ConstantsToActionData(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t) {}
 };
 
+/** Responsible for converting all FieldInstructions within a single Container operation into
+ *  one large Container Instruction over IR::MAU::MultiOperands.  Let say the following fields
+ *  f1 and f2 are in container B1, while f3 and f4 are in container B2.  The instructions:
+ *
+ *      -set hdr.f1, hdr.f3
+ *      -set hdr.f2, hdr.f4
+ *
+ *  will get converted to:
+ *      -set B1, B2
+ *
+ *  This will also merge many constants into a single container constant if the action is
+ *  possible to do.
+ */
 class MergeInstructions : public MauTransform, TofinoWriteContext {
  private:
     const PhvInfo &phv;

@@ -9,7 +9,8 @@
  *
  *  For example, let's say the following field, bigfield (64 bits) requires two 32 bit containers
  *  The instruction will originally look like:
- *      - set hdr.bigfield, param
+ *      - set hdr.bigfield, para
+                            | ActionAnalysis::ContainerAction::REFORMAT_CONSTANTm
  *  It will get converted to:
  *       - set hdr.bigfield.0-31, param.0-31
  *       - set hdr.bigfield.32-63, param.32-63
@@ -304,11 +305,13 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     merged_fields.clear();
     ActionAnalysis aa(phv, true, true, tbl);
     aa.set_container_actions_map(&container_actions_map);
-    aa.set_verbose();
     act->apply(aa);
     if (aa.misaligned_actiondata())
         throw ActionFormat::failure(act->name);
-    unsigned error_mask = ~ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE;
+
+    unsigned allowed_errors = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE
+                            | ActionAnalysis::ContainerAction::REFORMAT_CONSTANT;
+    unsigned error_mask = ~allowed_errors;
 
     for (auto &container_action : container_actions_map) {
         auto container = container_action.first;
@@ -543,7 +546,8 @@ IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container 
 IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container container,
          ActionAnalysis::ContainerAction &cont_action) {
     if (cont_action.field_actions.size() == 1 && cont_action.name != "set") {
-        unsigned error_mask = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE;
+        unsigned error_mask = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE
+                            | ActionAnalysis::ContainerAction::REFORMAT_CONSTANT;
         BUG_CHECK((cont_action.error_code & error_mask) != 0,
             "Invalid call to build a merged instruction");
         return dest_slice_to_container(container, cont_action);
@@ -554,24 +558,35 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     const IR::Expression *src2 = nullptr;
     bitvec src1_writebits;
     IR::Vector<IR::Expression> components;
-    BUG_CHECK(cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA]
-              + cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] <= 1,
-              "When merging an instruction, at most either one action data or constant "
-              "value is allowed");
+
+    BUG_CHECK(cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] <= 1, "At most "
+              "one section of action data is allowed in a merge instruction");
+
+    BUG_CHECK(!(cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 1 &&
+                cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] >= 1), "Before "
+              "merge instructions, some constant was not converted to action data");
+
     if (cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 1) {
         auto &adi = cont_action.adi;
         auto mo = new IR::MAU::MultiOperand(components, adi.action_data_name, false);
         fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::ACTIONDATA,
                                     adi.action_data_name, mo);
         src1 = mo;
-        src1_writebits = adi.ad_alignment.write_bits;
-        bitvec src1_read_bits = adi.ad_alignment.read_bits;
+        src1_writebits = adi.alignment.write_bits;
+        bitvec src1_read_bits = adi.alignment.read_bits;
         if (src1_read_bits.popcount() != static_cast<int>(container.size())) {
             src1 = MakeSlice(src1, src1_read_bits.min().index(), src1_read_bits.max().index());
         }
-    } else if (cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] == 1) {
-        src1 = find_field_action_constant(cont_action);
-        src1_writebits = cont_action.constant_alignment.write_bits;
+    } else if (cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] > 0) {
+        // Constant merged into a single constant over the entire container
+        int constant_value = cont_action.ci.valid_instruction_constant(container.size());
+        int width_bits;
+        if ((cont_action.error_code & ActionAnalysis::ContainerAction::REFORMAT_CONSTANT) == 0)
+            width_bits = cont_action.ci.alignment.bitrange_size();
+        else
+            width_bits = container.size();
+        src1 = new IR::Constant(IR::Type::Bits::get(width_bits), constant_value);
+        src1_writebits = cont_action.ci.alignment.write_bits;
     }
 
     for (auto &phv_ta : cont_action.phv_alignment) {

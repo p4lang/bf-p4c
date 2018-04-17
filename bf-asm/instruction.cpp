@@ -77,7 +77,7 @@ struct operand {
                 val |= ~0UL << group_size[group];
             int minconst = (options.target == JBAY) ? -4 : -8;
             if (val >= minconst && val < 8)
-                return value+24;
+                return val+24;
             error(lineno, "constant value %ld out of range for immediate", value);
             return -1; }
         void dbprint(std::ostream &out) const override { out << value; }

@@ -83,6 +83,7 @@ struct ActionFormat {
     struct ActionDataForSingleALU {
         struct ArgLoc {
             cstring name;       ///< name of the arg
+            // FIXME: Convert these to le_bitranges as this would be correct
             bitvec phv_loc;     ///< The bits which these act on in the phv container
             bitvec slot_loc;    ///< The bits within the action data slot that we use
             int field_bit;      ///< The starting bit of the argument
@@ -99,6 +100,11 @@ struct ActionFormat {
             int field_hi() const { return field_bit + phv_loc.popcount() - 1; }
             int phv_cont_lo() const { return phv_loc.min().index(); }
             int slot_lo() const { return slot_loc.min().index(); }
+            int slot_hi() const { return slot_loc.max().index(); }
+            le_bitrange slot_br() const {
+                BUG_CHECK(slot_loc.is_contiguous(), "Slot location is not contiguous");
+                return le_bitrange(slot_lo(), slot_hi());
+            }
             int width() const { return phv_loc.popcount(); }
             void dbprint(std::ostream &out) const {
                 out << name << "[" << field_bit << ":" << field_hi() << "]";

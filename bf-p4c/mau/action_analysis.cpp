@@ -4,6 +4,62 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+/** Calculates a total container constant, given which constants wrote to which fields in the
+ *  operation
+ */
+unsigned ActionAnalysis::ConstantInfo::build_constant() {
+    unsigned rv = 0;
+    BUG_CHECK(!positions.empty(), "Building a constant over a container when no constants are "
+              "contained within this container action");
+    for (auto position : positions) {
+        unsigned mask;
+        if (position.range.size() == sizeof(unsigned) * 8)
+            mask = static_cast<unsigned>(-1);
+        else
+            mask = (1U << position.range.size()) - 1;
+        unsigned pre_shift = position.value & mask;
+        rv |= (pre_shift << position.range.lo);
+    }
+    return rv;
+}
+
+/** Shifts a constant to the lower read bits point to determine if the constant can be used
+ *  within a deposit-field
+ */
+unsigned ActionAnalysis::ConstantInfo::build_shiftable_constant() {
+    unsigned rv = build_constant();
+    bitvec rv_bv(rv);
+
+    if (rv_bv.empty())
+        return rv;
+
+    return rv_bv.getrange(alignment.write_bits.min().index(), alignment.bitrange_size());
+}
+
+/** Because the assembly only recognizes constants between -8..7 or their corresponding
+ *  container size complement, this function converts all container constants (post-shifted)
+ *  to a pre-shift value between -8 and 7
+ */
+unsigned ActionAnalysis::ConstantInfo::valid_instruction_constant(int container_size) const {
+     unsigned max_value = (1U << CONST_SRC_MAX) - 1;
+     if (max_value >= constant_value) {
+         return constant_value;
+     }
+
+     unsigned total_container_mask;
+     if (container_size == sizeof(unsigned) * 8)
+         total_container_mask = static_cast<unsigned>(-1);
+     else
+         total_container_mask = (1U << container_size) - 1;
+     unsigned constant_mask;
+     int cm_size = alignment.bitrange_size();
+     if (cm_size == sizeof(unsigned) * 8)
+         constant_mask = static_cast<unsigned>(-1);
+     else
+         constant_mask = (1U << cm_size) - 1;
+     return ((total_container_mask & ~constant_mask) | constant_value);
+}
+
 void ActionAnalysis::initialize_phv_field(const IR::Expression *expr) {
     if (!phv.field(expr))
         return;
@@ -50,8 +106,8 @@ ActionAnalysis::classify_attached_output(const IR::MAU::AttachedOutput *ao) {
  *  If it is an ActionDataConstant, then the type is CONSTANT
  */
 const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
-        bitrange *bits_out, ActionParam::type_t *type) {
-    bitrange bits = { 0, e->type->width_bits() - 1};
+        le_bitrange *bits_out, ActionParam::type_t *type) {
+    le_bitrange bits = { 0, e->type->width_bits() - 1};
     if (auto *sl = e->to<IR::Slice>()) {
         bits.lo = sl->getL();
         bits.hi = sl->getH();
@@ -192,7 +248,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
     }
 
     if (phv_alloc) {
-        bitrange bits;
+        le_bitrange bits;
 
         auto *field = phv.field(field_action.write.expr, &bits);
         int split_count = 0;
@@ -254,7 +310,7 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
         // Check reads before writes for this, as field can be used in it's own instruction
         for (auto read : field_action.reads) {
             if (read.type != ActionParam::PHV) continue;
-            bitrange read_bitrange = {0, 0};
+            le_bitrange read_bitrange = {0, 0};
             auto field = phv.field(read.expr, &read_bitrange);
             bitvec read_bits(read_bitrange.lo, read_bitrange.size());
             BUG_CHECK(field, "Cannot convert an instruction read to a PHV field reference");
@@ -266,7 +322,7 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
             }
         }
 
-        bitrange bits = {0, 0};
+        le_bitrange bits = {0, 0};
         auto field = phv.field(field_action.write.expr, &bits);
         bitvec write_bits(bits.lo, bits.size());
         BUG_CHECK(field, "Cannot convert an instruction write to a PHV field reference");
@@ -315,16 +371,16 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
 bool ActionAnalysis::initialize_invalidate_alignment(const ActionParam &write, ContainerAction
         &cont_action) {
     BUG_CHECK(cont_action.name == "invalidate", "Expected invalidate instruction");
-    bitrange range;
+    le_bitrange range;
     auto *field = phv.field(write.expr, &range);
     BUG_CHECK(field, "Write in invalidate instruction has no PHV location");
 
     int count = 0;
-    bitvec write_bits;
+    le_bitrange write_bits;
     field->foreach_alloc(range, [&](const PHV::Field::alloc_slice &alloc) {
         count++;
         BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
-        write_bits.setrange(alloc.container_bit, alloc.width);
+        write_bits = alloc.container_bits();
     });
 
     BUG_CHECK(count == 1, "ActionAnalysis did not split up container by container");
@@ -359,16 +415,16 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
         return false;
     }
 
-    bitrange range;
+    le_bitrange range;
     auto *field = phv.field(write.expr, &range);
     BUG_CHECK(field, "Write in an instruction has no PHV location");
 
     int count = 0;
-    bitvec write_bits;
+    le_bitrange write_bits;
     field->foreach_alloc(range, [&](const PHV::Field::alloc_slice &alloc) {
         count++;
         BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
-        write_bits.setrange(alloc.container_bit, alloc.width);
+        write_bits = alloc.container_bits();
     });
 
     BUG_CHECK(count == 1, "ActionAnalysis did not split up container by container");
@@ -397,8 +453,8 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
  *  is only one PHV read per PHV write.
  */
 bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction &cont_action,
-        bitvec write_bits, cstring &error_message) {
-    bitrange range;
+        le_bitrange write_bits, cstring &error_message) {
+    le_bitrange range;
     auto *field = phv.field(read.expr, &range);
 
     BUG_CHECK(field, "PHV read has no allocation");
@@ -415,16 +471,19 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
         return false;
     }
 
+
     field->foreach_alloc(range, [&](const PHV::Field::alloc_slice &alloc) {
-         bitvec read_bits(alloc.container_bit, alloc.width);
-         bitvec mini_write_bits;
+         le_bitrange read_bits = alloc.container_bits();
+         int lo;
+         int hi;
          if (!cont_action.is_shift()) {
-             int mini_write_start = alloc.field_bit - range.lo;
-             int write_field_start = write_bits.ffs();
-             mini_write_bits.setrange(write_field_start + mini_write_start, alloc.width);
+             lo = write_bits.lo + (alloc.field_bit - range.lo);
+             hi = lo + read_bits.size() - 1;
          } else {
-             mini_write_bits = write_bits;
+             lo = write_bits.lo;
+             hi = write_bits.hi;
          }
+         le_bitrange mini_write_bits(lo, hi);
 
          auto &phv_alignment = cont_action.phv_alignment;
          if (phv_alignment.find(alloc.container) == phv_alignment.end()) {
@@ -445,7 +504,7 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
  *  allocation.  Thus this function could potentially return false.
  */
 bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerAction &cont_action,
-        bitvec write_bits, cstring action_name, PHV::Container container) {
+        le_bitrange write_bits, cstring action_name, PHV::Container container) {
     if (read.speciality != ActionParam::NO_SPECIAL)
         return init_simple_alignment(read, cont_action, write_bits);
 
@@ -456,7 +515,7 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
     // Information on where fields are stored
     auto action_data_format = action_format.action_data_format.at(action_name);
 
-    bitrange read_range;
+    le_bitrange read_range;
     ActionParam::type_t type = ActionParam::ACTIONDATA;
     auto action_arg = isActionParam(read.expr, &read_range, &type);
     if (action_arg == nullptr)
@@ -470,8 +529,7 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
 
 
     ActionFormat::ArgKey ak;
-    ak.init(arg_name, read_range.lo, action_format.phv_alloc, container,
-            write_bits.min().index());
+    ak.init(arg_name, read_range.lo, action_format.phv_alloc, container, write_bits.lo);
 
     BUG_CHECK(placements.find(ak) != placements.end(), "Action argument is not found to be "
               "allocated in the action format");
@@ -496,17 +554,39 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
         if (cont_action.counts[ActionParam::ACTIONDATA] == 0) {
             adi.initialize(adp.get_action_name(), adp.immediate, adp.start,
                            adp.arg_locs.size());
-            adi.ad_alignment.add_alignment(write_bits, arg_loc.slot_loc);
+            adi.alignment.add_alignment(write_bits, arg_loc.slot_br());
             cont_action.counts[ActionParam::ACTIONDATA] = 1;
         } else if (adi.start != adp.start || adi.immediate != adp.immediate) {
             cont_action.counts[ActionParam::ACTIONDATA]++;
         } else {
             adi.field_affects++;
-            adi.ad_alignment.add_alignment(write_bits, arg_loc.slot_loc);
+            adi.alignment.add_alignment(write_bits, arg_loc.slot_br());
         }
         found = true;
     }
     return found;
+}
+
+
+void ActionAnalysis::initialize_constant(const ActionParam &read,
+        ContainerAction &cont_action, le_bitrange write_bits, le_bitrange read_bits) {
+    cont_action.ci.initialized = true;
+    cont_action.ci.alignment.add_alignment(write_bits, read_bits);
+
+    auto constant = read.expr->to<IR::Constant>();
+
+    // FIXME: Could use a helper function on IR::Constant, but not pressing, though
+    // for the purposes must fit within a 32 bit section
+    // Constant can be from MINX_INT <= x <= MAX_UINT
+    BUG_CHECK(constant->value.fits_uint_p() || constant->fitsInt(), "%s: Constant "
+              "value in an instruction not split correctly", constant->srcInfo);
+
+    unsigned constant_value;
+    if (constant->value.fits_uint_p())
+        constant_value = constant->value.get_ui();
+    else
+        constant_value = static_cast<unsigned>(constant->asInt());
+    cont_action.ci.positions.emplace_back(constant_value, write_bits);
 }
 
 /** Handles a IR::Constant within an Instruction to determine whether the constant will
@@ -514,14 +594,14 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
  *  the alignment must be pulled out of the table placement algorithm.
  */
 bool ActionAnalysis::init_constant_alignment(const ActionParam &read,
-        ContainerAction &cont_action, bitvec write_bits, cstring action_name,
+        ContainerAction &cont_action, le_bitrange write_bits, cstring action_name,
         PHV::Container container) {
     auto &action_format = tbl->resources->action_format;
     auto &constant_renames = action_format.constant_locations.at(action_name);
     auto action_data_format = action_format.action_data_format.at(action_name);
 
     ActionFormat::ArgKey ak;
-    ak.init_constant(container, write_bits.min().index());
+    ak.init_constant(container, write_bits.lo);
 
     // If it is in this map, then this IR::Constant has to be converted to an
     // IR::ActionDataConstant, which itself can have a particular location in the action format
@@ -540,11 +620,7 @@ bool ActionAnalysis::init_constant_alignment(const ActionParam &read,
 
     // FIXME: Duplicate code used, but creation of a function would currently require
     // action_analysis.h to include action_format.h, which cannot happen as constructed currently
-    cont_action.constant_alignment.add_alignment(write_bits, arg_loc.slot_loc);
-    if (!cont_action.constant_set) {
-        cont_action.constant_used = read.expr->to<IR::Constant>()->asLong();
-        cont_action.constant_set = true;
-    }
+    initialize_constant(read, cont_action, write_bits, arg_loc.slot_br());
     cont_action.counts[ActionParam::CONSTANT]++;
     return true;
 }
@@ -553,7 +629,7 @@ bool ActionAnalysis::init_constant_alignment(const ActionParam &read,
  *  match up directly with the read bits
  */
 bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
-         ContainerAction &cont_action, bitvec write_bits) {
+         ContainerAction &cont_action, le_bitrange write_bits) {
     if (read.type == ActionParam::ACTIONDATA)
         BUG_CHECK(isActionParam(read.expr), "Action Data parameter not configured properly "
                                              "in ActionAnalysis pass");
@@ -561,15 +637,11 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
         BUG_CHECK(read.expr->is<IR::Constant>(), "Constant parameter not configured properly "
                                                   "in ActionAnalysis pass");
 
-    bitvec read_bits = write_bits;
+    le_bitrange read_bits = write_bits;
     if (read.type == ActionParam::ACTIONDATA) {
-        cont_action.adi.ad_alignment.add_alignment(write_bits, read_bits);
+        cont_action.adi.alignment.add_alignment(write_bits, read_bits);
     } else if (read.type == ActionParam::CONSTANT) {
-        cont_action.constant_alignment.add_alignment(write_bits, read_bits);
-        if (!cont_action.constant_set) {
-            cont_action.constant_used = read.expr->to<IR::Constant>()->asLong();
-            cont_action.constant_set = true;
-        }
+        initialize_constant(read, cont_action, write_bits, read_bits);
     }
     cont_action.counts[read.type]++;
     return true;
@@ -590,14 +662,14 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
  */
 bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
     if (verbose)
-        LOG3("Action " << action_name << " in table " << tbl->name);
+        LOG2("Action " << action_name << " in table " << tbl->name);
     for (auto &container_action : *container_actions_map) {
         auto &container = container_action.first;
         auto &cont_action = container_action.second;
         cont_action.verbose = verbose;
 
         if (verbose)
-            LOG3("Action over container " << container.toString() << ": " << cont_action);
+            LOG2("Action over container " << container.toString() << ": " << cont_action);
         cstring instr_name;
         bool same_action = true;
         BUG_CHECK(cont_action.field_actions.size() > 0, "Somehow a container action has no "
@@ -636,9 +708,6 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
                 total_init &= init;
             }
         }
-
-        if (!total_init)
-            continue;
 
 
         cstring error_message;
@@ -704,8 +773,8 @@ bitvec ActionAnalysis::ContainerAction::total_write() const {
     bitvec total_write_;
     for (auto tot_align_info : phv_alignment)
         total_write_ |= tot_align_info.second.write_bits;
-    total_write_ |= adi.ad_alignment.write_bits;
-    total_write_ |= constant_alignment.write_bits;
+    total_write_ |= adi.alignment.write_bits;
+    total_write_ |= ci.alignment.write_bits;
 
     return total_write_;
 }
@@ -778,9 +847,6 @@ bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
 
     for (auto &tot_align_info : phv_alignment) {
         auto &tot_alignment = tot_align_info.second;
-        if (verbose)
-            LOG3("Alignment " << tot_align_info.first.toString() << " 0x"
-                 << tot_alignment.write_bits << " 0x" << tot_alignment.read_bits);
 
         // Verify on an individual field by field basis on the instruction on alignment
         bool verify = verify_one_alignment(tot_alignment, container.size(),
@@ -796,7 +862,7 @@ bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
 
     unaligned_count = 0;
     if (counts[ActionParam::ACTIONDATA] > 0) {
-        bool verify = verify_one_alignment(adi.ad_alignment, container.size(), unaligned_count,
+        bool verify = verify_one_alignment(adi.alignment, container.size(), unaligned_count,
                                            non_contiguous_count);
         if (!verify)
             return false;
@@ -813,11 +879,11 @@ bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
     // considered src1.
     bool src1_assigned = false;
     if (counts[ActionParam::CONSTANT] > 0) {
-        constant_alignment.is_src1 = true;
+        ci.alignment.is_src1 = true;
         src1_assigned = true;
     }
     if (counts[ActionParam::ACTIONDATA] > 0) {
-        adi.ad_alignment.is_src1 = true;
+        adi.alignment.is_src1 = true;
         src1_assigned = true;
     }
 
@@ -863,8 +929,8 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(
         total_write_bits |= tot_align_info.second.write_bits;
     }
 
-    total_write_bits |= adi.ad_alignment.write_bits;
-    total_write_bits |= constant_alignment.write_bits;
+    total_write_bits |= adi.alignment.write_bits;
+    total_write_bits |= ci.alignment.write_bits;
     if (name == "invalidate")
         total_write_bits |= invalidate_write_bits;
 
@@ -906,14 +972,13 @@ bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv) {
 /** A verification of the constant used in a ContainerAction to make sure that it can
  *  be used without being converted to action data
  */
-bool ActionAnalysis::tofino_instruction_constant(int value, int max_shift, int container_size) {
-    unsigned u_value = static_cast<unsigned>(value);
-    if (value < 0)
-        u_value >>= (sizeof(unsigned) * 8 - container_size);
+bool ActionAnalysis::valid_instruction_constant(unsigned value, int max_shift, int min_shift,
+        int complement_size) {
     unsigned max_value = (1U << max_shift);
-    unsigned complement = (0xffffffffU) >> (sizeof(unsigned) * 8 - container_size);
+    unsigned min_value = (1U << min_shift);
+    unsigned complement = (0xffffffffU) >> (sizeof(unsigned) * 8 - complement_size);
 
-    if ((u_value < max_value) || (u_value >= complement - max_value && u_value <= complement))
+    if ((value < max_value) || (value >= complement - min_value && value <= complement))
         return true;
     return false;
 }
@@ -951,34 +1016,64 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
     if (counts[ActionParam::CONSTANT] == 0)
         return;
 
-    if (!cont_action.constant_set)
+    if (!cont_action.ci.initialized)
         BUG("Constant not setup by the program correctly");
 
     if (counts[ActionParam::ACTIONDATA] > 0 && counts[ActionParam::CONSTANT] > 0) {
         cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
-    } else if (counts[ActionParam::CONSTANT] > 1) {
-        // Could potentially be combined into a single constant
+        return;
+    }
+    unsigned constant_value;
+
+    // Due to the number of sources differing between Tofino and JBay in an action, respectively
+    // 16 and 20, the range for instruction constants is different between architectures.
+    // For Tofino it is -8..7 but for JBay it is -4..7
+    int const_src_min = CONST_SRC_MAX;
+#ifdef HAVE_JBAY
+    if (Device::currentDevice() == "JBay")
+        const_src_min = JBAY_CONST_SRC_MIN;
+#endif /* HAVE_JBAY */
+
+    if (cont_action.name == "set" && cont_action.ci.alignment.write_bits.popcount()
+                                     == static_cast<int>(container.size())) {
+        // Converting to load_const instruction
+        constant_value = cont_action.ci.build_constant();
+        if (!(valid_instruction_constant(constant_value, LOADCONST_MAX, LOADCONST_MAX,
+                                         container.size()))) {
+            cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+            return;
+        }
+    } else if (cont_action.name != "set") {
+        // Using the constant source directly in a non deposit-field operation
+        constant_value = cont_action.ci.build_constant();
+        if (!(valid_instruction_constant(constant_value, CONST_SRC_MAX, const_src_min,
+                                          container.size()))) {
+            cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+            return;
+        }
+    } else if (cont_action.to_bitmasked_set) {
+        // Bitmasked-set must be converted to action data
         cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
-    } else if (counts[ActionParam::CONSTANT] == 1) {
-        if (cont_action.name == "set" && cont_action.constant_alignment.write_bits.popcount()
-                                         == static_cast<int>(container.size())) {
-            if (!(tofino_instruction_constant(cont_action.constant_used, LOADCONST_MAX,
-                                              container.size()))) {
-                cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
-            }
-        } else if (!cont_action.is_shift()) {  // At this point probably impossible
-            if (!(tofino_instruction_constant(cont_action.constant_used, CONST_SRC_MAX,
-                                              container.size()))) {
-                cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
-            }
+        return;
+    } else {
+        int complement_size = cont_action.ci.alignment.bitrange_size();
+        // Set or deposit-field
+        constant_value = cont_action.ci.build_shiftable_constant();
+        if (!(valid_instruction_constant(constant_value, CONST_SRC_MAX, const_src_min,
+                                           complement_size))) {
+            cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+        }
+        if (constant_value > ((1U << CONST_SRC_MAX) - 1)) {
+            cont_action.error_code |= ContainerAction::REFORMAT_CONSTANT;
         }
     }
+    cont_action.ci.constant_value = constant_value;
 }
 
 void ActionAnalysis::ContainerAction::move_source_to_bit(safe_vector<int> &bit_uses,
         ActionAnalysis::TotalAlignment &ta) {
     for (auto alignment : ta.indiv_alignments) {
-        for (auto bit : alignment.write_bits) {
+        for (int bit = alignment.write_bits.lo; bit <= alignment.write_bits.hi; bit++) {
             bit_uses[bit]++;
         }
     }
@@ -997,8 +1092,8 @@ bool ActionAnalysis::ContainerAction::verify_source_to_bit(int operands,
         move_source_to_bit(bit_uses, phv_ta.second);
     }
 
-    move_source_to_bit(bit_uses, adi.ad_alignment);
-    move_source_to_bit(bit_uses, constant_alignment);
+    move_source_to_bit(bit_uses, adi.alignment);
+    move_source_to_bit(bit_uses, ci.alignment);
 
     for (size_t i = 0; i < container.size(); i++) {
         if (!(bit_uses[i] == operands || bit_uses[i] == 0))
@@ -1141,7 +1236,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         return false;
     }
 
-    bitvec ad_bitmask = adi.ad_alignment.write_bits | constant_alignment.write_bits;
+    bitvec ad_bitmask = adi.alignment.write_bits | ci.alignment.write_bits;
 
     if (sources_needed == 2 && name == "set")
         to_deposit_field = true;
