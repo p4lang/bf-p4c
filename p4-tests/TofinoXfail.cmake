@@ -645,13 +645,18 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue134-bmv2.p4
 )
 
-# BRIG-275
+# backend support for pvs
 p4c_add_xfail_reason("tofino"
-  "Invalid select case expression pvs.*"
+  "Can't match parser state due to previous match"
   extensions/p4_tests/p4_14/p4-tests/programs/pvs/pvs.p4
   testdata/p4_14_samples/issue946.p4
   testdata/p4_14_samples/parser_value_set0.p4
   testdata/p4_14_samples/parser_value_set1.p4
+  )
+
+# backend support for pvs
+p4c_add_xfail_reason("tofino"
+  "Too much data for parse matcher, not enough register"
   testdata/p4_14_samples/parser_value_set2.p4
   )
 
@@ -1075,3 +1080,9 @@ p4c_add_xfail_reason("tofino"
   "error: Couldn't resolve computed value for select in state .*"
   extensions/p4_tests/p4_16/ipv6_tlv.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "Identifier with no name"
+  testdata/p4_16_samples/issue1208-1.p4
+)
+

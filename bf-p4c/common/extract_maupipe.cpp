@@ -928,10 +928,10 @@ class ExtractPhase0 : public Inspector {
 
 class ExtractParde : public PassManager {
  public:
-    explicit ExtractParde(IR::BFN::Pipe* rv) {
+    explicit ExtractParde(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, IR::BFN::Pipe* rv) {
         setName("ExtractParde");
         addPasses({
-            new ExtractParser(rv),
+            new ExtractParser(refMap, typeMap, rv),
             new ExtractDeparser(rv),
         });
     }
@@ -958,7 +958,7 @@ ExtractBackendPipe::ExtractBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
         simplifyReferences,
         new GetBackendTables(refMap, typeMap, INGRESS, rv, converted),
         new GetBackendTables(refMap, typeMap, EGRESS, rv, converted),
-        new ExtractParde(rv),
+        new ExtractParde(refMap, typeMap, rv),
         new ExtractChecksum(rv),
         (useTna) ? nullptr : new ExtractResubmitFieldPackings(refMap, typeMap, &resubmitPackings),
         (useTna) ? nullptr : new ExtractMirrorFieldPackings(refMap, typeMap, &mirrorPackings),

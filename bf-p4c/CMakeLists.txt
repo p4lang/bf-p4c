@@ -40,6 +40,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_SRCS}")
 
 set (BF_P4C_IR_HDRS
   ir/bitrange.h
+  ir/value_set_match.h
   ir/control_flow_visitor.h
   ir/gress.h
   ir/thread_visitor.h

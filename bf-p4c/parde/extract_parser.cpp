@@ -11,6 +11,7 @@
 #include "bf-p4c/parde/add_parde_metadata.h"
 #include "bf-p4c/parde/resolve_computed.h"
 #include "bf-p4c/parde/gen_deparser.h"
+#include "bf-p4c/ir/value_set_match.h"
 
 namespace BFN {
 
@@ -216,7 +217,9 @@ struct AutoPushTransition {
 
 class GetBackendParser {
  public:
-    explicit GetBackendParser(const ParserPragmas& pg) : parserPragmas(pg) { }
+    explicit GetBackendParser(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                              const ParserPragmas& pg) :
+        refMap(refMap), typeMap(typeMap), parserPragmas(pg) { }
 
     const IR::BFN::Parser* extract(const IR::BFN::TranslatedP4Parser* parser);
 
@@ -230,6 +233,8 @@ class GetBackendParser {
     std::map<cstring, IR::BFN::ParserState *>   states;
     std::map<cstring, cstring>                  p4StateNameToStateName;
 
+    P4::ReferenceMap* refMap;
+    P4::TypeMap* typeMap;
     const ParserPragmas& parserPragmas;
 };
 
@@ -675,9 +680,25 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
 
     // Generate the outgoing transitions.
     for (auto selectCase : selectCases) {
-        auto matchVal = buildMatch(matchSize, selectCase->keyset, selectExprs);
-        bool ok = addTransition(state, matchVal, shift, selectCase->state->path->name);
-        if (!ok) return nullptr;
+        // parser_value_set shows up as a path expression in the select case.
+        if (auto path = selectCase->keyset->to<IR::PathExpression>()) {
+            auto decl = refMap->getDeclaration(path->path, true);
+            auto pvs = decl->to<IR::P4ValueSet>();
+            CHECK_NULL(pvs);
+
+            unsigned int size = 0;
+            auto sizeConstant = pvs->size->to<IR::Constant>();
+            size = sizeConstant->value.get_ui();
+
+            auto matchVal = value_set_match_t(pvs);
+            for (unsigned int n = 0; n < size; n++) {
+                addTransition(state, matchVal, shift, selectCase->state->path->name);
+            }
+        } else {
+            auto matchVal = buildMatch(matchSize, selectCase->keyset, selectExprs);
+            bool ok = addTransition(state, matchVal, shift, selectCase->state->path->name);
+            if (!ok) return nullptr;
+        }
     }
 
     return state;
@@ -687,7 +708,7 @@ void ExtractParser::postorder(const IR::BFN::TranslatedP4Parser* parser) {
     ParserPragmas pg;
     parser->apply(pg);
 
-    GetBackendParser gp(pg);
+    GetBackendParser gp(refMap, typeMap, pg);
     rv->thread[parser->thread].parser = gp.extract(parser);
 }
 

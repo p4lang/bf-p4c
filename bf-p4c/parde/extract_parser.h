@@ -4,6 +4,8 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
+#include "frontends/common/resolveReferences/referenceMap.h"
+#include "frontends/p4/typeMap.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/parde_visitor.h"
 
@@ -25,9 +27,13 @@ namespace BFN {
 /// Transform frontend parser and deparser into IR::BFN::Parser and IR::BFN::Deparser
 class ExtractParser : public ParserInspector {
  public:
-    explicit ExtractParser(IR::BFN::Pipe *rv) : rv(rv) { setName("ExtractParser"); }
+    explicit ExtractParser(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, IR::BFN::Pipe *rv)
+        : refMap(refMap), typeMap(typeMap), rv(rv) { setName("ExtractParser"); }
     void postorder(const IR::BFN::TranslatedP4Parser* parser) override;
     void end_apply() override;
+
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
     IR::BFN::Pipe *rv;
 };
 

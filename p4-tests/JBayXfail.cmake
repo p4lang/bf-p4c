@@ -178,12 +178,17 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_16/brig-42.p4
   )
 
-# BRIG-275
+# backend support for pvs
 p4c_add_xfail_reason("jbay"
-  "Invalid select case expression pvs.*"
+  "Can't match parser state due to previous match"
   testdata/p4_14_samples/issue946.p4
   testdata/p4_14_samples/parser_value_set0.p4
   testdata/p4_14_samples/parser_value_set1.p4
+  )
+
+# backend support for pvs
+p4c_add_xfail_reason("jbay"
+  "Too much data for parse matcher, not enough register"
   testdata/p4_14_samples/parser_value_set2.p4
   )
 
