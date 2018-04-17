@@ -152,16 +152,9 @@ if (PTF_REQUIREMENTS_MET)
     fabric-DWITH_SPGW-DWITH_INT_TRANSIT
     )
 
-  # Barefoot Academy tests
-  p4c_add_xfail_reason("tofino"
-    "ERROR: test.Test4"
-    01-simple_l3
-    03-simple_l3_rewrite
-    07-simple_l3_ind_cntr
-    )
   # fails also with Glass.
   p4c_add_xfail_reason("tofino"
-    "ERROR: test.MirrorTest1"
+    "Expected packet was not received on device 0, port 64."
     11-simple_l3_mirror
     )
   # broken test: https://github.com/barefootnetworks/p4examples/issues/5

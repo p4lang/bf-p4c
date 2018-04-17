@@ -83,7 +83,10 @@ def get_parser():
                         help='Generate output in JUnit XML format')
     return parser
 
-NUM_IFACES = 8
+DEFAULT_NUM_IFACES = 8
+DEFAULT_IFACES = ["veth{}".format(i) for i in xrange((DEFAULT_NUM_IFACES + 1) * 2)]
+# Add Ethernet CPU port
+DEFAULT_IFACES += ["veth250", "veth251"]
 
 def check_ifaces(ifaces):
     ifconfig_out = subprocess.check_output(['ifconfig'])
@@ -93,24 +96,14 @@ def check_ifaces(ifaces):
     return ifaces <= present_ifaces
 
 def check_and_add_ifaces():
-    ifconfig_out = subprocess.check_output(['ifconfig'])
-    iface_list = re.findall(r'^(\S+)', ifconfig_out, re.S | re.M)
-    ifaces = set(iface_list)
-    found = True
-    for i in xrange((NUM_IFACES + 1) * 2):
-        iface_name = "veth" + str(i)
-        if iface_name not in ifaces:
-            found = False
-            break
-
-    if found:
+    if check_ifaces(DEFAULT_IFACES):
         return
 
     warn("Some veth interfaces missing, creating them")
     veth_setup_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                   'tools', 'veth_setup.sh')
+                                   'p4testutils', 'veth_setup.sh')
     try:
-        subprocess.check_call([veth_setup_path, str((NUM_IFACES + 1) * 2)])
+        subprocess.check_call([veth_setup_path, str((DEFAULT_NUM_IFACES + 1) * 2)])
     except subprocess.CalledProcessError:
         error("Failed to create veth interfaces")
         sys.exit(1)
@@ -423,8 +416,10 @@ def main():
 
     port_map = OrderedDict()
     if port_map_path is None:
-        for iface_idx in xrange(NUM_IFACES):
+        for iface_idx in xrange(DEFAULT_NUM_IFACES):
             port_map[iface_idx] = 'veth{}'.format(2 * iface_idx + 1)
+        # Ethernet CPU port
+        port_map[64] = "veth251"
         check_and_add_ifaces()
     else:
         import json
