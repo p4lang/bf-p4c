@@ -16,7 +16,9 @@ LDCONFIG=ldconfig
 LDLIB_EXT=so
 
 install_python_packages() {
-    $SUDO pip install --upgrade pip
+    # do not upgrade pip until Ubuntu sorts out their issues
+    # If you have already upgraded, do: sudo apt-get remove python-pip python-pip-whl
+    # $SUDO pip install --upgrade pip
     $SUDO pip install setuptools || die "Failed to install needed packages"
     $SUDO pip install ply || die "Failed to install needed packages"
     $SUDO pip install jsonschema || die "Failed to install needed packages"
