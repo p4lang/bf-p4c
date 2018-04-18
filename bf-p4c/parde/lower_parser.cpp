@@ -950,12 +950,12 @@ struct InsertClotChecksums : public ParserModifier {
         return csum;
     }
 
-    bool preorder(IR::BFN::LoweredParserState* state) override {
+    bool preorder(IR::BFN::LoweredParserState* /* state */) override {
         allocated_in_state = 0;
         return true;
     }
 
-    void postorder(IR::BFN::LoweredParserState* state) override {
+    void postorder(IR::BFN::LoweredParserState* /* state */) override {
         curr_id += allocated_in_state;
         allocated_in_state = 0;
     }
@@ -1308,6 +1308,7 @@ class ExtractorAllocator {
      * Used by the allocator to split a big state.
      */
     struct MatchPrimitives {
+        MatchPrimitives() { }
         MatchPrimitives(const IR::Vector<IR::BFN::LoweredParserPrimitive>& ext,
                         const IR::Vector<IR::BFN::LoweredSave>& sa, int sft)
             : extracts(ext), saves(sa), shift(sft) { }
@@ -1417,6 +1418,159 @@ class ExtractorAllocator {
         BUG("Impossible constant value write in parser: %1%", value);
     }
 
+    struct SplitResult {
+        // Splitted out Primitives
+        IR::Vector<IR::BFN::LoweredParserPrimitive>     allocatedExtracts;
+        IR::Vector<IR::BFN::LoweredSave>                allocatedSaves;
+        // Rest Primitives;
+        std::vector<const IR::BFN::LoweredExtractPhv*>  remainingPhvExtracts;
+        std::vector<const IR::BFN::LoweredExtractClot*> remainingClotExtracts;
+        std::vector<const IR::BFN::LoweredSave*>        remainingSaves;
+        // Useful statics of result.
+        nw_byteinterval remainingBytes;
+        nw_byteinterval extractedInterval;
+    };
+
+    /// Split out a set of primitives that can be done in one state, limited by
+    /// bandwidth and buffer size. Remaining extracts and saves are returned as
+    /// well, along with the interval of remaining bytes and interval extracted
+    /// bytes. Side-effect free.
+    SplitResult splitOneByBandwidth(
+            const std::vector<const IR::BFN::LoweredExtractPhv*>& extractPhvs,
+            const std::vector<const IR::BFN::LoweredExtractClot*>& extractClots,
+            const std::vector<const IR::BFN::LoweredSave*>& saves) {
+        SplitResult rst;
+        auto& pardeSpec = Device::pardeSpec();
+        int inputBufferLastByte = pardeSpec.byteInputBufferSize() - 1;
+        // Allocate. We have a limited number of extractions of each size per
+        // state. We also ensure that we don't overflow the input buffer.
+        if (Device::currentDevice() == "Tofino") {
+            std::map<size_t, unsigned> allocatedExtractorsBySize;
+            for (auto* extract : extractPhvs) {
+                nw_byteinterval byteInterval;
+                size_t use_extractor = 0;
+                unsigned n_extractor_used = 1;
+                if (auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>()) {
+                    use_extractor = extract->dest->container.size();
+                    n_extractor_used = 1;
+                    byteInterval = source->byteInterval();
+                } else if (auto* source = extract->source->to<IR::BFN::LoweredBufferRVal>()) {
+                    use_extractor = extract->dest->container.size();
+                    n_extractor_used = 1;
+                } else if (auto* cons = extract->source->to<IR::BFN::LoweredConstantRVal>()) {
+                    int container_size = extract->dest->container.size();
+                    int value = cons->constant;
+                    std::tie(use_extractor, n_extractor_used) =
+                        calcConstantExtractorUses(value, container_size);
+                } else {
+                    BUG("Extract to unknown source: %1%", extract);
+                }
+
+                bool extractorsAvail = true;
+                if (n_extractor_used &&
+                    allocatedExtractorsBySize[use_extractor] + n_extractor_used >
+                    pardeSpec.extractorSpec().at(use_extractor)) {
+                    extractorsAvail = false; }
+
+                if (!extractorsAvail || byteInterval.hiByte() > inputBufferLastByte) {
+                    rst.remainingPhvExtracts.push_back(extract);
+                    rst.remainingBytes = rst.remainingBytes.unionWith(byteInterval);
+                    continue;
+                }
+                rst.extractedInterval |= byteInterval;
+                if (extract->dest)
+                    allocatedExtractorsBySize[extract->dest->container.size()] += n_extractor_used;
+                rst.allocatedExtracts.push_back(extract);
+            }
+
+            // Allocate saves as long as the source of save is inside the input buffer.
+            // Note that input buffer required bytes are calculated by assembler, so
+            // it does not matter even if save source is not inside the extracted bytes.
+            // Also, save source does not need to update neither remainingBytes nor
+            // extractedBytes, it does not affect actual shift byte.
+            for (auto* save : saves) {
+                const auto& source = save->source->byteInterval();
+                if (source.hiByte() > inputBufferLastByte)
+                    rst.remainingSaves.push_back(save);
+                else
+                    rst.allocatedSaves.push_back(save);
+            }
+#if HAVE_JBAY
+        } else if (Device::currentDevice() == "JBay") {
+            // JBay has one size, 16-bit extractors
+            unsigned allocatedExtractors = 0;
+            unsigned totalExtractors = pardeSpec.extractorSpec().at(16);
+
+            bool extractorsAvail = true;
+            for (auto* extract : extractPhvs) {
+                if (extract->dest) {
+                    if (allocatedExtractors == totalExtractors)
+                    extractorsAvail = false;
+                }
+
+                const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
+                    ? extract->source->to<IR::BFN::LoweredPacketRVal>()->byteInterval()
+                    : nw_byteinterval();
+
+                if (!extractorsAvail ||
+                    byteInterval.hiByte() > inputBufferLastByte) {
+                    rst.remainingPhvExtracts.push_back(extract);
+                    rst.remainingBytes = rst.remainingBytes.unionWith(byteInterval);
+                    continue;
+                }
+
+                // TODO(yumin): Does Jbay has same limitation as tofino when extract constants?
+                // If it does, we need to handle it like what we did on tofino.
+                if (extract->dest) {
+                    switch (extract->dest->container.size()) {
+                    case 8:  allocatedExtractors++;  break;
+                    case 16: allocatedExtractors++;  break;
+                    case 32: allocatedExtractors+=2; break;
+                    default: BUG("Unknown container size");
+                    }
+                }
+
+                // XXX(zma) we could pack two 8-bit extract into a single exact
+                // if the two containers are an even-odd pair.
+                rst.extractedInterval |= byteInterval;
+                rst.allocatedExtracts.push_back(extract);
+            }
+
+            for (auto* extract : extractClots) {
+                const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
+                    ? extract->source->to<IR::BFN::LoweredPacketRVal>()->byteInterval()
+                    : nw_byteinterval();
+
+                if (byteInterval.loByte() > inputBufferLastByte &&
+                    byteInterval.hiByte() > inputBufferLastByte) {
+                    rst.remainingClotExtracts.push_back(extract);
+                    rst.remainingBytes = rst.remainingBytes.unionWith(byteInterval);
+                    continue;
+                }
+
+                if (byteInterval.hiByte() > inputBufferLastByte) {
+                    nw_byteinterval remain(pardeSpec.byteInputBufferSize(), byteInterval.hi);
+                    auto rval = new IR::BFN::LoweredPacketRVal(*toClosedRange(remain));
+                    rst.remainingPhvExtracts.push_back(new IR::BFN::LoweredExtractPhv(rval));
+                    rst.remainingBytes = rst.remainingBytes.unionWith(remain);
+                }
+
+                rst.extractedInterval |= byteInterval;
+                rst.allocatedExtracts.push_back(extract);
+            }
+
+            for (auto* save : saves) {
+                const auto& source = save->source->byteInterval();
+                if (source.hiByte() > inputBufferLastByte)
+                    rst.remainingSaves.push_back(save);
+                else
+                    rst.allocatedSaves.push_back(save);
+            }
+#endif  // HAVE_JBAY
+        }
+        return rst;
+    }
+
     /**
      * Allocate as many parser primitives as will fit into a single state,
      * respecting hardware limits.
@@ -1429,153 +1583,24 @@ class ExtractorAllocator {
      * and (2) the shift that the new state should have.
      */
     MatchPrimitives allocateOneState() {
-        auto& pardeSpec = Device::pardeSpec();
-
-        // Allocate. We have a limited number of extractions of each size per
-        // state. We also ensure that we don't overflow the input buffer.
-        IR::Vector<IR::BFN::LoweredParserPrimitive>     allocatedExtracts;
-        IR::Vector<IR::BFN::LoweredSave>                allocatedSaves;
-        std::vector<const IR::BFN::LoweredExtractPhv*>  remainingPhvExtracts;
-        std::vector<const IR::BFN::LoweredExtractClot*> remainingClotExtracts;
-        std::vector<const IR::BFN::LoweredSave*>        remainingSaves;
-        nw_byteinterval remainingBytes;
-        nw_byteinterval extractedInterval;
-
-        if (Device::currentDevice() == "Tofino") {
-            std::map<size_t, unsigned> allocatedExtractorsBySize;
-            for (auto* extract : extractPhvs) {
-                nw_byteinterval byteInterval;
-                size_t use_extractor = 0;
-                unsigned n_extractor_used = 0;
-                if (auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>()) {
-                    use_extractor = extract->dest->container.size();
-                    n_extractor_used = 1;
-                    byteInterval = source->byteInterval();
-                } else if (auto* cons = extract->source->to<IR::BFN::LoweredConstantRVal>()) {
-                    int container_size = extract->dest->container.size();
-                    int value = cons->constant;
-                    std::tie(use_extractor, n_extractor_used) =
-                        calcConstantExtractorUses(value, container_size);
-                }
-
-                bool extractorsAvail = true;
-                if (n_extractor_used &&
-                    allocatedExtractorsBySize[use_extractor] + n_extractor_used >
-                    pardeSpec.extractorSpec().at(use_extractor)) {
-                    extractorsAvail = false; }
-
-                if (!extractorsAvail ||
-                    byteInterval.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
-                    remainingPhvExtracts.push_back(extract);
-                    remainingBytes = remainingBytes.unionWith(byteInterval);
-                    continue;
-                }
-                extractedInterval |= byteInterval;
-                if (extract->dest)
-                    allocatedExtractorsBySize[extract->dest->container.size()]++;
-                allocatedExtracts.push_back(extract);
-            }
-
-            // Allocate saves as long as the source of save is inside the input buffer.
-            // Note that input buffer required bytes are calculated by assembler, so
-            // it does not matter even if save source is not inside the extracted bytes.
-            // Also, save source does not need to update neither remainingBytes nor
-            // extractedBytes, it does not affect actual shift byte.
-            for (auto* save : saves) {
-                const auto& source = save->source->byteInterval();
-                if (source.hiByte() > pardeSpec.byteInputBufferSize() - 1)
-                    remainingSaves.push_back(save);
-                else
-                    allocatedSaves.push_back(save);
-            }
-#if HAVE_JBAY
-        } else if (Device::currentDevice() == "JBay") {
-            // JBay has one size, 16-bit extractors
-            unsigned allocatedExtractors = 0;
-            unsigned totalExtractors = pardeSpec.extractorSpec().at(16);
-
-            bool extractorsAvail = true;
-            for (auto* extract : extractPhvs) {
-                if (extract->dest) {
-                    if (allocatedExtractors == totalExtractors)
-                        extractorsAvail = false;
-                }
-
-                const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
-                                        ? extract->source->to<IR::BFN::LoweredPacketRVal>()
-                                                 ->byteInterval()
-                                        : nw_byteinterval();
-
-                if (!extractorsAvail ||
-                    byteInterval.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
-                    remainingPhvExtracts.push_back(extract);
-                    remainingBytes = remainingBytes.unionWith(byteInterval);
-                    continue;
-                }
-
-                if (extract->dest) {
-                    switch (extract->dest->container.size()) {
-                        case 8:  allocatedExtractors++;  break;
-                        case 16: allocatedExtractors++;  break;
-                        case 32: allocatedExtractors+=2; break;
-                        default: BUG("Unknown container size");
-                    }
-                }
-
-                // XXX(zma) we could pack two 8-bit extract into a single exact
-                // if the two containers are an even-odd pair.
-                extractedInterval |= byteInterval;
-                allocatedExtracts.push_back(extract);
-            }
-
-            for (auto* extract : extractClots) {
-                const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
-                                        ? extract->source->to<IR::BFN::LoweredPacketRVal>()
-                                                 ->byteInterval()
-                                        : nw_byteinterval();
-
-                if ((byteInterval.loByte() > pardeSpec.byteInputBufferSize() - 1) &&
-                    (byteInterval.hiByte() > pardeSpec.byteInputBufferSize() - 1)) {
-                    remainingClotExtracts.push_back(extract);
-                    remainingBytes = remainingBytes.unionWith(byteInterval);
-                    continue;
-                }
-
-                if (byteInterval.hiByte() > pardeSpec.byteInputBufferSize() - 1) {
-                    nw_byteinterval remain(pardeSpec.byteInputBufferSize(), byteInterval.hi);
-                    auto rval = new IR::BFN::LoweredPacketRVal(*toClosedRange(remain));
-                    remainingPhvExtracts.push_back(new IR::BFN::LoweredExtractPhv(rval));
-                    remainingBytes = remainingBytes.unionWith(remain);
-                }
-
-                extractedInterval |= byteInterval;
-                allocatedExtracts.push_back(extract);
-            }
-            extractClots.clear();
-
-            for (auto* save : saves) {
-                const auto& source = save->source->byteInterval();
-                if (source.hiByte() > pardeSpec.byteInputBufferSize() - 1)
-                    remainingSaves.push_back(save);
-                else
-                    allocatedSaves.push_back(save);
-            }
-#endif  // HAVE_JBAY
-        }
+        // TODO(yumin): currently checksums are not handled in the split state part.
+        // so as long as the splitted state use checksum, checksum primitives will be
+        // lost now.
+        auto rst = splitOneByBandwidth(extractPhvs, extractClots, saves);
 
         // If there is no more extract, calculate the actual shift for this state.
         // If remaining save falls into 32 byte range, then it's fine. If it does not
         // We need a new state for it.
-        current_input_buffer |= extractedInterval;
+        current_input_buffer |= rst.extractedInterval;
         int byteActualShift = 0;
-        if (remainingPhvExtracts.empty()) {
+        if (rst.remainingPhvExtracts.empty()) {
             byteActualShift = shift_required - shifted;
         } else {
             // If no more remaining extractions, just shift out the whole input buffer,
             // otherwise, shift until the first byte of the remaining is at head.
-            byteActualShift = remainingBytes.empty()
+            byteActualShift = rst.remainingBytes.empty()
                 ? current_input_buffer.hiByte() + 1
-                : std::min(remainingBytes.loByte(), current_input_buffer.hiByte() + 1);
+                : std::min(rst.remainingBytes.loByte(), current_input_buffer.hiByte() + 1);
         }
 
         // TODO(yumin): currently, phv allocation might generate out-of-end allocation
@@ -1599,22 +1624,22 @@ class ExtractorAllocator {
 
         // Shift up all the remaining extractions.
         extractPhvs.clear();
-        for (auto* extract : remainingPhvExtracts)
+        for (auto* extract : rst.remainingPhvExtracts)
             extractPhvs.push_back(leftShiftExtract(extract, byteActualShift));
 
         extractClots.clear();
-        for (auto* extract : remainingClotExtracts)
+        for (auto* extract : rst.remainingClotExtracts)
             extractClots.push_back(leftShiftExtract(extract, byteActualShift));
 
         saves.clear();
-        for (auto* save : remainingSaves)
+        for (auto* save : rst.remainingSaves)
             saves.push_back(leftShiftSave(save, byteActualShift));
 
         current_input_buffer = nw_byteinterval(
                 StartLen(0, current_input_buffer.hiByte() + 1 - byteActualShift));
 
         shifted += byteActualShift;
-        return MatchPrimitives(allocatedExtracts, allocatedSaves, byteActualShift);
+        return MatchPrimitives(rst.allocatedExtracts, rst.allocatedSaves, byteActualShift);
     }
 
  private:
@@ -1641,18 +1666,24 @@ class SplitBigStates : public ParserModifier {
         return ParserModifier::init_apply(root);
     }
 
-    /// return true if all branch need to be splitted. Only in a rare case that only part of
-    /// matches need to split, which is caused by that they have late-in-buffer save that
-    /// has to be done in a new state.
-    bool needSplitState(const IR::BFN::LoweredParserState* state) {
+    /// return the buffer size of first state if all branch need to be splitted.
+    /// Only in a rare case that only part of matches need to split, which is
+    /// caused by that they have late-in-buffer save that has to be done in a new state.
+    boost::optional<int> needSplitState(const IR::BFN::LoweredParserState* state) {
         bool allNeedSplitState = true;
+        int firstStateShift = (std::numeric_limits<int>::max)();
         for (const auto* match : state->match) {
             ExtractorAllocator allocator(state->name, match);
-            allocator.allocateOneState();
+            auto rst = allocator.allocateOneState();
+            firstStateShift = std::min(rst.shift, firstStateShift);
             if (!allocator.hasMoreExtracts()) {
                 allNeedSplitState = false; }
         }
-        return allNeedSplitState;
+        if (allNeedSplitState) {
+            return firstStateShift;
+        } else {
+            return boost::none;
+        }
     }
 
     /// return the index in the input buffer that primitives are common, if null, then
@@ -1682,133 +1713,140 @@ class SplitBigStates : public ParserModifier {
         // This will catch the case when these is no save at all.
         for (const auto* match : state->match) {
             earliest_conflict = std::min(earliest_conflict, match->shift); }
-
-        // If the conflicting point is in the middle of other primitives, move
-        // the conflicting point to lower position.
-        for (const auto* match : state->match) {
-            for (const auto* prim : match->statements) {
-                auto range = operatingRange(prim);
-                if (range && (*range).loByte() < earliest_conflict
-                    && earliest_conflict <= (*range).hiByte()) {
-                    earliest_conflict = (*range).loByte();
-                }
-            }
-            // TODO(yumin): checksum.
-        }
-
         return earliest_conflict;
     }
 
-    /// return the closed range on the input buffer that this primitive needs.
-    boost::optional<nw_byterange> operatingRange(const IR::BFN::LoweredParserPrimitive* prim) {
-        if (auto* phv = prim->to<IR::BFN::LoweredExtractPhv>()) {
-            if (auto* source = phv->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
-                return source->extractedBytes();
-            } else {
-                // For all other case, they do not need anything from input buffer.
-                return boost::none;
-            }
-        } else if (auto* clot = prim->to<IR::BFN::LoweredExtractClot>()) {
-            return clot->source->extractedBytes();
-        } else if (auto* save = prim->to<IR::BFN::LoweredSave>()) {
-            return save->source->extractedBytes();
-        } else if (/* auto* check_sum = */prim->to<IR::BFN::LoweredParserChecksum>()) {
-            // TODO(yumin): checksum.
-            return boost::none;
-        } else {
-            BUG("Unknown primitives %1%", prim);
-            return boost::none;
-        }
-    }
+    void
+    addTailStatePrimitives(IR::BFN::LoweredParserState* tailState, int until) {
+        IR::Vector<IR::BFN::LoweredParserMatch> matches;
+        for (const auto* match : tailState->match) {
+            std::vector<ExtractorAllocator::MatchPrimitives> tailStatePrimitives;
+            std::vector<const IR::BFN::LoweredSave*> common_state_allocated_saves;
+            int shifted = 0;  // shifted before tail state.
 
-    /// return true is this primitive does not need anything later than @p until.
-    bool validBefore(const IR::BFN::LoweredParserPrimitive* prim, int until) {
-        auto range = operatingRange(prim);
-        if (!range) return true;
-        if ((*range).hiByte() < until) {
-            return true;
-        } else if ((*range).loByte() < until && until <= (*range).hiByte()) {
-            BUG("Wrong earliest conflicting point calculation.");
-            return false;
-        } else {
-            return false;
-        }
-    }
-
-    /// Remove all primitives that are already moved to common state.
-    IR::BFN::LoweredParserMatch*
-    truncateMatchBefore(const IR::BFN::LoweredParserMatch* match, int until) {
-        auto* new_match =
-            new IR::BFN::LoweredParserMatch(match->value, match->shift - until, match->next);
-        for (const auto* prim : match->statements) {
-            if (!validBefore(prim, until)) {
-                if (auto* phv = prim->to<IR::BFN::LoweredExtractPhv>()) {
-                    new_match->statements.push_back(leftShiftExtract(phv, until));
-                } else if (auto* clot = prim->to<IR::BFN::LoweredExtractClot>()) {
-                    new_match->statements.push_back(leftShiftExtract(clot, until));
+            // collect tail state primitives
+            ExtractorAllocator allocator(tailState->name + "$SplitTailState", match);
+            while (allocator.hasMoreExtracts()) {
+                auto rst = allocator.allocateOneState();
+                // should be in the tail state.
+                if (!allocator.hasMoreExtracts() || shifted + rst.shift > until) {
+                    tailStatePrimitives.push_back(rst);
                 } else {
-                    BUG("Unsupported primitive: %1%", prim);
+                    // because allocateOneState will try to allocate saves as long as
+                    // it is possible to be reached in the input buffer, saves might be
+                    // allocated to previous common state and ignored. So we need to carry
+                    // them to the tail state.
+                    for (const auto* save : rst.saves) {
+                        auto* original_save = leftShiftSave(save, -shifted);
+                        if (original_save->source->range.hiByte() >= until) {
+                            common_state_allocated_saves.push_back(original_save); }
+                    }
+                    shifted += rst.shift;
                 }
             }
+
+            // create new match
+            auto* truncatedMatch = match->clone();
+            truncatedMatch->statements.clear();
+            truncatedMatch->saves.clear();
+            truncatedMatch->shift = match->shift - shifted;
+
+            // add saves that were allocated to common state but should be in tail.
+            for (auto* save : common_state_allocated_saves) {
+                truncatedMatch->saves.push_back(leftShiftSave(save, shifted)); }
+
+            // add primitives to new match
+            int accumulatedShift = 0;  // shifted in the tailed tail while crush it into one.
+            for (const auto& primitives : tailStatePrimitives) {
+                for (auto* prim : primitives.extracts) {
+                    if (auto* extractPhv = prim->to<IR::BFN::LoweredExtractPhv>()) {
+                        truncatedMatch->statements.push_back(
+                                leftShiftExtract(extractPhv, -accumulatedShift));
+                    } else if (auto* extractClot = prim->to<IR::BFN::LoweredExtractClot>()) {
+                        truncatedMatch->statements.push_back(
+                                leftShiftExtract(extractClot, -accumulatedShift));
+                    } else {
+                        BUG("unknown primitive when create tail state: %1%", prim);
+                    }
+                }
+                for (auto* save : primitives.saves) {
+                    truncatedMatch->saves.push_back(
+                            leftShiftSave(save, -accumulatedShift));
+                accumulatedShift += primitives.shift; }
+            }
+            matches.push_back(truncatedMatch);
         }
-
-        for (const auto* prim : match->saves) {
-            if (!validBefore(prim, until)) {
-                new_match->saves.push_back(leftShiftSave(prim, until)); } }
-
-        // TODO(yumin): checksum.
-        for (const auto* prim : match->checksums) {
-            if (!validBefore(prim, until)) {
-                new_match->checksums.push_back(prim); } }
-
-        return new_match;
+        tailState->match = matches;
     }
 
-    /// Add all common primitives to the target match.
-    void addCommonPrimitives(IR::BFN::LoweredParserMatch* target,
-                             const IR::BFN::LoweredParserMatch* source, int until) {
-        for (auto* prim : source->statements) {
-            if (validBefore(prim, until)) {
-                target->statements.push_back(prim); } }
+    /// Set primitives in @p common, as its the only match of the common state.
+    void
+    addCommonStatePrimitives(IR::BFN::LoweredParserMatch* common,
+                             const IR::BFN::LoweredParserState* sampleState,
+                             int until) {
+        const IR::BFN::LoweredParserMatch* sampleMatch = *(sampleState->match.begin());
+        ExtractorAllocator allocator(sampleState->name + "$SplitCommonState", sampleMatch);
+        int shifted = 0;
+        while (allocator.hasMoreExtracts()) {
+            auto rst = allocator.allocateOneState();
+            // The tail primitives
+            if (!allocator.hasMoreExtracts() || rst.shift + shifted > until) {
+                break; }
 
-        for (auto* prim : source->saves) {
-            if (validBefore(prim, until)) {
-                target->saves.push_back(prim); } }
+            // Add primitives to common
+            for (auto* prim : rst.extracts) {
+                    if (auto* extractPhv = prim->to<IR::BFN::LoweredExtractPhv>()) {
+                        common->statements.push_back(
+                                leftShiftExtract(extractPhv, -shifted));
+                    } else if (auto* extractClot = prim->to<IR::BFN::LoweredExtractClot>()) {
+                        common->statements.push_back(
+                                leftShiftExtract(extractClot, -shifted));
+                    } else {
+                        BUG("unknown primitive when create common state: %1%", prim);
+                    }
+            }
+            for (auto* save : rst.saves) {
+                // as long as this save is part of common part.
+                if (save->source->range.hiByte() < until) {
+                    common->saves.push_back(leftShiftSave(save, -shifted));
+                }
+            }
 
-        // TODO(yumin): checksum.
-        for (auto* prim : source->checksums) {
-            if (validBefore(prim, until)) {
-                target->checksums.push_back(prim); } }
-
-        target->shift = until;
+            shifted += rst.shift;
+        }
+        common->shift = shifted;
     }
 
     /// Split out common primitives to a common state and return this state.
     /// Splitted primitives will be removed from original state and shift are adjusted.
+    /// @return a state with common primitives and its next state is the truncated original
+    /// state.
     IR::BFN::LoweredParserState*
-    splitOutCommonState(IR::BFN::LoweredParserState* state, int until,
-                        const std::vector<const IR::BFN::LoweredSave*>& extra_saves) {
-        std::vector<const IR::BFN::LoweredParserPrimitive*> extracts;
-        std::vector<const IR::BFN::LoweredSave*> saves(extra_saves.begin(), extra_saves.end());
-
+    splitOutCommonState(IR::BFN::LoweredParserState* state,
+                        const std::vector<const IR::BFN::LoweredSave*>& extra_saves,
+                        int common_until) {
+        auto state_name =
+            cstring::make_unique(stateNames, state->name + ".$common");
+        stateNames.insert(state_name);
         auto* common_state =
-            new IR::BFN::LoweredParserState(state->name + ".$common", state->gress);
+            new IR::BFN::LoweredParserState(state_name, state->gress);
         auto* only_match =
             new IR::BFN::LoweredParserMatch(match_t(), 0, state);
-        only_match->shift = until;
         common_state->match.push_back(only_match);
 
+        // Add extra saves to this match.
+        for (auto* save : extra_saves) {
+            LOG5("Adding leftover saves:" << save);
+            only_match->saves.push_back(save); }
+
         // save common part to the only match.
-        addCommonPrimitives(only_match, *(state->match.begin()), until);
+        addCommonStatePrimitives(only_match, state, common_until);
         LOG5("Default Match Of Common State: " << only_match);
 
-        // remove common part in all branches and adjust shift
-        IR::Vector<IR::BFN::LoweredParserMatch> truncatedMatches;
-        for (auto* match : state->match) {
-            auto* truncated_match = truncateMatchBefore(match, until);
-            LOG5("Truncated Match: " << truncated_match);
-            truncatedMatches.push_back(truncated_match); }
-        state->match = truncatedMatches;
+        // add primitives to tail state part.
+        addTailStatePrimitives(state, common_until);
+        LOG5("Truncated Tail State: " << state);
+
         return common_state;
     }
 
@@ -1818,17 +1856,34 @@ class SplitBigStates : public ParserModifier {
         // If this state does not need to split, and there is no extra saves, do not
         // generate a common primitive state for it, because that would increase the number
         // of states.
-        if (extra_saves.empty() && !needSplitState(state)) {
-            LOG1("Does not have extra saves nor need to split:" << state->name);
-            return state->clone(); }
-
-        // Foreach match, the only difference it could have is the different saves.
-        // So we find the first different save, and push every thing before into
-        // the new common state;
-        LOG5("Generating common state for: " << state->name);
+        auto needSplit = needSplitState(state);
         int common_until = calcEarliestConflict(state);
-        LOG5("Common until: " << common_until);
-        return splitOutCommonState(state->clone(), common_until, extra_saves);
+        LOG5("Primitives are common until: " << common_until);
+
+        if (extra_saves.empty()) {
+            if (!needSplit) {
+                LOG1("Does not have extra saves nor need to split: " << state->name);
+                return state->clone();
+            } else if (*needSplit > common_until) {
+                // If there are different saves between matches in the first
+                // splitted state, then, we can not create any common state.
+                // TODO(yumin): we can create a smaller common state to hold
+                // primitives before common_until, by using the splitOneByBandwidth
+                // with input buffer size limited to common_until.
+                LOG1("Cannot create common state: " << state->name);
+                return state->clone();
+            }
+        }
+
+        for (const auto* save : extra_saves) {
+            BUG_CHECK(save->source->range.hiByte() < common_until,
+                      "complicated save not supported: %1% in %2%", save, state->name);
+        }
+
+        // Spliting state will not work efficiently if the the pre-sliced common state has
+        // too many extracts that some of them can be done in the last branching state,
+        // So we leave those primitives that can be done in he last state to the last state.
+        return splitOutCommonState(state->clone(), extra_saves, common_until);
     }
 
     /// Add common state when needed. Then preorder on match will be executed on new state.
