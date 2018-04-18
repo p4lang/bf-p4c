@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "bf-p4c/lib/vertex_weighted_coloring.h"
+#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
 #include <vector>
 #include <random>
