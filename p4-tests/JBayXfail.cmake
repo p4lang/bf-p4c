@@ -9,7 +9,6 @@ p4c_add_xfail_reason("jbay"
   "ERROR:PTF runner:Error when running PTF tests"
   extensions/p4_tests/p4_16/ONLab_packetio.p4
   extensions/p4_tests/p4_16/ingress_checksum.p4
-  extensions/p4_tests/p4_16/adata_constant_out_of_range_for_immediate.p4
   )
 
 # These tests compile successfuly and fail in the model when running the STF test
@@ -226,11 +225,9 @@ p4c_add_xfail_reason("jbay"
 
 p4c_add_xfail_reason("jbay"
   "AssertionError: Expected packet was not received on device .*, port .*"
-  extensions/p4_tests/p4_16/adata_constant_out_of_range_for_immediate.p4
   extensions/p4_tests/p4_16/ingress_checksum.p4
   extensions/p4_tests/p4_16/ONLab_packetio.p4
   extensions/p4_tests/p4_14/easy.p4
-  extensions/p4_tests/p4_14/easy_no_match_with_gateway.p4
   extensions/p4_tests/p4_14/easy_no_match.p4
   fabric.p4
   tor.p4
