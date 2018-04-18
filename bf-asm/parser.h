@@ -115,6 +115,8 @@ class Parser : public Section {
         struct Match {
             int         lineno;
             match_t     match;
+            std::string value_set_name;
+            int         value_set_size = 0;
             int         counter = 0, offset = 0, shift = 0, buf_req = -1;
             bool        counter_load = false, counter_reset = false, offset_reset = false;
             CounterInit *counter_exp;
@@ -171,6 +173,8 @@ class Parser : public Section {
             template<class REGS> int write_future_config(REGS &, Parser *, State *, int) const;
             template<class REGS> void write_lookup_config(REGS &, State *, int) const;
             template<class EA_REGS> void write_counter_config(EA_REGS &) const;
+            template<class REGS> void write_row_config(REGS &, Parser *, State *, int,
+                                                       Match *, json::map &);
             template<class REGS> void write_config(REGS &, Parser *, State *, Match *, json::map &);
         };
 

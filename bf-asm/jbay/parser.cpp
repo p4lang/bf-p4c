@@ -29,13 +29,16 @@ template<> void Parser::State::Match::write_lookup_config(Target::JBay::parser_r
                                                           State *state, int r) const {
     auto &row = regs.memory[state->gress].ml_tcam_row[r];
     match_t lookup = { 0, 0 };
+    unsigned dont_care = 0;
     for (int i = 0; i < 4; i++) {
         lookup.word0 <<= 8;
         lookup.word1 <<= 8;
+        dont_care <<= 8;
         if (state->key.data[i].bit >= 0) {
             lookup.word0 |= ((match.word0 >> state->key.data[i].bit) & 0xff);
-            lookup.word1 |= ((match.word1 >> state->key.data[i].bit) & 0xff); } }
-    unsigned dont_care = ~(lookup.word0 | lookup.word1);
+            lookup.word1 |= ((match.word1 >> state->key.data[i].bit) & 0xff);
+        } else {
+            dont_care |= 0xff; } }
     lookup.word0 |= dont_care;
     lookup.word1 |= dont_care;
     for (int i = 3; i >= 0; i--) {

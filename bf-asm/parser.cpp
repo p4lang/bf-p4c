@@ -941,6 +941,18 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
         } else if (kv.key.type == tBIGINT && kv.value.type == tMAP) {
             match_t m = { ~(unsigned)kv.key.bigi.data[0], (unsigned)kv.key.bigi.data[0] };
             match.emplace_back(kv.key.lineno, gress, m, kv.value.map);
+        } else if (kv.key == "value_set" && kv.value.type == tMAP) {
+            match_t m = { 0, 0 };
+            match.emplace_back(kv.key.lineno, gress, m, kv.value.map);
+            if (kv.key.type == tCMD) {
+                if (CHECKTYPE(kv.key[1], tSTR))
+                    match.back().value_set_name = kv.key[1].s;
+                if (kv.key.vec.size > 2 && CHECKTYPE(kv.key[2], tINT))
+                    match.back().value_set_size = kv.key[2].i;
+                else
+                    match.back().value_set_size = 1;
+            } else
+                match.back().value_set_size = 1;
         } else if (kv.key.type == tMATCH) {
             if (!CHECKTYPE(kv.value, tMAP)) continue;
             match.emplace_back(kv.key.lineno, gress, kv.key.m, kv.value.map);
@@ -1044,12 +1056,22 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
             if (s.what > ~(~1U << (s.where->hi - s.where->lo)))
                 error(s.where.lineno, "Can't fit value %d in a %d bit phv slice",
                         s.what, (s.where->hi - s.where->lo + 1)); } }
-    for (auto &m : state->match) {
-        if (&m == this) break;
-        if (m.match == match) {
-            warning(lineno, "Can't match parser state due to previous match");
-            warning(m.lineno, "here");
-            break; } }
+    if (value_set_size == 0) {
+        uint64_t match_mask = (1ULL << state->key.width) - 1;
+        uint64_t not_covered = match_mask & ~(match.word0 | match.word1);
+        if (not_covered != 0) {
+            warning(lineno, "Match pattern does not cover all bits of match key, "
+                    "assuming the rest are don't care");
+            match.word0 |= not_covered;
+            match.word1 |= not_covered; }
+        if ((match.word1 & ~match.word0 & ~match_mask) != 0)
+            error(lineno, "Matching on bits not in the match of state %s", state->name.c_str());
+        for (auto &m : state->match) {
+            if (&m == this) break;
+            if (m.match == match) {
+                warning(lineno, "Can't match parser state due to previous match");
+                warning(m.lineno, "here");
+                break; } } }
     for (auto &c : csum)
         c.pass1(pa);
 }
@@ -1248,16 +1270,24 @@ void Parser::PriorityUpdate::write_config(REGS &action_row) {
 }
 
 template <class REGS>
-void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state, Match *def, json::map &ctxt_json) {
-    int row;
-    int max_off = -1;
-    if ((row = --pa->tcam_row_use[state->gress]) < 0) {
-        if (row == -1)
-            error(state->lineno, "Ran out of tcam space in %sgress parser",
-                  state->gress ? "e" : "in");
-        return; }
-    ctxt_json["tcam_rows"].to<json::vector>().push_back(row);
+void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state,
+                                        Match *def, json::map &ctxt_json) {
+    int row, count = 0;
+    do {
+        if ((row = --pa->tcam_row_use[state->gress]) < 0) {
+            if (row == -1)
+                error(state->lineno, "Ran out of tcam space in %sgress parser",
+                      state->gress ? "e" : "in");
+            return; }
+        ctxt_json["tcam_rows"].to<json::vector>().push_back(row);
+        write_row_config(regs, pa, state, row, def,ctxt_json);
+    } while (++count < value_set_size);
+}
 
+template <class REGS>
+void Parser::State::Match::write_row_config(REGS &regs, Parser *pa, State *state, int row,
+                                            Match *def, json::map &ctxt_json) {
+    int max_off = -1;
     write_lookup_config(regs, state, row);
 
     auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
@@ -1324,10 +1354,12 @@ void Parser::State::write_config(REGS &regs, Parser *pa, json::vector &ctxt_json
     LOG2(gress << " state " << name << " (" << stateno << ')');
     json::map state_cjson;
     state_cjson["parser_name"] = name;
-    state_cjson["uses_pvs"] = false;
+    bool uses_pvs = false;
     key.write_config(regs, state_cjson["match_registers"]);
-    for (auto i = match.begin(); i != match.end(); i++)
-        i->write_config(regs, pa, this, def, state_cjson);
+    for (auto i = match.begin(); i != match.end(); i++) {
+        if (i->value_set_size > 0) uses_pvs = true;
+        i->write_config(regs, pa, this, def, state_cjson); }
+    state_cjson["uses_pvs"] = uses_pvs;
     if (def) def->write_config(regs, pa, this, 0, state_cjson);
     for (auto idx : MatchIter(stateno)) {
         state_cjson["parser_state_id"] = idx;

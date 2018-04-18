@@ -95,6 +95,8 @@ parser [<thread>]:
                         # with variations (unary is highest precedence, followed by shift,
                         # mask(&), +/- lowest)
                     max_length: <constant>
+            value_set <name> <size:
+                # actions to perform for a value set of the given <name> and integer <size>
             default:
                 # actions to perform regardless of the match
             # if there is no 'default' tag in a state, anything that is not
