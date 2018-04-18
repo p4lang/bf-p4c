@@ -7,7 +7,6 @@ configure
 install-sh
 missing
 tags
-jbay_test_harness
 
 # Emacs auto-save
 *~
@@ -16,5 +15,3 @@ jbay_test_harness
 .*.sw*
 
 *.pyc
-
-bf-asm/simple_test_harness/jbay_test_harness

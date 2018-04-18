@@ -249,9 +249,9 @@ def start_model(model, out=None, context_json=None, port_map_path=None, device=N
     debug("Starting model: {}".format(' '.join(cmd)))
     return subprocess.Popen(cmd, stdout=out, stderr=out)
 
-def start_switchd(switchd, status_port, conf_path, with_pd = None, out=None, device=None):
+def start_switchd(switchd, status_port, conf_path, with_pd = None, out=None, device=None, installdir="/usr/local"):
     cmd = [switchd]
-    cmd.extend(['--install-dir', '/usr/local'])
+    cmd.extend(['--install-dir', installdir])
     cmd.extend(['--conf-file', conf_path])
     if device is not None and 'jbay' in device:
         cmd.extend(['--skip-hld', 'krt'])
@@ -262,7 +262,7 @@ def start_switchd(switchd, status_port, conf_path, with_pd = None, out=None, dev
         cmd.extend(['--no-pi'])
         cmd.extend(['--init-mode', 'cold'])
     cmd.append('--background')
-    debug("Starting model: {}".format(' '.join(cmd)))
+    debug("Starting switchd: {}".format(' '.join(cmd)))
     return subprocess.Popen(cmd, stdout=out, stderr=out)
 
 # From
@@ -455,8 +455,15 @@ def main():
             sys.exit(1)
         sys.exit(0)
 
-    BF_SWITCHD = findbin(top_builddir, 'BF_SWITCHD')
-    HARLYN_MODEL = findbin(top_builddir, 'HARLYN_MODEL')
+    BF_SWITCHD = findbin(top_builddir, 'BF_SWITCHD_' + device)
+    HARLYN_MODEL = findbin(top_builddir, 'HARLYN_MODEL_' + device)
+
+    # Extract the tools install directory based on the install path of bf_switchd
+    BFD_INSTALLDIR = os.path.dirname(os.path.dirname(BF_SWITCHD))
+
+    debug("Using bf_switchd from: {}".format(BF_SWITCHD))
+    debug("Using model from: {}".format(HARLYN_MODEL))
+    debug("Tools install directory is at: {}".format(BFD_INSTALLDIR))
 
     dirname = tempfile.mkdtemp(prefix=args.name)
     os.chmod(dirname, 0o777)
@@ -486,7 +493,8 @@ def main():
             switchd_p = start_switchd(BF_SWITCHD, switchd_status_port,
                                       conf_path, args.pdtest,
                                       out=switchd_out,
-                                      device=device)
+                                      device=device,
+                                      installdir=BFD_INSTALLDIR)
             processes["switchd"] = switchd_p
 
             success = wait_for_switchd(model_p, switchd_p, switchd_status_port)

@@ -116,26 +116,17 @@ macro(simple_test_setup_check device)
   if (NOT ENABLE_STF2PTF)
     # We run STF tests on the STF framework
     set(STF_SEARCH_PATHS
-      ${CMAKE_INSTALL_PREFIX}/bin
-      ${BFN_P4C_SOURCE_DIR}/../model/tests/simple_test_harness
-      ${BFN_P4C_SOURCE_DIR}/../model/build/tests/simple_test_harness
-      ${BFN_P4C_SOURCE_DIR}/../model/debug/tests/simple_test_harness
-      ${BFN_P4C_SOURCE_DIR}/bf-asm/simple_test_harness)
-
-    find_program(HARLYN_STF_${device}_GZ ${device}_test_harness.gz PATHS ${STF_SEARCH_PATHS})
-
-    if (HARLYN_STF_${device}_GZ)
-      MESSAGE (STATUS "${device}_test_harness.gz found at ${HARLYN_STF_${device}_GZ}, uncompressing file ...")
-      execute_process(COMMAND gunzip -kf ${HARLYN_STF_${device}_GZ})
-    endif()
+      ${BFN_P4C_SOURCE_DIR}/../${device}_install/bin
+      ${CMAKE_INSTALL_PREFIX}/bin)
 
     find_program(HARLYN_STF_${device} ${device}_test_harness PATHS ${STF_SEARCH_PATHS})
 
     if (HARLYN_STF_${device})
-      MESSAGE (STATUS "${device}_test_harness found at ${HARLYN_STF_${device}}.")
+      MESSAGE (STATUS "${device}_test_harness for ${device} found at ${HARLYN_STF_${device}}.")
     else()
-      MESSAGE (WARNING "STF tests need Harlyn ${device}_test_harness.\nLooked in ${STF_SEARCH_PATHS}.")
+      MESSAGE (WARNING "STF tests need Harlyn ${device}_test_harness for ${device}.\nLooked in ${STF_SEARCH_PATHS}.")
     endif()
+
   endif()
 endmacro(simple_test_setup_check)
 
@@ -143,13 +134,33 @@ macro(packet_test_setup_check device)
   # check for ptf
   find_program(PTF ptf PATHS ${CMAKE_INSTALL_PREFIX}/bin)
 
+  set(BF_SWITCHD_SEARCH_PATHS
+    ${BFN_P4C_SOURCE_DIR}/../${device}_install/bin
+    ${CMAKE_INSTALL_PREFIX}/bin)
+
   # check for bf_switchd
-  find_program(BF_SWITCHD bf_switchd PATHS ${CMAKE_INSTALL_PREFIX}/bin)
+  find_program(BF_SWITCHD_${device} bf_switchd PATHS ${BF_SWITCHD_SEARCH_PATHS} NO_DEFAULT_PATH)
+
+  if (BF_SWITCHD_${device})
+    MESSAGE (STATUS "bf-switchd for ${device} found at ${BF_SWITCHD_${device}}.")
+  else()
+    MESSAGE (WARNING "PTF tests need bf-switchd for ${device}.\nLooked in ${BF_SWITCHD_SEARCH_PATHS}.")
+  endif()
 
   # check for tofino-model
-  find_program(HARLYN_MODEL ${device}-model PATHS ${CMAKE_INSTALL_PREFIX}/bin)
+  set(HARLYN_MODEL_SEARCH_PATHS
+    ${BFN_P4C_SOURCE_DIR}/../${device}_install/bin
+    ${CMAKE_INSTALL_PREFIX}/bin)
+    
+  find_program(HARLYN_MODEL_${device} tofino-model PATHS ${HARLYN_MODEL_SEARCH_PATHS} NO_DEFAULT_PATH)
 
-  if (PTF AND BF_SWITCHD AND HARLYN_MODEL)
+  if (HARLYN_MODEL_${device})
+    MESSAGE (STATUS "tofino-model for ${device} found at ${HARLYN_MODEL_${device}}.")
+  else()
+    MESSAGE (WARNING "PTF tests need tofino-model for ${device}.\nLooked in ${HARLYN_MODEL_SEARCH_PATHS}.")
+  endif()
+
+  if (PTF AND BF_SWITCHD_${device} AND HARLYN_MODEL_${device})  
     set (PTF_REQUIREMENTS_MET TRUE)
     MESSAGE (STATUS "All PTF dependencies were found.")
   else()
@@ -158,11 +169,11 @@ macro(packet_test_setup_check device)
     if (NOT PTF)
       set (__err_str "${__err_str} the ptf binary")
     endif()
-    if (NOT BF_SWITCHD)
+    if (NOT BF_SWITCHD_${device})
       set (__err_str "${__err_str} and the bf_switchd binary")
     endif()
-    if (NOT HARLYN_MODEL)
-      set (__err_str "${__err_str} and the ${device}-model binary")
+    if (NOT HARLYN_MODEL_${device})
+      set (__err_str "${__err_str} and the tofino-model binary")
     endif()
     MESSAGE (WARNING "${__err_str}")
   endif()

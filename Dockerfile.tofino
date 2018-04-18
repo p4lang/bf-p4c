@@ -79,7 +79,6 @@ RUN /usr/local/bin/ccache --zero-stats && \
     apt-get autoremove --purge -y && \
     rm -rf ~/.cache/* ~/.ccache/* /var/cache/apt/* /var/lib/apt/lists/* && \
     rm -rf bf-asm/walle/build/* && \
-    rm -rf bf-asm/simple_test_harness/jbay_test_harness && \
     find . -name '*.o' -type f -delete && \
     find . -name '*.a' -type f -delete
 

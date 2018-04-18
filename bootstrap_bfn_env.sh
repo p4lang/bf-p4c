@@ -5,6 +5,60 @@ cd $(dirname $0)
 curdir=$(basename $PWD)
 topdir=$(dirname $PWD)
 
+keep_files=false
+no_tofino=false
+no_jbay=false
+
+show_help () {
+    echo >&2 "bootstrap_bfn_env script options"
+    echo >&2 "   -keep_files    keep the build repo and files"
+    echo >&2 "   -no_tofino     do not build tofino"
+    echo >&2 "   -no_jbay       do not build jbay"
+}
+
+while [ $# -gt 0 ]; do
+    case $1 in
+    -h|-help|--help)
+        show_help
+        exit 0
+        ;;
+    -keep_files|--keep_files)
+        keep_files=true
+        ;;
+    -no_tofino|--no_tofino)
+        no_tofino=true
+        ;;
+    -no_jbay|--no_jbay)
+        no_jbay=true
+        ;;
+    *)
+        echo "Invalid argument supplied"
+        show_help
+        exit 0
+        ;;
+    esac
+    shift
+done
+
+if [ $no_tofino = true ] && [ $no_jbay = true ]; then
+    echo "No target specified. Exiting"
+    exit 0
+fi
+
+if [ $no_tofino = false ]; then
+    tofino_installdir="$topdir/tofino_install"
+    if [ ! -d $tofino_installdir ]; then
+        $(mkdir $tofino_installdir)
+    fi
+fi
+
+if [ $no_jbay = false ]; then
+    jbay_installdir="$topdir/jbay_install"
+    if [ ! -d $jbay_installdir ]; then
+        $(mkdir $jbay_installdir)
+    fi
+fi
+
 os_deps=${topdir}/${curdir}/install_os_deps.sh
 if [ ! -x $os_deps ]; then
     echo "Can not find script to install OS dependencies: $os_deps"
@@ -46,8 +100,21 @@ pull_before_rebuild=false
 rebase_option=""
 
 cd $topdir
+need_manual_update=false
+for repodir in model bf-drivers PI; do
+    if [ -d $repodir ] && [ -d $repodir/.git ]; then
+        need_manual_update=true
+        echo >&2 "$repodir is a git repo; need to move it to $repodir/master or $repodir/jbay_main or remove it"
+    fi
+done
+
+if $need_manual_update; then
+    echo >&2 "Manual cleanup required before bootstrap can continue"
+    exit 1
+fi
+
 found=""
-for repo in behavioral-model model bf-syslibs bf-utils bf-drivers PI; do
+for repo in behavioral-model model/master model/jbay_main bf-syslibs bf-utils bf-drivers/master bf-drivers/jbay_master PI/master PI/jbay_master; do
     if [ -d $repo ]; then
         if [ -d $repo/.git ]; then
             found=$found$'\n'"$repo in $topdir/$repo"
@@ -67,7 +134,7 @@ else
     else
         reuse_asis=true
     fi
-    if ! $reuse_asis && confirm "Pull latest changes from master?"; then
+    if ! $reuse_asis && confirm "Pull latest changes?"; then
         pull_before_rebuild=true
         if confirm "Use --rebase option on pull?"; then
             rebase_option="--rebase"
@@ -123,7 +190,7 @@ if [ ! -r /usr/local/include/crafter.h -o ! -x /usr/local/lib/libcrafter.${LDLIB
     git clone https://github.com/pellegre/libcrafter
     cd libcrafter/libcrafter
     ./autogen.sh
-    make -j4 || die "Failed to build libcrafter"
+    make || die "Failed to build libcrafter"
     $SUDO make install
     $SUDO $LDCONFIG
     cd ../..
@@ -144,118 +211,225 @@ else
     echo "libcli already installed"
 fi
 
-### Drivers and their dependencies
+### bf-syslibs and bf-utils
 
 install_bf_repo () {
-    name=$1
-    x_path_check=$2
-    configure_flags=$3
-    if [ ! -d $name/.git ]; then
-        gitclone git@github.com:barefootnetworks/$name.git $name "brig-stable"
+    local bf_repo=$1
+    local branch=$2
+    local x_path_check=$3
+    local configure_flags=$4
+    if [ ! -d $bf_repo/.git ]; then
+        gitclone git@github.com:barefootnetworks/$bf_repo.git $bf_repo $branch
     elif $pull_before_rebuild; then
-        pushd $name >/dev/null
-        git pull $rebase_option origin brig-stable
+        pushd $bf_repo >/dev/null
+        git pull $rebase_option origin master
         popd >/dev/null
     fi
-    pushd $name >/dev/null
+    pushd $bf_repo >/dev/null
     builddir="."
     if $reuse_asis && [ -x "$x_path_check" ]; then
-        echo "Reusing $name as is"
+        echo "Reusing $bf_repo as is"
     else
         cd $builddir
         if [ ! -r Makefile ]; then
             ./autogen.sh
-            ./configure $configure_flags
+            ./configure $configure_flags --prefix=$tofino_installdir
         fi
         if $clean_before_rebuild; then
             make clean
         fi
-        make && \
-        $SUDO make install && \
-        $SUDO $LDCONFIG || \
-        die "Failed to install $name"
+        make
+        if [ $no_tofino = false ]; then
+            make install && \
+            $SUDO $LDCONFIG || \
+            die "Failed to install $bf_repo for device: tofino"
+        fi
+        if [ $no_jbay = false ]; then
+            # Re-configure for device: "jbay" and install in $jbay_installdir
+            ./configure $configure_flags --prefix=$jbay_installdir
+            make install && \
+            $SUDO $LDCONFIG || \
+            die "Failed to install $bf_repo for device: jbay"
+        fi
     fi
     popd >/dev/null
-    return 0
 }
 
-# build the drivers only on Linux
+# build the modules only on Linux
 if [ $(uname -s) == 'Linux' ]; then
-    install_bf_repo "bf-syslibs" "/usr/local/lib/libbfsys.${LDLIB_EXT}" ""
-    install_bf_repo "bf-utils" "/usr/local/lib/libbfutils.${LDLIB_EXT}" ""
+    install_bf_repo "bf-syslibs" "master" "$tofino_installdir/lib/libbfsys.${LDLIB_EXT}" ""
+    install_bf_repo "bf-utils" "master" "$tofino_installdir/lib/libbfutils.${LDLIB_EXT}" ""
 fi
 
-if [ ! -d PI/.git ]; then
-    gitclone git@github.com:p4lang/PI.git PI
-elif $pull_before_rebuild; then
-    pushd PI >/dev/null
-        git pull $rebase_option origin master
-        git submodule update --init --recursive
+# Get a specific branch of given repo
+get_repo () {
+    local repo_root=$1
+    local repo_name=$2
+    local dirname=$3
+    local branch=$4
+    if [ ! -d $repo_name ]; then
+        $(mkdir $repo_name)
+    fi
+    pushd $repo_name >/dev/null
+    if [ ! -d $dirname ]; then
+        gitclone git@github.com:$repo_root/$repo_name.git $dirname $branch
+    elif $pull_before_rebuild; then
+        pushd $dirname >/dev/null
+            git pull $rebase_option origin $branch 
+        popd >/dev/null
+    fi
     popd >/dev/null
-fi
-pushd PI >/dev/null
-    builddir="."
-    if $reuse_asis && [ -x /usr/local/lib/libpi.${LDLIB_EXT} ]; then
-        echo "Reusing PI as is"
+}
+
+build_PI () {
+    device=$1
+    local dirname=""
+    local installdir=""
+    if [ "$device" == "jbay" ]; then
+        dirname="jbay_master"
+        installdir=$jbay_installdir
     else
-        cd $builddir
+        dirname="master"
+        installdir=$tofino_installdir
+    fi
+    get_repo "p4lang" "PI" $dirname "master"
+    pushd PI/$dirname >/dev/null
+    builddir=$topdir/PI/$dirname/build
+    if [ ! -d $builddir ]; then
+        $(mkdir $builddir)
+    fi
+    if $reuse_asis && [ -x $installdir/lib/libpi.${LDLIB_EXT} ]; then
+        echo "Reusing PI for $device as is"
+    else
         if [ ! -r Makefile ]; then
             ./autogen.sh
-            ./configure --with-proto --without-internal-rpc --without-cli
+            cd $builddir
+            ../configure --with-proto --without-internal-rpc --without-cli --prefix=$installdir
         fi
         if $PI_clean_before_rebuild; then
             make clean
         fi
         make && \
-        $SUDO make install && \
+        make install && \
         $SUDO $LDCONFIG || \
         die "Failed to install PI"
     fi
-popd >/dev/null
-
-# build the drivers only on Linux
-if [ $(uname -s) == 'Linux' ]; then
-    install_bf_repo "bf-drivers" "$(which bf_switchd)" "--enable-thrift --with-avago --without-kdrv --with-build-model --enable-pi --without-cint-binding"
-fi
-
-### Model setup
-if [ ! -d model/.git ]; then
-    gitclone git@github.com:barefootnetworks/model.git model
-elif $pull_before_rebuild; then
-    pushd model >/dev/null
-        git pull $rebase_option origin master
     popd >/dev/null
-fi
-pushd model >/dev/null
-    builddir="."
-    if [ -r opt/Makefile ]; then
-        builddir=opt
-    elif [ -r debug/Makefile ]; then
-        builddir=debug
+    if [ $keep_files = false ]; then
+        rm -rf PI/$dirname
     fi
-    if $reuse_asis && [ -x $builddir/tests/simple_test_harness/simple_test_harness ]; then
-        echo "Reusing built $PWD/$builddir/tests/simple_test_harness/simple_test_harness as is"
+}
+
+### Driver setup
+build_driver () {
+    device=$1
+    local dirname=""
+    local installdir=""
+    if [ "$device" == "jbay" ]; then
+        branch="jbay-stable"
+        dirname="jbay_master"
+        installdir=$jbay_installdir
     else
-        cd $builddir
-        if [ $(uname -s) == 'Linux' ]; then
-            config_args="--enable-runner --enable-simple-test-harness"
-        else
-            config_args="--enable-simple-test-harness"
-        fi
+        branch="brig-stable"
+        dirname="master"
+        installdir=$tofino_installdir
+    fi
+    get_repo "barefootnetworks" "bf-drivers" $dirname $branch
+    pushd bf-drivers/$dirname >/dev/null
+    builddir=$topdir/bf-drivers/$dirname/build
+    if [ ! -d $builddir ]; then
+        $(mkdir $builddir)
+    fi
+    if $reuse_asis && [ -x $builddir/bf-switchd ]; then
+        echo "Reusing bf-drivers for $device as is"
+    else
         if [ ! -r Makefile ]; then
             ./autogen.sh
-            ./configure $config_args
+            cd $builddir
+            CFLAGS="-O0" CPPFLAGS="-I $installdir/include" ../configure --enable-thrift --with-avago --without-kdrv --with-build-model --enable-pi  --prefix=$installdir
         fi
         if $clean_before_rebuild; then
             make clean
         fi
-        make || die "harlyn model build failed"
-        # FIXME -- should not need make install here!!!  Unless someone has previously
-        # done a make install of the model, in which case cmake will get the old one
-        $SUDO make install
+        make || die "Failed to build bf-drivers for device: $device"
+        make install || die "Failed to install bf-drivers for device: $device"
         $SUDO $LDCONFIG
     fi
-popd >/dev/null
+    popd >/dev/null
+    if [ $keep_files = false ]; then
+        rm -rf bf-drivers/$dirname
+    fi
+}
+
+### Model setup
+build_model () {
+    device=$1
+    local installdir=""
+    if [ "$device" == "jbay" ]; then
+        branch="jbay_main"
+        installdir=$jbay_installdir
+    else
+        branch="master"
+        installdir=$tofino_installdir
+    fi
+    get_repo "barefootnetworks" "model" $branch $branch
+    pushd model/$branch >/dev/null
+        builddir="."
+        if [ -r opt/Makefile ]; then
+            builddir=opt
+        elif [ -r debug/Makefile ]; then
+            builddir=debug
+        else
+            builddir=$topdir/model/$branch/build
+            if [ ! -d $builddir ]; then
+                $(mkdir $builddir)
+            fi
+        fi
+        if $reuse_asis && [ -x $builddir/tests/simple_test_harness/simple_test_harness ]; then
+            echo "Reusing built $PWD/$builddir/tests/simple_test_harness/simple_test_harness as is"
+        else
+            target="tofinoB0"
+            if [ $device == "jbay" ]; then
+                target="jbay"
+                branch="jbay_master" # Reusing the variable to refer to bf-drivers path later
+            fi
+            if [ $(uname -s) == 'Linux' ]; then
+                config_args="--enable-runner --enable-model-$target --prefix=$installdir"
+            else
+                config_args="--enable-model-$target --prefix=$installdir"
+            fi
+            if [ ! -r Makefile ]; then
+                ./autogen.sh
+                cd $builddir
+                LDFLAGS="-L $installdir/lib" CPPFLAGS="-I $installdir/include" ../configure $config_args
+            fi
+            if $clean_before_rebuild; then
+                make clean
+            fi
+            make || die "harlyn model build failed"
+            # Running make install for model recursively has a circular dependency, hence using -j 1
+            make -j 1 install || die "Failed to install model"
+            $SUDO $LDCONFIG
+        fi
+    popd >/dev/null
+    if [ $keep_files = false ]; then
+        rm -rf model/$dirname
+    fi
+}
+
+# build the drivers and model only on Linux
+if [ $(uname -s) == 'Linux' ]; then
+    if [ $no_tofino = false ]; then
+        build_PI "tofino"
+        build_driver "tofino"
+        build_model "tofino"
+    fi
+    if [ $no_jbay = false ]; then
+        build_PI "jbay"
+        build_driver "jbay"
+        build_model "jbay"
+    fi
+fi
 
 # re-install ptf unconditionally
 tmpdir=$(mktemp -d)
