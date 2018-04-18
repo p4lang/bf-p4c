@@ -11,7 +11,6 @@
 #include "bf-p4c/parde/add_parde_metadata.h"
 #include "bf-p4c/parde/resolve_computed.h"
 #include "bf-p4c/parde/gen_deparser.h"
-#include "bf-p4c/ir/value_set_match.h"
 
 namespace BFN {
 
@@ -223,7 +222,8 @@ class GetBackendParser {
 
     const IR::BFN::Parser* extract(const IR::BFN::TranslatedP4Parser* parser);
 
-    bool addTransition(IR::BFN::ParserState* state, match_t matchVal, int shift, cstring nextState);
+    bool addTransition(IR::BFN::ParserState* state, match_t matchVal, int shift, cstring nextState,
+                       const IR::P4ValueSet* valueSet = nullptr);
 
  private:
     IR::BFN::ParserState* getState(cstring name);
@@ -259,8 +259,8 @@ GetBackendParser::extract(const IR::BFN::TranslatedP4Parser* parser) {
 }
 
 bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,
-    int shift, cstring nextState) {
-    auto* transition = new IR::BFN::Transition(matchVal, shift);
+                                     int shift, cstring nextState, const IR::P4ValueSet* valueSet) {
+    auto* transition = new IR::BFN::Transition(matchVal, shift, valueSet);
     state->transitions.push_back(transition);
 
     AutoPushTransition newTransition(transitionStack, state, transition);
@@ -685,15 +685,7 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
             auto decl = refMap->getDeclaration(path->path, true);
             auto pvs = decl->to<IR::P4ValueSet>();
             CHECK_NULL(pvs);
-
-            unsigned int size = 0;
-            auto sizeConstant = pvs->size->to<IR::Constant>();
-            size = sizeConstant->value.get_ui();
-
-            auto matchVal = value_set_match_t(pvs);
-            for (unsigned int n = 0; n < size; n++) {
-                addTransition(state, matchVal, shift, selectCase->state->path->name);
-            }
+            addTransition(state, match_t(), shift, selectCase->state->path->name, pvs);
         } else {
             auto matchVal = buildMatch(matchSize, selectCase->keyset, selectExprs);
             bool ok = addTransition(state, matchVal, shift, selectCase->state->path->name);

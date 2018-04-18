@@ -596,6 +596,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
             auto* loweredMatch =
                 new IR::BFN::LoweredParserMatch(
                         transition->value,
+                        transition->value_set,
                         *transition->shift,
                         loweredStatements,
                         saves,

@@ -176,17 +176,26 @@ class LoweredSelect {
 }
 
 /// A lowered parser match construct. Each LoweredParserMatch logically
-/// represents a single row in the parser TCAM.
+/// represents a single row in the parser TCAM for constant matches;
+/// or a single value set which may use multiple rows in the parser TCAM.
 class LoweredParserMatch {
 #emit
-    LoweredParserMatch(match_t value, unsigned shift,
+    LoweredParserMatch(match_t value, unsigned shift, const LoweredParserState* next)
+        : value(value), value_set(nullptr), shift(shift),
+          bufferRequired(0), next(next) { }
+    LoweredParserMatch(match_t value, const P4ValueSet* value_set, unsigned shift,
                        const LoweredParserState* next)
-        : value(value), shift(shift), bufferRequired(0), next(next) { }
+        : value(value), value_set(value_set), shift(shift),
+          bufferRequired(0), next(next) { }
 #end
 
     /// The mask which will be matched against the value the containing state
     /// selects against.
     match_t value;
+
+    /// The value_set which will be populated at runtime and matched against
+    /// the value in the select expression.
+    NullOK P4ValueSet value_set;
 
     /// If the match is successful, the number of bytes to shift out before
     /// transitioning to the next state.

@@ -114,7 +114,10 @@ struct ParserAsmSerializer : public ParserInspector {
     void outputMatch(const IR::BFN::LoweredParserMatch* match) {
         AutoIndent indentMatchPattern(indent);
 
-        if (match->value)
+        if (match->value_set)
+            out << indent << "value_set " << match->value_set->controlPlaneName()
+                << " " << match->value_set->size << ':' << std::endl;
+        else if (match->value)
             out << indent << match->value << ':' << std::endl;
         else
             out << indent << "0x*:" << std::endl;

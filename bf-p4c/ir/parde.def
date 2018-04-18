@@ -225,13 +225,25 @@ class AddToChecksum : ParserPrimitive {
 
 /// The high-level representation of a parser state transition.
 class Transition {
-    Transition(match_t value) : value(value), next(nullptr) { }
+    Transition(match_t value)
+        : value(value), value_set(nullptr), next(nullptr) { }
+    Transition(match_t value, P4ValueSet value_set)
+        : value(value), value_set(value_set), next(nullptr) { }
     Transition(match_t value, boost::optional<int> shift)
-        : value(value), shift(shift), next(nullptr) { }
+        : value(value), value_set(nullptr), shift(shift), next(nullptr) { }
+    Transition(match_t value, boost::optional<int> shift, P4ValueSet value_set)
+        : value(value), value_set(value_set), shift(shift), next(nullptr) { }
+    Transition(match_t value, boost::optional<int> shift, ParserState next)
+        : value(value), value_set(nullptr), shift(shift), next(next) { }
+
 
     /// If the owning state's select expressions evaluate to a value which
     /// matches this...
     match_t                        value;
+
+    /// .. Or if the owning state's select expressions evaluate to a value that
+    /// matches to one of the value in this value_set ...
+    NullOK P4ValueSet              value_set;
 
     /// ...then shift the input buffer by this number of bytes (or boost::none
     /// if we don't know how many bytes we need to shift by yet)...
