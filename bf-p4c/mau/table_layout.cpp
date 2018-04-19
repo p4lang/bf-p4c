@@ -360,7 +360,7 @@ void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl) {
  *    4. At most 5 entries can be packed per RAM line.
  *
  * Lastly, the width <= 8, as that is the maximal width of the RAM array on which to
- * perform a wide match. 
+ * perform a wide match.
  */
 void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_in_table,
                                     int immediate_bits, int index) {
@@ -606,6 +606,7 @@ class VisitAttached : public Inspector {
 }  // namespace
 
 void TableLayout::setup_instr_and_next(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
+    layout.total_actions = tbl->actions.size();
     int action_count = get_hit_actions(tbl);
     if (get_hit_actions(tbl) > 0) {
         if (get_hit_actions(tbl) <= TableFormat::IMEM_MAP_TABLE_ENTRIES)

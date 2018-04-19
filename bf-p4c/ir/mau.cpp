@@ -18,6 +18,7 @@ bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
 }
 
 IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table::Layout &a) {
+    total_actions += a.total_actions;
     entries += a.entries;
     gateway |= a.gateway;
     ternary |= a.ternary;

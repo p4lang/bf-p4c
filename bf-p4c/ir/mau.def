@@ -114,6 +114,7 @@ class Table : BFN::Unit {
         int             partition_count = 0;
         int             pre_classifer_number_entries = 0;
         int             subtrees_per_partition = 0;
+        int             total_actions = 0;
         Layout() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
         toJSON {
@@ -154,8 +155,8 @@ class Table : BFN::Unit {
          *  runtime go through the hit pathway in Glass, so allocating accordingly.
          */
         bool no_match_hit_path() const {
-            return no_match_data() && ((overhead_bits == 0 && action_data_bytes == 0)
-                                       || hash_action);
+            return no_match_data() && ((overhead_bits == 0 && action_data_bytes == 0
+                && total_actions == 1) || hash_action);
         }
         /** Any keyless table that has parameters that can be adjusted during runtime, such
          *  as action or action data must go through the miss pathway, as those are the registers
