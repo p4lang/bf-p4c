@@ -514,8 +514,14 @@ extern DirectWred<T> {
 }
 
 /// Register
-extern register<T> {
-    register(@optional bit<32> instance_count, @optional T initial_value);
+extern Register<T> {
+    /// Instantiate an array of <size> registers. The initial value is
+    /// undefined.
+    Register(bit<32> size);
+
+    /// Initialize an array of <size> registers and set their value to
+    /// initial_value.
+    Register(bit<32> size, T initial_value);
 
     ///XXX(hanw): BRIG-212
     /// following two methods are not supported in brig backend
@@ -526,13 +532,14 @@ extern register<T> {
     void write(in bit<32> index, in T value);
 }
 
-extern register_params<T> {
-    register_params();
-    register_params(T value);
-    register_params(T v1, T v2);
-    register_params(T v1, T v2, T v3);
-    register_params(T v1, T v2, T v3, T v4);
-    T read(bit<2> index);
+extern RegisterParam<T> {
+    /// Construct a read-only run-time configurable parameter that can only be
+    /// used by RegisterAction.
+    /// @param initial_value : initial value of the parameter.
+    RegisterParam(T initial_value);
+
+    /// Return the value of the parameter.
+    T read();
 }
 
 extern math_unit<T, U> {
@@ -540,10 +547,9 @@ extern math_unit<T, U> {
     T execute(in T x);
 }
 
-extern register_action<T, U> {
-    register_action(register<T> reg, @optional math_unit<U, _> math,
-                                     @optional register_params<U> params);
-    abstract void apply(inout T value, @optional out U rv, @optional register_params<U> params);
+extern RegisterAction<T, U> {
+    RegisterAction(Register<T> reg);
+    abstract void apply(inout T value, @optional out U rv);
     U execute(@optional in bit<32> index); /* {
         U rv;
         T value = reg.read(index);
@@ -551,33 +557,8 @@ extern register_action<T, U> {
         reg.write(index, value);
         return rv;
     } */
+
     U execute_log(); /* execute at an index that increments each time */
-}
-
-/// stateful alu defined but not yet supported, the one supported in backend is
-/// the version after P14-to-16 translation.
-
-extern stateful_param<T> {
-    stateful_param(T initial_value);
-    T read();
-}
-
-/// StatefulALU
-extern stateful_alu<T, O, P> {
-    stateful_alu(@optional register<T> reg, @optional stateful_param<P> param);
-    abstract void instruction(inout T value, @optional out O rv, @optional in P p);
-    O execute<I>(@optional in I index);
-}
-
-/// Register
-extern Register<T> {
-    /// Instantiate an array of <size> registers. The initial value is
-    /// undefined.
-    Register(bit<32> size);
-
-    /// Initialize an array of <size> registers and set their value to
-    /// initial_value.
-    Register(bit<32> size, T initial_value);
 }
 
 extern ActionSelector {
@@ -607,7 +588,6 @@ extern selector_action {
 //                    @optional register<bit<1>> reg);
 //    abstract T hash();
 //}
-
 
 extern ActionProfile {
     /// Construct an action profile of 'size' entries.

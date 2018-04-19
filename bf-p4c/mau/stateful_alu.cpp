@@ -37,7 +37,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             field_idx = 1;
         case LocalVar::MEMLO:
             if (etype == NONE)
-                error("%s: register_action too complex", pe->srcInfo);
+                error("%s: RegisterAction too complex", pe->srcInfo);
         case LocalVar::MEMALL:
             break;
         default:
@@ -71,7 +71,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         if (etype == NONE)
             etype = OUTPUT;
         else
-            error("Reading out param %s in register_action not supported", pe);
+            error("Reading out param %s in RegisterAction not supported", pe);
         if (!opcode) opcode = "output";
         break;
     default:
@@ -121,7 +121,7 @@ bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
             } else {
                 use = LocalVar::ALUHI; }
             if (use == LocalVar::NONE || (dest->use != LocalVar::NONE && dest->use != use))
-                error("%s: register_action too complex", as->srcInfo);
+                error("%s: RegisterAction too complex", as->srcInfo);
             dest->use = use;
             LOG3("local " << dest->name << " use " << dest->use); }
         if (!dest || dest->use == LocalVar::ALUHI)

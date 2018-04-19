@@ -1277,6 +1277,23 @@ class ConstructSymbolTable : public Inspector {
         structure->_map.emplace(node, result);
     }
 
+    void cvtRegister(const IR::Declaration_Instance* node) {
+        auto type = node->type->to<IR::Type_Specialized>();
+        BUG_CHECK(type != nullptr, "Invalid type for register converter");
+        BUG_CHECK(type->baseType->path->name == "register",
+                  "register converter cannot be applied to %1%", type->baseType->path->name);
+        auto declarations = new IR::IndexedVector<IR::Declaration>();
+
+        auto args = new IR::Vector<IR::Expression>({node->arguments->at(0)});
+        type = new IR::Type_Specialized(
+            new IR::Type_Name("Register"), type->arguments);
+
+        auto decl = new IR::Declaration_Instance(
+            node->srcInfo, node->name, node->annotations, type, args);
+
+        structure->_map.emplace(node, decl);
+    }
+
     void cvtActionSelector(const IR::Declaration_Instance* node) {
         auto type = node->type->to<IR::Type_Name>();
         BUG_CHECK(type->path->name == "action_selector",
@@ -1397,8 +1414,9 @@ class ConstructSymbolTable : public Inspector {
             cvtActionProfile(node);
         } else if (name == "action_selector") {
             cvtActionSelector(node);
+        } else if (name == "register") {
+            cvtRegister(node);
         }
-        // TODO: register
     }
 
     void postorder(const IR::Declaration_Instance *node) override {

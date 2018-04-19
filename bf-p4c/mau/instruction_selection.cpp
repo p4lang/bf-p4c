@@ -316,15 +316,15 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
                           MakeSlice(egress_spec, 7, 8),
                           MakeSlice(ingress_port, 7, 8));
             return new IR::Vector<IR::Expression>({s1, s2}); }
-    } else if (prim->name == "register_action.execute" ||
-               prim->name == "register_action.execute_log" ||
+    } else if (prim->name == "RegisterAction.execute" ||
+               prim->name == "RegisterAction.execute_log" ||
                prim->name == "selector_action.execute") {
         bool direct_access = (prim->operands.size() == 1 && !prim->name.endsWith("_log"));
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
         if (!direct_access || salu->instruction.size() > 1)
             stateful.push_back(prim);  // needed to setup the index and/or type properly
-        if (prim->name.startsWith("register") && salu->direct != direct_access)
+        if (prim->name.startsWith("Register") && salu->direct != direct_access)
             error("%s: %sdirect access to %sdirect register", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
@@ -401,14 +401,14 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
         prim->name == "Lpf.execute" || prim->name == "DirectLpf.execute" ||
         prim->name == "Wred.execute" || prim->name == "DirectWred.execute")
         return IR::Type_Meter::get();
-    if (prim->name.startsWith("register_action.") || prim->name.startsWith("selector_action."))
+    if (prim->name.startsWith("RegisterAction.") || prim->name.startsWith("selector_action."))
         return IR::Type_Register::get();
     BUG("Not a stateful primitive %s", prim);
 }
 
 ssize_t index_operand(const IR::Primitive *prim) {
     if (prim->name.startsWith("Counter") || prim->name.startsWith("Meter")
-        || prim->name.startsWith("register_action"))
+        || prim->name.startsWith("RegisterAction"))
         return 1;
     else if (prim->name.startsWith("Lpf") || prim->name.startsWith("Wred"))
         return 2;
@@ -474,11 +474,11 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Instruction *instr)
 void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
     const IR::Attached *obj = nullptr;
     use_t use = NO_USE;
-    if (prim->name == "register_action.execute" || prim->name == "selector_action.execute") {
+    if (prim->name == "RegisterAction.execute" || prim->name == "selector_action.execute") {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
         BUG_CHECK(obj, "invalid object");
         use = prim->operands.size() == 1 ? DIRECT : INDIRECT;
-    } else if (prim->name == "register_action.execute_log") {
+    } else if (prim->name == "RegisterAction.execute_log") {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
         BUG_CHECK(obj, "invalid object");
         use = LOG;

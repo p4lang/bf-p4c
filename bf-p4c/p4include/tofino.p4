@@ -573,13 +573,6 @@ extern Register<T> {
     Register(bit<32> size, T initial_value);
 }
 
-/// Direct Register
-extern DirectRegister<T> {
-    DirectRegister();
-
-    DirectRegister(T initial_value);
-}
-
 extern RegisterParam<T> {
     /// Construct a read-only run-time configurable parameter that can only be
     /// used by RegisterAction.
@@ -593,6 +586,7 @@ extern RegisterParam<T> {
 extern RegisterAction<T, U> {
     RegisterAction(Register<T> reg);
     abstract void apply(inout T value, out U rv);
+    U execute();
     U execute(in bit<32> index); /* {
         U rv;
         T value = reg.read(index);
@@ -600,12 +594,6 @@ extern RegisterAction<T, U> {
         reg.write(index, value);
         return rv;
     } */
-}
-
-extern DirectRegisterAction<T, U, P> {
-    DirectRegisterAction(DirectRegister<T> reg);
-    abstract void apply(inout T value, out U rv);
-    U execute();
 }
 
 extern ActionSelector {

@@ -97,7 +97,7 @@ bool skipRegisterActionOutput(const Visitor::Context *ctxt, const IR::Expression
     if (!type) return true;
 
     auto name = type->baseType->to<IR::Type_Name>();
-    if (name->path->name != "register_action") return true;
+    if (name->path->name != "RegisterAction") return true;
 
     auto f = findContext<IR::Function>(ctxt);
     if (!f) return true;
