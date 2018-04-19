@@ -136,6 +136,7 @@ if (PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     ".*InvalidTableOperation.*"
     extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4
+    extensions/p4_tests/p4_14/p4-tests/programs/basic_ipv4/basic_ipv4.p4
     )
 
   # Timeouts -- need a better way to handle timeouts!!

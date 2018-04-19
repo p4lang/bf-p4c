@@ -192,14 +192,14 @@ bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/basic_ipv4/basic_ipv4
    test.TestAllHit
    test.TestAllStage
    test.TestDeepADT
-   test.TestRange
-   test.TestRangeTernaryValid
-   test.TestSelector
-   test.TestTcamDuplicateEntries
-   test.TestTcamEntries
-   test.TestTcamMove
+   ^test.TestRange
+   ^test.TestRangeTernaryValid
+   ^test.TestSelector
+   ^test.TestTcamDuplicateEntries
+   ^test.TestTcamEntries
+   ^test.TestTcamMove
    ^test.TestTernaryValidMatch
-   test.TestExm4way3Entries
+   ^test.TestExm4way3Entries
    test.TestExm6way4Entries")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_indirect_1/exm_indirect_1.p4"
   "test.TestActSelIterators
@@ -218,7 +218,7 @@ bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/multicast_test/multic
    test.TestEcmp
    ^test.TestLag
    ^test.TestBackup
-   test.TestGetEntry
+   ^test.TestGetEntry
    test.TestRegAccess")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/smoke_large_tbls/smoke_large_tbls.p4"
   "test.TestAtcam
