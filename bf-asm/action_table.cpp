@@ -48,15 +48,14 @@ Table::Format::Field *ActionTable::lookup_field(const std::string &name, const s
     return 0;
 }
 void ActionTable::pad_format_fields() {
+    format->size = get_size();
+    format->log2size = get_log2size();
     for (auto &fmt : action_formats) {
-        for (auto &fmt2 : action_formats)
-            if (fmt.second->log2size < fmt2.second->log2size)
-                fmt.second->log2size = fmt2.second->log2size;
-        if (format->log2size < fmt.second->log2size)
-            format->log2size = fmt.second->log2size;
-        if (format->size < fmt.second->size)
-            format->size = fmt.second->size; }
+        if (fmt.second->size < format->size) {
+            fmt.second->size = format->size;
+            fmt.second->log2size = format->log2size; } }
 }
+
 void ActionTable::apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn) {
     for (auto &fmt : action_formats)
         fmt.second->apply_to_field(n, fn);
@@ -306,9 +305,9 @@ void ActionTable::pass2() {
         error(lineno, "No match table for action table %s", name());
     if (!format)
         format = new Format(this);
-    if (direct) {
-        /* need all formats to be the same size, so pad them out */
-        pad_format_fields(); }
+    /* Driver does not support formats with different widths. Need all formats
+     * to be the same size, so pad them out */
+    pad_format_fields();
     if (actions) actions->pass2(this);
 }
 
