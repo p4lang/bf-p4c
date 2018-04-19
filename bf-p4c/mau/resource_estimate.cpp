@@ -171,7 +171,7 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
     if (ways_provided(tbl, lo, calculated_depth))
         return;
 
-    if (lo->layout.match_width_bits <= ceil_log2(Memories::SRAM_DEPTH)) {
+    if (lo->layout.ixbar_width_bits <= ceil_log2(Memories::SRAM_DEPTH)) {
         if (calculated_depth == 1) {
             lo->way_sizes = {1};
             return;

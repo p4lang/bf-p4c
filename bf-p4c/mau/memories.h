@@ -352,6 +352,10 @@ struct Memories {
         swbox_fill() {}
         void clear() { group = nullptr; mask = 0; mapram_mask = 0; }
         void clear_masks() {mask = 0; mapram_mask = 0; }
+        void dbprint(std::ostream &out) const {
+            out << *group << " RAM mask: 0x" << hex(mask) << " map RAM mask: 0x"
+                << hex(mapram_mask);
+        }
     };
 
     struct shared_attached {
@@ -439,6 +443,8 @@ struct Memories {
     void find_swbox_bus_users();
     void swbox_bus_selectors_indirects();
     void swbox_bus_meters_counters();
+    void swbox_logical_row(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
+                           swbox_fill &curr_oflow, swbox_fill &sel_oflow);
     void find_swbox_candidates(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
                                 bool stats_available, bool meter_available,
                                 swbox_fill &curr_oflow, swbox_fill &sel_oflow);

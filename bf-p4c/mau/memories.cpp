@@ -2125,6 +2125,7 @@ void Memories::fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, swi
         twoport_bus[row] = name;
         alloc.row.emplace_back(row);
     } else if (type == ACTION) {
+        LOG1("Home row for candidate " << candidate);
         action_data_bus[row][side] = name;
         alloc.row.emplace_back(row, side);
         alloc.home_row.emplace_back(2*row + side, candidate.group->number);
@@ -2222,7 +2223,16 @@ void Memories::calculate_curr_oflow(swbox_fill candidates[SWBOX_TYPES],
             BUG_CHECK(!synth_oflow_needed, "Multiple synth2port require overflow");
             synth_oflow = candidates[OFLOW];
             synth_oflow_needed = true;
+        } else if (curr_oflow && curr_oflow.group->is_synth_type()
+             && !(curr_oflow.group->all_placed()
+                  && curr_oflow.group->cm.all_placed())) {
+             // This check exists in case nothing could be placed within a row, and the synth2port
+             // table needs to just overflow across this row
+             BUG_CHECK(!synth_oflow_needed, "Multiple synth2port require overflow");
+             synth_oflow = curr_oflow;
+             synth_oflow_needed = true;
         }
+
         if (!synth_oflow_needed)
             synth_oflow.clear();
         else
@@ -2232,6 +2242,10 @@ void Memories::calculate_curr_oflow(swbox_fill candidates[SWBOX_TYPES],
     if (candidates[OFLOW] && !candidates[OFLOW].group->is_synth_type()
         && !candidates[OFLOW].group->all_placed()) {
         curr_oflow = candidates[OFLOW];
+        curr_oflow_needed = true;
+    } else if (curr_oflow && !curr_oflow.group->is_synth_type()
+               && !curr_oflow.group->all_placed()) {
+        // Again, this will overflow curr_oflow if no RAMs were allocated in this logical row
         curr_oflow_needed = true;
     } else if (candidates[ACTION] && !candidates[ACTION].group->all_placed()) {
         curr_oflow = candidates[ACTION];
@@ -2396,6 +2410,44 @@ void Memories::action_bus_users_log() {
     }
 }
 
+void Memories::swbox_logical_row(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
+                                 swbox_fill &curr_oflow, swbox_fill &sel_oflow) {
+    for (int k = 0; k < SWBOX_TYPES; k++)
+        candidates[k].clear();
+
+    LOG1("Row and side " << row << " " << side);
+    if (bitcount(side_mask(side) & ~sram_inuse[row]) == 0)
+        return;
+
+    bool stats_available = true; bool meter_available = true;
+
+    // FIXME: This is too loosely constrained
+    if (row == 7 || stats_alus[(row+1)/2]) {
+        stats_available = false;
+    }
+
+    if (meter_alus[row/2]) {
+        meter_available = false;
+    }
+
+    // Determine the candidates to place as well as what RAMs each candidate will have
+    find_swbox_candidates(row, side, candidates, stats_available, meter_available, curr_oflow,
+                          sel_oflow);
+
+    bool candidate_found = false;
+    for (int k = 0; k < SWBOX_TYPES; k++) {
+        if (candidates[k]) {
+            candidate_found = true;
+            LOG1("Candidate " << candidates[k]);
+        }
+    }
+
+    if (!candidate_found)
+        return;
+    // Fill out the Use structures based on the candidates
+    fill_swbox_side(candidates, row, side);
+}
+
 /** The purpose of this section of code is to allocate all data HV (Horizontal/Vertical) switchbox
  *  users.  This particular switchbox is shown in section 6.2.4.4 (RAM Data Bus Horizontal/Vertical
  *  (HV) Switchbox.  The possible tables that can use this switch box are action data tables,
@@ -2474,38 +2526,7 @@ bool Memories::allocate_all_swbox_users() {
         synth_oflow.clear();
         for (int j = RAM_SIDES - 1; j >= 0; j--) {
             auto side = static_cast<RAM_side_t>(j);
-            if (bitcount(side_mask(side) & ~sram_inuse[i]) == 0) continue;
-
-            for (int k = 0; k < SWBOX_TYPES; k++)
-                candidates[k].clear();
-
-            bool stats_available = true; bool meter_available = true;
-
-            // FIXME: This is too loosely constrained
-            if (i == 7 || stats_alus[(i+1)/2]) {
-                stats_available = false;
-            }
-
-            if (meter_alus[i/2]) {
-                meter_available = false;
-            }
-
-            // Determine the candidates to place as well as what RAMs each candidate will have
-            find_swbox_candidates(i, side, candidates, stats_available, meter_available,
-                                   curr_oflow, sel_oflow);
-
-            bool candidate_found = false;
-            for (int k = 0; k < SWBOX_TYPES; k++) {
-                if (candidates[k]) {
-                    candidate_found = true;
-                }
-            }
-
-            if (!candidate_found)
-                continue;
-
-            // Fill out the Use structures based on the candidates
-            fill_swbox_side(candidates, i, side);
+            swbox_logical_row(i, side, candidates, curr_oflow, sel_oflow);
             calculate_curr_oflow(candidates, curr_oflow, synth_oflow, side);
         }
         calculate_sel_oflow(candidates, sel_oflow);
@@ -2530,8 +2551,9 @@ bool Memories::allocate_all_swbox_users() {
 
 #ifdef HAVE_JBAY
         // JBay has no overflow bus between logical row 7 and 8
-        if ((Device::currentDevice() == "JBay") && i == 4)
+        if ((Device::currentDevice() == "JBay") && i == 4) {
             curr_oflow.clear();
+        }
 #endif /* HAVE_JBAY */
     }
 
