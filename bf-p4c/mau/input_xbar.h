@@ -118,6 +118,8 @@ struct IXBar {
         bitvec cont_loc() const {
             return bitvec(cont_lo, width());
         }
+
+        std::string visualization_detail() const;
     };
 
 
@@ -149,9 +151,9 @@ struct IXBar {
     Alloc1D<cstring, HASH_GROUPS>                      hash_group_print_use;
     unsigned                                    hash_group_use[HASH_GROUPS] = { 0 };
     Alloc2D<cstring, HASH_TABLES, HASH_DIST_SLICES>     hash_dist_use;
-    unsigned                                    hash_dist_inuse[HASH_TABLES] = { 0 };
+    bitvec                                      hash_dist_inuse[HASH_TABLES] = { bitvec() };
     Alloc2D<cstring, HASH_TABLES, HASH_DIST_SLICES * HASH_DIST_BITS>   hash_dist_bit_use;
-    unsigned long                               hash_dist_bit_inuse[HASH_TABLES] = { 0 };
+    bitvec                                      hash_dist_bit_inuse[HASH_TABLES] = { bitvec() };
 
     int hash_dist_groups[HASH_DIST_UNITS] = {-1, -1};
     friend class IXBarRealign;
@@ -168,13 +170,23 @@ struct IXBar {
         /* everything is public so anyone can read it, but only IXBar should write to this */
         enum flags_t { NeedRange = 1, NeedXor = 2,
                        Align16lo = 4, Align16hi = 8, Align32lo = 16, Align32hi = 32 };
-        bool            ternary;
-        bool            atcam;
-        bool            gw_search_bus;  int gw_search_bus_bytes;
-        bool            gw_hash_group;
+        bool            ternary = false;
+        bool            atcam = false;
+        bool            gw_search_bus = false;
+        int             gw_search_bus_bytes = 0;
+        bool            gw_hash_group = false;
 
+        // FIXME: Could be better created initialized through a constructor
+        enum type_t { MATCH, GATEWAY, SELECTOR, METER, STATEFUL_ALU, HASH_DIST, TYPES }
+            type = TYPES;
 
-        // enum use_type_t { Match, Gateway, Selector, StatefulAlu, HashDist, NotSet } use_type;
+        enum hash_dist_type_t { COUNTER_ADR, METER_ADR, ACTION_ADR, IMMEDIATE, PRECOLOR,
+                                HASHMOD, UNKNOWN } hash_dist_type = UNKNOWN;
+
+        std::string used_by;
+        std::string used_for() const;
+        std::string hash_dist_used_for() const;
+
         /* tracking individual bytes (or parts of bytes) placed on the ixbar */
         struct Byte {
             cstring     name;
@@ -226,8 +238,11 @@ struct IXBar {
             }
             bool is_range() const { return is_spec(RANGE_LO) || is_spec(RANGE_HI); }
             void unallocate() { search_bus = -1;  loc.group = -1;  loc.byte = -1; }
+            std::string visualization_detail() const;
         };
         safe_vector<Byte>    use;
+
+        bool allocated() { return !use.empty(); }
 
         /* which of the 16 hash tables we are using (bitvec) */
         unsigned        hash_table_inputs[HASH_GROUPS] = { 0 };
@@ -264,17 +279,23 @@ struct IXBar {
             bool allocated = false;
             int unit = -1;  // which of the two hash
             int group = -1;
+
+            bitvec slice;
+            bitvec bit_mask;
+            /*
             unsigned slice = 0;  // bitmask of the 3 hash distributions pre-units
             unsigned long               bit_mask = 0;
-            std::map<int, bitrange>     bit_starts;
+            */
+            // Key is position in 48 bits of input xbar, bitrange is the HashDistSlice
+            std::map<int, le_bitrange>     bit_starts;
             IR::MAU::hash_function      algorithm;
 
             void clear() {
                 allocated = false;
                 unit = -1;
                 group = -1;
-                slice = 0;
-                bit_mask = 0;
+                slice.clear();
+                bit_mask.clear();
                 bit_starts.clear();
             }
         };
@@ -331,8 +352,6 @@ struct IXBar {
     typedef std::map<Use::Byte, safe_vector<FieldInfo>> ContByteConversion;
 
     struct HashDistUse {
-        enum HashDistType { COUNTER_ADR, METER_ADR, ACTION_ADR, IMMEDIATE, PRECOLOR,
-                            HASHMOD, UNKNOWN } type = UNKNOWN;
         IXBar::Use use;
         /** The pre-slice number comes from the following calculation:
          *      hash_dist_hash.unit * HASH_DIST_SLICES (3) + (bit position in) hash_dist_hash.slice
@@ -452,9 +471,11 @@ struct IXBar {
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocSelector(const IR::MAU::Selector *, const IR::MAU::Table *, const PhvInfo &phv,
                        Use &alloc, cstring name);
-    bool allocStateful(const IR::MAU::StatefulAlu *, const PhvInfo &phv, Use &alloc);
-    bool allocMeter(const IR::MAU::Meter *, const PhvInfo &phv, Use &alloc);
-    bool allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashDistType hdt,
+    bool allocStateful(const IR::MAU::StatefulAlu *, const IR::MAU::Table *, const PhvInfo &phv,
+                       Use &alloc);
+    bool allocMeter(const IR::MAU::Meter *, const IR::MAU::Table *, const PhvInfo &phv,
+                    Use &alloc);
+    bool allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_type_t hdt,
                        const PhvInfo &phv, const ActionFormat::Use *af, IXBar::Use &alloc,
                        bool second_try, cstring name);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
@@ -536,20 +557,19 @@ struct IXBar {
         std::map<cstring, bitvec> &fields_needed, cstring name, bool hash_dist, const PhvInfo &phv,
         bool is_atcam = false, bool partition = false);
     void create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc);
-    bool allocHashDistAddress(const IR::MAU::HashDist *hd, const unsigned used_hash_dist_groups,
-        const unsigned long used_hash_dist_bits, const unsigned &hash_table_input,
-        unsigned &slice, unsigned long &bit_mask, std::map<int, bitrange> &bit_starts,
-        cstring name);
+    bool allocHashDistAddress(const IR::MAU::HashDist *hd, const bitvec used_hash_dist_groups,
+        const bitvec used_hash_dist_bits, const unsigned &hash_table_input, bitvec &slice,
+        bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name);
     bool allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionFormat::Use *af,
-        const unsigned used_hash_dist_slices, const unsigned &hash_table_input, unsigned &slice,
-        unsigned long &bit_mask, std::map<int, bitrange> &bit_starts, cstring name);
+        const bitvec used_hash_dist_slices, const unsigned &hash_table_input, bitvec &slice,
+        bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {
     return out << '(' << l.group << ',' << l.byte << ')'; }
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::FieldInfo &fi) {
-    out << fi.field << "[" << fi.lo << ".." << fi.hi << "]";
+    out << fi.visualization_detail();
     return out;
 }
 
@@ -559,14 +579,7 @@ inline std::ostream &operator<<(std::ostream &out, const IXBar::Use::Byte &b) {
     if (b.loc) out << b.loc;
     out << " 0x" << b.bit_use;
     if (b.flags) out << " flags=" << hex(b.flags);
-    out << " { ";
-    size_t index = 0;
-    for (auto fi : b.field_bytes) {
-        out << fi;
-        if (index == b.field_bytes.size())
-            out << ", ";
-    }
-    out << " }";
+    out << " " << b.visualization_detail();
     return out;
 }
 

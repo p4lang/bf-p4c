@@ -214,11 +214,21 @@ struct FormatHash {
     safe_vector<Slice>          match_data;
     const Slice                 *ghost;
     IR::MAU::hash_function      func;
-    FormatHash(const safe_vector<Slice>& md, const Slice *g, IR::MAU::hash_function f)
-        : match_data(md), ghost(g), func(f) {}
+    le_bitrange                 *field_range;
+
+    FormatHash(const safe_vector<Slice>& md, const Slice *g, IR::MAU::hash_function f,
+               le_bitrange *fr = nullptr)
+        : match_data(md), ghost(g), func(f), field_range(fr) {}
 };
 
 std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
+    if (hash.field_range != nullptr) {
+        FormatHash hash2(hash.match_data, hash.ghost, hash.func);
+        out << "slice(" << hash2 << ", " << hash.field_range->lo << "..";
+        out << hash.field_range->hi << ")";
+        return out;
+    }
+
     if (hash.func.type == IR::MAU::hash_function::IDENTITY) {
         out << "stripe(" << emit_vector(hash.match_data) << ")";
     } else if (hash.func.type == IR::MAU::hash_function::RANDOM) {
@@ -696,6 +706,15 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
             return;
         }
 
+        for (auto bit_start : hdh.bit_starts) {
+            int start_bit = bit_start.first;
+            le_bitrange br = bit_start.second;
+            int end_bit = start_bit + br.size() - 1;
+            out << indent << start_bit << ".." << end_bit;
+            out << ": " << FormatHash(match_data, nullptr, hdh.algorithm, &br) << std::endl;
+        }
+
+        /*
         for (int i = 0, sliceIdx = 0; i < IXBar::HASH_DIST_SLICES; i++) {
             if (((1 << i) & hdh.slice) == 0) continue;
             int first_bit = -1;
@@ -724,6 +743,7 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
             out << ": " << FormatHash(match_data, nullptr, hdh.algorithm) << std::endl;
             sliceIdx++;
         }
+        */
     }
 }
 

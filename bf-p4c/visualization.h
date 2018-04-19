@@ -53,32 +53,78 @@ class Visualization : public Inspector {
     }
 
  private:
+    enum node_t { USED_BY, USED_FOR, DETAILS, NODES };
     /// Root node for resources to be output in context.json
-    Util::JsonObject *_resourcesNode = nullptr;
+    struct JsonResource {
+        // The values for each context JSON node
+        std::array<std::vector<std::string>, NODES> json_vectors;
+        // If the context JSON node is allowed to be empty
+        std::array<bool, NODES> allowed_empty;
+        // If the context JSON node can only have one value
+        std::array<bool, NODES> singular_value;
 
-    struct XBarByteResource {
-        const IXBar::Use::Byte  _usedByte;
-        cstring                 _table;
-        cstring                 _matchType;
+     public:
+        bool empty(node_t node);
+        bool is_singular(node_t node);
+        std::string at(node_t node, size_t position);
+        std::vector<std::string> *values(node_t node);
+        std::string total_value(node_t node);
+        void add(node_t node, const std::string value);
+        void add(std::array<std::string, NODES> values);
+        virtual void append(JsonResource *jr);
 
-        explicit XBarByteResource(const IXBar::Use::Byte *b, cstring tblName, cstring matchType) :
-            _usedByte(*b), _table(tblName), _matchType(matchType) {}
+        void dbprint(std::ostream &out) const {
+            out << "used_by: " << json_vectors[USED_BY]
+                << " used_for: " << json_vectors[USED_FOR]
+                << " details: " << json_vectors[DETAILS];
+        }
 
-        explicit operator bool() const { return _usedByte.loc && _table && _matchType; }
+        JsonResource(std::array<bool, NODES> ae, std::array<bool, NODES> sv)
+            : allowed_empty(ae), singular_value(sv) {}
     };
 
-    struct HashBitResource {
-        cstring           _table;
-        cstring           _field;
-        const IXBar::Loc *_loc;
-        cstring           _matchType;
 
-        explicit HashBitResource(cstring tblName, cstring fieldName, const IXBar::Loc *loc,
-                                 cstring matchType) :
-            _table(tblName), _field(fieldName), _loc(loc), _matchType(matchType) {}
+    Util::JsonObject *_resourcesNode = nullptr;
 
-        explicit operator bool() const {
-            return _table && (_loc ? bool(*_loc) : true) && _matchType; }
+    struct XBarByteResource : JsonResource {
+        XBarByteResource()
+            : JsonResource({{ false, false, false }}, {{ false, false, false }}) { }
+        // Cross bar bytes can be shared by multiple tables for different purposes, and
+        // the detail can be different due to possible overlay of bytes
+
+        void append(JsonResource *jr) {
+            BUG_CHECK(dynamic_cast<XBarByteResource *>(jr) != nullptr, "Attempting to append "
+                      "non XBarByteResource with XBarByteResource");
+            JsonResource::append(jr);
+        }
+    };
+
+    struct HashBitResource : JsonResource {
+        HashBitResource()
+            : JsonResource({{ false, false, false }}, {{ true, false, false }}) { }
+         // Each hash bit is reserved to a single table or side effect.  However, because the
+         // same bit can be the select bits/RAM line bit for two different ways in the same
+         // table, then they can be shared
+
+        void append(JsonResource *jr) {
+            BUG_CHECK(dynamic_cast<HashBitResource *>(jr) != nullptr, "Attempting to append "
+                      "non HashBitResource with HashBitResource");
+            JsonResource::append(jr);
+        }
+    };
+
+    // This represents the 48 bits of hash distribution before the hash distribution units
+    // are expanded, masked and shifted
+    struct HashDistResource : JsonResource {
+        HashDistResource()
+            : JsonResource({{ false, false, true }}, {{ false, false, false }}) { }
+        // Hash Distribution units can be used for multiple purposes (i.e. two wide addresses
+        // between tables
+        void append(JsonResource *jr) {
+             BUG_CHECK(dynamic_cast<HashDistResource *>(jr) != nullptr, "Attempting to append "
+                       "non HashDistResource with HashDistResource");
+             JsonResource::append(jr);
+        }
     };
 
     struct MemoriesResource {
@@ -94,9 +140,10 @@ class Visualization : public Inspector {
     /// when compilation fails to output the set of resources already
     /// allocated.
     struct ResourceCollectors {
-        ordered_map<int, XBarByteResource>                _xBarBytesUsage;
-        ordered_map<std::pair<int, int>, HashBitResource> _hashBitsUsage;
-        std::vector<MemoriesResource>                     _memoriesUsage;
+        ordered_map<int, XBarByteResource>                 _xBarBytesUsage;
+        ordered_map<std::pair<int, int>, HashBitResource>  _hashBitsUsage;
+        ordered_map<std::pair<int, int>, HashDistResource> _hashDistUsage;
+        std::vector<MemoriesResource>                      _memoriesUsage;
         /// map logical ids to table names
         ordered_map<int, cstring>                         _logicalIds;
 
@@ -114,16 +161,16 @@ class Visualization : public Inspector {
     /// Skeleton to generate a "usages" node.
     /// In case the argument is the empty string, we output "--UNUSED--"
     static void usagesToCtxJson(Util::JsonObject *parent,
-                                const cstring &used_by,
-                                const cstring &used_for = cstring(),
-                                const cstring &detail = cstring()) {
+                                const std::string &used_by,
+                                const std::string &used_for = "",
+                                const std::string &detail = "") {
         auto *usages = new Util::JsonArray();
         auto *use = new Util::JsonObject();
-        if (used_by) {
+        if (!used_by.empty()) {
             use->emplace("used_by", new Util::JsonValue(used_by));
-            if (used_for)
+            if (!used_for.empty())
                 use->emplace("used_for", new Util::JsonValue(used_for));
-            if (detail)
+            if (!detail.empty())
                 use->emplace("detail", new Util::JsonValue(detail));
         } else {
             use->emplace("used_by", new Util::JsonValue("--UNUSED--"));
@@ -131,7 +178,6 @@ class Visualization : public Inspector {
         usages->append(use);
         parent->emplace("usages", usages);
     }
-
     Util::JsonObject *getResourcesNode() { return _resourcesNode; }
 
     /// return a pointer to `stage` in `pipe`
@@ -150,7 +196,8 @@ class Visualization : public Inspector {
 
  private:
     /// Update the collectors for each different type of resource
-    void add_xbar_usage(unsigned int stageNo, cstring name, const IXBar::Use &alloc);
+    void add_xbar_usage(unsigned int stageNo, const IXBar::Use &alloc);
+    void add_hash_dist_usage(unsigned int stageNo, const IXBar::HashDistUse &hd_alloc);
     void add_action_usage(unsigned int /* stageNo */, cstring /* name , Table?? */) {}
 
     void gen_xbar(unsigned int stageNo, Util::JsonObject *stage);
