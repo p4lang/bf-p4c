@@ -58,6 +58,7 @@ class AfterWriteTables : public BFN::ControlFlowVisitor, public MauInspector, To
     using AfterWriteTableList = std::map<int, std::set<const IR::MAU::Table*>>;
 
     const PhvInfo                                      &phv;
+    const SharedIndirectAttachedAnalysis               &shared;
     AfterWriteTableList                                after_write_tables;
     std::set<int>                                      been_written;
     std::map<int, std::set<const IR::MAU::Action*>>    written_in;
@@ -101,6 +102,23 @@ class AfterWriteTables : public BFN::ControlFlowVisitor, public MauInspector, To
     }
 
     void end_apply() {
+        // Mark tables that share action profile to be after-written, if one table is.
+        // XXX(yumin): This relation is transitive because each table can only have one
+        // of each type of shared resource.
+        for (const auto& f : phv) {
+            std::vector<const IR::MAU::Table*> to_insert;
+            for (const auto* tbl : after_write_tables[f.id]) {
+                for (const auto* shared_tbl : shared.action_data_shared_tables(tbl)) {
+                    to_insert.push_back(shared_tbl);
+                    LOG5("Mark after-write for " << f.name << " because " << shared_tbl->name
+                         << " is resource-shared table with " << tbl->name);
+                }
+            }
+            // Insert all tables that shared action profile to be after write.
+            for (const auto* tbl : to_insert) {
+                after_write_tables[f.id].insert(tbl); }
+        }
+
         if (LOGGING(5)) {
             LOG5("After Write Table List:");
             for (const auto& f : phv) {
@@ -134,8 +152,8 @@ class AfterWriteTables : public BFN::ControlFlowVisitor, public MauInspector, To
     };
 
  public:
-    explicit AfterWriteTables(const PhvInfo &p)
-        : phv(p) {
+    explicit AfterWriteTables(const PhvInfo &p, const SharedIndirectAttachedAnalysis& shared)
+        : phv(p), shared(shared) {
         joinFlows = true;
         visitDagOnce = false;
     }
@@ -270,9 +288,10 @@ class GreedyMetaInit : public DataDependencyGraphSearchBase {
     using TableList = ordered_set<const IR::MAU::Table*>;
     using InitTableResult = std::pair<TableList, bool>;
 
-    const DependencyGraph& dg;
-    const AfterWriteTables& after_write_tables;
-    const TablesMutuallyExclusive& mutex;
+    const DependencyGraph                &dg;
+    const AfterWriteTables               &after_write_tables;
+    const TablesMutuallyExclusive        &mutex;
+    const SharedIndirectAttachedAnalysis &shared;
     std::set<const IR::MAU::Table*> uses;
     std::set<const IR::MAU::Table*> writes;
     std::set<const IR::MAU::Table*> touched;
@@ -309,6 +328,10 @@ class GreedyMetaInit : public DataDependencyGraphSearchBase {
         // visited.
         if (after_write_tables.isAfterWrite(field, table)) {
             return {init_rst, on_use}; }
+        // If data-shared table is after write, then we can not neither.
+        for (const auto* shared_tbl : shared.action_data_shared_tables(table)) {
+            if (after_write_tables.isAfterWrite(field, shared_tbl)) {
+                return {init_rst, on_use}; } }
 
         for (const auto& next : graph.adjacent_list[v]) {
             if (!visited(next)) {
@@ -323,11 +346,23 @@ class GreedyMetaInit : public DataDependencyGraphSearchBase {
         // Insert Initialization if,
         // 1. Needed.
         // 2. This table does not uses of that field.
-        // 3. Not a possible table after writting.
-        if (need_init && !on_use &&
-            !after_write_tables.isAfterWrite(field, table)) {
-            init_rst = { table };
-            need_init = false;
+        // 3. Not a table possibly after writting, neither does shared tables. (already checked)
+        if (need_init && !on_use) {
+            bool can_insert = true;
+            if (willCreateNewDepsWithTouched(table)) {
+                can_insert = false; }
+            // If init at this table, need to init at all action-data-shared tables as well.
+            for (auto* shared_tbl : shared.action_data_shared_tables(table)) {
+                if (willCreateNewDepsWithTouched(shared_tbl)) {
+                    can_insert = false;
+                    break; } }
+            // Add initialization in this table and data-shared tables.
+            if (can_insert) {
+                init_rst = { table };
+                for (auto* shared_tbl : shared.action_data_shared_tables(table)) {
+                    init_rst.insert(shared_tbl); }
+                need_init = false;
+            }
         }
 
         return {init_rst, on_use || need_init};
@@ -339,9 +374,10 @@ class GreedyMetaInit : public DataDependencyGraphSearchBase {
                    const FieldDefUse& defuse,
                    const AfterWriteTables& af,
                    const TablesMutuallyExclusive& mutex,
+                   const SharedIndirectAttachedAnalysis &shared,
                    const PHV::Field* field)
         : DataDependencyGraphSearchBase(graph), dg(dg), after_write_tables(af),
-          mutex(mutex), field(field) {
+          mutex(mutex), shared(shared), field(field) {
         // Populate uses.
         for (const auto& use : defuse.getAllUses(field->id)) {
             if (auto* table = use.first->to<IR::MAU::Table>()) {
@@ -352,6 +388,13 @@ class GreedyMetaInit : public DataDependencyGraphSearchBase {
             if (auto* table = write.first->to<IR::MAU::Table>()) {
                 writes.insert(table);
                 touched.insert(table); } }
+    }
+
+    bool willCreateNewDepsWithTouched(const IR::MAU::Table* candidate) {
+        for (const auto& other : touched) {
+            if (willCreateNewDeps(candidate, other)) {
+                return true; } }
+        return false;
     }
 
     /// Initialization will create a new dependency when:
@@ -377,9 +420,16 @@ class GreedyMetaInit : public DataDependencyGraphSearchBase {
             return previous; }
 
         TableList rst = previous;
+        bool can_init = true;
         for (const auto& candidate : candidates) {
-            bool can_init = true;
-            for (const auto& other : touched) {
+            if (willCreateNewDepsWithTouched(candidate)) {
+                can_init = false; }
+            // Either all tables can be inserted or none of them,
+            // because if one can not be inserted, then there will
+            // be a path that the field is uninitialized. Also,
+            // since we pack table and its action data shared tables all
+            // inside candidates, if one can not, none of them can.
+            for (const auto& other : candidates) {
                 if (willCreateNewDeps(candidate, other)) {
                     can_init = false;
                     break; } }
@@ -387,12 +437,13 @@ class GreedyMetaInit : public DataDependencyGraphSearchBase {
                 if (willCreateNewDeps(candidate, other)) {
                     can_init = false;
                     break; } }
-            if (can_init) {
+        }
+        if (can_init) {
+            for (const auto& candidate : candidates) {
                 LOG2("Plan to init " << field->name << " at " << candidate->name);
                 rst.insert(candidate);
             }
         }
-
         return rst;
     }
 
@@ -429,11 +480,12 @@ class GreedyMetaInit : public DataDependencyGraphSearchBase {
  * write to the field) in table.y.
  */
 class ComputeMetadataInit : public Inspector {
-    const TablesMutuallyExclusive& mutex;
-    const PhvInfo&                 phv;
-    const FieldDefUse&             defuse;
-    const DependencyGraph&         dg;
-    const AfterWriteTables&        after_write_tables;
+    const TablesMutuallyExclusive        &mutex;
+    const SharedIndirectAttachedAnalysis &shared;
+    const PhvInfo                        &phv;
+    const FieldDefUse                    &defuse;
+    const DependencyGraph                &dg;
+    const AfterWriteTables               &after_write_tables;
 
     std::vector<const PHV::Field*> to_be_inited;
     DataDependencyGraph graph;
@@ -491,7 +543,8 @@ class ComputeMetadataInit : public Inspector {
         calcToBeInitedFields();
         buildControlGraph();
         for (const auto* f : to_be_inited) {
-            GreedyMetaInit init_strategy(dg, graph, defuse, after_write_tables, mutex, f);
+            GreedyMetaInit init_strategy(dg, graph, defuse, after_write_tables,
+                                         mutex, shared, f);
             std::set<MetaInitPlan> plans = init_strategy.generateMetaInitPlans();
             for (const auto& v : plans) {
                 init_summay[v.table].push_back(v.field);
@@ -502,11 +555,13 @@ class ComputeMetadataInit : public Inspector {
 
  public:
     ComputeMetadataInit(const TablesMutuallyExclusive& mutex,
-                           const PhvInfo& phv,
-                           const FieldDefUse& defuse,
-                           const DependencyGraph& dg,
-                           const AfterWriteTables& after_write)
-        : mutex(mutex), phv(phv), defuse(defuse), dg(dg), after_write_tables(after_write) { }
+                        const SharedIndirectAttachedAnalysis &shared,
+                        const PhvInfo& phv,
+                        const FieldDefUse& defuse,
+                        const DependencyGraph& dg,
+                        const AfterWriteTables& after_write)
+        : mutex(mutex), shared(shared), phv(phv),
+          defuse(defuse), dg(dg), after_write_tables(after_write) { }
 
     std::map<const IR::MAU::Table*, std::vector<const PHV::Field*>> init_summay;
 
@@ -723,13 +778,16 @@ class MetadataInitSummary : public Inspector {
 MetadataInitialization::MetadataInitialization(bool always_init_metadata, const PhvInfo& phv,
                                                FieldDefUse& defuse, const DependencyGraph& dg) {
     auto* mutex = new TablesMutuallyExclusive();
+    auto* shared_tables = new SharedIndirectAttachedAnalysis(*mutex);
     auto* field_to_expr = new MapFieldToExpr(phv);
-    auto* after_write = new AfterWriteTables(phv);
-    auto* gen_init_plans = new ComputeMetadataInit(*mutex, phv, defuse, dg, *after_write);
+    auto* after_write = new AfterWriteTables(phv, *shared_tables);
+    auto* gen_init_plans = new ComputeMetadataInit(*mutex, *shared_tables,
+                                                   phv, defuse, dg, *after_write);
     auto* apply_init_insert =
         new ApplyMetadataInitialization(*gen_init_plans, *field_to_expr, *after_write);
     addPasses({
         mutex,
+        shared_tables,
         field_to_expr,
         after_write,
         // new TableGraphGen(dg, init_alloc->getDataDepGraph()),

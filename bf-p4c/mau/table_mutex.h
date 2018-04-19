@@ -62,8 +62,10 @@ class TablesMutuallyExclusive : public MauInspector {
 };
 
 class SharedIndirectAttachedAnalysis : public MauInspector {
-    std::map<const IR::MAU::AttachedMemory *,
-             safe_vector<const IR::MAU::Table *>> backend_users;
+    ordered_map<const IR::MAU::AttachedMemory *,
+                safe_vector<const IR::MAU::Table *>> backend_users;
+    ordered_map<const IR::MAU::Table *,
+                ordered_set<const IR::MAU::Table *>> act_data_shared_tables;
     const TablesMutuallyExclusive &mutex;
 
     profile_t init_apply(const IR::Node *root) override {
@@ -73,6 +75,8 @@ class SharedIndirectAttachedAnalysis : public MauInspector {
     }
     bool preorder(const IR::MAU::AttachedMemory *ba) override;
     bool preorder(const IR::MAU::Action *) override;
+    void end_apply() override;
+
  public:
     safe_vector<const IR::MAU::Table *>
     all_shared_tables(const IR::MAU::AttachedMemory *am) const {
@@ -80,6 +84,15 @@ class SharedIndirectAttachedAnalysis : public MauInspector {
         if (am == nullptr || backend_users.count(am) == 0)
             return empty;
         return backend_users.at(am);
+    }
+    const ordered_set<const IR::MAU::Table *>&
+    action_data_shared_tables(const IR::MAU::Table* tbl) const {
+        static ordered_set<const IR::MAU::Table *> empty;
+        if (act_data_shared_tables.count(tbl)) {
+            return act_data_shared_tables.at(tbl);
+        } else {
+            return empty;
+        }
     }
     explicit SharedIndirectAttachedAnalysis(const TablesMutuallyExclusive &m) : mutex(m) {}
 };

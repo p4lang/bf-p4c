@@ -95,3 +95,18 @@ bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::AttachedMemory *am)
     backend_users[am].push_back(tbl);
     return false;
 }
+
+void SharedIndirectAttachedAnalysis::end_apply() {
+    for (const auto& kv : backend_users) {
+        if (auto* action_data = kv.first->to<IR::MAU::ActionData>()) {
+            for (const auto* tbl_i : kv.second) {
+                for (const auto* tbl_j : kv.second) {
+                    if (tbl_i != tbl_j) {
+                        act_data_shared_tables[tbl_i].insert(tbl_j);
+                        act_data_shared_tables[tbl_j].insert(tbl_i);
+                    }
+                }
+            }
+        }
+    }
+}
