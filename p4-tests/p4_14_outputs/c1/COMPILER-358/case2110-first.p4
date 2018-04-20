@@ -1370,7 +1370,7 @@ control Silva(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 @name(".Tryon") register<bit<1>>(32w262144) Tryon;
 
 control Sitka(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Klondike") register_action<bit<1>, bit<1>>(Buenos) Klondike = {
+    @name(".Klondike") RegisterAction<bit<1>, bit<1>>(Buenos) Klondike = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -1379,7 +1379,7 @@ control Sitka(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             rv = ~value;
         }
     };
-    @name(".Theba") register_action<bit<1>, bit<1>>(Tryon) Theba = {
+    @name(".Theba") RegisterAction<bit<1>, bit<1>>(Tryon) Theba = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

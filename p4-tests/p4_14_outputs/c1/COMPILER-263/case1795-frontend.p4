@@ -843,7 +843,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Alakanuk_temp_2;
     bit<1> _Alakanuk_tmp_1;
     bit<1> _Alakanuk_tmp_2;
-    @name(".Cricket") register_action<bit<1>, bit<1>>(Seagrove) _Cricket_0 = {
+    @name(".Cricket") RegisterAction<bit<1>, bit<1>>(Seagrove) _Cricket_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Alakanuk_in_value_1;
             _Alakanuk_in_value_1 = value;
@@ -851,7 +851,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Jerico") register_action<bit<1>, bit<1>>(Lackey) _Jerico_0 = {
+    @name(".Jerico") RegisterAction<bit<1>, bit<1>>(Lackey) _Jerico_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Alakanuk_in_value_2;
             _Alakanuk_in_value_2 = value;
@@ -922,7 +922,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_24();
     }
     @name(".Elihu") direct_counter(CounterType.packets_and_bytes) _Elihu_0;
-    @name(".Fowlkes") register_action<bit<1>, bit<1>>(Floyd) _Fowlkes_0 = {
+    @name(".Fowlkes") RegisterAction<bit<1>, bit<1>>(Floyd) _Fowlkes_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _NewRoads_in_value_0;
             rv = 1w0;

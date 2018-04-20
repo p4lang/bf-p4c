@@ -125,7 +125,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
 
 header ingress_parser_control_signals {
     bit<3> priority;
-    bit<5> _pad;
+    bit<5> _pad1;
     bit<8> parser_counter;
 }
 
@@ -185,9 +185,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".action_1") action action_4(bit<32> src1) {
     }
-    @name(".action_2") action action_5(bit<8> cond2, bit<32> src2) {
-        tmp_0 = (cond2 != 8w0 ? src2 : tmp_0);
-        tmp_0 = (!(cond2 != 8w0) ? hdr.hdr_0.c : tmp_0);
+    @name(".action_2") action action_5(bool cond2, bit<32> src2) {
+        tmp_0 = (cond2 ? src2 : tmp_0);
+        tmp_0 = (!cond2 ? hdr.hdr_0.c : tmp_0);
     }
     @name(".table_i0") table table_i0 {
         actions = {

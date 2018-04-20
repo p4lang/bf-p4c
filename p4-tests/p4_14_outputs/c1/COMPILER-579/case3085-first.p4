@@ -2586,7 +2586,7 @@ control Ramapo(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".Sagamore") register<bit<1>>(32w294912) Sagamore;
 
 control Ranchito(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Fittstown") register_action<bit<1>, bit<1>>(Sagamore) Fittstown = {
+    @name(".Fittstown") RegisterAction<bit<1>, bit<1>>(Sagamore) Fittstown = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -2595,7 +2595,7 @@ control Ranchito(inout headers hdr, inout metadata meta, inout standard_metadata
             rv = value;
         }
     };
-    @name(".Wheaton") register_action<bit<1>, bit<1>>(Oxford) Wheaton = {
+    @name(".Wheaton") RegisterAction<bit<1>, bit<1>>(Oxford) Wheaton = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

@@ -812,12 +812,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction_26();
     }
-    @name(".Sherack") register_action<bit<1>, bit<1>>(Chaffey) _Sherack_0 = {
+    @name(".Sherack") RegisterAction<bit<1>, bit<1>>(Chaffey) _Sherack_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Spiro") register_action<bit<1>, bit<1>>(Buenos) _Spiro_0 = {
+    @name(".Spiro") RegisterAction<bit<1>, bit<1>>(Buenos) _Spiro_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -884,7 +884,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_29();
     }
-    @name(".Powderly") register_action<bit<1>, bit<1>>(Ingleside) _Powderly_0 = {
+    @name(".Powderly") RegisterAction<bit<1>, bit<1>>(Ingleside) _Powderly_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;

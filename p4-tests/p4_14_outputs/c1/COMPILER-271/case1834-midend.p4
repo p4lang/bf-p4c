@@ -972,12 +972,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_31();
     }
-    @name(".Ackerman") register_action<bit<1>, bit<1>>(Sonora) _Ackerman_0 = {
+    @name(".Ackerman") RegisterAction<bit<1>, bit<1>>(Sonora) _Ackerman_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Exeter") register_action<bit<1>, bit<1>>(Newfane) _Exeter_0 = {
+    @name(".Exeter") RegisterAction<bit<1>, bit<1>>(Newfane) _Exeter_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -1056,7 +1056,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_35();
     }
     @name(".Amanda") direct_counter(CounterType.packets_and_bytes) _Amanda_0;
-    @name(".Warsaw") register_action<bit<1>, bit<1>>(Hobson) _Warsaw_0 = {
+    @name(".Warsaw") RegisterAction<bit<1>, bit<1>>(Hobson) _Warsaw_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;

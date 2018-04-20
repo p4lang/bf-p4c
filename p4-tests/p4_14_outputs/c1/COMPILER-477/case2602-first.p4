@@ -810,7 +810,7 @@ control Coventry(inout headers hdr, inout metadata meta, inout standard_metadata
 @name(".Pierpont") register<bit<1>>(32w262144) Pierpont;
 
 control Eastover(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Barney") register_action<bit<1>, bit<1>>(Pierpont) Barney = {
+    @name(".Barney") RegisterAction<bit<1>, bit<1>>(Pierpont) Barney = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -819,7 +819,7 @@ control Eastover(inout headers hdr, inout metadata meta, inout standard_metadata
             rv = value;
         }
     };
-    @name(".Waxhaw") register_action<bit<1>, bit<1>>(Correo) Waxhaw = {
+    @name(".Waxhaw") RegisterAction<bit<1>, bit<1>>(Correo) Waxhaw = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

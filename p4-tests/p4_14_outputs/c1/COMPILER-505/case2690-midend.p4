@@ -1222,12 +1222,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_52();
     }
-    @name(".Saluda") register_action<bit<1>, bit<1>>(Gregory) _Saluda_0 = {
+    @name(".Saluda") RegisterAction<bit<1>, bit<1>>(Gregory) _Saluda_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".SomesBar") register_action<bit<1>, bit<1>>(Argentine) _SomesBar_0 = {
+    @name(".SomesBar") RegisterAction<bit<1>, bit<1>>(Argentine) _SomesBar_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

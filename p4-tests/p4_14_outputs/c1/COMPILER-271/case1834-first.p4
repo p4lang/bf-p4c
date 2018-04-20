@@ -611,7 +611,7 @@ control Ardara(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control Devers(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Amanda") direct_counter(CounterType.packets_and_bytes) Amanda;
-    @name(".Warsaw") register_action<bit<1>, bit<1>>(Hobson) Warsaw = {
+    @name(".Warsaw") RegisterAction<bit<1>, bit<1>>(Hobson) Warsaw = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -1325,7 +1325,7 @@ control Parmelee(inout headers hdr, inout metadata meta, inout standard_metadata
 @name(".Sonora") register<bit<1>>(32w262144) Sonora;
 
 control Satanta(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Ackerman") register_action<bit<1>, bit<1>>(Sonora) Ackerman = {
+    @name(".Ackerman") RegisterAction<bit<1>, bit<1>>(Sonora) Ackerman = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -1334,7 +1334,7 @@ control Satanta(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Exeter") register_action<bit<1>, bit<1>>(Newfane) Exeter = {
+    @name(".Exeter") RegisterAction<bit<1>, bit<1>>(Newfane) Exeter = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

@@ -213,7 +213,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".cntr") @min_width(32) counter(32w16384, CounterType.packets) cntr;
     @name(".m") meter(32w1024, MeterType.packets) m;
-    @name(".r_alu") register_action<bit<16>, bit<16>>(r) r_alu = {
+    @name(".r_alu") RegisterAction<bit<16>, bit<16>>(r) r_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = 16w0;
             value = value + 16w1;

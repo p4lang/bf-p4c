@@ -1233,7 +1233,7 @@ control Harvest(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control Hebbville(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".LaHoma") direct_counter(CounterType.packets_and_bytes) LaHoma;
-    @name(".Veteran") register_action<bit<1>, bit<1>>(Linville) Veteran = {
+    @name(".Veteran") RegisterAction<bit<1>, bit<1>>(Linville) Veteran = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -1414,7 +1414,7 @@ control McKamie(inout headers hdr, inout metadata meta, inout standard_metadata_
 @name(".Venice") register<bit<1>>(32w262144) Venice;
 
 control Rockville(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Tavistock") register_action<bit<1>, bit<1>>(Goessel) Tavistock = {
+    @name(".Tavistock") RegisterAction<bit<1>, bit<1>>(Goessel) Tavistock = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -1423,7 +1423,7 @@ control Rockville(inout headers hdr, inout metadata meta, inout standard_metadat
             rv = value;
         }
     };
-    @name(".Westboro") register_action<bit<1>, bit<1>>(Venice) Westboro = {
+    @name(".Westboro") RegisterAction<bit<1>, bit<1>>(Venice) Westboro = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

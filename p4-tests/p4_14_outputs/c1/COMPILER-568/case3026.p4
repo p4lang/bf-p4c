@@ -1973,7 +1973,7 @@ control Inverness(inout headers hdr, inout metadata meta, inout standard_metadat
 @name(".Parkline") register<bit<1>>(32w262144) Parkline;
 
 control Lacona(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Masardis") register_action<bit<1>, bit<1>>(Parkline) Masardis = {
+    @name(".Masardis") RegisterAction<bit<1>, bit<1>>(Parkline) Masardis = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -1982,7 +1982,7 @@ control Lacona(inout headers hdr, inout metadata meta, inout standard_metadata_t
             rv = value;
         }
     };
-    @name(".Woodcrest") register_action<bit<1>, bit<1>>(Ontonagon) Woodcrest = {
+    @name(".Woodcrest") RegisterAction<bit<1>, bit<1>>(Ontonagon) Woodcrest = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

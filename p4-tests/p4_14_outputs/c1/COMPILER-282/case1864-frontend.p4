@@ -944,7 +944,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Cypress_temp_2;
     bit<1> _Cypress_tmp_1;
     bit<1> _Cypress_tmp_2;
-    @name(".Clermont") register_action<bit<1>, bit<1>>(Ceiba) _Clermont_0 = {
+    @name(".Clermont") RegisterAction<bit<1>, bit<1>>(Ceiba) _Clermont_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Cypress_in_value_1;
             _Cypress_in_value_1 = value;
@@ -952,7 +952,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Selah") register_action<bit<1>, bit<1>>(Mentmore) _Selah_0 = {
+    @name(".Selah") RegisterAction<bit<1>, bit<1>>(Mentmore) _Selah_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Cypress_in_value_2;
             _Cypress_in_value_2 = value;
@@ -1071,7 +1071,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_40();
     }
     @name(".Silvertip") direct_counter(CounterType.packets_and_bytes) _Silvertip_0;
-    @name(".Mabelle") register_action<bit<1>, bit<1>>(Brinson) _Mabelle_0 = {
+    @name(".Mabelle") RegisterAction<bit<1>, bit<1>>(Brinson) _Mabelle_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Moark_in_value_0;
             rv = 1w0;

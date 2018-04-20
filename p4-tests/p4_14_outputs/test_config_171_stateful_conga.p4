@@ -224,7 +224,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".conga_state") register<conga_state_layout>(32w256) conga_state;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".conga_alu") register_action<conga_state_layout, bit<8>>(conga_state) conga_alu = {
+    @name(".conga_alu") RegisterAction<conga_state_layout, bit<8>>(conga_state) conga_alu = {
         void apply(inout conga_state_layout value, out bit<8> rv) {
             conga_state_layout in_value;
             in_value = value;
@@ -233,7 +233,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value.next_hop;
         }
     };
-    @name(".conga_update_alu") register_action<conga_state_layout, bit<8>>(conga_state) conga_update_alu = {
+    @name(".conga_update_alu") RegisterAction<conga_state_layout, bit<8>>(conga_state) conga_update_alu = {
         void apply(inout conga_state_layout value, out bit<8> rv) {
             conga_state_layout in_value;
             in_value = value;

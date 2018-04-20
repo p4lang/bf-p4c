@@ -856,7 +856,7 @@ control DuQuoin(inout headers hdr, inout metadata meta, inout standard_metadata_
 @name(".Onamia") register<bit<1>>(32w262144) Onamia;
 
 control Halaula(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Fajardo") register_action<bit<1>, bit<1>>(Onamia) Fajardo = {
+    @name(".Fajardo") RegisterAction<bit<1>, bit<1>>(Onamia) Fajardo = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -865,7 +865,7 @@ control Halaula(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Gastonia") register_action<bit<1>, bit<1>>(Mahopac) Gastonia = {
+    @name(".Gastonia") RegisterAction<bit<1>, bit<1>>(Mahopac) Gastonia = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -1157,7 +1157,7 @@ control Oakes(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 
 control Parshall(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Norborne") direct_counter(CounterType.packets_and_bytes) Norborne;
-    @name(".Challenge") register_action<bit<1>, bit<1>>(Ashville) Challenge = {
+    @name(".Challenge") RegisterAction<bit<1>, bit<1>>(Ashville) Challenge = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

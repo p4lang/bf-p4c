@@ -1158,12 +1158,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_47();
     }
-    @name(".Barney") register_action<bit<1>, bit<1>>(Pierpont) _Barney_0 = {
+    @name(".Barney") RegisterAction<bit<1>, bit<1>>(Pierpont) _Barney_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Waxhaw") register_action<bit<1>, bit<1>>(Correo) _Waxhaw_0 = {
+    @name(".Waxhaw") RegisterAction<bit<1>, bit<1>>(Correo) _Waxhaw_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

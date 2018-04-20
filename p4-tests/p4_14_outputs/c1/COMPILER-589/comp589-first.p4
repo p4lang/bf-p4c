@@ -1113,7 +1113,7 @@ control Burket(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".Simla") register<bit<1>>(32w294912) Simla;
 
 control Calabasas(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Olene") register_action<bit<1>, bit<1>>(Lowes) Olene = {
+    @name(".Olene") RegisterAction<bit<1>, bit<1>>(Lowes) Olene = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -1122,7 +1122,7 @@ control Calabasas(inout headers hdr, inout metadata meta, inout standard_metadat
             rv = value;
         }
     };
-    @name(".Portal") register_action<bit<1>, bit<1>>(Simla) Portal = {
+    @name(".Portal") RegisterAction<bit<1>, bit<1>>(Simla) Portal = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

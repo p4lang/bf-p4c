@@ -1437,7 +1437,7 @@ control Millstadt(inout headers hdr, inout metadata meta, inout standard_metadat
 @name(".Redfield") register<bit<1>>(32w262144) Redfield;
 
 control OjoFeliz(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".LaConner") register_action<bit<1>, bit<1>>(Arnold) LaConner = {
+    @name(".LaConner") RegisterAction<bit<1>, bit<1>>(Arnold) LaConner = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -1446,7 +1446,7 @@ control OjoFeliz(inout headers hdr, inout metadata meta, inout standard_metadata
             rv = ~value;
         }
     };
-    @name(".ShowLow") register_action<bit<1>, bit<1>>(Redfield) ShowLow = {
+    @name(".ShowLow") RegisterAction<bit<1>, bit<1>>(Redfield) ShowLow = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

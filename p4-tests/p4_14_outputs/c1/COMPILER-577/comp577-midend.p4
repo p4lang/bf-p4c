@@ -1619,12 +1619,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_71();
     }
-    @name(".Campton") register_action<bit<1>, bit<1>>(Hibernia) _Campton_0 = {
+    @name(".Campton") RegisterAction<bit<1>, bit<1>>(Hibernia) _Campton_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Panaca") register_action<bit<1>, bit<1>>(Frontier) _Panaca_0 = {
+    @name(".Panaca") RegisterAction<bit<1>, bit<1>>(Frontier) _Panaca_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

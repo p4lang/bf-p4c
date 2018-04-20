@@ -845,12 +845,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_24();
     }
-    @name(".fcVprY") register_action<bit<1>, bit<1>>(GBdGiH) _fcVprY_0 = {
+    @name(".fcVprY") RegisterAction<bit<1>, bit<1>>(GBdGiH) _fcVprY_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".vOaDPT") register_action<bit<1>, bit<1>>(yevXhQ) _vOaDPT_0 = {
+    @name(".vOaDPT") RegisterAction<bit<1>, bit<1>>(yevXhQ) _vOaDPT_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -917,7 +917,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = _EAmgXn();
     }
-    @name(".tOUEnP") register_action<bit<1>, bit<1>>(QUINJI) _tOUEnP_0 = {
+    @name(".tOUEnP") RegisterAction<bit<1>, bit<1>>(QUINJI) _tOUEnP_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;

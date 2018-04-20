@@ -833,7 +833,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Halaula_temp_2;
     bit<1> _Halaula_tmp_1;
     bit<1> _Halaula_tmp_2;
-    @name(".Fajardo") register_action<bit<1>, bit<1>>(Onamia) _Fajardo_0 = {
+    @name(".Fajardo") RegisterAction<bit<1>, bit<1>>(Onamia) _Fajardo_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Halaula_in_value_1;
             _Halaula_in_value_1 = value;
@@ -841,7 +841,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Gastonia") register_action<bit<1>, bit<1>>(Mahopac) _Gastonia_0 = {
+    @name(".Gastonia") RegisterAction<bit<1>, bit<1>>(Mahopac) _Gastonia_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Halaula_in_value_2;
             _Halaula_in_value_2 = value;
@@ -912,7 +912,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_27();
     }
     @name(".Norborne") direct_counter(CounterType.packets_and_bytes) _Norborne_0;
-    @name(".Challenge") register_action<bit<1>, bit<1>>(Ashville) _Challenge_0 = {
+    @name(".Challenge") RegisterAction<bit<1>, bit<1>>(Ashville) _Challenge_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Parshall_in_value_0;
             rv = 1w0;

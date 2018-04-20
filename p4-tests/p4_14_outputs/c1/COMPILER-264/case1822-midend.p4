@@ -846,12 +846,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_24();
     }
-    @name(".Fajardo") register_action<bit<1>, bit<1>>(Onamia) _Fajardo_0 = {
+    @name(".Fajardo") RegisterAction<bit<1>, bit<1>>(Onamia) _Fajardo_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Gastonia") register_action<bit<1>, bit<1>>(Mahopac) _Gastonia_0 = {
+    @name(".Gastonia") RegisterAction<bit<1>, bit<1>>(Mahopac) _Gastonia_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -919,7 +919,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_27();
     }
     @name(".Norborne") direct_counter(CounterType.packets_and_bytes) _Norborne_0;
-    @name(".Challenge") register_action<bit<1>, bit<1>>(Ashville) _Challenge_0 = {
+    @name(".Challenge") RegisterAction<bit<1>, bit<1>>(Ashville) _Challenge_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;

@@ -376,7 +376,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @meter_sweep_interval(0) @name(".e4_meter") direct_meter<bit<8>>(MeterType.packets) e4_meter_1;
     @meter_sweep_interval(0) @name(".t3_meter") direct_meter<bit<8>>(MeterType.bytes) t3_meter_1;
     @meter_sweep_interval(0) @name(".t4_meter") direct_meter<bit<8>>(MeterType.packets) t4_meter_1;
-    @name(".e1_alu") register_action<e1_alu_layout, int<32>>(e1_reg) e1_alu = {
+    @name(".e1_alu") RegisterAction<e1_alu_layout, int<32>>(e1_reg) e1_alu = {
         void apply(inout e1_alu_layout value, out int<32> rv) {
             e1_alu_layout in_value;
             in_value = value;
@@ -386,7 +386,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 value.lo = 32s0;
         }
     };
-    @name(".e2_alu") register_action<e2_alu_layout, bit<16>>(e2_reg) e2_alu = {
+    @name(".e2_alu") RegisterAction<e2_alu_layout, bit<16>>(e2_reg) e2_alu = {
         void apply(inout e2_alu_layout value, out bit<16> rv) {
             e2_alu_layout in_value_14;
             in_value_14 = value;
@@ -398,7 +398,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     };
     @name(".e5_lpf") DirectLpf<bit<32>>() e5_lpf_1;
     @name(".e6_lpf") DirectLpf<bit<32>>() e6_lpf_1;
-    @name(".t1_alu") register_action<t1_alu_layout, int<32>>(t1_reg) t1_alu = {
+    @name(".t1_alu") RegisterAction<t1_alu_layout, int<32>>(t1_reg) t1_alu = {
         void apply(inout t1_alu_layout value, out int<32> rv) {
             t1_alu_layout in_value_15;
             in_value_15 = value;
@@ -408,7 +408,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 value.lo = 32s0;
         }
     };
-    @name(".t2_alu") register_action<t2_alu_layout, bit<16>>(t2_reg) t2_alu = {
+    @name(".t2_alu") RegisterAction<t2_alu_layout, bit<16>>(t2_reg) t2_alu = {
         void apply(inout t2_alu_layout value, out bit<16> rv) {
             t2_alu_layout in_value_16;
             in_value_16 = value;
@@ -420,7 +420,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     };
     @name(".t5_lpf") DirectLpf<bit<32>>() t5_lpf_1;
     @name(".t6_lpf") DirectLpf<bit<32>>() t6_lpf_1;
-    @name(".vp5_alu") register_action<vp5_alu_layout, bit<32>>(vp5_reg) vp5_alu = {
+    @name(".vp5_alu") RegisterAction<vp5_alu_layout, bit<32>>(vp5_reg) vp5_alu = {
         void apply(inout vp5_alu_layout value, out bit<32> rv) {
             vp5_alu_layout in_value_17;
             in_value_17 = value;
@@ -430,7 +430,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             value.lo = in_value_17.lo + 32w1;
         }
     };
-    @name(".vp6_alu") register_action<vp6_alu_layout, bit<32>>(vp6_reg) vp6_alu = {
+    @name(".vp6_alu") RegisterAction<vp6_alu_layout, bit<32>>(vp6_reg) vp6_alu = {
         void apply(inout vp6_alu_layout value, out bit<32> rv) {
             vp6_alu_layout in_value_18;
             in_value_18 = value;
@@ -440,7 +440,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             value.lo = in_value_18.lo + 32w1;
         }
     };
-    @name(".vpp5_alu") register_action<vpp5_alu_layout, bit<32>>(vpp5_reg) vpp5_alu = {
+    @name(".vpp5_alu") RegisterAction<vpp5_alu_layout, bit<32>>(vpp5_reg) vpp5_alu = {
         void apply(inout vpp5_alu_layout value, out bit<32> rv) {
             vpp5_alu_layout in_value_19;
             in_value_19 = value;
@@ -450,7 +450,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             value.lo = in_value_19.lo + 32w1;
         }
     };
-    @name(".vpp6_alu") register_action<vpp6_alu_layout, bit<32>>(vpp6_reg) vpp6_alu = {
+    @name(".vpp6_alu") RegisterAction<vpp6_alu_layout, bit<32>>(vpp6_reg) vpp6_alu = {
         void apply(inout vpp6_alu_layout value, out bit<32> rv) {
             vpp6_alu_layout in_value_20;
             in_value_20 = value;
@@ -850,7 +850,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".nothing") action nothing_9() {
         v3_cntr.count();
     }
-    @stage(11) @name(".v3") table v3_1 {
+    @stage(11) @name(".v3") table v3 {
         actions = {
             nothing_9();
             @defaultonly NoAction_90();
@@ -864,7 +864,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".nothing") action nothing_10() {
         v4_cntr.count();
     }
-    @stage(11) @name(".v4") table v4_1 {
+    @stage(11) @name(".v4") table v4 {
         actions = {
             nothing_10();
             @defaultonly NoAction_91();
@@ -971,9 +971,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         e4.apply();
         mr_verify_setup.apply();
         if (meta.md.t3_meter == meta.md.e3_meter) 
-            v3_1.apply();
+            v3.apply();
         if (meta.md.t4_meter == meta.md.e4_meter) 
-            v4_1.apply();
+            v4.apply();
         if (meta.md.t5_lpf == meta.md.e5_lpf) 
             v5.apply();
         if (meta.md.t6_lpf == meta.md.e6_lpf) 
@@ -1090,21 +1090,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".ig_cntr_3") counter(32w16384, CounterType.packets_and_bytes) ig_cntr_3;
     @name(".ig_cntr_4") counter(32w2048, CounterType.packets) ig_cntr_4;
     @meter_per_flow_enable(1) @meter_pre_color_aware_per_flow_enable(1) @meter_sweep_interval(0) @name(".m1") meter(32w20480, MeterType.bytes) m1_0;
-    @name(".sel_res_alu") register_action<bit<16>, bit<16>>(sel_res_reg) sel_res_alu = {
+    @name(".sel_res_alu") RegisterAction<bit<16>, bit<16>>(sel_res_reg) sel_res_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             bit<16> in_value_21;
             rv = 16w0;
             value = (bit<16>)hdr.ig_intr_md_for_tm.ucast_egress_port;
         }
     };
-    @name(".set_mrk_hi_alu") register_action<bit<16>, bit<16>>(mrk_hi_reg) set_mrk_hi_alu = {
+    @name(".set_mrk_hi_alu") RegisterAction<bit<16>, bit<16>>(mrk_hi_reg) set_mrk_hi_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             bit<16> in_value_22;
             value = meta.md.etherType_hi;
             rv = value;
         }
     };
-    @name(".set_mrk_lo_alu") register_action<bit<16>, bit<16>>(mrk_lo_reg) set_mrk_lo_alu = {
+    @name(".set_mrk_lo_alu") RegisterAction<bit<16>, bit<16>>(mrk_lo_reg) set_mrk_lo_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             bit<16> in_value_23;
             value = hdr.ethernet.etherType & 16w0xff;
@@ -1118,7 +1118,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = 1w0;
         }
     };
-    @name(".stats_key_alu1") register_action<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu1 = {
+    @name(".stats_key_alu1") RegisterAction<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu1 = {
         void apply(inout stats_key_alu1_layout value, out bit<32> rv) {
             stats_key_alu1_layout in_value_25;
             in_value_25 = value;
@@ -1133,7 +1133,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 value.lo = 32w100;
         }
     };
-    @name(".stats_key_alu3") register_action<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu3 = {
+    @name(".stats_key_alu3") RegisterAction<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu3 = {
         void apply(inout stats_key_alu1_layout value, out bit<32> rv) {
             stats_key_alu1_layout in_value_26;
             in_value_26 = value;

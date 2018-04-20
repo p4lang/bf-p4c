@@ -2569,7 +2569,7 @@ control Vanoss(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".Honuapo") register<bit<1>>(32w262144) Honuapo;
 
 control Walcott(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Montegut") register_action<bit<1>, bit<1>>(Dillsboro) Montegut = {
+    @name(".Montegut") RegisterAction<bit<1>, bit<1>>(Dillsboro) Montegut = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -2578,7 +2578,7 @@ control Walcott(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Plains") register_action<bit<1>, bit<1>>(Honuapo) Plains = {
+    @name(".Plains") RegisterAction<bit<1>, bit<1>>(Honuapo) Plains = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

@@ -2023,7 +2023,7 @@ control Mosinee(inout headers hdr, inout metadata meta, inout standard_metadata_
 @name(".Hibernia") register<bit<1>>(32w294912) Hibernia;
 
 control Netarts(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Campton") register_action<bit<1>, bit<1>>(Hibernia) Campton = {
+    @name(".Campton") RegisterAction<bit<1>, bit<1>>(Hibernia) Campton = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -2032,7 +2032,7 @@ control Netarts(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = ~value;
         }
     };
-    @name(".Panaca") register_action<bit<1>, bit<1>>(Frontier) Panaca = {
+    @name(".Panaca") RegisterAction<bit<1>, bit<1>>(Frontier) Panaca = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

@@ -692,7 +692,7 @@ control Hephzibah(inout headers hdr, inout metadata meta, inout standard_metadat
 @name(".Steger") register<bit<1>>(32w262144) Steger;
 
 control Homeacre(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Donegal") register_action<bit<1>, bit<1>>(Robinette) Donegal = {
+    @name(".Donegal") RegisterAction<bit<1>, bit<1>>(Robinette) Donegal = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -701,7 +701,7 @@ control Homeacre(inout headers hdr, inout metadata meta, inout standard_metadata
             rv = value;
         }
     };
-    @name(".Sitka") register_action<bit<1>, bit<1>>(Steger) Sitka = {
+    @name(".Sitka") RegisterAction<bit<1>, bit<1>>(Steger) Sitka = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -1234,7 +1234,7 @@ control Perez(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 
 control Puyallup(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Marquand") direct_counter(CounterType.packets_and_bytes) Marquand;
-    @name(".Chaumont") register_action<bit<1>, bit<1>>(Grants) Chaumont = {
+    @name(".Chaumont") RegisterAction<bit<1>, bit<1>>(Grants) Chaumont = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

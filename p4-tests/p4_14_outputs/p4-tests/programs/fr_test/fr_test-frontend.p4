@@ -516,7 +516,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_71() {
     }
     @name(".ing_mtr") meter(32w8192, MeterType.packets) ing_mtr;
-    @name(".reg_alu_0") register_action<bit<32>, bit<32>>(reg_0) reg_alu_0 = {
+    @name(".reg_alu_0") RegisterAction<bit<32>, bit<32>>(reg_0) reg_alu_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value;
             in_value = value;
@@ -524,7 +524,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = in_value + 32w1;
         }
     };
-    @name(".reg_alu_1") register_action<bit<32>, bit<32>>(reg_1) reg_alu_1 = {
+    @name(".reg_alu_1") RegisterAction<bit<32>, bit<32>>(reg_1) reg_alu_1 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value_11;
             in_value_11 = value;
@@ -532,7 +532,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = in_value_11 + 32w1;
         }
     };
-    @name(".reg_alu_10") register_action<bit<32>, bit<32>>(reg_10) reg_alu_2 = {
+    @name(".reg_alu_10") RegisterAction<bit<32>, bit<32>>(reg_10) reg_alu_2 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value_12;
             in_value_12 = value;
@@ -540,7 +540,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = in_value_12 + 32w1;
         }
     };
-    @name(".reg_alu_2") register_action<bit<32>, bit<32>>(reg_2) reg_alu_3 = {
+    @name(".reg_alu_2") RegisterAction<bit<32>, bit<32>>(reg_2) reg_alu_3 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value_13;
             in_value_13 = value;
@@ -548,7 +548,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = in_value_13 + 32w1;
         }
     };
-    @name(".reg_alu_3") register_action<bit<32>, bit<32>>(reg_3) reg_alu_4 = {
+    @name(".reg_alu_3") RegisterAction<bit<32>, bit<32>>(reg_3) reg_alu_4 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value_14;
             in_value_14 = value;
@@ -556,7 +556,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = in_value_14 + 32w1;
         }
     };
-    @name(".reg_alu_4") register_action<bit<32>, bit<32>>(reg_4) reg_alu_5 = {
+    @name(".reg_alu_4") RegisterAction<bit<32>, bit<32>>(reg_4) reg_alu_5 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value_15;
             in_value_15 = value;
@@ -564,7 +564,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = in_value_15 + 32w1;
         }
     };
-    @name(".reg_alu_5") register_action<bit<32>, bit<32>>(reg_5) reg_alu_6 = {
+    @name(".reg_alu_5") RegisterAction<bit<32>, bit<32>>(reg_5) reg_alu_6 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value_16;
             in_value_16 = value;
@@ -572,7 +572,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = in_value_16 + 32w1;
         }
     };
-    @name(".reg_alu_6") register_action<bit<32>, bit<32>>(reg_6) reg_alu_7 = {
+    @name(".reg_alu_6") RegisterAction<bit<32>, bit<32>>(reg_6) reg_alu_7 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value_17;
             in_value_17 = value;
@@ -580,7 +580,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = in_value_17 + 32w1;
         }
     };
-    @name(".reg_alu_7") register_action<bit<32>, bit<32>>(reg_7) reg_alu_8 = {
+    @name(".reg_alu_7") RegisterAction<bit<32>, bit<32>>(reg_7) reg_alu_8 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value_18;
             in_value_18 = value;
@@ -588,7 +588,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = in_value_18 + 32w1;
         }
     };
-    @name(".reg_alu_8") register_action<bit<32>, bit<32>>(reg_8) reg_alu_9 = {
+    @name(".reg_alu_8") RegisterAction<bit<32>, bit<32>>(reg_8) reg_alu_9 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value_19;
             in_value_19 = value;
@@ -596,7 +596,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = in_value_19 + 32w1;
         }
     };
-    @name(".reg_alu_9") register_action<bit<32>, bit<32>>(reg_9) reg_alu_10 = {
+    @name(".reg_alu_9") RegisterAction<bit<32>, bit<32>>(reg_9) reg_alu_10 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value_20;
             in_value_20 = value;

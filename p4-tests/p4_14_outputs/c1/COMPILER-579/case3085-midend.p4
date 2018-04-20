@@ -1476,12 +1476,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = _Millstadt_4();
     }
-    @name(".Fittstown") register_action<bit<1>, bit<1>>(Sagamore) _Fittstown_0 = {
+    @name(".Fittstown") RegisterAction<bit<1>, bit<1>>(Sagamore) _Fittstown_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Wheaton") register_action<bit<1>, bit<1>>(Oxford) _Wheaton_0 = {
+    @name(".Wheaton") RegisterAction<bit<1>, bit<1>>(Oxford) _Wheaton_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

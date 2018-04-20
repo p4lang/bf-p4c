@@ -184,7 +184,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @parser_value_set_size(7) @name(".pvs2") value_set<bit<16>> pvs2;
+    @parser_value_set_size(7) @name(".pvs2") value_set<bit<16>>(4) pvs2;
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {

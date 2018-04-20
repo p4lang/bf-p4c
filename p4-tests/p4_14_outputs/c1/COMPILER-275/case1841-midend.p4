@@ -941,12 +941,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = _LakePine();
     }
-    @name(".Donegal") register_action<bit<1>, bit<1>>(Robinette) _Donegal_0 = {
+    @name(".Donegal") RegisterAction<bit<1>, bit<1>>(Robinette) _Donegal_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Sitka") register_action<bit<1>, bit<1>>(Steger) _Sitka_0 = {
+    @name(".Sitka") RegisterAction<bit<1>, bit<1>>(Steger) _Sitka_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -1025,7 +1025,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_34();
     }
     @name(".Marquand") direct_counter(CounterType.packets_and_bytes) _Marquand_0;
-    @name(".Chaumont") register_action<bit<1>, bit<1>>(Grants) _Chaumont_0 = {
+    @name(".Chaumont") RegisterAction<bit<1>, bit<1>>(Grants) _Chaumont_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;

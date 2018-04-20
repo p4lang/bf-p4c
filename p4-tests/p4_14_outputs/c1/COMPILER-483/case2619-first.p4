@@ -2037,7 +2037,7 @@ control Robbins(inout headers hdr, inout metadata meta, inout standard_metadata_
 @name(".NewSite") register<bit<1>>(32w262144) NewSite;
 
 control Tahuya(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Goldsmith") register_action<bit<1>, bit<1>>(Alcalde) Goldsmith = {
+    @name(".Goldsmith") RegisterAction<bit<1>, bit<1>>(Alcalde) Goldsmith = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -2046,7 +2046,7 @@ control Tahuya(inout headers hdr, inout metadata meta, inout standard_metadata_t
             rv = ~value;
         }
     };
-    @name(".Mizpah") register_action<bit<1>, bit<1>>(NewSite) Mizpah = {
+    @name(".Mizpah") RegisterAction<bit<1>, bit<1>>(NewSite) Mizpah = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

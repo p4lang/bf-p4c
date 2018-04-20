@@ -1057,12 +1057,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = _Thach();
     }
-    @name(".Moxley") register_action<bit<1>, bit<1>>(Shidler) _Moxley_0 = {
+    @name(".Moxley") RegisterAction<bit<1>, bit<1>>(Shidler) _Moxley_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Shorter") register_action<bit<1>, bit<1>>(Jefferson) _Shorter_0 = {
+    @name(".Shorter") RegisterAction<bit<1>, bit<1>>(Jefferson) _Shorter_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

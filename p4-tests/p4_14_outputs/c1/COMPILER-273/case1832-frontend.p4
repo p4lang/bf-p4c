@@ -909,7 +909,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Ottertail_temp_2;
     bit<1> _Ottertail_tmp_1;
     bit<1> _Ottertail_tmp_2;
-    @name(".Flourtown") register_action<bit<1>, bit<1>>(Patchogue) _Flourtown_0 = {
+    @name(".Flourtown") RegisterAction<bit<1>, bit<1>>(Patchogue) _Flourtown_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Ottertail_in_value_1;
             _Ottertail_in_value_1 = value;
@@ -917,7 +917,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Lordstown") register_action<bit<1>, bit<1>>(LaConner) _Lordstown_0 = {
+    @name(".Lordstown") RegisterAction<bit<1>, bit<1>>(LaConner) _Lordstown_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Ottertail_in_value_2;
             _Ottertail_in_value_2 = value;
@@ -999,7 +999,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_35();
     }
     @name(".BigBay") direct_counter(CounterType.packets_and_bytes) _BigBay_0;
-    @name(".Sunrise") register_action<bit<1>, bit<1>>(Pueblo) _Sunrise_0 = {
+    @name(".Sunrise") RegisterAction<bit<1>, bit<1>>(Pueblo) _Sunrise_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Achille_in_value_0;
             rv = 1w0;

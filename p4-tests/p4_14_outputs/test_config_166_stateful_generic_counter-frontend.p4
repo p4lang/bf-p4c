@@ -194,7 +194,7 @@ struct counter_alu_layout {
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".counter_alu") register_action<counter_alu_layout, bit<32>>(cntr) counter_alu = {
+    @name(".counter_alu") RegisterAction<counter_alu_layout, bit<32>>(cntr) counter_alu = {
         void apply(inout counter_alu_layout value, out bit<32> rv) {
             counter_alu_layout in_value;
             in_value = value;

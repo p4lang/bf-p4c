@@ -856,12 +856,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = _Kamas(8w0, 1w1, 1w0, 1w1, 1w0);
     }
-    @name(".Cricket") register_action<bit<1>, bit<1>>(Seagrove) _Cricket_0 = {
+    @name(".Cricket") RegisterAction<bit<1>, bit<1>>(Seagrove) _Cricket_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Jerico") register_action<bit<1>, bit<1>>(Lackey) _Jerico_0 = {
+    @name(".Jerico") RegisterAction<bit<1>, bit<1>>(Lackey) _Jerico_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -929,7 +929,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_24();
     }
     @name(".Elihu") direct_counter(CounterType.packets_and_bytes) _Elihu_0;
-    @name(".Fowlkes") register_action<bit<1>, bit<1>>(Floyd) _Fowlkes_0 = {
+    @name(".Fowlkes") RegisterAction<bit<1>, bit<1>>(Floyd) _Fowlkes_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;

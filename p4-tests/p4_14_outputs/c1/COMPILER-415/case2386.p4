@@ -616,7 +616,7 @@ control Abernathy(inout headers hdr, inout metadata meta, inout standard_metadat
 @name(".Kennedale") register<bit<1>>(32w262144) Kennedale;
 
 control Carrizozo(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Silco") register_action<bit<1>, bit<1>>(Abraham) Silco = {
+    @name(".Silco") RegisterAction<bit<1>, bit<1>>(Abraham) Silco = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -625,7 +625,7 @@ control Carrizozo(inout headers hdr, inout metadata meta, inout standard_metadat
             rv = value;
         }
     };
-    @name(".Skene") register_action<bit<1>, bit<1>>(Kennedale) Skene = {
+    @name(".Skene") RegisterAction<bit<1>, bit<1>>(Kennedale) Skene = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

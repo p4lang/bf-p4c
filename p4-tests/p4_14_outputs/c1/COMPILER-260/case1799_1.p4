@@ -553,7 +553,7 @@ control HpHSVC(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".QUINJI") register<bit<1>>(32w65536) QUINJI;
 
 control IFycyA(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".tOUEnP") register_action<bit<1>, bit<1>>(QUINJI) tOUEnP = {
+    @name(".tOUEnP") RegisterAction<bit<1>, bit<1>>(QUINJI) tOUEnP = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -814,7 +814,7 @@ control OqQwzQ(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".yevXhQ") register<bit<1>>(32w262144) yevXhQ;
 
 control TDPRYG(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".fcVprY") register_action<bit<1>, bit<1>>(GBdGiH) fcVprY = {
+    @name(".fcVprY") RegisterAction<bit<1>, bit<1>>(GBdGiH) fcVprY = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -823,7 +823,7 @@ control TDPRYG(inout headers hdr, inout metadata meta, inout standard_metadata_t
             rv = value;
         }
     };
-    @name(".vOaDPT") register_action<bit<1>, bit<1>>(yevXhQ) vOaDPT = {
+    @name(".vOaDPT") RegisterAction<bit<1>, bit<1>>(yevXhQ) vOaDPT = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

@@ -907,7 +907,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Homeacre_temp_2;
     bit<1> _Homeacre_tmp_1;
     bit<1> _Homeacre_tmp_2;
-    @name(".Donegal") register_action<bit<1>, bit<1>>(Robinette) _Donegal_0 = {
+    @name(".Donegal") RegisterAction<bit<1>, bit<1>>(Robinette) _Donegal_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Homeacre_in_value_1;
             _Homeacre_in_value_1 = value;
@@ -915,7 +915,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Sitka") register_action<bit<1>, bit<1>>(Steger) _Sitka_0 = {
+    @name(".Sitka") RegisterAction<bit<1>, bit<1>>(Steger) _Sitka_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Homeacre_in_value_2;
             _Homeacre_in_value_2 = value;
@@ -997,7 +997,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_34();
     }
     @name(".Marquand") direct_counter(CounterType.packets_and_bytes) _Marquand_0;
-    @name(".Chaumont") register_action<bit<1>, bit<1>>(Grants) _Chaumont_0 = {
+    @name(".Chaumont") RegisterAction<bit<1>, bit<1>>(Grants) _Chaumont_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Puyallup_in_value_0;
             rv = 1w0;

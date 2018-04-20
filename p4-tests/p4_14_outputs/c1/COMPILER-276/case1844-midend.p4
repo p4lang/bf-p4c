@@ -995,12 +995,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_31();
     }
-    @name(".Tavistock") register_action<bit<1>, bit<1>>(Goessel) _Tavistock_0 = {
+    @name(".Tavistock") RegisterAction<bit<1>, bit<1>>(Goessel) _Tavistock_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Westboro") register_action<bit<1>, bit<1>>(Venice) _Westboro_0 = {
+    @name(".Westboro") RegisterAction<bit<1>, bit<1>>(Venice) _Westboro_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -1079,7 +1079,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_35();
     }
     @name(".LaHoma") direct_counter(CounterType.packets_and_bytes) _LaHoma_0;
-    @name(".Veteran") register_action<bit<1>, bit<1>>(Linville) _Veteran_0 = {
+    @name(".Veteran") RegisterAction<bit<1>, bit<1>>(Linville) _Veteran_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;

@@ -943,12 +943,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = _Goessel();
     }
-    @name(".Flourtown") register_action<bit<1>, bit<1>>(Patchogue) _Flourtown_0 = {
+    @name(".Flourtown") RegisterAction<bit<1>, bit<1>>(Patchogue) _Flourtown_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Lordstown") register_action<bit<1>, bit<1>>(LaConner) _Lordstown_0 = {
+    @name(".Lordstown") RegisterAction<bit<1>, bit<1>>(LaConner) _Lordstown_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
@@ -1027,7 +1027,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_35();
     }
     @name(".BigBay") direct_counter(CounterType.packets_and_bytes) _BigBay_0;
-    @name(".Sunrise") register_action<bit<1>, bit<1>>(Pueblo) _Sunrise_0 = {
+    @name(".Sunrise") RegisterAction<bit<1>, bit<1>>(Pueblo) _Sunrise_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w1;
