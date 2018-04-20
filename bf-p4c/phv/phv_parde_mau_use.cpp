@@ -32,7 +32,9 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Parser *p) {
 }
 
 bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Extract *e) {
-    auto* f = phv.field(e->dest->field);
+    auto lval = e->dest->to<IR::BFN::FieldLVal>();
+    if (!lval) return true;
+    auto* f = phv.field(lval->field);
     BUG_CHECK(f, "Extract to non-PHV destination: %1%", e);
     extracted_i[thread][f->id] = true;
     return true;
@@ -54,6 +56,9 @@ bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableSeq *) {
 }
 
 bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
+    if (findContext<IR::BFN::ExternLVal>())
+        return false;
+
     if (auto *hr = e->to<IR::HeaderRef>()) {
         for (auto id : phv.struct_info(hr).field_ids()) {
             use_i[in_mau][thread][id] = true;

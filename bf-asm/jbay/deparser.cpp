@@ -310,7 +310,8 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
             int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
             int seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
             clots[ch/CHUNKS_PER_GROUP].segment_tag[seg_tag] = clot_tag;
-            auto repl = clot->replace.begin();
+            auto phv_repl = clot->phv_replace.begin();
+            auto csum_repl = clot->csum_replace.begin();
             for (int i = 0; i < clot->length; i += 8, ++ch) {
                 if (ch >= TOTAL_CHUNKS) break;
                 if (clots_in_group[ch/CHUNKS_PER_GROUP] == 0) {
@@ -320,11 +321,16 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
                 chunk[ch].cfg.seg_sel = seg_tag;
                 chunk[ch].cfg.seg_slice = i/8U;
                 for (int j = 0; j < 8 && i + j < clot->length; ++j) {
-                    if (repl != clot->replace.end() && repl->first <= i + j) {
+                    if (phv_repl != clot->phv_replace.end() && phv_repl->first <= i + j) {
                         chunk[ch].is_phv |= 1 << j;
-                        chunk[ch].byte_off.phv_offset[j] = repl->second->reg.deparser_id();
-                        if (repl->first + repl->second->size()/8U <= i + j + 1)
-                            ++repl;
+                        chunk[ch].byte_off.phv_offset[j] = phv_repl->second->reg.deparser_id();
+                        if (phv_repl->first + phv_repl->second->size()/8U <= i + j + 1)
+                            ++phv_repl;
+                    } else if (csum_repl != clot->csum_replace.end() && csum_repl->first <= i + j) {
+                        chunk[ch].is_phv |= 1 << j;
+                        chunk[ch].byte_off.phv_offset[j] = csum_repl->second.encode();
+                        if (csum_repl->first + 2 <= i + j +1)
+                            ++csum_repl;
                     } else {
                         chunk[ch].byte_off.phv_offset[j] = i + j; } } }
             if (ch >= TOTAL_CHUNKS) break;

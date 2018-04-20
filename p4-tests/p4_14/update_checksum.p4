@@ -18,10 +18,10 @@ header_type data_t {
     fields {
         f1 : 32;
         f2 : 32;
+        cksum : 16;
         h1 : 16;
         b1 : 8;
         b2 : 8;
-        cksum : 16;
     }
 }
 header data_t data;
@@ -68,3 +68,4 @@ table test1 {
 control ingress {
     apply(test1);
 }
+

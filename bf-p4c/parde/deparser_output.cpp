@@ -82,24 +82,29 @@ struct OutputDictionary : public Inspector {
 
     bool preorder(const IR::BFN::EmitClot* emit) override {
         AutoIndent autoIndent(indent);
-        out << indent << "clot " << emit->clot.tag << ":" << std::endl;
+        out << indent << "clot " << emit->clot->tag << ":" << std::endl;
 
         auto povBit = phv.field(emit->povBit->field);
         AutoIndent fieldIndent(indent);
         out << indent << "pov: " << canon_name(trim_asm_name(povBit->externalName())) << std::endl;
 
         std::set<PHV::Container> containers;
-        for (auto f : emit->clot.phv_fields) {
+        for (auto f : emit->clot->phv_fields) {
             f->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
                 containers.insert(alloc.container);
             });
         }
 
-        unsigned clot_offset = emit->clot.start;
+        unsigned clot_offset = emit->clot->start;
         for (auto c : containers) {
             auto range = clot.container_range().at(c);
             range = range.shiftedByBytes(-clot_offset);
             out << indent << range.lo << " : " << c << std::endl;
+        }
+
+        for (auto f : emit->clot->csum_fields) {
+            out << indent << emit->clot->offset(f) << " : checksum " <<
+                emit->clot->csum_field_to_csum_id.at(f) << std::endl;
         }
 
         return false;

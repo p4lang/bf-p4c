@@ -1,6 +1,8 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_INFO_H_
 #define EXTENSIONS_BF_P4C_PARDE_CLOT_INFO_H_
 
+#include <algorithm>
+
 #include "clot.h"
 #include "lib/ordered_map.h"
 #include "bf-p4c/common/utils.h"
@@ -12,6 +14,7 @@ class PhvInfo;
 
 class ClotInfo {
     friend class CollectClotInfo;
+    friend class RemoveChecksumExtract;
     friend class NaiveClotAlloc;
 
     PhvUse &uses;
@@ -20,6 +23,8 @@ class ClotInfo {
                 std::vector<const PHV::Field*>> parser_state_to_fields_;
 
     ordered_map<const PHV::Field*, const IR::BFN::ParserState*> field_to_parser_state_;
+
+    std::set<const PHV::Field*> checksum_dests_;
 
     std::vector<const Clot*> clots_;
     std::map<const Clot*, const IR::BFN::ParserState*> clot_to_parser_state_;
@@ -43,9 +48,15 @@ class ClotInfo {
     const std::map<PHV::Container, nw_byterange>& container_range() const {
         return container_range_; }
 
-    void add(const Clot* cl, const IR::BFN::ParserState* state) {
-        clots_.push_back(cl);
+    void add_field(const PHV::Field* f, const IR::BFN::PacketRVal* rval,
+             const IR::BFN::ParserState* state) {
+        parser_state_to_fields_[state].push_back(f);
+        field_to_parser_state_[f] = state;
+        field_range_[f] = rval->range();
+    }
 
+    void add_clot(const Clot* cl, const IR::BFN::ParserState* state) {
+        clots_.push_back(cl);
         clot_to_parser_state_[cl] = state;
         parser_state_to_clots_[state].push_back(cl);
     }
@@ -60,11 +71,7 @@ class ClotInfo {
         if (!is_clot_candidate(field))
             return nullptr;
 
-        for (auto c : clots_)
-            for (auto f : c->all_fields)
-                if (f == field)
-                    return c;
-        return nullptr;
+        return clot(field);
     }
 
     /// @return the pointer to the CLOT if field is covered in a CLOT
@@ -86,6 +93,47 @@ class ClotInfo {
     }
 
     void dbprint(std::ostream &out) const;
+};
+
+class CollectClotInfo : public Inspector {
+    const PhvInfo& phv;
+    ClotInfo& clotInfo;
+
+ public:
+    explicit CollectClotInfo(const PhvInfo& phv, ClotInfo& clotInfo) :
+        phv(phv), clotInfo(clotInfo) {}
+
+ private:
+    Visitor::profile_t init_apply(const IR::Node* root) override {
+        auto rv = Inspector::init_apply(root);
+        clotInfo.clear();
+        return rv;
+    }
+
+    bool preorder(const IR::BFN::ParserPrimitive* prim) override {
+        auto state = findContext<IR::BFN::ParserState>();
+
+        if (auto extract = prim->to<IR::BFN::Extract>()) {
+            auto rval = extract->source->to<IR::BFN::PacketRVal>();
+            if (rval) {
+                if (auto field_lval = extract->dest->to<IR::BFN::FieldLVal>()) {
+                    if (auto f = phv.field(field_lval->field))
+                        clotInfo.add_field(f, rval, state);
+                } else if (auto extern_lval = extract->dest->to<IR::BFN::ExternLVal>()) {
+                    if (auto f = phv.field(extern_lval->field))
+                        clotInfo.add_field(f, rval, state);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    bool preorder(const IR::BFN::EmitChecksum* emit) override {
+        auto f = phv.field(emit->dest->field);
+        clotInfo.checksum_dests_.insert(f);
+        return false;
+    }
 };
 
 class AllocateClot : public PassManager {

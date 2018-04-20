@@ -135,6 +135,7 @@ TEST(TofinoWriteContext, DeparserEmit) {
 TEST(TofinoWriteContext, DeparserEmitChecksum) {
     auto* header = new IR::Header("foo", new IR::Type_Header("foo_t"));
     auto* field = new IR::Member(new IR::ConcreteHeaderRef(header), "bar");
+    auto* csum = new IR::Member(new IR::ConcreteHeaderRef(header), "csum");
     auto* povBit = new IR::Member(new IR::ConcreteHeaderRef(header), "$valid");
 
     auto* deparserControlType = new IR::Type_Control("dp", new IR::ParameterList);
@@ -143,7 +144,7 @@ TEST(TofinoWriteContext, DeparserEmitChecksum) {
     auto* deparser = new IR::BFN::Deparser(INGRESS, deparserControl);
     deparser->emits.push_back(new IR::BFN::EmitChecksum({
         new IR::BFN::FieldLVal(field)
-    }, new IR::BFN::FieldLVal(povBit)));
+    },  new IR::BFN::ExternLVal(csum), new IR::BFN::FieldLVal(povBit)));
 
     struct CheckEmitChecksum : public Inspector, TofinoWriteContext {
         bool preorder(const IR::Member*) override {

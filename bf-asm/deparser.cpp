@@ -51,7 +51,8 @@ struct Deparser::FDEntry {
         gress_t                                 gress;
         std::string                             tag;
         int                                     length = -1;
-        std::map<unsigned, ::Phv::Ref>          replace;
+        std::map<unsigned, ::Phv::Ref>          phv_replace;
+        std::map<unsigned, Checksum>            csum_replace;
         Clot(gress_t gr, const value_t &tag, const value_t &data, ::Phv::Ref &pov)
         : lineno(tag.lineno), gress(gr) {
             if (CHECKTYPE2(tag, tINT, tSTR)) {
@@ -70,11 +71,14 @@ struct Deparser::FDEntry {
                         if (CHECKTYPE(kv.value, tINT) && ((length = kv.value.i) < 0 || length > 64))
                             error(kv.value.lineno, "Invalid clot length");
                     } else if (kv.key.type == tINT) {
-                        if (replace.count(kv.key.i))
+                        if (phv_replace.count(kv.key.i) || csum_replace.count(kv.key.i))
                             error(kv.value.lineno, "Duplicate value at offset %ld", kv.key.i);
-                        replace.emplace(kv.key.i, ::Phv::Ref(gress, kv.value));
+                        if (kv.value.type == tCMD && kv.value.vec.size == 2 && kv.value == "checksum")
+                            csum_replace.emplace(kv.key.i, Checksum(gress, kv.value.vec[1]));
+                        else
+                            phv_replace.emplace(kv.key.i, ::Phv::Ref(gress, kv.value));
                     } else {
-                         error(kv.value.lineno, "Syntax error for clot"); } }
+                        error(kv.value.lineno, "Unknown key for clot: %s", value_desc(kv.key)); } }
             } else {
                 pov = ::Phv::Ref(gress, data); } }
         void check(bitvec &phv_use) override {
@@ -83,7 +87,7 @@ struct Deparser::FDEntry {
             if (Parser::clot_tag(gress, tag) < 0) error(lineno, "No tag for clot %s", tag.c_str());
             unsigned next = 0;
             ::Phv::Ref *prev;
-            for (auto &r: replace) {
+            for (auto &r: phv_replace) {
                 if (r.first < next) {
                     error(r.second.lineno, "Overlapping phvs in clot");
                     error(prev->lineno, "%s and %s", prev->name(), r.second.name()); }

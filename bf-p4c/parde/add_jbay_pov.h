@@ -85,11 +85,12 @@ class AddJBayMetadataPOV : public Transform {
         return p; }
     IR::Node *postorder(IR::BFN::Extract *e) override {
         for (auto* param : dp->params) {
-            if (equiv(e->dest->field, param->source->field))
-                return new IR::Vector<IR::BFN::ParserPrimitive>({ e,
-                    new IR::BFN::Extract(param->povBit,
+            if (auto lval = e->dest->to<IR::BFN::FieldLVal>()) {
+                if (equiv(lval->field, param->source->field))
+                    return new IR::Vector<IR::BFN::ParserPrimitive>({ e,
+                        new IR::BFN::Extract(param->povBit,
                                          new IR::BFN::ConstantRVal(1))
-                }); }
+                    }); } }
         return e; }
 
  public:

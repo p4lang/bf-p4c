@@ -41,9 +41,16 @@ class Clot {
 
     bool is_phv_field(const PHV::Field* f) const;
 
+    bool is_csum_field(const PHV::Field* f) const;
+
     std::vector<const PHV::Field*> all_fields;  // all fields covered in this clot
     std::vector<const PHV::Field*> phv_fields;  // fields that need to be replaced by
                                                 // phvs when deparsed
+    std::vector<const PHV::Field*> csum_fields;  // fields that need to be replaced by
+                                                 // checksum when deparsed
+
+    std::map<const PHV::Field*, unsigned> csum_field_to_csum_id;
+
     static int tagCnt;
 };
 

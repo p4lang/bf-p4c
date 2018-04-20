@@ -112,8 +112,10 @@ struct ResolveStackRefs : public ParserInspector {
                                 ExtractedStackIndices& map) const {
         // Is this a write to a header stack item POV bit?
         if (!extract->source->is<IR::BFN::ConstantRVal>()) return;
-        if (!extract->dest->field->is<IR::Member>()) return;
-        auto* member = extract->dest->field->to<IR::Member>();
+        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+        if (!lval) return;
+        if (!lval->field->is<IR::Member>()) return;
+        auto* member = lval->field->to<IR::Member>();
         if (member->member != "$valid") return;
         if (!member->expr->is<IR::HeaderStackItemRef>()) return;
 
@@ -457,7 +459,9 @@ struct CopyPropagateParserValues : public ParserInspector {
         // for `dest` and move on.
         forAllMatching<IR::BFN::Extract>(
             &state->statements, [&] (const IR::BFN::Extract* extract) {
-                auto dest = extract->dest->field->toString();
+                auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+                if (!lval) return;
+                auto dest = lval->field->toString();
                 if (!extract->source->is<IR::BFN::ComputedRVal>()) {
                     defs[dest] = ParserRValDef(state, extract->source); }
             });
@@ -468,7 +472,9 @@ struct CopyPropagateParserValues : public ParserInspector {
         // `dest`.)
         forAllMatching<IR::BFN::Extract>(
             &state->statements, [&](const IR::BFN::Extract* extract) {
-                auto dest = extract->dest->field->toString();
+                auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+                if (!lval) return;
+                auto dest = lval->field->toString();
                 if (auto* computed = extract->source->to<IR::BFN::ComputedRVal>()) {
                     propagateToUse(state, computed, defs);
                     defs[dest] = resolvedValues[computed].back(); }
@@ -521,9 +527,11 @@ struct ApplyParserValueResolutions : public ParserTransform {
 class CheckResolvedParserExpressions : public ParserTransform {
     const IR::BFN::Extract*
     checkExtractDestination(const IR::BFN::Extract* extract) const {
-        if (!extract->dest->field->is<IR::HeaderStackItemRef>()) return extract;
+        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+        if (!lval) return extract;
+        if (!lval->field->is<IR::HeaderStackItemRef>()) return extract;
 
-        auto* itemRef = extract->dest->field->to<IR::HeaderStackItemRef>();
+        auto* itemRef = lval->field->to<IR::HeaderStackItemRef>();
         if (itemRef->index()->is<IR::BFN::UnresolvedStackRef>()) {
             ::error("Couldn't resolve header stack reference in state %1%: %2%",
                     findContext<IR::BFN::ParserState>()->name, extract);
@@ -537,7 +545,7 @@ class CheckResolvedParserExpressions : public ParserTransform {
             return nullptr;
         }
 
-        auto* stack = extract->dest->field->to<IR::HeaderStackItemRef>()->base();
+        auto* stack = lval->field->to<IR::HeaderStackItemRef>()->base();
         auto stackSize = stack->type->to<IR::Type_Stack>()
                               ->size->to<IR::Constant>()->asInt();
         if (itemRef->index()->to<IR::Constant>()->asInt() >= stackSize) {

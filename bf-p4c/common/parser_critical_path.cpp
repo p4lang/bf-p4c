@@ -23,7 +23,8 @@ CalcParserCriticalPath::calc_critical_fields(const ParserCriticalPathResult& cri
     for (const auto& v : critical_path.path) {
         for (const auto& st : v.first->statements) {
             if (auto *ex = st->to<IR::BFN::Extract>()) {
-                rtn.insert(phv.field(ex->dest->field)); } } }
+                if (auto lval = ex->dest->to<IR::BFN::FieldLVal>()) {
+                    rtn.insert(phv.field(lval->field)); } } } }
     return rtn;
 }
 
@@ -33,7 +34,8 @@ bool ParserCriticalPath::preorder(const IR::BFN::ParserState* state) {
         // In this backend stage,
         // set_metadata is Extract as well
         if (auto *ex = prim->to<IR::BFN::Extract>()) {
-            total_extracted += ex->dest->field->type->width_bits(); } }
+            if (auto lval = ex->dest->to<IR::BFN::FieldLVal>()) {
+                total_extracted += lval->field->type->width_bits(); } } }
 
     result.length += total_extracted;
     result.path.push_back(std::make_pair(state, total_extracted));

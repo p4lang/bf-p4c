@@ -13,18 +13,6 @@ using ChecksumSourceMap = std::map<cstring, const ChecksumSources*>;
 using ParserStateChecksumMap = std::map<const IR::ParserState*,
     std::vector<const IR::MethodCallExpression*>>;
 
-#if 0  // Not used yet
-void showComputeChecksumUsage() {
-    ::warning("Computed checksum controls may include only code with this form:");
-    ::warning("  if (header.isValid()) {");
-    ::warning("    header.destField = checksumExternInstance.get({");
-    ::warning("       header.sourceField1,");
-    ::warning("       header.sourceField2");
-    ::warning("    });");
-    ::warning("  }");
-}
-#endif  // Not used
-
 static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment) {
     auto destField = assignment->left->to<IR::Member>();
     auto methodCall = assignment->right->to<IR::MethodCallExpression>();
@@ -98,7 +86,6 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
     auto methodCall = assignment->right->to<IR::MethodCallExpression>();
 
     const IR::ListExpression* sourceList = (*methodCall->arguments)[0]->to<IR::ListExpression>();
-    // const IR::HeaderRef* sourceHeader = destField->expr->to<IR::HeaderRef>();
 
     auto* sources = new ChecksumSources;
     for (auto* source : sourceList->components) {
@@ -145,30 +132,6 @@ analyzeUpdateChecksumStatement(const IR::IfStatement* ifStatement) {
     return analyzeUpdateChecksumStatement(assignment);
 }
 
-/*
-boost::optional<ChecksumSourceMap::value_type>
-analyzeParserChecksumStatement(const IR::MethodCallStatement* statement, cstring which) {
-    auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
-
-    if (!checkSanity(methodCall, which))
-        return boost::none;
-
-    const IR::ListExpression* sourceList = (*methodCall->arguments)[0]->to<IR::ListExpression>();
-    auto destField = (*methodCall->arguments)[1]->to<IR::Member>();
-    const IR::HeaderRef* sourceHeader = destField->expr->to<IR::HeaderRef>();
-
-    auto* sources = new ChecksumSources;
-    for (auto* source : sourceList->components) {
-        LOG2("Checksum would include field: " << source);
-        auto* member = source->to<IR::Member>();
-        sources->push_back(new IR::BFN::FieldLVal(member));
-    }
-
-    LOG2("Validated verify checksum for field: " << destField);
-    return ChecksumSourceMap::value_type(destField->toString(), sources);
-}
-*/
-
 /**
  * Analyze the provided tofino.p4 deparser and determine the set of checksums
  * to be computed.
@@ -209,7 +172,6 @@ struct SubstituteUpdateChecksums : public Transform {
 
  private:
     IR::BFN::DeparserPrimitive* preorder(IR::BFN::Emit* emit) override {
-        prune();
         if (!emit->source->field->is<IR::Member>()) return emit;
         auto* source = emit->source->field->to<IR::Member>();
         if (checksums.find(source->toString()) == checksums.end()) return emit;
@@ -220,9 +182,29 @@ struct SubstituteUpdateChecksums : public Transform {
         LOG2("Substituting update checksum for emitted value: " << emit);
         auto* sourceFields = checksums.at(source->toString());
         auto* emitChecksum =
-          new IR::BFN::EmitChecksum(*sourceFields, emit->povBit);
+          new IR::BFN::EmitChecksum(*sourceFields, new IR::BFN::ExternLVal(source), emit->povBit);
 
         return emitChecksum;
+    }
+
+    const ChecksumSourceMap& checksums;
+};
+
+struct SubStub : public Transform {
+    explicit SubStub(const ChecksumSourceMap& checksums)
+        : checksums(checksums) { }
+
+    IR::BFN::ParserPrimitive* preorder(IR::BFN::Extract* extract) override {
+        prune();
+        if (checksums.find(extract->dest->toString()) != checksums.end()) {
+            if (auto lval = extract->dest->to<IR::BFN::FieldLVal>()) {
+                return new IR::BFN::Extract(
+                    new IR::BFN::ExternLVal(lval->field),
+                    extract->source);
+            }
+        }
+
+        return extract;
     }
 
     const ChecksumSourceMap& checksums;
@@ -243,9 +225,10 @@ extractChecksumFromDeparser(const IR::P4Control* deparser, IR::BFN::Pipe* pipe) 
     if (checksums.empty()) return pipe;
 
     SubstituteUpdateChecksums substituteChecksums(checksums);
+    SubStub subStub(checksums);
     for (auto gress : { INGRESS, EGRESS }) {
-        auto* substituted = pipe->thread[gress].deparser->apply(substituteChecksums);
-        pipe->thread[gress].deparser = substituted;
+        pipe->thread[gress].deparser = pipe->thread[gress].deparser->apply(substituteChecksums);
+        pipe->thread[gress].parser = pipe->thread[gress].parser->apply(subStub);
     }
 
     return pipe;

@@ -324,21 +324,18 @@ TEST(TofinoFieldPacking, CreateExtractionState) {
 
     auto* field1Extract = extracts[0]->to<IR::BFN::Extract>();
     ASSERT_TRUE(field1Extract != nullptr);
-    ASSERT_TRUE(field1Extract->dest->field == field1);
     auto* field1Source = field1Extract->source->to<IR::BFN::PacketRVal>();
     ASSERT_TRUE(field1Source != nullptr);
     ASSERT_TRUE(field1Source->range() == nw_bitrange(3, 8));
 
     auto* field2Extract = extracts[1]->to<IR::BFN::Extract>();
     ASSERT_TRUE(field2Extract != nullptr);
-    ASSERT_TRUE(field2Extract->dest->field == field2);
     auto* field2Source = field2Extract->source->to<IR::BFN::PacketRVal>();
     ASSERT_TRUE(field2Source != nullptr);
     ASSERT_TRUE(field2Source->range() == nw_bitrange(9, 23));
 
     auto* field3Extract = extracts[2]->to<IR::BFN::Extract>();
     ASSERT_TRUE(field3Extract != nullptr);
-    ASSERT_TRUE(field3Extract->dest->field == field3);
     auto* field3Source = field3Extract->source->to<IR::BFN::PacketRVal>();
     ASSERT_TRUE(field3Source != nullptr);
     ASSERT_TRUE(field3Source->range() == nw_bitrange(33, 40));

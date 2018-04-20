@@ -211,7 +211,9 @@ IR::Node* UndoPrivatization::postorder(IR::BFN::ParserState* p) {
     for (auto stmt : p->statements) {
         auto* e = stmt->to<IR::BFN::Extract>();
         if (!e) continue;
-        const IR::Expression* expr = e->dest->field;
+        auto lval = e->to<IR::BFN::FieldLVal>();
+        if (!lval) continue;
+        const IR::Expression* expr = lval->field;
         PHV::Field* field = phv.field(expr);
         BUG_CHECK(field, "Field not found for %1%", expr);
         boost::optional<cstring> fieldname;

@@ -125,7 +125,9 @@ struct TransitionStack {
             extractCount++;
             cstring destName;
             unsigned allowedExtracts;
-            std::tie(destName, allowedExtracts) = analyzeDest(extract->dest->field);
+            auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+            if (!lval) return;
+            std::tie(destName, allowedExtracts) = analyzeDest(lval->field);
             if (extractTotals[destName] >= allowedExtracts) {
                 LOG2(state->name << ": too many extracts for " << destName);
                 badExtractCount++;

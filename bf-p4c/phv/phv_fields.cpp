@@ -855,7 +855,10 @@ struct ComputeFieldAlignments : public Inspector {
         auto* bufferSource = extract->source->to<IR::BFN::BufferlikeRVal>();
         if (!bufferSource) return false;
 
-        auto* fieldInfo = phv.field(extract->dest->field);
+        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+        if (!lval) return false;
+
+        auto* fieldInfo = phv.field(lval->field);
         if (!fieldInfo) {
             ::warning("No allocation for field %1%", extract->dest);
             return false;

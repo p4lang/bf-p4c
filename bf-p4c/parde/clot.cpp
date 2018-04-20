@@ -66,6 +66,13 @@ bool Clot::is_phv_field(const PHV::Field* field) const {
     return false;
 }
 
+bool Clot::is_csum_field(const PHV::Field* field) const {
+    for (auto f : csum_fields)
+        if (f == field)
+            return true;
+    return false;
+}
+
 void Clot::toJSON(JSONGenerator& json) const {
     json << *this;
 }
@@ -84,4 +91,3 @@ std::ostream& operator<<(std::ostream& out, const Clot c) {
 JSONGenerator& operator<<(JSONGenerator& out, const Clot c) {
     return out << c.toString();
 }
-

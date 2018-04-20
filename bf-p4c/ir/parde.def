@@ -173,6 +173,23 @@ class FieldLVal : ParserLVal {
     Expression field;
 }
 
+class ExternLVal : ParserLVal {
+    dbprint { out << field; }
+    toString { return field->toString(); }
+
+    int size() const { return field->type->width_bits(); }
+
+    validate {
+        CHECK_NULL(field);
+        BUG_CHECK(field->is<IR::Member>() || field->is<IR::TempVar>() ||
+                  field->is<IR::Slice>(),
+                  "FieldLVal contains unexpected value: %1%", field);
+    }
+
+    /// A reference to a "field-like" value.
+    Expression field;
+}
+
 /// Supertype for all parser primitives - i.e., actions that can be executed in
 /// parser states.
 abstract ParserPrimitive { }
@@ -188,7 +205,7 @@ class Extract : ParserPrimitive {
     dbprint { out << "extract " << source << " to " << dest; }
 
     /// The location to be written to.
-    FieldLVal dest;
+    ParserLVal dest;
 
     /// The location that will be read from.
     ParserRVal source;
@@ -425,14 +442,14 @@ class Emit : DeparserPrimitive {
 /// output packet.
 class EmitClot : DeparserPrimitive {
     dbprint {
-        out << "emit clot " << clot.tag << " if " << povBit->field->toString();
+        out << "emit clot " << clot->tag << " if " << povBit->field->toString();
     }
 
     // XXX(zma): EmitClot should really be a lowered IR class, since these
     // are inferred from CLOT allocation.
-
-    Clot clot;
-
+#emit
+    const Clot* clot = nullptr;
+#end
     /// The POV bit controlling whether the copy happens.
     FieldLVal povBit;
 }
@@ -443,6 +460,8 @@ class EmitClot : DeparserPrimitive {
 class EmitChecksum : DeparserPrimitive {
     /// The fields from which the checksum will be computed.
     inline Vector<FieldLVal> sources;
+
+    ExternLVal dest;
 
     /// The POV bit controlling whether the checksum is generated and copied to
     /// the output packet.

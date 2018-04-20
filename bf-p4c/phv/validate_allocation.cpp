@@ -49,7 +49,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     // collect information that we'll use to check container properties.
     for (auto& field : phv) {
         if (!uses.is_referenced(&field)) {
-            WARN_CHECK(field.alloc_i.empty() && !clot.clot(&field) ,
+            // FIXME(zma) ExternLVal field can be allocated to clot, e.g. csum
+            WARN_CHECK(field.alloc_i.empty() /*&& !clot.clot(&field)*/ ,
                         "PHV allocation for unreferenced %1%field %2% (width %3%)",
                         field.bridged ? "bridged " : "",
                         cstring::to_cstring(field),
@@ -511,10 +512,14 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         int requiredAlignment = bufferSource->range().lo % 8;
         bitrange bits;
-        auto* field = phv.field(extract->dest->field, &bits);
+
+        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+        if (!lval) return;
+
+        auto* field = phv.field(lval->field, &bits);
         if (!field) {
             ::error("No PHV allocation for field extracted by the "
-                    "parser: %1%", extract->dest);
+                    "parser: %1%", lval);
             return;
         }
 

@@ -60,35 +60,6 @@ void ClotInfo::dbprint(std::ostream &out) const {
     out << "total clot bits : " << total_allocated_clot_bits << std::endl;
 }
 
-class CollectClotInfo : public Inspector {
-    const PhvInfo& phv;
-    ClotInfo& clotInfo;
-
- public:
-    explicit CollectClotInfo(const PhvInfo& phv, ClotInfo& clotInfo) :
-        phv(phv), clotInfo(clotInfo) {}
-
- private:
-    Visitor::profile_t init_apply(const IR::Node* root) override {
-        auto rv = Inspector::init_apply(root);
-        clotInfo.clear();
-        return rv;
-    }
-
-    bool preorder(const IR::BFN::Extract* extract) override {
-        auto state = findContext<IR::BFN::ParserState>();
-        auto rval = extract->source->to<IR::BFN::PacketRVal>();
-        if (rval) {
-            if (auto f = phv.field(extract->dest->field)) {
-                clotInfo.parser_state_to_fields_[state].push_back(f);
-                clotInfo.field_to_parser_state_[f] = state;
-                clotInfo.field_range_[f] = rval->range();
-            }
-        }
-        return false;
-    }
-};
-
 /**
 
  This class implements a greedy CLOT allocation algorithm based on the parse graph.
@@ -217,6 +188,10 @@ class NaiveClotAlloc : public Visitor {
 
     bool can_allocate_to_clot(const PHV::Field* f) {
         return clotInfo.is_clot_candidate(f) && !is_packed_with_phv_field(f);
+    }
+
+    bool is_checksum_field(const PHV::Field* f) {
+        return clotInfo.checksum_dests_.count(f);
     }
 
     std::array<std::vector<ClotAlloc>, 2> compute_requirement() {
@@ -410,14 +385,16 @@ class NaiveClotAlloc : public Visitor {
                 clot = new Clot();
 
                 clot->start = head_offset / 8;  // clot start is in byte, offset in bits
-                clotInfo.add(clot, ca.state);
+                clotInfo.add_clot(clot, ca.state);
                 LOG3("allocate clot " << clot->tag << " to " << ca.state->name);
             }
 
             if (clot->length_in_bits() + f->size > MAX_BYTES_PER_CLOT * 8)
                 break;
 
-            if (!can_allocate_to_clot(f))
+            if (is_checksum_field(f))
+                clot->csum_fields.push_back(f);
+            else if (!can_allocate_to_clot(f))
                 clot->phv_fields.push_back(f);
 
             clot->all_fields.push_back(f);
@@ -463,7 +440,6 @@ AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses)
         &parserInfo,
         LOGGING(3) ? new DumpParser("before_clot_allocation.dot") : nullptr,
         new CollectClotInfo(phv, clotInfo),
-        new NaiveClotAlloc(clotInfo, parserInfo),
+        new NaiveClotAlloc(clotInfo, parserInfo)
     });
 }
-

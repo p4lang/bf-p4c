@@ -36,10 +36,13 @@ using alloc_slice = PHV::Field::alloc_slice;
  * @return a string describing which bits in the field are included in the
  * slice, and describing the corresponding bits in the container.
  */
-cstring debugInfoFor(const IR::BFN::FieldLVal* fieldRef,
+cstring debugInfoFor(const IR::BFN::ParserLVal* lval,
                      const alloc_slice& slice,
                      bool includeContainerInfo = true) {
     std::stringstream info;
+
+    auto fieldRef = lval->to<IR::BFN::FieldLVal>();
+    if (!fieldRef) return info;
 
     // Describe the range of bits assigned to this field slice in the container.
     // (In some cases we break this down in more detail elsewhere, so we don't
@@ -168,15 +171,25 @@ struct ExtractSimplifier {
     void add(const IR::BFN::Extract* extract) {
         LOG4("[ExtractSimplifier] adding: " << extract);
 
-        std::vector<alloc_slice> slices = phv.get_alloc(extract->dest->field);
+        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+        auto extern_lval = extract->dest->to<IR::BFN::ExternLVal>();
 
-        auto field = phv.field(extract->dest->field);
-        if (auto c = clot.clot(field)) {
-            clotExtracts[c].push_back(extract);
-            if (!c->is_phv_field(field))
-                return;
+        const PHV::Field *field = nullptr;
+        if (lval) field = phv.field(lval->field);
+        else if (extern_lval) field = phv.field(extern_lval->field);
+
+        if (field) {
+            if (auto c = clot.clot(field)) {
+                if (auto* rval = extract->source->to<IR::BFN::PacketRVal>())
+                    clotRVals[c].push_back(rval);
+                if (!c->is_phv_field(field))
+                    return;
+            }
         }
 
+        if (!lval) return;
+
+        std::vector<alloc_slice> slices = phv.get_alloc(lval->field);
         if (slices.empty()) {
             BUG("Parser extract didn't receive a PHV allocation: %1%", extract);
             return;
@@ -191,7 +204,7 @@ struct ExtractSimplifier {
                 // Shift the slice to its proper place in the input buffer.
                 auto bitOffset = bufferSource->range().lo;
                 const nw_bitrange bufferRange = slice.field_bits()
-                  .toOrder<Endian::Network>(extract->dest->size())
+                  .toOrder<Endian::Network>(lval->size())
                   .shiftedByBits(bitOffset);
 
                 // Expand the buffer slice so that it will write to the entire
@@ -382,15 +395,11 @@ struct ExtractSimplifier {
             loweredExtracts.push_back(mergedExtract);
         }
 
-        for (auto cx : clotExtracts) {
+        for (auto cx : clotRVals) {
             nw_bitinterval bitInterval;
 
-            for (auto extract : cx.second) {
-                if (auto* bufferSource = extract->source->to<IR::BFN::PacketRVal>())
-                    bitInterval = bitInterval.unionWith(bufferSource->interval());
-                else
-                    BUG("not sure if CLOT can extract constant");
-            }
+            for (auto rval : cx.second)
+                bitInterval = bitInterval.unionWith(rval->interval());
 
             nw_bitrange bitrange = *toClosedRange(bitInterval);
             nw_byterange byterange = bitrange.toUnit<RangeUnit::Byte>();
@@ -410,7 +419,7 @@ struct ExtractSimplifier {
     std::map<PHV::Container, ExtractSequence> extractFromBufferByContainer;
     std::map<PHV::Container, ExtractSequence> extractConstantByContainer;
 
-    std::map<const Clot*, std::vector<const IR::BFN::Extract*>> clotExtracts;
+    std::map<const Clot*, std::vector<const IR::BFN::PacketRVal*>> clotRVals;
 };
 
 using LoweredParserIRStates = std::map<const IR::BFN::ParserState*,
@@ -856,10 +865,11 @@ lowerUnsplittableField(const PhvInfo& phv,
     return containers.back();
 }
 
-#if HAVE_JBAY
 struct RewriteEmitClot : public DeparserTransform {
     RewriteEmitClot(const PhvInfo& phv, const ClotInfo& clotInfo) :
         phv(phv), clotInfo(clotInfo) {}
+
+    std::map<const IR::BFN::EmitChecksum*, const Clot*> emit_checksum_in_clot;
 
  private:
     const IR::Node* preorder(IR::BFN::Deparser* deparser) override {
@@ -871,16 +881,23 @@ struct RewriteEmitClot : public DeparserTransform {
         for (auto e : deparser->emits) {
            if (auto emit = e->to<IR::BFN::Emit>()) {
                auto field = phv.field(emit->source->field);
+               auto povBit = emit->povBit;
+
                if (auto c = clotInfo.clot(field)) {
                    if (c != last) {
-                       auto povBit = emit->povBit;
-                       auto clotEmit = new IR::BFN::EmitClot(*c, povBit);
+                       auto clotEmit = new IR::BFN::EmitClot(povBit);
+                       clotEmit->clot = c;
                        newEmits.pushBackOrAppend(clotEmit);
                    }
                    last = const_cast<Clot*>(c);
                } else {
                    newEmits.pushBackOrAppend(e);
                }
+           } else if (auto emit_csum = e->to<IR::BFN::EmitChecksum>()) {
+               auto field = phv.field(emit_csum->dest->field);
+               if (auto c = clotInfo.clot(field))
+                   emit_checksum_in_clot[emit_csum] = c;
+               newEmits.pushBackOrAppend(e);
            } else {
                newEmits.pushBackOrAppend(e);
            }
@@ -998,13 +1015,13 @@ struct AllocateClotChecksums : public PassManager {
     }
 };
 
-#endif
-
 /// Generate the lowered deparser IR by splitting references to fields in the
 /// high-level deparser IR into references to containers.
 struct ComputeLoweredDeparserIR : public DeparserInspector {
-    ComputeLoweredDeparserIR(const PhvInfo& phv, const ClotInfo& clotInfo)
-      : phv(phv), clotInfo(clotInfo), nextChecksumUnit(0) {
+    ComputeLoweredDeparserIR(const PhvInfo& phv, const ClotInfo& clotInfo,
+          const std::map<const IR::BFN::EmitChecksum*, const Clot*>& emit_checksum_in_clot)
+      : phv(phv), clotInfo(clotInfo), emit_checksum_in_clot(emit_checksum_in_clot),
+        nextChecksumUnit(0) {
         igLoweredDeparser = new IR::BFN::LoweredDeparser(INGRESS);
         egLoweredDeparser = new IR::BFN::LoweredDeparser(EGRESS);
     }
@@ -1022,10 +1039,9 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         // its own checksum units. On JBay they're shared, and their ids are
         // global, so on that device we don't reset the next checksum unit for
         // each deparser.
-#if HAVE_JBAY
-        if (Device::currentDevice() != "JBay")
+
+        if (Device::currentDevice() == "Tofino")
             nextChecksumUnit = 0;
-#endif
 
         struct LastSimpleEmitInfo {
             /// The `PHV::Field::id` of the POV bit for the last simple emit.
@@ -1136,10 +1152,17 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
 #endif
                 loweredDeparser->checksums.push_back(unitConfig);
 
-                // Generate the lowered checksum emit.
-                auto* loweredEmit =
-                  new IR::BFN::LoweredEmitChecksum(loweredPovBit, nextChecksumUnit);
-                loweredDeparser->emits.push_back(loweredEmit);
+                if (!emit_checksum_in_clot.count(emitChecksum)) {
+                    // Generate the lowered checksum emit.
+                    auto* loweredEmit =
+                      new IR::BFN::LoweredEmitChecksum(loweredPovBit, nextChecksumUnit);
+                    loweredDeparser->emits.push_back(loweredEmit);
+                } else {
+                    // this emit checksum is part of a clot
+                    auto cl = const_cast<Clot*>(emit_checksum_in_clot.at(emitChecksum));
+                    auto f = phv.field(emitChecksum->dest->field);
+                    cl->csum_field_to_csum_id[f] = nextChecksumUnit;
+                }
 
                 nextChecksumUnit++;
                 continue;
@@ -1218,6 +1241,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
 
     const PhvInfo& phv;
     const ClotInfo& clotInfo;
+    const std::map<const IR::BFN::EmitChecksum*, const Clot*>& emit_checksum_in_clot;
     unsigned nextChecksumUnit;
 };
 
@@ -1244,12 +1268,12 @@ struct ReplaceDeparserIR : public DeparserTransform {
 /// for the existing representation.
 struct LowerDeparserIR : public PassManager {
     LowerDeparserIR(const PhvInfo& phv, ClotInfo& clot) {
-        auto* computeLoweredDeparserIR = new ComputeLoweredDeparserIR(phv, clot);
+        auto* rewriteEmitClot = new RewriteEmitClot(phv, clot);
+        auto* computeLoweredDeparserIR = new ComputeLoweredDeparserIR(phv, clot,
+                                              rewriteEmitClot->emit_checksum_in_clot);
         addPasses({
-#if HAVE_JBAY
-            new RewriteEmitClot(phv, clot),
+            rewriteEmitClot,
             new AllocateClotChecksums(phv, clot),
-#endif
             computeLoweredDeparserIR,
             new ReplaceDeparserIR(computeLoweredDeparserIR->igLoweredDeparser,
                                   computeLoweredDeparserIR->egLoweredDeparser)

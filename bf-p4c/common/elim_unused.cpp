@@ -10,18 +10,35 @@ class ElimUnused::Instructions : public Transform {
         prune();
         return salu; }
 
+
+    bool elim_extract(const IR::BFN::Unit* unit, const IR::Expression* field) {
+        if (!self.defuse.getUses(unit, field).empty())
+            return false;
+
+        // XXX(cole): We should find a better mechanism rather than overlaying stkvalid.
+        if (strstr(field->toString().c_str(), "$stkvalid"))
+            return false;
+
+        return true;
+    }
+
     const IR::BFN::Extract* preorder(IR::BFN::Extract* extract) override {
         auto unit = findOrigCtxt<IR::BFN::Unit>();
         if (!unit) return extract;
-        if (!self.defuse.getUses(unit, extract->dest->field).empty())
-            return extract;
 
-        // XXX(cole): We should find a better mechanism rather than overlaying stkvalid.
-        if (strstr(extract->dest->field->toString().c_str(), "$stkvalid"))
-            return extract;
+        if (auto lval = extract->dest->to<IR::BFN::FieldLVal>()) {
+            if (elim_extract(unit, lval->field)) {
+                LOG1("ELIM UNUSED " << extract << " IN UNIT " << DBPrint::Brief << unit);
+                return nullptr;
+            }
+        } else if (auto lval = extract->dest->to<IR::BFN::ExternLVal>()) {
+            if (elim_extract(unit, lval->field)) {
+                LOG1("ELIM UNUSED " << extract << " IN UNIT " << DBPrint::Brief << unit);
+                return nullptr;
+            }
+        }
 
-        LOG1("ELIM UNUSED " << extract << " IN UNIT " << DBPrint::Brief << unit);
-        return nullptr;
+        return extract;
     }
 
     const IR::BFN::VerifyChecksum* preorder(IR::BFN::VerifyChecksum* verify) override {
