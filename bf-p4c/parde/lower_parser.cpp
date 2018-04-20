@@ -425,15 +425,121 @@ struct ExtractSimplifier {
 using LoweredParserIRStates = std::map<const IR::BFN::ParserState*,
                                        const IR::BFN::LoweredParserState*>;
 
+/// Maps a sequence of fields to a sequence of PHV containers. The sequence of
+/// fields is treated as ordered and non-overlapping; the resulting container
+/// sequence is the shortest one which maintains these properties.
 std::pair<IR::Vector<IR::BFN::ContainerRef>, std::vector<Clot> >
 lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
-            const IR::Vector<IR::BFN::FieldLVal>& fields);
+            const IR::Vector<IR::BFN::FieldLVal>& fields) {
+    struct LastContainerInfo {
+        /// The container into which the last field was placed.
+        IR::BFN::ContainerRef* containerRef;
+        /// The range in that container which we've already placed fields into.
+        nw_bitrange containerRange;
+    };
 
+    boost::optional<LastContainerInfo> last;
+    IR::Vector<IR::BFN::ContainerRef> containers;
+    std::vector<Clot> clots;
+
+    // Perform a left fold over the field sequence and merge contiguous fields
+    // which have been placed in the same container into a single container
+    // reference.
+    for (auto* fieldRef : fields) {
+        auto field = phv.field(fieldRef->field);
+        if (auto* clot = clotInfo.allocated(field)) {
+            if (clots.empty() || clots.back().tag != clot->tag)
+                clots.push_back(*clot);
+            continue;
+        }
+
+        std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
+
+        BUG_CHECK(!slices.empty(),
+                  "Emitted field didn't receive a PHV allocation: %1%",
+                  fieldRef->field);
+
+        // Walk each slice of the field. We need to walk the slices in reverse
+        // because `foreach_alloc()` (and hence `get_alloc()`) enumerates
+        // the slices in increasing order of their little endian offset, which
+        // means that in terms of network order it walks the slices backwards.
+        for (auto& slice : boost::adaptors::reverse(slices)) {
+            BUG_CHECK(bool(slice.container), "Emitted field was allocated to "
+                      "an invalid PHV container: %1%", fieldRef->field);
+
+            const nw_bitrange containerRange = slice.container_bits()
+                .toOrder<Endian::Network>(slice.container.size());
+
+            // If this slice was allocated to the same container as the previous
+            // one and we're monotonically advancing through the container, then
+            // we combine them into a single container reference. We check that
+            // we're advancing to avoid getting tripped up by cases like this:
+            //     packet.emit(h.header);
+            //     packet.emit(h.header);
+            // If `h.header` is small enough to fit in a single container and we
+            // didn't check that we were monotonically advancing through it,
+            // we'd end up merging those two emits and only emitting `h.header`
+            // once, even though the intention is clearly to emit it twice.
+            if (last && last->containerRef->container == slice.container &&
+                        last->containerRange.hi < containerRange.lo) {
+                LOG5(" - Merging in " << fieldRef->field);
+                last->containerRef->debug.info.push_back(debugInfoFor(fieldRef, slice));
+                last->containerRange = last->containerRange.unionWith(containerRange);
+                continue;
+            }
+
+            LOG5("Deparser: lowering field " << fieldRef->field
+                  << " to " << slice.container);
+            last = LastContainerInfo{new IR::BFN::ContainerRef(slice.container),
+                                     containerRange};
+            last->containerRef->debug.info.push_back(debugInfoFor(fieldRef, slice));
+            containers.push_back(last->containerRef);
+        }
+    }
+
+    return {containers, clots};
+}
+
+/// Maps a POV bit field to a single bit within a container, represented as a
+/// ContainerBitRef. Checks that the allocation for the POV bit field is sane.
+const IR::BFN::ContainerBitRef*
+lowerPovBit(const PhvInfo& phv, const IR::BFN::FieldLVal* fieldRef) {
+    std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
+
+    BUG_CHECK(!slices.empty(), "POV bit %1% didn't receive a PHV allocation",
+              fieldRef->field);
+    BUG_CHECK(slices.size() == 1, "POV bit %1% is somehow split across "
+              "multiple containers?", fieldRef->field);
+
+    auto container = new IR::BFN::ContainerRef(slices.back().container);
+    auto containerRange = slices.back().container_bits();
+    BUG_CHECK(containerRange.size() == 1, "POV bit %1% is multiple bits?",
+              fieldRef->field);
+
+    auto* povBit = new IR::BFN::ContainerBitRef(container, containerRange.lo);
+    LOG5("Mapping POV bit field " << fieldRef->field << " to " << povBit);
+    povBit->debug.info.push_back(debugInfoFor(fieldRef, slices.back(),
+                                              /* includeContainerInfo = */ false));
+    return povBit;
+}
+
+/// Maps a field which cannot be split between multiple containers to a single
+/// container, represented as a ContainerRef. Checks that the allocation for the
+/// field is sane.
 const IR::BFN::ContainerRef*
 lowerUnsplittableField(const PhvInfo& phv,
                        const ClotInfo& clotInfo,
                        const IR::BFN::FieldLVal* fieldRef,
-                       const char* unsplittableReason);
+                       const char* unsplittableReason) {
+    IR::Vector<IR::BFN::ContainerRef> containers;
+    std::tie(containers, std::ignore) = lowerFields(phv, clotInfo, { fieldRef });
+    BUG_CHECK(containers.size() == 1,
+              "Field %1% must be placed in a single container because it's "
+              "used in the deparser as a %2%, but it was sliced across %3% "
+              "containers", fieldRef->field, unsplittableReason,
+              containers.size());
+    return containers.back();
+}
 
 /// Combine the high-level parser IR and the results of PHV allocation to
 /// produce a low-level, target-specific representation of the parser program.
@@ -465,50 +571,62 @@ struct ComputeLoweredParserIR : public ParserInspector {
         return name;
     }
 
-    void postorder(const IR::BFN::VerifyChecksum* verify) override {
-        if (!verify->parserError)
-            return;
-
-        auto* loweredSource =
-            lowerUnsplittableField(phv, clotInfo, verify->parserError, "parser error");
-
-        auto parser = findContext<IR::BFN::Parser>();
-        if (parser->gress == INGRESS)
-            igParserError = loweredSource;
-        else
-            egParserError = loweredSource;
-    }
-
     IR::Vector<IR::BFN::LoweredParserPrimitive>
-    lowerParserChecksums(const std::vector<const IR::BFN::ParserPrimitive*>& checksums) {
+    lowerParserChecksums(std::vector<const IR::BFN::ParserPrimitive*>& checksums) {
         IR::Vector<IR::BFN::LoweredParserPrimitive> loweredChecksums;
 
         nw_byteinterval finalInterval;
-        // bool end = false;
+        bool end = false;
+        const IR::BFN::FieldLVal* csum_err = nullptr;
+
+        // remove all adds that don't have a succeeding verify
+        std::set<const IR::BFN::ParserPrimitive*> to_remove;
+
+        for (auto rit = checksums.rbegin(); rit!= checksums.rend(); ++rit) {
+            auto p = *rit;
+            if (p->is<IR::BFN::AddToChecksum>())
+                to_remove.insert(p);
+            else if (p->is<IR::BFN::VerifyChecksum>())
+                break;
+        }
+
+        for (auto c : to_remove)
+            checksums.erase(std::remove(checksums.begin(), checksums.end(), c), checksums.end());
 
         for (auto c : checksums) {
-            if (auto* add = c->to<IR::BFN::AddToChecksum>()) {
-                if (auto* v = add->source->to<IR::BFN::PacketRVal>()) {
+            if (auto add = c->to<IR::BFN::AddToChecksum>()) {
+                if (auto v = add->source->to<IR::BFN::PacketRVal>()) {
                     const auto byteInterval = v->interval().toUnit<RangeUnit::Byte>();
                     finalInterval = finalInterval.unionWith(byteInterval);
-                    // FIXME(zma) holes?
                  }
+            } else if (auto verify = c->to<IR::BFN::VerifyChecksum>()) {
+                end = true;
+                csum_err = verify->dest;
             }
-            // else if (c->is<IR::BFN::VerifyChecksum>()) {
-            //     end = true;
-            // }
         }
 
         if (!finalInterval.empty()) {
-            auto parser = findContext<IR::BFN::Parser>();
-            auto parserError = parser->gress == INGRESS ? igParserError : egParserError;
-            if (parserError) {
-                // TODO(zma) id/swap/start/end/type
-                unsigned mask = (1 << finalInterval.hi) - 1;
-                auto csum = new IR::BFN::LoweredParserChecksum(
-                    csum_id++, mask, 0x0, true, true, /*type*/0);
-                loweredChecksums.push_back(csum);
+            // TODO(zma) id/swap/start/end/type
+            // TODO(zma) residual checksum
+            unsigned mask = (1 << finalInterval.hi) - 1;
+            auto csum = new IR::BFN::LoweredParserChecksum(
+                csum_id++, mask, 0x0, true, end, /*type*/0);
+
+            if (csum_err) {
+                std::vector<alloc_slice> slices = phv.get_alloc(csum_err->field);
+                BUG_CHECK(slices.size() == 1, "checksum error %1% is somehow allocated to "
+                   "multiple containers?", csum_err->field);
+                if (auto sl = csum_err->field->to<IR::Slice>()) {
+                    BUG_CHECK(sl->getL() == sl->getH(), "checksum error must write to single bit");
+                    csum->csum_err = new IR::BFN::ContainerBitRef(
+                                         new IR::BFN::ContainerRef(slices.back().container),
+                                         (unsigned)sl->getL());
+                } else {
+                    csum->csum_err = lowerPovBit(phv, csum_err);
+                }
             }
+
+            loweredChecksums.push_back(csum);
         }
 
         return loweredChecksums;
@@ -679,81 +797,6 @@ struct LowerParserIR : public PassManager {
     }
 };
 
-/// Maps a sequence of fields to a sequence of PHV containers. The sequence of
-/// fields is treated as ordered and non-overlapping; the resulting container
-/// sequence is the shortest one which maintains these properties.
-std::pair<IR::Vector<IR::BFN::ContainerRef>, std::vector<Clot> >
-lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
-            const IR::Vector<IR::BFN::FieldLVal>& fields) {
-    struct LastContainerInfo {
-        /// The container into which the last field was placed.
-        IR::BFN::ContainerRef* containerRef;
-        /// The range in that container which we've already placed fields into.
-        nw_bitrange containerRange;
-    };
-
-    boost::optional<LastContainerInfo> last;
-    IR::Vector<IR::BFN::ContainerRef> containers;
-    std::vector<Clot> clots;
-
-    // Perform a left fold over the field sequence and merge contiguous fields
-    // which have been placed in the same container into a single container
-    // reference.
-    for (auto* fieldRef : fields) {
-        auto field = phv.field(fieldRef->field);
-        if (auto* clot = clotInfo.allocated(field)) {
-            if (clots.empty() || clots.back().tag != clot->tag)
-                clots.push_back(*clot);
-            continue;
-        }
-
-        std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
-
-        BUG_CHECK(!slices.empty(),
-                  "Emitted field didn't receive a PHV allocation: %1%",
-                  fieldRef->field);
-
-        // Walk each slice of the field. We need to walk the slices in reverse
-        // because `foreach_alloc()` (and hence `get_alloc()`) enumerates
-        // the slices in increasing order of their little endian offset, which
-        // means that in terms of network order it walks the slices backwards.
-        for (auto& slice : boost::adaptors::reverse(slices)) {
-            BUG_CHECK(bool(slice.container), "Emitted field was allocated to "
-                      "an invalid PHV container: %1%", fieldRef->field);
-
-            const nw_bitrange containerRange = slice.container_bits()
-                .toOrder<Endian::Network>(slice.container.size());
-
-            // If this slice was allocated to the same container as the previous
-            // one and we're monotonically advancing through the container, then
-            // we combine them into a single container reference. We check that
-            // we're advancing to avoid getting tripped up by cases like this:
-            //     packet.emit(h.header);
-            //     packet.emit(h.header);
-            // If `h.header` is small enough to fit in a single container and we
-            // didn't check that we were monotonically advancing through it,
-            // we'd end up merging those two emits and only emitting `h.header`
-            // once, even though the intention is clearly to emit it twice.
-            if (last && last->containerRef->container == slice.container &&
-                        last->containerRange.hi < containerRange.lo) {
-                LOG5(" - Merging in " << fieldRef->field);
-                last->containerRef->debug.info.push_back(debugInfoFor(fieldRef, slice));
-                last->containerRange = last->containerRange.unionWith(containerRange);
-                continue;
-            }
-
-            LOG5("Deparser: lowering field " << fieldRef->field
-                  << " to " << slice.container);
-            last = LastContainerInfo{new IR::BFN::ContainerRef(slice.container),
-                                     containerRange};
-            last->containerRef->debug.info.push_back(debugInfoFor(fieldRef, slice));
-            containers.push_back(last->containerRef);
-        }
-    }
-
-    return {containers, clots};
-}
-
 /// Given a sequence of fields, construct a packing format describing how the
 /// fields will be laid out once they're lowered to containers.
 /// XXX(seth): If this were a permanent thing, it'd probably be better to
@@ -822,47 +865,6 @@ computeControlPlaneFormat(const PhvInfo& phv,
     }
 
     return packing;
-}
-
-/// Maps a POV bit field to a single bit within a container, represented as a
-/// ContainerBitRef. Checks that the allocation for the POV bit field is sane.
-const IR::BFN::ContainerBitRef*
-lowerPovBit(const PhvInfo& phv, const IR::BFN::FieldLVal* fieldRef) {
-    std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
-
-    BUG_CHECK(!slices.empty(), "POV bit %1% didn't receive a PHV allocation",
-              fieldRef->field);
-    BUG_CHECK(slices.size() == 1, "POV bit %1% is somehow split across "
-              "multiple containers?", fieldRef->field);
-
-    auto container = new IR::BFN::ContainerRef(slices.back().container);
-    auto containerRange = slices.back().container_bits();
-    BUG_CHECK(containerRange.size() == 1, "POV bit %1% is multiple bits?",
-              fieldRef->field);
-
-    auto* povBit = new IR::BFN::ContainerBitRef(container, containerRange);
-    LOG5("Mapping POV bit field " << fieldRef->field << " to " << povBit);
-    povBit->debug.info.push_back(debugInfoFor(fieldRef, slices.back(),
-                                              /* includeContainerInfo = */ false));
-    return povBit;
-}
-
-/// Maps a field which cannot be split between multiple containers to a single
-/// container, represented as a ContainerRef. Checks that the allocation for the
-/// field is sane.
-const IR::BFN::ContainerRef*
-lowerUnsplittableField(const PhvInfo& phv,
-                       const ClotInfo& clotInfo,
-                       const IR::BFN::FieldLVal* fieldRef,
-                       const char* unsplittableReason) {
-    IR::Vector<IR::BFN::ContainerRef> containers;
-    std::tie(containers, std::ignore) = lowerFields(phv, clotInfo, { fieldRef });
-    BUG_CHECK(containers.size() == 1,
-              "Field %1% must be placed in a single container because it's "
-              "used in the deparser as a %2%, but it was sliced across %3% "
-              "containers", fieldRef->field, unsplittableReason,
-              containers.size());
-    return containers.back();
 }
 
 struct RewriteEmitClot : public DeparserTransform {
@@ -968,12 +970,12 @@ struct InsertClotChecksums : public ParserModifier {
         return csum;
     }
 
-    bool preorder(IR::BFN::LoweredParserState* /* state */) override {
+    bool preorder(IR::BFN::LoweredParserState*) override {
         allocated_in_state = 0;
         return true;
     }
 
-    void postorder(IR::BFN::LoweredParserState* /* state */) override {
+    void postorder(IR::BFN::LoweredParserState*) override {
         curr_id += allocated_in_state;
         allocated_in_state = 0;
     }

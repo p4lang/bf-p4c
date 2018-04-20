@@ -230,7 +230,7 @@ class VerifyChecksum : ParserPrimitive {
 
     dbprint { out << "verify checksum"; }
 
-    optional NullOK FieldLVal parserError; 
+    optional NullOK FieldLVal dest;
 }
 
 class AddToChecksum : ParserPrimitive {

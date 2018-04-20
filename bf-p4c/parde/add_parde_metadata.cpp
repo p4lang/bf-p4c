@@ -73,23 +73,6 @@ void AddParserMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
-bool AddParserMetadataShims::preorder(IR::BFN::VerifyChecksum *verify) {
-    auto parser = findContext<IR::BFN::Parser>();
-    if (parser->gress == INGRESS) {
-        auto* igParserMeta =
-          getMetadataType(pipe, "ingress_intrinsic_metadata_from_parser");
-        auto* parserError = gen_fieldref(igParserMeta, "parser_err");
-        verify->parserError = new IR::BFN::FieldLVal(parserError);
-    } else {
-        auto* egParserMeta =
-          getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
-        auto* parserError = gen_fieldref(egParserMeta, "parser_err");
-        verify->parserError = new IR::BFN::FieldLVal(parserError);
-    }
-
-    return false;
-}
-
 bool AddDeparserMetadataShims::preorder(IR::BFN::Deparser *d) {
     switch (d->gress) {
         case INGRESS: addIngressMetadata(d); break;

@@ -367,26 +367,39 @@ struct RewriteParserStatements : public Transform {
 
     const IR::Vector<IR::BFN::ParserPrimitive>*
     rewriteChecksumAdd(const IR::Expression* src) {
-         auto* mem = src->to<IR::Member>();
-         auto* hdr = mem->expr->to<IR::HeaderRef>();
-         BUG_CHECK(hdr != nullptr,
-                   "Extracting something other than a header: %1%", src);
-         auto* hdr_type = hdr->type->to<IR::Type_StructLike>();
-         BUG_CHECK(hdr_type != nullptr,
-                   "Header type isn't a structlike: %1%", hdr_type);
+        auto rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+        IR::Vector<IR::Expression> list;
+        if (auto member = src->to<IR::Member>()) {
+            list.push_back(member);
+        } else if (auto listExpr = src->to<IR::ListExpression>()) {
+            list = listExpr->components;
+        } else if (auto headerRef = src->to<IR::ConcreteHeaderRef>()) {
+            auto header = headerRef->baseRef();
+            for (auto field : header->type->fields) {
+                auto member = new IR::Member(
+                    src->srcInfo, headerRef, field->name);
+                list.push_back(member);
+            }
+        }
 
-         // Generate an extract operation for each field.
-         auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
-         auto rval = extractedFields.at(mem->member);
-         auto* add = new IR::BFN::AddToChecksum(rval);
-         rv->push_back(add);
-         return rv;
-    }
+        for (auto expr : list) {
+            auto member = expr->to<IR::Member>();
+            BUG_CHECK(member != nullptr,
+                      "Invalid field in the checksum verification field list : %1%",
+                      member->srcInfo);
+            auto hdr = member->expr->to<IR::HeaderRef>();
+            BUG_CHECK(hdr != nullptr,
+                      "Invalid field in the checksum verification field list."
+                      " Expecting a header field : %1%", member->srcInfo);
+            auto hdr_type = hdr->type->to<IR::Type_StructLike>();
+            BUG_CHECK(hdr_type != nullptr,
+                      "Header type isn't a structlike: %1%", hdr_type);
 
-    const IR::BFN::ParserPrimitive*
-    rewriteVerifyChecksum() {
-        auto* verify = new IR::BFN::VerifyChecksum();
-        return verify;
+            auto rval = extractedFields.at(member->member);
+            auto* add = new IR::BFN::AddToChecksum(rval);
+            rv->push_back(add);
+        }
+        return rv;
     }
 
     const IR::Vector<IR::BFN::ParserPrimitive>*
@@ -430,7 +443,7 @@ struct RewriteParserStatements : public Transform {
 
         if (method->member == "verify") {
             auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
-            rv->push_back(rewriteVerifyChecksum());
+            rv->push_back(new IR::BFN::VerifyChecksum());
             return rv;
         }
 
@@ -461,8 +474,14 @@ struct RewriteParserStatements : public Transform {
 
         if (auto mc = rhs->to<IR::MethodCallExpression>()) {
             auto* method = mc->method->to<IR::Member>();
-            if (method && method->member == "verify")
-                return rewriteVerifyChecksum();
+            if (method && method->member == "verify") {
+                auto verify = new IR::BFN::VerifyChecksum();
+                if (auto mem = s->left->to<IR::Member>())
+                    verify->dest = new IR::BFN::FieldLVal(mem);
+                else if (auto sl = s->left->to<IR::Slice>())
+                    verify->dest = new IR::BFN::FieldLVal(sl);
+                return verify;
+            }
         }
 
         if (auto mem = s->left->to<IR::Member>()) {

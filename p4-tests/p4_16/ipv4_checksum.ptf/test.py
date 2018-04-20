@@ -34,7 +34,7 @@ from base_test import stringify, ipv4_to_binary, mac_to_binary
 
 logger = logging.getLogger('ipv4_checksum')
 
-class IPv4ChecksumTest(P4RuntimeTest):
+class IPv4ChecksumUpdateTest(P4RuntimeTest):
     @autocleanup
     def runTest(self):
         ig_port = self.swports(1)
@@ -88,3 +88,47 @@ class IPv4ChecksumTest(P4RuntimeTest):
         logger.info("Expecting packet on port %d", eg_port)
         testutils.verify_packets(self, exp_pkt, [eg_port])
 
+
+class IPv4ChecksumVerifyTest(P4RuntimeTest):
+    @autocleanup
+    def runTest(self):
+        ig_port = self.swports(1)
+        eg_ports = [self.swports(2), self.swports(3)]
+        dmac = '00:00:00:00:00:01'
+
+        req = p4runtime_pb2.WriteRequest()
+        req.device_id = self.device_id
+
+        self.push_update_add_entry_to_action(
+            req,
+            'dmac',
+            [self.Exact('hdr.ethernet.dst_addr', mac_to_binary(dmac))],
+            'set_port',
+            [('port', stringify(eg_ports[0], 2))])
+
+        self.push_update_add_entry_to_action(
+            req,
+            'acl',
+            [self.Exact('ig_intr_prsr_md.parser_err', '\x00\x00'),
+             self.Exact('ig_md.checksum_err', '\x01')],
+            'set_port',
+            [('port', stringify(eg_ports[1], 2))])
+
+
+        self.write_request(req)
+
+        pkt = testutils.simple_tcp_packet(eth_dst=dmac)
+        exp_pkt = testutils.simple_tcp_packet(eth_dst=dmac)
+
+        logger.info("Sending packet on port %d", ig_port)
+        testutils.send_packet(self, ig_port, str(pkt))
+
+        logger.info("Expecting packet on port %d", eg_ports[0])
+        testutils.verify_packets(self, exp_pkt, [eg_ports[0]])
+
+        pkt['IP'].chksum = 0
+        logger.info("Sending packet on port %d", ig_port)
+        testutils.send_packet(self, ig_port, str(pkt))
+
+        logger.info("Expecting packet on port %d", eg_ports[1])
+        testutils.verify_packets(self, exp_pkt, [eg_ports[1]])

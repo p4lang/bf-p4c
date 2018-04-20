@@ -163,7 +163,7 @@ phv_8b_slots[] = {
 template <>
 void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Parser *pa, void *_map, unsigned &used) const
 {   
-    if (type != 0) return;
+    if (type != 0 || !dest) return;
 
     // checksum verification requires the last extractor to be a dummy (to work around a RTL bug)
     // see MODEL-210 for discussion.

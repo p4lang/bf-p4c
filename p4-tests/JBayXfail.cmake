@@ -192,7 +192,7 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "test.IPv4ChecksumTest ... FAIL"
+  "test.IPv4ChecksumUpdateTest ... FAIL"
   # needs tna to jna translation
   extensions/p4_tests/p4_16/ipv4_checksum.p4
   )

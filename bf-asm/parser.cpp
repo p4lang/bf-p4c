@@ -304,8 +304,6 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
             if (kv.value.type == tCMD && kv.value == "clot" && kv.value.vec.size == 2)
                 tag = kv.value[1].i;
             else dest = Phv::Ref(gress, kv.value);
-        } else if (kv.key == "dst_bit") {
-            if (CHECKTYPE(kv.value, tINT)) dst_bit_hdr_end_pos = kv.value.i;
         } else if (kv.key == "end_pos") {
             if (CHECKTYPE(kv.value, tINT)) dst_bit_hdr_end_pos = kv.value.i;
         } else if (kv.key == "mask") {
@@ -340,6 +338,12 @@ void Parser::Checksum::pass1(Parser *parser) {
             parser->checksum_use[gress][addr] = this; }
     if (dest.check() && dest->reg.parser_id() < 0)
         error(dest.lineno, "%s is not accessable in the parser", dest->reg.name);
+    if (type == 0 && dest) {
+        if (dest->lo != dest->hi)
+            error(dest.lineno, "checksum verification destination must be single bit");
+        else dst_bit_hdr_end_pos = dest->lo;
+    } else if (type == 1 && dest.size() != dest->reg.size) {
+        error(dest.lineno, "residual checksum must write whole container"); }
 }
 void Parser::Checksum::pass2(Parser *parser) {
     if (addr < 0) {

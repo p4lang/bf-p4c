@@ -233,23 +233,13 @@ class BFN::ContainerRef : BFN::Reference {
 
 /// A reference to a single bit within a PHV container. (e.g., a POV bit)
 class BFN::ContainerBitRef : BFN::Reference {
-    validate {
-        BUG_CHECK(bit.size() == 1,
-                  "ContainerBitRef range %1% is not a single bit?", bit);
-        BUG_CHECK(le_bitrange(StartLen(0, container->container.size())).contains(bit),
-                  "ContainerBitRef bit %1% does not fit within container %2%",
-                  bit, container->container);
-    }
-    toString { return container->toString() + "(" + std::to_string(bit.lo) + ")"; }
+    toString { return container->toString() + "(" + std::to_string(bit) + ")"; }
     dbprint { out << toString(); }
 
     /// The container containing the bit.
     BFN::ContainerRef container;
 
-    /// The bit itself, specified in little endian order as a range of size 1.
-    /// XXX(seth): It'd be nice to specify it as an index, but we don't have a
-    /// strongly typed representation of bit indices right now.
-    le_bitrange bit;
+    unsigned bit;
 }
 
 /// A Member object that maintains aliasing information for the field it is aliased with

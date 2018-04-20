@@ -44,8 +44,7 @@ class ElimUnused::Instructions : public Transform {
     const IR::BFN::VerifyChecksum* preorder(IR::BFN::VerifyChecksum* verify) override {
         auto unit = findOrigCtxt<IR::BFN::Unit>();
         if (!unit) return verify;
-        if (verify->parserError &&
-            !self.defuse.getUses(unit, verify->parserError->field).empty())
+        if (verify->dest && !self.defuse.getUses(unit, verify->dest->field).empty())
             return verify;
 
         LOG1("ELIM UNUSED " << verify << " IN UNIT " << DBPrint::Brief << unit);

@@ -225,31 +225,21 @@ struct ParserAsmSerializer : public ParserInspector {
         out << indent << "type: " << type << std::endl;
 
         // TODO(zma) these low level bit encoding can be pushed down into the
-        // assembler by using some syntax sugar in the assembly
+        // assembler by adding some syntax sugar in the assembly
         out << indent << "mask: " << csum->mask << std::endl;
         out << indent << "swap: " << csum->swap << std::endl;
         out << indent << "start: " << csum->start  << std::endl;
         out << indent << "end: " << csum->end  << std::endl;
 
-        auto parser = findContext<IR::BFN::LoweredParser>();
-        if (csum->type == 0) {
-            // XXX(zma) checksum error can have its own container dest,
-            // we use parser error to be consistent with glass
-            if (parser->parserError) {
-                out << indent << "dest: " << parser->parserError << std::endl;
-            }
-        } else if (csum->type == 1 && csum->phv_dest) {
+        if (csum->type == 0 && csum->csum_err)
+            out << indent << "dest: " << csum->csum_err << std::endl;
+        else if (csum->type == 1)
             out << indent << "dest: " << csum->phv_dest << std::endl;
-        } else if (csum->type == 2) {
+        else if (csum->type == 2)
             out << indent << "dest: " << csum->clot_dest << std::endl;
 
+        if (csum->type == 2)
             clot_tag_to_checksum_unit[csum->clot_dest.tag] = csum->unit_id;
-        }
-
-        if (csum->type == 0 && parser->parserError) {
-            // XXX(zma) again, hard-coded to be consistent with glass for now
-            out << indent << "dst_bit: 12" << std::endl;
-        }
     }
 
     // XXX(zma) really a work-around due to lack of reference support of clot
