@@ -129,6 +129,7 @@ if [ -z "$found" ]; then
     echo >&2 "No exisiting repositories found"
 else
     echo "Found:$found"
+    keep_files=true   # do NOT delete preexisting repositories!!!!
     if confirm "Rebuild these repositories before using them?"; then
         reuse_asis=false
     else
