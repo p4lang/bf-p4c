@@ -1714,6 +1714,23 @@ class SplitBigStates : public ParserModifier {
         // This will catch the case when these is no save at all.
         for (const auto* match : state->match) {
             earliest_conflict = std::min(earliest_conflict, match->shift); }
+
+        // Also the first save that might overwrite the match register used in this stage.
+        std::set<MatchRegister> used_for_select;
+        for (const auto* select : state->select) {
+            for (const auto& reg : select->reg) {
+                used_for_select.insert(reg); } }
+        for (const auto* match : state->match) {
+            for (const auto* save : match->saves) {
+                if (used_for_select.count(save->dest)) {
+                    auto range = save->source->extractedBytes();
+                    BUG_CHECK(range.loByte() >= 0,
+                              "negative range shoule be eliminated before, %1%", save);
+                    earliest_conflict = std::min(earliest_conflict, unsigned(range.loByte()));
+                }
+            }
+        }
+
         return earliest_conflict;
     }
 
@@ -1808,7 +1825,7 @@ class SplitBigStates : public ParserModifier {
             }
             for (auto* save : rst.saves) {
                 // as long as this save is part of common part.
-                if (save->source->range.hiByte() < until) {
+                if (save->source->range.hiByte() + shifted < until) {
                     common->saves.push_back(leftShiftSave(save, -shifted));
                 }
             }
