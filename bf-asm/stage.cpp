@@ -133,10 +133,12 @@ void AsmStage::process() {
     for (unsigned i = 0; i < stage.size(); i++) {
         for (auto table : stage[i].tables)
             table->pass1();
-        if (i == Target::NUM_MAU_STAGES()/2) {
-            /* to turn the corner, the middle stage must always be match dependent */
-            for (gress_t gress : Range(INGRESS, EGRESS))
-                stage[i].stage_dep[gress] = Stage::MATCH_DEP; }
+        if (options.target == TOFINO) {
+            if (i == Target::NUM_MAU_STAGES()/2) {
+                /* to turn the corner, the middle stage must always be match dependent */
+                for (gress_t gress : Range(INGRESS, EGRESS))
+                    stage[i].stage_dep[gress] = Stage::MATCH_DEP; }
+        }
         if (options.match_compiler || 1) {
             /* FIXME -- do we really want to do this?  In theory different stages could
              * FIXME -- use the same PHV slots differently, but the compiler always uses them
@@ -163,21 +165,27 @@ void AsmStage::output(json::map &ctxt_json) {
               stage.size());
     if (error_count > 0) return;
     if (stage.empty()) return;
+
+#if HAVE_JBAY
+    /* Allow to set any stage as match dependent based on a pattern - Should never be used for
+     * normal compilation */
+    if (options.target == JBAY && !options.stage_dependency_pattern.empty()) {
+        for (gress_t gress : Range(INGRESS, EGRESS)) {
+            for (unsigned i = 0; i < stage.size(); i++) {
+                    if ((options.stage_dependency_pattern.size() > i) &&
+                        (options.stage_dependency_pattern.at(i) == '1')) {
+                            LOG1("explicitly setting stage " << i << " " << gress
+                                << " as match dependent on previous stage");
+                            stage[i].stage_dep[gress] = Stage::MATCH_DEP;
+                    }
+            }
+        }
+    }
+#endif
+
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         bitvec set_regs = stage[0].action_set[gress];
         for (unsigned i = 1; i < stage.size(); i++) {
-#if HAVE_JBAY
-            /* Allow to set any stage as match dependent based on a pattern
-             * for DV team - Should never be used for normal compilation */
-            if (options.target == JBAY && !options.stage_dependency_pattern.empty()) {
-                if ((options.stage_dependency_pattern.size() > i) &&
-                    (options.stage_dependency_pattern.at(i) == '1')) {
-                        LOG1("setting stage " << i << " " << gress
-                            << " as match dependent on previous stage");
-                        stage[i].stage_dep[gress] = Stage::MATCH_DEP;
-                }
-            }
-#endif
             if (!stage[i].stage_dep[gress]) {
                 if (stage[i].match_use[gress].intersects(set_regs)) {
                     LOG1("stage " << i << " " << gress << " is match dependent on previous stage");
