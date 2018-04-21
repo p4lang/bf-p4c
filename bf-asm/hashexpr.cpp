@@ -190,6 +190,7 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
                 rv->start = what[2].i;
                 if (what.vec.size > 3)
                     rv->_width = what[3].i; }
+            return rv;
         } else if (what.vec.size == 2) {
             return new PhvRef(gress, what);
         } else
