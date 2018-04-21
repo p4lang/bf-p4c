@@ -25,7 +25,7 @@ class CanonGatewayExpr : public MauTransform {
     const IR::Expression *postorder(IR::LNot *) override;
     const IR::Expression *postorder(IR::BAnd *) override;
     const IR::Expression *postorder(IR::BOr *) override;
-    const IR::MAU::Table *postorder(IR::MAU::Table *) override;
+    const IR::Node *postorder(IR::MAU::Table *) override;
     class NeedNegate;
 };
 

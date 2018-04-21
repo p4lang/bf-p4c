@@ -22,7 +22,7 @@ static bool isSigned(const IR::Type *t) {
 
 static mpz_class SliceReduce(IR::Operation::Relation *rel, mpz_class val) {
     int slice = 0;
-    while ((val & 1) == 0) {
+    while (val != 0 && (val & 1) == 0) {
         ++slice;
         val /= 2; }
     if (slice > 0) {
@@ -53,17 +53,29 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Lss *e) {
     if (auto k = e->left->to<IR::Constant>()) {
         BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
         return postorder(new IR::Geq(e->right, new IR::Constant(k->value + 1))); }
-    if (auto k = e->right->to<IR::Constant>())
+    if (auto k = e->right->to<IR::Constant>()) {
+        if (k->value == 0) {
+            if (isSigned(e->left->type)) {
+                int signbit = e->left->type->width_bits() - 1;
+                return new IR::Equ(MakeSlice(e->left, signbit, signbit), new IR::Constant(1));
+            } else {
+                return new IR::BoolLiteral(false); } }
         if (SliceReduce(e, k->value) == 1 && !isSigned(e->left->type))
-            return new IR::Equ(e->left, new IR::Constant(0));
+            return new IR::Equ(e->left, new IR::Constant(0)); }
     return e; }
 const IR::Expression *CanonGatewayExpr::postorder(IR::Geq *e) {
     if (auto k = e->left->to<IR::Constant>()) {
         BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
         return postorder(new IR::Lss(e->right, new IR::Constant(k->value + 1))); }
-    if (auto k = e->right->to<IR::Constant>())
+    if (auto k = e->right->to<IR::Constant>()) {
+        if (k->value == 0) {
+            if (isSigned(e->left->type)) {
+                int signbit = e->left->type->width_bits() - 1;
+                return new IR::Equ(MakeSlice(e->left, signbit, signbit), new IR::Constant(0));
+            } else {
+                return new IR::BoolLiteral(true); } }
         if (SliceReduce(e, k->value) == 1 && !isSigned(e->left->type))
-            return new IR::Neq(e->left, new IR::Constant(0));
+            return new IR::Neq(e->left, new IR::Constant(0)); }
     return e; }
 const IR::Expression *CanonGatewayExpr::postorder(IR::Grt *e) {
     if (e->left->is<IR::Constant>())
@@ -75,7 +87,11 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LAnd *e) {
     const IR::Expression *rv = e;
     if (auto k = e->left->to<IR::Constant>()) {
         return k->value ? e->right : k; }
+    if (auto k = e->left->to<IR::BoolLiteral>()) {
+        return k->value ? e->right : k; }
     if (auto k = e->right->to<IR::Constant>()) {
+        return k->value ? e->left : k; }
+    if (auto k = e->right->to<IR::BoolLiteral>()) {
         return k->value ? e->left : k; }
     while (auto r = e->right->to<IR::LAnd>()) {
         e->left = postorder(new IR::LAnd(e->left, r->left));
@@ -103,7 +119,11 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LAnd *e) {
 const IR::Expression *CanonGatewayExpr::postorder(IR::LOr *e) {
     if (auto k = e->left->to<IR::Constant>()) {
         return k->value ? k : e->right; }
+    if (auto k = e->left->to<IR::BoolLiteral>()) {
+        return k->value ? k : e->right; }
     if (auto k = e->right->to<IR::Constant>()) {
+        return k->value ? k : e->left; }
+    if (auto k = e->right->to<IR::BoolLiteral>()) {
         return k->value ? k : e->left; }
     while (auto r = e->right->to<IR::LOr>()) {
         e->left = postorder(new IR::LOr(e->left, r->left));
@@ -149,11 +169,52 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::BOr *e) {
     return e;
 }
 
-const IR::MAU::Table *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
+const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
     auto &rows = tbl->gateway_rows;
     if (rows.empty() || !rows[0].first)
         return tbl;
     LOG2("CanonGateway on table " << tbl->name);
+    // Remove rows that can never match because they're after a row that always matches,
+    // or because their condition is 'false'.  While doing that, track the next tags
+    // that we remove and keep.
+    bool erase_rest = false;
+    std::set<cstring>   removed, present;  // next tags in the table from the gateway
+    for (auto row = rows.begin(); row != rows.end();) {
+        if (erase_rest) {
+            removed.insert(row->second);
+            row = rows.erase(row);
+        } else if (!row->first) {
+            erase_rest = true;
+            present.insert(row->second);
+            ++row;
+        } else if (auto k = row->first->to<IR::Constant>()) {
+            if (k->value == 0) {
+                removed.insert(row->second);
+                row = rows.erase(row);
+            } else {
+                row->first = nullptr; }
+        } else if (auto k = row->first->to<IR::BoolLiteral>()) {
+            if (k->value == 0) {
+                removed.insert(row->second);
+                row = rows.erase(row);
+            } else {
+                row->first = nullptr; }
+        } else {
+            present.insert(row->second);
+            ++row; } }
+    // If we removed ALL gateway rows that refer to a next tag, remove that tag from
+    // next, as it's unreachable.  This relies on the fact that gateway next tags and
+    // action next tags are always disjoint.
+    for (auto next_tag : removed)
+        if (!present.count(next_tag))
+            tbl->next.erase(next_tag);
+    if (rows.empty() || !rows[0].first) {
+        if (tbl->gateway_only()) {
+            LOG3("eliminating completely dead gateway-only table " << tbl->name);
+            if (!rows.empty() && tbl->next.count(rows.front().second))
+                return &tbl->next.at(rows.front().second)->tables;
+            return nullptr; }
+        return tbl; }
     /* split logical-OR operations across rows */
     for (auto it = rows.begin(); it != rows.end(); ++it) {
         LOG3("    " << it->first << " -> " << it->second);
