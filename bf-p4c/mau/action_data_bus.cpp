@@ -987,11 +987,8 @@ void ActionDataBus::update(cstring name, const Use &alloc) {
     }
 }
 
-void ActionDataBus::update(cstring name, const TableResourceAlloc *alloc) {
-    update(name, alloc->action_data_xbar);
-}
-
-void ActionDataBus::update_profile(const IR::MAU::Table *tbl) {
+void ActionDataBus::update(cstring name, const TableResourceAlloc *alloc,
+                           const IR::MAU::Table *tbl) {
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
         auto ad = at->to<IR::MAU::ActionData>();
@@ -1000,6 +997,11 @@ void ActionDataBus::update_profile(const IR::MAU::Table *tbl) {
             return;
         shared_action_profiles.emplace(ad);
     }
+    update(name, alloc);
+}
+
+void ActionDataBus::update(cstring name, const TableResourceAlloc *alloc) {
+    update(name, alloc->action_data_xbar);
 }
 
 void ActionDataBus::update(const IR::MAU::Table *tbl) {
@@ -1009,5 +1011,5 @@ void ActionDataBus::update(const IR::MAU::Table *tbl) {
             return;
         atcam_updates.emplace(orig_name);
     }
-    update(tbl->name, tbl->resources);
+    update(tbl->name, tbl->resources, tbl);
 }

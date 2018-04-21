@@ -200,10 +200,10 @@ struct ActionDataBus {
     bool alloc_action_data_bus(const IR::MAU::Table *tbl, const ActionFormat::Use *use,
                                TableResourceAlloc &alloc);
     void update(cstring name, const Use &alloc);
+    void update(cstring name, const TableResourceAlloc *alloc, const IR::MAU::Table *tbl);
     void update(cstring name, const TableResourceAlloc *alloc);
     void update(cstring name, const Use::ReservedSpace &rs);
     void update(cstring name, const Use::RandomNumberGenerator &rng);
-    void update_profile(const IR::MAU::Table *tbl);
     void update(const IR::MAU::Table *tbl);
 };
 

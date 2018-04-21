@@ -2125,7 +2125,6 @@ void Memories::fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, swi
         twoport_bus[row] = name;
         alloc.row.emplace_back(row);
     } else if (type == ACTION) {
-        LOG1("Home row for candidate " << candidate);
         action_data_bus[row][side] = name;
         alloc.row.emplace_back(row, side);
         alloc.home_row.emplace_back(2*row + side, candidate.group->number);
@@ -2415,7 +2414,6 @@ void Memories::swbox_logical_row(int row, RAM_side_t side, swbox_fill candidates
     for (int k = 0; k < SWBOX_TYPES; k++)
         candidates[k].clear();
 
-    LOG1("Row and side " << row << " " << side);
     if (bitcount(side_mask(side) & ~sram_inuse[row]) == 0)
         return;
 
@@ -2438,7 +2436,6 @@ void Memories::swbox_logical_row(int row, RAM_side_t side, swbox_fill candidates
     for (int k = 0; k < SWBOX_TYPES; k++) {
         if (candidates[k]) {
             candidate_found = true;
-            LOG1("Candidate " << candidates[k]);
         }
     }
 

@@ -1164,6 +1164,7 @@ int ActionFormat::offset_constraints_and_total_layouts() {
         use->total_layouts[ADT][BYTE].setrange(full_word * 4, added);
         use->total_layouts[ADT][HALF].setrange(full_word * 4 + 2, 2);
     }
+
     return max_small_bytes;
 }
 
@@ -1192,9 +1193,14 @@ void ActionFormat::space_8_and_16_containers(int max_small_bytes) {
             half_ends = check_full_bitmasked(aci, max_small_bytes);
         }
 
+        bitvec half_range;
         for (int i = 0; i < count_half; i++) {
-            aci.layouts[ADT][HALF].setrange(half_ends - 2 * i - 2, 2);
+            half_range.setrange(half_ends - 2 * i - 2, 2);
         }
+        aci.layouts[ADT][HALF] |= half_range;
+        // Due to bitmasked-sets of FULL words being packed together the location of where
+        // half words can be per word might not fit within the pre-calculated range
+        use->total_layouts[ADT][HALF] |= half_range;
 
         if (aci.offset_constraint) {
             aci.layouts[ADT][BYTE].setrange(aci.offset_full_word * 4,

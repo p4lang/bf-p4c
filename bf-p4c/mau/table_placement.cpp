@@ -485,8 +485,7 @@ bool TablePlacement::try_alloc_adb(Placed *next, const Placed *done,
     resources->action_data_xbar.clear();
 
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-        current_adb.update(p->name, p->resources);
-        current_adb.update_profile(p->table);
+        current_adb.update(p->name, p->resources, p->table);
     }
     if (!current_adb.alloc_action_data_bus(next->table, next->use.preferred_action_format(),
                                            *resources)) {
@@ -499,9 +498,9 @@ bool TablePlacement::try_alloc_adb(Placed *next, const Placed *done,
 
     ActionDataBus adb_update;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-        adb_update.update(p->name, p->resources->action_data_xbar);
+        adb_update.update(p->name, p->resources, p->table);
     }
-    adb_update.update(next->name, resources->action_data_xbar);
+    adb_update.update(next->name, resources, next->table);
     return true;
 }
 
@@ -548,9 +547,7 @@ static void coord_action_data_xbar(const TablePlacement::Placed *curr,
         if ((ad = at->attached->to<IR::MAU::ActionData>()) != nullptr) break;
     }
     if (ad == nullptr) return;
-    auto loc = resource->memuse.find(curr->table->get_use_name(ad));
-    if (loc == resource->memuse.end() || (loc != resource->memuse.end()
-        && !resource->action_data_xbar.empty()))
+    if (!resource->action_data_xbar.empty())
         return;
     int j = 0;
     for (auto *p = done; p && p->stage == curr->stage; p = p->prev) {
@@ -566,7 +563,6 @@ static void coord_action_data_xbar(const TablePlacement::Placed *curr,
         }
         if (p_ad == ad && !p->resources->action_data_xbar.empty()) {
             resource->action_data_xbar = prev_resources[j]->action_data_xbar;
-            prev_resources[j]->action_data_xbar.clear();
             break;
         }
         j++;
