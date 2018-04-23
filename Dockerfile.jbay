@@ -28,6 +28,7 @@ ENV P4C_RUNTIME_DEPS cpp \
                      libgc1c2 \
                      libgmp10 \
                      libgmpxx4ldbl \
+                     libnl-route-3-dev \
                      libssl1.0.0 \
                      pkg-config \
                      python-ipaddr \
@@ -59,7 +60,7 @@ ARG IMAGE_TYPE=release
 # testing dependencies
 RUN apt-get install -y net-tools
 
-RUN pip install ply jsonschema pexpect
+RUN pip install ply jsonschema pexpect crc16
 COPY . /bfn/bf-p4c-compilers/
 COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
 COPY scripts/docker_entry_point.sh /bfn/docker_entry_point.sh

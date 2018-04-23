@@ -24,19 +24,22 @@ env:
   matrix:
     # Run all tofino tests excluding smoketests
     - TEST_SUITE="^tofino"
-      TEST_EXTRA_OPTS="-LE smoketest"
+      TEST_EXTRA_OPTS="-E"
+      TEST_EXTRA_OPTS2="smoketest|programs"
       TARGET=tofino
       IMAGE_TAG="bf-p4c-compilers_tofino"
       DOCKERFILE=Dockerfile.tofino
     # Run all tofino smoke tests
-    - TEST_SUITE="^tofino"
-      TEST_EXTRA_OPTS="-L smoketest"
+    - TEST_SUITE="^tofino.*programs"
+      TEST_EXTRA_OPTS=""
+      TEST_EXTRA_OPTS2=""
       TARGET=tofino
-      IMAGE_TAG="bf-p4c-compilers_smoke"
+      IMAGE_TAG="bf-p4c-compilers_smoke_programs"
       DOCKERFILE=Dockerfile.tofino
     # Run all jbay tests (including cpplint and gtest)
     - TEST_SUITE="^jbay|cpplint|gtest"
       TEST_EXTRA_OPTS=""
+      TEST_EXTRA_OPTS2=""
       TARGET=jbay
       IMAGE_TAG="bf-p4c-compilers_jbay"
       DOCKERFILE="Dockerfile.jbay"
@@ -50,4 +53,4 @@ install:
   - docker build --network ccache_network -f $DOCKERFILE -t $IMAGE_TAG --build-arg IMAGE_TYPE=test .
 
 script:
-  - docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS $IMAGE_TAG ctest -R $TEST_SUITE $TEST_EXTRA_OPTS
+  - docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS $IMAGE_TAG ctest -R $TEST_SUITE $TEST_EXTRA_OPTS $TEST_EXTRA_OPTS2

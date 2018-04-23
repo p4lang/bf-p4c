@@ -187,8 +187,6 @@ macro(p4c_add_bf_backend_tests device label tests)
 
   simple_test_setup_check(${device})
 
-  packet_test_setup_check(${device})
-
   # if STF is not found, disable all stf tests
   if (NOT HARLYN_STF_${device})
     set (testExtraArgs "${testExtraArgs} -norun")

@@ -1,5 +1,8 @@
 set (jbay_timeout 500)
 
+# check for PTF requirements
+packet_test_setup_check("jbay")
+
 set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_JBAY "${P4TESTDATA}/p4_16_samples/*.p4")
@@ -58,6 +61,6 @@ p4c_add_ptf_test_with_ptfdir (
 set (BFN_EXCLUDE_PATTERNS "tofino.p4")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/emulation/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
-bfn_add_p4factory_tests("jbay" "smoketest" BFN_TESTS_LIST)
+bfn_add_p4factory_tests("jbay" "smoketest_programs" BFN_TESTS_LIST)
 
 include(JBayXfail.cmake)

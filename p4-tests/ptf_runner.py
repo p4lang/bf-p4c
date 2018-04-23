@@ -83,7 +83,7 @@ def get_parser():
                         help='Generate output in JUnit XML format')
     return parser
 
-DEFAULT_NUM_IFACES = 8
+DEFAULT_NUM_IFACES = 16
 DEFAULT_IFACES = ["veth{}".format(i) for i in xrange((DEFAULT_NUM_IFACES + 1) * 2)]
 # Add Ethernet CPU port
 DEFAULT_IFACES += ["veth250", "veth251"]
@@ -203,8 +203,11 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     else:
         os.environ['PYTHONPATH'] = ptfutils
     # find pd generated python files
-    site_pkg = os.path.join('lib', 'python2.7', 'site-packages', device+'pd')
+    site_pkg = os.path.join('lib', 'python2.7', 'site-packages')
+    # for switchapi
     os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg)
+    # for pdfixed
+    os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device+'pd')
     # res_pd_rpc -- bf-drivers still uses tofino to install res_pd_rpc: 'tofino' should be device
     res_pd_rpc = os.path.join('/usr', 'local', 'lib', 'python2.7', 'dist-packages', 'tofino')
     os.environ['PYTHONPATH'] += ":" + res_pd_rpc
@@ -215,6 +218,7 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     cmd = [PTF]
     cmd.extend(['--test-dir', ptfdir])
     cmd.extend(ifaces)
+    cmd.extend(['--socket-recv-size', '10240'])
     test_params = 'arch=\'{}\''.format(device.title())
     test_params += ';target=\'asic-model\''
     test_params += ';config_file=\'{}\''.format(config_file)

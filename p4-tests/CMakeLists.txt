@@ -29,6 +29,8 @@ configure_file ("src/ptf_runner_wrapper.c.in"
 # common test utils
 include(TestUtils.cmake)
 
+#include(Switch.cmake)
+
 # add tofino tests and xfails with reasons
 include(TofinoTests.cmake)
 

@@ -170,6 +170,24 @@ if (PTF_REQUIREMENTS_MET)
     06-simple_l3_dir_cntr
     )
 
+  # switch_msdc current failures in p4factory
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: Received packet did not match expected packet"
+    smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: .* != .*"
+    smoketest_switch_msdc_L2LNStatsTest
+    smoketest_switch_msdc_L2VlanStatsTest
+    smoketest_switch_msdc_MalformedPacketsTest
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: False is not true"
+    smoketest_switch_msdc_L3IPv4EcmpSeedTest
+    )
+
 endif() # PTF_REQUIREMENTS_MET
 
 
@@ -1021,6 +1039,11 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_7.0_dc_basic
   switch_7.0_l2
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: No field .* in format"
+  switch_ent_dc_general
 )
 
 # BRIG-528
