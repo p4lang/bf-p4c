@@ -55,6 +55,18 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
                 out << endl << *salu;
 }
 
+void IR::MAU::BackendAttached::dbprint(std::ostream &out) const {
+    out << *attached;
+    if (hash_dist) out << " hd=" << *hash_dist;
+    switch (use) {
+    case LOG: out << " {log}"; break;
+    case FIFO_PUSH: out << " {enq}"; break;
+    case FIFO_POP: out << " {deq}"; break;
+    case STACK_PUSH: out << " {push}"; break;
+    case STACK_POP: out << " {pop}"; break;
+    default: break; }
+}
+
 void IR::MAU::StatefulAlu::dbprint(std::ostream &out) const {
     out << "stateful " << name << " ";
     if (dual)

@@ -4,10 +4,10 @@
 header data_t {
     bit<32> f1;
     bit<32> f2;
+    bit<16> cksum;
     bit<16> h1;
     bit<8>  b1;
     bit<8>  b2;
-    bit<16> cksum;
 }
 
 struct metadata {

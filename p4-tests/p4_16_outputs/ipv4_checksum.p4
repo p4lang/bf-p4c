@@ -106,9 +106,11 @@ struct switch_header_t {
 }
 
 struct switch_metadata_t {
+    bool checksum_err;
 }
 
 parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
     state start {
         pkt.extract(ig_intr_md);
         transition select(ig_intr_md.resubmit_flag) {
@@ -129,6 +131,8 @@ parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_me
     }
     state parse_ipv4 {
         pkt.extract(hdr.ipv4);
+        ipv4_checksum.add(hdr.ipv4);
+        ig_md.checksum_err = ipv4_checksum.verify();
         transition select(hdr.ipv4.protocol) {
             6: parse_tcp;
             17: parse_udp;
@@ -146,7 +150,7 @@ parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_me
 }
 
 control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t ig_md, in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
-    Checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum;
+    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
     apply {
         hdr.ipv4.hdr_checksum = ipv4_checksum.update({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
         pkt.emit(hdr.ethernet);
@@ -156,9 +160,12 @@ control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in swit
     }
 }
 
-control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     switch_nexthop_t nexthop_index;
     action miss_() {
+    }
+    action drop() {
+        ig_intr_dprsr_md.drop_ctl = 0x7;
     }
     action set_nexthop(switch_nexthop_t index) {
         nexthop_index = index;
@@ -210,12 +217,22 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
             rewrite_;
         }
     }
+    table acl {
+        key = {
+            ig_intr_prsr_md.parser_err: exact;
+            ig_md.checksum_err        : exact;
+        }
+        actions = {
+            set_port;
+        }
+    }
     apply {
         nexthop_index = 0;
         fib.apply();
         nexthop.apply();
         dmac.apply();
         rewrite.apply();
+        acl.apply();
     }
 }
 

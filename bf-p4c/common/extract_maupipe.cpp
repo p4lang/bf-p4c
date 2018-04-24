@@ -1088,7 +1088,7 @@ void BackendConverter::convert(const IR::P4Program *program, BFN_Options& option
             processBackendPipe.addDebugHook(options.getDebugHook());
             pipe.emplace(0 /* index 0 */, rv->apply(processBackendPipe));
         }
-    } else if (options.arch == "tna" &&
+    } else if ((options.arch == "tna" || options.arch == "jna") &&
              options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
         if (options.target == "tofino" || options.target == "jbay") {
             auto parseTofinoArch = new ParseTofinoArch();
@@ -1131,6 +1131,11 @@ void BackendConverter::convert(const IR::P4Program *program, BFN_Options& option
             processBackendPipe1.addDebugHook(options.getDebugHook());
             pipe.emplace(1 /* index 1 */, p1->apply(processBackendPipe1));
         }
+    } else {
+        error("Architecture %s not supported with language version %s", options.arch,
+              options.langVersion ==CompilerOptions::FrontendVersion::P4_14 ? "P4_14" :
+              options.langVersion ==CompilerOptions::FrontendVersion::P4_16 ? "P4_16" :
+              "unknown");
     }
 }
 

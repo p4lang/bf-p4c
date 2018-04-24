@@ -98,14 +98,26 @@ int StatefulTable::parse_counter_mode(Target::JBay target, const value_t &v) {
     else if (v == "fifo") rv = FUNCTION_FIFO;
     else if (v == "stack") rv = FUNCTION_STACK;
     else return -1;
-    if (v.type == tSTR) rv |= PUSH_ALL;
-    else if (v.type != tCMD || v.vec.size != 2) return -1;
-    else {
-        static const std::map<std::string, int> modes = {
-            { "hit", PUSH_HIT }, { "miss", PUSH_MISS }, { "gateway", PUSH_GATEWAY } };
-        if (!modes.count(v[1].s)) return -1;
-        rv |= modes.at(v[1].s); }
-    return rv;
+    if (v.type == tSTR) return rv | PUSH_ALL;
+    if (v.type != tCMD) return -1;
+    int flag = 0;
+    for (int i = 1; i < v.vec.size; ++i) {
+        if (v[i] == "hit") flag |= PUSH_HIT;
+        else if (v[i] == "miss") flag |= PUSH_MISS;
+        else if (v[i] == "gateway") flag |= PUSH_GATEWAY;
+        else if (v[i] == "gw0") flag |= PUSH_GW_ENTRY;
+        else if (v[i] == "gw1") flag |= (PUSH_GW_ENTRY << 1);
+        else if (v[i] == "gw2") flag |= (PUSH_GW_ENTRY << 2);
+        else if (v[i] == "gw3") flag |= (PUSH_GW_ENTRY << 3);
+        else if (v[i] == "push" && (rv & FUNCTION_MASK) != FUNCTION_LOG) {
+            rv |= flag ? flag : PUSH_ALL;
+            flag = 0;
+        } else if (v[i] == "pop" && (rv & FUNCTION_MASK) != FUNCTION_LOG) {
+            rv |= (flag ? flag : PUSH_ALL) << PUSHPOP_BITS;
+            flag = 0;
+        } else
+            return -1; }
+    return rv | flag;
 }
 
 void StatefulTable::set_counter_mode(Target::JBay target, int mode) {
@@ -128,6 +140,7 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
         if (auto *call = m->get_call(this))
             if (call->args.size() >= 2 || call->args.at(1).type == Call::Arg::Counter)
                 mode = call->args.at(1).count_mode();
+        // adrdist.mau_stateful_log_counter_logical_map[m->logical+id] = ???
         merge.mau_stateful_log_counter_ctl[m->logical_id/8U][0].set_subfield(
             mode & PUSHPOP_MASK , 3*(m->logical_id % 8U), 3);
         merge.mau_stateful_log_counter_ctl[m->logical_id/8U][1].set_subfield(
@@ -137,6 +150,10 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
                 rep[0].set_subfield(meter_group | 0x4, 3*(m->logical_id % 8U), 3);
             if ((mode >> PUSHPOP_BITS) & PUSHPOP_MASK)
                 rep[1].set_subfield(meter_group | 0x4, 3*(m->logical_id % 8U), 3); } }
+    // adrdist.mau_meter_alu_vpn_range[meter_goup] = ???
+    adrdist.mau_stateful_log_counter_oxbar_map[meter_group].stateful_log_counter_oxbar_ctl
+        = meter_group;
+    adrdist.mau_stateful_log_counter_oxbar_map[meter_group].stateful_log_counter_oxbar_enable = 1;
     auto &ctl2 = merge.mau_stateful_log_counter_ctl2[meter_group];
     ctl2.slog_counter_function = stateful_counter_mode >> FUNCTION_SHIFT;
     ctl2.slog_instruction_width = format->log2size - 3;

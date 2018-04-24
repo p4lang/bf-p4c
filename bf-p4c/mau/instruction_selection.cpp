@@ -272,6 +272,9 @@ static const IR::Primitive *makeDepositField(IR::Primitive *prim, long) {
 const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
     if (!af) return prim;
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
+    auto dot = prim->name.find('.');
+    auto objType = dot ? prim->name.before(dot) : cstring();
+    cstring method = dot ? cstring(dot+1) : prim->name;
     if (prim->name == "modify_field") {
         long mask;
         if ((prim->operands.size() | 1) != 3) {
@@ -316,15 +319,13 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
                           MakeSlice(egress_spec, 7, 8),
                           MakeSlice(ingress_port, 7, 8));
             return new IR::Vector<IR::Expression>({s1, s2}); }
-    } else if (prim->name == "RegisterAction.execute" ||
-               prim->name == "RegisterAction.execute_log" ||
-               prim->name == "selector_action.execute") {
-        bool direct_access = (prim->operands.size() == 1 && !prim->name.endsWith("_log"));
+    } else if (objType == "RegisterAction" || objType == "selector_action") {
+        bool direct_access = (prim->operands.size() == 1 && method == "execute");
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
         if (!direct_access || salu->instruction.size() > 1)
             stateful.push_back(prim);  // needed to setup the index and/or type properly
-        if (prim->name.startsWith("Register") && salu->direct != direct_access)
+        if (objType == "RegisterAction" && salu->direct != direct_access)
             error("%s: %sdirect access to %sdirect register", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
@@ -473,34 +474,36 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Instruction *instr)
 
 void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
     const IR::Attached *obj = nullptr;
-    use_t use = NO_USE;
-    if (prim->name == "RegisterAction.execute" || prim->name == "selector_action.execute") {
+    use_t use = IR::MAU::BackendAttached::NO_USE;
+    auto dot = prim->name.find('.');
+    auto objType = dot ? prim->name.before(dot) : cstring();
+    cstring method = dot ? cstring(dot+1) : prim->name;
+    if (objType == "RegisterAction" || objType == "selector_action") {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
         BUG_CHECK(obj, "invalid object");
-        use = prim->operands.size() == 1 ? DIRECT : INDIRECT;
-    } else if (prim->name == "RegisterAction.execute_log") {
-        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
-        BUG_CHECK(obj, "invalid object");
-        use = LOG;
-    } else if (prim->name == "Lpf.execute" || prim->name == "Wred.execute" ||
-               prim->name == "Meter.execute") {
+        if (method == "execute") {
+            use = prim->operands.size() == 1 ? IR::MAU::BackendAttached::DIRECT
+                                             : IR::MAU::BackendAttached::INDIRECT;
+        } else if (method == "execute_log") {
+            use = IR::MAU::BackendAttached::LOG;
+        } else if (method == "enqueue") {
+            use = IR::MAU::BackendAttached::FIFO_PUSH;
+        } else if (method == "dequeue") {
+            use = IR::MAU::BackendAttached::FIFO_POP;
+        } else if (method == "push") {
+            use = IR::MAU::BackendAttached::STACK_PUSH;
+        } else if (method == "pop") {
+            use = IR::MAU::BackendAttached::STACK_POP;
+        } else {
+            BUG("Unknown %s method %s in: %s", objType, method, prim); }
+    } else if (method == "execute") {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Meter>();
         BUG_CHECK(obj, "invalid object");
-        use = INDIRECT;
-    } else if (prim->name == "DirectLpf.execute" || prim->name == "DirectWred.execute" ||
-               prim->name == "DirectMeter.execute") {
-        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Meter>();
-        BUG_CHECK(obj, "invalid object");
-        use = DIRECT;
-    } else if (prim->name == "Counter.count") {
+    } else if (method == "count") {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Counter>();
         BUG_CHECK(obj, "invalid object");
-        use = INDIRECT;
-    } else if (prim->name == "DirectCounter.count") {
-        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Counter>();
-        BUG_CHECK(obj, "invalid object");
-        use = DIRECT;
-    }
+        use = objType.startsWith("Direct") ? IR::MAU::BackendAttached::DIRECT
+                                           : IR::MAU::BackendAttached::INDIRECT; }
     if (obj) {
         auto *act = findContext<IR::MAU::Action>();
         use_t &prev_use = self.action_use[act][obj];
@@ -604,15 +607,14 @@ const IR::MAU::BackendAttached *
     HashDistKey hdk = std::make_pair(ba->attached, tbl);
     if (auto hd = ::get(self.update_hd, hdk)) {
         ba->hash_dist = hd; }
-    use_t use = NO_USE;
+    use_t use = IR::MAU::BackendAttached::NO_USE;
     for (auto act : Values(tbl->actions)) {
         if (auto use2 = self.action_use[act][ba->attached]) {
             if (use && use != use2) {
                 error("inconsistent use of %s in table %s", ba->attached, tbl);
                 break; }
             use = use2; } }
-    if (use == LOG)
-        ba->stateful_log = true;
+    ba->use = use;
     prune();
     return ba;
 }

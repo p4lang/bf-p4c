@@ -66,9 +66,12 @@ struct switch_header_t {
 }
 
 struct switch_metadata_t {
+    bool checksum_err;
 }
 
 parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+    bool tmp_1;
+    @name("SwitchIngressParser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
     state start {
         pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md);
         transition select(ig_intr_md.resubmit_flag) {
@@ -87,6 +90,9 @@ parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_me
     }
     state parse_ipv4 {
         pkt.extract<ipv4_h>(hdr.ipv4);
+        ipv4_checksum.add<ipv4_h>(hdr.ipv4);
+        tmp_1 = ipv4_checksum.verify();
+        ig_md.checksum_err = tmp_1;
         transition select(hdr.ipv4.protocol) {
             8w6: parse_tcp;
             8w17: parse_udp;
@@ -122,11 +128,11 @@ struct tuple_0 {
 }
 
 control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t ig_md, in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
-    bit<16> tmp_0;
-    @name("SwitchIngressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum;
+    bit<16> tmp_2;
+    @name("SwitchIngressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum_2;
     @hidden action act() {
-        tmp_0 = ipv4_checksum.update<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
-        hdr.ipv4.hdr_checksum = tmp_0;
+        tmp_2 = ipv4_checksum_2.update<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
+        hdr.ipv4.hdr_checksum = tmp_2;
         pkt.emit<ethernet_h>(hdr.ethernet);
         pkt.emit<ipv4_h>(hdr.ipv4);
         pkt.emit<udp_h>(hdr.udp);
@@ -143,11 +149,13 @@ control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in swit
     }
 }
 
-control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     switch_nexthop_t nexthop_index;
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".NoAction") action NoAction_3() {
+    @name(".NoAction") action NoAction_4() {
+    }
+    @name(".NoAction") action NoAction_5() {
     }
     @name("SwitchIngress.miss_") action miss() {
     }
@@ -160,6 +168,10 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
         hdr.ethernet.dst_addr = dmac;
     }
     @name("SwitchIngress.set_port") action set_port_0(PortId_t port) {
+        ig_intr_tm_md.ucast_egress_port = port;
+        ig_intr_tm_md.bypass_egress = true;
+    }
+    @name("SwitchIngress.set_port") action set_port_2(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
         ig_intr_tm_md.bypass_egress = true;
     }
@@ -203,9 +215,20 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
         }
         actions = {
             rewrite_0();
-            @defaultonly NoAction_3();
+            @defaultonly NoAction_4();
         }
-        default_action = NoAction_3();
+        default_action = NoAction_4();
+    }
+    @name("SwitchIngress.acl") table acl {
+        key = {
+            ig_intr_prsr_md.parser_err: exact @name("ig_intr_prsr_md.parser_err") ;
+            ig_md.checksum_err        : exact @name("ig_md.checksum_err") ;
+        }
+        actions = {
+            set_port_2();
+            @defaultonly NoAction_5();
+        }
+        default_action = NoAction_5();
     }
     @hidden action act_0() {
         nexthop_index = 16w0;
@@ -222,6 +245,7 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
         nexthop.apply();
         dmac_1.apply();
         rewrite_2.apply();
+        acl.apply();
     }
 }
 

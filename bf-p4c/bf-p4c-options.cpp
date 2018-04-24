@@ -88,6 +88,7 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
 #if HAVE_JBAY
         {"jbay", "v1model"},
         {"jbay", "tna"},
+        {"jbay", "jna"},
 #endif /* HAVE_JBAY */
     };
 

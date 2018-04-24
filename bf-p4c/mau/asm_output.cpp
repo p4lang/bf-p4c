@@ -2066,14 +2066,16 @@ std::string MauAsmOutput::find_indirect_index(const IR::MAU::AttachedMemory *at_
     } else if (at_mem->is<IR::MAU::Meter>() || at_mem->is<IR::MAU::Selector>()) {
         return "meter_addr";
     } else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
-        if (ba && ba->stateful_log) {
-            if (salu->instruction.size() > 1 && !index_only)
-                return "meter_type, counter";
-            return "counter"; }
+        cstring rv = "";
         if (salu->instruction.size() > 1 && !index_only)
-            return "meter_type, meter_addr";
-        else
-            return "meter_addr";
+            rv = "meter_type, ";
+        if (ba) {
+            if (ba->use == IR::MAU::BackendAttached::LOG) return rv + "counter";
+            if (ba->use == IR::MAU::BackendAttached::FIFO_PUSH) return rv + "fifo push";
+            if (ba->use == IR::MAU::BackendAttached::FIFO_POP) return rv + "fifo pop";
+            if (ba->use == IR::MAU::BackendAttached::STACK_PUSH) return rv + "stack push";
+            if (ba->use == IR::MAU::BackendAttached::STACK_POP) return rv + "stack pop"; }
+        return rv + "meter_addr";
     } else if (at_mem->is<IR::MAU::ActionData>()) {
         return index_only ? "action_addr" : "action, action_addr";
     } else {

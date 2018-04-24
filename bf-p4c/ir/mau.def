@@ -347,12 +347,11 @@ class Table : BFN::Unit {
 // the match tables are mutually exclusive
 class BackendAttached {
     NullOK HashDist hash_dist = nullptr;
-    bool stateful_log = false;
+#emit
+    enum use_t { NO_USE, DIRECT, INDIRECT, LOG, STACK_PUSH, STACK_POP, FIFO_PUSH, FIFO_POP };
+#end
+    use_t use = NO_USE;
     AttachedMemory attached;
-    dbprint {
-        out << *attached;
-        if (hash_dist) out << " hd=" << *hash_dist;
-        if (stateful_log) out << " {log}"; }
 }
 
 abstract AttachedMemory : Attached {
@@ -645,3 +644,18 @@ class RangeMatch : Operation_Unary {
     precedence = DBPrint::Prec_Equ;
     stringOp = " in ";
 }
+
+#emit
+inline bool operator>>(cstring s, IR::MAU::BackendAttached::use_t &u) {
+    if (!s || s == "" || s == "NO_USE") u = IR::MAU::BackendAttached::NO_USE;
+    else if (s == "DIRECT") u = IR::MAU::BackendAttached::DIRECT;
+    else if (s == "INDIRECT") u = IR::MAU::BackendAttached::INDIRECT;
+    else if (s == "LOG") u = IR::MAU::BackendAttached::LOG;
+    else if (s == "FIFO_PUSH") u = IR::MAU::BackendAttached::FIFO_PUSH;
+    else if (s == "FIFO_POP") u = IR::MAU::BackendAttached::FIFO_POP;
+    else if (s == "STACK_PUSH") u = IR::MAU::BackendAttached::STACK_PUSH;
+    else if (s == "STACK_POP") u = IR::MAU::BackendAttached::STACK_POP;
+    else return false;
+    return true;
+}
+#end

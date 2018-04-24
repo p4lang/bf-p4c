@@ -584,14 +584,19 @@ extern RegisterParam<T> {
 
 extern RegisterAction<T, U> {
     RegisterAction(Register<T> reg);
-    abstract void apply(inout T value, out U rv);
-    U execute(in bit<32> index); /* {
+    abstract void apply(inout T value, @optional out U rv);
+    U execute(@optional in bit<32> index); /* {
         U rv;
         T value = reg.read(index);
         apply(value, rv);
         reg.write(index, value);
         return rv;
     } */
+    U execute_log(); /* stateful logging execute at an index that increments each time */
+    U enqueue();  /* fifo push operation */
+    U dequeue();  /* fifo push operation */
+    U push();  /* stack push operation */
+    U pop();  /* stack pop operation */
 }
 
 extern DirectRegisterAction<T, U, P> {
