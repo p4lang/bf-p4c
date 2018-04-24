@@ -133,7 +133,7 @@ class LoweredParserChecksum : LoweredParserPrimitive {
 
     optional NullOK BFN::ContainerBitRef csum_err;
     optional Clot clot_dest;
-    optional NullOK BFN::ContainerRef phv_dest; 
+    optional NullOK BFN::ContainerRef phv_dest;
 }
 
 /// A lowered save operation, representing save a bits from input buffer to matchRegisters.
@@ -163,17 +163,46 @@ class LoweredSave : LoweredParserPrimitive {
 /// registers that have data loaded from input buffer in previous states
 /// which will be compared against in the state's LoweredParserMatch
 /// entries to select the next state to transition to.
-/// In the select on tuple case, there might be multiple selects in one
-/// parser state.
 class LoweredSelect {
-    /// The register match against.
-    std::vector<MatchRegister> reg;
-
 #emit
+    explicit LoweredSelect(const std::set<MatchRegister>& regs)
+        : regs(regs) { }
+
+    /// The register match against.
+    /// XXX(yumin): The order of registers is sorted by MatchRegister::operator<.
+    /// We use this order to adjust the match value in AdjustMatchValue pass.
+    std::set<MatchRegister> regs;
+
     /// Debugging information about the high-level operations that are
     /// implemented by this low-level select operation.
     ::BFN::DebugInfo debug;
 #end
+}
+
+/// The root class for values that a state match against.
+abstract LoweredMatchValue { }
+
+/// A static value that is defined in the p4, i.e. not PVS.
+class LoweredConstMatchValue : LoweredMatchValue {
+    dbprint { out << "const: " << value; }
+    match_t value;
+}
+
+/// Parser value set(PVS) value.
+/// The value_set which will be populated at runtime and matched against
+/// the value in the select expression.
+class LoweredPvsMatchValue : LoweredMatchValue {
+#emit
+    using FieldSlice = std::pair<cstring, nw_bitrange>;
+    using MatcherSlice = std::pair<MatchRegister, nw_bitrange>;
+    std::map<FieldSlice, MatcherSlice> mapping;
+
+    LoweredPvsMatchValue(cstring name, int size, const std::map<FieldSlice, MatcherSlice>& m)
+        : mapping(m), name(name), size(size) {}
+#end
+    dbprint { out << "name: " << name << " " << size; }
+    cstring name;
+    int size;
 }
 
 /// A lowered parser match construct. Each LoweredParserMatch logically
@@ -182,21 +211,12 @@ class LoweredSelect {
 class LoweredParserMatch {
 #emit
     LoweredParserMatch(match_t value, unsigned shift, const LoweredParserState* next)
-        : value(value), value_set(nullptr), shift(shift),
-          bufferRequired(0), next(next) { }
-    LoweredParserMatch(match_t value, const P4ValueSet* value_set, unsigned shift,
-                       const LoweredParserState* next)
-        : value(value), value_set(value_set), shift(shift),
-          bufferRequired(0), next(next) { }
+        : value(new IR::BFN::LoweredConstMatchValue(value)),
+          shift(shift), bufferRequired(0), next(next) { }
 #end
-
     /// The mask which will be matched against the value the containing state
     /// selects against.
-    match_t value;
-
-    /// The value_set which will be populated at runtime and matched against
-    /// the value in the select expression.
-    NullOK P4ValueSet value_set;
+    LoweredMatchValue value;
 
     /// If the match is successful, the number of bytes to shift out before
     /// transitioning to the next state.
@@ -232,12 +252,14 @@ class LoweredParserMatch {
 /// states in the original P4 program.
 class LoweredParserState : Unit {
 #noconstructor
-    LoweredParserState(cstring name, gress_t gress) : name(name), gress(gress) { }
+    LoweredParserState(cstring name, gress_t gress)
+        : name(name), gress(gress),
+          select(new LoweredSelect(std::set<MatchRegister>())) { }
     int stage() const override { return -1; }
     gress_t thread() const override { return gress; }
     toString { return name; }
     visit_children {
-        select.visit_children(v);
+        v.visit(select);
         match.parallel_visit_children(v); }
 
     /// The name of this state. This does not necessarily correspond to any
@@ -249,7 +271,7 @@ class LoweredParserState : Unit {
 
     /// The bytes from the input buffer which will be loaded into the match
     /// registers and used to select a LoweredParserMatch transition to take.
-    inline Vector<LoweredSelect> select;
+    LoweredSelect select;
 
     /// The possible transitions out of this state.
     inline Vector<LoweredParserMatch> match;

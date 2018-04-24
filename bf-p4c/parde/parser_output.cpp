@@ -79,20 +79,12 @@ struct ParserAsmSerializer : public ParserInspector {
 
         out << std::endl;
 
-        if (!state->select.empty()) {
+        if (!state->select->regs.empty()) {
             AutoIndent indentSelect(indent);
-
-            // Generate the assembly that actually implements the select.
-            // XXX(yumin): The order of registers is sorted by MatchRegister::operator<.
-            // We use this order to adjust the match value.
-            std::set<MatchRegister> used_registers;
-            for (auto *select : state->select) {
-                for (auto& r : select->reg) {
-                    used_registers.insert(r); } }
 
             out << indent << "match: ";
             const char *sep = "[ ";
-            for (const auto& r : used_registers) {
+            for (const auto& r : state->select->regs) {
                 out << sep << r;
                 sep = ", ";
             }
@@ -100,9 +92,8 @@ struct ParserAsmSerializer : public ParserInspector {
 
             // Print human-friendly debug info about what the select offsets
             // mean in terms of the original P4 program.
-            for (auto* select : state->select)
-                for (auto& info : select->debug.info)
-                    out << "      # - " << info << std::endl;
+            for (auto& info : state->select->debug.info)
+                out << "      # - " << info << std::endl;
         }
 
         for (auto* match : state->match)
@@ -114,13 +105,25 @@ struct ParserAsmSerializer : public ParserInspector {
     void outputMatch(const IR::BFN::LoweredParserMatch* match) {
         AutoIndent indentMatchPattern(indent);
 
-        if (match->value_set)
-            out << indent << "value_set " << match->value_set->controlPlaneName()
-                << " " << match->value_set->size << ':' << std::endl;
-        else if (match->value)
-            out << indent << match->value << ':' << std::endl;
-        else
-            out << indent << "0x*:" << std::endl;
+        if (auto* const_val = match->value->to<IR::BFN::LoweredConstMatchValue>()) {
+            out << indent << const_val->value << ':' << std::endl;
+        } else if (auto* pvs = match->value->to<IR::BFN::LoweredPvsMatchValue>()) {
+            out << indent << "value_set " << pvs->name << " " << pvs->size << ":" << std::endl;
+            AutoIndent indentMatch(indent);
+            out << indent << "field_mapping" << ":" << std::endl;
+            AutoIndent indentFieldMap(indent);
+            for (const auto& m : pvs->mapping) {
+                cstring fieldname = m.first.first;
+                cstring reg_name = m.second.first.name;
+                out << indent
+                    << fieldname << "(" << m.first.second.lo << ".." << m.first.second.hi << ")"
+                    << " : "
+                    << reg_name  << "(" << m.second.second.lo << ".." << m.second.second.hi << ")"
+                    << std::endl;
+            }
+        } else {
+            BUG("unknown parser match value %1%", match->value);
+        }
 
         AutoIndent indentMatch(indent);
 

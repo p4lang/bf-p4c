@@ -202,8 +202,10 @@ class ComputeMergeableState : public ParserInspector {
         return n_transition_to.at(state) > 1;
     }
 
-    bool is_wild(match_t value) {
-        return (value.word0 ^ value.word1) == 0;
+    bool is_wild(const IR::BFN::ParserMatchValue* value) {
+        if (auto* const_value = value->to<IR::BFN::ParserConstMatchValue>()) {
+            return (const_value->value.word0 ^ const_value->value.word1) == 0; }
+        return false;
     }
 
     cstring strip_gress(cstring name) {

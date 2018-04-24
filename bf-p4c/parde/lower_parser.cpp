@@ -692,19 +692,20 @@ struct ComputeLoweredParserIR : public ParserInspector {
             }
         }
 
+        /// Convert multiple select into one.
+        auto* loweredSelect = new IR::BFN::LoweredSelect();
         forAllMatching<IR::BFN::Select>(&state->selects,
                       [&](const IR::BFN::Select* select) {
             // Load match register from previous result.
             BUG_CHECK(select->reg.size() > 0, "Match register not allocated.");
-            auto* loweredSelect =
-                new IR::BFN::LoweredSelect(select->reg);
+            loweredSelect->regs.insert(select->reg.begin(), select->reg.end());
             if (auto* bufferSource = select->source->to<IR::BFN::BufferlikeRVal>()) {
                 const auto bufferRange =
                     bufferSource->range().toUnit<RangeUnit::Byte>();
                 loweredSelect->debug.info.push_back(debugInfoFor(select, bufferRange)); }
-            loweredState->select.push_back(loweredSelect);
             return;
         });
+        loweredState->select = loweredSelect;
 
         for (auto* transition : state->transitions) {
             BUG_CHECK(transition->shift, "State %1% has unset shift?", state->name);
@@ -720,15 +721,22 @@ struct ComputeLoweredParserIR : public ParserInspector {
                             save->dest,
                             save->source->range().toUnit<RangeUnit::Byte>()));
             }
-            auto* loweredMatch =
-                new IR::BFN::LoweredParserMatch(
-                        transition->value,
-                        transition->value_set,
-                        *transition->shift,
-                        loweredStatements,
-                        saves,
-                        loweredChecksums,
-                        loweredStates[transition->next]);
+            IR::BFN::LoweredMatchValue* match_value = nullptr;
+            if (auto* const_value = transition->value->to<IR::BFN::ParserConstMatchValue>()) {
+                match_value = new IR::BFN::LoweredConstMatchValue(const_value->value);
+            } else if (auto* pvs = transition->value->to<IR::BFN::ParserPvsMatchValue>()) {
+                match_value =
+                    new IR::BFN::LoweredPvsMatchValue(pvs->name, pvs->size, pvs->mapping);
+            } else {
+                BUG("Unknown match value %1%", transition->value);
+            }
+            auto* loweredMatch = new IR::BFN::LoweredParserMatch(
+                    match_value,
+                    *transition->shift,
+                    loweredStatements,
+                    saves,
+                    loweredChecksums,
+                    loweredStates[transition->next]);
             loweredState->match.push_back(loweredMatch);
         }
 
@@ -1742,13 +1750,9 @@ class SplitBigStates : public ParserModifier {
             earliest_conflict = std::min(earliest_conflict, match->shift); }
 
         // Also the first save that might overwrite the match register used in this stage.
-        std::set<MatchRegister> used_for_select;
-        for (const auto* select : state->select) {
-            for (const auto& reg : select->reg) {
-                used_for_select.insert(reg); } }
         for (const auto* match : state->match) {
             for (const auto* save : match->saves) {
-                if (used_for_select.count(save->dest)) {
+                if (state->select->regs.count(save->dest)) {
                     auto range = save->source->extractedBytes();
                     BUG_CHECK(range.loByte() >= 0,
                               "negative range shoule be eliminated before, %1%", save);

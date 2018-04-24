@@ -794,6 +794,9 @@ class ComputeSaveAndSelect: public ParserInspector {
             std::vector<UnresolvedSelect> early_stage_extracted;
 
             auto registers = Device::pardeSpec().matchRegisters();
+            std::sort(registers.begin(), registers.end(),
+                      [] (const MatchRegister& a, const MatchRegister& b) {
+                          return a.size < b.size; });  // Use smaller match registers first.
             std::set<MatchRegister> used_registers;
 
             // Sorted by whether has decided register, the size of select.
@@ -1002,7 +1005,6 @@ class ComputeSaveAndSelect: public ParserInspector {
         }
 
         // Calc a prefered register for them.
-        auto registers = Device::pardeSpec().matchRegisters();
         for (const auto& kv : temp_corrected_source) {
             const auto* select_use = kv.first;
             auto& source = kv.second;
@@ -1024,8 +1026,11 @@ class ComputeSaveAndSelect: public ParserInspector {
                 for (const auto& select : unresolved_selects) {
                     if (select.select == select_use && source == select.source()) {
                         merged_use.insert(select.used_by_others.begin(),
-                                          select.used_by_others.end()); } } }
-            used_regs[select_use] = merged_use; }
+                                          select.used_by_others.end()); } }
+            }
+
+            used_regs[select_use] = merged_use;
+        }
     }
 
  public:
@@ -1170,16 +1175,33 @@ class MatchRegisterLayout {
 
 struct AdjustMatchValue : public ParserModifier {
     void postorder(IR::BFN::Transition* transition) override {
+        if (transition->value->is<IR::BFN::ParserConstMatchValue>()) {
+            adjustConstValue(transition);
+        } else if (transition->value->is<IR::BFN::ParserPvsMatchValue>()) {
+            adjustPvsValue(transition);
+        } else {
+            BUG("Unknown match value: %1%", transition->value);
+        }
+    }
+
+    /// Assume all registers are placed in the order of its operator<,
+    /// adjust the transition value to a match_t that:
+    ///   1. match_t value's size = sum of size of all used registers.
+    ///   2. values are placed into their `slot` in match_t value.
+    void adjustConstValue(IR::BFN::Transition* transition) {
         auto* state = findContext<IR::BFN::ParserState>();
+        // It is important to use set here, so it use the default operator<
+        // to sort registers, because this order is also the order we enforece
+        // when we convert it to LoweredSelect and output to assembly.
         std::set<MatchRegister> used_registers;
         for (const auto* select : state->selects) {
             for (const auto& r : select->reg) {
                 used_registers.insert(r); } }
 
         // Pop out value for each select.
-        auto& value = transition->value;
-        uintmax_t word0 = value.word0;
-        uintmax_t word1 = value.word1;
+        auto const_val = transition->value->to<IR::BFN::ParserConstMatchValue>()->value;
+        uintmax_t word0 = const_val.word0;
+        uintmax_t word1 = const_val.word1;
         auto shiftOut = [&word0, &word1] (int sz) {
             uintmax_t mask = ~(~uintmax_t(0) << sz);
             uintmax_t sub0 = (word0 & mask);
@@ -1191,13 +1213,47 @@ struct AdjustMatchValue : public ParserModifier {
         std::map<const IR::BFN::Select*, match_t> select_values;
         for (const auto* select : boost::adaptors::reverse(state->selects)) {
             int value_size = select->mask.size();
-            select_values[select] = shiftOut(value_size); }
+            select_values[select] = shiftOut(value_size);
+        }
 
         MatchRegisterLayout layout(used_registers);
         for (const auto* select : state->selects) {
             layout.writeValue(select->reg, select->mask, select_values[select]);
         }
-        transition->value = layout.getMatchValue();
+        transition->value = new IR::BFN::ParserConstMatchValue(layout.getMatchValue());
+    }
+
+    /// Build a mapping from fieldslice to matcher slice by checking the field
+    /// where the select originally matched on and the masking of the registers.
+    void adjustPvsValue(IR::BFN::Transition* transition) {
+        auto* state = findContext<IR::BFN::ParserState>();
+        auto* old_value = transition->value->to<IR::BFN::ParserPvsMatchValue>();
+        auto* adjusted = new IR::BFN::ParserPvsMatchValue(old_value->name, old_value->size);
+        for (const auto* select : state->selects) {
+            LOG1("PVS SELECT P4source = " << select->p4Source->toString());
+            LOG1("PVS Mask = " << select->mask);
+            cstring fieldname = select->p4Source->toString();
+            nw_bitrange mask = select->mask;
+            int field_start = 0;
+            int reg_start = 0;
+            for (const auto& reg : select->reg) {
+                int n_regbits = reg.size * 8;
+                nw_bitrange reg_range(StartLen(reg_start, n_regbits));
+                BUG_CHECK(toClosedRange(reg_range & mask),
+                          "Empty intersection: %1%, %2%", reg_range, mask);
+                nw_bitrange intersect = *toClosedRange(reg_range & mask);
+
+                nw_bitrange field_slice(StartLen(field_start, intersect.size()));
+                nw_bitrange matcher_slice(StartLen(intersect.lo - reg_start, intersect.size()));
+                field_start += field_slice.size();
+                reg_start += n_regbits;
+
+                adjusted->mapping[{fieldname, field_slice}] = {reg, matcher_slice};
+                LOG1("PVS add mapping: " << fieldname << field_slice << " -> "
+                     << reg << matcher_slice);
+            }
+        }
+        transition->value = adjusted;
     }
 };
 

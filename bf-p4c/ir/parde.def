@@ -240,27 +240,38 @@ class AddToChecksum : ParserPrimitive {
     ParserRVal source;
 }
 
+abstract ParserMatchValue { }
+
+class ParserConstMatchValue : ParserMatchValue {
+    match_t value;
+    dbprint { out << "const: " << value; }
+}
+
+/// One PVS is value vector that is matched against ALL select fields in that states.
+class ParserPvsMatchValue : ParserMatchValue {
+#emit
+    using FieldSlice = std::pair<cstring, nw_bitrange>;
+    using MatcherSlice = std::pair<MatchRegister, nw_bitrange>;
+    std::map<FieldSlice, MatcherSlice> mapping;
+#end
+    cstring name;
+    int size;
+    dbprint { out << "name: " << name << " " << size; }
+}
+
 /// The high-level representation of a parser state transition.
 class Transition {
-    Transition(match_t value)
-        : value(value), value_set(nullptr), next(nullptr) { }
-    Transition(match_t value, P4ValueSet value_set)
-        : value(value), value_set(value_set), next(nullptr) { }
-    Transition(match_t value, boost::optional<int> shift)
-        : value(value), value_set(nullptr), shift(shift), next(nullptr) { }
-    Transition(match_t value, boost::optional<int> shift, P4ValueSet value_set)
-        : value(value), value_set(value_set), shift(shift), next(nullptr) { }
-    Transition(match_t value, boost::optional<int> shift, ParserState next)
-        : value(value), value_set(nullptr), shift(shift), next(next) { }
-
-
-    /// If the owning state's select expressions evaluate to a value which
+#emit
+    Transition(match_t v)
+        : value(new ParserConstMatchValue(v)), next(nullptr) { }
+    Transition(match_t v, boost::optional<int> shift)
+        : value(new ParserConstMatchValue(v)), shift(shift), next(nullptr) { }
+    Transition(match_t v, boost::optional<int> shift, const ParserState* next)
+        : value(new ParserConstMatchValue(v)), shift(shift), next(next) { }
+#end
+    /// The owning state's select expressions evaluate to a value which
     /// matches this...
-    match_t                        value;
-
-    /// .. Or if the owning state's select expressions evaluate to a value that
-    /// matches to one of the value in this value_set ...
-    NullOK P4ValueSet              value_set;
+    ParserMatchValue               value;
 
     /// ...then shift the input buffer by this number of bytes (or boost::none
     /// if we don't know how many bytes we need to shift by yet)...

@@ -8,14 +8,11 @@ class JSONGenerator;
 class JSONLoader;
 
 class MatchRegister {
-    static int g_id;
-
  public:
     MatchRegister() { }
     explicit MatchRegister(cstring);
-    MatchRegister(cstring n, size_t s)
-        : name(n), size(s) {
-        id = ++g_id;
+    MatchRegister(cstring n, size_t s, int id)
+        : name(n), size(s), id(id) {
     }
 
     cstring toString() const;
@@ -33,11 +30,6 @@ class MatchRegister {
     int     id;
 
     bool operator<(const MatchRegister& other) const {
-        // XXX(yumin): If you want to use std::set<T>::count(T) as contains()
-        // make sure to compare every field. Otherwise, here A("byte1", 1) B("byte2", 1)
-        // will be considered as equal, A < B => false && B < A => false.
-        if (name == other.name) {
-            return size < other.size; }
         return id < other.id;
     }
 };

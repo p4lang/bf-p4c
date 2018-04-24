@@ -164,7 +164,7 @@ void IR::BFN::ParserState::dbprint(std::ostream &out) const {
 void IR::BFN::LoweredSelect::dbprint(std::ostream &out) const {
     out << "select";
     const char* sep = " ";
-    for (const auto& r : reg) {
+    for (const auto& r : regs) {
         out << sep << r.name;
         sep = ", "; }
 }
@@ -174,13 +174,11 @@ void IR::BFN::LoweredParserState::dbprint(std::ostream &out) const {
     if (dbgetflags(out) & Brief)
         return;
     out << ':' << indent;
-    if (!select.empty()) {
-        out << endl << "select(" << setprec(Prec_Low);
-        const char *sep = "";
-        for (auto &e : select) {
-            out << sep << *e;
-            sep = ", "; }
-        out << ")" << setprec(0); }
+
+    out << endl << "select(" << setprec(Prec_Low);
+    out << *select;
+    out << ")" << setprec(0);
+
     for (auto *m : match)
         out << endl << *m;
     out << unindent;

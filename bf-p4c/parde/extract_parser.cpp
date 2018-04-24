@@ -262,7 +262,21 @@ GetBackendParser::extract(const IR::BFN::TranslatedP4Parser* parser) {
 
 bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,
                                      int shift, cstring nextState, const IR::P4ValueSet* valueSet) {
-    auto* transition = new IR::BFN::Transition(matchVal, shift, valueSet);
+    IR::BFN::ParserMatchValue* match_value_ir = nullptr;
+    if (valueSet) {
+        // Convert IR::Constant to unsigned int.
+        size_t sz = 0;
+        auto sizeConstant = valueSet->size->to<IR::Constant>();
+        if (sizeConstant == nullptr || !sizeConstant->fitsInt()) {
+            ::error("valueset should have an integer as size %1%", valueSet); }
+        if (sizeConstant->value < 0) {
+            ::error("valueset size must be a positive integer %1%", valueSet); }
+        sz = sizeConstant->value.get_ui();
+        match_value_ir = new IR::BFN::ParserPvsMatchValue(valueSet->controlPlaneName(), sz);
+    } else {
+        match_value_ir = new IR::BFN::ParserConstMatchValue(matchVal);
+    }
+    auto* transition = new IR::BFN::Transition(match_value_ir, shift, nullptr);
     state->transitions.push_back(transition);
 
     AutoPushTransition newTransition(transitionStack, state, transition);

@@ -3,8 +3,6 @@
 #include <sstream>
 #include "ir/json_loader.h"
 
-int MatchRegister::g_id = 0;
-
 cstring MatchRegister::toString() const {
     std::stringstream tmp;
     tmp << *this;
@@ -14,12 +12,17 @@ cstring MatchRegister::toString() const {
 MatchRegister::MatchRegister(cstring nm)
     : name(nm) {
     // This is a dummy implementation.
+    // TODO(yumin): JBAY use different name and layouts.
     if (nm == "half") {
         size = 2;
-    } else {
+        id = 0;
+    } else if (nm == "byte0") {
         size = 1;
+        id = 2;
+    } else if (nm == "byte1") {
+        size = 1;
+        id = 3;
     }
-    id = ++g_id;
 }
 
 void MatchRegister::toJSON(JSONGenerator& json) const {
