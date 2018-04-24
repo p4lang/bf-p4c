@@ -15,6 +15,11 @@ class MapFieldToExpr : public Inspector {
     const PhvInfo& phv;
     ordered_map<int, const IR::Expression*>     fieldExpressions;
 
+    profile_t init_apply(const IR::Node* root) override {
+        fieldExpressions.clear();
+        return Inspector::init_apply(root);
+    }
+
     /// For every IR::Expression object in the program, populate the fieldExpressions map.
     /// This might return a Field for slice and cast expressions on fields. It will
     /// work out ok solely becuase this is a preorder and you don't prune, so it
@@ -94,6 +99,9 @@ class AfterWriteTables : public BFN::ControlFlowVisitor, public MauInspector, To
     }
 
     profile_t init_apply(const IR::Node* root) override {
+        after_write_tables.clear();
+        been_written.clear();
+        written_in.clear();
         for (const auto& f : phv) {
             after_write_tables[f.id] = {};
             written_in[f.id] = {};
@@ -184,7 +192,6 @@ struct DataDependencyGraph {
     std::vector<const IR::MAU::Table*> id_table;
 
     AdjacentList adjacent_list;
-    VertexId n_nodes;
     std::set<VertexId> starts;  // Nodes that does not have any dependency.
 
     /// Generate a new node corresponding to a table.
@@ -213,7 +220,12 @@ struct DataDependencyGraph {
         BUG_CHECK(id >= 0 && id < id_table.size(), "Invalid Id: %1%", id);
         return id_table[id]; }
 
-    DataDependencyGraph() : n_nodes(0) { }
+    void clear() {
+        table_id.clear();
+        id_table.clear();
+        adjacent_list.clear();
+        starts.clear();
+    }
 };
 
 /** A base class for dfs-like searching, providing a helper function
@@ -540,6 +552,10 @@ class ComputeMetadataInit : public Inspector {
 
     // Run the algorithm.
     profile_t init_apply(const IR::Node *root) override {
+        // Reset state.
+        to_be_inited.clear();
+        graph.clear();
+
         calcToBeInitedFields();
         buildControlGraph();
         for (const auto* f : to_be_inited) {
