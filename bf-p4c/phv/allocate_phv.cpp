@@ -1413,6 +1413,11 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
         if (sc->slice_lists().size()) {
             continue; }
 
+        bool has_checksummed = sc->any_of_fieldslices(
+                [&] (const PHV::FieldSlice& fs) { return fs.field()->is_checksummed(); });
+        if (has_checksummed) {
+            continue; }
+
         auto available_spots = rst.available_spots();
         std::vector<bitvec> slice_schemas = calc_slicing_schemas(sc, available_spots);
         // Try different slicing, from large to small
@@ -1500,7 +1505,8 @@ BruteForceAllocationStrategy::remove_singleton_slicelist_metadata(
         auto fs = slice_list->front();
         if (fs.size() != int(super_cluster->aggregate_size())
             || !fs.field()->metadata
-            || fs.field()->pov) {
+            || fs.field()->pov
+            || fs.field()->is_checksummed()) {
             rst.push_back(super_cluster);
             continue; }
 

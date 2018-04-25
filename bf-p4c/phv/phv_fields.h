@@ -393,6 +393,7 @@ class Field {
                                                        /// privatized field
     bool            privatized_i = false;              /// true for the TPHV version of a
                                                        /// privatized field
+    bool            is_checksummed_i = false;          /// true for fields used in checksum.
 
     //
     // operations on this field
@@ -486,6 +487,8 @@ class Field {
     void set_privatizable(bool b)                          { privatizable_i = b; }
     bool privatized() const                                { return privatized_i; }
     void set_privatized(bool b)                            { privatized_i = b; }
+    bool is_checksummed() const                            { return is_checksummed_i; }
+    void set_is_checksummed(bool b)                        { is_checksummed_i = b; }
 
     void set_num_pack_conflicts(size_t no)                 { numNoPack = no; }
 

@@ -680,6 +680,15 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         return false;
     }
 
+    void postorder(const IR::BFN::EmitChecksum* checksum) override {
+        for (const auto* flval : checksum->sources) {
+            PHV::Field* f = phv.field(flval->field);
+            BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
+            f->set_is_checksummed(true);
+            LOG1("Checksummed field: " << f);
+        }
+    }
+
     void postorder(const IR::BFN::DeparserParameter* param) override {
         // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
         // set deparser constaints on field
@@ -1159,6 +1168,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.privatizable()) out << " PHV-priv";
     if (field.header_stack_pov_ccgf()) out << " header_stack_pov_ccgf";
     if (field.simple_header_pov_ccgf()) out << " simple_header_pov_ccgf";
+    if (field.is_checksummed()) out << " checksummed";
     if (field.ccgf()) out << " ccgf=" << field.ccgf()->id << ':' << field.ccgf()->name;
     if (field.ccgf_fields().size()) {
         // aggregate widths of members in "container contiguous group fields"

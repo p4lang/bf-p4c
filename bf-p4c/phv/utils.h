@@ -901,6 +901,26 @@ class SuperCluster : public ClusterStats {
     /// @returns the gress requirement of this cluster.
     gress_t gress() const override { return gress_i; }
 
+    /// Apply @p func on all field slices in this super cluster.
+    void forall_fieldslices(const std::function<void(const PHV::FieldSlice&)> func) const {
+        for (const auto& kv : slices_to_clusters_i) {
+            func(kv.first); }
+    }
+
+    /// @returns true if any_of @p func is true on a fieldslice.
+    bool any_of_fieldslices(const std::function<bool(const PHV::FieldSlice&)> func) const {
+        for (const auto& kv : slices_to_clusters_i) {
+            if (func(kv.first)) return true; }
+        return false;
+    }
+
+    /// Apply @p func on all field slices in this super cluster.
+    bool all_of_fieldslices(const std::function<bool(const PHV::FieldSlice&)> func) const {
+        for (const auto& kv : slices_to_clusters_i) {
+            if (!func(kv.first)) return false; }
+        return true;
+    }
+
     /// @returns true if no structural constraints prevent this super cluster
     /// from fitting.
     static bool is_well_formed(const SuperCluster* sc);

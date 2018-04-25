@@ -491,7 +491,8 @@ void Clustering::MakeSuperClusters::end_apply() {
     // metadata fields with alignment constraints to be placed together.
     for (auto& kv : self.fields_to_slices_i) {
         bool is_metadata = kv.first->metadata || kv.first->pov;
-        bool has_constraints = kv.first->alignment || kv.first->no_split() || kv.first->no_pack();
+        bool has_constraints = kv.first->alignment || kv.first->no_split() ||
+                               kv.first->no_pack() || kv.first->is_checksummed();
 
         // XXX(cole): Bridged metadata is treated as a header, except in the
         // egress pipeline, where it's treated as metadata.  We need to take
