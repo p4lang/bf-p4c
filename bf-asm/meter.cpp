@@ -385,14 +385,6 @@ void MeterTable::write_regs(REGS &regs) {
         //icxbar.address_distr_to_overflow = push_on_overflow;
         //if (direct)
         //    regs.cfg_regs.mau_cfg_lt_meter_are_direct |= 1 << m->logical_id;
-        if (!color_maprams.empty()) {
-            merge.mau_mapram_color_map_to_logical_ctl[m->logical_id/8].set_subfield(
-                0x4 | (home->row/4U), 3 * (m->logical_id%8U), 3);
-            // FIXME -- this bus_index calculation is probably wrong
-            int bus_index = color_maprams[0].bus;
-            if (color_maprams[0].row >= 4) bus_index += 10;
-            adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
-                .set_subfield(m->logical_id | 0x10, 5 * (bus_index%4), 5); }
         // FIXME -- color map should be programmable, rather than fixed
         adrdist.meter_color_output_map[m->logical_id].set_subfield(0,  0, 8);  // green
         adrdist.meter_color_output_map[m->logical_id].set_subfield(1,  8, 8);  // yellow
@@ -434,14 +426,32 @@ void MeterTable::write_regs(REGS &regs) {
 
 template<> void MeterTable::meter_color_logical_to_phys(Target::Tofino::mau_regs &regs,
                                                         int logical_id, int alu) {
+    auto &merge = regs.rams.match.merge;
     auto &adrdist = regs.rams.match.adrdist;
+    if (!color_maprams.empty()) {
+        merge.mau_mapram_color_map_to_logical_ctl[logical_id/8].set_subfield(
+            0x4 | alu, 3 * (logical_id%8U), 3);
+        // FIXME -- this bus_index calculation is probably wrong
+        int bus_index = color_maprams[0].bus;
+        if (color_maprams[0].row >= 4) bus_index += 10;
+        adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
+            .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5); }
     setup_muxctl(adrdist.meter_color_logical_to_phys_ixbar_ctl[logical_id], alu);
 }
 
 #if HAVE_JBAY
 template<> void MeterTable::meter_color_logical_to_phys(Target::JBay::mau_regs &regs,
                                                         int logical_id, int alu) {
+    auto &merge = regs.rams.match.merge;
     auto &adrdist = regs.rams.match.adrdist;
+    if (!color_maprams.empty()) {
+        merge.mau_mapram_color_map_to_logical_ctl[logical_id/8].set_subfield(
+            0x4 | alu, 3 * (logical_id%8U), 3);
+        // FIXME -- this bus_index calculation is probably wrong
+        int bus_index = color_maprams[0].bus;
+        if (color_maprams[0].row >= 4) bus_index += 10;
+        adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
+            .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5); }
     adrdist.meter_color_logical_to_phys_icxbar_ctl[logical_id] |= 1 << alu;
 }
 #endif // HAVE_JBAY
