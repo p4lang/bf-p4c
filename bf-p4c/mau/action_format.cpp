@@ -1085,6 +1085,16 @@ void ActionFormat::space_containers() {
     int start_byte = space_global_params();
     space_all_immediate_containers(start_byte);
     space_all_meter_color();
+    resolve_container_info();
+
+    for (auto &aci : action_counts) {
+        LOG3("Action info " << aci);
+    }
+
+    for (int i = 0; i < CONTAINER_TYPES; i++) {
+        LOG3("Layout ADT: 0x" << use->total_layouts[ADT][i] << " IMMED: "
+             << use->total_layouts[IMMED][i]);
+    }
 }
 
 /** For non-overlapping action data formats:
@@ -1254,6 +1264,22 @@ void ActionFormat::space_32_containers() {
     }
 }
 
+void ActionFormat::resolve_container_info() {
+    for (int i = 0; i < CONTAINER_TYPES; i++) {
+        for (int j = 0; j < LOCATIONS; j++) {
+            use->total_layouts[j][i].clear();
+        }
+    }
+
+    for (auto &aci : action_counts) {
+        for (int i = 0; i < CONTAINER_TYPES; i++) {
+            for (int j = 0; j < LOCATIONS; j++) {
+                use->total_layouts[j][i] |= aci.layouts[j][i];
+            }
+        }
+    }
+}
+
 /** The container allocation algorithm for the action data tables
  */
 void ActionFormat::space_all_table_containers() {
@@ -1324,7 +1350,7 @@ void ActionFormat::space_individ_immed(ActionContainerInfo &aci, int min_start) 
 
 /** Simply just reserves the upper byte of immediate for meter color. */
 void ActionFormat::space_all_meter_color() {
-    for (auto aci : action_counts) {
+    for (auto &aci : action_counts) {
         if (!aci.meter_reserved) continue;
         aci.layouts[IMMED][BYTE].setbit(IMMEDIATE_BYTES - 1);
         use->total_layouts[IMMED][BYTE] |= aci.layouts[IMMED][BYTE];

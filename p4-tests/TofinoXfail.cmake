@@ -337,6 +337,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_7.0_l2
+  switch_ent_dc_general
   )
 
 # BRIG-113
@@ -1041,10 +1042,6 @@ p4c_add_xfail_reason("tofino"
   switch_7.0_l2
 )
 
-p4c_add_xfail_reason("tofino"
-  "error: No field .* in format"
-  switch_ent_dc_general
-)
 
 # BRIG-528
 p4c_add_xfail_reason("tofino"

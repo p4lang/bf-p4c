@@ -539,6 +539,7 @@ struct ActionFormat {
     void space_individ_immed(ActionContainerInfo &aci, int start_byte);
     void space_32_immed(ActionContainerInfo &aci);
     void space_all_meter_color();
+    void resolve_container_info();
 
     void align_global_params(bitvec global_params_layouts[CONTAINER_TYPES]);
     void align_action_data_layouts();

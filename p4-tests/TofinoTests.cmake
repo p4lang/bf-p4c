@@ -46,7 +46,7 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
     "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs} -DENT_FIN_POSTCARD_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_ent_fin_postcard")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "switch_ent_dc_general" ${switchtest} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_ent_dc_general")
 

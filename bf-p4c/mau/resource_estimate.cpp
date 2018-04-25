@@ -750,6 +750,8 @@ void StageUseEstimate::unknown_atcams_needed(const IR::MAU::Table *tbl, LayoutOp
     int depth = 0;
     int ways_per_partition = (tbl->layout.partition_count + 1023) / 1024;
 
+    lo->way_sizes.push_back(ways_per_partition);
+
     while (true) {
         int attempted_depth = depth + 1;
         int sram_count = 0;
