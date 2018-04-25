@@ -561,7 +561,7 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
             adp.set_constraint(BITMASKED_SET);
 
         for (auto &field_action : cont_action.field_actions) {
-            bitrange bits;
+            le_bitrange bits;
             auto *write_field = phv.field(field_action.write.expr, &bits);
             le_bitrange container_bits;
             int write_count = 0;

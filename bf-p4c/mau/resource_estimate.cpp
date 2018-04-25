@@ -921,7 +921,7 @@ bool RangeEntries::preorder(const IR::MAU::InputXBarRead *ixbar_read) {
     if (ixbar_read->match_type.name != "range")
         return false;
 
-    bitrange bits = { 0, 0 };
+    le_bitrange bits = { 0, 0 };
     auto field = phv.field(ixbar_read->expr, &bits);
 
     int range_nibbles = 0;

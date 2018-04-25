@@ -125,8 +125,8 @@ TYPED_TEST(TofinoPHVTrivialAllocators, DISABLED_AutomaticAllocation) {
         // A helper that checks that the given field's allocation maps the given
         // field bit ranges to the provided container bit ranges.
         auto checkMapping =
-          [&](cstring fieldName, const std::vector<bitrange>& fieldBits,
-                                 const std::vector<bitrange>& containerBits) {
+          [&](cstring fieldName, const std::vector<le_bitrange>& fieldBits,
+                                 const std::vector<le_bitrange>& containerBits) {
             SCOPED_TRACE(fieldName.c_str());
 
             // Sanity check that the field has an allocation and that it has the
@@ -154,15 +154,15 @@ TYPED_TEST(TofinoPHVTrivialAllocators, DISABLED_AutomaticAllocation) {
         };
 
         // header H1 { bit<8> field; }
-        checkMapping("h1.field", { bitrange(0, 7) }, { bitrange(0, 7) });
+        checkMapping("h1.field", { le_bitrange(0, 7) }, { le_bitrange(0, 7) });
         auto h1Container = containers[SliceId("h1.field", 0)];
         EXPECT_EQ(PHV::Type("B"), h1Container.type());
         EXPECT_TRUE(uniqueContainers.insert(h1Container).second);
 
         // header H2 { bit<1> field1; bit<6> field2; bit<9> field3; }
-        checkMapping("h2.field1", { bitrange(0, 0) }, { bitrange(15, 15) });
-        checkMapping("h2.field2", { bitrange(0, 5) }, { bitrange(9, 14) });
-        checkMapping("h2.field3", { bitrange(0, 8) }, { bitrange(0, 8) });
+        checkMapping("h2.field1", { le_bitrange(0, 0) }, { le_bitrange(15, 15) });
+        checkMapping("h2.field2", { le_bitrange(0, 5) }, { le_bitrange(9, 14) });
+        checkMapping("h2.field3", { le_bitrange(0, 8) }, { le_bitrange(0, 8) });
         auto h2Container = containers[SliceId("h2.field1", 0)];
         EXPECT_EQ(h2Container, containers[SliceId("h2.field2", 0)]);
         EXPECT_EQ(h2Container, containers[SliceId("h2.field3", 0)]);
@@ -171,8 +171,8 @@ TYPED_TEST(TofinoPHVTrivialAllocators, DISABLED_AutomaticAllocation) {
 
         // header H3 { bit<72> field; }
         checkMapping("h3.field",
-                     { bitrange(40, 71), bitrange(8, 39), bitrange(0, 7) },
-                     { bitrange(0, 31), bitrange(0, 31), bitrange(0, 7) });
+                     { le_bitrange(40, 71), le_bitrange(8, 39), le_bitrange(0, 7) },
+                     { le_bitrange(0, 31), le_bitrange(0, 31), le_bitrange(0, 7) });
         auto h3Slice0Container = containers[SliceId("h3.field", 0)];
         EXPECT_EQ(PHV::Type("W"), h3Slice0Container.type());
         EXPECT_TRUE(uniqueContainers.insert(h3Slice0Container).second);
@@ -186,7 +186,7 @@ TYPED_TEST(TofinoPHVTrivialAllocators, DISABLED_AutomaticAllocation) {
         // header H4 { bit<16> field; }
         // (This field isn't used in the MAU, so we check that it gets assigned
         // to a tagalong container below.)
-        checkMapping("h4.field", { bitrange(0, 15) }, { bitrange(0, 15) });
+        checkMapping("h4.field", { le_bitrange(0, 15) }, { le_bitrange(0, 15) });
         auto h4Container = containers[SliceId("h4.field", 0)];
         EXPECT_EQ(PHV::Type("TH"), h4Container.type());
         EXPECT_TRUE(uniqueContainers.insert(h4Container).second);
@@ -204,24 +204,24 @@ TYPED_TEST(TofinoPHVTrivialAllocators, DISABLED_AutomaticAllocation) {
             // intrinsic metadata that results in a different set of POV bits.
             int nextBitIndex = 7;
             auto nextBit = [&] {
-                auto range = bitrange(nextBitIndex, nextBitIndex);
+                auto range = le_bitrange(nextBitIndex, nextBitIndex);
                 EXPECT_GE(nextBitIndex, 0);
                 nextBitIndex--;
                 return range;
             };
 
             if (gress == INGRESS)
-                checkMapping("$always_deparse", { bitrange(0, 0) }, { nextBit() });
-            checkMapping("h1.$valid", { bitrange(0, 0) }, { nextBit() });
-            checkMapping("h2.$valid", { bitrange(0, 0) }, { nextBit() });
-            checkMapping("h3.$valid", { bitrange(0, 0) }, { nextBit() });
+                checkMapping("$always_deparse", { le_bitrange(0, 0) }, { nextBit() });
+            checkMapping("h1.$valid", { le_bitrange(0, 0) }, { nextBit() });
+            checkMapping("h2.$valid", { le_bitrange(0, 0) }, { nextBit() });
+            checkMapping("h3.$valid", { le_bitrange(0, 0) }, { nextBit() });
 
             // XXX(seth): TrivialAlloc and ManualAlloc get different results here
             // because TrivialAlloc places the final field in a container as far to
             // the right as it can, even if it introduces a gap.
             nextBitIndex =
               std::is_same<TypeParam, PHV::TrivialAlloc>::value ? 0 : nextBitIndex;
-            checkMapping("h4.$valid", { bitrange(0, 0) }, { nextBit() });
+            checkMapping("h4.$valid", { le_bitrange(0, 0) }, { nextBit() });
         }
 
         auto povContainer = containers[SliceId("h1.$valid", 0)];

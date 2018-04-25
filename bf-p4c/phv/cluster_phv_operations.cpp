@@ -45,7 +45,7 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
     dst_i = nullptr;
     // get pointer to inst
     if (!inst->operands.empty()) {
-        bitrange dest_bits;
+        le_bitrange dest_bits;
         dst_i = phv.field(inst->operands[0], &dest_bits);
         int dst_size = 0;
         if (dst_i) {
@@ -61,7 +61,7 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
             for (auto operand = ++inst->operands.begin();
                     operand != inst->operands.end();
                     ++operand) {
-                bitrange field_bits;
+                le_bitrange field_bits;
                 PHV::Field* field = phv.field(*operand, &field_bits);
                 if (field) {
                     // insert operation in field.operations with tuple3

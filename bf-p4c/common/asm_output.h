@@ -33,7 +33,7 @@ class Slice {
     Slice(const PHV::Field *f) : field(f), lo(0), hi(f->size-1) {}
     Slice(const PHV::Field *f, int bit) : field(f), lo(bit), hi(bit) {}
     Slice(const PHV::Field *f, int l, int h) : field(f), lo(l), hi(h) {}
-    Slice(const PHV::Field *f, bitrange r) : field(f), lo(r.lo), hi(r.hi) {}
+    Slice(const PHV::Field *f, le_bitrange r) : field(f), lo(r.lo), hi(r.hi) {}
     Slice(const PhvInfo &phv, cstring n)
     : field(phv.field(n)), lo(0), hi(field->size-1) {}
     Slice(const PhvInfo &phv, cstring n, int bit)

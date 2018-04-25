@@ -53,62 +53,94 @@ class Visualization : public Inspector {
     }
 
  private:
-    enum node_t { USED_BY, USED_FOR, DETAILS, NODES };
+    enum node_t { USED_BY, USED_FOR, DETAILS };
+
+    static std::string toString(node_t node) {
+        switch (node) {
+            case USED_BY:  return "used_by";
+            case USED_FOR: return "used_for";
+            case DETAILS:  return "details";
+            default:  BUG("Unknown node type %d", node);
+        }
+    }
+
     /// Root node for resources to be output in context.json
     struct JsonResource {
         // The values for each context JSON node
-        std::array<std::vector<std::string>, NODES> json_vectors;
-        // If the context JSON node is allowed to be empty
-        std::array<bool, NODES> allowed_empty;
-        // If the context JSON node can only have one value
-        std::array<bool, NODES> singular_value;
+        std::map<node_t, std::vector<std::string>> json_vectors;
+
+        std::set<node_t> singular_value_nodes;
+        std::set<node_t> allowed_empty_nodes;
 
      public:
-        bool empty(node_t node);
-        bool is_singular(node_t node);
-        std::string at(node_t node, size_t position);
-        std::vector<std::string> *values(node_t node);
-        std::string total_value(node_t node);
-        void add(node_t node, const std::string value);
-        void add(std::array<std::string, NODES> values);
-        virtual void append(JsonResource *jr);
-
-        void dbprint(std::ostream &out) const {
-            out << "used_by: " << json_vectors[USED_BY]
-                << " used_for: " << json_vectors[USED_FOR]
-                << " details: " << json_vectors[DETAILS];
+        /** Whether the vector for a node type is empty for this type */
+        bool is_empty(node_t node) {
+            return json_vectors[node].empty();
         }
 
-        JsonResource(std::array<bool, NODES> ae, std::array<bool, NODES> sv)
-            : allowed_empty(ae), singular_value(sv) {}
+        /** Whether the vector for a node type only has one value for this type */
+        bool is_singular(node_t node) {
+            return json_vectors[node].size() == 1;
+        }
+
+        void check_sanity(node_t node) {
+            if (is_empty(node)) {
+                BUG_CHECK(allowed_empty_nodes.count(node),
+                    "Node %d cannot have an empty value in the context JSON",
+                    node);
+            }
+
+            if (!is_singular(node)) {
+                BUG_CHECK(!singular_value_nodes.count(node),
+                    "Node %d must only have a single value in the context JSON",
+                    node);
+            }
+        }
+
+        /** The string at that position in the vector for this node */
+        std::string at(node_t node, size_t position) {
+            return json_vectors.at(node).at(position);
+        }
+
+        /** A pointer to the vector of that node type */
+        std::vector<std::string> *values(node_t node) {
+            return &json_vectors[node];
+        }
+
+        std::string total_value(node_t node);
+        void add(node_t node, const std::string value);
+        void append(JsonResource *jr);
+
+        void dbprint(std::ostream &out) const {
+            for (auto kv : json_vectors)
+                out << " " << toString(kv.first) << ": " << kv.second;
+        }
+
+        JsonResource() {}
     };
 
 
     Util::JsonObject *_resourcesNode = nullptr;
 
     struct XBarByteResource : JsonResource {
-        XBarByteResource()
-            : JsonResource({{ false, false, false }}, {{ false, false, false }}) { }
+        XBarByteResource() {}
         // Cross bar bytes can be shared by multiple tables for different purposes, and
         // the detail can be different due to possible overlay of bytes
 
-        void append(JsonResource *jr) {
-            BUG_CHECK(dynamic_cast<XBarByteResource *>(jr) != nullptr, "Attempting to append "
-                      "non XBarByteResource with XBarByteResource");
+        void append(XBarByteResource *jr) {
             JsonResource::append(jr);
         }
     };
 
     struct HashBitResource : JsonResource {
-        HashBitResource()
-            : JsonResource({{ false, false, false }}, {{ true, false, false }}) { }
-         // Each hash bit is reserved to a single table or side effect.  However, because the
-         // same bit can be the select bits/RAM line bit for two different ways in the same
-         // table, then they can be shared
+        HashBitResource() {
+            singular_value_nodes = { USED_BY };
+        }
+        // Each hash bit is reserved to a single table or side effect.  However, because the
+        // same bit can be the select bits/RAM line bit for two different ways in the same
+        // table, then they can be shared
 
-        void append(JsonResource *jr) {
-            BUG_CHECK(dynamic_cast<HashBitResource *>(jr) != nullptr, "Attempting to append "
-                      "non HashBitResource with HashBitResource");
+        void append(HashBitResource *jr) {
             JsonResource::append(jr);
         }
     };
@@ -116,13 +148,14 @@ class Visualization : public Inspector {
     // This represents the 48 bits of hash distribution before the hash distribution units
     // are expanded, masked and shifted
     struct HashDistResource : JsonResource {
-        HashDistResource()
-            : JsonResource({{ false, false, true }}, {{ false, false, false }}) { }
+        HashDistResource() {
+            allowed_empty_nodes = { DETAILS };
+        }
+
         // Hash Distribution units can be used for multiple purposes (i.e. two wide addresses
         // between tables
-        void append(JsonResource *jr) {
-             BUG_CHECK(dynamic_cast<HashDistResource *>(jr) != nullptr, "Attempting to append "
-                       "non HashDistResource with HashDistResource");
+
+        void append(HashDistResource *jr) {
              JsonResource::append(jr);
         }
     };
@@ -145,7 +178,7 @@ class Visualization : public Inspector {
         ordered_map<std::pair<int, int>, HashDistResource> _hashDistUsage;
         std::vector<MemoriesResource>                      _memoriesUsage;
         /// map logical ids to table names
-        ordered_map<int, cstring>                         _logicalIds;
+        ordered_map<int, cstring>                          _logicalIds;
 
         ResourceCollectors() {}
     };

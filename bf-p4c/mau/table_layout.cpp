@@ -170,7 +170,7 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
     std::map<MatchByteKey, safe_vector<le_bitrange>> byte_impacts;
     for (auto ixbar_read : tbl->match_key) {
         if (ixbar_read->match_type.name == "selector") continue;
-        bitrange bits = { 0, 0 };
+        le_bitrange bits = { 0, 0 };
         auto *field = phv.field(ixbar_read->expr, &bits);
         int match_multiplier = 1;
         int ixbar_multiplier = 1;

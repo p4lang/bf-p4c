@@ -691,11 +691,6 @@ using le_bitinterval = HalfOpenRange<RangeUnit::Bit, Endian::Little>;
 using nw_byteinterval = HalfOpenRange<RangeUnit::Byte, Endian::Network>;
 using le_byteinterval = HalfOpenRange<RangeUnit::Byte, Endian::Little>;
 
-// XXX(seth): This is a compatibility typedef for old code which didn't specify
-// units or order explicitly; this seems to have been the most frequently
-// intended interpretation. PLEASE DO NOT WRITE NEW CODE THAT USES THIS TYPE.
-using bitrange = ClosedRange<RangeUnit::Bit, Endian::Little>;
-
 /// A helper function that implements operator<<() for HalfOpenRanges, so that
 /// the entire implementation doesn't need to be in the header file.
 std::ostream& writeHalfOpenRangeToStream(std::ostream& out, RangeUnit unit,

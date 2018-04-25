@@ -238,7 +238,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             // computed checksum.
             std::map<PHV::Container, std::vector<Slice>> checksumAllocations;
             for (auto* source : emitChecksum->sources) {
-                bitrange sourceFieldBits;
+                le_bitrange sourceFieldBits;
                 auto* sourceField = phv.field(source->field, &sourceFieldBits);
                 if (!sourceField) {
                     ::error("No PHV allocation for field used in computed "
@@ -281,7 +281,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         BUG_CHECK(povFieldSource != nullptr, "No POV bit field for %1%", prim);
 
-        bitrange povFieldBits;
+        le_bitrange povFieldBits;
         auto* povField = phv.field(povFieldSource->field, &povFieldBits);
         if (!povField) {
             ::error("No PHV allocation for field used as a POV bit in the "
@@ -511,7 +511,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         if (!bufferSource) return;
 
         int requiredAlignment = bufferSource->range().lo % 8;
-        bitrange bits;
+        le_bitrange bits;
 
         auto lval = extract->dest->to<IR::BFN::FieldLVal>();
         if (!lval) return;

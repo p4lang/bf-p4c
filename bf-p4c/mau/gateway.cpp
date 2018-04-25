@@ -196,7 +196,7 @@ const IR::MAU::Table *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
 
 bool CollectGatewayFields::preorder(const IR::Expression *e) {
     boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
-    bitrange bits;
+    le_bitrange bits;
     auto finfo = phv.field(e, &bits);
     if (!finfo) return true;
     info_t &info = this->info[finfo];
@@ -274,7 +274,7 @@ class GatewayRangeMatch::SetupRanges : public Transform {
     IR::MAU::TableSeq *preorder(IR::MAU::TableSeq *s) override { prune(); return s; }
 
     const IR::Expression *postorder(IR::Operation::Relation *rel) override {
-        bitrange bits;
+        le_bitrange bits;
         auto f = phv.field(rel->left, &bits);
         if (!f || !rel->right->is<IR::Constant>() || !fields.info.count(f)) return rel;
         LOG3("SetupRange for " << rel);
@@ -376,7 +376,7 @@ Visitor::profile_t BuildGatewayMatch::init_apply(const IR::Node *root) {
 }
 
 bool BuildGatewayMatch::preorder(const IR::Expression *e) {
-    bitrange bits;
+    le_bitrange bits;
     auto field = phv.field(e, &bits);
     if (!field)
         BUG("Unhandled expression in BuildGatewayMatch: %s", e);
@@ -470,7 +470,7 @@ bool BuildGatewayMatch::preorder(const IR::Equ *) {
     return true;
 }
 bool BuildGatewayMatch::preorder(const IR::RangeMatch *rm) {
-    bitrange bits;
+    le_bitrange bits;
     auto field = phv.field(rm->expr, &bits);
     BUG_CHECK(field, "invalid RangeMatch in BuildGatewayMatch");
     int unit = -1;

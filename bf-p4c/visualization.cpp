@@ -16,36 +16,10 @@ Visualization::Visualization() : _stageResources() {
     _resourcesNode->emplace("pipes", pipesNode);
 }
 
-/** Whether the vector for a node type is empty for this type */
-bool Visualization::JsonResource::empty(node_t node) {
-    return json_vectors[node].empty();
-}
-
-/** Whether the vector for a node type only has one value for this type */
-bool Visualization::JsonResource::is_singular(node_t node) {
-    return json_vectors[node].size() == 1;
-}
-
-/** The string at that position in the vector for this node */
-std::string Visualization::JsonResource::at(node_t node, size_t position) {
-    return json_vectors[node][position];
-}
-
-/** A pointer to the vector of that node type */
-std::vector<std::string> *Visualization::JsonResource::values(node_t node) {
-    return &json_vectors[node];
-}
-
 /** A string built from the concatenation of strings in that node vector */
 std::string Visualization::JsonResource::total_value(node_t node) {
-    std::string rv = "";
-    if (empty(node))
-        BUG_CHECK(allowed_empty[node], "Node %d cannot have an empty value in the context JSON",
-                  node);
-    if (!is_singular(node))
-        BUG_CHECK(!singular_value[node], "Node %d must only have a single value in the "
-                  "context JSON", node);
     auto _values = values(node);
+    std::string rv;
     for (size_t i = 0; i < _values->size(); i++) {
         rv += (*_values)[i];
         if (i != _values->size() - 1)
@@ -56,40 +30,21 @@ std::string Visualization::JsonResource::total_value(node_t node) {
 
 /** Adding a string value to a particular vector */
 void Visualization::JsonResource::add(node_t node, const std::string value) {
-    if (value == "")
+    if (value.empty())
         return;
     json_vectors[node].push_back(value);
-}
-
-/** Adding an array of strings to all of the vectors */
-void Visualization::JsonResource::add(std::array<std::string, NODES> values) {
-    for (size_t i = 0; i < NODES; i++) {
-        node_t node = static_cast<node_t>(i);
-        if (singular_value[node] && !empty(node) && !values[node].empty()) {
-            BUG_CHECK(at(node, 0) == values[node], "Only one value allowed for a node type");
-        } else {
-            add(node, values[node]);
-        }
-        if (empty(node) && !allowed_empty[node])
-            BUG("The vector for this node %d is not allowed to be empty");
-    }
+    check_sanity(node);
 }
 
 /** Appending the values in a JsonResource to the vector in this JsonResource */
 void Visualization::JsonResource::append(JsonResource *jr) {
-    std::array<std::string, NODES> values = { { "", "", "" } };
-    for (size_t i = 0; i < NODES; i++) {
-        node_t node = static_cast<node_t>(i);
-        BUG_CHECK(jr->empty(node) || jr->is_singular(node), "While appending, "
-                  "JsonResource can only have one value at most");
-        if (jr->empty(node)) {
-            BUG_CHECK(allowed_empty[node], "JsonResource has empty value for a node "
-                      "when it is not allowed");
-        } else {
-            values[node] = jr->at(node, 0);
-        }
+    for (auto kv : jr->json_vectors) {
+        auto node = kv.first;
+        if (singular_value_nodes.count(node) && !is_empty(node))
+            BUG_CHECK(at(node, 0) == jr->at(node, 0), "Only one value allowed for a node type");
+        else
+            add(node, jr->at(node, 0));
     }
-    add(values);
 }
 
 bool Visualization::preorder(const IR::BFN::Pipe *p) {
@@ -154,10 +109,14 @@ void Visualization::add_xbar_usage(unsigned int stage, const IXBar::Use &alloc) 
     // \TODO: what if these have usages from before? We need to append to elements rather
     // than emplace the elements
     for (auto &byte : alloc.use) {
-        LOG3("\tadding resource: xbar bytes " << byte.loc.getOrd(alloc.ternary));
         XBarByteResource xbr;
-        xbr.add({{ alloc.used_by, alloc.used_for(), byte.visualization_detail() }});
+        xbr.add(USED_BY, alloc.used_by);
+        xbr.add(USED_FOR, alloc.used_for());
+        xbr.add(DETAILS, byte.visualization_detail());
+
         _stageResources[stage]._xBarBytesUsage[byte.loc.getOrd(alloc.ternary)].append(&xbr);
+
+        LOG3("\tadding resource: xbar bytes " << byte.loc.getOrd(alloc.ternary));
     }
 
     // Used for the upper 12 bits of gateways
@@ -165,13 +124,16 @@ void Visualization::add_xbar_usage(unsigned int stage, const IXBar::Use &alloc) 
         for (int b = 0; b < bits.width; b++) {
             int bit = bits.bit + b;
             auto key = std::make_pair(bit, bits.group);
-            std::string detail = bits.field + std::to_string(bits.lo + b);
-            HashBitResource hbr;
 
-            hbr.add({ { alloc.used_by, alloc.used_for(), detail } });
+            HashBitResource hbr;
+            hbr.add(USED_BY, alloc.used_by);
+            hbr.add(USED_FOR, alloc.used_for());
+            hbr.add(DETAILS, bits.field + std::to_string(bits.lo + b));
+
+           _stageResources[stage]._hashBitsUsage[key].append(&hbr);
+
             LOG3("\tadding resource hash_bits from bit_use(" << bit << ", " << bits.group
                   << "): {" << hbr << "}");
-           _stageResources[stage]._hashBitsUsage[key].append(&hbr);
         }
     }
 
@@ -179,13 +141,16 @@ void Visualization::add_xbar_usage(unsigned int stage, const IXBar::Use &alloc) 
     int way_index = 0;
     for (auto &way : alloc.way_use) {
         for (auto bit : bitvec(way.mask)) {
-            std::string detail = "Hash Way " + std::to_string(way_index);
             HashBitResource hbr;
-            hbr.add({{ alloc.used_by, alloc.used_for(), detail }});
+            hbr.add(USED_BY, alloc.used_by);
+            hbr.add(USED_FOR, alloc.used_for());
+            hbr.add(DETAILS, "Hash Way " + std::to_string(way_index));
+
             auto key = std::make_pair(bit, way.group);
+            _stageResources[stage]._hashBitsUsage[key].append(&hbr);
+
             LOG3("\tadding resource hash_bits from way_use(" << bit << ", " << way.group
                  << "): {" << hbr << "}");
-            _stageResources[stage]._hashBitsUsage[key].append(&hbr);
         }
         way_index++;
     }
@@ -195,25 +160,33 @@ void Visualization::add_xbar_usage(unsigned int stage, const IXBar::Use &alloc) 
         for (int i = 0; i < IXBar::HASH_INDEX_GROUPS; i++) {
             for (int j = 0; j < TableFormat::RAM_GHOST_BITS; j++) {
                 int bit = i * TableFormat::RAM_GHOST_BITS + j;
-                std::string detail = "Selection Hash Bit " + std::to_string(bit);
+
                 HashBitResource hbr;
-                hbr.add({{ alloc.used_by, alloc.used_for(), detail }});
+                hbr.add(USED_BY, alloc.used_by);
+                hbr.add(USED_FOR, alloc.used_for());
+                hbr.add(DETAILS, "Selection Hash Bit " + std::to_string(bit));
+
                 auto key = std::make_pair(bit, select.group);
+                _stageResources[stage]._hashBitsUsage[key].append(&hbr);
+
                 LOG3("\tadding resource hash_bits from select_use(" << bit << ", " << select.group
                      << "): {" << hbr << "}");
-                _stageResources[stage]._hashBitsUsage[key].append(&hbr);
             }
         }
 
         for (int i = 0; i < IXBar::HASH_SINGLE_BITS - 1; i++) {
             int bit = i + TableFormat::RAM_GHOST_BITS * IXBar::HASH_INDEX_GROUPS;
-            std::string detail = "Selection Hash Bit " + std::to_string(bit);
+
             HashBitResource hbr;
-            hbr.add({{ alloc.used_by, alloc.used_for(), detail }});
+            hbr.add(USED_BY, alloc.used_by);
+            hbr.add(USED_FOR, alloc.used_for());
+            hbr.add(DETAILS, "Selection Hash Bit " + std::to_string(bit));
+
             auto key = std::make_pair(bit, select.group);
+            _stageResources[stage]._hashBitsUsage[key].append(&hbr);
+
             LOG3("\tadding resource hash_bits from select_use(" << bit << ", " << select.group
                  << "): {" << hbr << "}");
-            _stageResources[stage]._hashBitsUsage[key].append(&hbr);
         }
     }
     // Used for the bits for hash distribution
@@ -227,10 +200,13 @@ void Visualization::add_xbar_usage(unsigned int stage, const IXBar::Use &alloc) 
                 if (bit >= init_hb && bit < init_hb + br.size())
                     position = br.lo + (bit - init_hb);
             }
-            std::string detail = "Hash Dist Bit " + std::to_string(position);
             auto key = std::make_pair(bit, hdh.group);
+
             HashBitResource hbr;
-            hbr.add({{ alloc.used_by, alloc.used_for(), detail }});
+            hbr.add(USED_BY, alloc.used_by);
+            hbr.add(USED_FOR, alloc.used_for());
+            hbr.add(DETAILS, "Hash Dist Bit " + std::to_string(position));
+
             _stageResources[stage]._hashBitsUsage[key].append(&hbr);
         }
     }
@@ -244,7 +220,10 @@ void Visualization::add_hash_dist_usage(unsigned int stage, const IXBar::HashDis
     for (auto unit : hd_use.use.hash_dist_hash.slice) {
         auto key = std::make_pair(hash_id, unit);
         HashDistResource hdr;
-        hdr.add({{ hd_use.use.used_by, hd_use.use.used_for(), "" }});
+
+        hdr.add(USED_BY, hd_use.use.used_by);
+        hdr.add(USED_FOR, hd_use.use.used_for());
+
         _stageResources[stage]._hashDistUsage[key].append(&hdr);
     }
     LOG2("add_hash_dist_usage (stage=" << stage << "), table: " << hd_use.use.used_by

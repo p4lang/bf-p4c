@@ -186,7 +186,7 @@ bool FieldDefUse::preorder(const IR::Primitive* prim) {
 }
 
 bool FieldDefUse::preorder(const IR::Expression *e) {
-    bitrange bits;
+    le_bitrange bits;
     auto *f = phv.field(e, &bits);
     auto *hr = e->to<IR::HeaderRef>();
 

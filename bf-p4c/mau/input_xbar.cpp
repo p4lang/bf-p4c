@@ -1058,7 +1058,7 @@ int need_align_flags[4][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
 
 /* Add the pre-allocated bytes to the Use structure */
 static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *field,
-                    boost::optional<cstring> aliasSourceName, const bitrange *bits = nullptr,
+                    boost::optional<cstring> aliasSourceName, const le_bitrange *bits = nullptr,
                     int flags = 0, IXBar::byte_type_t byte_type = IXBar::NO_BYTE_TYPE,
                     unsigned extra_align = 0) {
     bool ok = false;
@@ -1141,7 +1141,7 @@ void IXBar::field_management(ContByteConversion &map_alloc, const IR::Expression
         std::map<cstring, bitvec> &fields_needed, cstring name, bool hash_dist, const PhvInfo &phv,
         bool is_atcam, bool partition) {
     const PHV::Field *finfo = nullptr;
-    bitrange bits = { };
+    le_bitrange bits = { };
     if (auto list = field->to<IR::ListExpression>()) {
         if (!hash_dist)
             BUG("A field list is somehow contained within the reads in table %s", name);
@@ -1236,7 +1236,7 @@ void IXBar::create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc) {
     }
 
     // Putting the fields in container order so the visualization prints them out in
-    // bitrange order
+    // le_bitrange order
     for (auto &byte : alloc.use) {
         std::sort(byte.field_bytes.begin(), byte.field_bytes.end(),
             [](const FieldInfo &a, const FieldInfo &b) {
@@ -1257,7 +1257,7 @@ class FindFieldsToAlloc : public Inspector {
         return false; }
     bool preorder(const IR::Expression *e) override {
         boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
-        bitrange bits;
+        le_bitrange bits;
         if (auto *finfo = phv.field(e, &bits)) {
             if (!fields_needed.count(finfo->name)) {
                 fields_needed.insert(finfo->name);
@@ -1797,7 +1797,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
     if (Device::currentDevice() == "Tofino")
         byte_mask <<= TOFINO_METER_ALU_BYTE_OFFSET;
     boost::optional<cstring> aliasSourceName = phv.get_alias_name(mtr->input);
-    bitrange bits;
+    le_bitrange bits;
     if (auto *finfo = phv.field(mtr->input, &bits)) {
         if (!fields_needed.count(finfo->name)) {
             fields_needed.insert(finfo->name);
@@ -1939,7 +1939,7 @@ bool IXBar::allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionForm
     BUG_CHECK(!hd_vec.empty(), "No allocation found for a hash_dist");
 
     // Coordinate the action format locations with the input xbar hash distribution locations
-    std::map<int, bitrange> immed_bit_positions;
+    std::map<int, le_bitrange> immed_bit_positions;
     bitvec immed_bitmask;
     for (auto &placement : hd_vec) {
         auto &arg_loc = placement.arg_locs[0];
@@ -2079,7 +2079,7 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_typ
 
     bool can_allocate = false;
     bitvec bit_mask; bitvec slice;
-    std::map<int, bitrange> bit_starts;
+    std::map<int, le_bitrange> bit_starts;
     int unit = -1;
 
     for (int i = 0; i < HASH_DIST_UNITS; i++) {
