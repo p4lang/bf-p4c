@@ -134,7 +134,13 @@ int main(int ac, char **av) {
                 default:
                     fprintf(stderr, "ignoring argument -%c\n", *arg);
                     error = 1; }
-        } else if (auto in = std::ifstream(av[i])) {
+        } else {
+  	    std::ifstream in(av[i], std::ios::binary);
+	    if (!in) {
+	        fprintf(stderr, "failed to open %s\n", av[i]);
+		error = 1;
+		continue;
+	    }
             unsigned char magic[4] = {};
             in.read((char *)magic, 4);
             if (magic[0] == 0 && magic[3] && strchr("RDBH", magic[3])) {
@@ -148,9 +154,6 @@ int main(int ac, char **av) {
             } else {
                 fprintf(stderr, "%s: Unknown file format\n", av[i]);
             }
-        } else {
-            fprintf(stderr, "Can't open %s\n", av[i]);
-            error = 1;
         }
     }
     if (error == 1)

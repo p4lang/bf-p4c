@@ -154,7 +154,6 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
         slices_by_size[i] = new PHV::FieldSlice(f, StartLen(0, f->size)); }
     auto* f16 = slices_by_size.at(16)->field();
     auto* f24 = slices_by_size.at(24)->field();
-
     ordered_map<PHV::SuperCluster::SliceList*, bitvec> schemas;
     auto* list = new PHV::SuperCluster::SliceList({ *slices_by_size.at(16) });
 
@@ -166,7 +165,11 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
     schemas.clear();
     schemas[list] = bitvec(8, 1);
     auto res = PHV::SlicingIterator::split_super_cluster(make_sc(list), schemas);
+#if !(__GNUC__ == 4 && __GNUC_MINOR__ == 9)
+    // Comparison with boost::optional triggers an undefined reference
+    // for basic_stream with GCC 4.9 !!!
     EXPECT_NE(boost::none, res);
+#endif
     EXPECT_EQ(2U, res->size());
     EXPECT_EQ(*res->front(), *make_sc(PHV::FieldSlice(f16, StartLen(0, 8))));
     EXPECT_EQ(*res->back(), *make_sc(PHV::FieldSlice(f16, StartLen(8, 8))));
@@ -176,7 +179,11 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
     list = new PHV::SuperCluster::SliceList({ *slices_by_size.at(24) });
     schemas[list] = bitvec(16, 1);
     res = PHV::SlicingIterator::split_super_cluster(make_sc(list), schemas);
+#if !(__GNUC__ == 4 && __GNUC_MINOR__ == 9)
+    // Comparison with boost::optional triggers an undefined reference
+    // for basic_stream with GCC 4.9 !!!
     EXPECT_NE(boost::none, res);
+#endif
     EXPECT_EQ(2U, res->size());
     EXPECT_EQ(*res->front(), *make_sc(PHV::FieldSlice(f24, StartLen(0, 16))));
     EXPECT_EQ(*res->back(), *make_sc(PHV::FieldSlice(f24, StartLen(16, 8))));
@@ -188,7 +195,11 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
     schemas[list].setbit(16);
     schemas[list2] = bitvec(8,1);
     res = PHV::SlicingIterator::split_super_cluster(make_sc({ list, list2 }), schemas);
+#if !(__GNUC__ == 4 && __GNUC_MINOR__ == 9)
+    // Comparison with boost::optional triggers an undefined reference
+    // for basic_stream with GCC 4.9 !!!
     EXPECT_NE(boost::none, res);
+#endif
     EXPECT_EQ(5U, res->size());
     EXPECT_EQ(*res->front(), *make_sc(PHV::FieldSlice(f24, StartLen(0, 8))));
     EXPECT_EQ(*res->back(), *make_sc(PHV::FieldSlice(f16, StartLen(8, 8))));
