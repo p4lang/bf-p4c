@@ -340,10 +340,20 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
             regs.main[EGRESS].emit_json(*open_output("regs.parser.main.egress.cfg.json"),
                                         "egress");
             regs.merge.emit_json(*open_output("regs.parse_merge.cfg.json")); } }
-    for (auto &ref : TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem)
-        ref.set("memories.parser.ingress", &regs.memory[INGRESS]);
-    for (auto &ref : TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem)
-        ref.set("memories.parser.egress", &regs.memory[EGRESS]);
+
+    /* multiple JBay parser mem blocks can respond to same address range to allow programming
+     * the device with a single write operation. See: pardereg.pgstnreg.ibprsr4reg.prsr.mem_ctrl */
+    for (auto i = 0; i < TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem.size();
+                                                        options.singlewrite ? i+=4 : i+=1) {
+        TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem[i].set("memories.parser.ingress",
+            &regs.memory[INGRESS]);
+    }
+    for (auto i = 0; i < TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem.size();
+                                                        options.singlewrite ? i+=4 : i+=1) {
+        TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem[i].set("memories.parser.egress",
+            &regs.memory[EGRESS]);
+    }
+
     for (auto &ref : TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.ipbprsr4reg)
         ref.set("regs.parser.ingress", &regs.ingress);
     for (auto &ref : TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.epbprsr4reg)

@@ -28,6 +28,7 @@ extern struct option_t {
     bool                debug_info;
     bool                werror;
     bool                disable_power_gating;
+    bool                singlewrite;
     std::string         stage_dependency_pattern;
 } options;
 

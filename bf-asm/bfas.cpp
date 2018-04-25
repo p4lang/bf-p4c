@@ -27,6 +27,7 @@ option_t options = {
     .debug_info = false,
     .werror = false,
     .disable_power_gating = false,
+    .singlewrite = false,
 };
 
 
@@ -127,6 +128,8 @@ int main(int ac, char **av) {
             options.binary = NO_BINARY;
         } else if (!strcmp(av[i], "--singlepipe")) {
             options.binary = ONE_PIPE;
+        } else if (!strcmp(av[i], "--singlewrite")) {
+            options.singlewrite = true;
         } else if (!strcmp(av[i], "--stage_dependency_pattern")) {
           ++i;
           if (!av[i]) {
