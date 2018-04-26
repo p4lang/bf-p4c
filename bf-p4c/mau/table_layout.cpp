@@ -667,7 +667,7 @@ bool TableLayout::preorder(IR::MAU::Action *act) {
                 "utilizes the hit path in Tofino, while the driver configures the miss path",
                 act->srcInfo, act->name);
 
-    act->default_allowed = false;
+    act->hit_path_imp_only = false;
     act->disallowed_reason = "uses_hash_dist";
     return false;
 }

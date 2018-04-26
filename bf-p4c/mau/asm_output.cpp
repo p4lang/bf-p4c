@@ -1223,8 +1223,8 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << indent << canon_name(act->name) << ":" << std::endl;
         action_context_json(act);
         out << indent << "- default_" << (act->miss_action_only ? "only_" : "") << "action: {"
-            << " allowed: " << std::boolalpha << act->default_allowed;
-        if (!act->default_allowed)
+            << " allowed: " << std::boolalpha << (act->default_allowed || act->hit_path_imp_only);
+        if (!act->default_allowed || act->hit_path_imp_only)
             out << ", reason: " << act->disallowed_reason;
         out << " }" << std::endl;
         is_empty = true;
@@ -1595,8 +1595,15 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
 }
 
 static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNext &def) {
+    if (what == "$miss") {
+        cstring tns = "$try_next_stage";
+        if (tbl->next.count(tns)) {
+            if (!tbl->next[tns]->empty())
+                return tbl->next[tns]->front()->name;
+        }
+    }
     if (tbl->next.count(what)) {
-        if (!tbl->next[what]->empty())
+        if (tbl->next[what] && !tbl->next[what]->empty())
             return tbl->next[what]->front()->name;
     } else if (tbl->next.count("$default")) {
         if (!tbl->next["$default"]->empty())

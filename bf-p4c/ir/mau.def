@@ -246,11 +246,23 @@ class Table : BFN::Unit {
             BUG("gateway always overrides match table");
         for (auto &nxt : next) {
             if (nxt.first == "$default") {
-            } else if (nxt.first == "$hit" || nxt.first == "$miss") {
+            } else if (nxt.first == "$hit" || nxt.first == "$miss"
+                       || nxt.first == "$try_next_stage") {
                 if (!match_table)
                     BUG("%s next on table with no match_table", nxt.first);
             } else if (!gw_next.count(nxt.first) && !actions.count(nxt.first)) {
-                BUG("%s next on table with no such action or gw result", nxt.first); } } }
+                BUG("%s next on table with no such action or gw result", nxt.first);
+            }
+            if (!gateway_only()) {
+                if (next.count("$hit") || next.count("$miss")) {
+                    size_t valid_next_table_size = next.count("$hit") + next.count("$miss")
+                                                   + next.count("$try_next_stage");
+                    BUG_CHECK(valid_next_table_size == next.size(),
+                              "Somehow have a hit/miss table combined with an action chain");
+                }
+            }
+        }
+     }
     visit_children {
         for (auto &gw : gateway_rows)
             v.visit(gw.first, "gateway_row");
@@ -260,25 +272,53 @@ class Table : BFN::Unit {
         if (!gateway_only()) {
             auto &clone(v.flow_clone());
             v.flow_dead();
-            auto &default_action(clone.flow_clone());
-            default_action.flow_dead();
-            for (auto &action : Values(actions)) {
+            // Can separate table using hit/miss from tables using action chaining,
+            // as in P4 semantically, a table can not use both hit/miss and action chaining
+            // Potentially if that changes, we will have to support it with a layered approach
+            // to the next table propagation
+            if (!next.count("$hit") && !next.count("$miss")) {
+                auto &default_action(clone.flow_clone());
+                default_action.flow_dead();
+                for (auto &action : Values(actions)) {
+                    auto &clone2(clone.flow_clone());
+                    clone2.visit(action);
+                    if (next.count(action->name)) {
+                        clone2.visit(next.at(action->name), action->name.name);
+                        v.flow_merge(clone2);
+                    } else {
+                        default_action.flow_merge(clone2);
+                    }
+                }
+                if (next.count("$default"))
+                    default_action.visit(next.at("$default"), "$default");
+                v.flow_merge(default_action);
+            } else {
+                auto &hit_actions(clone.flow_clone());
+                auto &miss_actions(clone.flow_clone());
+                hit_actions.flow_dead();
+                miss_actions.flow_dead();
+
+                for (auto &action : Values(actions)) {
+                    auto &clone2(clone.flow_clone());
+                    clone2.visit(action);
+                    if (!action->hit_only())
+                        miss_actions.flow_merge(clone2);
+                    if (!action->miss_only())
+                        hit_actions.flow_merge(clone2);
+                }
+
+                if (next.count("$hit"))
+                    hit_actions.visit(next.at("$hit"), "$hit");
+                if (next.count("$miss"))
+                    miss_actions.visit(next.at("$miss"), "$miss");
+                v.flow_merge(hit_actions);
+                v.flow_merge(miss_actions);
+            }
+            if (next.count("$try_next_stage")) {
                 auto &clone2(clone.flow_clone());
-                clone2.visit(action);
-                if (next.count(action->name)) {
-                    clone2.visit(next.at(action->name), action->name.name);
-                    v.flow_merge(clone2);
-                } else {
-                    default_action.flow_merge(clone2); } }
-            if (next.count("$default"))
-                default_action.visit(next.at("$default"), "$default");
-            else if (next.count("$hit"))
-                default_action.visit(next.at("$hit"), "$hit");
-            v.flow_merge(default_action);
-            if (next.count("$miss")) {
-                auto &clone2(clone.flow_clone());
-                clone2.visit(next.at("$miss"), "$miss");
-                v.flow_merge(clone2); }
+                clone2.visit(next.at("$try_next_stage"), "$try_next_stage");
+                v.flow_merge(clone2);
+            }
         } else {
             v.flow_dead(); }
         std::set<cstring> gw_next;
@@ -492,11 +532,25 @@ class Action : ActionFunction {
     bool miss_action_only = false;
     bool init_default = false;
     bool default_allowed = false;
+    // Currently if a table used hash distribution or the RNG, then the table must go
+    // go through the hit pathway.  However, due to different driver implementation, this
+    // could be different than being table_only, and thus it is left out of the
+    // visit_children of the table.
+    bool hit_path_imp_only = false;
     cstring internal_name = "";
     cstring disallowed_reason = "none";
     inline Vector<Expression> default_params = {};
     // Separate stateful primitives from actions, as they aren't instructions
     // as such.
+
+    bool hit_only() const { return default_allowed == false; }
+    bool miss_only() const { return miss_action_only == true; }
+
+    validate {
+        ERROR_CHECK(!(hit_only() && miss_only()), "Action %s cannot be both a hit only and a "
+                    "miss only action.  Can only be at most one of those categories", name);
+    }
+
     inline Vector<Primitive>    stateful = {};
 }
 /// A stateful ALU VLIW instruction -- multiple instructions that all run together

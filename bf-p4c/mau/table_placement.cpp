@@ -294,6 +294,8 @@ TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
             ++idx;
             if (it->second->deps[idx]) continue;
             if (t->uses_gateway()) continue;
+            // FIXME: Look for notes above preorder for IR::MAU::Table
+            if (t->next.count("$hit") || t->next.count("$miss")) continue;
             match = t;
             result_tag = it->first;
             break; }
@@ -1087,7 +1089,8 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
             for (auto &gw : table_part->gateway_rows)
                 table_part->next.erase(gw.second);
             table_part->gateway_rows.clear();
-            prev->next["$miss"] = new IR::MAU::TableSeq(table_part);
+            prev->next["$try_next_stage"] = new IR::MAU::TableSeq(table_part);
+            prev->next.erase("$miss");
         }
         if (last != nullptr)
             *last = table_part;
@@ -1095,6 +1098,55 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
     }
     return rv;
 }
+
+
+/** Note from gateway_merge:
+ *
+ *  Currently the algorithm is not sophisiticated enough to link a gateway table that has either
+ *  a $hit or $miss next table information.  The reason is the following:
+ *
+ *  Let's say we have the following example before table placement:
+ *
+ *       cond-1
+ *         |
+ *         | $true
+ *         |
+ *      { t1, t2, t3 }
+ *         |
+ *         | $miss
+ *         |
+ *      { t1_miss }
+ *
+ *  where t1 and cond-1 are going to be linked into 1 logical table.
+ *
+ *  This is currently converted to:
+ *
+ *             cond-1
+ *               t1
+ *             /   \
+ *      $miss /     \ $default
+ *           /       \
+ *     { t1_miss }  { t2, t3 }
+ *
+ *  This is fairly nonsensical, and incorrect.  Now because t1 is linked to the conditional,
+ *  in order to run t2 and t3 if t1 does run is to always run t2 and t3 on default.
+ *
+ *  A correct next table propagation would look like the following:
+ *
+ *             cond-1
+ *               t1
+ *             /   \
+ *      $miss /     \ $hit
+ *           /       \
+ *  { t1_miss } ---> { t2, t3 }
+ *            $default
+ *
+ *  Essentially by not having a $default pathway combined with a hit/miss pathway, the control
+ *  flow is correct.  Though this case is simple, other corner cases lead to a lot more difficult
+ *  next table calculations, i.e. multiple layers of this miss chaining with a conditional.
+ *  Thus currently the algorithm restricts linking conditionals with tables that have either
+ *  $hit or $miss.
+ */
 
 IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     auto it = table_placed.find(tbl->name);
@@ -1124,6 +1176,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         tbl->match_key = match->match_key;
         tbl->actions = match->actions;
         tbl->attached = match->attached;
+
         /* Generate the correct table layout from the options */
         gw_layout = tbl->layout;
         gw_layout_used = true;
@@ -1208,7 +1261,14 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             for (auto &gw : table_part->gateway_rows)
                 table_part->next.erase(gw.second);
             table_part->gateway_rows.clear();
-            prev->next["$miss"] = new IR::MAU::TableSeq(table_part);
+
+            // FIXME: Long term solution could be the following for these types of actions:
+            //    - Clone all actions and set them all to hit_only
+            //    - Create a noop action as miss_only
+            //    - Get rid of the $try_next_stage and just go through the standard hit/miss
+            // Separate control flow processing for try_next_stage vs miss"
+            prev->next["$try_next_stage"] = new IR::MAU::TableSeq(table_part);
+            prev->next.erase("$miss");
         }
         prev = table_part;
         if (atcam_last)
