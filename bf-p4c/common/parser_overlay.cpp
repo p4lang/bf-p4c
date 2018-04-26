@@ -66,6 +66,8 @@ void BuildMutex::end_apply() {
             // MAU pipeline to always be mutually inclusive.
             // XXX(cole): this could use a more sophisticated analysis to be
             // more precise.
+            if (*it1 == *it2) {
+                continue; }
             if (neverOverlay[*it2]) {
                 LOG5("Excluding field from overlay: " << *it2);
                 continue; }
@@ -80,6 +82,8 @@ void BuildMutex::end_apply() {
     for (auto fieldSet : parsedPragma) {
         auto* field1 = fieldSet.first;
         for (auto* field2 : fieldSet.second) {
+            if (field1->id == field2->id) {
+                continue; }
             mutually_exclusive(field1->id, field2->id) = true;
             LOG1("set " << field1 << " and " << field2
                 << " to be mutually_exclusive because of @pragma pa_mutually_exclusive"); } }

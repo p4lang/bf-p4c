@@ -1189,6 +1189,11 @@ void AllocatePHV::end_apply() {
     LOG1("--- BEGIN PHV ALLOCATION ----------------------------------------------------");
     log_device_stats();
 
+    // Make sure that fields are not marked as mutex with itself.
+    for (const auto& field : phv_i) {
+        BUG_CHECK(!mutex_i(field.id, field.id),
+                  "Field %1% can be overlaid with itseld.", field.name); }
+
     // HACK WARNING:
     // The meter hack, all destination of meter color go to 8-bit container.
     // TODO(yumin): remove this once this hack is removed in mau.

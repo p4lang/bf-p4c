@@ -80,6 +80,7 @@ void LiveRangeOverlay::end_apply() {
         if (noOverlay.count(&f1))
             continue;
         for (auto f2 : phv) {
+            if (f1.id == f2.id) continue;  // field should never be mutex to it self.
             if ((!f2.metadata && !f2.alwaysPackable && !f2.privatizable()) || f2.pov ||
                  f1.gress != f2.gress || f2.deparsed_to_tm())
                 continue;
