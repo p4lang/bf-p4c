@@ -90,8 +90,9 @@ function install_cmake() {
 function install_boost() {
     # ARG: boost_version
     # test for ubuntu version, and check if we have a local package
-    local ubuntu_release=$(lsb_release -r | cut -f 2)
-    if [[ $ubuntu_release =~ "14.04" ]]; then
+    local ubuntu_release=$(cat /etc/issue | awk '/Ubuntu/ {print $2 }' | cut -d "." -f 1-2) 
+    local debian_release=$(egrep -ic debian /etc/issue)
+    if [ $ubuntu_release =~ "14.04" ] || [ $debian_release ~= 1 ]; then
         sudo apt-get install -y python-dev libbz2-dev
         b_ver=$1
         boost_ver=$(echo $b_ver | tr "." "_")
