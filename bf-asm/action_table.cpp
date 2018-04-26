@@ -210,16 +210,29 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "home_row") {
             home_lineno = kv.value.lineno;
             if (CHECKTYPE2(kv.value, tINT, tVEC)) {
-                if (kv.value.type == tINT)
-                    home_rows.push_back(kv.value.i);
-                else for (auto &v : kv.value.vec)
-                    if (CHECKTYPE(v, tINT))
-                        home_rows.push_back(v.i); }
+                if (kv.value.type == tINT) {
+                    if (kv.value.i >= 0 || kv.value.i < LOGICAL_SRAM_ROWS)
+                        home_rows |= 1 << kv.value.i;
+                    else
+                        error(kv.value.lineno, "Invalid home row %ld", kv.value.i);
+                } else for (auto &v : kv.value.vec) {
+                    if (CHECKTYPE(v, tINT)) {
+                        if (v.i >= 0 || v.i < LOGICAL_SRAM_ROWS)
+                            home_rows |= 1 << v.i;
+                        else
+                            error(v.lineno, "Invalid home row %ld", v.i); } } }
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
                 p4_table = P4Table::get(P4Table::ActionData, kv.value.map);
         } else if (kv.key == "row" || kv.key == "logical_row" || kv.key == "column") {
             /* already done in setup_layout */
+        } else if (kv.key == "word") {
+            if (CHECKTYPE(kv.value, tVEC)) {
+                if (kv.value.vec.size != layout.size())
+                    error(kv.value.lineno, "word: does not match number of rows");
+                else for (unsigned i = 0; i < layout.size(); ++i)
+                    if (CHECKTYPE(kv.value[i], tINT))
+                        layout[i].word = kv.value[i].i; }
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
@@ -235,10 +248,9 @@ void ActionTable::pass1() {
     if (!p4_table) p4_table = P4Table::alloc(P4Table::ActionData, this);
     else p4_table->check(this);
     alloc_vpns();
-    std::sort(layout.begin(), layout.end(),
-              [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
-    std::sort(home_rows.begin(), home_rows.end(),
-              [](const int &a, const int &b)->bool { return a > b; });
+    std::sort(layout.begin(), layout.end(), [](const Layout &a, const Layout &b)->bool {
+              if (a.word != b.word) return a.word < b.word;
+              return a.row > b.row; });
     unsigned width = format ? (format->size-1)/128 + 1 : 1;
     for (auto &fmt : action_formats) {
         if (!actions->exists(fmt.first)) {
@@ -262,38 +274,55 @@ void ActionTable::pass1() {
 #endif
         width = std::max(width, (fmt.second->size-1)/128 + 1); }
     unsigned depth = layout_size()/width;
+    std::vector<int> slice_size(width, 0);
     unsigned idx = 0; // ram index within depth
-    int prev_row = -1;
-    int *home = home_rows.empty() ? nullptr : &home_rows[0];
-    int *home_end = home ? home + home_rows.size() : nullptr;
-    for (auto &row : layout) {
-        if (idx == 0 || idx + row.cols.size() > depth) {
-            if (!home)
-                home_rows.push_back(row.row);
-            else if (home == home_end || *home++ != row.row)
-                error(home_lineno, "invalid home rows for table %s", name());
-            need_bus(lineno, stage->action_data_use, row.row, "Action data"); }
-        if (idx != 0) {
-            if (home < home_end && *home == row.row) {
-                home++;
-                need_bus(lineno, stage->action_data_use, row.row, "Action data");
-            } else if (!home) {
-                if ((home_rows.back() - row.row > 10)
-                /* can't go over >10 rows for timing */
+    unsigned word = 0;  // word within wide table;
+    int home_row = -1;
+    unsigned final_home_rows = 0;
+    Layout *prev = nullptr;
+    for (auto row = layout.begin(); row != layout.end(); ++row) {
+        if (row->word > 0) word = row->word;
+        if (!prev || prev->word != word || ((home_rows >> row->row) & 1) != 0
+            || home_row - row->row > 10 /* can't go over >10 rows for timing */
 #ifdef HAVE_JBAY
-                    || (options.target == JBAY && prev_row >= 8 && row.row < 8)
-                /* can't flow between logical row 7 and 8 in JBay*/
+            || (options.target == JBAY && home_row >= 8 && row->row < 8)
+            /* can't flow between logical row 7 and 8 in JBay*/
 #endif /* HAVE_JBAY */
-                    ) { home_rows.push_back(row.row);
-                      need_bus(lineno, stage->action_data_use, row.row, "Action data"); }
-            } else if (home && home[-1] - row.row > 10) {
-                error(home_lineno, "Can't propagate over more than 10 rows to home row");
-            } else {
-                need_bus(lineno, stage->overflow_bus_use, row.row, "Overflow");
-                for (int r = (row.row + 1) | 1; r < prev_row; r += 2)
-                    need_bus(lineno, stage->overflow_bus_use, r, "Overflow"); } }
-        if ((idx += row.cols.size()) >= depth) idx -= depth;
-        prev_row = row.row; }
+        ) {
+            if (prev && prev->row == row->row) prev->home_row = false;
+            home_row = row->row;
+            row->home_row = true;
+            final_home_rows |= 1 << row->row; }
+        if (row->word >= 0) {
+            if (row->word > width) {
+                error(row->lineno, "Invalid word %u for row %d", row->word, row->row);
+                continue; }
+            slice_size[row->word] += row->cols.size();
+        } else {
+            if (slice_size[word] + row->cols.size() > depth) {
+                int split = depth - slice_size[word];
+                row = layout.insert(row, Layout(*row));
+                row->cols.erase(row->cols.begin() + split, row->cols.end());
+                row->vpns.erase(row->vpns.begin() + split, row->vpns.end());
+                auto next = row + 1;
+                next->cols.erase(next->cols.begin(), next->cols.begin() + split);
+                next->vpns.erase(next->vpns.begin(), next->vpns.begin() + split); }
+            row->word = word;
+            if ((slice_size[word] += row->cols.size()) == depth)
+                ++word; }
+        prev = &*row; }
+    if (home_rows & ~final_home_rows)
+        for (unsigned row : bitvec(home_rows & ~final_home_rows)) {
+            error(home_lineno, "home row %u not present in table %s", row, name());
+            break; }
+    home_rows = final_home_rows;
+    for (word = 0; word < width; ++word)
+        if (slice_size[word] != depth) {
+            error(layout.front().lineno, "Incorrect size for word %u in layout of table %s",
+                  word, name());
+            break; }
+    for (auto &r : layout)
+        LOG4("  " << r);
     action_bus->pass1(this);
     if (actions) actions->pass1(this);
     AttachedTable::pass1();
@@ -363,10 +392,9 @@ void ActionTable::write_regs(REGS &regs) {
     int idx = 0;
     int word = 0;
     Layout *home = nullptr;
-    auto home_row = home_rows.begin();
     int prev_logical_row = -1;
     decltype(regs.rams.array.switchbox.row[0].ctl) *home_switch_ctl = 0,
-                                                          *prev_switch_ctl = 0;
+                                                   *prev_switch_ctl = 0;
     auto &icxbar = regs.rams.match.adrdist.adr_dist_action_data_adr_icxbar_ctl;
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2;
@@ -375,13 +403,19 @@ void ActionTable::write_regs(REGS &regs) {
         auto vpn = logical_row.vpns.begin();
         auto &switch_ctl = regs.rams.array.switchbox.row[row].ctl;
         auto &map_alu_row =  regs.rams.map_alu.row[row];
-        if (home_row != home_rows.end() && *home_row == logical_row.row) {
-            if (idx + logical_row.cols.size() <=  depth) {
-                /* This is a second home row for this width slice, so does not
-                 * (cannot?) overflow to the row above */
-                home = nullptr; }
-            ++home_row; }
-        if (home) {
+        if (logical_row.home_row) {
+            home = &logical_row;
+            home_switch_ctl = &switch_ctl;
+            action_bus->write_action_regs(regs, this, logical_row.row, word);
+            if (side)
+                switch_ctl.r_action_o_mux_select.r_action_o_sel_action_rd_r_i = 1;
+            else
+                switch_ctl.r_l_action_o_mux_select.r_l_action_o_sel_action_rd_l_i = 1;
+            for (auto mtab : match_tables)
+                icxbar[mtab->logical_id].address_distr_to_logical_rows |=
+                    1U << logical_row.row;
+        } else {
+            assert(home);
             // FIXME use DataSwitchboxSetup for this somehow?
             if (&switch_ctl == home_switch_ctl) {
                 /* overflow from L to R action */
@@ -432,18 +466,8 @@ void ActionTable::write_regs(REGS &regs) {
             unsigned col = logical_col + 6*side;
             auto &ram = regs.rams.array.row[row].ram[col];
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
-            if (!home) {
-                home = &logical_row;
-                home_switch_ctl = &switch_ctl;
-                action_bus->write_action_regs(regs, this, logical_row.row, word);
-                if (side)
-                    switch_ctl.r_action_o_mux_select.r_action_o_sel_action_rd_r_i = 1;
-                else
-                    switch_ctl.r_l_action_o_mux_select.r_l_action_o_sel_action_rd_l_i = 1;
+            if (logical_row.home_row)
                 unitram_config.unitram_action_subword_out_en = 1;
-                for (auto mtab : match_tables)
-                    icxbar[mtab->logical_id].address_distr_to_logical_rows |=
-                        1U << logical_row.row; }
             ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::NONE;
             ram.unit_ram_ctl.match_ram_read_data_mux_select =
                 home == &logical_row ? UnitRam::DataMux::ACTION : UnitRam::DataMux::OVERFLOW;

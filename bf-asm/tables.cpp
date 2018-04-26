@@ -137,6 +137,29 @@ static int add_cols(Table::Layout &row, const value_t &cols) {
     return rv;
 }
 
+std::ostream &operator<<(std::ostream &out, const Table::Layout &l) {
+    if (l.home_row) out << "home_";
+    out << "row=" << l.row;
+    if (l.bus >= 0) out << " bus=" << l.bus;
+    if (l.word >= 0) out << " word=" << l.word;
+    if (!l.cols.empty()) {
+        const char *sep = "";
+        out << " [";
+        for (auto col : l.cols) { out << sep << col; sep = ", "; }
+        out << ']'; }
+    if (!l.vpns.empty()) {
+        const char *sep = "";
+        out << " vpns=[";
+        for (auto vpn : l.vpns) { out << sep << vpn; sep = ", "; }
+        out << ']'; }
+    if (!l.maprams.empty()) {
+        const char *sep = "";
+        out << " maprams=[";
+        for (auto mr : l.maprams) { out << sep << mr; sep = ", "; }
+        out << ']'; }
+    return out;
+}
+
 void Table::setup_layout(std::vector<Layout> &layout, const value_t *row,
                          const value_t *col,
                          const value_t *bus, const char *subname) {

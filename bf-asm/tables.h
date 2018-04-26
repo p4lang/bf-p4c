@@ -55,9 +55,12 @@ public:
          * maprams contain the map ram indexes for synthetic 2-port memories (matching cols) */
         int                     lineno = -1;
         int                     row = -1, bus = -1;
+        int                     word = -1;      // which word for wide tables
+        bool                    home_row = false;       // is this a home row
         std::vector<int>        cols, vpns, maprams;
         Layout() = default;
         Layout(int l, int r) : lineno(l), row(r) {}
+        friend std::ostream &operator<<(std::ostream &, const Layout &);
     };
 protected:
     Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1);
@@ -1103,7 +1106,7 @@ public:
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     int                                 action_id;
-    std::vector<int>                    home_rows;
+    unsigned                            home_rows = 0;
     int                                 home_lineno = -1;
     std::map<std::string, Format *>     action_formats;
     static const std::map<unsigned, std::vector<std::string>> action_data_address_huffman_encoding;

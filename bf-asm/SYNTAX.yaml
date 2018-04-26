@@ -133,6 +133,8 @@ stage <constant> <thread>:
             # depends on the table type
         bus: 0 | 1 | '[' 0 | 1, ... ']'
             # bus(es) to use.  If a list, must match the number of rows
+        word: <vector>
+            # for wide tables, specify which word of the wide word is in each row of the table
         vpns: <vector>
             # vpn values to use for rams
         input_xbar:
