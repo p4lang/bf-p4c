@@ -239,6 +239,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/phase0.cpp
   parde/resolve_computed.cpp
   parde/resubmit.cpp
+  parde/p4i/gen_parser_json.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_SRCS}")
 build_unified(BF_P4C_BACKEND_PARDE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -261,6 +262,8 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/phase0.h
   parde/resolve_computed.h
   parde/resubmit.h
+  parde/p4i/gen_parser_json.h
+  parde/p4i/p4i_json_types.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_HDRS}")
 

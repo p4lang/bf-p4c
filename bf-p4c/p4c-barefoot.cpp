@@ -67,6 +67,9 @@ class OutputAsm : public PassManager {
         if (!_options.debugInfo)  // generate resources info only if invoked with -g
             return;
         if (_success) {
+            // Why on jbay this outputFile can be null?
+            if (!_options.outputFile) {
+                return; }
             cstring resourcesFile = _options.outputFile + ".res.json";
             LOG2("ASM generation for resources: " << resourcesFile);
             std::ofstream ctxt_stream(_options.outputFile, std::ios_base::app);

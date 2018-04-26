@@ -6,6 +6,7 @@
 #include <string>
 
 #include "mau/resource.h"
+#include "parde/p4i/gen_parser_json.h"
 #include "visualization.h"
 
 namespace BFN {
@@ -54,7 +55,9 @@ bool Visualization::preorder(const IR::BFN::Pipe *p) {
     pipe->emplace("pipe_id", new Util::JsonValue(pipe_id));
     auto *parser = new Util::JsonObject();
     parser->emplace("nParsers", new Util::JsonValue(18));  // \TODO: get from device
-    parser->emplace("parsers", new Util::JsonArray());
+    auto* gen_parsers_json = new GenerateParserP4iJson();
+    p->apply(*gen_parsers_json);
+    parser->emplace("parsers", gen_parsers_json->getParsersJson());
     pipe->emplace("parser", parser);
     auto *mauStages = new Util::JsonArray();
     pipe->emplace("mau_stages", mauStages);
