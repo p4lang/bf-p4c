@@ -15,15 +15,13 @@
 namespace Test {
 
 /* static */ boost::optional<MidendTestCase>
-MidendTestCase::create(const std::string& source,
-                       CompilerOptions::FrontendVersion langVersion
-                          /* = CompilerOptions::FrontendVersion::P4_16 */) {
-    auto frontendTestCase = FrontendTestCase::create(source, langVersion);
-    if (!frontendTestCase) return boost::none;
-
+MidendTestCase::create(const std::string& source) {
     AutoCompileContext autoBFNContext(new BFNContext(BFNContext::get()));
     auto& options = BFNContext::get().options();
-    options.langVersion = langVersion;
+
+    auto frontendTestCase = FrontendTestCase::create(source);
+    if (!frontendTestCase) return boost::none;
+
     BFN::MidEnd midend(options);
     auto* midendProgram = frontendTestCase->program->apply(midend);
     if (midendProgram == nullptr) {
@@ -40,16 +38,27 @@ MidendTestCase::create(const std::string& source,
 }
 
 /* static */ boost::optional<TofinoPipeTestCase>
-TofinoPipeTestCase::create(const std::string& source,
-                           CompilerOptions::FrontendVersion langVersion
-                              /* = CompilerOptions::FrontendVersion::P4_16 */) {
-    auto midendTestCase = MidendTestCase::create(source, langVersion);
-    if (!midendTestCase) return boost::none;
-
+TofinoPipeTestCase::create(const std::string& source) {
     AutoCompileContext autoBFNContext(new BFNContext(BFNContext::get()));
     auto& options = BFNContext::get().options();
-    options.langVersion = langVersion;
-    auto* pipe = BFN::extract_maupipe(midendTestCase->program, options);
+
+    auto frontendTestCase = FrontendTestCase::create(source, options.langVersion);
+    if (!frontendTestCase) return boost::none;
+
+    BFN::MidEnd midend(options);
+    auto* midendProgram = frontendTestCase->program->apply(midend);
+    if (midendProgram == nullptr) {
+        std::cerr << "Midend failed" << std::endl;
+        return boost::none;
+    }
+    if (::diagnosticCount() > 0) {
+        std::cerr << "Encountered " << ::diagnosticCount()
+                  << " errors while executing midend" << std::endl;
+        return boost::none;
+    }
+    BFN::BackendConverter conv(&midend.refMap, &midend.typeMap, midend.toplevel);
+    conv.convert(midendProgram, options);
+    auto* pipe = conv.pipe[0];
     if (pipe == nullptr) {
         std::cerr << "extract_maupipe failed" << std::endl;
         return boost::none;
@@ -60,15 +69,12 @@ TofinoPipeTestCase::create(const std::string& source,
         return boost::none;
     }
 
-    return TofinoPipeTestCase{pipe, midendTestCase->program};
+    return TofinoPipeTestCase{pipe, midendProgram};
 }
 
 /* static */ boost::optional<TofinoPipeTestCase>
-TofinoPipeTestCase::createWithThreadLocalInstances(
-        const std::string& source,
-        CompilerOptions::FrontendVersion langVersion
-          /* = CompilerOptions::FrontendVersion::P4_16 */) {
-    auto pipeTestCase = TofinoPipeTestCase::create(source, langVersion);
+TofinoPipeTestCase::createWithThreadLocalInstances(const std::string& source) {
+    auto pipeTestCase = TofinoPipeTestCase::create(source);
     if (!pipeTestCase) return boost::none;
 
     pipeTestCase->pipe = pipeTestCase->pipe->apply(CreateThreadLocalInstances());

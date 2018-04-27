@@ -91,6 +91,11 @@ V1Switch(parse(), verifyChecksum(), ingress(), egress(),
     boost::replace_first(source, "%INGRESS_PIPELINE%", ingressPipeline);
     boost::replace_first(source, "%EGRESS_PIPELINE%", egressPipeline);
 
+    auto& options = BFNContext::get().options();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
 

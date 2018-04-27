@@ -83,6 +83,7 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
     static const ordered_set<Target> supportedTargets = {
         {"tofino", "v1model"},
         {"tofino", "tna"},
+        {"tofino", "tna32q"},
         {"tofino", "psa"},
 #if HAVE_JBAY
         {"jbay", "v1model"},

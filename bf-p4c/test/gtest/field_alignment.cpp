@@ -56,6 +56,11 @@ createFieldAlignmentTestCase(const std::string& headerSource) {
 
     boost::replace_first(source, "%HEADER_SOURCE%", headerSource);
 
+    auto& options = BFNContext::get().options();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
     return TofinoPipeTestCase::create(source);
 }
 
@@ -171,6 +176,11 @@ TEST_F(TofinoFieldAlignment, LargeUnalignedFields) {
 }
 
 TEST_F(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
+    auto& options = BFNContext::get().options();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
     auto test = TofinoPipeTestCase::create(P4_SOURCE(P4Headers::V1MODEL, R"(
         header H {
             bit<8> field;
@@ -220,6 +230,11 @@ TEST_F(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
 }
 
 TEST_F(TofinoFieldAlignment, DISABLED_BridgedMetadataRespectsAlignment) {
+    auto& options = BFNContext::get().options();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
     auto test = TofinoPipeTestCase::create(P4_SOURCE(P4Headers::V1MODEL, R"(
         header H { bit<8> field; }
         struct Headers { H h; }

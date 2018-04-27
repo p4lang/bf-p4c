@@ -71,8 +71,9 @@ class SkipControls : public P4::ActionSynthesisPolicy {
  public:
     explicit SkipControls(const std::set<cstring> *skip) : skip(skip) { CHECK_NULL(skip); }
     bool convert(const IR::P4Control* control) const {
-        if (skip->find(control->name) != skip->end())
+        if (control->is<IR::BFN::TranslatedP4Deparser>()) {
             return false;
+        }
         return true;
     }
 };

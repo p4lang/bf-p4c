@@ -9,6 +9,7 @@
 #include "bf-p4c/common/param_binding.h"
 #include "bf-p4c/parde/resubmit.h"
 #include "bf-p4c/parde/mirror.h"
+#include "bf-p4c/arch/arch.h"
 
 class BFN_Options;
 
@@ -91,15 +92,27 @@ class AttachTables : public PassManager {
     }
 };
 
-/// must be applied to IR::P4Program
-class ExtractBackendPipe : public PassManager {
+class ExtractStratumInfo : public PassManager {
  public:
-    ExtractBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                       IR::BFN::Pipe* rv, ParamBinding *bindings, bool useTna);
-
+    ExtractStratumInfo(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                       IR::BFN::Pipe* rv, ParamBinding *bindings);
     DeclarationConversions converted;
     ResubmitPacking resubmitPackings;
     MirroredFieldListPacking mirrorPackings;
+};
+
+class ExtractTofinoInfo : public PassManager {
+ public:
+    ExtractTofinoInfo(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                       IR::BFN::Pipe* rv, ParamBinding *bindings);
+    DeclarationConversions converted;
+};
+
+class ExtractTofino32QInfo : public PassManager {
+ public:
+    ExtractTofino32QInfo(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                         IR::BFN::Pipe *p0, IR::BFN::Pipe *p1, ParamBinding *bindings);
+    DeclarationConversions converted;
 };
 
 /// must be applied to IR::BFN::Pipe
@@ -109,7 +122,25 @@ class ProcessBackendPipe : public PassManager {
                        IR::BFN::Pipe* rv, DeclarationConversions &converted,
                        const BFN::ResubmitPacking *resubmitPackings,
                        const BFN::MirroredFieldListPacking *mirrorPackings,
-                       ParamBinding *bindings, bool useTna);
+                       ParamBinding *bindings);
+    ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                       IR::BFN::Pipe* rv, DeclarationConversions &converted,
+                       ParamBinding *bindings);
+};
+
+class BackendConverter {
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
+    IR::ToplevelBlock* toplevel;
+
+ public:
+    BackendConverter(P4::ReferenceMap *refMap, P4::TypeMap *typeMap, IR::ToplevelBlock* toplevel)
+        : refMap(refMap), typeMap(typeMap), toplevel(toplevel) {
+        CHECK_NULL(refMap); CHECK_NULL(typeMap); CHECK_NULL(toplevel); }
+
+    void convert(const IR::P4Program *prog, BFN_Options& options);
+
+    std::map<int /* index */, const IR::BFN::Pipe*> pipe;
 };
 
 }  // namespace BFN

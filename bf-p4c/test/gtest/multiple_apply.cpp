@@ -109,6 +109,11 @@ bit<1> b;
 
     boost::replace_first(source, "%INGRESS_APPLY%", ingressApply);
 
+    auto& options = BFNContext::get().options();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
     return TofinoPipeTestCase::create(source);
 }
 

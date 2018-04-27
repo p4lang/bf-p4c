@@ -23,6 +23,8 @@ ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
         }
     } else if (options.arch == "psa") {
         passes.push_back(new BFN::PortableSwitchTranslation(refMap, typeMap, options /*map*/));
+    } else if (options.arch == "tna32q") {
+        passes.push_back(new BFN::LowerTofino32QToStratum(refMap, typeMap, options /*map*/));
     }
 }
 

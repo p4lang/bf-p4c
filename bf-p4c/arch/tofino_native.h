@@ -42,6 +42,12 @@ struct LowerTofinoToStratum : public PassManager {
                          BFN_Options& options);
 };
 
+struct LowerTofino32QToStratum : public PassManager {
+    LowerTofino32QToStratum(P4::ReferenceMap* refMap,
+                            P4::TypeMap* typeMap,
+                            BFN_Options& options);
+};
+
 }  // namespace BFN
 
 #endif /* BF_P4C_ARCH_TOFINO_NATIVE_H_ */

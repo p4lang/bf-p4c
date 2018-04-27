@@ -75,6 +75,11 @@ createPaNoOverlayPragmaTestCase() {
                  computeChecksum(), deparse()) main;
     )");
 
+    auto& options = BFNContext::get().options();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
 

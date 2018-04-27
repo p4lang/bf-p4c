@@ -83,6 +83,161 @@ class ArchTranslation : public PassManager {
     ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, BFN_Options& options);
 };
 
+enum ArchBlockType {
+    PARSER,
+    MAU,
+    DEPARSER,
+};
+
+struct BlockInfo {
+    int index;
+    gress_t gress;
+    ArchBlockType type;
+    BlockInfo(int index, gress_t gress, ArchBlockType type)
+        : index(index), gress(gress), type(type) {}
+
+    bool operator==(const BlockInfo& rhs) const {
+        return rhs.index == this->index && rhs.gress == this->gress &&
+               rhs.type == this->type;
+    }
+};
+
+using ArchBlockMapping = std::map<BlockInfo*, const IR::CompileTimeValue*>;
+using BlockInfoMapping = std::map<const IR::Node*, BlockInfo*>;
+
+class ParseTofinoArch : public Inspector {
+ public:
+    ParseTofinoArch() {}
+
+    bool preorder(const IR::PackageBlock* block) override {
+        BlockInfo* binfo = nullptr;
+        auto pipe_index = 0;
+        auto ingress_parser = block->getParameterValue("ingress_parser");
+        binfo = new BlockInfo(pipe_index, INGRESS, PARSER);
+        toArchBlock.emplace(binfo, ingress_parser);
+        toBlockInfo.emplace(ingress_parser->to<IR::ParserBlock>()->container, binfo);
+
+        auto ingress = block->getParameterValue("ingress");
+        binfo = new BlockInfo(pipe_index, INGRESS, MAU);
+        toArchBlock.emplace(binfo, ingress);
+        toBlockInfo.emplace(ingress->to<IR::ControlBlock>()->container, binfo);
+
+        auto ingress_deparser = block->getParameterValue("ingress_deparser");
+        binfo = new BlockInfo(pipe_index, INGRESS, DEPARSER);
+        toArchBlock.emplace(binfo, ingress_deparser);
+        toBlockInfo.emplace(ingress_deparser->to<IR::ControlBlock>()->container, binfo);
+
+        auto egress_parser = block->getParameterValue("egress_parser");
+        binfo = new BlockInfo(pipe_index, EGRESS, PARSER);
+        toArchBlock.emplace(binfo, egress_parser);
+        toBlockInfo.emplace(egress_parser->to<IR::ParserBlock>()->container, binfo);
+
+        auto egress = block->getParameterValue("egress");
+        binfo = new BlockInfo(pipe_index, EGRESS, MAU);
+        toArchBlock.emplace(new BlockInfo(pipe_index, EGRESS, MAU), egress);
+        toBlockInfo.emplace(egress->to<IR::ControlBlock>()->container, binfo);
+
+        auto egress_deparser = block->getParameterValue("egress_deparser");
+        binfo = new BlockInfo(pipe_index, EGRESS, DEPARSER);
+        toArchBlock.emplace(new BlockInfo(pipe_index, EGRESS, DEPARSER), egress_deparser);
+        toBlockInfo.emplace(egress_deparser->to<IR::ControlBlock>()->container, binfo);
+        return false;
+    }
+
+    ArchBlockMapping toArchBlock;
+    BlockInfoMapping toBlockInfo;
+};
+
+class ParseTofino32QArch : public Inspector {
+ public:
+    ParseTofino32QArch() {}
+
+    bool preorder(const IR::PackageBlock* block) override {
+        if (auto param = block->getParameterValue("pipe0")) {
+            if (!param->is<IR::PackageBlock>()) {
+                ::error("Unexpected argument type %1%", param);
+                return false;
+            }
+            BlockInfo* binfo = nullptr;
+            auto p0 = param->to<IR::PackageBlock>();
+            auto pipe_index = 0;
+
+            auto ingress_parser = p0->getParameterValue("ingress_parser");
+            binfo = new BlockInfo(pipe_index, INGRESS, PARSER);
+            toArchBlock.emplace(binfo, ingress_parser);
+            toBlockInfo.emplace(ingress_parser->to<IR::ParserBlock>()->container, binfo);
+
+            auto ingress = p0->getParameterValue("ingress");
+            binfo = new BlockInfo(pipe_index, INGRESS, MAU);
+            toArchBlock.emplace(binfo, ingress);
+            toBlockInfo.emplace(ingress->to<IR::ControlBlock>()->container, binfo);
+
+            auto ingress_deparser = p0->getParameterValue("ingress_deparser");
+            binfo = new BlockInfo(pipe_index, INGRESS, DEPARSER);
+            toArchBlock.emplace(binfo, ingress_deparser);
+            toBlockInfo.emplace(ingress_deparser->to<IR::ControlBlock>()->container, binfo);
+
+            auto egress_parser = p0->getParameterValue("egress_parser");
+            binfo = new BlockInfo(pipe_index, EGRESS, PARSER);
+            toArchBlock.emplace(binfo, egress_parser);
+            toBlockInfo.emplace(egress_parser->to<IR::ParserBlock>()->container, binfo);
+
+            auto egress = p0->getParameterValue("egress");
+            binfo = new BlockInfo(pipe_index, EGRESS, MAU);
+            toArchBlock.emplace(new BlockInfo(pipe_index, EGRESS, MAU), egress);
+            toBlockInfo.emplace(egress->to<IR::ControlBlock>()->container, binfo);
+
+            auto egress_deparser = p0->getParameterValue("egress_deparser");
+            binfo = new BlockInfo(pipe_index, EGRESS, DEPARSER);
+            toArchBlock.emplace(new BlockInfo(pipe_index, EGRESS, DEPARSER), egress_deparser);
+            toBlockInfo.emplace(egress_deparser->to<IR::ControlBlock>()->container, binfo);
+        }
+        if (auto param = block->getParameterValue("pipe1")) {
+            if (!param->is<IR::PackageBlock>()) {
+                ::error("Unexpected argument type %1%", param);
+                return false;
+            }
+            BlockInfo* binfo = nullptr;
+            auto p1 = param->to<IR::PackageBlock>();
+            auto pipe_index = 1;
+
+            auto ingress_parser = p1->getParameterValue("ingress_parser");
+            binfo = new BlockInfo(pipe_index, INGRESS, PARSER);
+            toArchBlock.emplace(binfo, ingress_parser);
+            toBlockInfo.emplace(ingress_parser->to<IR::ParserBlock>()->container, binfo);
+
+            auto ingress = p1->getParameterValue("ingress");
+            binfo = new BlockInfo(pipe_index, INGRESS, MAU);
+            toArchBlock.emplace(binfo, ingress);
+            toBlockInfo.emplace(ingress->to<IR::ControlBlock>()->container, binfo);
+
+            auto ingress_deparser = p1->getParameterValue("ingress_deparser");
+            binfo = new BlockInfo(pipe_index, INGRESS, DEPARSER);
+            toArchBlock.emplace(binfo, ingress_deparser);
+            toBlockInfo.emplace(ingress_deparser->to<IR::ControlBlock>()->container, binfo);
+
+            auto egress_parser = p1->getParameterValue("egress_parser");
+            binfo = new BlockInfo(pipe_index, EGRESS, PARSER);
+            toArchBlock.emplace(binfo, egress_parser);
+            toBlockInfo.emplace(egress_parser->to<IR::ParserBlock>()->container, binfo);
+
+            auto egress = p1->getParameterValue("egress");
+            binfo = new BlockInfo(pipe_index, EGRESS, MAU);
+            toArchBlock.emplace(new BlockInfo(pipe_index, EGRESS, MAU), egress);
+            toBlockInfo.emplace(egress->to<IR::ControlBlock>()->container, binfo);
+
+            auto egress_deparser = p1->getParameterValue("egress_deparser");
+            binfo = new BlockInfo(pipe_index, EGRESS, DEPARSER);
+            toArchBlock.emplace(new BlockInfo(pipe_index, EGRESS, DEPARSER), egress_deparser);
+            toBlockInfo.emplace(egress_deparser->to<IR::ControlBlock>()->container, binfo);
+        }
+        return false;
+    }
+
+    ArchBlockMapping toArchBlock;
+    BlockInfoMapping toBlockInfo;
+};
+
 }  // namespace BFN
 
 #endif /* BF_P4C_ARCH_ARCH_H_ */

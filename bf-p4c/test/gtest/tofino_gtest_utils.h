@@ -21,9 +21,7 @@ namespace Test {
 struct MidendTestCase {
     /// Create a test case that requires the frontend and the midend to run.
     static boost::optional<MidendTestCase>
-    create(const std::string& source,
-           CompilerOptions::FrontendVersion langVersion
-              = CompilerOptions::FrontendVersion::P4_16);
+    create(const std::string& source);
 
     /// The output of the midend.
     const IR::P4Program* program;
@@ -35,16 +33,12 @@ struct MidendTestCase {
 struct TofinoPipeTestCase {
     /// Create a test case that requires extract_maupipe() to run.
     static boost::optional<TofinoPipeTestCase>
-    create(const std::string& source,
-           CompilerOptions::FrontendVersion langVersion
-              = CompilerOptions::FrontendVersion::P4_16);
+    create(const std::string& source);
 
     /// Create a test case that requires extract_maupipe() to run, and apply
     /// CreateThreadLocalInstances.
     static boost::optional<TofinoPipeTestCase>
-    createWithThreadLocalInstances(const std::string& source,
-                                   CompilerOptions::FrontendVersion langVersion
-                                     = CompilerOptions::FrontendVersion::P4_16);
+    createWithThreadLocalInstances(const std::string& source);
 
     /// The output of extract_maupipe().
     const IR::BFN::Pipe* pipe;

@@ -58,6 +58,11 @@ createComputedChecksumTestCase(const std::string& computeChecksumSource,
     boost::replace_first(source, "%COMPUTE_CHECKSUM_SOURCE%", computeChecksumSource);
     boost::replace_first(source, "%DEPARSER_SOURCE%", deparserSource);
 
+    auto& options = BFNContext::get().options();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
     return TofinoPipeTestCase::create(source);
 }
 

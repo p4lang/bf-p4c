@@ -60,6 +60,12 @@ createPaAtomicPragmaTestCase(const std::string& pragmas) {
     )");
 
     boost::replace_first(source, "%PRAGMAS%", pragmas);
+
+    auto& options = BFNContext::get().options();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
 

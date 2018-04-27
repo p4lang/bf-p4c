@@ -131,6 +131,44 @@ class OutputAsm : public PassManager {
     }
 };
 
+/// use pipe.n to generate output directory.
+void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
+    if (::errorCount() > 0)
+        return;
+    if (!maupipe)
+        return;
+
+    if (Log::verbose())
+        std::cout << "Compiling" << std::endl;
+
+    BFN::Backend backend(options);
+    try {
+        maupipe = maupipe->apply(backend);
+    } catch (Util::P4CExceptionBase &ex) {
+        // expect that all compiler failures to be derived from P4CExceptionBase
+        // compiler bugs or program errors are a different exception hierarchy -- are they?
+        std::cerr << ex.what() << std::endl;
+
+        // produce resource nodes in context.json regardless of failures
+        std::cerr << "compilation failed: producing ctxt.json" << std::endl;
+        OutputAsm as(backend, options, false);
+        maupipe->apply(as);
+
+        if (Log::verbose())
+            std::cerr << "Failed." << std::endl;
+        return;
+    } catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
+        if (Log::verbose())
+            std::cerr << "Failed." << std::endl;
+        return;
+    }
+
+    // output the .bfa file
+    OutputAsm as(backend, options);
+    maupipe->apply(as);
+}
+
 int main(int ac, char **av) {
     setup_gc_logging();
     setup_signals();
@@ -167,6 +205,7 @@ int main(int ac, char **av) {
 
     BFN::MidEnd midend(options);
     midend.addDebugHook(hook);
+    // so far, everything is still under the same program for 32q, generate two separate threads
     program = program->apply(midend);
     if (!program)
         return 1;
@@ -195,42 +234,13 @@ int main(int ac, char **av) {
         program->apply(pgg);
     }
 
-    auto maupipe = BFN::extract_maupipe(program, options);
+    // convert midend IR to backend IR
+    BFN::BackendConverter conv(&midend.refMap, &midend.typeMap, midend.toplevel);
+    conv.convert(program, options);
 
-    if (::errorCount() > 0)
-        return 1;
-    if (!maupipe)
-        return 1;
-
-    if (Log::verbose())
-        std::cout << "Compiling" << std::endl;
-
-    BFN::Backend backend(options);
-    try {
-        maupipe = maupipe->apply(backend);
-    } catch (Util::P4CExceptionBase &ex) {
-        // expect that all compiler failures to be derived from P4CExceptionBase
-        // compiler bugs or program errors are a different exception hierarchy -- are they?
-        std::cerr << ex.what() << std::endl;
-
-        // produce resource nodes in context.json regardless of failures
-        std::cerr << "compilation failed: producing ctxt.json" << std::endl;
-        OutputAsm as(backend, options, false);
-        maupipe->apply(as);
-
-        if (Log::verbose())
-            std::cerr << "Failed." << std::endl;
-        return 1;
-    } catch (std::exception &e) {
-        std::cerr << e.what() << std::endl;
-        if (Log::verbose())
-            std::cerr << "Failed." << std::endl;
-        return 1;
+    for (auto& kv : conv.pipe) {
+        execute_backend(kv.second, options);
     }
-
-    // output the .bfa file
-    OutputAsm as(backend, options);
-    maupipe->apply(as);
 
     if (Log::verbose())
         std::cout << "Done." << std::endl;

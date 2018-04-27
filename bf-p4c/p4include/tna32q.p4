@@ -47,7 +47,7 @@ control Egress<H, M>(
     inout M eg_md,
     in egress_intrinsic_metadata_t eg_intr_md,
     in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
-    inout egress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprs,
+    inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs,
     inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
 
 control IngressDeparser<H, M>(
@@ -60,7 +60,7 @@ control EgressDeparser<H, M>(
     packet_out pkt,
     inout H hdr,
     in M metadata,
-    in egress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprs);
+    in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs);
 
 package Pipe<IH, IM, EH, EM>(
     IngressParser<IH, IM> ingress_parser,
@@ -70,7 +70,9 @@ package Pipe<IH, IM, EH, EM>(
     Egress<EH, EM> egress,
     EgressDeparser<EH, EM> egress_deparser);
 
-package Switch(Pipe<_> pipe0, Pipe<_> pipe1);
+package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1>(
+            Pipe<IH0, IM0, EH0, EM0> pipe0,
+            Pipe<IH1, IM1, EH1, EM1> pipe1);
 
 #endif
 

@@ -947,30 +947,66 @@ struct ExtractChecksum : public Inspector {
     IR::BFN::Pipe* rv;
 };
 
-ExtractBackendPipe::ExtractBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                                       IR::BFN::Pipe *rv, ParamBinding *bindings, bool useTna) {
-    setName("ExtractBackendPipe");
+ExtractStratumInfo::ExtractStratumInfo(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                                       IR::BFN::Pipe *rv, ParamBinding *bindings) {
+    setName("ExtractStratumInfo");
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
     addPasses({
         bindings,
         new ExtractMetadata(rv, bindings),
-        (useTna) ? nullptr : new ExtractPhase0(rv, refMap),
+        new ExtractPhase0(rv, refMap),
         simplifyReferences,
         new GetBackendTables(refMap, typeMap, INGRESS, rv, converted),
         new GetBackendTables(refMap, typeMap, EGRESS, rv, converted),
         new ExtractParde(refMap, typeMap, rv),
         new ExtractChecksum(rv),
-        (useTna) ? nullptr : new ExtractResubmitFieldPackings(refMap, typeMap, &resubmitPackings),
-        (useTna) ? nullptr : new ExtractMirrorFieldPackings(refMap, typeMap, &mirrorPackings),
+        new ExtractResubmitFieldPackings(refMap, typeMap, &resubmitPackings),
+        new ExtractMirrorFieldPackings(refMap, typeMap, &mirrorPackings),
     });
 }
 
-// XXX(hanw): these passes should've been done in the midend with frontend IR.
+ExtractTofinoInfo::ExtractTofinoInfo(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                                     IR::BFN::Pipe *rv, ParamBinding *bindings) {
+    setName("ExtractTofinoInfo");
+    auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
+    addPasses({
+                  bindings,
+                  new ExtractMetadata(rv, bindings),
+                  simplifyReferences,
+                  new GetBackendTables(refMap, typeMap, INGRESS, rv, converted),
+                  new GetBackendTables(refMap, typeMap, EGRESS, rv, converted),
+                  new ExtractParde(refMap, typeMap, rv),
+                  new ExtractChecksum(rv),
+              });
+}
+
+ExtractTofino32QInfo::ExtractTofino32QInfo(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                                           IR::BFN::Pipe *p0, IR::BFN::Pipe *p1,
+                                           ParamBinding *bindings) {
+    setName("ExtractTofinoInfo");
+    auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
+    addPasses({
+                  bindings,
+                  new ExtractMetadata(p0, bindings),
+                  new ExtractMetadata(p1, bindings),
+                  simplifyReferences,
+                  new GetBackendTables(refMap, typeMap, INGRESS, p0, converted),
+                  new GetBackendTables(refMap, typeMap, EGRESS, p0, converted),
+                  new GetBackendTables(refMap, typeMap, INGRESS, p1, converted),
+                  new GetBackendTables(refMap, typeMap, EGRESS, p1, converted),
+                  new ExtractParde(refMap, typeMap, p0),
+                  new ExtractParde(refMap, typeMap, p1),
+                  new ExtractChecksum(p0),
+                  new ExtractChecksum(p1),
+              });
+}
+
+// used by backend for stratum architecture
 ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
                                        IR::BFN::Pipe *rv, DeclarationConversions &converted,
                                        const BFN::ResubmitPacking* resubmitPackings,
                                        const BFN::MirroredFieldListPacking* mirrorPackings,
-                                       ParamBinding *bindings, bool useTna) {
+                                       ParamBinding *bindings) {
     setName("ProcessBackendPipe");
     CHECK_NULL(bindings);
     CHECK_NULL(resubmitPackings);
@@ -978,9 +1014,9 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
     addPasses({
         new AttachTables(refMap, converted),  // add attached tables
-        new ProcessParde(rv, useTna),         // add parde metadata
-        (useTna) ? nullptr : new PopulateResubmitStateWithFieldPackings(resubmitPackings),
-        (useTna) ? nullptr : new PopulateMirrorStateWithFieldPackings(rv, mirrorPackings),
+        new ProcessParde(rv, false /* useTna */),         // add parde metadata
+        new PopulateResubmitStateWithFieldPackings(resubmitPackings),
+        new PopulateMirrorStateWithFieldPackings(rv, mirrorPackings),
         /// followings two passes are necessary, because ProcessBackendPipe transforms the
         /// IR::BFN::Pipe objects. If all the above passes can be moved to an earlier midend
         /// pass, then the passes below can possibily be removed.
@@ -989,33 +1025,113 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
     });
 }
 
-const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, BFN_Options& options) {
-    P4::ReferenceMap refMap;
-    P4::TypeMap typeMap;
-    refMap.setIsV1(true);
-    P4::EvaluatorPass evaluator(&refMap, &typeMap);
-    program = program->apply(evaluator);
+// used by backend for tna architecture
+ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                                       IR::BFN::Pipe *rv, DeclarationConversions &converted,
+                                       ParamBinding *bindings) {
+    setName("ProcessBackendPipe");
+    CHECK_NULL(bindings);
+    auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
+    addPasses({
+        new AttachTables(refMap, converted),  // add attached tables
+        new ProcessParde(rv, true /* useTna */),           // add parde metadata
+        /// followings two passes are necessary, because ProcessBackendPipe transforms the
+        /// IR::BFN::Pipe objects. If all the above passes can be moved to an earlier midend
+        /// pass, then the passes below can possibily be removed.
+        simplifyReferences,
+        new CopyHeaderEliminator(),
+    });
+}
 
-    bool useTna = (options.langVersion == CompilerOptions::FrontendVersion::P4_16 &&
-                   options.arch == "tna");
-    auto rv = new IR::BFN::Pipe();
-    auto bindings = new ParamBinding(&typeMap);
-    ExtractBackendPipe extractBackendPipe(&refMap, &typeMap, rv, bindings, useTna);
-    extractBackendPipe.addDebugHook(options.getDebugHook());
-    program = program->apply(extractBackendPipe);
+void BackendConverter::convert(const IR::P4Program *program, BFN_Options& options) {
+    if (options.arch == "v1model") {
+        if (options.target == "tofino" || options.target == "jbay") {
+            auto parseTofinoArch = new ParseTofinoArch();
+            toplevel->getMain()->apply(*parseTofinoArch);
+            auto bindings = new ParamBinding(typeMap);
+            auto rv = new IR::BFN::Pipe();
+            ExtractStratumInfo extractStratumInfo(refMap, typeMap, rv, bindings);
+            extractStratumInfo.addDebugHook(options.getDebugHook());
+            program->apply(extractStratumInfo);
 
-    // collect and set global_pragmas
-    CollectGlobalPragma collect_pragma;
-    program = program->apply(collect_pragma);
-    rv->global_pragmas = collect_pragma.global_pragmas();
+            // collect and set global_pragmas
+            CollectGlobalPragma collect_pragma;
+            program->apply(collect_pragma);
+            rv->global_pragmas = collect_pragma.global_pragmas();
 
-    ProcessBackendPipe processBackendPipe(&refMap, &typeMap, rv,
-                                          extractBackendPipe.converted,
-                                          &extractBackendPipe.resubmitPackings,
-                                          &extractBackendPipe.mirrorPackings,
-                                          bindings, useTna);
-    processBackendPipe.addDebugHook(options.getDebugHook());
-    return rv->apply(processBackendPipe);
+            ProcessBackendPipe processBackendPipe(refMap, typeMap, rv,
+                                                  extractStratumInfo.converted,
+                                                  &extractStratumInfo.resubmitPackings,
+                                                  &extractStratumInfo.mirrorPackings,
+                                                  bindings);
+            processBackendPipe.addDebugHook(options.getDebugHook());
+            pipe.emplace(0 /* index 0 */, rv->apply(processBackendPipe));
+        }
+    } else if (options.arch == "psa" &&
+             options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
+        if (options.target == "tofino" || options.target == "jbay") {
+            auto parseTofinoArch = new ParseTofinoArch();
+            toplevel->getMain()->apply(*parseTofinoArch);
+            auto bindings = new ParamBinding(typeMap);
+            auto rv = new IR::BFN::Pipe();
+            ExtractStratumInfo extractStratumInfo(refMap, typeMap, rv, bindings);
+            extractStratumInfo.addDebugHook(options.getDebugHook());
+            program->apply(extractStratumInfo);
+
+            // collect and set global_pragmas
+            CollectGlobalPragma collect_pragma;
+            program->apply(collect_pragma);
+            rv->global_pragmas = collect_pragma.global_pragmas();
+
+            ProcessBackendPipe processBackendPipe(refMap, typeMap, rv,
+                                                  extractStratumInfo.converted, bindings);
+            processBackendPipe.addDebugHook(options.getDebugHook());
+            pipe.emplace(0 /* index 0 */, rv->apply(processBackendPipe));
+        }
+    } else if (options.arch == "tna" &&
+             options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
+        if (options.target == "tofino" || options.target == "jbay") {
+            auto parseTofinoArch = new ParseTofinoArch();
+            toplevel->getMain()->apply(*parseTofinoArch);
+            auto bindings = new ParamBinding(typeMap);
+            auto rv = new IR::BFN::Pipe();
+            ExtractTofinoInfo extractTofinoInfo(refMap, typeMap, rv, bindings);
+            extractTofinoInfo.addDebugHook(options.getDebugHook());
+            program = program->apply(extractTofinoInfo);
+
+            // collect and set global_pragmas
+            CollectGlobalPragma collect_pragma;
+            program->apply(collect_pragma);
+            rv->global_pragmas = collect_pragma.global_pragmas();
+
+            ProcessBackendPipe processBackendPipe(refMap, typeMap, rv,
+                                                  extractTofinoInfo.converted, bindings);
+            processBackendPipe.addDebugHook(options.getDebugHook());
+            pipe.emplace(0 /* index 0 */, rv->apply(processBackendPipe));
+        }
+    } else if (options.arch == "tna32q" &&
+               options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
+        if (options.target == "tofino" || options.target == "jbay") {
+            auto parseTofino32QArch = new ParseTofino32QArch();
+            toplevel->getMain()->apply(*parseTofino32QArch);
+
+            auto bindings = new ParamBinding(typeMap);
+            auto p0 = new IR::BFN::Pipe();
+            auto p1 = new IR::BFN::Pipe();
+            ExtractTofino32QInfo extractTofino32QInfo(refMap, typeMap, p0, p1, bindings);
+            program = program->apply(extractTofino32QInfo);
+
+            ProcessBackendPipe processBackendPipe0(refMap, typeMap, p0,
+                                                  extractTofino32QInfo.converted, bindings);
+            processBackendPipe0.addDebugHook(options.getDebugHook());
+            pipe.emplace(0 /* index 0 */, p0->apply(processBackendPipe0));
+
+            ProcessBackendPipe processBackendPipe1(refMap, typeMap, p1,
+                                                  extractTofino32QInfo.converted, bindings);
+            processBackendPipe1.addDebugHook(options.getDebugHook());
+            pipe.emplace(1 /* index 1 */, p1->apply(processBackendPipe1));
+        }
+    }
 }
 
 }  // namespace BFN

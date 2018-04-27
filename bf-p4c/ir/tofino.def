@@ -75,6 +75,17 @@ class BFN::Pipe {
                 v.visit(th.deparser, "deparser"); } } }
 }
 
+class BFN::Pipes {
+    Pipes() = default;
+#noconstructor
+    Pipe[2] pipes = {};  // Pipe0 and Pipe1
+    visit_children {
+        v.visit(pipes[0]);
+        v.visit(pipes[1]);
+    }
+#nodbprint
+}
+
 abstract BFN::Unit {
     /* Abstract base class for any of
        - parser state

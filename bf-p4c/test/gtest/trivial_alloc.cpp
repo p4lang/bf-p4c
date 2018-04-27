@@ -21,6 +21,12 @@ namespace SharedPhvTestCases {
 /// A simple P4 program with a variety of header fields.
 static boost::optional<TofinoPipeTestCase> trivialAlloc() {
     SCOPED_TRACE("PhvTestCase::trivialAlloc()");
+
+    auto& options = BFNContext::get().options();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
     return TofinoPipeTestCase::createWithThreadLocalInstances(P4_SOURCE(P4Headers::CORE, R"(
         header H1 { bit<8> field; }
         header H2 { bit<1> field1; bit<6> field2; bit<9> field3; }
