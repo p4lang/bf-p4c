@@ -178,8 +178,6 @@ if (PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: .* != .*"
-    smoketest_switch_msdc_L2LNStatsTest
-    smoketest_switch_msdc_L2VlanStatsTest
     smoketest_switch_msdc_MalformedPacketsTest
     )
 

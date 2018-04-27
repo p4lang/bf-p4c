@@ -189,6 +189,9 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
         auto mapram = logical_row.maprams.begin();
         auto &map_alu_row =  map_alu.row[row];
         LOG2("# DataSwitchbox.setup(" << row << ") home=" << home->row/2U);
+        if (&logical_row == home) {
+            if (swbox.get_home_row() != row)
+                swbox.setup_row(swbox.get_home_row()); }
         swbox.setup_row(row);
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
@@ -198,7 +201,7 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
                 regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
             ++mapram, ++vpn; }
         if (&logical_row == home) {
-            int stats_group_index = row/2;
+            int stats_group_index = swbox.get_home_row()/2;
             auto &stats = map_alu.stats_wrap[stats_group_index].stats;
             auto &stat_ctl = stats.statistics_ctl;
             stat_ctl.stats_entries_per_word = format->groups();
@@ -224,17 +227,17 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
         } else {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
-            if (home->row >= 8 && logical_row.row < 8) {
+            if (swbox.get_home_row_logical() >= 8 && logical_row.row < 8) {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = 0;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::OVERFLOW;
                 push_on_overflow = true;
             } else {
-                adr_ctl.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
+                adr_ctl.adr_dist_oflo_adr_xbar_source_index = swbox.get_home_row_logical() % 8;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::STATISTICS; }
             adr_ctl.adr_dist_oflo_adr_xbar_enable = 1;
         }
     }
-    int stats_group_index = home->row/4U;
+    int stats_group_index = swbox.get_home_row()/2;
     bool run_at_eop = this->run_at_eop();
     for (MatchTable *m : match_tables)
         run_at_eop = run_at_eop || m->run_at_eop();

@@ -1293,6 +1293,7 @@ DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
     };
     std::vector<lrt_params>     lrt;
 public:
+    int home_row() const override { return layout.at(0).row; }
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;
     int address_shift() const override;

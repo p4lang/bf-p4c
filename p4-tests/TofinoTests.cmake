@@ -160,7 +160,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_2"
      	switch_tests.L2DynamicMacMoveTest
      	switch_tests.L2FloodTest
         switch_tests.L2LagTest
-	switch_tests.L2MacLearnTest
+        switch_tests.L2LNStatsTest
+	    switch_tests.L2MacLearnTest
      	switch_tests.L2StaticMacBulkDeleteTest
      	switch_tests.L2StaticMacMoveTest
      	switch_tests.L2TrunkToAccessVlanTest")
@@ -168,9 +169,10 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_3" ${SWITCH_P4
     "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_3"
 	"switch_tests.L2TrunkToTrunkVlanTest
+    switch_tests.L2VlanStatsTest
 	switch_tests.L3EcmpLagTest
 	switch_tests.L3IPv4EcmpTest
-        switch_tests.L3IPv4HostJumboTest
+    switch_tests.L3IPv4HostJumboTest
 	switch_tests.L3IPv4HostModifyTest
 	switch_tests.L3IPv4HostTest
 	switch_tests.L3IPv4LagTest
@@ -215,14 +217,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_7"
 	switch_acl.MirrorAclTest_e2e
 	switch_acl.MirrorAclTest_i2e
 	switch_acl.MirrorSessionTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_L2LNStatsTest" ${SWITCH_P4}
-	"${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_L2LNStatsTest"
-        "switch_tests.L2LNStatsTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_L2VlanStatsTest" ${SWITCH_P4}
-	"${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_L2VlanStatsTest"
-        "switch_tests.L2VlanStatsTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_L3IPv4EcmpSeedTest" ${SWITCH_P4}
         "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_L3IPv4EcmpSeedTest"
@@ -244,8 +238,6 @@ set_tests_properties("tofino/smoketest_switch_msdc_set_4" PROPERTIES TIMEOUT 120
 set_tests_properties("tofino/smoketest_switch_msdc_set_5" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_msdc_set_6" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_msdc_set_7" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_msdc_L2LNStatsTest" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_msdc_L2VlanStatsTest" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_msdc_L3IPv4EcmpSeedTest" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_msdc_MalformedPacketsTest" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest" PROPERTIES TIMEOUT 12000)

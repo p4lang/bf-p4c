@@ -13,10 +13,31 @@ template<class REGS>
 class DataSwitchboxSetup {
     REGS        &regs;
     Table       *tbl;
-    unsigned    home_row, prev_row;
+    unsigned    home_row, home_row_logical, prev_row, top_ram_row;
 public:
+    unsigned get_home_row() { return home_row; }
+    unsigned get_home_row_logical() { return home_row_logical; }
     DataSwitchboxSetup(REGS &regs, Table *t) : regs(regs), tbl(t) {
-        home_row = prev_row = tbl->layout[0].row/2U; }
+        top_ram_row = prev_row = home_row = tbl->layout[0].row/2U;
+        // Counter ALU's are on even rows on right side of RAM array. Set
+        // home_row to the correct ALU
+        if (tbl->table_type() == Table::COUNTER)
+            prev_row = home_row = prev_row % 2 ? prev_row + 1 : prev_row;
+        // Stateful/Selection/Meter ALU's are on odd rows on right side of RAM
+        // array. Set home_row to the correct ALU
+        else if (tbl->table_type() == Table::STATEFUL ||
+                tbl->table_type() == Table::SELECTION ||
+                tbl->table_type() == Table::METER)
+            prev_row = home_row = prev_row % 2 ? prev_row : prev_row + 1;
+        home_row_logical = home_row * 2 + 1; }
+    // FIXME: setup_row needs to be fixed to remove warnings in model when
+    // home_row is not in layout rows.
+    // WARN MauSramRowReg: synth2port data muxes unnecessary for stats_alu row
+    // with no rams stats_rd_r=1 stats_rd_l=0 meter_rd_r=0 meter_rd_l=0
+    // WARN MauSramRowReg: synth2port_fabric_ctl unnecessary config for middle
+    // row no rams stats_to_vbus_below=0 oflo_to_vbus_below=1
+    // oflo_to_vbus_above=1 synth2port_connect_below=1
+    // synth2port_connect_above=1 synth2port_connect_below2above=1
     void setup_row(unsigned row) {
         auto &map_alu =  regs.rams.map_alu;
         auto &swbox = regs.rams.array.switchbox.row;
@@ -44,8 +65,9 @@ public:
                 swbox[row].ctl.r_oflo_wr_o_mux_select = 1;
                 syn2port_ctl.oflo_to_vbus_above = 1;
                 syn2port_ctl.synth2port_connect_above = 1; } }
-        if (row == home_row)
-            swbox[row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_stats_rd_r_i = 1;
+        // FIXME: Should this be top_ram_row?
+        if (row == home_row) {
+            swbox[row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_stats_rd_r_i = 1; }
     }
     void setup_row_col(unsigned row, unsigned col, int vpn) {
         int side = col >= 6;
@@ -84,7 +106,7 @@ public:
         ram_address_mux_ctl.map_ram_wadr_mux_select = MapRam::Mux::SYNTHETIC_TWO_PORT;
         ram_address_mux_ctl.map_ram_wadr_mux_enable = 1;
         ram_address_mux_ctl.map_ram_radr_mux_select_smoflo = 1;
-        int syn2port_bus = prev_row == home_row ? 0 : 1;
+        int syn2port_bus = prev_row == top_ram_row ? 0 : 1;
         auto &syn2port_members = map_alu_row.i2portctl.synth2port_hbus_members[syn2port_bus][side];
         syn2port_members |= 1U << logical_col;
     }
