@@ -229,14 +229,6 @@ static const IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4:
     return rv->apply(afs)->to<IR::MAU::Action>();
 }
 
-static IR::ID getAnnotID(const IR::Annotations *annot, cstring name) {
-    if (auto a = annot->getSingle(name))
-        if (a->expr.size() == 1)
-            if (auto str = a->expr.at(0)->to<IR::StringLiteral>())
-                return IR::ID(str->srcInfo, str->value);
-    return IR::ID();
-}
-
 static IR::MAU::AttachedMemory *createIdleTime(cstring name, const IR::Annotations *annot) {
     auto idletime = new IR::MAU::IdleTime(name);
 
@@ -329,7 +321,6 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
             sel->mode = IR::ID("resilient");
         }
 
-        // sel->type = getAnnotID(annot, "type");
         sel->num_groups = 4;
         sel->group_size = 120;
         BUG_CHECK(args->size() == 3, "%s Selector does not have the correct number of arguments",
@@ -885,7 +876,6 @@ class ExtractMetadata : public Inspector {
                                        bindings->get(md)->obj->to<IR::Metadata>());
             }
         } else if (gress == EGRESS) {
-            int size = mau->getApplyParameters()->parameters.size();
             auto md = mau->getApplyParameters()->parameters.at(2);
             rv->metadata.addUnique("egress_intrinsic_metadata",
                                    bindings->get(md)->obj->to<IR::Header>());

@@ -180,6 +180,12 @@ void StatefulTable::pass1() {
             error(r.lineno, "%s is not a stateful table in the same stage as %s",
                   r->name(), name());
     Synth2Port::pass1();
+    if (underflow_action.set() && (!actions || !actions->exists(underflow_action.name)))
+        error(underflow_action.lineno, "No action %s in table %s",
+              underflow_action.name.c_str(), name());
+    if (overflow_action.set() && (!actions || !actions->exists(overflow_action.name)))
+        error(overflow_action.lineno, "No action %s in table %s",
+              overflow_action.name.c_str(), name());
 }
 
 int StatefulTable::get_const(long v) {

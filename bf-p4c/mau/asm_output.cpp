@@ -2401,6 +2401,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
             sep = ", "; }
         out << (sep+1) << ']' << std::endl;
         --indent; }
+    if (salu->overflow) out << indent << "overflow: " << salu->overflow << std::endl;
+    if (salu->underflow) out << indent << "underflow: " << salu->underflow << std::endl;
     if (!salu->instruction.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : Values(salu->instruction))

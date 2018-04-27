@@ -87,6 +87,12 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
             watermark_level = kv.value[1].i / 128;
             if (kv.value[1].i % 128 != 0)
                 error(kv.value[1].lineno, "watermark level must be a mulitple of 128");
+    } else if (kv.key == "underflow") {
+        if (CHECKTYPE(kv.value, tSTR))
+            underflow_action = kv.value;
+    } else if (kv.key == "overflow") {
+        if (CHECKTYPE(kv.value, tSTR))
+            overflow_action = kv.value;
     } else
         return false;
     return true;
@@ -140,7 +146,7 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
         if (auto *call = m->get_call(this))
             if (call->args.size() >= 2 || call->args.at(1).type == Call::Arg::Counter)
                 mode = call->args.at(1).count_mode();
-        // adrdist.mau_stateful_log_counter_logical_map[m->logical+id] = ???
+        // adrdist.mau_stateful_log_counter_logical_map[m->logical_id] = ???
         merge.mau_stateful_log_counter_ctl[m->logical_id/8U][0].set_subfield(
             mode & PUSHPOP_MASK , 3*(m->logical_id % 8U), 3);
         merge.mau_stateful_log_counter_ctl[m->logical_id/8U][1].set_subfield(
@@ -167,4 +173,10 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
         ctl2.slog_watermark_ctl = watermark_pop_not_push;
         ctl2.slog_watermark_enable = 1;
         merge.mau_stateful_log_watermark_threshold[meter_group] = watermark_level; }
+    auto &ctl3 = merge.mau_stateful_log_counter_ctl3[meter_group];
+    if (underflow_action.set())
+        // 4-bit stateful address MSB encoding for instruction, as given by table 6-67 (6.4.4.11)
+        ctl3.slog_underflow_instruction = actions->action(underflow_action.name)->code * 2 + 1;
+    if (overflow_action.set())
+        ctl3.slog_overflow_instruction = actions->action(overflow_action.name)->code * 2 + 1;
 }

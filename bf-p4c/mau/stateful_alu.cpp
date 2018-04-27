@@ -86,15 +86,56 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
 }
 
 bool CreateSaluInstruction::preorder(const IR::Function *func) {
-    BUG_CHECK(params == nullptr, "Nested function?");
+    BUG_CHECK(!action && !params, "Nested function?");
+    cstring name = reg_action->name;
+    if (func->name != "apply") {
+        name += "$" + func->name;
+        if (func->name == "overflow") {
+            if (salu->overflow)
+                error("%s: Conflicting overflow function for register", func->srcInfo);
+            else
+                salu->overflow = name; }
+        if (func->name == "underflow") {
+            if (salu->underflow)
+                error("%s: Conflicting underflow function for register", func->srcInfo);
+            else
+                salu->underflow = name; } }
+    LOG3("Creating action " << name << " for stateful table " << salu->name);
     LOG5(func);
+    action = new IR::MAU::SaluAction(func->srcInfo, name);
+    salu->instruction.addUnique(name, action);
     params = func->type->parameters;
     return true;
 }
+
 void CreateSaluInstruction::postorder(const IR::Function *func) {
     BUG_CHECK(params == func->type->parameters, "recursion failure");
+    if (cmp_instr.size() > 2)
+        error("%s: register action %s.%s needs %d comparisons; only 2 possible",
+              func->srcInfo, reg_action->name, func->name, cmp_instr.size());
+    if (onebit) {
+        action->action.push_back(onebit);
+        LOG3("  add " << *action->action.back()); }
+    if (output) {
+        action->action.push_back(output);
+        LOG3("  add " << *action->action.back()); }
+    if (math.valid) {
+        if (salu->math.valid && !(math == salu->math))
+            error("%s: math unit incompatible with %s", reg_action->srcInfo, salu);
+        else
+            salu->math = math; }
+    if (math_function && !math_function->expr)
+        error("%s: math unit requires math_input", reg_action->srcInfo);
+    int alu_hi_use = salu->dual ? 1 : 0;
+    for (auto &local : Values(locals))
+        if (local.use == LocalVar::ALUHI)
+            alu_hi_use++;
+    if (alu_hi_use > 1)
+        error("%s: too many locals in register action", func->srcInfo);
     params = nullptr;
+    action = nullptr;
 }
+
 bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
     BUG_CHECK(operands.empty(), "recursion failure");
     etype = NONE;
@@ -468,35 +509,10 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Variable *v) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
-    BUG_CHECK(!action, "%s: Nested extern", di->srcInfo);
-    LOG3("Creating action " << di->name << " for stateful table " << salu->name);
-    action = new IR::MAU::SaluAction(di->srcInfo, di->name);
-    salu->instruction.addUnique(di->name, action);
-    visit(di->properties, "properties");    // for P4_14 stateful_alu
-    visit(di->initializer, "initializer");  // for P4_16 abstract function
-    if (cmp_instr.size() > 2)
-        error("%s: register action %s needs %d comparisons; only 2 possible",
-              di->srcInfo, di->name, cmp_instr.size());
-    if (onebit) {
-        action->action.push_back(onebit);
-        LOG3("  add " << *action->action.back()); }
-    if (output) {
-        action->action.push_back(output);
-        LOG3("  add " << *action->action.back()); }
-    if (math.valid) {
-        if (salu->math.valid && !(math == salu->math))
-            error("%s: math unit incompatible with %s", di->srcInfo, salu);
-        else
-            salu->math = math; }
-    if (math_function && !math_function->expr)
-        error("%s: math unit requires math_input", di->srcInfo);
-    int alu_hi_use = salu->dual ? 1 : 0;
-    for (auto &local : Values(locals))
-        if (local.use == LocalVar::ALUHI)
-            alu_hi_use++;
-    if (alu_hi_use > 1)
-        error("%s: too many locals in register action", di->srcInfo);
-    return false;
+    BUG_CHECK(!reg_action, "%s: Nested extern", di->srcInfo);
+    BUG_CHECK(di->properties.empty(), "direct from P4_14 salu blackbox no longer supported");
+    reg_action = di;
+    return true;
 }
 
 bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {

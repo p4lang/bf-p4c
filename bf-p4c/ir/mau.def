@@ -415,6 +415,9 @@ class StatefulAlu : Synth2Port {
     inline NameMap<SaluAction, ordered_map>             instruction = {};
     // The stateful_alu externs executed for each action in the match table
     ordered_map<cstring, cstring>                       action_map = {};
+    // overflow and underflow actions, if any
+    cstring                                             overflow = {};
+    cstring                                             underflow = {};
 
     class MathUnit {
         bool            valid = false;

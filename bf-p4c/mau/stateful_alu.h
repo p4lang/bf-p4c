@@ -34,10 +34,11 @@ that exceeed the capabilities of the salu are diagnosed.
 
 */
 class CreateSaluInstruction : public Inspector {
-    IR::MAU::StatefulAlu        *salu;
-    const IR::Type              *regtype;
-    IR::MAU::SaluAction         *action = nullptr;
-    const IR::ParameterList     *params = nullptr;
+    IR::MAU::StatefulAlu                *salu;
+    const IR::Type                      *regtype;
+    const IR::Declaration_Instance      *reg_action = nullptr;
+    IR::MAU::SaluAction                 *action = nullptr;
+    const IR::ParameterList             *params = nullptr;
     struct LocalVar {
         cstring                 name;
         bool                    pair;
@@ -77,6 +78,7 @@ class CreateSaluInstruction : public Inspector {
     void postorder(const IR::Property *) override { BUG("unconverted p4_14"); }
     bool preorder(const IR::Function *) override;
     void postorder(const IR::Function *) override;
+    bool preorder(const IR::Annotations *) override { return false; }
     bool preorder(const IR::AssignmentStatement *) override;
     bool preorder(const IR::IfStatement *) override;
     bool preorder(const IR::BlockStatement *) override { return true; }

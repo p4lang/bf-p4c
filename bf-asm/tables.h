@@ -1359,6 +1359,7 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     unsigned initial_value_hi = 0;
     int logvpn_lineno = -1;
     int logvpn_min = -1, logvpn_max = -1;
+    Ref underflow_action, overflow_action;
 public:
     Ref                 bound_selector;
     unsigned            phv_byte_mask = 0;

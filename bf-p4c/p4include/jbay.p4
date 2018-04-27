@@ -597,6 +597,8 @@ extern RegisterAction<T, U> {
     U dequeue();  /* fifo push operation */
     U push();  /* stack push operation */
     U pop();  /* stack pop operation */
+    @optional abstract void overflow(@optional inout T value, @optional out U rv);
+    @optional abstract void underflow(@optional inout T value, @optional out U rv);
 }
 
 extern DirectRegisterAction<T, U, P> {
