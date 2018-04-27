@@ -65,6 +65,8 @@ public:
     template<class TARGET> void output(json::map &ctxt_json);
     template<class REGS>
         void gen_configuration_cache(REGS &regs, json::vector &cfg_cache);
+    template<class REGS>
+        void gen_stage_dependency(REGS &regs, json::vector &stg_dependency);
     template<class REGS> void write_regs(REGS &regs);
     template<class TARGET> void write_common_regs(typename TARGET::mau_regs &regs);
     int adr_dist_delay(gress_t gress);

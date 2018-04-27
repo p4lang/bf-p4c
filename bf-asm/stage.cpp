@@ -215,6 +215,8 @@ void AsmStage::output(json::map &ctxt_json) {
 
     for (unsigned i = 0; i < stage.size(); i++)
         SWITCH_FOREACH_TARGET(options.target, stage[i].output<TARGET>(ctxt_json);)
+
+
 }
 
 static FakeTable invalid_rams("RAMS NOT PRESENT");
@@ -412,7 +414,20 @@ void Stage::output(json::map &ctxt_json) {
     sprintf(buf, "regs.match_action_stage.%02x", stageno);
     if (stageno < Target::NUM_MAU_STAGES())
         TopLevel::all->set_mau_stage(stageno, buf, regs);
+    gen_stage_dependency(*regs, ctxt_json["stage_dependency"]);
     gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
+}
+
+template<class REGS>
+void Stage::gen_stage_dependency(REGS &regs, json::vector &stg_dependency) {
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+        json::map anon;
+        anon["stage"] = stageno;
+        anon["gress"] = (gress == INGRESS) ? "ingress" : "egress";
+        anon["match_dependent"] = (regs.dp.cur_stage_dependency_on_prev[gress] == 0)
+                                       ? true : false;
+        stg_dependency.push_back(std::move(anon));
+    }
 }
 
 template<class REGS>
