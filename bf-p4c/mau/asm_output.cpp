@@ -1568,7 +1568,7 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
             if (ghosted_bits.empty())
                 continue;
             else if (ghosted_bits != cont_loc)
-                hi -= (cont_loc.max().index() - ghosted_bits.min().index());
+                hi -= (cont_loc.max().index() - ghosted_bits.max().index());
             Slice sl(phv, fi.get_use_name(), lo, hi);
             if (sl.bytealign() != (ghosted_bits.min().index() % 8))
                 BUG("Byte alignment for ghosting does not match up properly");

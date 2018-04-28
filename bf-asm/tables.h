@@ -1221,7 +1221,7 @@ public:
     int unitram_type() override { return UnitRam::SELECTOR; }
     StatefulTable *get_stateful() const override { return bound_stateful; }
     void set_stateful(StatefulTable *s) override { bound_stateful = s; }
-    unsigned per_flow_enable_bit(MatchTable *m = nullptr) const;
+    unsigned per_flow_enable_bit(MatchTable *m = nullptr) const override;
 )
 
 class IdletimeTable : public Table {
@@ -1372,7 +1372,7 @@ public:
     int get_const(long v);
     bool is_dual_mode() { return dual_mode; }
     int home_row() const override { return layout.at(0).row | 3; }
-    unsigned per_flow_enable_bit(MatchTable *m = nullptr) const;
+    unsigned per_flow_enable_bit(MatchTable *m = nullptr) const override;
     void set_output_used() override { output_used = true; }
     FOR_ALL_TARGETS(TARGET_OVERLOAD, static int parse_counter_mode, const value_t &)
     static int parse_counter_mode(const value_t &v) {

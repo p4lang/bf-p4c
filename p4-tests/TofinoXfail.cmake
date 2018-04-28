@@ -1084,10 +1084,3 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1208-1.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Syntax error"
-  testdata/p4_14_samples/parser_value_set0.p4
-  testdata/p4_14_samples/parser_value_set1.p4
-  testdata/p4_14_samples/issue946.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/pvs/pvs.p4
-)

@@ -399,7 +399,7 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                                     s.action = m.value.s;
                                 else if (m.key == "is_default_entry")
                                     s.is_default_entry =
-                                        (m.value.s == "true") ? true : false;
+                                        (strncmp(m.value.s, "true", 4) == 0);
                             } else if (m.value.type == tVEC) {
                                 for (auto &f : m.value.vec) {
                                     if (CHECKTYPE(f, tINT)) {

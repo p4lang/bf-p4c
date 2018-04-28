@@ -644,6 +644,7 @@ deparser <thread>:
                 # data that is included in the digest, but it may also contain
                 # control metadata; for example, when configuring mirroring on
                 # Tofino, the first phv container specifies the mirror session id.
+        context_json: # anything
     # ingress or egress params:
     mirror: <digest-params>
     egress_unicast_port: <phv-location> [ ':' <pov-bit> ]

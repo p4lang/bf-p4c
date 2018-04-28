@@ -258,9 +258,3 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_16/stack_valid.p4
 )
 
-p4c_add_xfail_reason("jbay"
-  "Syntax error"
-  testdata/p4_14_samples/parser_value_set0.p4
-  testdata/p4_14_samples/parser_value_set1.p4
-  testdata/p4_14_samples/issue946.p4
-)

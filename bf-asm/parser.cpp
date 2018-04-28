@@ -120,7 +120,7 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
             if (kv.key == "states") {
                 if (CHECKTYPE(kv.value, tMAP))
                     for (auto &st : kv.value.map)
-                        define_state(gress, st); 
+                        define_state(gress, st);
                 continue; }
             if (gress == EGRESS && kv.key == "meta_opt") {
                 if (CHECKTYPE(kv.value, tINT))
@@ -790,6 +790,14 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
                 future.setup(kv.value);
         } else if (kv.key == "checksum") {
             csum.emplace_back(gress, kv);
+        } else if (kv.key == "field_mapping") {
+            if (CHECKTYPE(kv.value, tMAP)) {
+                for (auto map : kv.value.map) {
+                    auto ref = Phv::Ref(gress, map.key);
+                    auto fm = FieldMapping(ref, map.value);
+                    field_mapping.emplace_back(fm);
+                }
+            }
         } else if (kv.key.type == tCMD && kv.key == "clot" && kv.key.vec.size == 2) {
             clots.emplace_back(singleton_object, gress, kv.key.vec[1], kv.value);
         } else if (kv.key.type == tINT) {
@@ -931,6 +939,17 @@ Parser::State::Match::Clot::Clot(Parser &prsr, gress_t gress, const value_t &tag
             max_length = length;
     } else if (!load_length && max_length != length) {
         error(data.lineno, "Inconsistent constant length and max_length in clot"); }
+}
+
+Parser::State::Match::FieldMapping::FieldMapping(Phv::Ref &ref, const value_t &a) {
+    if (CHECKTYPE(a, tCMD)) {
+        where = ref;
+        container_id = a.vec[0].s;
+        lo = a.vec[1].lo;
+        hi = a.vec[1].hi;
+    } else {
+        error(a.lineno, "Syntax error");
+    }
 }
 
 Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR(pair_t) &data) :
@@ -1356,16 +1375,22 @@ void Parser::State::MatchKey::write_config(REGS &, json::vector &) {
 template <class REGS>
 void Parser::State::write_config(REGS &regs, Parser *pa, json::vector &ctxt_json) {
     LOG2(gress << " state " << name << " (" << stateno << ')');
-    json::map state_cjson;
-    state_cjson["parser_name"] = name;
-    bool uses_pvs = false;
-    key.write_config(regs, state_cjson["match_registers"]);
     for (auto i = match.begin(); i != match.end(); i++) {
+        bool uses_pvs = false;
+        json::map state_cjson;
+        state_cjson["parser_name"] = name;
+        i->write_config(regs, state_cjson["match_registers"]);
         if (i->value_set_size > 0) uses_pvs = true;
-        i->write_config(regs, pa, this, def, state_cjson); }
-    state_cjson["uses_pvs"] = uses_pvs;
-    if (def) def->write_config(regs, pa, this, 0, state_cjson);
-    for (auto idx : MatchIter(stateno)) {
-        state_cjson["parser_state_id"] = idx;
-        ctxt_json.push_back(state_cjson.clone()); }
+        i->write_config(regs, pa, this, def, state_cjson);
+        state_cjson["uses_pvs"] = uses_pvs;
+        if (def) def->write_config(regs, pa, this, 0, state_cjson);
+        if (uses_pvs) {
+            state_cjson["pvs_name"] = i->value_set_name;
+            state_cjson["pvs_handle"] = --pa->pvs_handle;
+        }
+        for (auto idx : MatchIter(stateno)) {
+            state_cjson["parser_state_id"] = idx;
+            ctxt_json.push_back(state_cjson.clone());
+        }
+    }
 }

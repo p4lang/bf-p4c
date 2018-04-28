@@ -163,6 +163,14 @@ class Parser : public Section {
             };
             std::vector<Clot>           clots;
             std::vector<Checksum>       csum;
+            struct FieldMapping {
+                Phv::Ref        where;
+                std::string     container_id;
+                int             lo;
+                int             hi;
+                FieldMapping(Phv::Ref &ref, const value_t &a);
+            };
+            std::vector<FieldMapping>   field_mapping;
             Match(int lineno, gress_t, match_t m, VECTOR(pair_t) &data);
             Match(int lineno, gress_t, State *n);
             void unmark_reachable(Parser *, State *state, bitvec &unreach);
@@ -176,6 +184,7 @@ class Parser : public Section {
             template<class REGS> void write_row_config(REGS &, Parser *, State *, int,
                                                        Match *, json::map &);
             template<class REGS> void write_config(REGS &, Parser *, State *, Match *, json::map &);
+            template<class REGS> void write_config(REGS &, json::vector &);
         };
 
         std::string             name;
@@ -206,6 +215,7 @@ public:
     int                                 priority[2][4] = {{0}};
     int                                 pri_thresh[2][4] = { {3,3,3,3}, {3,3,3,3} };
     int                                 tcam_row_use[2] = { 0 };
+    int                                 pvs_handle = 512;
     Phv::Ref                            parser_error[2];
     std::vector<Phv::Ref>               multi_write, init_zero;
     bitvec                              phv_use[2], phv_allow_multi_write, phv_init_valid;

@@ -162,7 +162,7 @@ phv_8b_slots[] = {
 
 template <>
 void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Parser *pa, void *_map, unsigned &used) const
-{   
+{
     if (type != 0 || !dest) return;
 
     // checksum verification requires the last extractor to be a dummy (to work around a RTL bug)
@@ -438,7 +438,7 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
                 ["parser_states"][std::to_string(st->stateno.word1)] = st->name;
 }
 
-template<> 
+template<>
 void Parser::gen_configuration_cache(Target::Tofino::parser_regs &regs, json::vector &cfg_cache) {
     std::string reg_fqname;
     std::string reg_name;
@@ -448,8 +448,8 @@ void Parser::gen_configuration_cache(Target::Tofino::parser_regs &regs, json::ve
 
     // epb_prsr_port_regs.chnl_ctrl
     for (int i = 0; i < 4; i++) {
-        reg_fqname = "pmarb.ebp18_reg.ebp_reg[0].epb_prsr_port_regs.chnl_ctrl[" 
-            + std::to_string(i) + "]"; 
+        reg_fqname = "pmarb.ebp18_reg.ebp_reg[0].epb_prsr_port_regs.chnl_ctrl["
+            + std::to_string(i) + "]";
         reg_name = "parser0_chnl_ctrl_" + std::to_string(i);
         reg_value =
                (regs.egress.epb_prsr_port_regs.chnl_ctrl[i].meta_opt        & 0x00001FFF)
@@ -458,16 +458,16 @@ void Parser::gen_configuration_cache(Target::Tofino::parser_regs &regs, json::ve
             | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].aemp_thr        & 0x00000007)  << 20)
             | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].prsr_stall_full & 0x00000001)  << 23)
             | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].timestamp_shift & 0x0000000F)  << 24)
-            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].pipeid_ovr      & 0x00000007)  << 28); 
+            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].pipeid_ovr      & 0x00000007)  << 28);
         if ((reg_value != 0) || (options.match_compiler)) {
             reg_value_str = int_to_hex_string(reg_value, reg_width);
             add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); } }
-     
+
     // epb_prsr_port_regs.multi_threading
-    reg_fqname = "pmarb.ebp18_reg.ebp_reg[0].epb_prsr_port_regs.multi_threading"; 
+    reg_fqname = "pmarb.ebp18_reg.ebp_reg[0].epb_prsr_port_regs.multi_threading";
     reg_name = "parser0_multi_threading";
-    reg_value = 
-               (regs.egress.epb_prsr_port_regs.multi_threading.prsr_dph_max    & 0x000003FF) 
+    reg_value =
+               (regs.egress.epb_prsr_port_regs.multi_threading.prsr_dph_max    & 0x000003FF)
             | ((regs.egress.epb_prsr_port_regs.multi_threading.stall_thr       & 0x00000007) << 12)
             | ((regs.egress.epb_prsr_port_regs.multi_threading.mult_thrd       & 0x00000001) << 16)
             | ((regs.egress.epb_prsr_port_regs.multi_threading.sngl_thrd       & 0x00000001) << 17)
@@ -476,5 +476,42 @@ void Parser::gen_configuration_cache(Target::Tofino::parser_regs &regs, json::ve
     if ((reg_value != 0) || (options.match_compiler)) {
         reg_value_str = int_to_hex_string(reg_value, reg_width);
         add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
+}
+
+template <>
+void Parser::State::Match::write_config(Target::Tofino::parser_regs &regs, json::vector &vec) {
+    for (auto f : field_mapping) {
+        json::map container_cjson;
+        if (f.container_id == "byte0" || f.container_id == "byte1") {
+            container_cjson["container_width"] = 8;
+        } else if (f.container_id == "half") {
+            container_cjson["container_width"] = 16;
+        } else {
+            error(lineno, "Syntax error");
+        }
+        if (f.container_id == "byte0") {
+            container_cjson["container_hardware_id"] = 2;
+        } else if (f.container_id == "byte1") {
+            container_cjson["container_hardware_id"] = 3;
+        } else if (f.container_id == "half") {
+            container_cjson["container_hardware_id"] = 0;
+        } else {
+            error(lineno, "Syntax error");
+        }
+        container_cjson["mask"] = (1 << (f.hi - f.lo + 1)) - 1;
+        json::vector field_mapping_cjson;
+        int start_bit = f.where.lobit();
+        int select_statement_bit = 0;
+        for (auto i = f.lo; i <= f.hi; i++) {
+            json::map field_map;
+            field_map["register_bit"] = i;
+            field_map["field_name"] = f.where.name();
+            field_map["start_bit"] = start_bit++;
+            field_map["select_statement_bit"] = select_statement_bit++;
+            field_mapping_cjson.push_back(field_map.clone());
+        }
+        container_cjson["field_mapping"] = field_mapping_cjson.clone();
+        vec.push_back(container_cjson.clone());
+    }
 }
 
