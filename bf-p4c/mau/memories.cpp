@@ -44,12 +44,17 @@ bool Memories::SRAM_group::same_wide_action(const SRAM_group &a) {
 
 
 unsigned Memories::side_mask(RAM_side_t side) {
-     if (side == LEFT)
-         return (1 << LEFT_SIDE_COLUMNS) - 1;
-     else if (side == RIGHT)
-         return ((1 << SRAM_COLUMNS) - 1) & ~((1 << LEFT_SIDE_COLUMNS) - 1);
-     else
-         BUG("Invalid side to find mask in memory allocation algorithm");
+    switch (side) {
+        case LEFT:
+            return (1 << LEFT_SIDE_COLUMNS) - 1;
+        case RIGHT:
+            return ((1 << SRAM_COLUMNS) - 1) & ~((1 << LEFT_SIDE_COLUMNS) - 1);
+        case RAM_SIDES:
+             return ((1 << SRAM_COLUMNS) - 1);
+        default:
+             BUG("Unrecognizable RAM side to allocate");
+    }
+    return 0;
 }
 
 unsigned Memories::partition_mask(RAM_side_t side) {
@@ -1798,6 +1803,138 @@ void Memories::set_up_RAM_counts(swbox_fill candidates[SWBOX_TYPES],
     }
 }
 
+int Memories::half_RAMs_available(int row, bool right_only) {
+    int lowest_row = row >= LOGICAL_ROW_MISSING_OFLOW / 2 ? LOGICAL_ROW_MISSING_OFLOW / 2 : 0;
+    int RAMs = 0;
+    for (int i = row; i >= lowest_row; i--) {
+        if (right_only)
+            RAMs += bitcount(side_mask(RIGHT) & ~sram_inuse[i]);
+        else
+            RAMs += bitcount(side_mask(RAM_SIDES) & ~sram_inuse[i]);
+    }
+    return RAMs;
+}
+
+int Memories::half_map_RAMs_available(int row) {
+    int lowest_row = row >= LOGICAL_ROW_MISSING_OFLOW / 2 ? LOGICAL_ROW_MISSING_OFLOW / 2 : 0;
+
+    int map_RAMs = 0;
+    unsigned mapram_mask = (1 << MAPRAM_COLUMNS) - 1;
+    for (int i = row; i >= lowest_row; i--) {
+        map_RAMs += bitcount(mapram_mask & ~mapram_inuse[i]);
+    }
+    return map_RAMs;
+}
+
+int Memories::synth_half_RAMs_to_place() {
+    int RAMs = 0;
+    for (auto grp : must_be_placed_in_half) {
+        if (!grp->is_synth_type())
+            continue;
+        RAMs += grp->left_to_place();
+    }
+    return RAMs;
+}
+
+int Memories::synth_half_map_RAMs_to_place() {
+    int map_RAMs = 0;
+    for (auto grp : must_be_placed_in_half) {
+        if (!grp->is_synth_type())
+            continue;
+        map_RAMs += grp->left_to_place() + grp->cm.left_to_place();
+    }
+    return map_RAMs;
+}
+
+int Memories::action_half_RAMs_to_place() {
+    int RAMs = 0;
+    for (auto grp : must_be_placed_in_half) {
+        if (grp->is_synth_type())
+            continue;
+        RAMs += grp->left_to_place();
+    }
+    return RAMs;
+}
+
+bool Memories::action_table_best_candidate(SRAM_group *next_synth, swbox_fill &sel_oflow) {
+    bool must_check = false;
+
+#ifdef HAVE_JBAY
+    if (Device::currentDevice() == "JBay")
+        must_check = true;
+#endif /* HAVE_JBAY */
+
+    if (!must_check)
+        return true;
+    if ((next_synth && next_synth->type == SRAM_group::SELECTOR) || sel_oflow)
+        return false;
+    return true;
+}
+
+/** The only major difference in the memory algorithm in Tofino vs. JBay is that one
+ *  cannot overflow any information over match central, specifically:
+ *      1. Data through the HV switchbox
+ *      2. Color mapram data and from the meter ALU
+ *      3. Selector Addresses to their associated Action Data RAMs
+ *
+ *  The algorithm thus needs to prevent a synth2port table from being placed within a half
+ *  if it fully cannot be placed within that half.  For action rows, it is less important,
+ *  as the action row can start a brand new homerow.  However, a synth2port cannot begin
+ *  on a new ALU.
+ *
+ *  Currently in the driver a synth2port table is only allocated to one stateful ALU, and
+ *  cannot be moved around.  Furthermore, in the direct case, one can only use movereg across
+ *  a single logical table, which means to move entries, the driver would have to support
+ *  a level above movereg.
+ */
+bool Memories::action_table_in_half(SRAM_group *action_table, SRAM_group *next_synth,
+                                   swbox_fill &sel_oflow) {
+    bool must_check = false;
+
+#ifdef HAVE_JBAY
+     if (Device::currentDevice() == "JBay")
+         must_check = true;
+#endif /* HAVE_JBAY */
+
+    if (!must_check)
+        return true;
+
+    if (next_synth && next_synth->type == SRAM_group::SELECTOR) {
+        if (next_synth->sel.action_groups.count(action_table) == 0) {
+            return false;
+        }
+    }
+    if (sel_oflow) {
+        if (sel_oflow.group->sel.action_groups.count(action_table) == 0)
+            return false;
+    }
+    return true;
+}
+
+bool Memories::synth_in_half(SRAM_group *synth_table, int row) {
+    bool must_check = false;
+#ifdef HAVE_JBAY
+    if (Device::currentDevice() == "JBay")
+         must_check = true;
+#endif /* HAVE_JBAY */
+
+    if (!must_check)
+        return true;
+    int s2p_RAMs = synth_table->left_to_place();
+    int map_RAMs = synth_table->left_to_place() + synth_table->cm.left_to_place();
+    int total_RAMs = synth_table->total_left_to_place();
+
+
+    if (total_RAMs + action_half_RAMs_to_place() + synth_half_RAMs_to_place()
+        > half_RAMs_available(row, false))
+        return false;
+    if (s2p_RAMs + synth_half_RAMs_to_place() > half_RAMs_available(row, true))
+        return false;
+    if (map_RAMs + synth_half_map_RAMs_to_place() > half_map_RAMs_available(row))
+        return false;
+    return true;
+}
+
 /** Determine potential candidates for the allocation algorithm to choose from.  Specifically
  *  best_fits are the one that could best fit in the current row, and nexts are the one with
  *  the greatest requirements.
@@ -1809,14 +1946,12 @@ void Memories::set_up_RAM_counts(swbox_fill candidates[SWBOX_TYPES],
 void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFLOW],
                                swbox_fill &curr_oflow, swbox_fill &sel_oflow,
                                bool stats_available, bool meter_available, RAM_side_t side,
-                               int RAMs_avail[OFLOW]) {
-    // TODO(zma) pick candidate that can be fully placed in this half (JBAY)
-    // for (Synth2Port, Selector, Meter w/ color mapram)
-
+                               int row, int RAMs_avail[OFLOW]) {
     int min_left = 0;
     int min_diff = 0;
     if (side == RIGHT) {
         /* Determine the best fit supplementary table on the row */
+
         for (auto synth_table : synth_bus_users) {
             if (curr_oflow.group == synth_table)
                 continue;
@@ -1827,6 +1962,8 @@ void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFL
             if (!meter_available && synth_table->type != SRAM_group::STATS)
                 continue;
             if (synth_table->type == SRAM_group::SELECTOR && sel_oflow)
+                continue;
+            if (!synth_in_half(synth_table, row))
                 continue;
             int RAM_diff = synth_table->left_to_place() - RAMs_avail[SYNTH];
             if (RAM_diff >= 0 && RAM_diff < min_diff) {
@@ -1850,6 +1987,9 @@ void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFL
                 */
                 continue;
             }
+
+            if (!synth_in_half(synth_table, row))
+                continue;
             if (synth_table->total_left_to_place() > min_left) {
                 nexts[SYNTH].group = synth_table;
                 min_left = synth_table->total_left_to_place();
@@ -1871,6 +2011,9 @@ void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFL
             continue;
         if (action_table->sel.sel_linked() && !action_table->sel.sel_any_placed())
             continue;
+        if (!action_table_best_candidate(nexts[SYNTH].group, sel_oflow))
+            continue;
+
         int RAM_diff = action_table->left_to_place() - RAMs_avail[ACTION];
         if (RAM_diff >= 0 && RAM_diff < min_diff) {
             best_fits[ACTION].group = action_table;
@@ -1891,11 +2034,25 @@ void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFL
                 continue;
             }
         }
+
+        if (!action_table_in_half(action_table, nexts[SYNTH].group, sel_oflow))
+            continue;
+
         if (action_table->left_to_place() > min_left) {
             nexts[ACTION].group = action_table;
             min_left = action_table->left_to_place();
         }
     }
+#ifdef HAVE_JBAY
+    // The algorithm, in order to place the action tables within the same half, must guarantee
+    // that there is enough room for that particular table
+    if (curr_oflow && must_be_placed_in_half.count(curr_oflow.group) == 0
+        && nexts[SYNTH] && nexts[SYNTH].group->type == SRAM_group::SELECTOR) {
+        BUG_CHECK(curr_oflow.group->type == SRAM_group::ACTION, "An overflowing synth2port table "
+                  "must be in placed in that half");
+        curr_oflow.clear();
+    }
+#endif /* HAVE_JBAY */
 }
 
 /** Given a number of RAMs to allocate, this function finds available RAMs and saves the masks
@@ -1934,9 +2091,10 @@ void Memories::fill_out_masks(swbox_fill candidates[SWBOX_TYPES], switchbox_t or
  *  best_candidates function based on what is currently available.  These may be limited due to
  *  table currently used in overflow.
  *
- *  The function determine_candidates_order selects the potential candidates for this row.  The function
- *  set_up_RAM_counts then determine the number of RAMs each of these candidates get.  Finally,
- *  fill_out_masks and color_mapram_candidates determine which RAMs/maprams go to which candidate.
+ *  The function determine_candidates_order selects the potential candidates for this row.
+ *  The function set_up_RAM_counts then determine the number of RAMs each of these candidates get. 
+ *  Finally, fill_out_masks and color_mapram_candidates determine which RAMs/maprams go to
+ *  which candidate.
  *
  *  Unfortunately the functions are not entirely independent, and corner cases will give rise
  *  to particular lines within each function.  Hopefull this is detailed throughout the comments.
@@ -1958,7 +2116,7 @@ void Memories::find_swbox_candidates(int row, RAM_side_t side, swbox_fill candid
 
     // Determines the candidates and potential order
     best_candidates(best_fits, nexts, curr_oflow, sel_oflow, stats_available, meter_available,
-                    side, RAMs_avail);
+                    side, row, RAMs_avail);
     if (!best_fits[ACTION] && !best_fits[SYNTH] && !curr_oflow && !nexts[ACTION] && !nexts[SYNTH]) {
         if (curr_oflow && curr_oflow.group->type == SRAM_group::METER
             && !curr_oflow.group->cm.all_placed()) {
@@ -2161,6 +2319,7 @@ void Memories::fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, swi
  *  group that has been completely placed by the algorithm.
  */
 void Memories::remove_placed_group(swbox_fill &candidate, RAM_side_t side) {
+    bool removed = false;
     if (candidate.group->all_placed() && candidate.group->cm.all_placed()) {
         if (candidate.group->is_synth_type()) {
             BUG_CHECK(side == RIGHT, "Allocating Synth2Port table on left side of RAM array");
@@ -2174,7 +2333,28 @@ void Memories::remove_placed_group(swbox_fill &candidate, RAM_side_t side) {
                       "Removing an action table that isn't in the list of potential tables");
             action_bus_users.erase(action_table_loc);
         }
+        removed = true;
     }
+
+#ifdef HAVE_JBAY
+    if (Device::currentDevice() == "JBay") {
+        if (removed) {
+            if (must_be_placed_in_half.count(candidate.group))
+                must_be_placed_in_half.erase(candidate.group);
+        } else {
+            if (candidate.group->is_synth_type()) {
+                must_be_placed_in_half.insert(candidate.group);
+            }
+
+            if (candidate.group->type == SRAM_group::SELECTOR) {
+                for (auto ag : candidate.group->sel.action_groups) {
+                    if (!ag->all_placed())
+                        must_be_placed_in_half.insert(ag);
+                }
+            }
+        }
+    }
+#endif
 }
 
 /** This ensures that no collision exists within the action selector overflow switchbox, and
@@ -2182,7 +2362,7 @@ void Memories::remove_placed_group(swbox_fill &candidate, RAM_side_t side) {
  */
 void Memories::calculate_sel_oflow(swbox_fill candidates[SWBOX_TYPES], swbox_fill &sel_oflow) {
     bool sel_oflow_needed = false;
-    if (sel_oflow && sel_oflow.group->sel.action_all_placed()) {
+    if (sel_oflow && !sel_oflow.group->sel.action_all_placed()) {
         sel_oflow_needed = true;
     }
 
@@ -2250,7 +2430,6 @@ void Memories::calculate_curr_oflow(swbox_fill candidates[SWBOX_TYPES],
         curr_oflow = candidates[ACTION];
         curr_oflow_needed = true;
     }
-
 
     if (!curr_oflow_needed)
         curr_oflow.clear();
@@ -2525,8 +2704,8 @@ bool Memories::allocate_all_swbox_users() {
             auto side = static_cast<RAM_side_t>(j);
             swbox_logical_row(i, side, candidates, curr_oflow, sel_oflow);
             calculate_curr_oflow(candidates, curr_oflow, synth_oflow, side);
+            calculate_sel_oflow(candidates, sel_oflow);
         }
-        calculate_sel_oflow(candidates, sel_oflow);
 
         // Always overflow the synth2port table between rows
         if (synth_oflow)
@@ -2548,7 +2727,7 @@ bool Memories::allocate_all_swbox_users() {
 
 #ifdef HAVE_JBAY
         // JBay has no overflow bus between logical row 7 and 8
-        if ((Device::currentDevice() == "JBay") && i == 4) {
+        if ((Device::currentDevice() == "JBay") && i == LOGICAL_ROW_MISSING_OFLOW / 2) {
             curr_oflow.clear();
         }
 #endif /* HAVE_JBAY */

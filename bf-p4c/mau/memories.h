@@ -2,7 +2,6 @@
 #define BF_P4C_MAU_MEMORIES_H_
 
 #include <algorithm>
-#include <unordered_set>
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/table_format.h"
 #include "ir/ir.h"
@@ -36,6 +35,8 @@ struct Memories {
     static constexpr int IMEM_LOOKUP_BITS = 3;
     static constexpr int NUM_IDLETIME_BUS = 10;
     static constexpr int MAX_PARTITION_RAMS_PER_ROW = 5;
+
+    static constexpr int LOGICAL_ROW_MISSING_OFLOW = 8;
 
     struct search_bus_info {
         cstring name;
@@ -228,7 +229,7 @@ struct Memories {
         // a collision on the selector overflow
         struct selector_info {
             SRAM_group *sel_group = nullptr;
-            std::unordered_set<SRAM_group *> action_groups;
+            ordered_set<SRAM_group *> action_groups;
             bool sel_linked() { return sel_group != nullptr; }
             bool act_linked() { return !action_groups.empty(); }
             bool sel_all_placed() { return sel_group->all_placed(); }
@@ -383,6 +384,7 @@ struct Memories {
     safe_vector<table_alloc *>       stateful_tables;
     ordered_set<SRAM_group *>        action_bus_users;
     ordered_set<SRAM_group *>        synth_bus_users;
+    ordered_set<SRAM_group *>        must_be_placed_in_half;
     safe_vector<table_alloc *>       gw_tables;
     safe_vector<table_alloc *>       no_match_hit_tables;
     safe_vector<table_alloc *>       no_match_miss_tables;
@@ -450,9 +452,20 @@ struct Memories {
                                 swbox_fill &curr_oflow, swbox_fill &sel_oflow);
     void adjust_RAMs_available(swbox_fill &curr_oflow, int RAMs_avail[OFLOW], int row,
                                RAM_side_t side);
+
+    int half_RAMs_available(int row, bool right_only);
+    int half_map_RAMs_available(int row);
+    int synth_half_RAMs_to_place();
+    int synth_half_map_RAMs_to_place();
+    int action_half_RAMs_to_place();
+    bool action_table_best_candidate(SRAM_group *next_synth, swbox_fill &sel_oflow);
+    bool action_table_in_half(SRAM_group *action_table, SRAM_group *next_synth,
+                              swbox_fill &sel_oflow);
+    bool synth_in_half(SRAM_group *synth_table, int row);
+
     void best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFLOW],
                          swbox_fill &curr_oflow, swbox_fill &sel_oflow,
-                         bool stats_available, bool meter_available, RAM_side_t side,
+                         bool stats_available, bool meter_available, RAM_side_t side, int row,
                          int RAMs_avail[OFLOW]);
     void fill_out_masks(swbox_fill candidates[SWBOX_TYPES], switchbox_t order[SWBOX_TYPES],
                         int RAMs[SWBOX_TYPES], int row, RAM_side_t side);

@@ -248,8 +248,7 @@ p4c_add_xfail_reason("jbay"
 )
 
 p4c_add_xfail_reason("jbay"
-  "Cannot have partially placed synth2port table that isn't overflow"
-   testdata/p4_14_samples/counter5.p4
+  "Could not place table : The table .* could not fit"
    extensions/p4_tests/p4_14/stateful3.p4
 )
 
