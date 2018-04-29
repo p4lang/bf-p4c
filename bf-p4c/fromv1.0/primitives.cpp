@@ -4,19 +4,9 @@ namespace P4V1 {
 
 CONVERT_PRIMITIVE(bypass_egress) {
     if (primitive->operands.size() != 0) return nullptr;
-#if 0
-    // FIXME -- need to include (via structure->include?) PSA or Tofino Native Arch definitions
-    // FIXME -- of this metadata, or we'll get errors about ig_intr_md_for_tm being undefined
-    auto meta = new IR::PathExpression("ig_intr_md_for_tm");
-    auto flag = new IR::Member(meta, "bypass_egress");
-    auto ftype = IR::Type::Bits::get(1);
-    return structure->assign(primitive->srcInfo, flag, new IR::Constant(ftype, 1), ftype);
-#else
-    // FIXME -- defer converting this to an assignment until converting to TNA works
     structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     return new IR::MethodCallStatement(primitive->srcInfo,
             IR::ID(primitive->srcInfo, "bypass_egress"), {});
-#endif
 }
 
 static cstring makeHashCall(ProgramStructure *structure, IR::BlockStatement *block,

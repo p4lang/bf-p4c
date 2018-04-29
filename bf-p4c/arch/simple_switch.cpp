@@ -971,6 +971,17 @@ class ConstructSymbolTable : public Inspector {
         structure->_map.emplace(node, assign);
     }
 
+    void cvtBypassEgressFunction(const IR::MethodCallStatement* node) {
+        auto control = findContext<IR::P4Control>();
+        BUG_CHECK(control != nullptr,
+                  "bypass_egress() must be used in a control block");
+        auto meta = new IR::PathExpression("ig_intr_md_for_tm");
+        auto flag = new IR::Member(meta, "bypass_egress");
+        auto ftype = IR::Type::Bits::get(1);
+        auto assign = new IR::AssignmentStatement(flag, new IR::Constant(ftype, 1));
+        structure->_map.emplace(node, assign);
+    }
+
     void convertHashPrimitive(const IR::MethodCallStatement *node, cstring hashName) {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce->arguments->size() > 4, "insufficient arguments to hash() function");
@@ -1469,6 +1480,8 @@ class ConstructSymbolTable : public Inspector {
                 cvtUpdateChecksum(node);
             } else if (name == "execute_meter_with_color") {
                 cvtExecuteMeterFunctiion(node);
+            } else if (name == "bypass_egress") {
+                cvtBypassEgressFunction(node);
             }
         }
     }
