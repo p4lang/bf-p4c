@@ -77,7 +77,7 @@ struct RewriteResubmit : public Transform {
                                       IR::ID("extract"));
         auto *member = new IR::Member(new IR::PathExpression(cgMeta),
                                       IR::ID("__resubmit_data"));
-        auto *args = new IR::Vector<IR::Expression>({member});
+        auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto *callExpr = new IR::MethodCallExpression(method, args);
         auto *extract = new IR::MethodCallStatement(callExpr);
         LOG4("Generated extract for resubmit data: " << extract);
@@ -165,7 +165,7 @@ struct RewriteRecirculate : public Transform {
                                       IR::ID("extract"));
         auto *member = new IR::Member(new IR::PathExpression(cgMeta),
                                       IR::ID("__recirculate_data"));
-        auto *args = new IR::Vector<IR::Expression>({member});
+        auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto *callExpr = new IR::MethodCallExpression(method, args);
         auto *extract = new IR::MethodCallStatement(callExpr);
         LOG4("Generated extract for recirculate data: " << extract);
@@ -251,7 +251,7 @@ struct RewriteClone : public Transform {
         auto packetInParam = tnaContext->tnaParams.at("pkt");
         auto *method = new IR::Member(new IR::PathExpression(packetInParam), IR::ID("extract"));
         auto *member = new IR::Member(new IR::PathExpression(cgMeta), IR::ID(metadata));
-        auto *args = new IR::Vector<IR::Expression>({member});
+        auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto *callExpr = new IR::MethodCallExpression(method, args);
         auto *extract = new IR::MethodCallStatement(callExpr);
         LOG4("Generated extract for clone data: " << extract);

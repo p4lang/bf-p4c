@@ -114,7 +114,8 @@ static std::map<cstring, cstring> standard_crcs = {
 
 }  // end anonymous namespace
 
-const IR::Expression *P4V1::TNA_ProgramStructure::convertHashAlgorithm(IR::ID algorithm) {
+const IR::Expression *
+P4V1::TNA_ProgramStructure::convertHashAlgorithm(Util::SourceInfo srcInfo, IR::ID algorithm) {
     if (algorithm == "identity" || algorithm == "identity_lsb" || algorithm == "identity_msb")
         return new IR::Member(new IR::TypeNameExpression("HashAlgorithm"), "identity");
     if (algorithm == "random" || algorithm == "csum16" || algorithm == "xor16")
@@ -139,13 +140,14 @@ const IR::Expression *P4V1::TNA_ProgramStructure::convertHashAlgorithm(IR::ID al
     // FIXME -- should convert directly to TNA
     include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     auto typeT = IR::Type::Bits::get(params.size + 1);
-    auto args = new IR::Vector<IR::Expression>({ new IR::Constant(typeT, params.poly),
-                                                 new IR::BoolLiteral(params.reverse),
-                                                 new IR::BoolLiteral(params.msb) });
+    auto args = new IR::Vector<IR::Argument>({
+            new IR::Argument(new IR::Constant(typeT, params.poly)),
+            new IR::Argument(new IR::BoolLiteral(params.reverse)),
+            new IR::Argument(new IR::BoolLiteral(params.msb)) });
     if (params.init != 0 || params.xout != 0)
-        args->push_back(new IR::Constant(typeT, params.init));
+        args->push_back(new IR::Argument(new IR::Constant(typeT, params.init)));
     if (params.xout != 0)
-        args->push_back(new IR::Constant(typeT, params.xout));
-    return new IR::MethodCallExpression(algorithm.srcInfo,
+        args->push_back(new IR::Argument(new IR::Constant(typeT, params.xout)));
+    return new IR::MethodCallExpression(srcInfo,
                     new IR::PathExpression("crc_poly"), args);
 }

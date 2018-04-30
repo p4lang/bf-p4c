@@ -193,13 +193,13 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
         BUG_CHECK(mu, "typechecking failure?");
         BUG_CHECK(mu->arguments->size() == 4, "typechecking failure");
         math.valid = true;
-        if (auto k = mu->arguments->at(0)->to<IR::BoolLiteral>())
+        if (auto k = mu->arguments->at(0)->expression->to<IR::BoolLiteral>())
             math.exp_invert = k->value;
-        if (auto k = mu->arguments->at(1)->to<IR::Constant>())
+        if (auto k = mu->arguments->at(1)->expression->to<IR::Constant>())
             math.exp_shift = k->asInt();
-        if (auto k = mu->arguments->at(2)->to<IR::Constant>())
+        if (auto k = mu->arguments->at(2)->expression->to<IR::Constant>())
             math.scale = k->asInt();
-        if (auto data = mu->arguments->at(3)->to<IR::ListExpression>()) {
+        if (auto data = mu->arguments->at(3)->expression->to<IR::ListExpression>()) {
             unsigned i = 0;
             for (auto e : data->components) {
                 if (i >= sizeof(math.table)/sizeof(math.table[0])) {
@@ -208,7 +208,7 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
                 if (auto k = e->to<IR::Constant>())
                     math.table[i++] = k->asInt(); }
         } else {
-            error("initializer %s is not a list expression", mu->arguments->at(3)); }
+            error("initializer %s is not a list expression", mu->arguments->at(3)->expression); }
     } else {
         error("%s: expression too complex for register action", prim->srcInfo); }
     return false;

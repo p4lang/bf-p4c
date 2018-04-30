@@ -22,12 +22,12 @@ static cstring makeHashCall(ProgramStructure *structure, IR::BlockStatement *blo
     block->push_back(new IR::Declaration_Variable(temp, ttype));
     block->push_back(new IR::MethodCallStatement(
         new IR::MethodCallExpression(flc->srcInfo, structure->v1model.hash.Id(), {
-            new IR::PathExpression(new IR::Path(temp)),
-            structure->convertHashAlgorithms(flc->algorithm),
-            new IR::Constant(ttype, 0),
-            conv.convert(flc->input_fields),
-            new IR::Constant(IR::Type_Bits::get(flc->output_width + 1),
-                             1 << flc->output_width) })));
+            new IR::Argument(new IR::PathExpression(new IR::Path(temp))),
+            new IR::Argument(structure->convertHashAlgorithms(flc->algorithm)),
+            new IR::Argument(new IR::Constant(ttype, 0)),
+            new IR::Argument(conv.convert(flc->input_fields)),
+            new IR::Argument(new IR::Constant(IR::Type_Bits::get(flc->output_width + 1),
+                             1 << flc->output_width)) })));
     return temp;
 }
 
@@ -50,7 +50,8 @@ CONVERT_PRIMITIVE(count_from_hash) {
     auto method = new IR::Member(counterref, structure->v1model.counter.increment.Id());
     auto arg = new IR::Cast(structure->v1model.counter.index_type,
                             new IR::PathExpression(new IR::Path(temp)));
-    block->push_back(new IR::MethodCallStatement(primitive->srcInfo, method, { arg }));
+    block->push_back(new IR::MethodCallStatement(primitive->srcInfo, method,
+                                                 { new IR::Argument(arg) }));
     return block;
 }
 
@@ -68,7 +69,9 @@ static bool makeMeterExecCall(const Util::SourceInfo &srcInfo, ProgramStructure 
     auto meterref = new IR::PathExpression(structure->meters.get(meter));
     auto method = new IR::Member(meterref, structure->v1model.meter.executeMeter.Id());
     auto arg = new IR::Cast(structure->v1model.meter.index_type, index);
-    block->push_back(new IR::MethodCallStatement(srcInfo, method, { arg, dest }));
+    block->push_back(new IR::MethodCallStatement(srcInfo, method,
+                                                 { new IR::Argument(arg),
+                                                   new IR::Argument(dest) }));
     return true;
 }
 
@@ -80,10 +83,10 @@ CONVERT_PRIMITIVE(execute_meter, 5) {
     // FIXME -- it to an execute call on a TNA meter
     return new IR::MethodCallStatement(primitive->srcInfo,
             IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
-                conv.convert(primitive->operands.at(0)),
-                conv.convert(primitive->operands.at(1)),
-                conv.convert(primitive->operands.at(2)),
-                conv.convert(primitive->operands.at(3)) });
+                new IR::Argument(conv.convert(primitive->operands.at(0))),
+                new IR::Argument(conv.convert(primitive->operands.at(1))),
+                new IR::Argument(conv.convert(primitive->operands.at(2))),
+                new IR::Argument(conv.convert(primitive->operands.at(3))) });
 }
 
 CONVERT_PRIMITIVE(execute_meter_from_hash) {
@@ -103,10 +106,10 @@ CONVERT_PRIMITIVE(execute_meter_from_hash) {
         block->push_back(
             new IR::MethodCallStatement(primitive->srcInfo,
                 IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
-                    conv.convert(primitive->operands.at(0)),
-                    new IR::PathExpression(new IR::Path(temp)),
-                    conv.convert(primitive->operands.at(2)),
-                    conv.convert(primitive->operands.at(3)) })); }
+                    new IR::Argument(conv.convert(primitive->operands.at(0))),
+                    new IR::Argument(new IR::PathExpression(new IR::Path(temp))),
+                    new IR::Argument(conv.convert(primitive->operands.at(2))),
+                    new IR::Argument(conv.convert(primitive->operands.at(3))) })); }
     return block;
 }
 
@@ -130,10 +133,10 @@ CONVERT_PRIMITIVE(execute_meter_from_hash_with_or) {
         block->push_back(
             new IR::MethodCallStatement(primitive->srcInfo,
                 IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
-                    conv.convert(primitive->operands.at(0)),
-                    new IR::PathExpression(new IR::Path(temp)),
-                    new IR::PathExpression(new IR::Path(temp2)),
-                    conv.convert(primitive->operands.at(3)) })); }
+                    new IR::Argument(conv.convert(primitive->operands.at(0))),
+                    new IR::Argument(new IR::PathExpression(new IR::Path(temp))),
+                    new IR::Argument(new IR::PathExpression(new IR::Path(temp2))),
+                    new IR::Argument(conv.convert(primitive->operands.at(3))) })); }
     block->push_back(
         new IR::AssignmentStatement(dest,
             new IR::BOr(dest, new IR::PathExpression(new IR::Path(temp2)))));
@@ -159,10 +162,10 @@ CONVERT_PRIMITIVE(execute_meter_with_or) {
         block->push_back(
             new IR::MethodCallStatement(primitive->srcInfo,
                 IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
-                    conv.convert(primitive->operands.at(0)),
-                    conv.convert(primitive->operands.at(1)),
-                    new IR::PathExpression(new IR::Path(temp2)),
-                    conv.convert(primitive->operands.at(3)) })); }
+                    new IR::Argument(conv.convert(primitive->operands.at(0))),
+                    new IR::Argument(conv.convert(primitive->operands.at(1))),
+                    new IR::Argument(new IR::PathExpression(new IR::Path(temp2))),
+                    new IR::Argument(conv.convert(primitive->operands.at(3))) })); }
     block->push_back(
         new IR::AssignmentStatement(dest,
             new IR::BOr(dest, new IR::PathExpression(new IR::Path(temp2)))));
@@ -175,7 +178,8 @@ CONVERT_PRIMITIVE(invalidate) {
     ExpressionConverter conv(structure);
     auto arg = conv.convert(primitive->operands.at(0));
     return new IR::MethodCallStatement(primitive->srcInfo, IR::ID(primitive->srcInfo,
-                    arg->is<IR::Constant>() ? "invalidate_raw" : "invalidate"), { arg });
+                    arg->is<IR::Constant>() ? "invalidate_raw" : "invalidate"),
+                                       { new IR::Argument(arg) });
 }
 
 CONVERT_PRIMITIVE(recirculate, 5) {
@@ -186,7 +190,8 @@ CONVERT_PRIMITIVE(recirculate, 5) {
     structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     port = conv.convert(port);
     port = new IR::Cast(IR::Type::Bits::get(9), port);
-    return new IR::MethodCallStatement(primitive->srcInfo, "recirculate_raw", { port });
+    return new IR::MethodCallStatement(primitive->srcInfo, "recirculate_raw",
+                                       { new IR::Argument(port) });
 }
 
 CONVERT_PRIMITIVE(sample_e2e) {
@@ -196,18 +201,18 @@ CONVERT_PRIMITIVE(sample_e2e) {
     auto session = conv.convert(primitive->operands.at(0));
     auto length = conv.convert(primitive->operands.at(1));
 
-    auto args = new IR::Vector<IR::Expression>();
+    auto args = new IR::Vector<IR::Argument>();
     auto enumref = new IR::TypeNameExpression(
         new IR::Type_Name(new IR::Path(structure->v1model.clone.cloneType.Id())));
     auto kindarg = new IR::Member(enumref, structure->v1model.clone.cloneType.e2e.Id());
-    args->push_back(kindarg);
-    args->push_back(new IR::Cast(primitive->operands.at(0)->srcInfo,
-                                 structure->v1model.clone.sessionType, session));
-    args->push_back(length);
+    args->push_back(new IR::Argument(kindarg));
+    args->push_back(new IR::Argument(new IR::Cast(primitive->operands.at(0)->srcInfo,
+                                                  structure->v1model.clone.sessionType, session)));
+    args->push_back(new IR::Argument(length));
     if (primitive->operands.size() == 3) {
         auto list = structure->convertFieldList(primitive->operands.at(2));
         if (list != nullptr)
-            args->push_back(list); }
+            args->push_back(new IR::Argument(list)); }
 
     auto fn = IR::ID(primitive->srcInfo, args->size() == 4 ? "sample4" : "sample3");
     return new IR::MethodCallStatement(new IR::MethodCallExpression(fn.srcInfo,

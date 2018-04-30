@@ -52,10 +52,11 @@ const IR::Declaration_Instance *P4V1::WREDConverter::convertExternInstance(
         drop_value = new IR::Constant(input_type, (1U << input_type->width_bits()) - 1);
     if (!no_drop_value) no_drop_value = new IR::Constant(input_type, 0);
 
-    auto args = new IR::Vector<IR::Expression>;
-    if (instance_count) args->push_back(instance_count);
-    args->push_back(drop_value);
-    args->push_back(no_drop_value);
+    auto args = new IR::Vector<IR::Argument>;
+    if (instance_count)
+        args->push_back(new IR::Argument(instance_count));
+    args->push_back(new IR::Argument(drop_value));
+    args->push_back(new IR::Argument(no_drop_value));
 
     auto* externalName = new IR::StringLiteral(IR::ID("." + name));
     auto* annotations = new IR::Annotations({
@@ -84,17 +85,17 @@ const IR::Statement *P4V1::WREDConverter::convertExternCall(P4V1::ProgramStructu
     BUG_CHECK(prim->operands.size() >= 2 && prim->operands.size() <= 3,
               "Expected 2 or 3 operands for %s", prim->name);
     auto dest = conv.convert(prim->operands.at(1));
-    auto args = new IR::Vector<IR::Expression>();
+    auto args = new IR::Vector<IR::Argument>();
     if (auto prop = ext->properties.get<IR::Property>("wred_input")) {
         if (auto ev = prop->value->to<IR::ExpressionValue>()) {
-            args->push_back(conv.convert(ev->expression));
+            args->push_back(new IR::Argument(conv.convert(ev->expression)));
         } else {
             error("%s: wred_input property is not an expression", prop->value->srcInfo);
             return nullptr; }
     } else {
         error("No wred_input in %s", ext); }
     if (prim->operands.size() == 3)
-        args->push_back(conv.convert(prim->operands.at(2)));
+        args->push_back(new IR::Argument(conv.convert(prim->operands.at(2))));
     auto extref = new IR::PathExpression(structure->externs.get(ext));
     auto method = new IR::Member(prim->srcInfo, extref, "execute");
     auto mc = new IR::MethodCallExpression(prim->srcInfo, IR::Type::Bits::get(8), method, args);

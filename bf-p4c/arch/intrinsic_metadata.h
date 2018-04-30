@@ -54,9 +54,8 @@ struct AddIntrinsicMetadata : public Transform {
         auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("extract"));
         auto headerParam = parser->tnaParams.at(header);
-        auto *args = new IR::Vector<IR::Expression>({
-                                                        new IR::PathExpression(headerParam)
-                                                    });
+        auto *args = new IR::Vector<IR::Argument>(
+            { new IR::Argument(new IR::PathExpression(headerParam)) });
         auto *callExpr = new IR::MethodCallExpression(method, args);
         return new IR::MethodCallStatement(callExpr);
     }
@@ -72,7 +71,7 @@ struct AddIntrinsicMetadata : public Transform {
                                                   });
         auto *lookaheadExpr =
             new IR::MethodCallExpression(method, typeArgs,
-                                         new IR::Vector<IR::Expression>);
+                                         new IR::Vector<IR::Argument>);
         return lookaheadExpr;
     }
 
@@ -82,8 +81,8 @@ struct AddIntrinsicMetadata : public Transform {
         auto packetInParam = parser->tnaParams.at("pkt");
         auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("advance"));
-        auto *args = new IR::Vector<IR::Expression>(
-            {new IR::Constant(IR::Type::Bits::get(32), bits)});
+        auto *args = new IR::Vector<IR::Argument>(
+            { new IR::Argument(new IR::Constant(IR::Type::Bits::get(32), bits)) });
         auto *callExpr = new IR::MethodCallExpression(method, args);
         return new IR::MethodCallStatement(callExpr);
     }

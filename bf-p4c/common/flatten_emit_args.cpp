@@ -20,12 +20,12 @@ void FlattenEmitArgs::postorder(IR::MethodCallExpression* mc) {
     //   resubmit.emit(field_list);
     //   digest.emit(field_list);
     int field_list_index = (type->name == "Mirror") ? 1 : 0;
-    auto* arg = mc->arguments->at(field_list_index);
+    auto* arg = mc->arguments->at(field_list_index)->expression;
     if (auto* args = arg->to<IR::ListExpression>()) {
-        auto* flattened_args = new IR::Vector<IR::Expression>();
+        auto* flattened_args = new IR::Vector<IR::Argument>();
         if (type->name == "Mirror")
             flattened_args->push_back(mc->arguments->at(0));
-        flattened_args->push_back(flatten_args(args));
+        flattened_args->push_back(new IR::Argument(flatten_args(args)));
         mc->arguments = flattened_args;
         LOG4("Flattened arguments: " << mc);
     }

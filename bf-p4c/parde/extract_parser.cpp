@@ -426,13 +426,13 @@ struct RewriteParserStatements : public Transform {
         if (method->member == "extract") {
             BUG_CHECK(call->arguments->size() == 1,
                       "Wrong number of arguments for method call: %1%", statement);
-            return rewriteExtract(statement->srcInfo, (*call->arguments)[0]);
+            return rewriteExtract(statement->srcInfo, (*call->arguments)[0]->expression);
         }
 
         if (method->member == "advance") {
             BUG_CHECK(call->arguments->size() == 1,
                       "Wrong number of arguments for method call: %1%", statement);
-            return rewriteAdvance((*call->arguments)[0]);
+            return rewriteAdvance((*call->arguments)[0]->expression);
         }
 
         if (method->member == "set") {
@@ -448,7 +448,7 @@ struct RewriteParserStatements : public Transform {
         if (method->member == "add") {
             BUG_CHECK(call->arguments->size() == 1,
                       "Wrong number of arguments for method call: %1%", statement);
-            return rewriteChecksumAdd((*call->arguments)[0]);
+            return rewriteChecksumAdd((*call->arguments)[0]->expression);
         }
 
         if (method->member == "remove") {

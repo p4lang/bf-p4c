@@ -72,7 +72,7 @@ class SplitComplexInstanceRef : public Transform {
  */
 const IR::Node *SplitComplexInstanceRef::preorder(IR::MethodCallStatement *mc) {
     if (mc->methodCall->arguments->size() == 0) return mc;
-    auto dest = mc->methodCall->arguments->at(0)->to<IR::InstanceRef>();
+    auto dest = mc->methodCall->arguments->at(0)->expression->to<IR::InstanceRef>();
     if (!dest) return mc;
     if (dest->obj != nullptr && dest->obj->is<IR::HeaderStack>()) {
         auto hs = dest->obj->to<IR::HeaderStack>();
@@ -82,9 +82,10 @@ const IR::Node *SplitComplexInstanceRef::preorder(IR::MethodCallStatement *mc) {
             auto *args = split->arguments->clone();
             split->arguments = args;
             for (auto &op : *args)
-                if (auto ir = op->to<IR::InstanceRef>())
+                if (auto ir = op->expression->to<IR::InstanceRef>())
                     if (ir->obj == hs)
-                        op = new IR::HeaderStackItemRef(ir, new IR::Constant(idx));
+                        op = new IR::Argument(
+                            new IR::HeaderStackItemRef(ir, new IR::Constant(idx)));
             rv->push_back(new IR::MethodCallStatement(mc->srcInfo, split)); }
         return rv;
     } else if (!dest->nested.empty()) {
@@ -94,8 +95,8 @@ const IR::Node *SplitComplexInstanceRef::preorder(IR::MethodCallStatement *mc) {
             auto *args = split->arguments->clone();
             split->arguments = args;
             for (auto &op : *args)
-                if (auto ir = op->to<IR::InstanceRef>())
-                    op = ir->nested.at(nest.first);
+                if (auto ir = op->expression->to<IR::InstanceRef>())
+                    op = new IR::Argument(ir->nested.at(nest.first));
             rv->push_back(new IR::MethodCallStatement(mc->srcInfo, split)); }
         return rv; }
     return mc;

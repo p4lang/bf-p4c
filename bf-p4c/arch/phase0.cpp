@@ -512,7 +512,7 @@ struct RewritePhase0IfPresent : public Transform {
                                       IR::ID("extract"));
         auto* member = new IR::Member(new IR::PathExpression(cgMeta),
                                       IR::ID("__phase0_data"));
-        auto* args = new IR::Vector<IR::Expression>({ member });
+        auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto* callExpr = new IR::MethodCallExpression(method, args);
         auto* extract = new IR::MethodCallStatement(callExpr);
         LOG4("Generated extract for phase 0 data: " << extract);

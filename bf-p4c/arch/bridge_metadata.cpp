@@ -149,7 +149,7 @@ struct BridgeIngressToEgress : public Transform {
             auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                           IR::ID("^bridged_metadata"));
             auto* method = new IR::Member(member, IR::ID("setValid"));
-            auto* args = new IR::Vector<IR::Expression>;
+            auto* args = new IR::Vector<IR::Argument>;
             auto* callExpr = new IR::MethodCallExpression(method, args);
             state->components.push_back(new IR::MethodCallStatement(callExpr));
         }
@@ -171,7 +171,7 @@ struct BridgeIngressToEgress : public Transform {
         auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
         auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                       IR::ID("^bridged_metadata"));
-        auto* args = new IR::Vector<IR::Expression>({ member });
+        auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto* callExpr = new IR::MethodCallExpression(method, args);
         state->components.push_back(new IR::MethodCallStatement(callExpr));
 
@@ -253,7 +253,7 @@ struct BridgeIngressToEgress : public Transform {
         auto cgMetadataParam = control->tnaParams.at("compiler_generated_meta");
         auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                       IR::ID("^bridged_metadata"));
-        auto* args = new IR::Vector<IR::Expression>({ member });
+        auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto* callExpr = new IR::MethodCallExpression(method, args);
 
         auto* body = control->body->clone();
@@ -385,7 +385,7 @@ struct PsaBridgeIngressToEgress : public Transform {
             auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                           IR::ID("^bridged_metadata"));
             auto* method = new IR::Member(member, IR::ID("setValid"));
-            auto* args = new IR::Vector<IR::Expression>;
+            auto* args = new IR::Vector<IR::Argument>;
             auto* callExpr = new IR::MethodCallExpression(method, args);
             state->components.push_back(new IR::MethodCallStatement(callExpr));
         }
@@ -407,7 +407,7 @@ struct PsaBridgeIngressToEgress : public Transform {
         auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
         auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                       IR::ID("^bridged_metadata"));
-        auto* args = new IR::Vector<IR::Expression>({ member });
+        auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto* callExpr = new IR::MethodCallExpression(method, args);
         state->components.push_back(new IR::MethodCallStatement(callExpr));
 
@@ -434,7 +434,7 @@ struct PsaBridgeIngressToEgress : public Transform {
         auto cgMetadataParam = control->tnaParams.at("compiler_generated_meta");
         auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                                       IR::ID("^bridged_metadata"));
-        auto* args = new IR::Vector<IR::Expression>({ member });
+        auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto* callExpr = new IR::MethodCallExpression(method, args);
 
         auto* body = control->body->clone();

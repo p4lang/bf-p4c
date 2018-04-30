@@ -93,7 +93,7 @@ class CreateSaluApplyFunction : public Inspector {
             } else if (attr->name == "math_unit") {
                 auto *mu = new IR::PathExpression(IR::ID(attr->srcInfo, self.math_unit_name));
                 return new IR::MethodCallExpression(attr->srcInfo,
-                        new IR::Member(mu, "execute"), { self.math_input });
+                        new IR::Member(mu, "execute"), { new IR::Argument(self.math_input) });
             } else if (attr->name == "predicate") {
                 // combined_predicate is an 1-bit output equals to condition_lo | condition_hi
                 // if any of the condition_lo/hi is true, then the output is 1,
@@ -292,8 +292,11 @@ class CreateMathUnit : public Inspector {
             tuple_type->components.push_back(utype);
         auto mutype = new IR::Type_Specialized(new IR::Type_Name("math_unit"),
                                new IR::Vector<IR::Type>({ utype, tuple_type }));
-        auto *ctor_args = new IR::Vector<IR::Expression>({
-            exp_invert, exp_shift, output_scale, new IR::ListExpression(table->expressions)
+        auto *ctor_args = new IR::Vector<IR::Argument>({
+            new IR::Argument(exp_invert),
+            new IR::Argument(exp_shift),
+            new IR::Argument(output_scale),
+            new IR::Argument(new IR::ListExpression(table->expressions))
         });
         auto* externalName = new IR::StringLiteral(IR::ID("." + name));
         auto* annotations = new IR::Annotations({
@@ -412,9 +415,9 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         LOG2("Creating apply function for selector_action " << ext->name);
         auto satype = new IR::Type_Name("selector_action");
         auto bit1 = IR::Type::Bits::get(1);
-        auto *ctor_args = new IR::Vector<IR::Expression>({
-                new IR::PathExpression(new IR::Path(
-                    structure->action_profiles.get(ap))) });
+        auto *ctor_args = new IR::Vector<IR::Argument>({
+                new IR::Argument(new IR::PathExpression(new IR::Path(
+                    structure->action_profiles.get(ap)))) });
         auto *block = new IR::BlockStatement({
             CreateSaluApplyFunction::create(structure, ext, bit1, bit1) });
         auto* externalName = new IR::StringLiteral(IR::ID("." + name));
@@ -429,8 +432,8 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         LOG2("Creating apply function for RegisterAction " << ext->name);
         auto ratype = new IR::Type_Specialized(new IR::Type_Name("RegisterAction"),
                                new IR::Vector<IR::Type>({ info.rtype, info.utype }));
-        auto *ctor_args = new IR::Vector<IR::Expression>({
-                new IR::PathExpression(new IR::Path(info.reg->name)) });
+        auto *ctor_args = new IR::Vector<IR::Argument>({
+                new IR::Argument(new IR::PathExpression(new IR::Path(info.reg->name))) });
         auto *math = CreateMathUnit::create(structure, ext, info.utype);
         if (math)
             structure->declarations->push_back(math);
@@ -462,11 +465,11 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
     IR::BlockStatement *block = nullptr;
     auto extref = new IR::PathExpression(structure->externs.get(ext));
     auto method = new IR::Member(prim->srcInfo, extref, "execute");
-    auto args = new IR::Vector<IR::Expression>();
+    auto args = new IR::Vector<IR::Argument>();
     if (prim->name == "execute_stateful_alu") {
         BUG_CHECK(prim->operands.size() <= 2, "Wrong number of operands to %s", prim->name);
         if (prim->operands.size() == 2)
-            args->push_back(conv.convert(prim->operands.at(1)));
+            args->push_back(new IR::Argument(conv.convert(prim->operands.at(1))));
     } else if (prim->name == "execute_stateful_alu_from_hash") {
         BUG_CHECK(prim->operands.size() == 2, "Wrong number of operands to %s", prim->name);
         auto pe = prim->operands.at(1)->to<IR::PathExpression>();
@@ -478,17 +481,17 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
         block = new IR::BlockStatement;
         cstring temp = structure->makeUniqueName("temp");
         block->push_back(new IR::Declaration_Variable(temp, ttype));
-        args->push_back(new IR::PathExpression(new IR::Path(temp)));
-        args->push_back(structure->convertHashAlgorithms(flc->algorithm));
-        args->push_back(new IR::Constant(ttype, 0));
-        args->push_back(conv.convert(flc->input_fields));
-        args->push_back(new IR::Constant(IR::Type_Bits::get(flc->output_width + 1),
-                                         1 << flc->output_width));
+        args->push_back(new IR::Argument(new IR::PathExpression(new IR::Path(temp))));
+        args->push_back(new IR::Argument(structure->convertHashAlgorithms(flc->algorithm)));
+        args->push_back(new IR::Argument(new IR::Constant(ttype, 0)));
+        args->push_back(new IR::Argument(conv.convert(flc->input_fields)));
+        args->push_back(new IR::Argument(new IR::Constant(IR::Type_Bits::get(flc->output_width + 1),
+                                         1 << flc->output_width)));
         block->push_back(new IR::MethodCallStatement(new IR::MethodCallExpression(
                 new IR::PathExpression(structure->v1model.hash.Id()), args)));
-        args = new IR::Vector<IR::Expression>();
-        args->push_back(new IR::Cast(IR::Type_Bits::get(32),
-                        new IR::PathExpression(new IR::Path(temp))));
+        args = new IR::Vector<IR::Argument>();
+        args->push_back(new IR::Argument(new IR::Cast(IR::Type_Bits::get(32),
+                        new IR::PathExpression(new IR::Path(temp)))));
     } else if (prim->name == "execute_stateful_log") {
         BUG_CHECK(prim->operands.size() == 1, "Wrong number of operands to %s", prim->name);
         method = new IR::Member(prim->srcInfo, extref, "execute_log");

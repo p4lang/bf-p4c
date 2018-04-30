@@ -1084,3 +1084,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1208-1.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "source of modify_field invalid"
+  testdata/p4_16_samples/saturated-bmv2.p4
+)

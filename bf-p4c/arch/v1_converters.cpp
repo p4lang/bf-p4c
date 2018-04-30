@@ -645,10 +645,10 @@ const IR::Node* MeterConverter::postorder(IR::MethodCallStatement* node) {
               "unexpected meter method %1%", member->member);
     auto method = new IR::Member(node->srcInfo, member->expr, "execute");
 
-    auto meterColor = mce->arguments->at(1);
+    auto meterColor = mce->arguments->at(1)->expression;
     auto size = meterColor->type->width_bits();
     BUG_CHECK(size != 0, "meter color cannot be bit<0>");
-    auto args = new IR::Vector<IR::Expression>();
+    auto args = new IR::Vector<IR::Argument>();
     args->push_back(mce->arguments->at(0));
     auto methodcall = new IR::MethodCallExpression(node->srcInfo, method, args);
     IR::AssignmentStatement* assign = nullptr;
@@ -670,11 +670,11 @@ const IR::Node* DirectMeterConverter::postorder(IR::MethodCallStatement* node) {
     auto member = mce->method->to<IR::Member>();
     auto method = new IR::Member(node->srcInfo, member->expr, "execute");
 
-    auto meterColor = mce->arguments->at(0);
+    auto meterColor = mce->arguments->at(0)->expression;
     auto size = meterColor->type->width_bits();
     BUG_CHECK(size != 0, "meter color width cannot be bit<0>");
     auto methodcall = new IR::MethodCallExpression(node->srcInfo, method,
-                                                   new IR::Vector<IR::Expression>());
+                                                   new IR::Vector<IR::Argument>());
     IR::AssignmentStatement* assign = nullptr;
     if (size > 8) {
         assign = new IR::AssignmentStatement(
@@ -690,10 +690,10 @@ const IR::Node* DirectMeterConverter::postorder(IR::MethodCallStatement* node) {
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 const IR::Node* ParserPriorityConverter::postorder(IR::AssignmentStatement* node) {
-    auto stmt = getOriginal<IR::AssignmentStatement>();
     auto parserPriority = new IR::PathExpression("ig_prsr_ctrl_priority");
     auto member = new IR::Member(parserPriority, "set");
-    auto result = new IR::MethodCallStatement(node->srcInfo, member, { node->right });
+    auto result = new IR::MethodCallStatement(node->srcInfo, member,
+                                              { new IR::Argument(node->right) });
     return result;
 }
 
@@ -709,11 +709,11 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
         }
     }
 
-    IR::MethodCallStatement *methodCall;
+    IR::MethodCallStatement *methodCall = nullptr;
     if (right->to<IR::Constant>() || right->to<IR::Member>()) {
         // Load operation
         methodCall = new IR::MethodCallStatement(
-            stmt->srcInfo, new IR::Member(parserCounter, "set"), {stmt->right});
+            stmt->srcInfo, new IR::Member(parserCounter, "set"), { new IR::Argument(stmt->right) });
     } else if (auto add = right->to<IR::Add>()) {
         // Add operaton.
         auto member = add->left->to<IR::Member>();
@@ -725,23 +725,23 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
             auto path = pathExpr->path->to<IR::Path>();
             if (path->name == "ig_prsr_ctrl" && member->member == "parser_counter")
                 return new IR::MethodCallStatement(
-                    stmt->srcInfo, new IR::Member(parserCounter, "increment"), {add->right});
+                    stmt->srcInfo, new IR::Member(parserCounter, "increment"),
+                    { new IR::Argument(add->right) });
         }
 
         methodCall =  new IR::MethodCallStatement(
                 stmt->srcInfo,
                 new IR::Member(parserCounter, "set"),
-                {new IR::Cast(IR::Type::Bits::get(8), right)});
+                { new IR::Argument(new IR::Cast(IR::Type::Bits::get(8), right)) });
     }
 
     return methodCall;
 }
 
 const IR::Node* ParserCounterSelectionConverter::postorder(IR::Member* node) {
-    auto member = getOriginal<IR::Member>();
     auto parserCounter = new IR::PathExpression("ig_prsr_ctrl_parser_counter");
     auto methodCall =  new IR::MethodCallExpression(
-        node->srcInfo, new IR::Member(parserCounter, "get"), {});
+        node->srcInfo, new IR::Member(parserCounter, "get"), new IR::Vector<IR::Argument>());
     return methodCall;
 }
 

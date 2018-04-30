@@ -448,10 +448,10 @@ class TranslateProgram : public Inspector {
 
         // Create a new instance of Hash<W>
         auto typeArgs = new IR::Vector<IR::Type>();
-        auto w = node->arguments->at(2)->to<IR::Constant>()->asInt();
+        auto w = node->arguments->at(2)->expression->to<IR::Constant>()->asInt();
         typeArgs->push_back(IR::Type::Bits::get(w));
 
-        auto args = new IR::Vector<IR::Expression>();
+        auto args = new IR::Vector<IR::Argument>();
         args->push_back(node->arguments->at(0));
 
         auto specializedType = new IR::Type_Specialized(
@@ -462,11 +462,11 @@ class TranslateProgram : public Inspector {
         declarations->push_back(
             new IR::Declaration_Instance(hashName, specializedType, args));
 
-        args = new IR::Vector<IR::Expression>();
+        args = new IR::Vector<IR::Argument>();
         // size
         args->push_back(node->arguments->at(1));
         // hash
-        args->push_back(new IR::PathExpression(hashName));
+        args->push_back(new IR::Argument(new IR::PathExpression(hashName)));
         // selector_mode
         auto sel_mode = new IR::Member(
             new IR::TypeNameExpression("SelectorMode_t"), "FAIR");
@@ -479,7 +479,7 @@ class TranslateProgram : public Inspector {
         } else {
             WARNING("No mode specified for the selector %s. Assuming fair" << node);
         }
-        args->push_back(sel_mode);
+        args->push_back(new IR::Argument(sel_mode));
 
         declarations->push_back(new IR::Declaration_Instance(
             node->srcInfo, node->name, node->annotations, node->type, args));

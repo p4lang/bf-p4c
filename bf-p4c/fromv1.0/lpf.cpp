@@ -43,9 +43,9 @@ const IR::Declaration_Instance *P4V1::LpfConverter::convertExternInstance(
     auto* externalName = new IR::StringLiteral(IR::ID("." + name));
     auto* annotations = new IR::Annotations({
         new IR::Annotation(IR::ID("name"), { externalName })});
-    auto args = new IR::Vector<IR::Expression>();
+    auto args = new IR::Vector<IR::Argument>();
     if (instance_count) {
-        args->push_back(instance_count);
+        args->push_back(new IR::Argument(instance_count));
         auto type = new IR::Type_Specialized(
             new IR::Type_Name("Lpf"),
             new IR::Vector<IR::Type>({ filt_type, IR::Type::Bits::get(32) }));
@@ -70,18 +70,18 @@ const IR::Statement *P4V1::LpfConverter::convertExternCall(P4V1::ProgramStructur
               "Expected 2 or 3 operands for %s", prim->name);
     const IR::Type *filt_type = nullptr;
     auto dest = conv.convert(prim->operands.at(1));
-    auto args = new IR::Vector<IR::Expression>();
+    auto args = new IR::Vector<IR::Argument>();
     if (auto prop = ext->properties.get<IR::Property>("filter_input")) {
         if (auto ev = prop->value->to<IR::ExpressionValue>()) {
             filt_type = ev->expression->type;
-            args->push_back(conv.convert(ev->expression));
+            args->push_back(new IR::Argument(conv.convert(ev->expression)));
         } else {
             error("%s: filter_input property is not an expression", prop->value->srcInfo);
             return nullptr; }
     } else {
         error("No filter_input in %s", ext); }
     if (prim->operands.size() == 3)
-        args->push_back(conv.convert(prim->operands.at(2)));
+        args->push_back(new IR::Argument(conv.convert(prim->operands.at(2))));
     auto extref = new IR::PathExpression(structure->externs.get(ext));
     auto method = new IR::Member(prim->srcInfo, extref, "execute");
     auto mc = new IR::MethodCallExpression(prim->srcInfo, filt_type, method, args);

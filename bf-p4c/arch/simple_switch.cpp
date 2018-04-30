@@ -188,14 +188,17 @@ class IdleTimeoutTranslation : public Transform {
             auto two_way_notify = table->getAnnotation("idletime_two_way_notification");
             auto per_flow_enable = table->getAnnotation("idletime_per_flow_idletime");
             auto type = new IR::Type_Name("idle_timeout");
-            auto param = new IR::Vector<IR::Expression>();
+            auto param = new IR::Vector<IR::Argument>();
             /// XXX(hanw): check default value for two_way_notify and per_flow_enable
-            param->push_back(precision ? precision->expr.at(0) :
-                             new IR::Constant(IR::Type::Bits::get(3), 3));
-            param->push_back(two_way_notify ? new IR::BoolLiteral(two_way_notify) :
-                             new IR::BoolLiteral(false));
-            param->push_back(per_flow_enable ? new IR::BoolLiteral(per_flow_enable) :
-                             new IR::BoolLiteral(false));
+            param->push_back(precision ?
+                             new IR::Argument(precision->expr.at(0)) :
+                             new IR::Argument(new IR::Constant(IR::Type::Bits::get(3), 3)));
+            param->push_back(two_way_notify ?
+                             new IR::Argument(new IR::BoolLiteral(two_way_notify)) :
+                             new IR::Argument(new IR::BoolLiteral(false)));
+            param->push_back(per_flow_enable ?
+                             new IR::Argument(new IR::BoolLiteral(per_flow_enable)) :
+                             new IR::Argument(new IR::BoolLiteral(false)));
             auto constructorExpr = new IR::ConstructorCallExpression(type, param);
             propertyMap.emplace(table, constructorExpr);
         }
@@ -660,7 +663,7 @@ class AnalyzeProgram : public Inspector {
                 new IR::Type_Name("ParserCounter"), typeArgs);
             auto decl = new IR::Declaration_Instance(
                 "ig_prsr_ctrl_parser_counter", type,
-                new IR::Vector<IR::Expression>());
+                new IR::Vector<IR::Argument>());
             structure->ingressParserDeclarations.push_back(decl);
             structure->egressParserDeclarations.push_back(decl);
         }
@@ -669,7 +672,7 @@ class AnalyzeProgram : public Inspector {
         {
             auto type = new IR::Type_Name("ParserPriority");
             auto decl = new IR::Declaration_Instance(
-                "ig_prsr_ctrl_priority", type, new IR::Vector<IR::Expression>());
+                "ig_prsr_ctrl_priority", type, new IR::Vector<IR::Argument>());
             structure->ingressParserDeclarations.push_back(decl);
             structure->egressParserDeclarations.push_back(decl);
         }
@@ -694,7 +697,7 @@ analyzeVerifyOrUpdateChecksum(const IR::MethodCallStatement *statement, cstring 
         ::warning("Expected 4 arguments for %1% statement: %2%", statement, which);
         return boost::none;
     }
-    auto destField = (*methodCall->arguments)[2]->to<IR::Member>();
+    auto destField = (*methodCall->arguments)[2]->expression->to<IR::Member>();
     CHECK_NULL(destField);
 
     return ChecksumSourceMap::value_type(destField, methodCall);
@@ -704,15 +707,15 @@ static IR::Declaration_Instance*
 getVerifyOrUpdateChecksumDeclaration(ProgramStructure *structure,
                                      ChecksumSourceMap::value_type csum) {
     auto typeArgs = new IR::Vector<IR::Type>();
-    typeArgs->push_back(csum.second->arguments->at(2)->type);
+    typeArgs->push_back(csum.second->arguments->at(2)->expression->type);
     auto inst = new IR::Type_Specialized(new IR::Type_Name("Checksum"), typeArgs);
 
     auto csum_name = cstring::make_unique(structure->unique_names, "checksum", '_');
     structure->unique_names.insert(csum_name);
-    auto args = new IR::Vector<IR::Expression>();
+    auto args = new IR::Vector<IR::Argument>();
     auto hashAlgo = new IR::Member(
             new IR::TypeNameExpression("HashAlgorithm_t"), "CSUM16");
-    args->push_back(hashAlgo);
+    args->push_back(new IR::Argument(hashAlgo));
     auto decl = new IR::Declaration_Instance(csum_name, inst, args);
 
     return decl;
@@ -780,7 +783,7 @@ class ConstructSymbolTable : public Inspector {
          *
          */
         auto field_list = mce->arguments->at(1);
-        auto args = new IR::Vector<IR::Expression>({field_list});
+        auto args = new IR::Vector<IR::Argument>({field_list});
         auto expr = new IR::PathExpression(new IR::Path(typeName->path->name));
         auto member = new IR::Member(expr, "pack");
         auto typeArgs = new IR::Vector<IR::Type>();
@@ -793,7 +796,7 @@ class ConstructSymbolTable : public Inspector {
         auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
         structure->ingressDeparserStatements.push_back(cond);
 
-        auto declArgs = new IR::Vector<IR::Expression>({});
+        auto declArgs = new IR::Vector<IR::Argument>({});
         auto declType = new IR::Type_Name("Digest");
         auto decl = new IR::Declaration_Instance(typeName->path->name,
                                                  new IR::Annotations({declAnno}),
@@ -864,7 +867,7 @@ class ConstructSymbolTable : public Inspector {
             BUG_CHECK(mce->arguments->size() >= 2,
                       "No mirror session id specified: %1%", mce);
             auto *mirrorId = new IR::Member(compilerMetadataPath, "mirror_id");
-            auto *mirrorIdValue = mce->arguments->at(1);
+            auto *mirrorIdValue = mce->arguments->at(1)->expression;
             /// v1model mirror_id is 32bit, cast to bit<10>
             auto *castedMirrorIdValue = new IR::Cast(IR::Type::Bits::get(10), mirrorIdValue);
             block->components.push_back(new IR::AssignmentStatement(mirrorId,
@@ -883,7 +886,7 @@ class ConstructSymbolTable : public Inspector {
 
         // Only instantiate the extern for the first instance of clone()
         if ((isIngress ? igCloneIndex : egCloneIndex) == 1) {
-            auto declArgs = new IR::Vector<IR::Expression>({});
+            auto declArgs = new IR::Vector<IR::Argument>({});
             auto declType = new IR::Type_Name("Mirror");
             auto decl = new IR::Declaration_Instance("mirror", declType, declArgs);
             if (isIngress)
@@ -896,16 +899,16 @@ class ConstructSymbolTable : public Inspector {
             new IR::Member(compilerMetadataPath, "mirror_source")});
 
         if (hasData && mce->arguments->size() > 2) {
-            auto *clonedData = mce->arguments->at(2);
+            auto *clonedData = mce->arguments->at(2)->expression;
             if (auto *originalFieldList = clonedData->to<IR::ListExpression>())
                 newFieldList->components.pushBackOrAppend(&originalFieldList->components);
             else
                 newFieldList->components.push_back(clonedData);
         }
 
-        auto args = new IR::Vector<IR::Expression>();
-        args->push_back(new IR::Member(compilerMetadataPath, "mirror_id"));
-        args->push_back(newFieldList);
+        auto args = new IR::Vector<IR::Argument>();
+        args->push_back(new IR::Argument(new IR::Member(compilerMetadataPath, "mirror_id")));
+        args->push_back(new IR::Argument(newFieldList));
 
         auto pathExpr = new IR::PathExpression(new IR::Path("mirror"));
         auto member = new IR::Member(pathExpr, "emit");
@@ -945,18 +948,19 @@ class ConstructSymbolTable : public Inspector {
                   "execute_meter_with_color() must be used in a control block");
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
 
-        auto inst = mce->arguments->at(0)->to<IR::PathExpression>();
+        auto inst = mce->arguments->at(0)->expression->to<IR::PathExpression>();
         BUG_CHECK(inst != nullptr, "Invalid meter instance %1%", inst);
         auto path = inst->to<IR::PathExpression>()->path;
         auto pathExpr = new IR::PathExpression(path->name);
 
         auto method = new IR::Member(node->srcInfo, pathExpr, "execute");
-        auto args = new IR::Vector<IR::Expression>();
+        auto args = new IR::Vector<IR::Argument>();
         args->push_back(mce->arguments->at(1));
-        args->push_back(new IR::Cast(IR::Type::Bits::get(2), mce->arguments->at(3)));
+        args->push_back(new IR::Argument(
+            new IR::Cast(IR::Type::Bits::get(2), mce->arguments->at(3)->expression)));
         auto methodCall = new IR::MethodCallExpression(node->srcInfo, method, args);
 
-        auto meterColor = mce->arguments->at(2);
+        auto meterColor = mce->arguments->at(2)->expression;
         auto size = meterColor->type->width_bits();
         IR::AssignmentStatement *assign = nullptr;
         if (size > 8) {
@@ -985,25 +989,25 @@ class ConstructSymbolTable : public Inspector {
     void convertHashPrimitive(const IR::MethodCallStatement *node, cstring hashName) {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce->arguments->size() > 4, "insufficient arguments to hash() function");
-        auto pDest = mce->arguments->at(0);
-        auto pBase = mce->arguments->at(2);
-        auto pMax = mce->arguments->at(4);
+        auto pDest = mce->arguments->at(0)->expression;
+        auto pBase = mce->arguments->at(2)->expression;
+        auto pMax = mce->arguments->at(4)->expression;
 
         // Check the max value
         auto w = pDest->type->width_bits();
         // Add data unconditionally.
-        auto args = new IR::Vector<IR::Expression>({ mce->arguments->at(3) });
+        auto args = new IR::Vector<IR::Argument>({ mce->arguments->at(3) });
         if (pMax->to<IR::Constant>() == nullptr || pBase->to<IR::Constant>() == nullptr)
             BUG("Only compile-time constants are supported for hash base offset and max value");
 
         if (pMax->to<IR::Constant>()->asLong() < (1LL << w))  {
             if (pBase->type->width_bits() != w)
                 pBase = new IR::Cast(IR::Type::Bits::get(w), pBase);
-            args->push_back(pBase);
+            args->push_back(new IR::Argument(pBase));
 
             if (pMax->type->width_bits() != w)
                 pMax = new IR::Cast(IR::Type::Bits::get(w), pMax);
-            args->push_back(pMax);
+            args->push_back(new IR::Argument(pMax));
         } else {
             BUG_CHECK(pBase->to<IR::Constant>()->asInt() == 0,
                       "The base offset for a hash calculation must be zero");
@@ -1040,7 +1044,7 @@ class ConstructSymbolTable : public Inspector {
         if (auto typeName = algorithm->to<IR::Member>()) {
             structure->typeNamesToDo.emplace(typeName, typeName);
             LOG3("add " << typeName << " to translation map"); }
-        auto hashArgs = new IR::Vector<IR::Expression>({algorithm});
+        auto hashArgs = new IR::Vector<IR::Argument>({ algorithm });
         auto hashInst = new IR::Declaration_Instance(hashName, hashType, hashArgs);
 
         if (isIngress) {
@@ -1086,21 +1090,21 @@ class ConstructSymbolTable : public Inspector {
 
         // Only instantiate the extern for the first instance of resubmit()
         if (resubmitIndex == 1) {
-            auto declArgs = new IR::Vector<IR::Expression>({});
+            auto declArgs = new IR::Vector<IR::Argument>({});
             auto declType = new IR::Type_Name("Resubmit");
             auto decl = new IR::Declaration_Instance("resubmit",
                                                  declType, declArgs);
             structure->ingressDeparserDeclarations.push_back(decl);
         }
 
-        auto fl = mce->arguments->at(0);   // resubmit field list
+        auto fl = mce->arguments->at(0)->expression;   // resubmit field list
         /// compiler inserts resubmit_type as the format id to
         /// identify the resubmit group, it is 3 bits in size, but
         /// will be aligned to byte boundary in backend.
         auto new_fl = new IR::ListExpression({mem});
         for (auto f : fl->to<IR::ListExpression>()->components)
             new_fl->push_back(f);
-        auto args = new IR::Vector<IR::Expression>(new_fl);
+        auto args = new IR::Vector<IR::Argument>(new IR::Argument(new_fl));
         auto expr = new IR::PathExpression(new IR::Path("resubmit"));
         auto member = new IR::Member(expr, "emit");
         auto typeArgs = new IR::Vector<IR::Type>();
@@ -1118,10 +1122,10 @@ class ConstructSymbolTable : public Inspector {
     void convertRandomPrimitive(const IR::MethodCallStatement *node, cstring randName) {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
 
-        auto dest = mce->arguments->at(0);
+        auto dest = mce->arguments->at(0)->expression;
         // ignore lower bound
         auto hi = mce->arguments->at(2);
-        auto args = new IR::Vector<IR::Expression>();
+        auto args = new IR::Vector<IR::Argument>();
         args->push_back(hi);
 
         auto method = new IR::PathExpression(randName);
@@ -1139,10 +1143,10 @@ class ConstructSymbolTable : public Inspector {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "Malformed IR: method call expression cannot be nullptr");
 
-        auto baseType = mce->arguments->at(0);
+        auto baseType = mce->arguments->at(0)->expression;
         auto typeArgs = new IR::Vector<IR::Type>({baseType->type});
         auto type = new IR::Type_Specialized(new IR::Type_Name("random"), typeArgs);
-        auto param = new IR::Vector<IR::Expression>();
+        auto param = new IR::Vector<IR::Argument>();
         auto randName = cstring::make_unique(structure->unique_names, "random", '_');
         structure->unique_names.insert(randName);
         convertRandomPrimitive(node, randName);
@@ -1162,23 +1166,24 @@ class ConstructSymbolTable : public Inspector {
         structure->ingressDeparserDeclarations.push_back(decl);
         structure->egressDeparserDeclarations.push_back(decl);
 
-        auto fieldlist = csum.second->arguments->at(1);
-        auto dest_field = csum.second->arguments->at(2);
+        auto fieldlist = csum.second->arguments->at(1)->expression;
+        auto dest_field = csum.second->arguments->at(2)->expression;
 
         auto* updateCall = new IR::MethodCallExpression(
                 csum.second->srcInfo,
                 new IR::Member(new IR::PathExpression(decl->name), "update"),
-                {fieldlist});
+                { new IR::Argument(fieldlist) });
 
         auto stmt = new IR::AssignmentStatement(dest_field, updateCall);
-        if (auto boolLiteral = csum.second->arguments->at(0)->to<IR::BoolLiteral>()) {
+        if (auto boolLiteral = csum.second->arguments->at(0)->expression->to<IR::BoolLiteral>()) {
             if (boolLiteral->value) {
                 // Do not add the if-statement if the condition is always true.
                 structure->ingressDeparserStatements.push_back(stmt);
                 structure->egressDeparserStatements.push_back(stmt);
             } else { return; }
         } else {
-            auto cond = new IR::IfStatement(csum.second->arguments->at(0), stmt, nullptr);
+            auto cond = new IR::IfStatement(csum.second->arguments->at(0)->expression,
+                                            stmt, nullptr);
 
             structure->ingressDeparserStatements.push_back(cond);
             structure->egressDeparserStatements.push_back(cond);
@@ -1293,9 +1298,8 @@ class ConstructSymbolTable : public Inspector {
         BUG_CHECK(type != nullptr, "Invalid type for register converter");
         BUG_CHECK(type->baseType->path->name == "register",
                   "register converter cannot be applied to %1%", type->baseType->path->name);
-        auto declarations = new IR::IndexedVector<IR::Declaration>();
 
-        auto args = new IR::Vector<IR::Expression>({node->arguments->at(0)});
+        auto args = new IR::Vector<IR::Argument>({node->arguments->at(0)});
         type = new IR::Type_Specialized(
             new IR::Type_Name("Register"), type->arguments);
 
@@ -1313,10 +1317,10 @@ class ConstructSymbolTable : public Inspector {
 
         // Create a new instance of Hash<W>
         auto typeArgs = new IR::Vector<IR::Type>();
-        auto w = node->arguments->at(2)->to<IR::Constant>()->asInt();
+        auto w = node->arguments->at(2)->expression->to<IR::Constant>()->asInt();
         typeArgs->push_back(IR::Type::Bits::get(w));
 
-        auto args = new IR::Vector<IR::Expression>();
+        auto args = new IR::Vector<IR::Argument>();
         args->push_back(node->arguments->at(0));
 
         auto specializedType = new IR::Type_Specialized(
@@ -1327,11 +1331,11 @@ class ConstructSymbolTable : public Inspector {
         declarations->push_back(
             new IR::Declaration_Instance(hashName, specializedType, args));
 
-        args = new IR::Vector<IR::Expression>();
+        args = new IR::Vector<IR::Argument>();
         // size
         args->push_back(node->arguments->at(1));
         // hash
-        args->push_back(new IR::PathExpression(hashName));
+        args->push_back(new IR::Argument(new IR::PathExpression(hashName)));
         // selector_mode
         auto sel_mode = new IR::Member(
             new IR::TypeNameExpression("SelectorMode_t"), "FAIR");
@@ -1344,7 +1348,7 @@ class ConstructSymbolTable : public Inspector {
         } else {
             WARNING("No mode specified for the selector %s. Assuming fair" << node);
         }
-        args->push_back(sel_mode);
+        args->push_back(new IR::Argument(sel_mode));
 
         type = new IR::Type_Name("ActionSelector");
         declarations->push_back(new IR::Declaration_Instance(
@@ -1366,7 +1370,7 @@ class ConstructSymbolTable : public Inspector {
             WARNING("Could not infer min_width for counter %s, using bit<32>" << node);
         }
         // type<S>
-        if (auto s = node->arguments->at(0)->to<IR::Constant>()) {
+        if (auto s = node->arguments->at(0)->expression->to<IR::Constant>()) {
             typeArgs->push_back(s->type->to<IR::Type_Bits>());
         }
 
@@ -1380,7 +1384,7 @@ class ConstructSymbolTable : public Inspector {
         auto type = node->type->to<IR::Type_Name>();
         if (!type) return;
         auto typeArgs = new IR::Vector<IR::Type>();
-        if (auto s = node->arguments->at(0)->to<IR::Constant>()) {
+        if (auto s = node->arguments->at(0)->expression->to<IR::Constant>()) {
             typeArgs->push_back(s->type->to<IR::Type_Bits>());
         }
         auto specializedType = new IR::Type_Specialized(new IR::Type_Name("Meter"), typeArgs);
@@ -1555,7 +1559,7 @@ class InsertVerifyChecksums : public Inspector {
             auto* method = call->method->to<IR::Member>();
             if (method && method->member == "extract") {
                 for (auto m : *(call->arguments))
-                    extracts.push_back(m->to<IR::Member>());
+                    extracts.push_back(m->expression->to<IR::Member>());
             }
         }
     };
@@ -1589,8 +1593,8 @@ class InsertVerifyChecksums : public Inspector {
 
     void implementVerifyChecksum(ChecksumSourceMap::value_type csum, cstring stateName,
                                  const std::vector<const IR::Member*>& extracts) {
-        auto fieldlist = csum.second->arguments->at(1);
-        auto dest_field = csum.second->arguments->at(2);
+        auto fieldlist = csum.second->arguments->at(1)->expression;
+        auto dest_field = csum.second->arguments->at(2)->expression;
 
         // check if any of the fields or dest belong to extracts
 
@@ -1607,7 +1611,8 @@ class InsertVerifyChecksums : public Inspector {
                     }
 
                     auto addCall = new IR::MethodCallStatement(csum.second->srcInfo,
-                        new IR::Member(new IR::PathExpression(decl->name), "add"), {f});
+                        new IR::Member(new IR::PathExpression(decl->name), "add"),
+                                                              { new IR::Argument(f) });
                     structure->ingressParserStatements[stateName].push_back(addCall);
                     structure->egressParserStatements[stateName].push_back(addCall);
                 }

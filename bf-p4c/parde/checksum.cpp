@@ -43,7 +43,7 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
     LOG2("Would write computed checksum to field: " << destField);
 
     const IR::ListExpression* sourceList =
-        (*methodCall->arguments)[0]->to<IR::ListExpression>();
+        (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
 
     if (!sourceList || sourceList->components.empty()) {
         ::error("Invalid list of fields for checksum calculation: %1%", methodCall);
@@ -85,7 +85,8 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
     auto destField = assignment->left->to<IR::Member>();
     auto methodCall = assignment->right->to<IR::MethodCallExpression>();
 
-    const IR::ListExpression* sourceList = (*methodCall->arguments)[0]->to<IR::ListExpression>();
+    const IR::ListExpression* sourceList =
+        (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
 
     auto* sources = new ChecksumSources;
     for (auto* source : sourceList->components) {

@@ -74,7 +74,7 @@ class ConvertMethodCall : public MauTransform {
             prim = new IR::MAU::TypedPrimitive(mc->srcInfo, mc->type, mc->method->type, name);
         if (recv) prim->operands.push_back(recv);
         for (auto arg : *mc->arguments)
-            prim->operands.push_back(arg);
+            prim->operands.push_back(arg->expression);
         // if method call returns a value
         return prim;
     }
@@ -134,7 +134,7 @@ class DefaultActionInit : public MauModifier {
         auto default_action = table->getDefaultAction();
         if (!default_action)
             return false;
-        const IR::Vector<IR::Expression> *args = nullptr;
+        const IR::Vector<IR::Argument> *args = nullptr;
         if (auto mc = default_action->to<IR::MethodCallExpression>()) {
             default_action = mc->method;
             args = mc->arguments;
@@ -204,7 +204,7 @@ class ActionBodySetup : public Inspector {
 };
 
 static const IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-    const IR::P4Action *ac, const IR::Vector<IR::Expression> *args) {
+    const IR::P4Action *ac, const IR::Vector<IR::Argument> *args) {
     auto rv = new IR::MAU::Action;
     rv->srcInfo = ac->srcInfo;
     rv->name = ac->externalName();
@@ -221,7 +221,7 @@ static const IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4:
             if (!args || arg_idx >= args->size())
                 error("%s: Not enough args for %s", args ? args->srcInfo : ac->srcInfo, ac);
             else
-                aas.add_arg(param->name, args->at(arg_idx++)); } }
+                aas.add_arg(param->name, args->at(arg_idx++)->expression); } }
     if (arg_idx != (args ? args->size(): 0))
         error("%s: Too many args for %s", args->srcInfo, ac);
     ac->body->apply(ActionBodySetup(rv));
@@ -280,13 +280,13 @@ static IR::MAU::AttachedMemory *createIdleTime(cstring name, const IR::Annotatio
     return idletime;
 }
 
-void setupParam(IR::MAU::Synth2Port* rv, const IR::Vector<IR::Expression>* args) {
+void setupParam(IR::MAU::Synth2Port* rv, const IR::Vector<IR::Argument>* args) {
     if (args->size() == 1) {
-        rv->settype(args->at(0)->as<IR::Member>().member.name);
+        rv->settype(args->at(0)->expression->as<IR::Member>().member.name);
         rv->direct = true;
     } else if (args->size() == 2) {
-        rv->size = args->at(0)->as<IR::Constant>().asInt();
-        rv->settype(args->at(1)->as<IR::Member>().member.name);
+        rv->size = args->at(0)->expression->as<IR::Constant>().asInt();
+        rv->settype(args->at(1)->expression->as<IR::Member>().member.name);
     } else {
         BUG("cannot have more than %d arguments", args->size());
     }
@@ -315,7 +315,7 @@ cstring getTypeName(const IR::Type* type) {
 }
 
 static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
-        cstring name, const IR::Type *type, const IR::Vector<IR::Expression> *args,
+        cstring name, const IR::Type *type, const IR::Vector<IR::Argument> *args,
         const IR::Annotations *annot, const P4::ReferenceMap *refMap,
         const IR::MAU::AttachedMemory **created_ap = nullptr) {
     auto baseType = getBaseType(type);
@@ -323,7 +323,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
 
     if (tname == "ActionSelector") {
         auto sel = new IR::MAU::Selector(srcInfo, name, annot);
-        if (args->at(2)->to<IR::Member>()->member.name == "FAIR") {
+        if (args->at(2)->expression->to<IR::Member>()->member.name == "FAIR") {
             sel->mode = IR::ID("fair");
         } else {
             sel->mode = IR::ID("resilient");
@@ -334,21 +334,21 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         sel->group_size = 120;
         BUG_CHECK(args->size() == 3, "%s Selector does not have the correct number of arguments",
                   sel->srcInfo);
-        auto path = args->at(1)->to<IR::PathExpression>()->path;
+        auto path = args->at(1)->expression->to<IR::PathExpression>()->path;
         auto decl = refMap->getDeclaration(path)->to<IR::Declaration_Instance>();
 
-        if (!sel->algorithm.setup(decl->arguments->at(0)))
-            BUG("invalid alorithm %s", args->at(0));
+        if (!sel->algorithm.setup(decl->arguments->at(0)->expression))
+            BUG("invalid alorithm %s", args->at(0)->expression);
 
         auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
         ap->direct = false;
-        ap->size = args->at(0)->as<IR::Constant>().asInt();
+        ap->size = args->at(0)->expression->as<IR::Constant>().asInt();
         // FIXME Need to reconstruct the field list from the table key?
         *created_ap = ap;
         return sel;
     } else if (tname == "ActionProfile") {
         auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
-        ap->size = args->at(0)->as<IR::Constant>().asInt();
+        ap->size = args->at(0)->expression->as<IR::Constant>().asInt();
         return ap;
     } else if (tname == "Counter" || tname == "DirectCounter") {
         auto ctr = new IR::MAU::Counter(srcInfo, name, annot);
@@ -374,7 +374,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
     } else if (tname == "Lpf") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         mtr->implementation = IR::ID("lpf");
-        mtr->size = args->at(0)->as<IR::Constant>().asInt();
+        mtr->size = args->at(0)->expression->as<IR::Constant>().asInt();
         return mtr;
     } else if (tname == "DirectLpf") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
@@ -384,16 +384,16 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
     } else if (tname == "Wred") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         mtr->implementation = IR::ID("wred");
-        mtr->size = args->at(0)->as<IR::Constant>().asInt();
-        mtr->red_drop_value = args->at(1)->as<IR::Constant>().asInt();
-        mtr->red_nodrop_value = args->at(2)->as<IR::Constant>().asInt();
+        mtr->size = args->at(0)->expression->as<IR::Constant>().asInt();
+        mtr->red_drop_value = args->at(1)->expression->as<IR::Constant>().asInt();
+        mtr->red_nodrop_value = args->at(2)->expression->as<IR::Constant>().asInt();
         return mtr;
     } else if (tname == "DirectWred") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         mtr->implementation = IR::ID("wred");
         mtr->direct = true;
-        mtr->red_drop_value = args->at(0)->as<IR::Constant>().asInt();
-        mtr->red_nodrop_value = args->at(1)->as<IR::Constant>().asInt();
+        mtr->red_drop_value = args->at(0)->expression->as<IR::Constant>().asInt();
+        mtr->red_nodrop_value = args->at(1)->expression->as<IR::Constant>().asInt();
         return mtr;
     }
 
@@ -480,7 +480,7 @@ class FixP4Table : public Inspector {
 bool AttachTables::findSaluDeclarations(const IR::Declaration_Instance *ext,
         const IR::Declaration_Instance **reg_ptr, const IR::Type_Specialized **regtype_ptr,
         const IR::Type_Extern **seltype_ptr) {
-    auto reg_arg = ext->arguments->size() > 0 ? ext->arguments->at(0) : nullptr;
+    auto reg_arg = ext->arguments->size() > 0 ? ext->arguments->at(0)->expression : nullptr;
     if (!reg_arg) {
         if (auto regprop = ext->properties["reg"]) {
             if (auto rpv = regprop->value->to<IR::ExpressionValue>())
@@ -538,7 +538,7 @@ void AttachTables::InitializeStatefulAlus
             salu->selector = sel;
             // FIXME -- how are selector table sizes set?  It seems to be lost in P4_16
             salu->size = 120*1024;  // one ram?
-        } else if (auto size = reg->arguments->at(0)->to<IR::Constant>()->asInt()) {
+        } else if (auto size = reg->arguments->at(0)->expression->to<IR::Constant>()->asInt()) {
             salu->direct = false;
             salu->size = size;
         } else {

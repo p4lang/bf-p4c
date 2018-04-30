@@ -372,7 +372,7 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
         }
 
         IR::MAU::hash_function algorithm;
-        if (!algorithm.setup(decl->arguments->at(0)))
+        if (!algorithm.setup(decl->arguments->at(0)->expression))
             BUG("invalid hash algorithm %s", decl->arguments->at(0));
         auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size),
                                          prim->operands[1], algorithm, prim);

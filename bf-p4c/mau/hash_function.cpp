@@ -28,43 +28,49 @@ bool IR::MAU::hash_function::setup(const IR::Expression *e) {
         } else {
             return false; }
         return true; }
-    const IR::Vector<IR::Expression> *crcargs = nullptr;
+    const IR::Vector<IR::Argument> *crcargs = nullptr;
     if (auto mc = e->to<IR::MethodCallExpression>()) {
         if (auto meth = mc->method->to<IR::PathExpression>())
             if (meth->path->name == "crc_poly")
                 crcargs = mc->arguments;
     } else if (auto prim = e->to<IR::Primitive>()) {
-        if (prim->name == "crc_poly")
-            crcargs = &prim->operands; }
+        if (prim->name == "crc_poly") {
+            auto ops = new IR::Vector<IR::Argument>();
+            for (auto op : prim->operands) {
+                ops->push_back(new IR::Argument(op));
+            }
+            crcargs = ops;
+        }
+    }
     if (crcargs) {
         type = CRC;
         switch (crcargs->size()) {
         case 5:
-            if (auto k = crcargs->at(4)->to<IR::Constant>())
+            if (auto k = crcargs->at(4)->expression->to<IR::Constant>())
                 final_xor = k->value.get_ui();
             else
                 return false;
             // fall through
         case 4:
-            if (auto k = crcargs->at(3)->to<IR::Constant>())
+            if (auto k = crcargs->at(3)->expression->to<IR::Constant>())
                 init = k->value.get_ui();
             else
                 return false;
             // fall through
         case 3:
-            if (auto k = crcargs->at(2)->to<IR::BoolLiteral>())
+            if (auto k = crcargs->at(2)->expression->to<IR::BoolLiteral>())
                 msb = k->value;
             else
                 return false;
             // fall through
         case 2:
-            if (auto k = crcargs->at(1)->to<IR::BoolLiteral>())
+            if (auto k = crcargs->at(1)->expression->to<IR::BoolLiteral>())
                 reverse = k->value;
             else
                 return false;
             // fall through
         case 1:
-            if (auto k = crcargs->at(0)->to<IR::Constant>())
+            if (auto k = crcargs->at(0)->expression->to<IR::Constant>())
                 poly = mpz_class(k->value / 2).get_ui();
             else
                 return false;
