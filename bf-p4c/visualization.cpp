@@ -11,6 +11,23 @@
 
 namespace BFN {
 
+static std::string typeName(Memories::Use::type_t type) {
+    switch (type) {
+        case Memories::Use::EXACT:      return "match_entry_ram";
+        case Memories::Use::ATCAM:      return "algorithmic_tcam";
+        case Memories::Use::TERNARY:    return "ternary_match";
+        case Memories::Use::GATEWAY:    return "gateway";
+        case Memories::Use::TIND:       return "ternary_indirection_ram";
+        case Memories::Use::COUNTER:    return "counter";
+        case Memories::Use::METER:      return "meter_ram";
+        case Memories::Use::STATEFUL:   return "stateful_ram";
+        case Memories::Use::SELECTOR:   return "select_ram";
+        case Memories::Use::ACTIONDATA: return "action_ram";
+        case Memories::Use::IDLETIME:   return "idletime";
+        default: BUG("Unknown memory type");
+    }
+}
+
 Visualization::Visualization() : _stageResources() {
     _resourcesNode = new Util::JsonObject();
     auto *pipesNode = new Util::JsonArray();
@@ -97,18 +114,20 @@ void Visualization::gen_stage(unsigned int stage) {
     assert(theStage);
 
     LOG1("generating resources for stage " << stage);
-    gen_xbar(stage, theStage);
-    gen_hashbits(stage, theStage);
+    gen_xbar_bytes(stage, theStage);
+    gen_hash_bits(stage, theStage);
     gen_hashdist(stage, theStage);
     gen_memories(stage, theStage);
-    gen_actions(stage, theStage);
+    gen_action_bus_bytes(stage, theStage);
+    gen_action_slots(stage, theStage);
+    gen_vliw(stage, theStage);
 }
 
-void Visualization::add_xbar_usage(unsigned int stage, const IXBar::Use &alloc) {
+void Visualization::add_xbar_bytes_usage(unsigned int stage, const IXBar::Use &alloc) {
     if (alloc.use.empty())
         return;
 
-    LOG2("add_xbar_usage (stage=" << stage << "), table: " << alloc.used_by);
+    LOG2("add_xbar_bytes_usage (stage=" << stage << "), table: " << alloc.used_by);
     // \TODO: what if these have usages from before? We need to append to elements rather
     // than emplace the elements
     for (auto &byte : alloc.use) {
@@ -214,11 +233,11 @@ void Visualization::add_xbar_usage(unsigned int stage, const IXBar::Use &alloc) 
         }
     }
 
-    LOG2("add_xbar_usage (stage=" << stage << "), table: " << alloc.used_by << " done!");
+    LOG2("add_xbar_bytes_usage (stage=" << stage << "), table: " << alloc.used_by << " done!");
 }
 
 void Visualization::add_hash_dist_usage(unsigned int stage, const IXBar::HashDistUse &hd_use) {
-    add_xbar_usage(stage, hd_use.use);
+    add_xbar_bytes_usage(stage, hd_use.use);
     int hash_id = hd_use.use.hash_dist_hash.unit;
     for (auto unit : hd_use.use.hash_dist_hash.slice) {
         auto key = std::make_pair(hash_id, unit);
@@ -233,8 +252,21 @@ void Visualization::add_hash_dist_usage(unsigned int stage, const IXBar::HashDis
          << " done!");
 }
 
+void Visualization::add_action_bus_bytes_usage(unsigned int stage, const ActionDataBus::Use &alloc,
+                                               cstring tableName) {
+    for (auto &rs : alloc.action_data_locs) {
+        int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
+        for (auto i = 0; i < byte_sz; i++) {
+            ActionBusByteResource abr;
+            abr.add(USED_BY, tableName + "");
+            _stageResources[stage]._actionBusBytesUsage[rs.location.byte+i].append(&abr);
+        }
+    }
 
-void Visualization::gen_xbar(unsigned int stageNo, Util::JsonObject *stage) {
+    LOG2("add_action_bus_bytes_usage (stage=" << stage << "), table :" << tableName << " done!");
+}
+
+void Visualization::gen_xbar_bytes(unsigned int stageNo, Util::JsonObject *stage) {
     auto *xr = new Util::JsonObject();
     xr->emplace("size",
                 new Util::JsonValue(IXBar::EXACT_GROUPS * IXBar::EXACT_BYTES_PER_GROUP +
@@ -265,7 +297,7 @@ void Visualization::gen_xbar(unsigned int stageNo, Util::JsonObject *stage) {
     stage->emplace("xbar_bytes", xr);
 }
 
-void Visualization::gen_hashbits(unsigned int stageNo, Util::JsonObject *stage) {
+void Visualization::gen_hash_bits(unsigned int stageNo, Util::JsonObject *stage) {
     auto *hash_bits_res = new Util::JsonObject();
     hash_bits_res->emplace("nBits", new Util::JsonValue(10 * IXBar::HASH_INDEX_GROUPS +
                                                         IXBar::HASH_SINGLE_BITS));
@@ -330,18 +362,31 @@ void Visualization::add_table_usage(cstring name, const IR::MAU::Table *table) {
     // logicalIds
     _stageResources[stage]._logicalIds.emplace(table->logical_id, name);
 
-    // collect table resources
     const TableResourceAlloc *alloc = table->resources;
+
     LOG3("\tadding resource table: " << name);
+
     _stageResources[stage]._memoriesUsage.push_back(MemoriesResource(name, alloc));
 
-    add_xbar_usage(stage, alloc->match_ixbar);
-    add_xbar_usage(stage, alloc->salu_ixbar);
-    add_xbar_usage(stage, alloc->meter_ixbar);
-    add_xbar_usage(stage, alloc->selector_ixbar);
-    add_xbar_usage(stage, alloc->gateway_ixbar);
+    for (auto at : table->attached) {
+        auto attached = at->attached;
+        _stageResources[stage]._memoriesUsage.push_back(MemoriesResource(attached->name, alloc));
+    }
+
+    add_xbar_bytes_usage(stage, alloc->match_ixbar);
+    add_xbar_bytes_usage(stage, alloc->salu_ixbar);
+    add_xbar_bytes_usage(stage, alloc->meter_ixbar);
+    add_xbar_bytes_usage(stage, alloc->selector_ixbar);
+    add_xbar_bytes_usage(stage, alloc->gateway_ixbar);
+
     for (auto &hash_dist : alloc->hash_dists)
         add_hash_dist_usage(stage, hash_dist);
+
+    add_action_bus_bytes_usage(stage, alloc->action_data_xbar, name);
+
+    // TODO action slots
+    // TODO vliw
+
     LOG1("add_table_usage: " << name << " done!");
 }
 
@@ -371,20 +416,7 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
     auto *jmeter_alus = new Util::JsonArray();
     auto *statistics_res = new Util::JsonObject();
     auto *statistics_alus = new Util::JsonArray();
-    #if 0
-    for (int r = 0; r < Memories::SRAM_ROWS; r++) {
-        const cstring &tbl = (r % 2) == 0 ? stats_alus[r/2] : meter_alus[r/2];
-        if (tbl || BFN::Visualization::OUTPUT_UNUSED) {
-            auto *jsram = new Util::JsonObject();
-            jsram->emplace("row", new Util::JsonValue(r));
-            BFN::Visualization::usagesToCtxJson(jsram, tbl);
-            if (r % 2 == 0)
-                statistics_alus->append(jsram);
-            else
-                jmeter_alus->append(jsram);
-        }
-    }
-    #endif
+
     jmeter_res->emplace("nAlus", new Util::JsonValue(4));
     jmeter_res->emplace("meters", jmeter_alus);
     parent->emplace("meter_alus", jmeter_res);
@@ -429,70 +461,56 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
     for (auto &res : _stageResources[stage]._memoriesUsage) {
         for (auto &use : res._use->memuse) {
             Memories::Use memuse = use.second;
+            std::string memTypeName = typeName(memuse.type);
             LOG3("MemUse: (" << res._tableName << ", p4name: " << p4name(res)
                  << memuse.type << ")");
             switch (memuse.type) {
             case Memories::Use::EXACT:
-                for (auto &r : memuse.row)
-                    for (auto &c : r.col)
-                        mkItem(rams, p4name(res), "match_entry_ram", r.row, c, "column");
-                break;
             case Memories::Use::ATCAM:
+            case Memories::Use::TIND:
+            case Memories::Use::ACTIONDATA:
                 for (auto &r : memuse.row)
                     for (auto &c : r.col)
-                        mkItem(rams, p4name(res), "algorithmic_tcam", r.row, c, "column");
+                        mkItem(rams, p4name(res), memTypeName, r.row, c, "column");
                 break;
             case Memories::Use::TERNARY:
                 for (auto &r : memuse.row)
                     for (auto &c : r.col)
-                        mkItem(tcams, p4name(res), "ternary_match", r.row, c, "column");
+                        mkItem(tcams, p4name(res), memTypeName, r.row, c, "column");
                 break;
-            case Memories::Use::GATEWAY:
-                for (auto &r : memuse.row)
-                    for (auto &c : r.col)
-                        mkItem(gateways, p4name(res), cstring(), r.row, c, "unit_id");
-                break;
-            case Memories::Use::TIND:
-                for (auto &r : memuse.row)
-                    for (auto &c : r.col)
-                        mkItem(rams, p4name(res), "ternary_indirection_ram", r.row, c, "column");
-                break;
+            case Memories::Use::GATEWAY: {
+                auto row = memuse.row[0].row;
+                auto unit = memuse.gateway.unit;
+                mkItem(gateways, p4name(res), memTypeName, row, unit, "unit_id");
+
+                break; }
             case Memories::Use::COUNTER:
             case Memories::Use::METER:
             case Memories::Use::STATEFUL:
             case Memories::Use::SELECTOR:
-                // \TODO: figure out the correct resource usage for counters/meters/stats/selectors
-                // which types of memories
                 for (auto &r : memuse.row) {
                     auto *item = new Util::JsonObject();
                     item->emplace("row", new Util::JsonValue(r.row));
-                    usagesToCtxJson(item, p4name(res) + "");
+                    usagesToCtxJson(item, p4name(res) + "", memTypeName);
                     if (r.row % 2 == 0) statistics_alus->append(item);
                     else                jmeter_alus->append(item);
                 }
-#if 0
-                // use = &mem.sram_use;
-                // mapuse = &mem.mapram_use;
-                for (auto &r : row) {
+
+                for (auto &r : memuse.row) {
                     for (auto &c : r.col)
-                        mkItem(rams, p4name(res), "...", r.row, c, "column");
+                        mkItem(rams, p4name(res), memTypeName, r.row, c, "column");
                     for (auto c : r.mapcol)
-                        mkItem(maprams, r.row, c, "unit_id");
+                        mkItem(map_rams, p4name(res), memTypeName, r.row, c, "unit_id");
                 }
-                for (auto &r : color_mapram)
+
+                for (auto &r : memuse.color_mapram)
                     for (auto &col : r.col)
-                        mkItem(maprams, r.row, col, "unit_id");
-#endif
+                        mkItem(map_rams, p4name(res), memTypeName, r.row, col, "unit_id");
+
                 break;
-            case Memories::Use::ACTIONDATA:
-                for (auto &r : memuse.row)
-                    for (auto &c : r.col)
-                        mkItem(rams, p4name(res), "action_ram", r.row, c, "column");
-                break;
-                // bus = &mem.sram_print_search_bus;
             case Memories::Use::IDLETIME:
                 for (auto &r : memuse.row)
-                    for (auto &c : r.mapcol)
+                    for (auto &c : r.col)
                         mkItem(map_rams, p4name(res), "idletime", r.row, c, "unit_id");
                 break;
             default:
@@ -521,13 +539,29 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
     parent->emplace("stashes", stashes_res);
 }
 
-void Visualization::gen_actions(unsigned int /* stageNo */, Util::JsonObject *stage) {
-    // \TODO: where do we get these ones from?
+void Visualization::gen_action_bus_bytes(unsigned int stageNo, Util::JsonObject *stage) {
     auto *action_bus_bytes = new Util::JsonObject();
     action_bus_bytes->emplace("size", new Util::JsonValue(ActionDataBus::ADB_BYTES));
-    action_bus_bytes->emplace("bytes", new Util::JsonArray());
-    stage->emplace("action_bus_bytes", action_bus_bytes);
+    auto *ab = new Util::JsonArray();
+    action_bus_bytes->emplace("bytes", ab);
 
+    std::for_each(_stageResources[stageNo]._actionBusBytesUsage.begin(),
+                  _stageResources[stageNo]._actionBusBytesUsage.end(),
+                  [ab](const std::pair<int, ActionBusByteResource> &p) {
+                      auto byte_number = p.first;
+                      auto use = p.second;
+                      auto *byte_repr = new Util::JsonObject();
+                      byte_repr->emplace("byte_number", new Util::JsonValue(byte_number));
+                      usagesToCtxJson(byte_repr, use.total_value(USED_BY),
+                                      use.total_value(USED_FOR), use.total_value(DETAILS));
+                      ab->append(byte_repr);
+                  });
+
+    stage->emplace("action_bus_bytes", action_bus_bytes);
+}
+
+void Visualization::gen_action_slots(unsigned int /* stageNo */, Util::JsonObject *stage) {
+    // \TODO: where do we get these ones from?
     auto *action_slots = new Util::JsonArray();
     for ( auto slot : { 8, 16, 32} ) {
         auto * s = new Util::JsonObject();
@@ -537,14 +571,15 @@ void Visualization::gen_actions(unsigned int /* stageNo */, Util::JsonObject *st
         action_slots->append(s);
     }
     stage->emplace("action_slots", action_slots);
+}
 
-
+void Visualization::gen_vliw(unsigned int /* stageNo */, Util::JsonObject *stage) {
+    // \TODO: where do we get these ones from?
     auto *vliw = new Util::JsonObject();
     vliw->emplace("size", new Util::JsonValue(32));
     vliw->emplace("instructions", new Util::JsonArray());
     stage->emplace("vliw", vliw);
 }
-
 
 std::ostream &operator<<(std::ostream &out, const Visualization &vis) {
     if (vis._resourcesNode)

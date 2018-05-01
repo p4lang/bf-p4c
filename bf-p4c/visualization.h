@@ -126,10 +126,6 @@ class Visualization : public Inspector {
         XBarByteResource() {}
         // Cross bar bytes can be shared by multiple tables for different purposes, and
         // the detail can be different due to possible overlay of bytes
-
-        void append(XBarByteResource *jr) {
-            JsonResource::append(jr);
-        }
     };
 
     struct HashBitResource : JsonResource {
@@ -139,10 +135,6 @@ class Visualization : public Inspector {
         // Each hash bit is reserved to a single table or side effect.  However, because the
         // same bit can be the select bits/RAM line bit for two different ways in the same
         // table, then they can be shared
-
-        void append(HashBitResource *jr) {
-            JsonResource::append(jr);
-        }
     };
 
     // This represents the 48 bits of hash distribution before the hash distribution units
@@ -151,21 +143,20 @@ class Visualization : public Inspector {
         HashDistResource() {
             allowed_empty_nodes = { DETAILS };
         }
-
         // Hash Distribution units can be used for multiple purposes (i.e. two wide addresses
         // between tables
-
-        void append(HashDistResource *jr) {
-             JsonResource::append(jr);
-        }
     };
 
     struct MemoriesResource {
         cstring                   _tableName;
         const TableResourceAlloc *_use;
 
-        explicit MemoriesResource(cstring name, const TableResourceAlloc *use) :
+        MemoriesResource(cstring name, const TableResourceAlloc *use) :
             _tableName(name), _use(use) {}
+    };
+
+    struct ActionBusByteResource : JsonResource {
+        ActionBusByteResource() {}
     };
 
     /// Collectors for generating the resource schema.
@@ -177,6 +168,7 @@ class Visualization : public Inspector {
         ordered_map<std::pair<int, int>, HashBitResource>  _hashBitsUsage;
         ordered_map<std::pair<int, int>, HashDistResource> _hashDistUsage;
         std::vector<MemoriesResource>                      _memoriesUsage;
+        ordered_map<int, ActionBusByteResource>            _actionBusBytesUsage;
         /// map logical ids to table names
         ordered_map<int, cstring>                          _logicalIds;
 
@@ -229,19 +221,22 @@ class Visualization : public Inspector {
 
  private:
     /// Update the collectors for each different type of resource
-    void add_xbar_usage(unsigned int stageNo, const IXBar::Use &alloc);
-    void add_hash_dist_usage(unsigned int stageNo, const IXBar::HashDistUse &hd_alloc);
-    void add_action_usage(unsigned int /* stageNo */, cstring /* name , Table?? */) {}
+    void add_xbar_bytes_usage(unsigned int stageNo, const IXBar::Use &alloc);
+    void add_hash_dist_usage(unsigned int stageNo, const IXBar::HashDistUse &alloc);
+    void add_action_bus_bytes_usage(unsigned int stageNo, const ActionDataBus::Use &alloc,
+                                    cstring tableName);
 
-    void gen_xbar(unsigned int stageNo, Util::JsonObject *stage);
-    void gen_hashbits(unsigned int stageNo, Util::JsonObject *stage);
+    void gen_xbar_bytes(unsigned int stageNo, Util::JsonObject *stage);
+    void gen_hash_bits(unsigned int stageNo, Util::JsonObject *stage);
     void gen_hashdist(unsigned int stageNo, Util::JsonObject *stage);
     /// Output the _memoriesUsage object into a json representation to be
     /// consumed by p4i. See memory related nodes in the context.json
     /// schema: rams, map_rams, gateways, meter_alus, statistic_alus,
     /// tcams.
     void gen_memories(unsigned int stageNo, Util::JsonObject *stage);
-    void gen_actions(unsigned int stageNo, Util::JsonObject *stage);
+    void gen_action_bus_bytes(unsigned int stageNo, Util::JsonObject *stage);
+    void gen_action_slots(unsigned int stageNo, Util::JsonObject *stage);
+    void gen_vliw(unsigned int stageNo, Util::JsonObject *stage);
 };
 
 }  // namespace BFN
