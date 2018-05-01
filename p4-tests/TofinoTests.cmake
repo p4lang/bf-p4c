@@ -324,7 +324,7 @@ bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_indirect_1/exm_in
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/multicast_test/multicast_test.p4"
   "test.TestBasic
    ^test.TestYid
-   test.TestXid
+   ^test.TestXid
    test.TestEcmp
    ^test.TestLag
    ^test.TestBackup

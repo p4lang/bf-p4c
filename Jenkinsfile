@@ -44,16 +44,11 @@ node {
                 }
             }
         }
-        stage ('Cleanup') {
-            ansiColor('xterm') {
-                timestamps {
-                    sh "echo 'Remove docker image'"
-                    sh "docker rmi -f bf-p4c-compilers_${image_tag}"
-                }
-            }
-        }
     } catch (err) {
         currentBuild.result = 'FAILED'
         throw err
+    } finally {
+        sh "echo 'Remove docker image'"
+        sh "docker rmi -f bf-p4c-compilers_${image_tag}"
     }
 }

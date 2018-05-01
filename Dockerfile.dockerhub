@@ -26,7 +26,8 @@ ENV P4C_DEPS automake \
              python-scapy \
              python-yaml \
              sudo \
-             tcpdump
+             tcpdump \
+             psmisc
 
 RUN apt-get update && \
     apt-get install -y $P4C_DEPS
