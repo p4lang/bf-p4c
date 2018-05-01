@@ -73,17 +73,29 @@ struct operand {
     // Operand which directly accesses phv(hi/lo) from Input Xbar
     struct PhvRaw : public Phv {
         int pi=-1;
+        unsigned mask = ~0U;
         PhvRaw *clone() const override { return new PhvRaw(*this); }
         PhvRaw(gress_t gress, const value_t &v) : Phv(v.lineno) {
             if (v == "phv_lo") pi = 0;
             else if (v == "phv_hi") pi = 1;
-            else assert(0); }
+            else assert(0);
+            if (v.type == tCMD && PCHECKTYPE(v.vec.size == 2, v[1], tRANGE)) {
+                if ((v[1].lo & 7) || ((v[1].hi + 1) & 7))
+                    error(lineno, "only byte slices allowed on %s", v[0].s);
+                mask = ((1U << (v[1].hi + 1)/8U) - 1) << (v[1].lo/8U); } }
         void dbprint(std::ostream &out) const override { out << pi; }
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const PhvRaw *>(a_)) {
                 return pi == a->pi;
             } else return false; }
         const char *kind() const override { return "phv_ixb"; }
+        void pass1(StatefulTable *tbl) override {
+            int size = tbl->format->begin()->second.size/8U;
+            if (mask == ~0U)
+                mask = (1U << size) - 1;
+            else if (mask &~ ((1U << size) - 1))
+                error(lineno, "slice out of range for %d byte value", size);
+            tbl->phv_byte_mask |= mask << (size * pi); }
         int phv_index(StatefulTable *tbl) override { return pi; }
     };
     struct Memory : public Base {
@@ -160,7 +172,9 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
             op = new PhvReg(tbl->gress, *v);
     } else if ((v->type == tCMD) && (v->vec[0] == "math_table")) {
         //operand *opP = new operand(tbl, act, v->vec[1]);
-        op = new MathFn(v->lineno, operand(tbl, act, v->vec[1])); }
+        op = new MathFn(v->lineno, operand(tbl, act, v->vec[1]));
+    } else if (*v == "phv_lo" || *v == "phv_hi")
+        op = new PhvRaw(tbl->gress, *v);
     else
         op = new PhvReg(tbl->gress, *v);
 }
