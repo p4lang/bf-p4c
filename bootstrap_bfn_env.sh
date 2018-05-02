@@ -47,16 +47,14 @@ fi
 
 if [ $no_tofino = false ]; then
     tofino_installdir="$topdir/tofino_install"
-    if [ ! -d $tofino_installdir ]; then
-        $(mkdir $tofino_installdir)
-    fi
+    rm -rf $tofino_installdir
+    mkdir -p $tofino_installdir
 fi
 
 if [ $no_jbay = false ]; then
     jbay_installdir="$topdir/jbay_install"
-    if [ ! -d $jbay_installdir ]; then
-        $(mkdir $jbay_installdir)
-    fi
+    rm -rf $jbay_installdir
+    mkdir -p $jbay_installdir
 fi
 
 os_deps=${topdir}/${curdir}/install_os_deps.sh
@@ -95,6 +93,7 @@ echo "Using MAKEFLAGS=${MAKEFLAGS:=-j 4}"
 export MAKEFLAGS
 
 reuse_asis=false
+rerun_autoconf=false
 clean_before_rebuild=false
 pull_before_rebuild=false
 rebase_option=""
@@ -141,6 +140,11 @@ else
             rebase_option="--rebase"
         fi
     fi
+    if ! $reuse_asis && confirm "Rerun autoconf/automake/configure?"; then
+        rerun_autoconf=true
+    else
+        rerun_autoconf=false
+    fi
     if ! $reuse_asis && confirm "Clean before rebuild?"; then
         clean_before_rebuild=true
     fi
@@ -168,7 +172,7 @@ pushd behavioral-model >/dev/null
     if $reuse_asis && [ -x "$(which simple_switch_CLI)" ]; then
         echo "Reusing installed $(which simple_switch_CLI) as is"
     else
-        if $clean_before_rebuild || [ ! -r Makefile ]; then
+        if $clean_before_rebuild || $rerun_autoconf || [ ! -r Makefile ]; then
             ./install_deps.sh
             ./autogen.sh
             ./configure
@@ -232,7 +236,7 @@ install_bf_repo () {
         echo "Reusing $bf_repo as is"
     else
         cd $builddir
-        if [ ! -r Makefile ]; then
+        if $rerun_autoconf || [ ! -r Makefile ]; then
             ./autogen.sh
             ./configure $configure_flags --prefix=$tofino_installdir
         fi
@@ -302,7 +306,7 @@ build_PI () {
     if $reuse_asis && [ -x $installdir/lib/libpi.${LDLIB_EXT} ]; then
         echo "Reusing PI for $device as is"
     else
-        if [ ! -r Makefile ]; then
+        if $rerun_autoconf || [ ! -r $builddir/Makefile ]; then
             ./autogen.sh
             cd $builddir
             ../configure --with-proto --without-internal-rpc --without-cli --prefix=$installdir
@@ -344,7 +348,7 @@ build_driver () {
     if $reuse_asis && [ -x $builddir/bf-switchd ]; then
         echo "Reusing bf-drivers for $device as is"
     else
-        if [ ! -r Makefile ]; then
+        if $rerun_autoconf || [ ! -r $builddir/Makefile ]; then
             ./autogen.sh
             cd $builddir
             CFLAGS="-O0" CPPFLAGS="-I $installdir/include" ../configure --enable-thrift --with-avago --without-kdrv --with-build-model --enable-pi  --prefix=$installdir
@@ -399,7 +403,7 @@ build_model () {
             else
                 config_args="--enable-model-$target --prefix=$installdir"
             fi
-            if [ ! -r Makefile ]; then
+            if $rerun_autoconf || [ ! -r $builddir/Makefile ]; then
                 ./autogen.sh
                 cd $builddir
                 LDFLAGS="-L $installdir/lib" CPPFLAGS="-I $installdir/include" ../configure $config_args
