@@ -185,7 +185,7 @@ Backend::Backend(const BFN_Options& options) :
         new TableAllocPass(options, phv, deps),
         new TableSummary,
         new IXBarVerify(phv),
-        new TotalInstructionAdjustment(phv),
+        new InstructionAdjustment(phv),
         new DumpPipe("Final table graph"),
         new CheckForUnallocatedTemps(phv, uses, clot),
 

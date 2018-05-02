@@ -374,7 +374,7 @@ class SetupAttachedTables : public MauInspector {
         mem.idletime_tables.push_back(ta);
 
         int per_row = IdleTimePerWord(idle);
-        mi.idletime_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row, true);
+        mi.idletime_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row, false);
         return false;
     }
 
@@ -3075,7 +3075,7 @@ bool Memories::find_mem_and_bus_for_idletime(
     int total_requested = 0;
 
     int mem_start_row = (top_half) ? SRAM_ROWS/2 : 0;
-    int mem_end_row = (top_half) ? SRAM_ROWS : SRAM_ROWS/2 - 1;
+    int mem_end_row = (top_half) ? SRAM_ROWS : SRAM_ROWS/2;
 
     mem_locs.clear();
 
@@ -3117,7 +3117,7 @@ bool Memories::find_mem_and_bus_for_idletime(
     }
 
     if (!found_bus) {
-        LOG4("Ran out of idletime bus in " << which_half << "half");
+        LOG3("Ran out of idletime bus in " << which_half << "half");
         return false;
     }
 
@@ -3125,7 +3125,7 @@ bool Memories::find_mem_and_bus_for_idletime(
 }
 
 bool Memories::allocate_idletime_in_top_or_bottom_half(SRAM_group* idletime_group,
-                                                       bool top_or_bottom) {
+                                                       bool in_top_half) {
     auto *ta = idletime_group->ta;
     cstring name = ta->table->get_use_name(idletime_group->attached);
 
@@ -3136,7 +3136,7 @@ bool Memories::allocate_idletime_in_top_or_bottom_half(SRAM_group* idletime_grou
 
     // find mem and bus in top and bottom half of mapram
     bool resource_available = find_mem_and_bus_for_idletime(mem_locs, bus, total_required,
-                                                            top_or_bottom);
+                                                            in_top_half);
 
     if (!resource_available)
         return false;
@@ -3148,25 +3148,29 @@ bool Memories::allocate_idletime_in_top_or_bottom_half(SRAM_group* idletime_grou
         Memories::Use::Row row(loc.first, bus);
         for (auto col : loc.second) {
             mapram_use[loc.first][col] = name;
+            mapram_inuse[loc.first] |= (1 << col);
             row.col.push_back(col);  // XXX(zma) use col as bfas expects "column" for idletime
             idletime_group->placed++;
         }
         alloc.row.push_back(row);
     }
 
-    idletime_bus[(unsigned)top_or_bottom][bus] = name;
+    idletime_bus[(unsigned)in_top_half][bus] = name;
     return idletime_group->all_placed();
 }
 
 
 bool Memories::allocate_idletime(SRAM_group* idletime_group) {
-    // try to allocate idletime in top and bottom half of the mapram array
-    // each half has its own 10 idletime buses
-    if (allocate_idletime_in_top_or_bottom_half(idletime_group, true))
-        return true;
-    else if (allocate_idletime_in_top_or_bottom_half(idletime_group, false))
-        return true;
+    // Pick the most available section of the map RAM array to try to fit in an idletime
+    // resource allocation
+    int top_half_maprams = half_map_RAMs_available(SRAM_ROWS - 1);
+    int bottom_half_maprams = half_map_RAMs_available((SRAM_ROWS / 2) - 1);
 
+    bool in_top_half = top_half_maprams >= bottom_half_maprams;
+    if (allocate_idletime_in_top_or_bottom_half(idletime_group, in_top_half))
+        return true;
+    if (allocate_idletime_in_top_or_bottom_half(idletime_group, !in_top_half))
+        return true;
     return false;
 }
 
@@ -3179,16 +3183,25 @@ bool Memories::allocate_all_idletime() {
                 continue;
 
             int per_row = IdleTimePerWord(id);
-            int depth = mems_needed(ta->calculated_entries, SRAM_DEPTH, per_row, true);
+            int depth = mems_needed(ta->calculated_entries, SRAM_DEPTH, per_row, false);
             auto idletime_group = new SRAM_group(ta, depth, 1, SRAM_group::IDLETIME);
             idletime_group->attached = id;
             idletime_groups.push_back(idletime_group);
         }
     }
 
-    for (auto* idletime_group : idletime_groups)
+    std::sort(idletime_groups.begin(), idletime_groups.end(),
+        [](const SRAM_group *a, const SRAM_group *b){
+        int t;
+        if ((t = a->left_to_place() - b->left_to_place()) != 0)
+            return t > 0;
+        return a->ta->table->name < b->ta->table->name;
+    });
+
+    for (auto* idletime_group : idletime_groups) {
         if (!allocate_idletime(idletime_group))
             return false;
+    }
 
     return true;
 }

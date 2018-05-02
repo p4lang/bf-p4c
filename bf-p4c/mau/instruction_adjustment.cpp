@@ -9,8 +9,7 @@
  *
  *  For example, let's say the following field, bigfield (64 bits) requires two 32 bit containers
  *  The instruction will originally look like:
- *      - set hdr.bigfield, para
-                            | ActionAnalysis::ContainerAction::REFORMAT_CONSTANTm
+ *      - set hdr.bigfield, param
  *  It will get converted to:
  *       - set hdr.bigfield.0-31, param.0-31
  *       - set hdr.bigfield.32-63, param.32-63
@@ -19,8 +18,11 @@
  *  data names, as the action data may not be contiguous
  */
 const IR::MAU::Action *SplitInstructions::preorder(IR::MAU::Action *act) {
+    visitOnce();
     container_actions_map.clear();
     split_fields.clear();
+    auto tbl = findContext<IR::MAU::Table>();
+    ActionAnalysis aa(phv, true, true, tbl);
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
     if (aa.misaligned_actiondata())
@@ -35,6 +37,19 @@ const IR::MAU::Action *SplitInstructions::preorder(IR::MAU::Action *act) {
         }
     }
     return act;
+}
+
+/** All of these passes are Transforms with visitDagOnce = false, as certain Expressions within
+ *  different Instructions use the same IR::Node (though this itself could be changed).
+ *
+ *  Actions appear in tables, that can themselves appear multiple times, and we only want
+ *  to transform these actions once while keeping the table in position.  Thus by calling
+ *  visitOnce on Nodes that don't have a preorder, the pass won't duplicate any Tables or
+ *  TableSequences
+ */
+const IR::Node *SplitInstructions::preorder(IR::Node *node) {
+    visitOnce();
+    return node;
 }
 
 const IR::MAU::Instruction *SplitInstructions::preorder(IR::MAU::Instruction *instr) {
@@ -58,6 +73,11 @@ const IR::Primitive *SplitInstructions::preorder(IR::Primitive *prim) {
 }
 
 const IR::Expression *SplitInstructions::preorder(IR::Expression *expr) {
+    if (!findContext<IR::MAU::Instruction>()) {
+        prune();
+        return expr;
+    }
+
     if (auto *field = phv.field(expr)) {
         if (isWrite()) {
             if (split_location != split_fields.end()) {
@@ -66,8 +86,6 @@ const IR::Expression *SplitInstructions::preorder(IR::Expression *expr) {
             split_location = split_fields.find(field);
             write_found = true;
         }
-    } else if (!aa.isActionParam(expr)) {
-        BUG("Unhandled type of Expression within Split Instructions");
     }
     prune();
     return expr;
@@ -86,8 +104,7 @@ const IR::MAU::StatefulAlu *SplitInstructions::preorder(IR::MAU::StatefulAlu *sa
 }
 
 const IR::MAU::HashDist *SplitInstructions::preorder(IR::MAU::HashDist *hd) {
-    prune(); return hd;
-}
+    prune(); return hd; }
 
 /**  If the instruction is to be split, the original instruction has to be removed
  */
@@ -145,8 +162,10 @@ const IR::MAU::Action *SplitInstructions::postorder(IR::MAU::Action *act) {
  *  on all instructions.
  */
 const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
+    visitOnce();
     container_actions_map.clear();
     constant_containers.clear();
+    auto tbl = findContext<IR::MAU::Table>();
     ActionAnalysis aa(phv, true, true, tbl);
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
@@ -172,6 +191,12 @@ const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
         throw ActionFormat::failure(act->name);
 
     return act;
+}
+
+
+const IR::Node *ConstantsToActionData::preorder(IR::Node *node) {
+    visitOnce();
+    return node;
 }
 
 const IR::MAU::Instruction *ConstantsToActionData::preorder(IR::MAU::Instruction *instr) {
@@ -232,6 +257,11 @@ const IR::Slice *ConstantsToActionData::preorder(IR::Slice *sl) {
 }
 
 const IR::Expression *ConstantsToActionData::preorder(IR::Expression *expr) {
+    if (!findContext<IR::MAU::Instruction>()) {
+        prune();
+        return expr;
+    }
+
     if (phv.field(expr)) {
         prune();
         analyze_phv_field(expr);
@@ -263,6 +293,7 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
     if (constant_containers.find(constant_renames_key.container) == constant_containers.end())
         return instr;
 
+    auto tbl = findContext<IR::MAU::Table>();
     auto &constant_renames = tbl->resources->action_format.constant_locations.at(action_name);
     auto &action_format = tbl->resources->action_format.action_data_format.at(action_name);
     bool constant_found = constant_renames.find(constant_renames_key) != constant_renames.end();
@@ -301,8 +332,10 @@ const IR::MAU::Action *ConstantsToActionData::postorder(IR::MAU::Action *act) {
  *  over a container
  */
 const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
+    visitOnce();
     container_actions_map.clear();
     merged_fields.clear();
+    auto tbl = findContext<IR::MAU::Table>();
     ActionAnalysis aa(phv, true, true, tbl);
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
@@ -329,6 +362,11 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
         prune();
 
     return act;
+}
+
+const IR::Node *MergeInstructions::preorder(IR::Node *node) {
+    visitOnce();
+    return node;
 }
 
 const IR::MAU::Instruction *MergeInstructions::preorder(IR::MAU::Instruction *instr) {
@@ -368,6 +406,11 @@ const IR::Slice *MergeInstructions::preorder(IR::Slice *sl) {
 /** Mark instructions that have a write corresponding to the expression being removed
  */
 const IR::Expression *MergeInstructions::preorder(IR::Expression *expr) {
+    if (!findContext<IR::MAU::Instruction>()) {
+        prune();
+        return expr;
+    }
+
     if (phv.field(expr))
         analyze_phv_field(expr);
     prune();
@@ -636,14 +679,164 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     return merged_instr;
 }
 
-/** Total Instruction Adjustment */
-
-const IR::MAU::Table *TotalInstructionAdjustment::preorder(IR::MAU::Table *tbl) {
-    for (auto &action : Values(tbl->actions)) {
-        action = action->apply(SplitInstructions(phv, tbl))->to<IR::MAU::Action>();
-        action = action->apply(ConstantsToActionData(phv, tbl))->to<IR::MAU::Action>();
-        action = action->apply(MergeInstructions(phv, tbl))->to<IR::MAU::Action>();
-    }
-    return tbl;
+/** The purpose of this pass it to convert any field within an SaluAction to either a slice of
+ *  phv_lo or phv_hi.  This is because a field could potentially be split in the PHV, and
+ *  be a single SALU instruction.
+ *
+ *  This also verifies that the allocation on the input xbar is correct, by checking the location
+ *  of these individual bytes and coordinating their location to guarantee correctness.
+ *
+ *  This assumes that the stateful alu is accessing its data through the search bus rather
+ *  than the hash bus, as the input xbar algorithm can only put it on the search bus.  When
+ *  we add hash matrix support for stateful ALUs, we will add that as well. 
+ */
+const IR::Node *AdjustStatefulInstructions::preorder(IR::Node *node) {
+    visitOnce();
+    return node;
 }
 
+const IR::MAU::Instruction *AdjustStatefulInstructions::preorder(IR::MAU::Instruction *instr) {
+    if (!findContext<IR::MAU::SaluAction>())
+        prune();
+    return instr;
+}
+
+const IR::MAU::AttachedOutput *AdjustStatefulInstructions::preorder(IR::MAU::AttachedOutput *ao) {
+    prune();
+    return ao;
+}
+
+/** Guarantees that all bits of a particular field are aligned correctly given a size of a
+ *  field and beginning position on the input xbar
+ */
+bool AdjustStatefulInstructions::check_bit_positions(std::map<int, le_bitrange> &salu_inputs,
+        int field_size, int starting_bit) {
+    bitvec all_bits;
+    for (auto entry : salu_inputs) {
+        int ixbar_bit_start = entry.first - starting_bit;
+        if (ixbar_bit_start != entry.second.lo)
+            return false;
+        all_bits.setrange(entry.second.lo, entry.second.size());
+    }
+
+    if (all_bits.popcount() != field_size || !all_bits.is_contiguous())
+        return false;
+    return true;
+}
+
+const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr) {
+    if (!findContext<IR::MAU::SaluAction>()) {
+        prune();
+        return expr;
+    }
+
+    le_bitrange bits;
+    auto field = phv.field(expr, &bits);
+    if (field == nullptr) {
+        return expr;
+    }
+
+    auto tbl = findContext<IR::MAU::Table>();
+    auto salu = findContext<IR::MAU::StatefulAlu>();
+    auto &salu_ixbar = tbl->resources->salu_ixbar;
+    std::map<int, le_bitrange> salu_inputs;
+    bitvec salu_bytes;
+    int group = 0;
+    bool group_set = false;
+    // Gather up all of the locations of the associated bytes within the input xbar
+    for (auto &byte : salu_ixbar.use) {
+        bool byte_used = true;
+        for (auto fi : byte.field_bytes) {
+            if (fi.field != field->name || fi.lo < bits.lo || fi.hi > bits.hi) {
+                byte_used = false;
+            }
+        }
+        if (!byte_used)
+            continue;
+
+        if (!group_set) {
+            group = byte.loc.group;
+        } else {
+            ERROR_CHECK(group == byte.loc.group, "Input %s for a stateful alu %s allocated across "
+                        "multiple groups, and cannot be resolved", field->name, salu->name);
+        }
+
+        salu_bytes.setbit(byte.loc.byte);
+
+        for (auto fi : byte.field_bytes) {
+            le_bitrange field_bits = { fi.lo, fi.hi };
+            salu_inputs[byte.loc.byte * 8 + fi.cont_lo] = field_bits;
+        }
+    }
+
+    int phv_width = salu->width;
+    if (salu->dual)
+        phv_width /= 2;
+    if (salu_bytes.popcount() > (phv_width / 8)) {
+        ::error("The input %s to stateful alu %s is allocated to more input xbar bytes than the "
+                "width than the ALU and cannot be resolved.", field->name, salu->name);
+        prune();
+        return expr;
+    }
+
+    if (!salu_bytes.is_contiguous()) {
+        ::error("The input %s to stateful alu %s is not allocated contiguously by byte on the "
+                "input xbar and cannot be resolved.", field->name, salu->name);
+        prune();
+        return expr;
+    }
+
+
+    std::set<int> valid_start_positions;
+
+    int initial_offset = 0;
+    if (Device::currentDevice() == "Tofino")
+        initial_offset = IXBar::TOFINO_METER_ALU_BYTE_OFFSET;
+
+
+    valid_start_positions.insert(initial_offset);
+    if (salu->dual)
+        valid_start_positions.insert(initial_offset + (phv_width / 8));
+
+    if (valid_start_positions.count(salu_bytes.min().index()) == 0) {
+        ::error("The input %s to stateful alu %s is not allocated in a valid region on the input "
+                "xbar to be a source of an ALU operation", field->name, salu->name);
+        prune();
+        return expr;
+    }
+
+    if (!check_bit_positions(salu_inputs, bits.size(), salu_bytes.min().index() * 8)) {
+        ::error("The input %s to stateful alu %s is not allocated contiguously by bit on the "
+                "input xbar and cannot be resolved.", field->name, salu->name);
+        prune();
+        return expr;
+    }
+
+    bool is_hi = salu_bytes.min().index() != initial_offset;
+    cstring name = "phv";
+    if (is_hi)
+        name += "_hi";
+    else
+        name += "_lo";
+
+    IR::MAU::SaluReg *salu_reg = new IR::MAU::SaluReg(expr->srcInfo,
+                                                      IR::Type::Bits::get(phv_width), name,
+                                                      is_hi);
+    salu_reg->phv_src = expr;
+    const IR::Expression *rv = salu_reg;
+    if (salu_bytes.popcount() < (phv_width / 8)) {
+        rv = MakeSlice(rv, 0, salu_bytes.popcount() * 8 - 1);
+    }
+    prune();
+    return rv;
+}
+
+/** Instruction Adjustment */
+InstructionAdjustment::InstructionAdjustment(const PhvInfo &phv) {
+    addPasses({
+        new SplitInstructions(phv),
+        new ConstantsToActionData(phv),
+        new MergeInstructions(phv),
+        new AdjustStatefulInstructions(phv)
+    });
+}

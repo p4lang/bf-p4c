@@ -13,6 +13,7 @@
 #include "lib/log.h"
 
 constexpr int IXBar::HASH_SINGLE_BITS;
+constexpr int IXBar::TOFINO_METER_ALU_BYTE_OFFSET;
 
 void IXBar::clear() {
     exact_use.clear();

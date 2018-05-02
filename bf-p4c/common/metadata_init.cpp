@@ -38,8 +38,8 @@ class MapFieldToExpr : public Inspector {
     const IR::Expression* getExpr(const PHV::Field* field) const {
         BUG_CHECK(fieldExpressions.count(field->id),
                   "Missing IR::Expression mapping of %1%", field->name);
-        return fieldExpressions.at(field->id); }
-
+        return fieldExpressions.at(field->id)->clone();
+    }
     /// Returns a instruction that initialize this field.
     const IR::MAU::Instruction* generateInitInstruction(const PHV::Field* f) const {
         BUG_CHECK(f, "Field is nullptr in generateInitInstruction");

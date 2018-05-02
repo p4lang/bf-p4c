@@ -78,6 +78,31 @@ class SkipControls : public P4::ActionSynthesisPolicy {
     }
 };
 
+class IsPhase0 : public P4::KeyIsSimple {
+ public:
+    IsPhase0() { }
+
+    bool isSimple(const IR::Expression *, const Visitor::Context *ctxt) override {
+        while (true) {
+            if (ctxt == nullptr)
+                return false;
+            auto *n = ctxt->node;
+            if (n->is<IR::P4Program>())
+                return false;
+            if (auto table = n->to<IR::P4Table>()) {
+                auto annot = table->getAnnotations();
+                if (annot->getSingle("phase0")) {
+                    return true;
+                }
+                return false;
+            }
+            ctxt = ctxt->parent;
+        }
+        return false;
+    }
+};
+
+
 /**
  * This function implements a policy suitable for the LocalCopyPropagation pass.
  * The policy is: do not local copy propagate for assignment statement
@@ -130,7 +155,7 @@ class MidEndLast : public PassManager {
 
 MidEnd::MidEnd(BFN_Options& options) {
     // we may come through this path even if the program is actually a P4 v1.0 program
-    setName("MidEnd");
+    setName("MidEnd");;;
     refMap.setIsV1(true);
     auto evaluator = new P4::EvaluatorPass(&refMap, &typeMap);
     auto skip_controls = new std::set<cstring>();
@@ -144,9 +169,10 @@ MidEnd::MidEnd(BFN_Options& options) {
         new BFN::ArchTranslation(&refMap, &typeMap, options),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::SimplifyKey(&refMap, &typeMap,
-                            new P4::OrPolicy(
+                            new P4::OrPolicy(new P4::OrPolicy(
                                 new P4::IsValid(&refMap, &typeMap),
-                                new P4::IsMask())),
+                                new P4::IsMask()),
+                                new BFN::IsPhase0())),
         new P4::RemoveExits(&refMap, &typeMap),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),

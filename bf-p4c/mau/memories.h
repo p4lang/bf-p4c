@@ -214,11 +214,11 @@ struct Memories {
         struct color_mapram_group {
             int needed = 0;
             int placed = 0;
-            bool all_placed() {
+            bool all_placed() const {
                 BUG_CHECK(placed <= needed, "Placed more RAMs than actually needed");
                 return needed == placed;
             }
-            int left_to_place() {
+            int left_to_place() const {
                 BUG_CHECK(placed <= needed, "Placed more RAMs than actually needed");
                 return needed - placed;
             }
@@ -297,8 +297,11 @@ struct Memories {
             return search_bus_info(ta->table->name, width_sect, hash_group, logical_table);
         }
 
-        int left_to_place() { return depth - placed; }
-        bool all_placed() {
+        int left_to_place() const {
+            BUG_CHECK(placed <= depth, "Placed more than needed");
+            return depth - placed;
+        }
+        bool all_placed() const {
             BUG_CHECK(placed <= depth, "Placed more than needed");
             return (depth == placed);
         }

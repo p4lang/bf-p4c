@@ -62,8 +62,6 @@ class Field;
  */
 class SplitInstructions : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
-    const IR::MAU::Table *tbl;
-    ActionAnalysis aa;
     ActionAnalysis::ContainerActionsMap container_actions_map;
     ordered_set<const PHV::Field *> split_fields;
     ordered_map<const PHV::Field *, IR::MAU::Instruction *> removed_instrs;
@@ -81,13 +79,13 @@ class SplitInstructions : public MauTransform, TofinoWriteContext {
     const IR::MAU::Instruction *postorder(IR::MAU::Instruction *) override;
     const IR::MAU::Action *postorder(IR::MAU::Action *) override;
     // ignore stuff related to stateful alus
+    const IR::Node *preorder(IR::Node *) override;
     const IR::MAU::AttachedOutput *preorder(IR::MAU::AttachedOutput *ao) override;
     const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override;
     const IR::MAU::HashDist *preorder(IR::MAU::HashDist *hd) override;
 
  public:
-    SplitInstructions(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t),
-        aa(phv, true, true, tbl) {}
+    explicit SplitInstructions(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
 };
 
 /** Responsible for converting IR::Constant to IR::MAU::ActionDataConstants when necessary.
@@ -96,7 +94,6 @@ class SplitInstructions : public MauTransform, TofinoWriteContext {
  */
 class ConstantsToActionData : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
-    const IR::MAU::Table *tbl;
     ActionAnalysis::ContainerActionsMap container_actions_map;
 
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;
@@ -113,7 +110,7 @@ class ConstantsToActionData : public MauTransform, TofinoWriteContext {
     const IR::MAU::AttachedOutput *preorder(IR::MAU::AttachedOutput *) override;
     const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *) override;
     const IR::MAU::HashDist *preorder(IR::MAU::HashDist *) override;
-
+    const IR::Node *preorder(IR::Node *) override;
     bool has_constant = false;
     bool write_found = false;
     ordered_set<PHV::Container> constant_containers;
@@ -121,7 +118,7 @@ class ConstantsToActionData : public MauTransform, TofinoWriteContext {
     cstring action_name;
 
  public:
-    ConstantsToActionData(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t) {}
+    explicit ConstantsToActionData(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
 };
 
 /** Responsible for converting all FieldInstructions within a single Container operation into
@@ -140,7 +137,6 @@ class ConstantsToActionData : public MauTransform, TofinoWriteContext {
 class MergeInstructions : public MauTransform, TofinoWriteContext {
  private:
     const PhvInfo &phv;
-    const IR::MAU::Table *tbl;
     ActionAnalysis::ContainerActionsMap container_actions_map;
 
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;
@@ -157,6 +153,8 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
     const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override;
     const IR::MAU::HashDist *preorder(IR::MAU::HashDist *hd) override;
 
+
+    const IR::Node *preorder(IR::Node *) override;
     const IR::MAU::Instruction *postorder(IR::MAU::Instruction *) override;
     const IR::MAU::Action *postorder(IR::MAU::Action *) override;
 
@@ -177,14 +175,26 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
     const IR::Constant *find_field_action_constant(ActionAnalysis::ContainerAction &cont_action);
 
  public:
-    MergeInstructions(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t) {}
+    explicit MergeInstructions(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
 };
 
-class TotalInstructionAdjustment : public MauTransform, TofinoWriteContext {
+class AdjustStatefulInstructions : public MauTransform {
+ private:
     const PhvInfo &phv;
-    const IR::MAU::Table *preorder(IR::MAU::Table *) override;
+    const IR::MAU::AttachedOutput *preorder(IR::MAU::AttachedOutput *) override;
+    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
+    const IR::Expression *preorder(IR::Expression *expr) override;
+    const IR::Node *preorder(IR::Node *) override;
+    bool check_bit_positions(std::map<int, le_bitrange> &salu_inputs, int field_size,
+        int starting_bit);
+
  public:
-    explicit TotalInstructionAdjustment(const PhvInfo &p) : phv(p) {}
+    explicit AdjustStatefulInstructions(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
+};
+
+class InstructionAdjustment : public PassManager {
+ public:
+    explicit InstructionAdjustment(const PhvInfo &p);
 };
 
 #endif /* BF_P4C_MAU_INSTRUCTION_ADJUSTMENT_H_ */
