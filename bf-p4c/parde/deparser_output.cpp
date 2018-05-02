@@ -124,12 +124,25 @@ struct OutputChecksums : public Inspector {
     bool preorder(const IR::BFN::ChecksumUnitConfig* checksum) override {
         out << indent << "checksum " << checksum->unit << ":" << std::endl;
 
+        std::vector<const IR::BFN::ContainerRef*> swaps;
         AutoIndent checksumIndent(indent);
         for (auto* input : checksum->phvs) {
             out << indent << "- " << input->source;
             if (input->povBit) out << ": " << input->povBit;
+            if (input->swap)
+                swaps.push_back(input->source);
             outputDebugInfo(out, indent, input->source, input->povBit);
             out << std::endl;
+        }
+
+        if (!swaps.empty()) {
+            const char* sep = "";
+            out << indent << "- swap: [ ";
+            for (auto s : swaps) {
+                out << sep << s;
+                sep = ", ";
+            }
+            out << " ]" << std::endl;
         }
 
 #if HAVE_JBAY

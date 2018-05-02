@@ -436,6 +436,8 @@ class ChecksumPhvInput {
     /// easier to safely compute a checksum involving headers which may be
     /// present in different combinations. On Tofino, this is always null.
     optional NullOK BFN::ContainerBitRef povBit;
+
+    optional bool swap = false;
 }
 
 class ChecksumClotInput {

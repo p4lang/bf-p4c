@@ -416,32 +416,33 @@ static short jbay_phv2cksum[224][2] = {
 };
 
 template<class ENTRIES>
-int write_jbay_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int pov,
+void write_jbay_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int pov,
                               int lineno, const char *reg, int id) {
-    if (mask == 0) return 0;
-    if (entry.modified()) {
+    assert(swap == 0 || swap == 1);
+    if (mask == 0) return;
+    if (entry.modified())
         error(lineno, "%s appears multiple times in checksum %d", reg, id);
-        return 0; }
     entry.swap = swap;
     entry.pov = pov;
     switch (mask ^ (swap*3)) {
     // reset value for zero_m_s_b and zero_l_s_b is 1 (flipped from Tofino reset value)
     case 1:
-        entry.zero_m_s_b = 0;
-        return 1;
-    case 2:
         entry.zero_l_s_b = 0;
-        return 1;
+        break;
+    case 2:
+        entry.zero_m_s_b = 0;
+        break;
     case 3:
         entry.zero_m_s_b = 0;
         entry.zero_l_s_b = 0;
+        break;
     default:
-        return 0; }
+        assert(0); }
 }
 
 template<class CSUM, class POV, class ENTRIES>
 void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, int unit,
-        std::vector<Deparser::Val> &data, ordered_map<const Phv::Register *, unsigned> &pov) {
+        std::vector<Deparser::Val> &data, std::vector<Phv::Ref> &swaps, ordered_map<const Phv::Register *, unsigned> &pov) {
     std::map<unsigned, unsigned>        pov_map;
     unsigned byte = 0, mapped[4];
     for (auto &val : data) {
@@ -461,8 +462,6 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
         pov_map[bit] = byte*8U + bit%8U;
         pov_cfg.byte_sel[byte++] = bit/8U; }
 
-    int swap = 0;
-    unsigned phv_entry_idx = 0;
     unsigned tag_idx = 0;
     for (auto &val : data) {
         if (!val.pov) continue;
@@ -475,26 +474,25 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
             csum.tags[tag_idx].tag = val.tag;
             tag_idx++;
         } else {
+            bool swap = std::find(swaps.begin(), swaps.end(), val.val) != swaps.end();
             unsigned mask = (1 << ((val->hi+1)/8U)) - (1 << (val->lo/10U));
             auto &remap = jbay_phv2cksum[val->reg.deparser_id()];
-            if (remap[1] >= 0) {
-                swap ^= write_jbay_checksum_entry(phv_entries.entry[remap[1]], mask >> 2, swap, povbit,
+            if (remap[1] >= 0)
+                write_jbay_checksum_entry(phv_entries.entry[remap[1]], mask >> 2, swap, povbit,
                                                   val.lineno, val->reg.name, unit);
-                if (phv_entry_idx == 8)
-                    error(-1, "Ran out of phv entries in deparser checksum unit %d", unit);
-                csum.phv_entry[phv_entry_idx].pov = pov_map.begin()->second;
-                csum.phv_entry[phv_entry_idx].vld = 1;
-                phv_entry_idx++;
-            } else assert(mask >> 2 == 0);
-            swap ^= write_jbay_checksum_entry(phv_entries.entry[remap[0]], mask & 3, swap, povbit,
+            else
+                assert(mask >> 2 == 0);
+            write_jbay_checksum_entry(phv_entries.entry[remap[0]], mask & 3, swap, povbit,
                                               val.lineno, val->reg.name, unit);
-            if (phv_entry_idx == 8)
-                error(-1, "Ran out of phv entries in deparser checksum unit %d", unit);
-            csum.phv_entry[phv_entry_idx].pov = pov_map.begin()->second;
-            csum.phv_entry[phv_entry_idx].vld = 1;
-            phv_entry_idx++;
         }
     }
+
+    // XXX(zma) -- each checksum output can combine any set of checksum units
+    // This opens up optimization opportunities where we can selectively
+    // combine a set of header checksums depending which ones are valid in
+    // the packet.
+    csum.phv_entry[unit].pov = pov_map.begin()->second;
+    csum.phv_entry[unit].vld = 1;
 
     // FIXME -- use/set csum.csum_constant and csum.zeros_as_ones?
 }
@@ -522,7 +520,7 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
             regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[i] = INGRESS;
             write_jbay_checksum_config(regs.dprsrreg.inp.icr.csum_engine[i],
                 regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[i],
-                regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum[INGRESS][i], pov[INGRESS]);
+                regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum[INGRESS][i], checksum_swaps[INGRESS][i], pov[INGRESS]);
             if (!checksum[EGRESS][i].empty()) {
                 error(checksum[INGRESS][i][0].lineno, "checksum %d used in both ingress", i);
                 error(checksum[EGRESS][i][0].lineno, "...and egress"); }
@@ -530,7 +528,7 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
             regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[i] = EGRESS;
             write_jbay_checksum_config(regs.dprsrreg.inp.icr.csum_engine[i],
                regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[i],
-               regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum[EGRESS][i], pov[EGRESS]); } }
+               regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum[EGRESS][i], checksum_swaps[EGRESS][i], pov[EGRESS]); } }
 
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr,
         regs.dprsrreg.inp.ipp.main_i.pov.phvs, pov[INGRESS], dictionary[INGRESS]);

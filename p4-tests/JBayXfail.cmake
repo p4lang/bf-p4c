@@ -50,11 +50,6 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "invalid parser checksum unit"
-  testdata/p4_14_samples/parser_dc_full.p4
-  )
-
-p4c_add_xfail_reason("jbay"
   "PHV allocation was not successful"
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
@@ -208,11 +203,6 @@ if (PTF_REQUIREMENTS_MET)
 p4c_add_xfail_reason("jbay"
   "AssertionError: A packet was received on device .*, port .*, but we expected no packets"
   extensions/p4_tests/p4_16/verify_checksum.p4
-  )
-
-p4c_add_xfail_reason("jbay"
-  "Ran out of phv entries in deparser checksum unit"
-  extensions/p4_tests/p4_14/ecmp_pi.p4
   )
 
 p4c_add_xfail_reason("jbay"

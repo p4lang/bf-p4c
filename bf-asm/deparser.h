@@ -29,11 +29,18 @@ public:
         Phv::Slice operator->() const { return *val; }
         bool check() const { return val.check(); }
     };
+
     struct FDEntry;
 
     int                                             lineno[2];
     std::vector<FDEntry>                            dictionary[2];
     std::vector<Val>                                checksum[2][MAX_DEPARSER_CHECKSUM_UNITS];
+    /* Stores phv entries that need to be swapped in checksum config.
+       This is needed for JBay because checksum entries may not
+       follow field order in the packet (due to clots), therefore
+       it's impossible for assemler to infer "swap"; compiler needs
+       to pass this info explictly in the assembly. */
+    std::vector<Phv::Ref>                           checksum_swaps[2][MAX_DEPARSER_CHECKSUM_UNITS];
     std::vector<Phv::Ref>                           pov_order[2];
     ordered_map<const Phv::Register *, unsigned>    pov[2];
     bitvec                                          phv_use[2];

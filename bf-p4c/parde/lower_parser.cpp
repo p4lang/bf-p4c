@@ -606,7 +606,6 @@ struct ComputeLoweredParserIR : public ParserInspector {
         }
 
         if (!finalInterval.empty()) {
-            // TODO(zma) id/swap/start/end/type
             // TODO(zma) residual checksum
             unsigned mask = (1 << finalInterval.hi) - 1;
             auto csum = new IR::BFN::LoweredParserChecksum(
@@ -633,7 +632,6 @@ struct ComputeLoweredParserIR : public ParserInspector {
     }
 
     bool preorder(const IR::BFN::Parser*) override {
-        // TODO(zma) checksum resouce allocation
         // Five parser checksum units are available; 0,1 can be used for verificaion/residual,
         // 2,3,4 can be used for CLOT; Checksum verification steals extractors.
 
@@ -951,6 +949,15 @@ struct CollectClotChecksumFields : public DeparserInspector {
 };
 
 struct InsertClotChecksums : public ParserModifier {
+    struct GetCurrentChecksumId : public ParserInspector {
+        unsigned current_id = 0;
+
+        bool preorder(const IR::BFN::LoweredParserChecksum* csum) override {
+            current_id = std::max(current_id, csum->unit_id);
+            return false;
+        }
+    };
+
     explicit InsertClotChecksums(const PhvInfo& phv,
         const std::map<const Clot*, std::vector<const PHV::Field*>>& fields) :
             phv(phv), clot_checksum_fields(fields) { }
@@ -972,10 +979,16 @@ struct InsertClotChecksums : public ParserModifier {
 
     IR::BFN::LoweredParserChecksum*
     createClotChecksum(unsigned id, unsigned mask, const Clot& clot) {
-        // TODO(zma) id/swap/start/end/type
         auto csum = new IR::BFN::LoweredParserChecksum(id, mask, 0x0, true, true, /* type */2);
         csum->clot_dest = clot;
         return csum;
+    }
+
+    bool preorder(IR::BFN::LoweredParser* p) override {
+        GetCurrentChecksumId gid;
+        p->apply(gid);
+        curr_id = std::max(0x2u, gid.current_id);  // clot can only use checksum engine 2-4
+        return true;
     }
 
     bool preorder(IR::BFN::LoweredParserState*) override {
@@ -1007,7 +1020,6 @@ struct InsertClotChecksums : public ParserModifier {
         return true;
     }
 
-    // TODO(zma) manage this ref count better
     unsigned curr_id = 2;
     unsigned allocated_in_state = 0;
 
@@ -2104,6 +2116,51 @@ class ComputeBufferRequirements : public ParserModifier {
     }
 };
 
+class ComputeDeparserChecksumPhvSwap : public PassManager {
+    struct GetContainerToRVal : public ParserInspector {
+        std::map<PHV::Container,
+                 const IR::BFN::LoweredPacketRVal*> containerToRVal;
+
+        bool preorder(const IR::BFN::LoweredExtractPhv* extract) override {
+            if (auto rval = extract->source->to<IR::BFN::LoweredPacketRVal>())
+                if (extract->dest)
+                    containerToRVal[extract->dest->container] = rval;
+            return false;
+        }
+    };
+
+    struct ModifyDeparserChecksumPhvSwap : public DeparserModifier {
+        const std::map<PHV::Container,
+                       const IR::BFN::LoweredPacketRVal*>& containerToRVal;
+
+        explicit ModifyDeparserChecksumPhvSwap(
+            const std::map<PHV::Container,
+                           const IR::BFN::LoweredPacketRVal*>& containerToRVal) :
+                containerToRVal(containerToRVal) { }
+
+        void postorder(IR::BFN::ChecksumPhvInput* phvInput) {
+            auto container = phvInput->source->container;
+            auto it = containerToRVal.find(container);
+            if (it != containerToRVal.end()) {
+                auto rval = it->second;
+                if (rval->range.lo % 2)
+                    phvInput->swap = true;
+                else if (container.size() == 8)
+                    phvInput->swap = true;
+            }
+        }
+    };
+
+ public:
+    ComputeDeparserChecksumPhvSwap() {
+        auto* getContainerToRVal = new GetContainerToRVal;
+        addPasses({
+            getContainerToRVal,
+            new ModifyDeparserChecksumPhvSwap(getContainerToRVal->containerToRVal)
+        });
+    }
+};
+
 }  // namespace
 
 LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse) {
@@ -2111,6 +2168,7 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
         new SplitBigStates,
+        Device::currentDevice() == "JBay" ? new ComputeDeparserChecksumPhvSwap : nullptr,
         new ComputeInitZeroContainers(phv, defuse),
         new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.
         new ComputeBufferRequirements,

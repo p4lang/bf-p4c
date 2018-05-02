@@ -251,11 +251,17 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                         for (auto &ent : kv.value.vec)
                             checksum[gress][unit].emplace_back(gress, ent);
                     } else {
-                        for (auto &ent : kv.value.map)
-                            if (ent.key == "clot")
+                        for (auto &ent : kv.value.map) {
+                            if (ent.key == "swap") {
+                                if (CHECKTYPE(ent.value, tVEC))
+                                    for (auto &val : ent.value.vec)
+                                        checksum_swaps[gress][unit].emplace_back(gress, val);
+                            } else if (ent.key == "clot") {
                                 checksum[gress][unit].emplace_back(gress, ent.key[1].i, ent.value);
-                            else
+                            } else {
                                 checksum[gress][unit].emplace_back(gress, ent.key, ent.value);
+                            }
+                        }
                     }
                 }
             } else if (auto *itype = ::get(Intrinsic::Type::all[options.target][gress],
