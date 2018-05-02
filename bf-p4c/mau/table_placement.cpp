@@ -309,22 +309,6 @@ TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
     return this;
 }
 
-int TablePlacement::get_provided_stage(const IR::MAU::Table *tbl) {
-    if (tbl->gateway_only())
-        return -1;
-    auto annot = tbl->match_table->annotations->getSingle("stage");
-    if (annot == nullptr)
-        return -1;
-    BUG_CHECK(annot->expr.size() == 1, "%s: Stage pragma provided to table %s has multiple "
-              "parameters, while Brig currently only supports one parameter",
-              annot->srcInfo, tbl->name);
-    auto constant = annot->expr.at(0)->to<IR::Constant>();
-    ERROR_CHECK(constant, "%s: Stage pragma value provided to table %s is not a constant",
-                annot->srcInfo, tbl->name);
-    return constant->asInt();
-}
-
-
 /**
  * The estimates for potential layout options are determined before all information is possibly
  * known:
@@ -571,24 +555,10 @@ static void coord_action_data_xbar(const TablePlacement::Placed *curr,
     }
 }
 
-TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
-                                                        const StageUseEstimate &current) {
-    LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
-    auto *rv = (new Placed(*this, t))->gateway_merge();
-    auto *min_placed = new Placed(*rv);
-    TableResourceAlloc *resources = new TableResourceAlloc;
-    TableResourceAlloc *min_resources = new TableResourceAlloc;
-    rv->resources = resources;
-    safe_vector<TableResourceAlloc *> prev_resources;
-    error_message = "";
-    for (auto *p = done; p && p->stage == done->stage; p = p->prev) {
-        prev_resources.push_back(p->resources->clone_ixbar());
-    }
-    t = rv->table;
-    rv->stage = done ? done->stage : 0;
-    min_placed->entries = 1;
 
-    int set_entries = 512;
+bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
+        int &set_entries, int &furthest_stage) {
+    auto *t = rv->table;
     if (t->match_table) {
         if (t->layout.pre_classifier)
             set_entries = t->layout.pre_classifer_number_entries;
@@ -605,11 +575,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             set_entries += t->layout.partition_count;
         }
     }
+
     for (auto *p = done; p; p = p->prev) {
         if (p->name == rv->name) {
             if (p->need_more == false) {
-                LOG2(" - can't place as its already done");
-                return nullptr; }
+                BUG(" - can't place %s as its already done");
+                return false; }
             set_entries -= p->entries;
             if (p->stage == rv->stage) {
                 LOG2("Cannot place multiple sections of an individual table in the same stage");
@@ -634,6 +605,43 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             }
         }
     }
+
+    auto stage_pragma = t->get_provided_stage();
+    if (stage_pragma >= 0) {
+        rv->stage = std::max(stage_pragma, rv->stage);
+        furthest_stage = rv->stage + 1;
+    } else if (forced_placement && !t->gateway_only()) {
+        ::warning("%s: Table %s has not been provided a stage even though forced placement of "
+                  "tables is turned on", t->srcInfo, t->name);
+    }
+    return true;
+}
+
+TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
+                                                        const StageUseEstimate &current) {
+    LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
+    auto *rv = (new Placed(*this, t))->gateway_merge();
+    auto *min_placed = new Placed(*rv);
+    TableResourceAlloc *resources = new TableResourceAlloc;
+    TableResourceAlloc *min_resources = new TableResourceAlloc;
+    rv->resources = resources;
+    safe_vector<TableResourceAlloc *> prev_resources;
+    error_message = "";
+    for (auto *p = done; p && p->stage == done->stage; p = p->prev) {
+        prev_resources.push_back(p->resources->clone_ixbar());
+    }
+    t = rv->table;
+    rv->stage = done ? done->stage : 0;
+    int furthest_stage = (done == nullptr) ? 0 : done->stage + 1;
+    int set_entries = 512;
+    if (!initial_stage_and_entries(rv, done, set_entries, furthest_stage))
+        return nullptr;
+
+
+    LOG3("Initial stage is " << rv->stage);
+
+    min_placed->entries = 1;
+
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
     const safe_vector<LayoutOption> layout_options = lc.get_layout_options(t);
     StageUseEstimate stage_current = current;
@@ -643,17 +651,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     // StageUseEstimate min_use(t, min_entries, &lc, stage_current.shared_attached);
 
     bool allocated = false;
-    int furthest_stage = (done == nullptr) ? 0 : done->stage + 1;
 
-    auto stage_pragma = get_provided_stage(t);
-    if (stage_pragma >= 0) {
-        rv->stage = std::max(stage_pragma, rv->stage);
-        furthest_stage = rv->stage + 1;
-    } else if (forced_placement && !t->gateway_only()) {
-        ::warning("%s: Table %s has not been provided a stage even though forced placement of "
-                  "tables is turned on", t->srcInfo, t->name);
-    }
-    LOG3("Initial stage is " << rv->stage);
 
     min_placed->stage = rv->stage;
     if (done && rv->stage != done->stage)
@@ -792,10 +790,10 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
          (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " <<
          pl->stage << (pl->need_more ? " (need more)" : ""));
 
-    if (get_provided_stage(pl->table) >= 0 && get_provided_stage(pl->table) != pl->stage)
+    if (pl->table->get_provided_stage() >= 0 && pl->table->get_provided_stage() != pl->stage)
         ::warning("%s: The stage specified for the table %s is %d, but the stage actually "
                   "allocated %d are not the same", pl->table->srcInfo, pl->table->name,
-                  get_provided_stage(pl->table), pl->stage);
+                  pl->table->get_provided_stage(), pl->stage);
 
     if (!pl->need_more) {
         pl->group->finish_if_placed(work, pl);
@@ -852,8 +850,8 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b) {
     if (a->stage < b->stage) return true;
     if (a->stage > b->stage) return false;
 
-    int a_provided_stage = get_provided_stage(a->table);
-    int b_provided_stage = get_provided_stage(b->table);
+    int a_provided_stage = a->table->get_provided_stage();
+    int b_provided_stage = b->table->get_provided_stage();
 
     if (a_provided_stage >= 0 && b_provided_stage >= 0) {
         if (a_provided_stage != b_provided_stage)

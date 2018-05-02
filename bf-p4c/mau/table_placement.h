@@ -56,9 +56,9 @@ class TablePlacement : public MauTransform, public Backtrack {
                             StageUseEstimate::StageAttached &shared_attached);
     bool shrink_estimate(Placed *next, const Placed *done, TableResourceAlloc *resources,
                          int &srams_left, int &tcams_left, int min_entries);
-
+    bool initial_stage_and_entries(Placed *rv, const Placed *done, int &set_entries,
+        int &furthest_stage);
     const Placed *place_table(ordered_set<const GroupPlace *>&work, const Placed *pl);
-    int get_provided_stage(const IR::MAU::Table *tbl);
     std::multimap<cstring, const Placed *> table_placed;
     std::multimap<cstring, const Placed *>::const_iterator find_placed(cstring name) const;
 };

@@ -43,7 +43,18 @@ void PackConflicts::end_apply() {
             if (!stage.empty()) {
                 LOG4("\tGenerate no pack conditions for table " << t1->name << " and table " <<
                         t2->name);
-                generateNoPackConstraints(t1, t2); } } }
+                generateNoPackConstraints(t1, t2);
+            } else if (t1->get_provided_stage() == t2->get_provided_stage()
+                       && t1->get_provided_stage() >= 0) {
+                // Potentially should not be an issue, as this can get caught by backtracking
+                // but if the program does not backtrack, then expected behavior might not
+                // be the same
+                LOG4("\tGenerate no pack conditions for table " << t1->name << " and table "
+                      << t2->name << " due to stage pragmas");
+                generateNoPackConstraints(t1, t2);
+            }
+        }
+    }
     LOG3("Total packing conditions: " << totalNumSet);
     updateNumPackConstraints();
     if (LOGGING(5))

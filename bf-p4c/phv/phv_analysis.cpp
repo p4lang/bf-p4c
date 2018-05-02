@@ -49,6 +49,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                                    // produce pairs of fields that are never live
                                    // in the same stage
             new PHV_Field_Operations(phv),  // PHV field operations analysis
+            &table_mutex,          // Table mutual exclusion information
+            &action_mutex,         // Mutually exclusive action information
             &pack_conflicts,       // collect list of fields that cannot be packed together based on
                                    // first round of table allocation (only useful if we backtracked
                                    // from table placement to PHV allocation)
@@ -56,8 +58,6 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new PhvInfo::DumpPhvFields(phv, uses),
             new TablePhvConstraints(phv),
             &critical_path_clusters,
-            &table_mutex,          // Table mutual exclusion information
-            &action_mutex,         // Mutually exclusive action information
             &action_constraints,
 #if HAVE_JBAY
             options.jbay_analysis ? new JbayPhvAnalysis(phv, uses, deps, defuse, action_constraints)

@@ -125,3 +125,18 @@ int IR::MAU::Table::action_next_paths() const {
     }
     return action_paths;
 }
+
+int IR::MAU::Table::get_provided_stage() const {
+    if (gateway_only())
+        return -1;
+    auto annot = match_table->annotations->getSingle("stage");
+    if (annot == nullptr)
+        return -1;
+    BUG_CHECK(annot->expr.size() == 1, "%s: Stage pragma provided to table %s has multiple "
+              "parameters, while Brig currently only supports one parameter",
+              annot->srcInfo, name);
+    auto constant = annot->expr.at(0)->to<IR::Constant>();
+    ERROR_CHECK(constant, "%s: Stage pragma value provided to table %s is not a constant",
+                annot->srcInfo, name);
+    return constant->asInt();
+}
