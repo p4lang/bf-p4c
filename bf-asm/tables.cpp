@@ -988,12 +988,14 @@ void Table::Actions::Action::pass1(Table *tbl) {
            default_only = true; }
     /* SALU actions always have addr == -1 (so iaddr == -1) */
     int iaddr = -1;
+    bool shared_VLIW = false;
     if (addr >= 0) {
         if (auto old = tbl->stage->imem_addr_use[tbl->gress][addr]) {
-            if (equiv(old)) {
-                return; }
-            error(lineno, "action instruction addr %d in use elsewhere", addr);
-            warning(old->lineno, "also defined here"); }
+            if (equivVLIW(old)) {
+                shared_VLIW = true;
+            } else {
+                error(lineno, "action instruction addr %d in use elsewhere", addr);
+                warning(old->lineno, "also defined here"); } }
         tbl->stage->imem_addr_use[tbl->gress][addr] = this;
         iaddr = addr/ACTION_IMEM_COLORS; }
     for (auto &inst : instr) {
@@ -1003,7 +1005,7 @@ void Table::Actions::Action::pass1(Table *tbl) {
                 error(inst->lineno, "instruction slot %d used multiple times in action %s",
                       inst->slot, name.c_str());
             slot_use[inst->slot] = 1; }
-        if (inst->slot >= 0 && iaddr >= 0) {
+        if (!shared_VLIW && inst->slot >= 0 && iaddr >= 0) {
             if (tbl->stage->imem_use[iaddr][inst->slot])
                 error(lineno, "action instruction slot %d.%d in use elsewhere",
                       iaddr, inst->slot);
