@@ -79,15 +79,12 @@ class GatewayRangeMatch : public MauModifier {
 
 class CheckGatewayExpr : public Inspector {
     const PhvInfo       &phv;
-    bool preorder(const IR::MAU::Table *tbl) override {
-        CollectGatewayFields collect(phv);
-        tbl->apply(collect);
-        if (!collect.compute_offsets())
-            error("%s: condition too complex", tbl->srcInfo);
-        return true; }
+    bool preorder(const IR::MAU::Table *tbl) override;
     bool preorder(const IR::MAU::Action *) override { return false; }
+    bool preorder(const IR::MAU::InputXBarRead *) override { return false; }
     bool preorder(const IR::P4Table *) override { return false; }
     bool preorder(const IR::Attached *) override { return false; }
+    bool preorder(const IR::MAU::BackendAttached *) override { return false; }
     bool preorder(const IR::Equ *) override { return true; }
     bool preorder(const IR::Neq *) override { return true; }
     bool preorder(const IR::BAnd *) override { return true; }
@@ -95,14 +92,10 @@ class CheckGatewayExpr : public Inspector {
     bool preorder(const IR::LAnd *) override { return true; }
     bool preorder(const IR::LOr *) override { return true; }
     bool preorder(const IR::LNot *) override { return true; }
-    bool preorder(const IR::Operation::Binary *e) override {
-        error("%s: condition too complex", e->srcInfo);
-        return false; }
-    bool preorder(const IR::Operation::Relation *rel) override {
-        if (!rel->right->is<IR::Constant>()) {
-            error("%s: condition too complex", rel->srcInfo);
-            return false; }
-        return true; }
+    bool preorder(const IR::Literal *) override { return true; }
+    bool preorder(const IR::RangeMatch *) override { return true; }
+    bool preorder(const IR::Expression *e) override;
+    bool preorder(const IR::Operation::Relation *rel) override;
 
  public:
     explicit CheckGatewayExpr(const PhvInfo &phv) : phv(phv) {}

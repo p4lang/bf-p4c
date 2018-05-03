@@ -410,8 +410,30 @@ void GatewayRangeMatch::postorder(IR::MAU::Table *tbl) {
         if (gw.first) gw.first = gw.first->apply(setup);
 }
 
+bool CheckGatewayExpr::preorder(const IR::MAU::Table *tbl) {
+    CollectGatewayFields collect(phv);
+    tbl->apply(collect);
+    if (!collect.compute_offsets())
+        error("%s: condition too complex, limit of 4 bytes + 12 bits of PHV input exceeded",
+              tbl->srcInfo);
+    return true;
+}
 
-BuildGatewayMatch:: BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f)
+bool CheckGatewayExpr::preorder(const IR::Expression *e) {
+    if (!phv.field(e))
+        error("%s: condition expression too complex", e->srcInfo);
+    return false;
+}
+
+bool CheckGatewayExpr::preorder(const IR::Operation::Relation *rel) {
+    if (!rel->right->is<IR::Constant>()) {
+        error("%s: condition too complex, one operand must be constant",
+              rel->srcInfo);
+        return false; }
+    return true;
+}
+
+BuildGatewayMatch::BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f)
 : phv(phv), fields(f) {
     shift = INT_MAX;
     for (auto &info : fields.info)
@@ -419,7 +441,6 @@ BuildGatewayMatch:: BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &
             if (off.first < shift)
                 shift = off.first;
 }
-
 
 Visitor::profile_t BuildGatewayMatch::init_apply(const IR::Node *root) {
     LOG3("BuildGatewayMatch for " << root);
