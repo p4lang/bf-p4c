@@ -97,7 +97,8 @@ struct OutputDictionary : public Inspector {
 
         unsigned clot_offset = emit->clot->start;
         for (auto c : containers) {
-            auto range = clot.container_range().at(c);
+            auto state = clot.clot_to_parser_state().at(emit->clot);
+            auto range = clot.container_range().at(state).at(c);
             range = range.shiftedByBytes(-clot_offset);
             out << indent << range.lo << " : " << c << std::endl;
         }

@@ -685,7 +685,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 if (auto* source = extract->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
                     auto bytes = source->extractedBytes();
                     auto container = extract->dest->container;
-                    clotInfo.container_range()[container] = bytes;
+                    clotInfo.container_range()[state][container] = bytes;
                 }
             }
         }

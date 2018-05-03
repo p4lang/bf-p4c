@@ -30,7 +30,8 @@ class ClotInfo {
     std::map<const Clot*, const IR::BFN::ParserState*> clot_to_parser_state_;
     std::map<const IR::BFN::ParserState*, std::vector<const Clot*>> parser_state_to_clots_;
 
-    std::map<PHV::Container, nw_byterange> container_range_;
+    std::map<const IR::BFN::ParserState*,
+             std::map<PHV::Container, nw_byterange>> container_range_;
     std::map<const PHV::Field*, nw_bitrange> field_range_;
 
  public:
@@ -41,11 +42,18 @@ class ClotInfo {
 
     unsigned num_clots_allocated() const { return Clot::tagCnt; }
 
+    const std::map<const Clot*, const IR::BFN::ParserState*>&
+        clot_to_parser_state()const { return clot_to_parser_state_; }
+
     const std::map<const IR::BFN::ParserState*, std::vector<const Clot*>>&
         parser_state_to_clots() const { return parser_state_to_clots_; }
 
-    std::map<PHV::Container, nw_byterange>& container_range() { return container_range_; }
-    const std::map<PHV::Container, nw_byterange>& container_range() const {
+    std::map<const IR::BFN::ParserState*,
+              std::map<PHV::Container, nw_byterange>>& container_range() {
+        return container_range_; }
+
+    const std::map<const IR::BFN::ParserState*,
+              std::map<PHV::Container, nw_byterange>>& container_range() const {
         return container_range_; }
 
     void add_field(const PHV::Field* f, const IR::BFN::PacketRVal* rval,
