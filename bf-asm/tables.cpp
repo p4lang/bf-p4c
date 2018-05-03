@@ -881,10 +881,13 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
     position_in_assembly = pos;
     if (kv.key.type == tCMD) {
         name = kv.key[0].s;
-        if (CHECKTYPE(kv.key[1], tINT)) {
-            if (actions->code_use[(code = kv.key[1].i)])
+        if (CHECKTYPE(kv.key[1], tINT) && (code = kv.key[1].i) >= 0) {
+            if (actions->code_use[code])
                 error(kv.key.lineno, "Duplicate action code %d", code);
             actions->code_use[code] = true; }
+        if (kv.key.vec.size > 2 && CHECKTYPE(kv.key[2], tINT)) {
+            if ((addr = kv.key[2].i) < 0 || addr >= ACTION_IMEM_ADDR_MAX)
+                error(kv.key[2].lineno, "Invalid instruction address %d", addr); }
     } else if (kv.key.type == tINT) {
         name = std::to_string(kv.key.i);
         if (actions->code_use[(code = kv.key.i)])
