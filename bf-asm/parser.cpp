@@ -1386,7 +1386,12 @@ void Parser::State::write_config(REGS &regs, Parser *pa, json::vector &ctxt_json
         if (def) def->write_config(regs, pa, this, 0, state_cjson);
         if (uses_pvs) {
             state_cjson["pvs_name"] = i->value_set_name;
-            state_cjson["pvs_handle"] = --pa->pvs_handle;
+            if (!pa->pvs_handle_use.count(i->value_set_name)) {
+                state_cjson["pvs_handle"] = --pa->pvs_handle;
+                pa->pvs_handle_use.emplace(i->value_set_name, pa->pvs_handle);
+            } else {
+                state_cjson["pvs_handle"] = pa->pvs_handle_use.at(i->value_set_name);
+            }
         }
         for (auto idx : MatchIter(stateno)) {
             state_cjson["parser_state_id"] = idx;

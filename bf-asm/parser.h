@@ -216,6 +216,7 @@ public:
     int                                 pri_thresh[2][4] = { {3,3,3,3}, {3,3,3,3} };
     int                                 tcam_row_use[2] = { 0 };
     int                                 pvs_handle = 512;
+    std::map<std::string, int>          pvs_handle_use;
     Phv::Ref                            parser_error[2];
     std::vector<Phv::Ref>               multi_write, init_zero;
     bitvec                              phv_use[2], phv_allow_multi_write, phv_init_valid;
