@@ -388,10 +388,12 @@ void Visualization::gen_hashdist(unsigned int stageNo, Util::JsonObject *stage) 
 
 void Visualization::add_table_usage(cstring name, const IR::MAU::Table *table) {
     LOG1("add_table_usage: " << name);
-    // \TODO: what do we do for un-allocated tables? id == -1?
     if (table->logical_id < 0) {
-        P4C_UNIMPLEMENTED("visualization of un-allocated tables not yet implemented (%1%: %2%)",
-                         name, table->logical_id);
+        // \TODO: for partial allocation, we'll eventually need to list all the
+        // tables, including the ones that are not allocated in the resources node.
+        // For now, we just ignore them, rather than issuing an error
+        // P4C_UNIMPLEMENTED("visualization of un-allocated tables not yet implemented (%1%: %2%)",
+        //                  name, table->logical_id);
         return;
     }
 
