@@ -198,7 +198,6 @@ struct BridgeIngressToEgress : public Transform {
 
     IR::BFN::TranslatedP4Control*
     preorder(IR::BFN::TranslatedP4Control* control) override {
-        prune();
         if (control->thread != INGRESS)
             return control;
         return updateIngressControl(control);
@@ -261,6 +260,31 @@ struct BridgeIngressToEgress : public Transform {
                                 new IR::MethodCallStatement(callExpr));
         control->body = body;
         return control;
+    }
+
+    IR::Node* preorder(IR::MethodCallStatement* node) override {
+        auto* call = node->methodCall;
+        auto* pa = call->method->to<IR::PathExpression>();
+        if (!pa) return node;
+        if (pa->path->name != "bypass_egress") return node;
+
+        auto stmts = new IR::IndexedVector<IR::StatOrDecl>();
+        auto control = findContext<IR::P4Control>();
+        BUG_CHECK(control != nullptr,
+                           "bypass_egress() must be used in a control block");
+        auto meta = new IR::PathExpression("ig_intr_md_for_tm");
+        auto flag = new IR::Member(meta, "bypass_egress");
+        auto ftype = IR::Type::Bits::get(1);
+        auto assign = new IR::AssignmentStatement(flag, new IR::Constant(ftype, 1));
+        stmts->push_back(assign);
+
+        auto* member = new IR::Member(new IR::PathExpression("compiler_generated_meta"),
+                            IR::ID("^bridged_metadata"));
+        auto* method = new IR::Member(member, IR::ID("setInvalid"));
+        auto* args = new IR::Vector<IR::Argument>;
+        auto* callExpr = new IR::MethodCallExpression(method, args);
+        stmts->push_back(new IR::MethodCallStatement(callExpr));
+        return stmts;
     }
 
     const IR::P4Program* postorder(IR::P4Program *program) override {
