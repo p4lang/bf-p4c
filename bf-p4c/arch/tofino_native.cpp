@@ -259,9 +259,6 @@ struct RewriteControlAndParserBlocks : Transform {
 
     const IR::Node* postorder(IR::P4Parser *node) override {
         auto orig = getOriginal();
-        for (auto kv : *bmap) {
-            LOG1("kv " << kv.first << " " << kv.second);
-        }
         if (!bmap->count(orig)) {
             BUG("P4Parser is mutated after evaluation");
             return node;
@@ -271,31 +268,28 @@ struct RewriteControlAndParserBlocks : Transform {
             node->srcInfo, node->name,
             node->type, node->constructorParams,
             node->parserLocals, node->states,
-            {}, binfo->gress);
+            {}, binfo.gress);
         return rv;
     }
 
     const IR::Node* postorder(IR::P4Control *node) override {
         auto orig = getOriginal();
-        for (auto kv : *bmap) {
-            LOG1("kv " << kv.first << " " << kv.second);
-        }
         if (!bmap->count(orig)) {
             BUG("P4Control is mutated after evaluation");
             return node;
         }
         auto binfo = bmap->at(orig);
-        if (binfo->type == ArchBlockType::MAU) {
+        if (binfo.type == ArchBlockType::MAU) {
             auto rv = new IR::BFN::TranslatedP4Control(
                 node->srcInfo, node->name, node->type,
                 node->constructorParams, node->controlLocals,
-                node->body, {}, binfo->gress);
+                node->body, {}, binfo.gress);
             return rv;
-        } else if (binfo->type == ArchBlockType::DEPARSER) {
+        } else if (binfo.type == ArchBlockType::DEPARSER) {
             auto rv = new IR::BFN::TranslatedP4Deparser(
                 node->srcInfo, node->name, node->type,
                 node->constructorParams, node->controlLocals,
-                node->body, {}, binfo->gress);
+                node->body, {}, binfo.gress);
             return rv;
         }
         return node;
@@ -322,36 +316,18 @@ NormalizeNativeProgram::NormalizeNativeProgram(P4::ReferenceMap* refMap,
 }
 
 LowerTofinoToStratum::LowerTofinoToStratum(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                                           BFN_Options &options) {
+                                           BFN_Options &options, int nPipe) {
     setName("LowerTofinoToStratum");
     addDebugHook(options.getDebugHook());
     auto* evaluator = new P4::EvaluatorPass(refMap, typeMap);
-    auto* parseTofinoArch = new ParseTofinoArch();
+    auto* parseTna = new ParseTna(nPipe, &threads /* not used */);
     addPasses({
         evaluator,
-        new VisitFunctor([this, evaluator, parseTofinoArch]() {
+        new VisitFunctor([this, evaluator, parseTna]() {
             auto toplevel = evaluator->getToplevelBlock();
-            toplevel->getMain()->apply(*parseTofinoArch);
+            toplevel->getMain()->apply(*parseTna);
         }),
-        new RewriteControlAndParserBlocks(&parseTofinoArch->toBlockInfo),
-        new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
-    });
-}
-
-LowerTofino32QToStratum::LowerTofino32QToStratum(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                                                 BFN_Options &options) {
-    setName("LowerTofino32QToStratum");
-    addDebugHook(options.getDebugHook());
-    auto* evaluator = new P4::EvaluatorPass(refMap, typeMap);
-    auto* parseTofino32QArch = new ParseTofino32QArch();
-    addPasses({
-        evaluator,
-        new VisitFunctor([this, evaluator, parseTofino32QArch]() {
-            auto toplevel = evaluator->getToplevelBlock();
-            toplevel->getMain()->apply(*parseTofino32QArch);
-        }),
-        new RewriteControlAndParserBlocks(&parseTofino32QArch->toBlockInfo),
+        new RewriteControlAndParserBlocks(&parseTna->toBlockInfo),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
     });

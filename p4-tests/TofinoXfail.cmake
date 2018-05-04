@@ -1088,3 +1088,8 @@ p4c_add_xfail_reason("tofino"
   "source of modify_field invalid"
   testdata/p4_16_samples/saturated-bmv2.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "condition expression too complex"
+  testdata/p4_14_samples/header-stack-ops-bmv2.p4
+)

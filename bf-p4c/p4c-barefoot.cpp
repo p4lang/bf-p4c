@@ -61,18 +61,29 @@ class OutputAsm : public PassManager {
  private:
     const BFN_Options &_options;
     bool _success;
+
+    // logical pipe id to support generating bfa for 64q, 32q and 16q.
+    // If compiling for 64q arch, all pipes are programmed with the same binary,
+    // the only used logical pipe id is 0.
+    // If compiling for 32q arch, use logical pipe id 0 and 1.
+    // If compiling for 16q arch, use logical pipe id 0, 1, 2, 3.
+    // In all cases, logical pipe id 0 is used for the external-facing pipe (pipe
+    // that has connection to external interface), logical pipe id 1, 2, 3 are used
+    // for internal-face pipe (pipes that use internal loopback).
+    int pipe_id;
+
     BFN::Visualization _visualization;
 
     void end_apply() override {
         if (!_options.debugInfo)  // generate resources info only if invoked with -g
             return;
         if (_success) {
-            // Why on jbay this outputFile can be null?
-            if (!_options.outputFile) {
-                return; }
-            cstring resourcesFile = _options.outputFile + ".res.json";
+            if (!_options.outputFiles.at(pipe_id)) {
+                return;
+            }
+            cstring resourcesFile = _options.outputFiles.at(pipe_id) + ".res.json";
             LOG2("ASM generation for resources: " << resourcesFile);
-            std::ofstream ctxt_stream(_options.outputFile, std::ios_base::app);
+            std::ofstream ctxt_stream(_options.outputFiles.at(pipe_id), std::ios_base::app);
             ctxt_stream << "resources: \"" << resourcesFile << "\"" << std::endl << std::flush;
             std::ofstream res(resourcesFile);
             res << _visualization << std::endl << std::flush;
@@ -88,16 +99,25 @@ class OutputAsm : public PassManager {
                 char build_date[1024];
                 strftime(build_date, 1024, "%c", localtime(&now));
 
-                char *program_name_ptr = basename(const_cast<char *>(_options.outputFile.c_str()));
+                char *program_name_ptr = basename(
+                    const_cast<char *>(_options.outputFiles.at(pipe_id).c_str()));
                 if (!program_name_ptr)
                     return;  // failed to get the program_name
                 std::string program_name(program_name_ptr);
                 program_name.erase(program_name.size()-4, 4);  // remove ".bfa"
 
-                char *dir_name_ptr = dirname(const_cast<char *>(_options.outputFile.c_str()));
-                if (!dir_name_ptr)
-                    return;   // failed to retrieve the directory
-                std::string dir(dir_name_ptr);
+                char *dir_name_ptr = dirname(
+                    const_cast<char *>(_options.outputFiles.at(pipe_id).c_str()));
+                std::string outputDir(dir_name_ptr ? dir_name_ptr : ".");
+                outputDir += "/pipe.";
+                outputDir += std::to_string(pipe_id);
+                int rc = mkdir(outputDir.c_str(), 0755);
+                if (rc != 0 && errno != EEXIST) {
+                    std::cerr << "Failed to create directory: " << outputDir << std::endl;
+                    return;
+                }
+                LOG2("Generating outputs under " << outputDir);
+                std::string dir(outputDir);
 
                 LOG2("ASM: context.json generation for failed compile: " << dir << "context.json");
                 ctxtJson.emplace("build_date", new Util::JsonValue(build_date));
@@ -121,10 +141,12 @@ class OutputAsm : public PassManager {
     }
 
  public:
-    explicit OutputAsm(const BFN::Backend &b, const BFN_Options& o, bool success = true) :
-        _options(o), _success(success) {
+    explicit OutputAsm(const BFN::Backend &b, const int& pipe_id,
+                       const BFN_Options& o, bool success = true) :
+        _options(o), _success(success), pipe_id(pipe_id) {
         setStopOnError(false);
-        addPasses({ new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(), o, success),
+        addPasses({ new BFN::AsmOutput(b.get_phv(), b.get_clot(),
+                                       b.get_defuse(), o, success, pipe_id),
                     &_visualization
                     });
         setName("Assembly output");
@@ -132,7 +154,7 @@ class OutputAsm : public PassManager {
 };
 
 /// use pipe.n to generate output directory.
-void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
+void execute_backend(const IR::BFN::Pipe* maupipe, int pipe_id, BFN_Options& options) {
     if (::errorCount() > 0)
         return;
     if (!maupipe)
@@ -151,7 +173,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
 
         // produce resource nodes in context.json regardless of failures
         std::cerr << "compilation failed: producing ctxt.json" << std::endl;
-        OutputAsm as(backend, options, false);
+        OutputAsm as(backend, pipe_id, options, false);
         maupipe->apply(as);
 
         if (Log::verbose())
@@ -165,7 +187,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
     }
 
     // output the .bfa file
-    OutputAsm as(backend, options);
+    OutputAsm as(backend, pipe_id, options);
     maupipe->apply(as);
 }
 
@@ -214,7 +236,7 @@ int main(int ac, char **av) {
     // generate graphs
     // In principle this should not fail, so we call it before the backend
     if (options.create_graphs) {
-        char *dir_name_ptr = dirname(const_cast<char *>(options.outputFile.c_str()));
+        char *dir_name_ptr = dirname(const_cast<char *>(options.outputFiles.at(0).c_str()));
         std::string graphsDir(dir_name_ptr ? dir_name_ptr : ".");
         graphsDir += "/graphs";
         int rc = mkdir(graphsDir.c_str(), 0755);
@@ -237,9 +259,11 @@ int main(int ac, char **av) {
     // convert midend IR to backend IR
     BFN::BackendConverter conv(&midend.refMap, &midend.typeMap, midend.toplevel);
     conv.convert(program, options);
+    if (::errorCount() > 0)
+        return 1;
 
     for (auto& kv : conv.pipe) {
-        execute_backend(kv.second, options);
+        execute_backend(kv.second, kv.first, options);
     }
 
     if (Log::verbose())

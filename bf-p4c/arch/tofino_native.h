@@ -39,13 +39,9 @@ struct NormalizeNativeProgram : public PassManager {
 struct LowerTofinoToStratum : public PassManager {
     LowerTofinoToStratum(P4::ReferenceMap* refMap,
                          P4::TypeMap* typeMap,
-                         BFN_Options& options);
-};
+                         BFN_Options& options, int nPipe);
 
-struct LowerTofino32QToStratum : public PassManager {
-    LowerTofino32QToStratum(P4::ReferenceMap* refMap,
-                            P4::TypeMap* typeMap,
-                            BFN_Options& options);
+    ProgramThreads threads;
 };
 
 }  // namespace BFN

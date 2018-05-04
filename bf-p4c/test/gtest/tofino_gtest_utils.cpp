@@ -58,6 +58,10 @@ TofinoPipeTestCase::create(const std::string& source) {
     }
     BFN::BackendConverter conv(&midend.refMap, &midend.typeMap, midend.toplevel);
     conv.convert(midendProgram, options);
+    if (conv.pipe.size() == 0) {
+        std::cerr << "backend converter failed" << std::endl;
+        return boost::none;
+    }
     auto* pipe = conv.pipe[0];
     if (pipe == nullptr) {
         std::cerr << "extract_maupipe failed" << std::endl;

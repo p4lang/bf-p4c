@@ -1,7 +1,14 @@
 #ifndef _EXTENSIONS_BF_P4C_ASM_H_
 #define _EXTENSIONS_BF_P4C_ASM_H_
 
+#include <limits.h>
+#include <signal.h>
+#include <stdio.h>
+#include <sys/stat.h>
 #include <fstream>
+#include <iostream>
+#include <string>
+
 #include "bf-asm/version.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/mau/asm_output.h"
@@ -30,11 +37,14 @@ class AsmOutput : public Inspector {
               const ClotInfo &clot,
               const FieldDefUse& defuse,
               const BFN_Options &opts,
-              bool success)
+              bool success,
+              int pipe_id)
           : phv(phv), clot(clot), defuse(defuse), options(opts), _successfulCompile(success) {
         out = &std::cout;
-        if (options.outputFile)
-            out = new std::ofstream(options.outputFile);
+        if (!options.outputFiles.empty()) {
+            if (auto file = options.outputFiles.at(pipe_id))
+                out = new std::ofstream(file);
+        }
     }
 
     bool preorder(const IR::BFN::Pipe* pipe) override {

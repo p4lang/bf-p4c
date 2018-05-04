@@ -296,7 +296,7 @@ TEST_F(TofinoComputedChecksum, MultipleChecksumsInOneHeader) {
     });
 }
 
-TEST_F(TofinoComputedChecksum, ErrorEmptyChecksum) {
+TEST_F(TofinoComputedChecksum, DISABLED_ErrorEmptyChecksum) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {},
                         headers.h1.checksum,

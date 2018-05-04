@@ -25,6 +25,7 @@ class BFN_Options : public CompilerOptions {
     bool always_init_metadata = false;
 
     cstring bfRtSchema = "";
+    std::vector<cstring> outputFiles;
 
     BFN_Options();
 

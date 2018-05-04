@@ -16,8 +16,8 @@
  *
  */
 
-#ifndef _TOFINO_NATIVE_ARCHITECTURE_32Q_P4_
-#define _TOFINO_NATIVE_ARCHITECTURE_32Q_P4_
+#ifndef _TOFINO_NATIVE_ARCHITECTURE_16Q_P4_
+#define _TOFINO_NATIVE_ARCHITECTURE_16Q_P4_
 
 #include "core.p4"
 #include "tofino.p4"
@@ -70,9 +70,12 @@ package Pipe<IH, IM, EH, EM>(
     Egress<EH, EM> egress,
     EgressDeparser<EH, EM> egress_deparser);
 
-package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1>(
+package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
+               IH2, IM2, EH2, EM2, IH3, IM3, EH3, EM3>(
             Pipe<IH0, IM0, EH0, EM0> pipe0,
-            Pipe<IH1, IM1, EH1, EM1> pipe1);
+            Pipe<IH1, IM1, EH1, EM1> pipe1,
+            Pipe<IH2, IM2, EH2, EM2> pipe2,
+            Pipe<IH3, IM3, EH3, EM3> pipe3);
 
 #endif
 

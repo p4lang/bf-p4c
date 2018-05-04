@@ -75,6 +75,12 @@ class P4Thread {
         json.load("deparser", thread->deparser);
         return thread;
     }
+#apply
+    visit_children {
+        v.visit(parser);
+        v.visit(mau);
+        v.visit(deparser);
+    }
 }
 
 }  // end namespace BFN

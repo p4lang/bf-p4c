@@ -12,6 +12,14 @@ BFN_Options::BFN_Options() {
     arch   = "v1model";
     compilerVersion = BF_P4C_VERSION;
 
+    registerOption("-o", "file1[,file2]",
+                   [this](const char* arg) {
+                       auto copy = strdup(arg);
+                       while (auto file = strsep(&copy, ","))
+                           outputFiles.push_back(file);
+                       return true;
+                   },
+                   "Write output to outfiles.\n");
     registerOption("--trivpa", nullptr,
         [this](const char *) { trivial_phvalloc = true; return true; },
         "use the trivial PHV allocator");
@@ -84,6 +92,7 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino", "v1model"},
         {"tofino", "tna"},
         {"tofino", "tna32q"},
+        {"tofino", "tna16q"},
         {"tofino", "psa"},
 #if HAVE_JBAY
         {"jbay", "v1model"},

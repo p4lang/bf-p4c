@@ -19,7 +19,6 @@ void ParamBinding::bind(const IR::Declaration_Variable *var) {
     by_declvar[var] = new IR::InstanceRef(var->name, typeMap->getType(var), true);
 }
 
-
 void ParamBinding::postorder(const IR::Parameter *param) {
     auto *type = typeMap->getType(param);
     if (!type->is<IR::Type_StructLike>()) return;

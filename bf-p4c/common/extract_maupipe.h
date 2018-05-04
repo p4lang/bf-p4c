@@ -92,29 +92,6 @@ class AttachTables : public PassManager {
     }
 };
 
-class ExtractStratumInfo : public PassManager {
- public:
-    ExtractStratumInfo(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                       IR::BFN::Pipe* rv, ParamBinding *bindings);
-    DeclarationConversions converted;
-    ResubmitPacking resubmitPackings;
-    MirroredFieldListPacking mirrorPackings;
-};
-
-class ExtractTofinoInfo : public PassManager {
- public:
-    ExtractTofinoInfo(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                       IR::BFN::Pipe* rv, ParamBinding *bindings);
-    DeclarationConversions converted;
-};
-
-class ExtractTofino32QInfo : public PassManager {
- public:
-    ExtractTofino32QInfo(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                         IR::BFN::Pipe *p0, IR::BFN::Pipe *p1, ParamBinding *bindings);
-    DeclarationConversions converted;
-};
-
 /// must be applied to IR::BFN::Pipe
 class ProcessBackendPipe : public PassManager {
  public:
@@ -132,6 +109,7 @@ class BackendConverter {
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
     IR::ToplevelBlock* toplevel;
+    ProgramThreads threads;
 
  public:
     BackendConverter(P4::ReferenceMap *refMap, P4::TypeMap *typeMap, IR::ToplevelBlock* toplevel)
@@ -139,6 +117,9 @@ class BackendConverter {
         CHECK_NULL(refMap); CHECK_NULL(typeMap); CHECK_NULL(toplevel); }
 
     void convert(const IR::P4Program *prog, BFN_Options& options);
+    void convertBackendPipe(const IR::P4Program* program, BFN_Options& options, int pipe_used);
+    void convertBackendPipe(const IR::P4Program *program, BFN_Options &options);
+    void extractThreads(int nPipes);
 
     std::map<int /* index */, const IR::BFN::Pipe*> pipe;
 };
