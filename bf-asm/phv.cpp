@@ -63,12 +63,21 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
     gress_t gress = (args.size == 1 && args[0] == "egress") ? EGRESS : INGRESS;
     for (auto &kv : data.map) {
         if (!CHECKTYPE(kv.key, tSTR)) continue;
-        if (get(gress, kv.key.s) || (!args.size && get(EGRESS, kv.key.s))) {
-            error(kv.key.lineno, "Duplicate phv name '%s'", kv.key.s);
-            continue; }
-        if (!addreg(gress, kv.key.s, kv.value) && args.size == 0)
-            addreg(EGRESS, kv.key.s, kv.value);
-    }
+        if (kv.key == "context_json") {
+            if (!CHECKTYPE(kv.value, tMAP)) continue;
+            for (auto& cjkv : kv.value.map) {
+                if (!CHECKTYPE(cjkv.key, tSTR)) continue;
+                if (!CHECKTYPE(cjkv.value, tMAP)) continue;
+                std::string name = cjkv.key.s;
+                stack_asm_name_to_p4(name);
+                for (auto& prop : cjkv.value.map)
+                    field_context_json[name][prop.key.s] = toJson(prop.value); }
+        } else {
+            if (get(gress, kv.key.s) || (!args.size && get(EGRESS, kv.key.s))) {
+                error(kv.key.lineno, "Duplicate phv name '%s'", kv.key.s);
+                continue; }
+            if (!addreg(gress, kv.key.s, kv.value) && args.size == 0)
+                addreg(EGRESS, kv.key.s, kv.value); } }
 }
 
 void Phv::output_names(json::map &out) {
@@ -259,6 +268,9 @@ void Phv::output(json::map &ctxt_json) {
                 phv_record["field_name"] = fix_name;
                 phv_record["field_msb"] = field_lo + field_size - 1;
                 phv_record["field_lsb"] = field_lo;
+                // Pass through per-field context_json information from the compiler.
+                if (field_context_json.count(fix_name))
+                    phv_record.merge(field_context_json.at(fix_name));
                 // Field width is set to total field width irrespective of current
                 // field slice width
                 phv_record["field_width"] = phv_field_sizes[gress][field_name];

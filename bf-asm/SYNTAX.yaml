@@ -38,6 +38,11 @@ phv [<thread>]:
         # (16-bit) registers, or W0-W63 for word (32-bit) registers.
         # May also use R0-R224 for all registers in W/B/H order.
         # TW0-TW31, TB0-TB21, TH0-TH47, R256-R367 for tagalong
+    context_json:
+        <name>:
+            # any keys/vector/values here are converted to json and output into
+            # the context.json phv_allocation.records info for field <name>
+            # verbatim
 parser [<thread>]:
     # Defines a parser.  <thread> must be 'ingress' or 'egress'
     start: <name>

@@ -21,6 +21,8 @@ enum class Kind : unsigned short {
     normal   = 3
 };
 
+const Kind KINDS[] = { Kind::tagalong, Kind::dark, Kind::mocha, Kind::normal };
+
 // all possible contexts a PHV container can participate in
 enum class Context : unsigned short {
     parde = 0,
@@ -78,6 +80,8 @@ enum class Size : unsigned short {
     b16  = 16,
     b32  = 32
 };
+
+const Size SIZES[] = { Size::null, Size::b8, Size::b16, Size::b32 };
 
 class Type {
     Kind        kind_;

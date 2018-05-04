@@ -278,6 +278,21 @@ const bitvec& TofinoPhvSpec::individuallyAssignedContainers() const {
     return individually_assigned_containers_i;
 }
 
+unsigned TofinoPhvSpec::physicalAddress(unsigned id) const {
+    const PHV::Type containerType = idToContainerType(id % numContainerTypes());
+    const unsigned index = id / numContainerTypes();
+    BUG_CHECK(physicalAddresses.find(containerType) != physicalAddresses.end(),
+              "PHV container %1% has unrecognized type %2%",
+              idToContainer(id), containerType);
+
+    auto physicalRange = physicalAddresses.at(containerType);
+    auto rv = physicalRange.min + index;
+    BUG_CHECK(rv <= physicalRange.max, "No physical address for PHV container %1%",
+              idToContainer(id));
+
+    return rv;
+}
+
 #if HAVE_JBAY
 JBayPhvSpec::JBayPhvSpec() {
     addType(PHV::Type::B);
@@ -333,6 +348,16 @@ bitvec JBayPhvSpec::parserGroup(unsigned id) const {
 
 const bitvec& JBayPhvSpec::individuallyAssignedContainers() const {
     return individually_assigned_containers_i;
+}
+
+unsigned JBayPhvSpec::physicalAddress(unsigned id) const {
+    // XXX(cole): JBay uses a different addressing scheme for PHV containers in
+    // PARDE and MAU.  At some point, we'll need to extend the physicalAddress
+    // interface to take a pipeline section parameter.  As this is primarily
+    // used for producing visualization information, we'll also need to update
+    // p4i with that knowledge.
+
+    P4C_UNIMPLEMENTED("Physical addresses for PHV containers");
 }
 
 #endif /* HAVE_JBAY */

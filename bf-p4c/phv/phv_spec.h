@@ -144,10 +144,23 @@ class PhvSpec {
     /// @return the ids of all containers which actually exist on the Tofino
     /// hardware - i.e., all non-overflow containers.
     const bitvec& physicalContainers() const;
+
+    /// @return the target-specific address of @container_id.
+    virtual unsigned physicalAddress(unsigned container_id) const = 0;
 };
 
 
 class TofinoPhvSpec : public PhvSpec {
+    /// Physical addresses of PHV containers.
+    struct ClosedRange { unsigned min; unsigned max; };
+    std::map<PHV::Type, ClosedRange> physicalAddresses = {
+        { PHV::Type::W,   { .min = 0,   .max = 63  } },
+        { PHV::Type::B,   { .min = 64,  .max = 127 } },
+        { PHV::Type::H,   { .min = 128, .max = 255 } },
+        { PHV::Type::TW,  { .min = 256, .max = 287 } },
+        { PHV::Type::TB,  { .min = 288, .max = 319} },
+        { PHV::Type::TH,  { .min = 320, .max = 367 } }, };
+
  public:
     TofinoPhvSpec();
 
@@ -155,6 +168,9 @@ class TofinoPhvSpec : public PhvSpec {
     bitvec parserGroup(unsigned id) const override;
 
     const bitvec& individuallyAssignedContainers() const override;
+
+    /// @see PhvSpec::physicalAddress(unsigned container_id).
+    unsigned physicalAddress(unsigned container_id) const override;
 };
 
 #if HAVE_JBAY
@@ -166,6 +182,9 @@ class JBayPhvSpec : public PhvSpec {
     bitvec parserGroup(unsigned id) const override;
 
     const bitvec& individuallyAssignedContainers() const override;
+
+    /// @see PhvSpec::physicalAddress(unsigned container_id).
+    unsigned physicalAddress(unsigned container_id) const override;
 };
 #endif /* HAVE_JBAY */
 

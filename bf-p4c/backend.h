@@ -4,13 +4,14 @@
 #include "ir/ir.h"
 #include "bf-p4c-options.h"
 
-#include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/mau/table_mutex.h"
+
+class FieldDefUse;
 
 namespace BFN {
 
@@ -31,8 +32,9 @@ class Backend : public PassManager {
  public:
     explicit Backend(const BFN_Options& options);
 
-    const PhvInfo  &get_phv()  const { return phv; }
-    const ClotInfo &get_clot() const { return clot; }
+    const PhvInfo       &get_phv()    const { return phv; }
+    const ClotInfo      &get_clot()   const { return clot; }
+    const FieldDefUse   &get_defuse() const { return defuse; }
 };
 
 }  // namespace BFN

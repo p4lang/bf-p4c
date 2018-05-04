@@ -90,6 +90,12 @@ private:
                 user_defined;
     bitvec      phv_use[2];
     std::map<std::string, int> phv_field_sizes [2];
+
+    // Maps P4-level field names (i.e. returned by stack_asm_name_to_p4()) to a
+    // map to be embedded in the field's context_json "records" node.
+    // Eg. field_context_json["hdr.f1"]["live_start"] == "\"parser\"".
+    std::map<std::string, json::map> field_context_json;
+
     void init_phv(target_t);
     void gen_phv_field_size_map();
     int addreg(gress_t gress, const char *name, const value_t &what);

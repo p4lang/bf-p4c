@@ -159,8 +159,8 @@ std::unique_ptr<json::map> toJson(VECTOR(pair_t) &);
      (error((V).lineno, "Syntax error, expecting %s", M), 0))
 #define CHECKTYPE2(V, T1, T2) \
     ((V).type == (T1) || (V).type == (T2) || \
-     (error((V).lineno, "Syntax error, expecting %s or %s", \
-            value_type_desc[T1], value_type_desc[T2]), 0))
+     (error((V).lineno, "Syntax error, expecting %s or %s but got %s", \
+            value_type_desc[T1], value_type_desc[T2], value_desc(V)), 0))
 #define CHECKTYPE3(V, T1, T2, T3) \
     ((V).type == (T1) || (V).type == (T2) || (V).type == (T3) || \
      (error((V).lineno, "Syntax error, expecting %s or %s or %s", \
@@ -171,7 +171,7 @@ std::unique_ptr<json::map> toJson(VECTOR(pair_t) &);
             value_type_desc[T1], value_type_desc[T2]), 0))
 #define CHECKTYPE2M(V, T1, T2, M) \
     ((V).type == (T1) || (V).type == (T2) || \
-     (error((V).lineno, "Syntax error, expecting %s", M), 0))
+     (error((V).lineno, "Syntax error, expecting %s but got %s", M, value_desc(V)), 0))
 #define PCHECKTYPE2M(P, V, T1, T2, M) \
     (((P) && ((V).type == (T1) || (V).type == (T2))) || \
      (error((V).lineno, "Syntax error, expecting %s", M), 0))

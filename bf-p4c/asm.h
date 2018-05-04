@@ -11,6 +11,8 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "common/run_id.h"
 
+class FieldDefUse;
+
 namespace BFN {
 
 class AsmOutput : public Inspector {
@@ -18,13 +20,18 @@ class AsmOutput : public Inspector {
     std::ostream*      out = nullptr;
     const PhvInfo     &phv;
     const ClotInfo    &clot;
+    const FieldDefUse &defuse;
     const BFN_Options &options;
     /// Tell this pass whether it is called after a succesful compilation
     bool               _successfulCompile = true;
 
  public:
-    AsmOutput(const PhvInfo &phv, const ClotInfo &clot, const BFN_Options &opts, bool success) :
-        phv(phv), clot(clot), options(opts), _successfulCompile(success) {
+    AsmOutput(const PhvInfo &phv,
+              const ClotInfo &clot,
+              const FieldDefUse& defuse,
+              const BFN_Options &opts,
+              bool success)
+          : phv(phv), clot(clot), defuse(defuse), options(opts), _successfulCompile(success) {
         out = &std::cout;
         if (options.outputFile)
             out = new std::ofstream(options.outputFile);
@@ -41,7 +48,7 @@ class AsmOutput : public Inspector {
                  << "  version: " << BFASM::Version::getVersion() << std::endl
                  << "  run_id: \"" << RunId::getId() << "\"" << std::endl;
             if (::errorCount() == 0) {
-                *out << PhvAsmOutput(phv)
+                *out << PhvAsmOutput(phv, defuse)
                      << ParserAsmOutput(pipe, INGRESS)
                      << DeparserAsmOutput(pipe, phv, clot, INGRESS)
                      << ParserAsmOutput(pipe, EGRESS)

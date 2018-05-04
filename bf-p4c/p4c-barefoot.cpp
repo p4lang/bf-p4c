@@ -124,7 +124,7 @@ class OutputAsm : public PassManager {
     explicit OutputAsm(const BFN::Backend &b, const BFN_Options& o, bool success = true) :
         _options(o), _success(success) {
         setStopOnError(false);
-        addPasses({ new BFN::AsmOutput(b.get_phv(), b.get_clot(), o, success),
+        addPasses({ new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(), o, success),
                     &_visualization
                     });
         setName("Assembly output");
