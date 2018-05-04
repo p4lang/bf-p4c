@@ -219,9 +219,8 @@ struct AutoPushTransition {
 
 class GetBackendParser {
  public:
-    explicit GetBackendParser(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                              const ParserPragmas& pg) :
-        refMap(refMap), typeMap(typeMap), parserPragmas(pg) { }
+    explicit GetBackendParser(P4::ReferenceMap *refMap, const ParserPragmas& pg) :
+        refMap(refMap), parserPragmas(pg) { }
 
     const IR::BFN::Parser* extract(const IR::BFN::TranslatedP4Parser* parser);
 
@@ -237,7 +236,6 @@ class GetBackendParser {
     std::map<cstring, cstring>                  p4StateNameToStateName;
 
     P4::ReferenceMap* refMap;
-    P4::TypeMap* typeMap;
     const ParserPragmas& parserPragmas;
 };
 
@@ -736,7 +734,7 @@ void ExtractParser::postorder(const IR::BFN::TranslatedP4Parser* parser) {
     ParserPragmas pg;
     parser->apply(pg);
 
-    GetBackendParser gp(refMap, typeMap, pg);
+    GetBackendParser gp(refMap, pg);
     rv->thread[parser->thread].parser = gp.extract(parser);
 }
 

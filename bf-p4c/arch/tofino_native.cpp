@@ -323,7 +323,7 @@ LowerTofinoToStratum::LowerTofinoToStratum(P4::ReferenceMap *refMap, P4::TypeMap
     auto* parseTna = new ParseTna(nPipe, &threads /* not used */);
     addPasses({
         evaluator,
-        new VisitFunctor([this, evaluator, parseTna]() {
+        new VisitFunctor([evaluator, parseTna]() {
             auto toplevel = evaluator->getToplevelBlock();
             toplevel->getMain()->apply(*parseTna);
         }),

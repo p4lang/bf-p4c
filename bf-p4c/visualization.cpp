@@ -477,7 +477,7 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
     tcams_res->emplace("tcams", tcams);
     parent->emplace("tcams", tcams_res);
 
-    auto p4name = [this](const MemoriesResource &res) {
+    auto p4name = [](const MemoriesResource &res) {
         // // find the P4Table
         // const IR::MAU::Table *table = nullptr;
         // for ( auto *t : tables)

@@ -303,7 +303,7 @@ ExtractMirrorFieldPackings::ExtractMirrorFieldPackings(P4::ReferenceMap *refMap,
     auto findMirror = new FindMirroredFieldLists(refMap, typeMap);
     addPasses({
         findMirror,
-        new VisitFunctor([this, findMirror, fieldPackings]() {
+        new VisitFunctor([findMirror, fieldPackings]() {
             for (auto& fieldList : findMirror->fieldLists) {
                 auto* packing = BFN::packMirroredFieldList(fieldList.second);
                 fieldPackings->emplace(fieldList.first, packing);

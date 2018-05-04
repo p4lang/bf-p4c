@@ -28,7 +28,9 @@ struct RewriteIntrinsicMeta : public ControlFlowVisitor, Inspector {
     // if extracted < 64, continue
 };
 
-PortTNAToJBay::PortTNAToJBay(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, BFN_Options& options) {
+    PortTNAToJBay::PortTNAToJBay(P4::ReferenceMap* /* refMap */,
+                                 P4::TypeMap* /* typeMap */,
+                                 BFN_Options& /* options */) {
     addPasses({
         new RewriteIntrinsicMeta()
     });

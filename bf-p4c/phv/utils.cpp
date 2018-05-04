@@ -917,7 +917,8 @@ cstring PHV::Transaction::getSummary(const PhvUse& /* uses */) const {
     P4C_UNIMPLEMENTED("Transaction::getSummary()");
 }
 
-cstring PHV::Transaction::getOccupancyMetrics(const ordered_map<PHV::Container, int>& used) const {
+cstring
+PHV::Transaction::getOccupancyMetrics(const ordered_map<PHV::Container, int>& /*used*/) const {
     P4C_UNIMPLEMENTED("Transaction::getOccupancyMetrics()");
 }
 

@@ -219,7 +219,7 @@ ExtractResubmitFieldPackings::ExtractResubmitFieldPackings(P4::ReferenceMap *ref
     auto findResubmit = new FindResubmit(refMap, typeMap);
     addPasses({
         findResubmit,
-        new VisitFunctor([this, findResubmit, fieldPackings]() {
+        new VisitFunctor([findResubmit, fieldPackings]() {
             for (auto extract : findResubmit->extracts) {
                 auto packing = packResubmitFields(extract.second);
                 fieldPackings->emplace(extract.first, packing);

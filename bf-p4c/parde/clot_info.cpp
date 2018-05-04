@@ -244,7 +244,7 @@ class NaiveClotAlloc : public Visitor {
 
                 // XXX(zma) needs to optimize this ...
                 if (state_clots.count(s) && state_clots.at(s).size() > 0) {
-                    unsigned credit = 0;
+                    int credit = 0;
 
                     if (credit_map.count(s))
                         credit = credit_map.at(s);
