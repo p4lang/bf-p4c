@@ -608,7 +608,7 @@ int ActionBus::find(Table::Format::Field *f, int off, int size /* in bytes */) {
         /* FIXME -- off < f->size check is wrong, but needed for old compiler broken asm */
         /* FIXME -- see test/action_bus1.p4 */
         if (off < (int)f->size && off - slot.second.data[f] >= slot.second.size) continue;
-        if (!(size & slot_sizes[slot.first/32U])) continue;
+        if (size && !(size & slot_sizes[slot.first/32U])) continue;
         // Check if slot can accommodate the desired field size
         if (std::min((int)f->size - off, size * 8) > slot.second.size) continue;
         return slot.first + (off - slot.second.data[f])/8U; }
@@ -617,7 +617,7 @@ int ActionBus::find(Table::Format::Field *f, int off, int size /* in bytes */) {
 int ActionBus::find(const char *name, int off, int size, int *len) {
     for (auto &slot : by_byte)
         if (slot.second.name == name) {
-            if (!(size & slot_sizes[slot.first/32U])) continue;
+            if (size && !(size & slot_sizes[slot.first/32U])) continue;
             if (len) *len = slot.second.size;
             return slot.first + off/8; }
     return -1;
@@ -626,7 +626,7 @@ int ActionBus::find(const char *name, int off, int size, int *len) {
 int ActionBus::find(HashDistribution *hd, int off, int size) {
     for (auto &slot : by_byte)
         if (slot.second.data.count(hd)) {
-            if (!(size & slot_sizes[slot.first/32U])) continue;
+            if (size && !(size & slot_sizes[slot.first/32U])) continue;
             // if (len) *len = slot.second.size;
             return slot.first + off/8; }
     return -1;
@@ -635,7 +635,7 @@ int ActionBus::find(HashDistribution *hd, int off, int size) {
 int ActionBus::find(RandomNumberGen rng, int off, int size) {
     for (auto &slot : by_byte)
         if (slot.second.data.count(rng)) {
-            if (!(size & slot_sizes[slot.first/32U])) continue;
+            if (size && !(size & slot_sizes[slot.first/32U])) continue;
             return slot.first + off/8; }
     return -1;
 }

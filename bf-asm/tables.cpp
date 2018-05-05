@@ -881,20 +881,22 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
     position_in_assembly = pos;
     if (kv.key.type == tCMD) {
         name = kv.key[0].s;
-        if (CHECKTYPE(kv.key[1], tINT) && (code = kv.key[1].i) >= 0) {
-            if (actions->code_use[code])
-                error(kv.key.lineno, "Duplicate action code %d", code);
-            actions->code_use[code] = true; }
+        if (CHECKTYPE(kv.key[1], tINT))
+            code = kv.key[1].i;
         if (kv.key.vec.size > 2 && CHECKTYPE(kv.key[2], tINT)) {
             if ((addr = kv.key[2].i) < 0 || addr >= ACTION_IMEM_ADDR_MAX)
                 error(kv.key[2].lineno, "Invalid instruction address %d", addr); }
     } else if (kv.key.type == tINT) {
-        name = std::to_string(kv.key.i);
-        if (actions->code_use[(code = kv.key.i)])
-            error(kv.key.lineno, "Duplicate action code %d", code);
-        actions->code_use[code] = true;
+        name = std::to_string((code = kv.key.i));
     } else
         name = kv.key.s;
+    if (code >= 0) {
+        if (actions->code_use[code]) {
+            if (!equivVLIW(actions->by_code[code]))
+                error(kv.key.lineno, "Duplicate action code %d", code);
+        } else {
+            actions->by_code[code] = this;
+            actions->code_use[code] = true; } }
     for (auto &i : kv.value.vec) {
         if (i.type == tINT && instr.empty()) {
             if ((addr = i.i) < 0 || i.i >= ACTION_IMEM_ADDR_MAX)
@@ -989,6 +991,13 @@ void Table::Actions::Action::pass1(Table *tbl) {
     /* SALU actions always have addr == -1 (so iaddr == -1) */
     int iaddr = -1;
     bool shared_VLIW = false;
+    for (auto &inst : instr) {
+        inst = inst->pass1(tbl, this);
+        if (inst->slot >= 0) {
+            if (slot_use[inst->slot])
+                error(inst->lineno, "instruction slot %d used multiple times in action %s",
+                      inst->slot, name.c_str());
+            slot_use[inst->slot] = 1; } }
     if (addr >= 0) {
         if (auto old = tbl->stage->imem_addr_use[tbl->gress][addr]) {
             if (equivVLIW(old)) {
@@ -998,18 +1007,13 @@ void Table::Actions::Action::pass1(Table *tbl) {
                 warning(old->lineno, "also defined here"); } }
         tbl->stage->imem_addr_use[tbl->gress][addr] = this;
         iaddr = addr/ACTION_IMEM_COLORS; }
-    for (auto &inst : instr) {
-        inst = inst->pass1(tbl, this);
-        if (inst->slot >= 0) {
-            if (slot_use[inst->slot])
-                error(inst->lineno, "instruction slot %d used multiple times in action %s",
-                      inst->slot, name.c_str());
-            slot_use[inst->slot] = 1; }
-        if (!shared_VLIW && inst->slot >= 0 && iaddr >= 0) {
-            if (tbl->stage->imem_use[iaddr][inst->slot])
-                error(lineno, "action instruction slot %d.%d in use elsewhere",
-                      iaddr, inst->slot);
-            tbl->stage->imem_use[iaddr][inst->slot] = 1; } }
+    if (!shared_VLIW) {
+        for (auto &inst : instr) {
+            if (inst->slot >= 0 && iaddr >= 0) {
+                if (tbl->stage->imem_use[iaddr][inst->slot])
+                    error(lineno, "action instruction slot %d.%d in use elsewhere",
+                          iaddr, inst->slot);
+                tbl->stage->imem_use[iaddr][inst->slot] = 1; } } }
     for (auto &a : alias) {
         while (alias.count(a.second.name) == 1) {
             // the alias refers to something else in the alias list
@@ -1081,30 +1085,31 @@ void Table::Actions::pass2(Table *tbl) {
      * code for every action to handle next_table properly */
     int code_limit = 0x10000;
     MatchTable *limit_match_table = nullptr;
-    bool have_next_hit_map = false;
+    bool use_code_for_next = false;  // true iff a table uses the action code for next table
+        // selection in addition to using it for the action instruction
     for (auto match : tbl->get_match_tables()) {
         auto &args = match->get_action().args;
         if (args.size() > 0 && (1 << args[0].size()) < code_limit) {
             code_limit = 1 << args[0].size();
             limit_match_table = match; }
-        if (match->hit_next_size() > 1)
-            have_next_hit_map = true; }
+        if (match->hit_next_size() > 1 && !match->lookup_field("next"))
+            use_code_for_next = true; }
 
     /* figure out if we need more codes than can fit in the action_instruction_adr_map.
      * use code = -1 to signal that condition. */
-    if (have_next_hit_map) {
-        if (code + actions.size() > ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
-            code = -1;
-    } else {
-        int non_nop_actions = 0;
-        for (auto &act : *this) {
-            if (act.default_only) continue;
-            if (act.instr.empty())
-                code = 1;   // nop action -- always uses code 0
-            else
-                ++non_nop_actions; }  // FIXME -- should combine identical actions
-        if (code + non_nop_actions > ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
-            code = -1; }
+    int non_nop_actions = by_code.size();
+    if (by_code.count(0) && by_code.at(0)->instr.empty()) {
+        --non_nop_actions;  // don't count code 0 action if its a noop
+        code = 1; }
+    for (auto &act : *this) {
+        if (act.default_only) continue;
+        if (act.instr.empty() && !use_code_for_next)
+            code = 1;   // nop action -- use code 0 unless it needs to be used as next
+        else if (act.code < 0)
+            ++non_nop_actions; }  // FIXME -- should combine identical actions?
+    if (code + non_nop_actions > ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
+        code = -1;
+    bool code0_is_noop = (code != 0);
 
     for (auto &act : *this) {
         for (auto *inst : act.instr)
@@ -1127,22 +1132,23 @@ void Table::Actions::pass2(Table *tbl) {
         if (act.code < 0 && !act.default_only) {
             if (code < 0 && !code_use[act.addr])
                 act.code = act.addr;
-            else if (act.instr.empty() && !have_next_hit_map)
+            else if (act.instr.empty() && !use_code_for_next && code0_is_noop)
                 act.code = 0;
-            else
-                act.code = code; }
+            else {
+                while (code >= 0 && code_use[code]) code++;
+                act.code = code; } }
         else if (code < 0 && act.code != act.addr && !act.default_only) {
             error(act.lineno, "Action code must be the same as action instruction address "
                   "when there are more than %d actions", ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH);
             if (act.code < 0)
                 warning(act.lineno, "Code %d is already in use by another action", act.addr); }
-        if (act.code >= 0)
-            code_use[act.code] = true;
+        if (act.code >= 0) {
+            by_code[act.code] = &act;
+            code_use[act.code] = true; }
         if (act.code >= code_limit)
             error(act.lineno, "Action code %d for %s too large for action specifier in "
                   "table %s", act.code, act.name.c_str(), limit_match_table->name());
-        if (act.code > max_code) max_code = act.code;
-        while (code >= 0 && code_use[code]) code++; }
+        if (act.code > max_code) max_code = act.code; }
     actions.sort([](const value_type &a, const value_type &b) -> bool {
         return a.second.code < b.second.code; });
     if (!tbl->default_action.empty() && !exists(tbl->default_action))
@@ -1171,8 +1177,9 @@ void Table::Actions::stateful_pass2(Table *tbl) {
     for (auto &act : *this) {
         if (act.code >= 4)
             error(act.lineno, "Only 4 actions in a stateful table");
-        else if (act.code >= 0)
-            code_use[act.code] = 1;
+        else if (act.code >= 0) {
+            by_code[act.code] = &act;
+            code_use[act.code] = true; }
         for (auto *inst : act.instr)
             inst->pass2(tbl, &act); }
     for (auto &act : *this) {
@@ -1180,7 +1187,8 @@ void Table::Actions::stateful_pass2(Table *tbl) {
             if ((act.code = code_use.ffz(0)) >= 4) {
                 error(act.lineno, "Only 4 actions in a stateful table");
                 break; }
-            code_use[act.code] = 1; } }
+            by_code[act.code] = &act;
+            code_use[act.code] = true; } }
 }
 
 template<class REGS> void Table::Actions::write_regs(REGS &regs, Table *tbl) {

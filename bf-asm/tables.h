@@ -382,10 +382,11 @@ public:
         };
     private:
         typedef ordered_map<std::string, Action> map_t;
-        map_t           actions;
-        bitvec          code_use;
-        bitvec          slot_use;
-        Table           *table;
+        map_t                   actions;
+        bitvec                  code_use;
+        std::map<int, Action *> by_code;
+        bitvec                  slot_use;
+        Table                   *table;
     public:
         int                                     max_code = -1;
         Actions(Table *tbl, VECTOR(pair_t) &);
@@ -634,10 +635,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual unsigned get_default_action_handle() {
         return default_action_handle > 0 ? default_action_handle : action ? action->default_action_handle : 0; }
     int get_format_field_size(std::string s) {
-        auto fmt = get_format();
-        if (fmt)
-            if (auto fmt_field = fmt->field(s))
-                return fmt_field->size;
+        if (auto field = lookup_field(s)) return field->size;
         return 0; }
 };
 

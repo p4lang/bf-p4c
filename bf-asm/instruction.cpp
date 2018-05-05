@@ -133,10 +133,15 @@ struct operand {
                unsigned l, unsigned h, const std::string &m) :
                 Base(line), name(n), p4name(m), table(tbl), field(f), lo(l), hi(h) {}
         bool equiv(const Base *a_) const override {
-            if (auto *a = dynamic_cast<const Action *>(a_)) {
-                return name == a->name && table == a->table && field == a->field &&
-                       lo == a->lo && hi == a->hi;
-            } else return false; }
+            auto *a = dynamic_cast<const Action *>(a_);
+            if (!a || lo != a->lo || hi != a->hi) return false;
+            if (name == a->name && table == a->table && field == a->field) return true;
+            if (field != a->field && (!field || !a->field)) return false;
+            int b1 = field ? table->find_on_actionbus(field, 0, 0)
+                           : table->find_on_actionbus(name, 0, 0);
+            int b2 = a->field ? a->table->find_on_actionbus(a->field, 0, 0)
+                              : a->table->find_on_actionbus(a->name, 0, 0);
+            return b1 == b2 && b1 >= 0; }
         Action *clone() override { return new Action(*this); }
         int bits(int group) override {
             int size = group_size[group]/8U;
@@ -245,9 +250,14 @@ struct operand {
                 if (auto rv = mtab->find_hash_dist(unit)) return rv;
             return nullptr; }
         bool equiv(const Base *a_) const override {
-            if (auto *a = dynamic_cast<const HashDist *>(a_)) {
-                return table == a->table && units == a->units;
-            } else return false; }
+            auto *a = dynamic_cast<const HashDist *>(a_);
+            if (!a || units != a->units || lo != a->lo || hi != a->hi) return false;
+            if (table == a->table) return true;
+            for (auto unit : units) {
+                int b1 = table->find_on_actionbus(find_hash_dist(unit), 0, 0);
+                int b2 = a->table->find_on_actionbus(a->find_hash_dist(unit), 0, 0);
+                if (b1 != b2 || b1 < 0) return false; }
+            return true; }
         HashDist *clone() override { return new HashDist(*this); }
         void pass2(int group) const override {
             // FIXME -- check lo/hi for sanity
