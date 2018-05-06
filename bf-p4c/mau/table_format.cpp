@@ -344,13 +344,8 @@ bool TableFormat::allocate_overhead() {
 }
 
 int TableFormat::hit_actions() {
-    int _hit_actions = 0;
-    for (auto act : Values(tbl->actions)) {
-        if (!act->miss_action_only)
-            _hit_actions++;
-    }
     int extra_action_needed = gw_linked ? 1 : 0;
-    return _hit_actions + extra_action_needed;
+    return tbl->hit_actions() + extra_action_needed;
 }
 
 /* Bits for selecting the next table from an action chain table must be in the lower part

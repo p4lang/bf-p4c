@@ -1220,7 +1220,10 @@ class MauAsmOutput::EmitAction : public Inspector {
             if (prim->operands.size() < 2) continue;
             if (auto aa = prim->operands.at(1)->to<IR::ActionArg>()) {
                 alias[aa->name] = self.find_indirect_index(at, true, nullptr, table); } }
-        out << indent << canon_name(act->name) << ":" << std::endl;
+        auto &instr_mem = table->resources->instr_mem;
+        out << indent << canon_name(act->name);
+        auto &vliw_instr = instr_mem.all_instrs.at(act->name);
+        out << "(" << vliw_instr.mem_code << ", " << vliw_instr.gen_addr() << "):" << std::endl;
         action_context_json(act);
         out << indent << "- default_" << (act->miss_action_only ? "only_" : "") << "action: {"
             << " allowed: " << std::boolalpha << (act->default_allowed || act->hit_path_imp_only);
@@ -1264,8 +1267,6 @@ class MauAsmOutput::EmitAction : public Inspector {
                         sep = ", "; } } }
             out << ')' << std::endl;
             is_empty = false; }
-        if (is_empty)
-            out << indent << "- 0" << std::endl;
         return false; }
     bool preorder(const IR::MAU::SaluAction *act) override {
         out << indent << canon_name(act->name) << ":" << std::endl;

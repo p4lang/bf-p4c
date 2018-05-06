@@ -13,6 +13,7 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     ixbar.clear();
     memory.clear();
     action_data_bus.clear();
+    imems.clear();
     tableAlloc.clear();
     tableNames.clear();
     mergedGateways.clear();
@@ -44,8 +45,10 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         tableNames[t->gateway_name] = t->gateway_name; }
     if (t->resources) {
         ixbar[t->stage()].update(t);
-        memory[t->stage()].update(t->resources->memuse); }
-    action_data_bus[t->stage()].update(t);
+        memory[t->stage()].update(t->resources->memuse);
+        action_data_bus[t->stage()].update(t);
+        imems[t->stage()].update(t);
+    }
     return true;
 }
 

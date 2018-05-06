@@ -140,3 +140,12 @@ int IR::MAU::Table::get_provided_stage() const {
                 annot->srcInfo, name);
     return constant->asInt();
 }
+
+int IR::MAU::Table::hit_actions() const {
+    int _hit_actions = 0;
+    for (auto act : Values(actions)) {
+        if (!act->miss_only())
+            _hit_actions++;
+    }
+    return _hit_actions;
+}

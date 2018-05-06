@@ -71,6 +71,7 @@ class SharedIndirectAttachedAnalysis : public MauInspector {
     profile_t init_apply(const IR::Node *root) override {
         profile_t rv = MauInspector::init_apply(root);
         backend_users.clear();
+        act_data_shared_tables.clear();
         return rv;
     }
     bool preorder(const IR::MAU::AttachedMemory *ba) override;

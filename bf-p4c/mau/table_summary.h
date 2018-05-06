@@ -44,6 +44,7 @@ class TableSummary: public MauInspector {
     std::map<int, IXBar>                     ixbar;
     std::map<int, Memories>                  memory;
     std::map<int, ActionDataBus>             action_data_bus;
+    std::map<int, InstructionMemory>         imems;
 
     profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::MAU::Table* t) override;

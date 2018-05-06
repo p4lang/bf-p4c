@@ -82,10 +82,12 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
 class TableAllocPass : public PassManager {
  private:
     TablesMutuallyExclusive mutex;
+    SharedIndirectAttachedAnalysis siaa;
     LayoutChoices           lc;
 
  public:
-    TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps) {
+    TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps)
+        : siaa(mutex) {
             addPasses({
                 new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
                 new TableLayout(phv, lc),
@@ -97,9 +99,9 @@ class TableAllocPass : public PassManager {
                 new CheckTableNameDuplicate,
                 new FindDependencyGraph(phv, deps),
                 &mutex,
-                new SharedIndirectAttachedAnalysis(mutex),
+                &siaa,
                 new DumpPipe("Before TablePlacement"),
-                new TablePlacement(&deps, mutex, phv, lc, options.forced_placement),
+                new TablePlacement(&deps, mutex, phv, lc, siaa, options.forced_placement),
                 new CheckTableNameDuplicate,
                 new TableFindSeqDependencies,  // not needed?
                 new CheckTableNameDuplicate

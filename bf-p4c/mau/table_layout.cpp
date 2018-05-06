@@ -286,14 +286,6 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
     }
 }
 
-int TableLayout::get_hit_actions(const IR::MAU::Table *tbl) {
-    int hit_actions = 0;
-    for (auto act : Values(tbl->actions)) {
-        if (!act->miss_action_only)
-            hit_actions++;
-    }
-    return hit_actions;
-}
 
 class GatewayLayout : public MauInspector {
     IR::MAU::Table::Layout &layout;
@@ -332,7 +324,7 @@ void TableLayout::setup_action_layout(IR::MAU::Table *tbl) {
    data if immediate is possible */
 void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl) {
     LOG2("Setup TCAM match layouts " << tbl->name);
-    if (get_hit_actions(tbl) == 1)
+    if (tbl->hit_actions() == 1)
         tbl->layout.overhead_bits++;
 
     int index = 0;
@@ -607,15 +599,15 @@ class VisitAttached : public Inspector {
 
 void TableLayout::setup_instr_and_next(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
     layout.total_actions = tbl->actions.size();
-    int action_count = get_hit_actions(tbl);
-    if (get_hit_actions(tbl) > 0) {
-        if (get_hit_actions(tbl) <= TableFormat::IMEM_MAP_TABLE_ENTRIES)
-            layout.overhead_bits += ceil_log2(action_count);
+    int hit_actions = tbl->hit_actions();
+    if (hit_actions > 0) {
+        if (hit_actions <= TableFormat::IMEM_MAP_TABLE_ENTRIES)
+            layout.overhead_bits += ceil_log2(hit_actions);
         else
             layout.overhead_bits += TableFormat::FULL_IMEM_ADDRESS_BITS;
     }
 
-    if (tbl->action_chain() && get_hit_actions(tbl) > TableFormat::NEXT_MAP_TABLE_ENTRIES) {
+    if (tbl->action_chain() && hit_actions > TableFormat::NEXT_MAP_TABLE_ENTRIES) {
         int next_tables = tbl->action_next_paths();
         if (!tbl->has_default_path())
             next_tables++;

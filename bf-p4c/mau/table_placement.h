@@ -16,7 +16,7 @@ class LayoutChoices;
 class TablePlacement : public MauTransform, public Backtrack {
  public:
     TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m, const PhvInfo &p,
-                   const LayoutChoices &l, bool fp);
+                   const LayoutChoices &l, const SharedIndirectAttachedAnalysis &siaa, bool fp);
     struct GroupPlace;
     struct Placed;
 
@@ -30,6 +30,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     const TablesMutuallyExclusive &mutex;
     const PhvInfo &phv;
     const LayoutChoices &lc;
+    const SharedIndirectAttachedAnalysis &siaa;
     bool ignoreContainerConflicts = false;
     bool forced_placement = false;
     bool alloc_done = false;
@@ -52,6 +53,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     bool try_alloc_mem(Placed *next, const Placed *done, TableResourceAlloc *resources,
         safe_vector<TableResourceAlloc *> &prev_resources);
     bool try_alloc_adb(Placed *next, const Placed *done, TableResourceAlloc *resources);
+    bool try_alloc_imem(Placed *next, const Placed *done, TableResourceAlloc *resources);
     bool pick_layout_option(Placed *next, const Placed *done, TableResourceAlloc *resources,
                             StageUseEstimate::StageAttached &shared_attached);
     bool shrink_estimate(Placed *next, const Placed *done, TableResourceAlloc *resources,

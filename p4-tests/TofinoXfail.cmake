@@ -1093,3 +1093,8 @@ p4c_add_xfail_reason("tofino"
   "condition expression too complex"
   testdata/p4_14_samples/header-stack-ops-bmv2.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: Action code must be the same as action instruction address"
+  extensions/p4_tests/p4_14/action_format_packing2.p4
+)

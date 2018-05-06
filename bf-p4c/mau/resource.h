@@ -4,6 +4,7 @@
 #include <map>
 #include "bf-p4c/mau/action_data_bus.h"
 #include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/mau/instruction_memory.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/table_format.h"
 #include "ir/ir.h"
@@ -17,6 +18,7 @@ struct TableResourceAlloc {
     std::map<cstring, Memories::Use>    memuse;
     ActionFormat::Use                   action_format;
     ActionDataBus::Use                  action_data_xbar;
+    InstructionMemory::Use              instr_mem;
     TableResourceAlloc *clone_ixbar() const {
         TableResourceAlloc *rv = new TableResourceAlloc;
         rv->match_ixbar = match_ixbar;
@@ -29,6 +31,7 @@ struct TableResourceAlloc {
         rv->action_format = action_format;
         rv->hash_dists = hash_dists;
         rv->action_data_xbar = action_data_xbar;
+        rv->instr_mem = instr_mem;
         return rv; }
     TableResourceAlloc *clone_rename(cstring ext, const cstring name) const {
         TableResourceAlloc *rv = clone_ixbar();
@@ -69,6 +72,7 @@ struct TableResourceAlloc {
         memuse.clear();
         action_format.clear();
         action_data_xbar.clear();
+        instr_mem.clear();
     }
     void toJSON(JSONGenerator &json) const { json << "null"; }
     static TableResourceAlloc *fromJSON(JSONLoader &) { return nullptr; }

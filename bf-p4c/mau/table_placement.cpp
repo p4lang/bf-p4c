@@ -5,6 +5,7 @@
 #include "bf-p4c/mau/action_data_bus.h"
 #include "bf-p4c/mau/field_use.h"
 #include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/mau/instruction_memory.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
@@ -22,8 +23,9 @@
 #include "bf-p4c/phv/phv_fields.h"
 
 TablePlacement::TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m,
-                               const PhvInfo &p, const LayoutChoices &l, bool fp)
-: deps(d), mutex(m), phv(p), lc(l), forced_placement(fp) {}
+                               const PhvInfo &p, const LayoutChoices &l,
+                               const SharedIndirectAttachedAnalysis &s, bool fp)
+: deps(d), mutex(m), phv(p), lc(l), siaa(s), forced_placement(fp) {}
 
 bool TablePlacement::backtrack(trigger &trig) {
     // If a table does not fit in the available stages, then TableSummary throws an exception.
@@ -446,6 +448,9 @@ bool TablePlacement::try_alloc_format(TablePlacement::Placed *next, TableResourc
         bool gw_linked) {
     const bitvec immediate_mask = next->use.preferred_action_format()->immediate_mask;
     resources->table_format.clear();
+    if (!siaa.action_data_shared_tables(next->table).empty())
+        gw_linked = true;
+
     TableFormat current_format(*next->use.preferred(), resources->match_ixbar, next->table,
                                 immediate_mask, gw_linked);
 
@@ -475,7 +480,7 @@ bool TablePlacement::try_alloc_adb(Placed *next, const Placed *done,
     }
     if (!current_adb.alloc_action_data_bus(next->table, next->use.preferred_action_format(),
                                            *resources)) {
-        error_message = "The table " + next->table->name + "  could not fit in within the "
+        error_message = "The table " + next->table->name + " could not fit in within the "
                         "action data bus";
         LOG3(error_message);
         resources->action_data_xbar.clear();
@@ -487,6 +492,43 @@ bool TablePlacement::try_alloc_adb(Placed *next, const Placed *done,
         adb_update.update(p->name, p->resources, p->table);
     }
     adb_update.update(next->name, resources, next->table);
+    return true;
+}
+
+bool TablePlacement::try_alloc_imem(Placed *next, const Placed *done,
+        TableResourceAlloc *resources) {
+    if (next->table->gateway_only())
+        return true;
+
+    InstructionMemory imem;
+    resources->instr_mem.clear();
+
+    for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
+        imem.update(p->name, p->resources, p->table);
+    }
+
+    bool gw_linked = next->gw != nullptr;
+    // FIXME: Because in the assembly, the actions are output with the action data table,
+    // in order to ensure that all action profiles have correct mem_codes, the algorithm
+    // currently always needs to assume a gateway exists.  This BUG arose from one table
+    // with an action profile having a gateway, while the other table did not.  The true
+    // fix would be to output the actions separate from the action table and with the
+    // table instead
+    if (!siaa.action_data_shared_tables(next->table).empty())
+        gw_linked = true;
+    if (!imem.allocate_imem(next->table, resources->instr_mem, phv, gw_linked)) {
+        error_message = "The table " + next->table->name + " could not fit within the "
+                        "instruction memory";
+        LOG3(error_message);
+        resources->instr_mem.clear();
+        return false;
+    }
+
+    InstructionMemory verify_imem;
+    for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
+        verify_imem.update(p->name, p->resources, p->table);
+    }
+    verify_imem.update(next->name, resources, next->table);
     return true;
 }
 
@@ -549,6 +591,7 @@ static void coord_action_data_xbar(const TablePlacement::Placed *curr,
         }
         if (p_ad == ad && !p->resources->action_data_xbar.empty()) {
             resource->action_data_xbar = prev_resources[j]->action_data_xbar;
+            resource->instr_mem = prev_resources[j]->instr_mem;
             break;
         }
         j++;
@@ -697,6 +740,18 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             LOG3("Normal use of action data bus did not fit");
         }
 
+        if (!advance_to_next_stage &&
+            !try_alloc_imem(min_placed, done, min_resources)) {
+            advance_to_next_stage = true;
+            LOG3("Min use of instruction memory did not fit");
+        }
+
+        if (!advance_to_next_stage &&
+            !try_alloc_imem(rv, done, resources)) {
+            advance_to_next_stage = true;
+            LOG3("Normal use of instruction memory did not fit");
+        }
+
         if (done && rv->stage == done->stage) {
             avail.srams -= stage_current.srams;
             avail.tcams -= stage_current.tcams;
@@ -718,6 +773,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 
             if (!try_alloc_adb(rv, done, resources)) {
                 ERROR("Action Data Bus Allocation error after previous allocation?");
+                advance_to_next_stage = true;
+                break;
+            }
+
+            if (!try_alloc_imem(rv, done, resources)) {
+                ERROR("Instruction Memory Allocation error after previous allocation?");
                 advance_to_next_stage = true;
                 break;
             }

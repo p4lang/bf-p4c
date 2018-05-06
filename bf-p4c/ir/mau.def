@@ -198,6 +198,7 @@ class Table : BFN::Unit {
     bool has_default_path() const;
     int action_next_paths() const;
     int get_provided_stage() const;
+    int hit_actions() const;
 
 #emit
     static constexpr int TIND_NAME = 1;
