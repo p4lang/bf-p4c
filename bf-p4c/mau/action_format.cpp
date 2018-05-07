@@ -238,7 +238,7 @@ cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
             if ((lo % CONTAINER_SIZES[type]) < range.min().index())
                 lo += range.min().index();
             if ((hi % CONTAINER_SIZES[type]) > range.max().index())
-                hi -= (hi - range.max().index());
+                hi -= (hi % CONTAINER_SIZES[type]) - range.max().index();
         }
         ret_name = "immediate(" +  std::to_string(lo) + "..";
         ret_name += std::to_string(hi) + ")";
