@@ -1779,6 +1779,7 @@ class SplitBigStates : public ParserModifier {
     void
     addTailStatePrimitives(IR::BFN::LoweredParserState* tailState, int until) {
         IR::Vector<IR::BFN::LoweredParserMatch> matches;
+        const auto& used_regs = tailState->select->regs;
         for (const auto* match : tailState->match) {
             std::vector<ExtractorAllocator::MatchPrimitives> tailStatePrimitives;
             std::vector<const IR::BFN::LoweredSave*> common_state_allocated_saves;
@@ -1794,11 +1795,14 @@ class SplitBigStates : public ParserModifier {
                 } else {
                     // because allocateOneState will try to allocate saves as long as
                     // it is possible to be reached in the input buffer, saves might be
-                    // allocated to previous common state and ignored. So we need to carry
+                    // allocated to previous common state but ignored by
+                    // addCommonStatePrimitives because it is illegal to do in the common state
+                    // due to out of input buffer or override match reg. So we need to carry
                     // them to the tail state.
                     for (const auto* save : rst.saves) {
                         auto* original_save = leftShiftSave(save, -shifted);
-                        if (original_save->source->range.hiByte() >= until) {
+                        if (original_save->source->range.hiByte() >= until
+                            || used_regs.count(save->dest)) {
                             common_state_allocated_saves.push_back(original_save); }
                     }
                     shifted += rst.shift;
@@ -1831,8 +1835,8 @@ class SplitBigStates : public ParserModifier {
                 }
                 for (auto* save : primitives.saves) {
                     truncatedMatch->saves.push_back(
-                            leftShiftSave(save, -accumulatedShift));
-                accumulatedShift += primitives.shift; }
+                            leftShiftSave(save, -accumulatedShift)); }
+                accumulatedShift += primitives.shift;
             }
             matches.push_back(truncatedMatch);
         }
@@ -1846,6 +1850,7 @@ class SplitBigStates : public ParserModifier {
                              int until) {
         const IR::BFN::LoweredParserMatch* sampleMatch = *(sampleState->match.begin());
         ExtractorAllocator allocator(sampleState->name + "$SplitCommonState", sampleMatch);
+        const auto& used_reg = sampleState->select->regs;
         int shifted = 0;
         while (allocator.hasMoreExtracts()) {
             auto rst = allocator.allocateOneState();
@@ -1855,19 +1860,21 @@ class SplitBigStates : public ParserModifier {
 
             // Add primitives to common
             for (auto* prim : rst.extracts) {
-                    if (auto* extractPhv = prim->to<IR::BFN::LoweredExtractPhv>()) {
-                        common->statements.push_back(
-                                leftShiftExtract(extractPhv, -shifted));
-                    } else if (auto* extractClot = prim->to<IR::BFN::LoweredExtractClot>()) {
-                        common->statements.push_back(
-                                leftShiftExtract(extractClot, -shifted));
-                    } else {
-                        BUG("unknown primitive when create common state: %1%", prim);
-                    }
+                if (auto* extractPhv = prim->to<IR::BFN::LoweredExtractPhv>()) {
+                    common->statements.push_back(
+                            leftShiftExtract(extractPhv, -shifted));
+                } else if (auto* extractClot = prim->to<IR::BFN::LoweredExtractClot>()) {
+                    common->statements.push_back(
+                            leftShiftExtract(extractClot, -shifted));
+                } else {
+                    BUG("unknown primitive when create common state: %1%", prim);
+                }
             }
             for (auto* save : rst.saves) {
-                // as long as this save is part of common part.
-                if (save->source->range.hiByte() + shifted < until) {
+                // as long as this save is part of common part, and the dest of this save
+                // will not override match register that will be used in the tail select state.
+                if (save->source->range.hiByte() + shifted < until
+                    && !used_reg.count(save->dest)) {
                     common->saves.push_back(leftShiftSave(save, -shifted));
                 }
             }
@@ -1948,7 +1955,7 @@ class SplitBigStates : public ParserModifier {
 
     /// Add common state when needed. Then preorder on match will be executed on new state.
     bool preorder(IR::BFN::LoweredParserState* state) override {
-        std::vector<const IR::BFN::LoweredSave*> extra_saves(leftover_saves[state]);
+        std::vector<const IR::BFN::LoweredSave*> extra_saves(leftover_saves[state->name]);
         auto* common_primitive_state =
             createCommonPrimitiveState(state, extra_saves);
         *state = *common_primitive_state;
@@ -1999,10 +2006,11 @@ class SplitBigStates : public ParserModifier {
         if (allocator.hasOutOfBufferSaves()) {
             for (const auto* save : allocator.getRemainingSaves()) {
                 LOG1("Found Remaining Saves:" << save <<
-                     " must be done before " << finalState->name); }
-            BUG_CHECK(leftover_saves[finalState].size() == 0,
+                     " must be done before " << finalState->name
+                     << " from state: " << state->name); }
+            BUG_CHECK(leftover_saves[finalState->name].size() == 0,
                       "Select on field from different parent branches is not supported.");
-            leftover_saves[finalState] = allocator.getRemainingSaves();
+            leftover_saves[finalState->name] = allocator.getRemainingSaves();
         }
 
         return true;
@@ -2010,8 +2018,7 @@ class SplitBigStates : public ParserModifier {
 
     std::set<cstring> stateNames;
     std::set<IR::BFN::LoweredParserMatch*> added;
-    std::map<const IR::BFN::LoweredParserState*,
-             std::vector<const IR::BFN::LoweredSave*>> leftover_saves;
+    std::map<cstring, std::vector<const IR::BFN::LoweredSave*>> leftover_saves;
 };
 
 /// Locate all containers that are written more than once by the parser (and
