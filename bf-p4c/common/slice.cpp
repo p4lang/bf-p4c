@@ -34,7 +34,8 @@ const IR::Expression *MakeSliceDestination(const IR::Expression *e, int lo, int 
     if (auto sl = e->to<IR::Slice>()) {
         LOG6("Encountered a slice [" << sl->getL() << ", " << sl->getH() << "]");
         LOG6("Original expression: " << sl->e0);
-        BUG_CHECK(lo >= sl->getL() && hi <= sl->getH(), "MakeSlice slice on slice type mismatch");
+        BUG_CHECK(lo >= int(sl->getL()) && hi <= int(sl->getH()),
+                  "MakeSlice slice on slice type mismatch");
         e = sl->e0; }
     return new IR::Slice(e, hi, lo);
 }
@@ -75,7 +76,8 @@ const IR::Expression *MakeSliceSource(const IR::Expression *read, int lo, int hi
     if (auto sl = read->to<IR::Slice>()) {
         LOG6("Encountered a slice [" << sl->getL() << ", " << sl->getH() << "]");
         LOG6("Original expression: " << sl->e0);
-        BUG_CHECK(lo >= sl->getL() && hi <= sl->getH(), "MakeSlice slice on slice type mismatch");
+        BUG_CHECK(lo >= int(sl->getL()) && hi <= int(sl->getH()),
+                  "MakeSlice slice on slice type mismatch");
         read = sl->e0; }
     LOG6("Return " << read << " lo: " << lo << " hi: " << hi);
     return new IR::Slice(read, hi, lo);
@@ -98,7 +100,8 @@ const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi) {
     if (auto sl = e->to<IR::Slice>()) {
         lo += sl->getL();
         hi += sl->getL();
-        BUG_CHECK(lo >= sl->getL() && hi <= sl->getH(), "MakeSlice slice on slice type mismatch");
+        BUG_CHECK(lo >= int(sl->getL()) && hi <= int(sl->getH()),
+                  "MakeSlice slice on slice type mismatch");
         e = sl->e0; }
     return new IR::Slice(e, hi, lo);
 }

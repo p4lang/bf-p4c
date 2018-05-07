@@ -2,6 +2,7 @@
 #define BF_P4C_ARCH_TOFINO_NATIVE_H_
 
 #include "ir/ir.h"
+#include "arch.h"
 
 namespace P4 {
 class ReferenceMap;

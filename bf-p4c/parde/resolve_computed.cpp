@@ -280,6 +280,7 @@ struct ParserRValDef {
 using ParserValueResolution =
     std::map<const IR::BFN::ComputedRVal*, std::vector<ParserRValDef>>;
 
+#ifndef NDEBUG
 std::ostream& operator<<(std::ostream& s, const ParserValueResolution& mapping) {
     for (const auto& kv : mapping) {
         s << "For " << kv.first << " multiple defs found: " << "\n";
@@ -287,6 +288,7 @@ std::ostream& operator<<(std::ostream& s, const ParserValueResolution& mapping) 
             s << def.state->name << ", " << def.rval << "\n"; } }
     return s;
 }
+#endif  // NDEBUG
 
 /**
  * Walk the parser programs (each thread is treated separately) and try to

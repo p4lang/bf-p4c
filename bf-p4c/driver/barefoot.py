@@ -58,16 +58,18 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--create-graphs",
                                     help="Create parse and table flow graphs",
                                     action="store_true", default=False)
-        self._argGroup.add_argument("-s", dest="run_post_compiler",
-                                    help="Only run assembler",
-                                    action="store_true", default=False)
         self._argGroup.add_argument("--no-link", dest="skip_linker",
                                     help="Run up to linker",
                                     action="store_true", default=False)
-        self._argGroup.add_argument("--validate-output", action="store_true", default=False,
-                                    help="run context.json validation")
-        self._argGroup.add_argument("--bf-rt-schema", action="store",
-                                    help="Generate and write BF-RT JSON schema  to the specified file")
+        self._argGroup.add_argument("-s", dest="run_post_compiler",
+                                    help="Only run assembler",
+                                    action="store_true", default=False)
+        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
+            self._argGroup.add_argument("--validate-output", action="store_true", default=False,
+                                        help="run context.json validation")
+            self._argGroup.add_argument("--bf-rt-schema", action="store",
+                                        help="Generate and write BF-RT JSON schema  to the specified file")
+
 
     def config_preprocessor(self, targetDefine):
         self.add_command_option('preprocessor', "-E -x c")
@@ -103,7 +105,7 @@ class BarefootBackend(BackendDriver):
         self._postCmds['compiler'] = []
         self._postCmds['compiler'].append(["rm -f {}.p4i".format(basepath)])
 
-        if (os.environ['P4C_BUILD_TYPE'] == "DEVELOPER"):
+        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self.add_command_option('assembler',
                                     "-vvvvl {}/bfas.config.log".format(output_dir))
         self.add_command_option('assembler', "-o {}".format(output_dir))
@@ -123,13 +125,14 @@ class BarefootBackend(BackendDriver):
         if opts.create_graphs:
             self.add_command_option('compiler', '--create-graphs')
 
-        if opts.bf_rt_schema is not None:
-            self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))
+        # Developer only options
+        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
+            if opts.validate_output:
+                self.add_command_option('verifier', "{}/context.json".format(output_dir))
+                self._commandsEnabled.append('verifier')
 
-        if opts.validate_output and os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
-            self.add_command_option('verifier', "{}/context.json".format(output_dir))
-            self._commandsEnabled.append('verifier')
+            if opts.bf_rt_schema is not None:
+                self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))
 
-        if opts.bf_rt_schema is not None and os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
-            self.add_command_option('bf-rt-verifier', opts.bf_rt_schema)
-            self._commandsEnabled.append('bf-rt-verifier')
+                self.add_command_option('bf-rt-verifier', opts.bf_rt_schema)
+                self._commandsEnabled.append('bf-rt-verifier')

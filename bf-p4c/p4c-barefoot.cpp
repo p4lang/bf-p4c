@@ -219,6 +219,11 @@ int main(int ac, char **av) {
     program = P4::FrontEnd(hook).run(options, program, true);
     if (!program)
         return 1;
+
+    // If we just want to prettyprint to p4_16, running the frontend is sufficient.
+    if (!options.prettyPrintFile.isNullOrEmpty())
+        return ::errorCount();
+
     log_dump(program, "Initial program");
 
     BFN::generateP4Runtime(program, options);

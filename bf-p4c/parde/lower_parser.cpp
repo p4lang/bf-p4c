@@ -2168,7 +2168,9 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
         new SplitBigStates,
+#if HAVE_JBAY
         Device::currentDevice() == "JBay" ? new ComputeDeparserChecksumPhvSwap : nullptr,
+#endif  // HAVE_JBAY
         new ComputeInitZeroContainers(phv, defuse),
         new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.
         new ComputeBufferRequirements,

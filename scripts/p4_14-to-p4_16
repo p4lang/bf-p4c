@@ -1,0 +1,19 @@
+#! /bin/bash
+
+if [ $# -lt 2 ]; then
+   echo "Usage: $0 <output_file> <input_file>"
+      exit 1
+      fi
+
+bindir=$(dirname $(realpath $0))
+incdir=$bindir/../share/p4c
+export P4C_16_INCLUDE_PATH=$incdir/p4include
+export P4C_14_INCLUDE_PATH=$incdir/p4_14include
+outfile=$1
+infile=$2
+shift
+shift
+
+$bindir/p4c-barefoot --std=p4-14 --Wdisable -o /dev/null \
+                     --target tofino --arch v1model \
+                     --pp $outfile $infile $@

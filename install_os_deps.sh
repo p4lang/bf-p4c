@@ -59,7 +59,7 @@ install_linux_packages() {
 
     install_cmake "3.5.2"
     install_boost "1.58.0"
-    if ! `pkg-config RapidJSON` && version_LT `pkg-config --modversion RapidJSON` "1.1.0"; then
+    if ! `pkg-config RapidJSON` || version_LT `pkg-config --modversion RapidJSON` "1.1.0"; then
         install_rapidjson "1.1.0"
     fi
 }
@@ -90,7 +90,7 @@ function install_cmake() {
 function install_boost() {
     # ARG: boost_version
     # test for ubuntu version, and check if we have a local package
-    local ubuntu_release=$(cat /etc/issue | awk '/Ubuntu/ {print $2 }' | cut -d "." -f 1-2) 
+    local ubuntu_release=$(cat /etc/issue | awk '/Ubuntu/ {print $2 }' | cut -d "." -f 1-2)
     local debian_release=$(egrep -ic debian /etc/issue)
     if [ $ubuntu_release =~ "14.04" ] || [ $debian_release ~= 1 ]; then
         sudo apt-get install -y python-dev libbz2-dev

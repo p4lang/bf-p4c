@@ -348,7 +348,6 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/arch.cpp
   arch/bridge_metadata.cpp
   arch/internal/collect_bridged_fields.cpp
-  arch/jbay_native.cpp
   arch/phase0.cpp
   arch/portable_switch.cpp
   arch/program_structure.cpp
@@ -362,6 +361,10 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/v1_converters.cpp
   arch/v1_program_structure.cpp
   )
+if (ENABLE_JBAY)
+  list (APPEND BF_P4C_BACKEND_ARCH_SRCS
+  arch/jbay_native.cpp)
+endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
 build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
@@ -370,7 +373,6 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/intrinsic_metadata.h
   arch/bridge_metadata.h
   arch/internal/collect_bridged_fields.h
-  arch/jbay_native.h
   arch/phase0.h
   arch/portable_switch.h
   arch/program_structure.h
@@ -384,6 +386,10 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/v1_converters.h
   arch/v1_program_structure.h
   )
+if (ENABLE_JBAY)
+  list (APPEND BF_P4C_BACKEND_ARCH_HDRS
+  arch/jbay_native.h)
+endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")
 
 set (BF_P4C_BACKEND_MAIN_SRCS
@@ -486,10 +492,18 @@ target_link_libraries (p4c-barefoot tofinobackend ${P4C_LIBRARIES} ${P4C_LIB_DEP
 
 install (TARGETS p4c-barefoot
   RUNTIME DESTINATION ${P4C_RUNTIME_OUTPUT_DIRECTORY})
-install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4include
-  DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY})
+if (NOT ENABLE_JBAY)
+  install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4include
+    DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}
+    REGEX "jbay|jna" EXCLUDE)
+else()
+  install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4include
+    DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY})
+endif()
 install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4_14include
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY})
+install (PROGRAMS ${BFN_P4C_SOURCE_DIR}/scripts/p4_14-to-p4_16
+  DESTINATION ${P4C_RUNTIME_OUTPUT_DIRECTORY})
 
 set (P4C_DRIVER_MACROS ${P4C_BINARY_DIR}/p4c_src/bfn_version.py)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/driver/bfn_version.in

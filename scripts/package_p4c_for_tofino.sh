@@ -12,11 +12,15 @@ $topdir/bootstrap_bfn_compilers.sh --no-ptf  --build-dir $builddir \
                                    -DENABLE_EBPF=OFF -DENABLE_P4TEST=OFF \
                                    -DENABLE_P4C_GRAPHS=ON
 cd $builddir
+# make tofino the default target for p4c
+sed -i -e "/os.environ\['P4C_14_INCLUDE_PATH/a os.environ['P4C_DEFAULT_TARGET'] = 'tofino'" p4c/p4c
+
 make -j $parallel_make package
 
 # verify that the package has no JBay references
 pushd _CPack_Packages/Linux/DEB/p4c-compilers-*
-jbay_refs=$(strings usr/local/bin/p4c-barefoot | c++filt | grep -i jbay)
+p4c_bin=$(find . -name p4c-barefoot)
+jbay_refs=$(strings $p4c_bin | c++filt | grep -i jbay)
 if [ $? == 0 ] ; then
     echo "Need to remove all JBay references from bf-p4c sources"
     echo $jbay_refs

@@ -109,7 +109,7 @@ class AfterWriteTables : public BFN::ControlFlowVisitor, public MauInspector, To
         return Inspector::init_apply(root);
     }
 
-    void end_apply() {
+    void end_apply() override {
         // Mark tables that share action profile to be after-written, if one table is.
         // XXX(yumin): This relation is transitive because each table can only have one
         // of each type of shared resource.
@@ -217,7 +217,7 @@ struct DataDependencyGraph {
     }
 
     const IR::MAU::Table* getTable(VertexId id) const {
-        BUG_CHECK(id >= 0 && id < id_table.size(), "Invalid Id: %1%", id);
+        BUG_CHECK(id >= 0 && id < int(id_table.size()), "Invalid Id: %1%", id);
         return id_table[id]; }
 
     void clear() {
@@ -270,10 +270,13 @@ struct MetaInitPlan {
     }
 };
 
+#ifndef NDEBUG
+// Used only in DEBUG mode
 std::ostream& operator<<(std::ostream& s, const MetaInitPlan& c) {
     s << "Initialize "<< c.field << " ...at... " << c.table->name;
     return s;
 }
+#endif  // NDEBUG
 
 /** A greedy algorithm that insert initialization as long as,
  * 1. Needed, meaning that there is uninitialized read after this table.
