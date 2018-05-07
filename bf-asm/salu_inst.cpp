@@ -112,7 +112,8 @@ struct operand {
         const char *kind() const override { return "memory"; }
     };
     struct MathFn;
-    bool neg = false;
+    bool        neg = false;
+    uint32_t    mask = uint32_t(-1);
     operand() : op(0) {}
     operand(const operand &a) : op(a.op ? a.op->clone() : 0) {}
     operand(operand &&a) : op(a.op) { a.op = 0; }
@@ -128,7 +129,7 @@ struct operand {
             a.op = 0; }
         return *this; }
     ~operand() { delete op; }
-    operand(Table *tbl, const Table::Actions::Action *act, const value_t &v);
+    operand(Table *tbl, const Table::Actions::Action *act, const value_t &v, bool can_mask = false);
     bool valid() const { return op != 0; }
     explicit operator bool() const { return op != 0; }
     bool operator==(operand &a) {
@@ -152,8 +153,19 @@ struct operand::MathFn : public Base {
     const char *kind() const override { return "math fn"; }
 };
 
-operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v_) : op(nullptr) {
+operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v_, bool can_mask)
+: op(nullptr) {
     const value_t *v = &v_;
+    if (options.target == TOFINO) can_mask = false;
+    if (can_mask && v->type == tCMD && *v == "&" && v->vec.size == 3) {
+        if (v[2].type == tINT) {
+            mask = v->vec[2].i;
+            v = &v->vec[1];
+        } else if (v->vec[1].type == tINT) {
+            mask = v->vec[1].i;
+            v = &v->vec[2];
+        } else {
+            error(v->lineno, "mask must be a constant"); } }
     if (v->type == tCMD && *v == "-") {
         neg = true;
         v = &v->vec[1]; }
@@ -434,7 +446,9 @@ struct CmpOP : public SaluInstruction {
     } *opc;
     int                 type = 0;
     operand::Memory     *srca = 0;
+    uint32_t            maska = ~0U;
     operand::Phv        *srcb = 0;
+    uint32_t            maskb = ~0U;
     operand::Const      *srcc = 0;
     bool                srca_neg = false, srcb_neg = false;
     CmpOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
@@ -489,17 +503,21 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
     int idx = 2;
     while (idx < op.size) {
-        operand src(tbl, act, op[idx++]);
+        operand src(tbl, act, op[idx++], true);
         if (!rv->srca && (rv->srca = src.to<operand::Memory>())) {
             src.op = nullptr;
             rv->srca_neg = src.neg;
+            rv->maska = src.mask;
         } else if (!rv->srcb && (rv->srcb = src.to<operand::Phv>())) {
             src.op = nullptr;
             rv->srcb_neg = src.neg;
+            rv->maskb = src.mask;
         } else if (!rv->srcc && (rv->srcc = src.to<operand::Const>())) {
             src.op = nullptr;
             if (src.neg)
                 rv->srcc->value = -rv->srcc->value;
+            if (src.mask != ~0U)
+                rv->srcc->value &= src.mask;
         } else if (src) {
             error(src->lineno, "Can't have more than one %s operand to an SALU compare",
                   src->kind()); } }

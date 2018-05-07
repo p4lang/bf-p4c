@@ -82,11 +82,23 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
     if (srca) {
         salu.salu_cmp_asrc_input = srca->field->bit(0) > 0;
         salu.salu_cmp_asrc_sign = srca_neg;
-        salu.salu_cmp_asrc_enable = 1; }
+        salu.salu_cmp_asrc_enable = 1;
+        if (maska != uint32_t(-1)) {
+            salu.salu_cmp_asrc_mask_enable = 1;
+            if ((maska >= uint32_t(-32) || maska < 32) &&
+                (!srcc || srcc->value == maska || srcc->value < -32 || srcc->value >= 32)) {
+                salu.salu_cmp_const_src = maska & 0x2f;
+                salu.salu_cmp_mask_input = 0;
+            } else {
+                salu.salu_cmp_mask_input = 0;
+                salu.salu_cmp_regfile_adr = tbl->get_const(maska); } } }
     if (srcb) {
         salu.salu_cmp_bsrc_input = srcb->phv_index(tbl);
         salu.salu_cmp_bsrc_sign = srcb_neg;
-        salu.salu_cmp_bsrc_enable = 1; }
+        salu.salu_cmp_bsrc_enable = 1;
+        if (maskb != uint32_t(-1)) {
+            salu.salu_cmp_bsrc_mask_enable = 1;
+            salu.salu_cmp_regfile_adr = tbl->get_const(maskb); } }
     if (srcc) {
         if (srcc->value >= -32 && srcc->value < 32) {
             salu.salu_cmp_const_src = srcc->value & 0x2f;
