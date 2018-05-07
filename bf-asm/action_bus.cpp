@@ -261,7 +261,7 @@ void ActionBus::pass1(Table *tbl) {
                     } else if (tbl->actions) {
                         Table::Format::Field *found_field = nullptr;
                         Table::Actions::Action *found_act = nullptr;
-                        for (auto act : *tbl->actions) {
+                        for (auto &act : *tbl->actions) {
                             int lo = -1, hi = -1;
                             auto name = act.alias_lookup(it->first.name_ref->lineno,
                                                          it->first.name_ref->name, lo, hi);

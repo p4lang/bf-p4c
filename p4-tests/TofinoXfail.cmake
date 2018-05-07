@@ -1095,6 +1095,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error: Action code must be the same as action instruction address"
-  extensions/p4_tests/p4_14/action_format_packing2.p4
+  "Compiler Bug.*: Type_Name is not a canonical type"
+  testdata/p4_16_samples/pvs-nested-struct.p4
+  testdata/p4_16_samples/pvs-struct.p4
 )

@@ -956,7 +956,7 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
         if (actions.count(name)) {
             error(kv.key.lineno, "Duplicate action %s", name.c_str());
             continue; }
-        actions.emplace(name, Action(tbl, this, kv, pos++)); }
+        actions.emplace(name, tbl, this, kv, pos++); }
 }
 
 void Table::Actions::Action::set_action_handle(Table *tbl) {

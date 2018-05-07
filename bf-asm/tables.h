@@ -364,6 +364,8 @@ public:
             int                                 position_in_assembly = -1;
             Action(Table *, Actions *, pair_t &, int);
             Action(const char *n, int l) : name(n), lineno(l) {}
+            Action(const Action &) = delete;
+            Action(Action &&) = delete;
             bool equiv(Action *a);
             bool equivVLIW(Action *a);
             typedef const decltype(alias)::value_type alias_value_t;

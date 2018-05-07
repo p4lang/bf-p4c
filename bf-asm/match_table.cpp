@@ -367,7 +367,7 @@ void MatchTable::gen_name_lookup(json::map &out) {
         out["table_name"] = name();
     json::map &actions_map = out["actions"] = json::map();
     if (auto acts = get_actions()) {
-        for (auto a : *acts) {
+        for (auto &a : *acts) {
             json::map &action_map = actions_map[a.name] = json::map();
             action_map["direction"] = logical_id;
             json::vector &prims = action_map["primitives"] = json::vector();
