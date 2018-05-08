@@ -525,6 +525,7 @@ bool PHV::Field::is_tphv_candidate(const PhvUse& uses) const {
     // Privatized fields are the TPHV copies of header fields. Therefore, privatized fields are
     // always TPHV candidates.
     if (privatized_i) return true;
+    if (alwaysPackable) return false;  // __pad_ fields are not considered as tphv.
     return !uses.is_used_mau(this) && !pov && !metadata && !deparsed_to_tm_i;
 }
 

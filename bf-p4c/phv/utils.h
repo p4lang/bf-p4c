@@ -166,9 +166,10 @@ class Allocation {
     ordered_map<PHV::Size, ordered_map<ContainerAllocStatus, int>> count_by_status_i;
 
     // For efficiency, these are NOT copied from parent to child.  Changes in
-    // the child are copied back to the parent on commit.
-    ordered_map<PHV::Container, ContainerStatus> container_status_i;
-    ordered_map<const PHV::Field*, FieldStatus>  field_status_i;
+    // the child are copied back to the parent on commit.  However, parent info
+    // is copied to the child when queried, as a caching optimization.
+    mutable ordered_map<PHV::Container, ContainerStatus> container_status_i;
+    mutable ordered_map<const PHV::Field*, FieldStatus>  field_status_i;
 
     Allocation(const SymBitMatrix& mutex, const PhvUse& uses) : mutex_i(&mutex), uses_i(&uses) { }
 
@@ -198,6 +199,11 @@ class Allocation {
     ///          that, check its ancestors.  If @c has no status yet, return boost::none.
     virtual boost::optional<ContainerStatus> getStatus(PHV::Container c) const = 0;
 
+    /// Uniform abstraction for accessing field state.
+    /// @returns the FieldStatus of this allocation, if present.  Failing
+    ///          that, check its ancestors.  If @f has no status yet, return an empty FieldStatus.
+    virtual FieldStatus getStatus(const PHV::Field* f) const = 0;
+
     friend class Transaction;
 
  public:
@@ -212,10 +218,10 @@ class Allocation {
     virtual bool contains(PHV::Container c) const = 0;
 
     /// @returns all the slices allocated to @c.
-    virtual ordered_set<AllocSlice> slices(PHV::Container c) const = 0;
+    ordered_set<AllocSlice> slices(PHV::Container c) const;
 
     /// @returns all the slices allocated to @c that overlap with @range.
-    virtual ordered_set<AllocSlice> slices(PHV::Container c, le_bitrange range) const = 0;
+    virtual ordered_set<AllocSlice> slices(PHV::Container c, le_bitrange range) const;
 
     /** The allocation manager keeps a list of combinations of slices that are
      * live in the container at the same time, as well as the thread assignment
@@ -271,7 +277,7 @@ class Allocation {
     /// the field portion of the allocated slice.  May be empty (if @f is not
     /// allocated) or contain slices that do not fully cover all bits of @f (if
     /// @f is only partially allocated).
-    virtual ordered_set<PHV::AllocSlice> slices(const PHV::Field* f, le_bitrange range) const = 0;
+    virtual ordered_set<PHV::AllocSlice> slices(const PHV::Field* f, le_bitrange range) const;
 
     /// @returns the set of slices allocated for the field @f in this
     /// Allocation.  May be empty (if @f is not allocated) or contain slices that
@@ -363,6 +369,11 @@ class ConcreteAllocation : public PHV::Allocation {
     ///          that, check its ancestors.  If @c has no status yet, return boost::none.
     boost::optional<ContainerStatus> getStatus(PHV::Container c) const override;
 
+    /// Uniform abstraction for accessing field state.
+    /// @returns the FieldStatus of this allocation, if present.  Failing
+    ///          that, check its ancestors.  If @f has no status yet, return an empty FieldStatus.
+    FieldStatus getStatus(const PHV::Field* f) const override;
+
  public:
     /** @returns an allocation initialized with the containers present in
      * Device::phvSpec, with the gress set for any hard-wired containers, but
@@ -379,18 +390,6 @@ class ConcreteAllocation : public PHV::Allocation {
 
     /// @returns true if this allocation owns @c.
     bool contains(PHV::Container c) const override;
-
-    /// @returns all the slices allocated to @c.
-    ordered_set<AllocSlice> slices(PHV::Container c) const override;
-
-    /// @returns all the slices allocated to @c that overlap with @range.
-    ordered_set<AllocSlice> slices(PHV::Container c, le_bitrange range) const override;
-
-    /// @returns all slices allocated for @f that include any part of @range in
-    /// the field portion of the allocated slice.  May be empty (if @f is not
-    /// allocated) or contain slices that do not fully cover all bits of @f (if
-    /// @f is only partially allocated).
-    ordered_set<PHV::AllocSlice> slices(const PHV::Field* f, le_bitrange range) const override;
 
     /// @returns a summary of the status of each container by type and gress.
     cstring getSummary(const PhvUse& uses) const override;
@@ -424,6 +423,11 @@ class Transaction : public Allocation {
     ///          that, check its ancestors.  If @c has no status yet, return boost::none.
     boost::optional<ContainerStatus> getStatus(PHV::Container c) const override;
 
+    /// Uniform abstraction for accessing field state.
+    /// @returns the FieldStatus of this allocation, if present.  Failing
+    ///          that, check its ancestors.  If @f has no status yet, return an empty FieldStatus.
+    FieldStatus getStatus(const PHV::Field* f) const override;
+
  public:
     /// Constructor.
     explicit Transaction(const Allocation& parent)
@@ -446,18 +450,6 @@ class Transaction : public Allocation {
 
     /// @returns true if this allocation owns @c.
     bool contains(PHV::Container c) const override { return parent_i->contains(c); }
-
-    /// @returns all the slices allocated to @c.
-    ordered_set<AllocSlice> slices(PHV::Container c) const override;
-
-    /// @returns all the slices allocated to @c that overlap with @range.
-    ordered_set<AllocSlice> slices(PHV::Container c, le_bitrange range) const override;
-
-    /// @returns all slices allocated for @f that include any part of @range in
-    /// the field portion of the allocated slice.  May be empty (if @f is not
-    /// allocated) or contain slices that do not fully cover all bits of @f (if
-    /// @f is only partially allocated).
-    ordered_set<PHV::AllocSlice> slices(const PHV::Field* f, le_bitrange range) const override;
 
     /// @returns a summary of the status of each container by type and gress.
     /// @warning not yet implemented.

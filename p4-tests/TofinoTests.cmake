@@ -38,7 +38,7 @@ set  (SWITCH_PTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/ptf-tests/base/api
 set  (SWITCH_PTF_DIR_MIRROR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/ptf-tests/base/feature-tests)
 set  (isXFail TRUE)
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "switch_dc_basic" ${switchtest} "${testExtraArgs} -DDC_BASIC_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_dc_basic")
 
@@ -66,11 +66,11 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
     "switch_msdc_leaf_int" ${switchtest} "${testExtraArgs} -DMSDC_LEAF_DTEL_INT_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_spine_int")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc_l3_heavy_int_leaf" ${switchtest} "${testExtraArgs} -DMSDC_L3_HEAVY_INT_LEAF_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_l3_heavy_int_leaf")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc_generic_int_leaf" ${switchtest} "${testExtraArgs} -DMSDC_GENERIC_INT_LEAF_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_generic_int_leaf")
 

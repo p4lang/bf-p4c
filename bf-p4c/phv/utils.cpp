@@ -93,39 +93,11 @@ bool PHV::AllocSlice::operator<(const PHV::AllocSlice& other) const {
 
 void PHV::Allocation::addStatus(PHV::Container c, const ContainerStatus& status) {
     // Update container status.
-    auto& this_status = container_status_i[c];
-    this_status.gress = status.gress;
-    this_status.parserGroupGress = status.parserGroupGress;
-    this_status.deparserGroupGress = status.deparserGroupGress;
-    this_status.slices |= status.slices;
+    container_status_i[c] = status;
 
     // Update field status.
     for (auto& slice : status.slices)
         field_status_i[slice.field()].insert(slice);
-
-    // Recalculate container allocation status for updated fields.  It's
-    // necessary to recalculate, rather that copy the child's count wholesale,
-    // because the parent may have merged other children since creating this
-    // child.
-    PHV::Allocation::ContainerAllocStatus old_status = this_status.alloc_status;
-    bitvec allocated_bits;
-    for (auto& slice : this_status.slices)
-        allocated_bits |= bitvec(slice.container_slice().lo, slice.width());
-    if (allocated_bits == bitvec())
-        this_status.alloc_status = PHV::Allocation::ContainerAllocStatus::EMPTY;
-    else if (allocated_bits == bitvec(0, c.size()))
-        this_status.alloc_status = PHV::Allocation::ContainerAllocStatus::FULL;
-    else
-        this_status.alloc_status = PHV::Allocation::ContainerAllocStatus::PARTIAL;
-
-    BUG_CHECK(this_status.alloc_status != PHV::Allocation::ContainerAllocStatus::EMPTY ||
-              (this_status.alloc_status == PHV::Allocation::ContainerAllocStatus::EMPTY &&
-               this_status.alloc_status == old_status),
-              "Changing allocation status from FULL or PARTIAL to EMPTY");
-
-    if (this_status.alloc_status != old_status) {
-        --count_by_status_i[c.type().size()][old_status];
-        ++count_by_status_i[c.type().size()][this_status.alloc_status]; }
 }
 
 void PHV::Allocation::addSlice(PHV::Container c, AllocSlice slice) {
@@ -328,8 +300,8 @@ void PHV::Allocation::allocate(PHV::AllocSlice slice) {
 }
 
 void PHV::Allocation::commit(Transaction& view) {
-    // XXX(cole): Add Allocation identifiers and check that this transaction
-    // came from this Allocation.
+    BUG_CHECK(view.getParent() == this, "Trying to commit PHV allocation transaction to an "
+              "allocation that is not its parent");
 
     // Merge the status from the view.
     for (auto kv : view.getTransactionStatus())
@@ -448,44 +420,17 @@ bool PHV::ConcreteAllocation::contains(PHV::Container c) const {
     return container_status_i.find(c) != container_status_i.end();
 }
 
-/// @returns the allocation status of @c and fails if @c is not present.
-ordered_set<PHV::AllocSlice> PHV::ConcreteAllocation::slices(PHV::Container c) const {
-    return slices(c, StartLen(0, int(c.type().size())));
-}
-
-ordered_set<PHV::AllocSlice>
-PHV::ConcreteAllocation::slices(PHV::Container c, le_bitrange range) const {
-    BUG_CHECK(container_status_i.find(c) != container_status_i.end(),
-              "Trying to get status for container %1% not in Allocation",
-              cstring::to_cstring(c));
-    const auto& slices = container_status_i.at(c).slices;
-    ordered_set<PHV::AllocSlice> rv;
-    for (auto& slice : slices)
-        if (slice.container_slice().intersectWith(range).size() > 0)
-            rv.insert(slice);
-    return rv;
-}
-
-/// @returns the set of containers to which a slice of the field @f with a le_bitrange @range is
-/// allocated
-ordered_set<PHV::AllocSlice>
-PHV::ConcreteAllocation::slices(const PHV::Field* f, le_bitrange range) const {
-    if (field_status_i.find(f) == field_status_i.end())
-        return { };
-
-    ordered_set<PHV::AllocSlice> rv;
-    for (auto& slice : field_status_i.at(f))
-        if (slice.field_slice().overlaps(range)) {
-            rv.insert(slice); }
-
-    return rv;
-}
-
 boost::optional<PHV::Allocation::ContainerStatus>
 PHV::ConcreteAllocation::getStatus(PHV::Container c) const {
     if (container_status_i.find(c) != container_status_i.end())
         return container_status_i.at(c);
     return boost::none;
+}
+
+PHV::Allocation::FieldStatus PHV::ConcreteAllocation::getStatus(const PHV::Field* f) const {
+    if (field_status_i.find(f) != field_status_i.end())
+        return field_status_i.at(f);
+    return { };
 }
 
 /// @returns the container status of @c and fails if @c is not present.
@@ -815,46 +760,56 @@ PHV::Allocation::const_iterator PHV::Transaction::end() const {
 }
 
 // Returns the contents of this transaction *and* its parent.
-ordered_set<PHV::AllocSlice> PHV::Transaction::slices(PHV::Container c) const {
+ordered_set<PHV::AllocSlice> PHV::Allocation::slices(PHV::Container c) const {
     return slices(c, StartLen(0, int(c.type().size())));
 }
 
 // Returns the contents of this transaction *and* its parent.
-ordered_set<PHV::AllocSlice> PHV::Transaction::slices(PHV::Container c, le_bitrange range) const {
+ordered_set<PHV::AllocSlice> PHV::Allocation::slices(PHV::Container c, le_bitrange range) const {
     ordered_set<PHV::AllocSlice> rv;
-    assert(parent_i != this);
 
-    // Copy in any parent slices first, as they were allocated first.
-    rv = parent_i->slices(c, range);
-
-    // Then insert any transaction slices.
-    if (container_status_i.find(c) != container_status_i.end()) {
-        for (auto& slice : container_status_i.at(c).slices)
+    if (auto status = this->getStatus(c))
+        for (auto& slice : status->slices)
             if (slice.container_slice().intersectWith(range).size() > 0)
-                rv.insert(slice); }
+                rv.insert(slice);
 
     return rv;
 }
 
 boost::optional<PHV::Allocation::ContainerStatus>
 PHV::Transaction::getStatus(PHV::Container c) const {
+    // If a status exists in the transaction, then it includes info from the
+    // parent.
     if (container_status_i.find(c) != container_status_i.end())
         return container_status_i.at(c);
-    return parent_i->getStatus(c);
+
+    // Otherwise, retrieve and cache parent info.
+    auto parentStatus = parent_i->getStatus(c);
+    if (parentStatus)
+        container_status_i[c] = *parentStatus;
+    return parentStatus;
+}
+
+PHV::Allocation::FieldStatus PHV::Transaction::getStatus(const PHV::Field* f) const {
+    // If a status exists in the transaction, then it includes info from the
+    // parent.
+    if (field_status_i.find(f) != field_status_i.end())
+        return field_status_i.at(f);
+
+    // Otherwise, retrieve and cache parent info.
+    auto parentStatus = parent_i->getStatus(f);
+    field_status_i[f] = parentStatus;
+    return parentStatus;
 }
 
 ordered_set<PHV::AllocSlice>
-PHV::Transaction::slices(const PHV::Field* f, le_bitrange range) const {
+PHV::Allocation::slices(const PHV::Field* f, le_bitrange range) const {
     ordered_set<PHV::AllocSlice> rv;
 
-    // Copy in parent slices first, as they were allocated first.
-    rv = parent_i->slices(f, range);
-
-    // Then insert any transaction slices.
-    if (field_status_i.find(f) != field_status_i.end()) {
-        for (auto& slice : field_status_i.at(f))
-            if (slice.field_slice().overlaps(range))
-                rv.insert(slice); }
+    // Get status, which includes parent and child info.
+    for (auto& slice : this->getStatus(f))
+        if (slice.field_slice().overlaps(range))
+            rv.insert(slice);
 
     return rv;
 }

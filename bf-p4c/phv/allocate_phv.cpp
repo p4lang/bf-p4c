@@ -141,8 +141,13 @@ AllocScore::AllocScore(const PHV::Transaction& alloc,
         const auto& gress = kv.second.gress;
         const auto& parserGroupGress = kv.second.parserGroupGress;
         const auto& deparserGroupGress = kv.second.deparserGroupGress;
-        const auto& slices = kv.second.slices;
         bitvec parent_alloc_vec = calcContainerAllocVec(parent->slices(container));
+        // The set of slices that are allocated in this transaction, by subtracting out
+        // slices allocated in parent, robust in that @p alloc can commit things that
+        // are already in the parent.
+        auto slices = kv.second.slices;
+        for (const auto& slice : parent->slices(container)) {
+            slices.erase(slice); }
 
         // skip, if there is no allocated slices.
         if (slices.size() == 0)
