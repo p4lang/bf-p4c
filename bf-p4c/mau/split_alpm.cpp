@@ -31,6 +31,10 @@ const IR::MAU::Table* SplitAlpm::create_pre_classifier_tcam(
     clone->actions.clear();
     clone->actions.addUnique(action_name, action);
 
+    // These values belong with the ATCAM table, not the pre-classifier
+    clone->next.clear();
+    clone->attached.clear();
+
     clone->layout.pre_classifier = true;
     clone->layout.pre_classifer_number_entries = pre_classifer_number_entries;
 
