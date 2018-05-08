@@ -900,8 +900,8 @@ CoreAllocation::tryAllocSliceList(
     return alloc_attempt;
 }
 
-static bool isClotSuperCluster(const ClotInfo& clots, const PHV::SuperCluster& sc) {
 #ifdef HAVE_JBAY
+static bool isClotSuperCluster(const ClotInfo& clots, const PHV::SuperCluster& sc) {
     // In JBay, a clot-candidate field may sometimes be allocated to a PHV
     // container, eg. if it is adjacent to a field that must be packed into a
     // larger container, in which case the clot candidate would be used as
@@ -920,10 +920,13 @@ static bool isClotSuperCluster(const ClotInfo& clots, const PHV::SuperCluster& s
             [&](const PHV::FieldSlice& slice) { return clots.allocated(slice.field()); });
         if (allClotCandidates)
             return true; }
-#endif
-
     return false;
 }
+#else
+static bool isClotSuperCluster(const ClotInfo&, const PHV::SuperCluster&) {
+    return false;
+}
+#endif
 
 // SUPERCLUSTER <--> CONTAINER GROUP allocation.
 boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
@@ -1233,7 +1236,7 @@ void AllocatePHV::end_apply() {
 
     // If only privatized fields are unallocated, mark allocation as done.
     // The rollback of unallocated privatized fields will happen in ValidateAllocation.
-    if (result.remaining_clusters.size() == 0) {
+    if (result.status == AllocResultCode::SUCCESS) {
         clearSlices(phv_i);
         bindSlices(alloc, phv_i);
         phv_i.set_done();
@@ -1250,6 +1253,8 @@ void AllocatePHV::end_apply() {
             LOG1(sc);
         LOG2(alloc);
         LOG2(alloc.getSummary(uses_i));
+    } else if (result.status == AllocResultCode::FAIL_UNSAT) {
+        formatAndThrowUnsat(result.remaining_clusters);
     } else {
         formatAndThrowError(alloc, result.remaining_clusters);
     }
@@ -1266,9 +1271,170 @@ bool AllocatePHV::onlyPrivatizedFieldsUnallocated(
     return true;
 }
 
+namespace PHV::Diagnostics {
+
+/// @returns a new slice list where any adjacent slices of the same field with
+/// contiguous little Endian ranges are merged into one slice, eg f[0:3], f[4:7]
+/// become f[0:7].
+static const PHV::SuperCluster::SliceList*
+mergeContiguousSlices(const PHV::SuperCluster::SliceList* list) {
+    if (!list->size()) return list;
+
+    auto* rv = new PHV::SuperCluster::SliceList();
+    auto slice = list->front();
+    for (auto it = ++list->begin(); it != list->end(); ++it) {
+        if (slice.field() == it->field() && slice.range().hi == it->range().lo - 1)
+            slice = PHV::FieldSlice(slice.field(), FromTo(slice.range().lo, it->range().hi));
+        else
+            rv->push_back(slice); }
+    if (rv->back() != slice)
+        rv->push_back(slice);
+    return rv;
+}
+
+static std::string printField(const PHV::Field* f) {
+    return f->externalName() + "<" + std::to_string(f->size) + "b>";
+}
+
+static std::string printSlice(const PHV::FieldSlice& slice) {
+    auto* f = slice.field();
+    if (slice.size() == f->size)
+        return printField(f);
+    else
+        return printField(f) + "[" + std::to_string(slice.range().hi)
+                             + ":" + std::to_string(slice.range().lo) + "]";
+}
+
+static std::string printSliceConstraints(const PHV::FieldSlice& slice) {
+    auto f = slice.field();
+    return printSlice(slice) + ": "
+            + (f->no_pack() ? "no_pack " : "")
+            + (f->no_split() ? "no_split " : "")
+            + (f->exact_containers() ? "exact_containers" : "");
+}
+
+/// @returns a sorted list of explanations, one for each set of conflicting
+/// constraints in @sc, or the empty vector if there are no conflicting
+/// constraints.
+static std::string diagnoseSuperCluster(const PHV::SuperCluster& sc) {
+    std::stringstream msg;
+
+    // Dump constraints.
+    std::set<const PHV::Field*> fields;
+    for (auto* rc : sc.clusters())
+        for (auto* ac : rc->clusters())
+            for (auto slice : *ac)
+                fields.insert(slice.field());
+    std::vector<const PHV::Field*> sortedFields(fields.begin(), fields.end());
+    std::sort(sortedFields.begin(), sortedFields.end(),
+              [](const PHV::Field* f1, const PHV::Field* f2) {
+                  return f1->name < f2->name; });
+    msg << "These fields have the following field-level constraints:" << std::endl;
+    for (auto* f : fields)
+        msg << "    " << printSliceConstraints(PHV::FieldSlice(f, StartLen(0, f->size)))
+            << std::endl;
+    msg << std::endl;
+
+    msg << "These slices must be in the same PHV container group:" << std::endl;
+    for (auto* rc : sc.clusters()) {
+        for (auto* ac : rc->clusters()) {
+            if (!ac->slices().size()) continue;
+
+            // Print singleton aligned cluster.
+            if (ac->slices().size() == 1) {
+                msg << "    " << PHV::Diagnostics::printSlice(*ac->begin()) << std::endl;
+                continue; }
+
+            msg << "    These slices must also be aligned within their respective containers:"
+                << std::endl;
+            for (auto slice : *ac)
+                msg << "        " << PHV::Diagnostics::printSlice(slice) << std::endl; } }
+    msg << std::endl;
+
+    // Print slice lists (adjacency constraints).
+    for (auto* slist : sc.slice_lists()) {
+        if (slist->size() <= 1) continue;
+        msg << "These fields can (optionally) be packed adjacently in the same container to "
+            << "satisfy exact_containers requirements:"
+            << std::endl;
+        for (auto slice : *slist)
+            msg << "    " << PHV::Diagnostics::printSlice(slice) << std::endl;
+        msg << std::endl; }
+
+    // Highlight specific conflicts that are easy to identify.
+    ordered_set<std::string> conflicts;
+    for (auto* rc : sc.clusters()) {
+        const auto& slices = rc->slices();
+        if (!slices.size()) continue;
+
+        // If two slices have different sizes but must go in the same container
+        // group, then either (a) the larger one must be split, (b) the smaller
+        // one must be packed with adjacent slices of its slice list, or (c)
+        // the smaller one must not have the exact_containers requirement.
+        for (auto s1 : slices) {
+            for (auto s2 : slices) {
+                if (s1 == s2) continue;
+                ordered_set<const PHV::SuperCluster::SliceList*> s1lists;
+                ordered_set<const PHV::SuperCluster::SliceList*> s2lists;
+                for (auto* list : sc.slice_list(s1))
+                    s1lists.insert(mergeContiguousSlices(list));
+                for (auto* list : sc.slice_list(s2))
+                    s2lists.insert(mergeContiguousSlices(list));
+
+                if (s1.field()->no_split())
+                    s1 = PHV::FieldSlice(s1.field(), StartLen(0, s1.field()->size));
+                if (s2.field()->no_split())
+                    s2 = PHV::FieldSlice(s2.field(), StartLen(0, s2.field()->size));
+
+                auto& larger = s1.size() > s2.size() ? s1 : s2;
+                auto largerLists = s1.size() > s2.size() ? s1lists : s2lists;
+                auto& smaller = s1.size() < s2.size() ? s1 : s2;
+                auto smallerLists = s1.size() < s2.size() ? s1lists : s2lists;
+
+                // Skip same-sized slices.
+                if (larger.size() == smaller.size()) continue;
+                // Skip if larger field can be split.
+                if (!larger.field()->no_split()) continue;
+                // Skip if smaller field doesn't have exact_containers.
+                if (!smaller.field()->exact_containers()) continue;
+
+                // If the smaller field can't be packed or doesn't have
+                // adjacent slices, that's a problem.
+                std::string sm = printSlice(smaller);
+                std::string lg = printSlice(larger);
+                if (smaller.field()->no_pack() && smaller.field()->size != larger.size()) {
+                    std::stringstream ss;
+                    ss << "Constraint conflict: ";
+                    ss << "Field slices " << sm << " and " << lg << " must be in the same PHV "
+                          "container group, but " << lg << " cannot be split, and " << sm <<
+                          " (a) must fill an entire container, (b) cannot be packed with "
+                          "adjacent fields, and (c) is not the same size as " << lg << ".";
+                    conflicts.insert(ss.str());
+                } else {
+                    for (auto* sliceList : smallerLists) {
+                        int listSize = std::accumulate(sliceList->begin(), sliceList->end(), 0,
+                            [](int acc, const PHV::FieldSlice& s) { return acc + s.size(); });
+                        if (listSize < larger.size()) {
+                            std::stringstream ss;
+                            ss << "Constraint conflict: ";
+                            ss << "Field slices " << sm << " and " << lg << " must be in the "
+                                  "same PHV container group, but " << lg << " cannot be split, "
+                                  "and " << sm << " (a) must fill an entire container with its "
+                                  "adjacent fields, but (b) it and its adjacent fields are "
+                                  "smaller than " << lg << ".";
+                            conflicts.insert(ss.str());
+                            break; } } } } } }
+    for (auto& conflict : conflicts)
+        msg << conflict << std::endl << std::endl;
+    return msg.str();
+}
+
+}   // namespace PHV::Diagnostics
+
 void AllocatePHV::formatAndThrowError(
         const PHV::Allocation& alloc,
         const std::list<PHV::SuperCluster *>& unallocated) {
+    int unallocated_slices = 0;
     int unallocated_bits = 0;
     int ingress_phv_bits = 0;
     int egress_phv_bits = 0;
@@ -1276,11 +1442,11 @@ void AllocatePHV::formatAndThrowError(
     int egress_t_phv_bits = 0;
     std::stringstream msg;
 
-    msg << "PHV allocation was not successful "
-        << "(" << unallocated.size() << " cluster groups remaining)" << std::endl;
-    msg << "SuperClusters unallocated: " << std::endl;
+    msg << "The following fields were not allocated: " << std::endl;
     for (auto* sc : unallocated)
-        msg << sc;
+        sc->forall_fieldslices([&](const PHV::FieldSlice& s) {
+            msg << "    " << PHV::Diagnostics::printSlice(s) << std::endl;
+            unallocated_slices++; });
     msg << std::endl;
 
     if (LOGGING(3)) {
@@ -1315,8 +1481,57 @@ void AllocatePHV::formatAndThrowError(
         msg << std::endl; }
 
     msg << alloc.getSummary(uses_i) << std::endl;
-    // ::error("%1%", msg.str());
-    throw Util::CompilationError("%1%", msg.str());
+    msg << "PHV allocation was not successful "
+        << "(" << unallocated_slices << " field slices remaining)" << std::endl;
+    ::error("%1%", msg.str());
+}
+
+void AllocatePHV::formatAndThrowUnsat(const std::list<PHV::SuperCluster*>& unsat) const {
+    std::stringstream msg;
+    msg << "Some fields cannot be allocated because of unsatisfiable constraints."
+       << std::endl << std::endl;
+
+    // Pretty-print the kinds of constraints.
+    /*
+    msg << R"(Constraints:
+    no_pack:    The field cannot be allocated in the same PHV container(s) as any
+                other fields.  Fields that are shifted or are the destination of
+                arithmetic operations have this constraint.
+
+    no_split:   The field must be entirely allocated to a single PHV container.
+                Fields that are shifted or are a source or destination of an
+                arithmetic operation have this constraint.
+
+    exact_containers:
+                If any field slice in a PHV container has this constraint, then
+                the container must be completely filled, and if it contains more
+                than one slice, all slices must also have adjaceny constraints.
+                All header fields have this constraint.
+
+    adjacency:  If two or more fields are marked as adjacent, then they must be
+                placed contiguously (in order) if placed in the same PHV
+                container.  Fields in the same header are marked as adjacent.
+
+    aligned:    If two or more fields are marked with an alignment constraint,
+                then they must be placed starting at the same least-significant
+                bit in their respective PHV containers.
+
+    grouped:    Fields involved in the same instructions must be placed in the
+                same PHV container group.  Note that the 'aligned' constraint
+                implies 'grouped'.)"
+                << std::endl
+                << std::endl;
+    */
+
+    // Pretty-print the supercluster constraints.
+    msg << "The following constraints are mutually unsatisfiable." << std::endl << std::endl;
+    for (auto* sc : unsat)
+        msg << PHV::Diagnostics::diagnoseSuperCluster(*sc);
+
+    msg << "PHV allocation was not successful "
+        << "(" << unsat.size() << " set" << (unsat.size() == 1 ? "" : "s")
+        << " of unsatisfiable constraints remaining)" << std::endl;
+    ::error("%1%", msg.str());
 }
 
 void AllocationStrategy::writeTransactionSummary(
@@ -1457,7 +1672,8 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
 
 std::list<PHV::SuperCluster*>
 BruteForceAllocationStrategy::slice_clusters(
-        const std::list<PHV::SuperCluster*>& cluster_groups) {
+        const std::list<PHV::SuperCluster*>& cluster_groups,
+        std::list<PHV::SuperCluster*>& unsliceable) {
     LOG5("===================  Pre-Slicing ===================");
     std::list<PHV::SuperCluster*> rst;
     for (auto* sc : cluster_groups) {
@@ -1492,7 +1708,7 @@ BruteForceAllocationStrategy::slice_clusters(
                           "@pa_container_size",
                           cstring::to_cstring(sc)); }
             LOG5("    ...but preslicing failed");
-            rst.push_back(sc); }
+            unsliceable.push_back(sc); }
         pa_container_sizes.ignore_fields(unsatisfiable_fields); }
     return rst;
 }
@@ -1542,7 +1758,15 @@ BruteForceAllocationStrategy::tryAllocation(
     cluster_groups = remove_singleton_slicelist_metadata(cluster_groups);
 
     // slice and then sort clusters.
-    cluster_groups = slice_clusters(cluster_groups);
+    std::list<PHV::SuperCluster*> unsliceable;
+    cluster_groups = slice_clusters(cluster_groups, unsliceable);
+
+    // fail early if some clusters have unsatisfiable constraints.
+    if (unsliceable.size()) {
+        return AllocResult(AllocResultCode::FAIL_UNSAT,
+                           std::move(alloc.makeTransaction()),
+                           std::move(unsliceable)); }
+
     sortClusters(cluster_groups);
 
     // Results are not used

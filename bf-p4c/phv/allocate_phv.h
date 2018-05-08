@@ -225,8 +225,10 @@ class CoreAllocation {
 
 // TODO(yumin) extends this to include all possible cases.
 enum class AllocResultCode {
-    SUCCESS, FAIL
-    // partial_success?
+    SUCCESS,        // All fields allocated
+    FAIL,           // Some fields unallocated
+    FAIL_UNSAT      // Some fields CANNOT be allocated due to unsatisfiable
+                    // constraints
 };
 
 struct AllocResult {
@@ -316,7 +318,8 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
 
     std::list<PHV::SuperCluster*>
     slice_clusters(
-            const std::list<PHV::SuperCluster*>& cluster_groups);
+            const std::list<PHV::SuperCluster*>& cluster_groups,
+            std::list<PHV::SuperCluster*>& unsliceable);
 
     std::list<PHV::SuperCluster*>
     remove_singleton_slicelist_metadata(
@@ -412,10 +415,14 @@ class AllocatePHV : public Inspector {
     /// privatization (field->privatized() == true).
     bool onlyPrivatizedFieldsUnallocated(std::list<PHV::SuperCluster*>& unallocated) const;
 
-    /// Throw a pretty-printed ::error when allocation fails.
+    /// Throw a pretty-printed ::error when allocation fails due to resource constraints.
     void formatAndThrowError(
         const PHV::Allocation& alloc,
         const std::list<PHV::SuperCluster *>& unallocated);
+
+    /// Throw a pretty-printed ::error when allocation fails due to
+    /// unsatisfiable constraints.
+    void formatAndThrowUnsat(const std::list<PHV::SuperCluster *>& unallocated) const;
 
  public:
     AllocatePHV(const Clustering& clustering,

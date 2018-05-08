@@ -690,6 +690,9 @@ class AlignedCluster : public ClusterStats {
  * same MAU group at rotationally-equivalent alignments.
  */
 class RotationalCluster : public ClusterStats {
+    /// Slices that make up the AlignedClusters in this RotationalCluster.
+    ordered_set<PHV::FieldSlice> slices_i;
+
     /// AlignedClusters that make up this RotationalCluster.
     ordered_set<AlignedCluster*> clusters_i;
 
@@ -710,6 +713,9 @@ class RotationalCluster : public ClusterStats {
 
     /// Semantic equality.
     bool operator==(const RotationalCluster& other) const;
+
+    /// @returns the slices in the aligned clusters in this group.
+    const ordered_set<PHV::FieldSlice>& slices() const { return slices_i; }
 
     /// @returns the aligned clusters in this group.
     const ordered_set<AlignedCluster*>& clusters() const { return clusters_i; }

@@ -476,6 +476,7 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
     int total_unallocated_bits = 0;
     int valid_ingress_unallocated_bits = 0;
     int valid_egress_unallocated_bits = 0;
+    std::stringstream ss;
 
     // TODO(yumin): code duplication of available_spots()
     // Compute status.
@@ -508,38 +509,37 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
         alloc_status[container_status_i.at(c).gress][c.type()][status]++;
     }
 
-    // Print container status.
-    std::stringstream ss;
-    ss << "Total width of fields allocated: " << total_allocated_bits << std::endl;
-    ss << "CONTAINER STATUS (after allocation so far):" << std::endl;
-    ss << boost::format("%1% %|10t| %2% %|20t| %3% %|30t| %4%\n")
-        % "GRESS" % "TYPE" % "STATUS" % "COUNT";
+    if (LOGGING(3)) {
+        // Print container status.
+        ss << "CONTAINER STATUS (after allocation so far):" << std::endl;
+        ss << boost::format("%1% %|10t| %2% %|20t| %3% %|30t| %4%\n")
+            % "GRESS" % "TYPE" % "STATUS" % "COUNT";
 
-    bool first_by_gress = true;
-    auto gresses = std::vector<boost::optional<gress_t>>({INGRESS, EGRESS, boost::none});
-    auto statuses = {ContainerAllocStatus::EMPTY,
-                     ContainerAllocStatus::PARTIAL,
-                     ContainerAllocStatus::FULL};
-    for (auto gress : gresses) {
-        first_by_gress = true;
-        for (auto status : statuses) {
-            for (auto type : Device::phvSpec().containerTypes()) {
-                if (alloc_status[gress][type][status] == 0)
-                    continue;
-                std::stringstream ss_gress;
-                std::string s_status;
-                ss_gress << gress;
-                switch (status) {
-                  case ContainerAllocStatus::EMPTY:   s_status = "EMPTY"; break;
-                  case ContainerAllocStatus::PARTIAL: s_status = "PARTIAL"; break;
-                  case ContainerAllocStatus::FULL:    s_status = "FULL"; break; }
-                ss << boost::format("%1% %|10t| %3% %|20t| %2% %|30t| %4%\n")
-                      % (first_by_gress  ? ss_gress.str() : "")
-                      % type.toString()
-                      % s_status
-                      % alloc_status[gress][type][status];
-                first_by_gress = false; } } }
-    ss << std::endl;
+        bool first_by_gress = true;
+        auto gresses = std::vector<boost::optional<gress_t>>({INGRESS, EGRESS, boost::none});
+        auto statuses = {ContainerAllocStatus::EMPTY,
+                         ContainerAllocStatus::PARTIAL,
+                         ContainerAllocStatus::FULL};
+        for (auto gress : gresses) {
+            first_by_gress = true;
+            for (auto status : statuses) {
+                for (auto type : Device::phvSpec().containerTypes()) {
+                    if (alloc_status[gress][type][status] == 0)
+                        continue;
+                    std::stringstream ss_gress;
+                    std::string s_status;
+                    ss_gress << gress;
+                    switch (status) {
+                      case ContainerAllocStatus::EMPTY:   s_status = "EMPTY"; break;
+                      case ContainerAllocStatus::PARTIAL: s_status = "PARTIAL"; break;
+                      case ContainerAllocStatus::FULL:    s_status = "FULL"; break; }
+                    ss << boost::format("%1% %|10t| %3% %|20t| %2% %|30t| %4%\n")
+                          % (first_by_gress  ? ss_gress.str() : "")
+                          % type.toString()
+                          % s_status
+                          % alloc_status[gress][type][status];
+                    first_by_gress = false; } } }
+        ss << std::endl; }
 
     // Compute overlay status.
     ordered_map<PHV::Container, int> overlay_result;
@@ -560,50 +560,56 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
             } else {
                 overlay_statistics[*kv.second.gress][1] += n_overlay; } } }
 
-    ss << "======== CONTAINER OVERLAY STAT ===========" << std::endl;
-    ss << "TOTAL INGRESS T-PHV OVERLAY BITS: " << overlay_statistics[INGRESS][0] << std::endl;
-    ss << "TOTAL INGRESS PHV OVERLAY BITS: "   << overlay_statistics[INGRESS][1] << std::endl;
-    ss << "TOTAL EGRESS T-PHV OVERLAY BITS: "  << overlay_statistics[EGRESS][0] << std::endl;
-    ss << "TOTAL EGRESS PHV OVERLAY BITS: "    << overlay_statistics[EGRESS][1] << std::endl;
+    if (LOGGING(2)) {
+        ss << "======== CONTAINER OVERLAY STAT ===========" << std::endl;
+        ss << "TOTAL INGRESS T-PHV OVERLAY BITS: " << overlay_statistics[INGRESS][0] << std::endl;
+        ss << "TOTAL INGRESS PHV OVERLAY BITS: "   << overlay_statistics[INGRESS][1] << std::endl;
+        ss << "TOTAL EGRESS T-PHV OVERLAY BITS: "  << overlay_statistics[EGRESS][0] << std::endl;
+        ss << "TOTAL EGRESS PHV OVERLAY BITS: "    << overlay_statistics[EGRESS][1] << std::endl;
 
-    for (auto kv : overlay_result) {
-        ss << kv.first << " has overlaid: " << kv.second << " bits " << std::endl;
-        for (const auto& slice : this->slices(kv.first)) {
-            ss << slice << std::endl; } }
-    ss << std::endl;
+        if (LOGGING(3)) {
+            for (auto kv : overlay_result) {
+                ss << kv.first << " has overlaid: " << kv.second << " bits " << std::endl;
+                for (const auto& slice : this->slices(kv.first)) {
+                    ss << slice << std::endl; } }
+            ss << std::endl; }
 
-    // Output Partial Containers
-    ss << "======== PARTIAL CONTAINERS STAT ==========" << std::endl;
-    ss << "TOTAL UNALLOCATED BITS: " << total_unallocated_bits << std::endl;
-    ss << "VALID INGRESS UNALLOCATED BITS: " << valid_ingress_unallocated_bits << std::endl;
-    ss << "VALID EGRESS UNALLOCATED BITS: " << valid_egress_unallocated_bits << std::endl;
-    for (const auto& kv : partial_containers_stat) {
-        ss << kv.first << " has unallocated bits: " << kv.second << std::endl;
-        for (const auto& slice : this->slices(kv.first)) {
-            ss << slice << std::endl; } }
+        // Output Partial Containers
+        ss << "======== PARTIAL CONTAINERS STAT ==========" << std::endl;
+        ss << "TOTAL UNALLOCATED BITS: " << total_unallocated_bits << std::endl;
+        ss << "VALID INGRESS UNALLOCATED BITS: " << valid_ingress_unallocated_bits << std::endl;
+        ss << "VALID EGRESS UNALLOCATED BITS: " << valid_egress_unallocated_bits << std::endl;
 
-    // compute tphv fields allocated on phv fields
-    int total_tphv_on_phv = 0;
-    ordered_map<PHV::Container, int> tphv_on_phv;
-    for (auto kv : container_status_i) {
-        PHV::Container c = kv.first;
-        if (c.is(PHV::Kind::tagalong)) {
-            continue; }
-        int n_tphvs = 0;
-        for (auto slice : kv.second.slices) {
-            if (slice.field()->is_tphv_candidate(uses)) {
-                n_tphvs += slice.width(); } }
-        if (n_tphvs == 0) continue;
-        tphv_on_phv[c] = n_tphvs;
-        total_tphv_on_phv += n_tphvs; }
+        if (LOGGING(3)) {
+            for (const auto& kv : partial_containers_stat) {
+                ss << kv.first << " has unallocated bits: " << kv.second << std::endl;
+                for (const auto& slice : this->slices(kv.first)) {
+                    ss << slice << std::endl; } } }
 
-    ss << "======== TPHV ON PHV STAT ========" << std::endl;
-    ss << "Total bits: " << total_tphv_on_phv << std::endl;
-    for (auto kv : tphv_on_phv) {
-        ss << kv.first << " has " << kv.second << " bits " << std::endl;
-        for (const auto& slice : slices(kv.first)) {
-            if (slice.field()->is_tphv_candidate(uses)) {
-                ss << slice << std::endl; } } }
+        // compute tphv fields allocated on phv fields
+        int total_tphv_on_phv = 0;
+        ordered_map<PHV::Container, int> tphv_on_phv;
+        for (auto kv : container_status_i) {
+            PHV::Container c = kv.first;
+            if (c.is(PHV::Kind::tagalong)) {
+                continue; }
+            int n_tphvs = 0;
+            for (auto slice : kv.second.slices) {
+                if (slice.field()->is_tphv_candidate(uses)) {
+                    n_tphvs += slice.width(); } }
+            if (n_tphvs == 0) continue;
+            tphv_on_phv[c] = n_tphvs;
+            total_tphv_on_phv += n_tphvs; }
+
+        ss << "======== TPHV ON PHV STAT ========" << std::endl;
+        ss << "Total bits: " << total_tphv_on_phv << std::endl;
+
+        if (LOGGING(3)) {
+            for (auto kv : tphv_on_phv) {
+                ss << kv.first << " has " << kv.second << " bits " << std::endl;
+                for (const auto& slice : slices(kv.first)) {
+                    if (slice.field()->is_tphv_candidate(uses)) {
+                        ss << slice << std::endl; } } } } }
 
     ss << getOccupancyMetrics(containers_used);
 
@@ -1110,9 +1116,10 @@ boost::optional<PHV::SliceResult<PHV::AlignedCluster>> PHV::AlignedCluster::slic
 PHV::RotationalCluster::RotationalCluster(ordered_set<PHV::AlignedCluster*> clusters)
         : clusters_i(clusters) {
     // Populate the field-->cluster map (slices_to_clusters_i).
-    for (auto* cluster : clusters_i)
-        for (auto& slice : *cluster)
+    for (auto* cluster : clusters_i) {
+        for (auto& slice : *cluster) {
             slices_to_clusters_i[slice] = cluster;
+            slices_i.insert(slice); } }
 
     // Tally stats.
     kind_i = PHV::Kind::tagalong;

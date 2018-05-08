@@ -1047,8 +1047,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/stack_valid.p4
 )
 
+# This fails because it has mirror field lists with fields larger than 32b,
+# which cannot currently be sliced.
 p4c_add_xfail_reason("tofino"
-    "Slice size greater than container size"
+  "PHV allocation was not successful"
   extensions/p4_tests/p4_14/test_config_303_static_table.p4
 )
 
