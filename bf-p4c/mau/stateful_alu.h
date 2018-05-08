@@ -4,6 +4,15 @@
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "mau_visitor.h"
+#include "bf-p4c/device.h"
+
+struct Device::StatefulAluSpec {
+    bool                        CmpMask;  // are cmp oprerands maskable?
+    std::vector<cstring>        CmpUnits;
+    int                         MaxSize;
+
+    cstring cmpUnit(unsigned idx) const { return idx < CmpUnits.size() ? CmpUnits.at(idx) : "??"; }
+};
 
 /**
 Converts a P4_14 stateful_alu extern object (a Declaration_Instance
@@ -37,6 +46,9 @@ class CreateSaluInstruction : public Inspector {
     IR::MAU::StatefulAlu                *salu;
     const IR::Type                      *regtype;
     const IR::Declaration_Instance      *reg_action = nullptr;
+    cstring                             action_type_name;
+    enum class param_t { VALUE, OUTPUT, HASH, LEARN, MATCH };
+    const std::vector<param_t>          *param_types;
     IR::MAU::SaluAction                 *action = nullptr;
     const IR::ParameterList             *params = nullptr;
     struct LocalVar {
@@ -54,6 +66,7 @@ class CreateSaluInstruction : public Inspector {
         IF,      // condition -- operand of an if
         VALUE,   // value to be written to memory -- alu output
         OUTPUT,  // value to be written to action data bus output
+        MATCH,   // value to be written to match output
         }                       etype = NONE;
     bool                        negate = false;
     bool                        alu_write[2] = { false, false };
@@ -110,14 +123,18 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::Cmpl *) override { return true; }
     void postorder(const IR::Cmpl *) override;
     bool preorder(const IR::BAnd *) override;
+    void postorder(const IR::BAnd *) override;
     bool preorder(const IR::BOr *) override;
     bool preorder(const IR::BXor *) override;
+    bool preorder(const IR::Concat *) override;
+    void postorder(const IR::Concat *) override;
     bool preorder(const IR::Expression *e) override {
         error("%s: expression too complex for register action", e->srcInfo);
         return false; }
 
     friend std::ostream &operator<<(std::ostream &, CreateSaluInstruction::LocalVar::use_t);
     friend std::ostream &operator<<(std::ostream &, CreateSaluInstruction::etype_t);
+    static std::map<std::pair<cstring, cstring>, std::vector<param_t>>  function_param_types;
 
  public:
     explicit CreateSaluInstruction(IR::MAU::StatefulAlu *salu) : salu(salu) {

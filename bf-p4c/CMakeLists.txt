@@ -584,3 +584,10 @@ set (GTEST_BF_P4C_SOURCES
 
 set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)
 set (GTEST_LDADD ${GTEST_LDADD} tofinobackend PARENT_SCOPE)
+
+# workarounds to enable on the cmake command line
+option(WORKAROUND_BRIG_640 "workaround for brig-640" OFF)
+if (WORKAROUND_BRIG_640)
+add_definitions(-DWORKAROUND_BRIG_640=1)
+endif()
+

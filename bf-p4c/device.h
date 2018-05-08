@@ -6,6 +6,7 @@
 #include "phv/phv_spec.h"
 #include "parde/parde_spec.h"
 
+
 class Device {
  public:
     /**
@@ -40,6 +41,8 @@ class Device {
 
     static const PhvSpec& phvSpec() { return Device::get().getPhvSpec(); }
     static const PardeSpec& pardeSpec() { return Device::get().getPardeSpec(); }
+    class StatefulAluSpec;
+    static const StatefulAluSpec& statefulAluSpec() { return Device::get().getStatefulAluSpec(); }
     static int numStages() { return Device::get().getNumStages(); }
 
  protected:
@@ -49,6 +52,7 @@ class Device {
 
     virtual const PhvSpec& getPhvSpec() const = 0;
     virtual const PardeSpec& getPardeSpec() const = 0;
+    virtual const StatefulAluSpec& getStatefulAluSpec() const = 0;
     virtual int getNumStages() const = 0;
 
     cstring name_;
@@ -68,6 +72,7 @@ class TofinoDevice : public Device {
 
     const PhvSpec& getPhvSpec() const { return phv_; }
     const PardeSpec& getPardeSpec() const { return parde_; }
+    const StatefulAluSpec& getStatefulAluSpec() const override;
 };
 
 #if HAVE_JBAY
@@ -81,6 +86,7 @@ class JBayDevice : public Device {
 
     const PhvSpec& getPhvSpec() const { return phv_; }
     const PardeSpec& getPardeSpec() const { return parde_; }
+    const StatefulAluSpec& getStatefulAluSpec() const override;
 };
 #endif /* HAVE_JBAY */
 

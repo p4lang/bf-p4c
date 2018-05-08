@@ -72,7 +72,7 @@ class value_t_Printer(object):
         if typ == 0:  # tINT
             return str(self.val['i'])
         elif typ == 1:  # tBIGINT
-            v = self.val['bi']
+            v = self.val['bigi']
             data = v['data']
             size = v['size']
             val = 0

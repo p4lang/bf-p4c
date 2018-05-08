@@ -111,9 +111,9 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
         salu_instr_common.salu_lmatch_sbus_listen = lmask;
     if (auto mmask = sbus_mask(logical_home_row/4U, tbl->sbus_match))
         salu_instr_common.salu_match_sbus_listen = mmask;
-    salu.salu_cmp_sbus_or = tbl->sbus_or;
-    salu.salu_cmp_sbus_and = tbl->sbus_and;
-    salu.salu_cmp_sbus_invert = tbl->sbus_invert;
+    salu.salu_cmp_sbus_or = 0;
+    salu.salu_cmp_sbus_and = learn ? 1 : 0;
+    salu.salu_cmp_sbus_invert = learn_not ? 1 : 0;
 }
 void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::JBay::mau_regs>(regs, tbl, act); }

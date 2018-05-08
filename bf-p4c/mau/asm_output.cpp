@@ -1430,7 +1430,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     }
     bool preorder(const IR::Constant *c) override {
         assert(sep);
-        out << sep << c->asLong();
+        out << sep << c->value;
         sep = ", ";
         return false;
     }
@@ -1496,6 +1496,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         return false; }
     bool preorder(const IR::LAnd *e) override { return preorder_binop(e, " & "); }
     bool preorder(const IR::LOr *e) override { return preorder_binop(e, " | "); }
+    bool preorder(const IR::BAnd *e) override { return preorder_binop(e, " & "); }
     void postorder(const IR::MAU::Instruction *) override {
         sep = nullptr;
         out << std::endl;

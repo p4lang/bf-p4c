@@ -956,10 +956,11 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                         } else alias.emplace(a.key.s, a.value); } }
         } else if (CHECKTYPE2(i, tSTR, tCMD)) {
             VECTOR(value_t) tmp;
-            if (i.type == tSTR)
+            if (i.type == tSTR) {
+                if (!*i.s) continue;  // skip blank line
                 VECTOR_init1(tmp, i);
-            else
-                VECTOR_initcopy(tmp, i.vec);
+            } else {
+                VECTOR_initcopy(tmp, i.vec); }
             if (auto *p = Instruction::decode(tbl, this, tmp))
                 instr.push_back(p);
             else if (tbl->to<MatchTable>() || tbl->to<TernaryIndirectTable>() ||

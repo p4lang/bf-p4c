@@ -599,7 +599,7 @@ stage <constant> <thread>:
                     # SALU instructions to run for this table
         context_json: #anything
         # jbay additional features:
-        sbus and|or [not]:
+        sbus:
           # jbay only -- shared bus use
           learn: <table> | '[' <table>, ... ']'
           match: <table> | '[' <table>, ... ']'

@@ -1364,7 +1364,6 @@ public:
     Ref                 bound_selector;
     unsigned            phv_byte_mask = 0;
     std::vector<Ref>    sbus_learn, sbus_match;
-    bool                sbus_invert = false, sbus_or = false, sbus_and = false;
     int instruction_set() override { return 1; /* STATEFUL_ALU */ }
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;

@@ -158,11 +158,21 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
     const value_t *v = &v_;
     if (options.target == TOFINO) can_mask = false;
     if (can_mask && v->type == tCMD && *v == "&" && v->vec.size == 3) {
-        if (v[2].type == tINT) {
+        if (v->vec[2].type == tINT) {
             mask = v->vec[2].i;
+            v = &v->vec[1];
+        } else if (v->vec[2].type == tBIGINT) {
+            if (v->vec[2].bigi.size != 1)
+                error(v->lineno, "mask too large");
+            mask = v->vec[2].bigi.data[0];
             v = &v->vec[1];
         } else if (v->vec[1].type == tINT) {
             mask = v->vec[1].i;
+            v = &v->vec[2];
+        } else if (v->vec[1].type == tBIGINT) {
+            if (v->vec[1].bigi.size != 1)
+                error(v->lineno, "mask too large");
+            mask = v->vec[1].bigi.data[0];
             v = &v->vec[2];
         } else {
             error(v->lineno, "mask must be a constant"); } }
@@ -451,6 +461,7 @@ struct CmpOP : public SaluInstruction {
     uint32_t            maskb = ~0U;
     operand::Const      *srcc = 0;
     bool                srca_neg = false, srcb_neg = false;
+    bool                learn = false, learn_not = false;
     CmpOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
     std::string name() override { return opc->name; };
     void gen_prim_cfg(json::map& out) override {
@@ -490,20 +501,27 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     if (op.size < 1 || op[1].type != tSTR) {
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
         return rv; }
-    unsigned unit;
-    char *end;
+    unsigned unit, len;
     if (op[1] == "lo") {
         rv->slot = CMPLO;
     } else if (op[1] == "hi") {
         rv->slot = CMPHI;
-    } else if (op[1].s[0] == 'p' && isdigit(op[1].s[1]) &&
-               (unit = strtol(op[1].s+1, &end, 10)) < Target::STATEFUL_CMP_UNITS() && *end == 0) {
+    } else if ((sscanf(op[1].s, "p%u%n", &unit, &len) >= 1 ||
+                sscanf(op[1].s, "cmp%u%n", &unit, &len) >= 1) &&
+               unit < Target::STATEFUL_CMP_UNITS() && op[1].s[len] == 0) {
         rv->slot = CMP0 + unit;
     } else
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
-    int idx = 2;
-    while (idx < op.size) {
-        operand src(tbl, act, op[idx++], true);
+    for (int idx = 2; idx < op.size; ++idx) {
+        if (!rv->learn) {
+            if (op[idx] == "learn" ) {
+                rv->learn = true;
+                continue; }
+            if (op[idx] == "!" && op[idx].type == tCMD && op[idx].vec.size == 2 &&
+                op[idx][1] == "learn") {
+                rv->learn = rv->learn_not = true;
+                continue; } }
+        operand src(tbl, act, op[idx], true);
         if (!rv->srca && (rv->srca = src.to<operand::Memory>())) {
             src.op = nullptr;
             rv->srca_neg = src.neg;

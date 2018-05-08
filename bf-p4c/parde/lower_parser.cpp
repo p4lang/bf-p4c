@@ -1319,7 +1319,10 @@ leftShiftExtract(T* primitive, int byteDelta) {
     // Do not need to shift it's not packetRval
     if (!bufferSource) return primitive;
 
-    const auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
+    auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
+#if WORKAROUND_BRIG_640
+    if (shiftedRange.lo < 0) shiftedRange.lo = 0;
+#endif
     BUG_CHECK(shiftedRange.lo >= 0, "Shifting extract to negative position.");
     auto* clone = primitive->clone();
     clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
@@ -1331,7 +1334,10 @@ leftShiftExtract(T* primitive, int byteDelta) {
 const IR::BFN::LoweredSave*
 leftShiftSave(const IR::BFN::LoweredSave* save, int byteDelta) {
     auto* bufferSource = save->source;
-    const auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
+    auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
+#if WORKAROUND_BRIG_640
+    if (shiftedRange.lo < 0) shiftedRange.lo = 0;
+#endif
     BUG_CHECK(shiftedRange.lo >= 0, "Shifting save to negative position.");
     auto* clone = save->clone();
     clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
@@ -1942,10 +1948,12 @@ class SplitBigStates : public ParserModifier {
             }
         }
 
+#if !WORKAROUND_BRIG_640
         for (const auto* save : extra_saves) {
             BUG_CHECK(save->source->range.hiByte() < common_until,
                       "complicated save not supported: %1% in %2%", save, state->name);
         }
+#endif
 
         // Spliting state will not work efficiently if the the pre-sliced common state has
         // too many extracts that some of them can be done in the last branching state,
@@ -2008,6 +2016,10 @@ class SplitBigStates : public ParserModifier {
                 LOG1("Found Remaining Saves:" << save <<
                      " must be done before " << finalState->name
                      << " from state: " << state->name); }
+#if WORKAROUND_BRIG_640
+            if (leftover_saves[finalState->name].size() != 0)
+                return false;  // prune to avoid stack overflow
+#endif
             BUG_CHECK(leftover_saves[finalState->name].size() == 0,
                       "Select on field from different parent branches is not supported.");
             leftover_saves[finalState->name] = allocator.getRemainingSaves();

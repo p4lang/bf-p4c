@@ -1,5 +1,26 @@
 #include "stateful_alu.h"
 
+const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
+    static const Device::StatefulAluSpec spec = {
+        /* .CmpMask = */ false,
+        /* .CmpUnits = */ { "lo", "hi" },
+        /* .MaxSize = */ 32,
+    };
+    return spec;
+}
+
+#if HAVE_JBAY
+const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
+    static const Device::StatefulAluSpec spec = {
+        /* .CmpMask = */ true,
+        /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
+        /* .MaxSize = */ 64,
+    };
+    return spec;
+}
+#endif
+
+
 std::ostream &operator<<(std::ostream &out, CreateSaluInstruction::LocalVar::use_t u) {
     static const char *use_names[] = { "NONE", "ALUHI", "MEMLO", "MEMHI", "MEMALL" };
     if (u < sizeof(use_names)/sizeof(use_names[0]))
@@ -37,7 +58,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             field_idx = 1;
         case LocalVar::MEMLO:
             if (etype == NONE)
-                error("%s: RegisterAction too complex", pe->srcInfo);
+                error("%s: %s too complex", pe->srcInfo, action_type_name);
         case LocalVar::MEMALL:
             break;
         default:
@@ -48,7 +69,8 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             if (p->name == pe->path->name) {
                 break; }
             ++idx; }
-        if (size_t(idx) >= params->parameters.size()) return false; }
+        if (size_t(idx) >= params->parameters.size()) return false;
+        BUG_CHECK(size_t(idx) < param_types->size(), "param index out of range"); }
     if (field_idx == 0 && field && regtype->is<IR::Type_StructLike>()) {
         for (auto f : regtype->to<IR::Type_StructLike>()->fields) {
             if (f->name == field)
@@ -56,8 +78,8 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             ++field_idx; }
         BUG_CHECK(field_idx < 2, "bad field name in register layout"); }
     cstring name = field_idx ? "hi" : "lo";
-    switch (idx) {
-    case 0:  /* first parameter to apply:  inout value; */
+    switch (param_types->at(idx)) {
+    case param_t::VALUE:        /* inout value; */
         if (etype == NONE) {
             if (!dest || dest->use == LocalVar::ALUHI)
                 alu_write[field_idx] = true;
@@ -67,12 +89,31 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             name = (alu_write[field_idx] ? "alu_" : "mem_") + name;
         e = new IR::MAU::SaluReg(pe->type, name, field_idx > 0);
         break;
-    case 1:  /* second parameter to apply:  out rv; */
+    case param_t::OUTPUT:       /* out rv; */
         if (etype == NONE)
             etype = OUTPUT;
         else
-            error("Reading out param %s in RegisterAction not supported", pe);
+            error("Reading out param %s in %s not supported", pe, action_type_name);
         if (!opcode) opcode = "output";
+        break;
+    case param_t::HASH:         /* in digest */
+        if (etype == NONE) {
+            error("Writing in param %s in %s not supported", pe, action_type_name);
+            return false; }
+        e = new IR::MAU::SaluReg(pe->type, "phv_" + name, field_idx > 0);
+        break;
+    case param_t::LEARN:        /* in learn */
+        if (etype == NONE) {
+            error("Writing in param %s in %s not supported", pe, action_type_name);
+            return false; }
+        e = new IR::MAU::SaluReg(pe->type, "learn", false);
+        break;
+    case param_t::MATCH:        /* out match */
+        if (etype != NONE) {
+            error("Reading out param %s in %s not supported", pe, action_type_name);
+            return false; }
+        etype = MATCH;
+        if (!opcode) opcode = "#match";
         break;
     default:
         return false; }
@@ -86,6 +127,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
 }
 
 bool CreateSaluInstruction::preorder(const IR::Function *func) {
+    static std::vector<param_t>         empty_params;
     BUG_CHECK(!action && !params, "Nested function?");
     cstring name = reg_action->name;
     if (func->name != "apply") {
@@ -100,6 +142,7 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
                 error("%s: Conflicting underflow function for register", func->srcInfo);
             else
                 salu->underflow = name; } }
+    param_types = &function_param_types.at(std::make_pair(action_type_name, func->name));
     LOG3("Creating action " << name << " for stateful table " << salu->name);
     LOG5(func);
     action = new IR::MAU::SaluAction(func->srcInfo, name);
@@ -110,9 +153,10 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
 
 void CreateSaluInstruction::postorder(const IR::Function *func) {
     BUG_CHECK(params == func->type->parameters, "recursion failure");
-    if (cmp_instr.size() > 2)
-        error("%s: register action %s.%s needs %d comparisons; only 2 possible",
-              func->srcInfo, reg_action->name, func->name, cmp_instr.size());
+    if (cmp_instr.size() > Device::statefulAluSpec().CmpUnits.size())
+        error("%s: %s %s.%s needs %d comparisons; only %d possible", func->srcInfo,
+              action_type_name, reg_action->name, func->name, cmp_instr.size(),
+              Device::statefulAluSpec().CmpUnits.size());
     if (onebit) {
         action->action.push_back(onebit);
         LOG3("  add " << *action->action.back()); }
@@ -142,13 +186,13 @@ bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
     dest = nullptr;
     opcode = cstring();
     visit(as->left, "left");
-    BUG_CHECK(operands.size() == (etype != OUTPUT) || ::errorCount() > 0, "recursion failure");
+    BUG_CHECK(operands.size() == (etype < OUTPUT) || ::errorCount() > 0, "recursion failure");
     if (etype == NONE)
         error("Can't assign to %s in register action", as->left);
     else
         visit(as->right);
     if (::errorCount() == 0) {
-        BUG_CHECK(operands.size() > (etype != OUTPUT), "recursion failure");
+        BUG_CHECK(operands.size() > (etype < OUTPUT), "recursion failure");
         if (dest && dest->use != LocalVar::ALUHI) {
             BUG_CHECK(etype == VALUE, "assert failure");
             LocalVar::use_t use = LocalVar::NONE;
@@ -162,7 +206,7 @@ bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
             } else {
                 use = LocalVar::ALUHI; }
             if (use == LocalVar::NONE || (dest->use != LocalVar::NONE && dest->use != use))
-                error("%s: RegisterAction too complex", as->srcInfo);
+                error("%s: %s too complex", as->srcInfo, action_type_name);
             dest->use = use;
             LOG3("local " << dest->name << " use " << dest->use); }
         if (!dest || dest->use == LocalVar::ALUHI)
@@ -182,20 +226,21 @@ static const IR::Expression *negatePred(const IR::Expression *e) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::IfStatement *s) {
-    if (!pred_operands.empty()) {
-        error("%s: nested conditionals not supported in register action", s->srcInfo);
-        return false; }
+    BUG_CHECK(operands.empty() && pred_operands.empty(), "recursion failure");
     etype = IF;
     dest = nullptr;
     visit(s->condition, "condition");
-    BUG_CHECK(pred_operands.size() == 1, "recursion failure");
+    BUG_CHECK(operands.empty() && pred_operands.size() == 1, "recursion failure");
     etype = NONE;
-    predicate = pred_operands.at(0);
-    visit(s->ifTrue, "ifTrue");
-    predicate = negatePred(predicate);
-    visit(s->ifFalse, "ifFalse");
-    predicate = nullptr;
+    auto old_predicate = predicate;
+    auto new_predicate = pred_operands.at(0);
     pred_operands.clear();
+    predicate = old_predicate ? new IR::LAnd(old_predicate, new_predicate) : new_predicate;
+    visit(s->ifTrue, "ifTrue");
+    new_predicate = negatePred(new_predicate);
+    predicate = old_predicate ? new IR::LAnd(old_predicate, new_predicate) : new_predicate;
+    visit(s->ifFalse, "ifFalse");
+    predicate = old_predicate;
     return false;
 }
 
@@ -287,11 +332,13 @@ const IR::Expression *CreateSaluInstruction::reuseCmp(const IR::MAU::Instruction
     for (unsigned i = 0; i < operands.size(); ++i)
         if (!equiv(operands.at(i), cmp->operands.at(i+1)))
             return nullptr;
+    auto bit1 = IR::Type::Bits::get(1);
+    auto name = Device::statefulAluSpec().cmpUnit(idx);
+    if (!name.startsWith("cmp")) name = "cmp" + name;
     if (opcode == cmp->name)
-        return new IR::MAU::SaluReg(IR::Type::Bits::get(1), idx ? "cmphi" : "cmplo", idx > 0);
+        return new IR::MAU::SaluReg(bit1, name, idx & 1);
     if (negate_op.at(opcode) == cmp->name)
-        return new IR::LNot(new IR::MAU::SaluReg(IR::Type::Bits::get(1),
-                                                 idx ? "cmphi" : "cmplo", idx > 0));
+        return new IR::LNot(new IR::MAU::SaluReg(bit1, name, idx & 0));
     return nullptr;
 }
 
@@ -313,12 +360,12 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
                     pred_operands.push_back(inst);
                     operands.clear();
                     return false; } }
-            cstring name = idx ? "hi" : "lo";
-            operands.insert(operands.begin(),
-                new IR::MAU::SaluReg(IR::Type::Bits::get(1), name, idx > 0));
+            auto bit1 = IR::Type::Bits::get(1);
+            cstring name = Device::statefulAluSpec().cmpUnit(idx);
+            operands.insert(operands.begin(), new IR::MAU::SaluReg(bit1, name, idx & 1));
             cmp_instr.push_back(createInstruction());
-            pred_operands.push_back(
-                new IR::MAU::SaluReg(IR::Type::Bits::get(1), "cmp" + name, idx > 0));
+            if (!name.startsWith("cmp")) name = "cmp" + name;
+            pred_operands.push_back(new IR::MAU::SaluReg(bit1, name, idx & 1));
             LOG4("Relation pred_operand: " << pred_operands.back());
             operands.clear(); }
     } else {
@@ -328,6 +375,7 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
 
 void CreateSaluInstruction::postorder(const IR::LNot *e) {
     if (etype == IF) {
+        BUG_CHECK(pred_operands.size() == 1 || ::errorCount() > 0, "recursion failure");
         if (pred_operands.size() < 1) return;  // can only happen if there has been an error
         pred_operands.back() = new IR::LNot(e->srcInfo, pred_operands.back());
         LOG4("LNot rewrite pred_opeands: " << pred_operands.back());
@@ -336,6 +384,8 @@ void CreateSaluInstruction::postorder(const IR::LNot *e) {
 }
 void CreateSaluInstruction::postorder(const IR::LAnd *e) {
     if (etype == IF) {
+        if (pred_operands.size() == 1) return;  // to deal with learn -- not always correct
+        BUG_CHECK(pred_operands.size() == 2 || ::errorCount() > 0, "recursion failure");
         if (pred_operands.size() < 2) return;  // can only happen if there has been an error
         auto r = pred_operands.back();
         pred_operands.pop_back();
@@ -346,6 +396,8 @@ void CreateSaluInstruction::postorder(const IR::LAnd *e) {
 }
 void CreateSaluInstruction::postorder(const IR::LOr *e) {
     if (etype == IF) {
+        if (pred_operands.size() == 1) return;  // to deal with learn -- not always correct
+        BUG_CHECK(pred_operands.size() == 2 || ::errorCount() > 0, "recursion failure");
         if (pred_operands.size() < 2) return;  // can only happen if there has been an error
         auto r = pred_operands.back();
         pred_operands.pop_back();
@@ -390,9 +442,23 @@ bool CreateSaluInstruction::preorder(const IR::BAnd *e) {
         else
             opcode = "and";
         return true;
+    } else if (etype == IF && Device::statefulAluSpec().CmpMask) {
+        return true;
     } else {
         error("%s: expression too complex for stateful alu", e->srcInfo);
         return false; }
+}
+void CreateSaluInstruction::postorder(const IR::BAnd *e) {
+    if (etype == IF) {
+        if (operands.size() < 2) return;  // can only happen if there has been an error
+        auto r = operands.back();
+        operands.pop_back();
+        if (!r->is<IR::Constant>()) {
+            if (!operands.back()->is<IR::Constant>())
+                error("%s: mask operand must be a constant", r->srcInfo);
+            std::swap(r, operands.back()); }
+        operands.back() = new IR::BAnd(e->srcInfo, operands.back(), r);
+        LOG4("BAnd rewrite opeands: " << operands.back()); }
 }
 bool CreateSaluInstruction::preorder(const IR::BOr *e) {
     if (etype == VALUE) {
@@ -406,6 +472,17 @@ bool CreateSaluInstruction::preorder(const IR::BOr *e) {
     } else {
         error("%s: expression too complex for stateful alu", e->srcInfo);
         return false; }
+}
+bool CreateSaluInstruction::preorder(const IR::Concat *e) {
+    if (etype == VALUE) {
+        // FIXME -- assume it can be implemented by an or?
+        if (e->left->is<IR::Cmpl>())
+            opcode = "orca";
+        else if (e->right->is<IR::Cmpl>())
+            opcode = "orcb";
+        else
+            opcode = "or"; }
+    return true;
 }
 bool CreateSaluInstruction::preorder(const IR::BXor *e) {
     if (etype == VALUE) {
@@ -432,6 +509,23 @@ void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
     else if (etype != VALUE)
         error("%s: expression too complex for stateful alu", e->srcInfo);
 }
+void CreateSaluInstruction::postorder(const IR::Concat *e) {
+    if (operands.size() < 2) return;  // can only happen if there has been an error
+    if (etype == VALUE) return;  // done in preorder
+    if (etype == IF) {
+        auto r = operands.back();
+        operands.pop_back();
+        if (r->is<IR::Constant>()) {
+            // FIXME -- dropped constant needed in hash function
+            LOG4("concant dropping low bit constant " << r);
+            return; }
+        if (operands.back()->is<IR::Constant>()) {
+            // FIXME -- dropped constant needed in hash function
+            LOG4("concant dropping high bit constant " << operands.back());
+            operands.back() = r;
+            return; } }
+    error("%s: expression too complex for stateful alu", e->srcInfo);
+}
 
 const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
     const IR::MAU::Instruction *rv = nullptr;
@@ -441,6 +535,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
         LOG3("  add " << *action->action.back());
         break;
     case VALUE:
+    case MATCH:
         if (operands.at(0)->type->width_bits() == 1) {
             BUG_CHECK(!predicate, "can't have predicate on 1-bit instruction");
             auto k = operands.at(1)->to<IR::Constant>();
@@ -508,10 +603,26 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Variable *v) {
     return false;
 }
 
+std::map<std::pair<cstring, cstring>, std::vector<CreateSaluInstruction::param_t>>
+CreateSaluInstruction::function_param_types = {
+    {{ "RegisterAction", "apply" },     { param_t::VALUE, param_t::OUTPUT }},
+    {{ "RegisterAction", "overflow" },  { param_t::VALUE, param_t::OUTPUT }},
+    {{ "RegisterAction", "underflow" }, { param_t::VALUE, param_t::OUTPUT }},
+#ifdef HAVE_JBAY
+    {{ "LearnAction", "apply" },        { param_t::VALUE, param_t::HASH, param_t::LEARN,
+                                          param_t::MATCH }},
+#endif
+    {{ "selector_action", "apply" },    { param_t::VALUE, param_t::OUTPUT }}
+};
+
 bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
     BUG_CHECK(!reg_action, "%s: Nested extern", di->srcInfo);
     BUG_CHECK(di->properties.empty(), "direct from P4_14 salu blackbox no longer supported");
     reg_action = di;
+    auto type = di->type;
+    if (auto st = type->to<IR::Type_Specialized>())
+        type = st->baseType;
+    action_type_name = type->toString();
     return true;
 }
 
@@ -531,17 +642,29 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
             salu->dual = nfields > 1;;
             if (bits->size == 1)
                 bits = nullptr; } }
-    if (bits && bits->size == 64 && !salu->dual) {
-        // Some (broken?) test programs use width 1x64 when they really mean 2x32
-        salu->dual = true;
-    } else if (!bits ||
-               (bits->size != 1 && bits->size != 8 && bits->size != 16 && bits->size != 32)) {
-        error("Unsupported register element type %s for stateful alu %s", regtype, salu); }
+    if (bits) {
+        if (bits->size == 1 && !salu->dual) {
+            // ok
+        } else if (bits->size == 64 && !salu->dual) {
+            // Some (broken?) test programs use width 1x64 when they really mean 2x32
+            salu->dual = true;
+        } else if (bits->size < 8) {
+            // too small
+            bits = nullptr;
+        } else if (bits->size > Device::statefulAluSpec().MaxSize) {
+            // too big
+            bits = nullptr;
+        } else if (bits->size & (bits->size - 1)) {
+            // not a power of two
+            bits = nullptr; } }
+    if (!bits) {
+        error("Unsupported register element type %s for stateful alu %s", regtype, salu);
+        return false; }
 
     // For a 1bit SALU, the driver expects a set and clr instr. Check if these
     // instr are already present, if not add them. Test - p4factory stful.p4 -
     // TestOneBit
-    if (bits && bits->size == 1) {
+    if (bits->size == 1) {
         std::set<cstring> set_clr { "set_bit", "clr_bit" };
         for (auto &salu_action : salu->instruction) {
             auto &salu_action_instr = salu_action.second;

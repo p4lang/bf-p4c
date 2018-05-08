@@ -251,3 +251,10 @@ p4c_add_xfail_reason("jbay"
   "condition expression too complex"
   testdata/p4_14_samples/header-stack-ops-bmv2.p4
 )
+
+# BRIG-640
+p4c_add_xfail_reason("jbay"
+  "Compiler Bug.*: Shifting extract to negative position"
+  extensions/p4_tests/p4_16/jbay/triv_ipv4.p4
+  extensions/p4_tests/p4_16/jbay/hwlearn1.p4
+)

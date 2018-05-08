@@ -601,9 +601,9 @@ extern RegisterAction<T, U> {
     @optional abstract void underflow(@optional inout T value, @optional out U rv);
 }
 
-extern DirectRegisterAction<T, U, P> {
-    DirectRegisterAction(DirectRegister<T> reg);
-    abstract void apply(inout T value, out U rv);
+extern LearnAction<T, D, U> {
+    LearnAction(Register<T> reg);
+    abstract void apply(inout T value, in D digest, in bool learn, out bit<2> match);
     U execute();
 }
 

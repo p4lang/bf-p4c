@@ -1079,6 +1079,10 @@ static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *fiel
         byte.flags =
             flags | need_align_flags[sl.container.log2sz()][(sl.container_bit/8U) & 3]
                   | need_align_flags[extra_align][index & 3];
+        // FIXME -- for (jbay) 128-bit salu, extra_align ends up being 3, so we're not adding
+        // any extra alignment here as it falls into the 'not yet allocated'.  This is either
+        // a happy accident, or incorrect -- I'm not sure if we need extra alignment for this
+        // case.  It will generally fill the entire 128-bit group, or use hash anyways.
         if (byte_type == IXBar::ATCAM) {
             byte.set_spec(IXBar::ATCAM_DOUBLE);
         } else if (byte_type == IXBar::PARTITION_INDEX) {
@@ -1837,7 +1841,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
          * in the Tofino uArch doc */
         extra_align = floor_log2(salu->width) - 3;
         if (salu->dual) extra_align--;
-        BUG_CHECK(extra_align <= 2, "Bad SatefulAlu width"); }
+        BUG_CHECK(extra_align <= 3, "Bad SatefulAlu width"); }
     salu->apply(FindFieldsToAlloc(phv, map_alloc, fields_needed, extra_align));
     unsigned width = salu->width/8U;
     if (!salu->dual) width *= 2;

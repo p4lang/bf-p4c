@@ -246,6 +246,7 @@ list_element
                 $$ = command($2, $6, yychar == '\n' ? 2 : 1); }
         | '-' key ':' '\n' indent_elements { $$ = singleton_map($2, $5); }
         | '-' '?' value ':' '\n' indent_elements { $$ = singleton_map($3, $6); }
+        | '-' '\n' { $$ = value(strdup(""), yychar == '\n' ? 2 : 1); }
         ;
 
 key : ID { $$ = VAL($1); }

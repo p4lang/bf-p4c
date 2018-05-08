@@ -38,7 +38,8 @@ static int decode_push_pop(const value_t &v) {
 }
 
 bool StatefulTable::setup_jbay(const pair_t &kv) {
-    if (kv.key.type == tCMD && kv.key == "sbus") {
+    if (kv.key == "sbus") {
+        // FIXME -- this should be in the stateful action setup as it is per action?
         if (!CHECKTYPE(kv.value, tMAP)) return true;
         for (auto &el : kv.value.map) {
             if (el.key == "match")
@@ -48,13 +49,6 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
             else
                 warning(el.key.lineno, "ignoring unknown item %s in sbus of table %s",
                         value_desc(el.key), name()); }
-        for (auto &el : kv.key.vec) {
-            if (el == "and") sbus_and = true;
-            else if (el == "or") sbus_or = true;
-            else if (el == "not") sbus_invert = true;
-            else if (el != "sbus")
-                warning(el.lineno, "ignoring unknown item %s in sbus of table %s",
-                        value_desc(el), name()); }
     } else if (kv.key == "fifo" || kv.key == "stack") {
         if (stateful_counter_mode) {
             error(kv.key.lineno, "Conflicting log counter functions in %s", name());

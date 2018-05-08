@@ -28,15 +28,9 @@ int CounterPerWord(const IR::MAU::Counter *ctr) {
 }
 
 int RegisterPerWord(const IR::MAU::StatefulAlu *reg) {
-    if (reg->width <= 0)
-        warning("%s: No width in register %s, using 8", reg->srcInfo, reg->name);
-    if (reg->width == 1) return 128;
-    if (reg->width <= 8) return 16;
-    if (reg->width <= 16) return 8;
-    if (reg->width <= 32) return 4;
-    if (reg->width > 64)
-        error("%s: Maximum width for register %s is 64 bits", reg->srcInfo, reg->name);
-    return 2;
+    BUG_CHECK(reg->width > 0 && (reg->width & (reg->width-1)) == 0,
+              "register width not a power of two");
+    return 128/reg->width;
 }
 
 int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
