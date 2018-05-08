@@ -191,7 +191,7 @@ def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
     return p.returncode == 0
 
 def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform, port_map,
-                     verbose_model_log, extra_args=[]):
+                     verbose_model_log, extra_args=[], installdir="/usr/local"):
     if verbose_model_log:
         enable_verbose_model_log()
 
@@ -209,7 +209,10 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     # for pdfixed
     os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device+'pd')
     # res_pd_rpc -- bf-drivers still uses tofino to install res_pd_rpc: 'tofino' should be device
-    res_pd_rpc = os.path.join('/usr', 'local', 'lib', 'python2.7', 'dist-packages', 'tofino')
+    if installdir == "/usr/local":
+        res_pd_rpc = os.path.join(installdir, 'lib', 'python2.7', 'dist-packages', 'tofino')
+    else:
+        res_pd_rpc = os.path.join(installdir, 'lib', 'python2.7', 'site-packages', 'tofino')
     os.environ['PYTHONPATH'] += ":" + res_pd_rpc
     debug('PYTHONPATH={}'.format(os.environ['PYTHONPATH']))
 
@@ -443,22 +446,6 @@ def main():
             sys.exit(1)
 
     PTF = findbin(top_builddir, 'PTF')
-
-    if args.test_only:
-        success = False
-        if args.pdtest is None:
-            success = run_pi_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
-                                    port_map, args.stftest, args.platform, args.verbose_model_log,
-                                    extra_ptf_args)
-        else:
-            success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
-                                   args.testdir, args.platform, port_map, args.verbose_model_log,
-                                   extra_ptf_args)
-        if not success:
-            error("Error when running PTF tests")
-            sys.exit(1)
-        sys.exit(0)
-
     BF_SWITCHD = findbin(top_builddir, 'BF_SWITCHD_' + device)
     HARLYN_MODEL = findbin(top_builddir, 'HARLYN_MODEL_' + device)
 
@@ -468,6 +455,21 @@ def main():
     debug("Using bf_switchd from: {}".format(BF_SWITCHD))
     debug("Using model from: {}".format(HARLYN_MODEL))
     debug("Tools install directory is at: {}".format(BFD_INSTALLDIR))
+
+    if args.test_only:
+        success = False
+        if args.pdtest is None:
+            success = run_pi_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
+                                    port_map, args.stftest, args.platform, args.verbose_model_log,
+                                    extra_ptf_args)
+        else:
+            success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
+                                       args.testdir, args.platform, port_map, args.verbose_model_log,
+                                       extra_ptf_args, installdir=BFD_INSTALLDIR)
+        if not success:
+            error("Error when running PTF tests")
+            sys.exit(1)
+        sys.exit(0)
 
     dirname = tempfile.mkdtemp(prefix=args.name)
     os.chmod(dirname, 0o777)
@@ -508,8 +510,8 @@ def main():
 
             if args.pdtest is not None:
                 success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
-                                       args.testdir, args.platform, port_map, args.verbose_model_log,
-                                       extra_ptf_args)
+                                           args.testdir, args.platform, port_map, args.verbose_model_log,
+                                           extra_ptf_args, installdir=BFD_INSTALLDIR)
             else:
                 success = update_config(args.name, args.grpc_addr,
                                     p4info_path, bin_path, cxt_json_path)
