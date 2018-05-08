@@ -106,7 +106,7 @@ endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 if (PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
-    "IR structure not yet handled by the ActionAnalysis pass"
+    "The following operation is not yet supported"
     extensions/p4_tests/p4_14/p4-tests/programs/opcode_test/opcode_test.p4
     )
 
@@ -291,11 +291,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/source_routing.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "error: src2 must be phv register"
-  extensions/p4_tests/p4_14/test_config_88_testing_action_data_allocation_3.p4
-  )
-
 # Checksum16 is deprecated
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for"
@@ -325,9 +320,14 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-102
 p4c_add_xfail_reason("tofino"
-  "IR structure not yet handled by the ActionAnalysis pass"
+  "The following operation is not yet supported"
   extensions/p4_tests/p4_14/test_config_235_funnel_shift.p4
   extensions/p4_tests/p4_14/p4-tests/programs/opcode_test/opcode_test.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "The following operation is not yet supported"
+  extensions/p4_tests/p4_14/test_config_88_testing_action_data_allocation_3.p4
   )
 
 p4c_add_xfail_reason("tofino"

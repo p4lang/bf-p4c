@@ -3,6 +3,7 @@
 #include <set>
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/bridged_metadata_replacement.h"
+#include "bf-p4c/common/check_for_unimplemented_features.h"
 #include "bf-p4c/common/check_header_refs.h"
 #include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/elim_unused.h"
@@ -119,6 +120,7 @@ Backend::Backend(const BFN_Options& options) :
     bridged_fields(phv) {
     addPasses({
         new DumpPipe("Initial table graph"),
+        new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
         new MultipleApply,
         new CheckStatefulAlu,

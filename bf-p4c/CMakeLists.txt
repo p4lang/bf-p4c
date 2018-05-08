@@ -88,7 +88,9 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/alias.cpp
   common/asm_output.cpp
   common/bridged_metadata_replacement.cpp
+  common/check_for_unimplemented_features.cpp
   common/check_header_alignment.cpp
+  common/collect_global_pragma.cpp
   common/copy_header_eliminator.cpp
   common/elim_unused.cpp
   common/extract_maupipe.cpp
@@ -98,15 +100,14 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/live_range_overlay.cpp
   common/metadata_init.cpp
   common/multiple_apply.cpp
-  common/rewrite.cpp
   common/param_binding.cpp
   common/parser_overlay.cpp
   common/parser_critical_path.cpp
   common/path_linearizer.cpp
+  common/rewrite.cpp
   common/simplify_references.cpp
   common/slice.cpp
   common/type_categories.cpp
-  common/collect_global_pragma.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_SRCS}")
 build_unified(BF_P4C_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -116,6 +117,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/autoindent.h
   common/blockmap.h
   common/bridged_metadata_replacement.h
+  common/check_for_unimplemented_features.h
   common/check_header_alignment.h
   common/check_header_refs.h
   common/collect_global_pragma.h
