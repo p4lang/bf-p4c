@@ -54,7 +54,7 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
     "switch_msdc_ipv4" ${switchtest} "${testExtraArgs} -DMSDC_IPV4_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_ipv4")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc_l3" ${switchtest} "${testExtraArgs} -DMSDC_L3_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_l3")
 
