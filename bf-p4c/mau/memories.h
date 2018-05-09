@@ -139,11 +139,11 @@ struct Memories {
         /* FIXME -- when tracking EXACT table memuse, do we need to track which way
          * each memory is allocated to?  For now, we do not. */
         struct Row {
-            int         row, bus, group, alloc;
+            int         row, bus, word, alloc;
             safe_vector<int> col, mapcol;
-            Row() : row(-1), bus(-1), group(-1), alloc(-1) {}
-            explicit Row(int r, int b = -1, int g = -1, int a = -1)
-                : row(r), bus(b), group(g), alloc(a) {}
+            Row() : row(-1), bus(-1), word(-1), alloc(-1) {}
+            explicit Row(int r, int b = -1, int w = -1, int a = -1)
+                : row(r), bus(b), word(w), alloc(a) {}
             void dbprint(std::ostream &out) const {
                 out << "Row " << row << " with bus " << bus;
             }

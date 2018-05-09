@@ -71,7 +71,7 @@ protected:
     virtual void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type);
     virtual bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type);
     void setup_layout(std::vector<Layout> &, const value_t *row, const value_t *col,
-                      const value_t *bus, const char *subname = "");
+                      const value_t *bus, const value_t *word, const char *subname = "");
     void setup_logical_id();
     void setup_actions(value_t &);
     void setup_maprams(value_t &);

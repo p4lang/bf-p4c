@@ -816,6 +816,8 @@ void Memories::compress_row(Use &alloc) {
     for (size_t i = 0; i < alloc.row.size() - 1; i++) {
         if (alloc.row[i].row == alloc.row[i+1].row &&
             alloc.row[i].bus == alloc.row[i+1].bus) {
+            BUG_CHECK(alloc.row[i].word == alloc.row[i+1].word, "SRAMs that share a row "
+                      "and bus must share the same word");
             alloc.row[i].col.insert(alloc.row[i].col.end(), alloc.row[i+1].col.begin(),
                                     alloc.row[i+1].col.end());
             alloc.row.erase(alloc.row.begin() + i + 1);
@@ -827,7 +829,7 @@ void Memories::compress_row(Use &alloc) {
         [=](const Memories::Use::Row &a, const Memories::Use::Row &b) {
         int t;
         if ((t = a.alloc - b.alloc) != 0) return t < 0;
-        if ((t = a.group - b.group) != 0) return t < 0;
+        if ((t = a.word - b.word) != 0) return t < 0;
         return a.row < b.row;
     });
 }
@@ -1258,21 +1260,21 @@ bool Memories::allocate_all_ternary() {
             bool split_midbyte = false;
             if (!find_ternary_stretch(TCAMs_necessary, row, col, midbyte, split_midbyte))
                 return false;
-            int group = 0;
+            int word = 0;
             if (split_midbyte)
-                group = TCAMs_necessary - 1;
+                word = TCAMs_necessary - 1;
             for (int i = row; i < row + TCAMs_necessary; i++) {
                  tcam_use[i][col] = name;
-                 auto tcam = ta->table_format->tcam_use[group];
+                 auto tcam = ta->table_format->tcam_use[word];
                  if (tcam_midbyte_use[i/2][col] >= 0 && tcam.byte_group >= 0)
                      BUG_CHECK(tcam_midbyte_use[i/2][col] == tcam.byte_group, "Two contiguous "
                          "TCAMs cannot correct share midbyte");
                  else if (tcam_midbyte_use[i/2][col] < 0)
                      tcam_midbyte_use[i/2][col] = tcam.byte_group;
-                 alloc.row.emplace_back(i, col, group, allocation_count);
+                 alloc.row.emplace_back(i, col, word, allocation_count);
                  alloc.row.back().col.push_back(col);
-                 group++;
-                 group %= TCAMs_necessary;
+                 word++;
+                 word %= TCAMs_necessary;
             }
             allocation_count++;
         }
@@ -1285,7 +1287,7 @@ bool Memories::allocate_all_ternary() {
             [=](const Memories::Use::Row &a, const Memories::Use::Row &b) {
             int t;
             if ((t = a.alloc - b.alloc) != 0) return t < 0;
-            if ((t = a.group - b.group) != 0) return t < 0;
+            if ((t = a.word - b.word) != 0) return t < 0;
             return a.row < b.row;
         });
     }
@@ -2255,12 +2257,15 @@ void Memories::fill_swbox_side(swbox_fill candidates[SWBOX_TYPES], int row, RAM_
         if (candidates[ACTION].group == candidates[OFLOW].group) {
             BUG("Shouldn't be the same for action and oflow");
         } else {
+            /*
             auto name = candidates[ACTION].group->get_name();
             auto &alloc = (*candidates[ACTION].group->ta->memuse)[name];
             size_t size = alloc.row.size();
             auto &row2 = alloc.row[size - 1]; auto &row1 = alloc.row[size - 2];
             row1.col.insert(row1.col.end(), row2.col.begin(), row2.col.end());
+            row1.word.insert(row1.word.end(), row2.word.begin(), row2.word.end());
             alloc.row.erase(alloc.row.begin() + size - 1);
+            */
         }
     }
 }
@@ -2278,13 +2283,15 @@ void Memories::fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, swi
     if (type == OFLOW) {
         overflow_bus[row][side] = name;
         alloc.row.emplace_back(row);
+        if (candidate.group->type == SRAM_group::ACTION)
+            alloc.row.back().word = candidate.group->number;
     } else if (type == SYNTH) {
         BUG_CHECK(side == RIGHT, "Allocating Synth2Port table on left side of RAM array");
         twoport_bus[row] = name;
         alloc.row.emplace_back(row);
     } else if (type == ACTION) {
         action_data_bus[row][side] = name;
-        alloc.row.emplace_back(row, side);
+        alloc.row.emplace_back(row, side, candidate.group->number);
         alloc.home_row.emplace_back(2*row + side, candidate.group->number);
         candidate.group->recent_home_row = row;
     }
@@ -3097,14 +3104,6 @@ bool Memories::find_mem_and_bus_for_idletime(
     }
 
     const char* which_half = top_half ? "top" : "bottom";
-
-    /*
-    if (total_requested < total_mem_required) {
-        mem_locs.clear();
-        LOG4("Ran out of mapram in " << which_half << "half");
-        return false;
-    }
-    */
 
     // find a bus
     bool found_bus = false;

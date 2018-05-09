@@ -21,7 +21,7 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "color_maprams") {
             if (CHECKTYPE(kv.value, tMAP)) {
                 setup_layout(color_maprams, get(kv.value.map, "row"),
-                             get(kv.value.map, "column"), get(kv.value.map, "bus"));
+                             get(kv.value.map, "column"), get(kv.value.map, "bus"), 0);
                 if (auto *vpn = get(kv.value.map, "vpn"))
                     if (CHECKTYPE(*vpn, tVEC))
                         setup_vpns(color_maprams, &vpn->vec, true); }

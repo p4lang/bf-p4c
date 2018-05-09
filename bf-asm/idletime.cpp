@@ -3,7 +3,7 @@
 #include "tables.h"
 
 void IdletimeTable::setup(VECTOR(pair_t) &data) {
-    setup_layout(layout, get(data, "row"), get(data, "column"), get(data, "bus"));
+    setup_layout(layout, get(data, "row"), get(data, "column"), get(data, "bus"), 0);
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "precision") {
             if (CHECKTYPE(kv.value, tINT)) {

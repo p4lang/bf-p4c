@@ -826,6 +826,7 @@ class memory_vector {
 std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
     if (v.vec.size() != 1) out << "[ ";
     const char *sep = "";
+
     int col_adjust = (v.type == Memories::Use::TERNARY  ||
                       v.type == Memories::Use::IDLETIME || v.is_mapcol)  ? 0 : 2;
     bool logical = v.type >= Memories::Use::COUNTER;
@@ -838,11 +839,12 @@ std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
 }
 
 void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem) const {
-    safe_vector<int> row, bus, home_row;
+    safe_vector<int> row, bus, home_row, word;
     bool logical = mem.type >= Memories::Use::COUNTER;
     bool have_bus = !logical;
     bool have_mapcol = mem.is_twoport();
     bool have_col = false;
+    bool have_word = mem.type == Memories::Use::ACTIONDATA;
 
     for (auto &r : mem.row) {
         if (logical) {
@@ -854,11 +856,16 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             if (r.bus < 0) have_bus = false;
             if (r.col.size() > 0) have_col = true;
         }
+
+        if (have_word)
+            word.push_back(r.word);
     }
 
     if (row.size() > 1) {
         out << indent << "row: " << row << std::endl;
         if (have_bus) out << indent << "bus: " << bus << std::endl;
+        if (have_word)
+            out << indent << "word: " << word << std::endl;
         if (have_col) {
             out << indent << "column:" << std::endl;
             for (auto &r : mem.row)
@@ -869,6 +876,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             for (auto &r : mem.row)
                 out << indent << "- " << memory_vector(r.mapcol, mem.type, true) << std::endl;
         }
+
     } else {
         out << indent << "row: " << row[0] << std::endl;
         if (have_bus) out << indent << "bus: " << bus[0] << std::endl;

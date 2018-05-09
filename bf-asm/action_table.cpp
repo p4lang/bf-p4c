@@ -168,7 +168,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
     action_id = -1;
     auto *row = get(data, "row");
     if (!row) row = get(data, "logical_row");
-    setup_layout(layout, row, get(data, "column"), 0);
+    setup_layout(layout, row, get(data, "column"), 0, get(data, "word"));
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "format") {
             const char *action = nullptr;
@@ -224,15 +224,9 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
                 p4_table = P4Table::get(P4Table::ActionData, kv.value.map);
-        } else if (kv.key == "row" || kv.key == "logical_row" || kv.key == "column") {
+        } else if (kv.key == "row" || kv.key == "logical_row" || kv.key == "column"
+                   || kv.key == "word") {
             /* already done in setup_layout */
-        } else if (kv.key == "word") {
-            if (CHECKTYPE(kv.value, tVEC)) {
-                if (kv.value.vec.size != layout.size())
-                    error(kv.value.lineno, "word: does not match number of rows");
-                else for (unsigned i = 0; i < layout.size(); ++i)
-                    if (CHECKTYPE(kv.value[i], tINT))
-                        layout[i].word = kv.value[i].i; }
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
