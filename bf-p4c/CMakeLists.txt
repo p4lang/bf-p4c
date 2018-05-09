@@ -33,6 +33,7 @@ set (BF_P4C_IR_SRCS
   ir/tofino_write_context.cpp
   mau/hash_function.cpp
   parde/clot.cpp
+  parde/marshal.cpp
   parde/match_register.cpp
   phv/phv.cpp
   )
@@ -46,6 +47,7 @@ set (BF_P4C_IR_HDRS
   ir/tofino_write_context.h
   mau/hash_function.h
   parde/clot.h
+  parde/marshal.h
   parde/match_register.h
   phv/phv.h
   )
@@ -228,7 +230,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_HDRS}")
 
 set (BF_P4C_BACKEND_PARDE_SRCS
   parde/add_parde_metadata.cpp
-  parde/bridge_metadata.cpp
+  parde/adjust_extract.cpp
   parde/checksum.cpp
   parde/clot_info.cpp
   parde/deparser_output.cpp
@@ -250,8 +252,8 @@ build_unified(BF_P4C_BACKEND_PARDE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_PARDE_HDRS
   parde/add_parde_metadata.h
+  parde/adjust_extract.h
   parde/asm_output.h
-  parde/bridge_metadata.h
   parde/checksum.h
   parde/clot_info.h
   parde/epb_config.h
@@ -259,6 +261,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/field_packing.h
   parde/gen_deparser.h
   parde/lower_parser.h
+  parde/marshal.h
   parde/match_register.h
   parde/merge_parser_state.h
   parde/mirror.h

@@ -10,7 +10,6 @@
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/parde/bridge_metadata.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
@@ -227,98 +226,6 @@ TEST_F(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
         { "usedOnlyInMAU.field", boost::none },
         { "meta.metadataField", boost::none },
     });
-}
-
-TEST_F(TofinoFieldAlignment, DISABLED_BridgedMetadataRespectsAlignment) {
-    auto& options = BFNContext::get().options();
-    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
-
-    auto test = TofinoPipeTestCase::create(P4_SOURCE(P4Headers::V1MODEL, R"(
-        header H { bit<8> field; }
-        struct Headers { H h; }
-        struct Metadata { bit<8> metadataField; }
-
-        parser parse(packet_in packet, out Headers headers, inout Metadata meta,
-                     inout standard_metadata_t sm) {
-            state start {
-                packet.advance(3);
-                // This is really an extract of bits [3, 11) of the input buffer.
-                meta.metadataField = packet.lookahead<bit<8>>();
-                packet.advance(5);
-                transition accept;
-            }
-        }
-
-        control verifyChecksum(inout Headers headers, inout Metadata meta) { apply { } }
-
-        control ingress(inout Headers headers, inout Metadata meta,
-                    inout standard_metadata_t sm) { apply { } }
-
-        control egress(inout Headers headers, inout Metadata meta,
-                    inout standard_metadata_t sm) {
-            apply {
-                headers.h.field = meta.metadataField;
-            }
-        }
-
-        control computeChecksum(inout Headers headers, inout Metadata meta) { apply { } }
-
-        control deparse(packet_out packet, in Headers headers) {
-            apply {
-                packet.emit(headers.h);
-            }
-        }
-
-        V1Switch(parse(), verifyChecksum(), ingress(), egress(),
-                 computeChecksum(), deparse()) main;
-    )"));
-
-    ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::diagnosticCount());
-
-    // We need to run enough of the backend to generate the bridged metadata
-    // parser state.
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
-    FieldDefUse defuse(phv);
-    PassManager addBridgedMetadataParserState = {
-        new CollectHeaderStackInfo,
-        new CollectPhvInfo(phv),
-        &defuse,
-        new AddBridgedMetadata(phv, defuse)
-    };
-    auto* pipe = test->pipe->apply(addBridgedMetadataParserState);
-
-    // Check that we computed the correct alignments.
-    checkFieldAlignment(pipe, {
-        { "h.field", ExpectedAlignment{/* network */ 0, /* little endian */ 0} },
-        { "meta.metadataField", ExpectedAlignment{/* network */ 3, /* little endian */ 5} },
-    });
-
-    // If the generated bridged metadata parser state used the wrong alignment,
-    // CollectPhvInfo() will report an error because it will detect inconsistent
-    // alignments.
-    EXPECT_EQ(0u, ::diagnosticCount());
-
-    // Verify that the generated parser state contains an extract for
-    // `meta.metadataField` with the correct alignment.
-    bool foundBridgedMetadataState = false;
-    forAllMatching<IR::BFN::ParserState>(pipe->thread[EGRESS].parser,
-                  [&](const IR::BFN::ParserState* state) {
-        if (state->name != "^bridge_metadata_extract") return;
-        foundBridgedMetadataState = true;
-
-        ASSERT_EQ(1u, state->statements.size());
-        auto* extract = state->statements[0]->to<IR::BFN::Extract>();
-        ASSERT_TRUE(extract != nullptr);
-        auto* bufferSource = extract->source->to<IR::BFN::PacketRVal>();
-        ASSERT_TRUE(bufferSource != nullptr);
-        EXPECT_EQ(3, bufferSource->range().lo % 8);
-    });
-
-    EXPECT_TRUE(foundBridgedMetadataState);
 }
 
 }  // namespace Test

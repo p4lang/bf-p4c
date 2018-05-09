@@ -27,7 +27,7 @@
 #include "bf-p4c/mau/table_seqdeps.h"
 #include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/parde/add_jbay_pov.h"
-#include "bf-p4c/parde/bridge_metadata.h"
+#include "bf-p4c/parde/adjust_extract.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/merge_parser_state.h"
 #include "bf-p4c/parde/resolve_computed.h"
@@ -193,6 +193,7 @@ Backend::Backend(const BFN_Options& options) :
         new DumpPipe("Final table graph"),
         new CheckForUnallocatedTemps(phv, uses, clot),
 
+        new AdjustExtract(phv),
         // Lower the parser IR to a target-specific representation. This *loses
         // information* about field reads and writes in the parser and deparser,
         // so after this point it's not safe to run CollectPhvInfo, FieldDefUse,

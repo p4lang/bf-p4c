@@ -37,7 +37,7 @@ analyzeResubmitStatement(const IR::MethodCallStatement* statement) {
     }
     const IR::ListExpression* sourceList = nullptr;
     {
-        sourceList = (*methodCall->arguments)[0]->to<IR::ListExpression>();
+        sourceList = (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
         if (!sourceList) {
             ::warning("Expected list of fields: %1%", methodCall);
             return boost::none;
@@ -141,7 +141,9 @@ FieldPacking* packResubmitFields(const ResubmitSources* extracts) {
             packing->padToAlignment(8);
             continue;
         }
-        packing->appendField(source, field->type->width_bits());
+        // TODO(yumin): shouldn't we pack before the field instead of after?
+        //              as it is how we do it on bridged and mirrored.
+        packing->appendField(source, field->type->width_bits(), INGRESS);
         packing->padToAlignment(8);
     }
 

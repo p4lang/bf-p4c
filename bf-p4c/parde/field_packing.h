@@ -24,6 +24,7 @@ struct FieldPacking {
     struct PackedItem {
         /// The packed field, or null if this is a padding item.
         const IR::Expression* field;
+        gress_t gress;
 
         /// For phase 0, the logical source of this field - generally an action
         /// parameter. This is exposed to the control plane.
@@ -33,6 +34,17 @@ struct FieldPacking {
         unsigned width;
 
         bool isPadding() const { return field == nullptr; }
+
+        explicit PackedItem(unsigned width)
+            : field(nullptr), width(width) { }
+        PackedItem(const IR::Expression* field,
+                   gress_t gress,
+                   cstring source,
+                   unsigned width)
+            : field(field), gress(gress), source(source), width(width) { }
+
+        static PackedItem makePadding(unsigned width) {
+            return PackedItem(width); }
     };
 
     typedef std::vector<PackedItem>::iterator iterator;
@@ -74,9 +86,11 @@ struct FieldPacking {
      *               uses the names of the action parameter and not the metadata
      *               fields we assign those parameters to.
      * @param width  The width in bits of the field.
+     * @param gress  The gress of the field, if it matters.
      */
-    void appendField(const IR::Expression* field, cstring source, unsigned width);
-    void appendField(const IR::Expression* field, unsigned width);
+    void appendField(const IR::Expression* field, cstring source,
+                     unsigned width, gress_t gress = INGRESS);
+    void appendField(const IR::Expression* field, unsigned width, gress_t gress = INGRESS);
 
     /// Appends the specified number of bits of padding to the sequence of
     /// packed items.

@@ -2,6 +2,7 @@
 
 #include "frontends/p4/callGraph.h"
 #include "ir/ir.h"
+#include "bf-p4c/parde/gen_deparser.h"
 
 namespace {
 

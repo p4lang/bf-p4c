@@ -2,17 +2,18 @@
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
+#include "bf-p4c/parde/marshal.h"
 
 namespace BFN {
 
-void FieldPacking::appendField(const IR::Expression* field, unsigned width) {
-    appendField(field, cstring(), width);
+void FieldPacking::appendField(const IR::Expression* field, unsigned width, gress_t gress) {
+    appendField(field, cstring(), width, gress);
 }
 
 void FieldPacking::appendField(const IR::Expression* field, cstring source,
-                               unsigned width) {
+                               unsigned width, gress_t gress) {
     BUG_CHECK(field != nullptr, "Packing null field?");
-    fields.push_back({field, source, width});
+    fields.push_back(PackedItem(field, gress, source, width));
     totalWidth += width;
 }
 
@@ -21,7 +22,7 @@ void FieldPacking::appendPadding(unsigned width) {
     if (!fields.empty() && fields.back().isPadding()) {
         fields.back().width += width;
     } else {
-        fields.push_back({nullptr, cstring(), width});
+        fields.push_back(PackedItem::makePadding(width));
     }
     totalWidth += width;
 }
@@ -31,7 +32,7 @@ void FieldPacking::append(const FieldPacking& packing) {
         if (item.isPadding())
             appendPadding(item.width);
         else
-            appendField(item.field, item.source, item.width);
+            appendField(item.field, item.source, item.width, item.gress);
     }
 }
 
@@ -68,11 +69,17 @@ FieldPacking::createExtractionState(gress_t gress, cstring stateName,
 
     IR::Vector<IR::BFN::ParserPrimitive> extracts;
     unsigned currentBit = 0;
+    size_t pre_padding = 0;
     for (auto& item : fields) {
         if (!item.isPadding()) {
             auto* extract = new IR::BFN::Extract(item.field,
               new IR::BFN::PacketRVal(StartLen(currentBit, item.width)));
+            extract->marshaled_from =
+                MarshaledFrom(item.gress, item.field->toString(), pre_padding);
             extracts.push_back(extract);
+            pre_padding = 0;
+        } else {
+            pre_padding = item.width;
         }
         currentBit += item.width;
     }

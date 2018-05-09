@@ -228,6 +228,14 @@ class Clustering : public PassManager {
         /// that appear in the same list.
         void end_apply() override;
 
+        /// Add padding into slice list for fields that will be marshaled, because they
+        /// have exact_container requirement but might be non-byte-aligned.
+        /// Singleton padding cluster will be inserted into @p cluster_set, if it is added
+        /// into @p slice_lists.
+        void addPaddingForMarshaledFields(
+                ordered_set<const PHV::RotationalCluster*>& cluster_set,
+                ordered_set<PHV::SuperCluster::SliceList*>& slice_lists);
+
      public:
         explicit MakeSuperClusters(Clustering &self)
         : self(self), phv_i(self.phv_i), conflicts_i(self.conflicts_i) { }

@@ -17,6 +17,5 @@ set (TOFINO_MUST_PASS_TESTS
   extensions/p4_tests/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4
   switch_msdc
   switch_7.0_msdc
-  switch_7.0_ent_dc_aggr
   switch_p4_16
   )

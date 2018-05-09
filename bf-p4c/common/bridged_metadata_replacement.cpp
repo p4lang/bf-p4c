@@ -5,6 +5,7 @@ Visitor::profile_t CollectBridgedFields::init_apply(const IR::Node* root) {
     orig_to_bridged.clear();
     bridged_to_orig.clear();
     bridged_to_external_name.clear();
+    orig_to_bridged_name.clear();
     return rv;
 }
 
@@ -20,6 +21,7 @@ void CollectBridgedFields::postorder(const IR::MAU::Instruction* inst) {
         bridged_to_orig[left] = right;
         orig_to_bridged[right] = inst->operands[0];
         bridged_to_external_name[left->name] = right->externalName();
+        orig_to_bridged_name[right->name] = left->name;
     }
 }
 
@@ -50,4 +52,22 @@ IR::Node* ReplaceOriginalFieldWithBridged::postorder(IR::Expression* expr) {
         }
     }
     return expr;
+}
+
+IR::BFN::Extract* ReplaceOriginalFieldWithBridged::postorder(IR::BFN::Extract* extract) {
+    if (extract->marshaled_from) {
+        auto marshaled_from = *extract->marshaled_from;
+        cstring full_name =
+            cstring::to_cstring(marshaled_from.gress) + "::" + marshaled_from.field_name;
+        if (mapping.orig_to_bridged_name.count(full_name)) {
+            cstring new_name = mapping.orig_to_bridged_name.at(full_name);
+            marshaled_from.field_name = cstring(new_name.findlast(':') + 1);
+            LOG1("Replacing string-based field name info in extract: " <<
+                 full_name << " with " << marshaled_from.field_name);
+            auto* new_extract = extract->clone();
+            new_extract->marshaled_from = marshaled_from;
+            return new_extract;
+        }
+    }
+    return extract;
 }

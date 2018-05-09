@@ -3,6 +3,8 @@
 #include <vector>
 #include <map>
 #include "lib/ordered_map.h"
+#include "bf-p4c/common/utils.h"
+#include "bf-p4c/parde/parde_visitor.h"
 
 namespace {
 

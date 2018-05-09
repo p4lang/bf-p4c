@@ -43,6 +43,8 @@ struct BridgeIngressToEgress : public Transform {
                                              IR::Type::Bits::get(8)));
 
         // The rest of the fields come from CollectBridgedFields.
+        // TODO(yumin): for __pad__ field, we should have a global variable to name
+        // them to avoid conflict.
         unsigned padFieldId = 0;
         for (auto& bridgedField : fieldsToBridge) {
             cstring fieldName = bridgedField.first + bridgedField.second;

@@ -492,7 +492,8 @@ void Clustering::MakeSuperClusters::end_apply() {
     for (auto& kv : self.fields_to_slices_i) {
         bool is_metadata = kv.first->metadata || kv.first->pov;
         bool has_constraints = kv.first->alignment || kv.first->no_split() ||
-                               kv.first->no_pack() || kv.first->is_checksummed();
+                               kv.first->no_pack() || kv.first->is_checksummed() ||
+                               kv.first->is_marshaled();
 
         // XXX(cole): Bridged metadata is treated as a header, except in the
         // egress pipeline, where it's treated as metadata.  We need to take
@@ -620,7 +621,10 @@ void Clustering::MakeSuperClusters::end_apply() {
                         these_lists.insert(new_list);
                         slices_in_these_lists.insert(slice); }
 
-        self.super_clusters_i.emplace_back(new PHV::SuperCluster(*cluster_set, these_lists)); }
+        // side-effect: cluster_set and these_lists might changes.
+        addPaddingForMarshaledFields(*cluster_set, these_lists);
+        self.super_clusters_i.emplace_back(new PHV::SuperCluster(*cluster_set, these_lists));
+    }
 
 
     if (LOGGING(1)) {
@@ -641,6 +645,65 @@ void Clustering::MakeSuperClusters::end_apply() {
                 LOG1(g); }
 }
 
+void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
+        ordered_set<const PHV::RotationalCluster*>& cluster_set,
+        ordered_set<PHV::SuperCluster::SliceList*>& these_lists) {
+    // Add paddings for marshaled fields slice list, to the size of the largest
+    // slice list, up to the largest container size.
+    // XXX(yumin): To make pa_container_size pragma work on marshaled fields, we
+    // set the minimal slice_list size to be 32-btis, so that slicing should take
+    // care of slicing redundent padding bits out.
+    int max_slice_list_size = 32;
+    for (const auto* slice_list : these_lists) {
+        int sum_bits = 0;
+        for (const auto& fs : *slice_list) {
+            sum_bits += fs.size(); }
+        max_slice_list_size = std::max(max_slice_list_size, sum_bits);
+    }
+    if (max_slice_list_size % 32 != 0) {
+        // Round up to the closest 32-bit.
+        max_slice_list_size = (max_slice_list_size / 32) * 32 + 32;
+    }
+
+    for (auto* slice_list : these_lists) {
+        if (std::any_of(slice_list->begin(), slice_list->end(),
+                        [] (const PHV::FieldSlice& fs) {
+                            return fs.field()->is_marshaled(); })) {
+            int sum_bits = 0;
+            for (const auto& fs : *slice_list) {
+                sum_bits += fs.size(); }
+            BUG_CHECK(max_slice_list_size >= sum_bits, "wrong max slice list size.");
+
+            bool has_bridged = std::any_of(slice_list->begin(), slice_list->end(),
+                                           [] (const PHV::FieldSlice& fs) {
+                                               return fs.field()->bridged; });
+            // If a slice has bridged field, then it's padding is handled by bridged metadata
+            // packing now. Adding extract padding here will make parse_bridged state wrong
+            // because we do not adjust bridged metadata state.
+            // TODO(yumin): in a long term, we need a way to deal with those marshaled fields,
+            // bridged/mirrored/resubmited uniformly.
+            if (has_bridged) {
+                continue; }
+            // If this field does not need padding, skip it.
+            if (max_slice_list_size == sum_bits) {
+                continue; }
+
+            auto* padding = phv_i.create_dummy_padding(max_slice_list_size - sum_bits,
+                                                       slice_list->front().gress());
+            padding->set_exact_containers(true);
+            auto padding_fs = PHV::FieldSlice(padding);
+            slice_list->push_back(padding_fs);
+            auto* aligned_cluster_padding =
+                new PHV::AlignedCluster(PHV::Kind::normal,
+                                        std::vector<PHV::FieldSlice>{padding_fs});
+            auto* rot_cluster_padding = new PHV::RotationalCluster({aligned_cluster_padding});
+            self.aligned_clusters_i.push_back(aligned_cluster_padding);
+            self.rotational_clusters_i.push_back(rot_cluster_padding);
+            cluster_set.insert(rot_cluster_padding);
+            LOG4("Added " << padding_fs << " for " <<  slice_list);
+        }
+    }
+}
 
 //***********************************************************************************
 //

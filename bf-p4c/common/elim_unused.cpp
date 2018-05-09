@@ -26,6 +26,17 @@ class ElimUnused::Instructions : public Transform {
         auto unit = findOrigCtxt<IR::BFN::Unit>();
         if (!unit) return extract;
 
+        // Do not eliminate extract that it is serialized from deparser so that its layout
+        // might be change due to phv allcoation.
+        // TODO(yumin): again, the reason we can not do it now is because that we do not have
+        // the `input buffer layout` stored with the parser state. Instead, we rely on all those
+        // primitives and shift and range to determine what is on the buffer, which has already
+        // created some troubles in ResolveComputed. Once we can do the input buffer layout
+        // refactoring, this can be removed as well, as long as from_marshaled is migrated onto
+        // input buffer layout as well.
+        if (extract->marshaled_from) {
+            return extract; }
+
         if (auto lval = extract->dest->to<IR::BFN::FieldLVal>()) {
             if (elim_extract(unit, lval->field)) {
                 LOG1("ELIM UNUSED " << extract << " IN UNIT " << DBPrint::Brief << unit);

@@ -395,6 +395,21 @@ class Field {
                                                        /// privatized field
     bool            is_checksummed_i = false;          /// true for fields used in checksum.
 
+    /** Marshaled fields are metadata fields serialized between a Tofino deparser and parser.
+     *  For example, mirrored field lists can be serialized from ingress deparser (when the mirrored
+     *  header is being created) to the ingress parser (when the mirrored header is being processed).
+     *
+     *  Marshaled fields differ from deparsed fields (i.e. the `deparsed_i` constraint) in that they
+     *  are not emitted on the wire.
+     *
+     *  XXX(yumin): Currently, only mirrored field lists are marked as marshaled, but the same
+     *  mechanism can be used for learning, recirculation, and bridged metadata.
+     **/
+    bool            is_marshaled_i = false;
+
+    /// true if hardware read the container validity bit, e.g. deparser paramerter, digest index
+    bool            read_container_valid_bit_i = false;
+
     //
     // operations on this field
     //
@@ -405,7 +420,6 @@ class Field {
     //
     bool            header_stack_pov_ccgf_i = false;   /// header stack pov owner
     bool            simple_header_pov_ccgf_i = false;  /// simple header ccgf
-    bool            read_container_valid_bit_i = false;  /// $valid is used for some purpose
     Field *ccgf_i = nullptr;           /// container contiguous group fields (ccgf)
                                        // (i) header stack povs: container FULL, no holes
                                        //     only when .$push exists -- see allocatePOV()
@@ -483,6 +497,9 @@ class Field {
 
     bool read_container_valid_bit() const                  { return read_container_valid_bit_i; }
     void set_read_container_valid_bit(bool b)              { read_container_valid_bit_i = b; }
+    bool is_marshaled() const                              { return is_marshaled_i; }
+    void set_is_marshaled(bool b)                          { is_marshaled_i = b; }
+
     bool privatizable() const                              { return privatizable_i; }
     void set_privatizable(bool b)                          { privatizable_i = b; }
     bool privatized() const                                { return privatized_i; }
@@ -730,6 +747,9 @@ class PhvInfo {
     /// the destination stored in the following map.
     ordered_map<cstring, cstring> aliasMap;
 
+    /// the dummy padding field names.
+    ordered_set<cstring> dummyPaddingNames;
+
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
 
@@ -789,6 +809,13 @@ class PhvInfo {
     const StructInfo struct_info(const IR::HeaderRef *hr) const {
         return struct_info(hr->toString()); }
     size_t num_fields() const { return all_fields.size(); }
+
+    PHV::Field* create_dummy_padding(size_t sz, gress_t gress) {
+        cstring name = cstring::make_unique(dummyPaddingNames, "__phv_dummy_padding__");
+        dummyPaddingNames.insert(name);
+        add(name, gress, sz, 0, false, false, false, /* isPad = */ true);
+        return field(name);
+    }
 
     std::vector<PHV::Field::alloc_slice>
     get_alloc(const IR::Expression* f) const {

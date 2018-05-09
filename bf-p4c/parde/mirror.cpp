@@ -37,7 +37,7 @@ analyzeMirrorStatement(const IR::MethodCallStatement* statement) {
     }
     const IR::ListExpression* fieldList = nullptr;
     {
-        fieldList = (*methodCall->arguments)[1]->to<IR::ListExpression>();
+        fieldList = (*methodCall->arguments)[1]->expression->to<IR::ListExpression>();
         if (!fieldList) {
             ::warning("Expected field list: %1%", methodCall);
             return boost::none;
@@ -132,7 +132,7 @@ struct FindMirroredFieldLists : public Inspector {
     P4::TypeMap* typeMap;
 };
 
-FieldPacking* packMirroredFieldList(const MirroredFieldList* fieldList) {
+FieldPacking* packMirroredFieldList(gress_t from_gress, const MirroredFieldList* fieldList) {
     auto* packing = new FieldPacking;
 
     for (auto* toMirror : *fieldList) {
@@ -178,7 +178,7 @@ FieldPacking* packMirroredFieldList(const MirroredFieldList* fieldList) {
         const int alignment = nextByteBoundary - fieldSize;
         packing->padToAlignment(8, alignment);
 
-        packing->appendField(source, field->type->width_bits());
+        packing->appendField(source, field->type->width_bits(), from_gress);
         packing->padToAlignment(8);
     }
 
@@ -305,7 +305,9 @@ ExtractMirrorFieldPackings::ExtractMirrorFieldPackings(P4::ReferenceMap *refMap,
         findMirror,
         new VisitFunctor([findMirror, fieldPackings]() {
             for (auto& fieldList : findMirror->fieldLists) {
-                auto* packing = BFN::packMirroredFieldList(fieldList.second);
+                auto* packing = BFN::packMirroredFieldList(
+                        fieldList.first.first,  // gress
+                        fieldList.second);
                 fieldPackings->emplace(fieldList.first, packing);
             }
         }),

@@ -1202,6 +1202,25 @@ void AllocatePHV::end_apply() {
         BUG_CHECK(!mutex_i(field.id, field.id),
                   "Field %1% can be overlaid with itseld.", field.name); }
 
+    // Mirror metadata allocation constraint:
+    for (auto gress : {INGRESS, EGRESS}) {
+        auto* mirror_id = phv_i.field(
+                cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_id");
+        if (mirror_id) {
+            mirror_id->set_no_split(true);
+            mirror_id->set_deparsed_bottom_bits(true);
+            pragmas_i.pa_container_sizes().add_constraint(mirror_id, { PHV::Size::b16 });
+        }
+
+        auto* mirror_src = phv_i.field(
+                cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_source");
+        if (mirror_src) {
+            mirror_src->set_no_split(true);
+            mirror_src->set_deparsed_bottom_bits(true);
+            pragmas_i.pa_container_sizes().add_constraint(mirror_src, { PHV::Size::b8 });
+        }
+    }
+
     // HACK WARNING:
     // The meter hack, all destination of meter color go to 8-bit container.
     // TODO(yumin): remove this once this hack is removed in mau.
@@ -1734,7 +1753,9 @@ BruteForceAllocationStrategy::remove_singleton_slicelist_metadata(
         if (fs.size() != int(super_cluster->aggregate_size())
             || !fs.field()->metadata
             || fs.field()->pov
-            || fs.field()->is_checksummed()) {
+            || fs.field()->is_checksummed()
+            || fs.field()->deparsed_bottom_bits()
+            || fs.field()->is_marshaled()) {
             rst.push_back(super_cluster);
             continue; }
 
@@ -1757,6 +1778,9 @@ BruteForceAllocationStrategy::tryAllocation(
         remove_unreferenced_clusters(cluster_groups_input);
 
     // remove singleton metadata slice list
+    // TODO(yumin): This was introduced because some metadata fields are placed
+    // in supercluster but it should not. If this does not happen anymore, we should
+    // remove this.
     cluster_groups = remove_singleton_slicelist_metadata(cluster_groups);
 
     // slice and then sort clusters.

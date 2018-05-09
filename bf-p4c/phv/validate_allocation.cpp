@@ -553,6 +553,31 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     if (throwPrivatizeException)
         checkAndThrowPrivatizeException(allocations);
 
+    // Mirror metadata allocation constraint check:
+    for (auto gress : {INGRESS, EGRESS}) {
+        const auto* mirror_id = phv.field(
+                cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_id");
+        if (mirror_id) {
+            const auto& id_alloc = phv.get_alloc(mirror_id);
+            BUG_CHECK(id_alloc.size() == 1,
+                      "%1% is splitted, but it should not.", mirror_id->name);
+            BUG_CHECK(id_alloc.front().container.size() == 16,
+                      "%1% must be allocated to %2% but phv allocation does not",
+                      mirror_id->name, 16);
+        }
+
+        const auto* mirror_src = phv.field(
+                cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_source");
+        if (mirror_src) {
+            const auto& src_alloc = phv.get_alloc(mirror_src);
+            BUG_CHECK(src_alloc.size() == 1,
+                      "%1% is splitted, but it should not.", mirror_src->name);
+            BUG_CHECK(src_alloc.front().container.size() == 8,
+                      "%1% must be allocated to %2% but phv allocation does not",
+                      mirror_src->name, 8);
+        }
+    }
+
     return false;
 }
 

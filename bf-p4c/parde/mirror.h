@@ -37,12 +37,6 @@ using MirroredFieldListPacking = std::map<FieldListId, const FieldPacking*>;
  * @param refMap  An up-to-date reference map for this P4 program.
  * @param typeMap  An up-to-date type map for this P4 program.
  */
-void addMirroredFieldParser(IR::BFN::Pipe* pipe,
-                            const IR::P4Control* ingressDeparser,
-                            const IR::P4Control* egressDeparser,
-                            P4::ReferenceMap* refMap,
-                            P4::TypeMap* typeMap);
-
 class ExtractMirrorFieldPackings : public PassManager {
  public:
     ExtractMirrorFieldPackings(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
@@ -51,6 +45,8 @@ class ExtractMirrorFieldPackings : public PassManager {
     MirroredFieldListPacking* fieldPackings;
 };
 
+/** Insert $mirror_field_list_* states in egress to parse mirrored data.
+ */
 class PopulateMirrorStateWithFieldPackings : public PassManager {
  public:
     PopulateMirrorStateWithFieldPackings(IR::BFN::Pipe* pipe,

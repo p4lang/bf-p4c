@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_COMMON_BRIDGED_METADATA_REPLACEMENT_H_
 #define EXTENSIONS_BF_P4C_COMMON_BRIDGED_METADATA_REPLACEMENT_H_
 
+#include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/common/field_defuse.h"
 
@@ -34,6 +35,7 @@ class CollectBridgedFields : public Inspector {
     ordered_map<const PHV::Field*, const IR::Expression*> orig_to_bridged;
     ordered_map<const PHV::Field*, const PHV::Field*> bridged_to_orig;
     ordered_map<cstring, cstring> bridged_to_external_name;
+    ordered_map<cstring, cstring> orig_to_bridged_name;
 };
 
 /** Replace original expression with bridged field's expression.
@@ -44,6 +46,7 @@ class ReplaceOriginalFieldWithBridged : public Transform {
     const CollectBridgedFields& mapping;
 
     IR::Node* postorder(IR::Expression* expr) override;
+    IR::BFN::Extract* postorder(IR::BFN::Extract* extract) override;
 
  public:
     ReplaceOriginalFieldWithBridged(const PhvInfo& phv, const CollectBridgedFields& mapping)

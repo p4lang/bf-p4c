@@ -2,6 +2,7 @@
 #include <boost/optional.hpp>
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/parde/marshal.h"
 #include "bf-p4c/parde/match_register.h"
 #end
 
@@ -209,6 +210,9 @@ class Extract : ParserPrimitive {
 
     /// The location that will be read from.
     ParserRVal source;
+
+    /// This extract expects that data on the wire is marshaled from a `field`.
+    optional boost::optional<MarshaledFrom> marshaled_from;  // not visited
 }
 
 /// Save data from input buffer to a match register.

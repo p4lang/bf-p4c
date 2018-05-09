@@ -155,7 +155,7 @@ if (PTF_REQUIREMENTS_MET)
 
   # fails also with Glass.
   p4c_add_xfail_reason("tofino"
-    "Expected packet was not received on device 0, port 64."
+    ".* is splitted, but it should not."
     11-simple_l3_mirror
     )
   # broken test: https://github.com/barefootnetworks/p4examples/issues/5
@@ -335,6 +335,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_7.0_l2
+  switch_7.0_ent_dc_aggr
+  switch_ent_dc_general
+  switch_msdc_l3
   )
 
 # BRIG-113
@@ -1045,13 +1048,6 @@ p4c_add_xfail_reason("tofino"
   "unexpected packet output on port .*"
   extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
   extensions/p4_tests/p4_16/stack_valid.p4
-)
-
-# This fails because it has mirror field lists with fields larger than 32b,
-# which cannot currently be sliced.
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  extensions/p4_tests/p4_14/test_config_303_static_table.p4
 )
 
 p4c_add_xfail_reason("tofino"
