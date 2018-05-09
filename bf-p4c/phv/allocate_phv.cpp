@@ -1271,7 +1271,8 @@ bool AllocatePHV::onlyPrivatizedFieldsUnallocated(
     return true;
 }
 
-namespace PHV::Diagnostics {
+namespace PHV {
+namespace Diagnostics {
 
 /// @returns a new slice list where any adjacent slices of the same field with
 /// contiguous little Endian ranges are merged into one slice, eg f[0:3], f[4:7]
@@ -1429,7 +1430,8 @@ static std::string diagnoseSuperCluster(const PHV::SuperCluster& sc) {
     return msg.str();
 }
 
-}   // namespace PHV::Diagnostics
+}  // namespace Diagnostics
+}  // namespace PHV
 
 void AllocatePHV::formatAndThrowError(
         const PHV::Allocation& alloc,
