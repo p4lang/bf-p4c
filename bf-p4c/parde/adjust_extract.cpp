@@ -41,15 +41,31 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
                     more_bits[extract_range.lo]     += (actual_pre_padding - pre_padding);
                     more_bits[extract_range.hi + 1] += actual_post_padding;
                     LOG3("[Extra padding] pre: " << actual_pre_padding - pre_padding
-                         << " post: "<< actual_post_padding);
+                         << ", at " << extract_range.lo
+                         << " post: "<< actual_post_padding << ", at " << extract_range.hi + 1);
                 }
             }
         }
     }
 
+    // calculate the largest bit.
+    int largest_bit = 0;
+    for (const auto* prim : state->statements) {
+        if (const auto* extract = prim->to<IR::BFN::Extract>()) {
+            if (auto* buf = extract->source->to<IR::BFN::PacketRVal>()) {
+                largest_bit = std::max(largest_bit, buf->range().hi + 1); }
+        }
+    }
+
+    for (const auto* transition : state->transitions) {
+        for (const auto* save : transition->saves) {
+            if (auto* buf = save->source->to<IR::BFN::PacketRVal>()) {
+                largest_bit = std::max(largest_bit, buf->range().hi + 1); }
+        }
+    }
+
     // aggregated[i] means that, the data on wire that should show up at i, is actually
     // at i + aggregated[i].
-    int largest_bit = Device::pardeSpec().bitInputBufferSize();
     int sum_more_bits = 0;
     std::vector<int> aggregated;
     for (int i = 0; i <= largest_bit; i++) {
@@ -69,8 +85,11 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
                 continue;
             }
             nw_bitrange old_source_range = old_source->range();
+            BUG_CHECK(old_source_range.hi <= largest_bit,
+                      "largest bit of %1% calculation is wrong", state->name);
             BUG_CHECK(aggregated[old_source_range.lo] == aggregated[old_source_range.hi],
-                      "marshaled field with padding in the middle? %1%", extract);
+                      "marshaled field with padding in the middle? %1%, %2%, %3%", extract,
+                      aggregated[old_source_range.lo], aggregated[old_source_range.hi]);
             size_t n_paddings = aggregated[old_source_range.lo];
             auto* adjusted_extract = extract->clone();
             adjusted_extract->marshaled_from = boost::none;
@@ -99,6 +118,8 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
             auto* adjusted_save = save->clone();
             if (auto* buf = save->source->to<IR::BFN::PacketRVal>()) {
                 nw_bitrange old_source_range = buf->range();
+                BUG_CHECK(old_source_range.hi <= largest_bit,
+                          "largest bit of %1% calculation is wrong", state->name);
                 BUG_CHECK(aggregated[old_source_range.lo] == aggregated[old_source_range.hi],
                           "marshaled field with padding in the middle? %1%", save);
                 size_t n_paddings = aggregated[old_source_range.lo];

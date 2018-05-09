@@ -240,6 +240,10 @@ struct ResolveNextAndLast : public PassManager {
 /// once. This is a requirement for the correctness of
 /// CopyPropagateParserValues.
 class VerifyParserRValsAreUnique : public ParserInspector {
+    profile_t init_apply(const IR::Node* root) override {
+        visitedParserRVals.clear();
+        return Inspector::init_apply(root);
+    }
     bool preorder(const IR::BFN::ParserRVal* value) override {
         BUG_CHECK(visitedParserRVals.find(value) == visitedParserRVals.end(),
                   "Parser r-value appears in more than one place: %1%", value);
@@ -254,6 +258,10 @@ class VerifyParserRValsAreUnique : public ParserInspector {
 /// This is a requirement for the correctness from CopyPropagateParserValues to
 /// InsertSaveAndSelect, as state name is used to check equalilty between state*.
 class VerifyStateNamessAreUnique : public ParserInspector {
+    profile_t init_apply(const IR::Node* root) override {
+        visitedNames.clear();
+        return Inspector::init_apply(root);
+    }
     bool preorder(const IR::BFN::ParserState* state) override {
         cstring name = cstring::to_cstring(state->gress) + state->name;
         BUG_CHECK(visitedNames.count(name) == 0,
@@ -308,6 +316,11 @@ struct CopyPropagateParserValues : public ParserInspector {
     /// A map from l-values (identified by strings) to the r-value most recently
     /// assigned to them.
     using ReachingDefs = std::map<cstring, ParserRValDef>;
+
+    profile_t init_apply(const IR::Node* root) override {
+        resolvedValues.clear();
+        return Inspector::init_apply(root);
+    }
 
     bool preorder(const IR::BFN::Parser* parser) override {
         ReachingDefs initialDefs;
@@ -506,6 +519,11 @@ struct ApplyParserValueResolutions : public ParserTransform {
         : resolvedValues(resolvedValues) { }
 
  private:
+    profile_t init_apply(const IR::Node* root) override {
+        multiDefValues.clear();
+        return Transform::init_apply(root);
+    }
+
     IR::BFN::ParserRVal* preorder(IR::BFN::ComputedRVal* value) override {
         prune();
         auto* original = getOriginal<IR::BFN::ComputedRVal>();
@@ -573,6 +591,11 @@ class CheckResolvedParserExpressions : public ParserTransform {
         ::error("Couldn't resolve computed value for extract in state %1%: %2%",
                 findContext<IR::BFN::ParserState>()->name, extract);
         return nullptr;
+    }
+
+    profile_t init_apply(const IR::Node* root) override {
+        updatedDefValues.clear();
+        return Transform::init_apply(root);
     }
 
     const IR::BFN::ParserPrimitive*
@@ -739,10 +762,15 @@ class ComputeSaveAndSelect: public ParserInspector {
         }
     };
 
-    // For unresolved computed values.
-    const ParserValueResolution& multiDefValues;
-    std::map<const State*, std::vector<UnresolvedSelect>> state_unresolved_selects;
-    ordered_set<const State*> unprocessed_states;
+    profile_t init_apply(const IR::Node* root) override {
+        state_unresolved_selects.clear();
+        unprocessed_states.clear();
+        transition_saves.clear();
+        select_registers.clear();
+        select_masks.clear();
+        additional_states.clear();
+        return Inspector::init_apply(root);
+    }
 
     void postorder(const State* state) override {
         LOG4(">> Inserting Saves on " << state->name);
@@ -1034,6 +1062,11 @@ class ComputeSaveAndSelect: public ParserInspector {
             used_regs[select_use] = merged_use;
         }
     }
+
+    // For unresolved computed values.
+    const ParserValueResolution& multiDefValues;
+    std::map<const State*, std::vector<UnresolvedSelect>> state_unresolved_selects;
+    ordered_set<const State*> unprocessed_states;
 
  public:
     explicit ComputeSaveAndSelect(const ParserValueResolution& m)
