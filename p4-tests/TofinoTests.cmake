@@ -106,6 +106,8 @@ set (TOFINO_TEST_SUITES
   # ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c7/*/*.p4
   # ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c8/*/*.p4
   ${v1tests}
+  # p4smith regression tests
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4smith_regression/*.p4
   )
 
 p4c_add_bf_backend_tests("tofino" "base" "${TOFINO_TEST_SUITES}")
@@ -217,10 +219,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_7"
 	switch_acl.MirrorAclTest_e2e
 	switch_acl.MirrorAclTest_i2e
 	switch_acl.MirrorSessionTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_L3IPv4EcmpSeedTest" ${SWITCH_P4}
-        "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_L3IPv4EcmpSeedTest"
-        "switch_tests.L3IPv4EcmpSeedTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_MalformedPacketsTest" ${SWITCH_P4}
 	"${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_MalformedPacketsTest"
@@ -238,7 +236,6 @@ set_tests_properties("tofino/smoketest_switch_msdc_set_4" PROPERTIES TIMEOUT 120
 set_tests_properties("tofino/smoketest_switch_msdc_set_5" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_msdc_set_6" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_msdc_set_7" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_msdc_L3IPv4EcmpSeedTest" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_msdc_MalformedPacketsTest" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest" PROPERTIES TIMEOUT 12000)
 

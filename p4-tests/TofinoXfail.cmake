@@ -75,11 +75,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/exact_match_mask1.p4
     )
 
-  p4c_add_xfail_reason("tofino"
-    "error: instruction slot [0-9]+ used multiple times in action push"
-    # testdata/p4_14_samples/instruct5.p4
-    )
-
 # BRIG-241
   p4c_add_xfail_reason("tofino"
     "AssertionError: Invalid match name .* for table .*"
@@ -181,11 +176,6 @@ if (PTF_REQUIREMENTS_MET)
     smoketest_switch_msdc_MalformedPacketsTest
     )
 
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: False is not true"
-    smoketest_switch_msdc_L3IPv4EcmpSeedTest
-    )
-
 endif() # PTF_REQUIREMENTS_MET
 
 
@@ -194,11 +184,6 @@ p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 
 # Problem with the stkvalid encoding of header stacks.
 # BRIG-497
-p4c_add_xfail_reason("tofino"
-  "instruction slot [0-9]+ used multiple times in action"
-  # testdata/p4_14_samples/instruct5.p4
-  )
-
 # This test fails because two fields are mutually exclusive in the parser, but
 # one is added in the MAU while the other is live.  This behavior matches glass
 # but is known to be incorrect.
@@ -437,11 +422,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue512.p4
   )
 
-
-# p4c_add_xfail_reason("tofino"
-#   "constant value .* out of range for immediate"
-#   extensions/p4_tests/p4_14/c1/COMPILER-402/case2318.p4
-#   )
 
 # BRIG-138
 p4c_add_xfail_reason("tofino"
@@ -1090,4 +1070,71 @@ p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: Type_Name is not a canonical type"
   testdata/p4_16_samples/pvs-nested-struct.p4
   testdata/p4_16_samples/pvs-struct.p4
+)
+
+# p4smith regression XFAILs
+# BRIG-646
+p4c_add_xfail_reason("tofino"
+  "error: Gateway xor key at offset .* overlaps previous value at offset .*"
+  extensions/p4_tests/p4_14/p4smith_regression/plasmas_0.p4
+)
+
+# BRIG-647
+p4c_add_xfail_reason("tofino"
+  "Fields involved in the same MAU operations have conflicting PARDE alignment requirements"
+  extensions/p4_tests/p4_14/p4smith_regression/grab_0.p4
+)
+
+# BRIG-648
+p4c_add_xfail_reason("tofino"
+  "Unhandled expression in .*"
+  extensions/p4_tests/p4_14/p4smith_regression/medal_0.p4
+)
+
+# BRIG-631
+p4c_add_xfail_reason("tofino"
+  "error: .*: Value too large"
+  extensions/p4_tests/p4_14/p4smith_regression/signets_0.p4
+)
+
+# BRIG-649
+p4c_add_xfail_reason("tofino"
+  "field equality comparison misaligned in gateway"
+  extensions/p4_tests/p4_14/p4smith_regression/centipedes_0.p4
+)
+
+# BRIG-650
+p4c_add_xfail_reason("tofino"
+  "error: constant value .* out of range for immediate"
+  extensions/p4_tests/p4_14/p4smith_regression/surnames_0.p4
+)
+
+# BRIG-651
+p4c_add_xfail_reason("tofino"
+  "PHV read has no allocation"
+  extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
+)
+
+# BRIG-652
+p4c_add_xfail_reason("tofino"
+  "MakeSlice slice on slice type mismatch"
+  extensions/p4_tests/p4_14/p4smith_regression/injection_0.p4
+)
+
+# BRIG-653
+p4c_add_xfail_reason("tofino"
+  "No casts should ever reach this point in the Tofino backend"
+  extensions/p4_tests/p4_14/p4smith_regression/murdoch_0.p4
+)
+
+# BRIG-654
+p4c_add_xfail_reason("tofino"
+  "Two containers in the same action are at the same place?"
+  extensions/p4_tests/p4_14/p4smith_regression/selenium_0.p4
+)
+
+# BRIG-655
+p4c_add_xfail_reason("tofino"
+  "Incorrectly overlapping action data when setting slot bits."
+  extensions/p4_tests/p4_14/p4smith_regression/laymen_0.p4
 )
