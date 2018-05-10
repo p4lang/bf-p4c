@@ -1137,21 +1137,22 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
         for (auto match_byte : match_group.match) {
             const bitvec &byte_layout = match_byte.second;
             // Byte start and byte end are the bitvec positions for this specific byte
-            if (!byte_layout.is_contiguous())
-                BUG("Currently non contiguous byte allocation in table format?");
-
-            int byte_start = byte_layout.min().index();
-            int byte_end = byte_layout.max().index();
-            if (start == -1) {
-                start = byte_start;
-                end = byte_end;
-            } else if (end == byte_start - 1) {
-                end = byte_end;
-            } else {
-               bits.emplace_back(start, end);
-               start = byte_start;
-               end = byte_end;
-            }
+            BUG_CHECK(!byte_layout.empty(), "Match byte allocated has no match bits");
+            int start_bit = byte_layout.ffs();
+            do {
+                int end_bit = byte_layout.ffz(start_bit);
+                if (start == -1) {
+                    start = start_bit;
+                    end = end_bit - 1;
+                } else if (end == start_bit - 1) {
+                    end = end_bit - 1;
+                } else {
+                    bits.emplace_back(start, end);
+                    start = start_bit;
+                    end = end_bit - 1;
+                }
+                start_bit = byte_layout.ffs(end_bit);
+            } while (start_bit != -1);
         }
         bits.emplace_back(start, end);
         fmt.emit(out, format_name(type), group, bits);
