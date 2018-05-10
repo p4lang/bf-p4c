@@ -326,11 +326,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "The following operation is not yet supported"
-  extensions/p4_tests/p4_14/test_config_88_testing_action_data_allocation_3.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4

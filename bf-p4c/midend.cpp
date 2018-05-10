@@ -23,6 +23,7 @@
 #include "midend/removeLeftSlices.h"
 #include "midend/removeParameters.h"
 #include "midend/removeExits.h"
+#include "midend/simplifyBitwise.h"
 #include "midend/simplifyKey.h"
 #include "midend/simplifySelectCases.h"
 #include "midend/simplifySelectList.h"
@@ -187,6 +188,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::Predication(&refMap),
         new P4::MoveDeclarations(),  // more may have been introduced
         new P4::ConstantFolding(&refMap, &typeMap),
+        new P4::SimplifyBitwise(),
         new P4::LocalCopyPropagation(&refMap, &typeMap, skipRegisterActionOutput),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
