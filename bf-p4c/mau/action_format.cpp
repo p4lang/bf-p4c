@@ -528,7 +528,9 @@ void ActionFormat::create_from_constant(ActionDataForSingleALU &adp,
     adp.phv_bits |= data_location;
     constant_to_ad_count++;
 
-    int constant_value = read.expr->to<IR::Constant>()->asInt();
+    long constant_value = read.expr->to<IR::Constant>()->asLong();
+    BUG_CHECK(constant_value >= INT_MIN && constant_value <= UINT_MAX,
+              "constant out of range for 32 bits: %ld", constant_value);
     adp.arg_locs.back().set_as_constant(constant_value);
 }
 
