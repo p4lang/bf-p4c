@@ -166,13 +166,9 @@ FieldPacking* packMirroredFieldList(gress_t from_gress, const MirroredFieldList*
             continue;
         }
 
-        // Align the field so that its LSB lines up with a byte boundary. This
-        // is a best-effort attempt to reproduce the behavior of the PHV
-        // allocator. This situation is even worse than the one for bridged
-        // metadata, because we don't even have knowledge of alignment
-        // constraints at this point in the code.
-        // XXX(seth): This entire approach - for digests as well as for bridged
-        // metadata - needs to be revisited.
+        // Align the field so that its LSB lines up with a byte boundary.
+        // After phv allocation, this extract and parser state will be adjusted
+        // accroding to the actual allocation.
         const int fieldSize = field->type->width_bits();
         const int nextByteBoundary = 8 * ((fieldSize + 7) / 8);
         const int alignment = nextByteBoundary - fieldSize;

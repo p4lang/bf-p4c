@@ -141,8 +141,15 @@ FieldPacking* packResubmitFields(const ResubmitSources* extracts) {
             packing->padToAlignment(8);
             continue;
         }
-        // TODO(yumin): shouldn't we pack before the field instead of after?
-        //              as it is how we do it on bridged and mirrored.
+
+        // Align the field so that its LSB lines up with a byte boundary.
+        // After phv allocation, this extract and parser state will be adjusted
+        // accroding to the actual allocation.
+        const int fieldSize = field->type->width_bits();
+        const int nextByteBoundary = 8 * ((fieldSize + 7) / 8);
+        const int alignment = nextByteBoundary - fieldSize;
+        packing->padToAlignment(8, alignment);
+
         packing->appendField(source, field->type->width_bits(), INGRESS);
         packing->padToAlignment(8);
     }

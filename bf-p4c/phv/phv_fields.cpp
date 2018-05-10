@@ -749,9 +749,26 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         LOG1(".....Deparser Constraint " << entry->name << " 'digest' on field..... " << f);
 
         if (entry->name == "resubmit") {
-            LOG1("\t resubmit field (" << f << ") is set to be "
-                 << "no_pack, no_split and deparsed_bottom_bits");
-            return; }
+            LOG1("\t resubmit metadata field (" << f << ") is set to be "
+                 << "exact container and is_marshaled.");
+            for (auto* fieldList : entry->fieldLists) {
+                LOG1("\t.....resubmit metadata field list....." << fieldList);
+                for (auto* resubmit_field_expr : fieldList->sources) {
+                    PHV::Field* resubmit_field = phv.field(resubmit_field_expr->field);
+                    if (resubmit_field) {
+                        if (resubmit_field->metadata) {
+                            resubmit_field->set_exact_containers(true);
+                            resubmit_field->set_is_marshaled(true);
+                            LOG1("\t\t" << resubmit_field);
+                        }
+                    } else {
+                        BUG("\t\t resubmit field does not exist: %1%",
+                            resubmit_field_expr->field);
+                    }
+                }
+            }
+            return;
+        }
 
         if (entry->name == "learning") {
             // Add byte-aligned constraint to metadata field in learning field_list
@@ -782,7 +799,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         LOG1(".....mirror fields in field list " << f->id << ":" << f->name);
         int fieldListIndex = 0;
         for (auto* fieldList : entry->fieldLists) {
-            LOG1("\t.....field list....." << fieldList);
+            LOG1("\t.....mirror metadata field list....." << fieldList);
 
             // The first two entries in the field list are both special and may
             // not be split between containers. The first indicates the mirror
@@ -799,7 +816,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
                 if (fieldInfo) fieldInfo->set_no_split(true);
             }
 
-            // mirror_field_list fields are not marked as is_marshaled, so that
+            // mirror_field_list fields are marked as is_marshaled, so that
             // the phv allocation will make sure that the allocation field can be
             // serialized without leaving any padding within the field.
             // XXX(yumin): One special case is that, on both gresses,
@@ -809,13 +826,18 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
             for (auto* mirroredField : fieldList->sources) {
                 PHV::Field* mirror = phv.field(mirroredField->field);
                 if (mirror) {
-                    mirror->mirror_field_list = {f, fieldListIndex};
-                    mirror->set_exact_containers(true);
-                    mirror->set_is_marshaled(true);
-                    LOG1("\t\t" << mirror);
+                    if (mirror->metadata) {
+                        mirror->mirror_field_list = {f, fieldListIndex};
+                        mirror->set_exact_containers(true);
+                        mirror->set_is_marshaled(true);
+                        LOG1("\t\t" << mirror);
+                    }
                 } else {
-                    LOG1("\t\t" << "-f?"); }
-                fieldListIndex++; } }
+                    BUG("\t\t mirror field does not exist: %1%", mirroredField->field);
+                }
+                fieldListIndex++;
+            }
+        }
     }
 
     void postorder(const IR::BFN::LoweredParser*) override {
