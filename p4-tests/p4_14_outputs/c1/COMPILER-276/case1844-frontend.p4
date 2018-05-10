@@ -1048,7 +1048,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_35();
     }
-    @name(".LaHoma") direct_counter(CounterType.packets_and_bytes) _LaHoma_0;
+    @min_width(16) @name(".LaHoma") direct_counter(CounterType.packets_and_bytes) _LaHoma_0;
     @name(".Veteran") RegisterAction<bit<1>, bit<1>>(Linville) _Veteran_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Hebbville_in_value_0;

@@ -825,7 +825,7 @@ control Huttig(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Iberia(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".BigPlain") direct_counter(CounterType.packets_and_bytes) BigPlain;
+    @name(".BigPlain") @min_width(16) direct_counter(CounterType.packets_and_bytes) BigPlain;
     @name(".Weslaco") action Weslaco() {
         meta.Seagrove.Horton = 1w1;
     }
@@ -1153,7 +1153,7 @@ control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Osage(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Terrell") direct_counter(CounterType.packets_and_bytes) Terrell;
+    @name(".Terrell") @min_width(16) direct_counter(CounterType.packets_and_bytes) Terrell;
     @name(".Gibson") action Gibson() {
         meta.Seagrove.Hindman = 1w1;
     }

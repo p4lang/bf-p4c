@@ -1232,7 +1232,7 @@ control Harvest(inout headers hdr, inout metadata meta, inout standard_metadata_
 @name(".Linville") register<bit<1>>(32w65536) Linville;
 
 control Hebbville(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".LaHoma") direct_counter(CounterType.packets_and_bytes) LaHoma;
+    @name(".LaHoma") @min_width(16) direct_counter(CounterType.packets_and_bytes) LaHoma;
     @name(".Veteran") RegisterAction<bit<1>, bit<1>>(Linville) Veteran = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;

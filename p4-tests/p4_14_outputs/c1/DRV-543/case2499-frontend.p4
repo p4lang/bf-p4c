@@ -805,7 +805,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_37();
     }
-    @name(".Lahaina") direct_counter(CounterType.packets_and_bytes) _Lahaina_0;
+    @min_width(16) @name(".Lahaina") direct_counter(CounterType.packets_and_bytes) _Lahaina_0;
     @name(".Escondido") action _Escondido() {
         meta.Goodrich.Harshaw = 1w1;
     }
@@ -1180,7 +1180,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = NoAction_49();
     }
-    @name(".Maltby") direct_counter(CounterType.packets_and_bytes) _Maltby_0;
+    @min_width(16) @name(".Maltby") direct_counter(CounterType.packets_and_bytes) _Maltby_0;
     @name(".Grandy") action _Grandy() {
         meta.Westville.Saticoy = 1w1;
     }

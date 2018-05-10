@@ -350,19 +350,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_1() {
     }
-    @name("NoAction") action NoAction_16() {
+    @name(".NoAction") action NoAction_16() {
     }
-    @name("NoAction") action NoAction_17() {
+    @name(".NoAction") action NoAction_17() {
     }
-    @name("NoAction") action NoAction_18() {
+    @name(".NoAction") action NoAction_18() {
     }
-    @name("NoAction") action NoAction_19() {
+    @name(".NoAction") action NoAction_19() {
     }
-    @name("NoAction") action NoAction_20() {
+    @name(".NoAction") action NoAction_20() {
     }
     @name(".encap_udp") action _encap_udp_0() {
         hdr.inner_udp = hdr.udp;
@@ -508,19 +508,19 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_21() {
+    @name(".NoAction") action NoAction_21() {
     }
-    @name("NoAction") action NoAction_22() {
+    @name(".NoAction") action NoAction_22() {
     }
-    @name("NoAction") action NoAction_23() {
+    @name(".NoAction") action NoAction_23() {
     }
-    @name("NoAction") action NoAction_24() {
+    @name(".NoAction") action NoAction_24() {
     }
-    @name("NoAction") action NoAction_25() {
+    @name(".NoAction") action NoAction_25() {
     }
-    @name("NoAction") action NoAction_26() {
+    @name(".NoAction") action NoAction_26() {
     }
-    @name("NoAction") action NoAction_27() {
+    @name(".NoAction") action NoAction_27() {
     }
     @name(".assign_vrf") action assign_vrf_0(bit<24> vrf) {
         meta.l3_metadata.vrf = vrf;

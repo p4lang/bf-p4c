@@ -901,7 +901,7 @@ control Dollar(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Fieldon(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Stidham") direct_counter(CounterType.packets_and_bytes) Stidham;
+    @name(".Stidham") @min_width(32) direct_counter(CounterType.packets_and_bytes) Stidham;
     @name(".Blitchton") action Blitchton() {
     }
     @name(".Blitchton") action Blitchton_0() {
@@ -2079,7 +2079,7 @@ control Sonora(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Terral(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Ardsley") direct_counter(CounterType.packets_and_bytes) Ardsley;
+    @name(".Ardsley") @min_width(16) direct_counter(CounterType.packets_and_bytes) Ardsley;
     @name(".Addison") action Addison() {
         meta.Netcong.Punaluu = 1w1;
     }
@@ -2161,7 +2161,7 @@ control Terral(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Urbanette(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Mekoryuk") direct_counter(CounterType.packets_and_bytes) Mekoryuk;
+    @name(".Mekoryuk") @min_width(16) direct_counter(CounterType.packets_and_bytes) Mekoryuk;
     @name(".Blitchton") action Blitchton() {
     }
     @name(".LunaPier") action LunaPier() {

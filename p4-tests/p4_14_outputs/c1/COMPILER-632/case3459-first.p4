@@ -1686,7 +1686,7 @@ control Geneva(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Gowanda(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Poteet") direct_counter(CounterType.packets_and_bytes) Poteet;
+    @name(".Poteet") @min_width(16) direct_counter(CounterType.packets_and_bytes) Poteet;
     @name(".Hobucken") action Hobucken(bit<1> Rockport, bit<1> Brohard) {
         meta.Westboro.Lewellen = Rockport;
         meta.Westboro.LaSalle = Brohard;
@@ -1889,7 +1889,7 @@ control Loris(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Gunter(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Domingo") direct_counter(CounterType.packets) Domingo;
+    @name(".Domingo") @min_width(64) direct_counter(CounterType.packets) Domingo;
     @name(".Lafayette") action Lafayette(bit<9> Hodge, bit<5> Homeworth) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = Hodge;
         meta.CoalCity.Becida = hdr.ig_intr_md.ingress_port;
@@ -2842,7 +2842,7 @@ control Veradale(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Wattsburg(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Henry") direct_counter(CounterType.packets) Henry;
+    @name(".Henry") @min_width(63) direct_counter(CounterType.packets) Henry;
     @name(".WestLine") action WestLine() {
     }
     @name(".Beaverdam") action Beaverdam() {
@@ -2917,7 +2917,7 @@ control Wauregan(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Wellford(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Moneta") direct_counter(CounterType.packets_and_bytes) Moneta;
+    @name(".Moneta") @min_width(16) direct_counter(CounterType.packets_and_bytes) Moneta;
     @name(".Mustang") action Mustang(bit<8> Rockdale, bit<1> Cuney) {
         meta.CoalCity.Murphy = 1w1;
         meta.CoalCity.Royston = Rockdale;

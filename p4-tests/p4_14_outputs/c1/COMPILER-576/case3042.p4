@@ -1800,7 +1800,7 @@ control Millstone(inout headers hdr, inout metadata meta, inout standard_metadat
 }
 
 control Naalehu(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Traverse") direct_counter(CounterType.packets_and_bytes) Traverse;
+    @name(".Traverse") @min_width(16) direct_counter(CounterType.packets_and_bytes) Traverse;
     @name(".Firebrick") action Firebrick() {
         meta.Everetts.Jeddo = 1w1;
     }
@@ -1999,7 +1999,7 @@ control Oketo(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Othello(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Meeker") direct_counter(CounterType.packets_and_bytes) Meeker;
+    @name(".Meeker") @min_width(16) direct_counter(CounterType.packets_and_bytes) Meeker;
     @name(".Woolwine") action Woolwine() {
         meta.Circle.Perrytown = 1w1;
     }
@@ -2444,7 +2444,7 @@ control Roberts(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Rowden(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".LakeFork") direct_counter(CounterType.packets) LakeFork;
+    @name(".LakeFork") @min_width(63) direct_counter(CounterType.packets) LakeFork;
     @name(".Odebolt") action Odebolt() {
         ;
     }

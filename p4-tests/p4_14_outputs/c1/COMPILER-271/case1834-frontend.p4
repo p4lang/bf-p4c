@@ -1027,7 +1027,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_35();
     }
-    @name(".Amanda") direct_counter(CounterType.packets_and_bytes) _Amanda_0;
+    @min_width(16) @name(".Amanda") direct_counter(CounterType.packets_and_bytes) _Amanda_0;
     @name(".Warsaw") RegisterAction<bit<1>, bit<1>>(Hobson) _Warsaw_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Devers_in_value_0;

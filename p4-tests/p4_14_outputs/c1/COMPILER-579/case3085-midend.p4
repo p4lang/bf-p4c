@@ -1195,7 +1195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_61();
     }
-    @name(".Carnation") direct_counter(CounterType.packets_and_bytes) _Carnation_0;
+    @min_width(16) @name(".Carnation") direct_counter(CounterType.packets_and_bytes) _Carnation_0;
     @name(".Panola") action _Panola() {
         meta.Garretson.Titonka = 1w1;
     }
@@ -1548,7 +1548,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = _Maben();
     }
-    @name(".Saragosa") direct_counter(CounterType.packets_and_bytes) _Saragosa_0;
+    @min_width(16) @name(".Saragosa") direct_counter(CounterType.packets_and_bytes) _Saragosa_0;
     @name(".Janney") action _Janney() {
     }
     @name(".Between") action _Between() {
@@ -2824,7 +2824,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_108();
     }
-    @name(".Atoka") direct_counter(CounterType.packets) _Atoka_0;
+    @min_width(63) @name(".Atoka") direct_counter(CounterType.packets) _Atoka_0;
     @name(".Millstadt") action _Millstadt_41() {
     }
     @name(".Redfield") action _Redfield() {

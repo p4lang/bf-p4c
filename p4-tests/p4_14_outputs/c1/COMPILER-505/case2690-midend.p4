@@ -804,7 +804,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 64;
         default_action = NoAction_43();
     }
-    @name(".FlatLick") direct_counter(CounterType.packets_and_bytes) _FlatLick_0;
+    @min_width(32) @name(".FlatLick") direct_counter(CounterType.packets_and_bytes) _FlatLick_0;
     @name(".Gilman") action _Gilman() {
         _FlatLick_0.count();
     }
@@ -963,7 +963,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_45();
     }
-    @name(".Hobergs") direct_counter(CounterType.packets_and_bytes) _Hobergs_0;
+    @min_width(16) @name(".Hobergs") direct_counter(CounterType.packets_and_bytes) _Hobergs_0;
     @name(".BigWells") action _BigWells() {
         meta.Deeth.Wartrace = 1w1;
     }
@@ -1294,7 +1294,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_55();
     }
-    @name(".Lansdowne") direct_counter(CounterType.packets_and_bytes) _Lansdowne_0;
+    @min_width(16) @name(".Lansdowne") direct_counter(CounterType.packets_and_bytes) _Lansdowne_0;
     @name(".Gilman") action _Gilman_0() {
     }
     @name(".Wauregan") action _Wauregan() {

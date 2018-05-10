@@ -801,7 +801,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 128;
         default_action = _Remsen_0();
     }
-    @name(".Stidham") direct_counter(CounterType.packets_and_bytes) _Stidham_0;
+    @min_width(32) @name(".Stidham") direct_counter(CounterType.packets_and_bytes) _Stidham_0;
     @name(".Blitchton") action _Blitchton() {
         _Stidham_0.count();
     }
@@ -923,7 +923,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_41();
     }
-    @name(".Ardsley") direct_counter(CounterType.packets_and_bytes) _Ardsley_0;
+    @min_width(16) @name(".Ardsley") direct_counter(CounterType.packets_and_bytes) _Ardsley_0;
     @name(".Addison") action _Addison() {
         meta.Netcong.Punaluu = 1w1;
     }
@@ -1264,7 +1264,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_51();
     }
-    @name(".Mekoryuk") direct_counter(CounterType.packets_and_bytes) _Mekoryuk_0;
+    @min_width(16) @name(".Mekoryuk") direct_counter(CounterType.packets_and_bytes) _Mekoryuk_0;
     @name(".Blitchton") action _Blitchton_0() {
     }
     @name(".LunaPier") action _LunaPier() {

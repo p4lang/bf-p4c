@@ -1485,7 +1485,7 @@ control McKenna(inout headers hdr, inout metadata meta, inout standard_metadata_
 @name(".Brinson") register<bit<1>>(32w65536) Brinson;
 
 control Moark(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Silvertip") direct_counter(CounterType.packets_and_bytes) Silvertip;
+    @name(".Silvertip") @min_width(16) direct_counter(CounterType.packets_and_bytes) Silvertip;
     @name(".Mabelle") RegisterAction<bit<1>, bit<1>>(Brinson) Mabelle = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;

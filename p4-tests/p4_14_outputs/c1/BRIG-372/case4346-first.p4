@@ -1247,7 +1247,7 @@ control CoalCity(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Counce(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".OreCity") direct_counter(CounterType.packets_and_bytes) OreCity;
+    @name(".OreCity") @min_width(16) direct_counter(CounterType.packets_and_bytes) OreCity;
     @name(".Oronogo") action Oronogo(bit<8> Simla, bit<1> Carpenter) {
         meta.Upalco.Westview = 1w1;
         meta.Upalco.Ackerly = Simla;
@@ -1938,7 +1938,7 @@ control Leflore(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Libby(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Bellamy") direct_counter(CounterType.packets) Bellamy;
+    @name(".Bellamy") @min_width(63) direct_counter(CounterType.packets) Bellamy;
     @name(".MintHill") action MintHill() {
     }
     @name(".Excello") action Excello() {
@@ -3639,7 +3639,7 @@ control Watters(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Wisdom(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Larue") direct_counter(CounterType.packets_and_bytes) Larue;
+    @name(".Larue") @min_width(16) direct_counter(CounterType.packets_and_bytes) Larue;
     @name(".Ripley") action Ripley() {
         meta.Bigspring.Hewitt = 1w1;
         mark_to_drop();
@@ -3881,7 +3881,7 @@ control Yocemento(inout headers hdr, inout metadata meta, inout standard_metadat
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pinesdale") direct_counter(CounterType.packets_and_bytes) Pinesdale;
+    @name(".Pinesdale") @min_width(128) direct_counter(CounterType.packets_and_bytes) Pinesdale;
     @name(".Brighton") action Brighton() {
         mark_to_drop();
     }

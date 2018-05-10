@@ -1146,7 +1146,7 @@ control Mabel(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Manning(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Trotwood") direct_counter(CounterType.packets_and_bytes) Trotwood;
+    @name(".Trotwood") @min_width(16) direct_counter(CounterType.packets_and_bytes) Trotwood;
     @name(".Stoystown") action Stoystown() {
         meta.Wagener.Glendale = 1w1;
     }
@@ -1616,7 +1616,7 @@ control SneeOosh(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Sutton(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Gastonia") direct_counter(CounterType.packets_and_bytes) Gastonia;
+    @name(".Gastonia") @min_width(16) direct_counter(CounterType.packets_and_bytes) Gastonia;
     @name(".SweetAir") action SweetAir() {
         meta.Nashoba.Chualar = 1w1;
     }

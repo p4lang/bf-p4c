@@ -568,7 +568,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".Tagus") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Tagus;
 
 control Benwood(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Hilbert") direct_counter(CounterType.packets_and_bytes) Hilbert;
+    @name(".Hilbert") @min_width(16) direct_counter(CounterType.packets_and_bytes) Hilbert;
     @name(".Sarasota") action Sarasota(bit<8> Bostic) {
         meta.Fontana.Harleton = 1w1;
         meta.Fontana.Palmerton = Bostic;
@@ -1636,7 +1636,7 @@ control Monohan(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Munger(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".HillCity") direct_counter(CounterType.packets_and_bytes) HillCity;
+    @name(".HillCity") @min_width(16) direct_counter(CounterType.packets_and_bytes) HillCity;
     @name(".Earling") action Earling() {
         ;
     }

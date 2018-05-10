@@ -756,7 +756,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_37();
     }
-    @name(".BigPlain") direct_counter(CounterType.packets_and_bytes) _BigPlain_0;
+    @min_width(16) @name(".BigPlain") direct_counter(CounterType.packets_and_bytes) _BigPlain_0;
     @name(".Weslaco") action _Weslaco() {
         meta.Seagrove.Horton = 1w1;
     }
@@ -1130,7 +1130,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = NoAction_50();
     }
-    @name(".Terrell") direct_counter(CounterType.packets_and_bytes) _Terrell_0;
+    @min_width(16) @name(".Terrell") direct_counter(CounterType.packets_and_bytes) _Terrell_0;
     @name(".Wausaukee") action _Wausaukee() {
     }
     @name(".Dalkeith") action _Dalkeith() {

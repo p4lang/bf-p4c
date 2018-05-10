@@ -872,7 +872,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".NoAction") action NoAction_70() {
     }
-    @name(".Pinesdale") direct_counter(CounterType.packets_and_bytes) Pinesdale;
+    @name(".Pinesdale") @min_width(128) direct_counter(CounterType.packets_and_bytes) Pinesdale;
     @name(".MintHill") action MintHill_3() {
     }
     @name(".Choptank") action Choptank_0() {
@@ -2056,7 +2056,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_74();
     }
-    @name(".OreCity") direct_counter(CounterType.packets_and_bytes) _OreCity_0;
+    @min_width(16) @name(".OreCity") direct_counter(CounterType.packets_and_bytes) _OreCity_0;
     @name(".MintHill") action _MintHill_2() {
     }
     @name(".Chevak") action _Chevak() {
@@ -2479,7 +2479,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = _MintHill_6();
     }
-    @name(".Larue") direct_counter(CounterType.packets_and_bytes) _Larue_0;
+    @min_width(16) @name(".Larue") direct_counter(CounterType.packets_and_bytes) _Larue_0;
     @name(".Ripley") action _Ripley_0() {
         meta.Bigspring.Hewitt = 1w1;
         mark_to_drop();
@@ -3845,7 +3845,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2;
         default_action = NoAction_120();
     }
-    @name(".Bellamy") direct_counter(CounterType.packets) _Bellamy_0;
+    @min_width(63) @name(".Bellamy") direct_counter(CounterType.packets) _Bellamy_0;
     @name(".MintHill") action _MintHill_45() {
     }
     @name(".Excello") action _Excello() {

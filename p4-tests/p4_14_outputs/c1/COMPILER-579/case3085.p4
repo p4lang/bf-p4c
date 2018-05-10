@@ -683,7 +683,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".Tanacross") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Tanacross;
 
 control Albany(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Saragosa") direct_counter(CounterType.packets_and_bytes) Saragosa;
+    @name(".Saragosa") @min_width(16) direct_counter(CounterType.packets_and_bytes) Saragosa;
     @name(".Janney") action Janney() {
         ;
     }
@@ -1533,7 +1533,7 @@ control GunnCity(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Harts(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Atoka") direct_counter(CounterType.packets) Atoka;
+    @name(".Atoka") @min_width(63) direct_counter(CounterType.packets) Atoka;
     @name(".Millstadt") action Millstadt() {
         ;
     }
@@ -2698,7 +2698,7 @@ control Sedona(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Sneads(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Carnation") direct_counter(CounterType.packets_and_bytes) Carnation;
+    @name(".Carnation") @min_width(16) direct_counter(CounterType.packets_and_bytes) Carnation;
     @name(".Vergennes") action Vergennes(bit<8> Shoshone, bit<1> Elimsport) {
         meta.Weehawken.Saticoy = 1w1;
         meta.Weehawken.Excello = Shoshone;

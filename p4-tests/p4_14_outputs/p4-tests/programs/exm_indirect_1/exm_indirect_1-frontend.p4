@@ -454,9 +454,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_43() {
     }
     @name(".cntDum1") direct_counter(CounterType.packets) cntDum1;
-    @name(".cntDum2") direct_counter(CounterType.packets) cntDum2;
+    @name(".cntDum2") @min_width(20) direct_counter(CounterType.packets) cntDum2;
     @name(".cntDum4") direct_counter(CounterType.packets_and_bytes) cntDum4;
-    @name(".cntDum5") direct_counter(CounterType.packets_and_bytes) cntDum5;
+    @name(".cntDum5") @min_width(20) direct_counter(CounterType.packets_and_bytes) cntDum5;
     @name(".cntDum") counter(32w256, CounterType.packets) cntDum;
     @name(".cntDum3") counter(32w256, CounterType.packets) cntDum3;
     @name(".cntDum6") counter(32w256, CounterType.packets_and_bytes) cntDum6;

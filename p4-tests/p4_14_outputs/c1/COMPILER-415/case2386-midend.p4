@@ -857,7 +857,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_39();
     }
-    @name(".Patchogue") direct_counter(CounterType.packets_and_bytes) _Patchogue_0;
+    @min_width(16) @name(".Patchogue") direct_counter(CounterType.packets_and_bytes) _Patchogue_0;
     @name(".Elvaston") action _Elvaston() {
         meta.Conneaut.Santos = 1w1;
     }
@@ -1222,7 +1222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = NoAction_51();
     }
-    @name(".Veguita") direct_counter(CounterType.packets_and_bytes) _Veguita_0;
+    @min_width(16) @name(".Veguita") direct_counter(CounterType.packets_and_bytes) _Veguita_0;
     @name(".LaPryor") action _LaPryor() {
     }
     @name(".Hooker") action _Hooker() {

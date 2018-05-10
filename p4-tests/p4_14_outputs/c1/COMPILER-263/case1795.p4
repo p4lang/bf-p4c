@@ -982,7 +982,7 @@ control Neavitt(inout headers hdr, inout metadata meta, inout standard_metadata_
 @name(".Floyd") register<bit<1>>(32w65536) Floyd;
 
 control NewRoads(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Elihu") direct_counter(CounterType.packets_and_bytes) Elihu;
+    @name(".Elihu") @min_width(16) direct_counter(CounterType.packets_and_bytes) Elihu;
     @name(".Fowlkes") RegisterAction<bit<1>, bit<1>>(Floyd) Fowlkes = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;

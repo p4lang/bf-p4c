@@ -748,7 +748,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 128;
         default_action = _Peletier_0();
     }
-    @name(".Crump") direct_counter(CounterType.packets_and_bytes) _Crump_0;
+    @min_width(32) @name(".Crump") direct_counter(CounterType.packets_and_bytes) _Crump_0;
     @name(".McDaniels") action _McDaniels() {
         _Crump_0.count();
     }
@@ -900,7 +900,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_40();
     }
-    @name(".Sutherlin") direct_counter(CounterType.packets_and_bytes) _Sutherlin_0;
+    @min_width(16) @name(".Sutherlin") direct_counter(CounterType.packets_and_bytes) _Sutherlin_0;
     @name(".Sudden") action _Sudden() {
         meta.Millhaven.Highcliff = 1w1;
     }
@@ -1230,7 +1230,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_50();
     }
-    @name(".Hallowell") direct_counter(CounterType.packets_and_bytes) _Hallowell_0;
+    @min_width(16) @name(".Hallowell") direct_counter(CounterType.packets_and_bytes) _Hallowell_0;
     @name(".Wentworth") action _Wentworth_2() {
     }
     @name(".LeCenter") action _LeCenter() {

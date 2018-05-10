@@ -157,6 +157,7 @@ struct l3_metadata_t {
     bit<16> lkp_outer_l4_dport;
     bit<8>  lkp_outer_tcp_flags;
     bit<8>  lkp_tcp_flags;
+    bit<1>  lkp_ip_llmc;
     bit<14> vrf;
     bit<10> rmac_group;
     bit<1>  rmac_hit;
@@ -677,11 +678,6 @@ header pktgen_timer_header_t {
     bit<16> packet_id;
 }
 
-header roce_header_t {
-    bit<320> ib_grh;
-    bit<96>  ib_bth;
-}
-
 header roce_v2_header_t {
     bit<96> ib_bth;
 }
@@ -895,7 +891,7 @@ struct headers {
     udp_t                                          inner_udp;
     @pa_fragment("ingress", "ipv4.hdrChecksum") @pa_fragment("egress", "ipv4.hdrChecksum") @name(".ipv4") 
     ipv4_t                                         ipv4;
-    @pa_no_overlay("egress", "ipv4_option_32b.option_fields") @name(".ipv4_option_32b") 
+    @pa_no_overlay("ingress", "ipv4_option_32b.option_fields") @pa_no_overlay("egress", "ipv4_option_32b.option_fields") @name(".ipv4_option_32b") 
     ipv4_option_32b_t                              ipv4_option_32b;
     @name(".ipv6") 
     ipv6_t                                         ipv6;
@@ -919,8 +915,6 @@ struct headers {
     pktgen_recirc_header_t                         pktgen_recirc;
     @name(".pktgen_timer") 
     pktgen_timer_header_t                          pktgen_timer;
-    @name(".roce") 
-    roce_header_t                                  roce;
     @name(".roce_v2") 
     roce_v2_header_t                               roce_v2;
     @name(".sctp") 
@@ -1182,6 +1176,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             (13w0, 8w4): parse_ipv4_in_ip;
             (13w0, 8w41): parse_ipv6_in_ip;
             (13w0, 8w2): parse_igmp;
+            (13w0, 8w88): parse_set_prio_med;
+            (13w0, 8w89): parse_set_prio_med;
+            (13w0, 8w103): parse_set_prio_med;
+            (13w0, 8w112): parse_set_prio_med;
             default: accept;
         }
     }
@@ -1290,12 +1288,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name(".parse_roce") state parse_roce {
-        packet.extract(hdr.roce);
-        transition accept;
-    }
     @name(".parse_roce_v2") state parse_roce_v2 {
-        packet.extract(hdr.roce_v2);
         transition accept;
     }
     @name(".parse_sctp") state parse_sctp {
@@ -1457,7 +1450,19 @@ control process_rid(inout headers hdr, inout metadata meta, inout standard_metad
         meta.tunnel_metadata.egress_header_count = header_count;
         meta.tunnel_metadata.tunnel_dmac_index = dmac_idx;
     }
-    @name(".inner_replica_from_rid") action inner_replica_from_rid(bit<14> bd, bit<8> dmac_idx, bit<8> tunnel_index, bit<8> tunnel_type, bit<8> header_count) {
+    @name(".encap_replica_from_rid") action encap_replica_from_rid(bit<14> bd, bit<12> dmac_idx, bit<14> tunnel_index, bit<5> tunnel_type, bit<4> header_count, bit<14> outer_bd) {
+        meta.egress_metadata.bd = bd;
+        meta.egress_metadata.outer_bd = outer_bd;
+        meta.multicast_metadata.replica = 1w1;
+        meta.multicast_metadata.inner_replica = 1w1;
+        meta.egress_metadata.routed = meta.l3_metadata.routed;
+        meta.egress_metadata.same_bd_check = bd ^ meta.ingress_metadata.bd;
+        meta.tunnel_metadata.tunnel_index = tunnel_index;
+        meta.tunnel_metadata.egress_tunnel_type = tunnel_type;
+        meta.tunnel_metadata.egress_header_count = header_count;
+        meta.tunnel_metadata.tunnel_dmac_index = dmac_idx;
+    }
+    @name(".inner_replica_from_rid") action inner_replica_from_rid(bit<14> bd) {
         meta.egress_metadata.bd = bd;
         meta.egress_metadata.outer_bd = bd;
         meta.multicast_metadata.replica = 1w1;
@@ -1473,6 +1478,7 @@ control process_rid(inout headers hdr, inout metadata meta, inout standard_metad
         actions = {
             nop;
             outer_replica_from_rid;
+            encap_replica_from_rid;
             inner_replica_from_rid;
             unicast_replica_from_rid;
         }
@@ -1558,7 +1564,7 @@ control process_mirroring(inout headers hdr, inout metadata meta, inout standard
         hdr.ethernet.srcAddr = smac;
         hdr.ethernet.dstAddr = dmac;
     }
-    @ignore_table_dependency("rid") @name(".mirror") table mirror {
+    @ignore_table_dependency("rid") @egress_pkt_length_stage(0) @name(".mirror") table mirror {
         actions = {
             nop;
             set_mirror_bd;
@@ -1632,7 +1638,7 @@ control process_vlan_decap(inout headers hdr, inout metadata meta, inout standar
         hdr.ethernet.etherType = hdr.vlan_tag_[0].etherType;
         hdr.vlan_tag_[0].setInvalid();
     }
-    @ternary(1) @name(".vlan_decap") table vlan_decap {
+    @name(".vlan_decap") table vlan_decap {
         actions = {
             nop;
             remove_vlan_single_tagged;
@@ -2114,7 +2120,7 @@ control process_egress_nat(inout headers hdr, inout metadata meta, inout standar
 }
 
 control process_egress_bd_stats(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".egress_bd_stats") direct_counter(CounterType.packets_and_bytes) egress_bd_stats;
+    @name(".egress_bd_stats") @min_width(32) direct_counter(CounterType.packets_and_bytes) egress_bd_stats;
     @name(".nop") action nop() {
     }
     @name(".nop") action nop_0() {
@@ -2142,6 +2148,11 @@ control process_egress_acl_stats(inout headers hdr, inout metadata meta, inout s
 }
 
 control process_dtel_port_convert(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    apply {
+    }
+}
+
+control process_dtel_report_encap(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
 }
@@ -2623,16 +2634,6 @@ control process_l4_checksum(inout headers hdr, inout metadata meta, inout standa
     }
 }
 
-control process_dtel_report_encap(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
-control process_dtel_insert_2(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
 control process_vlan_xlate(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".set_egress_if_params_untagged") action set_egress_if_params_untagged() {
     }
@@ -2664,6 +2665,11 @@ control process_egress_filter(inout headers hdr, inout metadata meta, inout stan
 }
 
 control process_dtel_deflect_on_drop(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    apply {
+    }
+}
+
+control process_egress_queue_stats(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
 }
@@ -2721,7 +2727,6 @@ control process_egress_system_acl(inout headers hdr, inout metadata meta, inout 
             hdr.eg_intr_md.egress_port        : ternary;
             hdr.eg_intr_md.deflection_flag    : ternary;
             meta.l3_metadata.l3_mtu_check     : ternary;
-            meta.acl_metadata.egress_acl_deny : ternary;
         }
         size = 512;
     }
@@ -2795,15 +2800,15 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".process_egress_bd_stats") process_egress_bd_stats() process_egress_bd_stats_0;
     @name(".process_egress_acl_stats") process_egress_acl_stats() process_egress_acl_stats_0;
     @name(".process_dtel_port_convert") process_dtel_port_convert() process_dtel_port_convert_0;
+    @name(".process_dtel_report_encap") process_dtel_report_encap() process_dtel_report_encap_0;
     @name(".process_dtel_insert") process_dtel_insert() process_dtel_insert_0;
     @name(".process_tunnel_encap") process_tunnel_encap() process_tunnel_encap_0;
     @name(".process_mtu") process_mtu() process_mtu_0;
     @name(".process_l4_checksum") process_l4_checksum() process_l4_checksum_0;
-    @name(".process_dtel_report_encap") process_dtel_report_encap() process_dtel_report_encap_0;
-    @name(".process_dtel_insert_2") process_dtel_insert_2() process_dtel_insert_2_0;
     @name(".process_vlan_xlate") process_vlan_xlate() process_vlan_xlate_0;
     @name(".process_egress_filter") process_egress_filter() process_egress_filter_0;
     @name(".process_dtel_deflect_on_drop") process_dtel_deflect_on_drop() process_dtel_deflect_on_drop_0;
+    @name(".process_egress_queue_stats") process_egress_queue_stats() process_egress_queue_stats_0;
     @name(".process_egress_system_acl") process_egress_system_acl() process_egress_system_acl_0;
     apply {
         process_bfd_recirc_0.apply(hdr, meta, standard_metadata);
@@ -2853,6 +2858,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 }
                 if (hdr.eg_intr_md_from_parser_aux.clone_src != 4w0) {
                     process_dtel_port_convert_0.apply(hdr, meta, standard_metadata);
+                    process_dtel_report_encap_0.apply(hdr, meta, standard_metadata);
                 }
                 else {
                     process_dtel_insert_0.apply(hdr, meta, standard_metadata);
@@ -2860,12 +2866,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 process_tunnel_encap_0.apply(hdr, meta, standard_metadata);
                 process_mtu_0.apply(hdr, meta, standard_metadata);
                 process_l4_checksum_0.apply(hdr, meta, standard_metadata);
-                if (hdr.eg_intr_md_from_parser_aux.clone_src != 4w0) {
-                    process_dtel_report_encap_0.apply(hdr, meta, standard_metadata);
-                }
-                else {
-                    process_dtel_insert_2_0.apply(hdr, meta, standard_metadata);
-                }
                 if (meta.egress_metadata.port_type == 2w0) {
                     process_vlan_xlate_0.apply(hdr, meta, standard_metadata);
                 }
@@ -2875,6 +2875,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 process_dtel_deflect_on_drop_0.apply(hdr, meta, standard_metadata);
             }
         }
+        process_egress_queue_stats_0.apply(hdr, meta, standard_metadata);
         process_egress_system_acl_0.apply(hdr, meta, standard_metadata);
     }
 }
@@ -2884,11 +2885,10 @@ control process_ingress_port_mapping(inout headers hdr, inout metadata meta, ino
         meta.ingress_metadata.port_lag_index = port_lag_index;
         meta.ingress_metadata.port_type = port_type;
     }
-    @name(".set_ingress_port_properties") action set_ingress_port_properties(bit<16> port_lag_label, bit<9> exclusion_id, bit<5> qos_group, bit<5> tc_qos_group, bit<8> tc, bit<2> color, bit<1> learning_enabled, bit<1> trust_dscp, bit<1> trust_pcp) {
+    @name(".set_ingress_port_properties") action set_ingress_port_properties(bit<16> port_lag_label, bit<9> exclusion_id, bit<5> qos_group, bit<8> tc_qos_group, bit<8> tc, bit<2> color, bit<1> learning_enabled, bit<1> trust_dscp, bit<1> trust_pcp) {
         hdr.ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
         meta.acl_metadata.port_lag_label = port_lag_label;
         meta.qos_metadata.ingress_qos_group = qos_group;
-        meta.qos_metadata.tc_qos_group = tc_qos_group;
         meta.qos_metadata.lkp_tc = tc;
         meta.meter_metadata.packet_color = color;
         meta.qos_metadata.trust_dscp = trust_dscp;
@@ -2945,6 +2945,12 @@ control validate_outer_ipv4_header(inout headers hdr, inout metadata meta, inout
         meta.l3_metadata.lkp_dscp = hdr.ipv4.diffserv;
         meta.l3_metadata.lkp_ip_version = hdr.ipv4.version;
     }
+    @name(".set_valid_outer_ipv4_llmc_packet") action set_valid_outer_ipv4_llmc_packet() {
+        meta.l3_metadata.lkp_ip_type = 2w1;
+        meta.l3_metadata.lkp_dscp = hdr.ipv4.diffserv;
+        meta.l3_metadata.lkp_ip_version = hdr.ipv4.version;
+        meta.l3_metadata.lkp_ip_llmc = 1w1;
+    }
     @name(".set_malformed_outer_ipv4_packet") action set_malformed_outer_ipv4_packet(bit<8> drop_reason) {
         meta.ingress_metadata.drop_flag = 1w1;
         meta.ingress_metadata.drop_reason = drop_reason;
@@ -2952,6 +2958,7 @@ control validate_outer_ipv4_header(inout headers hdr, inout metadata meta, inout
     @name(".validate_outer_ipv4_packet") table validate_outer_ipv4_packet {
         actions = {
             set_valid_outer_ipv4_packet;
+            set_valid_outer_ipv4_llmc_packet;
             set_malformed_outer_ipv4_packet;
         }
         key = {
@@ -2959,6 +2966,7 @@ control validate_outer_ipv4_header(inout headers hdr, inout metadata meta, inout
             hdr.ipv4.ihl           : ternary;
             hdr.ipv4.ttl           : ternary;
             hdr.ipv4.srcAddr[31:24]: ternary;
+            hdr.ipv4.dstAddr[31:8] : ternary;
         }
         size = 512;
     }
@@ -3114,7 +3122,6 @@ control process_bfd_rx_packet(inout headers hdr, inout metadata meta, inout stan
 control process_port_vlan_mapping(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".set_bd_properties") action set_bd_properties(bit<14> bd, bit<14> vrf, bit<10> stp_group, bit<1> learning_enabled, bit<16> bd_label, bit<14> stats_idx, bit<10> rmac_group, bit<1> ipv4_unicast_enabled, bit<1> ipv6_unicast_enabled, bit<2> ipv4_urpf_mode, bit<2> ipv6_urpf_mode, bit<1> igmp_snooping_enabled, bit<1> mld_snooping_enabled, bit<1> ipv4_multicast_enabled, bit<1> ipv6_multicast_enabled, bit<14> mrpf_group, bit<8> ipv4_mcast_key, bit<8> ipv4_mcast_key_type, bit<8> ipv6_mcast_key, bit<8> ipv6_mcast_key_type) {
         meta.ingress_metadata.bd = bd;
-        meta.ingress_metadata.outer_bd = bd;
         meta.acl_metadata.bd_label = bd_label;
         meta.l2_metadata.stp_group = stp_group;
         meta.l2_metadata.bd_stats_idx = stats_idx;
@@ -3122,13 +3129,13 @@ control process_port_vlan_mapping(inout headers hdr, inout metadata meta, inout 
         meta.l3_metadata.vrf = vrf;
         meta.ipv4_metadata.ipv4_unicast_enabled = ipv4_unicast_enabled;
         meta.ipv6_metadata.ipv6_unicast_enabled = ipv6_unicast_enabled;
+        meta.multicast_metadata.ipv6_multicast_enabled = ipv6_multicast_enabled;
+        meta.multicast_metadata.mld_snooping_enabled = mld_snooping_enabled;
         meta.ipv4_metadata.ipv4_urpf_mode = ipv4_urpf_mode;
         meta.ipv6_metadata.ipv6_urpf_mode = ipv6_urpf_mode;
         meta.l3_metadata.rmac_group = rmac_group;
         meta.multicast_metadata.igmp_snooping_enabled = igmp_snooping_enabled;
-        meta.multicast_metadata.mld_snooping_enabled = mld_snooping_enabled;
         meta.multicast_metadata.ipv4_multicast_enabled = ipv4_multicast_enabled;
-        meta.multicast_metadata.ipv6_multicast_enabled = ipv6_multicast_enabled;
         meta.multicast_metadata.bd_mrpf_group = mrpf_group;
     }
     @name(".port_vlan_mapping_miss") action port_vlan_mapping_miss() {
@@ -4860,6 +4867,7 @@ control process_fwd_results(inout headers hdr, inout metadata meta, inout standa
             meta.multicast_metadata.mcast_rpf_group      : ternary;
             meta.multicast_metadata.mcast_mode           : ternary;
             meta.nexthop_metadata.nexthop_type           : ternary;
+            meta.l3_metadata.lkp_ip_llmc                 : ternary;
         }
         size = 512;
     }
@@ -5134,6 +5142,11 @@ control process_ingress_racl_stats(inout headers hdr, inout metadata meta, inout
     }
 }
 
+control process_ingress_ppg_stats(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    apply {
+    }
+}
+
 control process_system_acl(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".drop_stats") counter(32w1024, CounterType.packets) drop_stats;
     @name(".drop_stats_2") counter(32w1024, CounterType.packets) drop_stats_2;
@@ -5315,6 +5328,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".process_fabric_lag") process_fabric_lag() process_fabric_lag_0;
     @name(".process_dtel_queue_watchlist") process_dtel_queue_watchlist() process_dtel_queue_watchlist_0;
     @name(".process_ingress_racl_stats") process_ingress_racl_stats() process_ingress_racl_stats_0;
+    @name(".process_ingress_ppg_stats") process_ingress_ppg_stats() process_ingress_ppg_stats_0;
     @name(".process_system_acl") process_system_acl() process_system_acl_0;
     @name(".process_ecn_acl") process_ecn_acl() process_ecn_acl_0;
     @name(".process_peer_link_properties") process_peer_link_properties() process_peer_link_properties_0;
@@ -5408,6 +5422,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         process_fabric_lag_0.apply(hdr, meta, standard_metadata);
         process_dtel_queue_watchlist_0.apply(hdr, meta, standard_metadata);
         process_ingress_racl_stats_0.apply(hdr, meta, standard_metadata);
+        process_ingress_ppg_stats_0.apply(hdr, meta, standard_metadata);
         if (meta.ingress_metadata.port_type != 2w1) {
             process_system_acl_0.apply(hdr, meta, standard_metadata);
         }

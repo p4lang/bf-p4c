@@ -1060,7 +1060,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 1024;
         default_action = NoAction_60();
     }
-    @name(".Palmdale") direct_counter(CounterType.packets) _Palmdale_0;
+    @min_width(63) @name(".Palmdale") direct_counter(CounterType.packets) _Palmdale_0;
     @name(".Grassy") action _Grassy() {
     }
     @name(".Seagate") action _Seagate() {
@@ -1313,7 +1313,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_64();
     }
-    @name(".SwissAlp") direct_counter(CounterType.packets_and_bytes) _SwissAlp_0;
+    @min_width(16) @name(".SwissAlp") direct_counter(CounterType.packets_and_bytes) _SwissAlp_0;
     @name(".Cochrane") action _Cochrane() {
         meta.Godley.Riverwood = 1w1;
     }
@@ -1663,7 +1663,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_74();
     }
-    @name(".Ethete") direct_counter(CounterType.packets_and_bytes) _Ethete_0;
+    @min_width(16) @name(".Ethete") direct_counter(CounterType.packets_and_bytes) _Ethete_0;
     @name(".Snowball") action _Snowball() {
     }
     @name(".FifeLake") action _FifeLake() {

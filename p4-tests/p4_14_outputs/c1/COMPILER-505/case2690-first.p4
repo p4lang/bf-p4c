@@ -595,7 +595,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".Taconite") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Taconite;
 
 control Airmont(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Hobergs") direct_counter(CounterType.packets_and_bytes) Hobergs;
+    @name(".Hobergs") @min_width(16) direct_counter(CounterType.packets_and_bytes) Hobergs;
     @name(".BigWells") action BigWells() {
         meta.Deeth.Wartrace = 1w1;
     }
@@ -780,7 +780,7 @@ control Biddle(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Capitola(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".FlatLick") direct_counter(CounterType.packets_and_bytes) FlatLick;
+    @name(".FlatLick") @min_width(32) direct_counter(CounterType.packets_and_bytes) FlatLick;
     @name(".Gilman") action Gilman() {
     }
     @name(".Gilman") action Gilman_0() {
@@ -969,7 +969,7 @@ control Depew(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Eckman(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Lansdowne") direct_counter(CounterType.packets_and_bytes) Lansdowne;
+    @name(".Lansdowne") @min_width(16) direct_counter(CounterType.packets_and_bytes) Lansdowne;
     @name(".Gilman") action Gilman() {
     }
     @name(".Wauregan") action Wauregan() {

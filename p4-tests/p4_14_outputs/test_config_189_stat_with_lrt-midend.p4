@@ -34,7 +34,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @lrt_scale(100) @name(".counter_0") direct_counter(CounterType.packets_and_bytes) counter_0;
+    @lrt_scale(100) @name(".counter_0") @min_width(32) direct_counter(CounterType.packets_and_bytes) counter_0;
     @name(".nop") action nop() {
         counter_0.count();
     }

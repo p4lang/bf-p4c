@@ -1156,7 +1156,7 @@ control Edinburgh(inout headers hdr, inout metadata meta, inout standard_metadat
 }
 
 control ElCentro(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Newsoms") direct_counter(CounterType.packets) Newsoms;
+    @name(".Newsoms") @min_width(63) direct_counter(CounterType.packets) Newsoms;
     @name(".ViewPark") action ViewPark() {
     }
     @name(".Biscay") action Biscay() {
@@ -1615,7 +1615,7 @@ control LeeCreek(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Machens(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Commack") direct_counter(CounterType.packets_and_bytes) Commack;
+    @name(".Commack") @min_width(16) direct_counter(CounterType.packets_and_bytes) Commack;
     @name(".Talkeetna") action Talkeetna(bit<1> Delavan, bit<1> Centre) {
         meta.Tillamook.Simnasho = Delavan;
         meta.Tillamook.Blanchard = Centre;
@@ -2052,7 +2052,7 @@ control Munger(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Norseland(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Malesus") direct_counter(CounterType.packets_and_bytes) Malesus;
+    @name(".Malesus") @min_width(16) direct_counter(CounterType.packets_and_bytes) Malesus;
     @name(".Troup") action Troup(bit<8> Lithonia, bit<1> Walland) {
         meta.Wegdahl.Naches = 1w1;
         meta.Wegdahl.Rumson = Lithonia;

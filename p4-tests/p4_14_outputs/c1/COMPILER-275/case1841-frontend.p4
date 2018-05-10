@@ -996,7 +996,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_34();
     }
-    @name(".Marquand") direct_counter(CounterType.packets_and_bytes) _Marquand_0;
+    @min_width(16) @name(".Marquand") direct_counter(CounterType.packets_and_bytes) _Marquand_0;
     @name(".Chaumont") RegisterAction<bit<1>, bit<1>>(Grants) _Chaumont_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Puyallup_in_value_0;

@@ -1178,7 +1178,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_64();
     }
-    @name(".Sidon") direct_counter(CounterType.packets_and_bytes) _Sidon_0;
+    @min_width(16) @name(".Sidon") direct_counter(CounterType.packets_and_bytes) _Sidon_0;
     @name(".Eucha") action _Eucha() {
         meta.Wimberley.Fristoe = 1w1;
     }
@@ -1528,7 +1528,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_74();
     }
-    @name(".Penrose") direct_counter(CounterType.packets_and_bytes) _Penrose_0;
+    @min_width(16) @name(".Penrose") direct_counter(CounterType.packets_and_bytes) _Penrose_0;
     @name(".Beechwood") action _Beechwood() {
         meta.Wimberley.Lubec = 1w1;
         mark_to_drop();
@@ -2942,7 +2942,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_116();
     }
-    @name(".Shelby") direct_counter(CounterType.packets) _Shelby_0;
+    @min_width(63) @name(".Shelby") direct_counter(CounterType.packets) _Shelby_0;
     @name(".Whitman") action _Whitman() {
     }
     @name(".Hearne") action _Hearne() {

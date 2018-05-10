@@ -1119,7 +1119,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_58();
     }
-    @name(".Carpenter") direct_counter(CounterType.packets_and_bytes) _Carpenter_0;
+    @min_width(16) @name(".Carpenter") direct_counter(CounterType.packets_and_bytes) _Carpenter_0;
     @name(".Montague") action _Montague() {
         meta.Pearson.Clarion = 1w1;
     }
@@ -1466,7 +1466,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction_68();
     }
-    @name(".Hauppauge") direct_counter(CounterType.packets_and_bytes) _Hauppauge_0;
+    @min_width(16) @name(".Hauppauge") direct_counter(CounterType.packets_and_bytes) _Hauppauge_0;
     @name(".Whiteclay") action _Whiteclay() {
     }
     @name(".National") action _National() {

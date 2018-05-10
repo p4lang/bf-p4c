@@ -720,7 +720,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_37();
     }
-    @name(".Gastonia") direct_counter(CounterType.packets_and_bytes) _Gastonia_0;
+    @min_width(16) @name(".Gastonia") direct_counter(CounterType.packets_and_bytes) _Gastonia_0;
     @name(".SweetAir") action _SweetAir() {
         meta.Nashoba.Chualar = 1w1;
     }
@@ -1106,7 +1106,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = NoAction_50();
     }
-    @name(".Trotwood") direct_counter(CounterType.packets_and_bytes) _Trotwood_0;
+    @min_width(16) @name(".Trotwood") direct_counter(CounterType.packets_and_bytes) _Trotwood_0;
     @name(".Stoystown") action _Stoystown() {
         meta.Wagener.Glendale = 1w1;
     }

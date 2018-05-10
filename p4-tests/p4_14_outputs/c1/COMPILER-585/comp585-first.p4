@@ -1376,7 +1376,7 @@ control Domingo(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Dunedin(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Sherrill") direct_counter(CounterType.packets_and_bytes) Sherrill;
+    @name(".Sherrill") @min_width(16) direct_counter(CounterType.packets_and_bytes) Sherrill;
     @name(".Salamonia") action Salamonia() {
         meta.ElCentro.CedarKey = 1w1;
     }
@@ -1773,7 +1773,7 @@ control Grigston(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Gunder(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Endeavor") direct_counter(CounterType.packets_and_bytes) Endeavor;
+    @name(".Endeavor") @min_width(16) direct_counter(CounterType.packets_and_bytes) Endeavor;
     @name(".Wanamassa") action Wanamassa() {
         meta.Pimento.Sewanee = 1w1;
     }
@@ -1922,7 +1922,7 @@ control Leadpoint(inout headers hdr, inout metadata meta, inout standard_metadat
 }
 
 control Lewis(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Ironside") direct_counter(CounterType.packets) Ironside;
+    @name(".Ironside") @min_width(63) direct_counter(CounterType.packets) Ironside;
     @name(".Mingus") action Mingus() {
     }
     @name(".Idria") action Idria() {

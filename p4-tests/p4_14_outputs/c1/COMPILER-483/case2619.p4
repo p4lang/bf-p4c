@@ -1218,7 +1218,7 @@ control Kalaloch(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Kenyon(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Frankfort") direct_counter(CounterType.packets_and_bytes) Frankfort;
+    @name(".Frankfort") @min_width(16) direct_counter(CounterType.packets_and_bytes) Frankfort;
     @name(".Swedeborg") action Swedeborg() {
         meta.Perrin.Bardwell = 1w1;
     }
@@ -1296,7 +1296,7 @@ control Kenyon(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Knoke(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Redvale") direct_counter(CounterType.packets_and_bytes) Redvale;
+    @name(".Redvale") @min_width(32) direct_counter(CounterType.packets_and_bytes) Redvale;
     @name(".Monkstown") action Monkstown() {
         ;
     }
@@ -1471,7 +1471,7 @@ control Lennep(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Luverne(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pathfork") direct_counter(CounterType.packets_and_bytes) Pathfork;
+    @name(".Pathfork") @min_width(16) direct_counter(CounterType.packets_and_bytes) Pathfork;
     @name(".Monkstown") action Monkstown() {
         ;
     }

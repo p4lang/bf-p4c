@@ -800,7 +800,7 @@ control Anita(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Armagh(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Ogunquit") direct_counter(CounterType.packets_and_bytes) Ogunquit;
+    @name(".Ogunquit") @min_width(32) direct_counter(CounterType.packets_and_bytes) Ogunquit;
     @name(".Careywood") action Careywood() {
         ;
     }
@@ -1372,7 +1372,7 @@ control Kalvesta(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Lewes(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Pearson") direct_counter(CounterType.packets_and_bytes) Pearson;
+    @name(".Pearson") @min_width(16) direct_counter(CounterType.packets_and_bytes) Pearson;
     @name(".Mendon") action Mendon() {
         meta.Horton.TiePlant = 1w1;
     }
@@ -2054,7 +2054,7 @@ control Salamonia(inout headers hdr, inout metadata meta, inout standard_metadat
 }
 
 control Suarez(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Garrison") direct_counter(CounterType.packets_and_bytes) Garrison;
+    @name(".Garrison") @min_width(16) direct_counter(CounterType.packets_and_bytes) Garrison;
     @name(".Careywood") action Careywood() {
         ;
     }

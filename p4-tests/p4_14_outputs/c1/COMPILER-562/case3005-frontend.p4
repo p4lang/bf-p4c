@@ -1113,7 +1113,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_58();
     }
-    @name(".Topsfield") direct_counter(CounterType.packets_and_bytes) _Topsfield_0;
+    @min_width(16) @name(".Topsfield") direct_counter(CounterType.packets_and_bytes) _Topsfield_0;
     @name(".McCracken") action _McCracken() {
         meta.Gerster.Proctor = 1w1;
     }
@@ -1463,7 +1463,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = _Quarry();
     }
-    @name(".Wyanet") direct_counter(CounterType.packets_and_bytes) _Wyanet_0;
+    @min_width(16) @name(".Wyanet") direct_counter(CounterType.packets_and_bytes) _Wyanet_0;
     @name(".TiePlant") action _TiePlant(bit<1> Anniston, bit<1> Draketown) {
         meta.Gerster.McDonough = Anniston;
         meta.Gerster.Highfill = Draketown;
@@ -2812,7 +2812,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_106();
     }
-    @name(".Gypsum") direct_counter(CounterType.packets) _Gypsum_0;
+    @min_width(63) @name(".Gypsum") direct_counter(CounterType.packets) _Gypsum_0;
     @name(".Rosburg") action _Rosburg_39() {
     }
     @name(".DeLancey") action _DeLancey() {

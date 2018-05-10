@@ -807,7 +807,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_38();
     }
-    @name(".Orrville") direct_counter(CounterType.packets_and_bytes) _Orrville_0;
+    @min_width(16) @name(".Orrville") direct_counter(CounterType.packets_and_bytes) _Orrville_0;
     @name(".Owanka") action _Owanka() {
         meta.Renton.Herald = 1w1;
     }
@@ -1145,7 +1145,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction_48();
     }
-    @name(".Marshall") direct_counter(CounterType.packets_and_bytes) _Marshall_0;
+    @min_width(16) @name(".Marshall") direct_counter(CounterType.packets_and_bytes) _Marshall_0;
     @name(".Onley") action _Onley() {
     }
     @name(".Lovett") action _Lovett() {

@@ -612,7 +612,7 @@ control Abilene(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control BlackOak(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Hallowell") direct_counter(CounterType.packets_and_bytes) Hallowell;
+    @name(".Hallowell") @min_width(16) direct_counter(CounterType.packets_and_bytes) Hallowell;
     @name(".Enhaut") action Enhaut() {
         meta.Millhaven.Vacherie = 1w1;
         mark_to_drop();
@@ -1238,7 +1238,7 @@ control Knierim(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Lanyon(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Sutherlin") direct_counter(CounterType.packets_and_bytes) Sutherlin;
+    @name(".Sutherlin") @min_width(16) direct_counter(CounterType.packets_and_bytes) Sutherlin;
     @name(".Ashwood") action Ashwood(bit<8> Gladys) {
         meta.Sigsbee.Monteview = 1w1;
         meta.Sigsbee.Emerado = Gladys;
@@ -1864,7 +1864,7 @@ control Telephone(inout headers hdr, inout metadata meta, inout standard_metadat
 }
 
 control Thermal(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Crump") direct_counter(CounterType.packets_and_bytes) Crump;
+    @name(".Crump") @min_width(32) direct_counter(CounterType.packets_and_bytes) Crump;
     @name(".McDaniels") action McDaniels() {
         ;
     }

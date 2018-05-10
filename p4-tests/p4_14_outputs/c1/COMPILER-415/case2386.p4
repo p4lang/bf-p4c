@@ -785,7 +785,7 @@ control Columbus(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Connell(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Veguita") direct_counter(CounterType.packets_and_bytes) Veguita;
+    @name(".Veguita") @min_width(16) direct_counter(CounterType.packets_and_bytes) Veguita;
     @name(".LaPryor") action LaPryor() {
         ;
     }
@@ -1602,7 +1602,7 @@ control LeaHill(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Ledoux(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Patchogue") direct_counter(CounterType.packets_and_bytes) Patchogue;
+    @name(".Patchogue") @min_width(16) direct_counter(CounterType.packets_and_bytes) Patchogue;
     @name(".Elvaston") action Elvaston() {
         meta.Conneaut.Santos = 1w1;
     }

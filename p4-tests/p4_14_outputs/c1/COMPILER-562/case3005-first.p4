@@ -1694,7 +1694,7 @@ control Fennimore(inout headers hdr, inout metadata meta, inout standard_metadat
 }
 
 control Fiskdale(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Topsfield") direct_counter(CounterType.packets_and_bytes) Topsfield;
+    @name(".Topsfield") @min_width(16) direct_counter(CounterType.packets_and_bytes) Topsfield;
     @name(".McCracken") action McCracken() {
         meta.Gerster.Proctor = 1w1;
     }
@@ -2068,7 +2068,7 @@ control Hubbell(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Hurst(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Wyanet") direct_counter(CounterType.packets_and_bytes) Wyanet;
+    @name(".Wyanet") @min_width(16) direct_counter(CounterType.packets_and_bytes) Wyanet;
     @name(".TiePlant") action TiePlant(bit<1> Anniston, bit<1> Draketown) {
         meta.Gerster.McDonough = Anniston;
         meta.Gerster.Highfill = Draketown;
@@ -2289,7 +2289,7 @@ control Lefor(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Linganore(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Gypsum") direct_counter(CounterType.packets) Gypsum;
+    @name(".Gypsum") @min_width(63) direct_counter(CounterType.packets) Gypsum;
     @name(".Rosburg") action Rosburg() {
     }
     @name(".DeLancey") action DeLancey() {

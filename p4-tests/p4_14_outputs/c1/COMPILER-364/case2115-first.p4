@@ -1538,7 +1538,7 @@ control OjoFeliz(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Pekin(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Southam") direct_counter(CounterType.packets_and_bytes) Southam;
+    @name(".Southam") @min_width(16) direct_counter(CounterType.packets_and_bytes) Southam;
     @name(".Montalba") action Montalba(bit<8> Gravette) {
         meta.Skyway.Pearson = 1w1;
         meta.Skyway.Hartwell = Gravette;
@@ -1649,7 +1649,7 @@ control Radcliffe(inout headers hdr, inout metadata meta, inout standard_metadat
 }
 
 control Rehobeth(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Waiehu") direct_counter(CounterType.packets_and_bytes) Waiehu;
+    @name(".Waiehu") @min_width(16) direct_counter(CounterType.packets_and_bytes) Waiehu;
     @name(".Armstrong") action Armstrong() {
     }
     @name(".WestPark") action WestPark() {

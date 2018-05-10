@@ -1858,7 +1858,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 1024;
         default_action = NoAction_106();
     }
-    @name(".egress_bd_stats") direct_counter(CounterType.packets_and_bytes) _egress_bd_stats_1;
+    @min_width(32) @name(".egress_bd_stats") direct_counter(CounterType.packets_and_bytes) _egress_bd_stats_1;
     @name(".nop") action _nop_16() {
         _egress_bd_stats_1.count();
     }

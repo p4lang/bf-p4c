@@ -1177,7 +1177,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_49();
     }
-    @name(".Barwick") direct_counter(CounterType.packets_and_bytes) _Barwick_0;
+    @min_width(16) @name(".Barwick") direct_counter(CounterType.packets_and_bytes) _Barwick_0;
     @name(".Hanford") action _Hanford() {
     }
     @name(".Vacherie") action _Vacherie() {

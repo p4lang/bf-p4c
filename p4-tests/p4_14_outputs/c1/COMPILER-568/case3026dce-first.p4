@@ -1139,7 +1139,7 @@ control Diana(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Dolliver(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Paxico") direct_counter(CounterType.packets_and_bytes) Paxico;
+    @name(".Paxico") @min_width(16) direct_counter(CounterType.packets_and_bytes) Paxico;
     @name(".Crannell") action Crannell(bit<8> Johnstown, bit<1> Cahokia) {
         meta.Homeacre.Aspetuck = 1w1;
         meta.Homeacre.Lanyon = Johnstown;
@@ -2910,7 +2910,7 @@ control Wataga(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Wauregan(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Hernandez") direct_counter(CounterType.packets_and_bytes) Hernandez;
+    @name(".Hernandez") @min_width(16) direct_counter(CounterType.packets_and_bytes) Hernandez;
     @name(".Lignite") action Lignite() {
         meta.Lisle.Grannis = 1w1;
         mark_to_drop();
@@ -3060,7 +3060,7 @@ control Wyncote(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Zarah(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Boistfort") direct_counter(CounterType.packets) Boistfort;
+    @name(".Boistfort") @min_width(63) direct_counter(CounterType.packets) Boistfort;
     @name(".Sultana") action Sultana() {
     }
     @name(".Swansea") action Swansea() {

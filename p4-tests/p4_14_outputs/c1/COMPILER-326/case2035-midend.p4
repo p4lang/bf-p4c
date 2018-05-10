@@ -1234,7 +1234,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = NoAction_53();
     }
-    @name(".Ceiba") direct_counter(CounterType.packets_and_bytes) _Ceiba_0;
+    @min_width(16) @name(".Ceiba") direct_counter(CounterType.packets_and_bytes) _Ceiba_0;
     @name(".Shauck") action _Shauck() {
     }
     @name(".Shelby") action _Shelby() {

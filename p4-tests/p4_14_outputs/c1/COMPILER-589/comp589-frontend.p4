@@ -1178,7 +1178,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_60();
     }
-    @name(".Seaside") direct_counter(CounterType.packets_and_bytes) _Seaside_0;
+    @min_width(16) @name(".Seaside") direct_counter(CounterType.packets_and_bytes) _Seaside_0;
     @name(".Delcambre") action _Delcambre() {
         meta.Newburgh.Florien = 1w1;
     }
@@ -1528,7 +1528,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = _Rawson();
     }
-    @name(".Carlsbad") direct_counter(CounterType.packets_and_bytes) _Carlsbad_0;
+    @min_width(16) @name(".Carlsbad") direct_counter(CounterType.packets_and_bytes) _Carlsbad_0;
     @name(".Alvwood") action _Alvwood(bit<1> Traskwood, bit<1> Champlin) {
         meta.Newburgh.Daniels = Traskwood;
         meta.Newburgh.Edmondson = Champlin;
@@ -2833,7 +2833,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_106();
     }
-    @name(".Fallis") direct_counter(CounterType.packets) _Fallis_0;
+    @min_width(63) @name(".Fallis") direct_counter(CounterType.packets) _Fallis_0;
     @name(".Ewing") action _Ewing_39() {
     }
     @name(".Vanzant") action _Vanzant() {

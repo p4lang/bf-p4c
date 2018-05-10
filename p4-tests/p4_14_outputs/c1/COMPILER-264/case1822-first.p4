@@ -1156,7 +1156,7 @@ control Oakes(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 @name(".Ashville") register<bit<1>>(32w65536) Ashville;
 
 control Parshall(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Norborne") direct_counter(CounterType.packets_and_bytes) Norborne;
+    @name(".Norborne") @min_width(16) direct_counter(CounterType.packets_and_bytes) Norborne;
     @name(".Challenge") RegisterAction<bit<1>, bit<1>>(Ashville) Challenge = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;

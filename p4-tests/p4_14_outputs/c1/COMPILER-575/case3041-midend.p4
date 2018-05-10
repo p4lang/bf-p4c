@@ -1010,7 +1010,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 128;
         default_action = _Ferrum_0();
     }
-    @name(".Boistfort") direct_counter(CounterType.packets) _Boistfort_0;
+    @min_width(63) @name(".Boistfort") direct_counter(CounterType.packets) _Boistfort_0;
     @name(".Sultana") action _Sultana_1() {
     }
     @name(".Swansea") action _Swansea() {
@@ -1235,7 +1235,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_60();
     }
-    @name(".Paxico") direct_counter(CounterType.packets_and_bytes) _Paxico_0;
+    @min_width(16) @name(".Paxico") direct_counter(CounterType.packets_and_bytes) _Paxico_0;
     @name(".GunnCity") action _GunnCity() {
         meta.Lisle.OakCity = 1w1;
     }
@@ -1562,7 +1562,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = _Reidland();
     }
-    @name(".Hernandez") direct_counter(CounterType.packets_and_bytes) _Hernandez_0;
+    @min_width(16) @name(".Hernandez") direct_counter(CounterType.packets_and_bytes) _Hernandez_0;
     @name(".Lignite") action _Lignite() {
         meta.Lisle.Grannis = 1w1;
         mark_to_drop();

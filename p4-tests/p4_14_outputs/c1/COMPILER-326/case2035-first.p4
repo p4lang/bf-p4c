@@ -1234,7 +1234,7 @@ control Lushton(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Medulla(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Ceiba") direct_counter(CounterType.packets_and_bytes) Ceiba;
+    @name(".Ceiba") @min_width(16) direct_counter(CounterType.packets_and_bytes) Ceiba;
     @name(".Shauck") action Shauck() {
     }
     @name(".Shelby") action Shelby() {

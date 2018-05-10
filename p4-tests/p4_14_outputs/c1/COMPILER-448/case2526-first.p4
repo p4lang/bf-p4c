@@ -797,7 +797,7 @@ control Ericsburg(inout headers hdr, inout metadata meta, inout standard_metadat
 }
 
 control Etter(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Lovett") direct_counter(CounterType.packets_and_bytes) Lovett;
+    @name(".Lovett") @min_width(16) direct_counter(CounterType.packets_and_bytes) Lovett;
     @name(".Bicknell") action Bicknell() {
         meta.Silva.Exell = 1w1;
     }
@@ -2008,7 +2008,7 @@ control Seaford(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Waukesha(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Owanka") direct_counter(CounterType.packets_and_bytes) Owanka;
+    @name(".Owanka") @min_width(16) direct_counter(CounterType.packets_and_bytes) Owanka;
     @name(".Finlayson") action Finlayson(bit<8> Halsey) {
         meta.Laplace.Bairoa = 1w1;
         meta.Laplace.Nerstrand = Halsey;

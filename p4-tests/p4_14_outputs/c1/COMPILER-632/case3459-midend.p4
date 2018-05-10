@@ -1367,7 +1367,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_58();
     }
-    @name(".Moneta") direct_counter(CounterType.packets_and_bytes) _Moneta_0;
+    @min_width(16) @name(".Moneta") direct_counter(CounterType.packets_and_bytes) _Moneta_0;
     @name(".Ardenvoir") action _Ardenvoir() {
         meta.Westboro.Rockham = 1w1;
     }
@@ -1670,7 +1670,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 72;
         default_action = NoAction_65();
     }
-    @name(".Poteet") direct_counter(CounterType.packets_and_bytes) _Poteet_0;
+    @min_width(16) @name(".Poteet") direct_counter(CounterType.packets_and_bytes) _Poteet_0;
     @name(".Hobucken") action _Hobucken(bit<1> Rockport, bit<1> Brohard) {
         meta.Westboro.Lewellen = Rockport;
         meta.Westboro.LaSalle = Brohard;
@@ -2948,7 +2948,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_101();
     }
-    @name(".Domingo") direct_counter(CounterType.packets) _Domingo_0;
+    @min_width(64) @name(".Domingo") direct_counter(CounterType.packets) _Domingo_0;
     @name(".Fitler") action _Fitler_39() {
     }
     @name(".Norwood") action _Norwood(bit<9> Struthers, bit<5> Rainelle) {
@@ -3033,7 +3033,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = _Netarts();
     }
-    @name(".Henry") direct_counter(CounterType.packets) _Henry_0;
+    @min_width(63) @name(".Henry") direct_counter(CounterType.packets) _Henry_0;
     @name(".WestLine") action _WestLine() {
     }
     @name(".Beaverdam") action _Beaverdam() {

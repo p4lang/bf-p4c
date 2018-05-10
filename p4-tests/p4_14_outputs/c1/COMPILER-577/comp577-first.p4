@@ -1372,7 +1372,7 @@ control Doddridge(inout headers hdr, inout metadata meta, inout standard_metadat
 }
 
 control Dougherty(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Palmdale") direct_counter(CounterType.packets) Palmdale;
+    @name(".Palmdale") @min_width(63) direct_counter(CounterType.packets) Palmdale;
     @name(".Grassy") action Grassy() {
     }
     @name(".Seagate") action Seagate() {
@@ -1635,7 +1635,7 @@ control Holden(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Kalida(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".SwissAlp") direct_counter(CounterType.packets_and_bytes) SwissAlp;
+    @name(".SwissAlp") @min_width(16) direct_counter(CounterType.packets_and_bytes) SwissAlp;
     @name(".Mayflower") action Mayflower(bit<8> Newberg, bit<1> Gullett) {
         meta.Crane.Midas = 1w1;
         meta.Crane.Paxson = Newberg;
@@ -2875,7 +2875,7 @@ control Trilby(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Westville(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Ethete") direct_counter(CounterType.packets_and_bytes) Ethete;
+    @name(".Ethete") @min_width(16) direct_counter(CounterType.packets_and_bytes) Ethete;
     @name(".Snowball") action Snowball() {
     }
     @name(".FifeLake") action FifeLake() {

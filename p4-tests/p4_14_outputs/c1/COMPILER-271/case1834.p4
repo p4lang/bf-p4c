@@ -609,7 +609,7 @@ control Ardara(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".Hobson") register<bit<1>>(32w65536) Hobson;
 
 control Devers(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Amanda") direct_counter(CounterType.packets_and_bytes) Amanda;
+    @name(".Amanda") @min_width(16) direct_counter(CounterType.packets_and_bytes) Amanda;
     @name(".Warsaw") RegisterAction<bit<1>, bit<1>>(Hobson) Warsaw = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;

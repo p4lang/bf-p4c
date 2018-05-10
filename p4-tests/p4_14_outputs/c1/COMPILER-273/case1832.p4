@@ -511,7 +511,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".Pueblo") register<bit<1>>(32w65536) Pueblo;
 
 control Achille(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".BigBay") direct_counter(CounterType.packets_and_bytes) BigBay;
+    @name(".BigBay") @min_width(16) direct_counter(CounterType.packets_and_bytes) BigBay;
     @name(".Sunrise") RegisterAction<bit<1>, bit<1>>(Pueblo) Sunrise = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;

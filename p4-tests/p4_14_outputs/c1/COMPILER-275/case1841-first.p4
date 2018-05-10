@@ -1233,7 +1233,7 @@ control Perez(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 @name(".Grants") register<bit<1>>(32w65536) Grants;
 
 control Puyallup(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Marquand") direct_counter(CounterType.packets_and_bytes) Marquand;
+    @name(".Marquand") @min_width(16) direct_counter(CounterType.packets_and_bytes) Marquand;
     @name(".Chaumont") RegisterAction<bit<1>, bit<1>>(Grants) Chaumont = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;

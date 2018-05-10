@@ -1895,7 +1895,7 @@ control Niota(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Paicines(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Sidon") direct_counter(CounterType.packets_and_bytes) Sidon;
+    @name(".Sidon") @min_width(16) direct_counter(CounterType.packets_and_bytes) Sidon;
     @name(".Eucha") action Eucha() {
         meta.Wimberley.Fristoe = 1w1;
     }
@@ -2216,7 +2216,7 @@ control Preston(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Ravena(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Shelby") direct_counter(CounterType.packets) Shelby;
+    @name(".Shelby") @min_width(63) direct_counter(CounterType.packets) Shelby;
     @name(".Whitman") action Whitman() {
     }
     @name(".Hearne") action Hearne() {
@@ -2294,7 +2294,7 @@ control Reynolds(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Royston(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Penrose") direct_counter(CounterType.packets_and_bytes) Penrose;
+    @name(".Penrose") @min_width(16) direct_counter(CounterType.packets_and_bytes) Penrose;
     @name(".Beechwood") action Beechwood() {
         meta.Wimberley.Lubec = 1w1;
         mark_to_drop();

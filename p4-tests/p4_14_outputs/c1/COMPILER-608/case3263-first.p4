@@ -1503,7 +1503,7 @@ control Dominguez(inout headers hdr, inout metadata meta, inout standard_metadat
 }
 
 control Drifton(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Kaplan") direct_counter(CounterType.packets_and_bytes) Kaplan;
+    @name(".Kaplan") @min_width(16) direct_counter(CounterType.packets_and_bytes) Kaplan;
     @name(".Lemont") action Lemont(bit<8> Westvaco, bit<1> Hokah) {
         meta.Ranburne.Monida = 1w1;
         meta.Ranburne.Kempton = Westvaco;
@@ -2114,7 +2114,7 @@ control Guion(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Gurdon(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Hiland") direct_counter(CounterType.packets) Hiland;
+    @name(".Hiland") @min_width(63) direct_counter(CounterType.packets) Hiland;
     @name(".Trail") action Trail() {
     }
     @name(".Neches") action Neches() {
@@ -3023,7 +3023,7 @@ control Whiteclay(inout headers hdr, inout metadata meta, inout standard_metadat
 }
 
 control Wyanet(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Yorkville") direct_counter(CounterType.packets_and_bytes) Yorkville;
+    @name(".Yorkville") @min_width(16) direct_counter(CounterType.packets_and_bytes) Yorkville;
     @name(".Rotterdam") action Rotterdam() {
         meta.Tingley.Cache = 1w1;
         mark_to_drop();

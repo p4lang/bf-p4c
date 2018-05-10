@@ -1070,7 +1070,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = NoAction_40();
     }
-    @name(".Silvertip") direct_counter(CounterType.packets_and_bytes) _Silvertip_0;
+    @min_width(16) @name(".Silvertip") direct_counter(CounterType.packets_and_bytes) _Silvertip_0;
     @name(".Mabelle") RegisterAction<bit<1>, bit<1>>(Brinson) _Mabelle_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Moark_in_value_0;

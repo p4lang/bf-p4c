@@ -1501,7 +1501,7 @@ control Reddell(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Retrop(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Barwick") direct_counter(CounterType.packets_and_bytes) Barwick;
+    @name(".Barwick") @min_width(16) direct_counter(CounterType.packets_and_bytes) Barwick;
     @name(".Hanford") action Hanford() {
         ;
     }

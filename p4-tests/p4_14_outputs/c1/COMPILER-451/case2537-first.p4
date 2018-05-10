@@ -927,7 +927,7 @@ control Battles(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Bicknell(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Marshall") direct_counter(CounterType.packets_and_bytes) Marshall;
+    @name(".Marshall") @min_width(16) direct_counter(CounterType.packets_and_bytes) Marshall;
     @name(".Onley") action Onley() {
     }
     @name(".Lovett") action Lovett() {
@@ -1112,7 +1112,7 @@ control Ceiba(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Cement(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Orrville") direct_counter(CounterType.packets_and_bytes) Orrville;
+    @name(".Orrville") @min_width(16) direct_counter(CounterType.packets_and_bytes) Orrville;
     @name(".Owanka") action Owanka() {
         meta.Renton.Herald = 1w1;
     }

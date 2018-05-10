@@ -1224,7 +1224,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_60();
     }
-    @name(".Traverse") direct_counter(CounterType.packets_and_bytes) _Traverse_0;
+    @min_width(16) @name(".Traverse") direct_counter(CounterType.packets_and_bytes) _Traverse_0;
     @name(".Firebrick") action _Firebrick() {
         meta.Everetts.Jeddo = 1w1;
     }
@@ -1564,7 +1564,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_70();
     }
-    @name(".Meeker") direct_counter(CounterType.packets_and_bytes) _Meeker_0;
+    @min_width(16) @name(".Meeker") direct_counter(CounterType.packets_and_bytes) _Meeker_0;
     @name(".Woolwine") action _Woolwine() {
         meta.Circle.Perrytown = 1w1;
     }
@@ -2833,7 +2833,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_106();
     }
-    @name(".LakeFork") direct_counter(CounterType.packets) _LakeFork_0;
+    @min_width(63) @name(".LakeFork") direct_counter(CounterType.packets) _LakeFork_0;
     @name(".Odebolt") action _Odebolt_39() {
     }
     @name(".Fannett") action _Fannett() {

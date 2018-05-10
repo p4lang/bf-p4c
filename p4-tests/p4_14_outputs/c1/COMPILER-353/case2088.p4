@@ -925,7 +925,7 @@ control Flasher(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Floral(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Holden") direct_counter(CounterType.packets_and_bytes) Holden;
+    @name(".Holden") @min_width(16) direct_counter(CounterType.packets_and_bytes) Holden;
     @name(".Waretown") action Waretown() {
         ;
     }
@@ -1181,7 +1181,7 @@ control Neponset(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Nixon(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Stuttgart") direct_counter(CounterType.packets_and_bytes) Stuttgart;
+    @name(".Stuttgart") @min_width(16) direct_counter(CounterType.packets_and_bytes) Stuttgart;
     @name(".Parmelee") action Parmelee() {
         meta.Goodlett.Parkway = 1w1;
     }

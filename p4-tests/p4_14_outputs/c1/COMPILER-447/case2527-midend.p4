@@ -840,7 +840,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_37();
     }
-    @name(".Cement") direct_counter(CounterType.packets_and_bytes) _Cement_0;
+    @min_width(16) @name(".Cement") direct_counter(CounterType.packets_and_bytes) _Cement_0;
     @name(".Waukesha") action _Waukesha() {
         meta.Renton.Herald = 1w1;
     }
@@ -1165,7 +1165,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_47();
     }
-    @name(".Moody") direct_counter(CounterType.packets_and_bytes) _Moody_0;
+    @min_width(16) @name(".Moody") direct_counter(CounterType.packets_and_bytes) _Moody_0;
     @name(".Achille") action _Achille() {
     }
     @name(".Bicknell") action _Bicknell() {

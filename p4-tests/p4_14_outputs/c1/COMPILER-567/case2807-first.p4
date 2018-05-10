@@ -2106,7 +2106,7 @@ control Lubec4(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Lublin(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Goldenrod") direct_counter(CounterType.packets_and_bytes) Goldenrod;
+    @name(".Goldenrod") @min_width(16) direct_counter(CounterType.packets_and_bytes) Goldenrod;
     @name(".Jenners") action Jenners(bit<8> Fannett, bit<1> LasLomas) {
         meta.Trenary.Sylvan = 1w1;
         meta.Trenary.Brookwood = Fannett;
@@ -2361,7 +2361,7 @@ control McGovern(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Neame(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Bayne") direct_counter(CounterType.packets_and_bytes) Bayne;
+    @name(".Bayne") @min_width(16) direct_counter(CounterType.packets_and_bytes) Bayne;
     @name(".Challis") action Challis() {
         meta.Maddock.Kapalua = 1w1;
         mark_to_drop();

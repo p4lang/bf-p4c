@@ -756,7 +756,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_37();
     }
-    @name(".Southam") direct_counter(CounterType.packets_and_bytes) _Southam_0;
+    @min_width(16) @name(".Southam") direct_counter(CounterType.packets_and_bytes) _Southam_0;
     @name(".Hillister") action _Hillister() {
         meta.Roxboro.Maddock = 1w1;
     }
@@ -1130,7 +1130,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_50();
     }
-    @name(".Waiehu") direct_counter(CounterType.packets_and_bytes) _Waiehu_0;
+    @min_width(16) @name(".Waiehu") direct_counter(CounterType.packets_and_bytes) _Waiehu_0;
     @name(".Armstrong") action _Armstrong() {
     }
     @name(".WestPark") action _WestPark() {

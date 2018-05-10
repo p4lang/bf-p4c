@@ -808,7 +808,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_40();
     }
-    @name(".Stuttgart") direct_counter(CounterType.packets_and_bytes) _Stuttgart_0;
+    @min_width(16) @name(".Stuttgart") direct_counter(CounterType.packets_and_bytes) _Stuttgart_0;
     @name(".Parmelee") action _Parmelee() {
         meta.Goodlett.Parkway = 1w1;
     }
@@ -1192,7 +1192,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_53();
     }
-    @name(".Holden") direct_counter(CounterType.packets_and_bytes) _Holden_0;
+    @min_width(16) @name(".Holden") direct_counter(CounterType.packets_and_bytes) _Holden_0;
     @name(".Waretown") action _Waretown() {
     }
     @name(".Virgilina") action _Virgilina() {

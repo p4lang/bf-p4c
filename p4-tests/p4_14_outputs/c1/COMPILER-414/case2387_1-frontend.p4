@@ -814,7 +814,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_40();
     }
-    @name(".Hilbert") direct_counter(CounterType.packets_and_bytes) _Hilbert_0;
+    @min_width(16) @name(".Hilbert") direct_counter(CounterType.packets_and_bytes) _Hilbert_0;
     @name(".Exira") action _Exira() {
         meta.Timken.Bellmore = 1w1;
     }
@@ -1200,7 +1200,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = NoAction_53();
     }
-    @name(".HillCity") direct_counter(CounterType.packets_and_bytes) _HillCity_0;
+    @min_width(16) @name(".HillCity") direct_counter(CounterType.packets_and_bytes) _HillCity_0;
     @name(".Earling") action _Earling() {
     }
     @name(".Comunas") action _Comunas() {

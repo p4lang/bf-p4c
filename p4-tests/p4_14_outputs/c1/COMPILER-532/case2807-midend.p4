@@ -1145,7 +1145,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_59();
     }
-    @name(".Goldenrod") direct_counter(CounterType.packets_and_bytes) _Goldenrod_0;
+    @min_width(16) @name(".Goldenrod") direct_counter(CounterType.packets_and_bytes) _Goldenrod_0;
     @name(".Karlsruhe") action _Karlsruhe() {
         meta.Maddock.Meridean = 1w1;
     }
@@ -1487,7 +1487,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_69();
     }
-    @name(".Bayne") direct_counter(CounterType.packets_and_bytes) _Bayne_0;
+    @min_width(16) @name(".Bayne") direct_counter(CounterType.packets_and_bytes) _Bayne_0;
     @name(".Calabash") action _Calabash_4() {
     }
     @name(".Calabash") action _Calabash_5() {

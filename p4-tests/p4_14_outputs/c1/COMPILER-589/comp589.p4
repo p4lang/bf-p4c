@@ -785,7 +785,7 @@ control Amber(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Anchorage(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Fallis") direct_counter(CounterType.packets) Fallis;
+    @name(".Fallis") @min_width(63) direct_counter(CounterType.packets) Fallis;
     @name(".Ewing") action Ewing() {
         ;
     }
@@ -1842,7 +1842,7 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Hatfield(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Seaside") direct_counter(CounterType.packets_and_bytes) Seaside;
+    @name(".Seaside") @min_width(16) direct_counter(CounterType.packets_and_bytes) Seaside;
     @name(".Paxtonia") action Paxtonia(bit<8> Nestoria, bit<1> Surrey) {
         meta.Holliston.Ragley = 1w1;
         meta.Holliston.Delmar = Nestoria;
@@ -1932,7 +1932,7 @@ control Hatfield(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Henry(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Carlsbad") direct_counter(CounterType.packets_and_bytes) Carlsbad;
+    @name(".Carlsbad") @min_width(16) direct_counter(CounterType.packets_and_bytes) Carlsbad;
     @name(".Alvwood") action Alvwood(bit<1> Traskwood, bit<1> Champlin) {
         meta.Newburgh.Daniels = Traskwood;
         meta.Newburgh.Edmondson = Champlin;

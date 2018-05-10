@@ -663,7 +663,7 @@ control Amasa(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 }
 
 control Baskett(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Cement") direct_counter(CounterType.packets_and_bytes) Cement;
+    @name(".Cement") @min_width(16) direct_counter(CounterType.packets_and_bytes) Cement;
     @name(".Alnwick") action Alnwick(bit<8> Halsey) {
         meta.Laplace.Bairoa = 1w1;
         meta.Laplace.Nerstrand = Halsey;
@@ -1621,7 +1621,7 @@ control Missoula(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Moapa(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Moody") direct_counter(CounterType.packets_and_bytes) Moody;
+    @name(".Moody") @min_width(16) direct_counter(CounterType.packets_and_bytes) Moody;
     @name(".Achille") action Achille() {
         ;
     }

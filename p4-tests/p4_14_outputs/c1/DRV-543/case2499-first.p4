@@ -854,7 +854,7 @@ control Ethete(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Grassflat(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Lahaina") direct_counter(CounterType.packets_and_bytes) Lahaina;
+    @name(".Lahaina") @min_width(16) direct_counter(CounterType.packets_and_bytes) Lahaina;
     @name(".Escondido") action Escondido() {
         meta.Goodrich.Harshaw = 1w1;
     }
@@ -1255,7 +1255,7 @@ control Juneau(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control Lamona(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Maltby") direct_counter(CounterType.packets_and_bytes) Maltby;
+    @name(".Maltby") @min_width(16) direct_counter(CounterType.packets_and_bytes) Maltby;
     @name(".Grandy") action Grandy() {
         meta.Westville.Saticoy = 1w1;
     }

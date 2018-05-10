@@ -911,7 +911,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_27();
     }
-    @name(".Norborne") direct_counter(CounterType.packets_and_bytes) _Norborne_0;
+    @min_width(16) @name(".Norborne") direct_counter(CounterType.packets_and_bytes) _Norborne_0;
     @name(".Challenge") RegisterAction<bit<1>, bit<1>>(Ashville) _Challenge_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Parshall_in_value_0;

@@ -748,7 +748,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 128;
         default_action = _Burrel_0();
     }
-    @name(".Redvale") direct_counter(CounterType.packets_and_bytes) _Redvale_0;
+    @min_width(32) @name(".Redvale") direct_counter(CounterType.packets_and_bytes) _Redvale_0;
     @name(".Monkstown") action _Monkstown() {
         _Redvale_0.count();
     }
@@ -863,7 +863,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_40();
     }
-    @name(".Frankfort") direct_counter(CounterType.packets_and_bytes) _Frankfort_0;
+    @min_width(16) @name(".Frankfort") direct_counter(CounterType.packets_and_bytes) _Frankfort_0;
     @name(".Swedeborg") action _Swedeborg() {
         meta.Perrin.Bardwell = 1w1;
     }
@@ -1203,7 +1203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_50();
     }
-    @name(".Pathfork") direct_counter(CounterType.packets_and_bytes) _Pathfork_0;
+    @min_width(16) @name(".Pathfork") direct_counter(CounterType.packets_and_bytes) _Pathfork_0;
     @name(".Monkstown") action _Monkstown_0() {
     }
     @name(".Skyway") action _Skyway() {

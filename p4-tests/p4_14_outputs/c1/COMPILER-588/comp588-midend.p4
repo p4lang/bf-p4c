@@ -1189,7 +1189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_60();
     }
-    @name(".Malesus") direct_counter(CounterType.packets_and_bytes) _Malesus_0;
+    @min_width(16) @name(".Malesus") direct_counter(CounterType.packets_and_bytes) _Malesus_0;
     @name(".Dorris") action _Dorris() {
         meta.Tillamook.Parkway = 1w1;
     }
@@ -1531,7 +1531,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_70();
     }
-    @name(".Commack") direct_counter(CounterType.packets_and_bytes) _Commack_0;
+    @min_width(16) @name(".Commack") direct_counter(CounterType.packets_and_bytes) _Commack_0;
     @name(".Talkeetna") action _Talkeetna(bit<1> Delavan, bit<1> Centre) {
         meta.Tillamook.Simnasho = Delavan;
         meta.Tillamook.Blanchard = Centre;
@@ -2808,7 +2808,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_106();
     }
-    @name(".Newsoms") direct_counter(CounterType.packets) _Newsoms_0;
+    @min_width(63) @name(".Newsoms") direct_counter(CounterType.packets) _Newsoms_0;
     @name(".ViewPark") action _ViewPark_39() {
     }
     @name(".Biscay") action _Biscay() {

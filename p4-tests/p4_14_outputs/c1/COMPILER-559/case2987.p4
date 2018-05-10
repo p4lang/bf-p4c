@@ -1564,7 +1564,7 @@ control Newsoms(inout headers hdr, inout metadata meta, inout standard_metadata_
 }
 
 control Nondalton(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Carpenter") direct_counter(CounterType.packets_and_bytes) Carpenter;
+    @name(".Carpenter") @min_width(16) direct_counter(CounterType.packets_and_bytes) Carpenter;
     @name(".Suwannee") action Suwannee(bit<8> Newborn, bit<1> Barney) {
         meta.Portal.Epsie = 1w1;
         meta.Portal.LoonLake = Newborn;
@@ -2120,7 +2120,7 @@ control StarLake(inout headers hdr, inout metadata meta, inout standard_metadata
 }
 
 control Swisher(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Hauppauge") direct_counter(CounterType.packets_and_bytes) Hauppauge;
+    @name(".Hauppauge") @min_width(16) direct_counter(CounterType.packets_and_bytes) Hauppauge;
     @name(".Whiteclay") action Whiteclay() {
         ;
     }

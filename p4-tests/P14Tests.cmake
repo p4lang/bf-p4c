@@ -5,7 +5,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_160_stateful_single_bit_mode.p4
   extensions/p4_tests/p4_14/test_config_185_first_lpf.p4
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
-  extensions/p4_tests/p4_14/test_config_195_stateful_predicate_output.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
   extensions/p4_tests/p4_14/shared_names.p4
   extensions/p4_tests/p4_14/c2/COMPILER-408/case2364.p4
@@ -27,7 +26,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
   extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
   extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
-  extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   # proprietary algorithms for hash
   extensions/p4_tests/p4_14/p4-tests/programs/dyn_hash/dyn_hash.p4
@@ -36,6 +34,7 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
   # knet_mgr_test.p4(10): error: add_cpu_header: parameter fabric_color must be bound
   extensions/p4_tests/p4_14/p4-tests/programs/knet_mgr_test/knet_mgr_test.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/mod_field_conditionally/mod_field_conditionally.p4
   # tofino hash function extensions not supported with p4test
   extensions/p4_tests/p4_14/brig-540.p4
   extensions/p4_tests/p4_14/brig-540-2.p4

@@ -1166,7 +1166,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_60();
     }
-    @name(".Endeavor") direct_counter(CounterType.packets_and_bytes) _Endeavor_0;
+    @min_width(16) @name(".Endeavor") direct_counter(CounterType.packets_and_bytes) _Endeavor_0;
     @name(".Wanamassa") action _Wanamassa() {
         meta.Pimento.Sewanee = 1w1;
     }
@@ -1516,7 +1516,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = _Skyway();
     }
-    @name(".Sherrill") direct_counter(CounterType.packets_and_bytes) _Sherrill_0;
+    @min_width(16) @name(".Sherrill") direct_counter(CounterType.packets_and_bytes) _Sherrill_0;
     @name(".Salamonia") action _Salamonia() {
         meta.ElCentro.CedarKey = 1w1;
     }
@@ -2817,7 +2817,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_106();
     }
-    @name(".Ironside") direct_counter(CounterType.packets) _Ironside_0;
+    @min_width(63) @name(".Ironside") direct_counter(CounterType.packets) _Ironside_0;
     @name(".Mingus") action _Mingus_39() {
     }
     @name(".Idria") action _Idria() {

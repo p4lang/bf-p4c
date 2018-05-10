@@ -833,7 +833,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 128;
         default_action = _Lynch_0();
     }
-    @name(".Ogunquit") direct_counter(CounterType.packets_and_bytes) _Ogunquit_0;
+    @min_width(32) @name(".Ogunquit") direct_counter(CounterType.packets_and_bytes) _Ogunquit_0;
     @name(".Careywood") action _Careywood() {
         _Ogunquit_0.count();
     }
@@ -991,7 +991,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_43();
     }
-    @name(".Pearson") direct_counter(CounterType.packets_and_bytes) _Pearson_0;
+    @min_width(16) @name(".Pearson") direct_counter(CounterType.packets_and_bytes) _Pearson_0;
     @name(".Mendon") action _Mendon() {
         meta.Horton.TiePlant = 1w1;
     }
@@ -1363,7 +1363,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2;
         default_action = NoAction_55();
     }
-    @name(".Garrison") direct_counter(CounterType.packets_and_bytes) _Garrison_0;
+    @min_width(16) @name(".Garrison") direct_counter(CounterType.packets_and_bytes) _Garrison_0;
     @name(".Careywood") action _Careywood_0() {
     }
     @name(".Agawam") action _Agawam() {

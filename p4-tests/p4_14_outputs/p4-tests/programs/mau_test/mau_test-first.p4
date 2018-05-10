@@ -282,17 +282,17 @@ struct vpp6_alu_layout {
 @name(".vpp6_reg") register<vpp6_alu_layout>(32w0) vpp6_reg;
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @lrt_enable(0) @lrt_scale(154) @name(".e1_cntr") direct_counter(CounterType.packets) e1_cntr;
-    @lrt_enable(0) @lrt_scale(15811) @name(".e2_cntr") direct_counter(CounterType.packets) e2_cntr;
-    @lrt_enable(0) @lrt_scale(154) @name(".e3_cntr") direct_counter(CounterType.bytes) e3_cntr;
+    @lrt_enable(0) @lrt_scale(154) @name(".e1_cntr") @min_width(64) direct_counter(CounterType.packets) e1_cntr;
+    @lrt_enable(0) @lrt_scale(15811) @name(".e2_cntr") @min_width(32) direct_counter(CounterType.packets) e2_cntr;
+    @lrt_enable(0) @lrt_scale(154) @name(".e3_cntr") @min_width(64) direct_counter(CounterType.bytes) e3_cntr;
     @lrt_enable(0) @lrt_scale(15811) @name(".e4_cntr") direct_counter(CounterType.packets) e4_cntr;
-    @lrt_enable(0) @lrt_scale(154) @name(".e5_cntr") direct_counter(CounterType.bytes) e5_cntr;
+    @lrt_enable(0) @lrt_scale(154) @name(".e5_cntr") @min_width(32) direct_counter(CounterType.bytes) e5_cntr;
     @lrt_enable(0) @lrt_scale(15811) @name(".e6_cntr") direct_counter(CounterType.packets) e6_cntr;
-    @lrt_enable(0) @lrt_scale(154) @name(".t1_cntr") direct_counter(CounterType.packets) t1_cntr;
-    @lrt_enable(0) @lrt_scale(15811) @name(".t2_cntr") direct_counter(CounterType.packets) t2_cntr;
-    @lrt_enable(0) @lrt_scale(154) @name(".t3_cntr") direct_counter(CounterType.bytes) t3_cntr;
+    @lrt_enable(0) @lrt_scale(154) @name(".t1_cntr") @min_width(64) direct_counter(CounterType.packets) t1_cntr;
+    @lrt_enable(0) @lrt_scale(15811) @name(".t2_cntr") @min_width(32) direct_counter(CounterType.packets) t2_cntr;
+    @lrt_enable(0) @lrt_scale(154) @name(".t3_cntr") @min_width(64) direct_counter(CounterType.bytes) t3_cntr;
     @lrt_enable(0) @lrt_scale(15811) @name(".t4_cntr") direct_counter(CounterType.packets) t4_cntr;
-    @lrt_enable(0) @lrt_scale(154) @name(".t5_cntr") direct_counter(CounterType.bytes) t5_cntr;
+    @lrt_enable(0) @lrt_scale(154) @name(".t5_cntr") @min_width(32) direct_counter(CounterType.bytes) t5_cntr;
     @lrt_enable(0) @lrt_scale(15811) @name(".t6_cntr") direct_counter(CounterType.packets) t6_cntr;
     @name(".v3_cntr") direct_counter(CounterType.bytes) v3_cntr;
     @name(".v4_cntr") direct_counter(CounterType.packets) v4_cntr;

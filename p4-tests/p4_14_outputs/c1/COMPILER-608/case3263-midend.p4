@@ -1158,7 +1158,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_57();
     }
-    @name(".Kaplan") direct_counter(CounterType.packets_and_bytes) _Kaplan_0;
+    @min_width(16) @name(".Kaplan") direct_counter(CounterType.packets_and_bytes) _Kaplan_0;
     @name(".Hoadly") action _Hoadly() {
         meta.Tingley.Pownal = 1w1;
     }
@@ -1457,7 +1457,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = _Verdery();
     }
-    @name(".Yorkville") direct_counter(CounterType.packets_and_bytes) _Yorkville_0;
+    @min_width(16) @name(".Yorkville") direct_counter(CounterType.packets_and_bytes) _Yorkville_0;
     @name(".Rotterdam") action _Rotterdam() {
         meta.Tingley.Cache = 1w1;
         mark_to_drop();
@@ -2825,7 +2825,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = Gallinas;
         default_action = NoAction_104();
     }
-    @name(".Hiland") direct_counter(CounterType.packets) _Hiland_0;
+    @min_width(63) @name(".Hiland") direct_counter(CounterType.packets) _Hiland_0;
     @name(".Trail") action _Trail() {
     }
     @name(".Neches") action _Neches() {
