@@ -229,10 +229,10 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Table *tbl) {
     for (auto& field_info : info_set) {
         auto* field = field_info.first;
         auto& info = field_info.second;
-        if (info.xor_with) {
+        for (auto *xor_with : info.xor_with) {
             // instead of using const_cast, get a mutable pointer from phvInfo.
             auto* field_a = phv_i.field(field->id);
-            auto* field_b = phv_i.field(info.xor_with->id);
+            auto* field_b = phv_i.field(xor_with->id);
             auto slices_a = self.slices(field_a, StartLen(0, field_a->size));
             auto slices_b = self.slices(field_b, StartLen(0, field_b->size));
             auto a_it = slices_a.begin();

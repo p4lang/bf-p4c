@@ -1618,7 +1618,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     for (auto &info : collect.info) {
         int flags = 0;
 
-        if (info.second.xor_with) {
+        if (!info.second.xor_with.empty()) {
             flags |= IXBar::Use::NeedXor;
             // FIXME: This need to be coordinated with the actual PHV!!!
             xor_required = true;

@@ -1041,11 +1041,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 # p4smith regression XFAILs
-# BRIG-646
-p4c_add_xfail_reason("tofino"
-  "error: Gateway xor key at offset .* overlaps previous value at offset .*"
-  extensions/p4_tests/p4_14/p4smith_regression/plasmas_0.p4
-)
 
 # BRIG-647
 p4c_add_xfail_reason("tofino"

@@ -1690,9 +1690,8 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
         out << gw_indent << "match: {";
         const char *sep = " ";
         for (auto &f : collect.info) {
-            if (f.second.xor_with) {
+            if (!f.second.xor_offsets.empty())
                 have_xor = true;
-                continue; }
             for (auto &offset : f.second.offsets) {
                 f.first->foreach_alloc(offset.second, [&](const PHV::Field::alloc_slice &sl) {
                     out << sep << (offset.first + (sl.field_bit - offset.second.lo));
@@ -1706,15 +1705,12 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             out << gw_indent << "xor: {";
             sep = " ";
             for (auto &f : collect.info) {
-                if (f.second.xor_with) {
-                    for (auto &offset : f.second.offsets) {
-                        f.first->foreach_alloc(offset.second,
-                                               [&](const PHV::Field::alloc_slice &sl) {
-                            out << sep << (offset.first + (sl.field_bit - offset.second.lo));
-                            out << ": " << Slice(f.first, sl.field_bits());
-                            sep = ", ";
-                        });
-                    }
+                for (auto &offset : f.second.xor_offsets) {
+                    f.first->foreach_alloc(offset.second, [&](const PHV::Field::alloc_slice &sl) {
+                        out << sep << (offset.first + (sl.field_bit - offset.second.lo));
+                        out << ": " << Slice(f.first, sl.field_bits());
+                        sep = ", ";
+                    });
                 }
             }
             out << (sep+1) << "}" << std::endl;

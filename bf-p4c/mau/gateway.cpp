@@ -39,7 +39,6 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
         auto *t = e->left;
         e->left = e->right;
         e->right = t; }
-
     return e;
 }
 
@@ -274,7 +273,10 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
         if (!rel->is<IR::Equ>() && !rel->is<IR::Neq>()) {
             info.need_range = need_range = true;
         } else if (ctxt->child_index > 0) {
-            info.xor_with = xor_match;
+            if (xor_match)
+                info.xor_with.insert(xor_match);
+            else
+                info.const_eq = true;
         } else {
             xor_match = finfo; } }
     if (aliasSourceName != boost::none) {
@@ -282,38 +284,45 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
         LOG5("Adding entry to info_to_uses: " << &info << " : " << *aliasSourceName);
     }
     return false; }
+void CollectGatewayFields::postorder(const IR::Literal *) {
+    if (xor_match && getParent<IR::Operation::Relation>())
+        info[xor_match].const_eq = true;
+}
 
 bool CollectGatewayFields::compute_offsets() {
     bytes = bits = 0;
     std::vector<decltype(info)::value_type *> sort_by_size;
     for (auto &field : info) {
         sort_by_size.push_back(&field);
-        field.second.offsets.clear(); }
+        field.second.offsets.clear();
+        field.second.xor_offsets.clear(); }
     std::sort(sort_by_size.begin(), sort_by_size.end(),
               [](decltype(info)::value_type *a, decltype(info)::value_type *b) -> bool {
                   return a->first->size > b->first->size; });
     for (auto &info : Values(this->info)) {
-        if (info.xor_with) {
-            auto &with = this->info[info.xor_with];
-            info.xor_with->foreach_byte(with.bits, [&](const PHV::Field::alloc_slice &sl) {
+        for (auto xor_with : info.xor_with) {
+            auto &with = this->info[xor_with];
+            xor_with->foreach_byte(with.bits, [&](const PHV::Field::alloc_slice &sl) {
                 with.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
-                info.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
+                info.xor_offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
                 ++bytes;
             }); } }
     if (bytes > 4) return false;
     for (auto *it : sort_by_size) {
         const PHV::Field &field = *it->first;
         info_t &info = it->second;
-        if (!info.offsets.empty()) continue;
+        if (!info.need_range && !info.const_eq) continue;
         int size = field.container_bytes(info.bits);
         if (ixbar) {
+            bool done = false;
             for (auto &f : ixbar->bit_use) {
                 if (f.field == field.name && info.bits.overlaps(f.lo, f.hi())) {
                     auto b = info.bits.unionWith(f.lo, f.hi());
                     info.offsets.emplace_back(f.bit + b.lo - f.lo + 32, b);
+                    done = true;
                     if (f.bit + b.hi - f.lo >= bits)
-                        bits = f.bit + b.hi - f.lo + 1; } } }
-        if (!info.offsets.empty()) continue;
+                        bits = f.bit + b.hi - f.lo + 1; } }
+            if (done) continue; }
         if (bytes+size > 4 || info.need_range) {
             info.offsets.emplace_back(bits + 32, info.bits);
             bits += info.bits.size();
@@ -484,8 +493,8 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         auto &match_info = fields.info.at(match_field);
         LOG4("  match_info = " << match_info << ", mask=0x" << hex(mask) << " shift=" << shift);
         LOG4("  xor_match_info = " << field_info);
-        auto it = field_info.offsets.begin();
-        auto end = field_info.offsets.end();
+        auto it = field_info.xor_offsets.begin();
+        auto end = field_info.xor_offsets.end();
         for (auto &off : match_info.offsets) {
             if (it == end || it->first != off.first || it->second.size() != off.second.size() ||
                 it->second.lo - field_info.bits.lo != off.second.lo - match_info.bits.lo) {
