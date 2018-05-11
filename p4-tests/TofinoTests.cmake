@@ -203,6 +203,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_5"
 	switch_tests.L3VIIPv4LagTest
 	switch_tests.L3VIIPv6HostTest
 	switch_tests.L3VINhopGleanTest
+        switch_tests.MalformedPacketsTest
 	switch_tests.MalformedPacketsTest_ipv6")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_6" ${SWITCH_P4}
 	"${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR_MIRROR}")
@@ -219,10 +220,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_7"
 	switch_acl.MirrorAclTest_e2e
 	switch_acl.MirrorAclTest_i2e
 	switch_acl.MirrorSessionTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_MalformedPacketsTest" ${SWITCH_P4}
-	"${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_MalformedPacketsTest"
-        "switch_tests.MalformedPacketsTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest" ${SWITCH_P4}
 	"${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest"
@@ -236,7 +233,6 @@ set_tests_properties("tofino/smoketest_switch_msdc_set_4" PROPERTIES TIMEOUT 120
 set_tests_properties("tofino/smoketest_switch_msdc_set_5" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_msdc_set_6" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_msdc_set_7" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_msdc_MalformedPacketsTest" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest" PROPERTIES TIMEOUT 12000)
 
 # subset of p4factory tests that we want to run as part of regressions

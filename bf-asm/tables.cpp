@@ -1723,9 +1723,17 @@ void Table::get_cjson_source(const std::string &field_name,
         source = "next_table";
     else if (field_name == "action_addr")
         source = "adt_ptr";
-    else if ((field_name == "meter_addr") && get_meter())
+    else if (field_name == "counter_addr")
+        source = "stats_ptr";
+    else if (field_name == "counter_pfe") {
+        source = "stats_ptr";
+        start_bit = STATISTICS_PER_FLOW_ENABLE_START_BIT;
+    } else if ((field_name == "meter_addr") && get_meter())
         source = "meter_ptr";
-    else if ((field_name == "meter_addr") && get_selector())
+    else if ((field_name == "meter_pfe") && get_meter()) {
+        source = "meter_ptr";
+        start_bit = METER_PER_FLOW_ENABLE_START_BIT;
+    } else if ((field_name == "meter_addr") && get_selector())
         source = "sel_ptr";
     else if ((field_name == "meter_addr") && get_stateful())
         source = "stful_ptr";
@@ -1803,10 +1811,10 @@ void Table::output_field_to_pack_format(json::vector &field_list,
         // Discard pfe bit fields
         Synth2Port *s = nullptr;
         std::string s_source = source;
-        if (a->stats.size() > 0) {
+        if (a->stats.size() > 0 && source == "stats_ptr") {
             s = a->stats[0]->to<Synth2Port>();
             s_source = "stats_ptr"; }
-        if (a->meters.size() > 0) {
+        if (a->meters.size() > 0 && source == "meter_ptr") {
             s = a->meters[0]->to<Synth2Port>();
             s_source = "meter_ptr"; }
         if (s) {

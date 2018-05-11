@@ -171,11 +171,6 @@ if (PTF_REQUIREMENTS_MET)
     smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest
     )
 
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: .* != .*"
-    smoketest_switch_msdc_MalformedPacketsTest
-    )
-
 endif() # PTF_REQUIREMENTS_MET
 
 
@@ -1089,12 +1084,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unhandled expression in .*"
   extensions/p4_tests/p4_14/p4smith_regression/medal_0.p4
-)
-
-# BRIG-631
-p4c_add_xfail_reason("tofino"
-  "error: .*: Value too large"
-  extensions/p4_tests/p4_14/p4smith_regression/signets_0.p4
 )
 
 # BRIG-649
