@@ -17,6 +17,7 @@
 #include "bf-p4c/arch/psa_program_structure.h"
 #include "bf-p4c/arch/internal/collect_bridged_fields.h"
 #include "bf-p4c/common/path_linearizer.h"
+#include "bf-p4c/lib/pad_alignment.h"
 
 namespace BFN {
 namespace {
@@ -56,8 +57,7 @@ struct BridgeIngressToEgress : public Transform {
                       bridgedField.first, bridgedField.second);
             auto& info = fieldInfo.at(bridgedField);
 
-            const int nextByteBoundary = 8 * ((info.type->width_bits() + 7) / 8);
-            const int alignment = nextByteBoundary - info.type->width_bits();
+            const int alignment = getAlignment(info.type->width_bits());
             if (alignment != 0) {
                 cstring padFieldName = "__pad_";
                 padFieldName += cstring::to_cstring(padFieldId++);

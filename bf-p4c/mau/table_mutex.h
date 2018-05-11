@@ -53,6 +53,7 @@ class TablesMutuallyExclusive : public MauInspector {
         table_ids.clear();
         table_succ.clear();
         mutex.clear();
+        action_mutex.clear();
         return rv; }
  public:
     bool operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const {

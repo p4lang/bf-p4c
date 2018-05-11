@@ -4,6 +4,7 @@
 #include "bf-p4c/common/path_linearizer.h"
 #include "bf-p4c/common/type_categories.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/lib/pad_alignment.h"
 #include "bf-p4c/parde/field_packing.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/coreLibrary.h"
@@ -350,9 +351,8 @@ struct FindPhase0Table : public Inspector {
             // XXX(seth): Once `@layout("flexible")` is properly supported in
             // the backend, we won't need this (or any padding), so we should
             // remove it at that point.
-            auto fieldSize = param->type->width_bits();
-            const int nextByteBoundary = 8 * ((fieldSize + 7) / 8);
-            const int alignment = nextByteBoundary - fieldSize;
+            const int fieldSize = param->type->width_bits();
+            const int alignment = getAlignment(fieldSize);
             packing.padToAlignment(8, alignment);
             packing.appendField(new IR::PathExpression(param->name),
                                 param->name, fieldSize);

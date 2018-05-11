@@ -41,6 +41,11 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
         self(self), table(t), ignoreDep(t1) { }
 
  private:
+    profile_t init_apply(const IR::Node* root) override {
+        cont_writes.clear();
+        return Inspector::init_apply(root);
+    }
+
     void addDeps(ordered_set<const IR::MAU::Table *> tables, const IR::MAU::Table* tbl,
             DependencyGraph::dependencies_t dep) {
         for (auto upstream_t : tables) {
@@ -108,6 +113,12 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
 
  public:
     UpdateAccess(FindDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) {}
+
+    profile_t init_apply(const IR::Node* root) override {
+        cont_writes.clear();
+        return Inspector::init_apply(root);
+    }
+
     bool preorder(const IR::Expression *e) override {
         if (auto *field = self.phv.field(e)) {
             if (isWrite()) {

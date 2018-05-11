@@ -1,4 +1,4 @@
-set (tofino_timeout 500)
+set (tofino_timeout 600)
 
 # check for PTF requirements
 packet_test_setup_check("tofino")
@@ -287,6 +287,7 @@ set (P4FACTORY_PROGRAMS_PATH "extensions/p4_tests/p4_14/p4-tests/programs")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/alpm_test/alpm_test.p4"
   "all
    ^test.TestCapacity
+   ^test.TestRealData
    ^test.TestStateRestoreLarge")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/basic_ipv4/basic_ipv4.p4"
   "test.TestAddHdr

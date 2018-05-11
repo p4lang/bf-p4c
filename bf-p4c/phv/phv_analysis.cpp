@@ -17,14 +17,14 @@ class PhvInfo;
 PHV_AnalysisPass::PHV_AnalysisPass(
     const BFN_Options &options,
     PhvInfo &phv, PhvUse &uses, const ClotInfo& clot,
-    FieldDefUse &defuse, DependencyGraph &deps)
-    : clustering(phv, uses, pack_conflicts),
+    FieldDefUse &defuse, DependencyGraph &deps, MauBacktracker& alloc)
+    : table_alloc(alloc),
+      clustering(phv, uses, pack_conflicts),
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
       pack_conflicts(phv, deps, table_mutex, table_alloc, action_mutex),
       action_constraints(phv, pack_conflicts),
-      pragmas(phv, options),
-      table_alloc(phv.field_mutex) {
+      pragmas(phv, options) {
     if (options.trivial_phvalloc) {
         addPasses({
             new PHV::TrivialAlloc(phv)});
@@ -32,8 +32,6 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         addPasses({
             // XXX(cole): TODO: insert a pass here that explicitly clears all
             // PHV allocation state (in preparation for backtracking).
-            &table_alloc,          // populates table placement information and start of
-                                   // backtracking
             &uses,                 // use of field in mau, parde
             &pragmas,              // parse and fold PHV-related pragmas
             new ParserOverlay(phv, pragmas),

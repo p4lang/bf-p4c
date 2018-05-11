@@ -21,6 +21,9 @@ class ClotInfo;
 
 class PHV_AnalysisPass : public PassManager {
  private:
+    MauBacktracker& table_alloc;                         // contains information about placement of
+                                                        // tables by an earlier table allocation
+                                                        // pass
     Clustering clustering;
     CalcParserCriticalPath parser_critical_path;        // parser critical path of both
                                                         // ingress/egress
@@ -32,13 +35,10 @@ class PHV_AnalysisPass : public PassManager {
                                                         // table allocation pass
     ActionPhvConstraints action_constraints;            // Action induced constraints for packing
     PHV::Pragmas pragmas;
-    MauBacktracker table_alloc;                         // contains information about placement of
-                                                        // tables by an earlier table allocation
-                                                        // pass
 
  public:
     PHV_AnalysisPass(const BFN_Options &options, PhvInfo &phv, PhvUse &uses, const ClotInfo &clot,
-                     FieldDefUse &defuse, DependencyGraph &deps);
+                     FieldDefUse &defuse, DependencyGraph &deps, MauBacktracker& alloc);
 };
 
 #endif /* BF_P4C_PHV_PHV_ANALYSIS_H_ */

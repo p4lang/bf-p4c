@@ -89,6 +89,7 @@ set(EXTENSION_P4_14_CONV_SOURCES ${EXTENSION_P4_14_CONV_SOURCES} ${QUAL_BF_P4C_P
 set (BF_P4C_BACKEND_COMMON_SRCS
   common/alias.cpp
   common/asm_output.cpp
+  common/bridged_metadata_packing.cpp
   common/bridged_metadata_replacement.cpp
   common/check_for_unimplemented_features.cpp
   common/check_header_alignment.cpp
@@ -118,6 +119,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/alias.h
   common/autoindent.h
   common/blockmap.h
+  common/bridged_metadata_packing.h
   common/bridged_metadata_replacement.h
   common/check_for_unimplemented_features.h
   common/check_header_alignment.h

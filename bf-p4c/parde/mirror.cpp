@@ -8,6 +8,7 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/indent.h"
+#include "bf-p4c/lib/pad_alignment.h"
 
 namespace BFN {
 namespace {
@@ -169,9 +170,7 @@ FieldPacking* packMirroredFieldList(gress_t from_gress, const MirroredFieldList*
         // Align the field so that its LSB lines up with a byte boundary.
         // After phv allocation, this extract and parser state will be adjusted
         // accroding to the actual allocation.
-        const int fieldSize = field->type->width_bits();
-        const int nextByteBoundary = 8 * ((fieldSize + 7) / 8);
-        const int alignment = nextByteBoundary - fieldSize;
+        const int alignment = getAlignment(field->type->width_bits());
         packing->padToAlignment(8, alignment);
 
         packing->appendField(source, field->type->width_bits(), from_gress);

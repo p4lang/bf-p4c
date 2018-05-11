@@ -70,6 +70,12 @@ void PackConflicts::generateNoPackConstraints(const IR::MAU::Table* t1, const IR
     ordered_set<const PHV::Field*> fields2;
     size_t numSet = 0;
 
+    if (!tableActions.count(t1)) {
+        LOG6("No actions in table " << t1);
+        return; }
+    if (!tableActions.count(t2)) {
+        LOG6("No actions in table " << t2);
+        return; }
     for (auto act1 : tableActions.at(t1)) {
         for (auto act2 : tableActions.at(t2)) {
             if (amutex(act1, act2)) {

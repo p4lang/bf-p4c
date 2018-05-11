@@ -7,6 +7,7 @@
 #include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/mau/table_mutex.h"
@@ -24,6 +25,8 @@ class Backend : public PassManager {
     FieldDefUse defuse;
     TablesMutuallyExclusive mutex;
     CollectBridgedFields bridged_fields;
+    /// Class that represents the backtracking point from table placement to PHV allocation.
+    MauBacktracker table_alloc;
     /// List of field names which should not be privatized. Detected by ValidateAllocation pass and
     /// used by Privatization (when invoked due to backtracking) or UndoPrivatization to prevent
     /// privatization.

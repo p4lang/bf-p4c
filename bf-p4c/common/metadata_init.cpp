@@ -558,6 +558,7 @@ class ComputeMetadataInit : public Inspector {
         // Reset state.
         to_be_inited.clear();
         graph.clear();
+        init_summay.clear();
 
         calcToBeInitedFields();
         buildControlGraph();

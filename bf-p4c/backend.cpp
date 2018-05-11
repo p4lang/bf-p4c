@@ -4,6 +4,7 @@
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/common/check_for_unimplemented_features.h"
+#include "bf-p4c/common/bridged_metadata_packing.h"
 #include "bf-p4c/common/check_header_refs.h"
 #include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/elim_unused.h"
@@ -117,7 +118,8 @@ Backend::Backend(const BFN_Options& options) :
     phv(mutually_exclusive_field_ids),
     uses(phv),
     defuse(phv),
-    bridged_fields(phv) {
+    bridged_fields(phv),
+    table_alloc(phv.field_mutex) {
     addPasses({
         new DumpPipe("Initial table graph"),
         new CheckForUnimplementedFeatures(),
@@ -130,7 +132,6 @@ Backend::Backend(const BFN_Options& options) :
 #if HAVE_JBAY
         options.target == "jbay" ? new AddJBayMetadataPOV(phv) : nullptr,
 #endif  // HAVE_JBAY
-        new ResolveComputedParserExpressions,
         new CollectPhvInfo(phv),
         &defuse,
         // only needed to avoid warnings about otherwise unused ingress/egress_port?
@@ -149,11 +150,24 @@ Backend::Backend(const BFN_Options& options) :
         &defuse,
         options.privatization ? new Privatization(phv, deps, doNotPrivatize, defuse) : nullptr,
                                   // For read-only fields, generate private TPHV and PHV copies.
+
+        // This is the backtracking point from table placement to PHV allocation. Based on a
+        // container conflict-free PHV allocation, we generate a number of no-pack conflicts between
+        // fields (these are fields written in different nonmutually exclusive actions in the same
+        // stage). As some of these no-pack conflicts may be related to bridged metadata fields, we
+        // need to pull out the backtracking point from close to PHV allocation to before bridged
+        // metadata packing.
+        &table_alloc,
         new CollectPhvInfo(phv),
         &defuse,
         new CollectNameAnnotations(phv),
-        &bridged_fields,  // Needs to be run after InstructionSelection & CollectNameAnnotations.
-        new ReplaceOriginalFieldWithBridged(phv, bridged_fields),  // Run before deadcode elim.
+
+        // Bridged metadata related passes in the backend.
+        // Needs to be run after InstructionSelection and CollectNameAnnotations, but before
+        // deadcode elimination.
+        new BridgedMetadataPacking(phv, deps, bridged_fields, table_alloc),
+        // Run after bridged metadata packing as bridged packing updates the parser state.
+        new ResolveComputedParserExpressions,
         new CollectPhvInfo(phv),
         &defuse,
         new AlpmSetup,
@@ -176,9 +190,8 @@ Backend::Backend(const BFN_Options& options) :
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
         new DumpPipe("Before phv_analysis"),
-        new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps),  // phv analysis after last
-                                                                 // CollectPhvInfo pass
-
+        new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps, table_alloc),
+                                // phv analysis after last CollectPhvInfo pass
         new PHV::ValidateAllocation(phv, clot, phv.field_mutex, doNotPrivatize),
                                 // Validate results of PHV allocation
         options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,

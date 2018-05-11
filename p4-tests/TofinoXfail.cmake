@@ -24,6 +24,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   p4c_add_xfail_reason("tofino"
     "mismatch from expected(.*) at byte .*"
     extensions/p4_tests/p4_16/brig-532.p4
+    testdata/p4_14_samples/instruct5.p4
     )
 
   # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
@@ -33,7 +34,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/gateway2.p4
     testdata/p4_14_samples/gateway3.p4
     testdata/p4_14_samples/gateway4.p4
-    testdata/p4_14_samples/instruct5.p4
     testdata/p4_16_samples/issue774-4-bmv2.p4
     testdata/p4_16_samples/issue1000-bmv2.p4
     extensions/p4_tests/p4_16/cast_narrowing_set.p4
@@ -310,7 +310,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_7.0_l2
   switch_7.0_ent_dc_aggr
-  switch_ent_dc_general
   switch_msdc_l3
   )
 
@@ -700,7 +699,7 @@ p4c_add_xfail_reason("tofino"
 # This code contains an implicit cast in an assignment in the parser; we need to
 # convert it into a slice instead of just ignoring the cast.
 p4c_add_xfail_reason("tofino"
-  "Inferred incompatible alignments for field ig_intr_md_for_tm.ucast_egress_port"
+  "Inferred incompatible alignments for field .*"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
 )
 
@@ -1125,4 +1124,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Incorrectly overlapping action data when setting slot bits."
   extensions/p4_tests/p4_14/p4smith_regression/laymen_0.p4
+)
+
+# BRIG-659
+p4c_add_xfail_reason("tofino"
+  "immediate not correctly aligned for 16-bit use on action bus"
+  switch_ent_dc_general
 )

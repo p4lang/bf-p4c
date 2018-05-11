@@ -90,7 +90,7 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
     current_action++;
 }
 
-bool ActionPhvConstraints::checkSpecialityPacking(ordered_set<const PHV::Field*>& fields) {
+bool ActionPhvConstraints::checkSpecialityPacking(ordered_set<const PHV::Field*>& fields) const {
     ordered_set<const PHV::Field*> special_writes;
     // Detect all the speciality writes in the container
     for (const PHV::Field* f : fields) {
@@ -102,7 +102,7 @@ bool ActionPhvConstraints::checkSpecialityPacking(ordered_set<const PHV::Field*>
 
     // If special writes present, check against all other actions
     for (const PHV::Field* f : special_writes) {
-        for (const IR::MAU::Action* act : special_no_pack[f]) {
+        for (const IR::MAU::Action* act : special_no_pack.at(f)) {
             for (auto& fo_wr : constraint_tracker.writes(act)) {
                 if (!fo_wr.phv_used) continue;
                 const PHV::Field* f_wr = fo_wr.phv_used->field();
@@ -614,7 +614,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     for (auto sl1 : container_state) {
         for (auto sl2 : container_state) {
             if (sl1.field() == sl2.field()) continue;
-            if (conflicts.hasPackConflict(sl1.field(), sl2.field())) {
+            if (hasPackConflict(sl1.field(), sl2.field())) {
                     LOG5("\t\t\t" << sl1.field()->name << " cannot be packed in the same stage with"
                             << " " << sl2.field()->name);
                     return boost::none; } } }
@@ -1259,6 +1259,39 @@ ActionPhvConstraints::actionWrites(const IR::MAU::Action* act) const {
         if (fw.phv_used)
             rv.insert(fw.phv_used->field()); }
     return rv;
+}
+
+ordered_set<const PHV::Field*> ActionPhvConstraints::field_sources(const PHV::Field* f) const {
+    ordered_set<const PHV::Field*> rv;
+    PHV::FieldSlice dest(f, StartLen(0, f->size));
+    for (const IR::MAU::Action* act : constraint_tracker.written_in(dest)) {
+        auto operands = constraint_tracker.sources(dest, act);
+        for (auto it = operands.begin(); it != operands.end(); ++it) {
+            if (!(it->phv_used)) continue;
+            PHV::FieldSlice sourceFieldSlice = *(it->phv_used);
+            rv.insert(sourceFieldSlice.field()); } }
+    return rv;
+}
+
+ordered_set<const PHV::Field*> ActionPhvConstraints::field_destinations(const PHV::Field* f) const {
+    ordered_set<const PHV::Field*> rv;
+    PHV::FieldSlice source(f, StartLen(0, f->size));
+    for (const IR::MAU::Action* act : constraint_tracker.read_in(source)) {
+        auto destinations = constraint_tracker.destinations(source, act);
+        for (auto slice : destinations)
+            rv.insert(slice.field()); }
+    return rv;
+}
+
+bool ActionPhvConstraints::move_only_operations(const PHV::Field* f) const {
+    PHV::FieldSlice dest(f, StartLen(0, f->size));
+    // Whenever f is written in an action, if the write is not a MOVE operation, return true
+    for (const IR::MAU::Action* act : constraint_tracker.written_in(dest)) {
+        auto operands = constraint_tracker.sources(dest, act);
+        for (auto it = operands.begin(); it != operands.end(); ++it)
+            if (it->flags != OperandInfo::MOVE)
+                return false; }
+    return true;
 }
 
 void ActionPhvConstraints::ConstraintTracker::printMapStates() const {
