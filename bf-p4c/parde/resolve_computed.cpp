@@ -386,8 +386,9 @@ struct CopyPropagateParserValues : public ParserInspector {
                 resolvedValues[value] = { ParserRValDef(state, value->clone()) };
             } else {
                 resolvedValues[value].push_back(ParserRValDef(state, value->clone()));
-                ::warning("Select on field that might be uninitialized "
-                          "in some parser path: %1%", value->source); }
+                LOG1("Select on field that might be uninitialized "
+                     "in some parser path: " << value->source);
+            }
             return;
         }
 
@@ -729,6 +730,16 @@ class ComputeSaveAndSelect: public ParserInspector {
         // trace it back to the state of each def and insert save at that state.
         boost::optional<ParserRValDef> preferred_source;
 
+        std::string to_string() const {
+            std::stringstream ss;
+            ss << "[";
+            ss << select << " ... ";
+            for (const auto& r : used_by_others) {
+                ss << r << " "; }
+            ss << "]";
+            return ss.str();
+        }
+
         // The absolute offset that this select match on for current state's
         // input buffer.
         nw_bitrange source() const {
@@ -792,6 +803,136 @@ class ComputeSaveAndSelect: public ParserInspector {
         calcSaves(state);
     }
 
+    /// Forall unresolved select that reashes this point, separate out selects
+    /// that should be process in this state and those shoule be process in earlier state.
+    /// unresolved selects are sorted by whether has decided register, then the size of select.
+    void calcUnresolvedSelects(
+            std::vector<UnresolvedSelect>& unresolved_selects,
+            std::vector<UnresolvedSelect>& early_stage_extracted,
+            const std::map<const StateSelect*, nw_bitrange>& corrected_source,
+            const State* state,
+            const State* next_state,
+            unsigned shift_bytes) {
+        for (const auto& unresolved : calcUnresolvedSelects(next_state, shift_bytes)) {
+            // Wrongly trace-backd select, ignored.
+            if (corrected_source.count(unresolved.select)
+                && unresolved.source() != corrected_source.at(unresolved.select)) {
+                continue; }
+            if (unresolved.isExtractedEarlier(state)) {
+                early_stage_extracted.push_back(unresolved);
+            } else {
+                unresolved_selects.push_back(unresolved);
+            }
+        }
+        // Sorted by whether has decided register, the size of select.
+        sort(unresolved_selects.begin(), unresolved_selects.end(),
+             [&] (const UnresolvedSelect& l, const UnresolvedSelect& r) {
+                 if (select_registers.count(l.select) != select_registers.count(r.select)) {
+                     return select_registers.count(l.select) >
+                            select_registers.count(r.select);
+                 }
+                 return l.source().size() < r.source().size();
+             });
+    }
+
+    /// @returns a vector of all match resigers sorted by size, increasing.
+    std::vector<MatchRegister> getMatchRegistersSortedBySize() {
+        auto registers = Device::pardeSpec().matchRegisters();
+        std::sort(registers.begin(), registers.end(),
+                  [] (const MatchRegister& a, const MatchRegister& b) {
+                      return a.size < b.size; });
+        return registers;
+    }
+
+    /// For byte @p i on the input buffer, find a match register that already saved
+    /// byte i in, and valid for @p unresolved.
+    boost::optional<MatchRegister>
+    findSavedRegForByte(
+            int i,
+            const UnresolvedSelect& unresolved,
+            const std::map<nw_byterange, MatchRegister>& saved_range,
+            const std::map<const StateSelect*, std::set<MatchRegister>>& used_by_other_path) {
+        for (int reg_size : {1, 2}) {
+            nw_byterange reg_range = nw_byterange(StartLen(i, reg_size));
+            if (saved_range.count(reg_range)) {
+                auto& reg = saved_range.at(reg_range);
+                // If this reg is used by others, we can not reuse it's result.
+                if (used_by_other_path.count(unresolved.select)
+                    && used_by_other_path.at(unresolved.select).count(reg)) {
+                    continue;
+                }
+                return reg;
+            }
+        }
+        return boost::none;
+    }
+
+    /// Return a vector of match registers that address the @p unresolved.
+    boost::optional<std::vector<MatchRegister>>
+    allocMatchRegisterForSelect(
+            const UnresolvedSelect& unresolved,
+            const std::map<nw_byterange, MatchRegister>& saved_range,
+            const std::set<MatchRegister>& used_registers,
+            const std::map<const StateSelect*, std::set<MatchRegister>>& used_by_other_path) {
+        if (select_registers.count(unresolved.select)) {
+            // If the select has already be set by other branch,
+            // this branch need to follow it's decision.
+            // already saved in this state.
+            auto& regs = select_registers[unresolved.select];
+            bool has_conflit =
+                std::any_of(regs.begin(), regs.end(), [&] (const MatchRegister& r) -> bool {
+                    return unresolved.used_by_others.count(r); });
+            if (!has_conflit) {
+                return regs;
+            } else {
+                ::error("Due to the insufficiency of current algorithm, "
+                        "Match register allocation failed in %1%", unresolved.select); }
+            return boost::none;
+        }
+
+        // TODO(yumin):
+        // We should have an algorithm that minimizes the use the
+        // register, e.g. use half to cover two small field,
+        // instead of this naive one.
+        nw_byterange source = unresolved.source().toUnit<RangeUnit::Byte>();
+        std::vector<MatchRegister> accumulated_regs;
+        std::set<MatchRegister> in_candidates;
+        // calculate which regs to use for each byte.
+        for (int i = source.loByte(); i <= source.hiByte();) {
+            auto already_save_in =
+                findSavedRegForByte(i, unresolved, saved_range, used_by_other_path);
+            if (already_save_in) {
+                LOG4("re-used " << *already_save_in << " because byte " << i << " are shared");
+                accumulated_regs.push_back(*already_save_in);
+                i += (*already_save_in).size;
+                continue;
+            }
+
+            bool found_reg_for_this_byte = false;
+            for (auto& reg : getMatchRegistersSortedBySize()) {
+                if (in_candidates.count(reg)) {
+                    continue; }
+                if (used_registers.count(reg) || unresolved.used_by_others.count(reg)) {
+                    continue; }
+                if (used_by_other_path.count(unresolved.select)
+                    && used_by_other_path.at(unresolved.select).count(reg)) {
+                    continue; }
+                accumulated_regs.push_back(reg);
+                i += reg.size;
+                found_reg_for_this_byte = true;
+                in_candidates.insert(reg);
+                break;
+            }
+
+            if (!found_reg_for_this_byte) {
+                LOG3("Can not find match register for byte " << i <<
+                     " for " << unresolved.to_string());
+                return boost::none;
+            }
+        }
+        return accumulated_regs;
+    }
+
     void calcSaves(const State* state) {
         // For multi-def sources, we need to calculate the corrected_source and used_regs
         // across different branches.
@@ -804,123 +945,49 @@ class ComputeSaveAndSelect: public ParserInspector {
             BUG_CHECK(transition->shift, "State %1% has unset shift?", state->name);
             BUG_CHECK(*transition->shift >= 0, "State %1% has negative shift %2%?",
                       state->name, *transition->shift);
+            if (!transition->next) {
+                continue; }
 
-            // Mapping input buffer to a register that save it.
-            std::map<nw_byterange, MatchRegister> saved_range;
-
-            // XXX(yumin): shift is in byte, while all others are in bits.
-            unsigned shift_bytes = *transition->shift;
             auto next_state = transition->next;
-
-            // If this state is the last one, do not need to insert any save.
-            if (!next_state)
-                continue;
-
             unprocessed_states.erase(next_state);
             LOG4("For transition to: " << next_state->name);
 
             // Get unresolved selects by merge all child state's unresolved selects.
-            auto unresolved_selects = calcUnresolvedSelects(next_state, shift_bytes);
+            std::vector<UnresolvedSelect> unresolved_selects;
             std::vector<UnresolvedSelect> early_stage_extracted;
+            calcUnresolvedSelects(unresolved_selects, early_stage_extracted, corrected_source,
+                                  state, next_state, *(transition->shift));
 
-            auto registers = Device::pardeSpec().matchRegisters();
-            std::sort(registers.begin(), registers.end(),
-                      [] (const MatchRegister& a, const MatchRegister& b) {
-                          return a.size < b.size; });  // Use smaller match registers first.
+            // Mapping input buffer to a register that save it.
+            std::map<nw_byterange, MatchRegister> saved_range;
             std::set<MatchRegister> used_registers;
-
-            // Sorted by whether has decided register, the size of select.
-            sort(unresolved_selects.begin(), unresolved_selects.end(),
-                 [&] (const UnresolvedSelect& l, const UnresolvedSelect& r) {
-                     if (select_registers.count(l.select) != select_registers.count(r.select))
-                         return select_registers.count(l.select) > select_registers.count(r.select);
-                     return l.source().size() < r.source().size();
-                 });
-
             std::set<const StateSelect*> resolved_in_this_transition;
             for (const auto& unresolved : unresolved_selects) {
-                // Wrongly trace-backed resolve.
-                if (corrected_source.count(unresolved.select)
-                    && unresolved.source() != corrected_source.at(unresolved.select)) {
-                    LOG4("Ignore wrongly trace-backed resolve: " << unresolved.select);
-                    continue; }
-                nw_byterange source = unresolved.source().toUnit<RangeUnit::Byte>();
-                if (unresolved.isExtractedEarlier(state)) {
-                    early_stage_extracted.push_back(unresolved);
-                    continue; }
-
-                boost::optional<std::vector<MatchRegister>> reg_choice;
-
-                if (select_registers.count(unresolved.select)) {
-                    // If the select has already be set by other branch,
-                    // this branch need to follow it's decision.
-                    // already saved in this state.
-                    auto& regs = select_registers[unresolved.select];
-                    if (!std::any_of(regs.begin(), regs.end(),
-                                     [&] (const MatchRegister& r) -> bool {
-                                         return unresolved.used_by_others.count(r); })) {
-                        reg_choice = regs; }
-                } else {
-                    // TODO(yumin):
-                    // We should have an algorithm that minimizes the use the
-                    // register, e.g. use half to cover two small field,
-                    // instead of this naive one.
-                    // calculate which regs to use for each byte.
-                    std::vector<MatchRegister> accumulated_regs;
-                    size_t match_reg_itr = 0;
-                    bool found_registers = true;
-                    for (int i = source.loByte(); i <= source.hiByte();) {
-                        bool found_saved_reg = false;
-                        for (int reg_size : {1, 2}) {
-                            nw_byterange reg_range = nw_byterange(StartLen(i, reg_size));
-                            if (saved_range.count(reg_range)) {
-                                accumulated_regs.push_back(saved_range.at(reg_range));
-                                i += reg_size;
-                                found_saved_reg = true;
-                                break; } }
-
-                        if (found_saved_reg) continue;
-
-                        bool found_reg_for_this_byte = false;
-                        while (match_reg_itr < registers.size()) {
-                            auto& reg = registers[match_reg_itr++];
-                            if (used_registers.count(reg) || unresolved.used_by_others.count(reg)) {
-                                continue; }
-                            if (used_by_other_path.count(unresolved.select)
-                                && used_by_other_path[unresolved.select].count(reg)) {
-                                continue; }
-                            accumulated_regs.push_back(reg);
-                            i += reg.size;
-                            found_reg_for_this_byte = true;
-                            break;
-                        }
-
-                        if (!found_reg_for_this_byte) {
-                            found_registers = false;
-                            break;
-                        }
-                    }
-                    if (found_registers) {
-                        reg_choice = accumulated_regs; }
-                }
-
+                auto reg_choice = allocMatchRegisterForSelect(
+                        unresolved, saved_range, used_registers, used_by_other_path);
                 // Cannot find a register or the found one has been used
                 // by downstream states because of brother's decision.
                 if (!reg_choice) {
                     // throw error message saying that it's impossible.
-                    ::error("Too much data for parse matcher, not enough register for %1%",
-                            unresolved.select->p4Source);
+                    ::error("Too much data for parse matcher, "
+                            "not enough register for %1% in %2%",
+                        unresolved.select->p4Source, state->name);
                     return;
                 }
 
                 if (LOGGING(4)) {
-                    for (const auto& reg : *reg_choice)
-                        LOG4("Assign " << reg << " to " << unresolved.select->p4Source); }
+                    for (const auto& reg : *reg_choice) {
+                        LOG4("\t Assign " << reg << " to " << unresolved.select->p4Source);
+                        LOG4("\t In From:  " << state->name << " -->to--> "
+                             << next_state->name);
+                    }
+                }
 
                 // Assign registers and update match_saves
                 // TODO(yumin): if it's the last byte, we can't use half register on it.
                 // This case is rare because it only happens when you lookahead
                 // to the last byte and all byte registers are used.
+                nw_byterange source = unresolved.source().toUnit<RangeUnit::Byte>();
                 nw_byterange save_range_itr = source;
                 for (const auto& r : *reg_choice) {
                     nw_byterange range_of_this_register = save_range_itr.resizedToBytes(r.size);
@@ -950,7 +1017,7 @@ class ComputeSaveAndSelect: public ParserInspector {
                 auto unresolved = remaining_unresolved;
                 unresolved.used_by_others.insert(used_registers.begin(), used_registers.end());
                 state_unresolved_selects[state].push_back(unresolved);
-                LOG4("Add Unresolved in `" << state->name << "` " << unresolved.select);
+                LOG5("Add Unresolved in `" << state->name << "` " << unresolved.select);
             }
         }  // for transition
     }
@@ -979,6 +1046,7 @@ class ComputeSaveAndSelect: public ParserInspector {
         return match_range.shiftedByBytes(-loByte);
     }
 
+    /// @returns all unresolved select from @p next_state.
     std::vector<UnresolvedSelect>
     calcUnresolvedSelects(const State* next_state, unsigned shift_bytes) {
         // For the state_unresolved_selects from children state,
@@ -992,6 +1060,8 @@ class ComputeSaveAndSelect: public ParserInspector {
         return rst;
     }
 
+    /// For this @p state, what is the correct source for those computed value
+    /// and for those source, what are match registers that have beeen used.
     void
     calcCorrectSourceAndUsedReg(
             const State* state,
@@ -1022,19 +1092,18 @@ class ComputeSaveAndSelect: public ParserInspector {
         for (const auto* select : selects) {
             int max_count = -1;
             for (const auto& kv : select_count) {
-            LOG4("Select-Count: " << kv.first.first << " on "
+            LOG5("Select-Count: " << kv.first.first << " on "
                  << kv.first.second << " c: " << kv.second);
                 if (kv.second <= 1) continue;
                 if (select != kv.first.first) continue;
                 if (kv.second > max_count) {
                     temp_corrected_source[select] = kv.first.second;
                     max_count = kv.second;
-                    LOG4("Corrected Souce of `" << select << "` ..is.. " << kv.first.second);
+                    LOG5("Corrected Souce of `" << select << "` ..is.. " << kv.first.second);
                 }
             }
         }
 
-        // Calc a prefered register for them.
         for (const auto& kv : temp_corrected_source) {
             const auto* select_use = kv.first;
             auto& source = kv.second;
@@ -1045,21 +1114,18 @@ class ComputeSaveAndSelect: public ParserInspector {
             corrected_source[select_use] = source;
 
             // Merge all used register set.
-            std::set<MatchRegister> merged_use;
             for (const auto* transition : state->transitions) {
                 if (!transition->next)
                     continue;
-                auto next_state = transition->next;
-                unsigned shift_bytes = *transition->shift;
+                auto* next_state = transition->next;
+                unsigned shift_bytes = *(transition->shift);
                 auto unresolved_selects = calcUnresolvedSelects(next_state, shift_bytes);
 
                 for (const auto& select : unresolved_selects) {
                     if (select.select == select_use && source == select.source()) {
-                        merged_use.insert(select.used_by_others.begin(),
-                                          select.used_by_others.end()); } }
+                        used_regs[select_use].insert(select.used_by_others.begin(),
+                                                     select.used_by_others.end()); } }
             }
-
-            used_regs[select_use] = merged_use;
         }
     }
 
