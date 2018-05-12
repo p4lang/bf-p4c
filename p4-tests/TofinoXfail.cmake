@@ -23,8 +23,9 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 
   p4c_add_xfail_reason("tofino"
     "mismatch from expected(.*) at byte .*"
-    extensions/p4_tests/p4_16/brig-532.p4
     testdata/p4_14_samples/instruct5.p4
+    extensions/p4_tests/p4_16/brig-532.p4
+    extensions/p4_tests/p4_16/cast_widening_set.p4
     )
 
   # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
@@ -36,10 +37,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/gateway4.p4
     testdata/p4_16_samples/issue774-4-bmv2.p4
     testdata/p4_16_samples/issue1000-bmv2.p4
-    extensions/p4_tests/p4_16/cast_narrowing_set.p4
-    extensions/p4_tests/p4_16/multiple_apply1.p4
-    extensions/p4_tests/p4_16/cast_widening_set.p4
-    extensions/p4_tests/p4_16/container_dependency.p4
     )
 
 endif() # HARLYN_STF_tofino
