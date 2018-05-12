@@ -1125,9 +1125,3 @@ p4c_add_xfail_reason("tofino"
   "Incorrectly overlapping action data when setting slot bits."
   extensions/p4_tests/p4_14/p4smith_regression/laymen_0.p4
 )
-
-# BRIG-659
-p4c_add_xfail_reason("tofino"
-  "immediate not correctly aligned for 16-bit use on action bus"
-  switch_ent_dc_general
-)

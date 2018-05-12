@@ -18,7 +18,6 @@
  *  data names, as the action data may not be contiguous
  */
 const IR::MAU::Action *SplitInstructions::preorder(IR::MAU::Action *act) {
-    visitOnce();
     container_actions_map.clear();
     split_fields.clear();
     auto tbl = findContext<IR::MAU::Table>();
@@ -162,7 +161,6 @@ const IR::MAU::Action *SplitInstructions::postorder(IR::MAU::Action *act) {
  *  on all instructions.
  */
 const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
-    visitOnce();
     container_actions_map.clear();
     constant_containers.clear();
     auto tbl = findContext<IR::MAU::Table>();
@@ -332,7 +330,6 @@ const IR::MAU::Action *ConstantsToActionData::postorder(IR::MAU::Action *act) {
  *  over a container
  */
 const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
-    visitOnce();
     container_actions_map.clear();
     merged_fields.clear();
     auto tbl = findContext<IR::MAU::Table>();
