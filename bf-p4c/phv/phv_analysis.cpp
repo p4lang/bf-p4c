@@ -33,6 +33,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // XXX(cole): TODO: insert a pass here that explicitly clears all
             // PHV allocation state (in preparation for backtracking).
             &uses,                 // use of field in mau, parde
+            new PhvInfo::DumpPhvFields(phv, uses),
             &pragmas,              // parse and fold PHV-related pragmas
             new ParserOverlay(phv, pragmas),
                                    // produce pairs of mutually exclusive header

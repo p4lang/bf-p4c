@@ -18,8 +18,12 @@ void CollectBridgedFields::postorder(const IR::MAU::Instruction* inst) {
 
         LOG5("Found bridged field:" << left << " --> " << right);
         BUG_CHECK(bridged_to_orig.count(left) == 0, "Duplicated initialzation of bridged.");
+        auto* leftMember = inst->operands[0]->to<IR::Member>();
+        BUG_CHECK(leftMember, "Expected bridged field to be an IR::Member: %1%",
+                  inst->operands[0]);
+
         bridged_to_orig[left] = right;
-        orig_to_bridged[right] = inst->operands[0];
+        orig_to_bridged[right] = leftMember;
         bridged_to_external_name[left->name] = right->externalName();
         orig_to_bridged_name[right->name] = left->name;
     }
@@ -43,14 +47,17 @@ IR::Node* ReplaceOriginalFieldWithBridged::postorder(IR::Expression* expr) {
 
     if (mapping.orig_to_bridged.count(f)) {
         auto* bridged = mapping.orig_to_bridged.at(f);
-        if (expr->is<IR::Member>()) {
+        if (auto* alias = expr->to<IR::BFN::AliasMember>()) {
+            // Take care to preserve aliasing information, if present.
+            LOG5("Replacing use of original expr " << expr << " with " << bridged);
+            return new IR::BFN::AliasMember(bridged->clone(), alias->source);
+        } else if (expr->is<IR::Member>()) {
             LOG5("Replacing use of original expr " << expr << " with " << bridged);
             return bridged->clone();
         } else {
             BUG("BridgedReplacement: unhandled expression type: %1%", expr);
-            return expr;
-        }
-    }
+            return expr; } }
+
     return expr;
 }
 

@@ -23,7 +23,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 
   p4c_add_xfail_reason("tofino"
     "mismatch from expected(.*) at byte .*"
-    testdata/p4_14_samples/instruct5.p4
     extensions/p4_tests/p4_16/brig-532.p4
     extensions/p4_tests/p4_16/cast_widening_set.p4
     )
@@ -173,15 +172,12 @@ endif() # PTF_REQUIREMENTS_MET
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 
-# Problem with the stkvalid encoding of header stacks.
-# BRIG-497
 # This test fails because two fields are mutually exclusive in the parser, but
 # one is added in the MAU while the other is live.  This behavior matches glass
 # but is known to be incorrect.
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   extensions/p4_tests/p4_14/overlay_add_header.p4
-# packing valid bits incorrectly
   )
 
 # BRIG-104
@@ -563,6 +559,7 @@ p4c_add_xfail_reason("tofino"
   "Expected type T in digest to be a typeName"
   testdata/p4_16_samples/issue430-1-bmv2.p4
   )
+
 # bug in instruction selection
 p4c_add_xfail_reason("tofino"
   "visitor returned invalid type Cast"
@@ -972,7 +969,7 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-435
 p4c_add_xfail_reason("tofino"
-  "all_structs inconsistent"
+  "unexpected reads expression"
   testdata/p4_16_samples/issue486-bmv2.p4
   )
 
@@ -1012,7 +1009,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "unexpected packet output on port .*"
   extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
-  extensions/p4_tests/p4_16/stack_valid.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1020,9 +1016,10 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/header-stack-ops-bmv2.p4
 )
 
+# BRIG-583
 p4c_add_xfail_reason("tofino"
-  "Extract to non-PHV destination:.*stkvalid"
-  extensions/p4_tests/p4_16/brig-42.p4
+  "shift value .* out of range"
+  # fabric-DWITH_SPGW
 )
 
 # Flaky.
@@ -1121,4 +1118,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Incorrectly overlapping action data when setting slot bits."
   extensions/p4_tests/p4_14/p4smith_regression/laymen_0.p4
+)
+
+# BRIG-584
+p4c_add_xfail_reason("tofino"
+  "Unimplemented compiler support.*: Cannot extract to a field slice in the parser"
+  extensions/p4_tests/p4_16/extract_slice.p4
 )

@@ -5,7 +5,7 @@
 #include "lib/log.h"
 
 Visitor::profile_t PragmaAlias::init_apply(const IR::Node* root) {
-    pa_alias_i.clear();
+    aliasMap.clear();
     fieldsWithExpressions.clear();
     return Inspector::init_apply(root);
 }
@@ -70,16 +70,16 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
                       field2->size);
             continue; }
 
-        if (pa_alias_i.count(field1)) {
+        if (aliasMap.count(field1->name)) {
             ::warning("@pragma pa_alias for fields %1% and %2% ignored because "
                       "field %1% already aliases with %3%", field1_name, field2_name,
-                      pa_alias_i[field1]->name);
+                      aliasMap[field1->name].field);
             continue; }
 
-        if (pa_alias_i.count(field2)) {
+        if (aliasMap.count(field2->name)) {
             ::warning("@pragma pa_alias for fields %1% and %2% ignored because "
                       "field %1% already aliases with %3%", field2_name, field1_name,
-                      pa_alias_i[field2]->name);
+                      aliasMap[field2->name].field);
             continue; }
 
         if (field1->isPacketField() && field2->isPacketField())
@@ -87,11 +87,11 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
                       field1_name, field2_name);
 
         if (field2->metadata && !field1->metadata) {
-            pa_alias_i[field2] = field1;
+            aliasMap[field2->name] = { field1->name, boost::none };
             continue; }
 
         if (field1->metadata && !field2->metadata) {
-            pa_alias_i[field1] = field2;
+            aliasMap[field1->name] = { field2->name, boost::none };
             continue; }
 
         // When the aliasing relationship is between a metadata and a header field, the header field
@@ -102,11 +102,11 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
             bool field1Expr = fieldsWithExpressions[field1->id];
             bool field2Expr = fieldsWithExpressions[field2->id];
             if (!field1Expr && field2Expr)
-                pa_alias_i[field1] = field2;
+                aliasMap[field1->name] = { field2->name, boost::none };
             else if (field1Expr && !field2Expr)
-                pa_alias_i[field2] = field1;
+                aliasMap[field2->name] = { field1->name, boost::none };
             else if (field1Expr && field2Expr)
-                pa_alias_i[field1] = field2;
+                aliasMap[field1->name] = { field2->name, boost::none };
             else
                 ::warning("@pragma pa_alias ignored because no uses found for fields %1% and %2%",
                           field1_name, field2_name);
@@ -115,21 +115,21 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
         ::warning("@pragma pa_alias does not support alias of fields %1% and %2%", field1_name,
                 field2_name);
     }
-    LOG1("Processed " << pa_alias_i.size() << " pragmas");
-}
-
-void PragmaAlias::end_apply() {
-    for (auto kv : pa_alias_i)
-        phv_i.setAliasEntry(kv.first->name, kv.second->name);
-    LOG1(*this);
+    LOG1("Processed " << aliasMap.size() << " pragmas");
 }
 
 std::ostream& operator<<(std::ostream& out, const PragmaAlias& pa_a) {
     std::stringstream logs;
     logs <<  "Printing fields marked as an alias by @pragma pa_alias" << std::endl;
-    for (auto kv : pa_a.alias_fields()) {
-        logs << "ALIAS " << kv.first->name << " (" << kv.first->size << "b) -> " << kv.second->name
-             << " (" << kv.second->size << "b)" << std::endl; }
+    for (auto kv : pa_a.getAliasMap()) {
+        logs << "ALIAS " << kv.first << " -> " << kv.second.field << std::endl; }
     out << logs.str();
+    return out;
+}
+
+std::ostream &operator<<(std::ostream& out, const PragmaAlias::AliasDestination& dest) {
+    out << dest.field;
+    if (dest.range)
+        out << "[" << dest.range->hi << ":" << dest.range->lo << "]";
     return out;
 }

@@ -1,11 +1,12 @@
 #include "bf-p4c/common/alias.h"
+#include <sstream>
 
 Visitor::profile_t FindExpressionsForFields::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);
     exprFields.clear();
-    auto& aliasMap = phv.getAliasMap();
-    for (auto kv : aliasMap)
-        exprFields.insert(phv.field(kv.second));
+    fieldExpressions.clear();
+    for (auto kv : pragmaAlias.getAliasMap())
+        exprFields.insert(phv.field(kv.second.field));
     return rv;
 }
 
@@ -25,9 +26,11 @@ bool FindExpressionsForFields::preorder(const IR::Expression* expr) {
 void FindExpressionsForFields::end_apply() {
     if (LOGGING(1)) {
         LOG1("    All aliasing fields: ");
-        auto& aliasMap = phv.getAliasMap();
-        for (auto kv : aliasMap)
-            LOG1("      " << kv.first << " -> " << kv.second); }
+        for (auto kv : pragmaAlias.getAliasMap()) {
+            std::stringstream ss;
+            if (kv.second.range)
+                ss << "[" << kv.second.range->hi << ":" << kv.second.range->lo << "]";
+            LOG1("      " << kv.first << " -> " << kv.second.field << ss.str()); } }
 }
 
 IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
@@ -37,7 +40,7 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
         return expr; }
 
     // Determine alias source fields
-    auto& aliasMap = phv.getAliasMap();
+    auto& aliasMap = pragmaAlias.getAliasMap();
     if (!aliasMap.count(f->name)) {
         LOG4("    Field " << f->name << " not part of any aliasing.");
         return expr; }
@@ -47,7 +50,8 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
         return expr; }
 
     // replacementField is the alias destination field
-    const PHV::Field* replacementField = phv.field(aliasMap.at(f->name));
+    auto destInfo = aliasMap.at(f->name);
+    const PHV::Field* replacementField = phv.field(destInfo.field);
     BUG_CHECK(fieldExpressions.count(replacementField), "Expression not found");
 
     // replacementExpression is the expression corresponding to the alias destination field
@@ -55,11 +59,7 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
     auto* replacementMember = replacementExpression->to<IR::Member>();
     BUG_CHECK(replacementMember, "Replacement member not found for expression %s",
             replacementMember);
-    auto* aliasName = new IR::StringLiteral(IR::ID(f->name));
-    auto* fieldAnnotations = new IR::Annotations({new IR::Annotation(IR::ID("alias"),
-                {aliasName})});
-    auto* newMember = new IR::BFN::AliasMember(replacementExpression->type, replacementMember->expr,
-            replacementMember->member, fieldAnnotations);
+    auto* newMember = new IR::BFN::AliasMember(replacementMember, expr);
 
     auto* sl = expr->to<IR::Slice>();
     if (sl) {

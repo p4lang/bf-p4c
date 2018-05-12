@@ -185,7 +185,9 @@ struct TransitionStack {
     std::pair<cstring, unsigned> analyzeDest(const IR::Expression* dest) {
         if (dest->is<IR::TempVar>())
             return std::make_pair(dest->toString(), 1);
-        if (!dest->is<IR::Member>()) {
+        if (dest->is<IR::Slice>()) {
+            P4C_UNIMPLEMENTED("Cannot extract to a field slice in the parser: %1%", dest);
+        } else if (!dest->is<IR::Member>()) {
             ::warning("Unexpected extract destination: %1%", dest);
             return std::make_pair(dest->toString(), 1);
         }

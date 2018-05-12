@@ -162,38 +162,6 @@ class TempVar : BFN::Reference {
 }
 
 
-/** A slice of a reference, most commonly a BFN::Member or BFN::TempVar. */
-class BFN::Slice : BFN::Reference {
-    BFN::Reference base;
-    le_bitrange range;
-
-#noconstructor
-
-    /** Slice constructors that also create a Bit<X> type of the appropriate
-     * size if no type is provided.   /// Utility constructors that take hi/lo
-     * bits directly.
-     */
-    Slice(BFN::Reference a, le_bitrange range)
-    : BFN::Reference(IR::Type::Bits::get(range.size())), base(a), range(range) { }
-    Slice(Util::SourceInfo si, BFN::Reference a, le_bitrange range)
-    : BFN::Reference(si, IR::Type::Bits::get(range.size())), base(a), range(range) { }
-
-    /// Utility constructors that build a bitrange from hi/lo bits.
-    Slice(BFN::Reference a, int hi, int lo) : BFN::Slice(a, le_bitrange(FromTo(lo, hi))) { }
-    Slice(Util::SourceInfo si, BFN::Reference a, int hi, int lo)
-    : BFN::Slice(si, a, le_bitrange(FromTo(lo, hi))) { }
-
-    Slice {
-        if (type->is<Type::Unknown>())
-            type = IR::Type::Bits::get(range.size()); }
-
-    toString {
-        return base->toString() + "[" + std::to_string(range.hi) + ":" + std::to_string(range.lo) + "]";
-    }
-    dbprint { out << toString(); }
-}
-
-
 /** A reference to a PHV container.  At the hardware level, Barefoot switches
  * operate over PHV containers, not header/metadata fields, and the back end
  * eventually lowers operations to work on PHV containers directly.
@@ -242,19 +210,64 @@ class BFN::ContainerBitRef : BFN::Reference {
     unsigned bit;
 }
 
-/// A Member object that maintains aliasing information for the field it is aliased with
-class BFN::AliasMember : IR::Member, IAnnotated {
-    optional Annotations        annotations = Annotations::empty;
-#novalidate
-    Annotations getAnnotations() const override { return annotations; }
-    dbprint { out << member << ", alias: " << annotations; }
-    cstring getAliasSource() const {
-        if (auto s = annotations->getSingle("alias")) {
-            BUG_CHECK(s->expr.size() == 1, "%s: The alias annotation does not have a value", s);
-            auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
-            BUG_CHECK(pragma_val != nullptr, "The alias annotation value is not a string");
-            return pragma_val->value;
-        }
-        return cstring();
+/** When two fields are aliased, we replace one with the other during
+ * compilation.  We call the one being removed the alias "source" and the one
+ * being inserted in its place the "destination".
+ *
+ * An AliasMember node represents such a replacement.  The IR::Member part of
+ * the node holds the alias destination, but the extra `source` field points to
+ * the original alias source.
+ */
+class BFN::AliasMember : IR::Member {
+    /// The original expression (i.e. the alias source) that has been replaced
+    /// by this AliasMember.  Not visited in IR traversals.
+    Expression source;
+
+    dbprint {
+        IR::Member::dbprint(out);
+        out << "alias: " << source;
     }
+
+    visit_children {
+        IR::Member::visit_children(v);
+    }
+
+#emit
+    /// A convenience method to construct an AliasMember with source info from
+    /// the alias source.
+    AliasMember(const IR::Member* destination, const IR::Expression* source)
+    : IR::Member(source->srcInfo, destination->type, destination->expr, destination->member),
+      source(source) { }
+#end
+}
+
+/** When two fields are aliased, we replace one with the other during
+ * compilation.  We call the one being removed the alias "source" and the one
+ * being inserted in its place the "destination".
+ *
+ * An AliasSlice node represents such a replacement, in the case when an alias
+ * source is a field, but the alias destination is a slice of another field.
+ * The IR::Slice part of the node holds the alias destination, but the extra
+ * `source` field points to the original alias source.
+ */
+class BFN::AliasSlice : IR::Slice {
+    /// The original expression (i.e. the alias source) that has been replaced
+    /// by this AliasSlice.  Not visited in IR traversals.
+    Expression source;
+
+    dbprint {
+        IR::Slice::dbprint(out);
+        out << "alias: " << source;
+    }
+
+    visit_children {
+        IR::Slice::visit_children(v);
+    }
+
+#emit
+    /// A convenience method to construct an AliasSlice with source info from
+    /// the alias source.
+    AliasSlice(const IR::Slice* dest, const IR::Expression* source)
+    : IR::Slice(source->srcInfo, dest->type, dest->e0, dest->e1, dest->e2), source(source) { }
+#end
 }

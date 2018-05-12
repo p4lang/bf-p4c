@@ -34,6 +34,13 @@ struct CollectStateUses : public ParserInspector {
         return true;
     }
 
+    Visitor::profile_t init_apply(const IR::Node* root) {
+        match_reg_def.clear();
+        match_reg_use.clear();
+        n_transition_to.clear();
+        return ParserInspector::init_apply(root);
+    }
+
     std::map<const State*, std::set<MatchRegister>> match_reg_def;
     std::map<const State*, std::set<MatchRegister>> match_reg_use;
     std::map<const State*, int> n_transition_to;
@@ -212,6 +219,12 @@ class ComputeMergeableState : public ParserInspector {
 
     cstring strip_gress(cstring name) {
         return cstring(name.findlast(':') + 1);
+    }
+
+    Visitor::profile_t init_apply(const IR::Node* root) {
+        state_chains.clear();
+        results.clear();
+        return ParserInspector::init_apply(root);
     }
 
     const std::map<const State*, std::set<MatchRegister>>& match_reg_def;

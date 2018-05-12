@@ -138,10 +138,6 @@ Visitor::profile_t Clustering::MakeAlignedClusters::init_apply(const IR::Node *r
     // Initialize union_find_i with pointers to all field slices.
     for (auto& by_field : self.fields_to_slices_i) {
         for (auto& slice : by_field.second) {
-            // Skip stack POV fields; these are allocated with stkvalid.
-            if (slice.field()->ccgf() && !slice.field()->is_ccgf()) {
-                LOG5("Skipping stack POV field slice " << slice);
-                continue; }
             LOG5("Creating AlignedCluster singleton containing field slice " << slice);
             union_find_i.insert(slice); } }
     return rv;
@@ -333,16 +329,16 @@ Visitor::profile_t Clustering::MakeSuperClusters::init_apply(const IR::Node* roo
     return rv;
 }
 
-bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
+void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
     LOG5("Visiting HeaderRef " << hr);
     const PhvInfo::StructInfo& struct_info = phv_i.struct_info(hr);
 
     // Only analyze headers, not metadata structs.
     if (struct_info.metadata || struct_info.size == 0)
-        return false;
+        return;
 
     if (headers_i.find(struct_info.first_field_id) != headers_i.end())
-        return false;
+        return;
     headers_i.insert(struct_info.first_field_id);
 
     // Build slice lists.  All slices of the same field go in the same slice
@@ -482,7 +478,15 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
 
     if (accumulator->size())
         slice_lists_i.insert(accumulator);
+}
 
+bool Clustering::MakeSuperClusters::preorder(const IR::ConcreteHeaderRef* hr) {
+    visitHeaderRef(hr);
+    return false;
+}
+
+bool Clustering::MakeSuperClusters::preorder(const IR::HeaderStackItemRef* hr) {
+    visitHeaderRef(hr);
     return false;
 }
 
@@ -490,6 +494,7 @@ void Clustering::MakeSuperClusters::end_apply() {
     // XXX(cole): This is a temporary hack to try to encourage slices of
     // metadata fields with alignment constraints to be placed together.
     for (auto& kv : self.fields_to_slices_i) {
+        if (!self.uses_i.is_referenced(kv.first)) continue;
         bool is_metadata = kv.first->metadata || kv.first->pov;
         // The kv.second.size() comparison is added to avoid creating slice lists containing one
         // slice.
@@ -531,22 +536,19 @@ void Clustering::MakeSuperClusters::end_apply() {
     int ingress_list_bits = 0;
     int egress_list_bits = 0;
     for (auto& f : phv_i) {
+        // Don't bother adding unreferenced fields.
+        if (!self.uses_i.is_referenced(&f)) continue;
+
         // Skip everything but POV valid bits.
-        if (!f.pov)
-            continue;
+        if (!f.pov) continue;
 
         // Skip valid bits for header stacks, which are allocated with
         // $stkvalid.
-        if (f.ccgf())
-            continue;
+        if (f.size > 1) continue;
 
         // Skip valid bits involved in complex instructions, because they have
         // complicated packing constraints.
         if (self.complex_validity_bits_i.find(&f) != self.complex_validity_bits_i.end())
-            continue;
-
-        // If this validity bit is part of a header stack, skip it.
-        if (f.header_stack_pov_ccgf() || f.ccgf())
             continue;
 
         LOG5("Creating POV BIT LIST with " << f);

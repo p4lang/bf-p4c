@@ -40,14 +40,13 @@ class MapFieldToExpr : public Inspector {
                   "Missing IR::Expression mapping of %1%", field->name);
         return fieldExpressions.at(field->id)->clone();
     }
+
     /// Returns a instruction that initialize this field.
     const IR::MAU::Instruction* generateInitInstruction(const PHV::Field* f) const {
         BUG_CHECK(f, "Field is nullptr in generateInitInstruction");
-        const IR::Expression* zero_expr =
-            new IR::Constant(new IR::Type_Bits(f->size, false), 0);
+        const IR::Expression* zero_expr = new IR::Constant(new IR::Type_Bits(f->size, false), 0);
         const IR::Expression* field_expr = getExpr(f);
-        auto* prim =
-            new IR::MAU::Instruction("set", { field_expr, zero_expr });
+        auto* prim = new IR::MAU::Instruction("set", { field_expr, zero_expr });
         return prim;
     }
 };
@@ -194,6 +193,15 @@ struct DataDependencyGraph {
     AdjacentList adjacent_list;
     std::set<VertexId> starts;  // Nodes that does not have any dependency.
 
+    /// Clear the data structure, removing all vertices, edges, and other
+    /// internal state.
+    void clear() {
+        table_id.clear();
+        id_table.clear();
+        adjacent_list.clear();
+        starts.clear();
+    }
+
     /// Generate a new node corresponding to a table.
     VertexId getNode(const IR::MAU::Table* table) {
         if (table_id.count(table)) {
@@ -219,13 +227,6 @@ struct DataDependencyGraph {
     const IR::MAU::Table* getTable(VertexId id) const {
         BUG_CHECK(id >= 0 && id < int(id_table.size()), "Invalid Id: %1%", id);
         return id_table[id]; }
-
-    void clear() {
-        table_id.clear();
-        id_table.clear();
-        adjacent_list.clear();
-        starts.clear();
-    }
 };
 
 /** A base class for dfs-like searching, providing a helper function

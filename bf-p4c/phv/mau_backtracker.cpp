@@ -33,6 +33,8 @@ void MauBacktracker::end_apply() {
 
 ordered_set<int>
 MauBacktracker::inSameStage(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+    BUG_CHECK(t1, "Null table!");
+    BUG_CHECK(t2, "Null table!");
     ordered_set<int> rs;
     if (tables.size() == 0) return rs;
     const ordered_set<int>& t1Stages = tables.at(TableSummary::getTableName(t1));

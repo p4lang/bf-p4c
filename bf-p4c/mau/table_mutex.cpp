@@ -2,7 +2,7 @@
 
 void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     // FIXME: Doesn't take into account gateways and match tables merging after table placement
-    assert(table_ids.count(tbl));
+    BUG_CHECK(table_ids.count(tbl), "Table found in postorder not visited in preorder?");
     table_succ[tbl][table_ids[tbl]] = true;
     safe_vector<bitvec> sets;
     bitvec common;
@@ -75,6 +75,18 @@ void TablesMutuallyExclusive::postorder(const IR::BFN::Pipe *pipe) {
             for (auto &other : sets)
                 if (&set != &other)
                     mutex[t] |= other;
+}
+
+bool TablesMutuallyExclusive::operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
+    BUG_CHECK(table_ids.count(a), "No table info for %1%", a);
+    BUG_CHECK(table_ids.count(b), "No table info for %1%", b);
+    return mutex(table_ids.at(a), table_ids.at(b));
+}
+
+bool TablesMutuallyExclusive::action(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
+    BUG_CHECK(table_ids.count(a), "No table info for %1%", a);
+    BUG_CHECK(table_ids.count(b), "No table info for %1%", b);
+    return action_mutex(table_ids.at(a), table_ids.at(b));
 }
 
 bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::Action *) {

@@ -4,6 +4,8 @@
 #include "ir/ir.h"
 #include "lib/map.h"
 
+class PhvInfo;
+
 /** Walk over the IR and collect metadata about the usage of header stacks in
  * the program. The results are stored in `IR::BFN::Pipe::headerStackInfo`.
  *
@@ -33,6 +35,12 @@ class ElimUnusedHeaderStackInfo : public PassManager {
         ordered_set<cstring> used;
 
         explicit Find(ElimUnusedHeaderStackInfo& self) : self(self) { }
+
+        Visitor::profile_t init_apply(const IR::Node* root) {
+            self.unused.clear();
+            used.clear();
+            return Inspector::init_apply(root);
+        }
 
         bool preorder(const IR::BFN::Pipe* pipe) override {
             BUG_CHECK(pipe->headerStackInfo != nullptr,
@@ -102,5 +110,55 @@ struct HeaderStackInfo {
 };
 
 }  // namespace BFN
+
+/** Remove setValid when used to initialize a newly-pushed element of a header
+ * stack, and fail with P4C_UNIMPLEMENTED if no such initialization occurs in
+ * the same action as the push.
+ *
+ * This is because P4_16 defines push_front as pushing an invalid header, but
+ * P4_14 (and our current implementation) implements push_front as pushing a
+ * *valid* header.
+ *
+ * @pre Must run before ValidToStkvalid, because this pass refers to the
+ * "$valid" suffix of header stack elements, and before HeaderPushPop, because
+ * it looks for "push_front" instructions.
+ */
+class RemovePushInitialization : public Transform {
+    IR::Node* preorder(IR::MAU::Action* act) override;
+
+ public:
+    RemovePushInitialization() { }
+};
+
+/** Replace the "$valid" suffix for header stacks with an AliasSlice index into
+ * the "$stkvalid" field instead.  Also updates the alias map in PhvInfo.
+ *
+ * @pre Must happen after ResolveComputedParserExpressions.
+ */
+class ValidToStkvalid : public Transform {
+    PhvInfo& phv;
+    struct BFN::HeaderStackInfo* stack_info_;
+
+    // Populate stack_info_.
+    IR::Node* preorder(IR::BFN::Pipe* pipe) override;
+
+    // Replace uses of stk[x].$valid with stk.$stkvalid[y:y], where the latter
+    // corresponds to the validity bit in $stkvalid of element x of stk.
+    IR::Node* postorder(IR::Member* member) override;
+
+    // Replace extractions to slices of $stkvalid with equivalent extractions
+    // to the entire field.  Eg. extract(stk.$stkvalid, 0x4) instead of
+    // extract(stk.$stkvalid[2:2], 0x1).
+    //
+    // XXX(cole): This is because Brig doesn't currently support extracting
+    // constants to field slices in the parser (see BRIG-584).  As a result,
+    // this removes the AliasSlice node and hence loses the aliasing
+    // information.  However, as parser extracts aren't exposed to the control
+    // plane, this should be fine.
+    IR::Node* postorder(IR::BFN::Extract* extract) override;
+
+ public:
+    explicit ValidToStkvalid(PhvInfo& phv) : phv(phv) { }
+};
 
 #endif /* BF_P4C_COMMON_HEADER_STACK_H_ */

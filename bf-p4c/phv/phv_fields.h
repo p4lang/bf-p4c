@@ -33,6 +33,7 @@ class TofinoPHVManualAlloc;
 
 class ActionPhvConstraints;
 class AllocSlice;
+class ClearPhvInfo;
 class Clustering;
 struct CollectPhvFields;
 struct ComputeFieldAlignments;
@@ -718,14 +719,6 @@ class PhvInfo {
 
     const SymBitMatrix& mutex() const { return field_mutex; }
 
-    const ordered_map<cstring, cstring>& getAliasMap() const {
-        return aliasMap;
-    }
-
-    void setAliasEntry(cstring first, cstring second) {
-        aliasMap[first] = second;
-    }
-
  private:  // class PhvInfo
     //
     std::map<cstring, PHV::Field>            all_fields;
@@ -741,11 +734,6 @@ class PhvInfo {
 
     /// Mapping from containers to the fields using those containers.
     std::map<PHV::Container, ordered_set<const PHV::Field *>> container_to_fields;
-
-    /// When two fields are aliased, the source is replaced with the destination throughout the
-    /// backend, except in assembly generation, when the source is emitted using information about
-    /// the destination stored in the following map.
-    ordered_map<cstring, cstring> aliasMap;
 
     /// the dummy padding field names.
     ordered_set<cstring> dummyPaddingNames;
@@ -772,6 +760,7 @@ class PhvInfo {
         decltype(**it) operator*() { return **it; }
         decltype(*it) operator->() { return *it; } };
 
+    friend class ClearPhvInfo;
     friend struct CollectPhvFields;
     friend struct AllocatePOVBits;
     friend struct MarkBridgedMetadataFields;
@@ -817,19 +806,15 @@ class PhvInfo {
         return field(name);
     }
 
-    std::vector<PHV::Field::alloc_slice>
-    get_alloc(const IR::Expression* f) const {
+    std::vector<PHV::Field::alloc_slice> get_alloc(const IR::Expression* f) const {
         CHECK_NULL(f);
-        std::vector<PHV::Field::alloc_slice> slices;
-
         auto* phv_field = field(f);
+        BUG_CHECK(phv_field, "No PHV field for expression %1%", f);
         return get_alloc(phv_field);
     }
 
-    std::vector<PHV::Field::alloc_slice>
-    get_alloc(const PHV::Field* phv_field) const {
+    std::vector<PHV::Field::alloc_slice> get_alloc(const PHV::Field* phv_field) const {
         std::vector<PHV::Field::alloc_slice> slices;
-        if (!phv_field) return slices;
 
         phv_field->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
             slices.push_back(alloc);
@@ -857,8 +842,8 @@ class PhvInfo {
     /// @returns the set of fields assigned (partially or entirely) to @c
     const ordered_set<const PHV::Field *>& fields_in_container(const PHV::Container c) const;
 
-    /** @returns a bitvec showing the currently allocated bits in a container corresponding to 
-      * fields simultaneously live with the fields passed in the argument set. 
+    /** @returns a bitvec showing the currently allocated bits in a container corresponding to
+      * fields simultaneously live with the fields passed in the argument set.
       * Note that one common bitvec is used to represent all fields that may be in a container
       */
     bitvec bits_allocated(const PHV::Container, const ordered_set<const PHV::Field*>&) const;
@@ -901,9 +886,20 @@ struct CollectPhvInfo : public PassManager {
   * @pre PhvAnalysis_Pass has been run so that allocation objects are available.
   */
 class AddAliasAllocation : public Inspector {
- private:
     PhvInfo& phv;
-    profile_t init_apply(const IR::Node* root) override;
+    ordered_set<const PHV::Field*> seen;
+
+    /// Set @source allocation to that of the @range of @dest.  The size of
+    /// @range must match the size of @source.
+    void addAllocation(PHV::Field* source, const PHV::Field* dest, le_bitrange range);
+
+    profile_t init_apply(const IR::Node* root) override {
+        seen.clear();
+        return Inspector::init_apply(root);
+    }
+    bool preorder(const IR::BFN::AliasMember*) override;
+    bool preorder(const IR::BFN::AliasSlice*) override;
+    void end_apply() override;
 
  public:
     explicit AddAliasAllocation(PhvInfo& p) : phv(p) { }

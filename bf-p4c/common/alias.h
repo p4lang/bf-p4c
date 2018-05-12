@@ -13,6 +13,8 @@ class FindExpressionsForFields : public Inspector {
  private:
     /// PhvInfo object.
     const PhvInfo& phv;
+    /// Aliasing information from the @pa_alias pragma.
+    const PragmaAlias& pragmaAlias;
     /// Map of IR::Expression objects corresponding to the alias destination fields.
     ordered_map<const PHV::Field*, const IR::Expression*>&     fieldExpressions;
 
@@ -27,8 +29,9 @@ class FindExpressionsForFields : public Inspector {
  public:
     FindExpressionsForFields(
             const PhvInfo& p,
+            const PragmaAlias& pragmaAlias,
             ordered_map<const PHV::Field*, const IR::Expression*>& f)
-        : phv(p), fieldExpressions(f) { }
+        : phv(p), pragmaAlias(pragmaAlias), fieldExpressions(f) { }
 };
 
 /** This class replaces all uses of alias source fields with the corresponding alias destination
@@ -39,6 +42,8 @@ class ReplaceAllAliases : public Transform {
  private:
     /// PhvInfo object.
     const PhvInfo& phv;
+    /// Aliasing information from the @pa_alias pragma.
+    const PragmaAlias& pragmaAlias;
     /// Map of IR::Expression objects corresponding to the alias destination fields.
     const ordered_map<const PHV::Field*, const IR::Expression*>&    fieldExpressions;
 
@@ -47,8 +52,9 @@ class ReplaceAllAliases : public Transform {
  public:
     ReplaceAllAliases(
             const PhvInfo& p,
+            const PragmaAlias& pragmaAlias,
             const ordered_map<const PHV::Field*, const IR::Expression*>& f)
-        : phv(p), fieldExpressions(f) { }
+        : phv(p), pragmaAlias(pragmaAlias), fieldExpressions(f) { }
 };
 
 /** This class implements a pass manager that handles aliasing relationships specified by pa_alias
@@ -62,14 +68,25 @@ class ReplaceAllAliases : public Transform {
 class Alias : public PassManager {
  private:
      ordered_map<const PHV::Field*, const IR::Expression*> fieldExpressions;
+     PragmaAlias pragmaAlias;
 
  public:
-    explicit Alias(PhvInfo& phv) {
+    explicit Alias(PhvInfo& phv) : pragmaAlias(phv) {
         addPasses({
-            new PragmaAlias(phv),
-            new FindExpressionsForFields(phv, fieldExpressions),
-            new ReplaceAllAliases(phv, fieldExpressions)
+            &pragmaAlias,
+            new FindExpressionsForFields(phv, pragmaAlias, fieldExpressions),
+            new ReplaceAllAliases(phv, pragmaAlias, fieldExpressions)
         });
+    }
+};
+
+/// Replace AliasMember and AliasSlice nodes with their alias sources.
+class ReinstateAliasSources : public Transform {
+    IR::Node* preorder(IR::BFN::AliasMember* alias) override {
+        return alias->source->apply(ReinstateAliasSources())->clone();
+    }
+    IR::Node* preorder(IR::BFN::AliasSlice* alias) override {
+        return alias->source->apply(ReinstateAliasSources())->clone();
     }
 };
 

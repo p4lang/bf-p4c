@@ -1,6 +1,7 @@
 #ifndef BF_P4C_PHV_CHECK_UNALLOCATED_H_
 #define BF_P4C_PHV_CHECK_UNALLOCATED_H_
 
+#include <sstream>
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -53,9 +54,10 @@ class CheckForUnallocatedTemps : public PassManager {
 
             ordered_set<PHV::Field *> unallocated = collect_unallocated_fields(phv, uses, clot);
             if (unallocated.size()) {
-                BUG("Fields added after PHV allocation");
-                for (auto f : unallocated)
-                    BUG("%1%", f->name); }
+                std::stringstream ss;
+                for (auto* f : unallocated)
+                    ss << f << std::endl;
+                BUG("Fields added after PHV allocation:\n%1%", ss.str()); }
 
             return n;
         }

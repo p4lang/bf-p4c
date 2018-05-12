@@ -69,12 +69,10 @@ class Clustering : public PassManager {
       */
     class ClearClusteringStructs : public Inspector {
         Clustering& self;
-        // PhvInfo& phv_i;
-
         Visitor::profile_t init_apply(const IR::Node* node) override;
 
      public:
-        explicit ClearClusteringStructs(Clustering& self) : self(self) /*, phv_i(self.phv_i) */ { }
+        explicit ClearClusteringStructs(Clustering& self) : self(self) { }
     };
 
     /** Find validity bits involved in any MAU instruction other than
@@ -218,11 +216,17 @@ class Clustering : public PassManager {
         /// be placed, in order, in the same container.
         ordered_set<PHV::SuperCluster::SliceList*> slice_lists_i;
 
+        /// Helper function for visiting HeaderRefs.
+        void visitHeaderRef(const IR::HeaderRef* hr);
+
         /// Clear state to enable backtracking
         Visitor::profile_t init_apply(const IR::Node *) override;
 
         /// Create lists of slices that need to be allocated in the same container.
-        bool preorder(const IR::HeaderRef*) override;
+        bool preorder(const IR::ConcreteHeaderRef*) override;
+
+        /// Create lists of slices that need to be allocated in the same container.
+        bool preorder(const IR::HeaderStackItemRef*) override;
 
         /// Create cluster groups by taking the union of clusters of slices
         /// that appear in the same list.

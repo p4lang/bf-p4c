@@ -1,4 +1,5 @@
 #include "bf-p4c/parde/asm_output.h"
+#include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/autoindent.h"
 #include "bf-p4c/parde/clot_info.h"
@@ -84,9 +85,13 @@ struct OutputDictionary : public Inspector {
         AutoIndent autoIndent(indent);
         out << indent << "clot " << emit->clot->tag << ":" << std::endl;
 
-        auto povBit = phv.field(emit->povBit->field);
+        le_bitrange range;
+        auto* povField = phv.field(emit->povBit->field, &range);
         AutoIndent fieldIndent(indent);
-        out << indent << "pov: " << canon_name(trim_asm_name(povBit->externalName())) << std::endl;
+        out << indent << "pov: " << canon_name(trim_asm_name(povField->externalName()));
+        if (range.size() != povField->size)
+            out << "(" << range.lo << ")";
+        out << std::endl;
 
         std::set<PHV::Container> containers;
         for (auto f : emit->clot->phv_fields) {
@@ -299,10 +304,6 @@ struct OutputDigests : public Inspector {
               [&](nw_bitrange range, const IR::Expression*, cstring fieldName) {
                 le_bitrange leRange = range.toOrder<Endian::Little>(
                     entry->controlPlaneFormat->totalWidth);
-                for (auto kv : phv.getAliasMap()) {
-                    if (fieldName == kv.second) {
-                        fieldName = kv.first;
-                        break; } }
                 out << indent << "- [ " << canon_name(fieldName)
                               << ", " << range.loByte() + 1  // Start byte.
                               << ", " << range.size()        // Field width.
@@ -342,10 +343,11 @@ std::ostream&
 operator<<(std::ostream& out, const DeparserAsmOutput& deparserOut) {
     out << "deparser " << deparserOut.deparser->thread() << ":" << std::endl;
 
-    deparserOut.deparser->apply(OutputDictionary(out, deparserOut.phv, deparserOut.clot));
-    deparserOut.deparser->apply(OutputChecksums(out));
-    deparserOut.deparser->apply(OutputParameters(out));
-    deparserOut.deparser->apply(OutputDigests(out, deparserOut.phv));
+    auto* unaliasedDeparser = deparserOut.deparser->apply(ReinstateAliasSources());
+    unaliasedDeparser->apply(OutputDictionary(out, deparserOut.phv, deparserOut.clot));
+    unaliasedDeparser->apply(OutputChecksums(out));
+    unaliasedDeparser->apply(OutputParameters(out));
+    unaliasedDeparser->apply(OutputDigests(out, deparserOut.phv));
 
     return out;
 }

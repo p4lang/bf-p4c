@@ -14,9 +14,22 @@
  *
  */
 class PragmaAlias : public Inspector {
-    PhvInfo& phv_i;
+ public:
+    struct AliasDestination {
+        /// The alias destination field.
+        cstring field;
 
-    ordered_map<const PHV::Field*, const PHV::Field*> pa_alias_i;
+        /// The range of the field being aliased, or boost::none when the
+        /// entire field is aliased.
+        boost::optional<le_bitrange> range;
+    };
+
+    /// Map type from alias sources to destinations.
+    using AliasMap = ordered_map<cstring, AliasDestination>;
+
+ private:
+    const PhvInfo& phv_i;
+    AliasMap aliasMap;
 
     /// All PHV::Field objects that have expressions associated with them.
     /// This is used to replace IR::Expression objects for aliased fields later.
@@ -30,16 +43,12 @@ class PragmaAlias : public Inspector {
     /// Get global pragma pa_alias.
     void postorder(const IR::BFN::Pipe* pipe) override;
 
-    void end_apply() override;
-
  public:
     explicit PragmaAlias(PhvInfo& phv) : phv_i(phv) { }
-
-    const ordered_map<const PHV::Field*, const PHV::Field*>& alias_fields() const {
-        return pa_alias_i;
-    }
+    const AliasMap& getAliasMap() const { return aliasMap; }
 };
 
 std::ostream& operator<<(std::ostream& out, const PragmaAlias& pa_a);
+std::ostream &operator<<(std::ostream &, const PragmaAlias::AliasDestination& dest);
 
 #endif /* EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_ALIAS_H_ */

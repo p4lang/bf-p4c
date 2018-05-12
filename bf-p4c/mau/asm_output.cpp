@@ -1,4 +1,5 @@
 #include "bf-p4c/mau/asm_output.h"
+#include "bf-p4c/common/alias.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_format.h"
@@ -1785,24 +1786,14 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         if (ixbar_read->match_type.name == "selector") continue;
         if (p4_param_index != ixbar_read->p4_param_order) continue;
         auto *expr = ixbar_read->expr;
-        auto* mem = expr->to<IR::BFN::AliasMember>();
         if (ixbar_read->from_mask)
             expr = expr->to<IR::Slice>()->e0;
-        auto* sl = expr->to<IR::Slice>();
+        // Replace any alias nodes with their original sources, in order to
+        // ensure the original names are emitted.
+        expr = expr->apply(ReinstateAliasSources());
         auto size = expr->type->width_bits();
-        if (sl)
-            mem = sl->e0->to<IR::BFN::AliasMember>();
 
-        if (mem) {
-            cstring aliasSourceName = mem->getAliasSource();
-            BUG_CHECK(aliasSourceName != cstring(), "No alias source name for AliasMember %1%",
-                      mem);
-            const PHV::Field* aliasSourceField = phv.field(aliasSourceName);
-            ERROR_CHECK(aliasSourceField, "Field %s not found", aliasSourceName);
-            out << indent << canon_name(aliasSourceField->externalName()) << ": ";
-        } else {
-            out << indent << canon_name(phv.field(expr)->externalName()) << ": ";
-        }
+        out << indent << canon_name(phv.field(expr)->externalName()) << ": ";
         out << "{ type: " << ixbar_read->match_type.name << ", ";
         out << "size: " << size << ", ";
         out << "full_size: " << phv.field(expr)->size;

@@ -35,7 +35,6 @@
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/check_unallocated.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
-#include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_analysis.h"
 #include "bf-p4c/phv/privatization.h"
 #include "bf-p4c/phv/validate_allocation.h"
@@ -139,15 +138,17 @@ Backend::Backend(const BFN_Options& options) :
         new CreateThreadLocalInstances,
         new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances, but
                                      // cannot be run after InstructionSelection.
+        new RemovePushInitialization,
         new StackPushShims,
-        new CollectPhvInfo(phv),  // Needs to be rerun after CreateThreadLocalInstances.
+        new CollectPhvInfo(phv),    // Needs to be rerun after CreateThreadLocalInstances.
         new HeaderPushPop,
         new CollectPhvInfo(phv),
         new DoInstructionSelection(phv),
         new DumpPipe("After InstructionSelection"),
-        new Alias(phv),   // Interpret the pa_alias pragmas
+        new Alias(phv),             // Add aliasing from the pa_alias pragmas
         new CollectPhvInfo(phv),
         &defuse,
+        new FindDependencyGraph(phv, deps),
         options.privatization ? new Privatization(phv, deps, doNotPrivatize, defuse) : nullptr,
                                   // For read-only fields, generate private TPHV and PHV copies.
 
@@ -172,14 +173,21 @@ Backend::Backend(const BFN_Options& options) :
         &defuse,
         new AlpmSetup,
         new CollectPhvInfo(phv),
+        new ValidToStkvalid(phv),   // Alias header stack $valid fields with $stkvalid slices
+        new CollectPhvInfo(phv),
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         new CollectPhvInfo(phv),
         new MergeParserStates,
         &defuse,
-            // Following pass must run after CollectNameAnnotations, after any CollectPhvInfo.
+
+        // SetExternalNameForBridgedMetadata must run after
+        // CollectNameAnnotations.  DO NOT RUN CollectPhvInfo afterwards, as
+        // this will destroy the external names for bridged metadata PHV::Field
+        // objects.
         new SetExternalNameForBridgedMetadata(phv, bridged_fields),
+
         new CheckForHeaders(),
 #if HAVE_JBAY
         options.target == "jbay" && options.use_clot ? new AllocateClot(clot, phv, uses) : nullptr,
@@ -189,15 +197,19 @@ Backend::Backend(const BFN_Options& options) :
         new MetadataInitialization(options.always_init_metadata, phv, defuse, deps),
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
+
+        // Do PHV allocation.  Cannot run CollectPhvInfo afterwards, as that
+        // will clear the allocation.
         new DumpPipe("Before phv_analysis"),
         new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps, table_alloc),
-                                // phv analysis after last CollectPhvInfo pass
+        // Validate results of PHV allocation.
         new PHV::ValidateAllocation(phv, clot, phv.field_mutex, doNotPrivatize),
-                                // Validate results of PHV allocation
+
         options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,
                                 // Undo results of privatization for the doNotPrivatize fields
         new PHV::ValidateActions(phv, false, true, false),
         new AddAliasAllocation(phv),
+        new ReinstateAliasSources(),    // revert AliasMembers/Slices to their original sources
         options.privatization ? &defuse : nullptr,
         new TableAllocPass(options, phv, deps),
         new TableSummary,

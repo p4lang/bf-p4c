@@ -56,10 +56,8 @@ class TablesMutuallyExclusive : public MauInspector {
         action_mutex.clear();
         return rv; }
  public:
-    bool operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
-        return mutex(table_ids.at(a), table_ids.at(b)); }
-    bool action(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
-        return action_mutex(table_ids.at(a), table_ids.at(b)); }
+    bool operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
+    bool action(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
 };
 
 class SharedIndirectAttachedAnalysis : public MauInspector {

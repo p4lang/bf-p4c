@@ -73,7 +73,7 @@ bool PragmaAtomic::preorder(const IR::BFN::Pipe* pipe) {
     }
 
     for (auto field : pa_atomic_from_arch) {
-        if (auto phv_field = phv_i.field(field))
+        if (phv_i.field(field))
             add_constraint(field);
     }
 

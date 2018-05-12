@@ -2,6 +2,8 @@
 
 #include <boost/optional.hpp>
 #include <boost/range/adaptor/reversed.hpp>
+#include <boost/range/irange.hpp>
+#include <string>
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -33,9 +35,11 @@ void PhvInfo::add(
     // Set the egress version of bridged fields to metadata
     if (gress == EGRESS && bridged)
         meta = true;
+    if (all_fields.count(name)) {
+        LOG3("Already added field; skipping: " << name);
+        return; }
     LOG3("PhvInfo adding " << (pad ? "padding" : (meta ? "metadata" : "header")) << " field " <<
          name << " size " << size);
-    assert(all_fields.count(name) == 0);
     auto *info = &all_fields[name];
     info->name = name;
     info->id = by_id.size();
@@ -53,13 +57,15 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gre
     if (!type) {
         LOG3("PhvInfo no type for " << name);
         return; }
+    if (all_structs.count(name)) {
+        LOG3("Already added header; skipping: " << name);
+        return; }
     LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
-    BUG_CHECK(all_structs.count(name) == 0, "phv_fields.cpp:add_hdr(): all_structs inconsistent");
     int start = by_id.size();
     int offset = 0;
     auto annot = type->getAnnotations();
     bool bridged = false;
-    if (auto s = annot->getSingle("layout")) {
+    if (annot->getSingle("layout")) {
         LOG3("Candidate bridged metadata header (found layout annotation): " << name);
         bridged = true; }
     for (auto f : type->fields)
@@ -111,14 +117,13 @@ const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) con
     if (auto *sl = e->to<IR::Slice>()) {
         auto *rv = field(sl->e0, bits);
         if (rv && bits) {
-            bits->lo += sl->getL();
-            int width = sl->getH() - sl->getL() + 1;
-            if (bits->hi >= bits->lo + width - 1)
-                bits->hi = bits->lo + width - 1;
-            if (bits->hi < bits->lo) {
+            le_bitrange sliceRange = FromTo(sl->getL(), sl->getH());
+            if (!bits->contains(sliceRange)) {
                 warning("slice %d..%d invalid for field %s of size %d", sl->getL(), sl->getH(),
-                        sl->e0, bits->hi);
-                return 0; } }
+                        sl->e0, bits->size());
+                return nullptr; }
+            auto intersection = bits->intersectWith(sliceRange);
+            *bits = le_bitrange(StartLen(intersection.lo, intersection.size())); }
         return rv; }
     if (auto *tv = e->to<IR::TempVar>()) {
         if (auto *rv = getref(all_fields, tv->name)) {
@@ -182,10 +187,11 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
     int size[2] = { 0, 0 };
     int stacks_num = 0;
     for (auto &stack : stacks) {
-        LOG3("    ...preanalyzing header stack " << stack.name);
         StructInfo info = struct_info(stack.name);
+        LOG3("    ...preanalyzing header stack " << stack.name << " (" << info.gress << ")");
         BUG_CHECK(!info.metadata, "metadata stack?");
-        size[info.gress] += stack.size + stack.maxpush + stack.maxpop;
+        size[info.gress] += stack.size + stack.maxpush + stack.maxpop;  // size for $stkvalid
+        size[info.gress] += stack.size;                                 // size for $valid
         stacks_num++; }
 
     for (auto &hdr : simple_headers) {
@@ -204,53 +210,30 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
                 size[gress] -= field.size;
                 field.offset = size[gress]; } }
 
-        // Create fields for validity bits.
+        // Create fields for (non-header stack) validity bits.
         for (auto hdr : simple_headers)
             if (hdr.second.gress == gress)
                 add(hdr.first + ".$valid", gress, 1, --size[gress], false, true);
 
-        // Create header stack CCGFs.
+        // Create header stack POVs, including header stack validity bits.
         for (auto &stack : stacks) {
-            safe_vector<PHV::Field *> pov_fields;  // accumulate member povs of header stk pov
             StructInfo info = struct_info(stack.name);
             if (info.gress == gress) {
-                if (stack.maxpush) {
-                    size[gress] -= stack.maxpush;
-                    add(stack.name + ".$push", gress, stack.maxpush, size[gress], true, true);
-                    pov_fields.push_back(&all_fields[stack.name + ".$push"]);
-                }
-                char buffer[16];
-                for (int i = 0; i < stack.size; ++i) {
-                    snprintf(buffer, sizeof(buffer), "[%d]", i);
-                    add(stack.name + buffer + ".$valid", gress, 1, --size[gress], false, true);
-                    pov_fields.push_back(&all_fields[stack.name + buffer + ".$valid"]);
-                }
-                if (stack.maxpop) {
-                    size[gress] -= stack.maxpop;
-                    add(stack.name + ".$pop", gress, stack.maxpop, size[gress], true, true);
-                    pov_fields.push_back(&all_fields[stack.name + ".$pop"]);
-                }
+                // Create $stkvalid.
                 add(stack.name + ".$stkvalid", gress, stack.size + stack.maxpush + stack.maxpop,
                     size[gress], true, true);
-                // do not push ".$stkvalid" as a member
-                // members are slices of owner ".stkvalid"'s allocation span
                 PHV::Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
-                for (auto &f : pov_fields) {
-                    pov_stk->ccgf_fields().push_back(f);
-                    f->set_ccgf(pov_stk);
-                    BUG_CHECK(f->validContainerRange() == nw_bitrange(ZeroToMax()),
-                        "POV bit with absolute container offset"); }
-                pov_stk->set_header_stack_pov_ccgf(true);
                 pov_stk->set_no_split(true);
-                LOG3("Creating HEADER STACK CCGF " << pov_stk);
-                BUG_CHECK(pov_stk->ccgf_fields().size() > 0,
-                    "Creating .$stkvalid CCGF with no members: %1%",
-                    cstring::to_cstring(pov_stk));
-            }
-        }
-        assert(size[gress] == 0);
-    }
-}  // allocatePOV
+                LOG3("Creating HEADER STACK " << pov_stk);
+                size[gress] -= stack.size + stack.maxpush + stack.maxpop;
+                // Create $valid.
+                for (int i : boost::irange(0, stack.size))
+                    add(stack.name + "[" + std::to_string(i) + "].$valid",
+                        gress, 1, --size[gress], false, true); } }
+
+        BUG_CHECK(size[gress] == 0, "Error creating %1% POV fields.  %2% bits not created.",
+                  cstring::to_cstring(gress), size[gress]); }
+}
 
 //
 //***********************************************************************************
@@ -303,23 +286,16 @@ bitvec PhvInfo::bits_allocated(
 }
 
 boost::optional<cstring> PhvInfo::get_alias_name(const IR::Expression* expr) const {
-    if (auto mem = expr->to<IR::BFN::AliasMember>()) {
-        cstring aliasSourceName = mem->getAliasSource();
-        BUG_CHECK(aliasSourceName != cstring(), "No alias source name for AliasMember %1%",
-                mem);
-        const PHV::Field* aliasSourceField = field(aliasSourceName);
-        BUG_CHECK(aliasSourceField, "Field %s not found", aliasSourceName);
-        return aliasSourceName;
+    if (auto* alias = expr->to<IR::BFN::AliasMember>()) {
+        const PHV::Field* aliasSourceField = field(alias->source);
+        BUG_CHECK(aliasSourceField, "Alias source field %s not found", alias->source);
+        return aliasSourceField->name;
+    } else if (auto* alias = expr->to<IR::BFN::AliasSlice>()) {
+        const PHV::Field* aliasSourceField = field(alias->source);
+        BUG_CHECK(aliasSourceField, "Alias source field %s not found", alias->source);
+        return aliasSourceField->name;
     } else if (auto sl = expr->to<IR::Slice>()) {
-        auto expr = sl->e0;
-        if (auto mem = expr->to<IR::BFN::AliasMember>()) {
-            cstring aliasSourceName = mem->getAliasSource();
-            BUG_CHECK(aliasSourceName != cstring(), "No alias source name for AliasMember %1%",
-                    mem);
-            const PHV::Field* aliasSourceField = field(aliasSourceName);
-            BUG_CHECK(aliasSourceField, "Field %s not found", aliasSourceName);
-            return aliasSourceName;
-        }
+        get_alias_name(sl->e0);
     }
     return boost::none;
 }
@@ -607,58 +583,81 @@ void PHV::Field::updateValidContainerRange(nw_bitrange newValidRange) {
 //
 //***********************************************************************************
 
-/**
- * Populates a PhvInfo object with Fields for each PHV-backed object in the
- * program (header instances, TempVars, etc.).
- *
- * Some Field metadata can't be collected in a single pass; that information is
- * collected by other CollectPhvInfo passes.
- *
- * XXX(seth): There's some other stuff mixed in here for historical reasons, but
- * we should think about whether it belongs in separate passes.
- */
-struct CollectPhvFields : public Inspector, public TofinoWriteContext {
-    explicit CollectPhvFields(PhvInfo& phv) : phv(phv) { }
-
- private:
-    Visitor::profile_t init_apply(const IR::Node* root) override {
-        auto rv = Inspector::init_apply(root);
+class ClearPhvInfo : public Inspector {
+    PhvInfo& phv;
+    bool preorder(const IR::BFN::Pipe*) override {
         phv.clear();
-        return rv;
+        return false;
+    }
+
+ public:
+    explicit ClearPhvInfo(PhvInfo& phv) : phv(phv) { }
+};
+
+/** Populates a PhvInfo object with Fields for each PHV-backed object in the
+ * program (header instances, TempVars, etc.), with the exception of POV
+ * fields, which are created by the AllocatePOVBits pass.
+ *
+ * Note that this pass also collects field information for alias sources by
+ * explicitly visiting the `source` children of AliasMembers and AliasSlices.
+ */
+class CollectPhvFields : public Inspector {
+    PhvInfo& phv;
+    boost::optional<gress_t> gress;
+
+    bool preorder(const IR::BFN::Parser*) override {
+        gress = VisitingThread(this);
+        return true;
+    }
+
+    /// Collect field information for alias sources.
+    bool preorder(const IR::BFN::AliasMember* alias) override {
+        alias->source->apply(CollectPhvFields(phv, gress));
+        return true;
+    }
+
+    /// Collect field information for alias sources.
+    bool preorder(const IR::BFN::AliasSlice* alias) override {
+        alias->source->apply(CollectPhvFields(phv, gress));
+        return true;
     }
 
     bool preorder(const IR::Header* h) override {
-        auto gress = VisitingThread(this);
+        BUG_CHECK(gress, "Trying to collect PHV field info from an IR subtree "
+                  "without supplying a thread");
         int start = phv.by_id.size();
-        phv.add_hdr(h->name, h->type, gress, false);
+        phv.add_hdr(h->name, h->type, *gress, false);
         int end = phv.by_id.size();
         phv.simple_headers.emplace(h->name,
-                                   PhvInfo::StructInfo(false, gress, start, end - start));
+                                   PhvInfo::StructInfo(false, *gress, start, end - start));
         return false;
     }
 
     bool preorder(const IR::HeaderStack* h) override {
         if (!h->type) return false;
-        auto gress = VisitingThread(this);
+        BUG_CHECK(gress, "Trying to collect PHV field info from an IR subtree "
+                  "without supplying a thread");
         char buffer[16];
         int start = phv.by_id.size();
         for (int i = 0; i < h->size; i++) {
             snprintf(buffer, sizeof(buffer), "[%d]", i);
-            phv.add_hdr(h->name + buffer, h->type, gress, false); }
+            phv.add_hdr(h->name + buffer, h->type, *gress, false); }
         int end = phv.by_id.size();
-        phv.all_structs.emplace(h->name, PhvInfo::StructInfo(false, gress, start, end - start));
+        phv.all_structs.emplace(h->name, PhvInfo::StructInfo(false, *gress, start, end - start));
         return false;
     }
 
     bool preorder(const IR::Metadata* h) override {
-        auto gress = VisitingThread(this);
-        phv.add_hdr(h->name, h->type, gress, true);
+        BUG_CHECK(gress, "Trying to collect PHV field info from an IR subtree "
+                  "without supplying a thread");
+        phv.add_hdr(h->name, h->type, *gress, true);
         return false;
     }
 
     bool preorder(const IR::TempVar* tv) override {
-        auto gress = VisitingThread(this);
-        phv.addTempVar(tv, gress);
+        BUG_CHECK(gress, "Trying to collect PHV field info from an IR subtree "
+                  "without supplying a thread");
+        phv.addTempVar(tv, *gress);
 
         // XXX(seth): `^bridged_metadata_indicator` is a special case, because
         // it looks like bridged metadata in the IR, but it *must* be placed in
@@ -682,6 +681,170 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         return false;
     }
 
+    void postorder(const IR::BFN::LoweredParser*) override {
+        BUG("Running CollectPhvInfo after the parser IR has been lowered; "
+            "this will produce invalid results.");
+    }
+
+ public:
+    explicit CollectPhvFields(PhvInfo& phv, boost::optional<gress_t> gress = boost::none)
+    : phv(phv), gress(gress) { }
+};
+
+/// Allocate POV bits for each header instance, metadata instance, or header
+/// stack that we visited in CollectPhvFields.
+struct AllocatePOVBits : public Inspector {
+    explicit AllocatePOVBits(PhvInfo& phv) : phv(phv) { }
+
+ private:
+    profile_t init_apply(const IR::Node* root) override {
+        LOG3("BEGIN AllocatePOVBits");
+        return Inspector::init_apply(root);
+    }
+
+    bool preorder(const IR::BFN::Pipe* pipe) override {
+        BUG_CHECK(pipe->headerStackInfo != nullptr,
+                  "Running AllocatePOVBits without running "
+                  "CollectHeaderStackInfo first?");
+        phv.allocatePOV(*pipe->headerStackInfo);
+        return false;
+    }
+
+    PhvInfo& phv;
+};
+
+/// Examine how fields are used in the parser and deparser to compute their
+/// alignment requirements.
+struct ComputeFieldAlignments : public Inspector {
+    explicit ComputeFieldAlignments(PhvInfo& phv) : phv(phv) { }
+
+ private:
+    bool preorder(const IR::BFN::Extract* extract) override {
+        // Only extracts from the input buffer introduce alignment constraints.
+        auto* bufferSource = extract->source->to<IR::BFN::BufferlikeRVal>();
+        if (!bufferSource) return false;
+
+        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+        if (!lval) return false;
+
+        auto* fieldInfo = phv.field(lval->field);
+        if (!fieldInfo) {
+            ::warning("No allocation for field %1%", extract->dest);
+            return false;
+        }
+
+        // The alignment required for a parsed field is determined by the
+        // position from which it's read from the wire.
+        const auto extractedBits = bufferSource->range();
+        const auto alignment = FieldAlignment(extractedBits);
+        fieldInfo->updateAlignment(alignment);
+
+        // If a parsed field starts at a container bit index larger than the bit
+        // index at which it's located in the input buffer, we won't be able to
+        // extract it, because we'd have to read past the beginning of the input
+        // buffer. For example (all indices are in network order):
+        //
+        //   Container: [ 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 ]
+        //                                      [       field      ]
+        //   Input buffer:                      [ 0  1  2  3  4  5 ]
+        //
+        // This field begins at position 0 in the input buffer, but because the
+        // parser has to write to the entire container, to place the field at
+        // position 8 in the container would require that bits [0, 7] of the
+        // container came from a negative position in the input buffer.
+        //
+        // To avoid this, we generate a constraint that prevents PHV allocation
+        // from placing the field in a problematic position in the container.
+        //
+        // In simple terms, what we want to avoid is placing the field too far
+        // to the right in the container. For fields which come from the mapped
+        // input buffer region (which has a fixed coordinate system that cannot
+        // be shifted) or from the end of the headers in the input packet (where
+        // we'll end up treating some of the packet payload as header if we
+        // introduce an extra shift), a symmetric issue exists where we need to
+        // avoid placing the field too far to the *left* in the container. Both
+        // of these limitations need to be converted into constraints for PHV
+        // allocation.
+        // XXX(seth): Unfortunately we can't capture the "too far to the left"
+        // case with our current representation of valid container ranges.
+        const nw_bitrange validContainerRange = FromTo(0, extractedBits.hi);
+        fieldInfo->updateValidContainerRange(validContainerRange);
+
+        // XXX(seth): This is a hack: if this field was bridged from ingress, we
+        // apply the same alignment constraint to the ingress version of the
+        // field. This ensures that the two allocations are compatible until
+        // we're ready to handle bridged metadata more intelligently. (Note that
+        // we don't even need to do this before CreateThreadLocalInstances has
+        // run, since before that there is just one version of the field; that's
+        // why we check for "egress::" below.)
+        auto* state = findContext<IR::BFN::ParserState>();
+        if (state->name.endsWith("^bridge_metadata_extract") &&
+                fieldInfo->name.startsWith("egress::")) {
+            cstring ingressFieldName = cstring("ingress::")
+                                     + fieldInfo->name.substr(strlen("egress::"));
+            auto* ingressFieldInfo = phv.field(ingressFieldName);
+            BUG_CHECK(ingressFieldInfo != nullptr,
+                      "No ingress version of egress bridged metadata field?");
+            ingressFieldInfo->updateAlignment(alignment);
+            ingressFieldInfo->updateValidContainerRange(validContainerRange);
+        }
+
+        return false;
+    }
+
+    bool preorder(const IR::BFN::Deparser* deparser) override {
+        unsigned currentBit = 0;
+
+        for (auto* emitPrimitive : deparser->emits) {
+            // XXX(seth): Right now we treat EmitChecksum as not inducing any
+            // particular alignment, but we will need to revisit that.
+            auto* emit = emitPrimitive->to<IR::BFN::Emit>();
+            if (!emit) continue;
+
+            auto* fieldInfo = phv.field(emit->source->field);
+            if (!fieldInfo) {
+                ::warning("No allocation for field %1%", emit->source);
+                currentBit = 0;
+                continue;
+            }
+
+            // XXX(seth): We don't need to infer any constraints from the
+            // deparser for bridged metadata fields; they get their alignment
+            // from the hack in `preorder(Extract)`. (We just duplicate the
+            // egress alignment constraints, which are inferred from the
+            // parser, for the ingress versions of the fields.) For now, we just
+            // skip to the next byte-aligned position.
+            if (fieldInfo->bridged) {
+                currentBit += fieldInfo->size;
+                if (currentBit % 8 != 0)
+                    currentBit += 8 - currentBit % 8;
+                continue;
+            }
+
+            // For other deparsed fields, the alignment requirement is induced
+            // by the position at which the field will be written on the wire.
+            // We can behave as if every field will be deparsed (i.e., all POV
+            // bits are set) because any sequential group of deparsed fields
+            // with the same POV bits must be byte-aligned in a valid Tofino P4
+            // program. (If not, you'd end up with garbage bits on the wire.)
+            nw_bitrange emittedBits(currentBit, currentBit + fieldInfo->size - 1);
+            fieldInfo->updateAlignment(FieldAlignment(emittedBits));
+            currentBit += fieldInfo->size;
+        }
+
+        return false;
+    }
+
+    PhvInfo& phv;
+};
+
+
+/** Sets constraint properties in PHV::Field objects based on constraints
+ * induced by the parser/deparser.
+ */
+class CollectPardeConstraints : public Inspector {
+    PhvInfo& phv;
+
     void postorder(const IR::BFN::EmitChecksum* checksum) override {
         for (const auto* flval : checksum->sources) {
             PHV::Field* f = phv.field(flval->field);
@@ -689,6 +852,27 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
             f->set_is_checksummed(true);
             LOG1("Checksummed field: " << f);
         }
+    }
+
+    void postorder(const IR::BFN::Emit* emit) {
+        auto* src_field = phv.field(emit->source->field);
+        BUG_CHECK(src_field, "Deparser Emit with a non-PHV source: %1%",
+                  cstring::to_cstring(emit));
+        // XXX(cole): These two constraints will be subsumed by deparser schema.
+        src_field->set_deparsed(true);
+        src_field->set_exact_containers(true);
+
+        if (!src_field->privatized()) return;
+
+        // The original PHV copy of privatized fields must be explicitly identified as privatizable
+        // and its exact containers property must be set to true.
+        boost::optional<cstring> newString = src_field->getPHVPrivateFieldName();
+        if (!newString)
+            BUG("Did not find PHV version of privatized field %1%", src_field->name);
+        auto* phv_field = phv.field(*newString);
+        BUG_CHECK(phv_field, "PHV version of privatized field %1% not found", src_field->name);
+        phv_field->set_exact_containers(true);
+        phv_field->set_privatizable(true);
     }
 
     void postorder(const IR::BFN::DeparserParameter* param) override {
@@ -840,218 +1024,65 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         }
     }
 
-    void postorder(const IR::BFN::LoweredParser*) override {
-        BUG("Running CollectPhvInfo after the parser IR has been lowered; "
-            "this will produce invalid results.");
-    }
-
-    PhvInfo& phv;
-};
-
-/// Allocate POV bits for each header instance, metadata instance, or header
-/// stack that we visited in CollectPhvFields.
-struct AllocatePOVBits : public Inspector {
-    explicit AllocatePOVBits(PhvInfo& phv) : phv(phv) { }
-
- private:
-    profile_t init_apply(const IR::Node* root) override {
-        LOG3("BEGIN AllocatePOVBits");
-        return Inspector::init_apply(root);
-    }
-
-    bool preorder(const IR::BFN::Pipe* pipe) override {
-        BUG_CHECK(pipe->headerStackInfo != nullptr,
-                  "Running AllocatePOVBits without running "
-                  "CollectHeaderStackInfo first?");
-        phv.allocatePOV(*pipe->headerStackInfo);
-        return false;
-    }
-
-    PhvInfo& phv;
-};
-
-/// Examine how fields are used in the parser and deparser to compute their
-/// alignment requirements.
-struct ComputeFieldAlignments : public Inspector {
-    explicit ComputeFieldAlignments(PhvInfo& phv) : phv(phv) { }
-
- private:
-    bool preorder(const IR::BFN::Extract* extract) override {
-        // Only extracts from the input buffer introduce alignment constraints.
-        auto* bufferSource = extract->source->to<IR::BFN::BufferlikeRVal>();
-        if (!bufferSource) return false;
-
-        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
-        if (!lval) return false;
-
-        auto* fieldInfo = phv.field(lval->field);
-        if (!fieldInfo) {
-            ::warning("No allocation for field %1%", extract->dest);
-            return false;
-        }
-
-        // The alignment required for a parsed field is determined by the
-        // position from which it's read from the wire.
-        const auto extractedBits = bufferSource->range();
-        const auto alignment = FieldAlignment(extractedBits);
-        fieldInfo->updateAlignment(alignment);
-
-        // If a parsed field starts at a container bit index larger than the bit
-        // index at which it's located in the input buffer, we won't be able to
-        // extract it, because we'd have to read past the beginning of the input
-        // buffer. For example (all indices are in network order):
-        //
-        //   Container: [ 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 ]
-        //                                      [       field      ]
-        //   Input buffer:                      [ 0  1  2  3  4  5 ]
-        //
-        // This field begins at position 0 in the input buffer, but because the
-        // parser has to write to the entire container, to place the field at
-        // position 8 in the container would require that bits [0, 7] of the
-        // container came from a negative position in the input buffer.
-        //
-        // To avoid this, we generate a constraint that prevents PHV allocation
-        // from placing the field in a problematic position in the container.
-        //
-        // In simple terms, what we want to avoid is placing the field too far
-        // to the right in the container. For fields which come from the mapped
-        // input buffer region (which has a fixed coordinate system that cannot
-        // be shifted) or from the end of the headers in the input packet (where
-        // we'll end up treating some of the packet payload as header if we
-        // introduce an extra shift), a symmetric issue exists where we need to
-        // avoid placing the field too far to the *left* in the container. Both
-        // of these limitations need to be converted into constraints for PHV
-        // allocation.
-        // XXX(seth): Unfortunately we can't capture the "too far to the left"
-        // case with our current representation of valid container ranges.
-        const nw_bitrange validContainerRange = FromTo(0, extractedBits.hi);
-        fieldInfo->updateValidContainerRange(validContainerRange);
-
-        // XXX(seth): This is a hack: if this field was bridged from ingress, we
-        // apply the same alignment constraint to the ingress version of the
-        // field. This ensures that the two allocations are compatible until
-        // we're ready to handle bridged metadata more intelligently. (Note that
-        // we don't even need to do this before CreateThreadLocalInstances has
-        // run, since before that there is just one version of the field; that's
-        // why we check for "egress::" below.)
-        auto* state = findContext<IR::BFN::ParserState>();
-        if (state->name.endsWith("^bridge_metadata_extract") &&
-                fieldInfo->name.startsWith("egress::")) {
-            cstring ingressFieldName = cstring("ingress::")
-                                     + fieldInfo->name.substr(strlen("egress::"));
-            auto* ingressFieldInfo = phv.field(ingressFieldName);
-            BUG_CHECK(ingressFieldInfo != nullptr,
-                      "No ingress version of egress bridged metadata field?");
-            ingressFieldInfo->updateAlignment(alignment);
-            ingressFieldInfo->updateValidContainerRange(validContainerRange);
-        }
-
-        return false;
-    }
-
-    bool preorder(const IR::BFN::Deparser* deparser) override {
-        unsigned currentBit = 0;
-
-        for (auto* emitPrimitive : deparser->emits) {
-            // XXX(seth): Right now we treat EmitChecksum as not inducing any
-            // particular alignment, but we will need to revisit that.
-            auto* emit = emitPrimitive->to<IR::BFN::Emit>();
-            if (!emit) continue;
-
-            auto* fieldInfo = phv.field(emit->source->field);
-            if (!fieldInfo) {
-                ::warning("No allocation for field %1%", emit->source);
-                currentBit = 0;
-                continue;
-            }
-
-            // XXX(seth): We don't need to infer any constraints from the
-            // deparser for bridged metadata fields; they get their alignment
-            // from the hack in `preorder(Extract)`. (We just duplicate the
-            // egress alignment constraints, which are inferred from the
-            // parser, for the ingress versions of the fields.) For now, we just
-            // skip to the next byte-aligned position.
-            if (fieldInfo->bridged) {
-                currentBit += fieldInfo->size;
-                if (currentBit % 8 != 0)
-                    currentBit += 8 - currentBit % 8;
-                continue;
-            }
-
-            // For other deparsed fields, the alignment requirement is induced
-            // by the position at which the field will be written on the wire.
-            // We can behave as if every field will be deparsed (i.e., all POV
-            // bits are set) because any sequential group of deparsed fields
-            // with the same POV bits must be byte-aligned in a valid Tofino P4
-            // program. (If not, you'd end up with garbage bits on the wire.)
-            nw_bitrange emittedBits(currentBit, currentBit + fieldInfo->size - 1);
-            fieldInfo->updateAlignment(FieldAlignment(emittedBits));
-            currentBit += fieldInfo->size;
-        }
-
-        return false;
-    }
-
-    PhvInfo& phv;
-};
-
-
-/// Set the `deparsed` constraint for fields that are emitted in the deparser.
-class MarkDeparsedFields : public Inspector {
-    PhvInfo& phv_i;
-
-    bool preorder(const IR::BFN::Emit* emit) {
-        auto* src_field = phv_i.field(emit->source->field);
-        BUG_CHECK(src_field, "Deparser Emit with a non-PHV source: %1%",
-                  cstring::to_cstring(emit));
-        // XXX(cole): These two constraints will be subsumed by deparser schema.
-        src_field->set_deparsed(true);
-        src_field->set_exact_containers(true);
-
-        if (!src_field->privatized()) return false;
-
-        // The original PHV copy of privatized fields must be explicitly identified as privatizable
-        // and its exact containers property must be set to true.
-        boost::optional<cstring> newString = src_field->getPHVPrivateFieldName();
-        if (!newString)
-            BUG("Did not find PHV version of privatized field %1%", src_field->name);
-        auto* phv_field = phv_i.field(*newString);
-        BUG_CHECK(phv_field, "PHV version of privatized field %1% not found", src_field->name);
-        phv_field->set_exact_containers(true);
-        phv_field->set_privatizable(true);
-
-        return false;
-    }
-
  public:
-    explicit MarkDeparsedFields(PhvInfo& phv) : phv_i(phv) { }
+    explicit CollectPardeConstraints(PhvInfo& phv) : phv(phv) { }
 };
 
-Visitor::profile_t AddAliasAllocation::init_apply(const IR::Node* root) {
-    profile_t rv = Inspector::init_apply(root);
-    for (auto kv : phv.getAliasMap()) {
-        PHV::Field* aliasSource = phv.field(kv.first);
-        PHV::Field* aliasDest = phv.field(kv.second);
-        BUG_CHECK(aliasSource, "Alias source %1% not found");
-        BUG_CHECK(aliasDest, "Alias destination %1% not found");
-        aliasDest->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-            aliasSource->alloc_i.emplace_back(
-                aliasSource,
-                alloc.container,
-                alloc.field_bit,
-                alloc.container_bit,
-                alloc.width);
-            phv.add_container_to_field_entry(alloc.container, aliasSource);
-        });
-    }
+void AddAliasAllocation::addAllocation(
+        PHV::Field* aliasSource,
+        const PHV::Field* aliasDest,
+        le_bitrange range) {
+    BUG_CHECK(aliasSource->size == range.size(), "Alias source (%1%b) and destination (%2%b) of "
+              "different sizes", aliasSource->size, range.size());
 
+    // Avoid adding allocation for the same field more than once.
+    if (seen.count(aliasSource))
+        return;
+    seen.insert(aliasSource);
+
+    // Add allocation.
+    aliasDest->foreach_alloc(range, [&](const PHV::Field::alloc_slice& alloc) {
+        PHV::Field::alloc_slice new_slice(
+            aliasSource,
+            alloc.container,
+            alloc.field_bit - range.lo,
+            alloc.container_bit,
+            alloc.width);
+        LOG5("Adding allocation slice for aliased field: " << aliasSource << " " << new_slice);
+        aliasSource->alloc_i.push_back(new_slice);
+        phv.add_container_to_field_entry(alloc.container, aliasSource);
+    });
+}
+
+bool AddAliasAllocation::preorder(const IR::BFN::AliasMember* alias) {
+    // Recursively add any aliases in the source.
+    alias->source->apply(AddAliasAllocation(phv));
+
+    // Then add this alias.
+    PHV::Field* aliasSource = phv.field(alias->source);
+    const PHV::Field* aliasDest = phv.field(alias);
+    addAllocation(aliasSource, aliasDest, StartLen(0, aliasSource->size));
+    return true;
+}
+
+bool AddAliasAllocation::preorder(const IR::BFN::AliasSlice* alias) {
+    // Recursively add any aliases in the source.
+    alias->source->apply(AddAliasAllocation(phv));
+
+    // Then add this alias.
+    PHV::Field* aliasSource = phv.field(alias->source);
+    const PHV::Field* aliasDest = phv.field(alias);
+    addAllocation(aliasSource, aliasDest, FromTo(alias->getL(), alias->getH()));
+    return true;
+}
+
+void AddAliasAllocation::end_apply() {
     // Later passes assume that PHV allocation is sorted in field bit order
     // MSB first
     for (auto& f : phv) {
         std::sort(f.alloc_i.begin(), f.alloc_i.end(),
                 [](PHV::Field::alloc_slice l, PHV::Field::alloc_slice r) {
                 return l.field_bit > r.field_bit; }); }
-    return rv;
 }
 
 bool CollectNameAnnotations::preorder(const IR::MAU::Table* t) {
@@ -1085,10 +1116,10 @@ bool CollectNameAnnotations::preorder(const IR::MAU::Table* t) {
  * buffer, and PHV allocation needs to take care when allocating these fields:
  * Their start/end bits can't be placed too deep within a PHV container,
  * because that would cause the extractor to read off the end of the buffer.
- *  
+ *
  * That is, both timestamp and version have both a validContainerStart range
  * (like extracted fields) but also a dual validContainerEnd range.
- *  
+ *
  * However, rather than implement that for just two fields, this pass instead
  * sets the exact_containers requirement for these fields, sidestepping the
  * problem.
@@ -1112,10 +1143,11 @@ class MarkTimestampAndVersion : public Inspector {
 
 CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
     addPasses({
+        new ClearPhvInfo(phv),
         new CollectPhvFields(phv),
         new AllocatePOVBits(phv),
+        new CollectPardeConstraints(phv),
         new ComputeFieldAlignments(phv),
-        new MarkDeparsedFields(phv),
         new MarkTimestampAndVersion(phv)
     });
 }
@@ -1289,7 +1321,7 @@ const IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const IR::Node *n, const c
               (uses.is_used_mau(&f) ? "M" : " ") <<
               (uses.is_referenced(&f) ? "R" : " ") <<
               (uses.is_deparsed(&f) ? "D" : " ") << ") " << /*f.externalName()*/
-              f); }
+              f << " (" << f.gress << ")") ; }
     LOG1("");
 
     LOG1("--- PHV FIELDS WIDTH HISTOGRAM----------------------------");
