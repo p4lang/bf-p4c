@@ -368,7 +368,8 @@ class GatewayRangeMatch::SetupRanges : public Transform {
             BUG_CHECK(base == 0, "bits for %s split in range match", f->name);
             base = alloc.first + bits.lo - alloc.second.lo;
             BUG_CHECK(base >= 32 && base + bits.size() <= alloc.first + alloc.second.size(),
-                      "bad gateway field layout for range match"); }
+                      "bad gateway field layout for range match");
+            break; }
         if (!base) return rel;
         if (base & 3) {
             bits.lo -= base & 3;
@@ -378,18 +379,17 @@ class GatewayRangeMatch::SetupRanges : public Transform {
         bits.hi -= orig_lo;
         const IR::Expression *rv = nullptr, *himatch = nullptr;
         LOG5("  bits = " << bits);
-        for (int lo = (bits.hi & ~3); lo >= (bits.lo & ~3); lo -= 4) {
+        for (int lo = ((bits.hi - bits.lo) & ~3) + bits.lo; lo >= bits.lo; lo -= 4) {
             int hi = std::min(lo + 3, bits.hi);
-            if (lo < bits.lo) lo = bits.lo;
             unsigned data = 1U << ((val >> (lo - bits.lo)) & 0xf);
             const IR::Expression *eq, *c;
-            eq = new IR::RangeMatch(MakeSlice(rel->left, lo, hi), data);
+            eq = new IR::RangeMatch(MakeSlice(rel->left, std::max(0, lo), hi), data);
             if (forceRange) --data;
             if (reverse) {
                 data ^= 0xffff;
                 if (forceRange && lo != bits.lo)
                     data = (data << 1) & 0xffff; }
-            c = new IR::RangeMatch(MakeSlice(rel->left, lo, hi), data);
+            c = new IR::RangeMatch(MakeSlice(rel->left, std::max(0, lo), hi), data);
             if (forceRange)
                 c = himatch ? new IR::LAnd(himatch, c) : c;
             if (rv) {
@@ -486,7 +486,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
     } else {
         LOG4("  xor_field = " << field->name << ' ' << bits);
         size_t size = std::max(bits.size(), match_field_bits.size());
-        uint64_t mask = (1ULL << size) - 1;
+        uint64_t mask = (1ULL << size) - 1, donemask = 0;
         mask &= andmask & ~ormask;
         mask <<= match_field_bits.lo;
         auto &field_info = fields.info.at(field);
@@ -496,10 +496,12 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         auto it = field_info.xor_offsets.begin();
         auto end = field_info.xor_offsets.end();
         for (auto &off : match_info.offsets) {
-            if (it == end || it->first != off.first || it->second.size() != off.second.size() ||
+            while (it != end && it->first < off.first) ++it;
+            if (it == end) break;
+            if (off.first < it->first) continue;
+            if (it->first != off.first || it->second.size() != off.second.size() ||
                 it->second.lo - field_info.bits.lo != off.second.lo - match_info.bits.lo) {
                 BUG("field equality comparison misaligned in gateway"); }
-            it++;
             uint64_t elmask = ((1ULL << off.second.size()) - 1) << off.second.lo;
             if ((elmask &= mask) == 0) continue;
             int shft = off.first - off.second.lo - shift;
@@ -508,7 +510,11 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
                 match.word1 &= ~(elmask << shft);
             else
                 match.word1 &= ~(elmask >> -shft);
-            LOG6("    match now " << match); }
+            LOG6("    match now " << match);
+            donemask |= mask;
+            if (++it == end) break; }
+        BUG_CHECK(mask == donemask, "failed to match all bits of %s",
+                  findContext<IR::Operation::Relation>());
         match_field = nullptr; }
     return false;
 }
@@ -566,11 +572,14 @@ bool BuildGatewayMatch::preorder(const IR::RangeMatch *rm) {
     BUG_CHECK(field, "invalid RangeMatch in BuildGatewayMatch");
     int unit = -1;
     for (auto &alloc : fields.info.at(field).offsets) {
-        if (alloc.first < 32 && !alloc.second.overlaps(bits))
+        if (alloc.first < 32 || !alloc.second.overlaps(bits))
             continue;
         unit = (alloc.first + bits.lo - alloc.second.lo - 32) / 4;
+        BUG_CHECK(unit == (alloc.first + bits.hi - alloc.second.lo - 32) / 4,
+                  "RangeMatch source (%s) misaligned at %d..%d", rm->expr,
+                  alloc.first + bits.lo - alloc.second.lo, alloc.first + bits.lo - alloc.second.lo);
         break; }
-    BUG_CHECK(unit >= 0 && unit < 3, "invalid RangeMatch unit");
+    BUG_CHECK(unit >= 0 && unit < 3, "invalid RangeMatch unit %d", unit);
     LOG4("RangeMatch " << rm->expr << " unit=" << unit << " size=" << bits.size() <<
          " data=0x" << hex(rm->data));
     while (range_match.size() <= size_t(unit))

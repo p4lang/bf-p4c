@@ -48,7 +48,7 @@ class CollectGatewayFields : public Inspector {
 
  public:
     struct info_t {
-        ordered_set<const PHV::Field *> xor_with;       // {x: x ==/!= this field in gateway } 
+        ordered_set<const PHV::Field *> xor_with;       // {x: x ==/!= this field in gateway }
         le_bitrange             bits = { -1, -1 };
         bool                    const_eq = false;       // ==/!= with constant
         bool                    need_range = false;     // </>= with constant

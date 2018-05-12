@@ -1048,18 +1048,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/grab_0.p4
 )
 
-# BRIG-648
-p4c_add_xfail_reason("tofino"
-  "Unhandled expression in .*"
-  extensions/p4_tests/p4_14/p4smith_regression/medal_0.p4
-)
-
-# BRIG-649
-p4c_add_xfail_reason("tofino"
-  "field equality comparison misaligned in gateway"
-  extensions/p4_tests/p4_14/p4smith_regression/centipedes_0.p4
-)
-
 # BRIG-650
 p4c_add_xfail_reason("tofino"
   "error: constant value .* out of range for immediate"
@@ -1074,7 +1062,7 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-652
 p4c_add_xfail_reason("tofino"
-  "MakeSlice slice on slice type mismatch"
+  "condition too complex, one operand must be constant"
   extensions/p4_tests/p4_14/p4smith_regression/injection_0.p4
 )
 
