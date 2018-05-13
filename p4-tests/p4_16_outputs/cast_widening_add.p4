@@ -17,8 +17,15 @@ struct headers {
     data_t data;
 }
 
+header ingress_skip_t {
+    bit<64> pad;
+}
+
 parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intrinsic_metadata_t ig_intr_md) {
+    ingress_skip_t skip;
     state start {
+        b.extract(ig_intr_md);
+        b.extract(skip);
         b.extract(hdr.data);
         transition accept;
     }
@@ -51,6 +58,7 @@ control DeparserI(packet_out b, inout headers hdr, in metadata meta, in ingress_
 
 parser ParserE(packet_in b, out headers hdr, out metadata meta, out egress_intrinsic_metadata_t eg_intr_md) {
     state start {
+        b.extract(eg_intr_md);
         b.extract(hdr.data);
         transition accept;
     }
