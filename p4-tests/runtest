@@ -378,7 +378,7 @@ clean_process() {
     fi
     if [ "$process_running" != "no process found" ]; then
         # Try to kill the process
-        sudo killall $process_name
+        sudo -n killall $process_name
     fi
 }
 

@@ -280,7 +280,7 @@ get_repo () {
         gitclone git@github.com:$repo_root/$repo_name.git $dirname $branch
     elif $pull_before_rebuild; then
         pushd $dirname >/dev/null
-            git pull $rebase_option origin $branch 
+            git pull $rebase_option origin $branch
         popd >/dev/null
     fi
     popd >/dev/null
@@ -310,6 +310,8 @@ build_PI () {
             ./autogen.sh
             cd $builddir
             ../configure --with-proto --without-internal-rpc --without-cli --prefix=$installdir
+        else
+            cd $builddir
         fi
         if $PI_clean_before_rebuild; then
             make clean
@@ -352,6 +354,8 @@ build_driver () {
             ./autogen.sh
             cd $builddir
             CFLAGS="-O0" CPPFLAGS="-I $installdir/include" ../configure --enable-thrift --with-avago --without-kdrv --with-build-model --enable-pi  --prefix=$installdir
+        else
+            cd $builddir
         fi
         if $clean_before_rebuild; then
             make clean
@@ -399,7 +403,7 @@ build_model () {
                 branch="jbay_master" # Reusing the variable to refer to bf-drivers path later
             fi
             if [ $(uname -s) == 'Linux' ]; then
-                config_args="--enable-runner --enable-model-$target --prefix=$installdir"
+                config_args="--enable-runner --enable-model-$target --prefix=$installdir CXX=g++"
             else
                 config_args="--enable-model-$target --prefix=$installdir"
             fi
@@ -407,6 +411,9 @@ build_model () {
                 ./autogen.sh
                 cd $builddir
                 LDFLAGS="-L $installdir/lib" CPPFLAGS="-I $installdir/include" ../configure $config_args
+                find . -name '*.gch' -o -name '*.d' | xargs rm -f
+            else
+                cd $builddir
             fi
             if $clean_before_rebuild; then
                 make clean
