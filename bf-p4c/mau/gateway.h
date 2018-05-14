@@ -34,13 +34,7 @@ class CollectGatewayFields : public Inspector {
     const IXBar::Use    *ixbar = nullptr;
     unsigned            row_limit = ~0U;   // FIXME -- needed?  only use by SplitComplexGateways
     const PHV::Field   *xor_match = nullptr;    // field on lhs of ==/!= when visiting rhs
-    bool preorder(const IR::MAU::Table *tbl) override {
-        unsigned row = 0;
-        for (auto &gw : tbl->gateway_rows) {
-            if (++row > row_limit)
-                return false;
-            visit(gw.first, "gateway_row"); }
-        return false; }
+    bool preorder(const IR::MAU::Table *tbl) override;
     bool preorder(const IR::Expression *) override;
     void postorder(const IR::Literal *) override;
     void postorder(const IR::Operation::Relation *) override {
@@ -50,7 +44,7 @@ class CollectGatewayFields : public Inspector {
     struct info_t {
         ordered_set<const PHV::Field *> xor_with;       // {x: x ==/!= this field in gateway }
         le_bitrange             bits = { -1, -1 };
-        bool                    const_eq = false;       // ==/!= with constant
+        bool                    const_eq = false;       // ==/!= with constant or bool check
         bool                    need_range = false;     // </>= with constant
         uint64_t                need_mask = 0;
         safe_vector<std::pair<int, le_bitrange>> offsets;

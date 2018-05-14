@@ -253,6 +253,16 @@ const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
     return postorder(tbl);
 }
 
+bool CollectGatewayFields::preorder(const IR::MAU::Table *tbl) {
+    unsigned row = 0;
+    if (tbl->uses_gateway())
+        LOG5("CollectGatewayFields for table " << tbl->name);
+    for (auto &gw : tbl->gateway_rows) {
+        if (++row > row_limit)
+            return false;
+        visit(gw.first, "gateway_row"); }
+    return false;
+}
 
 bool CollectGatewayFields::preorder(const IR::Expression *e) {
     boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
@@ -278,7 +288,9 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
             else
                 info.const_eq = true;
         } else {
-            xor_match = finfo; } }
+            xor_match = finfo; }
+    } else {
+        info.const_eq = true; }
     if (aliasSourceName != boost::none) {
         info_to_uses[&info] = *aliasSourceName;
         LOG5("Adding entry to info_to_uses: " << &info << " : " << *aliasSourceName);
@@ -290,6 +302,7 @@ void CollectGatewayFields::postorder(const IR::Literal *) {
 }
 
 bool CollectGatewayFields::compute_offsets() {
+    LOG5("CollectGatewayFields::compute_offsets");
     bytes = bits = 0;
     std::vector<decltype(info)::value_type *> sort_by_size;
     for (auto &field : info) {
@@ -299,12 +312,16 @@ bool CollectGatewayFields::compute_offsets() {
     std::sort(sort_by_size.begin(), sort_by_size.end(),
               [](decltype(info)::value_type *a, decltype(info)::value_type *b) -> bool {
                   return a->first->size > b->first->size; });
-    for (auto &info : Values(this->info)) {
+    for (auto &i : this->info) {
+        auto *field = i.first;
+        auto &info = i.second;
         for (auto xor_with : info.xor_with) {
             auto &with = this->info[xor_with];
             xor_with->foreach_byte(with.bits, [&](const PHV::Field::alloc_slice &sl) {
                 with.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
                 info.xor_offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
+                LOG5("  byte " << bytes << " " << sl << " " << field->name << " xor " <<
+                     xor_with->name);
                 ++bytes;
             }); } }
     if (bytes > 4) return false;
@@ -319,16 +336,19 @@ bool CollectGatewayFields::compute_offsets() {
                 if (f.field == field.name && info.bits.overlaps(f.lo, f.hi())) {
                     auto b = info.bits.unionWith(f.lo, f.hi());
                     info.offsets.emplace_back(f.bit + b.lo - f.lo + 32, b);
+                    LOG5("  bit " << f.bit + b.lo - f.lo + 32 << " " << field.name);
                     done = true;
                     if (f.bit + b.hi - f.lo >= bits)
                         bits = f.bit + b.hi - f.lo + 1; } }
             if (done) continue; }
         if (bytes+size > 4 || info.need_range) {
             info.offsets.emplace_back(bits + 32, info.bits);
+            LOG5("  bit " << bits + 32 << " " << field.name);
             bits += info.bits.size();
         } else {
             field.foreach_byte(info.bits, [&](const PHV::Field::alloc_slice &sl) {
                 info.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
+                LOG5("  byte " << bytes << " " << sl << " " << field.name);
                 ++bytes;
             }); } }
     if (bytes > 4) return false;
