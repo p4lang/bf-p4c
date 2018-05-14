@@ -476,10 +476,35 @@ def main():
     model_log_path = os.path.join(dirname, 'model.log')
     switchd_log_path = os.path.join(dirname, 'switchd.log')
 
+    # Check for running processes and kill them
+    # Check for zombie processes and wait for their exit
+    def wait_for_setup(process_name):
+        processes_running = subprocess.Popen(["ps", "-ef"],stdout=subprocess.PIPE)
+        for process in processes_running.stdout:
+            if re.search(process_name, process):
+                if 'defunct' not in process:
+                    pid = process.split()[1]
+                    debug("{0} still running: {1}, killing pid: {2}".format(process_name, process, pid))
+                    os.kill(int(pid), signal.SIGTERM)
+                else:
+                    debug("{0} still running as defunct: {1}".format(process_name, process))
+                    time.sleep(2)
+                    wait_for_setup(process_name)
+
+    # Ensure clean environment before starting the test
+    def run_setup():
+        procs = ['tofino-model', 'bf_switchd']
+        for proc in procs:
+            wait_for_setup(proc)
+
     # TODO(antonin): in the future, do not restart model and switchd between
     # tests to speed-up testing
     processes = {}
     def run():
+
+        # Ensure that there are no instances of tofino-model or bf_switchd running
+        run_setup()
+
         with open(model_log_path, 'w') as model_out, \
              open(switchd_log_path, 'w') as switchd_out:
             model_p = start_model(HARLYN_MODEL, out=model_out,
@@ -530,11 +555,24 @@ def main():
 
     success = run()
 
+
     for pname, p in processes.items():
         try:
+            # Terminate the process
+            debug("Killing process: {0} with pid: {1}".format(pname, p.pid))
             p.terminate()
-        except:
-            error("Error when trying to terminate {}".format(pname))
+            # Poll for 5 seconds and exit when the process in not running anymore
+            # Note that the process may still exist as <defunt> after 5 seconds
+            # if the tofino-model and bf_switchd are still communicating with the
+            # parent, ptf_runner.py
+            start_time = time.time()
+            while time.time() - start_time < 5:
+                time.sleep(0.2)
+                poll_status = p.poll()
+                if poll_status is not None:
+                    break
+        except Exception as e:
+            error("Error when trying to terminate {0}, error {1}".format(pname, str(e)))
 
     # move bf_drivers log to log file directory
     if os.path.exists('bf_drivers.log'):

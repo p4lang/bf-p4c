@@ -377,8 +377,12 @@ clean_process() {
         echo "Is $process_name running: $process_running"
     fi
     if [ "$process_running" != "no process found" ]; then
-        # Try to kill the process
-        sudo -n killall $process_name
+        # Try to kill the process if it is not a zombie
+        if [[ $process_running == *defunct* ]]; then
+        	echo "Zombie process exists. Not killing"
+        else
+        	sudo -n killall $process_name
+        fi
     fi
 }
 
@@ -456,11 +460,12 @@ if $run_pd ; then
                              --pdtest $testout/$name.conf \
                              --device ${device} \
                              $PTF_EXTRA_ARGS"
-        run $PTF_CMD || die
+        run $PTF_CMD
+        ptf_test_status=$?
         clean_process "ptf_runner"
-        clean_process "bf_switchd"
         clean_process "tofino-model"
-        exit 0
+        clean_process "bf_switchd"
+        exit $ptf_test_status
     fi
 fi
 
@@ -488,7 +493,12 @@ if $run_ptf ; then
                 $PTF_EXTRA_ARGS"
     fi
     if [ -n "$PTF_CMD" ]; then
-        run $PTF_CMD || die
+        run $PTF_CMD
+        ptf_test_status=$?
+        clean_process "ptf_runner"
+        clean_process "tofino-model"
+        clean_process "bf_switchd"
+        exit $ptf_test_status
     fi
 fi
 
