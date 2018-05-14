@@ -109,7 +109,7 @@ if (PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "AttributeError: Client instance has no attribute .*"
-    extensions/p4_tests/p4_14/p4-tests/programs/alpm_test/alpm_test.p4
+    smoketest_programs_alpm_test_TestIdleTime
     extensions/p4_tests/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4
     extensions/p4_tests/p4_14/p4-tests/programs/exm_smoke_test/exm_smoke_test.p4
     extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
@@ -125,8 +125,8 @@ if (PTF_REQUIREMENTS_MET)
     )
 
   p4c_add_xfail_reason("tofino"
-    ".*InvalidTableOperation.*"
-    extensions/p4_tests/p4_14/p4-tests/programs/basic_ipv4/basic_ipv4.p4
+    ".*InvalidSnapshotOperation.*"
+    smoketest_programs_alpm_test_TestSnapshot
     )
 
   # Timeouts -- need a better way to handle timeouts!!
@@ -406,6 +406,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue232-bmv2.p4
   testdata/p4_16_samples/issue420.p4
   testdata/p4_16_samples/issue512.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/mod_field_conditionally/mod_field_conditionally.p4
   )
 
 
@@ -533,17 +534,6 @@ p4c_add_xfail_reason("tofino"
     "error: : The hash offset must be a power of 2 in a hash calculation Hash.get"
     testdata/p4_16_samples/issue1049-bmv2.p4
     )
-
-# BRIG-181
-# These are invalid programs, simply because P4_14 is too lax
-# The solution is to fix the test cases and pass parameters
-# to the default actions.
-p4c_add_xfail_reason("tofino"
-  "parameter .* must be bound"
-#  extensions/p4_tests/p4_14/test_config_291_default_action.p4
-#  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/mod_field_conditionally/mod_field_conditionally.p4
-  )
 
 p4c_add_xfail_reason("tofino"
   "Ran out of tcam space in .* parser"
@@ -771,6 +761,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: resubmit digest limited to 8 bytes"
   extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4
   )
 
 # translation bug: smeta
@@ -785,10 +776,6 @@ p4c_add_xfail_reason("tofino"
   )
 p4c_add_xfail_reason("tofino"
   "does not have a PHV allocation though it is used in an action"
-  )
-p4c_add_xfail_reason("tofino"
-  "Due to complexity in action bus, can only currently handle meter color in an 8 bit ALU operation"
-  extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -899,6 +886,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/meter.p4
   testdata/p4_14_samples/meter.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
   )
 
 # missing support for random in extract_maupipe
@@ -909,11 +897,6 @@ p4c_add_xfail_reason("tofino"
 
 #-------- New tests, new failures
 p4c_add_xfail_reason("tofino"
-  "error: add_cpu_header: parameter reason_code must be bound"
-  extensions/p4_tests/p4_14/p4-tests/programs/knet_mgr_test/knet_mgr_test.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "multiple calls to execute in action"
   extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
   extensions/p4_tests/p4_14/p4-tests/programs/pgrs/pgrs.p4
@@ -922,12 +905,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Expression .* cannot be the target of an assignment"
   testdata/p4_16_samples/issue1079-bmv2.p4
-  )
-
-# missing argument in default_action -- test bug
-p4c_add_xfail_reason("tofino"
-  "error: set_p: parameter p must be bound"
-  extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
   )
 
 # dynamic hash

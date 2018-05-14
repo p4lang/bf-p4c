@@ -69,19 +69,24 @@ function(bfn_add_p4factory_tests tag label test_list)
     string (REPLACE "p4-tests/programs" "p4-tests/ptf-tests" ptfpath ${__t})
     get_filename_component (ptfdir ${ptfpath} DIRECTORY)
     p4c_add_ptf_test_with_ptfdir (${tag} ${p4test} ${__t} "${testExtraArgs} -pd" ${ptfdir})
-    set_tests_properties("${tag}/${p4test}" PROPERTIES
-      ENVIRONMENT "PTF_TEST_SPECS=")
+    set_property(TEST "${tag}/${p4test}" PROPERTY ENVIRONMENT "")
     set_tests_properties("${tag}/${p4test}" PROPERTIES TIMEOUT 1000)
     p4c_add_test_label(${tag} ${label} ${p4test})
   endforeach()
+endfunction()
+
+# add additional arguments to building the pd test, after the call to add_test
+function(bfn_set_pd_build_flag tag p4test pd_build_flag)
+  set_property(TEST "${tag}/${p4test}"
+    APPEND PROPERTY ENVIRONMENT "PDFLAGS=${pd_build_flag}")
 endfunction()
 
 # add additional arguments to a test, after the call to add_test
 # We currently use this for specifying a set of tests, either by tag,
 # a sequence of tags, or a sequence of tests
 function(bfn_set_ptf_test_spec tag p4test ptf_test_spec)
-  set_tests_properties("${tag}/${p4test}"
-    PROPERTIES ENVIRONMENT "PTF_TEST_SPECS=${ptf_test_spec}")
+  set_property(TEST "${tag}/${p4test}"
+    APPEND PROPERTY ENVIRONMENT "PTF_TEST_SPECS=${ptf_test_spec}")
 endfunction()
 
 # call this macro to register a PTF test with a custom PTF test directory; by

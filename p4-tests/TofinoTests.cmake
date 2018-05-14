@@ -239,8 +239,6 @@ set_tests_properties("tofino/smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest" PR
 # One # means it fails badly but should get it to run soon
 # Two # means it is not required for switch, but we should still try to compile
 set (P4FACTORY_REGRESSION_TESTS
-  alpm_test
-  basic_ipv4
   basic_switching
   # # # bf-diags
   # # clpm
@@ -282,29 +280,19 @@ foreach (t IN LISTS P4FACTORY_REGRESSION_TESTS)
 endforeach()
 bfn_add_p4factory_tests("tofino" "smoketest_programs" P4F_PTF_TESTS)
 
-# Pick a single test for the tests that are timing out:
 set (P4FACTORY_PROGRAMS_PATH "extensions/p4_tests/p4_14/p4-tests/programs")
-bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/alpm_test/alpm_test.p4"
-  "all
-   ^test.TestCapacity
-   ^test.TestRealData
-   ^test.TestStateRestoreLarge")
-bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/basic_ipv4/basic_ipv4.p4"
-  "test.TestAddHdr
-   test.TestAddRemPort
-   test.TestAddRoute
-   test.TestAllHit
-   test.TestAllStage
-   test.TestDeepADT
-   ^test.TestRange
-   ^test.TestRangeTernaryValid
-   ^test.TestSelector
-   ^test.TestTcamDuplicateEntries
-   ^test.TestTcamEntries
-   ^test.TestTcamMove
-   ^test.TestTernaryValidMatch
-   ^test.TestExm4way3Entries
-   test.TestExm6way4Entries")
+# Add extra build flags for PD gen
+
+bfn_set_pd_build_flag("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_direct_1/exm_direct_1.p4"
+  "--gen-exm-test-pd")
+bfn_set_pd_build_flag("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_indirect_1/exm_indirect_1.p4"
+  "--gen-exm-test-pd")
+bfn_set_pd_build_flag("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_smoke_test/exm_smoke_test.p4"
+  "--gen-exm-test-pd")
+bfn_set_pd_build_flag("tofino" "${P4FACTORY_PROGRAMS_PATH}/perf_test_alpm/perf_test_alpm.p4"
+  "--gen-perf-test-pd")
+
+# Pick a single test for the tests that are timing out:
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_indirect_1/exm_indirect_1.p4"
   "test.TestActSelIterators
    test.TestDirectStats
@@ -360,6 +348,62 @@ endforeach()
 p4c_add_bf_backend_tests("tofino" "smoketest_programs" "${P4F_COMPILE_ONLY}")
 
 # Other PD tests
+
+p4c_add_ptf_test_with_ptfdir("tofino" "smoketest_programs_alpm_test" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/alpm_test/alpm_test.p4"
+  "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/alpm_test")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test"
+  "test.TestAddRoute
+   ^test.TestCapacity
+   test.TestCoveringPrefix
+   test.TestDefaultEntry
+   test.TestDrop
+   test.TestManyEntries
+   test.TestModify")
+
+p4c_add_ptf_test_with_ptfdir("tofino" "smoketest_programs_alpm_test_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/alpm_test/alpm_test.p4"
+  "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/alpm_test")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test_2"
+   "test.TestStateRestore
+   test.TestTcamMove")
+
+p4c_add_ptf_test_with_ptfdir("tofino" "smoketest_programs_alpm_test_TestRealData" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/alpm_test/alpm_test.p4"
+  "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/alpm_test")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test_TestRealData"
+   "test.TestRealData")
+
+p4c_add_ptf_test_with_ptfdir("tofino" "smoketest_programs_alpm_test_TestIdleTime" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/alpm_test/alpm_test.p4"
+  "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/alpm_test")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test_TestIdleTime"
+   "test.TestIdleTime")
+
+p4c_add_ptf_test_with_ptfdir("tofino" "smoketest_programs_alpm_test_TestSnapshot" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/alpm_test/alpm_test.p4"
+  "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/alpm_test")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test_TestSnapshot"
+   "test.TestSnapshot")
+
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/basic_ipv4/basic_ipv4.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/basic_ipv4")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4"
+        "test.TestAddHdr
+         test.TestAddRemPort
+         test.TestAddRoute
+         test.TestAllHit
+         test.TestAllStage
+         test.TestDeepADT")
+
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/basic_ipv4/basic_ipv4.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/basic_ipv4")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_2"
+        "test.TestRange
+         test.TestRangeTernaryValid
+         test.TestSelector
+         test.TestTcamDuplicateEntries
+         test.TestTcamEntries
+         test.TestTcamMove
+         test.TestTernaryValidMatch
+         test.TestExm4way3Entries
+         test.TestExm6way4Entries")
+
 p4c_add_ptf_test_with_ptfdir ("tofino" "miss_clause" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/PD/miss_clause.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/PD/miss_clause.ptf")
 
