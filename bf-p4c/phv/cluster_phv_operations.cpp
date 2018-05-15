@@ -51,7 +51,7 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
         if (dst_i) {
             // insert operation in field.operations with tuple3<operation, mode>
             // most of the information in the tuple is for debugging purpose
-            auto op = std::make_tuple(is_move_op, inst->name, PHV::Field_Ops::W);
+            auto op = PHV::FieldOperation(is_move_op, inst->name, PHV::FieldAccessType::W);
             dst_i->operations().push_back(op);
             dst_size = dest_bits.size(); }
 
@@ -64,9 +64,30 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
                 le_bitrange field_bits;
                 PHV::Field* field = phv.field(*operand, &field_bits);
                 if (field) {
-                    // insert operation in field.operations with tuple3
-                    auto op = std::make_tuple(is_move_op, inst->name, PHV::Field_Ops::R);
-                    field->operations().push_back(op);
+                    // NOT IR::BFN::Slice
+                    // TODO(yumin): replace all use of front-end IR::Slice with IR:BFN::Slice.
+                    if (auto* slice = (*operand)->to<IR::Slice>()) {
+                        le_bitrange range = le_bitrange(slice->getL(), slice->getH());
+                        auto op =
+                            PHV::FieldOperation(is_move_op, inst->name,
+                                                PHV::FieldAccessType::R, range);
+                        field->operations().push_back(op);
+                        LOG5("Found sliced field, field = " << field << " at " << range);
+                        // TODO(yumin): In the p4_14 to p4_16 conversion, this case should
+                        // be handled and slice should be added to source fields.
+                    } else if (dst_size > 0 && dst_size < field->size) {
+                        le_bitrange range(StartLen(0, dst_size));
+                        auto op =
+                            PHV::FieldOperation(is_move_op, inst->name,
+                                                PHV::FieldAccessType::R, range);
+                        field->operations().push_back(op);
+                        LOG5("Found implicitly sliced field = " << field << " at " << range);
+                    } else {
+                        auto op = PHV::FieldOperation(is_move_op, inst->name,
+                                                      PHV::FieldAccessType::R);
+                        field->operations().push_back(op);
+                        LOG5("Found non-sliced field, field = " << field);
+                    }
 
                     // For non-move operations, if the source field is smaller in size than the
                     // destination field, we need to set the no_pack property for the source field
@@ -103,18 +124,35 @@ void PHV_Field_Operations::end_apply() {
     LOG3("..........Begin PHV_Field_Operations..........");
     for (auto &f : phv) {
         for (auto &op : f.operations()) {
-            bool is_move_op = std::get<0>(op);
-            bool is_write = std::get<2>(op) == PHV::Field_Ops::W
-                            || std::get<2>(op) == PHV::Field_Ops::RW;
+            bool is_move_op = op.is_move_op;
+            bool is_write = op.rw_type == PHV::FieldAccessType::W
+                            || op.rw_type == PHV::FieldAccessType::RW;
             if (!is_move_op) {
-                // Don't split carry operations.
-                f.set_no_split(true);
-
+                // Apply no_pack constraint on carry-based operation. If sliced,
+                // apply on the slice only.
                 // If f can't be split but is larger than 32 bits, report an error.
-                if (f.size > 32)
-                    P4C_UNIMPLEMENTED("Operands of arithmetic operations cannot be greater than "
-                                      "32b, but field %1% has %2%b and is involved in '%3%'",
-                                      cstring::to_cstring(f), f.size, std::get<1>(op));
+                if (op.range) {
+                    auto sz = (*op.range).size();
+                    if (sz > 32) {
+                        P4C_UNIMPLEMENTED(
+                                "Operands of arithmetic operations cannot be greater than "
+                                "32b, but fieldslice %1% %2% has %3%b and is involved in '%4%'",
+                                cstring::to_cstring(f), *op.range, sz, op.inst_name);
+                    }
+                    LOG1("    ...setting no split on " << *op.range << " of " << f.name
+                         << " because involved in " << op.inst_name);
+                    f.set_no_split_at(*op.range);
+                } else {
+                    if (f.size > 32) {
+                        P4C_UNIMPLEMENTED(
+                                "Operands of arithmetic operations cannot be greater than "
+                                "32b, but field %1% has %2%b and is involved in '%3%'",
+                                cstring::to_cstring(f), f.size, op.inst_name);
+                    }
+                    f.set_no_split(true);
+                    LOG1("    ...setting no split on " << f.name
+                         << " because involved in " << op.inst_name);
+                }
 
                 // For sources of writes involved in a non-MOVE operation, the bits not involved in
                 // the non-move operations do not change. Therefore, it is safe to not put a

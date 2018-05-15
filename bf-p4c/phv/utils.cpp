@@ -1094,8 +1094,8 @@ boost::optional<PHV::SliceResult<PHV::AlignedCluster>> PHV::AlignedCluster::slic
             rv.slice_map.emplace(PHV::FieldSlice(slice), std::make_pair(slice, boost::none));
             continue; }
         // Check whether the field in `slice` can be sliced.
-        if (slice.field()->no_split())
-            return boost::none;
+        if (slice.field()->no_split_at(pos)) {
+            return boost::none; }
         // Create new slices.
         le_bitrange lo_range = StartLen(slice.range().lo, pos);
         le_bitrange hi_range = StartLen(slice.range().lo + pos,

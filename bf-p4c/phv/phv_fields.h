@@ -61,7 +61,17 @@ enum class FieldKind : unsigned short {
     pov      = 2    // POV fields, eg. $valid
 };
 
-enum class Field_Ops { NONE = 0, R = 1, W = 2, RW = 3 };
+enum class FieldAccessType { NONE = 0, R = 1, W = 2, RW = 3 };
+
+struct FieldOperation {
+    bool is_move_op;
+    cstring inst_name;
+    FieldAccessType rw_type;
+    boost::optional<le_bitrange> range;  // if only part of the field is involved
+    FieldOperation(bool is_move_op, cstring inst_name, FieldAccessType rw_type,
+                  boost::optional<le_bitrange> range = boost::none)
+        : is_move_op(is_move_op), inst_name(inst_name), rw_type(rw_type), range(range) { }
+};
 
 class Field {
  public:
@@ -383,9 +393,6 @@ class Field {
     bool            deparsed_bottom_bits_i = false;    /// true when learning digest, no shifter
     bool            exact_containers_i = false;        /// place in container exactly (no holes)
 
-    bool            no_split_i = false;                /// true if field cannot be split into
-                                                       /// multiple PHV containers
-
     bool            deparsed_to_tm_i = false;          /// true if field is read by TM
     size_t          numNoPack = 0;                     /// Number of fields with which this field
                                                        /// cannot be packed
@@ -395,6 +402,12 @@ class Field {
     bool            privatized_i = false;              /// true for the TPHV version of a
                                                        /// privatized field
     bool            is_checksummed_i = false;          /// true for fields used in checksum.
+
+    /// Ranges of this field that can not be split.
+    /// E.g. in a<32b> = b<32b> + c[0:31]<48b>, [0:31] will be the no_split range for c.
+    /// you can create a fieldslice for c as long as it
+    /// does not split c[0:31]. E.g. c[32:47] is allowed, but c[15:31] is not.
+    std::vector<le_bitrange> no_split_ranges_i;
 
     /** Marshaled fields are metadata fields serialized between a Tofino deparser and parser.
      *  For example, mirrored field lists can be serialized from ingress deparser (when the mirrored
@@ -414,7 +427,7 @@ class Field {
     //
     // operations on this field
     //
-    safe_vector<std::tuple<bool, cstring, Field_Ops>> operations_i;
+    safe_vector<FieldOperation> operations_i;
                                                        /// all operations performed on field
     //
     // ccgf fields
@@ -455,8 +468,7 @@ class Field {
     //
     // operations on this field
     //
-    safe_vector<std::tuple<bool, cstring, Field_Ops>>&
-        operations()                                       { return  operations_i; }
+    safe_vector<FieldOperation>& operations()               { return  operations_i; }
     //
     // ccgf
     //
@@ -490,8 +502,11 @@ class Field {
     bool exact_containers() const                          { return exact_containers_i; }
     void set_exact_containers(bool b)                      { exact_containers_i = b; }
 
-    bool no_split() const                                  { return no_split_i; }
-    void set_no_split(bool b)                              { no_split_i = b; }
+    bool no_split() const;
+    void set_no_split(bool b);
+    bool no_split_at(int pos) const;
+    void set_no_split_at(le_bitrange range);
+    std::vector<le_bitrange> no_split_ranges() const       { return no_split_ranges_i; }
 
     bool deparsed_to_tm() const                            { return deparsed_to_tm_i; }
     void set_deparsed_to_tm(bool b)                        { deparsed_to_tm_i = b; }
@@ -912,7 +927,7 @@ std::ostream &operator<<(std::ostream &, const safe_vector<PHV::Field::alloc_sli
 std::ostream &operator<<(std::ostream &, const ordered_set<PHV::Field *>&);
 std::ostream &operator<<(std::ostream &, const ordered_set<const PHV::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);
-std::ostream &operator<<(std::ostream &, const PHV::Field_Ops &);
+std::ostream &operator<<(std::ostream &, const PHV::FieldAccessType &);
 
 // These overloads must be declared directly in `namespace std` to work around
 // ADL limitations for lookup of names in sibling namespaces.

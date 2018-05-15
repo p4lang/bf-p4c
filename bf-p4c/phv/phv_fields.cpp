@@ -576,6 +576,30 @@ void PHV::Field::updateValidContainerRange(nw_bitrange newValidRange) {
     validContainerRange_i = *toClosedRange(intersection);
 }
 
+bool PHV::Field::no_split() const {
+    for (const auto& range : no_split_ranges_i) {
+        if (range.size() == size) {
+            return true; } }
+    return false;
+}
+
+void PHV::Field::set_no_split(bool b) {
+    if (b) {
+        set_no_split_at(le_bitrange(StartLen(0, size)));
+    } else {
+        no_split_ranges_i.clear();
+    }
+}
+
+bool PHV::Field::no_split_at(int pos) const {
+    return std::any_of(
+            no_split_ranges_i.begin(), no_split_ranges_i.end(), [&] (const le_bitrange& r) {
+                return r.contains(pos); });
+}
+
+void PHV::Field::set_no_split_at(le_bitrange range) {
+    no_split_ranges_i.push_back(range);
+}
 
 //***********************************************************************************
 //
@@ -1209,7 +1233,11 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.mau_phv_no_pack()) out << " mau_phv_no_pack";
     if (field.no_pack()) out << " no_pack";
     if (field.alwaysPackable) out << " always_packable";
-    if (field.no_split()) out << " no_split";
+    if (field.no_split()) {
+        out << " no_split";
+    } else if (field.no_split_ranges().size() > 0) {
+        for (const auto& range : field.no_split_ranges()) {
+            out << " no_split_at" << range; } }
     if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
     if (field.deparsed_to_tm()) out << " deparsed_to_tm";
     if (field.exact_containers()) out << " exact_containers";
@@ -1275,13 +1303,13 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PHV::Field_Ops &op) {
+std::ostream &operator<<(std::ostream &out, const PHV::FieldAccessType &op) {
     switch (op) {
-        case PHV::Field_Ops::NONE: out << "None"; break;
-        case PHV::Field_Ops::R: out << 'R'; break;
-        case PHV::Field_Ops::W: out << 'W'; break;
-        case PHV::Field_Ops::RW: out << "RW"; break;
-        default: out << "<Field_Ops " << int(op) << ">"; }
+        case PHV::FieldAccessType::NONE: out << "None"; break;
+        case PHV::FieldAccessType::R: out << 'R'; break;
+        case PHV::FieldAccessType::W: out << 'W'; break;
+        case PHV::FieldAccessType::RW: out << "RW"; break;
+        default: out << "<FieldAccessType " << int(op) << ">"; }
     return out;
 }
 
