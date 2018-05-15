@@ -59,13 +59,16 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
     void addContDeps(ordered_map<const IR::MAU::Table *, bitvec> tables,
                      const IR::MAU::Table *t, bitvec range, PHV::Container container) {
         for (auto upstream_t : tables) {
-            if (ignoreDep.count(upstream_t.first->name)) {
+            if (upstream_t.first->match_table &&
+                    ignoreDep.count(upstream_t.first->match_table->externalName())) {
                 WARN_CHECK(upstream_t.second == range, "Table %s's pragma ignore_table_dependency "
                            "of %s is also ignoring PHV added action dependencies over container "
                            "%s, which may not have been the desired outcome", t->name,
                             upstream_t.first->name, container.toString());
                 continue;
             }
+            LOG3("Adding container conflict between table " << upstream_t.first->name << " and "
+                 << "table " << t->name << " because of container " << container);
             self.dg.container_conflicts[upstream_t.first].insert(t);
             self.dg.container_conflicts[t].insert(upstream_t.first);
         }

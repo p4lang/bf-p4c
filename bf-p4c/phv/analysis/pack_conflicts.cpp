@@ -82,7 +82,7 @@ void PackConflicts::generateNoPackConstraints(const IR::MAU::Table* t1, const IR
                 LOG6("Actions " << act1->name << " and " << act2->name << " are mutually "
                         "exclusive.");
             } else {
-                LOG6("Non mutually exclusive actions " << act1->name << " and " << act2->name);
+                LOG6("\t  Non mutually exclusive actions " << act1->name << " and " << act2->name);
                 fields1.insert(actionWrites[act1].begin(), actionWrites[act1].end());
                 fields2.insert(actionWrites[act2].begin(), actionWrites[act2].end()); } } }
 
@@ -94,18 +94,16 @@ void PackConflicts::generateNoPackConstraints(const IR::MAU::Table* t1, const IR
         for (auto f2 : fields2) {
             if (f1 == f2) {
                 // xxx(Deep): This should be taken care of by mutually_exclusive_actions
-                ::warning("Dependency Analysis may be wrong if %1% is written by both tables "
-                        "%2% and %3%.", f1->name, t1->name, t2->name);
+                LOG1("Dependency analysis may be wrong if " << f1->name << " is written by both "
+                     "tables " << t1->name << " and " << t2->name);
             } else {
-                if (fieldNoPack(f1->id, f2->id) != true || fieldNoPack(f2->id, f1->id) != true)
-                    ++numSet;
+                ++numSet;
                 fieldNoPack(f1->id, f2->id) = true;
                 fieldNoPack(f2->id, f1->id) = true;
-                LOG6(this << " " << " " << fieldNoPack(f1->id, f2->id) << " Setting no pack for " <<
-                        f1->name << " (" << f1->id << ") and " << f2->name << " (" << f2->id <<
-                        ")"); } } }
+                LOG6("\t" << fieldNoPack(f1->id, f2->id) << " Setting no pack for " << f1->name <<
+                     " (" << f1->id << ") and " << f2->name << " (" << f2->id << ")"); } } }
 
-    LOG4("\tNumber of no pack conditions added: " << numSet);
+    LOG4("\tNumber of no pack conditions added: " << numSet / 2);
     totalNumSet += numSet;
 }
 
