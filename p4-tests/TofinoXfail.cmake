@@ -304,6 +304,7 @@ p4c_add_xfail_reason("tofino"
   switch_7.0_l2
   switch_7.0_ent_dc_aggr
   switch_msdc_l3
+  switch_ent_dc_general
   )
 
 # BRIG-113
@@ -569,6 +570,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   extensions/p4_tests/p4_16/int_transit.p4
+  switch_dc_basic
+  switch_msdc_l3_heavy_int_leaf
+  switch_msdc_generic_int_leaf
 
   # Expected to fail, which means that action analysis is working correctly.
   extensions/p4_tests/p4_14/action_conflict_1.p4
