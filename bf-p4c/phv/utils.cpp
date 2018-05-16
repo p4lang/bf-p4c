@@ -1229,18 +1229,9 @@ PHV::SuperCluster::SuperCluster(
 
 void PHV::SuperCluster::calc_pack_conflicts() {
     // calculate number of no pack conditions for each super cluster
-    for (const auto* slice_list : this->slice_lists()) {
-        BUG_CHECK(slice_list->size() > 0, "empty slice list");
-        SliceList::const_iterator it;
-        for (auto slice : *slice_list) {
-            num_pack_conflicts_i = std::max(slice.field()->num_pack_conflicts(),
-                    num_pack_conflicts_i); } }
-
-    for (const auto* rot : this->clusters()) {
-        for (const auto* ali : rot->clusters()) {
-            for (const auto& fs : ali->slices())
-                num_pack_conflicts_i = std::max(fs.field()->num_pack_conflicts(),
-                        num_pack_conflicts_i); } }
+    forall_fieldslices([&] (const PHV::FieldSlice& fs) {
+        num_pack_conflicts_i += fs.field()->num_pack_conflicts();
+    });
 }
 
 bool PHV::SuperCluster::operator==(const PHV::SuperCluster& other) const {

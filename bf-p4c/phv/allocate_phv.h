@@ -20,6 +20,48 @@
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
 
+/// For each field, calculate the possible packing opportunities, if they are allocated
+/// in the given order, with fields that are allocated later than it.
+/// This object must be created after sorting superclusters, because
+/// it takes the sorted clusters to construct.
+class FieldPackingOpportunity {
+    const ActionPhvConstraints& actions;
+    const PhvUse& uses;
+    const FieldDefUse& defuse;
+    const SymBitMatrix& mutex;
+    using FieldPair = std::pair<const PHV::Field*, const PHV::Field*>;
+    std::map<const PHV::Field*, int> opportunities;
+    std::map<FieldPair, int> opportunities_after;
+
+    /// @returns a vector fields sorted by the show-up order in the sorted clusters.
+    std::vector<const PHV::Field*>
+    fieldsInOrder(const std::list<PHV::SuperCluster*>& sorted_clusters) const;
+
+    bool isExtractedOrUninitialized(const PHV::Field* f) const;
+    bool canPack(const PHV::Field* f1, const PHV::Field* f2) const;
+
+ public:
+    /// @p sorted_clusters is a list of clusters that we will allocated, in this order.
+    FieldPackingOpportunity(
+            const std::list<PHV::SuperCluster*>& sorted_clusters,
+            const ActionPhvConstraints& actions,
+            const PhvUse& uses,
+            const FieldDefUse& defuse,
+            const SymBitMatrix& mutex);
+
+    /// How many fields, after @p f is allocated, can be packed with @p f.
+    int nOpportunities(const PHV::Field* f) const {
+        return opportunities.at(f); }
+
+    /// How many fields, after @p f1 is allocated and @p f2 is not packed with it,
+    /// can be packed with @p f1. This is used to decide the priority of this packing,
+    /// less opportunities, more priority. For example, if @p f2 can be packed with f1
+    /// and f1', but if not packed with f1, there is no opportunities for f1 to be packed with,
+    /// while there is a lot of opportunities for f1', then packing f1 and f2 may be a better
+    /// choice.
+    int nOpportunitiesAfter(const PHV::Field* f1, const PHV::Field* f2) const;
+};
+
 /** The score of an Allocation .
  *
  * This score is used in 3 places where decisions have to be made.
@@ -39,6 +81,7 @@ struct AllocScore {
         int n_set_deparser_group_gress;
         int n_overlay_bits;
         int n_packing_bits;  // how many wasted bits in partial container get used.
+        int n_packing_priority;  // smaller, better.
         int n_inc_containers;
         int n_wasted_bits;  // if no_pack but taking a container larger than it.
 
@@ -55,6 +98,7 @@ struct AllocScore {
         // 16b, and 32b containers remain.
         int container_imbalance;
     };
+
     ordered_map<PHV::Kind, ScoreByKind> score;
     int n_tphv_on_phv_bits;
 
@@ -69,6 +113,10 @@ struct AllocScore {
 
     bool operator>(const AllocScore& other) const;
     static AllocScore make_lowest();
+
+    /* stateful variables for AllocScore. */
+    /// Opportunities for packing if allocated in some order.
+    static FieldPackingOpportunity* g_packing_opportunities;
 
  private:
     bitvec calcContainerAllocVec(const ordered_set<PHV::AllocSlice>& slices);
@@ -219,8 +267,11 @@ class CoreAllocation {
             PHV::Field* f,
             int start) const;
 
-    const PhvUse& uses() const { return uses_i; }
-    PHV::Pragmas& pragmas() const { return pragmas_i; }
+    const PhvUse& uses() const                            { return uses_i; }
+    const SymBitMatrix& mutex() const                     { return mutex_i; }
+    const FieldDefUse& defuse() const                     { return defuse_i; }
+    const ActionPhvConstraints& actionConstraints() const { return actions_i; }
+    PHV::Pragmas& pragmas() const                         { return pragmas_i; }
 };
 
 // TODO(yumin) extends this to include all possible cases.

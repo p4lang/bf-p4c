@@ -4,7 +4,78 @@
 #include <numeric>
 #include "lib/log.h"
 
-using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
+std::vector<const PHV::Field*>
+FieldPackingOpportunity::fieldsInOrder(
+        const std::list<PHV::SuperCluster*>& sorted_clusters) const {
+    std::set<const PHV::Field*> showed;
+    std::vector<const PHV::Field*> rst;
+    for (const auto* cluster : sorted_clusters) {
+        cluster->forall_fieldslices([&] (const PHV::FieldSlice& fs) {
+            if (!showed.count(fs.field())) {
+                showed.insert(fs.field());
+                rst.push_back(fs.field()); }
+        });
+    }
+    return rst;
+}
+
+bool FieldPackingOpportunity::isExtractedOrUninitialized(const PHV::Field* f) const {
+    return uses.is_extracted(f) || defuse.hasUninitializedRead(f->id);
+}
+
+bool FieldPackingOpportunity::canPack(const PHV::Field* f1, const PHV::Field* f2) const {
+    // Being mutex is considered as no pack.
+    if (mutex(f1->id, f2->id))
+        return false;
+    // Same stage packing conflits.
+    if (actions.hasPackConflict(f1, f2))
+        return false;
+    // Extracted Uninitilized packing conflits
+    if (isExtractedOrUninitialized(f1) && isExtractedOrUninitialized(f2))
+        return false;
+    return true;
+}
+
+FieldPackingOpportunity::FieldPackingOpportunity(
+        const std::list<PHV::SuperCluster*>& sorted_clusters,
+        const ActionPhvConstraints& actions,
+        const PhvUse& uses,
+        const FieldDefUse& defuse,
+        const SymBitMatrix& mutex)
+    : actions(actions), uses(uses), defuse(defuse), mutex(mutex) {
+    std::vector<const PHV::Field*> fields = fieldsInOrder(sorted_clusters);
+    for (auto i = fields.begin(); i != fields.end(); ++i) {
+        opportunities[*i] = 0;
+        for (auto j = i + 1; j != fields.end(); ++j) {
+            if (canPack(*i, *j)) {
+                opportunities[*i]++;
+            }
+        }
+    }
+
+    for (auto i = fields.begin(); i != fields.end(); ++i) {
+        int sum = 0;
+        for (auto j = i + 1; j != fields.end(); ++j) {
+            if (canPack(*i, *j))
+                sum++;
+            opportunities_after[{*i, *j}] = opportunities[*i] - sum;
+        }
+    }
+}
+
+int FieldPackingOpportunity::nOpportunitiesAfter(
+        const PHV::Field* f1, const PHV::Field* f2) const {
+    if (opportunities_after.count({f1, f2})) {
+        return opportunities_after.at({f1, f2});
+    } else {
+        LOG1("FieldPackingOpportunity for " << f1->name << " " << f2->name
+             << " has not benn calculated.");
+        return 0;
+    }
+}
+
+/* AllocScore state variables. */
+FieldPackingOpportunity* AllocScore::g_packing_opportunities = nullptr;
 
 /** Metrics are prioritized by
  * 1. is_tphv.
@@ -27,6 +98,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
     int delta_clot_bits = 0;
     int delta_wasted_bits = 0;
     int delta_packing_bits = 0;
+    int delta_packing_priority = 0;
     int delta_overlay_bits = 0;
     int delta_inc_containers = 0;
     int delta_set_gress = 0;
@@ -48,6 +120,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
             delta_clot_bits += penalty * score.at(kind).n_clot_bits;
             delta_wasted_bits += penalty * score.at(kind).n_wasted_bits;
             delta_packing_bits += bonus * score.at(kind).n_packing_bits;
+            delta_packing_priority += penalty * score.at(kind).n_packing_priority;
             delta_overlay_bits += bonus * score.at(kind).n_overlay_bits;
             delta_inc_containers += penalty * score.at(kind).n_inc_containers;
             delta_set_gress += penalty * score.at(kind).n_set_gress;
@@ -61,6 +134,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
             delta_clot_bits -= penalty * other.score.at(kind).n_clot_bits;
             delta_wasted_bits -= penalty * other.score.at(kind).n_wasted_bits;
             delta_packing_bits -= bonus * other.score.at(kind).n_packing_bits;
+            delta_packing_priority -= penalty * other.score.at(kind).n_packing_priority;
             delta_overlay_bits -= bonus * other.score.at(kind).n_overlay_bits;
             delta_inc_containers -= penalty * other.score.at(kind).n_inc_containers;
             delta_set_gress -= penalty * other.score.at(kind).n_set_gress;
@@ -93,6 +167,9 @@ bool AllocScore::operator>(const AllocScore& other) const {
     if (delta_packing_bits != 0) {
         // This score has more packing bits.
         return delta_packing_bits > 0; }
+    if (delta_packing_priority != 0) {
+        // This score is better if it make a more prioritized packing.
+        return delta_packing_priority < 0; }
     if (delta_inc_containers != 0) {
         // This score requires more new containers.
         return delta_inc_containers < 0; }
@@ -132,6 +209,7 @@ AllocScore AllocScore::make_lowest() {
 AllocScore::AllocScore(const PHV::Transaction& alloc,
                        const ClotInfo& clot,
                        const PhvUse& uses) : AllocScore() {
+    using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
     const auto* parent = alloc.getParent();
 
     // Forall allocated slices group by container.
@@ -172,15 +250,38 @@ AllocScore::AllocScore(const PHV::Transaction& alloc,
             && merged_status != ContainerAllocStatus::EMPTY) {
             score[kind].n_inc_containers++; }
 
-        // calc n_packing_bits
         if (parent_status == ContainerAllocStatus::PARTIAL) {
+            // calc n_packing_bits
             for (auto i = container.lsb(); i <= container.msb(); ++i) {
                 if (parent_alloc_vec[i]) continue;
                 for (const auto& slice : slices) {
                     if (slice.container_slice().contains(i)) {
                         score[kind].n_packing_bits++;
                         break; }
-                } } }
+                }
+            }
+
+            // calc n_packing_priority.
+            if (score[kind].n_packing_bits) {
+                BUG_CHECK(g_packing_opportunities, "packing opportunities not set?");
+                int n_packing_priority = 100000;  // do not use max because it might overflow.
+                for (auto i = container.lsb(); i <= container.msb(); ++i) {
+                    for (const auto& p_slice : parent->slices(container)) {
+                        for (const auto& slice : slices) {
+                            if (p_slice.container_slice().contains(i)
+                                && slice.container_slice().contains(i)) {
+                                auto* f1 = p_slice.field();
+                                auto* f2 = slice.field();
+                                n_packing_priority = std::min(
+                                        n_packing_priority,
+                                        g_packing_opportunities->nOpportunitiesAfter(f1, f2));
+                            }
+                        }
+                    }
+                }
+                score[kind].n_packing_priority = n_packing_priority;
+            }
+        }
 
         // calc n_overlay_bits
         for (const int i : parent_alloc_vec) {
@@ -237,6 +338,7 @@ std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
         s << "wasted_bits: " << score.score.at(kind).n_wasted_bits << ", ";
         s << "overlay_bits: " << score.score.at(kind).n_overlay_bits << ", ";
         s << "packing_bits: " << score.score.at(kind).n_packing_bits << ", ";
+        s << "packing_prio: " << score.score.at(kind).n_packing_priority << ", ";
         s << "inc_containers: " << score.score.at(kind).n_inc_containers << ", ";
         s << "set_gress: " << score.score.at(kind).n_set_gress << ", ";
         s << "free container imbalance: " << score.score.at(kind).container_imbalance;
@@ -298,7 +400,7 @@ bool CoreAllocation::satisfies_constraints(std::vector<PHV::AllocSlice> slices) 
     // Slices placed together must be placed in the same container.
     auto DifferentContainer = [](const PHV::AllocSlice& left, const PHV::AllocSlice& right) {
             return left.container() != right.container();
-        };
+    };
     if (std::adjacent_find(slices.begin(), slices.end(), DifferentContainer) != slices.end()) {
         LOG5("        constraint: slices placed together must be placed in the same container: "
              << slices);
@@ -306,11 +408,8 @@ bool CoreAllocation::satisfies_constraints(std::vector<PHV::AllocSlice> slices) 
 
     // Check exact containers for deparsed fields
     auto IsDeparsed = [](const PHV::AllocSlice& slice) {
-            // XXX(cole): This is a hack to deal with bridged metadata; it
-            // should be revisited once bridged metadata is moved to the
-            // midend.
-            return (slice.field()->deparsed() || slice.field()->exact_containers());
-        };
+        return (slice.field()->deparsed() || slice.field()->exact_containers());
+    };
     if (std::any_of(slices.begin(), slices.end(), IsDeparsed)) {
         // Reject mixes of deparsed/not deparsed fields.
         if (!std::all_of(slices.begin(), slices.end(), IsDeparsed)) {
@@ -1830,10 +1929,32 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     std::map<const PHV::SuperCluster*, int> n_required_length;
     std::set<const PHV::SuperCluster*> pounder_clusters;
     std::set<const PHV::SuperCluster*> non_slicable;
+    std::set<const PHV::SuperCluster*> has_pov;
+    std::map<const PHV::SuperCluster*, int> n_extracted_uninitialized;
+
+    // calc whether the cluster has pov bits.
+    for (auto* cluster : cluster_groups) {
+        cluster->forall_fieldslices([&] (const PHV::FieldSlice& fs) {
+            if (fs.field()->pov)
+                has_pov.insert(cluster);
+        });
+    }
 
     // calc num_pack_conflicts
     for (auto* super_cluster : cluster_groups)
         super_cluster->calc_pack_conflicts();
+
+    // calc n_extracted_uninitialized
+    for (auto* cluster : cluster_groups) {
+        n_extracted_uninitialized[cluster] = 0;
+        cluster->forall_fieldslices([&] (const PHV::FieldSlice& fs) {
+            auto* f = fs.field();
+            if (core_alloc_i.uses().is_extracted(f) ||
+                core_alloc_i.defuse().hasUninitializedRead(f->id)) {
+                n_extracted_uninitialized[cluster]++;
+            }
+        });
+    }
 
     // calc no_pack and no_split.
     for (const auto* super_cluster : cluster_groups) {
@@ -1845,6 +1966,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
                                                [] (int a, int) { return a + 1; });
                 n_valid_starts[super_cluster] =
                     std::min(n_valid_starts[super_cluster], n_starts);
+                n_valid_starts[super_cluster] = std::min(n_valid_starts[super_cluster], 5);
 
                 for (const auto& slice : ali->slices()) {
                     if (slice.field()->no_pack()) {
@@ -1903,6 +2025,16 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
                 std::max(n_required_length[super_cluster], length);
         } }
 
+    // Other heuristics:
+    // if (has_pov.count(l) != has_pov.count(r)) {
+    //     return has_pov.count(l) > has_pov.count(r); }
+    // if (pounder_clusters.count(l) != pounder_clusters.count(r)) {
+    //     return pounder_clusters.count(l) < pounder_clusters.count(r); }
+    // if (critical_clusters.count(l) != critical_clusters.count(r)) {
+    //     return critical_clusters.count(l) > critical_clusters.count(r); }
+    // if (l->max_width() != r->max_width()) {
+    //     return l->max_width() > r->max_width(); }
+
     auto ClusterGroupComparator = [&] (PHV::SuperCluster* l, PHV::SuperCluster* r) {
         if (has_no_pack.count(l) != has_no_pack.count(r)) {
             return has_no_pack.count(l) > has_no_pack.count(r); }
@@ -1910,33 +2042,29 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
             return has_no_split.count(l) > has_no_split.count(r); }
         if (non_slicable.count(l) != non_slicable.count(r)) {
             return non_slicable.count(l) > non_slicable.count(r); }
-        if (pounder_clusters.count(l) != pounder_clusters.count(r)) {
-            return pounder_clusters.count(l) < pounder_clusters.count(r); }
         if (bool(l->exact_containers()) != bool(r->exact_containers())) {
             return bool(l->exact_containers()) > bool(r->exact_containers()); }
         // if it's header fields
         if (bool(l->exact_containers())) {
             if (n_required_length[l] != n_required_length[r]) {
-                return n_required_length[l] < n_required_length[r]; }
+                return n_required_length[l] > n_required_length[r]; }
             if (l->slice_lists().size() != r->slice_lists().size()) {
                 return l->slice_lists().size() > r->slice_lists().size(); }
         } else {
             // for non header field, aggregate size matters
             if (n_valid_starts.at(l) != n_valid_starts.at(r)) {
                 return n_valid_starts.at(l) < n_valid_starts.at(r); }
+            if (n_extracted_uninitialized[l] != n_extracted_uninitialized[r]) {
+                return n_extracted_uninitialized[l] > n_extracted_uninitialized[r]; }
+            if (l->num_pack_conflicts() != r->num_pack_conflicts()) {
+                return l->num_pack_conflicts() > r->num_pack_conflicts(); }
             if (l->aggregate_size() != r->aggregate_size()) {
                 return l->aggregate_size() > r->aggregate_size(); }
             if (n_required_length[l] != n_required_length[r]) {
-                return n_required_length[l] < n_required_length[r]; }
+                return n_required_length[l] > n_required_length[r]; }
         }
-        if (l->num_pack_conflicts() != r->num_pack_conflicts()) {
-            return l->num_pack_conflicts() > r->num_pack_conflicts(); }
-        // if (critical_clusters.count(l) != critical_clusters.count(r)) {
-        //     return critical_clusters.count(l) > critical_clusters.count(r); }
         if (l->num_constraints() != r->num_constraints()) {
             return l->num_constraints() > r->num_constraints(); }
-        // if (l->max_width() != r->max_width()) {
-        //     return l->max_width() > r->max_width(); }
         return false;
     };
     cluster_groups.sort(ClusterGroupComparator);
@@ -1955,6 +2083,8 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
             logs << "is_pounderable: "        << pounder_clusters.count(v) << ", ";
             logs << "required_length: "       << n_required_length[v] << ", ";
             logs << "n_valid_starts: "        << n_valid_starts[v] << ", ";
+            logs << "n_pack_conflicts: "        << v->num_pack_conflicts() << ", ";
+            logs << "n_extracted_uninitialized: "  << n_extracted_uninitialized[v] << ", ";
             logs << "]\n";
             logs << v; }
         LOG5(logs.str());
@@ -1965,6 +2095,20 @@ std::list<PHV::SuperCluster*>
 BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                                         std::list<PHV::SuperCluster*>& cluster_groups,
                                         const std::list<PHV::ContainerGroup *>& container_groups) {
+    // Packing opportunities for each field, if allocated in @p cluster_groups order.
+    AllocScore::g_packing_opportunities = new FieldPackingOpportunity(
+            cluster_groups, core_alloc_i.actionConstraints(),
+            core_alloc_i.uses(), core_alloc_i.defuse(), core_alloc_i.mutex());
+    for (const auto* cluster : cluster_groups) {
+        std::set<const PHV::Field*> showed;
+        cluster->forall_fieldslices([&] (const PHV::FieldSlice& fs) {
+            if (showed.count(fs.field())) return;
+            showed.insert(fs.field());
+            LOG1("Field " << fs.field() << " has "
+                 << AllocScore::g_packing_opportunities->nOpportunities(fs.field()));
+        });
+    }
+
     const int MAX_SLICING_TRY = 65535;
     std::stringstream alloc_history;
     std::list<PHV::SuperCluster*> allocated;
