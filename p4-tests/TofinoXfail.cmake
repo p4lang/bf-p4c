@@ -166,6 +166,12 @@ if (PTF_REQUIREMENTS_MET)
     smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest
     )
 
+  # default action not programmed by drivers
+  p4c_add_xfail_reason("tofino"
+    "Expected packet was not received on device"
+    extensions/p4_tests/p4_16/large_action_data_constant.p4
+    )
+
 endif() # PTF_REQUIREMENTS_MET
 
 
