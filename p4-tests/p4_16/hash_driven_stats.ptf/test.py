@@ -31,9 +31,13 @@ class CounterReadTest(P4RuntimeTest):
             egress_count = self.read_counter("egress_port_counter", egress_port)
             return ingress_count, egress_count
 
-        ingress_count, egress_count = get_counts()
-        self.assertEqual(ingress_count, 0)
-        self.assertEqual(egress_count, 0)
+        ingress_count_0, egress_count_0 = get_counts()
+        # On HW we observe some extra packets sent before the test, as the ports
+        # are being brought-up. To avoid the issue, we only check that the
+        # counters are incremented correctly, instead of checking for absolute
+        # values.
+        # self.assertEqual(ingress_count_0, 0)
+        # self.assertEqual(egress_count_0, 0)
         size = 70
         pkt = "\xab" * size
         testutils.send_packet(self, ingress_port, pkt)
@@ -43,8 +47,8 @@ class CounterReadTest(P4RuntimeTest):
         print "Egress Count: ", egress_count
         # FIXME: Due to the model adding 4 extra bytes, we update the counters with this value
         # Must check with Sachin to validate this behavior as a check
-        #WIP: Working on bytecount adjust to account for additional 16 bytes
-        self.assertEqual(ingress_count, 74)
+        # WIP: Working on bytecount adjust to account for additional 16 bytes
+        self.assertEqual(ingress_count - ingress_count_0, 74)
         # FIXME: The egress count includes one byte of bridged metadata generated
         # internally by the compiler, when it should be subtracted off
-        self.assertEqual(egress_count, 75)
+        self.assertEqual(egress_count - egress_count_0, 75)

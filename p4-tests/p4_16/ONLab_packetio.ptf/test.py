@@ -28,7 +28,7 @@ class PacketInTest(P4RuntimeTest):
 
 class PacketOutTest(P4RuntimeTest):
     def runTest(self):
-        port = 3
+        port = self.swports(3)
         port_hex = stringify(port, 2)
         payload = 'a' * 20
         packet_out = p4runtime_pb2.PacketOut()
