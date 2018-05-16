@@ -247,21 +247,22 @@ void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
                            gress_t gress, std::vector<Deparser::Val> checksum[]) {
     assert(tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS-1][0] == 143);
     for (int i = 0; i < Target::Tofino::DEPARSER_CHECKSUM_UNITS; i++) {
-        if (checksum[i].empty()) {
-            if (!options.match_compiler)
-                continue; }
         auto &main_unit = main_csum_units[i].csum_cfg_entry;
         auto &tagalong_unit = tagalong_csum_units[i].csum_cfg_entry;
         for (auto &ent : main_unit) {
             ent.zero_l_s_b = 1;
             ent.zero_l_s_b.rewrite();
             ent.zero_m_s_b = 1;
-            ent.zero_m_s_b.rewrite(); }
+            ent.zero_m_s_b.rewrite();
+            ent.swap = 0;
+            ent.swap.rewrite(); }
         for (auto &ent : tagalong_unit) {
             ent.zero_l_s_b = 1;
             ent.zero_l_s_b.rewrite();
             ent.zero_m_s_b = 1;
-            ent.zero_m_s_b.rewrite(); }
+            ent.zero_m_s_b.rewrite();
+            ent.swap = 0;
+            ent.swap.rewrite(); }
         if (checksum[i].empty())
             continue;
         int polarity = 0;
@@ -349,9 +350,13 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
     for (auto &digest : digests)
         digest.type->setregs(regs, *this, digest);
 
-    if (options.condense_json) {
-        regs.input.disable_if_reset_value();
-        regs.header.disable_if_reset_value(); }
+    // The csum_cfg_entry registers are NOT reset by hardware and must be
+    // explicitly configured.  We remove the disable_if_reset_value() calls on
+    // these register tree for now, but ideally they should have a flag to indicate no
+    // reset value is present and the register tree should prune only those regs
+    // if (options.condense_json) {
+    //     regs.input.disable_if_reset_value();
+    //     regs.header.disable_if_reset_value(); }
     if (error_count == 0 && options.gen_json) {
         regs.input.emit_json(*open_output("regs.all.deparser.input_phase.cfg.json"));
         regs.header.emit_json(*open_output("regs.all.deparser.header_phase.cfg.json")); }
