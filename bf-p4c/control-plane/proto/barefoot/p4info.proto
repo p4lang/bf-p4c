@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+import "p4/p4types.proto";
+
+package barefoot;
+
+message MeterSpec {
+  enum Unit {
+    UNSPECIFIED = 0;
+    BYTES = 1;
+    PACKETS = 2;
+  }
+
+  enum Type {
+    COLOR_UNAWARE = 0;  // default value
+    COLOR_AWARE = 1;
+  }
+
+  Unit unit = 1;
+  Type type = 2;
+}
+
+message CounterSpec {
+  // Corresponds to `type` attribute for counter in P4 spec.
+  enum Unit {
+    UNSPECIFIED = 0;
+    BYTES = 1;
+    PACKETS = 2;
+    BYTES_AND_PACKETS = 3;
+  }
+
+  Unit unit = 1;
+}
+
+message ActionProfile {
+  repeated uint32 table_ids = 1;
+  int64 size = 2;
+}
+
+message ActionSelector {
+  repeated uint32 table_ids = 1;
+  uint32 hash_id = 2;
+  int64 size = 3;
+}
+
+message Counter {
+  CounterSpec spec = 1;
+  int64 size = 2;
+}
+
+message DirectCounter {
+  CounterSpec spec = 1;
+  uint32 direct_table_id = 2;
+}
+
+message Meter {
+  MeterSpec spec = 1;
+  int64 size = 2;
+}
+
+message DirectMeter {
+  MeterSpec spec = 1;
+  uint32 direct_table_id = 2;
+}
+
+message Wred {
+  int64 size = 1;
+}
+
+message DirectWred {
+  uint32 direct_table_id = 1;
+}
+
+message Lpf {
+  int64 size = 1;
+}
+
+message DirectLpf {
+  uint32 direct_table_id = 1;
+}
+
+message Register {
+  p4.P4DataTypeSpec type_spec = 1;
+  int64 size = 2;
+}
+
+message RegisterParam {
+  p4.P4DataTypeSpec type_spec = 1;
+}
+
+message Digest {
+  p4.P4DataTypeSpec type_spec = 1;
+}
+
+message Hash {
+  //TODO(msharif): Not sure if hash algorithm is needed?
+  p4.P4DataTypeSpec type_spec = 1;
+}
+
+// Any metadata associated with ingress port.
+message PortMetadata {
+  p4.P4DataTypeSpec type_spec = 1;
+}

@@ -492,10 +492,10 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${P4C_BAREFOOT_SRCS}")
 build_unified(P4C_BAREFOOT_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 add_library(tofinobackend ${BF_P4C_SOURCES})
-add_dependencies(tofinobackend genIR genLogging)
+add_dependencies(tofinobackend genIR genLogging bfn_p4runtime)
 
 add_executable(p4c-barefoot ${P4C_BAREFOOT_SRCS})
-target_link_libraries (p4c-barefoot tofinobackend ${P4C_LIBRARIES} ${P4C_LIB_DEPS})
+target_link_libraries (p4c-barefoot tofinobackend bfn_p4runtime ${P4C_LIBRARIES} ${P4C_LIB_DEPS})
 
 install (TARGETS p4c-barefoot
   RUNTIME DESTINATION ${P4C_RUNTIME_OUTPUT_DIRECTORY})
@@ -547,6 +547,32 @@ add_custom_target(linkp4cbarefoot
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${P4C_BINARY_DIR}/p4_14include ${CMAKE_CURRENT_BINARY_DIR}/p4_14include
   )
 add_dependencies(p4c_driver linkp4cbarefoot)
+
+################ Proto
+set (BFN_P4RUNTIME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/control-plane/proto)
+set (BFN_P4RUNTIME_INFO_PROTO ${BFN_P4RUNTIME_DIR}/barefoot/p4info.proto)
+set (BFN_P4RUNTIME_INFO_GEN_SRCS ${P4C_BINARY_DIR}/control-plane/barefoot/p4info.pb.cc)
+set (BFN_P4RUNTIME_INFO_GEN_HDRS ${P4C_BINARY_DIR}/control-plane/barefoot/p4info.pb.h)
+
+add_custom_target (barefootdir
+  ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/control-plane/barefoot)
+# Generate source code from .proto using protoc. The output is
+# placed in the build directory inside `control-plane` directory
+add_custom_command(
+  OUTPUT ${BFN_P4RUNTIME_INFO_GEN_SRCS} ${BFN_P4RUNTIME_INFO_GEN_HDRS}
+  COMMAND ${PROTOBUF_PROTOC_EXECUTABLE}
+          --proto_path ${BFN_P4RUNTIME_DIR}
+          --proto_path ${P4C_SOURCE_DIR}/control-plane/PI/proto
+          --cpp_out ${P4C_BINARY_DIR}/control-plane
+          --python_out ${P4C_BINARY_DIR}/control-plane
+          ${BFN_P4RUNTIME_INFO_PROTO}
+  DEPENDS ${BFN_P4RUNTIME_INFO_PROTO}
+  COMMENT "Generating protobuf files for p4info."
+  )
+
+add_library(bfn_p4runtime STATIC ${BFN_P4RUNTIME_INFO_GEN_SRCS})
+set_source_files_properties (${BFN_P4RUNTIME_INFO_GEN_SRCS} PROPERTIES GENERATED TRUE)
+add_dependencies(bfn_p4runtime barefootdir)
 
 ################ Testing
 
