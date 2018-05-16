@@ -94,6 +94,11 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
     /// the two.
     ordered_map<cstring, cstring> egressBridgedMap;
 
+    /// Map of original field to a related field from which this field will derive its alignment
+    /// constraints from.
+    /// XXX(Deep): Use this for more efficient bridged field packing.
+    ordered_map<const PHV::Field*, const PHV::Field*> fieldAlignmentMap;
+
     /// Ingress bridged metadata header created by this pass.
     IR::Header* ingressBridgedHeader = nullptr;
     /// Egress bridged metadata header created by this pass.
@@ -121,7 +126,7 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
     void determineAlignmentConstraints(
             const IR::Header* h,
             const std::vector<const IR::StructField*>& nonByteAlignedFields,
-            ordered_set<const IR::StructField*>& alignmentConstraints) const;
+            ordered_set<const IR::StructField*>& alignmentConstraints);
 
  public:
     explicit PackBridgedMetadata(

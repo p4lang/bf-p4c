@@ -50,6 +50,7 @@ Visitor::profile_t PackBridgedMetadata::init_apply(const IR::Node* root) {
     ingressBridgedHeader = nullptr;
     egressBridgedHeader = nullptr;
     egressBridgedMap.clear();
+    fieldAlignmentMap.clear();
     for (auto kv : fields.bridged_to_orig)
         egressBridgedMap[getEgressFieldName(kv.second->name)] = getEgressFieldName(kv.first->name);
 
@@ -171,51 +172,66 @@ void PackBridgedMetadata::bridgedActionAnalysis(
 void PackBridgedMetadata::determineAlignmentConstraints(
         const IR::Header* h,
         const std::vector<const IR::StructField*>& nonByteAlignedFields,
-        ordered_set<const IR::StructField*>& alignmentConstraints) const {
+        ordered_set<const IR::StructField*>& alignmentConstraints) {
     for (auto structField : nonByteAlignedFields) {
         ordered_set<const PHV::Field*> relatedFields;
+        std::queue<const PHV::Field*> fieldsNotVisited;
         cstring fieldName = getFieldName(h, structField);
         const auto* field = phv.field(fieldName);
-        auto operands = actionConstraints.field_sources(field);
-        for (const PHV::Field* f : operands)
-            relatedFields.insert(f);
-        auto destinations = actionConstraints.field_destinations(field);
-        for (const PHV::Field* f : destinations)
-            relatedFields.insert(f);
-        LOG4("\tField: " << field);
-
+        BUG_CHECK(field, "No field named %1% found", fieldName);
         // Also summarize the egress version of this field, as alignment constraints may be induced
         // by uses of the egress version of the bridged field.
         cstring egressFieldName = getNonBridgedEgressFieldName(fieldName);
-        if (egressFieldName) {
-            const auto* egressField = phv.field(egressFieldName);
-            LOG4("\t  Egress field: " << egressField);
-            auto egressOperands = actionConstraints.field_sources(egressField);
-            for (const PHV::Field* f : egressOperands)
-                relatedFields.insert(f);
-            auto egressDestinations = actionConstraints.field_destinations(egressField);
-            for (const PHV::Field* f : egressDestinations)
-                relatedFields.insert(f); }
+        BUG_CHECK(egressFieldName, "No egress version of the field %1%", fieldName);
+        const auto* egressField = phv.field(egressFieldName);
+        BUG_CHECK(egressField, "No egress field %1%", egressFieldName);
+        // Add the ingress field and its egress version to visit.
+        fieldsNotVisited.push(field);
+        fieldsNotVisited.push(egressField);
+
+        while (!fieldsNotVisited.empty()) {
+            const PHV::Field* currentField = fieldsNotVisited.front();
+            relatedFields.insert(currentField);
+            fieldsNotVisited.pop();
+            LOG6("\t\tVisiting new field: " << currentField);
+            auto operands = actionConstraints.field_sources(currentField);
+            // Add all unvisited operands to fieldsNotVisited.
+            for (const PHV::Field* f : operands) {
+                if (!relatedFields.count(f))
+                    fieldsNotVisited.push(f); }
+            auto destinations = actionConstraints.field_destinations(currentField);
+            // Add all unvisited destinations to fieldsNotVisited.
+            for (const PHV::Field* f : destinations) {
+                if (!relatedFields.count(f))
+                    fieldsNotVisited.push(f); }
+            LOG6("\t\t  Now, we have " << fieldsNotVisited.size() << " fields unvisited"); }
 
         if (LOGGING(4) && relatedFields.count(field) == 0) {
             LOG4("\t  No related fields");
             continue; }
 
         for (const PHV::Field* f : relatedFields) {
-            LOG4("\t  Related field: " << f);
+            LOG5("\t  Related field: " << f);
             if (f->alignment) {
-                LOG4("\t\tComputed alignment: " << *(f->alignment));
-                alignmentConstraints.insert(structField); }
-            // If a field in an MAU operation with a related field that is bigger in size, the slice
-            // of the bigger field ends up having an alignment constraint even though the field
-            // itself does not have any alignment constraint. The following lines conservatively
-            // marks bridged metadata fields used in such operations as having alignment
-            // constraints themselves.
-            // XXX(Deep): Detect this case with more precision.
-            if (f->size > field->size) {
-                alignmentConstraints.insert(structField);
-                LOG4("Alignment induced in " << structField << " due to use with a bigger slice"); }
-        } }
+                LOG5("\t\t  New alignment: " << *(f->alignment));
+                if (fieldAlignmentMap.count(field)) {
+                    // alignSource is where the alignment constraint originates from.
+                    const PHV::Field* alignSource = fieldAlignmentMap[field];
+                    BUG_CHECK(alignSource->alignment, "No alignment for field %1%",
+                              alignSource->name);
+                    LOG5("\t\t  Old alignment: " << *(alignSource->alignment));
+                    // Only compare the little endian alignments because the network endian
+                    // alignments differ for some fields of different sizes.
+                    // XXX(Deep): Figure out why we get conflicting alignment constraints for
+                    // related fields and how to reconcile it. Until then, don't pack these fields
+                    // with anything else.
+                    WARN_CHECK(f->alignment->littleEndian == alignSource->alignment->littleEndian,
+                               "Conflicting alignment constraints detected for bridged field %1%"
+                               ": %2%, %3%", field->name, f->alignment->littleEndian,
+                               alignSource->alignment->littleEndian);
+                    continue; }
+                fieldAlignmentMap[field] = f;
+                alignmentConstraints.insert(structField); } } }
     if (LOGGING(4)) {
         LOG4("\tPrinting bridged fields with alignment constraints:");
         for (auto f : alignmentConstraints)
