@@ -241,6 +241,20 @@ static short tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS][2] = {
      Target::Tofino::Phv::COUNT_16BIT_TPHV + \
      2*Target::Tofino::Phv::COUNT_32BIT_TPHV)
 
+template<typename DTYPE, typename STYPE> static
+void copy_csum_cfg_entry(DTYPE & dst_unit, STYPE & src_unit) {
+    assert(dst_unit.size() == src_unit.size());
+
+    for (unsigned i = 0; i < dst_unit.size(); i++) {
+        auto& src = src_unit[i];
+        auto& dst = dst_unit[i];
+
+        dst.zero_l_s_b = src.zero_l_s_b;
+        dst.zero_m_s_b = src.zero_m_s_b;
+        dst.swap = src.swap;
+    }
+}
+
 template<typename IPO, typename HPO> static
 void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
                            checked_array_base<HPO> &tagalong_csum_units,
@@ -298,15 +312,45 @@ void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
         tagalong_unit.set_modified(); }
 }
 
+static
+void tofino_checksum_units(Target::Tofino::deparser_regs &regs,
+                           std::vector<Deparser::Val> checksum[2][MAX_DEPARSER_CHECKSUM_UNITS]) {
+    for (unsigned id = 2; id < MAX_DEPARSER_CHECKSUM_UNITS; id++) {
+        if (!checksum[0][id].empty() && !checksum[1][id].empty())
+            error(-1, "deparser checksum unit %d used in both ingress and egress", id);
+    }
+
+    tofino_checksum_units(regs.input.iim.ii_phv_csum.csum_cfg,
+                          regs.header.him.hi_tphv_csum.csum_cfg, INGRESS, checksum[INGRESS]);
+    tofino_checksum_units(regs.input.iem.ie_phv_csum.csum_cfg,
+                          regs.header.hem.he_tphv_csum.csum_cfg, EGRESS, checksum[EGRESS]);
+
+    // make sure shared units are configured identically
+    for (unsigned id = 2; id < Target::Tofino::DEPARSER_CHECKSUM_UNITS; id++) {
+        auto& eg_main_unit = regs.input.iem.ie_phv_csum.csum_cfg[id].csum_cfg_entry;
+        auto& ig_main_unit = regs.input.iim.ii_phv_csum.csum_cfg[id].csum_cfg_entry;
+
+        auto& eg_tphv_unit = regs.header.hem.he_tphv_csum.csum_cfg[id].csum_cfg_entry;
+        auto& ig_tphv_unit = regs.header.him.hi_tphv_csum.csum_cfg[id].csum_cfg_entry;
+
+        if (!checksum[0][id].empty()) {
+            copy_csum_cfg_entry(eg_main_unit, ig_main_unit);
+            copy_csum_cfg_entry(eg_tphv_unit, ig_tphv_unit);
+        } else if (!checksum[1][id].empty()) {
+            copy_csum_cfg_entry(ig_main_unit, eg_main_unit);
+            copy_csum_cfg_entry(ig_tphv_unit, eg_tphv_unit);
+        }
+    }
+}
+
 template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
     regs.input.icr.inp_cfg.disable();
     regs.input.icr.intr.disable();
     regs.header.hem.he_edf_cfg.disable();
     regs.header.him.hi_edf_cfg.disable();
-    tofino_checksum_units(regs.input.iim.ii_phv_csum.csum_cfg,
-                          regs.header.him.hi_tphv_csum.csum_cfg, INGRESS, checksum[INGRESS]);
-    tofino_checksum_units(regs.input.iem.ie_phv_csum.csum_cfg,
-                          regs.header.hem.he_tphv_csum.csum_cfg, EGRESS, checksum[EGRESS]);
+
+    tofino_checksum_units(regs, checksum);
+
     tofino_field_dictionary(regs.input.iim.ii_fde_pov.fde_pov, regs.header.him.hi_fde_phv.fde_phv,
                             regs.input.iir.main_i.pov.phvs, pov_order[INGRESS],
                             dictionary[INGRESS]);

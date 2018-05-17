@@ -243,7 +243,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
             } else if (kv.key == "checksum") {
                 if (kv.key.type != tCMD || kv.key.vec.size != 2 || kv.key[1].type != tINT ||
                     kv.key[1].i < 0 || kv.key[1].i >= Target::DEPARSER_CHECKSUM_UNITS())
-                    error(kv.key.lineno, "Invalid checksum unit number");
+                    error(kv.key.lineno, "Invalid deparser checksum unit number");
                 else if (CHECKTYPE2(kv.value, tVEC, tMAP)) {
                     collapse_list_of_maps(kv.value);
                     int unit = kv.key[1].i;
