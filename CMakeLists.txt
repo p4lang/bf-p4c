@@ -11,6 +11,12 @@ project (BFN_P4C)
 
 OPTION(ENABLE_JBAY "Enable JBay" OFF)
 
+# Additional P4C_CPP_FLAGS may be passed (via bootstrap_bfn_compilers.sh script) 
+# from p4factory when configuring bf-p4c-compilers to specify certain predefined 
+# features when building the compiler
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${P4C_CPP_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${P4C_CPP_FLAGS}")
+
 # Get the version from bf-p4c/version.h
 file (STRINGS "${BFN_P4C_SOURCE_DIR}/bf-p4c/version.h"
   __version

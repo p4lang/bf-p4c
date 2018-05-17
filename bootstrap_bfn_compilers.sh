@@ -36,6 +36,12 @@ if [ "$1" == "--build-dir" ]; then
     shift; shift;
 fi
 
+P4C_CPP_FLAGS=''
+if [ "$1" == "--p4c-cpp-flags" ]; then
+    P4C_CPP_FLAGS="$2"
+    shift; shift;
+fi
+
 if [ ! -r p4c/CMakeLists.txt ]; then
     git submodule update --init --recursive
 fi
@@ -50,7 +56,7 @@ popd # p4c/extensions
 
 mkdir -p ${builddir}
 pushd ${builddir}
-cmake ${mydir} -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=ON $*
+cmake ${mydir} -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=ON -DP4C_CPP_FLAGS="$P4C_CPP_FLAGS" $*
 popd # builddir
 
 if [ "$RUN_BOOTSTRAP_PTF" == "yes" ]; then
