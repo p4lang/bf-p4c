@@ -159,6 +159,14 @@ class Visualization : public Inspector {
         ActionBusByteResource() {}
     };
 
+    struct IMemColorResource : JsonResource {
+        IMemColorResource() {
+            allowed_empty_nodes = { USED_FOR };
+        }
+        unsigned int color = 0;
+        gress_t gress = INGRESS;
+    };
+
     /// Collectors for generating the resource schema.
     /// These maps are updated either at the end of the allocation or
     /// when compilation fails to output the set of resources already
@@ -169,6 +177,7 @@ class Visualization : public Inspector {
         ordered_map<std::pair<int, int>, HashDistResource> _hashDistUsage;
         std::vector<MemoriesResource>                      _memoriesUsage;
         ordered_map<int, ActionBusByteResource>            _actionBusBytesUsage;
+        ordered_map<int, std::vector<IMemColorResource>>   _imemColorUsage;
         /// map logical ids to table names
         ordered_map<int, cstring>                          _logicalIds;
 
@@ -225,6 +234,8 @@ class Visualization : public Inspector {
     void add_hash_dist_usage(unsigned int stageNo, const IXBar::HashDistUse &alloc);
     void add_action_bus_bytes_usage(unsigned int stageNo, const ActionDataBus::Use &alloc,
                                     cstring tableName);
+    void add_vliw_usage(unsigned int stageNo, const InstructionMemory::Use &alloc,
+                        gress_t gress, cstring tableName);
 
     void gen_xbar_bytes(unsigned int stageNo, Util::JsonObject *stage);
     void gen_hash_bits(unsigned int stageNo, Util::JsonObject *stage);

@@ -5,6 +5,7 @@
 #include <set>
 #include <string>
 
+#include "ir/gress.h"
 #include "mau/resource.h"
 #include "parde/p4i/gen_parser_json.h"
 #include "visualization.h"
@@ -309,6 +310,36 @@ void Visualization::add_action_bus_bytes_usage(unsigned int stage, const ActionD
     LOG2("add_action_bus_bytes_usage (stage=" << stage << "), table :" << tableName << " done!");
 }
 
+void Visualization::add_vliw_usage(unsigned int stage, const InstructionMemory::Use &alloc,
+                                   gress_t gress, cstring tableName) {
+    for (auto &entry : alloc.all_instrs) {
+        auto instr = entry.second;
+        int row = instr.row;
+        IMemColorResource imr;
+        imr.color = instr.color;
+        imr.gress = gress;
+        imr.add(USED_BY, tableName.c_str());
+        imr.add(DETAILS, entry.first.c_str());
+
+        bool shared_slot = false;
+        for (auto& r : _stageResources[stage]._imemColorUsage[row]) {
+            if (r.color == imr.color && r.gress == imr.gress)  {
+                r.add(USED_BY, tableName.c_str());
+                r.add(DETAILS, entry.first.c_str());
+                shared_slot = true;
+                break;
+            }
+        }
+
+        if (shared_slot)
+            continue;
+
+        _stageResources[stage]._imemColorUsage[row].push_back(imr);
+    }
+
+    LOG2("add_vliw_usage (stage=" << stage << "), table :" << tableName << " done!");
+}
+
 void Visualization::gen_xbar_bytes(unsigned int stageNo, Util::JsonObject *stage) {
     auto *xr = new Util::JsonObject();
     xr->emplace("size",
@@ -430,7 +461,8 @@ void Visualization::add_table_usage(cstring name, const IR::MAU::Table *table) {
     add_action_bus_bytes_usage(stage, alloc->action_data_xbar, name);
 
     // TODO action slots
-    // TODO vliw
+
+    add_vliw_usage(stage, alloc->instr_mem, table->gress, name);
 
     LOG1("add_table_usage: " << name << " done!");
 }
@@ -618,11 +650,31 @@ void Visualization::gen_action_slots(unsigned int /* stageNo */, Util::JsonObjec
     stage->emplace("action_slots", action_slots);
 }
 
-void Visualization::gen_vliw(unsigned int /* stageNo */, Util::JsonObject *stage) {
-    // \TODO: where do we get these ones from?
+void Visualization::gen_vliw(unsigned int stageNo, Util::JsonObject *stage) {
     auto *vliw = new Util::JsonObject();
-    vliw->emplace("size", new Util::JsonValue(32));
-    vliw->emplace("instructions", new Util::JsonArray());
+    vliw->emplace("size", new Util::JsonValue(InstructionMemory::IMEM_ROWS));
+    auto *instructions = new Util::JsonArray();
+    vliw->emplace("instructions", instructions);
+
+    std::for_each(_stageResources[stageNo]._imemColorUsage.begin(),
+                  _stageResources[stageNo]._imemColorUsage.end(),
+                  [instructions](const std::pair<int, std::vector<IMemColorResource>> &p) {
+                      auto row = p.first;
+                      auto *instr = new Util::JsonObject();
+                      instr->emplace("instruction_number", new Util::JsonValue(row));
+                      auto *color_usages = new Util::JsonArray();
+                      for (auto use : p.second) {
+                          auto* usage = new Util::JsonObject();
+                          usage->emplace("color", new Util::JsonValue(use.color));
+                          usage->emplace("gress", new Util::JsonValue(::toString(use.gress)));
+                          usagesToCtxJson(usage, use.total_value(USED_BY),
+                                      use.total_value(USED_FOR), use.total_value(DETAILS));
+                          color_usages->append(usage);
+                      }
+                      instr->emplace("color_usages", color_usages);
+                      instructions->append(instr);
+                  });
+
     stage->emplace("vliw", vliw);
 }
 
