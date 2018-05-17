@@ -572,7 +572,7 @@ add_custom_command(
 
 add_library(bfn_p4runtime STATIC ${BFN_P4RUNTIME_INFO_GEN_SRCS})
 set_source_files_properties (${BFN_P4RUNTIME_INFO_GEN_SRCS} PROPERTIES GENERATED TRUE)
-add_dependencies(bfn_p4runtime barefootdir)
+add_dependencies(bfn_p4runtime barefootdir controlplane)
 
 ################ Testing
 
