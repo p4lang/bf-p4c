@@ -5,6 +5,7 @@ const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
         /* .CmpMask = */ false,
         /* .CmpUnits = */ { "lo", "hi" },
         /* .MaxSize = */ 32,
+        /* .OutputWords = */ 1,
     };
     return spec;
 }
@@ -15,6 +16,7 @@ const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
         /* .CmpMask = */ true,
         /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
         /* .MaxSize = */ 64,
+        /* .OutputWords = */ 4,
     };
     return spec;
 }
@@ -43,6 +45,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
     assert(dest == nullptr || etype != NONE);
     IR::Expression *e = nullptr;
     int idx = 0, field_idx = 0;
+    output_index = 0;
     if (locals.count(pe->path->name.name)) {
         auto &local = locals.at(pe->path->name.name);
         if (etype == NONE)
@@ -68,6 +71,8 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         for (auto p : params->parameters) {
             if (p->name == pe->path->name) {
                 break; }
+            if (param_types->at(idx) == param_t::OUTPUT)
+                ++output_index;
             ++idx; }
         if (size_t(idx) >= params->parameters.size()) return false;
         BUG_CHECK(size_t(idx) < param_types->size(), "param index out of range"); }
@@ -94,6 +99,9 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             etype = OUTPUT;
         else
             error("Reading out param %s in %s not supported", pe, action_type_name);
+        if (output_index > Device::statefulAluSpec().OutputWords)
+            error("Only %d stateful output%s supported", Device::statefulAluSpec().OutputWords,
+                  Device::statefulAluSpec().OutputWords > 1 ? "s" : "");
         if (!opcode) opcode = "output";
         break;
     case param_t::HASH:         /* in digest */
@@ -146,6 +154,9 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
     LOG3("Creating action " << name << " for stateful table " << salu->name);
     LOG5(func);
     action = new IR::MAU::SaluAction(func->srcInfo, name);
+    outputs.clear();
+    onebit = nullptr;
+    onebit_cmpl = false;
     salu->instruction.addUnique(name, action);
     params = func->type->parameters;
     return true;
@@ -160,9 +171,10 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
     if (onebit) {
         action->action.push_back(onebit);
         LOG3("  add " << *action->action.back()); }
-    if (output) {
-        action->action.push_back(output);
-        LOG3("  add " << *action->action.back()); }
+    for (auto *instr : outputs) {
+        if (instr) {
+            action->action.push_back(instr);
+            LOG3("  add " << *action->action.back()); } }
     if (math.valid) {
         if (salu->math.valid && !(math == salu->math))
             error("%s: math unit incompatible with %s", reg_action->srcInfo, salu);
@@ -295,6 +307,8 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
                     math.table[i++] = k->asInt(); }
         } else {
             error("initializer %s is not a list expression", mu->arguments->at(3)->expression); }
+    } else if (prim->name == "RegisterAction.address") {
+        operands.push_back(new IR::MAU::SaluReg(prim->type, "address", false));
     } else {
         error("%s: expression too complex for register action", prim->srcInfo); }
     return false;
@@ -352,22 +366,22 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
             auto t = rel->left->type->to<IR::Type::Bits>();
             op += (t && t->isSigned) ? ".s" : ".u"; }
         opcode = op;
-        if (etype == IF) {
-            int idx = 0;
-            for (auto cmp : cmp_instr) {
-                if (auto inst = reuseCmp(cmp, idx++)) {
-                    LOG4("Relation reuse pred_operand: " << inst);
-                    pred_operands.push_back(inst);
-                    operands.clear();
-                    return false; } }
-            auto bit1 = IR::Type::Bits::get(1);
-            cstring name = Device::statefulAluSpec().cmpUnit(idx);
-            operands.insert(operands.begin(), new IR::MAU::SaluReg(bit1, name, idx & 1));
-            cmp_instr.push_back(createInstruction());
-            if (!name.startsWith("cmp")) name = "cmp" + name;
-            pred_operands.push_back(new IR::MAU::SaluReg(bit1, name, idx & 1));
-            LOG4("Relation pred_operand: " << pred_operands.back());
-            operands.clear(); }
+        BUG_CHECK(etype == IF, "etype changed?");
+        int idx = 0;
+        for (auto cmp : cmp_instr) {
+            if (auto inst = reuseCmp(cmp, idx++)) {
+                LOG4("Relation reuse pred_operand: " << inst);
+                pred_operands.push_back(inst);
+                operands.clear();
+                return false; } }
+        auto bit1 = IR::Type::Bits::get(1);
+        cstring name = Device::statefulAluSpec().cmpUnit(idx);
+        operands.insert(operands.begin(), new IR::MAU::SaluReg(bit1, name, idx & 1));
+        cmp_instr.push_back(createInstruction());
+        if (!name.startsWith("cmp")) name = "cmp" + name;
+        pred_operands.push_back(new IR::MAU::SaluReg(bit1, name, idx & 1));
+        LOG4("Relation pred_operand: " << pred_operands.back());
+        operands.clear();
     } else {
         error("%s: expression in stateful alu too complex", rel->srcInfo); }
     return false;
@@ -502,7 +516,7 @@ void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
         { "notb", "alu_b" }, { "orca", "andcb" }, { "orcb", "andca" }, { "or", "nor" },
         { "sethi", "setz" }, { "setz", "sethi" }, { "xnor", "xor" }, { "xor", "xnor" } };
     if (etype == OUTPUT && e->type->width_bits() == 1) {
-        output_cmpl = true;
+        onebit_cmpl = true;
         return; }
     if (complement.count(opcode))
         opcode = complement.at(opcode);
@@ -527,6 +541,30 @@ void CreateSaluInstruction::postorder(const IR::Concat *e) {
     error("%s: expression too complex for stateful alu", e->srcInfo);
 }
 
+static void setup_output(std::vector<const IR::MAU::Instruction *> &output, int index,
+                         const IR::Expression *predicate,
+                         std::vector<const IR::Expression *> operands) {
+    if (output.size() <= size_t(index)) output.resize(index+1);
+    if (Device::statefulAluSpec().OutputWords > 1)
+        operands.insert(operands.begin(), new IR::MAU::SaluReg(operands.at(0)->type,
+                                "word" + std::to_string(index), false));
+    if (predicate)
+        operands.insert(operands.begin(), predicate);
+    if (output[index]) {
+        if (!equiv(operands.back(), output[index]->operands.back())) {
+            error("Incompatible outputs in RegisterAction: %s and %s\n",
+                  output[index]->operands.back(), operands.back());
+            return; }
+        if (output[index]->operands.size() == operands.size()) {
+            if (predicate)
+                operands[0] = new IR::LOr(output[index]->operands[0], operands[0]);
+            else
+                return;
+        } else if (predicate) {
+            return; } }
+    output[index] = new IR::MAU::Instruction("output", operands);
+}
+
 const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
     const IR::MAU::Instruction *rv = nullptr;
     switch (etype) {
@@ -541,10 +579,10 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             auto k = operands.at(1)->to<IR::Constant>();
             BUG_CHECK(k, "non-const writeback in 1-bit instruction?");
             opcode = k->value ? "set_bit" : "clr_bit";
-            if (output_cmpl) opcode += 'c';
-            onebit = new IR::MAU::Instruction(opcode);
-            rv = output = new IR::MAU::Instruction("output",
-                new IR::MAU::SaluReg(operands.at(0)->type, "alu_lo", false));
+            if (onebit_cmpl) opcode += 'c';
+            rv = onebit = new IR::MAU::Instruction(opcode);
+            setup_output(outputs, 0, nullptr, {
+                new IR::MAU::SaluReg(IR::Type::Bits::get(1), "alu_lo", false) });
             break; }
         if (predicate)
             operands.insert(operands.begin(), predicate);
@@ -554,10 +592,10 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
     case OUTPUT:
         if (operands.at(0)->type->width_bits() == 1) {
             BUG_CHECK(!predicate, "can't have predicate on 1-bit instruction");
-            opcode = output_cmpl ? "read_bitc" : "read_bit";
-            onebit = new IR::MAU::Instruction(opcode);
-            rv = output = new IR::MAU::Instruction("output",
-                new IR::MAU::SaluReg(operands.at(0)->type, "alu_lo", false));
+            opcode = onebit_cmpl ? "read_bitc" : "read_bit";
+            rv = onebit = new IR::MAU::Instruction(opcode);
+            setup_output(outputs, 0, nullptr, {
+                new IR::MAU::SaluReg(IR::Type::Bits::get(1), "alu_lo", false) });
             break;
         } else if (auto k = operands.at(0)->to<IR::Constant>()) {
             if (k->value == 0) {
@@ -575,16 +613,19 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
                 // that deals with this better, but for now, see if we can use alu_hi to
                 // to output the constant and use that instead
                 locals.emplace("--output--", LocalVar("--output--", false, LocalVar::ALUHI));
-                action->action.push_back(new IR::MAU::Instruction(
-                        "alu_a", new IR::MAU::SaluReg(k->type, "hi", true), k));
+                if (predicate)
+                    action->action.push_back(new IR::MAU::Instruction(
+                            "alu_a", predicate, new IR::MAU::SaluReg(k->type, "hi", true), k));
+                else
+                    action->action.push_back(new IR::MAU::Instruction(
+                            "alu_a", new IR::MAU::SaluReg(k->type, "hi", true), k));
                 LOG3("  add " << *action->action.back());
                 operands.at(0) = new IR::MAU::SaluReg(k->type, "alu_hi", true);
             } else {
                 error("%s: can't output a constant from a register action",
                       operands.at(0)->srcInfo); } }
-        if (predicate)
-            operands.insert(operands.begin(), predicate);
-        rv = output = new IR::MAU::Instruction(opcode, operands);
+        setup_output(outputs, output_index, predicate, operands);
+        rv = outputs[output_index];
         break;
     default:
         BUG("Invalid etype");
@@ -605,14 +646,18 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Variable *v) {
 
 std::map<std::pair<cstring, cstring>, std::vector<CreateSaluInstruction::param_t>>
 CreateSaluInstruction::function_param_types = {
-    {{ "RegisterAction", "apply" },     { param_t::VALUE, param_t::OUTPUT }},
-    {{ "RegisterAction", "overflow" },  { param_t::VALUE, param_t::OUTPUT }},
-    {{ "RegisterAction", "underflow" }, { param_t::VALUE, param_t::OUTPUT }},
+    {{ "RegisterAction", "apply" },     { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+                                          param_t::OUTPUT, param_t::OUTPUT }},
+    {{ "RegisterAction", "overflow" },  { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+                                          param_t::OUTPUT, param_t::OUTPUT }},
+    {{ "RegisterAction", "underflow" }, { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+                                          param_t::OUTPUT, param_t::OUTPUT }},
 #ifdef HAVE_JBAY
     {{ "LearnAction", "apply" },        { param_t::VALUE, param_t::HASH, param_t::LEARN,
                                           param_t::MATCH }},
 #endif
-    {{ "selector_action", "apply" },    { param_t::VALUE, param_t::OUTPUT }}
+    {{ "selector_action", "apply" },    { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+                                          param_t::OUTPUT, param_t::OUTPUT }}
 };
 
 bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {

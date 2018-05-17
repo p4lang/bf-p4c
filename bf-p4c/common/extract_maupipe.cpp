@@ -63,8 +63,12 @@ class ConvertMethodCall : public MauTransform {
             recv = bi->appliedTo;
         } else if (auto em = mi->to<P4::ExternMethod>()) {
             name = em->actualExternType->name + "." + em->method->name;
-            auto n = em->object->getNode();
-            recv = new IR::GlobalRef(typeMap->getType(n), n);
+            auto mem = mc->method->to<IR::Member>();
+            if (mem && mem->expr->is<IR::This>()) {
+                recv = mem->expr;
+            } else {
+                auto n = em->object->getNode();
+                recv = new IR::GlobalRef(typeMap->getType(n), n); }
         } else if (auto ef = mi->to<P4::ExternFunction>()) {
             name = ef->method->name;
         } else {

@@ -476,6 +476,7 @@ void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
     // data bus.  Action data bus allocation could properly be optimized a lot more before this
     // choice would have to be made
     auto uses = lc.get_action_formats(tbl);
+    BUG_CHECK(!uses.empty(), "no uses?");
     auto &use = uses.back();
     IR::MAU::Table::Layout layout = tbl->layout;
     layout.immediate_bits = use.immediate_bits();

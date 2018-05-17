@@ -560,12 +560,9 @@ Instruction *CmpOP::pass1(Table *tbl_, Table::Actions::Action *act) {
 //Output ALU instruction
 struct OutOP : public SaluInstruction {
     struct Decode : public Instruction::Decode {
-        static const int min_ops = 2;
-        static const int max_ops = 3;
         Decode(const char *n) : Instruction::Decode(n, STATEFUL_ALU) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
-        void check_num_ops(int lineno, const VECTOR(value_t) &op) const;
     };
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
     int output_mux;
@@ -590,19 +587,10 @@ bool OutOP::equiv(Instruction *a_) {
                 && slot == a->slot && output_mux == a->output_mux;
     return false;
 }
-void OutOP::Decode::check_num_ops(int lineno, const VECTOR(value_t) &op) const {
-    //FIXME: Mechanism to print more detail on expected instruction format
-    //and allowed operands values
-    if (op.size > max_ops)
-        error(lineno, "too many operands for %s instruction", op[0].s);
-    if (op.size < min_ops)
-        error(lineno, "too few operands for %s instruction", op[0].s);
-}
 
 Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                    const VECTOR(value_t) &op) const {
     OutOP *rv = new OutOP(this, op[0].lineno);
-    check_num_ops(rv->lineno, op);
     int idx = 1;
     // Check optional predicate operand
     if (idx < op.size) {
@@ -640,7 +628,13 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
         SWITCH_FOREACH_TARGET(options.target, rv->decode_output_mux(TARGET(), op[idx]); );
         if (rv->output_mux < 0)
             error(op[idx].lineno, "invalid operand '%s' for '%s' instruction",
-                  value_desc(op[idx]), op[0].s); }
+                  value_desc(op[idx]), op[0].s);
+        idx++;
+    } else
+        error(rv->lineno, "too few operands for %s instruction", op[0].s);
+    if (idx < op.size)
+        error(rv->lineno, "too many operands for %s instruction", op[0].s);
+
     return rv;
 }
 

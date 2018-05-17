@@ -11,6 +11,9 @@ parser egressParser(packet_in packet, out headers hdr, out metadata meta,
                     out egress_intrinsic_metadata_t eg_intr_md) {
     egress_skip_t skip;
     state start {
+#ifdef METADATA_INIT
+        METADATA_INIT(meta)
+#endif
         packet.extract(eg_intr_md);
         packet.extract(skip);
         transition accept;

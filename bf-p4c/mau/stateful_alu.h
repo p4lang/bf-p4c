@@ -10,6 +10,7 @@ struct Device::StatefulAluSpec {
     bool                        CmpMask;  // are cmp oprerands maskable?
     std::vector<cstring>        CmpUnits;
     int                         MaxSize;
+    int                         OutputWords;
 
     cstring cmpUnit(unsigned idx) const { return idx < CmpUnits.size() ? CmpUnits.at(idx) : "??"; }
 };
@@ -72,11 +73,12 @@ class CreateSaluInstruction : public Inspector {
     bool                        alu_write[2] = { false, false };
     cstring                     opcode;
     std::vector<const IR::Expression *>         operands, pred_operands;
+    int                                         output_index;
     std::vector<const IR::MAU::Instruction *>   cmp_instr;
-    const IR::Expression        *predicate = nullptr;
-    const IR::MAU::Instruction  *onebit = nullptr;        // the single 1-bit alu op
-    const IR::MAU::Instruction  *output = nullptr;
-    bool                        output_cmpl = false;
+    const IR::Expression                        *predicate = nullptr;
+    const IR::MAU::Instruction                  *onebit = nullptr;  // the single 1-bit alu op
+    bool                                        onebit_cmpl = false;  // 1-bit op needs cmpl
+    std::vector<const IR::MAU::Instruction  *>  outputs;  // add to end of action body
     IR::MAU::StatefulAlu::MathUnit      math;
     IR::MAU::SaluMathFunction   *math_function = nullptr;
     const IR::Expression        *math_input = nullptr;

@@ -21,16 +21,17 @@ class PhvInfo;
  *    - VerifyActions: Verifies that all generated instructions will be correctly understood
  *      and interpreted by the remainder of the compiler
  */
-class InstructionSelection : public MauTransform {
+class InstructionSelection : public MauTransform, TofinoWriteContext {
     PhvInfo &phv;
-    const IR::MAU::Action *af = nullptr;
+    IR::MAU::Action                     *af = nullptr;
+    IR::Vector<IR::Primitive>::iterator af_action_iter;
+    void insert_inst(const IR::MAU::Instruction *);
     class SplitInstructions;
     std::vector<const IR::Primitive *>  stateful;
 
     profile_t init_apply(const IR::Node *root) override;
     const IR::GlobalRef *preorder(IR::GlobalRef *) override;
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;
-    const IR::MAU::Action *postorder(IR::MAU::Action *) override;
     const IR::Expression *postorder(IR::Add *) override;
     const IR::Expression *postorder(IR::Sub *) override;
     const IR::Expression *postorder(IR::Shr *) override;
@@ -41,8 +42,10 @@ class InstructionSelection : public MauTransform {
     const IR::Expression *postorder(IR::Cmpl *) override;
     // const IR::Expression *postorder(IR::Cast *) override;
     const IR::Expression *postorder(IR::Mux *) override;
+    const IR::Slice *postorder(IR::Slice *) override;
     const IR::Expression *postorder(IR::BoolLiteral *) override;
-    const IR::Node *postorder(IR::Primitive *) override;
+    const IR::Expression *postorder(IR::TempVar *) override;
+    const IR::Expression *postorder(IR::Primitive *) override;
     const IR::MAU::Instruction *postorder(IR::MAU::Instruction *i) override { return i; }
 
     bool checkPHV(const IR::Expression *);
@@ -143,7 +146,7 @@ class ConvertCastToSlice : public MauTransform, P4WriteContext {
 
 class DoInstructionSelection : public PassManager {
  public:
-     explicit DoInstructionSelection(PhvInfo &);
+    explicit DoInstructionSelection(PhvInfo &);
 };
 
 #endif /* BF_P4C_MAU_INSTRUCTION_SELECTION_H_ */

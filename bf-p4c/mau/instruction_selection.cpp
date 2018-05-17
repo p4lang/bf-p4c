@@ -2,6 +2,7 @@
 #include "lib/bitops.h"
 #include "lib/safe_vector.h"
 #include "action_analysis.h"
+#include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/validate_allocation.h"
@@ -37,14 +38,6 @@ const IR::GlobalRef *InstructionSelection::preorder(IR::GlobalRef *gr) {
     return gr;
 }
 
-const IR::MAU::Action *InstructionSelection::preorder(IR::MAU::Action *af) {
-    BUG_CHECK(this->af == nullptr, "Nested action functions");
-    BUG_CHECK(stateful.empty(), "invalid state in visitor");
-    LOG2("InstructionSelection processing action " << af->name);
-    this->af = af;
-    return af;
-}
-
 class InstructionSelection::SplitInstructions : public Transform {
     IR::Vector<IR::Primitive> &split;
     const IR::Expression *postorder(IR::MAU::Instruction *inst) override {
@@ -63,8 +56,39 @@ class InstructionSelection::SplitInstructions : public Transform {
     explicit SplitInstructions(IR::Vector<IR::Primitive> &s) : split(s) {}
 };
 
-const IR::MAU::Action *InstructionSelection::postorder(IR::MAU::Action *af) {
-    BUG_CHECK(this->af == af, "Nested action functions");
+// Test to see if 'a' contains 'b' -- both expressions refer to phvs or tempvars, and b
+// is a subset or subrange of a.  Not exhaustive, so may return false.
+static bool expr_contains(const PhvInfo &phv, const IR::Expression *a, const IR::Expression *b) {
+    if (*a == *b) return true;
+    if (a->is<IR::TempVar>() || b->is<IR::TempVar>())
+        // FIXME -- trying to call phv.field on a newly created tempvar will crash
+        return false;
+    le_bitrange abits, bbits;
+    if (auto f = phv.field(a, &abits))
+        if (f == phv.field(b, &bbits) && abits.contains(bbits))
+            return true;
+    return false;
+}
+
+const IR::MAU::Action *InstructionSelection::preorder(IR::MAU::Action *af) {
+    BUG_CHECK(this->af == nullptr, "Nested action functions");
+    BUG_CHECK(stateful.empty(), "invalid state in visitor");
+    LOG2("InstructionSelection processing action " << af->name);
+    LOG5(af);
+    this->af = af;
+    prune();
+    // DANGER Custom visitor where we carefully track the iterator over the action body, so we
+    // can insert new instructions into it while iterating over it.  We carefully use this
+    // iterator and ensure that it remains valid after any insert or erase operation.
+    af_action_iter = af->action.begin();
+    while (af_action_iter != af->action.end()) {
+        const IR::Expression *prim = *af_action_iter;
+        visit(prim, "action");
+        if (prim && (*af_action_iter = prim->to<IR::Primitive>()))
+            ++af_action_iter;
+        else
+            af_action_iter = af->action.erase(af_action_iter); }
+    BUG_CHECK(this->af == af, "Action function corrupted");
     this->af = nullptr;
     IR::Vector<IR::Primitive> split;
     for (auto *p : af->action)
@@ -73,7 +97,25 @@ const IR::MAU::Action *InstructionSelection::postorder(IR::MAU::Action *af) {
         af->action = std::move(split);
     af->stateful.append(stateful);
     stateful.clear();
+    // remove instructions that are later overwritten in the same action
+    // FIXME -- should be a separate pass in DoInstructionSelection after InstructionSelection?
+    for (auto it = af->action.begin(); it != af->action.end();) {
+        bool overwritten = false;
+        for (auto it2 = it + 1; it2 != af->action.end(); ++it2) {
+            if (expr_contains(phv, (*it2)->operands.at(0), (*it)->operands.at(0))) {
+                overwritten = true;
+                break; } }
+        if (overwritten)
+            it = af->action.erase(it);
+        else
+            ++it; }
+    LOG5("after instruction_selection:\n" << af);
     return af;
+}
+
+void InstructionSelection::insert_inst(const IR::MAU::Instruction *inst) {
+    af_action_iter = af->action.insert(af_action_iter, inst);
+    ++af_action_iter;
 }
 
 bool InstructionSelection::checkPHV(const IR::Expression *e) {
@@ -245,6 +287,29 @@ const IR::Expression *InstructionSelection::postorder(IR::Mux *e) {
     return e;
 }
 
+const IR::Slice *InstructionSelection::postorder(IR::Slice *sl) {
+    if (auto expr = sl->e0->to<IR::Slice>()) {
+        sl->e0 = expr->e0;
+        sl->e1 = new IR::Constant(sl->getH() + expr->getL());
+        sl->e2 = new IR::Constant(sl->getL() + expr->getL());
+        BUG_CHECK(int(sl->getH()) < sl->e0->type->width_bits(), "invalid slice on slice"); }
+    return sl;
+}
+
+const IR::Expression *InstructionSelection::postorder(IR::TempVar *e) {
+    // Look for previous sets to the tempvar and copy-prop them.
+    // FIXME -- should be a separate pass in DoInstructionSelection after InstructionSelection?
+    visitAgain();
+    if (!af || isWrite()) return e;
+    const IR::Expression *rv = e;
+    for (auto it = af->action.begin(); it != af_action_iter; ++it) {
+        const auto *prim = *it;
+        if (prim->name == "set" && *prim->operands.at(0) == *e) {
+            LOG3("forwarding assignment to " << e);
+            rv = prim->operands.at(1); } }
+    return rv;
+}
+
 static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
                                                 const IR::Expression *dest) {
     if (auto *c = in->to<IR::Cast>())
@@ -269,7 +334,7 @@ static const IR::Primitive *makeDepositField(IR::Primitive *prim, long) {
     return prim;
 }
 
-const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
+const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
     if (!af) return prim;
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
     auto dot = prim->name.find('.');
@@ -312,16 +377,16 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
                                                      "ingress_intrinsic_metadata",
                                                      "ingress_port");
 
-            auto s1 = new IR::MAU::Instruction(prim->srcInfo, "set",
-                          MakeSlice(egress_spec, 0, 6),
-                          MakeSlice(prim->operands.at(0), 0, 6));
-            auto s2 = new IR::MAU::Instruction(prim->srcInfo, "set",
-                          MakeSlice(egress_spec, 7, 8),
-                          MakeSlice(ingress_port, 7, 8));
-            return new IR::Vector<IR::Expression>({s1, s2}); }
+            insert_inst(new IR::MAU::Instruction(prim->srcInfo, "set",
+                                  MakeSlice(egress_spec, 0, 6),
+                                  MakeSlice(prim->operands.at(0), 0, 6)));
+            return new IR::MAU::Instruction(prim->srcInfo, "set",
+                                  MakeSlice(egress_spec, 7, 8),
+                                  MakeSlice(ingress_port, 7, 8)); }
     } else if (objType == "RegisterAction" || objType == "LearnAction" ||
                objType == "selector_action") {
-        bool direct_access = (prim->operands.size() == 1 && method == "execute");
+        bool direct_access = (prim->operands.size() == 1 && method == "execute") ||
+                             method == "execute_direct";
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
         if (!direct_access || salu->instruction.size() > 1)
@@ -329,6 +394,12 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
         if (objType == "RegisterAction" && salu->direct != direct_access)
             error("%s: %sdirect access to %sdirect register", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");
+        int bit = 32;
+        unsigned idx = method == "execute_direct" ? 1 : 2;
+        for (; idx < prim->operands.size(); ++idx, bit += 32) {
+            insert_inst(new IR::MAU::Instruction(prim->srcInfo, "set", prim->operands[idx],
+                MakeSlice(new IR::MAU::AttachedOutput(IR::Type::Bits::get(bit+32), salu),
+                          bit, bit+31))); }
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
                                         new IR::MAU::AttachedOutput(prim->type, salu));
     } else if (prim->name == "Counter.count") {
@@ -362,16 +433,13 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
                 if (constant->asInt() != 0)
                     error("%s: The initial offset for a hash "
                           "calculation function has to be zero %s",
-                          prim->srcInfo, *prim);
-            }
-
-            if (prim->operands[3]->to<IR::Constant>()) {
-                size = bitcount(prim->operands[3]->to<IR::Constant>()->asLong() - 1);
-                if ((1LL << size) != prim->operands[3]->to<IR::Constant>()->asLong())
-                    error("%s: The hash offset must be a power of 2 in a hash calculation %s",
-                          prim->srcInfo, *prim);
-            }
-        }
+                          prim->srcInfo, *prim); }
+            if (auto *constant = prim->operands[3]->to<IR::Constant>()) {
+                if (constant->asLong() != 0) {
+                    size = bitcount(constant->asLong() - 1);
+                    if ((1LL << size) != constant->asLong())
+                        error("%s: The hash offset must be a power of 2 in a hash calculation %s",
+                              prim->srcInfo, *prim); } } }
 
         IR::MAU::hash_function algorithm;
         if (!algorithm.setup(decl->arguments->at(0)->expression))
@@ -533,16 +601,17 @@ IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const IR::Expressio
  */
 const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expression *expr,
                                                                const IR::Primitive *prim) {
-    if (auto *c = expr->to<IR::Cast>())
-        return find_hash_dist(c->expr, prim);
-    const IR::MAU::HashDist *hd = nullptr;
-
-    auto tv = expr->to<IR::TempVar>();
-    if (tv != nullptr && stateful_alu_from_hash_dists.count(tv->name)) {
-        hd = stateful_alu_from_hash_dists.at(tv->name);
-    } else if (phv.field(expr)) {
-        hd = create_hash_dist(expr, prim);
-    }
+    while (auto *c = expr->to<IR::Cast>())
+        expr = c->expr;
+    const IR::MAU::HashDist *hd = expr->to<IR::MAU::HashDist>();
+    if (!hd) {
+        // FIXME -- is this needed?  TempVar folding (InstructionSelection::postorder(TempVar))
+        // should alway fold away the TempVar, making this refer to the HashDist directly
+        auto tv = expr->to<IR::TempVar>();
+        if (tv != nullptr && stateful_alu_from_hash_dists.count(tv->name)) {
+            hd = stateful_alu_from_hash_dists.at(tv->name);
+        } else if (phv.field(expr)) {
+            hd = create_hash_dist(expr, prim); } }
     return hd;
 }
 

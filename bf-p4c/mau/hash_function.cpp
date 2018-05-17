@@ -28,6 +28,33 @@ bool IR::MAU::hash_function::setup(const IR::Expression *e) {
         } else {
             return false; }
         return true; }
+    if (auto k = e->to<IR::Constant>()) {
+        // Hash contructor calls will have the enum converted to an int const by
+        // ConvertEnums in the midend.  Would be better if they didn't.
+        // DANGER -- these values need to match up with the order of the hash tags
+        // in the arch.p4 header file.
+        switch (k->asInt()) {
+        case 0:
+            type = IDENTITY;
+            return true;
+        case 1:
+            type = RANDOM;
+            return true;
+        case 2:
+            type = CRC;
+            size = 16;
+            poly = 0x8fdb;
+            return true;
+        case 3:
+            type = CRC;
+            size = 32;
+            poly = 0xe89061db;
+            return true;
+        case 4:
+            type = CSUM;
+            return true;
+        default:
+            return false; } }
     const IR::Vector<IR::Argument> *crcargs = nullptr;
     if (auto mc = e->to<IR::MethodCallExpression>()) {
         if (auto meth = mc->method->to<IR::PathExpression>())

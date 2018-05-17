@@ -58,6 +58,9 @@ parser ingressParser(packet_in packet, out headers hdr, out metadata meta,
                      out ingress_intrinsic_metadata_t ig_intr_md) {
     ingress_skip_t skip;
     state start {
+#ifdef METADATA_INIT
+        METADATA_INIT(meta)
+#endif
         packet.extract(ig_intr_md);
         transition skip_skip;
     }

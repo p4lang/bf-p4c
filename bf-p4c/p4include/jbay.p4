@@ -584,8 +584,10 @@ extern RegisterParam<T> {
 
 extern RegisterAction<T, U> {
     RegisterAction(Register<T> reg);
-    abstract void apply(inout T value, @optional out U rv);
-    U execute(@optional in bit<32> index); /* {
+    abstract void apply(inout T value, @optional out U rv1, @optional out U rv2,
+                                       @optional out U rv3, @optional out U rv4);
+    U execute<H>(@optional in H index, @optional out U rv2,
+                 @optional out U rv3, @optional out U rv4); /* {
         U rv;
         T value = reg.read(index);
         apply(value, rv);
@@ -597,8 +599,13 @@ extern RegisterAction<T, U> {
     U dequeue();  /* fifo push operation */
     U push();  /* stack push operation */
     U pop();  /* stack pop operation */
-    @optional abstract void overflow(@optional inout T value, @optional out U rv);
-    @optional abstract void underflow(@optional inout T value, @optional out U rv);
+    U address(); /* return the match address */
+    @optional abstract void overflow(@optional inout T value,
+                                     @optional out U rv1, @optional out U rv2,
+                                     @optional out U rv3, @optional out U rv4);
+    @optional abstract void underflow(@optional inout T value,
+                                      @optional out U rv1, @optional out U rv2,
+                                      @optional out U rv3, @optional out U rv4);
 }
 
 extern LearnAction<T, D, U> {

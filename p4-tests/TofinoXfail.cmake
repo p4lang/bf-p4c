@@ -567,11 +567,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue430-1-bmv2.p4
   )
 
-# bug in instruction selection
-p4c_add_xfail_reason("tofino"
-  "visitor returned invalid type Cast"
-  testdata/p4_16_samples/issue430-bmv2.p4
-  )
 p4c_add_xfail_reason("tofino"
   "warning: : Currently the Barefoot HW compiler cannot handle any non direct assignment instruction that has missized rvalues"
   extensions/p4_tests/p4_16/cast_narrowing_add.p4
@@ -971,10 +966,10 @@ p4c_add_xfail_reason("tofino"
 # to the same field in the same action.  However, in this case the sources are
 # constants, which could theoretically be merged into one write by the
 # compiler.
-p4c_add_xfail_reason("tofino"
-  "Field .* written to more than once in action .*"
-  testdata/p4_16_samples/slice-def-use1.p4
-  )
+#p4c_add_xfail_reason("tofino"
+#  "Field .* written to more than once in action .*"
+#  testdata/p4_16_samples/slice-def-use1.p4
+#  )
 
 p4c_add_xfail_reason("tofino"
   "error: Can't find .* on the input xbar"
@@ -1079,10 +1074,10 @@ p4c_add_xfail_reason("tofino"
 )
 
 # BRIG-655
-p4c_add_xfail_reason("tofino"
-  "Incorrectly overlapping action data when setting slot bits."
-  extensions/p4_tests/p4_14/p4smith_regression/laymen_0.p4
-)
+#p4c_add_xfail_reason("tofino"
+#  "Incorrectly overlapping action data when setting slot bits."
+#  extensions/p4_tests/p4_14/p4smith_regression/laymen_0.p4
+#)
 
 # BRIG-677
 # error: MAU::TableSeq: duplicated name (MAU::TableSeq is previous instance)
@@ -1138,10 +1133,10 @@ p4c_add_xfail_reason("tofino"
 )
 
 # BRIG-681
-p4c_add_xfail_reason("tofino"
-  "set requires 2 operands"
-  extensions/p4_tests/p4_14/p4smith_regression/faecess_0.p4
-)
+#p4c_add_xfail_reason("tofino"
+#  "set requires 2 operands"
+#  extensions/p4_tests/p4_14/p4smith_regression/faecess_0.p4
+#)
 
 # BRIG-584
 p4c_add_xfail_reason("tofino"
