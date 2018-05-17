@@ -56,6 +56,30 @@ class GatherPhase0Fields : public Inspector {
          : phv(p), phase0Fields(f) { }
 };
 
+/// This class identifies all metadata fields that have alignment constraints due to initialization
+/// by ComputedRVals in the parser.
+class GatherParserExtracts : public Inspector {
+ private:
+    const PhvInfo& phv;
+    /// Map of all fields with alignment constraints due to initialization in the parser with values
+    /// being the field they are initialized to.
+    ordered_map<const PHV::Field*, const PHV::Field*>& parserAlignedFields;
+    static constexpr char const *FIELD_PREFIX = "ingress::^bridged_metadata";
+
+    profile_t init_apply(const IR::Node* root) override {
+        parserAlignedFields.clear();
+        return Inspector::init_apply(root);
+    }
+
+    bool preorder(const IR::BFN::Extract* e) override;
+
+ public:
+    explicit GatherParserExtracts(
+            const PhvInfo& p,
+            ordered_map<const PHV::Field*, const PHV::Field*>& f)
+        : phv(p), parserAlignedFields(f) { }
+};
+
 /// This class analyzes all bridged metadata headers, which until this point, insert padding to byte
 /// alignment after every nonbyte aligned bridged metadata field. This pass takes into account
 /// action-related as well as some alignment related constraints (such as deparser_bottom_bits() set
@@ -86,6 +110,8 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
     const ordered_set<const PHV::Field*>& phase0Fields;
     /// Set of all fields used as deparser parameters.
     const ordered_set<const PHV::Field*>& deparserParams;
+    /// Set of all fields with alignment constraints induced by the parser.
+    const ordered_map<const PHV::Field*, const PHV::Field*>& parserAlignedFields;
 
     /// Map of original egress field name to the field name in the egress bridged metadata header.
     /// E.g. egress::ingress_metadata.ingress_port is the original backend name for a field, and
@@ -135,9 +161,10 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
             const ActionPhvConstraints& a,
             SymBitMatrix& s,
             const ordered_set<const PHV::Field*>& z,
-            const ordered_set<const PHV::Field*>& d)
-        : phv(p), fields(f), actionConstraints(a), doNotPack(s), phase0Fields(z), deparserParams(d)
-    { }
+            const ordered_set<const PHV::Field*>& d,
+            const ordered_map<const PHV::Field*, const PHV::Field*>& pa)
+        : phv(p), fields(f), actionConstraints(a), doNotPack(s), phase0Fields(z), deparserParams(d),
+          parserAlignedFields(pa) { }
 
     /// @returns the backend name of the field, given the @header and the the @field.
     /// This performs a simple string concatenation.
@@ -226,15 +253,16 @@ class ReplaceBridgedMetadataUses : public Transform {
 
 class BridgedMetadataPacking : public PassManager {
  private:
-    CollectBridgedFields&               bridgedFields;
-    PackConflicts                       packConflicts;
-    ActionPhvConstraints                actionConstraints;
-    PackBridgedMetadata                 packMetadata;
-    SymBitMatrix                        doNotPack;
-    TablesMutuallyExclusive             tMutex;
-    ActionMutuallyExclusive             aMutex;
-    ordered_set<const PHV::Field*>      phase0Fields;
-    ordered_set<const PHV::Field*>      deparserParams;
+    CollectBridgedFields&                               bridgedFields;
+    PackConflicts                                       packConflicts;
+    ActionPhvConstraints                                actionConstraints;
+    PackBridgedMetadata                                 packMetadata;
+    SymBitMatrix                                        doNotPack;
+    TablesMutuallyExclusive                             tMutex;
+    ActionMutuallyExclusive                             aMutex;
+    ordered_set<const PHV::Field*>                      phase0Fields;
+    ordered_set<const PHV::Field*>                      deparserParams;
+    ordered_map<const PHV::Field*, const PHV::Field*>   parserAlignedFields;
 
  public:
     explicit BridgedMetadataPacking(

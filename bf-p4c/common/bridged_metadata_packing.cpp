@@ -34,6 +34,21 @@ bool GatherPhase0Fields::preorder(const IR::BFN::ParserState* p) {
     return true;
 }
 
+bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
+    auto* fieldLVal = e->dest->to<IR::BFN::FieldLVal>();
+    if (!fieldLVal) return true;
+    auto* f = phv.field(fieldLVal->field);
+    if (!f) return true;
+    if (!f->name.startsWith(FIELD_PREFIX)) return true;
+    auto* source = e->source->to<IR::BFN::ComputedRVal>();
+    if (!source) return true;
+    auto* sourceField = phv.field(source->source);
+    if (!sourceField) return true;
+    parserAlignedFields[f] = sourceField;
+    LOG5("    Initialization due to ComputedRVal in parser: " << f);
+    return true;
+}
+
 cstring PackBridgedMetadata::getEgressFieldName(cstring ingressName) {
     if (!ingressName.startsWith(INGRESS_FIELD_PREFIX)) {
         BUG("Called getEgressFieldName on ingress fieldname %1%", ingressName);
@@ -70,7 +85,7 @@ Visitor::profile_t PackBridgedMetadata::init_apply(const IR::Node* root) {
     if (LOGGING(3)) {
         LOG3("\nPrinting egress bridged to external");
         for (auto kv : egressBridgedMap)
-            LOG1(kv.first << "\t" << kv.second); }
+            LOG3(kv.first << "\t" << kv.second); }
 
     return Transform::init_apply(root);
 }
@@ -179,6 +194,14 @@ void PackBridgedMetadata::determineAlignmentConstraints(
         cstring fieldName = getFieldName(h, structField);
         const auto* field = phv.field(fieldName);
         BUG_CHECK(field, "No field named %1% found", fieldName);
+        // If this field is initialized by a ComputedRVal expression in the parser, then consider it
+        // as having alignment constraints.
+        if (parserAlignedFields.count(field)) {
+            alignmentConstraints.insert(structField);
+            LOG4("\t  Field " << field << " in parser aligned fields.");
+        } else {
+            LOG4("\t  Field " << field << " not in parser aligned fields.");
+        }
         // Also summarize the egress version of this field, as alignment constraints may be induced
         // by uses of the egress version of the bridged field.
         cstring egressFieldName = getNonBridgedEgressFieldName(fieldName);
@@ -320,8 +343,34 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
         LOG3("\t  Trying to pack fields with " << tempField->name);
         if (deparserParams.count(tempField))
             hasDeparserParam = true;
+        // If this has alignment constraints due to the parser, ensure we pad it correctly.
+        int alignment;
+        ordered_set<const IR::StructField*> addedPadding;
+        if (parserAlignedFields.count(tempField)) {
+            const PHV::Field* source = parserAlignedFields.at(tempField);
+            if (source->alignment) {
+                LOG4("\t\tAlignment constraint on " << tempField << " : " << *(source->alignment) <<
+                     " " << source->alignment->littleEndian);
+                int postPadding = source->alignment->littleEndian;
+                // Ignore postPadding if the alignment is at little endian 0th bit.
+                if (postPadding != 0) {
+                    cstring padFieldName = "__pad_" + cstring::to_cstring(padFieldId++);
+                    auto* fieldAnnotations = new IR::Annotations({new
+                                                 IR::Annotation(IR::ID("hidden"), { }) });
+                    const IR::StructField* padding = new IR::StructField(padFieldName,
+                                            fieldAnnotations, IR::Type::Bits::get(postPadding));
+                    fieldsPackedTogether.push_back(padding);
+                    addedPadding.insert(padding);
+                    LOG3("Pushing padding field " << padding->name << " of type " <<
+                            padding->type->width_bits() << "b.");
+                }
+                alignment = getAlignment(postPadding + f1->type->width_bits());
+            } else {
+                LOG4("\t\tNo alignment constraint on " << tempField);
+                alignment = getAlignment(f1->type->width_bits());
+            }
+        }
 
-        int alignment = getAlignment(f1->type->width_bits());
         // Find other fields to be packed together with field @f1.
         // As nonByteAlignedFields is sorted in increasing order of width, we start looking from the
         // end of the vector to find the largest field that could fit within that byte.
@@ -356,6 +405,7 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
                     hasDeparserParam = true;
                 // Check against all fields already packed together
                 for (auto* candidate2 : fieldsPackedTogether) {
+                    if (addedPadding.count(candidate2)) continue;
                     cstring candidateName2 = getFieldName(h, candidate2);
                     const auto* candidateField2 = phv.field(candidateName2);
                     if (doNotPack(candidateField->id, candidateField2->id))
@@ -375,11 +425,12 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
             cstring padFieldName = "__pad_" + cstring::to_cstring(padFieldId++);
             auto* fieldAnnotations = new IR::Annotations({new IR::Annotation(IR::ID("hidden"), { })
                                                         });
-            const IR::StructField* padding = new IR::StructField(padFieldName, fieldAnnotations,
+            const IR::StructField* prePadding = new IR::StructField(padFieldName, fieldAnnotations,
                                                                  IR::Type::Bits::get(alignment));
-            fields.push_back(padding);
-            LOG4("Pushing padding field " << padding->name << " of type " <<
-                 padding->type->width_bits() << "b."); }
+            fields.push_back(prePadding);
+            LOG4("Pushing padding field " << prePadding->name << " of type " <<
+                 prePadding->type->width_bits() << "b.");
+        }
 
         // Ensure that any bridged field used as a deparser parameter will be packed accordingly.
         // Note that there is only one such field in every fieldsPackedTogether set.
@@ -393,7 +444,7 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
                     return false;
                 if (!deparserParams.count(fieldA) && deparserParams.count(fieldB))
                     return true;
-                return aName < bName;
+                return false;
         });
 
         for (auto it = fieldsPackedTogether.begin(); it != fieldsPackedTogether.end(); ++it) {
@@ -551,7 +602,8 @@ BridgedMetadataPacking::BridgedMetadataPacking(
     : bridgedFields(b),
       packConflicts(p, dg, tMutex, alloc, aMutex),
       actionConstraints(p, packConflicts),
-      packMetadata(p, b, actionConstraints, doNotPack, phase0Fields, deparserParams) {
+      packMetadata(p, b, actionConstraints, doNotPack, phase0Fields, deparserParams,
+                   parserAlignedFields) {
           addPasses({
               &bridgedFields,
               new ReplaceOriginalFieldWithBridged(p, bridgedFields),
@@ -562,6 +614,7 @@ BridgedMetadataPacking::BridgedMetadataPacking(
               &actionConstraints,
               new GatherDeparserParameters(p, deparserParams),
               new GatherPhase0Fields(p, phase0Fields),
+              new GatherParserExtracts(p, parserAlignedFields),
               &packMetadata,
               new ReplaceBridgedMetadataUses(p, packMetadata, bridgedFields)
           });
