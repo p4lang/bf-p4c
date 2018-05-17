@@ -35,6 +35,7 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
         "xnor"
     };
     bool is_move_op = move_based_ops.count(inst->name);
+    bool is_salu_op = (findContext<IR::MAU::SaluAction>() != nullptr);
 
     // SALU operands have special constraints.
     bool has_reg_operand = false;
@@ -51,7 +52,8 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
         if (dst_i) {
             // insert operation in field.operations with tuple3<operation, mode>
             // most of the information in the tuple is for debugging purpose
-            auto op = PHV::FieldOperation(is_move_op, inst->name, PHV::FieldAccessType::W);
+            auto op = PHV::FieldOperation(is_move_op, is_salu_op,
+                                          inst->name, PHV::FieldAccessType::W);
             dst_i->operations().push_back(op);
             dst_size = dest_bits.size(); }
 
@@ -69,7 +71,7 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
                     if (auto* slice = (*operand)->to<IR::Slice>()) {
                         le_bitrange range = le_bitrange(slice->getL(), slice->getH());
                         auto op =
-                            PHV::FieldOperation(is_move_op, inst->name,
+                            PHV::FieldOperation(is_move_op, is_salu_op, inst->name,
                                                 PHV::FieldAccessType::R, range);
                         field->operations().push_back(op);
                         LOG5("Found sliced field, field = " << field << " at " << range);
@@ -78,12 +80,12 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
                     } else if (dst_size > 0 && dst_size < field->size) {
                         le_bitrange range(StartLen(0, dst_size));
                         auto op =
-                            PHV::FieldOperation(is_move_op, inst->name,
+                            PHV::FieldOperation(is_move_op, is_salu_op, inst->name,
                                                 PHV::FieldAccessType::R, range);
                         field->operations().push_back(op);
                         LOG5("Found implicitly sliced field = " << field << " at " << range);
                     } else {
-                        auto op = PHV::FieldOperation(is_move_op, inst->name,
+                        auto op = PHV::FieldOperation(is_move_op, is_salu_op, inst->name,
                                                       PHV::FieldAccessType::R);
                         field->operations().push_back(op);
                         LOG5("Found non-sliced field, field = " << field);
@@ -124,10 +126,9 @@ void PHV_Field_Operations::end_apply() {
     LOG3("..........Begin PHV_Field_Operations..........");
     for (auto &f : phv) {
         for (auto &op : f.operations()) {
-            bool is_move_op = op.is_move_op;
             bool is_write = op.rw_type == PHV::FieldAccessType::W
                             || op.rw_type == PHV::FieldAccessType::RW;
-            if (!is_move_op) {
+            if (!op.is_move_op && !op.is_salu_op) {
                 // Apply no_pack constraint on carry-based operation. If sliced,
                 // apply on the slice only.
                 // If f can't be split but is larger than 32 bits, report an error.

@@ -1074,7 +1074,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
             // starting offset.
             if (!valid_start_options->getbit(le_offset)) {
                 LOG5("    ...but slice list requires slice to start at " << le_offset <<
-                     " which its cluster cannot support");
+                     " which its cluster cannot support: " << slice);
                 return boost::none; }
 
             // Return if the slice is part of another slice list but was previously

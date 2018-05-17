@@ -65,12 +65,14 @@ enum class FieldAccessType { NONE = 0, R = 1, W = 2, RW = 3 };
 
 struct FieldOperation {
     bool is_move_op;
+    bool is_salu_op;
     cstring inst_name;
     FieldAccessType rw_type;
     boost::optional<le_bitrange> range;  // if only part of the field is involved
-    FieldOperation(bool is_move_op, cstring inst_name, FieldAccessType rw_type,
+    FieldOperation(bool is_move_op, bool is_salu_op, cstring inst_name, FieldAccessType rw_type,
                   boost::optional<le_bitrange> range = boost::none)
-        : is_move_op(is_move_op), inst_name(inst_name), rw_type(rw_type), range(range) { }
+        : is_move_op(is_move_op), is_salu_op(is_salu_op),
+          inst_name(inst_name), rw_type(rw_type), range(range) { }
 };
 
 class Field {

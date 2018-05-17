@@ -1394,8 +1394,11 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
         int offset = 0;
         for (auto* list : sc->slice_lists()) {
             int size = 0;
+            bool has_exact_containers = false;
             // Always require a split at the beginning of a slice with deparsed_bottom_bits.
             for (auto& slice : *list) {
+                if (slice.field()->exact_containers())
+                    has_exact_containers = true;
                 if (slice.field()->deparsed_bottom_bits() && slice.range().lo == 0 && size > 0) {
                     // XXX(cole): 'BUG_CHECK' here might be too strong.
                     BUG_CHECK(size % 8 == 0, "Can't slice on field %1% in slice list %2% "
@@ -1412,6 +1415,8 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
             // cannot be sliced, which is reflected in bits_needed == 0.
             int bits_needed = size / 8 - (1 - bool(size % 8));
             ranges_i[list] = StartLen(offset, bits_needed);
+            if (has_exact_containers)
+                exact_containers_i.setrange(offset, bits_needed);
             offset += bits_needed;
             boundaries_i.setbit(offset);
             LOG5("    ...slice list (" << size << "b) with compressed bitvec size "
@@ -1456,7 +1461,8 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
         PHV::enforce_container_sizes(compressed_schemas_i,
                                      sentinel_idx_i,
                                      boundaries_i,
-                                     required_slices_i);
+                                     required_slices_i,
+                                     exact_containers_i);
     } else {
         // In this case, there are no slice lists, and the SuperCluster
         // contains a single RotationalCluster.  We will try all slicings of
@@ -1920,7 +1926,8 @@ PHV::SlicingIterator PHV::SlicingIterator::operator++() {
         PHV::enforce_container_sizes(compressed_schemas_i,
                                      sentinel_idx_i,
                                      boundaries_i,
-                                     required_slices_i);
+                                     required_slices_i,
+                                     exact_containers_i);
 
         // Stop if we find a valid slicing.
         if (auto res = get_slices()) {
@@ -1946,7 +1953,8 @@ inline void enforce_container_sizes(
         bitvec& bv,
         int sentinel,
         const bitvec& boundaries,
-        const bitvec& required) {
+        const bitvec& required,
+        const bitvec& exact_containers) {
     // Eagerly break invalid sequences of zeroes.  See comment in utils.h.
     // NB: Because we're walking backwards, boundaries[i] is true for the last
     // bit of each range, eg. boundaries[i] implies that the *next* bit (i-1)
@@ -1965,7 +1973,7 @@ inline void enforce_container_sizes(
             // Look ahead to see if the next bit is a breaking point.
             bool break_next = i == 0 || boundaries[i] || bv[i-1];
 
-            if ((break_next && zeroes == 2) || zeroes > 3) {
+            if ((break_next && zeroes == 2 && exact_containers[i]) || zeroes > 3) {
                 state = SETTING;
                 zeroes = 0;
                 bv.setbit(i); }
@@ -1983,7 +1991,7 @@ inline void enforce_container_sizes(
                 zeroes = 0; }
 
             bool at_last_bit = i == 0 || boundaries[i];
-            if (zeroes > 3 || (zeroes == 2 && at_last_bit)) {
+            if (zeroes > 3 || (zeroes == 2 && at_last_bit && exact_containers[i])) {
                 bv.setbit(i);
                 zeroes = 0; }
 

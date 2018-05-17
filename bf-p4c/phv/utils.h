@@ -957,6 +957,10 @@ void inc(bitvec& bv);
  *
  * This is the smallest number with groups of zero, one, or three zeroes.
  *
+ * Slice lists that do not have the 'exact_containers' constraint can be sliced
+ * into 24b sizes, i.e. can container sequences of two zeroes, but not more
+ * than three.
+ *
  * @param bv the bitvec of slice positions.
  *
  * @param sentinel is the size of the entire bitvec, including leading zeroes.
@@ -968,13 +972,17 @@ void inc(bitvec& bv);
  *
  * @param required marks required slices, i.e. bits that cannot be zero.
  *
+ * @param exact_containers marks which bits in @bv correspond to slice lists
+ * which require exact containers, i.e. cannot contain sequences of two zeroes.
+ *
  * @warning this mutates @bv by reference.
  */
 void enforce_container_sizes(
     bitvec& bv,
     int sentinel,
     const bitvec& boundaries,
-    const bitvec& required);
+    const bitvec& required,
+    const bitvec& exact_containers);
 
 /** A custom forward iterator that walks through all possible slicings of a
  * SuperCluster.
@@ -986,6 +994,7 @@ class SlicingIterator {
     bitvec boundaries_i;
     bitvec required_slices_i;
     ordered_map<PHV::SuperCluster::SliceList*, le_bitrange> ranges_i;
+    bitvec exact_containers_i;
     int sentinel_idx_i;
     std::list<PHV::SuperCluster*> cached_i;
 
