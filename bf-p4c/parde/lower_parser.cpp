@@ -1326,9 +1326,6 @@ leftShiftExtract(T* primitive, int byteDelta) {
     if (!bufferSource) return primitive;
 
     auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
-#if WORKAROUND_BRIG_640
-    if (shiftedRange.lo < 0) shiftedRange.lo = 0;
-#endif
     BUG_CHECK(shiftedRange.lo >= 0, "Shifting extract to negative position.");
     auto* clone = primitive->clone();
     clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
@@ -1341,9 +1338,6 @@ const IR::BFN::LoweredSave*
 leftShiftSave(const IR::BFN::LoweredSave* save, int byteDelta) {
     auto* bufferSource = save->source;
     auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
-#if WORKAROUND_BRIG_640
-    if (shiftedRange.lo < 0) shiftedRange.lo = 0;
-#endif
     BUG_CHECK(shiftedRange.lo >= 0, "Shifting save to negative position.");
     auto* clone = save->clone();
     clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
@@ -1404,8 +1398,10 @@ class ExtractorAllocator {
     }
 
     /// @return true if we haven't allocated everything yet.
-    bool hasMoreExtracts() const {
+    bool hasMore() const {
         if (!extractPhvs.empty() || !extractClots.empty()) {
+            return true;
+        } else if (shift_required - shifted > 0) {
             return true;
         } else if (!saves.empty() && !hasOutOfBufferSaves()) {
             return true;
@@ -1477,28 +1473,47 @@ class ExtractorAllocator {
         BUG("Impossible constant value write in parser: %1%", value);
     }
 
-    struct SplitResult {
+    struct SplitExtractResult {
         // Splitted out Primitives
         IR::Vector<IR::BFN::LoweredParserPrimitive>     allocatedExtracts;
-        IR::Vector<IR::BFN::LoweredSave>                allocatedSaves;
         // Rest Primitives;
         std::vector<const IR::BFN::LoweredExtractPhv*>  remainingPhvExtracts;
         std::vector<const IR::BFN::LoweredExtractClot*> remainingClotExtracts;
-        std::vector<const IR::BFN::LoweredSave*>        remainingSaves;
         // Useful statics of result.
         nw_byteinterval remainingBytes;
         nw_byteinterval extractedInterval;
     };
 
+    struct SplitSaveResult {
+        IR::Vector<IR::BFN::LoweredSave>                allocatedSaves;
+        std::vector<const IR::BFN::LoweredSave*>        remainingSaves;
+    };
+
+    /// Allocate saves as long as the source of save is inside the input buffer.
+    /// Note that input buffer required bytes are calculated by assembler, so
+    /// it does not matter even if save source is not inside the extracted bytes.
+    /// Also, save source does not need to update neither remainingBytes nor
+    /// extractedBytes, it does not affect actual shift byte.
+    SplitSaveResult allocSaves(const std::vector<const IR::BFN::LoweredSave*>& saves) {
+        SplitSaveResult rst;
+        for (auto* save : saves) {
+            const auto& source = save->source->byteInterval();
+            if (source.hiByte() > Device::pardeSpec().byteInputBufferSize() - 1)
+                rst.remainingSaves.push_back(save);
+            else
+                rst.allocatedSaves.push_back(save);
+        }
+        return rst;
+    }
+
     /// Split out a set of primitives that can be done in one state, limited by
-    /// bandwidth and buffer size. Remaining extracts and saves are returned as
+    /// bandwidth and buffer size. Remaining extracts are returned as
     /// well, along with the interval of remaining bytes and interval extracted
     /// bytes. Side-effect free.
-    SplitResult splitOneByBandwidth(
+    SplitExtractResult splitOneByBandwidth(
             const std::vector<const IR::BFN::LoweredExtractPhv*>& extractPhvs,
-            const std::vector<const IR::BFN::LoweredExtractClot*>& extractClots,
-            const std::vector<const IR::BFN::LoweredSave*>& saves) {
-        SplitResult rst;
+            const std::vector<const IR::BFN::LoweredExtractClot*>& extractClots) {
+        SplitExtractResult rst;
         auto& pardeSpec = Device::pardeSpec();
         int inputBufferLastByte = pardeSpec.byteInputBufferSize() - 1;
         // Allocate. We have a limited number of extractions of each size per
@@ -1542,18 +1557,6 @@ class ExtractorAllocator {
                 rst.allocatedExtracts.push_back(extract);
             }
 
-            // Allocate saves as long as the source of save is inside the input buffer.
-            // Note that input buffer required bytes are calculated by assembler, so
-            // it does not matter even if save source is not inside the extracted bytes.
-            // Also, save source does not need to update neither remainingBytes nor
-            // extractedBytes, it does not affect actual shift byte.
-            for (auto* save : saves) {
-                const auto& source = save->source->byteInterval();
-                if (source.hiByte() > inputBufferLastByte)
-                    rst.remainingSaves.push_back(save);
-                else
-                    rst.allocatedSaves.push_back(save);
-            }
 #if HAVE_JBAY
         } else if (Device::currentDevice() == "JBay") {
             // JBay has one size, 16-bit extractors
@@ -1617,14 +1620,6 @@ class ExtractorAllocator {
                 rst.extractedInterval |= byteInterval;
                 rst.allocatedExtracts.push_back(extract);
             }
-
-            for (auto* save : saves) {
-                const auto& source = save->source->byteInterval();
-                if (source.hiByte() > inputBufferLastByte)
-                    rst.remainingSaves.push_back(save);
-                else
-                    rst.allocatedSaves.push_back(save);
-            }
 #endif  // HAVE_JBAY
         }
         return rst;
@@ -1634,8 +1629,8 @@ class ExtractorAllocator {
      * Allocate as many parser primitives as will fit into a single state,
      * respecting hardware limits.
      *
-     * Keep calling this until hasMoreExtracts() returns false.
-     * After that, you should call hasMoreSaves() and getRemainingSaves() if there is, and
+     * Keep calling this until hasMore() returns false.
+     * After that, you should call getRemainingSaves() if there is, and
      * push them down to the next state to generate a data extractor state.
      *
      * @return a pair containing (1) the parser primitives that were allocated,
@@ -1645,21 +1640,24 @@ class ExtractorAllocator {
         // TODO(yumin): currently checksums are not handled in the split state part.
         // so as long as the splitted state use checksum, checksum primitives will be
         // lost now.
-        auto rst = splitOneByBandwidth(extractPhvs, extractClots, saves);
+        auto extract_rst = splitOneByBandwidth(extractPhvs, extractClots);
+        auto save_rst = allocSaves(saves);
 
         // If there is no more extract, calculate the actual shift for this state.
         // If remaining save falls into 32 byte range, then it's fine. If it does not
         // We need a new state for it.
-        current_input_buffer |= rst.extractedInterval;
+        current_input_buffer |= extract_rst.extractedInterval;
         int byteActualShift = 0;
-        if (rst.remainingPhvExtracts.empty()) {
-            byteActualShift = shift_required - shifted;
+        if (extract_rst.remainingPhvExtracts.empty()) {
+            byteActualShift = std::min(shift_required - shifted,
+                                       Device::pardeSpec().byteInputBufferSize());
         } else {
             // If no more remaining extractions, just shift out the whole input buffer,
             // otherwise, shift until the first byte of the remaining is at head.
-            byteActualShift = rst.remainingBytes.empty()
+            byteActualShift = extract_rst.remainingBytes.empty()
                 ? current_input_buffer.hiByte() + 1
-                : std::min(rst.remainingBytes.loByte(), current_input_buffer.hiByte() + 1);
+                : std::min(extract_rst.remainingBytes.loByte(),
+                           Device::pardeSpec().byteInputBufferSize());
         }
 
         // TODO(yumin): currently, phv allocation might generate out-of-end allocation
@@ -1683,22 +1681,24 @@ class ExtractorAllocator {
 
         // Shift up all the remaining extractions.
         extractPhvs.clear();
-        for (auto* extract : rst.remainingPhvExtracts)
+        for (auto* extract : extract_rst.remainingPhvExtracts)
             extractPhvs.push_back(leftShiftExtract(extract, byteActualShift));
 
         extractClots.clear();
-        for (auto* extract : rst.remainingClotExtracts)
+        for (auto* extract : extract_rst.remainingClotExtracts)
             extractClots.push_back(leftShiftExtract(extract, byteActualShift));
 
         saves.clear();
-        for (auto* save : rst.remainingSaves)
+        for (auto* save : save_rst.remainingSaves)
             saves.push_back(leftShiftSave(save, byteActualShift));
 
         current_input_buffer = nw_byteinterval(
                 StartLen(0, current_input_buffer.hiByte() + 1 - byteActualShift));
 
         shifted += byteActualShift;
-        return MatchPrimitives(rst.allocatedExtracts, rst.allocatedSaves, byteActualShift);
+        return MatchPrimitives(extract_rst.allocatedExtracts,
+                               save_rst.allocatedSaves,
+                               byteActualShift);
     }
 
  private:
@@ -1735,7 +1735,7 @@ class SplitBigStates : public ParserModifier {
             ExtractorAllocator allocator(state->name, match);
             auto rst = allocator.allocateOneState();
             firstStateShift = std::min(rst.shift, firstStateShift);
-            if (!allocator.hasMoreExtracts()) {
+            if (!allocator.hasMore()) {
                 allNeedSplitState = false; }
         }
         if (allNeedSplitState) {
@@ -1799,10 +1799,10 @@ class SplitBigStates : public ParserModifier {
 
             // collect tail state primitives
             ExtractorAllocator allocator(tailState->name + "$SplitTailState", match);
-            while (allocator.hasMoreExtracts()) {
+            while (allocator.hasMore()) {
                 auto rst = allocator.allocateOneState();
                 // should be in the tail state.
-                if (!allocator.hasMoreExtracts() || shifted + rst.shift > until) {
+                if (!allocator.hasMore() || shifted + rst.shift > until) {
                     tailStatePrimitives.push_back(rst);
                 } else {
                     // because allocateOneState will try to allocate saves as long as
@@ -1864,10 +1864,10 @@ class SplitBigStates : public ParserModifier {
         ExtractorAllocator allocator(sampleState->name + "$SplitCommonState", sampleMatch);
         const auto& used_reg = sampleState->select->regs;
         int shifted = 0;
-        while (allocator.hasMoreExtracts()) {
+        while (allocator.hasMore()) {
             auto rst = allocator.allocateOneState();
             // The tail primitives
-            if (!allocator.hasMoreExtracts() || rst.shift + shifted > until) {
+            if (!allocator.hasMore() || rst.shift + shifted > until) {
                 break; }
 
             // Add primitives to common
@@ -1954,12 +1954,9 @@ class SplitBigStates : public ParserModifier {
             }
         }
 
-#if !WORKAROUND_BRIG_640
         for (const auto* save : extra_saves) {
             BUG_CHECK(save->source->range.hiByte() < common_until,
-                      "complicated save not supported: %1% in %2%", save, state->name);
-        }
-#endif
+                      "complicated save not supported: %1% in %2%", save, state->name); }
 
         // Spliting state will not work efficiently if the the pre-sliced common state has
         // too many extracts that some of them can be done in the last branching state,
@@ -1972,6 +1969,7 @@ class SplitBigStates : public ParserModifier {
         std::vector<const IR::BFN::LoweredSave*> extra_saves(leftover_saves[state->name]);
         auto* common_primitive_state =
             createCommonPrimitiveState(state, extra_saves);
+        leftover_saves[state->name].clear();
         *state = *common_primitive_state;
         return true;
     }
@@ -1992,7 +1990,7 @@ class SplitBigStates : public ParserModifier {
         // If there's still more, allocate as many followup states as we need.
         auto* finalState = match->next;
         auto* currentMatch = match;
-        while (allocator.hasMoreExtracts()) {
+        while (allocator.hasMore()) {
             // Create a new split state.
             auto newName = cstring::make_unique(stateNames, state->name + ".$split");
             stateNames.insert(newName);
@@ -2022,10 +2020,6 @@ class SplitBigStates : public ParserModifier {
                 LOG1("Found Remaining Saves:" << save <<
                      " must be done before " << finalState->name
                      << " from state: " << state->name); }
-#if WORKAROUND_BRIG_640
-            if (leftover_saves[finalState->name].size() != 0)
-                return false;  // prune to avoid stack overflow
-#endif
             BUG_CHECK(leftover_saves[finalState->name].size() == 0,
                       "Select on field from different parent branches is not supported.");
             leftover_saves[finalState->name] = allocator.getRemainingSaves();
