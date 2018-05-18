@@ -35,7 +35,7 @@ class ActionPhvConstraints;
 class AllocSlice;
 class ClearPhvInfo;
 class Clustering;
-struct CollectPhvFields;
+class CollectPhvFields;
 struct ComputeFieldAlignments;
 class PHV_Field_Operations;
 class PhvInfo;
@@ -364,7 +364,7 @@ class Field {
     //
     // friends of phv_assignment interface
     //
-    friend struct ::CollectPhvFields;
+    friend class ::CollectPhvFields;
     friend struct ::ComputeFieldAlignments;
     friend class ::PHV::ManualAlloc;        // phv/trivial_alloc
     friend class ::PHV::TrivialAlloc;       // phv/trivial_alloc
@@ -377,13 +377,13 @@ class Field {
     //
     friend std::ostream &::operator<<(std::ostream &out, const ::Slice &sl);
     //
-    // ****************************************************************************************
+    // **********************************************************************
     // end phv_assignment (phv_bind) interface
-    // ****************************************************************************************
+    // **********************************************************************
     //
-    // ****************************************************************************************
+    // **********************************************************************
     // begin phv_analysis interface
-    // ****************************************************************************************
+    // **********************************************************************
     //
     // constraints on this field
     //
@@ -778,7 +778,7 @@ class PhvInfo {
         decltype(*it) operator->() { return *it; } };
 
     friend class ClearPhvInfo;
-    friend struct CollectPhvFields;
+    friend class CollectPhvFields;
     friend struct AllocatePOVBits;
     friend struct MarkBridgedMetadataFields;
 

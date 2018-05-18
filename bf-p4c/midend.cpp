@@ -75,6 +75,9 @@ class SkipControls : public P4::ActionSynthesisPolicy {
         if (control->is<IR::BFN::TranslatedP4Deparser>()) {
             return false;
         }
+        for (auto c : *skip)
+            if (control->name == c)
+                return false;
         return true;
     }
 };

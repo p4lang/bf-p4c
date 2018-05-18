@@ -700,8 +700,8 @@ const IR::MAU::SaluAction *ConvertCastToSlice::preorder(IR::MAU::SaluAction *sac
  */
 const IR::Expression *ConvertCastToSlice::preorder(IR::Slice *sl) {
     if (auto *c = sl->e0->to<IR::Cast>()) {
-        BUG_CHECK(c->expr->type->width_bits() >=  (sl->getH() - sl->getL() + 1), "Slice of a cast "
-                  "that is larger than the cast");
+        BUG_CHECK(c->expr->type->width_bits() >=  int(sl->getH() - sl->getL() + 1),
+                  "Slice of a cast that is larger than the cast");
         return MakeSlice(c->expr, sl->getL(), sl->getH());
     }
     return sl;

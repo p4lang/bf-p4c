@@ -878,7 +878,7 @@ class CollectPardeConstraints : public Inspector {
         }
     }
 
-    void postorder(const IR::BFN::Emit* emit) {
+    void postorder(const IR::BFN::Emit* emit) override {
         auto* src_field = phv.field(emit->source->field);
         BUG_CHECK(src_field, "Deparser Emit with a non-PHV source: %1%",
                   cstring::to_cstring(emit));

@@ -36,7 +36,7 @@ class ElimUnusedHeaderStackInfo : public PassManager {
 
         explicit Find(ElimUnusedHeaderStackInfo& self) : self(self) { }
 
-        Visitor::profile_t init_apply(const IR::Node* root) {
+        Visitor::profile_t init_apply(const IR::Node* root) override {
             self.unused.clear();
             used.clear();
             return Inspector::init_apply(root);
@@ -136,7 +136,6 @@ class RemovePushInitialization : public Transform {
  * @pre Must happen after ResolveComputedParserExpressions.
  */
 class ValidToStkvalid : public Transform {
-    PhvInfo& phv;
     struct BFN::HeaderStackInfo* stack_info_;
 
     // Populate stack_info_.
@@ -158,7 +157,7 @@ class ValidToStkvalid : public Transform {
     IR::Node* postorder(IR::BFN::Extract* extract) override;
 
  public:
-    explicit ValidToStkvalid(PhvInfo& phv) : phv(phv) { }
+    explicit ValidToStkvalid(PhvInfo&) { }
 };
 
 #endif /* BF_P4C_COMMON_HEADER_STACK_H_ */

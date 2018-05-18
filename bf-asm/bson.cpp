@@ -224,6 +224,7 @@ std::string bson_encode_element(const std::string &key, const json::obj *o) {
         auto doc = bson_encode(o->to<json::map>());
         return '\x03' + key + '\0' + out32(doc.size() + 4) + doc; }
     assert(0);
+    return "";  // quiet warning
 }
 
 std::string bson_encode(const json::vector &v) {

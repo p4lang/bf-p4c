@@ -11,7 +11,7 @@ void MarshaledFrom::toJSON(JSONGenerator& json) const {
 }
 
 /* static */
-MarshaledFrom MarshaledFrom::fromJSON(JSONLoader& json) {
+MarshaledFrom MarshaledFrom::fromJSON(JSONLoader&) {
     BUG("Uninmplemented");
     return MarshaledFrom();
 }

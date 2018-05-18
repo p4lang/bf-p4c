@@ -41,7 +41,7 @@ class Device {
 
     static const PhvSpec& phvSpec() { return Device::get().getPhvSpec(); }
     static const PardeSpec& pardeSpec() { return Device::get().getPardeSpec(); }
-    class StatefulAluSpec;
+    struct StatefulAluSpec;
     static const StatefulAluSpec& statefulAluSpec() { return Device::get().getStatefulAluSpec(); }
     static int numStages() { return Device::get().getNumStages(); }
 
@@ -68,10 +68,10 @@ class TofinoDevice : public Device {
 
  public:
     TofinoDevice() : Device("Tofino"), parde_() {}
-    int getNumStages() const { return 12; }
+    int getNumStages() const override { return 12; }
 
-    const PhvSpec& getPhvSpec() const { return phv_; }
-    const PardeSpec& getPardeSpec() const { return parde_; }
+    const PhvSpec& getPhvSpec() const override { return phv_; }
+    const PardeSpec& getPardeSpec() const override { return parde_; }
     const StatefulAluSpec& getStatefulAluSpec() const override;
 };
 
@@ -82,10 +82,10 @@ class JBayDevice : public Device {
 
  public:
     JBayDevice() : Device("JBay"), parde_() {}
-    int getNumStages() const { return 20; }
+    int getNumStages() const override { return 20; }
 
-    const PhvSpec& getPhvSpec() const { return phv_; }
-    const PardeSpec& getPardeSpec() const { return parde_; }
+    const PhvSpec& getPhvSpec() const override { return phv_; }
+    const PardeSpec& getPardeSpec() const override { return parde_; }
     const StatefulAluSpec& getStatefulAluSpec() const override;
 };
 #endif /* HAVE_JBAY */

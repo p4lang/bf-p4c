@@ -141,7 +141,7 @@ AdjustExtract::calcPrePadding(const PHV::Field* field) {
     boost::optional<size_t> pre_padding;
     auto alloc = phv.get_alloc(field);
     for (auto& slice : alloc) {
-        if (slice.width != slice.container.size()) {
+        if (slice.width != int(slice.container.size())) {
             // pre/post in nw_order, so it is opposite to container's order.
             size_t pre = slice.container.msb() - slice.container_hi();
             size_t post = slice.container_bit;

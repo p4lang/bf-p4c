@@ -234,7 +234,7 @@ struct OutputParameters : public Inspector {
 
 /// Generate the assembly for digests.
 struct OutputDigests : public Inspector {
-    explicit OutputDigests(std::ostream& out, const PhvInfo& p) : out(out), phv(p), indent(1) { }
+    explicit OutputDigests(std::ostream& out, const PhvInfo&) : out(out), indent(1) { }
 
     bool preorder(const IR::BFN::LoweredDigest* digest) override {
         out << indent << digest->name << ":" << std::endl;
@@ -323,7 +323,6 @@ struct OutputDigests : public Inspector {
     }
 
     std::ostream& out;
-    const PhvInfo& phv;
     indent_t indent;
 };
 

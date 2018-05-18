@@ -251,7 +251,7 @@ class NaiveClotAlloc : public Visitor {
                     else  // s hasn't been allocated
                         credit = INTER_CLOTS_BYTE_GAP * 8;
 
-                    gap_needed_for_s = std::max(INTER_CLOTS_BYTE_GAP * 8 - credit, 0u);
+                    gap_needed_for_s = std::max(int(INTER_CLOTS_BYTE_GAP * 8) - credit, 0);
                 }
 
                 gap_needed = std::max(gap_needed, gap_needed_for_s);

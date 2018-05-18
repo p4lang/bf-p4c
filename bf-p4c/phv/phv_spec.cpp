@@ -350,7 +350,7 @@ const bitvec& JBayPhvSpec::individuallyAssignedContainers() const {
     return individually_assigned_containers_i;
 }
 
-unsigned JBayPhvSpec::physicalAddress(unsigned id) const {
+unsigned JBayPhvSpec::physicalAddress(unsigned /* id */) const {
     // XXX(cole): JBay uses a different addressing scheme for PHV containers in
     // PARDE and MAU.  At some point, we'll need to extend the physicalAddress
     // interface to take a pipeline section parameter.  As this is primarily
