@@ -1324,6 +1324,7 @@ public:
     bool run_at_eop() override { return type == STANDARD; }
     int unitram_type() override { return UnitRam::METER; }
     int home_row() const override { return layout.at(0).row | 3; }
+    unsigned meter_group() const { return layout.at(0).row/4U; }
     bool uses_colormaprams() const override { return !color_maprams.empty(); }
     void add_cfg_reg(json::vector &cfg_cache, std::string full_name, std::string name, unsigned val, unsigned width);
     int default_pfe_adjust() const override { return color_aware ? -METER_TYPE_BITS : 0; }
@@ -1372,6 +1373,7 @@ public:
     int get_const(long v);
     bool is_dual_mode() { return dual_mode; }
     int home_row() const override { return layout.at(0).row | 3; }
+    unsigned meter_group() const { return layout.at(0).row/4U; }
     unsigned per_flow_enable_bit(MatchTable *m = nullptr) const override;
     void set_output_used() override { output_used = true; }
     FOR_ALL_TARGETS(TARGET_OVERLOAD, static int parse_counter_mode, const value_t &)
@@ -1382,6 +1384,7 @@ public:
     FOR_ALL_TARGETS(TARGET_OVERLOAD, void set_counter_mode, int)
     void set_counter_mode(int mode) {
         SWITCH_FOREACH_TARGET(options.target, set_counter_mode(TARGET(), mode);); }
+    FOR_ALL_TARGETS(TARGET_OVERLOAD, void gen_tbl_cfg, json::map &, json::map &)
 )
 
 #endif /* _tables_h_ */

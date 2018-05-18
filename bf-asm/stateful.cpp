@@ -510,6 +510,7 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) {
         tbl["initial_value_lo"] = initial_value_lo;
     if (initial_value_hi > 0)
         tbl["initial_value_hi"] = initial_value_hi;
+    SWITCH_FOREACH_TARGET(options.target, gen_tbl_cfg(TARGET(), tbl, stage_tbl); )
     if (context_json)
         stage_tbl.merge(*context_json);
 }

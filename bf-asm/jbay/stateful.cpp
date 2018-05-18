@@ -134,11 +134,10 @@ void StatefulTable::set_counter_mode(Target::JBay target, int mode) {
 template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) {
     auto &adrdist =  regs.rams.match.adrdist;
     auto &merge =  regs.rams.match.merge;
-    unsigned meter_group = layout.at(0).row/4U;
     for (MatchTable *m : match_tables) {
         int mode = stateful_counter_mode;
         if (auto *call = m->get_call(this))
-            if (call->args.size() >= 2 || call->args.at(1).type == Call::Arg::Counter)
+            if (call->args.size() >= 2 && call->args.at(1).type == Call::Arg::Counter)
                 mode = call->args.at(1).count_mode();
         // adrdist.mau_stateful_log_counter_logical_map[m->logical_id] = ???
         merge.mau_stateful_log_counter_ctl[m->logical_id/8U][0].set_subfield(
@@ -147,14 +146,14 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
             (mode >> PUSHPOP_BITS) & PUSHPOP_MASK , 3*(m->logical_id % 8U), 3);
         for (auto &rep : merge.mau_stateful_log_ctl_ixbar_map[m->logical_id/8U]) {
             if (mode & PUSHPOP_MASK)
-                rep[0].set_subfield(meter_group | 0x4, 3*(m->logical_id % 8U), 3);
+                rep[0].set_subfield(meter_group() | 0x4, 3*(m->logical_id % 8U), 3);
             if ((mode >> PUSHPOP_BITS) & PUSHPOP_MASK)
-                rep[1].set_subfield(meter_group | 0x4, 3*(m->logical_id % 8U), 3); } }
+                rep[1].set_subfield(meter_group() | 0x4, 3*(m->logical_id % 8U), 3); } }
     // adrdist.mau_meter_alu_vpn_range[meter_goup] = ???
-    adrdist.mau_stateful_log_counter_oxbar_map[meter_group].stateful_log_counter_oxbar_ctl
-        = meter_group;
-    adrdist.mau_stateful_log_counter_oxbar_map[meter_group].stateful_log_counter_oxbar_enable = 1;
-    auto &ctl2 = merge.mau_stateful_log_counter_ctl2[meter_group];
+    auto &oxbar_map = adrdist.mau_stateful_log_counter_oxbar_map[meter_group()];
+    oxbar_map.stateful_log_counter_oxbar_ctl = meter_group();
+    oxbar_map.stateful_log_counter_oxbar_enable = 1;
+    auto &ctl2 = merge.mau_stateful_log_counter_ctl2[meter_group()];
     ctl2.slog_counter_function = stateful_counter_mode >> FUNCTION_SHIFT;
     ctl2.slog_instruction_width = format->log2size - 3;
     if (stateful_counter_mode & PUSHPOP_CONTROLPLANE)
@@ -166,11 +165,32 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
     if (watermark_level) {
         ctl2.slog_watermark_ctl = watermark_pop_not_push;
         ctl2.slog_watermark_enable = 1;
-        merge.mau_stateful_log_watermark_threshold[meter_group] = watermark_level; }
-    auto &ctl3 = merge.mau_stateful_log_counter_ctl3[meter_group];
+        merge.mau_stateful_log_watermark_threshold[meter_group()] = watermark_level; }
+    auto &ctl3 = merge.mau_stateful_log_counter_ctl3[meter_group()];
     if (underflow_action.set())
         // 4-bit stateful address MSB encoding for instruction, as given by table 6-67 (6.4.4.11)
         ctl3.slog_underflow_instruction = actions->action(underflow_action.name)->code * 2 + 1;
     if (overflow_action.set())
         ctl3.slog_overflow_instruction = actions->action(overflow_action.name)->code * 2 + 1;
+}
+
+void StatefulTable::gen_tbl_cfg(Target::JBay, json::map &tbl, json::map &stage_tbl) {
+    static const char *table_type[] = { "normal", "log", "fifo", "stack", "bloom_clear" };
+    tbl["stateful_table_type"] = table_type[stateful_counter_mode >> FUNCTION_SHIFT];
+    bool has_push = (stateful_counter_mode & PUSHPOP_MASK) != 0;
+    bool has_pop = (stateful_counter_mode & (PUSHPOP_MASK << PUSHPOP_BITS)) != 0;
+    for (MatchTable *m : match_tables) {
+        if (auto *call = m->get_call(this)) {
+            if (call->args.size() >= 2 && call->args.at(1).type == Call::Arg::Counter) {
+                unsigned mode = call->args.at(1).count_mode();
+                has_push |= (mode & PUSHPOP_MASK) != 0;
+                has_pop |= (mode & (PUSHPOP_MASK << PUSHPOP_BITS)) != 0; } } }
+    if (has_push) {
+        if (has_pop)
+            tbl["stateful_direction"] = "inout";
+        else
+            tbl["stateful_direction"] = "out";
+    } else if (has_pop)
+        tbl["stateful_direction"] = "in";
+    tbl["stateful_counter_index"] = meter_group();
 }

@@ -32,3 +32,6 @@ template<> void StatefulTable::write_logging_regs(Target::Tofino::mau_regs &regs
     merge.mau_stateful_log_vpn_limit[meter_group/2]
         .set_subfield(logvpn_max, 6 * (meter_group%2), 6);
 }
+
+void StatefulTable::gen_tbl_cfg(Target::Tofino, json::map &tbl, json::map &stage_tbl) {
+}
