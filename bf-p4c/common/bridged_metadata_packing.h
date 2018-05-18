@@ -251,6 +251,21 @@ class ReplaceBridgedMetadataUses : public Transform {
         : phv(p), pack(pm), collectBridgedFields(f) { }
 };
 
+/** To ensure that BridgedMetadataPacking works even when dead code elimination is disabled, we need
+  * to remove all the Extract nodes that refer to the egress version of bridged metadata fields.
+  * This pass performs that removal.
+  */
+class RemoveUnusedExtracts : public Transform {
+ private:
+    const PhvInfo& phv;
+    static constexpr char const *BM_INDICATOR = "^bridged_metadata.^bridged_metadata_indicator";
+
+    IR::Node* preorder(IR::BFN::Extract* e) override;
+
+ public:
+    explicit RemoveUnusedExtracts(const PhvInfo& p) : phv(p) { }
+};
+
 class BridgedMetadataPacking : public PassManager {
  private:
     CollectBridgedFields&                               bridgedFields;

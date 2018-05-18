@@ -107,7 +107,6 @@ int PackBridgedMetadata::getHeaderBytes(const IR::Header* h) const {
     int rv = 0;
     for (auto f : h->type->fields)
         rv += f->type->width_bits();
-    LOG1("Number of bits in header: " << rv);
     return (rv / 8);
 }
 
@@ -280,16 +279,19 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
             BUG("Do not have a bridged header in ingress");
             return h; }
         LOG1("Original Egress header layout: " << h->type);
+        LOG1("Size of original egress bridged header: " << getHeaderBytes(h));
         auto* layoutKind = new IR::StringLiteral(IR::ID("flexible"));
         auto* egressBridgedHeaderType = new IR::Type_Header(h->type->name,
             new IR::Annotations({ new IR::Annotation(IR::ID("layout"), {layoutKind}) }),
             ingressBridgedHeader->type->fields);
-        LOG1("Egress Bridged header: " << egressBridgedHeaderType);
+        LOG1("New Egress Bridged header: " << egressBridgedHeaderType);
         egressBridgedHeader = new IR::Header(h->name, egressBridgedHeaderType);
+        LOG1("New size of egress bridged header: " << getHeaderBytes(egressBridgedHeader));
         return egressBridgedHeader; }
 
     // Ingress bridged metadata header, if it comes here.
     LOG1("Original Ingress header layout: " << h->type);
+    LOG1("New size of ingress bridged header: " << getHeaderBytes(h));
     // Fields that will form the basis of the new repacked header.
     IR::IndexedVector<IR::StructField> fields;
     // Non byte aligned fields in the header.
@@ -457,8 +459,9 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
     auto* ingressBridgedHeaderType = new IR::Type_Header(h->type->name,
             new IR::Annotations({ new IR::Annotation(IR::ID("layout"), {layoutKind}) }),
             fields);
-    LOG1("Ingress Bridged header : " << ingressBridgedHeaderType);
     ingressBridgedHeader = new IR::Header(h->name, ingressBridgedHeaderType);
+    LOG1("Ingress Bridged header : " << ingressBridgedHeaderType);
+    LOG1("New size of ingress bridged header: " << getHeaderBytes(ingressBridgedHeader));
     return ingressBridgedHeader;
 }
 
@@ -509,13 +512,13 @@ IR::Node* ReplaceBridgedMetadataUses::postorder(IR::BFN::ParserState* p) {
         auto* constValue = value->to<IR::BFN::ParserConstMatchValue>();
         BUG_CHECK(constValue, "No constant value attached to transition %1%", t);
         int shift = pack.getHeaderBytes(pack.getEgressBridgedHeader());
-        LOG1("    New shift calculated: " << shift);
+        LOG3("    New shift calculated: " << shift);
         auto* newTransition =  new IR::BFN::Transition(constValue->value, shift, t->next);
         newTransition->saves = t->saves;
         transitions.push_back(newTransition); }
     IR::BFN::ParserState* newParserState =
         new IR::BFN::ParserState(p->name, p->gress, p->statements, p->selects, transitions);
-    LOG1("    New Parser State: " << newParserState);
+    LOG3("    New Parser State: " << newParserState);
     return newParserState;
 }
 
@@ -551,8 +554,8 @@ void ReplaceBridgedMetadataUses::replaceEmit(const IR::BFN::Emit* e) {
     auto* source = e->source;
     auto* povBit = e->povBit;
     auto* fieldSource = phv.field(source->field);
-    // At this point, these emits may correspond to old padding fields that will be removed later by
-    // dead code elimination. Therefore, no BUG_CHECK here.
+    // At this point, these emits may correspond to fields that will be removed later by dead code
+    // elimination. Therefore, no BUG_CHECK here.
     if (!fieldSource || !bridgedFields.count(fieldSource->name))
         return;
     LOG4("\t  Found emit for bridged field " << e);
@@ -594,6 +597,24 @@ IR::Node* ReplaceBridgedMetadataUses::postorder(IR::BFN::Deparser* d) {
     return d;
 }
 
+IR::Node* RemoveUnusedExtracts::preorder(IR::BFN::Extract* e) {
+    auto* state = findContext<IR::BFN::ParserState>();
+    if (state->name != PackBridgedMetadata::EGRESS_BRIDGED_PARSER_STATE_NAME)
+        return e;
+    auto* fieldLVal = e->dest->to<IR::BFN::FieldLVal>();
+    if (!fieldLVal) return e;
+    auto* f = phv.field(fieldLVal->field);
+    if (!f) return e;
+    cstring fieldName = cstring(PackBridgedMetadata::EGRESS_FIELD_PREFIX) +
+        cstring(PackBridgedMetadata::BRIDGED_FIELD_PREFIX) + ".";
+    cstring bmIndicator = cstring(PackBridgedMetadata::EGRESS_FIELD_PREFIX) + cstring(BM_INDICATOR);
+    if (f->name != bmIndicator && f->name.startsWith(fieldName)) {
+        LOG4("    Removing extract corresponding to egress version of bridged field: " << f);
+        return nullptr;
+    }
+    return e;
+}
+
 BridgedMetadataPacking::BridgedMetadataPacking(
             const PhvInfo& p,
             DependencyGraph& dg,
@@ -616,6 +637,7 @@ BridgedMetadataPacking::BridgedMetadataPacking(
               new GatherPhase0Fields(p, phase0Fields),
               new GatherParserExtracts(p, parserAlignedFields),
               &packMetadata,
-              new ReplaceBridgedMetadataUses(p, packMetadata, bridgedFields)
+              new ReplaceBridgedMetadataUses(p, packMetadata, bridgedFields),
+              new RemoveUnusedExtracts(p)
           });
 }
