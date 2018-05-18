@@ -68,7 +68,7 @@ int FieldPackingOpportunity::nOpportunitiesAfter(
     if (opportunities_after.count({f1, f2})) {
         return opportunities_after.at({f1, f2});
     } else {
-        LOG1("FieldPackingOpportunity for " << f1->name << " " << f2->name
+        LOG4("FieldPackingOpportunity for " << f1->name << " " << f2->name
              << " has not benn calculated.");
         return 0;
     }
@@ -2104,7 +2104,7 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
         cluster->forall_fieldslices([&] (const PHV::FieldSlice& fs) {
             if (showed.count(fs.field())) return;
             showed.insert(fs.field());
-            LOG1("Field " << fs.field() << " has "
+            LOG4("Field " << fs.field() << " has "
                  << AllocScore::g_packing_opportunities->nOpportunities(fs.field()));
         });
     }

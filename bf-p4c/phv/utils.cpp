@@ -2044,6 +2044,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation& alloc) {
         order.push_back(tagalong); }
     order.push_back(phvSpec.physicalContainers() - seen);
 
+    bool firstEmpty = true;
     for (bitvec group : order) {
         for (auto cid : group) {
             auto container = phvSpec.idToContainer(cid);
@@ -2052,11 +2053,11 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation& alloc) {
             bool hardwired = phvSpec.ingressOnly()[cid] || phvSpec.egressOnly()[cid];
 
             if (slices.size() == 0) {
-                out << boost::format("%1%(%2%%3%)\n")
-                     % cstring::to_cstring(container)
-                     % cstring::to_cstring(gress)
-                     % (hardwired ? "-HW" : "");
+                if (firstEmpty) {
+                    out << "..." << std::endl;
+                    firstEmpty = false; }
                 continue; }
+            firstEmpty = true;
 
             for (auto slice : slices) {
                 std::stringstream container_slice;
