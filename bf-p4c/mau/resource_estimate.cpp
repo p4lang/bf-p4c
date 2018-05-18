@@ -27,6 +27,23 @@ int CounterPerWord(const IR::MAU::Counter *ctr) {
         return 1; }
 }
 
+int CounterWidth(const IR::MAU::Counter *cntr) {
+    switch (cntr->type) {
+    case IR::MAU::DataAggregation::PACKETS:
+        if (cntr->min_width <= 32) return 32;
+        return 64;
+    case IR::MAU::DataAggregation::BYTES:
+        if (cntr->min_width <= 32) return 32;
+        return 64;
+    case IR::MAU::DataAggregation::BOTH:
+        if (cntr->min_width <= 64) return 36;
+        return 64;
+    default:
+        error("%s: No counter type for %s", cntr->srcInfo, cntr->name);
+        return 1;
+    }
+}
+
 int RegisterPerWord(const IR::MAU::StatefulAlu *reg) {
     BUG_CHECK(reg->width > 0 && (reg->width & (reg->width-1)) == 0,
               "register width not a power of two");

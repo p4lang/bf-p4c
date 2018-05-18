@@ -2236,6 +2236,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
     out << "}" << std::endl;
     if (counter->indexed() && !tbl->layout.hash_action)
         out << indent << "per_flow_enable: " << "counter_pfe" << std::endl;
+    if (counter->threshold != -1) {
+        out << indent << "lrt: { threshold: " << counter->threshold <<
+             ", interval: " << counter->interval << " }" << std::endl;
+    }
     return false;
 }
 

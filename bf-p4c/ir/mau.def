@@ -379,6 +379,8 @@ abstract Synth2Port : AttachedMemory {
 class Counter : Synth2Port {
     int min_width = -1;
     int max_width = -1; // Perhaps to play with a range of widths
+    int threshold = -1;
+    int interval = -1;
     const char *kind() const override { return "stats"; }
 #nodbprint
     const Type *getType() const override { return Type_Counter::get(); }

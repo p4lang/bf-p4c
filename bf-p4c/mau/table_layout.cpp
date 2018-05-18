@@ -1,4 +1,5 @@
 #include "bf-p4c/mau/table_layout.h"
+#include <math.h>
 
 #include <set>
 #include "bf-p4c/mau/input_xbar.h"
@@ -685,4 +686,133 @@ bool TableLayout::preorder(IR::MAU::InputXBarRead *read) {
             read->partition_index = true;
     }
     return false;
+}
+
+static double eqn(double current, int num_counters ) {
+    return (current-1) + (log(num_counters) / (log(current/(current-1))) + 2*current);
+}
+
+static bool tol(double b, double maxVal, int num_counters) {
+    auto tmp = maxVal - 5000.0;
+    auto eqnval = eqn(b, num_counters);
+    if ((tmp <= eqnval) && (eqnval < maxVal)) {
+        return true;
+    }
+    return false;
+}
+
+void calculate_lrt_threshold_and_interval(IR::MAU::Counter *cntr) {
+    if (cntr->threshold != -1) return; /* calculated already? */
+    auto annot = cntr->annotations;
+    bool lrt_enabled = false;
+    if (auto s = annot->getSingle("lrt_enable")) {
+        ERROR_CHECK(s->expr.size() >= 1, "%s: lrt_enable pragma on counter does not have a"
+            "value", cntr->srcInfo, cntr->name);
+        auto pragma_val = s->expr.at(0)->to<IR::Constant>();
+        if (pragma_val == nullptr) {
+            ::error("%s: lrt_enable value on counter %s is not a constant", cntr->srcInfo,
+                cntr->name);
+            return;
+        }
+        auto real_val = pragma_val->asInt();
+        if (real_val == 0) return;  // disabled
+        if (real_val != 1) {
+            ::error("%s: invalid lrt_enable value on counter %s", cntr->srcInfo, cntr->name);
+            return;
+        }
+        lrt_enabled = true;
+    }
+
+    if (lrt_enabled == false) return;
+
+    // now get the lrt_scale
+    auto s = annot->getSingle("lrt_scale");
+    auto lrt_val = s->expr.at(0)->to<IR::Constant>();
+    if (lrt_val == nullptr) {
+        ::error("%s: lrt_scale value on counter %s is not a constant", cntr->srcInfo, cntr->name);
+        return;
+    }
+    int lrt_scale = lrt_val->asInt();
+    if (lrt_scale <= 0) {
+        ::error("%s: invalid lrt_scale value on counter %s", cntr->srcInfo, cntr->name);
+        return;
+    }
+    if (cntr->min_width >= 64) {
+        ::error("%s: LR(t) cannot be used on 64 bit counter %s", cntr->srcInfo, cntr->name);
+        return;
+    }
+
+    auto num_counters = cntr->size;
+    auto width = CounterWidth(cntr);
+    if (width == 1) return;
+
+    double maxVal = pow(2, width) - 1;
+    double b_last = 0.0;
+    double b_cur = 50000.0;
+    int iterations = 0;
+
+    LOG3("Calulating LR(t) on counter:  " << cntr->name);
+    LOG3("num_counters: " << num_counters);
+    LOG3("width: " << width);
+    LOG3("maxVal: " << maxVal);
+
+    while (eqn(b_cur, num_counters) < maxVal) {
+        b_last = b_cur;
+        b_cur *= 2.0;
+        iterations++;
+    }
+
+    double step = floor(b_cur - b_last);
+    std::set<double> saw;
+    while ((!tol(b_cur, maxVal, num_counters)) && (b_cur > 1.0)) {
+        if (step > 4.0) {
+            step /= 2.0;
+            step = floor(step);
+        }
+        iterations++;
+
+        auto e = eqn(b_cur, num_counters);
+
+        if (e > maxVal) {
+            b_cur -= step;
+        } else if (e < maxVal) {
+            auto it = saw.find(e);
+            if (*it == e)
+              break;
+            else
+              b_cur += step;
+        } else {
+            b_cur -= 1.0;
+            break;
+        }
+        saw.insert(e);
+        if (iterations > 10000) break;
+    }
+
+    auto threshold = static_cast<unsigned long>(b_cur) >> 4;
+    auto interval = static_cast<unsigned long>(b_cur);
+    if (cntr->type != IR::MAU::DataAggregation::PACKETS)
+        interval = static_cast<unsigned long>(b_cur) >> 8;
+
+    if (interval >= pow(2, 28)) {
+        interval = pow(2, 28) - 1;
+    }
+
+#define roundUp(n, b) ( ( ((n)+(b)-1) - (((n)-1)%(b)) ) )
+    auto scaled_threshold = threshold / lrt_scale;
+    /* threshold - must be a multiple of 16 */
+    cntr->threshold = roundUp(scaled_threshold, 16);
+    LOG3("threshold: " << cntr->threshold);
+    auto scaled_interval = interval / lrt_scale;
+    /* interval - must be a multiple of 256 */
+    cntr->interval = roundUp(scaled_interval, 256);
+    LOG3("interval: " << cntr->interval);
+#undef roundUp
+}
+
+
+
+bool TableLayout::preorder(IR::MAU::Counter *cntr) {
+  calculate_lrt_threshold_and_interval(cntr);
+  return true;
 }
