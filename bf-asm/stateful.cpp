@@ -369,7 +369,7 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
                 map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
                 int meter_group_index = row/2U;
                 auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group_index];
-                delay_ctl.meter_alu_right_group_delay = METER_ALU_GROUP_DATA_DELAY + row/4 + stage->tcam_delay(gress);
+                delay_ctl.meter_alu_right_group_delay = Target::METER_ALU_GROUP_DATA_DELAY() + row/4 + stage->tcam_delay(gress);
                 auto &error_ctl = map_alu.meter_alu_group_error_ctl[meter_group_index];
                 error_ctl.meter_alu_group_ecc_error_enable = 1;
                 if (output_used) {
