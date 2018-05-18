@@ -615,7 +615,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
             // TODO(zma) residual checksum
             unsigned mask = (1 << finalInterval.hi) - 1;
             auto csum = new IR::BFN::LoweredParserChecksum(
-                csum_id++, mask, 0x0, true, end, /*type*/0);
+                csum_id, mask, 0x0, true, end, /*type*/0);
 
             if (csum_err) {
                 std::vector<alloc_slice> slices = phv.get_alloc(csum_err->field);
@@ -638,8 +638,18 @@ struct ComputeLoweredParserIR : public ParserInspector {
     }
 
     bool preorder(const IR::BFN::Parser*) override {
-        // Five parser checksum units are available; 0,1 can be used for verificaion/residual,
-        // 2,3,4 can be used for CLOT; Checksum verification steals extractors.
+        // TODO parser checksum allocation
+
+        // Tofino: 2 parser checksum units available
+        // Modes: Verification/Residual
+
+        // JBay: 5 parser checksum units available
+        // Modes: Verification/Residual/CLOT
+        // Units 0-1 can only used for Verification/Residual
+        // Units 2-4 can be used for all modes
+
+        // Residual checksum once used need to reserved to end of parsing
+        // Verification/CLOT checksum can be reused when done
 
         csum_id = 0;
         return true;
@@ -1015,7 +1025,7 @@ struct InsertClotChecksums : public ParserModifier {
                 for (auto c : clot_checksum_fields) {
                     if (c.first->tag == ec->dest.tag) {
                         unsigned mask = generateByteMask(c.second, ec);
-                        auto* csum = createClotChecksum(id++, mask, ec->dest);
+                        auto* csum = createClotChecksum(id, mask, ec->dest);
                         match->checksums.push_back(csum);
                         allocated++;
                     }
