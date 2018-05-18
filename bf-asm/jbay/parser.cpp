@@ -302,7 +302,8 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
      * When parser error codes are supported from assembly this can be added as a
      * proper feature. It seems that we do not support this completely
      */
-    regs.main[EGRESS].err_phv_cfg.en = 0;
+    regs.main[EGRESS].err_phv_cfg[0].en = 0;
+    regs.main[EGRESS].err_phv_cfg[1].en = 0;
 
     int i_start = Stage::first_table(INGRESS) & 0x1ff;
     for (auto &reg : regs.merge.ll1.i_start_table)

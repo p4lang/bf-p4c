@@ -220,11 +220,6 @@ p4c_add_xfail_reason("jbay"
   testdata/p4_14_samples/action_chain1.p4
 )
 
-p4c_add_xfail_reason("jbay"
-  "Rendezvous of RPC that terminated with"
-  extensions/p4_tests/p4_16/hash_driven_stats.p4
-)
-
 # This test is tailored to fill Tofino's PHV.  It is expected to fail on JBay
 # until the compiler can take full advantage of all PHV container types.  (And
 # maybe even after that.)
