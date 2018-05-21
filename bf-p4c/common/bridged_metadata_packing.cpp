@@ -363,7 +363,7 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
                                             fieldAnnotations, IR::Type::Bits::get(postPadding));
                     fieldsPackedTogether.push_back(padding);
                     addedPadding.insert(padding);
-                    LOG3("Pushing padding field " << padding->name << " of type " <<
+                    LOG3("\tPushing post padding field " << padding->name << " of type " <<
                             padding->type->width_bits() << "b.");
                 }
                 alignment = getAlignment(postPadding + f1->type->width_bits());
@@ -446,7 +446,7 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
                     return false;
                 if (!deparserParams.count(fieldA) && deparserParams.count(fieldB))
                     return true;
-                return false;
+                return aName < bName;
         });
 
         for (auto it = fieldsPackedTogether.begin(); it != fieldsPackedTogether.end(); ++it) {
@@ -637,7 +637,6 @@ BridgedMetadataPacking::BridgedMetadataPacking(
               new GatherPhase0Fields(p, phase0Fields),
               new GatherParserExtracts(p, parserAlignedFields),
               &packMetadata,
-              new ReplaceBridgedMetadataUses(p, packMetadata, bridgedFields),
-              new RemoveUnusedExtracts(p)
+              new ReplaceBridgedMetadataUses(p, packMetadata, bridgedFields)
           });
 }

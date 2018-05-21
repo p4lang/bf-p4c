@@ -169,6 +169,7 @@ Backend::Backend(const BFN_Options& options) :
         new BridgedMetadataPacking(phv, deps, bridged_fields, table_alloc),
         // Run after bridged metadata packing as bridged packing updates the parser state.
         new ResolveComputedParserExpressions,
+        new RemoveUnusedExtracts(phv),
         new CollectPhvInfo(phv),
         &defuse,
         new AlpmSetup,
