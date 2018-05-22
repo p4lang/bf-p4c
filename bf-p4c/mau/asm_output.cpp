@@ -1771,6 +1771,15 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             if (!ap->direct)
                 out << ", action_profile: " << canon_name(ap->name);
     }
+    // Output 'disable_atomic_modify' pragma if present. This will to be plugged
+    // into the context json for the driver. COMPILER-944
+    if (auto m = tbl->match_table) {
+        for (auto annot : m->annotations->annotations)
+            if (annot->name == "disable_atomic_modify"
+                    && annot->expr.size() > 0
+                    && annot->expr[0]->to<IR::Constant>()->asInt() == 1)
+                out << ", disable_atomic_modify : true";
+    }
     out << " }" << std::endl;
 
     if (tbl->match_key.empty())

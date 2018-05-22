@@ -16,6 +16,7 @@ class P4Table {
     json::map           *config = 0;
     P4Table() {}
 public:
+    bool                disable_atomic_modify = false;
     unsigned            size = 0;
     std::string         match_type, action_profile = "";
     enum type { MatchEntry=1, ActionData=2, Selection=3, Statistics=4, Meter=5, Stateful=6 };

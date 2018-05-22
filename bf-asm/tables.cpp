@@ -1999,6 +1999,8 @@ void Table::common_tbl_cfg(json::map &tbl) {
     //FIXME-JSON: PD related, check glass examples for false (ALPM)
     tbl["is_resource_controllable"] = true;
     tbl["uses_range"] = false;
+    if (p4_table && p4_table->disable_atomic_modify)
+        tbl["disable_atomic_modify"] = true;
     json::vector &params = tbl["match_key_fields"] = json::vector();
     if ((!p4_params_list.empty()) &&
             (this->to<MatchTable>() || this->to<Phase0MatchTable>())) {

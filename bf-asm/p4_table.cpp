@@ -68,6 +68,10 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
         } else if (kv.key == "preferred_match_type") {
             if (CHECKTYPE(kv.value, tSTR))
                 rv->preferred_match_type = kv.value.s;
+        } else if (kv.key == "disable_atomic_modify") {
+            if (CHECKTYPE(kv.value, tSTR))
+                if (strncmp(kv.value.s, "true", 4) == 0)
+                    rv->disable_atomic_modify = true;
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in p4 info", value_desc(kv.key)); }
     return rv;
