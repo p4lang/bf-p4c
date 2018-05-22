@@ -30,6 +30,10 @@ struct IXBar {
     static constexpr int TERNARY_BYTES_PER_GROUP = 5;
     static constexpr int TERNARY_BYTES_PER_BIG_GROUP = 11;
     static constexpr int GATEWAY_SEARCH_BYTES = 4;
+    static constexpr int RESILIENT_MODE_HASH_BITS = 51;
+    static constexpr int FAIR_MODE_HASH_BITS = 14;
+    static constexpr int METER_ALU_HASH_BITS = 51;
+
     struct Loc {
         int group = -1, byte = -1;
         Loc() = default;
@@ -248,6 +252,12 @@ struct IXBar {
         unsigned        hash_table_inputs[HASH_GROUPS] = { 0 };
         /* values fed through the hash tables onto the upper 12 bits of the hash bus via
          * an identity matrix */
+        struct matrix_position {
+            int hash_start = -1;
+            le_bitrange field_range = { -1, -1 };
+            matrix_position(int hs, le_bitrange fr) : hash_start(hs), field_range(fr) { }
+        };
+
         struct Bits {
             cstring     field;
             int         group;
@@ -266,14 +276,21 @@ struct IXBar {
             Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {} };
         safe_vector<Way>     way_use;
 
-        struct Select {
-            int                         group = -1;
-            unsigned                    bit_mask = 0;
-            IR::MAU::hash_function      algorithm;
-            cstring                     mode;
-            explicit Select(int g) : group(g), bit_mask(0) {}
+        struct MeterAluHash {
+            bool allocated = false;
+            int group = -1;
+            bitvec bit_mask;
+            IR::MAU::hash_function algorithm;
+            ordered_map<const PHV::Field *, safe_vector<matrix_position>> identity_positions;
+
+            void clear() {
+                allocated = false;
+                group = -1;
+                bit_mask.clear();
+                identity_positions.clear();
+            }
         };
-        safe_vector<Select> select_use;
+        MeterAluHash meter_alu_hash;
 
         struct HashDistHash {
             bool allocated = false;
@@ -299,10 +316,10 @@ struct IXBar {
                 bit_starts.clear();
             }
         };
-
         HashDistHash hash_dist_hash;
+
         void clear() { use.clear(); memset(hash_table_inputs, 0, sizeof(hash_table_inputs));
-                       bit_use.clear(); way_use.clear(); select_use.clear();
+                       bit_use.clear(); way_use.clear(); meter_alu_hash.clear();
                        hash_dist_hash.clear(); }
         unsigned compute_hash_tables();
         int groups() const;  // how many different groups in this use
@@ -472,9 +489,9 @@ struct IXBar {
     bool allocSelector(const IR::MAU::Selector *, const IR::MAU::Table *, const PhvInfo &phv,
                        Use &alloc, cstring name);
     bool allocStateful(const IR::MAU::StatefulAlu *, const IR::MAU::Table *, const PhvInfo &phv,
-                       Use &alloc);
+                       Use &alloc, bool on_search_bus);
     bool allocMeter(const IR::MAU::Meter *, const IR::MAU::Table *, const PhvInfo &phv,
-                    Use &alloc);
+                    Use &alloc, bool on_search_bus);
     bool allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_type_t hdt,
                        const PhvInfo &phv, const ActionFormat::Use *af, IXBar::Use &alloc,
                        bool second_try, cstring name);
@@ -557,6 +574,18 @@ struct IXBar {
         std::map<cstring, bitvec> &fields_needed, cstring name, bool hash_dist, const PhvInfo &phv,
         bool is_atcam = false, bool partition = false);
     void create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc);
+    int max_index_group(int max_bit);
+    int max_index_single_bit(int max_bit);
+    bool hash_use_free(int max_group, int max_single_bit, unsigned hash_table_input);
+    void write_hash_use(int max_group, int max_single_bit, unsigned hash_table_input,
+        cstring name);
+    bool can_allocate_on_search_bus(Use &alloc, const PHV::Field *field, le_bitrange range,
+        int ixbar_position);
+    bool setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &alloc,
+        ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources,
+        unsigned &byte_mask);
+    bool setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc,
+        ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources);
     bool allocHashDistAddress(const IR::MAU::HashDist *hd, const bitvec used_hash_dist_groups,
         const bitvec used_hash_dist_bits, const unsigned &hash_table_input, bitvec &slice,
         bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name);

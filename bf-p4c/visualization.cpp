@@ -222,36 +222,17 @@ void Visualization::add_xbar_bytes_usage(unsigned int stage, const IXBar::Use &a
     }
 
     // Used for the bits provided to the selector
-    for (auto &select : alloc.select_use) {
-        for (int i = 0; i < IXBar::HASH_INDEX_GROUPS; i++) {
-            for (int j = 0; j < TableFormat::RAM_GHOST_BITS; j++) {
-                int bit = i * TableFormat::RAM_GHOST_BITS + j;
-
-                HashBitResource hbr;
-                hbr.add(USED_BY, alloc.used_by);
-                hbr.add(USED_FOR, alloc.used_for());
-                hbr.add(DETAILS, "Selection Hash Bit " + std::to_string(bit));
-
-                auto key = std::make_pair(bit, select.group);
-                _stageResources[stage]._hashBitsUsage[key].append(&hbr);
-
-                LOG3("\tadding resource hash_bits from select_use(" << bit << ", " << select.group
-                     << "): {" << hbr << "}");
-            }
-        }
-
-        for (int i = 0; i < IXBar::HASH_SINGLE_BITS - 1; i++) {
-            int bit = i + TableFormat::RAM_GHOST_BITS * IXBar::HASH_INDEX_GROUPS;
-
+    if (alloc.meter_alu_hash.allocated) {
+        auto &mah = alloc.meter_alu_hash;
+        for (auto bit : mah.bit_mask) {
             HashBitResource hbr;
             hbr.add(USED_BY, alloc.used_by);
             hbr.add(USED_FOR, alloc.used_for());
             hbr.add(DETAILS, "Selection Hash Bit " + std::to_string(bit));
-
-            auto key = std::make_pair(bit, select.group);
+            auto key = std::make_pair(bit, mah.group);
             _stageResources[stage]._hashBitsUsage[key].append(&hbr);
 
-            LOG3("\tadding resource hash_bits from select_use(" << bit << ", " << select.group
+            LOG3("\tadding resource hash_bits from select_use(" << bit << ", " << mah.group
                  << "): {" << hbr << "}");
         }
     }

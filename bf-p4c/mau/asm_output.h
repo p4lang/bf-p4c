@@ -84,6 +84,8 @@ class MauAsmOutput : public MauInspector {
     void emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
             safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
              const IR::Expression *hd_expr) const;
+    void emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
+            safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah) const;
     void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
             const TableMatch *fmt, const IR::Expression *hd_expr = nullptr) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;

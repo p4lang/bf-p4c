@@ -29,6 +29,11 @@ struct hash_function {
         hash_function rv;
         rv.type = RANDOM;
         return rv; }
+    bool size_from_algorithm() const {
+        if (type == CRC)
+            return true;
+        return false;
+    }
 };
 
 }  // end namespace MAU

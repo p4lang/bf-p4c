@@ -70,10 +70,12 @@ bool IR::MAU::hash_function::setup(const IR::Expression *e) {
                 return false;
             // fall through
         case 1:
-            if (auto k = crcargs->at(0)->expression->to<IR::Constant>())
+            if (auto k = crcargs->at(0)->expression->to<IR::Constant>()) {
                 poly = mpz_class(k->value / 2).get_ui();
-            else
+                size = k->type->width_bits() - 1;
+            } else {
                 return false;
+            }
             break;
         default:
             return false; }

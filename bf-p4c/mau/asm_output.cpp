@@ -649,6 +649,32 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
     }
 }
 
+void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
+        safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah) const {
+    if (mah.algorithm.type == IR::MAU::hash_function::IDENTITY) {
+        for (auto &slice : match_data) {
+            if (mah.identity_positions.count(slice.get_field()) == 0)
+                continue;
+            auto &pos_vec = mah.identity_positions.at(slice.get_field());
+            for (auto &pos : pos_vec) {
+                le_bitrange slice_bits = { -1, -1 };
+                slice_bits.lo = std::max(slice.get_lo(), pos.field_range.lo);
+                slice_bits.hi = std::min(slice.get_hi(), pos.field_range.hi);
+                safe_vector<Slice> single_match_vec;
+                int start_bit = pos.hash_start + (slice_bits.lo - pos.field_range.lo);
+                int end_bit = start_bit + slice_bits.size() - 1;
+                single_match_vec.emplace_back(slice.get_field(), slice_bits);
+                out << indent << start_bit << ".." << end_bit << ": "
+                    << FormatHash(single_match_vec, nullptr, mah.algorithm) << std::endl;
+            }
+        }
+    } else {
+        le_bitrange br = { mah.bit_mask.min().index(), mah.bit_mask.max().index() };
+        out << indent << br.lo << ".." << br.hi << ": "
+            << FormatHash(match_data, nullptr, mah.algorithm, &br) << std::endl;
+    }
+}
+
 /* Generate asm for the hash of a table, specifically either a match, gateway, or selector
    table.  Not used for hash distribution hash */
 void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
@@ -662,16 +688,10 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
                               ident_bits_prev_alloc);
     }
 
-    for (auto &select : use->select_use) {
-        if (select.mode == "resilient")
-            out << indent << "0..50: "
-                << FormatHash(match_data, nullptr, select.algorithm) << std::endl;
-        else if (select.mode == "fair")
-            out << indent << "0..13: "
-                << FormatHash(match_data, nullptr, select.algorithm) << std::endl;
-        else
-            BUG("Unrecognized mode of the action selector");
+    if (use->meter_alu_hash.allocated) {
+        emit_ixbar_meter_alu_hash(out, indent, match_data, use->meter_alu_hash);
     }
+
 
     // Printing out the hash for gateway tables
     for (auto ident : use->bit_use) {

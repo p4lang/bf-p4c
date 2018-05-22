@@ -739,21 +739,8 @@ bool AdjustStatefulInstructions::check_bit_positions(std::map<int, le_bitrange> 
     return true;
 }
 
-const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr) {
-    if (!findContext<IR::MAU::SaluAction>()) {
-        prune();
-        return expr;
-    }
-
-    le_bitrange bits;
-    auto field = phv.field(expr, &bits);
-    if (field == nullptr) {
-        return expr;
-    }
-
-    auto tbl = findContext<IR::MAU::Table>();
-    auto salu = findContext<IR::MAU::StatefulAlu>();
-    auto &salu_ixbar = tbl->resources->salu_ixbar;
+bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu *salu,
+        const IXBar::Use &salu_ixbar, const PHV::Field *field, le_bitrange bits, bool &is_hi) {
     std::map<int, le_bitrange> salu_inputs;
     bitvec salu_bytes;
     int group = 0;
@@ -771,34 +758,29 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
 
         if (!group_set) {
             group = byte.loc.group;
-        } else {
-            ERROR_CHECK(group == byte.loc.group, "Input %s for a stateful alu %s allocated across "
-                        "multiple groups, and cannot be resolved", field->name, salu->name);
+        } else if (group == byte.loc.group) {
+            ::error("Input %s for a stateful alu %s allocated across multiple groups, and "
+                     "cannot be resolved", field->name, salu->name);
+             return false;
         }
-
         salu_bytes.setbit(byte.loc.byte);
-
         for (auto fi : byte.field_bytes) {
             le_bitrange field_bits = { fi.lo, fi.hi };
             salu_inputs[byte.loc.byte * 8 + fi.cont_lo] = field_bits;
         }
     }
 
-    int phv_width = salu->width;
-    if (salu->dual)
-        phv_width /= 2;
+    int phv_width = salu->source_width();
     if (salu_bytes.popcount() > (phv_width / 8)) {
         ::error("The input %s to stateful alu %s is allocated to more input xbar bytes than the "
                 "width than the ALU and cannot be resolved.", field->name, salu->name);
-        prune();
-        return expr;
+        return false;
     }
 
     if (!salu_bytes.is_contiguous()) {
         ::error("The input %s to stateful alu %s is not allocated contiguously by byte on the "
                 "input xbar and cannot be resolved.", field->name, salu->name);
-        prune();
-        return expr;
+       return false;
     }
 
 
@@ -816,31 +798,93 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
     if (valid_start_positions.count(salu_bytes.min().index()) == 0) {
         ::error("The input %s to stateful alu %s is not allocated in a valid region on the input "
                 "xbar to be a source of an ALU operation", field->name, salu->name);
-        prune();
-        return expr;
+        return false;
     }
 
     if (!check_bit_positions(salu_inputs, bits.size(), salu_bytes.min().index() * 8)) {
         ::error("The input %s to stateful alu %s is not allocated contiguously by bit on the "
                 "input xbar and cannot be resolved.", field->name, salu->name);
+        return false;
+    }
+
+    is_hi = salu_bytes.min().index() != initial_offset;
+    return true;
+}
+
+bool AdjustStatefulInstructions::verify_on_hash_bus(const IR::MAU::StatefulAlu *salu,
+        const IXBar::Use::MeterAluHash &mah, const PHV::Field *field, le_bitrange bits,
+        bool &is_hi) {
+    if (mah.identity_positions.count(field) == 0) {
+        ::error("The input %s to the stateful alu %s cannot be found on the hash input",
+                 field->name, salu->name);
+        return false;
+    }
+
+    auto &pos_vec = mah.identity_positions.at(field);
+    bool range_found = false;
+    for (auto &pos : pos_vec) {
+        if (pos.field_range != bits)
+            continue;
+        range_found = true;
+        is_hi = pos.hash_start != 0;
+    }
+
+    if (!range_found) {
+        ::error("The range for the input %s to the stateful alu %s is not found on the hash "
+                "input", field->name, salu->name);
+        return false;
+    }
+    return true;
+}
+
+/** The entire point of this pass is to convert any field name in a Stateful ALU instruction
+ *  to either phv_lo or phv_hi, depending on the input xbar allocation.  If the field
+ *  comes through the hash bus, then the stateful ALU cannot resolve the name without
+ *  phv_lo or phv_hi anyway.
+ */
+const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr) {
+    if (!findContext<IR::MAU::SaluAction>()) {
         prune();
         return expr;
     }
 
-    bool is_hi = salu_bytes.min().index() != initial_offset;
+    le_bitrange bits;
+    auto field = phv.field(expr, &bits);
+    if (field == nullptr) {
+        return expr;
+    }
+
+    auto tbl = findContext<IR::MAU::Table>();
+    auto salu = findContext<IR::MAU::StatefulAlu>();
+    auto &salu_ixbar = tbl->resources->salu_ixbar;
+    bool is_hi = false;
+    if (!salu_ixbar.meter_alu_hash.allocated) {
+        if (!verify_on_search_bus(salu, salu_ixbar, field, bits, is_hi)) {
+            prune();
+            return expr;
+        }
+    } else {
+        if (!verify_on_hash_bus(salu, salu_ixbar.meter_alu_hash, field, bits, is_hi)) {
+            prune();
+            return expr;
+        }
+    }
+
     cstring name = "phv";
     if (is_hi)
         name += "_hi";
     else
         name += "_lo";
 
-    IR::MAU::SaluReg *salu_reg = new IR::MAU::SaluReg(expr->srcInfo,
-                                                      IR::Type::Bits::get(phv_width), name,
-                                                      is_hi);
+    IR::MAU::SaluReg *salu_reg
+        = new IR::MAU::SaluReg(expr->srcInfo, IR::Type::Bits::get(salu->source_width()), name,
+                               is_hi);
+    int phv_width = ((bits.size() + 7) / 8) * 8;
     salu_reg->phv_src = expr;
     const IR::Expression *rv = salu_reg;
-    if (salu_bytes.popcount() < (phv_width / 8)) {
-        rv = MakeSlice(rv, 0, salu_bytes.popcount() * 8 - 1);
+    // Sets the byte_mask for the input for the stateful alu
+    if (phv_width < salu->source_width()) {
+        rv = MakeSlice(rv, 0, phv_width - 1);
     }
     prune();
     return rv;

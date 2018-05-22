@@ -12,7 +12,9 @@
 #include "lib/range.h"
 #include "lib/log.h"
 
+constexpr int IXBar::HASH_INDEX_GROUPS;
 constexpr int IXBar::HASH_SINGLE_BITS;
+constexpr int IXBar::METER_ALU_HASH_BITS;
 constexpr int IXBar::TOFINO_METER_ALU_BYTE_OFFSET;
 
 void IXBar::clear() {
@@ -244,7 +246,6 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
     use.insert(use.end(), alloc.use.begin(), alloc.use.end());
     bit_use.insert(bit_use.end(), alloc.bit_use.begin(), alloc.bit_use.end());
     way_use.insert(way_use.end(), alloc.way_use.begin(), alloc.way_use.end());
-    select_use.insert(select_use.end(), alloc.select_use.begin(), alloc.select_use.end());
     for (int i = 0; i < HASH_GROUPS; i++) {
         if (hash_table_inputs[i] != 0 && alloc.hash_table_inputs[i] != 0)
             BUG("When adding allocs of ways, somehow ended up on the same hash group");
@@ -1012,6 +1013,8 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
                                         mid_bytes_needed);
         if (!possible)
             break;
+        if (groups_needed > 1 && byte_mask != ~0U)
+            break;
         for (int i = 0; i < 2 && !allocated; i++) {
             bool version_placed = false;
             bool prefer_found = i == 0;
@@ -1252,11 +1255,12 @@ void IXBar::create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc) {
 
 /* This visitor is used by stateful tables to find the fields needed and add them to the
  * use info */
-class FindFieldsToAlloc : public Inspector {
+class FindSaluSources : public MauInspector {
     const PhvInfo              &phv;
     IXBar::ContByteConversion  &map_alloc;
     std::set<cstring>          &fields_needed;
-    unsigned                   extra_align;  // log2 of the salu size in bytes (0 = 8 bits, etc)
+    ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources;
+
     bool preorder(const IR::MAU::SaluAction *a) override {
         visit(a->action, "action");  // just visit the action instructions
         return false; }
@@ -1266,8 +1270,8 @@ class FindFieldsToAlloc : public Inspector {
         if (auto *finfo = phv.field(e, &bits)) {
             if (!fields_needed.count(finfo->name)) {
                 fields_needed.insert(finfo->name);
-                add_use(map_alloc, finfo, aliasSourceName, &bits, 0, IXBar::NO_BYTE_TYPE,
-                        extra_align);
+                add_use(map_alloc, finfo, aliasSourceName, &bits, 0, IXBar::NO_BYTE_TYPE);
+                phv_sources.insert(std::make_pair(finfo, bits));
             }
             return false; }
         return true; }
@@ -1277,9 +1281,9 @@ class FindFieldsToAlloc : public Inspector {
     }
 
  public:
-    FindFieldsToAlloc(const PhvInfo &phv, IXBar::ContByteConversion &ma, std::set<cstring> &fn,
-                      unsigned ea)
-    : phv(phv), map_alloc(ma), fields_needed(fn), extra_align(ea) {}
+    FindSaluSources(const PhvInfo &phv, IXBar::ContByteConversion &ma, std::set<cstring> &fn,
+                    ordered_set<std::pair<const PHV::Field *, le_bitrange>> &ps)
+    : phv(phv), map_alloc(ma), fields_needed(fn), phv_sources(ps) {}
 };
 
 bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
@@ -1713,6 +1717,74 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     return true;
 }
 
+int IXBar::max_index_group(int max_bit) {
+    int total_max = (max_bit + TableFormat::RAM_GHOST_BITS - 1) / TableFormat::RAM_GHOST_BITS;
+    return std::min(total_max, HASH_INDEX_GROUPS);
+}
+
+int IXBar::max_index_single_bit(int max_bit) {
+    int max_single_bit = max_bit - TableFormat::RAM_GHOST_BITS * HASH_INDEX_GROUPS;
+    max_single_bit = std::max(max_single_bit, 0);
+    BUG_CHECK(max_single_bit <= HASH_SINGLE_BITS, "Requesting a bit beyond the size of the "
+              "Galois matrix");
+    return max_single_bit;
+}
+
+bool IXBar::hash_use_free(int max_group, int max_single_bit, unsigned hash_table_input) {
+    for (int i = 0; i < HASH_TABLES; i++) {
+        if (((1 << i) & hash_table_input) == 0)
+            continue;
+        for (int j = 0; j < max_group; j++) {
+            if ((hash_index_inuse[j] & (1 << i)) != 0)
+                return false;
+        }
+        for (int j = 0; j < max_single_bit; j++) {
+            if ((hash_single_bit_inuse[j] & (1 << i)) != 0)
+                return false;
+        }
+    }
+    return true;
+}
+
+void IXBar::write_hash_use(int max_group, int max_single_bit, unsigned hash_table_input,
+        cstring name) {
+    for (int i = 0; i < HASH_TABLES; i++) {
+        if (((1 << i) & hash_table_input) == 0)
+            continue;
+        for (int j = 0; j < max_group; j++) {
+            hash_index_use[i][j] = name;
+            hash_index_inuse[j] |= (1 << i);
+        }
+        for (int j = 0; j < max_single_bit; j++) {
+            hash_single_bit_use[i][j] = name;
+            hash_single_bit_inuse[j] |= (1 << i);
+        }
+    }
+}
+
+/** The Meter ALU, responsible for any meters, selectors, or stateful ALU operations
+ *  potentially needs information from PHV in order to perform the associated
+ *  calculations.  The allocSelector, allocMeter, and allocStateful are to determine
+ *  the requirements and the allocation of these values to the ALU.
+ *
+ *  Data can reach the ALU through two pathways, either through a search bus or after
+ *  a hash calculation.
+ *
+ *  The pathway for the search bus is described in section 6.2.3 Exact Match Row
+ *  Veritical/Horizontal (VH) Xbars.  In the diagram, on each row, a bus headed directly
+ *  to the meter ALU block can come from any 8 of the input xbar groups.  In Tofino,
+ *  the upper 8 bytes go through, while on JBay, the entirety of the input xbar group
+ *  can go through.  However, unlike the normal search buses, there is no byte swizzler.
+ *  The group is ANDed with a byte_mask
+ *
+ *  The hash pathway is described in section 6.2.4.8.1 Exact Match RAM Addressing.  The Galois
+ *  matrix can be used to calculate any kind of hash, or if the alignment on the search bus
+ *  is not possible, then the hash matrix can be used to position any of the search bus
+ *  results into the correct position.  However, the limitation is that this can only
+ *  process up to 51 bits, rather than the full range occasionally needed by wide stateful
+ *  ALU tables
+ */
+
 /** Selector allocation algorithm.  Currently reserves an entire section of hash matrix,
  *  even if the selector is only on fair mode, rather than resilient
  */
@@ -1745,73 +1817,145 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
         alloc.clear();
         return false;
     }
-    for (int i = 0; i < HASH_TABLES; i++) {
-        if ((1U << i) & hash_table_input) {
-            for (int j = 0; j < HASH_INDEX_GROUPS; j++) {
-                if (hash_index_use[i][j]) {
-                    alloc.clear();
-                    return false;
-                }
-            }
-            for (int j = 0; j < HASH_SINGLE_BITS; j++) {
-                if (hash_single_bit_use[i][j]) {
-                    alloc.clear();
-                    return false;
-                }
-            }
+
+    auto &mah = alloc.meter_alu_hash;
+
+    mah.allocated = true;
+    mah.group = hash_group;
+    mah.algorithm = as->algorithm;
+    int mode_width_bits = as->mode == "resilient" ? RESILIENT_MODE_HASH_BITS : FAIR_MODE_HASH_BITS;
+
+    if (mah.algorithm.size_from_algorithm()) {
+        if (mode_width_bits > mah.algorithm.size) {
+            // FIXME: Debatably be moved to an error, but have to wait on a p4-tests update
+            ::warning("%s: The algorithm for selector %s has a size of %d bits, when the mode "
+                      "selected requires %d bits", as->srcInfo, as->name, mah.algorithm.size,
+                    mode_width_bits);
+            // alloc.clear();
+            // return false;
         }
     }
 
-    alloc.select_use.emplace_back(hash_group);
-    alloc.select_use.back().algorithm = as->algorithm;
-    alloc.select_use.back().mode = as->mode.name;
-    for (int i = 0; i < HASH_TABLES; i++) {
-        if ((1U << i) & hash_table_input) {
-            for (int j = 0; j < HASH_INDEX_GROUPS; j++) {
-                hash_index_use[i][j] = name + "$select";
-                hash_index_inuse[j] |= (1 << i);
+    // Mark the positions of each of the fields on the identity hash, so that the
+    // asm_output can easily locate the positions of all of the the associated fields
+    if (mah.algorithm.type == IR::MAU::hash_function::IDENTITY) {
+        int bits_seen = 0;
+        for (auto ixbar_read : tbl->match_key) {
+            if (ixbar_read->match_type.name != "selector") continue;
+            le_bitrange bits = { 0, 0 };
+            auto *finfo = phv.field(ixbar_read->expr, &bits);
+            BUG_CHECK(finfo, "Null selector field in PHV allocation");
+            int diff = bits_seen + bits.size() - mode_width_bits;
+            if (diff > 0) {
+                bits.hi -= diff;
             }
-            for (int j = 0; j < HASH_SINGLE_BITS; j++) {
-                hash_single_bit_use[i][j] = name + "$select";
-                hash_single_bit_inuse[j] |= (1 << i);
-            }
+            mah.identity_positions[finfo].emplace_back(bits_seen, bits);
+            bits_seen += bits.size();
+            if (bits_seen >= mode_width_bits)
+                break;
+        }
+
+        if (bits_seen < mode_width_bits) {
+            // FIXME: See above at previous FIXME
+            ::warning("%s: The identity hash for selector %s has a size of %d bits, when the mode "
+                      "selected required %d bits", as->srcInfo, as->name, bits_seen,
+                       mode_width_bits);
+            // alloc.clear();
+            // return false;
         }
     }
-    fill_out_use(alloced, false);
-    hash_group_print_use[hash_group] = name + "$select";
-    hash_group_use[hash_group] |= hash_table_input;
+    mah.bit_mask.setrange(0, mode_width_bits);
     alloc.hash_table_inputs[hash_group] = hash_table_input;
+    int max_bit = ((mah.bit_mask.max().index() + 7) / 8) * 8;
+    max_bit = std::min(max_bit, METER_ALU_HASH_BITS);
+    int max_group = max_index_group(max_bit);
+    int max_single_bit = max_index_single_bit(max_bit);
+    BUG_CHECK(hash_use_free(max_group, max_single_bit, hash_table_input), "The calculation for "
+              "the hash matrix should be completely free at this point");
+    write_hash_use(max_group, max_single_bit, hash_table_input, alloc.used_by);
+    fill_out_use(alloced, false);
+    hash_group_print_use[hash_group] = name;
     hash_group_use[hash_group] |= hash_table_input;
     return rv;
 }
 
+/**
+ *  Given a field range, and a byte position to start the allocation on the ixbar, can that
+ *  field be allocated starting from lo to hi within that search bus position.
+ */
+bool IXBar::can_allocate_on_search_bus(IXBar::Use &alloc, const PHV::Field *field,
+        le_bitrange range, int ixbar_position) {
+    bitvec seen_bits;
+
+    for (auto &byte : alloc.use) {
+        if (byte.field_bytes.size() > 1)
+            return false;
+        auto &fi = byte.field_bytes[0];
+        if (fi.field != field->name)
+            continue;
+        if (fi.width() != 8) {
+            if (fi.hi != range.hi)
+                return false;
+        }
+        if (fi.cont_loc().min().index() != 0)
+            return false;
+        int byte_position = ((fi.lo - range.lo) + 7)/ 8;
+        // Validate that the byte, given the PHV allocation for that particular byte
+        if (align_flags[(ixbar_position + byte_position) & 3] & byte.flags)
+            return false;
+        seen_bits.setrange(fi.lo, fi.width());
+    }
+    if (!seen_bits.is_contiguous() || !(seen_bits.min().index() == range.lo)
+        || !(seen_bits.max().index() == range.hi))
+        return false;
+    return true;
+}
+
 /** Allocation of the meter input xbar if it is an LPF or WRED.  On Tofino, specifically have
- *  to reserve bytes 8-11 of a specific input xbar group currently
+ *  to reserve bytes 8-11 of a specific input xbar group currently.
+ *
+ *  Similar to stateful ALU allocation, except in the LPF/WRED case it is only one field,
+ *  and thus one input xbar source
  */
 bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, const PhvInfo &phv,
-                       Use &alloc) {
+                       Use &alloc, bool on_search_bus) {
     if (!mtr->alu_output())
         return true;
     if (mtr->input == nullptr)
         return true;
-
     ContByteConversion map_alloc;
     safe_vector<IXBar::Use::Byte *> alloced;
     std::set<cstring> fields_needed;
-    unsigned byte_mask = ((1U << LPF_INPUT_BYTES) - 1);
-    if (Device::currentDevice() == "Tofino")
-        byte_mask <<= TOFINO_METER_ALU_BYTE_OFFSET;
     boost::optional<cstring> aliasSourceName = phv.get_alias_name(mtr->input);
     le_bitrange bits;
-    if (auto *finfo = phv.field(mtr->input, &bits)) {
-        if (!fields_needed.count(finfo->name)) {
-            fields_needed.insert(finfo->name);
-            add_use(map_alloc, finfo, aliasSourceName, &bits, 0, IXBar::NO_BYTE_TYPE);
+
+    auto *finfo = phv.field(mtr->input, &bits);
+    BUG_CHECK(finfo, "%s: The input for %s does not have a PHV allocation", mtr->srcInfo,
+              mtr->name);
+    if (!fields_needed.count(finfo->name)) {
+        fields_needed.insert(finfo->name);
+        add_use(map_alloc, finfo, aliasSourceName, &bits, 0, IXBar::NO_BYTE_TYPE);
+    }
+    create_alloc(map_alloc, alloc);
+
+    unsigned byte_mask = ~0U;
+    hash_matrix_reqs hm_reqs;
+    if (on_search_bus) {
+        if (!can_allocate_on_search_bus(alloc, finfo, bits, 0)) {
+            alloc.clear();
+            return false;
         }
+        // Byte mask for a meter is 4 bytes
+        byte_mask = ((1U << LPF_INPUT_BYTES) - 1);
+        if (Device::currentDevice() == "Tofino")
+            byte_mask <<= TOFINO_METER_ALU_BYTE_OFFSET;
+    } else {
+        hm_reqs.index_groups = HASH_INDEX_GROUPS;
     }
 
-    create_alloc(map_alloc, alloc);
-    hash_matrix_reqs hm_reqs;
+    LOG3("Alloc meter " << mtr->name << " on_search_bus " << on_search_bus << " with "
+          << alloc.use.size() << " bytes");
+
     if (!find_alloc(alloc.use, false, alloced, hm_reqs, byte_mask)) {
         alloc.clear();
         return false;
@@ -1822,49 +1966,250 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
         alloc.used_by = tbl->match_table->externalName() + "$meter";
     else
         alloc.used_by = mtr->name + "";
+
+    if (!on_search_bus) {
+        auto &mah = alloc.meter_alu_hash;
+        unsigned hash_table_input = alloc.compute_hash_tables();
+        int hash_group = getHashGroup(hash_table_input);
+        if (hash_group < 0) {
+            alloc.clear();
+            return false;
+        }
+
+        mah.allocated = true;
+        mah.group = hash_group;
+        mah.bit_mask.setrange(0, bits.size());
+        mah.algorithm = IR::MAU::hash_function::identity();
+        mah.identity_positions[finfo].emplace_back(0, bits);
+        int max_bit = ((mah.bit_mask.max().index() + 7) / 8) * 8;
+        max_bit = std::min(max_bit, METER_ALU_HASH_BITS);
+        int max_group = max_index_group(max_bit);
+        int max_single_bit = max_index_single_bit(max_bit);
+        BUG_CHECK(hash_use_free(max_group, max_single_bit, hash_table_input), "The calculation "
+                  "for the hash matrix should be completely free at this point");
+        write_hash_use(max_group, max_single_bit, hash_table_input, alloc.used_by);
+        alloc.hash_table_inputs[mah.group] = hash_table_input;
+    }
+
     fill_out_use(alloced, false);
     return true;
 }
 
+/**
+ *  Given a list of PHV fields that have are sources for this Stateful Alu, see if their
+ *  given PHV allocation can fit through the search bus.  This will also reset the order
+ *  of the bytes in the allocation if the order is to be reversed.
+ *
+ */
+bool IXBar::setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &alloc,
+       ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources,
+       unsigned &byte_mask) {
+    int width = salu->source_width()/8U;
+    int ixbar_initial_position = 0;
+    if (Device::currentDevice() == "Tofino")
+        ixbar_initial_position = TOFINO_METER_ALU_BYTE_OFFSET;
+
+    bool phv_src_reserved[2] = { false, false };
+    bool reversed = false;
+    int total_sources = salu->dual ? 2 : 1;
+
+    int source_index = 0;
+    // Check to see which input xbar positions the sources can be allocated to
+    for (auto &source : phv_sources) {
+        auto field = source.first;
+        auto range = source.second;
+        bool can_fit[2] = { false, false };
+        bool can_fit_anywhere = false;
+        for (int i = 0; i < total_sources; i++) {
+            if (phv_src_reserved[i])
+                continue;
+            can_fit[i] = can_allocate_on_search_bus(alloc, field, range, i * width);
+            can_fit_anywhere |= can_fit[i];
+        }
+        if (!can_fit_anywhere)
+            return false;
+        // If a source can only fit in one of the two input xbar positions, reserve
+        // that position for that source
+        if (can_fit[0] && !can_fit[1])
+            phv_src_reserved[0] = true;
+        if (can_fit[1] && !can_fit[0])
+            phv_src_reserved[1] = true;
+
+        // If the first source is in the second position on the input xbar, then
+        // reverse the vector of bytes for the allocation
+        if (source_index == 0 && phv_src_reserved[1])
+            reversed = true;
+    }
+
+    byte_mask = (1U << (width * total_sources)) - 1;
+    byte_mask <<= ixbar_initial_position;
+
+
+    if (reversed) {
+        if (phv_sources.size() == 2) {
+            const PHV::Field *first_field = nullptr;
+            for (auto &source : phv_sources) {
+                first_field = source.first;
+                break;
+            }
+
+            // Due to the find_alloc algorithm, reverse the order of the fields as the
+            // first field is actually the phv_hi source
+            std::sort(alloc.use.begin(), alloc.use.end(),
+                [&](const IXBar::Use::Byte &a, const IXBar::Use::Byte &b) {
+                auto a_fi = a.field_bytes[0];
+                auto b_fi = b.field_bytes[0];
+                if (a_fi.field == first_field->name && b_fi.field != first_field->name)
+                    return true;
+                if (a_fi.field != first_field->name && b_fi.field == first_field->name)
+                    return false;
+                return a_fi.lo < b_fi.lo;
+            });
+        } else {
+            // The same source is used twice, but can only be placed at the upper position
+            unsigned unused_byte_mask = (1U << width) - 1;
+            unused_byte_mask <<= ixbar_initial_position;
+            byte_mask &= ~unused_byte_mask;
+        }
+    }
+    return true;
+}
+
+/**
+ *  Determines whether a stateful ALU can fit within a hash bus.  If it can, determine
+ *  the positions of these individual sources within the hash matrix, as the Galois
+ *  matrix has to set up an identity matrix for this
+ */
+bool IXBar::setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc,
+        ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources) {
+    auto &mah = alloc.meter_alu_hash;
+    unsigned hash_table_input = alloc.compute_hash_tables();
+    int hash_group = getHashGroup(hash_table_input);
+    if (hash_group < 0) {
+        alloc.clear();
+        return false;
+    }
+
+    mah.allocated = true;
+    mah.group = hash_group;
+    mah.algorithm = IR::MAU::hash_function::identity();
+    bool phv_src_reserved[2] = { false, false };
+
+    int source_index = -1;
+    std::set<int> sources_finished;
+    for (auto &source : phv_sources) {
+        source_index++;
+        auto field = source.first;
+        auto range = source.second;
+        // If a stateful ALU has a dual 32 bit function, if one of the sources is
+        // greater than 51 (Size of Hash Matrix Output) - 32 (Size of Input) = 19 bits
+        if (!(salu->source_width() >= 32 && salu->dual && phv_sources.size() == 2
+              && range.size() > METER_ALU_HASH_BITS - salu->source_width()))
+            continue;
+        int start_bit = 0;
+        mah.bit_mask.setrange(start_bit, range.size());
+        mah.identity_positions[field].emplace_back(start_bit, range);
+        phv_src_reserved[0] = true;
+        sources_finished.insert(source_index);
+    }
+
+    source_index = -1;
+    int alu_slot_index = 0;
+    for (auto &source : phv_sources) {
+        source_index++;
+        auto field = source.first;
+        auto range = source.second;
+        if (sources_finished.count(source_index))
+            continue;
+        if (phv_src_reserved[alu_slot_index])
+            alu_slot_index++;
+        int start_bit = alu_slot_index * salu->source_width();
+        mah.identity_positions[field].emplace_back(start_bit, range);
+        mah.bit_mask.setrange(start_bit, range.size());
+    }
+
+    // Because of a byte mask, must reserve the full byte on the hash bus
+    int max_bit = ((mah.bit_mask.max().index() + 7) / 8) * 8;
+    max_bit = std::min(max_bit, METER_ALU_HASH_BITS);
+    int max_group = max_index_group(max_bit);
+    int max_single_bit = max_index_single_bit(max_bit);
+    BUG_CHECK(hash_use_free(max_group, max_single_bit, hash_table_input), "The calculation "
+              "for the hash matrix should be completely free at this point");
+    write_hash_use(max_group, max_single_bit, hash_table_input, alloc.used_by);
+    alloc.hash_table_inputs[mah.group] = hash_table_input;
+    return true;
+}
+
+
+/**  If a stateful ALU is in dual mode, then the stateful ALU has two possible inputs, which
+ *  can go to either the lo or hi ALU.  The sizes of these sources can either be
+ *  8, 16, or 32 bits, and the stateful ALU can have either one or two sources.  The inputs
+ *  come in from an initial offset on the input xbar.  For Tofino, the start byte is 8,
+ *  in JBay, the start byte is 0.
+ *
+ *  Thus, in dual mode:
+ *       the bytes for 8 bit inputs are start_byte and start_byte + 1
+ *       the bytes for 16 bit inputs are start_byte and start_byte + 2
+ *       the bytes for 32 bit inputs are start_byte and start_byte + 4
+ *
+ *  Either phv source can go to the alu_lo or alu_hi, so the order in which the stateful
+ *  ALU fields are allocated do not matter.
+ *
+ *  Currently the algorithm only allocates fully on a hash bus or a search bus.  In theory
+ *  these could be combined, if the allocation was too constrained for either but not
+ *  for both.  In general, it might be easier just to influence PHV allocation in that
+ *  case.
+ */
 bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table *tbl,
-                          const PhvInfo &phv, Use &alloc) {
+                          const PhvInfo &phv, Use &alloc, bool on_search_bus) {
     std::set <cstring> fields_needed;
     ContByteConversion map_alloc;
-    unsigned extra_align = 0;
+    ordered_set<std::pair<const PHV::Field *, le_bitrange>> phv_sources;
     LOG3("IXBar::allocStateful(" << salu->name << ")");
-    if (salu->width > 1) {
-        /* To use the stateful_meter_alu_data path, any fields read must be aligned
-         * properly on the ixbar for the size of the stateful alu.  We only do this
-         * on the first try, since if it's not aligned, we can still make it work, we
-         * just need to use a hash table to swizzle it properly, and use the Exact
-         * Match Hash Address VH Xbar.  See 6.2.3(fig 6-18) and 6.2.8.4.1(fig 6-32)
-         * in the Tofino uArch doc */
-        extra_align = floor_log2(salu->width) - 3;
-        if (salu->dual) extra_align--;
-        BUG_CHECK(extra_align <= 3, "Bad SatefulAlu width"); }
-    salu->apply(FindFieldsToAlloc(phv, map_alloc, fields_needed, extra_align));
-    unsigned width = salu->width/8U;
-    if (!salu->dual) width *= 2;
-    unsigned byte_mask = (1U << width) - 1;
-    if (Device::currentDevice() == "Tofino")
-        byte_mask <<= TOFINO_METER_ALU_BYTE_OFFSET;
+    salu->apply(FindSaluSources(phv, map_alloc, fields_needed, phv_sources));
     create_alloc(map_alloc, alloc);
-    if (alloc.use.size() == 0) return true;
-    if (alloc.use.size() > width) {
-        // can't possibly fit
-        return false; }
-    safe_vector<IXBar::Use::Byte *> xbar_alloced;
+    if (alloc.use.size() == 0)
+        return true;
 
+    unsigned byte_mask = ~0U;
     hash_matrix_reqs hm_reqs;
+
+    if (on_search_bus) {
+        if (!setup_stateful_search_bus(salu, alloc, phv_sources, byte_mask)) {
+            alloc.clear();
+            return false;
+        }
+    } else {
+        int total_bits = 0;
+        for (auto &source : phv_sources) {
+            total_bits += source.second.size();
+        }
+        if (total_bits > METER_ALU_HASH_BITS)
+            return false;
+        hm_reqs = hash_matrix_reqs::max(false);
+    }
+
+    LOG3("Alloc stateful alu " << salu->name << " on_search_bus " << on_search_bus << " with "
+          << alloc.use.size() << " bytes");
+    safe_vector<IXBar::Use::Byte *> xbar_alloced;
     if (!find_alloc(alloc.use, false, xbar_alloced, hm_reqs, byte_mask)) {
         alloc.clear();
-        return false; }  // FIXME -- need to allocate hash table space if it turns out we need it
+        return false;
+    }
 
     alloc.type = Use::STATEFUL_ALU;
     if (salu->direct)
         alloc.used_by = tbl->match_table->externalName() + "$register";
     else
         alloc.used_by = salu->name + "";
+
+    if (!on_search_bus) {
+        if (!setup_stateful_hash_bus(salu, alloc, phv_sources)) {
+            alloc.clear();
+            return false;
+        }
+    }
+
     LOG3("allocStateful succeeded: " << alloc);
     fill_out_use(xbar_alloced, false);
     return true;
@@ -2308,6 +2653,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     /* Determine number of groups needed.  Loop through them, alloc match will be the same
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
     LOG1("IXBar::allocTable(" << tbl->name << ")");
+
     if (!tbl->gateway_only() && !lo->layout.no_match_data() && !lo->layout.atcam) {
         bool ternary = tbl->layout.ternary;
         safe_vector<IXBar::Use::Byte *> alloced;
@@ -2365,13 +2711,17 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
                 alloc.clear_ixbar();
                 return false; } }
         if (auto mtr = at_mem->to<IR::MAU::Meter>()) {
-            if (!attached_tables.count(mtr) && !allocMeter(mtr, tbl, phv, alloc.meter_ixbar)) {
+            if (!attached_tables.count(mtr)
+                && !(allocMeter(mtr, tbl, phv, alloc.meter_ixbar, true)
+                     || allocMeter(mtr, tbl, phv, alloc.meter_ixbar, false))) {
                 alloc.clear_ixbar();
                 return false;
             }
         }
         if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
-            if (!attached_tables.count(salu) && !allocStateful(salu, tbl, phv, alloc.salu_ixbar)) {
+            if (!attached_tables.count(salu)
+                && !(allocStateful(salu, tbl, phv, alloc.salu_ixbar, true)
+                     || allocStateful(salu, tbl, phv, alloc.salu_ixbar, false))) {
                 alloc.clear_ixbar();
                 return false; } } }
 
@@ -2444,21 +2794,23 @@ void IXBar::update(cstring name, const Use &alloc) {
                 hash_single_bit_inuse[bit] |= alloc.hash_table_inputs[way.group];
                 if (!hash_single_bit_use[hash][bit])
                     hash_single_bit_use[hash][bit] = name; } } }
-    for (auto &select : alloc.select_use) {
-        for (int i = 0; i < HASH_TABLES; i++) {
-            if ((1U << i) & alloc.hash_table_inputs[select.group]) {
-                for (int j = 0; j < HASH_INDEX_GROUPS; j++) {
-                    hash_index_use[i][j] = name;
-                    hash_index_inuse[j] |= (1 << i);
-                }
-                for (int j = 0; j < HASH_SINGLE_BITS; j++) {
-                    hash_single_bit_use[i][j] = name;
-                    hash_single_bit_inuse[j] |= (1 << i);
-                }
-            }
+
+    if (alloc.meter_alu_hash.allocated) {
+        auto &mah = alloc.meter_alu_hash;
+        // The mask is a byte mask, so must reserve the entire byte
+        int max_bit = ((mah.bit_mask.max().index() + 7) / 8) * 8;
+        max_bit = std::min(max_bit, METER_ALU_HASH_BITS);
+        int max_group = max_index_group(max_bit);
+        int max_index_bit = max_index_single_bit(max_bit);
+        unsigned hash_table_input = alloc.hash_table_inputs[mah.group];
+        if (hash_group_use[mah.group] == 0) {
+            hash_group_use[mah.group] = alloc.hash_table_inputs[mah.group];
+            hash_group_print_use[mah.group] = name;
         }
-        hash_group_print_use[select.group] = name;
-        hash_group_use[select.group] |= alloc.hash_table_inputs[select.group];
+        if (!hash_use_free(max_group, max_index_bit, hash_table_input)) {
+            BUG("Conflicting hash matrix usage for %s", name);
+        }
+        write_hash_use(max_group, max_index_bit, hash_table_input, name);
     }
     // If allocation uses hash distribution, update for hash distribution
     if (alloc.hash_dist_hash.allocated) {

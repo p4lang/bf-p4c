@@ -2045,9 +2045,13 @@ void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFL
             min_left = action_table->left_to_place();
         }
     }
+
 #ifdef HAVE_JBAY
     // The algorithm, in order to place the action tables within the same half, must guarantee
     // that there is enough room for that particular table
+    if (Device::currentDevice() == "Tofino")
+        return;
+
     if (curr_oflow && must_be_placed_in_half.count(curr_oflow.group) == 0
         && nexts[SYNTH] && nexts[SYNTH].group->type == SRAM_group::SELECTOR) {
         BUG_CHECK(curr_oflow.group->type == SRAM_group::ACTION, "An overflowing synth2port table "

@@ -436,6 +436,12 @@ class StatefulAlu : Synth2Port {
 
     const char *kind() const override { return "stateful"; }
     const Type *getType() const override { return Type_Register::get(); }
+
+    int source_width() const {
+        if (dual)
+            return width / 2;
+        return width;
+    }
 }
 
 class Selector : AttachedMemory {

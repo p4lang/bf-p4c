@@ -187,6 +187,11 @@ class AdjustStatefulInstructions : public MauTransform {
     const IR::Node *preorder(IR::Node *) override;
     bool check_bit_positions(std::map<int, le_bitrange> &salu_inputs, int field_size,
         int starting_bit);
+    bool verify_on_search_bus(const IR::MAU::StatefulAlu *, const IXBar::Use &salu_ixbar,
+        const PHV::Field *field, le_bitrange bits, bool &is_hi);
+    bool verify_on_hash_bus(const IR::MAU::StatefulAlu *salu,
+         const IXBar::Use::MeterAluHash &mah, const PHV::Field *field, le_bitrange bits,
+         bool &is_hi);
 
  public:
     explicit AdjustStatefulInstructions(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
