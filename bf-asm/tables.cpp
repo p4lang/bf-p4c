@@ -207,7 +207,7 @@ void Table::setup_layout(std::vector<Layout> &layout, const value_t *row,
             err = 1;
         } else if (word->type == tVEC) {
             if (word->vec.size != (int)layout.size()) {
-                error(word->lineno, "Word shape doesn't match rows"); 
+                error(word->lineno, "Word shape doesn't match rows");
                 err = 1;
             } else {
                 for (int i = 0; i < word->vec.size; i++) {
@@ -1627,9 +1627,8 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
                 mra["spare_bank_memory_unit"] = mem[0]->clone();
             else
                 mra["spare_bank_memory_unit"] = mem.clone();
-            if (table_type() == SELECTION) break; }
-        //FIXME-JSON -- Hack to match glass json
-        //if (table_type() != ACTION) break; }
+            if (table_type() == SELECTION || table_type() == COUNTER ||
+                    table_type() == METER || table_type() == STATEFUL) break; }
         std::sort(mem.begin(), mem.end(), json::obj::ptrless());
         json::map tmp;
         tmp["memory_units"] = std::move(mem);
