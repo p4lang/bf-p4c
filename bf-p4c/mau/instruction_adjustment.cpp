@@ -340,7 +340,8 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
         throw ActionFormat::failure(act->name);
 
     unsigned allowed_errors = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE
-                            | ActionAnalysis::ContainerAction::REFORMAT_CONSTANT;
+                            | ActionAnalysis::ContainerAction::REFORMAT_CONSTANT
+                            | ActionAnalysis::ContainerAction::UNRESOLVED_REPEATED_ACTION_DATA;
     unsigned error_mask = ~allowed_errors;
 
     for (auto &container_action : container_actions_map) {
@@ -468,6 +469,7 @@ const IR::MAU::Instruction *MergeInstructions::postorder(IR::MAU::Instruction *i
 const IR::MAU::Action *MergeInstructions::postorder(IR::MAU::Action *act) {
     if (merged_fields.empty())
         return act;
+
     for (auto &container_action_info : container_actions_map) {
         auto container = container_action_info.first;
         auto &cont_action = container_action_info.second;
@@ -585,13 +587,13 @@ IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container 
  */
 IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container container,
          ActionAnalysis::ContainerAction &cont_action) {
-    if (cont_action.field_actions.size() == 1 && cont_action.name != "set") {
-        unsigned error_mask = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE
-                            | ActionAnalysis::ContainerAction::REFORMAT_CONSTANT;
+    if (cont_action.is_shift()) {
+        unsigned error_mask = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE;
         BUG_CHECK((cont_action.error_code & error_mask) != 0,
             "Invalid call to build a merged instruction");
         return dest_slice_to_container(container, cont_action);
     }
+
 
     const IR::Expression *dst = nullptr;
     const IR::Expression *src1 = nullptr;
@@ -607,15 +609,31 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
               "merge instructions, some constant was not converted to action data");
 
     if (cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 1) {
-        auto &adi = cont_action.adi;
-        auto mo = new IR::MAU::MultiOperand(components, adi.action_data_name, false);
-        fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::ACTIONDATA,
-                                    adi.action_data_name, mo);
-        src1 = mo;
-        src1_writebits = adi.alignment.write_bits;
-        bitvec src1_read_bits = adi.alignment.read_bits;
-        if (src1_read_bits.popcount() != static_cast<int>(container.size())) {
-            src1 = MakeSlice(src1, src1_read_bits.min().index(), src1_read_bits.max().index());
+        if (cont_action.ad_renamed()) {
+            auto &adi = cont_action.adi;
+            auto mo = new IR::MAU::MultiOperand(components, adi.action_data_name, false);
+            fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::ACTIONDATA,
+                                        adi.action_data_name, mo);
+            src1 = mo;
+            src1_writebits = adi.alignment.write_bits;
+            bitvec src1_read_bits = adi.alignment.read_bits;
+            if (src1_read_bits.popcount() != static_cast<int>(container.size())) {
+                src1 = MakeSlice(src1, src1_read_bits.min().index(), src1_read_bits.max().index());
+            }
+        } else {
+            bool single_action_data = true;
+            auto &adi = cont_action.adi;
+            for (auto &field_action : cont_action.field_actions) {
+                for (auto &read : field_action.reads) {
+                    if (read.type != ActionAnalysis::ActionParam::ACTIONDATA)
+                        continue;
+                    BUG_CHECK(single_action_data, "Action data that shouldn't require an alias "
+                              "does require an alias");
+                    src1 = read.expr;
+                    src1_writebits = adi.alignment.write_bits;
+                    single_action_data = false;
+                }
+            }
         }
     } else if (cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] > 0) {
         // Constant merged into a single constant over the entire container

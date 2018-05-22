@@ -163,6 +163,7 @@ struct ActionFormat {
 
         cstring action_name;  ///< Potential rename if multiple action args within one placement
         cstring mask_name;  ///< A name that coordinates the mask to be setup in asm_output
+        bool single_rename = false;
 
         int gen_index() const {
             return ceil_log2(alu_size / 8);
@@ -170,12 +171,16 @@ struct ActionFormat {
 
         /** The alias needed in the format of the action for a placement */
         cstring get_action_name() const {
-            BUG_CHECK(action_name.isNull() == (arg_locs.size() == 1), "Action Format"
-                      " arg_loc size doesn't match name");
-            if (arg_locs.size() == 1)
+            BUG_CHECK(action_name.isNull() == (arg_locs.size() == 1 && !single_rename),
+                      "Action Format arg_loc size doesn't match name");
+            if (arg_locs.size() == 1 && !single_rename)
                 return arg_locs[0].get_asm_name();
             else
                 return action_name;
+        }
+
+        bool requires_alias() const {
+            return single_rename || arg_locs.size() > 1;
         }
 
         /** Returns the mask name.  Only can be called on a placement that has bitmasked-set */

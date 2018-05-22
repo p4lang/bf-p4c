@@ -214,7 +214,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                             PARTIAL_OVERWRITE = (1 << 15),
                             MULTIPLE_SHIFTS = (1 << 16),
                             ILLEGAL_ACTION_DATA = (1 << 17),
-                            REFORMAT_CONSTANT = (1 << 18) };
+                            REFORMAT_CONSTANT = (1 << 18),
+                            UNRESOLVED_REPEATED_ACTION_DATA = (1 << 19) };
         unsigned error_code = NO_PROBLEM;
         cstring name;
         ActionDataInfo adi;
@@ -229,26 +230,34 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                    + counts[ActionParam::CONSTANT];
         }
 
-        int operands() {
+        int operands() const {
             if (field_actions.size() == 0)
                 BUG("Cannot call operands function on empty container process");
             return field_actions[0].reads.size();
         }
 
-        int ad_sources() {
+        int ad_sources() const {
             return std::min(1, counts[ActionParam::ACTIONDATA] + counts[ActionParam::CONSTANT]);
         }
 
-        bool is_shift() {
+        bool is_shift() const {
             return name == "shru" || name == "shrs" || name == "shl";
         }
 
-        bool has_ad_or_constant() {
+        bool has_ad_or_constant() const {
             return ad_sources() > 0;
         }
 
         bool partial_overwrite() const {
             return (error_code & PARTIAL_OVERWRITE) != 0;
+        }
+
+        bool unresolved_ad() const {
+            return (error_code & UNRESOLVED_REPEATED_ACTION_DATA) != 0;
+        }
+
+        bool ad_renamed() const {
+            return adi.field_affects > 1 || unresolved_ad();
         }
 
         void set_mismatch(ActionParam::type_t type) {
@@ -312,6 +321,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     ContainerActionsMap *container_actions_map = nullptr;
     const IR::MAU::Table *tbl;
     FieldAction field_action;
+    ordered_set<std::pair<cstring, le_bitrange>> single_ad_params;
+    ordered_set<std::pair<cstring, le_bitrange>> multiple_ad_params;
 
     void initialize_phv_field(const IR::Expression *expr);
     void initialize_action_data(const IR::Expression *expr);
@@ -353,6 +364,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool valid_instruction_constant(unsigned value, int max_shift, int min_shift,
                                     int complement_size);
     void check_constant_to_actiondata(ContainerAction &cont_action, PHV::Container container);
+    void add_to_single_ad_params(ContainerAction &cont_action);
+    void check_single_ad_params(ContainerAction &cont_action);
 
     void verify_P4_action_for_tofino(cstring action_name);
     bool verify_P4_action_without_phv(cstring action_name);
@@ -361,6 +374,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
  public:
     const IR::Expression *isActionParam(const IR::Expression *expr,
         le_bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
+    const IR::ActionArg *isActionArg(const IR::Expression *expr,
+        le_bitrange *bits_out = nullptr);
 
     bool misaligned_actiondata() {
         return action_data_misaligned;

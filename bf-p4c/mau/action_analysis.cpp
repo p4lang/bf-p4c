@@ -130,6 +130,23 @@ const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
     return nullptr;
 }
 
+const IR::ActionArg *ActionAnalysis::isActionArg(const IR::Expression *e,
+    le_bitrange *bits_out) {
+    le_bitrange bits = { 0, e->type->width_bits() - 1 };
+    if (auto *sl = e->to<IR::Slice>()) {
+        bits.lo = sl->getL();
+        bits.hi = sl->getH();
+        e = sl->e0;
+    }
+
+    if (auto aa = e->to<IR::ActionArg>()) {
+        if (bits_out)
+           *bits_out = bits;
+        return aa;
+    }
+    return nullptr;
+}
+
 
 std::ostream &operator<<(std::ostream &out, const ActionAnalysis::ActionParam &ap) {
     out << ap.expr;
@@ -717,6 +734,12 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
             warning = true;
         }
         check_constant_to_actiondata(cont_action, container);
+        add_to_single_ad_params(cont_action);
+    }
+
+    for (auto &container_action : *container_actions_map) {
+        auto &cont_action = container_action.second;
+        check_single_ad_params(cont_action);
     }
 
     // Specifically for backtracking, as ActionFormat can be configured before PHV allocation,
@@ -943,6 +966,7 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(
     return true;
 }
 
+
 /** Ensure that a read field is the only field within that container
  */
 bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv) {
@@ -967,6 +991,37 @@ bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv) {
             return false;
     }
     return true;
+}
+
+void ActionAnalysis::add_to_single_ad_params(ContainerAction &cont_action) {
+    const IR::ActionArg *aa = nullptr;
+    for (auto &field_action : cont_action.field_actions) {
+        for (auto &param : field_action.reads) {
+            le_bitrange aa_range = { 0, 0 };
+            aa = isActionArg(param.expr, &aa_range);
+            if (aa == nullptr)
+                continue;
+            auto pair = std::make_pair(aa->name, aa_range);
+            if (single_ad_params.count(pair) > 0)
+                multiple_ad_params.insert(pair);
+            else
+                single_ad_params.insert(std::make_pair(aa->name, aa_range));
+        }
+    }
+}
+
+void ActionAnalysis::check_single_ad_params(ContainerAction &cont_action) {
+    if (cont_action.field_actions.size() != 1)
+        return;
+    const IR::ActionArg *aa = nullptr;
+    for (auto &param : cont_action.field_actions[0].reads) {
+        le_bitrange aa_range = { 0, 0 };
+        aa = isActionArg(param.expr, &aa_range);
+        if (aa == nullptr)
+            continue;
+        if (multiple_ad_params.count(std::make_pair(aa->name, aa_range)) > 0)
+            cont_action.error_code |= ContainerAction::UNRESOLVED_REPEATED_ACTION_DATA;
+    }
 }
 
 /** A verification of the constant used in a ContainerAction to make sure that it can

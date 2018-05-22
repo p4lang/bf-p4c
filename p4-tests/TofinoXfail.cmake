@@ -311,11 +311,6 @@ p4c_add_xfail_reason("tofino"
   switch_msdc_l3
   )
 
-p4c_add_xfail_reason("tofino"
-  "Can't allocate space on 16-bit part of action bus"
-  switch_ent_dc_general
-  )
-
 # BRIG-113
 p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"

@@ -94,18 +94,18 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
 
         auto type = static_cast<ActionFormat::cont_type_t>(placement.gen_index());
         out << ": " << use.get_format_name(placement.start, type, placement.immediate,
-                                           placement.slot_bits, (placement.arg_locs.size() == 1));
-        if (placement.arg_locs.size() == 1 && placement.arg_locs[0].is_constant) {
+                                           placement.slot_bits, !placement.requires_alias());
+        if (!placement.requires_alias() && placement.arg_locs[0].is_constant) {
             out << ", ";
             out << placement.arg_locs[0].get_asm_name();
             out << ": " << placement.arg_locs[0].constant_value;
         }
 
-        if (index == placement_vec.size() - 1 && placement.arg_locs.size() == 1)
+        if (index == placement_vec.size() - 1 && !placement.requires_alias())
             last_entry = true;
         if (!last_entry)
              out << ", ";
-        if (placement.arg_locs.size() > 1) {
+        if (placement.requires_alias()) {
             size_t arg_index = 0;
             for (auto &arg_loc : placement.arg_locs) {
                 out << arg_loc.get_asm_name();
@@ -1287,6 +1287,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::Annotations *) override { return false; }
 
     bool preorder(const IR::MAU::Instruction *inst) override {
+        LOG1("Instruction " << inst);
         out << indent << "- " << inst->name;
         sep = " ";
         is_empty = false;

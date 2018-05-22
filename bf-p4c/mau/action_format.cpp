@@ -591,6 +591,8 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
                 if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
                     create_from_actiondata(adp, read, container_bits.lo, &hd, &rn);
                     initialized = true;
+                    if (cont_action.unresolved_ad())
+                        adp.single_rename = true;
                 } else if (read.type == ActionAnalysis::ActionParam::CONSTANT
                     && cont_action.convert_constant_to_actiondata()) {
                     create_from_constant(adp, read, bits.lo, container_bits.lo,
@@ -1684,11 +1686,12 @@ void ActionFormat::determine_asm_name(SingleActionALUPlacement &placement_vec) {
     int mask_index = 0;
     for (auto &placement : placement_vec) {
         if (placement.arg_locs.size() > 1) {
-            placement.action_name = "$data" + std::to_string(index);
+            placement.action_name = "$data" + std::to_string(index++);
             if (placement.bitmasked_set) {
                 placement.mask_name = "$mask" + std::to_string(mask_index++);
             }
-            index++;
+        } else if (placement.single_rename) {
+            placement.action_name = "$data" + std::to_string(index++);
         } else if (placement.arg_locs.size() < 1) {
             placement.action_name = "$no_arg";
         }
