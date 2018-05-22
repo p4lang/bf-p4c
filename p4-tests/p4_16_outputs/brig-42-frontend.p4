@@ -54,6 +54,7 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
     }
     @name("MyIngress.do_push") action do_push_0() {
         p.data.push_front(1);
+        p.data[0].setValid();
         p.data[0].data_eof = 8w1;
         p.data[0].data_value = p.instr[0].instr_value;
         p.instr.pop_front(1);
@@ -61,6 +62,7 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
     }
     @name("MyIngress.do_push") action do_push_6() {
         p.data.push_front(1);
+        p.data[0].setValid();
         p.data[0].data_eof = 8w1;
         p.data[0].data_value = p.instr[0].instr_value;
         p.instr.pop_front(1);
@@ -68,6 +70,7 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
     }
     @name("MyIngress.do_push") action do_push_7() {
         p.data.push_front(1);
+        p.data[0].setValid();
         p.data[0].data_eof = 8w1;
         p.data[0].data_value = p.instr[0].instr_value;
         p.instr.pop_front(1);
@@ -75,6 +78,7 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
     }
     @name("MyIngress.do_push") action do_push_8() {
         p.data.push_front(1);
+        p.data[0].setValid();
         p.data[0].data_eof = 8w1;
         p.data[0].data_value = p.instr[0].instr_value;
         p.instr.pop_front(1);
@@ -82,6 +86,7 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
     }
     @name("MyIngress.do_push") action do_push_9() {
         p.data.push_front(1);
+        p.data[0].setValid();
         p.data[0].data_eof = 8w1;
         p.data[0].data_value = p.instr[0].instr_value;
         p.instr.pop_front(1);
@@ -89,6 +94,7 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
     }
     @name("MyIngress.do_push") action do_push_10() {
         p.data.push_front(1);
+        p.data[0].setValid();
         p.data[0].data_eof = 8w1;
         p.data[0].data_value = p.instr[0].instr_value;
         p.instr.pop_front(1);

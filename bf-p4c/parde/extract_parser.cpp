@@ -73,11 +73,23 @@ struct ParserPragmas : public Inspector {
             if (gress->value == toString(p->thread)) {
                 force_shift[ps] = shift_amt->asInt();
             }
+        } else if (pragma_name == "packet_entry") {
+            if (ps->name == "start_i2e_mirrored") {
+                LOG1("Found i2e mirror start start: " << ps->name);
+                mirror_i2e_start = ps;
+            } else if (ps->name == "start_e2e_mirrored") {
+                LOG1("Found e2e mirror start state: " << ps->name);
+                mirror_e2e_start = ps;
+            } else {
+                ::warning("packet_entry %1% may be ignored.", ps->name);
+            }
         }
 
         return false;
     }
 
+    const IR::ParserState* mirror_i2e_start = nullptr;
+    const IR::ParserState* mirror_e2e_start = nullptr;
     std::set<const IR::ParserState*> terminate_parsing;
     std::map<const IR::ParserState*, unsigned> force_shift;
 };
@@ -255,10 +267,25 @@ GetBackendParser::extract(const IR::BFN::TranslatedP4Parser* parser) {
         return true;
     });
 
-    BUG_CHECK(p4StateNameToStateName.count("start"),
-              "No entry point in parser?");
+    BUG_CHECK(p4StateNameToStateName.count("start"), "No entry point in parser?");
     auto* startState = getState(p4StateNameToStateName.at("start"));
-    return new IR::BFN::Parser(parser->thread, startState);
+    auto* backend_parser = new IR::BFN::Parser(parser->thread, startState);
+    // In egress parser, mirror state might have different starts.
+    if (parser->thread == EGRESS) {
+        if (parserPragmas.mirror_i2e_start) {
+            BUG_CHECK(p4StateNameToStateName.count(parserPragmas.mirror_i2e_start->name),
+                      "No such state in parser: %1%", parserPragmas.mirror_i2e_start->name);
+            backend_parser->mirror_i2e_start =
+                getState(p4StateNameToStateName.at(parserPragmas.mirror_i2e_start->name));
+        }
+        if (parserPragmas.mirror_e2e_start) {
+            BUG_CHECK(p4StateNameToStateName.count(parserPragmas.mirror_e2e_start->name),
+                      "No such state in parser: %1%", parserPragmas.mirror_e2e_start->name);
+            backend_parser->mirror_e2e_start =
+                getState(p4StateNameToStateName.at(parserPragmas.mirror_e2e_start->name));
+        }
+    }
+    return backend_parser;
 }
 
 bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,

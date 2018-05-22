@@ -160,12 +160,6 @@ if (PTF_REQUIREMENTS_MET)
     06-simple_l3_dir_cntr
     )
 
-  # switch_msdc current failures in p4factory
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: Received packet did not match expected packet"
-    smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest
-    )
-
   # default action not programmed by drivers
   p4c_add_xfail_reason("tofino"
     "Expected packet was not received on device"
@@ -1089,4 +1083,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*: Cannot extract to a field slice in the parser"
   extensions/p4_tests/p4_16/extract_slice.p4
+)
+
+# BRIG-673
+p4c_add_xfail_reason("tofino"
+  "no definitions"
+  extensions/p4_tests/p4_14/p4-tests/programs/pvs/pvs.p4
 )

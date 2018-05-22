@@ -39,6 +39,7 @@ control ingress(inout packet_t hdrs, inout user_metadata_t m, inout standard_met
     }
     @name("ingress.do_push") action do_push_0() {
         hdrs.data.push_front(1);
+        hdrs.data[0].setValid();
     }
     @name("ingress.do_pop") action do_pop_0() {
         hdrs.data.pop_front(1);

@@ -42,6 +42,7 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
     }
     action do_push() {
         p.data.push_front(1);
+        p.data[0].setValid();
         p.data[0].data_eof = 8w1;
         p.data[0].data_value = p.instr[0].instr_value;
         p.instr.pop_front(1);
