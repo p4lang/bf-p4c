@@ -318,7 +318,8 @@ void ActionBus::pass1(Table *tbl) {
                 break; }
             if (auto tbl_in_slot = tbl->stage->action_bus_use[slotno]) {
                 if (tbl_in_slot != tbl) {
-                    if (!check_sharing(tbl, tbl_in_slot))
+                    if (!(check_atcam_sharing(tbl, tbl_in_slot)
+                            || check_slot_sharing(slot, tbl->stage->action_bus_use_bit_mask)))
                         error(lineno, "Action bus byte %d set in table %s and table %s", byte,
                             tbl->name(), tbl->stage->action_bus_use[slotno]->name());
                 } else {
@@ -342,6 +343,15 @@ void ActionBus::pass1(Table *tbl) {
                               slot.name.c_str(), tbl->name()); }
             } else {
                 tbl->stage->action_bus_use[slotno] = tbl;
+                // Set a per-byte mask on the action bus bytes to indicate which
+                // bits in bytes are being used. A slot can be shared among
+                // tables which dont overlap any bits. The code assumes the
+                // action bus allocation is byte aligned (and sets the mask to
+                // 0xF), while this could ideally be not the case. In that
+                // event, the mask must be set accordingly. This will require
+                // additional logic to determine which bits in the byte are used
+                // or additional syntax in the action bus assembly output.
+                tbl->stage->action_bus_use_bit_mask.setrange(slot.byte * 8U, slot.size);
                 use[slotno] = &slot; }
             unsigned hi = slot.lo(tbl) + slot.size - 1;
             if (action_hv_slice_use.size() <= hi/128U)
@@ -352,7 +362,11 @@ void ActionBus::pass1(Table *tbl) {
                 action_hv_slice_use.at(byte/16).at(slot.byte/16) |= hv_groups.at(byte%16); } } }
 }
 
-bool ActionBus::check_sharing(Table *tbl1, Table *tbl2) {
+bool ActionBus::check_slot_sharing(Slot &slot, bitvec &action_bus) {
+    return (action_bus.getrange(slot.byte * 8U, slot.size) == 0);
+}
+
+bool ActionBus::check_atcam_sharing(Table *tbl1, Table *tbl2) {
     bool atcam_share_bytes = false;
     bool atcam_action_share_bytes = false;
     // Check tables are not same atcam's sharing bytes on action bus

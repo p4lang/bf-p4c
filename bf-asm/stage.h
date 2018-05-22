@@ -31,6 +31,7 @@ public:
     Alloc1D<std::vector<InputXbar *>, EXACT_HASH_GROUPS>hash_group_use;
     Alloc1D<std::vector<HashDistribution *>, 6>         hash_dist_use;
     Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
+    Alloc1D<unsigned, ACTION_DATA_BUS_SLOTS>            action_bus_use_mask;
     Alloc1D<Table *, LOGICAL_SRAM_ROWS>                 action_data_use,
                                                         meter_bus_use,
                                                         stats_bus_use,
@@ -45,6 +46,7 @@ public:
     bitvec              match_use[2], action_use[2], action_set[2];
     enum { NO_CONFIG=0, PROPAGATE, MAP_TO_IMMEDIATE, DISABLE_ALL_TABLES }
                         error_mode[2];
+    bitvec      action_bus_use_bit_mask;
 
     int                         pass1_logical_id, pass1_tcam_id;
 protected:

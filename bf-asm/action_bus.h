@@ -68,7 +68,8 @@ class ActionBus {
                     unsigned sz, unsigned off);
     int find_free(Table *tbl, int min, int max, int step, int lobyte, int bytes);
     int find_merge(Table *tbl, int offset, int bytes, int use);
-    bool check_sharing(Table *tbl1, Table *tbl2);
+    bool check_atcam_sharing(Table *tbl1, Table *tbl2);
+    bool check_slot_sharing(ActionBus::Slot &slot, bitvec &action_bus);
 public:
     int             lineno;
     ActionBus() : lineno(-1) {}
