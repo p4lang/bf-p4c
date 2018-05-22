@@ -12,25 +12,55 @@ class PhvSpec {
  protected:
     // All cache fields
     mutable bitvec physical_containers_i;
-    mutable std::map<PHV::Type, std::vector<bitvec>> mau_groups_i;
+    mutable std::map<PHV::Size, std::vector<bitvec>> mau_groups_i;
     mutable bitvec ingress_only_containers_i;
     mutable bitvec egress_only_containers_i;
     mutable std::vector<bitvec> tagalong_collections_i;
     mutable bitvec individually_assigned_containers_i;
 
+    /// All types of containers supported by the device.
     std::vector<PHV::Type> definedTypes;
+    /// All sizes of containers supported by the device.
+    std::set<PHV::Size> definedSizes;
+    /// All kinds of containers supported by the device.
+    std::set<PHV::Kind> definedKinds;
+
     ordered_map<PHV::Type, unsigned> typeIdMap;
+
+    std::map<PHV::Size, std::set<PHV::Type>> sizeToTypeMap;
+
+    /// A single MAU group description. Members include the number of these groups in a device and a
+    /// map from the type of container to number of containers in each group.
+    struct MauGroupType {
+        unsigned numGroups;     // Number of MAU groups
+        std::map<PHV::Type, unsigned> types;
+                                // Type and number of containers in each group
+
+        explicit MauGroupType(unsigned n, std::map<PHV::Type, unsigned> t)
+            : numGroups(n), types(t) { }
+
+        explicit MauGroupType(unsigned n) : numGroups(n) { }
+
+        MauGroupType() : numGroups(0) { }
+
+        void addType(PHV::Type t, unsigned n) {
+            types.emplace(t, n);
+        }
+    };
 
     /**
      * @used to describe phv groups for mau in the device.
-     * e.g. entry { PHV::Type::W, std::pair(4,16) } means for normal 32b
-     * container, there are 4 groups, each with 16 containers.
+     * e.g. if a device has two types of MAU groups, corresponding to 32-bit and 8-bit containers,
+     * and each type of group has 16 normal PHV containers of a given size, the mauGroupSpec will
+     * be:
+     * { { PHV::Size::b8, MauGroupType(4, { PHV::Type::B, 16 }) },
+     *   { PHV::Size::b32, MauGroupType(4, { PHV::Type::W, 16 }) } }.
      */
-    std::map<PHV::Type, std::pair<unsigned, unsigned>> mauGroupSpec;
+    std::map<PHV::Size, MauGroupType> mauGroupSpec;
 
-    std::map<PHV::Type, std::vector<unsigned>> ingressOnlyMauGroupIds;
+    std::map<PHV::Size, std::vector<unsigned>> ingressOnlyMauGroupIds;
 
-    std::map<PHV::Type, std::vector<unsigned>> egressOnlyMauGroupIds;
+    std::map<PHV::Size, std::vector<unsigned>> egressOnlyMauGroupIds;
 
     std::map<PHV::Type, unsigned> tagalongCollectionSpec;
 
@@ -47,6 +77,15 @@ class PhvSpec {
  public:
     /// @return the PHV container types available on this device.
     const std::vector<PHV::Type>& containerTypes() const;
+
+    /// @return the PHV container sizes available on this device.
+    const std::set<PHV::Size>& containerSizes() const;
+
+    /// @return the PHV container kinds available on this device.
+    const std::set<PHV::Kind>& containerKinds() const;
+
+    /// @return the map from PHV groups to the types supported by that group.
+    const std::map<PHV::Size, std::set<PHV::Type>> groupsToTypes() const;
 
     /// @return the number of PHV container types available on this device.
     /// Behaves the same as `containerTypes().size()`.
@@ -108,7 +147,7 @@ class PhvSpec {
 
     /// @return containers that constraint to either ingress or egress
     bitvec ingressOrEgressOnlyContainers(
-        const std::map<PHV::Type, std::vector<unsigned>>& gressOnlyMauGroupIds) const;
+        const std::map<PHV::Size, std::vector<unsigned>>& gressOnlyMauGroupIds) const;
 
     /// @return a bitvec of the containers which are hard-wired to ingress.
     const bitvec& ingressOnly() const;
@@ -116,11 +155,11 @@ class PhvSpec {
     /// @return a bitvec of the containers which are hard-wired to egress.
     const bitvec& egressOnly() const;
 
-    /// @return MAU groups of a given type @t.
-    const std::vector<bitvec>& mauGroups(PHV::Type t) const;
+    /// @return MAU groups of a given size @sz.
+    const std::vector<bitvec>& mauGroups(PHV::Size sz) const;
 
     /// @return MAU groups of all types
-    const std::map<PHV::Type, std::vector<bitvec>>& mauGroups() const;
+    const std::map<PHV::Size, std::vector<bitvec>>& mauGroups() const;
 
     /// @return the ids of every container in @container_id's MAU group, or
     /// boost::none if @container_id is not part of any MAU group.

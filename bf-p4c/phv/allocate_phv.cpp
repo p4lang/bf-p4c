@@ -111,7 +111,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
     // fields).  More is better.
     int delta_mismatched_gress = 0;
 
-    for (auto kind : { PHV::Kind::normal, PHV::Kind::tagalong }) {
+    for (auto kind : Device::phvSpec().containerKinds()) {
         int penalty = kind == PHV::Kind::normal ? weight_factor : 1;
         int bonus = kind == PHV::Kind::tagalong ? weight_factor : 1;
 
@@ -326,7 +326,7 @@ AllocScore::calcContainerAllocVec(const ordered_set<PHV::AllocSlice>& slices) {
 
 std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
     bool any_positive_score = false;
-    for (auto kind : { PHV::Kind::tagalong, PHV::Kind::normal }) {
+    for (auto kind : Device::phvSpec().containerKinds()) {
         if (score.score.find(kind) == score.score.end())
             continue;
         any_positive_score = true;
@@ -365,22 +365,26 @@ boost::optional<bitvec> CoreAllocation::satisfies_constraints(
         const PHV::ContainerGroup& group, const PHV::AlignedCluster& cluster) const {
     // Check that these containers support the operations required by fields in
     // this cluster.
-    if (!cluster.okIn(group.type().kind())) {
-        LOG5("    ...but cluster cannot be placed in " << group.type().kind() << "PHV containers");
+    bool isOkIn = false;
+    for (auto t : group.types()) {
+        if (cluster.okIn(t.kind()))
+            isOkIn = true; }
+    if (!isOkIn) {
+        LOG5("    ...but cluster cannot be placed in " << group.width() << "PHV containers");
         return boost::none; }
 
     // Check that a valid start alignment exists for containers of this size.
     // An empty bitvec indicates no valid starting positions.
-    return cluster.validContainerStart(group.type().size());
+    return cluster.validContainerStart(group.width());
 }
 
 bool CoreAllocation::satisfies_constraints(
         const PHV::ContainerGroup& group,
         const PHV::Field* f) const {
     // Check that TM deparsed fields aren't split
-    if (f->no_split() && int(group.type().size()) < f->size) {
-        LOG5("        constraint: can't split field size " << f->size <<
-             " across " << group.type().size() << " containers");
+    if (f->no_split() && int(group.width()) < f->size) {
+        LOG5("        constraint: can't split field size " << f->size << " across " << group.width()
+             << " containers");
         return false; }
     return true;
 }
@@ -533,6 +537,12 @@ bool CoreAllocation::satisfies_constraints(
              << (hasExtracted ? "extracted" : "uninitialized"));
         return false; }
 
+    if (c.is(PHV::Kind::mocha))
+        return false;
+
+    if (c.is(PHV::Kind::dark))
+        return false;
+
     return true;
 }
 
@@ -558,6 +568,10 @@ bool CoreAllocation::satisfies_CCGF_constraints(
         LOG5("    ...but CCGF is deparsed and does not match deparser group gress");
         return false; }
 
+    if (c.is(PHV::Kind::mocha) || c.is(PHV::Kind::dark)) {
+        LOG5("    ...but CCGF cannot be allocated to mocha or dark");
+        return false; }
+
     return true;
 }
 
@@ -565,8 +579,8 @@ bool CoreAllocation::satisfies_CCGF_constraints(
 bool
 CoreAllocation::satisfies_constraints(const PHV::ContainerGroup& g, const PHV::SuperCluster& sc) {
     // Check max individual field width.
-    if (int(g.type().size()) < sc.max_width()) {
-        LOG5("    ...but container size " << g.type().size() <<
+    if (int(g.width()) < sc.max_width()) {
+        LOG5("    ...but container size " << g.width() <<
              " is too small for max field width " << sc.max_width());
         return false; }
 
@@ -575,8 +589,8 @@ CoreAllocation::satisfies_constraints(const PHV::ContainerGroup& g, const PHV::S
         int size = 0;
         for (auto& slice : *slice_list)
             size += slice.size();
-        if (int(g.type().size()) < size) {
-            LOG5("    ...but container size " << g.type().size() <<
+        if (int(g.width()) < size) {
+            LOG5("    ...but container size " << g.width() <<
                  " is too small for slice list width " << size);
             return false; } }
 
@@ -596,7 +610,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocCCGF(
               cstring::to_cstring(f));
 
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
-    int container_size = int(group.type().size());
+    int container_size = int(group.width());
     int ccgf_size = 0;
 
     // Calculate CCGF size
@@ -711,7 +725,7 @@ CoreAllocation::tryAllocSliceList(
         slices.push_back(kv.first);
 
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
-    int container_size = int(group.type().size());
+    int container_size = int(group.width());
 
     // Set previous_container to the container returned as part of start_positions
     boost::optional<PHV::Container> previous_container = boost::none;
@@ -1174,17 +1188,12 @@ std::list<PHV::ContainerGroup *> AllocatePHV::makeDeviceContainerGroups() {
     std::list<PHV::ContainerGroup *> rv;
 
     // Build MAU groups
-    for (const PHV::Type t : phvSpec.containerTypes()) {
-        // XXX(zma) we don't have an allocator for these yet
-        if (t.kind() == PHV::Kind::mocha || t.kind() == PHV::Kind::dark)
-            continue;
-
-        for (auto group : phvSpec.mauGroups(t)) {
+    for (const PHV::Size s : phvSpec.containerSizes()) {
+        for (auto group : phvSpec.mauGroups(s)) {
             // Get type of group
-            if (group.empty())
-                continue;
-            // Create group
-            rv.emplace_back(new PHV::ContainerGroup(t, group)); } }
+            if (group.empty()) continue;
+            // Create group.
+            rv.emplace_back(new PHV::ContainerGroup(s, group)); } }
 
     // Build TPHV collections
     for (auto collection : phvSpec.tagalongGroups()) {
@@ -1198,7 +1207,7 @@ std::list<PHV::ContainerGroup *> AllocatePHV::makeDeviceContainerGroups() {
             groups_by_type[type].setbit(cid); }
 
         for (auto kv : groups_by_type)
-            rv.emplace_back(new PHV::ContainerGroup(kv.first, kv.second)); }
+            rv.emplace_back(new PHV::ContainerGroup(kv.first.size(), kv.second)); }
 
     return rv;
 }
@@ -1299,7 +1308,7 @@ void AllocatePHV::end_apply() {
     // Make sure that fields are not marked as mutex with itself.
     for (const auto& field : phv_i) {
         BUG_CHECK(!mutex_i(field.id, field.id),
-                  "Field %1% can be overlaid with itseld.", field.name); }
+                  "Field %1% can be overlaid with itself.", field.name); }
 
     // Mirror metadata allocation constraint:
     for (auto gress : {INGRESS, EGRESS}) {

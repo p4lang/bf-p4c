@@ -118,21 +118,21 @@ void CheckTofinoPhvContainerResources(int scale_factor = 1) {
 
     // MAU and Tagalong containers should be subsets of the physical
     // containers.
-    for (auto t : phvSpec.containerTypes()) {
-        for (auto mau_group : phvSpec.mauGroups(t)) {
+    for (auto s : phvSpec.containerSizes()) {
+        for (auto mau_group : phvSpec.mauGroups(s)) {
             EXPECT_NE(bitvec(), mau_group & phvSpec.physicalContainers()); } }
     for (auto tagalong_group : phvSpec.tagalongGroups()) {
         EXPECT_NE(bitvec(), tagalong_group & phvSpec.physicalContainers()); }
 
-    // MAU groups should have the type used to retrieve them.
-    for (auto t : phvSpec.containerTypes()) {
-        for (auto mau_group : phvSpec.mauGroups(t)) {
+    // MAU groups should have the size used to retrieve them.
+    for (auto s : phvSpec.containerSizes()) {
+        for (auto mau_group : phvSpec.mauGroups(s)) {
             for (auto cid : mau_group) {
-                EXPECT_EQ(t, phvSpec.idToContainer(cid).type()); } } }
+                EXPECT_EQ(s, phvSpec.idToContainer(cid).type().size()); } } }
 
     // They should also be disjoint.
-    for (auto t : phvSpec.containerTypes()) {
-        for (auto mau_group : phvSpec.mauGroups(t)) {
+    for (auto s : phvSpec.containerSizes()) {
+        for (auto mau_group : phvSpec.mauGroups(s)) {
             for (auto tagalong_group : phvSpec.tagalongGroups()) {
                 EXPECT_EQ(bitvec(), mau_group & tagalong_group); } } }
 
@@ -150,16 +150,22 @@ void CheckTofinoPhvContainerResources(int scale_factor = 1) {
 
     // There should be 4 MAU groups of size b8, 6 of b16, and 4 of b32.
     ordered_map<PHV::Size, int> mau_group_sizes;
-    for (auto t : phvSpec.containerTypes()) {
-        for (auto containers : phvSpec.mauGroups(t)) {
+    const std::map<PHV::Size, std::set<PHV::Type>> groupsToTypes = phvSpec.groupsToTypes();
+    for (auto s : phvSpec.containerSizes()) {
+        for (auto containers : phvSpec.mauGroups(s)) {
             // MAU groups should not be empty.
             EXPECT_LE(0, containers.min());
+            // Each MAU group should have an entry in the groupsToTypes map.
+            EXPECT_EQ(1, groupsToTypes.count(s));
+            // For Tofino, each group should have exactly one type associated with it.
+            EXPECT_EQ(1, groupsToTypes.at(s).size());
+            auto t = *(groupsToTypes.at(s).begin());
 
             // Containers in each group should have the same type.
             for (auto cid : containers)
                 EXPECT_EQ(t, phvSpec.idToContainer(cid).type());
 
-            mau_group_sizes[t.size()]++; } }
+            mau_group_sizes[s]++; } }
 
     EXPECT_EQ(4 * scale_factor, mau_group_sizes[PHV::Size::b8]);
     EXPECT_EQ(6 * scale_factor, mau_group_sizes[PHV::Size::b16]);

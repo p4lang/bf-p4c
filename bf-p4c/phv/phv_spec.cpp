@@ -10,11 +10,25 @@ void
 PhvSpec::addType(PHV::Type t) {
     const size_t typeId = definedTypes.size();
     definedTypes.push_back(t);
+    definedSizes.insert(t.size());
+    definedKinds.insert(t.kind());
     typeIdMap[t] = typeId;
 }
 
 const std::vector<PHV::Type>& PhvSpec::containerTypes() const {
     return definedTypes;
+}
+
+const std::set<PHV::Size>& PhvSpec::containerSizes() const {
+    return definedSizes;
+}
+
+const std::set<PHV::Kind>& PhvSpec::containerKinds() const {
+    return definedKinds;
+}
+
+const std::map<PHV::Size, std::set<PHV::Type>> PhvSpec::groupsToTypes() const {
+    return sizeToTypeMap;
 }
 
 unsigned PhvSpec::numContainerTypes() const {
@@ -69,8 +83,8 @@ PhvSpec::range(PHV::Type t, unsigned start, unsigned length) const {
 const bitvec& PhvSpec::physicalContainers() const {
     if (physical_containers_i) return physical_containers_i;
     bitvec containers;
-    for (auto tg : mauGroups())
-        for (auto g : tg.second)
+    for (auto sg : mauGroups())
+        for (auto g : sg.second)
             containers |= g;
     for (auto g : tagalongGroups())
         containers |= g;
@@ -80,44 +94,68 @@ const bitvec& PhvSpec::physicalContainers() const {
 
 bitvec PhvSpec::mauGroup(unsigned container_id) const {
     const auto containerType = idToContainerType(container_id % numContainerTypes());
-    auto it = mauGroupSpec.find(containerType);
+    auto it = mauGroupSpec.find(containerType.size());
     if (it == mauGroupSpec.end())
         return bitvec();
 
+    // Check if container type is present in the mauGroupSpec.
+    MauGroupType typeDesc = it->second;
+    auto itDesc = typeDesc.types.find(containerType);
+    if (itDesc == typeDesc.types.end())
+        return bitvec();
+
+    // At this point, we have determined that the container type is present in the mauGroupSpec.
     const unsigned index = container_id / numContainerTypes();
-    unsigned groupSize = it->second.second;
+    unsigned groupSize = itDesc->second;
     const unsigned mau_group_index = index / groupSize;
-    auto group = mauGroups(containerType);
+    auto group = mauGroups(containerType.size());
     if (mau_group_index < group.size())
         return group[mau_group_index];
     return bitvec();
 }
 
-const std::map<PHV::Type, std::vector<bitvec>>& PhvSpec::mauGroups() const {
+const std::map<PHV::Size, std::vector<bitvec>>& PhvSpec::mauGroups() const {
     if (!mau_groups_i.empty())
         return mau_groups_i;
-    std::map<PHV::Type, std::vector<bitvec>> mau_groups;
-    for (auto gs : mauGroupSpec) {
-        PHV::Type groupType = gs.first;
-        unsigned numGroups = gs.second.first;
-        unsigned groupSize = gs.second.second;
-        for (unsigned index = 0; index < numGroups; index++)
-            mau_groups[groupType].push_back(range(groupType, index * groupSize, groupSize)); }
+
+    std::map<PHV::Size, std::vector<bitvec>> mau_groups;
+    for (auto sizeSpec : mauGroupSpec) {
+        // numGroups: Number of groups of each container size.
+        unsigned numGroups = sizeSpec.second.numGroups;
+        // groupSize: Size of the group.
+        PHV::Size groupSize = sizeSpec.first;
+        // Generate one bitvec for every group in this size. The bitvec for each group is the union
+        // of all bitvecs corresponding to each type of container within the group.
+        for (unsigned index = 0; index < numGroups; index++) {
+            // sizeRange: Representation of all containers in group index of size groupSize bits.
+            bitvec sizeRange;
+            for (auto typeSpec : sizeSpec.second.types) {
+                // groupNumContainers: Number of containers in each type in group.
+                unsigned groupNumContainers = typeSpec.second;
+                // Type of container.
+                PHV::Type t = typeSpec.first;
+                // typeRange: Representation of all groupNumContainers of type t in group index.
+                bitvec typeRange = range(t, index * groupNumContainers, groupNumContainers);
+                LOG1("  Adding ID " << typeRange << " for type " << t);
+                sizeRange |= typeRange; }
+            LOG1("Adding ID " << sizeRange << " corresponding to size " << groupSize);
+            mau_groups[groupSize].push_back(sizeRange); } }
     mau_groups_i = std::move(mau_groups);
     return mau_groups_i;
 }
 
 bitvec PhvSpec::ingressOrEgressOnlyContainers(
-    const std::map<PHV::Type, std::vector<unsigned>>& gressOnlyMauGroupIds) const {
+    const std::map<PHV::Size, std::vector<unsigned>>& gressOnlyMauGroupIds) const {
     bitvec containers;
     for (auto gg : gressOnlyMauGroupIds) {
-        PHV::Type type = gg.first;
-        auto group_ids = gg.second;
-        unsigned group_size = mauGroupSpec.at(type).second;
-        for (auto group_id : group_ids) {
-            containers |= range(type, group_id * group_size, group_size);
-        }
-    }
+        PHV::Size size = gg.first;
+        auto groupIDs = gg.second;
+        MauGroupType sizeSpec = mauGroupSpec.at(size);
+        for (auto typeSpec : sizeSpec.types) {
+            unsigned groupSize = typeSpec.second;
+            PHV::Type type = typeSpec.first;
+            for (auto groupID : groupIDs)
+                containers |= range(type, groupID * groupSize, groupSize); } }
     return containers;
 }
 
@@ -168,19 +206,25 @@ bitvec PhvSpec::tagalongGroup(unsigned container_id) const {
     return tagalongGroups()[collection_num];
 }
 
-const std::vector<bitvec>& PhvSpec::mauGroups(PHV::Type t) const {
-    auto it = mauGroups().find(t);
+const std::vector<bitvec>& PhvSpec::mauGroups(PHV::Size sz) const {
+    auto it = mauGroups().find(sz);
     if (it != mauGroups().end())
-        return mauGroups().at(t);
-
+        return mauGroups().at(sz);
     static std::vector<bitvec> dummy;
-    return dummy;  // FIXME
+    return dummy;
 }
 
 const std::pair<int, int> PhvSpec::mauGroupNumAndSize(const PHV::Type t) const {
-    if (!mauGroupSpec.count(t))
+    if (!mauGroupSpec.count(t.size()))
         return std::pair<int, int>();
-    return mauGroupSpec.at(t);
+    // Find the size specification corresponding to the size of the container.
+    MauGroupType sizeSpec = mauGroupSpec.at(t.size());
+    unsigned numGroups = sizeSpec.numGroups;
+    // If that sized container does not have the particular type of container, return an empty pair.
+    if (!sizeSpec.types.count(t))
+        return std::pair<int, int>();
+    unsigned groupSize = sizeSpec.types.at(t);
+    return std::pair<int, int>(numGroups, groupSize);
 }
 
 bitvec PhvSpec::deparserGroup(unsigned id) const {
@@ -224,30 +268,48 @@ TofinoPhvSpec::TofinoPhvSpec() {
     BUG_CHECK(unsigned(phv_scale_factor * 4) >= 1,
               "PHV scale factor %1% too small", phv_scale_factor);
 
-    mauGroupSpec = {
+    std::map<PHV::Type, std::pair<unsigned, unsigned>> rawMauGroupSpec = {
         { PHV::Type::B, std::make_pair(4*phv_scale_factor, 16) },
         { PHV::Type::H, std::make_pair(6*phv_scale_factor, 16) },
         { PHV::Type::W, std::make_pair(4*phv_scale_factor, 16) }
     };
 
+    for (auto kv : rawMauGroupSpec) {
+        PHV::Type t = kv.first;
+        unsigned numGroups = kv.second.first;
+        unsigned numContainers = kv.second.second;
+        sizeToTypeMap[t.size()].insert(t);
+        MauGroupType desc(numGroups);
+        desc.addType(t, numContainers);
+        mauGroupSpec[t.size()] = desc;
+    }
+
+    if (LOGGING(1)) {
+        for (auto kv : mauGroupSpec) {
+            LOG1("    " << kv.second.numGroups << " groups of size " << kv.first);
+            for (auto kv1 : kv.second.types)
+                LOG1("      " << kv1.first << " : " << kv1.second); } }
+
     std::vector<unsigned> ingressGroupIds;
-    for (unsigned i = 0; i < (unsigned)phv_scale_factor; ++i)
-        ingressGroupIds.push_back(4*i);
+    for (unsigned i = 0; i < (unsigned)phv_scale_factor; ++i) {
+        LOG1("    Setting group " << (4*i) << " to ingress only");
+        ingressGroupIds.push_back(4*i); }
 
     ingressOnlyMauGroupIds = {
-        { PHV::Type::B, ingressGroupIds },
-        { PHV::Type::H, ingressGroupIds },
-        { PHV::Type::W, ingressGroupIds }
+        { PHV::Size::b8,  ingressGroupIds },
+        { PHV::Size::b16, ingressGroupIds },
+        { PHV::Size::b32, ingressGroupIds }
     };
 
     std::vector<unsigned> egressGroupIds;
-    for (unsigned i = 0; i < (unsigned)phv_scale_factor; ++i)
-        egressGroupIds.push_back(4*i + 1);
+    for (unsigned i = 0; i < (unsigned)phv_scale_factor; ++i) {
+        LOG1("    Setting group " << (4*i+1) << " to egress only");
+        egressGroupIds.push_back(4*i + 1); }
 
     egressOnlyMauGroupIds = {
-        { PHV::Type::B, egressGroupIds },
-        { PHV::Type::H, egressGroupIds },
-        { PHV::Type::W, egressGroupIds }
+        { PHV::Size::b8,  egressGroupIds },
+        { PHV::Size::b16, egressGroupIds },
+        { PHV::Size::b32, egressGroupIds }
     };
 
     tagalongCollectionSpec = {
@@ -305,17 +367,31 @@ JBayPhvSpec::JBayPhvSpec() {
     addType(PHV::Type::DH);
     addType(PHV::Type::DW);
 
-    mauGroupSpec = {
-        { PHV::Type::B,  std::make_pair(4, 12) },
-        { PHV::Type::MB, std::make_pair(4, 4)  },
-        { PHV::Type::DB, std::make_pair(4, 4)  },
-        { PHV::Type::H,  std::make_pair(6, 12) },
-        { PHV::Type::MH, std::make_pair(6, 4)  },
-        { PHV::Type::DH, std::make_pair(6, 4)  },
-        { PHV::Type::W,  std::make_pair(4, 12) },
-        { PHV::Type::MW, std::make_pair(4, 4)  },
-        { PHV::Type::DW, std::make_pair(4, 4)  }
+    std::map<PHV::Size, std::map<unsigned, std::map<PHV::Type, unsigned>>> rawMauGroupSpec = {
+        { PHV::Size::b8, {{4, {{PHV::Type::B, 12}, {PHV::Type::MB, 4}, {PHV::Type::DB, 4}} }} },
+        { PHV::Size::b16, {{6, {{PHV::Type::H, 12}, {PHV::Type::MH, 4}, {PHV::Type::DH, 4}} }} },
+        { PHV::Size::b32, {{4, {{PHV::Type::W, 12}, {PHV::Type::MW, 4}, {PHV::Type::DW, 4}} }} }
     };
+
+    for (auto kv : rawMauGroupSpec) {
+        PHV::Size sz = kv.first;
+        for (auto kv1 : kv.second) {
+            unsigned numGroups = kv1.first;
+            std::map<PHV::Type, unsigned> types = kv1.second;
+            for (auto kv2 : types) {
+                PHV::Type t = kv2.first;
+                sizeToTypeMap[sz].insert(t);
+            }
+            MauGroupType desc(numGroups, types);
+            mauGroupSpec[sz] = desc;
+        }
+    }
+
+    if (LOGGING(1)) {
+        for (auto kv : mauGroupSpec) {
+            LOG1("    " << kv.second.numGroups << " groups of size " << kv.first);
+            for (auto kv1 : kv.second.types)
+                LOG1("      " << kv1.first << " : " << kv1.second); } }
 
     ingressOnlyMauGroupIds = { };
 

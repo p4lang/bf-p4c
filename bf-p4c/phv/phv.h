@@ -27,48 +27,49 @@ const Kind KINDS[] = { Kind::tagalong, Kind::dark, Kind::mocha, Kind::normal };
 enum class Context : unsigned short {
     parde = 0,
     ixbar = 1,
-    vliw  = 2
+    vliw  = 2,
+    vliw_set = 3    // Whole container move only
 };
 
 inline std::vector<Context> all_contexts(Kind kind) {
     switch (kind) {
         case PHV::Kind::normal:   return { Context::parde,
                                            Context::ixbar,
-                                           Context::vliw };
+                                           Context::vliw,
+                                           Context::vliw_set};
 
         case PHV::Kind::tagalong: return { Context::parde };
 
         case PHV::Kind::mocha:    return { Context::parde,
                                            Context::ixbar,
-                                           Context::vliw };  // move only
+                                           Context::vliw_set };  // move only
 
-        case PHV::Kind::dark:     return { Context::vliw };  // move only
+        case PHV::Kind::dark:     return { Context::vliw_set };  // move only
 
         default:    BUG("Unknown PHV container kind");
     }
 }
-
-// TODO With the addition of mocha/dark, the PHV kind is no longer a strict
-// order (i.e. normal > tagalong). The function below needs to be re-written
-// in conjunction with its use in phv allocation.
 
 /** Provides a partial ordering over PHV container kinds, denoting subset
  * inclusion over the set of capabilities each kind supports.  For example,
  * `tagalong < normal`, because tagalong containers don't support reads/writes
  * in the MAU, whereas normal containers do.
  */
-/*
 inline bool operator<(Kind left, Kind right) {
-    // No containers support more operations than normal containers.
+    // Unfortunately, using the all_contexts map to define this inequality causes a massive slowdown
+    // (>2x) in compilation times.
+    // XXX(Deep): Figure out a way to use the all_contexts map to define this inequality.
+    // Normal containers support the most operations.
     if (left == Kind::normal) return false;
-
-    // Hence, a non-normal (left) container always supports fewer operations.
     if (right == Kind::normal) return true;
-
-    // All other container types are incomparable.
+    // Mocha containers support the second most operations.
+    if (left == Kind::mocha) return false;
+    if (right == Kind::mocha) return true;
+    // Dark and tagalong won't occur together. So, no need to define the relationship between the
+    // two.
     return false;
 }
-*/
+
 inline bool operator<=(Kind left, Kind right) {
     return left == right || left < right;
 }

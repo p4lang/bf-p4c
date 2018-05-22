@@ -107,15 +107,36 @@ void CheckJBayPhvContainerResources() {
     const auto& phvSpec = Device::phvSpec();
 
     // MAU containers should be subsets of the physical containers.
-    for (auto t : phvSpec.containerTypes()) {
-        for (auto mau_group : phvSpec.mauGroups(t)) {
+    for (auto s : phvSpec.containerSizes()) {
+        for (auto mau_group : phvSpec.mauGroups(s)) {
             EXPECT_NE(bitvec(), mau_group & phvSpec.physicalContainers()); } }
 
-    // MAU groups should have the type used to retrieve them.
-    for (auto t : phvSpec.containerTypes()) {
-        for (auto mau_group : phvSpec.mauGroups(t)) {
-            for (auto cid : mau_group) {
-                EXPECT_EQ(t, phvSpec.idToContainer(cid).type()); } } }
+    // There should be 4 MAU groups of size b8, 6 of b16, and 4 of b32.
+    // Each group has 20 containers: 12 normal, 4 dark, and 4 mocha.
+    ordered_map<PHV::Size, int> mau_group_sizes;
+    const std::map<PHV::Size, std::set<PHV::Type>> groupsToTypes = phvSpec.groupsToTypes();
+    for (auto s : phvSpec.containerSizes()) {
+        for (auto containers : phvSpec.mauGroups(s)) {
+            // MAU groups should not be empty.
+            EXPECT_LE((unsigned)0, containers.min());
+            // Each MAU group should have an entry in the groupsToTypes map.
+            EXPECT_EQ((unsigned)1, groupsToTypes.count(s));
+            // For JBay, each group should have three types associated with it: Dark, Mocha, and
+            // Normal.
+            EXPECT_EQ((unsigned)3, groupsToTypes.at(s).size());
+            std::map<PHV::Kind, int> typeNum;
+            for (auto cid : containers) {
+                auto t = phvSpec.idToContainer(cid).type();
+                typeNum[t.kind()]++; }
+            // Check the number of containers of each type in each MAU group.
+            EXPECT_EQ(12, typeNum[PHV::Kind::normal]);
+            EXPECT_EQ(4, typeNum[PHV::Kind::mocha]);
+            EXPECT_EQ(4, typeNum[PHV::Kind::dark]);
+            mau_group_sizes[s]++; } }
+
+    EXPECT_EQ(4, mau_group_sizes[PHV::Size::b8]);
+    EXPECT_EQ(6, mau_group_sizes[PHV::Size::b16]);
+    EXPECT_EQ(4, mau_group_sizes[PHV::Size::b32]);
 }
 
 // Test that we can serialize PHV::Container objects to JSON.

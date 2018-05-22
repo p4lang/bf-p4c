@@ -8,28 +8,30 @@
 
 static int cluster_id_g = 0;                // global counter for assigning cluster ids
 
-PHV::ContainerGroup::ContainerGroup(PHV::Type type, const std::vector<PHV::Container> containers)
-: type_i(type), containers_i(containers) {
+PHV::ContainerGroup::ContainerGroup(PHV::Size sz, const std::vector<PHV::Container> containers)
+: size_i(sz), containers_i(containers) {
     // Check that all containers are the right size.
     for (auto c : containers_i) {
-        BUG_CHECK(c.type() == type_i,
-            "PHV container group constructed with type %1% but has container %2% of type %3%",
-            cstring::to_cstring(type_i),
+        BUG_CHECK(c.type().size() == size_i,
+            "PHV container group constructed with size %1% but has container %2% of size %3%",
+            cstring::to_cstring(size_i),
             cstring::to_cstring(c),
-            cstring::to_cstring(c.type()));
+            cstring::to_cstring(c.size()));
+        types_i.insert(c.type());
         ids_i.setbit(Device::phvSpec().containerToId(c)); }
 }
 
-PHV::ContainerGroup::ContainerGroup(PHV::Type type, bitvec container_group)
-: type_i(type), ids_i(container_group) {
+PHV::ContainerGroup::ContainerGroup(PHV::Size sz, bitvec container_group)
+: size_i(sz), ids_i(container_group) {
     const PhvSpec& phvSpec = Device::phvSpec();
     for (auto cid : container_group) {
         auto c = phvSpec.idToContainer(cid);
-        BUG_CHECK(c.type() == type_i,
-            "PHV container group constructed with type %1% but has container %2% of type %3%",
-            cstring::to_cstring(type_i),
+        BUG_CHECK(c.type().size() == size_i,
+            "PHV container group constructed with size %1% but has container %2% of size %3%",
+            cstring::to_cstring(size_i),
             cstring::to_cstring(c),
-            cstring::to_cstring(c.type()));
+            cstring::to_cstring(c.size()));
+        types_i.insert(c.type());
         containers_i.push_back(c); }
 }
 
@@ -706,7 +708,7 @@ PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, i
             << boost::format("%=20s") % "" << "|" << boost::format("%=20s") % "" << "|" <<
             std::endl;
 
-        for (auto mauGroup : Device::phvSpec().mauGroups(containerType)) {
+        for (auto mauGroup : Device::phvSpec().mauGroups(containerType.size())) {
             size = (size == 0) ? groups[mauGroup].size : size;
             sz_containersUsed += groups[mauGroup].containersUsed;
             sz_bitsUsed += groups[mauGroup].bitsUsed;
@@ -724,7 +726,7 @@ PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, i
                     containers.str() << "|" << boost::format("%=20s") % bits.str() << "|" <<
                     boost::format("%=20s") % totalBits << "|" << std::endl; }
 
-        if (Device::phvSpec().mauGroups(containerType).size() != 0) {
+        if (Device::phvSpec().mauGroups(containerType.size()).size() != 0) {
             // Size wise occupancy metrics
             // Ensure that these lines appears only for B, H, and W; not for TB, TH, TW
             tContainersUsed += sz_containersUsed;

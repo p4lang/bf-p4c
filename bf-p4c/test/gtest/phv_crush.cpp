@@ -324,13 +324,13 @@ TEST_F(TofinoPhvCrush, Transaction) {
 
     EXPECT_NE(phvSpec.ingressOnly() | phvSpec.egressOnly(), phvSpec.physicalContainers());
 
-    bitvec mauGroup0 = phvSpec.mauGroups(PHV::Type::B)[2];
+    bitvec mauGroup0 = phvSpec.mauGroups(PHV::Size::b8)[2];
     bitvec depGroup0 = phvSpec.deparserGroup(*mauGroup0.min());
     EXPECT_NE(-1, depGroup0.min());
     EXPECT_NE(*depGroup0.min(), *depGroup0.max());
     EXPECT_EQ(bitvec(), (phvSpec.ingressOnly() | phvSpec.egressOnly()) & depGroup0);
 
-    bitvec mauGroup1 = phvSpec.mauGroups(PHV::Type::B)[3];
+    bitvec mauGroup1 = phvSpec.mauGroups(PHV::Size::b8)[3];
     bitvec depGroup1 = phvSpec.deparserGroup(*mauGroup1.min());
     EXPECT_NE(-1, depGroup1.min());
     EXPECT_NE(*depGroup1.min(), *depGroup1.max());

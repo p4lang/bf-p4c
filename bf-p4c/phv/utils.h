@@ -14,8 +14,11 @@ namespace PHV {
 
 /** A set of PHV containers of the same size. */
 class ContainerGroup {
-    /// The type of each container in this group.
-    const PHV::Type type_i;
+    /// Size of each container in this group.
+    const PHV::Size size_i;
+
+    /// Types of each container in this group.
+    std::set<PHV::Type> types_i;
 
     /// Containers in this group.
     std::vector<PHV::Container> containers_i;
@@ -24,16 +27,15 @@ class ContainerGroup {
     bitvec ids_i;
 
  public:
-    /** Creates a container group from a vector of containers.  Fails
-     * catastrophically if @containers has containers not of type @type.
-     */
-    ContainerGroup(PHV::Type type, const std::vector<PHV::Container> containers);
+    /** Creates a container group from a vector of containers.  Fails catastrophically if
+      * @containers has containers not of size @size.
+      */
+    ContainerGroup(PHV::Size size, const std::vector<PHV::Container> containers);
 
-    /** Creates a container group from a bitvec of container IDs.  Fails
-     * catastrophically if @container_group has containers not of type
-     * @type.
-     */
-    ContainerGroup(PHV::Type type, bitvec container_group);
+    /** Creates a container group from a bitvec of container IDs.  Fails catastrophically if
+      * @container_group has containers not of size @size.
+      */
+    ContainerGroup(PHV::Size size, bitvec container_group);
 
     using const_iterator = std::vector<PHV::Container>::const_iterator;
     const_iterator begin() const { return containers_i.begin(); }
@@ -45,11 +47,24 @@ class ContainerGroup {
     /// @returns the number of containers in this group.
     size_t size() const { return containers_i.size(); }
 
-    /// @returns the PHV::Type of this group.
-    PHV::Type type() const { return type_i; }
+    /// @returns the PHV::Size of this group.
+    PHV::Size width() const    { return size_i; }
 
-    bool is(PHV::Kind k) const { return k == type_i.kind(); }
-    bool is(PHV::Size s) const { return s == type_i.size(); }
+    /// @returns the types of PHVs in this group.
+    const std::set<PHV::Type> types() const { return types_i; }
+
+    /// @returns true if the type @t is present in this group.
+    bool hasType(PHV::Type t) const { return types_i.count(t); }
+
+    /// @return true if the ContainerGroup has kind k.
+    bool is(PHV::Kind k) const {
+        for (auto t : types_i)
+            if (t.kind() == k) return true;
+        return false;
+    }
+
+    /// @return true if the ContainerGroup is of size s.
+    bool is(PHV::Size s) const { return s == size_i; }
 
     /// @returns the ids of containers in this group.
     bitvec ids() const { return ids_i; }
