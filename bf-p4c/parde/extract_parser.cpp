@@ -428,7 +428,7 @@ struct RewriteParserStatements : public Transform {
             auto member = expr->to<IR::Member>();
             BUG_CHECK(member != nullptr,
                       "Invalid field in the checksum verification field list : %1%",
-                      member->srcInfo);
+                      expr->srcInfo);
             auto hdr = member->expr->to<IR::HeaderRef>();
             BUG_CHECK(hdr != nullptr,
                       "Invalid field in the checksum verification field list."

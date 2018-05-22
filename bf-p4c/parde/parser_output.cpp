@@ -128,8 +128,8 @@ struct ParserAsmSerializer : public ParserInspector {
         AutoIndent indentMatch(indent);
 
         for (auto* ck : match->checksums) {
-            if (auto* csum = ck->to<IR::BFN::LoweredParserChecksum>())
-                outputChecksum(csum);
+            if (auto* csum = ck->to<IR::BFN::LoweredParserChecksum2>())
+                outputChecksum2(csum);
         }
 
         for (auto* stmt : match->statements) {
@@ -215,7 +215,18 @@ struct ParserAsmSerializer : public ParserInspector {
         }
     }
 
-    void outputChecksum(const IR::BFN::LoweredParserChecksum* csum) {
+    unsigned rangesToUnsigned(const std::vector<nw_byterange>& ranges) {
+        unsigned rst = 0;
+        for (const auto& r : ranges) {
+            for (int i = r.loByte(); i <= r.hiByte(); ++i) {
+                BUG_CHECK(i <= 31, "Unable to convert this range to a 32 bit unsigned: %1%", r);
+                rst |= (1 << i);
+            }
+        }
+        return rst;
+    }
+
+    void outputChecksum2(const IR::BFN::LoweredParserChecksum2* csum) {
         cstring type;
         switch (csum->type) {
             case 0: type = "verify";   break;
@@ -229,7 +240,7 @@ struct ParserAsmSerializer : public ParserInspector {
 
         // TODO(zma) these low level bit encoding can be pushed down into the
         // assembler by adding some syntax sugar in the assembly
-        out << indent << "mask: " << csum->mask << std::endl;
+        out << indent << "mask: " << rangesToUnsigned(csum->masked_ranges) << std::endl;
         out << indent << "swap: " << csum->swap << std::endl;
         out << indent << "start: " << csum->start  << std::endl;
         out << indent << "end: " << csum->end  << std::endl;

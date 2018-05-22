@@ -144,6 +144,8 @@ void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
         out << endl << *st;
     for (auto *save : saves)
         out << endl << *save;
+    for (auto *chk : checksums)
+        out << endl << *chk;
 
     out << unindent;
 

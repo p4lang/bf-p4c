@@ -120,12 +120,22 @@ class LoweredExtractClot : LoweredParserPrimitive {
 #end
 }
 
-class LoweredParserChecksum : LoweredParserPrimitive {
-    dbprint { out << " parser checksum "; }
+class LoweredParserChecksum2 : LoweredParserPrimitive {
+    dbprint {
+        out << "parser checksum: ";
+        out << "unit = "  << unit_id << ", ";
+        out << "mask = [";
+        for (auto& r : masked_ranges) {
+            out << r << ", "; }
+        out << "] ";
+        out << "swap = "  << swap << ", ";
+        out << "start = " << start << ", ";
+        out << "end = " << end << ", ";
+        out << "type = " << type << ".";
+    }
 
     unsigned unit_id;
-
-    unsigned mask;
+    std::vector<nw_byterange> masked_ranges;
     unsigned swap;
     bool start;
     bool end;
@@ -229,7 +239,7 @@ class LoweredParserMatch {
     inline Vector<LoweredSave> saves;
 
     ///
-    inline Vector<LoweredParserPrimitive> checksums;
+    inline Vector<LoweredParserChecksum2> checksums;
 
     /// The number of packet bytes which must be available in the input buffer
     /// for the extractions to be performed successfully. If `boost::none`,

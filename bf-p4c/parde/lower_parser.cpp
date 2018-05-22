@@ -577,11 +577,10 @@ struct ComputeLoweredParserIR : public ParserInspector {
         return name;
     }
 
-    IR::Vector<IR::BFN::LoweredParserPrimitive>
+    IR::Vector<IR::BFN::LoweredParserChecksum2>
     lowerParserChecksums(std::vector<const IR::BFN::ParserPrimitive*>& checksums) {
-        IR::Vector<IR::BFN::LoweredParserPrimitive> loweredChecksums;
+        IR::Vector<IR::BFN::LoweredParserChecksum2> loweredChecksums;
 
-        nw_byteinterval finalInterval;
         bool end = false;
         const IR::BFN::FieldLVal* csum_err = nullptr;
 
@@ -599,11 +598,11 @@ struct ComputeLoweredParserIR : public ParserInspector {
         for (auto c : to_remove)
             checksums.erase(std::remove(checksums.begin(), checksums.end(), c), checksums.end());
 
+        std::vector<nw_byterange> masked_ranges;
         for (auto c : checksums) {
             if (auto add = c->to<IR::BFN::AddToChecksum>()) {
                 if (auto v = add->source->to<IR::BFN::PacketRVal>()) {
-                    const auto byteInterval = v->interval().toUnit<RangeUnit::Byte>();
-                    finalInterval = finalInterval.unionWith(byteInterval);
+                    masked_ranges.push_back(v->range().toUnit<RangeUnit::Byte>());
                  }
             } else if (auto verify = c->to<IR::BFN::VerifyChecksum>()) {
                 end = true;
@@ -611,11 +610,10 @@ struct ComputeLoweredParserIR : public ParserInspector {
             }
         }
 
-        if (!finalInterval.empty()) {
+        if (!masked_ranges.empty()) {
             // TODO(zma) residual checksum
-            unsigned mask = (1 << finalInterval.hi) - 1;
-            auto csum = new IR::BFN::LoweredParserChecksum(
-                csum_id, mask, 0x0, true, end, /*type*/0);
+            auto csum2 = new IR::BFN::LoweredParserChecksum2(
+                csum_id, masked_ranges, 0x0, true, end, /*type*/0);
 
             if (csum_err) {
                 std::vector<alloc_slice> slices = phv.get_alloc(csum_err->field);
@@ -623,15 +621,14 @@ struct ComputeLoweredParserIR : public ParserInspector {
                    "multiple containers?", csum_err->field);
                 if (auto sl = csum_err->field->to<IR::Slice>()) {
                     BUG_CHECK(sl->getL() == sl->getH(), "checksum error must write to single bit");
-                    csum->csum_err = new IR::BFN::ContainerBitRef(
+                    csum2->csum_err = new IR::BFN::ContainerBitRef(
                                          new IR::BFN::ContainerRef(slices.back().container),
                                          (unsigned)sl->getL());
                 } else {
-                    csum->csum_err = lowerPovBit(phv, csum_err);
+                    csum2->csum_err = lowerPovBit(phv, csum_err);
                 }
             }
-
-            loweredChecksums.push_back(csum);
+            loweredChecksums.push_back(csum2);
         }
 
         return loweredChecksums;
@@ -968,7 +965,7 @@ struct InsertClotChecksums : public ParserModifier {
     struct GetCurrentChecksumId : public ParserInspector {
         unsigned current_id = 0;
 
-        bool preorder(const IR::BFN::LoweredParserChecksum* csum) override {
+        bool preorder(const IR::BFN::LoweredParserChecksum2* csum) override {
             current_id = std::max(current_id, csum->unit_id);
             return false;
         }
@@ -978,24 +975,27 @@ struct InsertClotChecksums : public ParserModifier {
         const std::map<const Clot*, std::vector<const PHV::Field*>>& fields) :
             phv(phv), clot_checksum_fields(fields) { }
 
-    unsigned generateByteMask(const std::vector<const PHV::Field*>& clot_csum_fields,
-                              const IR::BFN::LoweredExtractClot* ec) {
-        unsigned csum_mask = 0;
+    std::vector<nw_byterange>
+    generateByteMask(const std::vector<const PHV::Field*>& clot_csum_fields,
+                     const IR::BFN::LoweredExtractClot* ec) {
+        std::vector<nw_byterange> ranges;
         unsigned clot_start_byte = ec->dest.start;
 
         for (auto f : clot_csum_fields) {
             unsigned offset = ec->dest.offset(f);
-            unsigned field_mask = (1 << (f->size + 7)/8) - 1;
-            field_mask <<= clot_start_byte + offset;
-            csum_mask |= field_mask;
+            int sz = (f->size + 7) / 8;
+            ranges.emplace_back(StartLen(clot_start_byte + offset, sz));
         }
 
-        return csum_mask;
+        return ranges;
     }
 
-    IR::BFN::LoweredParserChecksum*
-    createClotChecksum(unsigned id, unsigned mask, const Clot& clot) {
-        auto csum = new IR::BFN::LoweredParserChecksum(id, mask, 0x0, true, true, /* type */2);
+    IR::BFN::LoweredParserChecksum2*
+    createClotChecksum(unsigned id,
+                       const std::vector<nw_byterange>& mask,
+                       const Clot& clot) {
+        auto csum = new IR::BFN::LoweredParserChecksum2(
+                id, mask, 0x0, true, true, /* type */2);
         csum->clot_dest = clot;
         return csum;
     }
@@ -1024,7 +1024,7 @@ struct InsertClotChecksums : public ParserModifier {
             if (auto ec = p->to<IR::BFN::LoweredExtractClot>()) {
                 for (auto c : clot_checksum_fields) {
                     if (c.first->tag == ec->dest.tag) {
-                        unsigned mask = generateByteMask(c.second, ec);
+                        auto mask = generateByteMask(c.second, ec);
                         auto* csum = createClotChecksum(id, mask, ec->dest);
                         match->checksums.push_back(csum);
                         allocated++;
@@ -1373,10 +1373,13 @@ class ExtractorAllocator {
     struct MatchPrimitives {
         MatchPrimitives() { }
         MatchPrimitives(const IR::Vector<IR::BFN::LoweredParserPrimitive>& ext,
-                        const IR::Vector<IR::BFN::LoweredSave>& sa, int sft)
-            : extracts(ext), saves(sa), shift(sft) { }
+                        const IR::Vector<IR::BFN::LoweredParserChecksum2>& chk,
+                        const IR::Vector<IR::BFN::LoweredSave>& sa,
+                        int sft)
+            : extracts(ext), checksums(chk), saves(sa), shift(sft) { }
 
         IR::Vector<IR::BFN::LoweredParserPrimitive> extracts;
+        IR::Vector<IR::BFN::LoweredParserChecksum2> checksums;
         IR::Vector<IR::BFN::LoweredSave> saves;
         int shift;
     };
@@ -1399,6 +1402,14 @@ class ExtractorAllocator {
             else
                 ::warning("Splitting State ignores unsupported primitive: %1%", stmt);
 
+        // adding checksums.
+        for (auto* prim : match->checksums) {
+            if (auto* cks = prim->to<IR::BFN::LoweredParserChecksum2>()) {
+                checksums.push_back(cks);
+            }
+        }
+
+        // adding saves
         for (auto* save : match->saves)
             saves.push_back(save);
 
@@ -1494,6 +1505,11 @@ class ExtractorAllocator {
         nw_byteinterval extractedInterval;
     };
 
+    struct SplitChecksumResult {
+        IR::Vector<IR::BFN::LoweredParserChecksum2>          allocatedChecksums;
+        std::vector<const IR::BFN::LoweredParserChecksum2*>  remainingChecksums;
+    };
+
     struct SplitSaveResult {
         IR::Vector<IR::BFN::LoweredSave>                allocatedSaves;
         std::vector<const IR::BFN::LoweredSave*>        remainingSaves;
@@ -1522,7 +1538,8 @@ class ExtractorAllocator {
     /// bytes. Side-effect free.
     SplitExtractResult splitOneByBandwidth(
             const std::vector<const IR::BFN::LoweredExtractPhv*>& extractPhvs,
-            const std::vector<const IR::BFN::LoweredExtractClot*>& extractClots) {
+            const std::vector<const IR::BFN::LoweredExtractClot*>& extractClots,
+            const IR::Vector<IR::BFN::LoweredParserChecksum2>& checksums) {
         SplitExtractResult rst;
         auto& pardeSpec = Device::pardeSpec();
         int inputBufferLastByte = pardeSpec.byteInputBufferSize() - 1;
@@ -1530,6 +1547,19 @@ class ExtractorAllocator {
         // state. We also ensure that we don't overflow the input buffer.
         if (Device::currentDevice() == "Tofino") {
             std::map<size_t, unsigned> allocatedExtractorsBySize;
+
+            // reserve extractors for checksum unit.
+            for (auto* cks : checksums) {
+                // In verify mode, we need to reserve a 16 bit extractor.
+                if (cks->type == 1) {
+                    auto use_extractor = 16;
+                    allocatedExtractorsBySize[use_extractor]++;
+                    BUG_CHECK(allocatedExtractorsBySize[use_extractor] <=
+                              pardeSpec.extractorSpec().at(use_extractor),
+                              "too much checksum, use up extractors.");
+                }
+            }
+
             for (auto* extract : extractPhvs) {
                 nw_byteinterval byteInterval;
                 size_t use_extractor = 0;
@@ -1635,6 +1665,102 @@ class ExtractorAllocator {
         return rst;
     }
 
+    /// Return checksums that can be done in this state.
+    /// As long as all masked ranges are within input buffer, this checksum
+    /// can be done in this state. We need this because we need to reserve extractors
+    /// for those checksums.
+    SplitChecksumResult
+    allocCanBeDoneChecksums(
+            const std::vector<const IR::BFN::LoweredParserChecksum2*>& checksums) {
+        SplitChecksumResult rst;
+        for (const auto* cks : checksums) {
+            bool can_be_done = std::all_of(cks->masked_ranges.begin(), cks->masked_ranges.end(),
+                [&] (const nw_byterange& r) {
+                    return r.hiByte() <= Device::pardeSpec().byteInputBufferSize() - 1;
+                });
+            if (can_be_done) {
+                rst.allocatedChecksums.push_back(cks);
+            } else {
+                rst.remainingChecksums.push_back(cks);
+            }
+        }
+        return rst;
+    }
+
+    /// return two checksum primitives that is generated from splitting @p cks.
+    /// The first one is the former part checksum unit, and the second part is the latter.
+    /// XXX(yumin): the second part is already left shifted by @p shifted.
+    static
+    std::pair<const IR::BFN::LoweredParserChecksum2*, const IR::BFN::LoweredParserChecksum2*>
+    splitChecksumAt(const IR::BFN::LoweredParserChecksum2* cks, int shifted) {
+        // shifted - 1 is the last byte allocated to the split state.
+        int lastByte = shifted - 1;
+        std::vector<nw_byterange> prev;
+        std::vector<nw_byterange> post;
+        for (const auto& range : cks->masked_ranges) {
+            if (range.hiByte() <= lastByte) {
+                prev.push_back(range);
+            } else if (range.loByte() <= lastByte && range.hiByte() > lastByte) {
+                prev.emplace_back(FromTo(range.loByte(), lastByte));
+                post.emplace_back(FromTo(lastByte + 1, range.hiByte()));
+            } else {
+                post.emplace_back(range);
+            }
+        }
+
+        // left shift all post range by shifted bytes.
+        for (auto& r : post) {
+            r = nw_byterange(FromTo(r.loByte() - shifted, r.hiByte() - shifted)); }
+
+        if (prev.empty())
+            return {nullptr, cks};
+        if (post.empty())
+            return {cks, nullptr};
+
+        auto* prev_cks = cks->clone();
+        auto* post_cks = cks->clone();
+
+        prev_cks->masked_ranges = prev;
+        post_cks->masked_ranges = post;
+
+        // if even/odd order changed, mark swap.
+        if (shifted % 2 == 1) {
+            post_cks->swap = (!cks->swap); }
+
+        // start in first checksum.
+        if (cks->start) {
+            prev_cks->start = true;
+            post_cks->start = false;
+        }
+
+        // end in the second checksum.
+        if (cks->end) {
+            prev_cks->end = false;
+            post_cks->end = true;
+        }
+
+        return {prev_cks, post_cks};
+    }
+
+    /// Return checksum primitives that needs to be done if we decide to shift
+    /// out @p shifted bytes in this state. Checksums will be splitted, and the
+    /// remaining checksums are already left shifted by @p shifted bytes.
+    SplitChecksumResult
+    allocPartialChecksums(
+            const std::vector<const IR::BFN::LoweredParserChecksum2*>& checksums,
+            int shifted) {
+        SplitChecksumResult rst;
+        for (const auto& cks : checksums) {
+            auto splitted_cks = splitChecksumAt(cks, shifted);
+            if (splitted_cks.first) {
+                rst.allocatedChecksums.push_back(splitted_cks.first); }
+            if (splitted_cks.second) {
+                rst.remainingChecksums.push_back(splitted_cks.second); }
+        }
+        return rst;
+    }
+
+
     /**
      * Allocate as many parser primitives as will fit into a single state,
      * respecting hardware limits.
@@ -1647,10 +1773,9 @@ class ExtractorAllocator {
      * and (2) the shift that the new state should have.
      */
     MatchPrimitives allocateOneState() {
-        // TODO(yumin): currently checksums are not handled in the split state part.
-        // so as long as the splitted state use checksum, checksum primitives will be
-        // lost now.
-        auto extract_rst = splitOneByBandwidth(extractPhvs, extractClots);
+        auto checksum_rst_done = allocCanBeDoneChecksums(checksums);
+        auto extract_rst = splitOneByBandwidth(extractPhvs, extractClots,
+                                               checksum_rst_done.allocatedChecksums);
         auto save_rst = allocSaves(saves);
 
         // If there is no more extract, calculate the actual shift for this state.
@@ -1689,6 +1814,16 @@ class ExtractorAllocator {
         LOG4("Created split state for " << stateName << " with shift "
              << byteActualShift << ":");
 
+        // For checksums that can not be done in this state, split them.
+        auto checksum_rst_partial = allocPartialChecksums(
+                checksum_rst_done.remainingChecksums, byteActualShift);
+
+        // Merge checksums allocation results.
+        SplitChecksumResult checksum_rst;
+        checksum_rst.allocatedChecksums.append(checksum_rst_done.allocatedChecksums);
+        checksum_rst.allocatedChecksums.append(checksum_rst_partial.allocatedChecksums);
+        checksum_rst.remainingChecksums = checksum_rst_partial.remainingChecksums;
+
         // Shift up all the remaining extractions.
         extractPhvs.clear();
         for (auto* extract : extract_rst.remainingPhvExtracts)
@@ -1702,11 +1837,18 @@ class ExtractorAllocator {
         for (auto* save : save_rst.remainingSaves)
             saves.push_back(leftShiftSave(save, byteActualShift));
 
+        // remaining checksums are already left shifted by allocPartialChecksums,
+        // so it do not need left shift here.
+        checksums.clear();
+        for (auto* cks : checksum_rst.remainingChecksums)
+            checksums.push_back(cks);
+
         current_input_buffer = nw_byteinterval(
                 StartLen(0, current_input_buffer.hiByte() + 1 - byteActualShift));
 
         shifted += byteActualShift;
         return MatchPrimitives(extract_rst.allocatedExtracts,
+                               checksum_rst.allocatedChecksums,
                                save_rst.allocatedSaves,
                                byteActualShift);
     }
@@ -1718,6 +1860,7 @@ class ExtractorAllocator {
     int shifted;
     std::vector<const IR::BFN::LoweredExtractPhv*> extractPhvs;
     std::vector<const IR::BFN::LoweredExtractClot*> extractClots;
+    std::vector<const IR::BFN::LoweredParserChecksum2*> checksums;
     std::vector<const IR::BFN::LoweredSave*> saves;
     nw_byteinterval current_input_buffer;
 };
@@ -1841,6 +1984,16 @@ class SplitBigStates : public ParserModifier {
             for (auto* save : common_state_allocated_saves) {
                 truncatedMatch->saves.push_back(leftShiftSave(save, shifted)); }
 
+            // allocate checksums.
+            truncatedMatch->checksums.clear();
+            for (const auto* cks : match->checksums) {
+                auto splitted_cks = ExtractorAllocator::splitChecksumAt(cks, shifted);
+                if (splitted_cks.second) {
+                    LOG4("Allocate checksum to tail state: " << splitted_cks.second);
+                    truncatedMatch->checksums.push_back(splitted_cks.second);
+                }
+            }
+
             // add primitives to new match
             int accumulatedShift = 0;  // shifted in the tailed tail while crush it into one.
             for (const auto& primitives : tailStatePrimitives) {
@@ -1900,9 +2053,19 @@ class SplitBigStates : public ParserModifier {
                     common->saves.push_back(leftShiftSave(save, -shifted));
                 }
             }
-
             shifted += rst.shift;
         }
+
+        // allocate checksums.
+        common->checksums.clear();
+        for (const auto* cks : sampleMatch->checksums) {
+            auto splitted_cks = ExtractorAllocator::splitChecksumAt(cks, shifted);
+            if (splitted_cks.first) {
+                LOG4("Alloc checksum to common state: " << splitted_cks.first);
+                common->checksums.push_back(splitted_cks.first);
+            }
+        }
+
         common->shift = shifted;
     }
 
@@ -1994,6 +2157,7 @@ class SplitBigStates : public ParserModifier {
         // Allocate whatever we can fit into this match.
         auto primitives_a = allocator.allocateOneState();
         match->statements = primitives_a.extracts;
+        match->checksums  = primitives_a.checksums;
         match->saves      = primitives_a.saves;
         match->shift      = primitives_a.shift;
 
@@ -2015,6 +2179,7 @@ class SplitBigStates : public ParserModifier {
               new IR::BFN::LoweredParserMatch(match_t(), 0, finalState);
 
             newMatch->statements = primitives.extracts;
+            newMatch->checksums  = primitives.checksums;
             newMatch->saves      = primitives.saves;
             newMatch->shift      = primitives.shift;
             newState->match.push_back(newMatch);
@@ -2128,20 +2293,23 @@ class ComputeBufferRequirements : public ParserModifier {
             bytesRead = bytesRead.unionWith(save->source->byteInterval());
         });
 
+        forAllMatching<IR::BFN::LoweredParserChecksum2>(&match->checksums,
+                      [&] (const IR::BFN::LoweredParserChecksum2* cks) {
+            for (const auto& r : cks->masked_ranges) {
+                bytesRead = bytesRead.unionWith(toHalfOpenRange(r)); }
+        });
+
         // We need to have buffered enough bytes to read the last byte in the
         // range. We also need to be sure to buffer at least as many bytes as we
         // plan to shift.
         match->bufferRequired = std::max(unsigned(bytesRead.hi), match->shift);
-        match->bufferRequired = std::min(unsigned(*match->bufferRequired),
-                                         unsigned(Device::pardeSpec().byteInputBufferSize()));
-/*
+
         const unsigned inputBufferSize = Device::pardeSpec().byteInputBufferSize();
         BUG_CHECK(*match->bufferRequired <= inputBufferSize,
                   "Match for state %1% requires %2% bytes to be buffered, which "
                   "is more than can fit in the %3% byte input buffer",
                   findContext<IR::BFN::LoweredParserState>()->name,
                   *match->bufferRequired, inputBufferSize);
-*/
     }
 };
 
