@@ -1079,6 +1079,65 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/laymen_0.p4
 )
 
+# BRIG-677
+# error: MAU::TableSeq: duplicated name (MAU::TableSeq is previous instance)
+p4c_add_xfail_reason("tofino"
+  "duplicated name"
+  extensions/p4_tests/p4_14/p4smith_regression/basseterre_0.p4
+)
+
+# BRIG-678
+p4c_add_xfail_reason("tofino"
+  "Split cannot work on this scenario"
+  extensions/p4_tests/p4_14/p4smith_regression/underpin_0.p4
+)
+
+# BRIG-648
+p4c_add_xfail_reason("tofino"
+  "Unhandled expression in BuildGatewayMatch"
+  extensions/p4_tests/p4_14/p4smith_regression/drunkards_0.p4
+)
+
+# BRIG-682
+p4c_add_xfail_reason("tofino"
+  "Some fields cannot be allocated because of unsatisfiable constraints"
+  extensions/p4_tests/p4_14/p4smith_regression/photostats_0.p4
+)
+
+# BRIG-679
+# error: Gateway match key chubs.dr not in matching hash column
+p4c_add_xfail_reason("tofino"
+  "not in matching hash column"
+  extensions/p4_tests/p4_14/p4smith_regression/vindemiatrixs_0.p4
+)
+
+# BRIG-680
+# Compiler Bug: sidestepped_0.p4(95): RangeMatch source (ingress::discontinuitys.soupcons[7:4];) misaligned at 34..34
+p4c_add_xfail_reason("tofino"
+  "RangeMatch source"
+  extensions/p4_tests/p4_14/p4smith_regression/sidestepped_0.p4
+)
+
+# BRIG-683
+# error: Upper word match of tracker.medicos for range gateway not a multiple of 4 bits
+p4c_add_xfail_reason("tofino"
+  "for range gateway not a multiple of 4 bits"
+  extensions/p4_tests/p4_14/p4smith_regression/motowns_0.p4
+)
+
+# BRIG-684
+# error: hash expression width mismatch (2 != 1)
+p4c_add_xfail_reason("tofino"
+  "hash expression width mismatch"
+  extensions/p4_tests/p4_14/p4smith_regression/ghosted_0.p4
+)
+
+# BRIG-681
+p4c_add_xfail_reason("tofino"
+  "set requires 2 operands"
+  extensions/p4_tests/p4_14/p4smith_regression/faecess_0.p4
+)
+
 # BRIG-584
 p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*: Cannot extract to a field slice in the parser"
