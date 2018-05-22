@@ -156,7 +156,11 @@ class Target::JBay : public Target {
     typedef ::JBay::regs_deparser                   deparser_regs;
     enum {
         PARSER_CHECKSUM_UNITS = 5,
+#ifdef EMU_OVERRIDE_STAGE_COUNT
+        NUM_MAU_STAGES = EMU_OVERRIDE_STAGE_COUNT,
+#else
         NUM_MAU_STAGES = 20,
+#endif
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
         DEPARSER_CHECKSUM_UNITS = 8,
         DEPARSER_MAX_POV_BYTES = 16,
