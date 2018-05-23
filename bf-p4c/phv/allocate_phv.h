@@ -75,6 +75,7 @@ class FieldPackingOpportunity {
  */
 struct AllocScore {
     using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
+    static constexpr int DARK_TO_PHV_DISTANCE = 2;
     struct ScoreByKind {
         int n_set_gress;
         int n_set_parser_group_gress;
@@ -101,8 +102,12 @@ struct AllocScore {
 
     ordered_map<PHV::Kind, ScoreByKind> score;
     int n_tphv_on_phv_bits;
+    int n_mocha_on_phv_bits;
+    int n_dark_on_phv_bits;
+    int n_dark_on_mocha_bits;
 
-    AllocScore() : n_tphv_on_phv_bits(0) { }
+    AllocScore() : n_tphv_on_phv_bits(0), n_mocha_on_phv_bits(0), n_dark_on_phv_bits(0),
+                   n_dark_on_mocha_bits(0) { }
 
     /** Construct a score from a Transaction.
      *

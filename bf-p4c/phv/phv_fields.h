@@ -404,6 +404,10 @@ class Field {
     bool            privatized_i = false;              /// true for the TPHV version of a
                                                        /// privatized field
     bool            is_checksummed_i = false;          /// true for fields used in checksum.
+    bool            mocha_i = false;                   /// true if field is a candidate for mocha
+                                                       /// PHV.
+    bool            dark_i = false;                    /// true if field is a candidate for dark
+                                                       /// PHV.
 
     /// Ranges of this field that can not be split.
     /// E.g. in a<32b> = b<32b> + c[0:31]<48b>, [0:31] will be the no_split range for c.
@@ -489,6 +493,10 @@ class Field {
     int ccgf_width() const;  // phv width = aggregate size of members
 
     bool is_tphv_candidate(const PhvUse& uses) const;
+    bool is_mocha_candidate() const                        { return mocha_i; }
+    bool is_dark_candidate() const                         { return dark_i; }
+    void set_mocha_candidate(bool c)                       { mocha_i = c; }
+    void set_dark_candidate(bool c)                        { dark_i = c; }
 
     //
     // constraints

@@ -86,13 +86,20 @@ FieldPackingOpportunity* AllocScore::g_packing_opportunities = nullptr;
  * 6. set gress.
  */
 bool AllocScore::operator>(const AllocScore& other) const {
-    // Less TPHV over PHV
+    // Less TPHV over PHV. Less dark over PHV. Less mocha over dark. Less dark over mocha.
     // This is not redundent even if we have weight_factor for TPHV/PHV score,
     // because we want to avoid the case that placing TPHV candidates to PHV containers
     // so that the score is higher, because scores are calculated based on
     // container type, not field type.
-    if (n_tphv_on_phv_bits != other.n_tphv_on_phv_bits) {
-        return n_tphv_on_phv_bits < other.n_tphv_on_phv_bits; }
+    int delta_tphv_on_phv_bits = n_tphv_on_phv_bits - other.n_tphv_on_phv_bits;
+    int delta_dark_on_phv_bits = n_dark_on_phv_bits - other.n_dark_on_phv_bits;
+    int delta_mocha_on_phv_bits = n_mocha_on_phv_bits - other.n_mocha_on_phv_bits;
+    int delta_dark_on_mocha_bits = n_dark_on_mocha_bits - other.n_dark_on_mocha_bits;
+
+    int container_type_score = delta_tphv_on_phv_bits + DARK_TO_PHV_DISTANCE *
+        delta_dark_on_phv_bits + delta_mocha_on_phv_bits + delta_dark_on_mocha_bits;
+    if (container_type_score != 0)
+        return container_type_score < 0;
 
     int weight_factor = 2;
     int delta_clot_bits = 0;
@@ -240,8 +247,17 @@ AllocScore::AllocScore(const PHV::Transaction& alloc,
 
         if (kind == PHV::Kind::normal) {
             for (const auto& slice : slices) {
-                if (slice.field()->is_tphv_candidate(uses)) {
-                    n_tphv_on_phv_bits += (slice.width()); } } }
+                if (slice.field()->is_tphv_candidate(uses))
+                    n_tphv_on_phv_bits += (slice.width());
+                else if (slice.field()->is_mocha_candidate())
+                    n_mocha_on_phv_bits += (slice.width());
+                else if (slice.field()->is_dark_candidate())
+                    n_dark_on_phv_bits += (slice.width()); } }
+
+        if (kind == PHV::Kind::mocha)
+            for (const auto& slice : slices)
+                if (slice.field()->is_dark_candidate())
+                    n_dark_on_mocha_bits += (slice.width());
 
         // calc_n_inc_containers
         ContainerAllocStatus merged_status = alloc.alloc_status(container);
@@ -537,10 +553,10 @@ bool CoreAllocation::satisfies_constraints(
              << (hasExtracted ? "extracted" : "uninitialized"));
         return false; }
 
-    if (c.is(PHV::Kind::mocha))
+    if (c.is(PHV::Kind::mocha) && !f->is_mocha_candidate())
         return false;
 
-    if (c.is(PHV::Kind::dark))
+    if (c.is(PHV::Kind::dark) && !f->is_dark_candidate())
         return false;
 
     return true;
@@ -568,6 +584,8 @@ bool CoreAllocation::satisfies_CCGF_constraints(
         LOG5("    ...but CCGF is deparsed and does not match deparser group gress");
         return false; }
 
+    // Check mocha and dark candidates.
+    // XXX(Deep): Hack. Just ignore mocha and dark for now.
     if (c.is(PHV::Kind::mocha) || c.is(PHV::Kind::dark)) {
         LOG5("    ...but CCGF cannot be allocated to mocha or dark");
         return false; }

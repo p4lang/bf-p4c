@@ -696,6 +696,17 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         // If no PHV containers, then packing is valid
         if (num_source_containers == 0) continue;
 
+        // Dark and mocha containers require the entire container to be written all at once. For
+        // dark and mocha containers, ensure that all the field slices in the container are written
+        // in every action that writes one of those fields.
+        bool mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
+        if (mocha_or_dark) {
+            // Only one container source for dark/mocha.
+            if (sources.num_allocated > 1) return boost::none;
+            if (!all_field_slices_written_together(container_state, set_of_actions))
+                return boost::none;
+            phvMustBeAligned[action] = true; }
+
         // If source fields have already been allocated and number of sources greater than 2, then
         // packing is not possible (TOO_MANY_SOURCES)
         if (sources.num_allocated > 2) {
@@ -768,6 +779,13 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         // XXX(deep): What's the best way to choose which allocated slice to pack with
         if (sources.num_allocated == 2 && sources.num_unallocated > 0)
             pack_slices_together(alloc, container_state, copacking_constraints, action, false);
+
+        // For mocha and dark containers, partial container sets are impossible.
+        if (mocha_or_dark && sources.num_unallocated > 0) {
+            BUG_CHECK(sources.num_allocated <= 1, "Cannot have 2 or more sources for container %1%",
+                      c);
+            // Pack all slices together.
+            pack_slices_together(alloc, container_state, copacking_constraints, action, false); }
 
         // If sources.num_allocated == 1 and sources.num_unallocated > 0, then
         if (sources.num_allocated <= 1 && sources.num_unallocated > 0) {
@@ -1218,6 +1236,31 @@ bool ActionPhvConstraints::assign_containers_to_unallocated_sources(
             LOG5("\t\t\t\t\tSlice " << slice << " must be allocated to container " << c);
             req_container[slice] = c; } }
 
+    return true;
+}
+
+bool ActionPhvConstraints::all_field_slices_written_together(
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const ordered_set<const IR::MAU::Action*>& set_of_actions) const {
+    for (auto action : set_of_actions) {
+        boost::optional<bool> thisActionWrites = boost::none;
+        // for each AllocSlice in the container, check if it is written by the action.
+        for (auto& slice : container_state) {
+            boost::optional<OperandInfo> writeStatus = constraint_tracker.is_written(slice, action);
+            if (!writeStatus) {
+                if (!thisActionWrites)
+                    // First slice encountered, so set status to field not written.
+                    thisActionWrites = false;
+                else if (*thisActionWrites == true)
+                    // If a field was written previously, this returns false.
+                    return false;
+            } else {
+                if (!thisActionWrites)
+                    // first slice encountered, so set status to field written.
+                    thisActionWrites = true;
+                else if (*thisActionWrites == false)
+                    // If a field was not written previously, this returns false.
+                    return false; } } }
     return true;
 }
 

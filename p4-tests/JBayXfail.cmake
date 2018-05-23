@@ -75,11 +75,6 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "PHV allocation creates a container action impossible within a Tofino ALU"
-  extensions/p4_tests/p4_14/overlay_add_header.p4
-  )
-
-p4c_add_xfail_reason("jbay"
   "error: Assignment cannot be supported in the parser"
   testdata/p4_14_samples/axon.p4
   )
@@ -242,4 +237,10 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "condition expression too complex"
   testdata/p4_14_samples/header-stack-ops-bmv2.p4
+)
+
+# BRIG-685
+p4c_add_xfail_reason("jbay"
+  "all ways in use"
+  extensions/p4_tests/p4_14/em_ghost4.p4
 )

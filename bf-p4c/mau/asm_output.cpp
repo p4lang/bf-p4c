@@ -36,8 +36,13 @@ class MauAsmOutput::EmitAttached : public Inspector {
     : self(s), out(o), tbl(t), stage(stg), gress(gt) {}};
 
 std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
+    indent_t indent(1);
     for (auto &stage : mauasm.by_stage) {
         out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
+#if HAVE_JBAY
+        if (Device::currentDevice() == "JBay" && stage.first.second > 0)
+            out << indent << "dependency: match" << std::endl;
+#endif
         for (auto &tbl : stage.second) {
             BUG_CHECK(!(tbl.phase0Info && tbl.tableInfo),
                       "TableInstance is both a phase 0 table and a regular table?");

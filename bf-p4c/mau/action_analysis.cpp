@@ -1158,16 +1158,17 @@ bool ActionAnalysis::ContainerAction::verify_source_to_bit(int operands,
     return true;
 }
 
-/** Each PHV ALU can only pull from a local group of 16 PHVs in an operation.  This guarantees
- *  that this clustering constraint is met.
+/** Each PHV ALU can only pull from a local group of PHVs in an operation.  This guarantees that
+ * this clustering constraint is met.
  */
 bool ActionAnalysis::ContainerAction::verify_phv_mau_group(PHV::Container container) {
+    auto write_container_id = Device::phvSpec().containerToId(container);
+    auto write_group = Device::phvSpec().mauGroup(write_container_id);
     for (auto phv_ta : phv_alignment) {
         auto read_container = phv_ta.first;
-        if (read_container.type() != container.type())
-            return false;
-        int group_size = Device::phvSpec().mauGroupNumAndSize(container.type()).second;
-        if (read_container.index() / group_size != container.index() / group_size)
+        auto read_container_id = Device::phvSpec().containerToId(read_container);
+        auto read_group = Device::phvSpec().mauGroup(read_container_id);
+        if (write_group != read_group)
             return false;
     }
     return true;
@@ -1293,11 +1294,26 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
 
     bitvec ad_bitmask = adi.alignment.write_bits | ci.alignment.write_bits;
 
-    if (sources_needed == 2 && name == "set")
-        to_deposit_field = true;
-    if (name == "set" && ad_bitmask.popcount() > 0 && !ad_bitmask.is_contiguous())
-        to_bitmasked_set = true;
-
+    // Bitmasked-set and deposit-field instructions must only be generated for normal PHVs, not dark
+    // or mocha PHVs.
+    if (container.is(PHV::Kind::normal)) {
+        if (sources_needed == 2 && name == "set") {
+            to_deposit_field = true;
+        }
+        if (name == "set" && ad_bitmask.popcount() > 0 && !ad_bitmask.is_contiguous()) {
+            to_bitmasked_set = true;
+        }
+    } else if (container.is(PHV::Kind::mocha) || container.is(PHV::Kind::dark)) {
+        bool total_overwrite_possible = verify_overwritten(container, phv);
+        if (total_overwrite_possible) {
+            error_code |= PARTIAL_OVERWRITE;
+        } else {
+            error_code |= ILLEGAL_OVERWRITE;
+            error_message += "fields bits in container " + cstring::to_cstring(container) + " will "
+                             "be overwritten by action " + action_name;
+            return false;
+        }
+    }
 
     bool can_phv_be_unaligned = (name == "set" && (actual_ad == 0));
     int phv_unaligned = can_phv_be_unaligned ? 1 : 0;

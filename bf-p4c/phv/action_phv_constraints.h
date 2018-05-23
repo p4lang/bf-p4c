@@ -184,7 +184,7 @@ class ActionPhvConstraints : public Inspector {
         /// @returns operation information for fields written in @act.
         const ordered_set<PHV::FieldSlice>& reads(const IR::MAU::Action* act) const;
 
-        /// @eturns a OperandInfo structure if @slice is written in @act.
+        /// @returns a OperandInfo structure if @slice is written in @act.
         boost::optional<OperandInfo>
         is_written(PHV::FieldSlice slice, const IR::MAU::Action *act) const;
 
@@ -399,29 +399,37 @@ class ActionPhvConstraints : public Inspector {
         return (!checkSpecialityPacking(fields) || is_meter_color_destination(f));
     }
 
-    /// returns all the fields that are written using meter color fields.
+    /// @returns all the fields that are written using meter color fields.
     ordered_set<const PHV::Field*>& meter_color_dests() {
         return meter_color_destinations;
     }
 
-    /// returns the set of all the actions which write field @f.
+    /// @returns the set of all the actions which write field @f.
     ordered_set<const IR::MAU::Action*> actions_writing_fields(const PHV::Field* f) const {
         return constraint_tracker.written_in(PHV::FieldSlice(f, StartLen(0, f->size)));
     }
 
-    /// returns the set of all actions which read field @f.
+    /// @returns the set of all actions which read field @f.
     ordered_set<const IR::MAU::Action*> actions_reading_fields(const PHV::Field* f) const {
         return constraint_tracker.read_in(PHV::FieldSlice(f, StartLen(0, f->size)));
     }
 
-    /// returns the set of fields which are sources for field @f across all actions.
+    /// @returns the set of fields which are sources for field @f across all actions.
     ordered_set<const PHV::Field*> field_sources(const PHV::Field* f) const;
 
-    /// returns the set of fields which use field @f as sources, across all actions.
+    /// @returns the set of fields which use field @f as sources, across all actions.
     ordered_set<const PHV::Field*> field_destinations(const PHV::Field* f) const;
 
-    /// returns true if the field @f is only ever written by move operations.
+    /// @returns true if the field @f is only ever written by move operations.
     bool move_only_operations(const PHV::Field* f) const;
+
+    /// @returns true if: for every slice s in @container_state, if an action a in @set_of_actions
+    /// writes that slice, then all other slices in @container_state are also written by a; and
+    /// if an action b in @set_of_actions does not write slice s, then all other slices in
+    /// @container_state are also not written by action b.
+    bool all_field_slices_written_together(
+            const PHV::Allocation::MutuallyLiveSlices& container_state,
+            const ordered_set<const IR::MAU::Action*>& set_of_actions) const;
 
     /** Checks whether packing @slices into a container will violate MAU action
      * constraints.

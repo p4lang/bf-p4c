@@ -10,6 +10,7 @@
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/phv/analysis/field_interference.h"
 #include "bf-p4c/phv/analysis/jbay_phv_analysis.h"
+#include "bf-p4c/phv/analysis/mocha.h"
 #include "bf-p4c/mau/action_mutex.h"
 
 class PhvInfo;
@@ -34,6 +35,10 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // PHV allocation state (in preparation for backtracking).
             &uses,                 // use of field in mau, parde
             new PhvInfo::DumpPhvFields(phv, uses),
+#if HAVE_JBAY
+            // Determine candidates for mocha PHVs.
+            new CollectMochaCandidates(phv, uses),
+#endif
             &pragmas,              // parse and fold PHV-related pragmas
             new ParserOverlay(phv, pragmas),
                                    // produce pairs of mutually exclusive header
