@@ -259,6 +259,9 @@ void SelectionTable::write_regs(REGS &regs) {
     } else {
         merge.meter_alu_thread[0].meter_alu_thread_egress |= 1U << meter_group;
         merge.meter_alu_thread[1].meter_alu_thread_egress |= 1U << meter_group; }
+    if (gress == EGRESS) {
+        regs.rams.map_alu.meter_group[meter_group].meter.meter_ctl.meter_alu_egress = 1;
+    }
 }
 
 template<> void SelectionTable::setup_logical_alu_map(Target::Tofino::mau_regs &regs,

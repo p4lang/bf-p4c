@@ -429,6 +429,9 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
         merge.meter_alu_thread[1].meter_alu_thread_egress |= 1U << meter_group; }
     auto &salu = regs.rams.map_alu.meter_group[meter_group].stateful;
     salu.stateful_ctl.salu_enable = 1;
+    if (gress == EGRESS) {
+        regs.rams.map_alu.meter_group[meter_group].meter.meter_ctl.meter_alu_egress = 1;
+    }
     if (math_table) {
         for (size_t i = 0; i < math_table.data.size(); ++i)
             salu.salu_mathtable[i/4U].set_subfield(math_table.data[i], 8*(i%4U), 8);
