@@ -161,9 +161,15 @@ stage <constant> <thread>:
                         # random hash of the given phv locations.  We generate
                         # with random(3) and we do NOT call srand, so the hash
                         # for a given program is repeatable.
-                    crc(<int>, <phv-location>, ...)
+                    crc(<int>, [<int>,] <phv-location>, ...)
                         # crc hash of the given phv locations -- first arg is integer
-                        # constant denoting polynomial (Koopman notation)
+                        # constant denoting polynomial (Koopman notation).  Second arg
+                        # is an initial constant prefixed to the input.
+                    crc(<int>, [<int>,] '{' <int> : <phv-location>, ... '}')
+                        # crc hash of the given phv locations, at the specified offsets
+                        # from the lsb of the crc input as a whole.
+                    crc_rev(...)
+                        # bit-reversed (little endian instead of the defaul big endian) crc
                     <expression> ^ <expression>
                         # xor of other expressions.
                     stripe(<expression>, ...)

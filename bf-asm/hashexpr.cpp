@@ -19,6 +19,7 @@ static bool check_ixbar(Phv::Ref &ref, InputXbar *ix, int grp) {
     if (ref->reg.mau_id() < 0) {
         error(ref.lineno, "%s not accessable in mau", ref->reg.name);
         return false; }
+    if (grp < 0) return true;
     if (auto *in = ix->find_exact(*ref, grp))
         return in->lo >= 0;
     else error(ref.lineno, "%s not in group %d", ref.name(), grp);
@@ -46,7 +47,7 @@ class HashExpr::Random : HashExpr {
     bool check_ixbar(InputXbar *ix, int grp) override {
         bool rv = true;
         for (auto &ref : what)
-            rv |= ::check_ixbar(ref, ix, grp);
+            rv &= ::check_ixbar(ref, ix, grp);
         return rv; }
     void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) override;
     int width() override { return 0; }
@@ -59,21 +60,21 @@ class HashExpr::Random : HashExpr {
 class HashExpr::Crc : HashExpr {
     bitvec                      poly;
     bitvec                      init;
-    std::vector<Phv::Ref>       what;
+    std::map<int, Phv::Ref>     what;
+    std::vector<Phv::Ref>       vec_what;
     bool                        reverse = false;
     Crc(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int grp) override {
-        bool rv = true;
-        for (auto &ref : what)
-            rv |= ::check_ixbar(ref, ix, grp);
-        return rv; }
+    bool check_ixbar(InputXbar *ix, int grp) override;
     void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) override;
     int width() override { return poly.max().index() - 1; }
     int input_size() override {
-        int rv = 0;
-        for (auto &ref : what) rv += ref->size();
-        return rv; }
+        if (what.empty()) {
+            int rv = 0;
+            for (auto &ref : vec_what) rv += ref->size();
+            return rv;
+        } else {
+            return what.rbegin()->first + what.rbegin()->second->size(); } }
 };
 
 class HashExpr::Xor : HashExpr {
@@ -160,8 +161,16 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
                     rv->init.setraw(what[2].i);
                 else
                     i--; }
-            for (; i < what.vec.size; i++) {
-                rv->what.emplace_back(gress, what[i]); }
+            if (what.vec.size == i+i && what[i].type == tMAP) {
+                for (auto &kv : what[i].map) {
+                    if (CHECKTYPE(kv.value, tINT)) {
+                        if (rv->what.count(kv.value.i))
+                            error(kv.value.lineno, "Duplicate field at offset %ld", kv.value.i);
+                        else
+                            rv->what.emplace(kv.value.i, Phv::Ref(gress, kv.key)); } }
+            } else {
+                for (; i < what.vec.size; i++) {
+                    rv->vec_what.emplace_back(gress, what[i]); } }
             return rv;
         } else if (what[0] == "^") {
             Xor *rv = new Xor(what.lineno);
@@ -218,16 +227,42 @@ void HashExpr::Random::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
     }
 }
 
+bool HashExpr::Crc::check_ixbar(InputXbar *ix, int grp) {
+    bool rv = true;
+    if (!vec_what.empty()) {
+        int off = 0;
+        for (auto &ref : vec_what) {
+            rv &= ::check_ixbar(ref, ix, -1);
+            if (ref) {
+                if (auto *in = ix->find_exact(*ref, grp))
+                    if (in->lo >= 0)
+                        what.emplace(off, ref);
+                off += ref.size(); } }
+        vec_what.clear();
+    } else {
+        int max = -1;
+        for (auto &ref : what) {
+            if (ref.first < max)
+                error(ref.second.lineno, "Overlapping fields in crc input");
+            if (ref.second)
+                max = ref.first + ref.second->size() - 1;
+            rv &= ::check_ixbar(ref.second, ix, grp); } }
+    return rv;
+}
+
 void HashExpr::Crc::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
-    bitvec crcbit(1UL);
     bitvec init = this->init << input_size();
-    if (reverse)
-        crcbit <<= input_size() - 1;
     for (auto &ref : what) {
-        auto *in = ix->find_exact(*ref, grp);
-        if (!in || in->lo < 0) break;
+        auto *in = ix->find_exact(*ref.second, grp);
+        if (!in || in->lo < 0)
+            continue;
+        bitvec crcbit(1UL);
+        if (reverse)
+            crcbit <<= input_size() - 1 - ref.first;
+        else
+            crcbit <<= ref.first;
         int off = in->lo%64U - in->what->lo;
-        for (int i = ref->lo; i <= ref->hi; i++) {
+        for (int i = ref.second->lo; i <= ref.second->hi; i++) {
             data[i + off] = crc(poly, init|crcbit).getbit(bit);
             if (reverse)
                 crcbit >>= 1;
