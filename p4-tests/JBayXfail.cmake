@@ -208,10 +208,8 @@ p4c_add_xfail_reason("jbay"
 
 endif() # PTF_REQUIREMENTS_MET
 
-# BRIG-528
 p4c_add_xfail_reason("jbay"
   ".* expected packet on port .* not seen"
-  extensions/p4_tests/p4_14/bug_metadata_mutex_1.p4
   testdata/p4_14_samples/action_chain1.p4
 )
 

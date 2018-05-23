@@ -249,7 +249,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
 
         bool partial_overwrite() const {
-            return (error_code & PARTIAL_OVERWRITE) != 0;
+            return ((error_code & PARTIAL_OVERWRITE) != 0 && !to_deposit_field) || to_bitmasked_set;
         }
 
         bool unresolved_ad() const {
