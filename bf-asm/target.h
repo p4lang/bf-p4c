@@ -27,6 +27,7 @@
     M(int, MAU_BASE_DELAY) M(int, MAU_BASE_PREDICATION_DELAY) \
     M(int, NUM_MAU_STAGES) \
     M(int, STATEFUL_CMP_UNITS) M(int, STATEFUL_OUTPUT_UNITS) M(int, STATEFUL_PRED_MASK) \
+    M(int, STATEFUL_TMATCH_UNITS) \
     M(int, METER_ALU_GROUP_DATA_DELAY)
 
 #define DECLARE_PER_TARGET_CONSTANT(TYPE, NAME) static TYPE NAME();
@@ -96,6 +97,7 @@ class Target::Tofino : public Target {
         MAU_BASE_PREDICATION_DELAY = 11,
         METER_ALU_GROUP_DATA_DELAY = 13,
         STATEFUL_CMP_UNITS = 2,
+        STATEFUL_TMATCH_UNITS = 0,
         STATEFUL_OUTPUT_UNITS = 1,
         STATEFUL_PRED_MASK = (1U << (1 << STATEFUL_CMP_UNITS)) - 1,
     };
@@ -173,6 +175,7 @@ class Target::JBay : public Target {
         MAU_BASE_PREDICATION_DELAY = 13,
         METER_ALU_GROUP_DATA_DELAY = 15,
         STATEFUL_CMP_UNITS = 4,
+        STATEFUL_TMATCH_UNITS = 2,
         STATEFUL_OUTPUT_UNITS = 4,
         STATEFUL_PRED_MASK = (1U << (1 << STATEFUL_CMP_UNITS)) - 1,
     };

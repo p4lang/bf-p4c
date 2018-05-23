@@ -6,7 +6,7 @@
 #include "stage.h"
 #include <cstring>
 
-namespace {
+namespace StatefulAlu {
 
 struct operand {
     struct Base {
@@ -113,7 +113,7 @@ struct operand {
     };
     struct MathFn;
     bool        neg = false;
-    uint32_t    mask = uint32_t(-1);
+    uint64_t    mask = uint32_t(-1);
     operand() : op(0) {}
     operand(const operand &a) : op(a.op ? a.op->clone() : 0) {}
     operand(operand &&a) : op(a.op) { a.op = 0; }
@@ -456,9 +456,9 @@ struct CmpOP : public SaluInstruction {
     } *opc;
     int                 type = 0;
     operand::Memory     *srca = 0;
-    uint32_t            maska = ~0U;
+    uint64_t            maska = 0xffffffffU;
     operand::Phv        *srcb = 0;
-    uint32_t            maskb = ~0U;
+    uint64_t            maskb = 0xffffffffU;
     operand::Const      *srcc = 0;
     bool                srca_neg = false, srcb_neg = false;
     bool                learn = false, learn_not = false;
@@ -544,8 +544,9 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 
 bool CmpOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<CmpOP *>(a_))
-        return opc == a->opc && slot == a->slot && srca == a->srca &&
-               srcb == a->srcb && srcc == a->srcc;
+        return opc == a->opc && slot == a->slot && srca == a->srca && maska == a->maska &&
+               srcb == a->srcb && maskb == a->maskb && srcc == a->srcc &&
+               learn == a->learn && learn_not == a->learn_not;
     return false;
 }
 
@@ -556,6 +557,116 @@ Instruction *CmpOP::pass1(Table *tbl_, Table::Actions::Action *act) {
     if (srcc) srcc->pass1(tbl);
     return this;
 }
+
+#if HAVE_JBAY
+struct TMatchOP : public SaluInstruction {
+    const struct Decode : public Instruction::Decode {
+        std::string     name;
+        unsigned        opcode;
+        Decode(const char *n) : Instruction::Decode(n, JBAY, STATEFUL_ALU), name(n) {}
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op) const override;
+    } *opc;
+    operand::Memory     *srca = 0;
+    uint64_t            mask = 0;
+    operand::Phv        *srcb = 0;
+    bool                learn = false, learn_not = false;
+    TMatchOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
+    std::string name() override { return opc->name; };
+    void gen_prim_cfg(json::map& out) override {
+        out["name"] = opc->name;
+        /* TODO: What are srca, srcb and srcc here?
+        srca->gen_prim_cfg((out["dst"] = json::map()));
+        json::vector &srcv = out["src"] = json::vector();
+        json::map oneoper;
+        srcb->gen_prim_cfg(oneoper);
+        srcv.push_back(std::move(oneoper));
+        srcc->gen_prim_cfg(oneoper);
+        srcv.push_back(std::move(oneoper));
+        */
+    }
+    Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
+    void pass2(Table *tbl, Table::Actions::Action *) override { }
+    bool equiv(Instruction *a_) override;
+    void dbprint(std::ostream &out) const override{
+        out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
+    template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
+    FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
+};
+
+static TMatchOP::Decode opTMatch("tmatch");
+
+Instruction *TMatchOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                   const VECTOR(value_t) &op) const {
+    auto rv = new TMatchOP(this, op[0].lineno);
+    if (op.size < 1 || op[1].type != tSTR) {
+        error(rv->lineno, "invalid destination for %s instruction", op[0].s);
+        return rv; }
+    unsigned unit, len;
+    if ((sscanf(op[1].s, "p%u%n", &unit, &len) >= 1 ||
+         sscanf(op[1].s, "cmp%u%n", &unit, &len) >= 1) &&
+        unit < Target::STATEFUL_TMATCH_UNITS() && op[1].s[len] == 0) {
+        rv->slot = CMP0 + unit;
+    } else
+        error(rv->lineno, "invalid destination for %s instruction", op[0].s);
+    for (int idx = 2; idx < op.size; ++idx) {
+        if (!rv->learn) {
+            if (op[idx] == "learn" ) {
+                rv->learn = true;
+                continue; }
+            if (op[idx] == "!" && op[idx].type == tCMD && op[idx].vec.size == 2 &&
+                op[idx][1] == "learn") {
+                rv->learn = rv->learn_not = true;
+                continue; } }
+        if (op[idx].type == tINT) {
+            if (rv->mask)
+                error(op[idx].lineno, "Can't have more than one mask operand to an SALU tmatch");
+            rv->mask = op[idx].i;
+        } else if (op[idx].type == tBIGINT) {
+            if (rv->mask)
+                error(op[idx].lineno, "Can't have more than one mask operand to an SALU tmatch");
+            if (op[idx].bigi.size > 1)
+                error(op[idx].lineno, "Integer too large");
+            rv->mask = op[idx].bigi.data[0];
+        } else if (op[idx].type == tSTR) {
+            if (auto f = tbl->format->field(op[idx].s)) {
+                if (rv->srca)
+                    error(op[idx].lineno, "Can't have more than one memory operand to an "
+                          "SALU tmatch");
+                rv->srca = new operand::Memory(op[idx].lineno, tbl, f);
+            } else if (rv->srcb) {
+                error(op[idx].lineno, "Can't have more than one phv operand to an SALU tmatch");
+            } else if (op[idx] == "phv_lo" || op[idx] == "phv_hi") {
+                rv->srcb = new operand::PhvRaw(tbl->gress, op[idx]);
+            } else {
+                rv->srcb = new operand::PhvReg(tbl->gress, op[idx]); } } }
+    if (!rv->srca || !rv->srcb || !rv->mask)
+        error(rv->lineno, "Not enough operands to SALU tmatch");
+    return rv;
+}
+
+bool TMatchOP::equiv(Instruction *a_) {
+    if (auto *a = dynamic_cast<TMatchOP *>(a_))
+        return opc == a->opc && slot == a->slot && srca == a->srca && srcb == a->srcb &&
+               mask == a->mask && learn == a->learn && learn_not == a->learn_not;
+    return false;
+}
+
+Instruction *TMatchOP::pass1(Table *tbl_, Table::Actions::Action *act) {
+    auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    if (srca) srca->pass1(tbl);
+    if (srcb) srcb->pass1(tbl);
+    if (tbl->tmatch_use[slot].op) {
+        if (mask != tbl->tmatch_use[slot].op->mask) {
+            error(lineno, "Incompatable tmatch masks in stateful actions %s and %s",
+                  tbl->tmatch_use[slot].act->name.c_str(), act->name.c_str());
+            error(tbl->tmatch_use[slot].op->lineno, "previous use"); }
+    } else {
+        tbl->tmatch_use[slot].act = act;
+        tbl->tmatch_use[slot].op = this; }
+    return this;
+}
+#endif  /* HAVE_JBAY */
 
 //Output ALU instruction
 struct OutOP : public SaluInstruction {
@@ -643,4 +754,4 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 #include "jbay/salu_inst.cpp"
 #endif // HAVE_JBAY
 
-}  // end anonymous namespace
+}  // end namespace StatefulAlu

@@ -1332,6 +1332,14 @@ public:
     void set_output_used() override { output_used = true; }
 )
 
+namespace StatefulAlu {
+struct TMatchOP;
+struct TMatchInfo {
+    const Table::Actions::Action        *act;
+    const TMatchOP                      *op;
+};
+}
+
 DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     table_type_t table_type() const override { return STATEFUL; }
 #if HAVE_JBAY
@@ -1385,6 +1393,9 @@ public:
     void set_counter_mode(int mode) {
         SWITCH_FOREACH_TARGET(options.target, set_counter_mode(TARGET(), mode);); }
     FOR_ALL_TARGETS(TARGET_OVERLOAD, void gen_tbl_cfg, json::map &, json::map &)
+#if HAVE_JBAY
+    Alloc1D<StatefulAlu::TMatchInfo, Target::JBay::STATEFUL_TMATCH_UNITS>       tmatch_use;
+#endif
 )
 
 #endif /* _tables_h_ */

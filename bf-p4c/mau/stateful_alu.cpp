@@ -1,4 +1,5 @@
 #include "stateful_alu.h"
+#include "ir/pattern.h"
 
 const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
     static const Device::StatefulAluSpec spec = {
@@ -358,14 +359,23 @@ const IR::Expression *CreateSaluInstruction::reuseCmp(const IR::MAU::Instruction
 
 bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring op, bool eq) {
     if (etype == IF) {
-        visit(rel->left, "left");
-        negate = !negate;
-        visit(rel->right, "right");
-        negate = !negate;
-        if (!eq) {
-            auto t = rel->left->type->to<IR::Type::Bits>();
-            op += (t && t->isSigned) ? ".s" : ".u"; }
-        opcode = op;
+        const IR::Expression *e1, *e2;
+        const IR::Constant *k;
+        if ((((Pattern(e1) & Pattern(k)) == Pattern(e2))).match(rel) &&
+            !k->fitsUint() && !k->fitsInt()) {
+            // FIXME -- wide "neq" can be done with tmatch too?
+            opcode = "tmatch";
+            visit(rel->left, "left");
+            visit(rel->right, "right");
+        } else {
+            opcode = op;
+            if (!eq) {
+                auto t = rel->left->type->to<IR::Type::Bits>();
+                opcode += (t && t->isSigned) ? ".s" : ".u"; }
+            visit(rel->left, "left");
+            negate = !negate;
+            visit(rel->right, "right");
+            negate = !negate; }
         BUG_CHECK(etype == IF, "etype changed?");
         int idx = 0;
         for (auto cmp : cmp_instr) {
@@ -465,6 +475,7 @@ bool CreateSaluInstruction::preorder(const IR::BAnd *e) {
 void CreateSaluInstruction::postorder(const IR::BAnd *e) {
     if (etype == IF) {
         if (operands.size() < 2) return;  // can only happen if there has been an error
+        if (opcode == "tmatch") return;  // separate operands
         auto r = operands.back();
         operands.pop_back();
         if (!r->is<IR::Constant>()) {

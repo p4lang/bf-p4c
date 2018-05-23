@@ -118,6 +118,31 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
 void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
 
+template<>
+void TMatchOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
+    auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    int logical_home_row = tbl->layout[0].row;
+    auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
+    auto &salu = meter_group.stateful.salu_instr_cmp_alu[act->code][slot];
+    auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
+    salu.salu_cmp_tmatch_enable = 1;
+    meter_group.stateful.tmatch_mask[slot][0] = mask & 0xffffffffU;
+    meter_group.stateful.tmatch_mask[slot][1] = mask >> 32;
+    salu.salu_cmp_opcode = 2;
+    salu.salu_cmp_asrc_input = srca->field->bit(0) > 0;
+    salu.salu_cmp_bsrc_input = srcb->phv_index(tbl);
+    if (auto lmask = sbus_mask(logical_home_row/4U, tbl->sbus_learn))
+        salu_instr_common.salu_lmatch_sbus_listen = lmask;
+    if (auto mmask = sbus_mask(logical_home_row/4U, tbl->sbus_match))
+        salu_instr_common.salu_match_sbus_listen = mmask;
+    salu.salu_cmp_sbus_or = 0;
+    salu.salu_cmp_sbus_and = learn ? 1 : 0;
+    salu.salu_cmp_sbus_invert = learn_not ? 1 : 0;
+}
+
+void TMatchOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
+    write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
+
 void OutOP::decode_output_mux(Target::JBay, value_t &op) {
     static const std::map<std::string, int> ops_mux_lookup = {
         { "mem_hi", 1 }, { "mem_lo", 0 },
