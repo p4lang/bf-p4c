@@ -245,7 +245,7 @@ class P4RuntimeTest(BaseTest):
         self.stream_out_q.put(None)
         self.stream_recv_thread.join()
 
-    def get_packet_in(self, timeout=2):
+    def get_packet_in(self, timeout=3):
         msg = self.get_stream_packet("packet", timeout)
         if msg is None:
             self.fail("Packet in not received")

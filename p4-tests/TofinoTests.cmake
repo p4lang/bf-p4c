@@ -615,6 +615,18 @@ foreach(t IN LISTS ba_tests)
   p4c_add_test_label("tofino" "BA-101" ${testname})
 endforeach()
 
+# p4testgen ptf tests for p4factory programs
+p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_emulation" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/emulation.p4
+    "${testExtraArgs} -pd -to 12000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/emulation.ptf")
+set_tests_properties("tofino/p4testgen_emulation" PROPERTIES TIMEOUT 12000)
+p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_basic_switching" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/basic_switching.p4
+    "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/basic_switching.ptf")
+p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_pcie_pkt_test" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/pcie_pkt_test.p4
+    "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/pcie_pkt_test.ptf")
+p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_smoke_large_tbls" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/smoke_large_tbls.p4
+    "${testExtraArgs} -pd -to 12000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/smoke_large_tbls.ptf")
+set_tests_properties("tofino/p4testgen_smoke_large_tbls" PROPERTIES TIMEOUT 12000)
+
 
 include(TofinoMustPass.cmake)
 include(TofinoXfail.cmake)
