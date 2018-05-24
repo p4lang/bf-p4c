@@ -777,7 +777,7 @@ class ConstructSymbolTable : public Inspector {
         BUG_CHECK(typeName != nullptr, "Wrong argument type for %1%", typeArg);
         /*
          * In the ingress deparser, add the following code
-         * Digest() learn_1;
+         * Digest<T>() learn_1;
          * if (ig_intr_md_for_dprsr.digest_type == n)
          *    learn_1.pack({fields});
          *
@@ -797,7 +797,7 @@ class ConstructSymbolTable : public Inspector {
         structure->ingressDeparserStatements.push_back(cond);
 
         auto declArgs = new IR::Vector<IR::Argument>({});
-        auto declType = new IR::Type_Name("Digest");
+        auto declType = new IR::Type_Specialized(new IR::Type_Name("Digest"), mce->typeArguments);
         auto decl = new IR::Declaration_Instance(typeName->path->name,
                                                  new IR::Annotations({declAnno}),
                                                  declType, declArgs);

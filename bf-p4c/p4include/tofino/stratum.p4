@@ -625,14 +625,14 @@ extern Resubmit {
     void emit<T>(in T hdr);
 }
 
-extern Digest {
+extern Digest<T> {
     /// define a digest stream to the control plane
     Digest();
 
     /// Emit data into the stream.  The p4 program can instantiate multiple
     /// Digest instances in the same deparser control block, and call the pack
     /// method once during a single execution of the control block
-    void pack<T>(in T data);
+    void pack(in T data);
 }
 
 parser IngressParser<H, M, CG>(
