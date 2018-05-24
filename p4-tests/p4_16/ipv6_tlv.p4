@@ -26,7 +26,7 @@
 #include "util.h"
 
 #define ETHERTYPE_IPV4 0x0800
-#define ETHERTYPE_IPV6 0x8100
+#define ETHERTYPE_IPV6 0x86dd
 #define IP_PROTOCOLS_TCP 6
 #define IP_PROTOCOLS_UDP 17
 #define IP_PROTOCOLS_SR 43

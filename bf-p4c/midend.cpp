@@ -198,10 +198,13 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::MoveDeclarations(),
         (options.arch == "psa") ?
             new P4::ValidateTableProperties({"implementation", "size", "psa_direct_counters",
-                                         "psa_direct_meters", "support_timeout"}) : nullptr,
-        (options.arch == "v1model" || options.arch == "tna") ?
+                                             "psa_direct_meters", "support_timeout"}) : nullptr,
+        (options.arch == "v1model") ?
             new P4::ValidateTableProperties({"implementation", "size", "counters",
-                                         "meters", "support_timeout"}) : nullptr,
+                                             "meters", "support_timeout"}) : nullptr,
+        (options.arch == "tna") ?
+            new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
+                                             "filters", "idle_timeout"}) : nullptr,
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::CompileTimeOperations(),
         new P4::TableHit(&refMap, &typeMap),

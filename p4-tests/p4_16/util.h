@@ -79,10 +79,11 @@ header udp_h {
 }
 
 // Simple ingress/egress parsers
-parser TofinoIngressParser(
+parser TofinoIngressParser<H, M>(
         packet_in pkt,
+        out H hdr,
+        out M ig_md,
         out ingress_intrinsic_metadata_t ig_intr_md) {
-
     state start {
         pkt.extract(ig_intr_md);
         transition select(ig_intr_md.resubmit_flag) {
@@ -101,10 +102,11 @@ parser TofinoIngressParser(
         transition accept;
     }
 }
-
-parser TofinoEgressParser(
-        packet_in pkt,
-        out egress_intrinsic_metadata_t eg_intr_md) {
+parser TofinoEgressParser<H, M>(
+       packet_in pkt,
+       out H hdr,
+       out M eg_md,
+       out egress_intrinsic_metadata_t eg_intr_md) {
     state start {
         pkt.extract(eg_intr_md);
         transition accept;
