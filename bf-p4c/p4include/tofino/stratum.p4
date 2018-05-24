@@ -382,7 +382,6 @@ extern Checksum<W> {
     bool verify();
     W get();
     W update<T>(in T data);
-    W update<T>(in T data, in W residul_csum);
 }
 
 // -----------------------------------------------------------------------------

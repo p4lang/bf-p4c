@@ -19,22 +19,12 @@
 #ifndef TOFINO_P4_
 #define TOFINO_P4_
 
-
-//XXX Open issues:
-// Meter color
-// Math unit
-// Action selector
-// Digest
-// Coalesce mirroring
-// Parser priority threshold, default_prio
-
 // ----------------------------------------------------------------------------
 // COMMON TYPES
 // ----------------------------------------------------------------------------
 typedef bit<9>  PortId_t;               // Port id -- ingress or egress port
 typedef bit<16> MulticastGroupId_t;     // Multicast group id
 typedef bit<5>  QueueId_t;              // Queue id
-typedef bit<4>  CloneId_t;              // Clone id
 typedef bit<10> MirrorId_t;             // Mirror id
 typedef bit<16> ReplicationId_t;        // Replication id
 
@@ -43,7 +33,13 @@ typedef error ParserError_t;
 /// Meter
 enum MeterType_t { PACKETS, BYTES }
 
-enum MeterColor_t { GREEN, YELLOW, RED }
+//TODO(msharif): Use serializable enum when it's supported by the compiler
+// See https://github.com/p4lang/p4-spec/issues/611
+typedef bit<2> MeterColor_t;
+const MeterColor_t METER_COLOR_GREEN = 0b00;
+const MeterColor_t METER_COLOR_YELLOW = 0b01;
+const MeterColor_t METER_COLOR_YELLOW_ = 0b10;
+const MeterColor_t METER_COLOR_RED = 0b11;
 
 /// Counter
 enum CounterType_t {
@@ -58,8 +54,10 @@ enum SelectorMode_t { FAIR, RESILIENT }
 enum HashAlgorithm_t {
     IDENTITY,
     RANDOM,
+    CRC8,
     CRC16,
     CRC32,
+    CRC64,
     CSUM16
 }
 
@@ -91,7 +89,7 @@ error {
 // -----------------------------------------------------------------------------
 @__intrinsic_metadata
 header ingress_intrinsic_metadata_t {
-    bit<1> resubmit_flag;               // Flag distinguising original packets
+    bit<1> resubmit_flag;               // Flag distinguishing original packets
                                         // from resubmitted packets.
     bit<1> _pad1;
 
@@ -100,7 +98,6 @@ header ingress_intrinsic_metadata_t {
     bit<3> _pad2;
 
     PortId_t ingress_port;              // Ingress physical port id.
-                                        // this field is passed to the deparser
 
     bit<48> ingress_mac_tstamp;         // Ingress IEEE 1588 timestamp (in nsec)
                                         // taken at the ingress MAC.
@@ -131,7 +128,7 @@ struct ingress_intrinsic_metadata_for_tm_t {
 
     bool copy_to_cpu;                   // Request for copy to cpu.
 
-    bit<2> packet_color;                // Packet color (G,Y,R) that is
+    MeterColor_t packet_color;          // Packet color (G,Y,R) that is
                                         // typically derived from meters and
                                         // used for color-based tail dropping.
 
@@ -387,6 +384,8 @@ header ptp_metadata_t {
 
 extern Checksum<W> {
     /// Constructor.
+    /// @type_param W : Width of the calculated checksum. Only bit<16> is
+    /// supported.
     /// @param algorithm : Only HashAlgorithm_t.CSUM16 is supported.
     Checksum(HashAlgorithm_t algorithm);
 
@@ -400,15 +399,17 @@ extern Checksum<W> {
     /// data must be byte aligned.
     void subtract<T>(in T data);
 
-    /// Verify whether the complemented sum is zero.
+    /// Verify whether the complemented sum is zero, i.e. the checksum is valid.
+    /// @return : Boolean flag indicating wether the checksum is valid or not.
     bool verify();
 
+    /// Get the calculated checksum value.
+    /// @return : The calculated checksum value for added fields.
     W get();
 
     /// Calculate the checksum for a  given list of fields.
+    /// @param data : List of fields contributing to the checksum value.
     W update<T>(in T data);
-
-    W update<T>(in T data, in W residul_csum);
 }
 
 // ----------------------------------------------------------------------------
@@ -417,8 +418,10 @@ extern Checksum<W> {
 // Tofino parser counter can be used to extract header stacks or headers with
 // variable length. Tofino has a single 8-bit signed counter that can be
 // initialized with an immediate value or a header field.
+
 extern ParserCounter<W> {
-    // Constructor
+    /// Constructor
+    /// @type_param W : Width of counter. Only 8-bit counter is supported.
     ParserCounter();
 
     /// Load the counter with an immediate value or a header field.
@@ -438,7 +441,7 @@ extern ParserCounter<W> {
     /// Get the parser counter value. Can only be used in the select expression
     /// in a parser state and can only checks if the counter is zero or
     /// negative.
-    /// @return : restricted parser counter value.
+    /// @return : parser counter value.
     W get();
 
     /// Add an immediate value to the parser counter.
@@ -453,11 +456,13 @@ extern ParserCounter<W> {
 // Tofino ingress parser compare the priority with a configurable!!! threshold
 // to determine to whether drop the packet if the input buffer is congested.
 // Egress parser does not perform any dropping.
+
 extern ParserPriority {
     /// Constructor
     ParserPriority();
 
     /// Set a new priority for the packet.
+    /// param prio : parser priority for the parsed packet.
     void set(in bit<3> prio);
 }
 
@@ -466,15 +471,17 @@ extern ParserPriority {
 // ----------------------------------------------------------------------------
 extern Hash<W> {
     /// Constructor
+    /// @type_param W : width of the calculated hash.
+    /// @param algo : The default algorithm used for hash calculation.
     Hash(HashAlgorithm_t algo);
 
-    /// Compute the hash for data.
-    /// @param data : The data over which to calculate the hash.
+    /// Compute the hash for the given data.
+    /// @param data : The list of fields contributing to the hash.
     /// @return The hash value.
     W get<D>(in D data);
 
     /// Compute the hash for data.
-    /// @param data : The data over which to calculate the hash.
+    /// @param data : The list of fields contributing to the hash.
     /// @param base : Minimum return value.
     /// @param max : The value use in modulo operation.
     /// @return (base + (h % max)) where h is the hash value.
@@ -484,18 +491,13 @@ extern Hash<W> {
 /// Random number generator.
 extern Random<W> {
     /// Constructor
+    /// @type_param W : width of the calculated hash.
     Random();
 
     /// Return a random number with uniform distribution.
-    /// @return : ranom number between 0 and 2**W - 1
+    /// @return : random number between 0 and 2**W - 1
     W get();
 }
-
-/// Idle timeout
-extern IdleTimeout {
-    IdleTimeout();
-}
-
 
 // -----------------------------------------------------------------------------
 // EXTERN FUNCTIONS
@@ -512,8 +514,16 @@ extern T min<T>(T t1, T t2);
 extern void invalidate<T>(in T field);
 
 /// Counter
+/// Indexed counter with `size’ independent counter values.
 extern Counter<W, I> {
+    /// Constructor
+    /// @type_param W : width of the counter value.
+    /// @type_param I : width of the counter index.
+    /// @param type : counter type. Packet an byte counters are supported.
     Counter(bit<32> size, CounterType_t type);
+
+    /// Increment the counter value.
+    /// @param index : index of the counter to be incremented.
     void count(in I index);
 }
 
@@ -526,14 +536,14 @@ extern DirectCounter<W> {
 /// Meter
 extern Meter<I> {
     Meter(bit<32> size, MeterType_t type);
-    bit<8> execute(in I index, in bit<2> color);
+    bit<8> execute(in I index, in MeterColor_t color);
     bit<8> execute(in I index);
 }
 
 /// Direct meter.
 extern DirectMeter {
     DirectMeter(MeterType_t type);
-    bit<8> execute(in bit<2> color);
+    bit<8> execute(in MeterColor_t color);
     bit<8> execute();
 }
 
@@ -561,7 +571,6 @@ extern DirectWred<T> {
     bit<8> execute(in T val);
 }
 
-
 /// Register
 extern Register<T> {
     /// Instantiate an array of <size> registers. The initial value is
@@ -583,6 +592,9 @@ extern RegisterParam<T> {
     T read();
 }
 
+
+// This is implemented using an experimental feature in p4c and subject to
+// change. See https://github.com/p4lang/p4-spec/issues/561
 extern RegisterAction<T, U> {
     RegisterAction(Register<T> reg);
     abstract void apply(inout T value, out U rv);
@@ -612,14 +624,19 @@ extern ActionProfile {
     ActionProfile(bit<32> size);
 }
 
+// Tofino supports mirroring both at the ingress and egress. Ingress deparser
+// create a copy of the original ingress packet and prepend the prepend the
+// mirror header. Egress deparser first construct the output packet and then
+// prepend the mirror header.
 extern Mirror {
+    /// Constructor
     Mirror();
 
+    /// Mirror the packet.
     void emit(in MirrorId_t session_id);
 
     /// Write @hdr into the ingress/egress mirror buffer.
-    /// @param hdr : T can be a header type, a header stack, a header_union,
-    /// or a struct containing fields with such types.
+    /// @param hdr : T can be a header type.
     void emit<T>(in MirrorId_t session_id, in T hdr);
 }
 
@@ -635,8 +652,7 @@ extern Resubmit {
     void emit();
 
     /// Resubmit the packet and prepend it with @hdr.
-    /// @param hdr : T can be a header type, a header stack, a header_union,
-    /// or a struct containing fields with such types.
+    /// @param hdr : T can be a header type.
     void emit<T>(in T hdr);
 }
 
