@@ -307,6 +307,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_SRCS
+    phv/analysis/dark.cpp
     phv/analysis/jbay_phv_analysis.cpp
     phv/analysis/mocha.cpp)
 endif()
@@ -348,6 +349,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_HDRS
+    phv/analysis/dark.h
     phv/analysis/jbay_phv_analysis.h
     phv/analysis/mocha.h)
 endif ()

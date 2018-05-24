@@ -26,14 +26,16 @@ struct ParserAsmSerializer : public ParserInspector {
             out << indent << "start: " << canon_name(parser->start->name)
                 << std::endl;
 
-        if (!parser->initZeroContainers.empty()) {
-            out << indent << "init_zero: ";
-            const char *sep = "[ ";
-            for (auto container : parser->initZeroContainers) {
-                out << sep << container;
-                sep = ", ";
+        if (Device::currentDevice() == "Tofino") {
+            if (!parser->initZeroContainers.empty()) {
+                out << indent << "init_zero: ";
+                const char *sep = "[ ";
+                for (auto container : parser->initZeroContainers) {
+                    out << sep << container;
+                    sep = ", ";
+                }
+                out << " ]" << std::endl;
             }
-            out << " ]" << std::endl;
         }
 
         if (!parser->multiwriteContainers.empty()) {

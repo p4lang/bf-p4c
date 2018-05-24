@@ -32,6 +32,7 @@ header H1
 {
     bit<8> f1;
     bit<8> f2;
+    bit<8> f3;
 }
 
 struct Headers { H1 h1; }
@@ -39,6 +40,7 @@ struct Headers { H1 h1; }
 struct Metadata {
     bit<8> f1;
     bit<8> f2;
+    bit<8> f3;
 }
 
 parser parse(packet_in packet, out Headers headers, inout Metadata meta,
@@ -98,6 +100,7 @@ TEST_F(MochaAnalysisTest, AnalyzeMochaCandidates) {
 action do1() {
     meta.f1 = headers.h1.f1;
     meta.f2 = headers.h1.f2;
+    meta.f3 = headers.h1.f3;
 }
 
 action do2() {
@@ -107,6 +110,7 @@ action do2() {
 action do3() {
     headers.h1.f1 = meta.f2;
     headers.h1.f2 = meta.f1;
+    headers.h1.f3 = meta.f3;
 }
 
 table t1 {
@@ -115,7 +119,7 @@ table t1 {
 }
 
 table t2 {
-    key = { meta.f1 : exact; meta.f2 : exact; }
+    key = { meta.f1 : exact;}
     actions = { do3; }
 }
 
@@ -141,13 +145,29 @@ apply {
 
     const PHV::Field* h1f1 = phv.field("ingress::h1.f1");
     const PHV::Field* h1f2 = phv.field("ingress::h1.f2");
+    const PHV::Field* h1f3 = phv.field("ingress::h1.f3");
     const PHV::Field* m1f1 = phv.field("ingress::meta.f1");
     const PHV::Field* m1f2 = phv.field("ingress::meta.f2");
-    ASSERT_TRUE(h1f1 && h1f2 && m1f1 && m1f2);
+    const PHV::Field* m1f3 = phv.field("ingress::meta.f3");
+
+    ASSERT_TRUE(h1f1 && h1f2 && h1f3 && m1f1 && m1f2 && m1f3);
+
+    // Check mocha candidates.
     EXPECT_EQ(h1f1->is_mocha_candidate(), true);
     EXPECT_EQ(h1f2->is_mocha_candidate(), true);
+    EXPECT_EQ(h1f3->is_mocha_candidate(), true);
     EXPECT_EQ(m1f1->is_mocha_candidate(), true);
     EXPECT_EQ(m1f2->is_mocha_candidate(), false);
+    EXPECT_EQ(m1f3->is_mocha_candidate(), true);
+
+    // Check dark candidates.
+    EXPECT_EQ(h1f1->is_dark_candidate(), false);
+    EXPECT_EQ(h1f2->is_dark_candidate(), false);
+    EXPECT_EQ(h1f3->is_dark_candidate(), false);
+    EXPECT_EQ(m1f1->is_dark_candidate(), false);
+    EXPECT_EQ(m1f2->is_dark_candidate(), false);
+    EXPECT_EQ(m1f3->is_dark_candidate(), true);
+
 #endif
 }
 
