@@ -22,6 +22,8 @@ public:
     virtual int width() = 0;
     virtual int input_size() = 0;
     virtual bool match_phvref(Phv::Ref &ref) { return false; }
+    virtual bool operator==(const HashExpr &) const = 0;
+    bool operator!=(const HashExpr &a) const { return !operator==(a); }
 };
 
 #endif /* _hashexpr_h_ */

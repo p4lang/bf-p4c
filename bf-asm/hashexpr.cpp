@@ -38,6 +38,10 @@ class HashExpr::PhvRef : HashExpr {
         if (what->reg != ref->reg || what->lo != ref->lo)
             return false;
         return true; }
+    bool operator==(const HashExpr &a_) const override {
+        if (typeid(*this) != typeid(a_)) return false;
+        auto &a = static_cast<const PhvRef &>(a_);
+        return *what == *a.what; }
 };
 
 class HashExpr::Random : HashExpr {
@@ -55,6 +59,14 @@ class HashExpr::Random : HashExpr {
         int rv = 0;
         for (auto &ref : what) rv += ref->size();
         return rv; }
+    bool operator==(const HashExpr &a_) const override {
+        if (typeid(*this) != typeid(a_)) return false;
+        auto &a = static_cast<const Random &>(a_);
+        if (what.size() != a.what.size()) return false;
+        auto it = a.what.begin();
+        for (auto &el : what)
+            if (*el != **it++) return false;
+        return true; }
 };
 
 class HashExpr::Crc : HashExpr {
@@ -75,6 +87,19 @@ class HashExpr::Crc : HashExpr {
             return rv;
         } else {
             return what.rbegin()->first + what.rbegin()->second->size(); } }
+    bool operator==(const HashExpr &a_) const override {
+        if (typeid(*this) != typeid(a_)) return false;
+        auto &a = static_cast<const Crc &>(a_);
+        if (what.size() != a.what.size()) return false;
+        if (vec_what.size() != a.vec_what.size()) return false;
+        auto it = a.what.begin();
+        for (auto &el : what)
+            if (el.first != it->first || *el.second != *(it++)->second)
+                return false;
+        auto it2 = a.vec_what.begin();
+        for (auto &el : vec_what)
+            if (*el != **it2++) return false;
+        return true; }
 };
 
 class HashExpr::Xor : HashExpr {
@@ -97,6 +122,14 @@ class HashExpr::Xor : HashExpr {
         int rv = 0;
         for (auto *e : what) rv += e->input_size();
         return rv; }
+    bool operator==(const HashExpr &a_) const override {
+        if (typeid(*this) != typeid(a_)) return false;
+        auto &a = static_cast<const Xor &>(a_);
+        if (what.size() != a.what.size()) return false;
+        auto it = a.what.begin();
+        for (auto &el : what)
+            if (*el != **it++) return false;
+        return true; }
 };
 
 class HashExpr::Stripe : HashExpr {
@@ -114,6 +147,14 @@ class HashExpr::Stripe : HashExpr {
         int rv = 0;
         for (auto *e : what) rv += e->input_size();
         return rv; }
+    bool operator==(const HashExpr &a_) const override {
+        if (typeid(*this) != typeid(a_)) return false;
+        auto &a = static_cast<const Stripe &>(a_);
+        if (what.size() != a.what.size()) return false;
+        auto it = a.what.begin();
+        for (auto &el : what)
+            if (*el != **it++) return false;
+        return true; }
 };
 
 class HashExpr::Slice : HashExpr {
@@ -133,6 +174,12 @@ class HashExpr::Slice : HashExpr {
                 if (_width <= 0) _width = -1; } }
         return _width; }
     int input_size() override { return what->input_size(); }
+    bool operator==(const HashExpr &a_) const override {
+        if (typeid(*this) != typeid(a_)) return false;
+        auto &a = static_cast<const Slice &>(a_);
+        if (start != a.start || _width != a._width) return false;
+        return *what == *a.what;
+    }
 };
 
 

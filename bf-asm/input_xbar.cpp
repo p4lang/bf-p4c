@@ -364,6 +364,19 @@ void InputXbar::check_tcam_input_conflict(InputXbar::Group group, Input &input, 
             table->stage->tcam_ixbar_input[in_byte] = tbl; } }
 }
 
+bool InputXbar::copy_existing_hash(int group, std::pair<const int, HashCol> &col) {
+    for (InputXbar *other : table->stage->hash_table_use[group]) {
+        if (other == this) continue;
+        if (other->hash_tables.count(group)) {
+            auto &o = other->hash_tables.at(group);
+            if (o.count(col.first)) {
+                auto ocol = o.at(col.first);
+                if (ocol.fn && *ocol.fn == *col.second.fn) {
+                    col.second.data = ocol.data;
+                    return true; } } } }
+    return false;
+}
+
 void InputXbar::pass1() {
     TcamUseCache tcam_use;
     tcam_use.ixbars_added.insert(this);
@@ -404,13 +417,13 @@ void InputXbar::pass1() {
         for (auto &col : hash.second) {
             if (col.second.fn && col.second.fn != prev)
                 ok = (prev = col.second.fn)->check_ixbar(this, hash.first/2U);
-            if (ok && col.second.fn)
+            if (ok && col.second.fn && !copy_existing_hash(hash.first, col))
                 col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first/2U); }
         bool add_to_use = true;
         for (InputXbar *other : table->stage->hash_table_use[hash.first]) {
             if (other == this) {
                 add_to_use = false;
-                break; }
+                continue; }
             if (other->hash_tables.count(hash.first) &&
                 conflict(other->hash_tables[hash.first], hash.second)) {
                 error(lineno, "Input xbar hash table %d conflict in stage %d", hash.first,
