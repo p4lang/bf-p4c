@@ -70,8 +70,9 @@ class Table : BFN::Unit {
      * `(int)(logical_id/16)`.
      */
     int                                         logical_id = -1;
-    // The split within the stage for an atcam table
-    int                                         atcam_logical_split = -1;
+    // The split within the stage for an atcam/dleft table
+    int                                         logical_split = -1;
+    int                                         logical_tables_in_stage = -1;
     safe_vector<std::pair<Expression, cstring>> gateway_rows;
     /** each gateway_row is a an expression for a single row of the gateway,
      * with the string being a tag to run in 'next' for next table, or null
@@ -199,6 +200,7 @@ class Table : BFN::Unit {
     int action_next_paths() const;
     int get_provided_stage() const;
     int hit_actions() const;
+    bool for_dleft() const;
 
 #emit
     static constexpr int TIND_NAME = 1;
@@ -352,6 +354,8 @@ class BackendAttached {
     enum use_t { NO_USE, DIRECT, INDIRECT, LOG, STACK_PUSH, STACK_POP, FIFO_PUSH, FIFO_POP };
 #end
     use_t use = NO_USE;
+    safe_vector<cstring>                                learn = {};
+    safe_vector<cstring>                                match = {};
     AttachedMemory attached;
 }
 
@@ -590,7 +594,7 @@ class HashDist : Expression {
     int                  bit_width = 0;
     // Pointer to the IR::Primitive that was used to generate this HashDist
     // (and then removed).  This is not visited as part of IR traversal.
-    Primitive            prim;
+    NullOK Primitive     prim;
 
     visit_children {
         Expression::visit_children(v);
@@ -643,7 +647,12 @@ class InputXBarRead : Expression {
     int p4_param_order = -1;
     bool from_mask = false;
     bool partition_index = false;
-#nodbprint
+
+    bool for_selection() const { return match_type.name == "selector"; }
+    bool for_dleft() const { return match_type.name == "dleft_hash"; }
+    bool for_match() const { return !for_selection() && !for_dleft(); }
+
+    dbprint { out << expr << ": " << match_type.name; }
 }
 
 }  // end namespace MAU

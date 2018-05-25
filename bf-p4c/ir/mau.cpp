@@ -69,6 +69,10 @@ cstring IR::MAU::Table::get_use_name(const IR::MAU::AttachedMemory *at, bool is_
         BUG("Atcam becomes part of the table name after table placement, so atcam won't be "
             "append to the table name");
     }
+    if (for_dleft() && !is_placed()) {
+        rv += "$dleft" + ((logical_table == -1) ? std::to_string(0)
+                                               : std::to_string(logical_table));
+    }
 
     if (is_gw) {
         return rv +"$gw";
@@ -97,6 +101,7 @@ cstring IR::MAU::Table::get_use_name(const IR::MAU::AttachedMemory *at, bool is_
         BUG("Unrecgonized attached table %s", at->name);
         return "";
     }
+
     return rv;
 }
 
@@ -148,4 +153,10 @@ int IR::MAU::Table::hit_actions() const {
             _hit_actions++;
     }
     return _hit_actions;
+}
+
+bool IR::MAU::Table::for_dleft() const {
+    if (gateway_only())
+        return false;
+    return match_table->getAnnotations()->getSingle("dleft_learn_cache") != nullptr;
 }

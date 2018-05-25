@@ -1312,7 +1312,6 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::Annotations *) override { return false; }
 
     bool preorder(const IR::MAU::Instruction *inst) override {
-        LOG1("Instruction " << inst);
         out << indent << "- " << inst->name;
         sep = " ";
         is_empty = false;
@@ -1814,7 +1813,8 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
     out << indent++ <<  "p4_param_order: " << std::endl;
     int p4_param_index = 0;
     for (auto ixbar_read : tbl->match_key) {
-        if (ixbar_read->match_type.name == "selector") continue;
+        if (!ixbar_read->for_match())
+            continue;
         if (p4_param_index != ixbar_read->p4_param_order) continue;
         auto *expr = ixbar_read->expr;
         if (ixbar_read->from_mask)
@@ -2456,6 +2456,13 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         --indent; }
     if (salu->indexed() && !tbl->layout.hash_action)
         out << indent << "per_flow_enable: meter_pfe" << std::endl;
+
+    auto ba = findContext<IR::MAU::BackendAttached>();
+    if (!ba->learn.empty())
+        out << indent << "learn: [" << emit_vector(ba->learn) << "]" << std::endl;
+    if (!ba->match.empty())
+        out << indent << "match: [" <<  emit_vector(ba->match) << "]" << std::endl;
+
     return false;
 }
 

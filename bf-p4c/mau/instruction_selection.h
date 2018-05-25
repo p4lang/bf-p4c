@@ -135,6 +135,15 @@ class LPFSetup : public PassManager {
         addPasses({ new Scan(*this), new Update(*this) }); }
 };
 
+class DLeftSetup : public MauModifier, TofinoWriteContext {
+    void postorder(IR::MAU::Table *tbl) override;
+    void postorder(IR::MAU::BackendAttached *ba) override;
+    void postorder(IR::MAU::InputXBarRead *read) override;
+
+ public:
+    DLeftSetup() {}
+};
+
 class ConvertCastToSlice : public MauTransform, P4WriteContext {
     bool contains_cast = false;
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;

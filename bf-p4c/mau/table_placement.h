@@ -37,13 +37,15 @@ class TablePlacement : public MauTransform, public Backtrack {
     cstring error_message;
     profile_t init_apply(const IR::Node *root) override;
     bool backtrack(trigger &) override;
-    IR::MAU::Table *break_up_atcam(IR::MAU::Table *);
     IR::Node *preorder(IR::BFN::Pipe *) override;
     IR::Node *preorder(IR::MAU::TableSeq *) override;
     IR::Node *preorder(IR::MAU::Table *) override;
     IR::Node *postorder(IR::BFN::Pipe *pipe) override;
+    IR::Node *preorder(IR::MAU::BackendAttached *ba) override;
     IR::MAU::Table *break_up_atcam(IR::MAU::Table *tbl, const Placed *placed,
-                                   cstring suffix = "", IR::MAU::Table **last = nullptr);
+        cstring suffix = "", IR::MAU::Table **last = nullptr);
+    IR::Vector<IR::MAU::Table> *break_up_dleft(IR::MAU::Table *tbl, const Placed *placed,
+        cstring suffix = "");
     const Placed *placement;
     bool is_better(const Placed *a, const Placed *b);
     Placed *try_place_table(const IR::MAU::Table *t, const Placed *done,

@@ -162,11 +162,14 @@ struct IXBar {
     int hash_dist_groups[HASH_DIST_UNITS] = {-1, -1};
     friend class IXBarRealign;
 
+
  public:
     /** attached tables that have been accounted for in the current IXBar state -- since
      * they might be attached to more than one match table, and we only want to account
      * for them once. */
-    std::unordered_set<const IR::Attached *>                attached_tables;
+    ordered_set<const IR::MAU::AttachedMemory *>            attached_tables;
+    std::set<cstring>                                       dleft_updates;
+
     enum byte_type_t { NO_BYTE_TYPE, ATCAM, PARTITION_INDEX, RANGE };
 
     /** IXbar::Use tracks the input xbar use of a single table */
@@ -296,6 +299,7 @@ struct IXBar {
             bool allocated = false;
             int unit = -1;  // which of the two hash
             int group = -1;
+            int bits_required = 0;
 
             bitvec slice;
             bitvec bit_mask;
@@ -311,6 +315,7 @@ struct IXBar {
                 allocated = false;
                 unit = -1;
                 group = -1;
+                bits_required = 0;
                 slice.clear();
                 bit_mask.clear();
                 bit_starts.clear();
@@ -471,8 +476,66 @@ struct IXBar {
             : index_groups(ig), select_bits(sb), hash_dist(hd) {}
     };
 
+    // Used to determine what phv fields need to be allocated on the input xbar for the
+    // stateful ALU to work
+    class FindSaluSources : public MauInspector {
+        IXBar                      &self;
+        const PhvInfo              &phv;
+        ContByteConversion  &map_alloc;
+        // Holds which bitranges of fields have been requested, and will not allocate
+        // if a bitrange has been requested multiple times
+        std::map<cstring, bitvec>  fields_needed;
+        ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources;
+        bool                       &dleft;
+        const IR::MAU::Table       *tbl;
+
+        profile_t init_apply(const IR::Node *root) override;
+        bool preorder(const IR::MAU::StatefulAlu *) override;
+        bool preorder(const IR::MAU::SaluAction *) override;
+        bool preorder(const IR::Expression *e) override;
+        bool preorder(const IR::MAU::HashDist *) override;
+
+     public:
+        FindSaluSources(IXBar &self, const PhvInfo &phv, ContByteConversion &ma,
+                    ordered_set<std::pair<const PHV::Field *, le_bitrange>> &ps,
+                    bool &d, const IR::MAU::Table *t)
+        : self(self), phv(phv), map_alloc(ma), phv_sources(ps), dleft(d), tbl(t) {}
+    };
+
+    class XBarHashDist : public MauInspector {
+        IXBar &self;
+        const PhvInfo &phv;
+        TableResourceAlloc &alloc;
+        const ActionFormat::Use *af;
+        const LayoutOption *lo;
+        bool allocation_passed = true;
+        const IR::MAU::Table *tbl;
+
+        void initialize_hash_dist_unit(IXBar::HashDistUse &hd_use);
+
+        // In the IR::MAU::Action, there are two lists.  One is a list of instructions for
+        // ALU operations, another is a list of counter/meter/stateful ALU externs saved
+        // Because the hash distribution units are already saved on the BackendAttached objects,
+        // we don't want to visit them in within the action in order to not double count
+        bool preorder(const IR::MAU::HashDist *hd) override;
+        bool preorder(const IR::Primitive *) override { return false; }
+        bool preorder(const IR::MAU::Instruction *) override { return true; }
+        void end_apply() override;
+        bool preorder(const IR::MAU::AttachedOutput *) override { return false; }
+        bool preorder(const IR::MAU::TableSeq *) override { return false; }
+
+     public:
+        bool passed_allocation() { return allocation_passed; }
+        XBarHashDist(IXBar &i, const PhvInfo &p, TableResourceAlloc &a, const ActionFormat::Use *u,
+                     const LayoutOption *l, const IR::MAU::Table *t)
+            : self(i), phv(p), alloc(a), af(u), lo(l), tbl(t) {}
+    };
+
 
     void clear();
+    void field_management(ContByteConversion &map_alloc, const IR::Expression *field,
+        std::map<cstring, bitvec> &fields_needed, cstring name, bool hash_dist, const PhvInfo &phv,
+        bool is_atcam = false, bool partition = false);
     bool allocMatch(bool ternary, const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                     safe_vector<IXBar::Use::Byte *> &alloced, hash_matrix_reqs &hm_reqs);
     bool allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
@@ -494,13 +557,12 @@ struct IXBar {
                     Use &alloc, bool on_search_bus);
     bool allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_type_t hdt,
                        const PhvInfo &phv, const ActionFormat::Use *af, IXBar::Use &alloc,
-                       bool second_try, cstring name);
+                       bool second_try, int bits_required, cstring name);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
                     const LayoutOption *lo, const ActionFormat::Use *af);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
-    void update(const IR::MAU::Table *tbl) {
-        if (tbl->resources) update(tbl->name, tbl->resources); }
+    void update(const IR::MAU::Table *tbl);
     friend std::ostream &operator<<(std::ostream &, const IXBar &);
     const Loc *findExactByte(cstring name, int byte) const {
         for (auto &p : Values(exact_fields.equal_range(name)))
@@ -570,9 +632,6 @@ struct IXBar {
         bool ternary);
     void layout_option_calculation(const LayoutOption *layout_option,
                                    size_t &start, size_t &last);
-    void field_management(ContByteConversion &map_alloc, const IR::Expression *field,
-        std::map<cstring, bitvec> &fields_needed, cstring name, bool hash_dist, const PhvInfo &phv,
-        bool is_atcam = false, bool partition = false);
     void create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc);
     int max_index_group(int max_bit);
     int max_index_single_bit(int max_bit);
@@ -584,9 +643,9 @@ struct IXBar {
     bool setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &alloc,
         ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources,
         unsigned &byte_mask);
-    bool setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc,
+    bool setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc, bool dleft,
         ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources);
-    bool allocHashDistAddress(const IR::MAU::HashDist *hd, const bitvec used_hash_dist_groups,
+    bool allocHashDistAddress(int bits_required, const bitvec used_hash_dist_groups,
         const bitvec used_hash_dist_bits, const unsigned &hash_table_input, bitvec &slice,
         bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name);
     bool allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionFormat::Use *af,

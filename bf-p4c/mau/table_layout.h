@@ -11,6 +11,7 @@ class LayoutOption {
     IR::MAU::Table::Way way;
     safe_vector<int> way_sizes;
     safe_vector<int> partition_sizes;
+    safe_vector<int> dleft_hash_sizes;
     int entries = 0;
     int srams = 0, maprams = 0, tcams = 0;
     int select_bus_split = -1;
@@ -29,10 +30,15 @@ class LayoutOption {
         select_bus_split = -1;
         way_sizes.clear();
         partition_sizes.clear();
+        dleft_hash_sizes.clear();
     }
 
     int logical_tables() const {
-        return static_cast<size_t>(partition_sizes.size());
+        if (partition_sizes.size() > 0)
+            return static_cast<int>(partition_sizes.size());
+        else if (dleft_hash_sizes.size() > 0)
+            return static_cast<int>(dleft_hash_sizes.size());
+        return 1;
     }
 };
 

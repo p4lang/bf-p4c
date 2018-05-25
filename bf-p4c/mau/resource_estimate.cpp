@@ -4,6 +4,7 @@
 
 constexpr int RangeEntries::MULTIRANGE_DISTRIBUTION_LIMIT;
 constexpr int RangeEntries::RANGE_ENTRY_PERCENTAGE;
+constexpr int StageUseEstimate::MAX_DLEFT_HASH_SIZE;
 
 int CounterPerWord(const IR::MAU::Counter *ctr) {
     switch (ctr->type) {
@@ -296,6 +297,54 @@ void StageUseEstimate::options_to_atcam_entries(const IR::MAU::Table *tbl, int &
     }
 }
 
+/** Currently a very simple way to split up the dleft hash tables into a reasonable number
+ *  of ALUs with a particular size.  Eventually, the hash mod can potentially be used in order
+ *  to calculate a RAM size exactly, according to Mike Ferrera, so that the addresses
+ *  don't have to be a power of two.
+ */
+void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl, int &entries) {
+    const IR::MAU::StatefulAlu *salu = nullptr;
+    for (auto back_at : tbl->attached) {
+        salu = back_at->attached->to<IR::MAU::StatefulAlu>();
+        if (salu != nullptr)
+            break;
+    }
+
+    LOG1("Salu " << salu->width << " " << salu->dual);
+    int per_row = RegisterPerWord(salu);
+    LOG1("Per row " << per_row);
+    int total_stateful_rams = (entries + per_row * Memories::SRAM_DEPTH - 1)
+                               / (per_row * Memories::SRAM_DEPTH);
+    LOG1("Entries " << entries << " " << total_stateful_rams);
+    int available_alus = MAX_METER_ALUS - meter_alus;
+
+    for (auto &lo : layout_options) {
+        if (total_stateful_rams <= MAX_METER_ALUS) {
+            int hash_size = (1 << ceil_log2(total_stateful_rams));
+            lo.dleft_hash_sizes.push_back(hash_size);
+            lo.entries += hash_size * per_row * Memories::SRAM_DEPTH;
+            continue;
+        }
+
+        int needed_alus = available_alus + 1;
+        int per_alu = 0;
+        // Determine when the per_alu is > 4, to determine the logical number of splits
+        do {
+            needed_alus -= 1;
+            per_alu = (total_stateful_rams + needed_alus - 1) / needed_alus;
+        } while (per_alu < 4 && needed_alus > 1);
+        // FIXME: The hash distribution units are all identical for each, so the sizes for
+        // each of the stateful for the same, as the mask is per hash distribution unit.
+        // Just currently a limit of the input xbar algorithm which will have to be opened up
+        for (int i = 0; i < needed_alus; i++) {
+            int hash_size = std::min(1 << ceil_log2(per_alu), MAX_DLEFT_HASH_SIZE);
+            lo.dleft_hash_sizes.push_back(hash_size);
+            lo.entries += hash_size * per_row * Memories::SRAM_DEPTH;
+        }
+        LOG3("Dleft entries per_alu: " << per_alu << " needed_alus: " << needed_alus);
+    }
+}
+
 /* Calculate the number of rams required for attached tables, given the number of entries
    provided from the table placment */
 void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
@@ -320,7 +369,12 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
             need_maprams = true;
         } else if (auto *reg = at->to<IR::MAU::StatefulAlu>()) {
             per_word = RegisterPerWord(reg);
-            if (!reg->direct) attached_entries = reg->size;
+            if (!reg->direct) {
+                if (tbl->for_dleft())
+                    attached_entries = lo->entries;
+                else
+                    attached_entries = reg->size;
+            }
             need_maprams = true;
         } else if (auto *ad = at->to<IR::MAU::ActionData>()) {
             // FIXME: in theory, the table should not have an action data table,
@@ -471,7 +525,14 @@ void StageUseEstimate::fill_estimate_from_option(int &entries) {
 
 void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl,
         int &entries, bool table_placement) {
-    if (layout_options.size() == 1 && layout_options[0].layout.no_match_data()) {
+    if (tbl->for_dleft()) {
+        BUG_CHECK(layout_options.size() == 1, "Should only be one layout option for dleft "
+                  "hash tables");
+        options_to_dleft_entries(tbl, entries);
+        options_to_rams(tbl, table_placement);
+        preferred_index = 0;
+        fill_estimate_from_option(entries);
+    } else if (layout_options.size() == 1 && layout_options[0].layout.no_match_data()) {
         entries = 512;
         preferred_index = 0;
     } else if (tbl->layout.atcam) {

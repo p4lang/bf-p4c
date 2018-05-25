@@ -749,6 +749,42 @@ bool LPFSetup::Update::preorder(IR::MAU::Meter *mtr) {
     return false;
 }
 
+void DLeftSetup::postorder(IR::MAU::Table *tbl) {
+    if (tbl->for_dleft()) {
+        ERROR_CHECK(Device::currentDevice() != "Tofino", "Tofino does not support dleft hash "
+                    "tables");
+    }
+}
+
+void DLeftSetup::postorder(IR::MAU::BackendAttached *ba) {
+    auto tbl = findContext<IR::MAU::Table>();
+    if (!tbl->for_dleft())
+        return;
+    if (!ba->attached->is<IR::MAU::StatefulAlu>())
+        return;
+    if (tbl->match_key.empty())
+        return;
+
+    IR::Vector<IR::Expression> components;
+    IR::ListExpression *field_list = new IR::ListExpression(components);
+
+    for (auto *read : tbl->match_key) {
+        if (read->for_match() || read->for_dleft()) {
+            field_list->push_back(read->expr);
+        }
+    }
+    ba->hash_dist = new IR::MAU::HashDist(IR::Type::Bits::get(0), field_list,
+                                          IR::MAU::hash_function::random(), nullptr);
+}
+
+void DLeftSetup::postorder(IR::MAU::InputXBarRead *read) {
+    auto tbl = findContext<IR::MAU::Table>();
+    if (!tbl->for_dleft())
+        return;
+    if (read->for_match())
+        read->match_type = IR::ID("dleft_hash");
+}
+
 const IR::MAU::Instruction *ConvertCastToSlice::preorder(IR::MAU::Instruction *instr) {
     BUG_CHECK(findContext<IR::MAU::Instruction>() == nullptr, "nested instructions");
     contains_cast = false;
@@ -904,6 +940,7 @@ DoInstructionSelection::DoInstructionSelection(PhvInfo &phv) : PassManager {
     new ConvertCastToSlice,
     new StatefulAttachmentSetup(phv),
     new LPFSetup(phv),
+    new DLeftSetup,
     new CollectPhvInfo(phv),
     new PHV::ValidateActions(phv, false, false, false)
 } {}

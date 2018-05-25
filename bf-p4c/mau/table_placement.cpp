@@ -298,6 +298,9 @@ TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
             if (t->uses_gateway()) continue;
             // FIXME: Look for notes above preorder for IR::MAU::Table
             if (t->next.count("$hit") || t->next.count("$miss")) continue;
+            // Currently would potentially require multiple gateways if split into
+            // multiple tables.  Not supported yet during allocation
+            if (t->for_dleft()) continue;
             match = t;
             result_tag = it->first;
             break; }
@@ -350,6 +353,11 @@ bool TablePlacement::shrink_estimate(Placed *next, const Placed *done,
         TableResourceAlloc *resources, int &srams_left, int &tcams_left,
         int min_entries) {
     auto t = next->table;
+    if (t->for_dleft()) {
+        ::error("Cannot currently split dleft hash tables");
+        return false;
+    }
+
     if (t->layout.atcam)
         next->use.calculate_for_leftover_atcams(t, srams_left, next->entries);
     else if (!t->layout.ternary)
@@ -602,7 +610,15 @@ static void coord_action_data_xbar(const TablePlacement::Placed *curr,
 bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
         int &set_entries, int &furthest_stage) {
     auto *t = rv->table;
-    if (t->match_table) {
+    if (t->for_dleft()) {
+        const IR::MAU::StatefulAlu *salu = nullptr;
+        for (auto *back_at : t->attached) {
+            salu = back_at->attached->to<IR::MAU::StatefulAlu>();
+            if (salu != nullptr)
+                break;
+        }
+        set_entries = salu->size;
+    } else if (t->match_table) {
         if (t->layout.pre_classifier)
             set_entries = t->layout.pre_classifer_number_entries;
         else if (auto k = t->match_table->getConstantProperty("size"))
@@ -707,6 +723,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         bool advance_to_next_stage = false;
         allocated = false;
         rv->use = StageUseEstimate(t, rv->entries, &lc, stage_current.shared_attached);
+        LOG1("Set entries " << set_entries << " " << rv->entries);
+        if (t->for_dleft() && set_entries > rv->entries) {
+            advance_to_next_stage = true;
+            LOG3("Cannot split a dleft hash table");
+        }
+
         // FIXME: This is not the appropriate way to check if a table is a single gateway
 
         if (!pick_layout_option(min_placed, done, min_resources, stage_current.shared_attached)) {
@@ -809,10 +831,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     }
 
     if (done && done->stage == rv->stage) {
-        if (done->table->layout.atcam)
-            rv->logical_id = done->logical_id + done->use.preferred()->logical_tables();
-        else
+        if (done->table->gateway_only())
             rv->logical_id = done->logical_id + 1;
+        else
+            rv->logical_id = done->logical_id + done->use.preferred()->logical_tables();
     } else {
         rv->logical_id = rv->stage * StageUse::MAX_LOGICAL_IDS;
     }
@@ -1127,7 +1149,8 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
     cstring suffix, IR::MAU::Table **last) {
     IR::MAU::Table *rv = nullptr;
     IR::MAU::Table *prev = nullptr;
-    for (int lt = 0; lt < placed->use.preferred()->logical_tables(); lt++) {
+    int logical_tables = placed->use.preferred()->logical_tables();
+    for (int lt = 0; lt < logical_tables; lt++) {
         cstring atcam_suffix = "$atcam" + std::to_string(lt);
         auto *table_part = tbl->clone();
         // Clear gateway_name for the split tables
@@ -1135,7 +1158,8 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
             table_part->gateway_name = cstring();
         table_part->name = table_part->name + atcam_suffix + suffix;
         table_part->logical_id = placed->logical_id + lt;
-        table_part->atcam_logical_split = lt;
+        table_part->logical_split = lt;
+        table_part->logical_tables_in_stage = logical_tables;
         if (lt != 0) {
             tbl->gateway_rows.clear();
         }
@@ -1156,6 +1180,48 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
         prev = table_part;
     }
     return rv;
+}
+
+/** Splits a single dleft table into a Vector of tables.  Unlike ATCAM tables or multi-stage
+ *  tables, predication is not used to enable or disable tables.   Instead all run, and the
+ *  learn/match method is used to determine which table to run.  Thus, the algorithm differs
+ *  from the hit miss chaining
+ */
+IR::Vector<IR::MAU::Table> *TablePlacement::break_up_dleft(IR::MAU::Table *tbl,
+    const Placed *placed, cstring suffix) {
+    auto dleft_vector = new IR::Vector<IR::MAU::Table>();
+    int logical_tables = placed->use.preferred()->logical_tables();
+
+    for (int lt = 0; lt < logical_tables; lt++) {
+        cstring dleft_suffix = "$dleft" +std::to_string(lt);
+        auto *table_part = tbl->clone();
+
+        if (lt != 0)
+            table_part->gateway_name = cstring();
+        table_part->name = table_part->name + dleft_suffix + suffix;
+        table_part->logical_id = placed->logical_id + lt;
+        table_part->logical_split = lt;
+        table_part->logical_tables_in_stage = logical_tables;
+        if (lt != 0)
+            tbl->gateway_rows.clear();
+
+        const IR::MAU::StatefulAlu *salu = nullptr;
+        for (auto back_at : tbl->attached) {
+            salu = back_at->attached->to<IR::MAU::StatefulAlu>();
+            if (salu != nullptr)
+                break;
+        }
+        int per_row = RegisterPerWord(salu);
+        int entries = placed->use.preferred()->dleft_hash_sizes[lt] * Memories::SRAM_DEPTH
+                      * per_row;
+        table_set_resources(table_part, placed->resources->clone_dleft(tbl, lt, suffix),
+                            entries);
+        if (lt != logical_tables - 1)
+            table_part->next.clear();
+
+        dleft_vector->push_back(table_part);
+    }
+    return dleft_vector;
 }
 
 
@@ -1284,6 +1350,8 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         }
         if (tbl->layout.atcam)
             return break_up_atcam(tbl, it->second);
+        else if (tbl->for_dleft())
+            return break_up_dleft(tbl, it->second);
         else
             table_set_resources(tbl, it->second->resources, it->second->entries);
         return tbl;
@@ -1345,10 +1413,38 @@ IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
                 int b_logical_id = find_placed(b->name)->second->logical_id;
                 if (a_logical_id != b_logical_id)
                     return a_logical_id < b_logical_id;
-                return a->atcam_logical_split < b->atcam_logical_split;
+                return a->logical_split < b->logical_split;
         });
     }
     return seq;
+}
+
+/** For setting up the learn/match sections of a dleft hash table in IR.  Perhaps it doesn't
+ *  belong there, but rather in an outside data structure.
+ */
+IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
+    auto *tbl = findContext<IR::MAU::Table>();
+    const IR::MAU::StatefulAlu *salu = ba->attached->to<IR::MAU::StatefulAlu>();
+    if (!tbl->for_dleft() || salu == nullptr)
+        return ba;
+
+    visitAgain();
+    auto salu_name = tbl->get_use_name(salu);
+    auto salu_back = salu_name.findlast('$');
+
+    auto orig_name = tbl->name.before(tbl->name.find('$'));
+    for (int i = 0; i < tbl->logical_split; i++) {
+        cstring learn_name = orig_name + "$dleft" + std::to_string(i) + salu_back;
+        ba->learn.push_back(learn_name);
+    }
+
+    for (int i = 0; i < tbl->logical_tables_in_stage; i++) {
+        if (i == tbl->logical_split)
+            continue;
+        cstring match_name = orig_name + "$dleft" + std::to_string(i) + salu_back;
+        ba->match.push_back(match_name);
+    }
+    return ba;
 }
 
 std::multimap<cstring, const TablePlacement::Placed *>::const_iterator

@@ -7,6 +7,10 @@
 struct StageUseEstimate {
     static constexpr int MIN_WAYS = 1;
     static constexpr int MAX_WAYS = 8;
+    static constexpr int MAX_METER_ALUS = 4;
+    static constexpr int MAX_STATS_ALUS = 4;
+    // FIXME: This is a quick workaround that will need to change as the tables need to expand
+    static constexpr int MAX_DLEFT_HASH_SIZE = 8;
 
     typedef ordered_set<const IR::MAU::AttachedMemory *> StageAttached;
     int logical_ids = 0;
@@ -15,6 +19,9 @@ struct StageUseEstimate {
     int maprams = 0;
     int exact_ixbar_bytes = 0;
     int ternary_ixbar_groups = 0;
+    int meter_alus = 0;
+    int stats_alus = 0;
+
     safe_vector<LayoutOption> layout_options;
     safe_vector<ActionFormat::Use> action_formats;
     StageAttached shared_attached;
@@ -41,6 +48,8 @@ struct StageUseEstimate {
         rv.maprams = StageUse::MAX_MAPRAMS;
         rv.exact_ixbar_bytes = StageUse::MAX_IXBAR_BYTES;
         rv.ternary_ixbar_groups = StageUse::MAX_TERNARY_GROUPS;
+        rv.stats_alus = MAX_METER_ALUS;
+        rv.meter_alus = MAX_STATS_ALUS;
         return rv; }
     bool operator<=(const StageUseEstimate &a) {
         return logical_ids <= a.logical_ids && srams <= a.srams && tcams <= a.tcams &&
@@ -56,6 +65,7 @@ struct StageUseEstimate {
     void options_to_ternary_entries(const IR::MAU::Table *tbl, int &entries);
     void select_best_option_ternary();
     void options_to_atcam_entries(const IR::MAU::Table *tbl, int &entries);
+    void options_to_dleft_entries(const IR::MAU::Table *tbl, int &entries);
     void calculate_attached_rams(const IR::MAU::Table *tbl, LayoutOption *lo, bool table_placement);
     void fill_estimate_from_option(int &entries);
     const LayoutOption *preferred() const {

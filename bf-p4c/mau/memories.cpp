@@ -25,6 +25,11 @@ cstring Memories::SRAM_group::get_name() const {
             return ta->table->get_use_name(nullptr, false, IR::MAU::Table::AD_NAME,
                                            logical_table);
     }
+    if (ta->table->for_dleft()) {
+        if (type == REGISTER)
+            return ta->table->get_use_name(attached, false, 0, logical_table);
+    }
+
     if (type == TIND)
         return ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
     if (type == ACTION && attached == nullptr)
@@ -320,7 +325,31 @@ class SetupAttachedTables : public MauInspector {
         return false;
     }
 
+    void handle_dleft(const IR::MAU::StatefulAlu *salu) {
+        auto &dleft_hash_sizes = ta->layout_option->dleft_hash_sizes;
+        if (mem.shared_attached.count(salu)) {
+            BUG("Currently sharing a dleft table between two tables is impossible");
+        }
+        for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
+            int RAMs_needed = dleft_hash_sizes[lt] + 1;
+            auto name = ta->table->get_use_name(salu, false, 0, lt);
+            mi.stateful_tables++;
+            mi.stateful_RAMs += RAMs_needed;
+            (*ta->memuse)[name].type = Memories::Use::STATEFUL;
+        }
+
+        if (!stateful_pushed) {
+            mem.stateful_tables.push_back(ta);
+            stateful_pushed = true;
+        }
+    }
+
     bool preorder(const IR::MAU::StatefulAlu *salu) {
+        if (ta->table->for_dleft()) {
+            handle_dleft(salu);
+            return false;
+        }
+
         auto name = ta->table->get_use_name(salu);
         auto table_name = ta->table->get_use_name();
         (*ta->memuse)[name].type = Memories::Use::STATEFUL;
@@ -404,7 +433,16 @@ bool Memories::analyze_tables(mem_info &mi) {
         }
         auto table = ta->table;
         int entries = ta->provided_entries;
-        if (ta->layout_option->layout.no_match_data()) {
+        if (ta->table->for_dleft()) {
+            mi.logical_tables += ta->layout_option->logical_tables();
+            BUG_CHECK(ta->layout_option->layout.no_match_hit_path(), "DLeft tables can only part"
+                      "of the hit path");
+            for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
+                auto name = ta->table->get_use_name(nullptr, false, 0, lt);
+                (*ta->memuse)[name].type = Use::EXACT;
+            }
+            no_match_hit_tables.push_back(ta);
+        } else if (ta->layout_option->layout.no_match_data()) {
             auto name = ta->table->get_use_name();
             if (ta->layout_option->layout.no_match_hit_path()) {
                 no_match_hit_tables.push_back(ta);
@@ -1476,6 +1514,55 @@ void Memories::swbox_bus_selectors_indirects() {
     }
 }
 
+/** Sets up the SRAM_groups for stateful ALUs and the dleft hash tables.  For the dleft hash
+ *  tables, the number of SRAM groups created are provided from the number of logical tables
+ *  provided by the layout option.
+ */
+void Memories::swbox_bus_stateful_alus() {
+    for (auto *ta : stateful_tables) {
+        if (ta->table->for_dleft())
+            continue;
+        const IR::MAU::StatefulAlu *salu = nullptr;
+        for (auto back_at : ta->table->attached) {
+            auto at = back_at->attached;
+            if ((salu = at->to<IR::MAU::StatefulAlu>()) == nullptr)
+                continue;
+            if (salu->selector)
+                // use the selector's memory
+                continue;
+            int per_row = RegisterPerWord(salu);
+            int depth;
+            if (salu->direct) {
+                depth = mems_needed(ta->calculated_entries, SRAM_DEPTH, per_row, true);
+            } else {
+                depth = mems_needed(salu->size, SRAM_DEPTH, per_row, true);
+            }
+            auto reg_group = new SRAM_group(ta, depth, 0, SRAM_group::REGISTER);
+            reg_group->attached = salu;
+            synth_bus_users.insert(reg_group);
+        }
+    }
+
+    for (auto *ta : stateful_tables) {
+        if (!ta->table->for_dleft())
+            continue;
+        const IR::MAU::StatefulAlu *salu = nullptr;
+        for (auto back_at : ta->table->attached) {
+            salu = back_at->attached->to<IR::MAU::StatefulAlu>();
+            if (salu == nullptr)
+                continue;
+            auto &dleft_hash_sizes = ta->layout_option->dleft_hash_sizes;
+            for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
+                int depth = dleft_hash_sizes[lt] + 1;
+                auto *reg_group = new SRAM_group(ta, depth, 0, SRAM_group::REGISTER);
+                reg_group->attached = salu;
+                reg_group->logical_table = lt;
+                synth_bus_users.insert(reg_group);
+            }
+        }
+    }
+}
+
 /* Calculates the necessary size and requirements for any meter and counter tables within
    the stage */
 void Memories::swbox_bus_meters_counters() {
@@ -1531,31 +1618,6 @@ void Memories::swbox_bus_meters_counters() {
             synth_bus_users.insert(meter_group);
         }
     }
-
-    for (auto *ta : stateful_tables) {
-        const IR::MAU::StatefulAlu *salu = nullptr;
-        for (auto back_at : ta->table->attached) {
-            auto at = back_at->attached;
-            if ((salu = at->to<IR::MAU::StatefulAlu>()) == nullptr)
-                continue;
-            if (salu->selector)
-                // use the selector's memory
-                continue;
-            int per_row = RegisterPerWord(salu);
-            int depth;
-            if (salu->direct) {
-                depth = mems_needed(ta->calculated_entries, SRAM_DEPTH, per_row, true);
-            } else {
-                depth = mems_needed(salu->size, SRAM_DEPTH, per_row, true);
-            }
-            auto reg_group = new SRAM_group(ta, depth, 0, SRAM_group::REGISTER);
-            reg_group->attached = salu;
-            auto name = ta->table->get_use_name(salu);
-            // FIXME: This can go away
-            (*ta->memuse)[name].per_row = per_row;
-            synth_bus_users.insert(reg_group);
-        }
-    }
 }
 
 /* Breaks up all tables requiring an action to be parsed into SRAM_group, a structure
@@ -1588,6 +1650,7 @@ void Memories::find_swbox_bus_users() {
     }
     swbox_bus_selectors_indirects();
     swbox_bus_meters_counters();
+    swbox_bus_stateful_alus();
 }
 
 /** Due to the color mapram allocation algorithm described over color_mapram_candidates, the
@@ -2260,16 +2323,6 @@ void Memories::fill_swbox_side(swbox_fill candidates[SWBOX_TYPES], int row, RAM_
         && candidates[ACTION].group->same_wide_action(*candidates[OFLOW].group)) {
         if (candidates[ACTION].group == candidates[OFLOW].group) {
             BUG("Shouldn't be the same for action and oflow");
-        } else {
-            /*
-            auto name = candidates[ACTION].group->get_name();
-            auto &alloc = (*candidates[ACTION].group->ta->memuse)[name];
-            size_t size = alloc.row.size();
-            auto &row2 = alloc.row[size - 1]; auto &row1 = alloc.row[size - 2];
-            row1.col.insert(row1.col.end(), row2.col.begin(), row2.col.end());
-            row1.word.insert(row1.word.end(), row2.word.begin(), row2.word.end());
-            alloc.row.erase(alloc.row.begin() + size - 1);
-            */
         }
     }
 }
@@ -2859,7 +2912,7 @@ bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring
  *  row, bus, and value, as well as link no match tables if necessary
  */
 bool Memories::find_match_bus_gw(Memories::Use &alloc, int payload, cstring name,
-                                 table_alloc *ta_no_match) {
+                                 table_alloc *ta_no_match, int logical_table) {
     for (int i = 0; i < SRAM_ROWS; i++) {
         for (int j = 0; j < BUS_COUNT; j++) {
             if (payload_use[i][j]) continue;
@@ -2877,7 +2930,8 @@ bool Memories::find_match_bus_gw(Memories::Use &alloc, int payload, cstring name
             if (payload != 0)
                 payload_use[i][j] = name;
             if (ta_no_match) {
-                cstring no_match_name = ta_no_match->table->get_use_name();
+                cstring no_match_name
+                    = ta_no_match->table->get_use_name(nullptr, false, 0, logical_table);
                 auto &no_match_alloc = (*ta_no_match->memuse)[no_match_name];
                 no_match_alloc.row.emplace_back(i, j);
                 no_match_alloc.type = Use::EXACT;
@@ -2952,6 +3006,8 @@ bool Memories::allocate_all_normal_gw() {
  */
 bool Memories::allocate_all_no_match_gw() {
     for (auto *ta : no_match_gws) {
+        if (ta->table->for_dleft())
+            continue;
         auto name = ta->table->get_use_name(nullptr, true);
         auto &alloc = (*ta->memuse)[name];
         alloc.type = Use::GATEWAY;
@@ -2961,6 +3017,19 @@ bool Memories::allocate_all_no_match_gw() {
             return false;
     }
 
+    for (auto *ta : no_match_gws) {
+        if (!ta->table->for_dleft())
+            continue;
+        for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
+            auto name = ta->table->get_use_name(nullptr, true, 0, lt);
+            auto &alloc = (*ta->memuse)[name];
+            alloc.type = Use::GATEWAY;
+            bool unit_found = find_unit_gw(alloc, name, false);
+            bool match_bus_found = find_match_bus_gw(alloc, 0, name, ta, lt);
+            if (!(unit_found && match_bus_found))
+                return false;
+        }
+    }
     return true;
 }
 

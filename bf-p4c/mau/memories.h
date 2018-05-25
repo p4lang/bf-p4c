@@ -448,6 +448,7 @@ struct Memories {
     void find_swbox_bus_users();
     void swbox_bus_selectors_indirects();
     void swbox_bus_meters_counters();
+    void swbox_bus_stateful_alus();
     void swbox_logical_row(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
                            swbox_fill &curr_oflow, swbox_fill &sel_oflow);
     void find_swbox_candidates(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
@@ -502,7 +503,7 @@ struct Memories {
     bool find_unit_gw(Memories::Use &alloc, cstring name, bool requires_search_bus);
     bool find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring name);
     bool find_match_bus_gw(Memories::Use &alloc, int payload, cstring name,
-                           table_alloc *ta_no_match);
+                           table_alloc *ta_no_match, int logical_table = -1);
     bool allocate_all_gw();
     bool allocate_all_payload_gw();
     bool allocate_all_normal_gw();

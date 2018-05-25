@@ -58,6 +58,8 @@ struct TableResourceAlloc {
         return rv; }
     TableResourceAlloc *clone_atcam(const IR::MAU::Table *tbl, int logical_table,
                                     cstring suffix) const;
+    TableResourceAlloc *clone_dleft(const IR::MAU::Table *tbl, int logical_table,
+                                    cstring suffix) const;
     void clear_ixbar() {
         match_ixbar.clear();
         gateway_ixbar.clear();

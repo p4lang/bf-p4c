@@ -66,3 +66,34 @@ TableResourceAlloc *TableResourceAlloc::clone_atcam(const IR::MAU::Table *tbl,
     }
     return rv;
 }
+
+/** Given a single logical table of a dleft table, break this table up into multiple
+ *  logical tables, and save only the associated logical tables with that particular stage.
+ *
+ *  Again, all currently handled by string manipulation, which always can lead to issues.
+ *  The non string manipulation is a larger issue.
+ */
+TableResourceAlloc *TableResourceAlloc::clone_dleft(const IR::MAU::Table *tbl,
+    int logical_table, cstring suffix) const {
+    TableResourceAlloc *rv = clone_ixbar();
+
+    int added_resource = 0;
+    auto name = tbl->get_use_name(nullptr, false, 0, logical_table);
+    for (auto &use : memuse) {
+        if (name == use.first) {
+            rv->memuse.emplace(name + suffix, use.second);
+            continue;
+        }
+        cstring back_init = use.first.findlast('$');
+        std::string back = back_init.isNull() ? "" : (back_init + "");
+        if (back.empty() || back.find("dleft") != std::string::npos)
+            continue;
+        cstring front = use.first.before(use.first.findlast('$'));
+        if (front != name)
+            continue;
+
+        rv->memuse.emplace(name + suffix + back, use.second);
+        added_resource++;
+    }
+    return rv;
+}
