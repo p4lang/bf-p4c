@@ -31,7 +31,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     "mismatch from expected.* at byte .*"
     extensions/p4_tests/p4_14/action_chain_limits.p4
     # clot-phv interaction bug?
-    extensions/p4_tests/p4_16/brig-532.p4
     testdata/p4_14_samples/bridge1.p4
     )
 
@@ -201,6 +200,7 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_16/ONLab_packetio.p4
   extensions/p4_tests/p4_14/easy.p4
   extensions/p4_tests/p4_14/easy_no_match.p4
+  extensions/p4_tests/p4_14/ecmp_pi.p4
   fabric.p4
   tor.p4
   extensions/p4_tests/p4_16/large_action_data_constant.p4
