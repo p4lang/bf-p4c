@@ -34,9 +34,13 @@ class CollectBridgedFields : public Inspector {
  public:
     explicit CollectBridgedFields(const PhvInfo& phv) : phv(phv) { }
 
-    ordered_map<const PHV::Field*, const IR::Member*> orig_to_bridged;
-    ordered_map<const PHV::Field*, const PHV::Field*> bridged_to_orig;
+    /// Key: Field name, Value: Corresponding member object.
+    ordered_map<cstring, const IR::Member*> orig_to_bridged;
+    /// Key: Bridged Field name, Value: Original field name.
+    ordered_map<cstring, cstring> bridged_to_orig;
+    /// Key: Bridged Field name, Value: External name of original field.
     ordered_map<cstring, cstring> bridged_to_external_name;
+    /// Key: Original Field name, Value: Bridged field name.
     ordered_map<cstring, cstring> orig_to_bridged_name;
 };
 

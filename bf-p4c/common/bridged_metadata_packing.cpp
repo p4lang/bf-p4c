@@ -67,7 +67,7 @@ Visitor::profile_t PackBridgedMetadata::init_apply(const IR::Node* root) {
     egressBridgedMap.clear();
     fieldAlignmentMap.clear();
     for (auto kv : fields.bridged_to_orig)
-        egressBridgedMap[getEgressFieldName(kv.second->name)] = getEgressFieldName(kv.first->name);
+        egressBridgedMap[getEgressFieldName(kv.second)] = getEgressFieldName(kv.first);
 
     if (LOGGING(5)) {
         LOG5("\nPrinting orig to bridged");
