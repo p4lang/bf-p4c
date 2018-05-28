@@ -60,6 +60,7 @@ class MauAsmOutput::TableMatch {
  public:
     safe_vector<Slice>       match_fields;
     safe_vector<Slice>       ghost_bits;
+    const IR::MAU::Table     *table = nullptr;
 
     TableMatch(const MauAsmOutput &s, const PhvInfo &phv, const IR::MAU::Table *tbl);
 };
@@ -837,6 +838,10 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
                               hash_dist.original_hd->field_list);
         }
     }
+
+    if (fmt && fmt->table && fmt->table->random_seed != -1) {
+        out << indent++ << "random_seed:" << fmt->table->random_seed << std::endl;
+    }
 }
 
 class memory_vector {
@@ -1612,6 +1617,8 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
             ghost_bits.push_back(sl);
         }
     }
+    /* Store the table pointer handy in case we need to write the seed */
+    table = tbl;
 
     // Link match data together for an easier to read asm
     /*

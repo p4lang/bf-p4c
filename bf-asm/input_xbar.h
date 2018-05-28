@@ -82,6 +82,7 @@ class InputXbar {
     };
 public:
     const int   lineno;
+    int random_seed = -1;
     InputXbar(Table *table) : table(table), lineno(-1) {}
     InputXbar(Table *table, bool ternary, const VECTOR(pair_t) &data);
     void pass1();

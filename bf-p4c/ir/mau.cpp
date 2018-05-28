@@ -146,6 +146,24 @@ int IR::MAU::Table::get_provided_stage() const {
     return constant->asInt();
 }
 
+int IR::MAU::Table::get_random_seed() const {
+    if (match_table == nullptr)
+        return -1;
+    auto annot = match_table->annotations->getSingle("random_seed");
+    if (annot == nullptr)
+        return -1;
+    ERROR_CHECK(annot->expr.size() == 1, "%s: random_seed pragma provided to table %s has multiple "
+              "parameters, while Brig currently only supports one parameter",
+              annot->srcInfo, name);
+    auto constant = annot->expr.at(0)->to<IR::Constant>();
+    ERROR_CHECK(constant, "%s: random_seed pragma provided to table %s is not a constant",
+                annot->srcInfo, name);
+    int val = constant->asInt();
+    ERROR_CHECK(val >= 0, "%s: random_seem pragma provided to table %s must be >= 0",
+                annot->srcInfo, name);
+    return val;
+}
+
 int IR::MAU::Table::hit_actions() const {
     int _hit_actions = 0;
     for (auto act : Values(actions)) {

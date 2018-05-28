@@ -188,6 +188,8 @@ stage <constant> <thread>:
             group <constant>: '[]'
             - group <constant>
                 # use an xbar group configured elsewhere
+            random_seed: <constant>
+                # random seed from pragma for the table
         gateway:
             # gateway table on this table -- see below
         format: { <name>: <range>, <name>: <size> ... }

@@ -51,6 +51,10 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
 : table(t), lineno(data[0].key.lineno)
 {
     for (auto &kv : data) {
+        if ((kv.key.type == tSTR) && (kv.key == "random_seed")) {
+          random_seed = kv.value.i;
+          continue;
+        }
         Group::type_t grtype = tern ? Group::TERNARY : Group::EXACT;
         if (!CHECKTYPEM(kv.key, tCMD, "group or hash descriptor"))
             continue;
@@ -363,6 +367,8 @@ void InputXbar::check_tcam_input_conflict(InputXbar::Group group, Input &input, 
 void InputXbar::pass1() {
     TcamUseCache tcam_use;
     tcam_use.ixbars_added.insert(this);
+    if (random_seed >= 0)
+        srandom(random_seed);
     for (auto &group : groups) {
         for (auto &input : group.second) {
             if (!input.what.check()) continue;

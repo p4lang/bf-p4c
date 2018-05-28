@@ -633,6 +633,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     VisitAttached visit_attached(&tbl->layout);
     tbl->attached.apply(visit_attached);
     setup_action_layout(tbl);
+    tbl->random_seed = tbl->get_random_seed();
     if (tbl->layout.gateway)
         return true;
     else if (tbl->layout.no_match_data())

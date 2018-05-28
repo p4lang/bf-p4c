@@ -119,6 +119,7 @@ class TableLayout : public MauModifier, Backtrack {
     void setup_action_layout(IR::MAU::Table *tbl);
     void setup_ternary_layout_options(IR::MAU::Table *tbl);
     void setup_layout_option_no_match(IR::MAU::Table *tbl);
+    void attach_random_seed(IR::MAU::Table *tbl);
 
  public:
     explicit TableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {}

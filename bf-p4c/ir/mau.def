@@ -87,6 +87,7 @@ class Table : BFN::Unit {
     inline NameMap<Action, ordered_map>         actions;
     inline NameMap<TableSeq>                    next;
     inline Vector<InputXBarRead>                match_key;
+    int                                         random_seed = -1;
 
     class Layout {
         /* POD type */
@@ -200,6 +201,7 @@ class Table : BFN::Unit {
     int action_next_paths() const;
     int get_provided_stage() const;
     int hit_actions() const;
+    int get_random_seed() const;
     bool for_dleft() const;
 
 #emit
