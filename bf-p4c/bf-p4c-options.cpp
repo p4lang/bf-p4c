@@ -1,10 +1,13 @@
 #include "bf-p4c-options.h"
+#include <libgen.h>
+#include <string.h>
 #include <boost/algorithm/string.hpp>
 #include <algorithm>
 #include <unordered_set>
 #include <vector>
 #include "ir/ir.h"
 #include "ir/visitor.h"
+#include "lib/cstring.h"
 #include "version.h"
 
 BFN_Options::BFN_Options() {
@@ -120,6 +123,40 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
 #endif
         processed = true;
     }
+
+    // Cache the names of the output directory and the program name
+    cstring inputFile;
+    if (remainingOptions->size() > 1) {
+        inputFile = cstring(remainingOptions->at(0));
+    } else {
+        if (outputFiles.size() > 0)
+            inputFile = cstring(outputFiles.at(0));
+        else
+            inputFile = cstring("dummy.p4i");
+    }
+    size_t len = inputFile.size();
+    char *buffer = new char[len+1];
+    strncpy(buffer, inputFile.c_str(), len);
+
+    char *program_name_ptr = basename(buffer);
+    BUG_CHECK(program_name_ptr, "No valid output argument");
+    std::string program_name(program_name_ptr);
+    // remove ".p4i"
+    program_name.erase(program_name.size()-4, 4);
+    programName = cstring(program_name);
+    delete [] buffer;
+
+    cstring outputFile;
+    if (outputFiles.size() > 0)
+        outputFile = outputFiles.at(0);
+    else
+        outputFile = cstring(programName + "." + target + "/dummy.bfa");
+    len = outputFile.size();
+    buffer = new char[len+1];
+    strncpy(buffer, outputFile.c_str(), len);
+    char *dirname_ptr = dirname(buffer);
+    outputDir = cstring(dirname_ptr ? dirname_ptr : programName + "." + target);
+    delete [] buffer;
 
     return remainingOptions;
 }

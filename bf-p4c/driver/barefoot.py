@@ -42,9 +42,14 @@ class BarefootBackend(BackendDriver):
                 os.path.join(os.environ['P4C_BIN_DIR'],
                              '../../scripts/validate_context_json'))
             self.add_command(
+                'manifest-verifier',
+                os.path.join(os.environ['P4C_BIN_DIR'],
+                             '../../scripts/validate_manifest'))
+            self.add_command(
                 'bf-rt-verifier',
                 os.path.join(os.environ['P4C_BIN_DIR'],
                              '../../bf-p4c/control-plane/gen_bf_rt_json_schema.py'))
+        self.add_command('archiver', 'tar')
 
         # order of commands
         self.enable_commands(['preprocessor', 'compiler', 'assembler'])
@@ -64,9 +69,14 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("-s", dest="run_post_compiler",
                                     help="Only run assembler",
                                     action="store_true", default=False)
+        self._argGroup.add_argument("--archive",
+                                    help="Archive all outputs into a single tar.bz2 file",
+                                    action="store_true", default=False)
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self._argGroup.add_argument("--validate-output", action="store_true", default=False,
                                         help="run context.json validation")
+            self._argGroup.add_argument("--validate-manifest", action="store_true", default=False,
+                                        help="run manifest validation")
             self._argGroup.add_argument("--bf-rt-schema", action="store",
                                         help="Generate and write BF-RT JSON schema  to the specified file")
 
@@ -111,9 +121,12 @@ class BarefootBackend(BackendDriver):
         self.add_command_option('assembler', "-o {}".format(output_dir))
         self.add_command_option('assembler', "{}.bfa".format(basepath))
         # cleanup after assembler
+        self._postCmds['assembler'] = []
         if not opts.debug_info:
-            self._postCmds['assembler'] = []
             self._postCmds['assembler'].append(["rm -f {}.bfa".format(basepath)])
+
+        # cleanup after visualizer
+        self._postCmds['assembler'].append(["rm -f {}.bfa.res.json".format(basepath)])
 
         src_filename, src_extension = os.path.splitext(self._source_filename)
         # local options
@@ -130,9 +143,26 @@ class BarefootBackend(BackendDriver):
             if opts.validate_output:
                 self.add_command_option('verifier', "{}/context.json".format(output_dir))
                 self._commandsEnabled.append('verifier')
+            if opts.validate_manifest:
+                self.add_command_option('manifest-verifier', "{}/manifest.json".format(output_dir))
+                self._commandsEnabled.append('manifest-verifier')
 
             if opts.bf_rt_schema is not None:
                 self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))
 
                 self.add_command_option('bf-rt-verifier', opts.bf_rt_schema)
                 self._commandsEnabled.append('bf-rt-verifier')
+
+        # if we need to generate an archive, should be the last command
+        if opts.archive:
+            root_dir = os.path.dirname(output_dir)
+            if root_dir == "": root_dir = "."
+            program_name = os.path.basename(basepath)
+            program_dir = os.path.basename(output_dir)
+            if program_dir != ".":
+                self.add_command_option('archiver',
+                                        "-cf {}/{}.tar.bz2 -j -C {} {}".format(root_dir,
+                                        program_name, root_dir, program_dir))
+                self._commandsEnabled.append('archiver')
+            else:
+                print >> sys.stderr, "Please specify an output directory (using -o) to generate an archive"

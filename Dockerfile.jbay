@@ -48,8 +48,6 @@ RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 10 && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 20
 
-RUN pip install pyinstaller==3.2.1
-
 # Default to using 2 make jobs, which is a good default for CI. If you're
 # building locally or you know there are more cores available, you may want to
 # override this.
@@ -61,7 +59,7 @@ ARG IMAGE_TYPE=release
 # testing dependencies
 RUN apt-get install -y net-tools
 
-RUN pip install ply jsonschema pexpect crc16
+RUN pip install ply jsl jsonschema pexpect crc16
 COPY . /bfn/bf-p4c-compilers/
 COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
 COPY scripts/docker_entry_point.sh /bfn/docker_entry_point.sh
@@ -77,7 +75,6 @@ RUN /usr/local/bin/ccache --zero-stats && \
     make && \
     make install && \
     /usr/local/bin/ccache -p --show-stats && \
-    pip uninstall -y pyinstaller && \
     apt-get autoremove --purge -y && \
     rm -rf ~/.cache/* ~/.ccache/* /var/cache/apt/* /var/lib/apt/lists/* && \
     rm -rf bf-asm/walle/build/* && \

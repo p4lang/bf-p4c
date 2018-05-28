@@ -20,7 +20,6 @@ then fed to walle to produce binary for tofino.
 - A C++ compiler supporting C++11 (the Makefile uses g++ by defalt)
 - bison
 - flex
-- pyinstaller (for walle) [ sudo pip install pyinstaller ]
 
 Running the test suite requires access to the Glass p4c\_tofino compiler.
 Running stf tests requires access to the simple test harness.  The

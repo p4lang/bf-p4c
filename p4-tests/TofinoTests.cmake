@@ -627,6 +627,19 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_smoke_large_tbls" ${CMAKE_CURR
     "${testExtraArgs} -pd -to 12000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/smoke_large_tbls.ptf")
 set_tests_properties("tofino/p4testgen_smoke_large_tbls" PROPERTIES TIMEOUT 12000)
 
+## Manifest tests
+# test the generation of the compiler archive, for a must pass P4_14 and P4_16 program
+# will run as part of cpplint
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE "easy-ternary-archive"
+  extensions/p4_tests/p4_14/easy_ternary.p4
+  "-norun --create-graphs --archive --validate-manifest")
+p4c_add_test_label("tofino" "cpplint" "easy-ternary-archive")
+
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE "tor-archive"
+  extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
+  "-norun --create-graphs --archive --validate-manifest")
+p4c_add_test_label("tofino" "cpplint" "tor-archive")
+
 
 include(TofinoMustPass.cmake)
 include(TofinoXfail.cmake)

@@ -16,7 +16,9 @@ add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
 if (ENABLE_JBAY)
   add_definitions("-DHAVE_JBAY=1")
 endif()
-include_directories(${BFN_P4C_SOURCE_DIR} ${P4C_BINARY_DIR}/control-plane
+include_directories(${BFN_P4C_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${P4C_BINARY_DIR}/control-plane
   ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
 set (HAVE_LIBBOOST_GRAPH 1)
 set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY};${OPENSSL_LIBRARIES}")
@@ -402,6 +404,12 @@ if (ENABLE_JBAY)
   arch/jbay_native.h)
 endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")
+
+set (BF_P4C_BACKEND_LOGGING_HDRS
+  logging/logging.h
+  logging/manifest.h
+  )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_HDRS}")
 
 set (BF_P4C_BACKEND_MAIN_SRCS
   backend.cpp

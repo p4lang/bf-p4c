@@ -21,8 +21,7 @@ install_python_packages() {
     # $SUDO pip install --upgrade pip
     $SUDO pip install setuptools || die "Failed to install needed packages"
     $SUDO pip install ply || die "Failed to install needed packages"
-    $SUDO pip install jsonschema || die "Failed to install needed packages"
-    $SUDO pip install pyinstaller==3.2.1 || die "Failed to install needed packages"
+    $SUDO pip install jsl jsonschema || die "Failed to install needed packages"
     $SUDO pip install thrift || die "Failed to install needed packages"  # need this one instead
     $SUDO pip install pexpect || die "Failed to install needed packages"
 }

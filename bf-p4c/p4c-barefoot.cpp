@@ -33,6 +33,7 @@
 #include "lib/gc.h"
 #include "lib/log.h"
 #include "lib/exceptions.h"
+#include "logging/manifest.h"
 #include "midend.h"
 #include "version.h"
 
@@ -99,16 +100,7 @@ class OutputAsm : public PassManager {
                 char build_date[1024];
                 strftime(build_date, 1024, "%c", localtime(&now));
 
-                char *program_name_ptr = basename(
-                    const_cast<char *>(_options.outputFiles.at(pipe_id).c_str()));
-                if (!program_name_ptr)
-                    return;  // failed to get the program_name
-                std::string program_name(program_name_ptr);
-                program_name.erase(program_name.size()-4, 4);  // remove ".bfa"
-
-                char *dir_name_ptr = dirname(
-                    const_cast<char *>(_options.outputFiles.at(pipe_id).c_str()));
-                std::string outputDir(dir_name_ptr ? dir_name_ptr : ".");
+                std::string outputDir(_options.outputDir.c_str());
                 outputDir += "/pipe.";
                 outputDir += std::to_string(pipe_id);
                 int rc = mkdir(outputDir.c_str(), 0755);
@@ -123,7 +115,7 @@ class OutputAsm : public PassManager {
                 ctxtJson.emplace("build_date", new Util::JsonValue(build_date));
                 ctxtJson.emplace("schema_version", new Util::JsonValue("1.3.9"));
                 ctxtJson.emplace("compiler_version", new Util::JsonValue(BF_P4C_VERSION));
-                ctxtJson.emplace("program_name", new Util::JsonValue(program_name));
+                ctxtJson.emplace("program_name", new Util::JsonValue(_options.programName));
                 ctxtJson.emplace("run_id", new Util::JsonValue(RunId::getId()));
                 ctxtJson.emplace("learn_quanta", new Util::JsonArray());
                 ctxtJson.emplace("dynamic_hash_calculations", new Util::JsonArray());
@@ -162,6 +154,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, int pipe_id, BFN_Options& opt
 
     if (Log::verbose())
         std::cout << "Compiling" << std::endl;
+
 
     BFN::Backend backend(options);
     try {
@@ -238,11 +231,13 @@ int main(int ac, char **av) {
         return 1;
     log_dump(program, "After midend");
 
+    // create the archive manifest
+    Logging::Manifest manifest(options);
+
     // generate graphs
     // In principle this should not fail, so we call it before the backend
     if (options.create_graphs) {
-        char *dir_name_ptr = dirname(const_cast<char *>(options.outputFiles.at(0).c_str()));
-        std::string graphsDir(dir_name_ptr ? dir_name_ptr : ".");
+        std::string graphsDir(options.outputDir.c_str());
         graphsDir += "/graphs";
         int rc = mkdir(graphsDir.c_str(), 0755);
         if (rc != 0 && errno != EEXIST) {
@@ -255,10 +250,12 @@ int main(int ac, char **av) {
             LOG2("Generating control graphs");
             graphs::ControlGraphs cgen(&midend.refMap, &midend.typeMap, graphsDir);
             toplevel->getMain()->apply(cgen);
+            toplevel->getMain()->apply(manifest);  // generate entries for controls in manifest
         }
         LOG2("Generating parser graphs");
         graphs::ParserGraphs pgg(&midend.refMap, &midend.typeMap, graphsDir);
         program->apply(pgg);
+        program->apply(manifest);  // generate graph entries for parsers in manifest
     }
 
     // convert midend IR to backend IR
@@ -269,7 +266,10 @@ int main(int ac, char **av) {
 
     for (auto& kv : conv.pipe) {
         execute_backend(kv.second, kv.first, options);
+        manifest.addContext(kv.first, "context.json");
     }
+    // generate the archive manifest
+    manifest.serialize();
 
     if (Log::verbose())
         std::cout << "Done." << std::endl;

@@ -31,7 +31,6 @@ ENV P4C_DEPS automake \
 
 RUN apt-get update && \
     apt-get install -y $P4C_DEPS
-RUN pip install pyinstaller==3.2.1
 
 # Default to 1, as dockerhub provides a single CPU
 ARG MAKEFLAGS=-j1
@@ -42,7 +41,7 @@ ARG IMAGE_TYPE=test
 # testing dependencies
 RUN apt-get install -y net-tools
 
-RUN pip install ply jsonschema pexpect crc16
+RUN pip install ply jsl jsonschema pexpect crc16
 COPY . /bfn/bf-p4c-compilers/
 COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
 COPY scripts/docker_entry_point.sh /bfn/docker_entry_point.sh

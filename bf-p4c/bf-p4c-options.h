@@ -26,6 +26,8 @@ class BFN_Options : public CompilerOptions {
 
     cstring bfRtSchema = "";
     std::vector<cstring> outputFiles;
+    cstring outputDir;    // output directory, default "programName.device"
+    cstring programName;  // name of the program (derived from first .bfa arg)
 
     BFN_Options();
 
