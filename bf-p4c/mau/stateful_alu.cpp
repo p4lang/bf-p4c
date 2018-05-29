@@ -310,6 +310,8 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
             error("initializer %s is not a list expression", mu->arguments->at(3)->expression); }
     } else if (prim->name == "RegisterAction.address") {
         operands.push_back(new IR::MAU::SaluReg(prim->type, "address", false));
+    } else if (prim->name == "RegisterAction.predicate") {
+        operands.push_back(new IR::MAU::SaluReg(prim->type, "predicate", false));
     } else {
         error("%s: expression too complex for register action", prim->srcInfo); }
     return false;

@@ -3,22 +3,30 @@
 struct metadata {
     bit<16> src_port;
     bit<16> dst_port;
+    @pa_container_size("ingress", "meta.cache_id", 32)
     bit<12> cache_id;
-    bit<12> proxy_hash;
+    @pa_container_size("ingress", "meta.flow_id", 32)
+    bit<16> flow_id;
+    bit<1>  new_flow;
     bit<64> digest;
-    bit<3> learn;
+    bit<16> learn;
 }
 #define METADATA_INIT(M) \
     M.src_port = 0; \
     M.dst_port = 0; \
     M.cache_id = 0; \
-    M.proxy_hash = 0; \
+    M.flow_id = 0; \
+    M.new_flow = 0; \
     M.digest = 1; \
     M.learn = 0;
 
 struct pair {
     bit<64>     first;
     bit<64>     second;
+}
+struct map_pair {
+    bit<16>     cid;
+    bit<16>     fid;
 }
 
 #include "ipv4_parser.h"
@@ -33,68 +41,113 @@ control ingress(inout headers hdr, inout metadata meta,
     action compute_digest() {
         meta.digest[63:32] = digest_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
                                                hdr.ipv4.protocol, meta.src_port, meta.dst_port }); }
-    action compute_hash() {
-        meta.proxy_hash = lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr, hdr.ipv4.protocol,
-                                            meta.src_port, meta.dst_port }); }
     action set_egress_port() { ig_intr_tm_md.ucast_egress_port = 3; }
 
+    /* dleft cache table -- 1 way in one stage (so no sbus) */
     Register<pair>(4096) learn_cache;
     RegisterAction<pair, bit<32>>(learn_cache) learn_act = {
-        void apply(inout pair value, out bit<32> cid, out bit<32> learn_match) {
+        void apply(inout pair value, out bit<32> cid, out bit<32> pred) {
             if (value.first & -31 == meta.digest) {
                 value.first = value.first | 30;
                 cid = this.address();
-                learn_match = 2;
-#if 0
             } else if (value.second & -31 == meta.digest) {
                 value.second = value.second | 30;
                 cid = this.address();
-                learn_match = 3;
-#endif
             } else if (value.first & 1 == 0) {
                 value.first = meta.digest | 31;
                 cid = this.address();
-                learn_match = 4;
-#if 0
             } else if (value.second & 1 == 0) {
                 value.second = meta.digest | 31;
                 cid = this.address();
-                learn_match = 5;
-#endif
             } else {
                 cid = 0;
-                learn_match = 0;
             }
+            pred = this.predicate();
         }
     };
     action do_learn_match() {
         bit<32> tmp2;
-        bit<32> tmp = learn_act.execute(meta.proxy_hash, tmp2);
-        meta.cache_id = tmp[11:0];
-        meta.learn = tmp2[2:0];
+        bit<32> tmp = learn_act.execute(lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
+                                                          hdr.ipv4.protocol, meta.src_port,
+                                                          meta.dst_port }), tmp2);
+        meta.cache_id = tmp[18:7];
+        meta.learn = tmp2[19:4];
     }
-    @dleft_learn_cache
     table learn_match {
         actions = { do_learn_match; }
         default_action = do_learn_match;
-        // FIXME -- frontend doesn't like implementation as anything other than
-        // an action_profile, so use a pragma for now.
-        // implementation = learn_act;
     }
 
+    /* new flow fifo -- source for new flowids from the driver */
+    Register<bit<32>>(4096) fid_fifo;
+    RegisterAction<bit<32>, bit<32>>(fid_fifo) new_fid = {
+        void apply(inout bit<32> fid, out bit<32> rv) { rv = fid; } };
+    action new_flow() {
+        meta.new_flow = 1;
+        meta.flow_id = (bit<16>)new_fid.pop(); }
+    action old_flow() { meta.new_flow = 0; }
+    action failed_overflow() { }
+    table get_new_fid {
+        key = { meta.learn : ternary; }
+        actions = { new_flow; old_flow; failed_overflow; }
+    }
+#if 0
+    RegisterAction<bit<32>, bit<32>>(fid_fifo) insert_fid = {
+        void apply(inout bit<32> fid) { fid = (bit<32>)meta.flow_id; } };
+    action insert_new_fid() { insert_fid.push(); }
+#endif
+
+    /* output fifo -- outputs cache ids of new flows */
+    Register<bit<32>>(4096) output_fifo;
+    RegisterAction<bit<32>, bit<32>>(output_fifo) report_cacheid = {
+        void apply(inout bit<32> val) { val = (bit<32>)meta.cache_id; } };
+    action do_report_cacheid() { report_cacheid.push(); }
+
+    /* map table -- records mapping from cache id to flow id */
+    Register<map_pair>(4096) cid2fidmap;
+    RegisterAction<map_pair, bit<16>>(cid2fidmap) register_new_flow = {
+        void apply(inout map_pair val, out bit<16> rv) {
+            val.cid = (bit<16>)meta.cache_id;
+            val.fid = meta.flow_id;
+            rv = meta.flow_id; } };
+    RegisterAction<map_pair, bit<16>>(cid2fidmap) existing_flow = {
+        void apply(inout map_pair val, out bit<16> rv) {
+            rv = val.fid; } };
+
+    /* final flow packet counter */
+    // FIXME -- jna Counter broken?  crashes on CounterType_t.PACKETS
+    Register<bit<16>>(4096) flow_counter;
+    RegisterAction<bit<16>, bit<16>>(flow_counter) inc_flow_counter = {
+        void apply(inout bit<16> val) { val = val + 1; } };
+
     apply {
+        meta.digest[31:0] = 1;  // FIXME setting to 1 in parser fails?
         if (hdr.tcp.isValid()) {
             meta.src_port = hdr.tcp.src_port;
             meta.dst_port = hdr.tcp.dst_port;
         } else if (hdr.udp.isValid()) {
             meta.src_port = hdr.udp.src_port;
-            meta.dst_port = hdr.udp.dst_port; }
+            meta.dst_port = hdr.udp.dst_port;
+        }
+#if 0
+        // FIXME -- compiler can't determine table mutual exclusivity with return
+        // only need this to prime the fifo with STF as it does not support directly pushing
+        else if (hdr.ethernet.ether_type == 0xffff) {
+            meta.flow_id = hdr.ethernet.dst_addr[15:0];
+            insert_new_fid();
+            return; }
+#endif
         compute_digest();
-        compute_hash();
         set_egress_port();
         learn_match.apply();
-        hdr.ipv4.identification = (bit<16>)meta.cache_id;
-        hdr.ipv4.diffserv = (bit<8>)meta.learn;
+        get_new_fid.apply();
+        if (meta.new_flow == 1) {
+            do_report_cacheid();
+            register_new_flow.execute(meta.cache_id);
+        } else {
+            meta.flow_id = existing_flow.execute(meta.cache_id);
+        }
+        inc_flow_counter.execute(meta.flow_id);
     }
 }
 

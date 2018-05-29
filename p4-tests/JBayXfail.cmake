@@ -242,3 +242,9 @@ p4c_add_xfail_reason("jbay"
   "all ways in use"
   extensions/p4_tests/p4_14/em_ghost4.p4
 )
+
+#work in progress
+p4c_add_xfail_reason("jbay"
+  "error: Hash table .* column .* duplicated"
+  extensions/p4_tests/p4_16/jbay/hwlearn0.p4
+)

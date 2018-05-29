@@ -1904,10 +1904,9 @@ bool IXBar::can_allocate_on_search_bus(IXBar::Use &alloc, const PHV::Field *fiel
         auto &fi = byte.field_bytes[0];
         if (fi.field != field->name)
             continue;
-        if (fi.width() != 8) {
-            if (fi.hi != range.hi)
-                return false;
-        }
+        if (fi.width() != 8 && fi.hi != range.hi) {
+            LOG4("  not byte aligned: " << fi);
+            return false; }
         if (fi.cont_loc().min().index() != 0)
             return false;
         int byte_position = ((fi.lo - range.lo) + 7)/ 8;
@@ -2204,8 +2203,10 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
         for (auto &source : phv_sources) {
             total_bits += source.second.size();
         }
-        if (total_bits > METER_ALU_HASH_BITS)
-            return false;
+        if (total_bits > METER_ALU_HASH_BITS) {
+            LOG4("  total_bits(" << total_bits << ") > METER_ALU_HASH_BITS(" <<
+                 METER_ALU_HASH_BITS << ")");
+            return false; }
         hm_reqs = hash_matrix_reqs::max(false);
     }
 

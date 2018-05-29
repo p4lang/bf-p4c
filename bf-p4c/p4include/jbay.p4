@@ -600,6 +600,7 @@ extern RegisterAction<T, U> {
     U push();  /* stack push operation */
     U pop();  /* stack pop operation */
     U address(); /* return the match address */
+    U predicate(); /* return the predicate value */
     @optional abstract void overflow(@optional inout T value,
                                      @optional out U rv1, @optional out U rv2,
                                      @optional out U rv3, @optional out U rv4);

@@ -11,6 +11,7 @@ namespace {
 static IR::Constant *zero = new IR::Constant(0);
 static IR::Constant *one = new IR::Constant(1);
 static IR::Constant *two = new IR::Constant(2);
+static IR::This *thisVal = new IR::This();
 
 class TestRead : public Inspector, TofinoWriteContext {
     bool preorder(const IR::Expression *p) {
@@ -58,7 +59,7 @@ TEST(TofinoWriteContext, Read) {
     state->apply(TestRead());
 
     auto prim = new IR::MAU::TypedPrimitive("foo_prim");
-    prim->operands = IR::Vector<IR::Expression>({zero, one, two});
+    prim->operands = IR::Vector<IR::Expression>({thisVal, zero, one, two});
     prim->method_type =
       new IR::Type_Method(
         new IR::ParameterList(
@@ -96,7 +97,7 @@ TEST(TofinoWriteContext, Write) {
     salu->apply(TestWrite());
 
     auto prim = new IR::MAU::TypedPrimitive("foo_prim");
-    prim->operands = IR::Vector<IR::Expression>({zero, one, two});
+    prim->operands = IR::Vector<IR::Expression>({thisVal, zero, one, two});
     prim->method_type =
       new IR::Type_Method(
         new IR::ParameterList(

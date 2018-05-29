@@ -364,9 +364,9 @@ class PHVContainerPrinter(object):
     def to_string(self):
         tk = int(self.val['type_']['kind_'])
         ts = int(self.val['type_']['size_'])
-        if tk < 0 or tk >= len(container_types) or not ts in container_sizes:
+        if tk < 0 or tk >= len(self.container_kinds) or not ts in self.container_sizes:
             return "<invalid PHV::Container>"
-        rv = container_types[tk] + container_sizes[ts] + str(self.val['index_'])
+        rv = self.container_kinds[tk] + self.container_sizes[ts] + str(self.val['index_'])
         return rv;
 
 class SlicePrinter(object):

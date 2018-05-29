@@ -5,6 +5,7 @@
 #include "tables.h"
 #include "stage.h"
 #include <cstring>
+#include "hex.h"
 
 namespace StatefulAlu {
 
@@ -83,7 +84,7 @@ struct operand {
                 if ((v[1].lo & 7) || ((v[1].hi + 1) & 7))
                     error(lineno, "only byte slices allowed on %s", v[0].s);
                 mask = ((1U << (v[1].hi + 1)/8U) - 1) << (v[1].lo/8U); } }
-        void dbprint(std::ostream &out) const override { out << pi; }
+        void dbprint(std::ostream &out) const override { out << (pi ? "phv_hi" : "phv_lo"); }
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const PhvRaw *>(a_)) {
                 return pi == a->pi;
@@ -220,16 +221,31 @@ struct SaluInstruction : public Instruction {
 };
 
 int SaluInstruction::decode_predicate(const value_t &exp) {
-    if (exp == "cmplo") return STATEFUL_PREDICATION_ENCODE_CMPLO;
-    if (exp == "cmphi") return STATEFUL_PREDICATION_ENCODE_CMPHI;
-    if (exp == "cmp0") return STATEFUL_PREDICATION_ENCODE_CMP0;
-    if (Target::STATEFUL_CMP_UNITS() > 1 && exp == "cmp1") return STATEFUL_PREDICATION_ENCODE_CMP1;
-    if (Target::STATEFUL_CMP_UNITS() > 2 && exp == "cmp2") return STATEFUL_PREDICATION_ENCODE_CMP2;
-    if (Target::STATEFUL_CMP_UNITS() > 3 && exp == "cmp3") return STATEFUL_PREDICATION_ENCODE_CMP3;
+    if (exp == "cmplo") return Target::STATEFUL_PRED_MASK() & STATEFUL_PREDICATION_ENCODE_CMPLO;
+    if (exp == "cmphi") return Target::STATEFUL_PRED_MASK() & STATEFUL_PREDICATION_ENCODE_CMPHI;
+    if (exp == "cmp0") return Target::STATEFUL_PRED_MASK() & STATEFUL_PREDICATION_ENCODE_CMP0;
+    if (Target::STATEFUL_CMP_UNITS() > 1 && exp == "cmp1")
+        return Target::STATEFUL_PRED_MASK() & STATEFUL_PREDICATION_ENCODE_CMP1;
+    if (Target::STATEFUL_CMP_UNITS() > 2 && exp == "cmp2")
+        return Target::STATEFUL_PRED_MASK() & STATEFUL_PREDICATION_ENCODE_CMP2;
+    if (Target::STATEFUL_CMP_UNITS() > 3 && exp == "cmp3")
+        return Target::STATEFUL_PRED_MASK() & STATEFUL_PREDICATION_ENCODE_CMP3;
     if (exp == "!") return Target::STATEFUL_PRED_MASK() ^ decode_predicate(exp[1]);
-    if (exp == "&") return decode_predicate(exp[1]) & decode_predicate(exp[2]);;
-    if (exp == "|") return decode_predicate(exp[1]) | decode_predicate(exp[2]);;
-    if (exp == "^") return decode_predicate(exp[1]) ^ decode_predicate(exp[2]);;
+    if (exp == "&") {
+        auto rv = decode_predicate(exp[1]);
+        for (unsigned i = 2; i < exp.vec.size; ++i)
+            rv &= decode_predicate(exp[i]);
+        return rv; }
+    if (exp == "|") {
+        auto rv = decode_predicate(exp[1]);
+        for (unsigned i = 2; i < exp.vec.size; ++i)
+            rv |= decode_predicate(exp[i]);
+        return rv; }
+    if (exp == "^") {
+        auto rv = decode_predicate(exp[1]);
+        for (unsigned i = 2; i < exp.vec.size; ++i)
+            rv ^= decode_predicate(exp[i]);
+        return rv; }
     if (exp.type == tINT && exp.i >=0 && exp.i <= Target::STATEFUL_PRED_MASK()) return exp.i;
     error(exp.lineno, "Unexpected expression %s in predicate", value_desc(&exp));
     return -1;
@@ -286,7 +302,8 @@ struct AluOP : public SaluInstruction {
     void pass2(Table *tbl, Table::Actions::Action *)  override { }
     bool equiv(Instruction *a_) override;
     void dbprint(std::ostream &out) const override {
-        out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
+        out << "INSTR: " << opc->name << " pred=0x" << hex(predication_encode)
+            << " " << (dest ? "hi" : "lo") << ", " << srca << ", " << srcb; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
@@ -420,7 +437,7 @@ struct BitOP : public SaluInstruction {
     void pass2(Table *, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
     void dbprint(std::ostream &out) const override{
-        out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
+        out << "INSTR: " << opc->name; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
@@ -456,9 +473,9 @@ struct CmpOP : public SaluInstruction {
     } *opc;
     int                 type = 0;
     operand::Memory     *srca = 0;
-    uint64_t            maska = 0xffffffffU;
+    uint32_t            maska = 0xffffffffU;
     operand::Phv        *srcb = 0;
-    uint64_t            maskb = 0xffffffffU;
+    uint32_t            maskb = 0xffffffffU;
     operand::Const      *srcc = 0;
     bool                srca_neg = false, srcb_neg = false;
     bool                learn = false, learn_not = false;
@@ -479,8 +496,19 @@ struct CmpOP : public SaluInstruction {
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
-    void dbprint(std::ostream &out) const override{
-        out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
+    void dbprint(std::ostream &out) const override {
+        out << "INSTR: " << opc->name << " cmp" << slot;
+        if (srca) {
+            out << ", " << (srca_neg ? "-" : "") << *srca;
+            if (maska != 0xffffffffU)
+                out << " & 0x" << hex(maska); }
+        if (srcb) {
+            out << ", " << (srcb_neg ? "-" : "") << *srcb;
+            if (maskb != 0xffffffffU)
+                out << " & 0x" << hex(maskb); }
+        if (srcc) out << ", " << *srcc;
+        if (learn) out << ", learn";
+        if (learn_not) out << ", learn_not"; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
@@ -588,8 +616,13 @@ struct TMatchOP : public SaluInstruction {
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
-    void dbprint(std::ostream &out) const override{
-        out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
+    void dbprint(std::ostream &out) const override {
+        out << "INSTR: " << opc->name << " cmp" << slot;
+        if (srca) out << ", " << *srca;
+        if (mask) out << ", 0x" << hex(mask);
+        if (srcb) out << ", " << *srcb;
+        if (learn) out << ", learn";
+        if (learn_not) out << ", learn_not"; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
@@ -685,7 +718,11 @@ struct OutOP : public SaluInstruction {
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
     void dbprint(std::ostream &out) const override {
-        out << "INSTR: output " /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
+        out << "INSTR: output " << "pred=0x" << hex(predication_encode)
+#if HAVE_JBAY
+            << " word" << (slot - ALUOUT0)
+#endif
+            << " mux=" << output_mux; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };

@@ -189,8 +189,8 @@ void StatefulTable::gen_tbl_cfg(Target::JBay, json::map &tbl, json::map &stage_t
         if (has_pop)
             tbl["stateful_direction"] = "inout";
         else
-            tbl["stateful_direction"] = "out";
+            tbl["stateful_direction"] = "in";
     } else if (has_pop)
-        tbl["stateful_direction"] = "in";
+        tbl["stateful_direction"] = "out";
     tbl["stateful_counter_index"] = meter_group();
 }

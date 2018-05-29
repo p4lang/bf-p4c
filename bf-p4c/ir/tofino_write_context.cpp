@@ -38,9 +38,10 @@ bool TofinoWriteContext::isWrite(bool root_value) {
     if (auto *tm = prim->method_type->to<IR::Type_Method>()) {
     if (tm->parameters) {
     if (const IR::IndexedVector<IR::Parameter> *params = &tm->parameters->parameters) {
-    if (ctxt->child_index >= 0) {
-    if (static_cast<size_t>(ctxt->child_index) < params->size()) {
-        const IR::Direction d = params->at(ctxt->child_index)->direction;
+    if (ctxt->child_index > 0) {
+    // child 0 is 'this', which is not included in the parameter list
+    if (static_cast<size_t>(ctxt->child_index) <= params->size()) {
+        const IR::Direction d = params->at(ctxt->child_index - 1)->direction;
         if (d == IR::Direction::Out || d == IR::Direction::InOut)
             return true;
         else
@@ -112,12 +113,14 @@ bool TofinoWriteContext::isRead(bool root_value) {
     if (auto *tm = prim->method_type->to<IR::Type_Method>()) {
     if (tm->parameters) {
     if (const IR::IndexedVector<IR::Parameter> *params = &tm->parameters->parameters) {
-    if ((size_t)(ctxt->child_index) < params->size()) {
-        const IR::Direction d = params->at(ctxt->child_index)->direction;
+    if (ctxt->child_index > 0) {
+    // child 0 is 'this', which is not included in the parameter list
+    if ((size_t)(ctxt->child_index) <= params->size()) {
+        const IR::Direction d = params->at(ctxt->child_index-1)->direction;
         if (d == IR::Direction::In || d == IR::Direction::InOut)
             return true;
         else
-            return false; } } } } } }
+            return false; } } } } } } }
 
     if (ctxt->node->is<IR::MAU::Instruction>())
         return ctxt->child_index > 0;

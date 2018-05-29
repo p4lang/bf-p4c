@@ -4,6 +4,7 @@
 
 template<>
 void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
+    LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
@@ -52,6 +53,7 @@ void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions:
 
 template<>
 void BitOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
+    LOG2(this);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot-ALU2LO];
@@ -74,6 +76,7 @@ static int sbus_mask(int alu, const std::vector<Table::Ref> &tbls) {
 
 template<>
 void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
+    LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
@@ -85,12 +88,13 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
         salu.salu_cmp_asrc_enable = 1;
         if (maska != uint32_t(-1)) {
             salu.salu_cmp_asrc_mask_enable = 1;
-            if ((maska >= uint32_t(-32) || maska < 32) &&
-                (!srcc || srcc->value == maska || srcc->value < -32 || srcc->value >= 32)) {
+            auto cval = srcc ? srcc->value : 0;
+            if ((maska >= uint32_t(-32) || maska < 32) && 
+                (uint32_t(cval) == maska || cval < -32 || cval >= 32)) {
                 salu.salu_cmp_const_src = maska & 0x2f;
                 salu.salu_cmp_mask_input = 0;
             } else {
-                salu.salu_cmp_mask_input = 0;
+                salu.salu_cmp_mask_input = 1;
                 salu.salu_cmp_regfile_adr = tbl->get_const(maska); } } }
     if (srcb) {
         salu.salu_cmp_bsrc_input = srcb->phv_index(tbl);
@@ -99,13 +103,12 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
         if (maskb != uint32_t(-1)) {
             salu.salu_cmp_bsrc_mask_enable = 1;
             salu.salu_cmp_regfile_adr = tbl->get_const(maskb); } }
-    if (srcc) {
-        if (srcc->value >= -32 && srcc->value < 32) {
-            salu.salu_cmp_const_src = srcc->value & 0x2f;
-            salu.salu_cmp_regfile_const = 0;
-        } else {
-            salu.salu_cmp_regfile_adr = tbl->get_const(srcc->value);
-            salu.salu_cmp_regfile_const = 1; } }
+    if (srcc && (srcc->value < -32 || srcc->value >= 32)) {
+        salu.salu_cmp_regfile_adr = tbl->get_const(srcc->value);
+        salu.salu_cmp_regfile_const = 1;
+    } else {
+        salu.salu_cmp_const_src = srcc ? srcc->value & 0x2f : 0;
+        salu.salu_cmp_regfile_const = 0; }
     salu.salu_cmp_opcode = opc->opcode | (type << 2);
     if (auto lmask = sbus_mask(logical_home_row/4U, tbl->sbus_learn))
         salu_instr_common.salu_lmatch_sbus_listen = lmask;
@@ -120,14 +123,17 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions:
 
 template<>
 void TMatchOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
+    LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_cmp_alu[act->code][slot];
     auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
     salu.salu_cmp_tmatch_enable = 1;
-    meter_group.stateful.tmatch_mask[slot][0] = mask & 0xffffffffU;
-    meter_group.stateful.tmatch_mask[slot][1] = mask >> 32;
+    salu.salu_cmp_asrc_enable = 1;
+    salu.salu_cmp_bsrc_enable = 1;
+    meter_group.stateful.tmatch_mask[slot][0] = ~mask & 0xffffffffU;
+    meter_group.stateful.tmatch_mask[slot][1] = ~mask >> 32;
     salu.salu_cmp_opcode = 2;
     salu.salu_cmp_asrc_input = srca->field->bit(0) > 0;
     salu.salu_cmp_bsrc_input = srcb->phv_index(tbl);
@@ -160,6 +166,7 @@ void OutOP::decode_output_mux(Target::JBay, value_t &op) {
 
 template<>
 void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
+    LOG2(this);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_output_alu[act->code][slot - ALUOUT0];
