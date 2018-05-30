@@ -297,7 +297,7 @@ build_PI () {
         dirname="master"
         installdir=$tofino_installdir
     fi
-    get_repo "p4lang" "PI" $dirname "master"
+    get_repo "p4lang" "PI" $dirname "stable"
     pushd PI/$dirname >/dev/null
     builddir=$topdir/PI/$dirname/build
     if [ ! -d $builddir ]; then
