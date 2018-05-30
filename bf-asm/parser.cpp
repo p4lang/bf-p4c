@@ -307,7 +307,26 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
         } else if (kv.key == "end_pos") {
             if (CHECKTYPE(kv.value, tINT)) dst_bit_hdr_end_pos = kv.value.i;
         } else if (kv.key == "mask") {
-            if (CHECKTYPE(kv.value, tINT)) mask = kv.value.i;
+            if (CHECKTYPE(kv.value, tVEC)) {
+                for (int i = 0; i < kv.value.vec.size; i++) {
+                    auto range = kv.value[i];
+                    unsigned lo = 0, hi = 0;
+                    if (range.type == tRANGE) {
+                        lo = range.lo;
+                        hi = range.hi;
+                    } else if (range.type == tINT)
+                        lo = hi = range.i;
+                    else error(kv.value.lineno, "Syntax error, expecting range or int");
+
+                    if (lo > hi)
+                        error(kv.value.lineno, "Invalid parser checksum input");
+                    if ((hi + 1) > PARSER_INPUT_BUFFER_SIZE)
+                        error(kv.value.lineno, "Parser checksum out of input buffer?");
+
+                    for (int byte = lo; byte <= hi; ++byte)
+                       mask |= (1 << byte);
+                }
+            }
         } else if (kv.key == "shift") {
             shift = get_bool(kv.value);
         } else if (kv.key == "swap") {

@@ -577,9 +577,9 @@ struct ComputeLoweredParserIR : public ParserInspector {
         return name;
     }
 
-    IR::Vector<IR::BFN::LoweredParserChecksum2>
+    IR::Vector<IR::BFN::LoweredParserChecksum>
     lowerParserChecksums(std::vector<const IR::BFN::ParserPrimitive*>& checksums) {
-        IR::Vector<IR::BFN::LoweredParserChecksum2> loweredChecksums;
+        IR::Vector<IR::BFN::LoweredParserChecksum> loweredChecksums;
 
         bool end = false;
         const IR::BFN::FieldLVal* csum_err = nullptr;
@@ -612,7 +612,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         if (!masked_ranges.empty()) {
             // TODO(zma) residual checksum
-            auto csum2 = new IR::BFN::LoweredParserChecksum2(
+            auto csum2 = new IR::BFN::LoweredParserChecksum(
                 csum_id, masked_ranges, 0x0, true, end, /*type*/0);
 
             if (csum_err) {
@@ -965,7 +965,7 @@ struct InsertClotChecksums : public ParserModifier {
     struct GetCurrentChecksumId : public ParserInspector {
         unsigned current_id = 0;
 
-        bool preorder(const IR::BFN::LoweredParserChecksum2* csum) override {
+        bool preorder(const IR::BFN::LoweredParserChecksum* csum) override {
             current_id = std::max(current_id, csum->unit_id);
             return false;
         }
@@ -990,11 +990,11 @@ struct InsertClotChecksums : public ParserModifier {
         return ranges;
     }
 
-    IR::BFN::LoweredParserChecksum2*
+    IR::BFN::LoweredParserChecksum*
     createClotChecksum(unsigned id,
                        const std::vector<nw_byterange>& mask,
                        const Clot& clot) {
-        auto csum = new IR::BFN::LoweredParserChecksum2(
+        auto csum = new IR::BFN::LoweredParserChecksum(
                 id, mask, 0x0, true, true, /* type */2);
         csum->clot_dest = clot;
         return csum;
@@ -1373,13 +1373,13 @@ class ExtractorAllocator {
     struct MatchPrimitives {
         MatchPrimitives() { }
         MatchPrimitives(const IR::Vector<IR::BFN::LoweredParserPrimitive>& ext,
-                        const IR::Vector<IR::BFN::LoweredParserChecksum2>& chk,
+                        const IR::Vector<IR::BFN::LoweredParserChecksum>& chk,
                         const IR::Vector<IR::BFN::LoweredSave>& sa,
                         int sft)
             : extracts(ext), checksums(chk), saves(sa), shift(sft) { }
 
         IR::Vector<IR::BFN::LoweredParserPrimitive> extracts;
-        IR::Vector<IR::BFN::LoweredParserChecksum2> checksums;
+        IR::Vector<IR::BFN::LoweredParserChecksum> checksums;
         IR::Vector<IR::BFN::LoweredSave> saves;
         int shift;
     };
@@ -1404,7 +1404,7 @@ class ExtractorAllocator {
 
         // adding checksums.
         for (auto* prim : match->checksums) {
-            if (auto* cks = prim->to<IR::BFN::LoweredParserChecksum2>()) {
+            if (auto* cks = prim->to<IR::BFN::LoweredParserChecksum>()) {
                 checksums.push_back(cks);
             }
         }
@@ -1506,8 +1506,8 @@ class ExtractorAllocator {
     };
 
     struct SplitChecksumResult {
-        IR::Vector<IR::BFN::LoweredParserChecksum2>          allocatedChecksums;
-        std::vector<const IR::BFN::LoweredParserChecksum2*>  remainingChecksums;
+        IR::Vector<IR::BFN::LoweredParserChecksum>          allocatedChecksums;
+        std::vector<const IR::BFN::LoweredParserChecksum*>  remainingChecksums;
     };
 
     struct SplitSaveResult {
@@ -1539,7 +1539,7 @@ class ExtractorAllocator {
     SplitExtractResult splitOneByBandwidth(
             const std::vector<const IR::BFN::LoweredExtractPhv*>& extractPhvs,
             const std::vector<const IR::BFN::LoweredExtractClot*>& extractClots,
-            const IR::Vector<IR::BFN::LoweredParserChecksum2>& checksums) {
+            const IR::Vector<IR::BFN::LoweredParserChecksum>& checksums) {
         SplitExtractResult rst;
         auto& pardeSpec = Device::pardeSpec();
         int inputBufferLastByte = pardeSpec.byteInputBufferSize() - 1;
@@ -1671,7 +1671,7 @@ class ExtractorAllocator {
     /// for those checksums.
     SplitChecksumResult
     allocCanBeDoneChecksums(
-            const std::vector<const IR::BFN::LoweredParserChecksum2*>& checksums) {
+            const std::vector<const IR::BFN::LoweredParserChecksum*>& checksums) {
         SplitChecksumResult rst;
         for (const auto* cks : checksums) {
             bool can_be_done = std::all_of(cks->masked_ranges.begin(), cks->masked_ranges.end(),
@@ -1691,8 +1691,8 @@ class ExtractorAllocator {
     /// The first one is the former part checksum unit, and the second part is the latter.
     /// XXX(yumin): the second part is already left shifted by @p shifted.
     static
-    std::pair<const IR::BFN::LoweredParserChecksum2*, const IR::BFN::LoweredParserChecksum2*>
-    splitChecksumAt(const IR::BFN::LoweredParserChecksum2* cks, int shifted) {
+    std::pair<const IR::BFN::LoweredParserChecksum*, const IR::BFN::LoweredParserChecksum*>
+    splitChecksumAt(const IR::BFN::LoweredParserChecksum* cks, int shifted) {
         // shifted - 1 is the last byte allocated to the split state.
         int lastByte = shifted - 1;
         std::vector<nw_byterange> prev;
@@ -1747,7 +1747,7 @@ class ExtractorAllocator {
     /// remaining checksums are already left shifted by @p shifted bytes.
     SplitChecksumResult
     allocPartialChecksums(
-            const std::vector<const IR::BFN::LoweredParserChecksum2*>& checksums,
+            const std::vector<const IR::BFN::LoweredParserChecksum*>& checksums,
             int shifted) {
         SplitChecksumResult rst;
         for (const auto& cks : checksums) {
@@ -1860,7 +1860,7 @@ class ExtractorAllocator {
     int shifted;
     std::vector<const IR::BFN::LoweredExtractPhv*> extractPhvs;
     std::vector<const IR::BFN::LoweredExtractClot*> extractClots;
-    std::vector<const IR::BFN::LoweredParserChecksum2*> checksums;
+    std::vector<const IR::BFN::LoweredParserChecksum*> checksums;
     std::vector<const IR::BFN::LoweredSave*> saves;
     nw_byteinterval current_input_buffer;
 };
@@ -2293,8 +2293,8 @@ class ComputeBufferRequirements : public ParserModifier {
             bytesRead = bytesRead.unionWith(save->source->byteInterval());
         });
 
-        forAllMatching<IR::BFN::LoweredParserChecksum2>(&match->checksums,
-                      [&] (const IR::BFN::LoweredParserChecksum2* cks) {
+        forAllMatching<IR::BFN::LoweredParserChecksum>(&match->checksums,
+                      [&] (const IR::BFN::LoweredParserChecksum* cks) {
             for (const auto& r : cks->masked_ranges) {
                 bytesRead = bytesRead.unionWith(toHalfOpenRange(r)); }
         });

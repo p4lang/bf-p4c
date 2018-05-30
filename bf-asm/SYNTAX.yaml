@@ -74,6 +74,13 @@ parser [<thread>]:
                     # number bytes that must be in the input buffer to not stall
                 counter: [set] <constant> | inc <constant> | dec <constant> | load <expression>
                     # modification of the counter
+                checksum <int>:
+                    # modification of checksum unit <int>
+                    type: verify | residual | clot
+                    mask: <vector> # vector of byte ranges of input buffer
+                    swap: <vector>
+                    start: 0 | 1
+                    end: 0 | 1
                 next: <name> | <match-constant>
                     # next state -- match-constant takes don't care bits
                     # from current state
@@ -636,13 +643,14 @@ deparser <thread>:
             pov: <bit-location>
             length: <int>
                 # maximum length of the clot
-            <int>: <phv_location>
-                # offset in clot to replace with a PHV value
+            <int>: <phv_location> | checksum <int> 
+                # offset in clot to replace with a PHV or checksum value
     pov: <phv-location> | '[' <phv-location>, ... ']'
         # optional explicit use/ordering of phvs for POV.  All phvs used for POV bits
         # in the dictionary will be added to the end of this, if not already present
     checksum <int>:
         <phv-location> [ ':' <pov-bit> ]
+        swap: <vector> # containers that need a swap
         # checksum unit programming -- pov bits for jbay only
     <name>: <phv-location> [ ':' <pov-bit ] | <digest-params>
         # more generally, any deparser param that comes from the phv is

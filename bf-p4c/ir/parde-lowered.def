@@ -120,7 +120,7 @@ class LoweredExtractClot : LoweredParserPrimitive {
 #end
 }
 
-class LoweredParserChecksum2 : LoweredParserPrimitive {
+class LoweredParserChecksum : LoweredParserPrimitive {
     dbprint {
         out << "parser checksum: ";
         out << "unit = "  << unit_id << ", ";
@@ -215,39 +215,38 @@ class LoweredPvsMatchValue : LoweredMatchValue {
     int size;
 }
 
-/// A lowered parser match construct. Each LoweredParserMatch logically
-/// represents a single row in the parser TCAM for constant matches;
-/// or a single value set which may use multiple rows in the parser TCAM.
+/// This class represents the operations to perform on a match at
+/// the current parser state. Each LoweredParserMatch uses a single
+/// TCAM row in the parser for constant matches, and multiple TCAM rows
+/// for value sets. Operations use a row in their associated action RAMs
+/// (Early Action RAM and Checksum Control RAM).
 class LoweredParserMatch {
 #emit
     LoweredParserMatch(match_t value, unsigned shift, const LoweredParserState* next)
         : value(new IR::BFN::LoweredConstMatchValue(value)),
           shift(shift), bufferRequired(0), next(next) { }
 #end
-    /// The mask which will be matched against the value the containing state
-    /// selects against.
+    /// The match value: constant or a value set
     LoweredMatchValue value;
 
-    /// If the match is successful, the number of bytes to shift out before
-    /// transitioning to the next state.
+    /// Number of bytes to shift out of input buffer at current state  
     unsigned shift;
 
-    /// If the match is successful, the extractions to perform.
+    /// Extractions to perform
     inline Vector<LoweredParserPrimitive> statements;
 
-    /// If the match is successful, the save to register to perform.
+    /// Save match word to registers
     inline Vector<LoweredSave> saves;
 
-    ///
-    inline Vector<LoweredParserChecksum2> checksums;
+    /// Checksum calculations
+    inline Vector<LoweredParserChecksum> checksums;
 
     /// The number of packet bytes which must be available in the input buffer
     /// for the extractions to be performed successfully. If `boost::none`,
     /// there is no particular requirement; the assembler will choose a default.
     optional boost::optional<unsigned> bufferRequired;
 
-    /// If the match is successful, the next state to transition to, or null if
-    /// this is a terminal state in the parser program.
+    /// Next state to transition to (null means terminal state)
     NullOK LoweredParserState next;
 
 #emit
