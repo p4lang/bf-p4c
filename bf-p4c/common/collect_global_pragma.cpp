@@ -7,6 +7,7 @@ CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
     PHV::pragma::ALIAS,
     PHV::pragma::ATOMIC,
     PHV::pragma::CONTAINER_SIZE,
+    PHV::pragma::CONTAINER_TYPE,
     PHV::pragma::MUTUALLY_EXCLUSIVE,
     PHV::pragma::NO_OVERLAY,
     PHV::pragma::SOLITARY

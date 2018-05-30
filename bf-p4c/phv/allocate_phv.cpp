@@ -1958,6 +1958,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     std::set<const PHV::SuperCluster*> non_slicable;
     std::set<const PHV::SuperCluster*> has_pov;
     std::map<const PHV::SuperCluster*, int> n_extracted_uninitialized;
+    std::set<const PHV::SuperCluster*> has_container_type_pragma;
 
     // calc whether the cluster has pov bits.
     for (auto* cluster : cluster_groups) {
@@ -1966,6 +1967,20 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
                 has_pov.insert(cluster);
         });
     }
+
+#if HAVE_JBAY
+    // calc whether the cluster has container type pragma. Only for JBay.
+    if (Device::currentDevice() == "JBay") {
+        const ordered_map<const PHV::Field*, cstring> container_type_pragmas =
+            core_alloc_i.pragmas().pa_container_type().getFields();
+        for (auto* cluster : cluster_groups) {
+            cluster->forall_fieldslices([&] (const PHV::FieldSlice& fs) {
+                if (container_type_pragmas.count(fs.field()))
+                    has_container_type_pragma.insert(cluster);
+            });
+        }
+    }
+#endif
 
     // calc num_pack_conflicts
     for (auto* super_cluster : cluster_groups)
@@ -2063,6 +2078,11 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     //     return l->max_width() > r->max_width(); }
 
     auto ClusterGroupComparator = [&] (PHV::SuperCluster* l, PHV::SuperCluster* r) {
+#if HAVE_JBAY
+        if (Device::currentDevice() == "JBay") {
+            if (has_container_type_pragma.count(l) != has_container_type_pragma.count(r)) {
+                return has_container_type_pragma.count(l) > has_container_type_pragma.count(r); } }
+#endif
         if (has_no_pack.count(l) != has_no_pack.count(r)) {
             return has_no_pack.count(l) > has_no_pack.count(r); }
         if (has_no_split.count(l) != has_no_split.count(r)) {
