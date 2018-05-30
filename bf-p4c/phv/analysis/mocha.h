@@ -32,11 +32,6 @@ class CollectMochaCandidates : public Inspector {
     /// Size in bits of mocha candidates.
     size_t          mochaSize;
 
-    /// @returns true when @f is a field from a packet (not metadata, pov, or bridged field).
-    static bool isPacketField(const PHV::Field* f) {
-        return (f && !f->metadata && !f->pov && !f->bridged && !f->alwaysPackable);
-    }
-
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::MAU::Action* act) override;
     void end_apply() override;
@@ -49,6 +44,11 @@ class CollectMochaCandidates : public Inspector {
 
  public:
     explicit CollectMochaCandidates(PhvInfo& p, const PhvUse& u) : phv(p), uses(u) { }
+
+    /// @returns true when @f is a field from a packet (not metadata, pov, or bridged field).
+    static bool isPacketField(const PHV::Field* f) {
+        return (f && !f->metadata && !f->pov && !f->bridged && !f->alwaysPackable);
+    }
 };
 
 #endif  /* EXTENSIONS_BF_P4C_PHV_ANALYSIS_MOCHA_H_ */

@@ -38,6 +38,7 @@
 #include "bf-p4c/phv/phv_analysis.h"
 #include "bf-p4c/phv/privatization.h"
 #include "bf-p4c/phv/validate_allocation.h"
+#include "bf-p4c/phv/analysis/dark.h"
 
 namespace BFN {
 
@@ -179,14 +180,18 @@ Backend::Backend(const BFN_Options& options) :
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
-        new CollectPhvInfo(phv),
         new MergeParserStates,
         &defuse,
-
+#if HAVE_JBAY
+        Device::currentDevice() == "JBay" ? new DarkPrivatization(phv) : nullptr,
+                                    // Allow allocation into dark PHVs for testing purposes
+#endif
         // SetExternalNameForBridgedMetadata must run after
         // CollectNameAnnotations.  DO NOT RUN CollectPhvInfo afterwards, as
         // this will destroy the external names for bridged metadata PHV::Field
         // objects.
+        new CollectPhvInfo(phv),
+        &defuse,
         new SetExternalNameForBridgedMetadata(phv, bridged_fields),
 
         new CheckForHeaders(),

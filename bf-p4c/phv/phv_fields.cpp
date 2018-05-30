@@ -693,10 +693,10 @@ class CollectPhvFields : public Inspector {
             f->set_no_pack(true);
             f->set_no_split(true);
         }
-        // A field that ends with PHV::Field::PRIVATIZE_SUFFIX is the TPHV copy of a header field,
-        // produced during the Privatization pass. This field must be marked appropriately as
+        // A field that ends with PHV::Field::TPHV_PRIVATIZE_SUFFIX is the TPHV copy of a header
+        // field, produced during the Privatization pass. This field must be marked appropriately as
         // privatized.
-        if (tv->name.endsWith(PHV::Field::PRIVATIZE_SUFFIX)) {
+        if (tv->name.endsWith(PHV::Field::TPHV_PRIVATIZE_SUFFIX)) {
             PHV::Field* f = phv.field(tv);
             BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
             f->set_privatized(true);

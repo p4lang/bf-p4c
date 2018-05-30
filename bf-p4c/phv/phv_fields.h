@@ -78,7 +78,8 @@ struct FieldOperation {
 class Field {
  public:
     /// This suffix is added to the name of the privatized (TPHV) copy of a field.
-    static constexpr char const *PRIVATIZE_SUFFIX = "$tphv";
+    static constexpr char const *TPHV_PRIVATIZE_SUFFIX = "$tphv";
+    static constexpr char const *DARK_PRIVATIZE_SUFFIX = "$dark";
 
     /** Field name, following this scheme:
      *   - "header.field"
@@ -408,6 +409,17 @@ class Field {
                                                        /// PHV.
     bool            dark_i = false;                    /// true if field is a candidate for dark
                                                        /// PHV.
+#if HAVE_JBAY
+    /// XXX(Deep): Until we move to a stage-based allocation that allows us to move fields into and
+    /// out of dark containers, the utilization of dark containers in JBay is not significant. To
+    /// address this and enable testing, I am introducing a privatizable dark category of fields.
+    /// These fields satisfy all the requirements for dark containers, except that they are used in
+    /// the parser/deparser. So, we create two versions of such a field--the normal/mocha version
+    /// which is involved in the parde operations and the privatized dark version. The
+    /// privatizable_dark_i property is set to true for all mocha fields that could be allocated
+    /// into dark containers with dark privatization.
+    bool            privatizable_dark_i = false;
+#endif
 
     /// Ranges of this field that can not be split.
     /// E.g. in a<32b> = b<32b> + c[0:31]<48b>, [0:31] will be the no_split range for c.
@@ -498,6 +510,11 @@ class Field {
     void set_mocha_candidate(bool c)                       { mocha_i = c; }
     void set_dark_candidate(bool c)                        { dark_i = c; }
 
+#if HAVE_JBAY
+    bool is_privatizable_dark() const                      { return privatizable_dark_i; }
+    void set_privatizable_dark(bool c)                     { privatizable_dark_i = c; }
+#endif
+
     //
     // constraints
     //
@@ -540,20 +557,21 @@ class Field {
     bool constrained(bool packing_constraint = false) const;
 
     /// If a field is privatized (TPHV copy of header field), @returns the name of the PHV field
-    /// (name of the privatized field less the PHV::Field::PRIVATIZE_SUFFIX).
+    /// (name of the privatized field less the PHV::Field::TPHV_PRIVATIZE_SUFFIX).
     /// If field is not privatized, return empty string.
     boost::optional<cstring> getPHVPrivateFieldName() const {
         if (!privatized_i) return boost::none;
         size_t strLength = name.size();
         LOG1("Length of suffix: " << strLength);
-        strLength -= strlen(PHV::Field::PRIVATIZE_SUFFIX);  // Ignore PHV::Field::PRIVATIZE_SUFFIX
+        // Ignore PHV::Field::TPHV_PRIVATIZE_SUFFIX
+        strLength -= strlen(PHV::Field::TPHV_PRIVATIZE_SUFFIX);
         return name.substr(0, strLength);
     }
 
     /// @returns the name of the privatized copy (TPHV copy) of the field.
     boost::optional<cstring> getTPHVPrivateFieldName() const {
         if (!privatizable_i) return boost::none;
-        cstring tphvName = name + PRIVATIZE_SUFFIX;
+        cstring tphvName = name + TPHV_PRIVATIZE_SUFFIX;
         return tphvName;
     }
 

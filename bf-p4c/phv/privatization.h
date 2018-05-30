@@ -85,8 +85,8 @@ class CollectFieldsForPrivatization : public Inspector {
 
 /** This class transforms the backend IR as follows:
   * 0. This pass creates a privatized temporary variable for each privatizable field, named
-  *    "field_name.PHV::Field::PRIVATIZE_SUFFIX" that uniquely identifies the privatized temporary
-  *    variable.
+  *    "field_name.PHV::Field::TPHV_PRIVATIZE_SUFFIX" that uniquely identifies the privatized
+  *    temporary variable.
   * 1. Parser now extracts the same range to both the PHV (privatizable) and TPHV (privatized) copy
   *    of the same field.
   * 2. Deparser emits the container for the TPHV (privatized) copy.
