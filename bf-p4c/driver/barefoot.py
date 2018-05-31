@@ -25,8 +25,12 @@ from p4c_src.driver import BackendDriver
 # Search the environment for assets
 if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
     bfas = find_file('bf-asm', 'bfas')
+    bfrt_gen = os.path.join(
+        os.environ['P4C_BIN_DIR'],
+        '../../bf-p4c/control-plane/gen_bf_rt_json_schema.py')
 else:
     bfas = find_file(os.environ['P4C_BIN_DIR'], 'bfas')
+    bfrt_gen = find_file(os.environ['P4C_BIN_DIR'], 'gen_bf_rt_json_schema.py')
 
 class BarefootBackend(BackendDriver):
     def __init__(self, target, arch, argParser):
@@ -36,6 +40,8 @@ class BarefootBackend(BackendDriver):
         self.add_command('compiler',
                          os.path.join(os.environ['P4C_BIN_DIR'], 'p4c-barefoot'))
         self.add_command('assembler', bfas)
+        self.add_command('bf-rt-verifier', bfrt_gen)
+
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self.add_command(
                 'verifier',
@@ -45,10 +51,7 @@ class BarefootBackend(BackendDriver):
                 'manifest-verifier',
                 os.path.join(os.environ['P4C_BIN_DIR'],
                              '../../scripts/validate_manifest'))
-            self.add_command(
-                'bf-rt-verifier',
-                os.path.join(os.environ['P4C_BIN_DIR'],
-                             '../../bf-p4c/control-plane/gen_bf_rt_json_schema.py'))
+
         self.add_command('archiver', 'tar')
 
         # order of commands
@@ -72,14 +75,14 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--archive",
                                     help="Archive all outputs into a single tar.bz2 file",
                                     action="store_true", default=False)
+        self._argGroup.add_argument("--bf-rt-schema", action="store",
+                                    help="Generate and write BF-RT JSON schema  to the specified file")
+
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self._argGroup.add_argument("--validate-output", action="store_true", default=False,
                                         help="run context.json validation")
             self._argGroup.add_argument("--validate-manifest", action="store_true", default=False,
                                         help="run manifest validation")
-            self._argGroup.add_argument("--bf-rt-schema", action="store",
-                                        help="Generate and write BF-RT JSON schema  to the specified file")
-
 
     def config_preprocessor(self, targetDefine):
         self.add_command_option('preprocessor', "-E -x c")
@@ -138,6 +141,12 @@ class BarefootBackend(BackendDriver):
         if opts.create_graphs:
             self.add_command_option('compiler', '--create-graphs')
 
+        if opts.bf_rt_schema is not None:
+            self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))
+
+            self.add_command_option('bf-rt-verifier', opts.bf_rt_schema)
+            self._commandsEnabled.append('bf-rt-verifier')
+
         # Developer only options
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             if opts.validate_output:
@@ -146,12 +155,6 @@ class BarefootBackend(BackendDriver):
             if opts.validate_manifest:
                 self.add_command_option('manifest-verifier', "{}/manifest.json".format(output_dir))
                 self._commandsEnabled.append('manifest-verifier')
-
-            if opts.bf_rt_schema is not None:
-                self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))
-
-                self.add_command_option('bf-rt-verifier', opts.bf_rt_schema)
-                self._commandsEnabled.append('bf-rt-verifier')
 
         # if we need to generate an archive, should be the last command
         if opts.archive:
