@@ -937,14 +937,6 @@ p4c_add_xfail_reason("tofino"
 #   extensions/p4_tests/p4_14/c1/BRIG-372/case4346.p4
 #   )
 
-# XXX(cole): The following test appears impossible to compile on Tofino,
-# because it has non-byte aligned header fields (parsed/deparsed) subject to
-# arithmetic operations (no_split/no_pack).
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  extensions/p4_tests/p4_14/brig-11.p4
-  )
-
 # BRIG-400
 p4c_add_xfail_reason("tofino"
   "non-header in *"
