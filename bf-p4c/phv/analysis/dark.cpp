@@ -1,4 +1,5 @@
 #include "bf-p4c/phv/analysis/dark.h"
+#include <queue>
 
 Visitor::profile_t CollectDarkCandidates::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);
@@ -19,19 +20,27 @@ bool CollectDarkCandidates::preorder(const IR::MAU::Action* act) {
 }
 
 bool CollectDarkCandidates::preorder(const IR::MAU::Table* tbl) {
+    LOG5("Table: " << tbl->name);
     for (auto kv : tbl->gateway_rows) {
         if (kv.first == nullptr) continue;
-        auto* op = kv.first->to<IR::Operation_Binary>();
-        if (!op)
-            continue;
-        const PHV::Field* left = phv.field(op->left);
-        if (left) {
-            LOG5("    Input crossbar read, field in gateway condition: " << left);
-            nonDarkMauUses[left->id] = true; }
-        const PHV::Field* right = phv.field(op->right);
-        if (right) {
-            LOG5("    Input crossbar read, field in gateway condition: " << right);
-            nonDarkMauUses[right->id] = true; } }
+        LOG5("  Gateway row: " << kv.first);
+        std::queue<const IR::Expression*> expressions;
+        expressions.push(kv.first);
+        while (!expressions.empty()) {
+            const IR::Expression* expr = expressions.front();
+            expressions.pop();
+            if (auto* op = expr->to<IR::Operation_Binary>()) {
+                LOG5("    Binary operation Expression: " << expr);
+                if (op->left)
+                    expressions.push(op->left);
+                if (op->right)
+                    expressions.push(op->right);
+            } else {
+                LOG5("    Non-binary operation expression: " << expr);
+                const PHV::Field* field = phv.field(expr);
+                if (field) {
+                    LOG5("    Input crossbar read, field in gateway condition: " << field);
+                    nonDarkMauUses[field->id] = true; } } } }
     return true;
 }
 
