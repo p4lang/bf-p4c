@@ -27,11 +27,10 @@ class ClotInfo {
     std::set<const PHV::Field*> checksum_dests_;
 
     std::vector<const Clot*> clots_;
-    std::map<const Clot*, const IR::BFN::ParserState*> clot_to_parser_state_;
-    std::map<const IR::BFN::ParserState*, std::vector<const Clot*>> parser_state_to_clots_;
+    std::map<const Clot*, cstring> clot_to_parser_state_;
+    std::map<cstring, std::vector<const Clot*>> parser_state_to_clots_;
 
-    std::map<const IR::BFN::ParserState*,
-             std::map<PHV::Container, nw_byterange>> container_range_;
+    std::map<cstring, std::map<PHV::Container, nw_byterange>> container_range_;
     std::map<const PHV::Field*, nw_bitrange> field_range_;
 
  public:
@@ -42,17 +41,17 @@ class ClotInfo {
 
     unsigned num_clots_allocated() const { return Clot::tagCnt; }
 
-    const std::map<const Clot*, const IR::BFN::ParserState*>&
+    const std::map<const Clot*, cstring>&
         clot_to_parser_state()const { return clot_to_parser_state_; }
 
-    const std::map<const IR::BFN::ParserState*, std::vector<const Clot*>>&
+    const std::map<cstring, std::vector<const Clot*>>&
         parser_state_to_clots() const { return parser_state_to_clots_; }
 
-    std::map<const IR::BFN::ParserState*,
+    std::map<cstring,
               std::map<PHV::Container, nw_byterange>>& container_range() {
         return container_range_; }
 
-    const std::map<const IR::BFN::ParserState*,
+    const std::map<cstring,
               std::map<PHV::Container, nw_byterange>>& container_range() const {
         return container_range_; }
 
@@ -65,8 +64,8 @@ class ClotInfo {
 
     void add_clot(const Clot* cl, const IR::BFN::ParserState* state) {
         clots_.push_back(cl);
-        clot_to_parser_state_[cl] = state;
-        parser_state_to_clots_[state].push_back(cl);
+        clot_to_parser_state_[cl] = state->name;
+        parser_state_to_clots_[state->name].push_back(cl);
     }
 
     bool is_clot_candidate(const PHV::Field* field) const {

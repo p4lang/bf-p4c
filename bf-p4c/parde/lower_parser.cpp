@@ -691,14 +691,14 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         auto loweredChecksums = lowerParserChecksums(checksums);
 
-        // XXX(zma) populate container range in clot info
+        // populate container range in clot info
 
         for (auto stmt : loweredStatements) {
             if (auto extract = stmt->to<IR::BFN::LoweredExtractPhv>()) {
                 if (auto* source = extract->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
                     auto bytes = source->extractedBytes();
                     auto container = extract->dest->container;
-                    clotInfo.container_range()[state][container] = bytes;
+                    clotInfo.container_range()[state->name][container] = bytes;
                 }
             }
         }

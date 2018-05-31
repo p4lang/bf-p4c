@@ -243,7 +243,7 @@ class NaiveClotAlloc : public Visitor {
                 auto& state_clots = clotInfo.parser_state_to_clots();
 
                 // XXX(zma) needs to optimize this ...
-                if (state_clots.count(s) && state_clots.at(s).size() > 0) {
+                if (state_clots.count(s->name) && state_clots.at(s->name).size() > 0) {
                     int credit = 0;
 
                     if (credit_map.count(s))
@@ -359,15 +359,15 @@ class NaiveClotAlloc : public Visitor {
         // now allocate
         Clot* clot = nullptr;
 
-        // see if can find a mutex state and reuse clot
+        // see if can find a mutex state and reuse clot tag
         int overlay_tag = -1;
 
         const IR::BFN::Parser* parser = parserInfo.parser(ca.state);
         auto& mutex_state_map = parserInfo.mutex(parser).mutex_state_map();
         if (mutex_state_map.count(ca.state) > 0) {
             for (auto s : mutex_state_map.at(ca.state)) {
-                if (clotInfo.parser_state_to_clots().count(s) > 0) {
-                    auto& clots = clotInfo.parser_state_to_clots().at(s);
+                if (clotInfo.parser_state_to_clots().count(s->name) > 0) {
+                    auto& clots = clotInfo.parser_state_to_clots().at(s->name);
                     overlay_tag = clots[0]->tag;
                     LOG3("can overlay with state " << s->name << " clot " << overlay_tag);
                     break;
