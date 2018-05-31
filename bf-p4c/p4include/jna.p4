@@ -65,12 +65,19 @@ control EgressDeparser<H, M>(
     in M metadata,
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs);
 
-package Switch<IH, IM, EH, EM>(
+package Pipeline<IH, IM, EH, EM>(
     IngressParser<IH, IM> ingress_parser,
     Ingress<IH, IM> ingress,
     IngressDeparser<IH, IM> ingress_deparser,
     EgressParser<EH, EM> egress_parser,
     Egress<EH, EM> egress,
     EgressDeparser<EH, EM> egress_deparser);
+
+package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
+               IH2, IM2, EH2, EM2, IH3, IM3, EH3, EM3>(
+    Pipeline<IH0, IM0, EH0, EM0> pipe0,
+    @optional Pipeline<IH1, IM1, EH1, EM1> pipe1,
+    @optional Pipeline<IH2, IM2, EH2, EM2> pipe2,
+    @optional Pipeline<IH3, IM3, EH3, EM3> pipe3);
 
 #endif  /* _JBAY_NATIVE_ARCHITECTURE_P4_ */

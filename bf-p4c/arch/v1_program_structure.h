@@ -27,6 +27,7 @@ struct ProgramStructure : BFN::ProgramStructure {
     void createParsers() override;
     void createControls() override;
     void createMain() override;
+    void createPipeline();
     const IR::P4Program *create(const IR::P4Program *program) override;
 };
 

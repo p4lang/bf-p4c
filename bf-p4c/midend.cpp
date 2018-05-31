@@ -19,6 +19,7 @@
 #include "midend/expandLookahead.h"
 #include "midend/local_copyprop.h"
 #include "midend/nestedStructs.h"
+#include "midend/orderArguments.h"
 #include "midend/predication.h"
 #include "midend/removeLeftSlices.h"
 #include "midend/removeParameters.h"
@@ -170,6 +171,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new BFN::CheckHeaderAlignment(&typeMap),
         new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
         new P4::RemoveActionParameters(&refMap, &typeMap),
+        new P4::OrderArguments(&refMap, &typeMap),
         new BFN::ArchTranslation(&refMap, &typeMap, options),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::SimplifyKey(&refMap, &typeMap,

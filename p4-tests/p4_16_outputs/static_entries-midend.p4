@@ -1,30 +1,4 @@
-error {
-    NoError,
-    PacketTooShort,
-    NoMatch,
-    StackOutOfBounds,
-    HeaderTooShort,
-    ParserTimeout
-}
-
-extern packet_in {
-    void extract<T>(out T hdr);
-    void extract<T>(out T variableSizeHeader, in bit<32> variableFieldSizeInBits);
-    T lookahead<T>();
-    void advance(in bit<32> sizeInBits);
-    bit<32> length();
-}
-
-extern packet_out {
-    void emit<T>(in T hdr);
-}
-
-extern void verify(in bool check, in error toSignal);
-match_kind {
-    exact,
-    ternary,
-    lpm
-}
+#include <core.p4>
 #include <tofino.p4>
 #include <tna.p4>
 
@@ -108,5 +82,7 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, i
     }
 }
 
-Switch<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) main;
+Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
+
+Switch<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipe0) main;
 

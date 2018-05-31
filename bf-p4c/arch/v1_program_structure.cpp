@@ -50,9 +50,9 @@ void ProgramStructure::createControls() {
     declarations.push_back(egDeparser);
 }
 
-void ProgramStructure::createMain() {
-    auto name = IR::ID(IR::P4Program::main);
-    auto typepath = new IR::Path("Switch");
+void ProgramStructure::createPipeline() {
+    auto name = IR::ID("pipe");
+    auto typepath = new IR::Path("Pipeline");
     auto type = new IR::Type_Name(typepath);
     auto typeArgs = new IR::Vector<IR::Type>();
     typeArgs->push_back(new IR::Type_Name(type_h));
@@ -98,6 +98,30 @@ void ProgramStructure::createMain() {
     declarations.push_back(result);
 }
 
+void ProgramStructure::createMain() {
+    auto name = IR::ID("main");
+    auto typepath = new IR::Path("Switch");
+    auto type = new IR::Type_Name(typepath);
+    auto typeArgs = new IR::Vector<IR::Type>();
+    typeArgs->push_back(new IR::Type_Name(type_h));
+    typeArgs->push_back(new IR::Type_Name(type_m));
+    typeArgs->push_back(new IR::Type_Name(type_h));
+    typeArgs->push_back(new IR::Type_Name(type_m));
+    typeArgs->push_back(new IR::Type_Name("compiler_generated_metadata_t"));
+    // P4-14 only uses one pipeline, hence the other type arguments are dont_care.
+    for (auto i=0; i < 15; i++)
+        typeArgs->push_back(new IR::Type_Dontcare());
+    auto typeSpecialized = new IR::Type_Specialized(type, typeArgs);
+
+    auto args = new IR::Vector<IR::Argument>();
+    auto pipe0 = new IR::Path("pipe");
+    auto expr = new IR::PathExpression(pipe0);
+    args->push_back(new IR::Argument(expr));
+
+    auto result = new IR::Declaration_Instance(name, typeSpecialized, args, nullptr);
+    declarations.push_back(result);
+}
+
 /// Remap paths, member expressions, and type names according to the mappings
 /// specified in the given ProgramStructure.
 struct ConvertNames : public PassManager {
@@ -114,6 +138,7 @@ const IR::P4Program *ProgramStructure::create(const IR::P4Program *program) {
     createActions();
     createParsers();
     createControls();
+    createPipeline();
     createMain();
     auto *convertedProgram = new IR::P4Program(program->srcInfo, declarations);
 

@@ -40,7 +40,7 @@ control IngressP(
         in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
- 
+
     action act(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
         hdr.data.f1 = (bit<32>)(hdr.data.b2);
@@ -92,4 +92,5 @@ control DeparserE(packet_out b,
     apply { b.emit(hdr.data); }
 }
 
-Switch(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) main;
+Pipeline(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) pipe0;
+Switch(pipe0) main;

@@ -1,3 +1,4 @@
+
 control ingressDeparser(packet_out packet, inout headers hdr, in metadata meta,
                         in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprs) {
     apply {
@@ -34,4 +35,5 @@ control egressDeparser(packet_out packet, inout headers hdr, in metadata meta,
     }
 }
 
-Switch(ingressParser(), ingress(), ingressDeparser(), egressParser(), egress(), egressDeparser()) main;
+Pipeline(ingressParser(), ingress(), ingressDeparser(), egressParser(), egress(), egressDeparser()) pipe;
+Switch(pipe) main;

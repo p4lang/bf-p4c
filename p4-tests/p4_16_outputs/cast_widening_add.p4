@@ -75,5 +75,7 @@ control DeparserE(packet_out b, inout headers hdr, in metadata meta, in egress_i
     }
 }
 
-Switch(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) main;
+Pipeline(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) pipe0;
+
+Switch(pipe0) main;
 

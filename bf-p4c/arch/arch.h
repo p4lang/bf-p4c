@@ -117,10 +117,8 @@ using ProgramThreads = std::map<std::pair<int, gress_t>, const IR::BFN::P4Thread
 using BlockInfoMapping = std::map<const IR::Node*, BlockInfo>;
 
 class ParseTna : public Inspector {
-    int nPipes;
-
  public:
-    ParseTna(const int nPipes, ProgramThreads *threads) : nPipes(nPipes), threads(threads) {
+    explicit ParseTna(ProgramThreads *threads) : threads(threads) {
         CHECK_NULL(threads);
     }
 
@@ -163,19 +161,11 @@ class ParseTna : public Inspector {
     }
 
     bool preorder(const IR::PackageBlock* block) override {
-        if (nPipes == 1) {
-            parsePipeline(block, 0 /* pipe 0 */);
-        } else if (nPipes == 2 || nPipes == 4) {
-            for (auto i = 0; i < nPipes; i++) {
-                cstring pipeName = "pipe" + cstring::to_cstring(i);
-                if (auto param = block->getParameterValue(pipeName)) {
-                    if (!param->is<IR::PackageBlock>()) {
-                        ::error("Unexpected argument type %1%", param);
-                        return false;
-                    }
-                    parsePipeline(param->to<IR::PackageBlock>(), i);
-                }
-            }
+        auto pos = 0;
+        for (auto param : block->constantValue) {
+            if (!param.second) continue;
+            if (!param.second->is<IR::PackageBlock>()) continue;
+            parsePipeline(param.second->to<IR::PackageBlock>(), pos++);
         }
         return false;
     }

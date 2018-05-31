@@ -54,7 +54,7 @@ control inner_multiple(inout headers hdr,
         actions = { t2_act;
                     noop; }
         key = { hdr.data.h2: exact; }
-        default_action = noop; 
+        default_action = noop;
     }
 
     table t3 {
@@ -116,10 +116,10 @@ control IngressP(
     apply {
         if (hdr.data.b1 == 0) {
             if (!t1.apply().hit) {
-                inner_multiple.apply(hdr, meta, ig_intr_md, ig_intr_prsr_md, ig_intr_tm_md); 
+                inner_multiple.apply(hdr, meta, ig_intr_md, ig_intr_prsr_md, ig_intr_tm_md);
             }
         } else {
-            inner_multiple.apply(hdr, meta, ig_intr_md, ig_intr_prsr_md, ig_intr_tm_md); 
+            inner_multiple.apply(hdr, meta, ig_intr_md, ig_intr_prsr_md, ig_intr_tm_md);
         }
         port_setter.apply();
     }
@@ -162,4 +162,5 @@ control DeparserE(packet_out b,
     apply { b.emit(hdr.data); }
 }
 
-Switch(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) main;
+Pipeline(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) pipe0;
+Switch(pipe0) main;

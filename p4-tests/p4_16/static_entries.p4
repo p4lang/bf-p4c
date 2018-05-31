@@ -134,9 +134,11 @@ control SwitchEgress(
     apply {}
 }
 
-Switch(SwitchIngressParser(),
+Pipeline(SwitchIngressParser(),
        SwitchIngress(),
        SwitchIngressDeparser(),
        SwitchEgressParser(),
        SwitchEgress(),
-       SwitchEgressDeparser()) main;
+       SwitchEgressDeparser()) pipe0;
+
+Switch(pipe0) main;

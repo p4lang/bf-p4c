@@ -117,9 +117,8 @@ class BackendConverter {
         CHECK_NULL(refMap); CHECK_NULL(typeMap); CHECK_NULL(toplevel); }
 
     void convert(const IR::P4Program *prog, BFN_Options& options);
-    void convertBackendPipe(const IR::P4Program* program, BFN_Options& options, int pipe_used);
-    void convertBackendPipe(const IR::P4Program *program, BFN_Options &options);
-    void extractThreads(int nPipes);
+    void convertTnaProgram(const IR::P4Program *program, BFN_Options &options);
+    void convertV1Program(const IR::P4Program *program, BFN_Options &options);
 
     std::map<int /* index */, const IR::BFN::Pipe*> pipe;
 };

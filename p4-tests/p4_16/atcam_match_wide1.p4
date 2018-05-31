@@ -117,4 +117,5 @@ control DeparserE(packet_out b,
     apply { b.emit(hdr.data); }
 }
 
-Switch(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) main;
+Pipeline(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) pipe0;
+Switch(pipe0) main;

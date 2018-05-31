@@ -97,146 +97,124 @@ control EmptyEgress<H, M>(inout H hdr, inout M eg_md, in egress_intrinsic_metada
     }
 }
 
-typedef bit<16> switch_nexthop_t;
 struct switch_header_t {
     ethernet_h ethernet;
     ipv4_h     ipv4;
-    tcp_h      tcp;
-    udp_h      udp;
+    ipv6_h     ipv6;
 }
 
 struct switch_metadata_t {
-    bool checksum_err;
 }
 
-parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
-    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
+parser SwitchEgressParser(packet_in pkt, out switch_header_t hdr, out switch_metadata_t eg_md, out egress_intrinsic_metadata_t eg_intr_md) {
     state start {
-        pkt.extract(ig_intr_md);
-        transition select(ig_intr_md.resubmit_flag) {
-            0: parse_port_metadata;
-            1: reject;
-        }
-    }
-    state parse_port_metadata {
-        pkt.advance(64);
+        pkt.extract(eg_intr_md);
         transition parse_ethernet;
     }
     state parse_ethernet {
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.ether_type) {
             0x800: parse_ipv4;
+            0x86dd: parse_ipv6;
             default: reject;
         }
     }
     state parse_ipv4 {
         pkt.extract(hdr.ipv4);
-        ipv4_checksum.add(hdr.ipv4);
-        ig_md.checksum_err = ipv4_checksum.verify();
-        transition select(hdr.ipv4.protocol) {
-            6: parse_tcp;
-            17: parse_udp;
-            default: accept;
-        }
-    }
-    state parse_udp {
-        pkt.extract(hdr.udp);
         transition accept;
     }
-    state parse_tcp {
-        pkt.extract(hdr.tcp);
+    state parse_ipv6 {
+        pkt.extract(hdr.ipv6);
         transition accept;
     }
 }
 
 control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t ig_md, in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
-    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
     apply {
-        hdr.ipv4.hdr_checksum = ipv4_checksum.update({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
+    }
+}
+
+control SwitchEgressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t eg_md, in egress_intrinsic_metadata_for_deparser_t eg_intr_dprsr_md) {
+    apply {
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.ipv4);
-        pkt.emit(hdr.udp);
-        pkt.emit(hdr.tcp);
+        pkt.emit(hdr.ipv6);
     }
 }
 
 control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    switch_nexthop_t nexthop_index;
-    action miss_() {
-    }
-    action drop() {
-        ig_intr_dprsr_md.drop_ctl = 0x7;
-    }
-    action set_nexthop(switch_nexthop_t index) {
-        nexthop_index = index;
-    }
-    action set_nexthop_info(mac_addr_t dmac) {
-        hdr.ethernet.dst_addr = dmac;
-    }
-    action set_port(PortId_t port) {
-        ig_intr_tm_md.ucast_egress_port = port;
-        ig_intr_tm_md.bypass_egress = true;
-    }
-    action rewrite_(mac_addr_t smac) {
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
-        hdr.ethernet.src_addr = smac;
-    }
-    table fib {
-        key = {
-            hdr.ipv4.dst_addr: exact;
-        }
-        actions = {
-            miss_;
-            set_nexthop;
-        }
-        const default_action = miss_;
-    }
-    table nexthop {
-        key = {
-            nexthop_index: exact;
-        }
-        actions = {
-            set_nexthop_info;
-        }
-    }
-    table dmac {
-        key = {
-            hdr.ethernet.dst_addr: exact;
-        }
-        actions = {
-            set_port;
-            miss_;
-        }
-        const default_action = miss_;
-    }
-    table rewrite {
-        key = {
-            ig_intr_tm_md.ucast_egress_port: exact;
-        }
-        actions = {
-            rewrite_;
-        }
-    }
-    table acl {
-        key = {
-            ig_intr_prsr_md.parser_err: exact;
-            ig_md.checksum_err        : exact;
-        }
-        actions = {
-            set_port;
-        }
-    }
     apply {
-        nexthop_index = 0;
-        fib.apply();
-        nexthop.apply();
-        dmac.apply();
-        rewrite.apply();
-        acl.apply();
+        ig_intr_tm_md.ucast_egress_port = ig_intr_md.ingress_port;
     }
 }
 
-Pipeline(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), EmptyEgressParser<switch_header_t, switch_metadata_t>(), EmptyEgress<switch_header_t, switch_metadata_t>(), EmptyEgressDeparser<switch_header_t, switch_metadata_t>()) pipe0;
+control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs, inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
+    DirectLpf<bit<19>>() dummy_lpf;
+    DirectWred<bit<19>>(0, 1) direct_wred;
+    bit<1> wred_flag;
+    bit<19> avg_queue;
+    action set_ipv4_ecn() {
+        hdr.ipv4.diffserv[1:0] = 0b11;
+    }
+    action set_ipv6_ecn() {
+        hdr.ipv6.traffic_class[1:0] = 0b11;
+    }
+    table ecn_marking {
+        key = {
+            hdr.ipv4.isValid()    : ternary;
+            hdr.ipv4.diffserv     : ternary;
+            hdr.ipv6.isValid()    : ternary;
+            hdr.ipv6.traffic_class: ternary;
+        }
+        actions = {
+            NoAction;
+            set_ipv4_ecn;
+            set_ipv6_ecn;
+        }
+        size = 1024;
+    }
+    action set_wred_flag() {
+        wred_flag = (bit<1>)direct_wred.execute(eg_intr_md.enq_qdepth);
+    }
+    table wred {
+        key = {
+            eg_intr_md.egress_port: exact;
+            eg_intr_md.egress_qid : exact;
+        }
+        actions = {
+            NoAction;
+            set_wred_flag;
+        }
+        const default_action = NoAction;
+        size = 2048;
+        filters = direct_wred;
+    }
+    action set_avg_queue() {
+        avg_queue = dummy_lpf.execute(eg_intr_md.deq_qdepth);
+    }
+    table queue {
+        key = {
+            eg_intr_md.egress_port: exact;
+        }
+        actions = {
+            set_avg_queue;
+        }
+        filters = dummy_lpf;
+    }
+    apply {
+        wred_flag = 0;
+        avg_queue = 0;
+        queue.apply();
+        if (avg_queue == 0) {
+            exit;
+        }
+        wred.apply();
+        if (wred_flag == 1) 
+            ecn_marking.apply();
+    }
+}
+
+Pipeline(TofinoIngressParser<switch_header_t, switch_metadata_t>(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
 
 Switch(pipe0) main;
 

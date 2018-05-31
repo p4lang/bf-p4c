@@ -79,7 +79,7 @@ control IngressP(inout headers hdr,
         key = { hdr.data.f1 : exact; }
         actions = { setb1;
                     @default_only noop; }
-        const default_action = noop; 
+        const default_action = noop;
     }
 
     table df_act6 {
@@ -140,4 +140,5 @@ control DeparserE(packet_out b,
     apply { b.emit(hdr.data); }
 }
 
-Switch(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) main;
+Pipeline(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) pipe0;
+Switch(pipe0) main;

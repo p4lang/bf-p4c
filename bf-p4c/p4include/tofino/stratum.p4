@@ -695,12 +695,19 @@ control EgressDeparser<H, M, CG>(
     in ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
     inout CG aux);
 
-package Switch<IH, IM, EH, EM, CG>(
+package Pipeline<IH, IM, EH, EM, CG>(
     IngressParser<IH, IM, CG> ingress_parser,
     Ingress<IH, IM, CG> ingress,
     IngressDeparser<IH, IM, CG> ingress_deparser,
     EgressParser<EH, EM, CG> egress_parser,
     Egress<EH, EM, CG> egress,
     EgressDeparser<EH, EM, CG> egress_deparser);
+
+package Switch<IH0, IM0, EH0, EM0, CG0, IH1, IM1, EH1, EM1, CG1,
+               IH2, IM2, EH2, EM2, CG2, IH3, IM3, EH3, EM3, CG3>(
+    Pipeline<IH0, IM0, EH0, EM0, CG0> pipe0,
+    @optional Pipeline<IH1, IM1, EH1, EM1, CG1> pipe1,
+    @optional Pipeline<IH2, IM2, EH2, EM2, CG2> pipe2,
+    @optional Pipeline<IH3, IM3, EH3, EM3, CG3> pipe3);
 
 #endif  /* _STRATUM_P4_ */

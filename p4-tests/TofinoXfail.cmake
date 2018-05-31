@@ -1149,3 +1149,13 @@ p4c_add_xfail_reason("tofino"
   "no definitions"
   extensions/p4_tests/p4_14/p4-tests/programs/pvs/pvs.p4
 )
+
+# 05/31/2018: Need to update p4c refpoint to take commit 8319d32, The update is
+# currently blocked by a P4Runtime PR that Antonin's working on. Once the
+# P4Runtime PR is in and p4c refpoint is updated. this xfail can then be
+# removed.
+p4c_add_xfail_reason("tofino"
+  "Exiting with SIGSEGV"
+  easy-ternary-archive
+  tor-archive
+)

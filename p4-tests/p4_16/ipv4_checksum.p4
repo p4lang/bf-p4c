@@ -211,9 +211,11 @@ control SwitchIngress(
     }
 }
 
-Switch(SwitchIngressParser(),
+Pipeline(SwitchIngressParser(),
        SwitchIngress(),
        SwitchIngressDeparser(),
        EmptyEgressParser<switch_header_t, switch_metadata_t>(),
        EmptyEgress<switch_header_t, switch_metadata_t>(),
-       EmptyEgressDeparser<switch_header_t, switch_metadata_t>()) main;
+       EmptyEgressDeparser<switch_header_t, switch_metadata_t>()) pipe0;
+
+Switch(pipe0) main;

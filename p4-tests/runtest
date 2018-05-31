@@ -231,11 +231,10 @@ if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; th
     # identify the target, making the "--target" flag obsolete.  For the time
     # being, we grep for "v1model.p4" to determine whether a test uses the v1model
     # or TNA architecture.
-    # XXX(zma) assuming tofino and jbay have same arch for now
     if grep -q "tofino.p4\|tna.p4" "$file"; then
         P4C_ARGS="$P4C_ARGS --target ${device} --arch tna"
     elif grep -q "jbay.p4\|jna.p4" "$file"; then
-        P4C_ARGS="$P4C_ARGS --target ${device} --arch tna"
+        P4C_ARGS="$P4C_ARGS --target ${device} --arch jna"
     elif grep -q "psa.p4" "$file"; then
         P4C_ARGS="$P4C_ARGS --target ${device} --arch psa"
     else

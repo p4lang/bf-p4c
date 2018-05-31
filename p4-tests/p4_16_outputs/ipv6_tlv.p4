@@ -1,32 +1,4 @@
-error {
-    NoError,
-    PacketTooShort,
-    NoMatch,
-    StackOutOfBounds,
-    HeaderTooShort,
-    ParserTimeout
-}
-
-extern packet_in {
-    void extract<T>(out T hdr);
-    void extract<T>(out T variableSizeHeader, in bit<32> variableFieldSizeInBits);
-    T lookahead<T>();
-    void advance(in bit<32> sizeInBits);
-    bit<32> length();
-}
-
-extern packet_out {
-    void emit<T>(in T hdr);
-}
-
-extern void verify(in bool check, in error toSignal);
-action NoAction() {
-}
-match_kind {
-    exact,
-    ternary,
-    lpm
-}
+#include <core.p4>
 #include <tofino.p4>
 #include <tna.p4>
 
@@ -85,7 +57,7 @@ header udp_h {
     bit<16> checksum;
 }
 
-parser TofinoIngressParser(packet_in pkt, out ingress_intrinsic_metadata_t ig_intr_md) {
+parser TofinoIngressParser<H, M>(packet_in pkt, out H hdr, out M ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
     state start {
         pkt.extract(ig_intr_md);
         transition select(ig_intr_md.resubmit_flag) {
@@ -102,7 +74,7 @@ parser TofinoIngressParser(packet_in pkt, out ingress_intrinsic_metadata_t ig_in
     }
 }
 
-parser TofinoEgressParser(packet_in pkt, out egress_intrinsic_metadata_t eg_intr_md) {
+parser TofinoEgressParser<H, M>(packet_in pkt, out H hdr, out M eg_md, out egress_intrinsic_metadata_t eg_intr_md) {
     state start {
         pkt.extract(eg_intr_md);
         transition accept;
@@ -169,7 +141,7 @@ parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_me
     state parse_ethernet {
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.ether_type) {
-            0x8100: parse_ipv6;
+            0x86dd: parse_ipv6;
             default: reject;
         }
     }
@@ -232,5 +204,7 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
     }
 }
 
-Switch(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), EmptyEgressParser<switch_header_t, switch_metadata_t>(), EmptyEgress<switch_header_t, switch_metadata_t>(), EmptyEgressDeparser<switch_header_t, switch_metadata_t>()) main;
+Pipeline(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), EmptyEgressParser<switch_header_t, switch_metadata_t>(), EmptyEgress<switch_header_t, switch_metadata_t>(), EmptyEgressDeparser<switch_header_t, switch_metadata_t>()) pipe0;
+
+Switch(pipe0) main;
 

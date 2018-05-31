@@ -60,7 +60,7 @@ parser EgParser(
   }
 }
 control SwitchEgress(
-    inout headers_t hdr,  
+    inout headers_t hdr,
     inout user_metadata_t meta,
     in egress_intrinsic_metadata_t eg_intr_md,
     in egress_intrinsic_metadata_from_parser_t eg_intr_prsr_md,
@@ -85,8 +85,9 @@ control SwitchEgressDeparser(
         b.emit(hdr);
     }
 }
-Switch(InParser(), SwitchIngress(), SwitchIngressDeparser(),
-       EgParser(), SwitchEgress(), SwitchEgressDeparser()) main;
+Pipeline(InParser(), SwitchIngress(), SwitchIngressDeparser(),
+       EgParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
+Switch(pipe0) main;
 
 #else
 #error "Tofino Native Arch not supported on compiler versions earlier than 6.0"

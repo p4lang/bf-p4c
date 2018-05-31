@@ -40,7 +40,7 @@ struct NormalizeNativeProgram : public PassManager {
 struct LowerTofinoToStratum : public PassManager {
     LowerTofinoToStratum(P4::ReferenceMap* refMap,
                          P4::TypeMap* typeMap,
-                         BFN_Options& options, int nPipe);
+                         BFN_Options& options);
 
     ProgramThreads threads;
 };

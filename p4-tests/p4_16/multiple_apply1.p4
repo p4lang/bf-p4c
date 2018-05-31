@@ -66,7 +66,7 @@ control IngressP(
         actions = { t2_act;
                     noop; }
         key = { hdr.data.h2: exact; }
-        default_action = noop; 
+        default_action = noop;
     }
 
     table port_setter {
@@ -127,4 +127,5 @@ control DeparserE(packet_out b,
     apply { b.emit(hdr.data); }
 }
 
-Switch(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) main;
+Pipeline(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) pipe0;
+Switch(pipe0) main;

@@ -459,8 +459,6 @@ set (p4include_HEADERS
   p4include/psa.p4
   p4include/tofino.p4
   p4include/tna.p4
-  p4include/tna32q.p4
-  p4include/tna16q.p4
   p4include/tofino/lpf.p4
   p4include/tofino/stratum.p4
   p4include/tofino/p4_14_prim.p4

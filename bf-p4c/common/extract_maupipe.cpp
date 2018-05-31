@@ -975,16 +975,17 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
     });
 }
 
-void BackendConverter::extractThreads(int nPipes) {
-    auto arch = new ParseTna(nPipes, &threads);
-    toplevel->getMain()->apply(*arch);
-}
-
-void BackendConverter::convertBackendPipe(const IR::P4Program* program,
-                                          BFN_Options& options, int nPipes) {
+void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Options& options) {
+    auto main = toplevel->getMain();
     DeclarationConversions converted;
-    extractThreads(nPipes);
-    for (auto i = 0 ; i < nPipes; i++) {
+
+    auto arch = new ParseTna(&threads);
+    toplevel->getMain()->apply(*arch);
+
+    auto npipe = 0;
+    for (auto pkg : main->constantValue) {
+        if (!pkg.second) continue;
+        if (!pkg.second->is<IR::PackageBlock>()) continue;
         auto rv = new IR::BFN::Pipe();
         auto bindings = new ParamBinding(typeMap);
         /// SimplifyReferences passes are fixup passes that modifies the visited IR tree.
@@ -997,10 +998,10 @@ void BackendConverter::convertBackendPipe(const IR::P4Program* program,
         program->apply(*bindings);
         std::list<gress_t> gresses = {INGRESS, EGRESS};
         for (auto gress : gresses) {
-            if (!threads.count(std::make_pair(i, gress))) {
-                ::error("Unabled to find thread %1%", i);
+            if (!threads.count(std::make_pair(npipe, gress))) {
+                ::error("Unabled to find thread %1%", npipe);
                 return; }
-            auto thread = threads.at(std::make_pair(i, gress));
+            auto thread = threads.at(std::make_pair(npipe, gress));
             thread = thread->apply(*simplifyReferences);
             if (auto mau = thread->mau->to<IR::BFN::TranslatedP4Control>()) {
                 mau->apply(ExtractMetadata(rv, bindings));
@@ -1022,16 +1023,19 @@ void BackendConverter::convertBackendPipe(const IR::P4Program* program,
 
         ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted, bindings);
         processBackendPipe.addDebugHook(options.getDebugHook());
-        pipe.emplace(i /* index 0 */, rv->apply(processBackendPipe));
+        pipe.emplace(npipe /* index 0 */, rv->apply(processBackendPipe));
+        npipe++;
     }
 }
 
-void BackendConverter::convertBackendPipe(const IR::P4Program *program, BFN_Options &options) {
+void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Options &options) {
     DeclarationConversions converted;
     ResubmitPacking resubmitPackings;
     MirroredFieldListPacking mirrorPackings;
 
-    extractThreads(1);
+    auto arch = new ParseTna(&threads);
+    toplevel->getMain()->apply(*arch);
+
     auto rv = new IR::BFN::Pipe();
     auto bindings = new ParamBinding(typeMap);
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
@@ -1076,51 +1080,31 @@ void BackendConverter::convertBackendPipe(const IR::P4Program *program, BFN_Opti
 void BackendConverter::convert(const IR::P4Program *program, BFN_Options& options) {
     if (options.arch == "v1model") {
         if (options.target == "tofino") {
-            convertBackendPipe(program, options);
+            convertV1Program(program, options);
         }
 #ifdef HAVE_JBAY
         if (options.target == "jbay") {
-            convertBackendPipe(program, options);
+            convertV1Program(program, options);
         }
 #endif
     } else if (options.arch == "psa" &&
              options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
         if (options.target == "tofino") {
-            convertBackendPipe(program, options);
+            convertTnaProgram(program, options);
         }
 #ifdef HAVE_JBAY
         if (options.target == "jbay") {
-            convertBackendPipe(program, options);
+            convertTnaProgram(program, options);
         }
 #endif
     } else if ((options.arch == "tna" || options.arch == "jna") &&
              options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
         if (options.target == "tofino") {
-            convertBackendPipe(program, options, 1);
+            convertTnaProgram(program, options);
         }
 #ifdef HAVE_JBAY
         if (options.target == "jbay") {
-            convertBackendPipe(program, options, 1);
-        }
-#endif
-    } else if (options.arch == "tna32q" &&
-               options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
-        if (options.target == "tofino") {
-            convertBackendPipe(program, options, 2);
-        }
-#ifdef HAVE_JBAY
-        if (options.target == "jbay") {
-            convertBackendPipe(program, options, 2);
-        }
-#endif
-    } else if (options.arch == "tna16q" &&
-               options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
-        if (options.target == "tofino") {
-            convertBackendPipe(program, options, 4);
-        }
-#ifdef HAVE_JBAY
-        if (options.target == "jbay") {
-            convertBackendPipe(program, options, 4);
+            convertTnaProgram(program, options);
         }
 #endif
     } else {

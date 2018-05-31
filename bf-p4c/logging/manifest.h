@@ -51,6 +51,7 @@ class Manifest : public Inspector {
 
     void postorder(const IR::PackageBlock *block) override {
         for (auto it : block->constantValue) {
+            if (!it.second) continue;
             if (!it.second->is<IR::ControlBlock>())
                 continue;
             auto name = it.second->to<IR::ControlBlock>()->container->name;

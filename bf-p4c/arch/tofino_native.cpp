@@ -316,11 +316,11 @@ NormalizeNativeProgram::NormalizeNativeProgram(P4::ReferenceMap* refMap,
 }
 
 LowerTofinoToStratum::LowerTofinoToStratum(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                                           BFN_Options &options, int nPipe) {
+                                           BFN_Options &options) {
     setName("LowerTofinoToStratum");
     addDebugHook(options.getDebugHook());
     auto* evaluator = new P4::EvaluatorPass(refMap, typeMap);
-    auto* parseTna = new ParseTna(nPipe, &threads /* not used */);
+    auto* parseTna = new ParseTna(&threads /* not used */);
     addPasses({
         evaluator,
         new VisitFunctor([evaluator, parseTna]() {
