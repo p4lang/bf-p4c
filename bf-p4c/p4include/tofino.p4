@@ -38,7 +38,6 @@ enum MeterType_t { PACKETS, BYTES }
 typedef bit<2> MeterColor_t;
 const MeterColor_t METER_COLOR_GREEN = 0b00;
 const MeterColor_t METER_COLOR_YELLOW = 0b01;
-const MeterColor_t METER_COLOR_YELLOW_ = 0b10;
 const MeterColor_t METER_COLOR_RED = 0b11;
 
 /// Counter
