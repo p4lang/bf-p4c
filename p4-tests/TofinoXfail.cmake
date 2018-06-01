@@ -23,7 +23,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 
   p4c_add_xfail_reason("tofino"
     "mismatch from expected(.*) at byte .*"
-    extensions/p4_tests/p4_16/brig-532.p4
     extensions/p4_tests/p4_16/cast_widening_set.p4
     )
 
@@ -113,7 +112,7 @@ if (PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4
     extensions/p4_tests/p4_14/p4-tests/programs/exm_smoke_test/exm_smoke_test.p4
     extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
-    extensions/p4_tests/p4_14/p4-tests/programs/smoke_large_tbls/smoke_large_tbls.p4
+    extensions/p4_tests/p4_14/p4-tests/programs/multicast_test/multicast_test.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -133,8 +132,66 @@ if (PTF_REQUIREMENTS_MET)
     smoketest_switch_dc_basic_L3VxlanUnicastTunnelECMPLagReflectionSMTest
     smoketest_switch_dc_basic_L3VxlanUnicastTunnelSMTest
     p4testgen_emulation
+    smoketest_switch_ent_dc_general_IPAclStatsTest
+    smoketest_switch_ent_dc_general_AclLabelTest
+    smoketest_switch_ent_dc_general_IPIngressAclRangeTcamTest
+    smoketest_switch_ent_dc_general_IPAclTest
+    smoketest_switch_ent_dc_general_MirrorAclTest_i2e
+    smoketest_switch_ent_dc_general_HostIfRxTxTest
+    smoketest_switch_ent_dc_general_L3VxlanUnicastTunnelSMTest
+    smoketest_switch_ent_dc_general_L3VIIPv4HostVlanTaggingTest
+    smoketest_switch_ent_dc_general_L3IPv4HostTest
+    smoketest_switch_ent_dc_general_ExceptionPacketsTest_IPV6
+    smoketest_switch_ent_dc_general_L3IPv4SubIntfHostTest
+    smoketest_switch_ent_dc_general_L3IPv6LpmTest
+    smoketest_switch_ent_dc_general_L3IPv6HostTest
+    smoketest_switch_ent_dc_general_MalformedPacketsTest_tunnel
+    smoketest_switch_ent_dc_general_L3VIIPv4HostFloodTest
+    smoketest_switch_ent_dc_general_L3IPv4HostJumboTest
+    smoketest_switch_ent_dc_general_L3VIIPv4HostMacMoveTest
+    smoketest_switch_ent_dc_general_L3IPv4LpmTest
+    smoketest_switch_ent_dc_general_L3VINhopGleanTest
+    smoketest_switch_ent_dc_general_ExceptionPacketsTest
+    smoketest_switch_ent_dc_general_HostIfV6Test
+    smoketest_switch_ent_dc_general_L3VIIPv6HostTest
+    smoketest_switch_ent_dc_general_L2VxlanUnicastBasicTest
+    smoketest_switch_ent_dc_general_L3IPv4HostModifyTest
+    smoketest_switch_ent_dc_general_L3VIIPv4HostTest
+    smoketest_switch_ent_dc_general_L2VxlanArpUnicastBasicTest
     )
 
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: Did not receive any expected packet on any of ports"
+    smoketest_switch_ent_dc_general_L3VxlanUnicastTunnelECMPLagReflectionSMTest
+    smoketest_switch_ent_dc_general_L3VxlanUnicastTunnelECMPSMTest
+    smoketest_switch_ent_dc_general_L3IPv6LagTest
+    smoketest_switch_ent_dc_general_L3IPv6EcmpTest
+    smoketest_switch_ent_dc_general_L3IPv6LpmEcmpTest
+    smoketest_switch_ent_dc_general_L3IPv4EcmpTest
+    smoketest_switch_ent_dc_general_L3IPv4LagTest
+    smoketest_switch_ent_dc_general_L3EcmpLagTest
+    smoketest_switch_ent_dc_general_L3IPv4EcmpSeedTest
+    smoketest_switch_ent_dc_general_L3IPv4LpmEcmpTest
+    smoketest_switch_ent_dc_general_L2VxlanUnicastLagBasicTest   
+    smoketest_switch_ent_dc_general_L3VIIPv4LagTest 
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: Received packet that we expected not to receive on device"
+    smoketest_switch_ent_dc_general_L2StpTest
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: A packet was received on device"
+    smoketest_switch_ent_dc_general_L2StpEgressBlockingTest
+    )
+
+  # TypeError: format_failure() takes exactly 2 arguments (1 given)
+  p4c_add_xfail_reason("tofino"
+    "TypeError: format_failure"
+    smoketest_switch_ent_dc_general_CpuTxTest
+    )
+    
   p4c_add_xfail_reason("tofino"
     ".*InvalidSnapshotOperation.*"
     smoketest_programs_alpm_test_TestSnapshot
@@ -985,6 +1042,7 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_7.0_dc_basic
   switch_7.0_l2
+  smoketest_programs_netcache
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1024,7 +1082,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/pvs-struct.p4
 )
 
-# p4smith regression XFAILs
+# p4smith and p4testgen regression XFAILs
 
 # BRIG-647
 p4c_add_xfail_reason("tofino"
@@ -1062,11 +1120,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/selenium_0.p4
 )
 
-# BRIG-655
-#p4c_add_xfail_reason("tofino"
-#  "Incorrectly overlapping action data when setting slot bits."
-#  extensions/p4_tests/p4_14/p4smith_regression/laymen_0.p4
-#)
+# https://github.com/barefootnetworks/p4v/issues/362
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expected packet was not received on device"
+  p4testgen_laymen_0
+)
 
 # BRIG-677
 # error: MAU::TableSeq: duplicated name (MAU::TableSeq is previous instance)
@@ -1122,10 +1180,16 @@ p4c_add_xfail_reason("tofino"
 )
 
 # BRIG-681
-#p4c_add_xfail_reason("tofino"
-#  "set requires 2 operands"
-#  extensions/p4_tests/p4_14/p4smith_regression/faecess_0.p4
-#)
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expected packet was not received on device"
+  p4testgen_faecess_0
+)
+
+# BRIG-691
+p4c_add_xfail_reason("tofino"
+  "TTransportException: TSocket read 0 bytes"
+  p4testgen_signets_0
+)
 
 # BRIG-584
 p4c_add_xfail_reason("tofino"

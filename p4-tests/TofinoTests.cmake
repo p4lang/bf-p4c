@@ -5,85 +5,6 @@ packet_test_setup_check("tofino")
 # experimental -- doesn't quite work yet
 # bfn_add_switch("tofino")
 
-# Switch On Release 7.0
-set  (SWITCH_7.0_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-7.0/p4src/switch.p4)
-set  (isXFail TRUE)
-file (RELATIVE_PATH switch_7.0_test ${P4C_SOURCE_DIR} ${SWITCH_7.0_P4})
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-  "switch_7.0_ent_fin_leaf" ${switch_7.0_test} "${testExtraArgs} -DENT_FIN_LEAF_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_7.0_ent_fin_leaf")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_7.0_dc_basic" ${switch_7.0_test} "${testExtraArgs} -DDC_BASIC_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_7.0_dc_basic")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_7.0_ent_dc_general" ${switch_7.0_test} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_7.0_ent_dc_general")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_7.0_ent_dc_aggr" ${switch_7.0_test} "${testExtraArgs} -DENT_DC_AGGR_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_7.0_ent_dc_aggr")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_7.0_msdc" ${switch_7.0_test} "${testExtraArgs} -DMSDC_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_7.0_msdc")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_7.0_l2" ${switch_7.0_test} "${testExtraArgs} -DL2_PROFILE")
-
-# Switch P4-14 On Master (refpoint must be periodically updated)
-set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
-set  (SWITCH_PTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/ptf-tests/base/api-tests)
-set  (SWITCH_PTF_DIR_MIRROR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/ptf-tests/base/feature-tests)
-set  (isXFail TRUE)
-file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_dc_basic" ${switchtest} "${testExtraArgs} -DDC_BASIC_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_dc_basic")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-    "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs} -DENT_FIN_POSTCARD_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_ent_fin_postcard")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_ent_dc_general" ${switchtest} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_ent_dc_general")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_msdc" ${switchtest} "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-    "switch_msdc_ipv4" ${switchtest} "${testExtraArgs} -DMSDC_IPV4_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_ipv4")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_msdc_l3" ${switchtest} "${testExtraArgs} -DMSDC_L3_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_l3")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-    "switch_msdc_spine_int" ${switchtest} "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_spine_int")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-    "switch_msdc_leaf_int" ${switchtest} "${testExtraArgs} -DMSDC_LEAF_DTEL_INT_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_spine_int")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_msdc_l3_heavy_int_leaf" ${switchtest} "${testExtraArgs} -DMSDC_L3_HEAVY_INT_LEAF_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_l3_heavy_int_leaf")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_msdc_generic_int_leaf" ${switchtest} "${testExtraArgs} -DMSDC_GENERIC_INT_LEAF_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_generic_int_leaf")
-
-# Switch P4-16
-set  (SWITCH_P4_16 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch/p4_16src/switch.p4)
-file (RELATIVE_PATH switch_p4_16_test ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_p4_16" ${switch_p4_16_test} "${testExtraArgs} -nop4info")
-
 set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main|common_v1_test")
 set (V1_EXCLUDE_PATTERNS "package" "extern")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
@@ -141,288 +62,6 @@ p4c_add_ptf_test_with_ptfdir_and_spec (
     "${testExtraArgs} -DWITH_INT_TRANSIT"
     ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf "all ^spgw")
 
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc"
-	"switch_hostif.HostIfRxTxTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_1" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_1"
-	"switch_tests.CpuTxTest
-     	switch_tests.ExceptionPacketsTest
-     	switch_tests.ExceptionPacketsTest_IPV6
-     	switch_tests.HostIfTest
-     	switch_tests.HostIfV6Test
-     	switch_tests.L2AccessToAccessVlanTest
-     	switch_tests.L2AccessToTrunkPriorityTaggingTest
-        switch_tests.L2AccessToTrunkVlanJumboTest
-	switch_tests.L2AccessToTrunkVlanTest
-	switch_tests.L2AgingTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_2" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_2"
-     	"switch_tests.L2DynamicLearnAgeTest
-     	switch_tests.L2DynamicMacLearnTest
-     	switch_tests.L2DynamicMacMoveTest
-     	switch_tests.L2FloodTest
-        switch_tests.L2LagTest
-        switch_tests.L2LNStatsTest
-	    switch_tests.L2MacLearnTest
-     	switch_tests.L2StaticMacBulkDeleteTest
-     	switch_tests.L2StaticMacMoveTest
-     	switch_tests.L2TrunkToAccessVlanTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_3" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_3"
-	"switch_tests.L2TrunkToTrunkVlanTest
-    switch_tests.L2VlanStatsTest
-	switch_tests.L3EcmpLagTest
-	switch_tests.L3IPv4EcmpTest
-    switch_tests.L3IPv4HostJumboTest
-	switch_tests.L3IPv4HostModifyTest
-	switch_tests.L3IPv4HostTest
-	switch_tests.L3IPv4LagTest
-	switch_tests.L3IPv4LookupTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_4" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_4"
-	"switch_tests.L3IPv4LpmEcmpTest
-	switch_tests.L3IPv4LpmTest
-	switch_tests.L3IPv4MtuTest
-	switch_tests.L3IPv4SubIntfHostTest
-	switch_tests.L3IPv6EcmpTest
-	switch_tests.L3IPv6HostTest
-	switch_tests.L3IPv6LagTest
-	switch_tests.L3IPv6LookupTest
-	switch_tests.L3IPv6LpmEcmpTest
-	switch_tests.L3IPv6LpmTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_5" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_5"
-	"switch_tests.L3VIFloodTest
-	switch_tests.L3VIIPv4HostFloodTest
-	switch_tests.L3VIIPv4HostMacMoveTest
-	switch_tests.L3VIIPv4HostTest
-	switch_tests.L3VIIPv4HostVlanTaggingTest
-	switch_tests.L3VIIPv4LagTest
-	switch_tests.L3VIIPv6HostTest
-	switch_tests.L3VINhopGleanTest
-        switch_tests.MalformedPacketsTest
-	switch_tests.MalformedPacketsTest_ipv6")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_6" ${SWITCH_P4}
-	"${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR_MIRROR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_6"
-        "mirror_acl_slice_tests.IPv6MirrorAclSliceTest_i2e
-	mirror_acl_slice_tests.MirrorAclSliceTest_i2e")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_7" ${SWITCH_P4}
-	"${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_7"
-	"switch_acl.Acl_i2e_ErspanRewriteTest
-        switch_acl.AclLabelTest
-	switch_acl.IPAclStatsTest
-	switch_acl.IPAclTest
-	switch_acl.IPIngressAclRangeTcamTest
-	switch_acl.MirrorAclTest_e2e
-	switch_acl.MirrorAclTest_i2e
-	switch_acl.MirrorSessionTest")
-# 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino/smoketest_switch_msdc" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_msdc_set_1" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_msdc_set_2" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_msdc_set_3" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_msdc_set_4" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_msdc_set_5" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_msdc_set_6" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_msdc_set_7" PROPERTIES TIMEOUT 12000)
-
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic" ${SWITCH_P4}
-	"${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic"
-	"switch_hostif.HostIfRxTxTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_1" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_1"
-        "fast_reconfig_tests.FastReconfigBigTest
-        fast_reconfig_tests.MultipleWarmInitTest
-        fast_reconfig_tests.NormalthanWarmInitTest
-        fast_reconfig_tests.RegularWarmInitTest
-        switch_acl.Acl_i2e_ErspanRewriteTest
-        switch_acl.AclLabelTest
-        switch_acl.IPAclStatsTest
-        switch_acl.IPAclTest
-        switch_acl.IPIngressAclRangeTcamTest
-        switch_acl.IPv6RAclTest
-        switch_acl.MirrorAclTest_e2e
-        switch_acl.MirrorAclTest_i2e
-        switch_acl.MirrorSessionTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_2" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_2"
-        "switch_get.AclGetTest
-        switch_get.BufferGetTest
-        switch_get.DeviceGetTest
-        switch_get.HostIfGetTest
-        switch_get.InterfaceGetTest
-        switch_get.L2GetTest
-        switch_get.LagGetTest
-        switch_get.MirrorGetTest
-        switch_get.MtreeGetTest
-        switch_get.NhopGetTest
-        switch_get.PortGetTest
-        switch_get.QosGetTest
-        switch_get.RifGetTest
-        switch_get.VlanGetTest
-        switch_get.VrfRmacGetTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_3" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_3"
-        "switch_mcast.L3Multicast
-        switch_mcast.L3MulticastBidir
-        switch_mcast.L3MulticastStatsTest
-        switch_mcast.L3MulticastToEcmp
-        switch_tests.CpuTxTest
-        switch_tests.DeviceInfoTest
-        switch_tests.ExceptionPacketsTest
-        switch_tests.ExceptionPacketsTest_IPV6
-        switch_tests.IPinIPTest
-        switch_tests.IPNeighborTest
-        switch_tests.L2VxlanToGeneveUnicastLagBasicTest
-        switch_tests.L2VxlanUnicastLagBasicTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_4" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_4"
-        "switch_tests.L2AccessToAccessVlanTest
-        switch_tests.L2AccessToTrunkPriorityTaggingTest
-        switch_tests.L2AccessToTrunkVlanJumboTest
-        switch_tests.L2AccessToTrunkVlanTest
-        switch_tests.L2AgingTest
-        switch_tests.L2DynamicLearnAgeTest
-        switch_tests.L2DynamicMacLearnTest
-        switch_tests.L2DynamicMacMoveTest
-        switch_tests.L2FloodTest
-        switch_tests.L2GeneveUnicastLagBasicTest
-        switch_tests.L2LagFloodTest
-        switch_tests.L2LagTest
-        switch_tests.L2LNStatsTest
-        switch_tests.L2LNSubIntfEncapTest
-        switch_tests.L2MacLearnTest
-        switch_tests.L2NvgreUnicastLagBasicTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_5" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_5"
-        "switch_tests.L2MplsPushJumboTest
-        switch_tests.L2MplsPushTest
-        switch_tests.L2MplsSwapTest
-        switch_tests.L2StaticMacBulkDeleteTest
-        switch_tests.L2StaticMacMoveTest
-        switch_tests.L2StpEgressBlockingTest
-        switch_tests.L2StpTest
-        switch_tests.L2TrunkToAccessVlanTest
-        switch_tests.L2TrunkToTrunkVlanTest
-        switch_tests.L2TunnelFloodEnhancedTest
-        switch_tests.L2TunnelSplicingExtreme1Test
-        switch_tests.L2TunnelSplicingExtreme2Test
-        switch_tests.L2VlanStatsTest
-        switch_tests.L2VxlanFloodBasicTest
-        switch_tests.L2VxlanLearnBasicTest
-        switch_tests.L2VxlanToGeneveUnicastEnhancedTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_6" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_6"
-        "switch_tests.L2VxlanToGeneveUnicastLagEnhancedTest
-        switch_tests.L3EcmpLagTest
-        switch_tests.L3IPv4EcmpTest
-        switch_tests.L3IPv4HostJumboTest
-        switch_tests.L3IPv4HostModifyTest
-        switch_tests.L3IPv4HostTest
-        switch_tests.L3IPv4LagTest
-        switch_tests.L3IPv4LookupTest
-        switch_tests.L3IPv4LpmEcmpTest
-        switch_tests.L3IPv4LpmTest
-        switch_tests.L3IPv4MtuTest
-        switch_tests.L3IPv4SubIntfHostTest
-        switch_tests.L3IPv6EcmpTest
-        switch_tests.L3IPv6HostTest
-        switch_tests.L3IPv6LagTest
-        switch_tests.L3IPv6LookupTest
-        switch_tests.L3IPv6LpmEcmpTest
-        switch_tests.L3IPv6LpmTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_7" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_7"
-        "switch_tests.L3MplsPopTest
-        switch_tests.L3MplsPushTest
-        switch_tests.L3RpfTest
-        switch_tests.L3VIFloodTest
-        switch_tests.L3VIIPv4HostFloodTest
-        switch_tests.L3VIIPv4HostMacMoveTest
-        switch_tests.L3VIIPv4HostTest
-        switch_tests.L3VIIPv4HostVlanTaggingTest
-        switch_tests.L3VIIPv4LagTest
-        switch_tests.L3VIIPv6HostTest
-        switch_tests.MalformedPacketsTest
-        switch_tests.MalformedPacketsTest_ipv6
-        switch_tunnel.L3VxlanUnicastTunnelECMPSMTest
-        switch_tunnel.L3VxlanUnicastTunnelSMSVITest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_8" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_8"
-	"switch_hostif.HostIfPtpTest
-	switch_tests.HostIfTest
-	switch_tests.HostIfV6Test
-	switch_tests.L3VINhopGleanBGPTest
-	switch_tests.L3VINhopGleanTest
-	switch_tests.MalformedPacketsTest_tunnel")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L2GeneveUnicastBasicTest" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L2GeneveUnicastBasicTest"
-        "switch_tests.L2GeneveUnicastBasicTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L2IPv4InIPv6VxlanUnicastBasicTest" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L2IPv4InIPv6VxlanUnicastBasicTest"
-        "switch_tests.L2IPv4InIPv6VxlanUnicastBasicTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L2MplsPopTest" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L2MplsPopTest"
-        "switch_tests.L2MplsPopTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L2NvgreUnicastBasicTest" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L2NvgreUnicastBasicTest"
-        "switch_tests.L2NvgreUnicastBasicTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L2VxlanArpUnicastBasicTest" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L2VxlanArpUnicastBasicTest"
-        "switch_tests.L2VxlanArpUnicastBasicTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L2VxlanToGeneveUnicastBasicTest" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L2VxlanToGeneveUnicastBasicTest"
-        "switch_tests.L2VxlanToGeneveUnicastBasicTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L2VxlanUnicastBasicTest" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L2VxlanUnicastBasicTest"
-        "switch_tests.L2VxlanUnicastBasicTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L3VxlanUnicastMultiTunnelSMTest" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L3VxlanUnicastMultiTunnelSMTest"
-        "switch_tunnel.L3VxlanUnicastMultiTunnelSMTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L3VxlanUnicastTunnelECMPLagReflectionSMTest" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L3VxlanUnicastTunnelECMPLagReflectionSMTest"
-        "switch_tunnel.L3VxlanUnicastTunnelECMPLagReflectionSMTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L3VxlanUnicastTunnelSMTest" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L3VxlanUnicastTunnelSMTest"
-        "switch_tunnel.L3VxlanUnicastTunnelSMTest")
-# 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino/smoketest_switch_dc_basic" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_dc_basic_set_1" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_dc_basic_set_2" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_dc_basic_set_3" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_dc_basic_set_4" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_dc_basic_set_5" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_dc_basic_set_6" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_dc_basic_set_7" PROPERTIES TIMEOUT 12000)
-
 # subset of p4factory tests that we want to run as part of regressions
 # One # means it fails badly but should get it to run soon
 # Two # means it is not required for switch, but we should still try to compile
@@ -457,7 +96,13 @@ set (P4FACTORY_REGRESSION_TESTS
   )
 
 # p4-tests has all the includes at the same level with the programs.
-set (BFN_EXCLUDE_PATTERNS "tofino.p4")
+# exclude tofino.p4 which is included in some programs
+# exclude fifo_pair.p4 which is jbay specific test
+# exclude all netcache p4s and add it as a separate test
+set (BFN_EXCLUDE_PATTERNS "tofino.p4" "fifo_pair.p4" "defines.p4" 
+                          "fast_update.p4" "headers.p4" "heavy_hitter.p4"
+                          "ipv4.p4" "meter.p4" "netcache.p4" "parser.p4"
+                          "slow_update.p4")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/*/*.p4")
 bfn_find_tests ("${BFN_TESTS}" ALL_BFN_TESTS EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 # make a list of all the tests that we want to run PTF on
@@ -524,6 +169,10 @@ bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/mirror_test/mirror_te
    test.TestBasicIngMir
    test.TestBasicEgrMir
    test.TestBatching")
+
+# add netcache test
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_netcache" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/netcache/netcache.p4"
+   "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/netcache")
 
 # for all other p4factory tests, add them as compile only.
 set (P4F_COMPILE_ONLY)
@@ -626,6 +275,18 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_pcie_pkt_test" ${CMAKE_CURRENT
 p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_smoke_large_tbls" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/smoke_large_tbls.p4
     "${testExtraArgs} -pd -to 12000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/smoke_large_tbls.ptf")
 set_tests_properties("tofino/p4testgen_smoke_large_tbls" PROPERTIES TIMEOUT 12000)
+p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_centipedes_0" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/centipedes_0.p4
+    "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/centipedes_0.ptf")
+p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_medal_0" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/medal_0.p4
+    "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/medal_0.ptf")
+p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_plasmas_0" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/plasmas_0.p4
+    "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/plasmas_0.ptf")
+p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_signets_0" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/signets_0.p4
+    "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/signets_0.ptf")
+p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_laymen_0" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/laymen_0.p4
+    "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/laymen_0.ptf")
+p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_faecess_0" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/faecess_0.p4
+    "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4testgen_regression/faecess_0.ptf")
 
 ## Manifest tests
 # test the generation of the compiler archive, for a must pass P4_14 and P4_16 program
@@ -640,7 +301,7 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE "tor-archive"
   "-norun --create-graphs --archive --validate-manifest")
 p4c_add_test_label("tofino" "cpplint" "tor-archive")
 
-
+include(Switch.cmake)
 include(TofinoMustPass.cmake)
 include(TofinoXfail.cmake)
 
