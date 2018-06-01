@@ -1913,17 +1913,20 @@ bool IXBar::can_allocate_on_search_bus(IXBar::Use &alloc, const PHV::Field *fiel
         if (fi.width() != 8 && fi.hi != range.hi) {
             LOG4("  not byte aligned: " << fi);
             return false; }
-        if (fi.cont_loc().min().index() != 0)
-            return false;
+        if (fi.cont_loc().min().index() != 0) {
+            LOG4("  not in bit 0 of byte");
+            return false; }
         int byte_position = ((fi.lo - range.lo) + 7)/ 8;
         // Validate that the byte, given the PHV allocation for that particular byte
-        if (align_flags[(ixbar_position + byte_position) & 3] & byte.flags)
-            return false;
+        if (align_flags[(ixbar_position + byte_position) & 3] & byte.flags) {
+            LOG4("  not aligned within container for ixbar");
+            return false; }
         seen_bits.setrange(fi.lo, fi.width());
     }
     if (!seen_bits.is_contiguous() || !(seen_bits.min().index() == range.lo)
-        || !(seen_bits.max().index() == range.hi))
-        return false;
+        || !(seen_bits.max().index() == range.hi)) {
+        LOG4("  not the right bits for the range");
+        return false; }
     return true;
 }
 
@@ -2143,11 +2146,13 @@ bool IXBar::setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc
             auto range = source.second;
             if (sources_finished.count(source_index))
                 continue;
+            BUG_CHECK(alu_slot_index < 2, "index out of range");
             if (phv_src_reserved[alu_slot_index])
                 alu_slot_index++;
             int start_bit = alu_slot_index * salu->source_width();
             mah.identity_positions[field].emplace_back(start_bit, range);
             mah.bit_mask.setrange(start_bit, range.size());
+            alu_slot_index++;
         }
     }
 
@@ -2190,7 +2195,8 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
     ContByteConversion map_alloc;
     ordered_set<std::pair<const PHV::Field *, le_bitrange>> phv_sources;
     bool dleft = false;
-    LOG3("IXBar::allocStateful(" << salu->name << ")");
+    LOG3("IXBar::allocStateful(" << salu->name << ", " << tbl->name << ", " <<
+         (on_search_bus ? "true" : "false") << ")");
     salu->apply(FindSaluSources(*this, phv, map_alloc, alloc.field_list_order, phv_sources,
                                 dleft, tbl));
     create_alloc(map_alloc, alloc);

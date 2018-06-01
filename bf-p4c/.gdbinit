@@ -295,17 +295,21 @@ class IXBarUsePrinter(object):
         for i in range(0, vec_size(arr)):
             rv += "\n" + indent + "use[" + str(i) +"]: "
             byte = vec_at(arr, i)
-            rv += byte['field']['str'].string()
-            rv += "[" + str(byte['lo']) + ".." + str(byte['hi']) + "]("
+            rv += byte['name']['str'].string()
+            rv += "[" + str(byte['lo']) + "]("
             rv += str(byte['loc']['group']) + ','
             rv += str(byte['loc']['byte']) + ')'
             if int(byte['flags']) != 0:
                 rv += " flags=" + hex(int(byte['flags']))
+            if int(byte['search_bus']) >= 0:
+                rv += " search_bus=" + str(int(byte['search_bus']))
+            if int(byte['match_index']) >= 0:
+                rv += " match_index=" + str(int(byte['match_index']))
         return rv;
     def to_string(self):
         rv = ""
         try:
-            rv = "Ternary" if self.val['ternary'] else "Exact"
+            rv = "Ternary" if self.val['ternary'] else "Atcam" if self.val['atcam'] else "Exact"
             rv += self.use_array(self.val['use'], '   ')
             for i in range(0, 8):
                 hti = self.val['hash_table_inputs'][i]
@@ -330,18 +334,20 @@ class IXBarUsePrinter(object):
                 rv += "\n   way_use[" + str(i) +"]: "
                 way = vec_at(self.val['way_use'], i)
                 rv += "[%d:%d:%x]" % (int(way['group']), int(way['slice']), int(way['mask']))
-            for i in range(0, vec_size(self.val['select_use'])):
-                rv += "\n   sel_use[" + str(i) +"]: "
-                sel = vec_at(self.val['select_use'], i)
-                rv += "%d:%x - %s" % (int(sel['group']), int(sel['bit_mask']), str(sel['alg']))
+            #for i in range(0, vec_size(self.val['select_use'])):
+            #    rv += "\n   sel_use[" + str(i) +"]: "
+            #    sel = vec_at(self.val['select_use'], i)
+            #    rv += "%d:%x - %s" % (int(sel['group']), int(sel['bit_mask']), str(sel['alg']))
+            mah = self.val['meter_alu_hash']
+            if mah['allocated']:
+                rv += "\n   meter_alu_hash: group=" + str(mah['group'])
             hdh = self.val['hash_dist_hash']
             if hdh['allocated']:
                 rv += "\n   hash_dist_hash: unit=" + str(hdh['unit'])
                 rv += " group=" + str(hdh['group'])
                 rv += " slice=" + str(hdh['slice'])
                 rv += " bit_mask=" + str(hdh['bit_mask'])
-                if hdh['algorithm']['str']:
-                    rv += " algorithm=" + hdh['algorithm']['str'].string()
+                rv += " algorithm=" + str(hdh['algorithm'])
             rv += "\n"
         except Exception as e:
             rv += "{crash: "+str(e)+"}\n"
@@ -357,7 +363,7 @@ class PHVBitPrinter(object):
 
 class PHVContainerPrinter(object):
     "Print a PHV::Container object"
-    container_kinds = [ "", "T", "D", "M", ]
+    container_kinds = [ "T", "D", "M", "" ]
     container_sizes = { 8: "B", 16: "H", 32: "W" }
     def __init__(self, val):
         self.val = val

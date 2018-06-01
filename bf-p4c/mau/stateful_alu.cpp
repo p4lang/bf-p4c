@@ -361,10 +361,9 @@ const IR::Expression *CreateSaluInstruction::reuseCmp(const IR::MAU::Instruction
 
 bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring op, bool eq) {
     if (etype == IF) {
-        const IR::Expression *e1, *e2;
-        const IR::Constant *k;
-        if ((((Pattern(e1) & Pattern(k)) == Pattern(e2))).match(rel) &&
-            !k->fitsUint() && !k->fitsInt()) {
+        Pattern::Match<IR::Expression> e1, e2;
+        Pattern::Match<IR::Constant> k;
+        if (((e1 & k) == e2).match(rel) && !k->fitsUint() && !k->fitsInt()) {
             // FIXME -- wide "neq" can be done with tmatch too?
             opcode = "tmatch";
             visit(rel->left, "left");
