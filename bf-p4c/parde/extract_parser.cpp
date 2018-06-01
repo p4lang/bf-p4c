@@ -784,16 +784,10 @@ ProcessParde::ProcessParde(IR::BFN::Pipe* rv, bool useTna) {
     setName("ProcessParde");
     addPasses({
         // Attempt to resolve header stack ".next" and ".last" members.
-        // XXX(seth): In the long term we should run
-        // ResolveComputedParserExpressions here instead, but right now we can't
-        // because we haven't yet added bridged metadata, and without it the egress
-        // parser may fail because it tries to read ingress intrinsic metadata that
-        // isn't present natively in egress.
         // XXX(seth): Also, generating the egress deparser from the egress parser
         // correctly requires that we've resolved header stack indices, but that's
         // an artifact of the IR conversion and it's not something that should not
         // be happening at this layer anyway.
-        // XXX(seth): We could and should deal with this in the midend.
         new ResolveComputedHeaderStackExpressions(),
         // Add shims for intrinsic metadata.
         (useTna) ? nullptr : new AddParserMetadataShims(rv),

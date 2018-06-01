@@ -34,6 +34,7 @@
 #include "common/check_header_alignment.h"
 #include "common/flatten_emit_args.h"
 #include "bf-p4c/arch/arch.h"
+#include "bf-p4c/parde/unroll_parser_counter.h"
 
 namespace BFN {
 
@@ -233,6 +234,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::TypeChecking(&refMap, &typeMap, true),
         new FillFromBlockMap(&refMap, &typeMap),
         new FlattenEmitArgs(),
+        new UnrollParserCounter(&refMap, &typeMap),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
         new MidEndLast,

@@ -781,7 +781,9 @@ p4c_add_xfail_reason("tofino"
   "Could not find declaration for smeta"
   testdata/p4_16_samples/issue677-bmv2.p4
   )
+
 # missing support in backend: parser counter
+# parser counter translation error.
 p4c_add_xfail_reason("tofino"
   "warning: can't find field 'ig_prsr_ctrl_parser_counter.get'"
   extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
@@ -999,11 +1001,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "expected packet on port .* not seen"
   testdata/p4_14_samples/action_chain1.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error: Couldn't resolve computed value for select in state .*"
-  extensions/p4_tests/p4_16/ipv6_tlv.p4
 )
 
 p4c_add_xfail_reason("tofino"

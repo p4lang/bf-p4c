@@ -130,7 +130,7 @@ class ComputeMergeableState : public ParserInspector {
             }
             for (const auto* save : transition->saves) {
                 saves.push_back(rightShiftSource(save, shifted)); }
-            name << strip_gress(st->name) << ".";
+            name << strip_common_prefix(name.str(), strip_gress(st->name).c_str()) << ".";
             shifted += *transition->shift;
         }
 
@@ -144,7 +144,7 @@ class ComputeMergeableState : public ParserInspector {
                 extractions.push_back(stmt); }
         }
 
-        name << strip_gress(tail->name);
+        name << strip_common_prefix(name.str(), strip_gress(tail->name).c_str());
 
         auto* merged_state = new IR::BFN::ParserState(nullptr, cstring(name), tail->gress);
         merged_state->selects = tail->selects;
@@ -219,6 +219,18 @@ class ComputeMergeableState : public ParserInspector {
 
     cstring strip_gress(cstring name) {
         return cstring(name.findlast(':') + 1);
+    }
+
+    cstring strip_common_prefix(std::string current, std::string to_append) {
+        int sz = std::min(current.size(), to_append.size());
+        int i = 0;
+        while (i < sz && current[i] == to_append[i]) {
+            i++; }
+        if (i >= 5) {  // "parse" has 5 chars.
+            return to_append.substr(i);
+        } else {
+            return to_append;
+        }
     }
 
     Visitor::profile_t init_apply(const IR::Node* root) {
