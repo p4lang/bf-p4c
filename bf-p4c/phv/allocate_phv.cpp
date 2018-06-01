@@ -98,8 +98,6 @@ bool AllocScore::operator>(const AllocScore& other) const {
 
     int container_type_score = delta_tphv_on_phv_bits + DARK_TO_PHV_DISTANCE *
         delta_dark_on_phv_bits + delta_mocha_on_phv_bits + delta_dark_on_mocha_bits;
-    if (container_type_score != 0)
-        return container_type_score < 0;
 
     int weight_factor = 2;
     int delta_clot_bits = 0;
@@ -165,6 +163,8 @@ bool AllocScore::operator>(const AllocScore& other) const {
     if (delta_clot_bits != 0) {
         // This score is better if it has fewer clot bits.
         return delta_clot_bits < 0; }
+    if (container_type_score != 0)
+        return container_type_score < 0;
     if (delta_wasted_bits != 0) {
         // This score has fewer wasted bits.
         return delta_wasted_bits < 0; }
