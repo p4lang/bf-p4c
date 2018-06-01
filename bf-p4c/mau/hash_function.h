@@ -14,6 +14,7 @@ struct hash_function {
     uint64_t            poly = 0;         // crc polynoimal in koopman form (poly-1)/2
     uint64_t            init = 0;
     uint64_t            final_xor = 0;
+    bool                ordered = false;
 
     bool operator==(const hash_function &a) const {
         return type == a.type && size == a.size && msb == a.msb && reverse == a.reverse &&

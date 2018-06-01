@@ -218,41 +218,48 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
 
 
 struct FormatHash {
-    safe_vector<Slice>          match_data;
+    const safe_vector<Slice>    *match_data;
+    const std::map<int, Slice>  *match_data_map;
     const Slice                 *ghost;
     IR::MAU::hash_function      func;
     le_bitrange                 *field_range;
 
-    FormatHash(const safe_vector<Slice>& md, const Slice *g, IR::MAU::hash_function f,
-               le_bitrange *fr = nullptr)
-        : match_data(md), ghost(g), func(f), field_range(fr) {}
+    FormatHash(const safe_vector<Slice> *md, const std::map<int, Slice> *mdm, const Slice *g,
+               IR::MAU::hash_function f, le_bitrange *fr = nullptr)
+        : match_data(md), match_data_map(mdm), ghost(g), func(f), field_range(fr) {
+        BUG_CHECK(match_data == nullptr || match_data_map == nullptr, "FormatHash not "
+                  "configured correctly");
+    }
 };
 
 std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
     if (hash.field_range != nullptr) {
-        FormatHash hash2(hash.match_data, hash.ghost, hash.func);
+        FormatHash hash2(hash.match_data, hash.match_data_map, hash.ghost, hash.func);
         out << "slice(" << hash2 << ", " << hash.field_range->lo << "..";
         out << hash.field_range->hi << ")";
         return out;
     }
 
     if (hash.func.type == IR::MAU::hash_function::IDENTITY) {
-        out << "stripe(" << emit_vector(hash.match_data) << ")";
+        BUG_CHECK(hash.match_data, "For an identity, must be a standard vector");
+        out << "stripe(" << emit_vector(*hash.match_data) << ")";
     } else if (hash.func.type == IR::MAU::hash_function::RANDOM) {
-        if (!hash.match_data.empty()) {
-            out << "random(" << emit_vector(hash.match_data, ", ") << ")";
+        BUG_CHECK(hash.match_data, "For a random, must be a standard vector");
+        if (!hash.match_data->empty()) {
+            out << "random(" << emit_vector(*hash.match_data, ", ") << ")";
             if (hash.ghost) out << " ^ ";
         }
         if (hash.ghost) {
             out << *hash.ghost;
         }
     } else if (hash.func.type == IR::MAU::hash_function::CRC) {
+        BUG_CHECK(hash.match_data_map, "For a crc, must be a map");
         out << "stripe(crc";
         if (hash.func.reverse) out << "_rev";
         out << "(0x" << hex(hash.func.poly) << ", ";
         if (hash.func.init)
             out << "0x" << hex(hash.func.init) << ", ";
-        out << emit_vector(hash.match_data, ", ") << ")";
+        out << *hash.match_data_map << ")";
         // FIXME -- final_xor needs to go into the seed for the hash group
         out << ")";
     } else if (hash.func.type == IR::MAU::hash_function::XOR) {
@@ -397,7 +404,8 @@ void MauAsmOutput::emit_ixbar_hash_way(std::ostream &out, indent_t indent,
         out << indent << way_start;
         if (way_end != way_start)
             out << ".." << way_end;
-        out << ": " << FormatHash(match_data, ghost, IR::MAU::hash_function::random()) << std::endl;
+        out << ": " << FormatHash(&match_data, nullptr, ghost, IR::MAU::hash_function::random())
+            << std::endl;
     }
 }
 
@@ -410,7 +418,8 @@ void MauAsmOutput::emit_ixbar_hash_way_select(std::ostream &out, indent_t indent
     out << indent << way_start;
     if (way_end != way_start)
         out << ".." << way_end;
-    out << ": " << FormatHash(match_data, ghost, IR::MAU::hash_function::random()) << std::endl;
+    out << ": " << FormatHash(&match_data, nullptr, ghost, IR::MAU::hash_function::random())
+        << std::endl;
 }
 
 /** This function is necessary due to the limits of the driver's handling of ATCAM tables.
@@ -647,7 +656,8 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
                 ident_slice.push_back(adapted_sl);
 
                 out << indent << hash_lo << ".." << hash_hi;
-                out << ": " << FormatHash(ident_slice, nullptr, IR::MAU::hash_function::identity())
+                out << ": " << FormatHash(&ident_slice, nullptr, nullptr,
+                                          IR::MAU::hash_function::identity())
                     << std::endl;
             }
             start_bit = bv.ffs(end_bit);
@@ -656,7 +666,8 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
 }
 
 void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah) const {
+        safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
+        const safe_vector<PHV::Field::Slice> &field_list_order) const {
     if (mah.algorithm.type == IR::MAU::hash_function::IDENTITY) {
         for (auto &slice : match_data) {
             if (mah.identity_positions.count(slice.get_field()) == 0)
@@ -671,13 +682,61 @@ void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
                 int end_bit = start_bit + slice_bits.size() - 1;
                 single_match_vec.emplace_back(slice.get_field(), slice_bits);
                 out << indent << start_bit << ".." << end_bit << ": "
-                    << FormatHash(single_match_vec, nullptr, mah.algorithm) << std::endl;
+                    << FormatHash(&single_match_vec, nullptr, nullptr, mah.algorithm)
+                    << std::endl;
             }
         }
     } else {
         le_bitrange br = { mah.bit_mask.min().index(), mah.bit_mask.max().index() };
-        out << indent << br.lo << ".." << br.hi << ": "
-            << FormatHash(match_data, nullptr, mah.algorithm, &br) << std::endl;
+        std::map<int, Slice> match_data_map;
+        bool use_map = false;
+        if (mah.algorithm.ordered) {
+            emit_ixbar_gather_map(match_data_map, match_data, field_list_order);
+            use_map = true;
+        }
+        out << indent << br.lo << ".." << br.hi << ": ";
+        if (use_map)
+            out << FormatHash(nullptr, &match_data_map, nullptr, mah.algorithm, &br);
+        else
+            out << FormatHash(&match_data, nullptr, nullptr, mah.algorithm, &br);
+        out << std::endl;
+    }
+}
+
+/** Given an order for an allocation, will determine the input position of the slice in
+ *  the allocation, and save it in the match_data_map
+ *
+ *  FIXME: Currently does not work on repeated data
+ */
+void MauAsmOutput::emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
+        safe_vector<Slice> &match_data,
+        const safe_vector<PHV::Field::Slice> &field_list_order) const {
+    for (auto sl : match_data) {
+        int order_bit = 0;
+        for (auto fs : field_list_order) {
+            if (fs.field() != sl.get_field()) {
+                order_bit += fs.size();
+                continue;
+            }
+
+            auto half_open_intersect = fs.range().intersectWith(sl.range());
+            if (half_open_intersect.empty()) {
+                order_bit += fs.size();
+                continue;
+            }
+
+            le_bitrange intersect = { half_open_intersect.lo, half_open_intersect.hi - 1 };
+            Slice adapted_sl = sl;
+
+
+            int lo_adjust = std::max(intersect.lo - sl.range().lo, sl.range().lo - intersect.lo);
+            int hi_adjust = std::max(intersect.hi - sl.range().hi, sl.range().hi - intersect.hi);
+            adapted_sl.shrink_lo(lo_adjust);
+            adapted_sl.shrink_hi(hi_adjust);
+            int offset = adapted_sl.get_lo() - fs.range().lo;
+            match_data_map[order_bit + offset] = adapted_sl;
+            order_bit += fs.size();
+        }
     }
 }
 
@@ -695,7 +754,8 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
     }
 
     if (use->meter_alu_hash.allocated) {
-        emit_ixbar_meter_alu_hash(out, indent, match_data, use->meter_alu_hash);
+        emit_ixbar_meter_alu_hash(out, indent, match_data, use->meter_alu_hash,
+                                  use->field_list_order);
     }
 
 
@@ -733,12 +793,23 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
             return;
         }
 
+        std::map<int, Slice> match_data_map;
+        bool use_map = false;
+        if (hdh.algorithm.ordered) {
+            emit_ixbar_gather_map(match_data_map, match_data, use->field_list_order);
+            use_map = true;
+        }
+
         for (auto bit_start : hdh.bit_starts) {
             int start_bit = bit_start.first;
             le_bitrange br = bit_start.second;
             int end_bit = start_bit + br.size() - 1;
             out << indent << start_bit << ".." << end_bit;
-            out << ": " << FormatHash(match_data, nullptr, hdh.algorithm, &br) << std::endl;
+            if (use_map)
+                out << ": " << FormatHash(nullptr, &match_data_map, nullptr, hdh.algorithm, &br);
+            else
+                out << ": " << FormatHash(&match_data, nullptr, nullptr, hdh.algorithm, &br);
+            out << std::endl;
         }
 
         /*
@@ -767,7 +838,7 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
             if (last_bit == -1)
                 last_bit = (i + 1) * IXBar::HASH_DIST_BITS - 1;
             out << indent << first_bit << ".." << last_bit;
-            out << ": " << FormatHash(match_data, nullptr, hdh.algorithm) << std::endl;
+            out << ": " << FormatHash(&match_data, nullptr, nullptr, hdh.algorithm) << std::endl;
             sliceIdx++;
         }
         */

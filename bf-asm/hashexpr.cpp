@@ -208,13 +208,13 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
                     rv->init.setraw(what[2].i);
                 else
                     i--; }
-            if (what.vec.size == i+i && what[i].type == tMAP) {
+            if (what.vec.size == i+1 && what[i].type == tMAP) {
                 for (auto &kv : what[i].map) {
-                    if (CHECKTYPE(kv.value, tINT)) {
-                        if (rv->what.count(kv.value.i))
+                    if (CHECKTYPE(kv.key, tINT)) {
+                        if (rv->what.count(kv.key.i))
                             error(kv.value.lineno, "Duplicate field at offset %ld", kv.value.i);
                         else
-                            rv->what.emplace(kv.value.i, Phv::Ref(gress, kv.key)); } }
+                            rv->what.emplace(kv.key.i, Phv::Ref(gress, kv.value)); } }
             } else {
                 for (; i < what.vec.size; i++) {
                     rv->vec_what.emplace_back(gress, what[i]); } }

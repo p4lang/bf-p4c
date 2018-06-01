@@ -1145,7 +1145,8 @@ IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
 
 /* This is for adding fields to be allocated in the ixbar allocation scheme.  Used by
    match tables, selectors, and hash distribution */
-void IXBar::field_management(ContByteConversion &map_alloc, const IR::Expression *field,
+void IXBar::field_management(ContByteConversion &map_alloc,
+        safe_vector<PHV::Field::Slice> &field_list_order, const IR::Expression *field,
         std::map<cstring, bitvec> &fields_needed, cstring name, bool hash_dist, const PhvInfo &phv,
         bool is_atcam, bool partition) {
     const PHV::Field *finfo = nullptr;
@@ -1154,8 +1155,8 @@ void IXBar::field_management(ContByteConversion &map_alloc, const IR::Expression
         if (!hash_dist)
             BUG("A field list is somehow contained within the reads in table %s", name);
         for (auto comp : list->components)
-             field_management(map_alloc, comp, fields_needed, name, hash_dist, phv, is_atcam,
-                              partition);
+             field_management(map_alloc, field_list_order, comp, fields_needed, name, hash_dist,
+                              phv, is_atcam, partition);
         return;
     }
     if (field->is<IR::Mask>())
@@ -1190,6 +1191,7 @@ void IXBar::field_management(ContByteConversion &map_alloc, const IR::Expression
     } else {
         fields_needed[finfo->name] = field_bits;
     }
+    field_list_order.emplace_back(finfo, bits);
     add_use(map_alloc, finfo, aliasSourceName, &bits, 0, byte_type);
 }
 
@@ -1264,7 +1266,8 @@ Visitor::profile_t IXBar::FindSaluSources::init_apply(const IR::Node *root) {
     for (auto read : tbl->match_key) {
         if (!read->for_dleft())
             continue;
-        self.field_management(map_alloc, read->expr, fields_needed, tbl->name, false, phv);
+        self.field_management(map_alloc, field_list_order, read->expr, fields_needed,
+                              tbl->name, false, phv);
     }
     return rv;
 }
@@ -1282,7 +1285,8 @@ bool IXBar::FindSaluSources::preorder(const IR::Expression *e) {
     boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
     le_bitrange bits;
     if (auto *finfo = phv.field(e, &bits)) {
-        self.field_management(map_alloc, e, fields_needed, tbl->name, false, phv);
+        self.field_management(map_alloc, field_list_order, e, fields_needed, tbl->name, false,
+                              phv);
         phv_sources.insert(std::make_pair(finfo, bits));
         return false;
     }
@@ -1306,7 +1310,8 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_match())
             continue;
-        field_management(map_alloc, ixbar_read, fields_needed, tbl->name, false, phv,
+        field_management(map_alloc, alloc.field_list_order, ixbar_read, fields_needed,
+                         tbl->name, false, phv,
                          tbl->layout.atcam);
     }
 
@@ -1544,8 +1549,8 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_match())
             continue;
-        field_management(map_alloc, ixbar_read, fields_needed, tbl->name, false, phv,
-                         tbl->layout.atcam, true);
+        field_management(map_alloc, alloc.field_list_order, ixbar_read, fields_needed,
+                         tbl->name, false, phv, tbl->layout.atcam, true);
     }
     create_alloc(map_alloc, alloc);
     BUG_CHECK(alloc.use.size() > 0, "No partition index found");
@@ -1806,7 +1811,8 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     std::map<cstring, bitvec>        fields_needed;
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_selection()) continue;
-        field_management(map_alloc, ixbar_read->expr, fields_needed, tbl->name, false, phv);
+        field_management(map_alloc, alloc.field_list_order, ixbar_read->expr, fields_needed,
+                         tbl->name, false, phv);
     }
     create_alloc(map_alloc, alloc);
 
@@ -2185,7 +2191,8 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
     ordered_set<std::pair<const PHV::Field *, le_bitrange>> phv_sources;
     bool dleft = false;
     LOG3("IXBar::allocStateful(" << salu->name << ")");
-    salu->apply(FindSaluSources(*this, phv, map_alloc, phv_sources, dleft, tbl));
+    salu->apply(FindSaluSources(*this, phv, map_alloc, alloc.field_list_order, phv_sources,
+                                dleft, tbl));
     create_alloc(map_alloc, alloc);
     if (alloc.use.size() == 0)
         return true;
@@ -2425,7 +2432,8 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_typ
     safe_vector <IXBar::Use::Byte *> alloced;
     fields_needed.clear();
 
-    field_management(map_alloc, hd->field_list, fields_needed, name, true, phv);
+    field_management(map_alloc, alloc.field_list_order, hd->field_list, fields_needed, name,
+                     true, phv);
     create_alloc(map_alloc, alloc);
 
 

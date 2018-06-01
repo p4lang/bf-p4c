@@ -5,6 +5,7 @@
 #include <map>
 #include <unordered_set>
 #include "bf-p4c/mau/table_layout.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
 #include "lib/alloc.h"
 #include "lib/hex.h"
@@ -321,11 +322,14 @@ struct IXBar {
                 bit_starts.clear();
             }
         };
+
+        // The order in the P4 program that the fields appear in the list
+        safe_vector<PHV::Field::Slice> field_list_order;
         HashDistHash hash_dist_hash;
 
         void clear() { use.clear(); memset(hash_table_inputs, 0, sizeof(hash_table_inputs));
                        bit_use.clear(); way_use.clear(); meter_alu_hash.clear();
-                       hash_dist_hash.clear(); }
+                       hash_dist_hash.clear(); field_list_order.clear(); }
         unsigned compute_hash_tables();
         int groups() const;  // how many different groups in this use
         void add(const Use &alloc);
@@ -482,6 +486,7 @@ struct IXBar {
         IXBar                      &self;
         const PhvInfo              &phv;
         ContByteConversion  &map_alloc;
+        safe_vector<PHV::Field::Slice> &field_list_order;
         // Holds which bitranges of fields have been requested, and will not allocate
         // if a bitrange has been requested multiple times
         std::map<cstring, bitvec>  fields_needed;
@@ -497,9 +502,11 @@ struct IXBar {
 
      public:
         FindSaluSources(IXBar &self, const PhvInfo &phv, ContByteConversion &ma,
+                    safe_vector<PHV::Field::Slice> &flo,
                     ordered_set<std::pair<const PHV::Field *, le_bitrange>> &ps,
                     bool &d, const IR::MAU::Table *t)
-        : self(self), phv(phv), map_alloc(ma), phv_sources(ps), dleft(d), tbl(t) {}
+        : self(self), phv(phv), map_alloc(ma), field_list_order(flo), phv_sources(ps), dleft(d),
+          tbl(t) {}
     };
 
     class XBarHashDist : public MauInspector {
@@ -533,7 +540,8 @@ struct IXBar {
 
 
     void clear();
-    void field_management(ContByteConversion &map_alloc, const IR::Expression *field,
+    void field_management(ContByteConversion &map_alloc,
+        safe_vector<PHV::Field::Slice> &field_list_order, const IR::Expression *field,
         std::map<cstring, bitvec> &fields_needed, cstring name, bool hash_dist, const PhvInfo &phv,
         bool is_atcam = false, bool partition = false);
     bool allocMatch(bool ternary, const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,

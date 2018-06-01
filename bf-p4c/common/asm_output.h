@@ -94,7 +94,7 @@ class Slice {
         else
             lo += shrink;
     }
-
+    le_bitrange range() const { return { lo, hi}; }
     void shrink_hi(int shrink) {
         if (hi - shrink <= lo)
             hi = lo;

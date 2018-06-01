@@ -21,10 +21,12 @@ bool IR::MAU::hash_function::setup(const IR::Expression *e) {
             type = CRC;
             size = 16;
             poly = 0x8fdb;
+            ordered = true;
         } else if (m->member == "crc32" || m->member == "crc32_custom" || m->member == "CRC32") {
             type = CRC;
             size = 32;
             poly = 0xe89061db;
+            ordered = true;
         } else {
             return false; }
         return true; }
@@ -44,11 +46,13 @@ bool IR::MAU::hash_function::setup(const IR::Expression *e) {
             type = CRC;
             size = 16;
             poly = 0x8fdb;
+            ordered = true;
             return true;
         case 3:
             type = CRC;
             size = 32;
             poly = 0xe89061db;
+            ordered = true;
             return true;
         case 4:
             type = CSUM;
@@ -71,6 +75,7 @@ bool IR::MAU::hash_function::setup(const IR::Expression *e) {
     }
     if (crcargs) {
         type = CRC;
+        ordered = true;
         switch (crcargs->size()) {
         case 5:
             if (auto k = crcargs->at(4)->expression->to<IR::Constant>())

@@ -8,6 +8,7 @@
 #include "bf-p4c/mau/default_next.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/resource.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "lib/log.h"
 #include "lib/safe_vector.h"
 
@@ -69,6 +70,9 @@ class MauAsmOutput : public MauInspector {
     void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
             safe_vector<Slice> &ghost, const TableMatch *fmt,
             std::map<int, std::map<int, Slice>> &sort) const;
+    void emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
+            safe_vector<Slice> &match_data,
+            const safe_vector<PHV::Field::Slice> &field_list_order) const;
     void emit_ixbar_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
             safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
             int &ident_bits_prev_alloc, const IR::Expression *hd_expr) const;
@@ -85,7 +89,8 @@ class MauAsmOutput : public MauInspector {
             safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
              const IR::Expression *hd_expr) const;
     void emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
-            safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah) const;
+            safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
+            const safe_vector<PHV::Field::Slice> &field_list_order) const;
     void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
             const TableMatch *fmt, const IR::Expression *hd_expr = nullptr) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;
