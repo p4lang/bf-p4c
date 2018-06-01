@@ -411,11 +411,6 @@ class ConcreteAllocation : public PHV::Allocation {
 
     /// @returns a visual representation of the groupwise occupancy metrics.
     cstring getOccupancyMetrics(const ordered_map<PHV::Container, int>& used) const override;
-
-    /// @returns a vector of group names based on a description of the group (number and per group
-    /// size) and the type string of that group
-    std::vector<cstring>
-    getGroupNamesBySize(const std::pair<int, int>& groupDesc, cstring type) const;
 };
 
 

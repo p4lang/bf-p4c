@@ -618,23 +618,6 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
     return ss.str();
 }
 
-std::vector<cstring> PHV::ConcreteAllocation::getGroupNamesBySize(
-        const std::pair<int, int>& groupDesc, cstring type) const {
-    std::vector<cstring> rv;
-    // Every string is of format [B/W/H][a-b]. In this case, a is represented by firstIndexInGroup
-    // and b is represented by lastIndexInGroup
-    unsigned firstIndexInGroup = 0;
-    unsigned lastIndexInGroup = groupDesc.second - 1;
-    unsigned totalContainers = groupDesc.first * groupDesc.second;
-    while (lastIndexInGroup < totalContainers) {
-        cstring groupName = type + std::to_string(firstIndexInGroup) + "--" + type +
-            std::to_string(lastIndexInGroup);
-        rv.push_back(groupName);
-        firstIndexInGroup += groupDesc.second;
-        lastIndexInGroup += groupDesc.second; }
-    return rv;
-}
-
 cstring
 PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, int>& used) const {
     const auto& phvSpec = Device::phvSpec();
@@ -645,16 +628,6 @@ PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, i
     std::pair<int, int> numBytes = phvSpec.mauGroupNumAndSize(PHV::Type::B);
     std::pair<int, int> numHalfs = phvSpec.mauGroupNumAndSize(PHV::Type::H);
     std::pair<int, int> numWords = phvSpec.mauGroupNumAndSize(PHV::Type::W);
-
-    // Extract all group names into a vector. Order is W->B->H.
-    // Format is [B/W/H][a-b] where a or b  are the indexes of the containers that form the range of
-    // containers in this group. E.g. B0-B15.
-    std::vector<cstring> wordGroupNames = getGroupNamesBySize(numWords, "W");
-    groupIDList.insert(groupIDList.end(), wordGroupNames.begin(), wordGroupNames.end());
-    std::vector<cstring> byteGroupNames = getGroupNamesBySize(numBytes, "B");
-    groupIDList.insert(groupIDList.end(), byteGroupNames.begin(), byteGroupNames.end());
-    std::vector<cstring> halfGroupNames = getGroupNamesBySize(numHalfs, "H");
-    groupIDList.insert(groupIDList.end(), halfGroupNames.begin(), halfGroupNames.end());
 
     for (auto cid : Device::phvSpec().physicalContainers()) {
         PHV::Container c = Device::phvSpec().idToContainer(cid);
@@ -691,71 +664,88 @@ PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, i
     // Set up the column headings for the groupwise occupancy metrics
     ss << std::endl << "PHV Groups Allocation State" << std::endl;
     ss << dashes.str();
-    ss << "|" << boost::format("%=20s") % "PHV Group" << "|" << boost::format("%=20s") %
-        "Containers Used" << "|" << boost::format("%=20s") % "Bits Used" << "|" <<
-        boost::format("%=20s") % "Available Bits" << "|" << std::endl;
-    ss << "|" << boost::format("%=20s") % "(Size)" << "|" << boost::format("%=20s") % "(%)" << "|"
-        << boost::format("%=20s") % "(%)" << "|" << boost::format("%=20s") % "" << "|" << std::endl;
+    ss << "|" << boost::format("%=20s") % "PHV Group"
+       << "|" << boost::format("%=20s") % "Containers Used"
+       << "|" << boost::format("%=20s") % "Bits Used"
+       << "|" << boost::format("%=20s") % "Available Bits"
+       << "|" << std::endl;
+    ss << "|" << boost::format("%=20s") % "(Size)"
+       << "|" << boost::format("%=20s") % "(%)"
+       << "|" << boost::format("%=20s") % "(%)"
+       << "|" << boost::format("%=20s") % ""
+       << "|" << std::endl;
     ss << dashes.str();
 
     auto tContainersUsed = 0, tBitsUsed = 0, tTotalBits = 0, tTotalContainers = 0;
-    for (auto containerType : Device::phvSpec().containerTypes()) {
+    for (auto containerSize : Device::phvSpec().containerSizes()) {
         // Calculate total size-wise
         auto sz_containersUsed = 0, sz_bitsUsed = 0, sz_totalBits = 0, sz_totalContainers = 0;
         auto size = 0;
         std::stringstream blankLine;
-        blankLine << "|" << boost::format("%=20s") % "" << "|" << boost::format("%=20s") % "" << "|"
-            << boost::format("%=20s") % "" << "|" << boost::format("%=20s") % "" << "|" <<
-            std::endl;
+        blankLine << "|" << boost::format("%=20s") % ""
+                  << "|" << boost::format("%=20s") % ""
+                  << "|" << boost::format("%=20s") % ""
+                  << "|" << boost::format("%=20s") % ""
+                  << "|" << std::endl;
 
-        for (auto mauGroup : Device::phvSpec().mauGroups(containerType.size())) {
+        for (auto mauGroup : Device::phvSpec().mauGroups(containerSize)) {
             size = (size == 0) ? groups[mauGroup].size : size;
             sz_containersUsed += groups[mauGroup].containersUsed;
             sz_bitsUsed += groups[mauGroup].bitsUsed;
             auto totalBits = groups[mauGroup].totalContainers * groups[mauGroup].size;
             sz_totalBits += totalBits;
             sz_totalContainers += groups[mauGroup].totalContainers;
+
             std::stringstream group, containers, bits;
-            group << groupIDList[groups[mauGroup].groupID];
-            containers << boost::format("%2d") % groups[mauGroup].containersUsed <<
-                boost::format(" (%=6.3g%%)") % (100.0 * groups[mauGroup].containersUsed /
-                        groups[mauGroup].totalContainers);
+            group << Device::phvSpec().idToContainer(*mauGroup.min()) << "--"
+                  << Device::phvSpec().idToContainer(*mauGroup.max());
+            containers << boost::format("%2d") % groups[mauGroup].containersUsed
+                       << boost::format(" (%=6.3g%%)") % (100.0 * groups[mauGroup].containersUsed /
+                                                          groups[mauGroup].totalContainers);
             bits << boost::format("%3d") % groups[mauGroup].bitsUsed << boost::format(" (%=6.3g%%)")
                 % (100.0 * groups[mauGroup].bitsUsed / totalBits);
-            ss << "|" << boost::format("%=20s") % group.str() << "|" << boost::format("%=20s") %
-                    containers.str() << "|" << boost::format("%=20s") % bits.str() << "|" <<
-                    boost::format("%=20s") % totalBits << "|" << std::endl; }
+            ss << "|" << boost::format("%=20s") % group.str()
+               << "|" << boost::format("%=20s") % containers.str()
+               << "|" << boost::format("%=20s") % bits.str()
+               << "|" << boost::format("%=20s") % totalBits
+               << "|" << std::endl; }
 
-        if (Device::phvSpec().mauGroups(containerType.size()).size() != 0) {
+        if (Device::phvSpec().mauGroups(containerSize).size() != 0) {
             // Size wise occupancy metrics
             // Ensure that these lines appears only for B, H, and W; not for TB, TH, TW
             tContainersUsed += sz_containersUsed;
             tBitsUsed += sz_bitsUsed;
             tTotalBits += sz_totalBits;
             tTotalContainers += sz_totalContainers;
+
             std::stringstream group, containers, bits;
             group << "Usage for " << size << "b";
-            containers << boost::format("%2d") % sz_containersUsed << boost::format(" (%=6.3g%%)") %
-                (100.0 * sz_containersUsed / sz_totalContainers);
-            bits << boost::format("%3d") % sz_bitsUsed << boost::format(" (%=6.3g%%)") % (100.0 *
-                    sz_bitsUsed / sz_totalBits);
+            containers << boost::format("%2d") % sz_containersUsed
+                       << boost::format(" (%=6.3g%%)") %
+                              (100.0 * sz_containersUsed / sz_totalContainers);
+            bits << boost::format("%3d") % sz_bitsUsed
+                 << boost::format(" (%=6.3g%%)") % (100.0 * sz_bitsUsed / sz_totalBits);
             ss << blankLine.str();
-            ss << "|" << boost::format("%=20s") % group.str() << "|" << boost::format("%=20s") %
-                containers.str() << "|" << boost::format("%=20s") % bits.str() << "|" <<
-                boost::format("%=20s") % sz_totalBits << "|" << std::endl;
+            ss << "|" << boost::format("%=20s") % group.str()
+               << "|" << boost::format("%=20s") % containers.str()
+               << "|" << boost::format("%=20s") % bits.str()
+               << "|" << boost::format("%=20s") % sz_totalBits
+               << "|" << std::endl;
             ss << dashes.str(); } }
 
+    // Print "Overal usage" stats.
     std::stringstream containers, bits;
-    containers << boost::format("%2d") % tContainersUsed << boost::format(" (%=6.3g%%)") % (100.0 *
-            tContainersUsed / tTotalContainers);
-    bits << boost::format("%4d") % tBitsUsed << boost::format(" (%=6.3g%%)") % (100.0 * tBitsUsed /
-            tTotalBits);
-    ss << "|" << boost::format("%=20s") % "Overall PHV Usage" << "|" << boost::format("%=20s") %
-        containers.str() << "|" << boost::format("%=20s") % bits.str() << "|" <<
-        boost::format("%=20s") % tTotalBits << "|" << std::endl;
+    containers << boost::format("%2d") % tContainersUsed
+               << boost::format(" (%=6.3g%%)") % (100.0 * tContainersUsed / tTotalContainers);
+    bits << boost::format("%4d") % tBitsUsed
+         << boost::format(" (%=6.3g%%)") % (100.0 * tBitsUsed / tTotalBits);
+    ss << "|" << boost::format("%=20s") % "Overall PHV Usage"
+       << "|" << boost::format("%=20s") % containers.str()
+       << "|" << boost::format("%=20s") % bits.str()
+       << "|" << boost::format("%=20s") % tTotalBits
+       << "|" << std::endl;
 
     ss << dashes.str();
-
     return ss.str();
 }
 
