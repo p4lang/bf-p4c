@@ -571,6 +571,9 @@ set (BFN_P4RUNTIME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/control-plane/proto)
 set (BFN_P4RUNTIME_INFO_PROTO ${BFN_P4RUNTIME_DIR}/barefoot/p4info.proto)
 set (BFN_P4RUNTIME_INFO_GEN_SRCS ${P4C_BINARY_DIR}/control-plane/barefoot/p4info.pb.cc)
 set (BFN_P4RUNTIME_INFO_GEN_HDRS ${P4C_BINARY_DIR}/control-plane/barefoot/p4info.pb.h)
+# The generated code for protobuf has an excessive number of warnings
+set_source_files_properties(${BFN_P4RUNTIME_INFO_GEN_SRCS} PROPERTIES
+  COMPILE_FLAGS "-Wno-unused-parameter")
 
 add_custom_target (barefootdir
   ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/control-plane/barefoot)

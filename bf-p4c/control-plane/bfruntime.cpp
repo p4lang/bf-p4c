@@ -12,7 +12,11 @@
 #include "lib/gmputil.h"
 #include "lib/json.h"
 #include "lib/log.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+// The generated code for protobuf has an excessive number of warnings
 #include "p4/config/p4info.pb.h"
+#pragma GCC diagnostic pop
 
 namespace BFN {
 
