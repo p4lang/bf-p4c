@@ -93,10 +93,13 @@ class ClotInfo {
     void clear() {
         parser_state_to_fields_.clear();
         field_to_parser_state_.clear();
-
+        checksum_dests_.clear();
         clots_.clear();
         clot_to_parser_state_.clear();
         parser_state_to_clots_.clear();
+        container_range_.clear();
+        field_range_.clear();
+        Clot::tagCnt = 0;
     }
 
     void dbprint(std::ostream &out) const;
