@@ -354,8 +354,14 @@ class BackendAttached {
     NullOK HashDist hash_dist = nullptr;
 #emit
     enum use_t { NO_USE, DIRECT, INDIRECT, LOG, STACK_PUSH, STACK_POP, FIFO_PUSH, FIFO_POP };
+    enum addr_location_t { ADDR_DIRECT, ADDR_OVERHEAD, ADDR_HASH, ADDR_NOT_SET };
+    enum pfe_location_t { PFE_DEFAULT, PFE_OVERHEAD, PFE_PAYLOAD, PFE_NOT_SET };
+    enum type_location_t { TYPE_DEFAULT, TYPE_OVERHEAD, TYPE_NOT_SET };
 #end
     use_t use = NO_USE;
+    addr_location_t addr_location = ADDR_NOT_SET;
+    pfe_location_t pfe_location = PFE_NOT_SET;
+    type_location_t type_location = TYPE_NOT_SET;
     safe_vector<cstring>                                learn = {};
     safe_vector<cstring>                                match = {};
     AttachedMemory attached;
@@ -537,6 +543,10 @@ class Instruction : Primitive {
 #emit
     using Primitive::Primitive;
 #end
+    // This is a vector, filled after BackendCopyPropagation, indicating which operands
+    // have been copy propagated from an earlier instruction.  Copy propagated operands
+    // don't have to be checked in order to guarantee parallelism
+    safe_vector<bool> copy_propagated = {};
     Instruction(const Primitive &p) : Primitive(p) {}
     Instruction(cstring op, const std::vector<Expression> &args) : Primitive(op) {
         for (auto a : args) operands.push_back(a); }
@@ -558,18 +568,27 @@ class Action : ActionFunction {
     cstring internal_name = "";
     cstring disallowed_reason = "none";
     inline Vector<Argument> default_params = {};
+
     // Separate stateful primitives from actions, as they aren't instructions
     // as such.
+    bool meter_pfe = false;
+    bool stats_pfe = false;
+#emit
+    enum meter_type_t { UNUSED, STFUL_INST0, COLOR_BLIND, STFUL_INST1, SELECTOR, STFUL_INST2,
+                        COLOR_AWARE, STFUL_INST3 };
+#end
+    meter_type_t meter_type = UNUSED;
+    inline Vector<Primitive>    stateful = {};
 
     bool hit_only() const { return default_allowed == false; }
     bool miss_only() const { return miss_action_only == true; }
+
+
 
     validate {
         ERROR_CHECK(!(hit_only() && miss_only()), "Action %s cannot be both a hit only and a "
                     "miss only action.  Can only be at most one of those categories", name);
     }
-
-    inline Vector<Primitive>    stateful = {};
 }
 /// A stateful ALU VLIW instruction -- multiple instructions that all run together
 /// "simultanesouly" in different ALUs (certain ALUs are actually later in the pipeline)
@@ -678,6 +697,45 @@ inline bool operator>>(cstring s, IR::MAU::BackendAttached::use_t &u) {
     else if (s == "FIFO_POP") u = IR::MAU::BackendAttached::FIFO_POP;
     else if (s == "STACK_PUSH") u = IR::MAU::BackendAttached::STACK_PUSH;
     else if (s == "STACK_POP") u = IR::MAU::BackendAttached::STACK_POP;
+    else return false;
+    return true;
+}
+
+inline bool operator>>(cstring s, IR::MAU::BackendAttached::addr_location_t &a) {
+    if (!s || s == "" || s == "ADDR_NOT_SET") a = IR::MAU::BackendAttached::ADDR_NOT_SET;
+    else if (s == "ADDR_DIRECT") a = IR::MAU::BackendAttached::ADDR_DIRECT;
+    else if (s == "ADDR_OVERHEAD") a = IR::MAU::BackendAttached::ADDR_OVERHEAD;
+    else if (s == "ADDR_HASH") a = IR::MAU::BackendAttached::ADDR_HASH;
+    else return false;
+    return true;
+}
+
+inline bool operator>>(cstring s,  IR::MAU::BackendAttached::pfe_location_t &p) {
+    if (!s || s == "" || s == "PFE_NOT_SET") p = IR::MAU::BackendAttached::PFE_NOT_SET;
+    else if (s == "PFE_DEFAULT") p = IR::MAU::BackendAttached::PFE_DEFAULT;
+    else if (s == "PFE_OVERHEAD") p = IR::MAU::BackendAttached::PFE_OVERHEAD;
+    else if (s == "PFE_PAYLOAD") p = IR::MAU::BackendAttached::PFE_PAYLOAD;
+    else return false;
+    return true;
+}
+
+inline bool operator>>(cstring s, IR::MAU::BackendAttached::type_location_t &t) {
+    if (!s || s == "" || s == "TYPE_NOT_SET") t = IR::MAU::BackendAttached::TYPE_NOT_SET;
+    else if (s == "TYPE_DEFAULT") t = IR::MAU::BackendAttached::TYPE_DEFAULT;
+    else if (s == "TYPE_OVERHEAD") t = IR::MAU::BackendAttached::TYPE_OVERHEAD;
+    else return false;
+    return true;
+}
+
+inline bool operator>>(cstring s, IR::MAU::Action::meter_type_t &m) {
+    if (!s || s == "" || s == "UNUSED") m = IR::MAU::Action::UNUSED;
+    else if (s == "STFUL_INST0") m = IR::MAU::Action::STFUL_INST0;
+    else if (s == "COLOR_BLIND") m = IR::MAU::Action::COLOR_BLIND;
+    else if (s == "STFUL_INST1") m = IR::MAU::Action::STFUL_INST1;
+    else if (s == "SELECTOR") m = IR::MAU::Action::SELECTOR;
+    else if (s == "STFUL_INST2") m = IR::MAU::Action::STFUL_INST2;
+    else if (s == "COLOR_AWARE") m = IR::MAU::Action::COLOR_AWARE;
+    else if (s == "STFUL_INST3") m = IR::MAU::Action::STFUL_INST3;
     else return false;
     return true;
 }

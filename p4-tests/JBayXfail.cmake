@@ -129,6 +129,11 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
+  "The action .* manipulates field .* that requires multiple stages from an action"
+  testdata/p4_14_samples/action_inline.p4
+  )
+
+p4c_add_xfail_reason("jbay"
   "Compiler Bug.*: .*: Cannot find declaration for"
   testdata/p4_14_samples/TLV_parsing.p4
   )

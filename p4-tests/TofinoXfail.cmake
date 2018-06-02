@@ -940,8 +940,24 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Instruction selection creates an instruction that the rest of the compiler cannot correctly interpret"
+  "Currently the field .* in action .* is assigned in a way too complex for the compiler"
+  testdata/p4_16_samples/slice-def-use1.p4
+  )
+  
+
+p4c_add_xfail_reason("tofino"
+  "The action .* manipulates field .* that requires multiple stages from an action"
   testdata/p4_16_samples/issue983-bmv2.p4
+  testdata/p4_14_samples/action_inline.p4
+  extensions/p4_tests/p4_14/p4smith_regression/murdoch_0.p4
+  p4testgen_laymen_0
+  extensions/p4_tests/p4_14/p4smith_regression/photostats_0.p4
+  extensions/p4_tests/p4_14/p4smith_regression/sidestepped_0.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "src2 must be phv register"
+  p4testgen_faecess_0
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1108,22 +1124,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/injection_0.p4
 )
 
-# BRIG-653
-p4c_add_xfail_reason("tofino"
-  "No casts should ever reach this point in the Tofino backend"
-  extensions/p4_tests/p4_14/p4smith_regression/murdoch_0.p4
-)
 
 # BRIG-654
 p4c_add_xfail_reason("tofino"
   "Two containers in the same action are at the same place?"
   extensions/p4_tests/p4_14/p4smith_regression/selenium_0.p4
-)
-
-# https://github.com/barefootnetworks/p4v/issues/362
-p4c_add_xfail_reason("tofino"
-  "AssertionError: Expected packet was not received on device"
-  p4testgen_laymen_0
 )
 
 # BRIG-677
@@ -1145,12 +1150,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/drunkards_0.p4
 )
 
-# BRIG-682
-p4c_add_xfail_reason("tofino"
-  "Some fields cannot be allocated because of unsatisfiable constraints"
-  extensions/p4_tests/p4_14/p4smith_regression/photostats_0.p4
-)
-
 # BRIG-679
 # error: Gateway match key chubs.dr not in matching hash column
 p4c_add_xfail_reason("tofino"
@@ -1158,12 +1157,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/vindemiatrixs_0.p4
 )
 
-# BRIG-680
-# Compiler Bug: sidestepped_0.p4(95): RangeMatch source (ingress::discontinuitys.soupcons[7:4];) misaligned at 34..34
-p4c_add_xfail_reason("tofino"
-  "RangeMatch source"
-  extensions/p4_tests/p4_14/p4smith_regression/sidestepped_0.p4
-)
 
 # BRIG-683
 # error: Upper word match of tracker.medicos for range gateway not a multiple of 4 bits
@@ -1177,12 +1170,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "hash expression width mismatch"
   extensions/p4_tests/p4_14/p4smith_regression/ghosted_0.p4
-)
-
-# BRIG-681
-p4c_add_xfail_reason("tofino"
-  "AssertionError: Expected packet was not received on device"
-  p4testgen_faecess_0
 )
 
 # BRIG-691

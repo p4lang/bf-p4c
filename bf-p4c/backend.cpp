@@ -144,7 +144,7 @@ Backend::Backend(const BFN_Options& options) :
         new CollectPhvInfo(phv),    // Needs to be rerun after CreateThreadLocalInstances.
         new HeaderPushPop,
         new CollectPhvInfo(phv),
-        new DoInstructionSelection(phv),
+        new InstructionSelection(phv),
         new DumpPipe("After InstructionSelection"),
         new Alias(phv),             // Add aliasing from the pa_alias pragmas
         new CollectPhvInfo(phv),

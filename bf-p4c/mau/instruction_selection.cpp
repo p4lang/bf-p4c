@@ -7,17 +7,106 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/validate_allocation.h"
 
+const IR::MAU::Action *Synth2PortSetup::preorder(IR::MAU::Action *act) {
+    clear_action();
+    return act;
+}
+
+/** Converts any method calls relating to Synth2Port tables to the associated AttachedOutput
+ *  if necessary, and once converted, saves this value to the primitive
+ */
+const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
+    if (findContext<IR::MAU::SaluAction>())
+        return prim;
+
+    if (findContext<IR::MAU::Action>() == nullptr)
+        return prim;
+
+    auto dot = prim->name.find('.');
+    auto objType = dot ? prim->name.before(dot) : cstring();
+    IR::Node *rv = prim;
+
+    cstring method = dot ? cstring(dot+1) : prim->name;
+    if (objType == "RegisterAction" || objType == "LearnAction" ||
+        objType == "selector_action") {
+        bool direct_access = (prim->operands.size() == 1 && method == "execute") ||
+                             method == "execute_direct";
+        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
+        // needed to setup the index and/or type properly
+        stateful.push_back(prim);
+
+        if (objType == "RegisterAction" && salu->direct != direct_access)
+            error("%s: %sdirect access to %sdirect register", prim->srcInfo,
+                  direct_access ? "" : "in", salu->direct ? "" : "in");
+        int bit = 32;
+        unsigned idx = method == "execute_direct" ? 1 : 2;
+
+        for (; idx < prim->operands.size(); ++idx, bit += 32) {
+            auto ao = new IR::MAU::AttachedOutput(IR::Type::Bits::get(bit+32), salu);
+            auto instr = new IR::MAU::Instruction(prim->srcInfo, "set", prim->operands[idx],
+                                                  MakeSlice(ao, bit, bit+31));
+            // Have to put these instructions at the highest level of the instruction
+            created_instrs.push_back(instr);
+        }
+        rv = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
+                                      new IR::MAU::AttachedOutput(prim->type, salu));
+    } else if (prim->name == "Counter.count") {
+        stateful.push_back(prim);  // needed to setup the index
+        rv = nullptr;
+    } else if (prim->name == "Lpf.execute" || prim->name == "Wred.execute" ||
+               prim->name == "Meter.execute" || prim->name == "DirectLpf.execute" ||
+               prim->name == "DirectWred.execute") {
+        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        auto mtr = glob->obj->to<IR::MAU::Meter>();
+        BUG_CHECK(mtr != nullptr, "%s: Cannot find associated meter for the method call %s",
+                  prim->srcInfo, *prim);
+        stateful.push_back(prim);
+        rv = new IR::MAU::AttachedOutput(prim->type, mtr);
+    } else if (prim->name == "DirectCounter.count") {
+        stateful.push_back(prim);
+        rv = nullptr;
+    } else if (prim->name == "DirectMeter.execute") {
+        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        auto mtr = glob->obj->to<IR::MAU::Meter>();
+        stateful.push_back(prim);
+        rv = new IR::MAU::AttachedOutput(IR::Type::Bits::get(8), mtr);
+    }
+
+    if (findContext<IR::Primitive>() != nullptr)
+        return rv;
+    // If instructions are at the top level of the instruction, then push these instructions
+    // in after
+    if (!created_instrs.empty()) {
+        auto *rv_vec = new IR::Vector<IR::Node>();
+        if (rv != nullptr)
+            rv_vec->push_back(rv);
+        for (auto instr : created_instrs)
+            rv_vec->push_back(instr);
+        created_instrs.clear();
+        return rv_vec;
+    }
+    return rv;
+}
+
+const IR::MAU::Action *Synth2PortSetup::postorder(IR::MAU::Action *act) {
+    act->stateful.append(stateful);
+    act->meter_pfe = meter_pfe;
+    act->stats_pfe = stats_pfe;
+    return act;
+}
+
 template<class T> static
 T *clone(const T *ir) { return ir ? ir->clone() : nullptr; }
 
-InstructionSelection::InstructionSelection(PhvInfo &phv) : phv(phv) {}
+DoInstructionSelection::DoInstructionSelection(const PhvInfo &phv) : phv(phv) {}
 
-Visitor::profile_t InstructionSelection::init_apply(const IR::Node *root) {
+Visitor::profile_t DoInstructionSelection::init_apply(const IR::Node *root) {
     auto rv = MauTransform::init_apply(root);
     return rv;
 }
 
-IR::Member *InstructionSelection::genIntrinsicMetadata(gress_t gress,
+IR::Member *DoInstructionSelection::genIntrinsicMetadata(gress_t gress,
                                                        cstring header, cstring field) {
     auto metadataName = cstring::to_cstring(gress) + "::" + header;
     auto* meta = findContext<IR::BFN::Pipe>()->metadata[metadataName];
@@ -31,14 +120,14 @@ IR::Member *InstructionSelection::genIntrinsicMetadata(gress_t gress,
     return nullptr;
 }
 
-const IR::GlobalRef *InstructionSelection::preorder(IR::GlobalRef *gr) {
+const IR::GlobalRef *DoInstructionSelection::preorder(IR::GlobalRef *gr) {
     /* don't recurse through GlobalRefs as they refer to things elsewhere, not stuff
      * we want to turn into VLIW instructions */
     prune();
     return gr;
 }
 
-class InstructionSelection::SplitInstructions : public Transform {
+class DoInstructionSelection::SplitInstructions : public Transform {
     IR::Vector<IR::Primitive> &split;
     const IR::Expression *postorder(IR::MAU::Instruction *inst) override {
         if (inst->operands.empty()) return inst;
@@ -56,75 +145,33 @@ class InstructionSelection::SplitInstructions : public Transform {
     explicit SplitInstructions(IR::Vector<IR::Primitive> &s) : split(s) {}
 };
 
-// Test to see if 'a' contains 'b' -- both expressions refer to phvs or tempvars, and b
-// is a subset or subrange of a.  Not exhaustive, so may return false.
-static bool expr_contains(const PhvInfo &phv, const IR::Expression *a, const IR::Expression *b) {
-    if (*a == *b) return true;
-    if (a->is<IR::TempVar>() || b->is<IR::TempVar>())
-        // FIXME -- trying to call phv.field on a newly created tempvar will crash
-        return false;
-    le_bitrange abits, bbits;
-    if (auto f = phv.field(a, &abits))
-        if (f == phv.field(b, &bbits) && abits.contains(bbits))
-            return true;
-    return false;
-}
-
-const IR::MAU::Action *InstructionSelection::preorder(IR::MAU::Action *af) {
-    BUG_CHECK(this->af == nullptr, "Nested action functions");
-    BUG_CHECK(stateful.empty(), "invalid state in visitor");
-    LOG2("InstructionSelection processing action " << af->name);
-    LOG5(af);
-    this->af = af;
-    prune();
-    // DANGER Custom visitor where we carefully track the iterator over the action body, so we
-    // can insert new instructions into it while iterating over it.  We carefully use this
-    // iterator and ensure that it remains valid after any insert or erase operation.
-    af_action_iter = af->action.begin();
-    while (af_action_iter != af->action.end()) {
-        const IR::Expression *prim = *af_action_iter;
-        visit(prim, "action");
-        if (prim && (*af_action_iter = prim->to<IR::Primitive>()))
-            ++af_action_iter;
-        else
-            af_action_iter = af->action.erase(af_action_iter); }
-    BUG_CHECK(this->af == af, "Action function corrupted");
-    this->af = nullptr;
+const IR::MAU::Action *DoInstructionSelection::postorder(IR::MAU::Action *af) {
     IR::Vector<IR::Primitive> split;
+    // FIXME: This should be pulled out as a different pass
     for (auto *p : af->action)
         split.push_back(p->apply(SplitInstructions(split)));
     if (split.size() > af->action.size())
         af->action = std::move(split);
-    af->stateful.append(stateful);
-    stateful.clear();
-    // remove instructions that are later overwritten in the same action
-    // FIXME -- should be a separate pass in DoInstructionSelection after InstructionSelection?
-    for (auto it = af->action.begin(); it != af->action.end();) {
-        bool overwritten = false;
-        for (auto it2 = it + 1; it2 != af->action.end(); ++it2) {
-            if (expr_contains(phv, (*it2)->operands.at(0), (*it)->operands.at(0))) {
-                overwritten = true;
-                break; } }
-        if (overwritten)
-            it = af->action.erase(it);
-        else
-            ++it; }
-    LOG5("after instruction_selection:\n" << af);
+    LOG5("Postorder " << af);
+    this->af = nullptr;
     return af;
 }
 
-void InstructionSelection::insert_inst(const IR::MAU::Instruction *inst) {
-    af_action_iter = af->action.insert(af_action_iter, inst);
-    ++af_action_iter;
+const IR::MAU::Action *DoInstructionSelection::preorder(IR::MAU::Action *af) {
+    BUG_CHECK(findContext<IR::MAU::Action>() == nullptr, "Nested action functions");
+    LOG2("DoInstructionSelection processing action " << af->name);
+    LOG5(af);
+    this->af = af;
+    return af;
 }
 
-bool InstructionSelection::checkPHV(const IR::Expression *e) {
+bool DoInstructionSelection::checkPHV(const IR::Expression *e) {
     if (auto *c = e->to<IR::Cast>())
         return checkPHV(c->expr);
     return phv.field(e);
 }
 
-bool InstructionSelection::checkSrc1(const IR::Expression *e) {
+bool DoInstructionSelection::checkSrc1(const IR::Expression *e) {
     if (auto *c = e->to<IR::Cast>())
         return checkSrc1(c->expr);
     if (auto slice = e->to<IR::Slice>())
@@ -138,7 +185,7 @@ bool InstructionSelection::checkSrc1(const IR::Expression *e) {
     return phv.field(e);
 }
 
-bool InstructionSelection::checkConst(const IR::Expression *ex, long &value) {
+bool DoInstructionSelection::checkConst(const IR::Expression *ex, long &value) {
     if (auto *k = ex->to<IR::Constant>()) {
         value = k->asLong();
         return true;
@@ -147,7 +194,7 @@ bool InstructionSelection::checkConst(const IR::Expression *ex, long &value) {
     }
 }
 
-bool InstructionSelection::equiv(const IR::Expression *a, const IR::Expression *b) {
+bool DoInstructionSelection::equiv(const IR::Expression *a, const IR::Expression *b) {
     if (*a == *b) return true;
     if (typeid(*a) != typeid(*b)) return false;
     if (auto ca = a->to<IR::Cast>()) {
@@ -157,13 +204,13 @@ bool InstructionSelection::equiv(const IR::Expression *a, const IR::Expression *
     return false;
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::BoolLiteral *bl) {
+const IR::Expression *DoInstructionSelection::postorder(IR::BoolLiteral *bl) {
     if (!findContext<IR::MAU::Action>())
         return bl;
     return new IR::Constant(new IR::Type::Bits(1, false), static_cast<int>(bl->value));
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::BAnd *e) {
+const IR::Expression *DoInstructionSelection::postorder(IR::BAnd *e) {
     if (!af) return e;
     auto *left = e->left, *right = e->right;
     const char *op = "and";
@@ -182,7 +229,7 @@ const IR::Expression *InstructionSelection::postorder(IR::BAnd *e) {
     return new IR::MAU::Instruction(e->srcInfo, op, new IR::TempVar(e->type), left, right);
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::BOr *e) {
+const IR::Expression *DoInstructionSelection::postorder(IR::BOr *e) {
     if (!af) return e;
     auto *left = e->left, *right = e->right;
     const char *op = "or";
@@ -201,7 +248,7 @@ const IR::Expression *InstructionSelection::postorder(IR::BOr *e) {
     return new IR::MAU::Instruction(e->srcInfo, op, new IR::TempVar(e->type), left, right);
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::BXor *e) {
+const IR::Expression *DoInstructionSelection::postorder(IR::BXor *e) {
     if (!af) return e;
     auto *left = e->left, *right = e->right;
     const char *op = "xor";
@@ -219,7 +266,7 @@ const IR::Expression *InstructionSelection::postorder(IR::BXor *e) {
     return new IR::MAU::Instruction(e->srcInfo, op, new IR::TempVar(e->type), left, right);
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::Cmpl *e) {
+const IR::Expression *DoInstructionSelection::postorder(IR::Cmpl *e) {
     if (!af) return e;
     if (auto *fold = clone(e->expr->to<IR::MAU::Instruction>())) {
         if (fold->name == "and") fold->name = "nand";
@@ -238,12 +285,12 @@ const IR::Expression *InstructionSelection::postorder(IR::Cmpl *e) {
     return new IR::MAU::Instruction(e->srcInfo, "not", new IR::TempVar(e->type), e->expr);
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::Add *e) {
+const IR::Expression *DoInstructionSelection::postorder(IR::Add *e) {
     if (!af) return e;
     return new IR::MAU::Instruction(e->srcInfo, "add", new IR::TempVar(e->type), e->left, e->right);
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::Sub *e) {
+const IR::Expression *DoInstructionSelection::postorder(IR::Sub *e) {
     if (!af) return e;
     if (auto *k = e->right->to<IR::Constant>())
         return new IR::MAU::Instruction(e->srcInfo, "add", new IR::TempVar(e->type),
@@ -251,14 +298,14 @@ const IR::Expression *InstructionSelection::postorder(IR::Sub *e) {
     return new IR::MAU::Instruction(e->srcInfo, "sub", new IR::TempVar(e->type), e->left, e->right);
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::Shl *e) {
+const IR::Expression *DoInstructionSelection::postorder(IR::Shl *e) {
     if (!af) return e;
     if (!e->right->is<IR::Constant>())
         error("%s: shift count must be a constant in %s", e->srcInfo, e);
     return new IR::MAU::Instruction(e->srcInfo, "shl", new IR::TempVar(e->type), e->left, e->right);
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::Shr *e) {
+const IR::Expression *DoInstructionSelection::postorder(IR::Shr *e) {
     if (!af) return e;
     if (!e->right->is<IR::Constant>())
         error("%s: shift count must be a constant in %s", e->srcInfo, e);
@@ -268,7 +315,7 @@ const IR::Expression *InstructionSelection::postorder(IR::Shr *e) {
     return new IR::MAU::Instruction(e->srcInfo, shr, new IR::TempVar(e->type), e->left, e->right);
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::Mux *e) {
+const IR::Expression *DoInstructionSelection::postorder(IR::Mux *e) {
     if (auto r = e->e0->to<IR::Operation_Relation>()) {
         bool isMin = false;
         if (r->is<IR::Lss>() || r->is<IR::Leq>())
@@ -287,7 +334,7 @@ const IR::Expression *InstructionSelection::postorder(IR::Mux *e) {
     return e;
 }
 
-const IR::Slice *InstructionSelection::postorder(IR::Slice *sl) {
+const IR::Slice *DoInstructionSelection::postorder(IR::Slice *sl) {
     if (auto expr = sl->e0->to<IR::Slice>()) {
         sl->e0 = expr->e0;
         sl->e1 = new IR::Constant(sl->getH() + expr->getL());
@@ -296,19 +343,6 @@ const IR::Slice *InstructionSelection::postorder(IR::Slice *sl) {
     return sl;
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::TempVar *e) {
-    // Look for previous sets to the tempvar and copy-prop them.
-    // FIXME -- should be a separate pass in DoInstructionSelection after InstructionSelection?
-    visitAgain();
-    if (!af || isWrite()) return e;
-    const IR::Expression *rv = e;
-    for (auto it = af->action.begin(); it != af_action_iter; ++it) {
-        const auto *prim = *it;
-        if (prim->name == "set" && *prim->operands.at(0) == *e) {
-            LOG3("forwarding assignment to " << e);
-            rv = prim->operands.at(1); } }
-    return rv;
-}
 
 static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
                                                 const IR::Expression *dest) {
@@ -334,7 +368,7 @@ static const IR::Primitive *makeDepositField(IR::Primitive *prim, long) {
     return prim;
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
+const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
     if (!af) return prim;
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
     auto dot = prim->name.find('.');
@@ -377,50 +411,12 @@ const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
                                                      "ingress_intrinsic_metadata",
                                                      "ingress_port");
 
-            insert_inst(new IR::MAU::Instruction(prim->srcInfo, "set",
-                                  MakeSlice(egress_spec, 0, 6),
-                                  MakeSlice(prim->operands.at(0), 0, 6)));
-            return new IR::MAU::Instruction(prim->srcInfo, "set",
-                                  MakeSlice(egress_spec, 7, 8),
-                                  MakeSlice(ingress_port, 7, 8)); }
-    } else if (objType == "RegisterAction" || objType == "LearnAction" ||
-               objType == "selector_action") {
-        bool direct_access = (prim->operands.size() == 1 && method == "execute") ||
-                             method == "execute_direct";
-        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
-        auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
-        if (!direct_access || salu->instruction.size() > 1)
-            stateful.push_back(prim);  // needed to setup the index and/or type properly
-        if (objType == "RegisterAction" && salu->direct != direct_access)
-            error("%s: %sdirect access to %sdirect register", prim->srcInfo,
-                  direct_access ? "" : "in", salu->direct ? "" : "in");
-        int bit = 32;
-        unsigned idx = method == "execute_direct" ? 1 : 2;
-        for (; idx < prim->operands.size(); ++idx, bit += 32) {
-            insert_inst(new IR::MAU::Instruction(prim->srcInfo, "set", prim->operands[idx],
-                MakeSlice(new IR::MAU::AttachedOutput(IR::Type::Bits::get(bit+32), salu),
-                          bit, bit+31))); }
-        return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
-                                        new IR::MAU::AttachedOutput(prim->type, salu));
-    } else if (prim->name == "Counter.count") {
-        stateful.push_back(prim);  // needed to setup the index
-        return nullptr;
-    } else if (prim->name == "Lpf.execute" || prim->name == "Wred.execute" ||
-               prim->name == "Meter.execute" || prim->name == "DirectLpf.execute" ||
-               prim->name == "DirectWred.execute") {
-        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
-        auto mtr = glob->obj->to<IR::MAU::Meter>();
-        BUG_CHECK(mtr != nullptr, "%s: Cannot find associated meter for the method call %s",
-                  prim->srcInfo, *prim);
-        stateful.push_back(prim);
-        return new IR::MAU::AttachedOutput(prim->type, mtr);
-    } else if (prim->name == "DirectCounter.count") {
-        return nullptr;
-    } else if (prim->name == "DirectMeter.execute") {
-        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
-        auto mtr = glob->obj->to<IR::MAU::Meter>();
-        return new IR::MAU::AttachedOutput(IR::Type::Bits::get(8), mtr);
-    // Convert hash extern in tofino.p4
+            auto s1 = new IR::MAU::Instruction(prim->srcInfo, "set",
+                          MakeSlice(egress_spec, 0, 6), MakeSlice(prim->operands.at(0), 0, 6));
+            auto s2 = new IR::MAU::Instruction(prim->srcInfo, "set",
+                          MakeSlice(egress_spec, 7, 8), MakeSlice(ingress_port, 7, 8));
+            return new IR::Vector<IR::Expression>({s1, s2});
+        }
     } else if (prim->name == "Hash.get") {
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto decl = glob->obj->to<IR::Declaration_Instance>();
@@ -483,7 +479,8 @@ ssize_t index_operand(const IR::Primitive *prim) {
         return 1;
     else if (prim->name.startsWith("Lpf") || prim->name.startsWith("Wred"))
         return 2;
-    else if (prim->name.startsWith("DirectLpf") || prim->name.startsWith("DirectWred"))
+    else if (prim->name.startsWith("DirectLpf") || prim->name.startsWith("DirectWred") ||
+             prim->name.startsWith("DirectCounter") || prim->name.startsWith("DirectMeter"))
         return -1;
     return 1;
 }
@@ -569,17 +566,21 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
     } else if (method == "execute") {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Meter>();
         BUG_CHECK(obj, "invalid object");
+        use = objType.startsWith("Direct") ? IR::MAU::BackendAttached::DIRECT
+                                           : IR::MAU::BackendAttached::INDIRECT;
     } else if (method == "count") {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Counter>();
         BUG_CHECK(obj, "invalid object");
         use = objType.startsWith("Direct") ? IR::MAU::BackendAttached::DIRECT
-                                           : IR::MAU::BackendAttached::INDIRECT; }
+                                           : IR::MAU::BackendAttached::INDIRECT;
+    }
     if (obj) {
         auto *act = findContext<IR::MAU::Action>();
         use_t &prev_use = self.action_use[act][obj];
         if (prev_use && prev_use != use)
             error("Inconsistent use of %s in action %s", obj, act);
-        prev_use = use; }
+        prev_use = use;
+    }
 }
 
 IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const IR::Expression *expr,
@@ -605,8 +606,6 @@ const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expre
         expr = c->expr;
     const IR::MAU::HashDist *hd = expr->to<IR::MAU::HashDist>();
     if (!hd) {
-        // FIXME -- is this needed?  TempVar folding (InstructionSelection::postorder(TempVar))
-        // should alway fold away the TempVar, making this refer to the HashDist directly
         auto tv = expr->to<IR::TempVar>();
         if (tv != nullptr && stateful_alu_from_hash_dists.count(tv->name)) {
             hd = stateful_alu_from_hash_dists.at(tv->name);
@@ -934,13 +933,379 @@ struct ValidateInvalidatePrimitive : public PassManager {
     }
 };
 
-DoInstructionSelection::DoInstructionSelection(PhvInfo &phv) : PassManager {
+/** The purpose of BackendCopyPropagation is to propagate reads written in previous sets.
+ *  This will only work for set operations, i.e. the following action:
+ *
+ *      set b, a
+ *      set c, b
+ *      set d, c
+ *
+ *  should afterwards be:
+ *
+ *     set b, a
+ *     set c, a
+ *     set d, a
+ *
+ *  The point of this is to parallelize the action as much as possible in order to guarantee
+ *  that the action can be performed within a single stage.
+ *
+ *  Currently the algorithm does not copy propagate forward any non-set operation.  The following
+ *  would be considered to be too difficult to copy_propagate
+ *
+ *      xor c, b, a 
+ *      add e, c, d 
+ *
+ *  as it is not a guarantee that any action can possibly be handled within a single stage.
+ *  At some point, this could be loosened
+ *
+ *      xor c, b, a
+ *      set d, c
+ *
+ *  could be:
+ *
+ *      xor c, b, a,
+ *      xor d, b, a
+ *
+ *  Another example not currently wall reads are not previously written, and that the writes
+ *  are simple, i.e.
+ *
+ *     set f1[7:0], f2
+ *     set f3, f1[3:0]
+ *
+ *  would be considered too difficult to copy propagate correctly in the short term, as this
+ *  itself would require the instructions to first be split into the minimal field slice in
+ *  order to correctly copy propagate.  Perhaps this can be done at a later time 
+ *
+ *  However, instruction with mutually exclusive bitranges would be completely acceptable.
+ *  Note that no instructions are eliminated, as this should be the job of ElimUnused
+ */
+const IR::MAU::Action *BackendCopyPropagation::preorder(IR::MAU::Action *a) {
+    visitOnce();
+    copy_propagation_replacements.clear();
+    return a;
+}
+
+const IR::MAU::Instruction *BackendCopyPropagation::preorder(IR::MAU::Instruction *instr) {
+    instr->copy_propagated.clear();
+    instr->copy_propagated.resize(instr->operands.size(), false);
+    // In order to maintain the sequential property, the reads have to be visited before the writes
+    for (ssize_t i = instr->operands.size() - 1; i >= 0; i--) {
+        bool is_write = i == 0;
+        bool elem_copy_propagated = false;
+        if (is_write)
+            update(instr);
+        else
+            instr->operands[i] = propagate(instr, instr->operands[i], elem_copy_propagated);
+        instr->copy_propagated[i] = elem_copy_propagated;
+    }
+    prune();
+    return instr;
+}
+/** Mark instr->operands[1] as the most recent replacement for instr->operands[0] when @inst 
+  * is a set instruction.  Otherwise, remove instr->operands[0] from the set of copy propagation 
+  * candidates. 
+  */
+void BackendCopyPropagation::update(const IR::MAU::Instruction *instr) {
+    const IR::Expression *e = instr->operands[0];
+    auto act = findContext<IR::MAU::Action>();
+    if (act == nullptr) {
+        return;
+    }
+
+    le_bitrange bits = { 0, 0 };
+    auto field = phv.field(e, &bits);
+    if (field == nullptr) {
+        return;
+    }
+
+    bool replaced = false;
+    // If a value is previously written, and previously had a copy propagation,
+    // replace this value with a new value, if in a set, or clear the value
+    auto it = copy_propagation_replacements[field].begin();
+    while (it != copy_propagation_replacements[field].end()) {
+        if (it->dest_bits == bits) {
+            if (instr->name == "set") {
+                it->read = instr->operands[1];
+                it++;
+            } else {
+                it = copy_propagation_replacements[field].erase(it);
+            }
+            replaced = true;
+        // overlapping ranges for copy propagation are too difficult to handle for the
+        // first pass
+        } else if (!it->dest_bits.intersectWith(bits).empty()) {
+            ::error("%s: Currently the field %s[%d:%d] in action %s is assigned in a "
+                    "way too complex for the compiler to currently handle.  Please consider "
+                    "simplifying this action around this parameter", instr->srcInfo,
+                    field->name, bits.hi, bits.lo, act->name);
+            replaced = true;
+            it++;
+        } else {
+            it++;
+        }
+    }
+
+    if (!replaced && instr->name == "set") {
+        copy_propagation_replacements[field].emplace_back(bits, instr->operands[1]);
+    }
+}
+
+/** @returns the copy propagation candidate for @e if @e can be replaced (setting 
+  * @elem_copy_propagated to true), or @e if @e cannot be replaced (setting @elem_copy_propagated 
+  * to false). 
+  */
+const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instruction *instr,
+    const IR::Expression *e, bool &elem_copy_propagated) {
+    auto act = findContext<IR::MAU::Action>();
+    if (act == nullptr) {
+        elem_copy_propagated = false;
+        return e;
+    }
+
+    le_bitrange bits = { 0, 0 };
+    auto field = phv.field(e, &bits);
+    if (field == nullptr) {
+        elem_copy_propagated = false;
+        return e;
+    }
+
+    // If a read is possibly replaced with a copy propagated value, replace this value
+    for (auto replacement : copy_propagation_replacements[field]) {
+        if (replacement.dest_bits.contains(bits)) {
+            elem_copy_propagated = true;
+            return MakeSlice(replacement.read, bits.lo, bits.hi);
+        } else if (!replacement.dest_bits.intersectWith(bits).empty()) {
+           ::error("%s: Currently the field %s[%d:%d] in action %s is read in a way "
+                   "too complex for the compiler to currently handle.  Please consider "
+                   "simplifying this action around this parameter", instr->srcInfo,
+                   field->name, bits.hi, bits.lo, act->name);
+        }
+    }
+
+    elem_copy_propagated = false;
+    return e;
+}
+
+
+/** The purpose of this pass is to verify that an action is able to be performed in parallel
+ *  Because the semantics of P4 are that instructions are sequential, and the actions in
+ *  Tofino are parallel, this guarantees that an action is possible as a single action.
+ *
+ *  The following example would be marked as non-parallel
+ *
+ *     set f2, f1
+ *     set f3, f2
+ *
+ *  as f2 is previously written and then read, which would require a two stage parameter.
+ *
+ *  Fields will be skipped if they have been copy propagated.  This is necessary if the P4
+ *  programmer intended on swapping fields, i.e.
+ *
+ *      set $tmp, f2
+ *      set f2, f1
+ *      set f1, $tmp
+ *
+ *  BackendCopyPropagation will have the following output:
+ *
+ *      set $tmp, f2,
+ *      set f2, f1,
+ *      set f1, f2
+ *
+ *  The f2 read in the final instruction will be marked as having been copy propagated.  By
+ *  using this marking, the algorithm skips over any things that have been copy propagated
+ *  as the pre-change value is the value desired.
+ *
+ *  Note the following instruction will also be caught:
+ *
+ *      set f1[7:0], f2
+ *      set f1[11:4], f3
+ *
+ *  as these instructions not parallelizable.
+ *
+ *  In the future, an action could possibly be split across multiple stages, given that
+ *  the following is implemented:
+ * 
+ *      1. Splitting a complex actions into multiple actions that are single stage.
+ *      2. Chaining the next table with these action splitting
+ *      3. Somehow update the context JSON, in the case that this requires either stateful
+ *         outputs or action parameters.  This 3rd step is significantly more complicated
+ *
+ *   Let say a table t1 has actions a1-a3.  a2 and a3 are single-stage actions, while a1
+ *   is the following:
+ *        xor $tmp1, f1, f2
+ *        add f4, f3, $tmp1
+ *
+ *   a1 would be split into:
+ *
+ *   action a1_0 { xor $tmp1, f1, f2 }
+ *   action a1_1 { add f4, f3, $tmp1 }
+ *
+ *   the table apply then must be converted into
+ *   if (t1.apply().action_run) {
+ *       a1_0 { a1_1(); }
+ *   }
+ *
+ *   The splitting of an action is relatively easy.  The chaining could have many corner
+ *   cases, but would be only compiler.  However, if instead of f3, the compiler had
+ *   an action data parameter, an API would be required for the splitting of this table
+ *   to write to two logical tables, which definitely does not yet have driver support. 
+ *
+ */
+bool VerifyParallelWritesAndReads::is_parallel(const IR::Expression *e, bool is_write) {
+    le_bitrange bits = { 0, 0 };
+    auto field = phv.field(e, &bits);
+    if (field == nullptr)
+        return true;
+
+    if (is_write) {
+        bool append = true;
+        // Ensures that the writes of ranges of field bits are either completely identical
+        // or over mutually exclusive regions of that field, as those are too difficult
+        // to deal with
+        for (auto write_bits : writes[field]) {
+            // Because EliminateAllButLastWrite has to come after this, due to the write
+            // appearing in potentially reads
+            if (bits == write_bits) {
+                append = false;
+            } else if (!bits.intersectWith(write_bits).empty()) {
+                return false;
+            }
+        }
+        if (append)
+            writes[field].push_back(bits);
+    } else {
+        for (auto write_bits : writes[field]) {
+            if (!bits.intersectWith(write_bits).empty()) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/** Determines if any values of this particular instruction have previously been written
+ *  within this action, and if so, throw an error
+ */
+bool VerifyParallelWritesAndReads::preorder(const IR::MAU::Instruction *instr) {
+    auto act = findContext<IR::MAU::Action>();
+    for (ssize_t i = instr->operands.size() -1; i >= 0; i--) {
+        // Skip copy propagated values
+        if (instr->copy_propagated[i])
+            continue;
+        bool is_write = i == 0;
+        if (!is_parallel(instr->operands[i], is_write)) {
+            le_bitrange bits = {0, 0};
+            auto field = phv.field(instr->operands[i], &bits);
+            ::error("%s: The action %s manipulates field %s[%d:%d] in such a way that "
+                    "requires multiple stages from an action.  Currently p4c only single "
+                    "stage actions are support.  Consider rewriting the action to be a "
+                    "single stage action", instr->srcInfo, act->name, field->name, bits.hi,
+                    bits.lo);
+        }
+    }
+    return false;
+}
+
+bool VerifyParallelWritesAndReads::preorder(const IR::MAU::Action *) {
+    writes.clear();
+    return true;
+}
+
+/** The purpose of this pass is to parallelize the passes by removing all writes to the last
+ *  from a field, i.e.
+ *
+ *      set f1, f2
+ *      xor f1, f3, f4
+ *      set f1, f5
+ *
+ *  will be translated into:
+ *
+ *      set f1, f5
+ *
+ *  because in a parallel sense, this is the only result that matters.
+ *
+ *  This pass has to follow VerifyParallelWritesAndReads, due to the following example:
+ *
+ *      add f1, f2, f3
+ *      add f1, f1, f4 
+ *
+ *  This could not be considered parallel, as long as the check happens before the elimination
+ */
+bool EliminateAllButLastWrite::Scan::preorder(const IR::MAU::Action *) {
+    last_instr_map.clear();
+    return true;
+}
+
+bool EliminateAllButLastWrite::Scan::preorder(const IR::MAU::Instruction *instr) {
+    if (instr->operands.size() == 0)
+        return false;
+
+    auto write = instr->operands[0];
+    le_bitrange bits = { 0, 0 };
+    auto field = self.phv.field(write, &bits);
+    if (field == nullptr) {
+        auto *act = findContext<IR::MAU::Action>();
+        ::error("%s: A write of an instruction in action %s is not a PHV field", instr->srcInfo,
+                act->name);
+        return false;
+    }
+    PHV::Field::Slice fs(field, bits);
+    // Ensures that the last instruction relating to this instruction is marked
+    last_instr_map[fs] = instr;
+    return false;
+}
+
+void EliminateAllButLastWrite::Scan::postorder(const IR::MAU::Action *a) {
+    self.last_instr_per_action_map[a] = last_instr_map;
+}
+
+const IR::MAU::Action *EliminateAllButLastWrite::Update::preorder(IR::MAU::Action *act) {
+    current_af = getOriginal()->to<IR::MAU::Action>();
+    return act;
+}
+
+const IR::MAU::Instruction *
+        EliminateAllButLastWrite::Update::preorder(IR::MAU::Instruction *instr) {
+    auto orig_instr = getOriginal()->to<IR::MAU::Instruction>();
+    auto last_instr_map = self.last_instr_per_action_map[current_af];
+    prune();
+
+    if (instr->operands.size() == 0)
+        return instr;
+
+    auto write = instr->operands[0];
+    le_bitrange bits = { 0, 0 };
+    auto field = self.phv.field(write, &bits);
+    if (field == nullptr) {
+        ::error("%s: A write of an instruction in action %s is not a PHV field", instr->srcInfo,
+                current_af->name);
+        return instr;
+    }
+    PHV::Field::Slice fs(field, bits);
+    BUG_CHECK(last_instr_map.count(fs) != 0, "A write was not found in the inspect pass, but "
+              "was found in the update pass");
+    // Remove if not the last instruction
+    if (last_instr_map.at(fs) != orig_instr) {
+        return nullptr;
+    }
+    return instr;
+}
+
+/** EliminateAllButLastWrite has to follow VerifyParallelWritesAndReads.  Look at the example
+ *  above EliminateAllButLastWrite
+ */
+InstructionSelection::InstructionSelection(PhvInfo &phv) : PassManager {
     new ValidateInvalidatePrimitive(phv),
-    new InstructionSelection(phv),
+    new Synth2PortSetup(phv),
+    new DoInstructionSelection(phv),
     new ConvertCastToSlice,
     new StatefulAttachmentSetup(phv),
     new LPFSetup(phv),
     new DLeftSetup,
+    new CollectPhvInfo(phv),
+    new BackendCopyPropagation(phv),
+    new VerifyParallelWritesAndReads(phv),
+    new EliminateAllButLastWrite(phv),
     new CollectPhvInfo(phv),
     new PHV::ValidateActions(phv, false, false, false)
 } {}
