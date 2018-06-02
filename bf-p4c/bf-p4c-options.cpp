@@ -124,7 +124,7 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
 
     // Cache the names of the output directory and the program name
     cstring inputFile;
-    if (remainingOptions->size() > 1) {
+    if (remainingOptions && remainingOptions->size() > 1) {
         inputFile = cstring(remainingOptions->at(0));
     } else {
         if (outputFiles.size() > 0)
