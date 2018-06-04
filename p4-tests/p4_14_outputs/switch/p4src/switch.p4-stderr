@@ -1,26 +1,38 @@
 switch.p4:46:0:
-parser.p4:953:6: warning: missing terminating ' character
+parser.p4:949:6: warning: missing terminating ' character
      8'0;
       ^
-parser.p4:985:6: warning: missing terminating ' character
+parser.p4:981:6: warning: missing terminating ' character
      8'0;
       ^
-parser.p4:1093:6: warning: missing terminating ' character
+parser.p4:1089:6: warning: missing terminating ' character
      8'0;
       ^
-parser.p4:1454:6: warning: missing terminating ' character
+parser.p4:1450:6: warning: missing terminating ' character
      8'0;
       ^
 switch.p4:179:0:
-dtel.p4:643:15: warning: extra tokens at end of #ifdef directive
+dtel.p4:638:15: warning: extra tokens at end of #ifdef directive
  #ifdef defined(L3_HEAVY_INT_LEAF_PROFILE) || defined(GENERIC_INT_LEAF_PROFILE)
                ^
 nexthop.p4(347): warning: : Multiple algorithms in a field list not supported in P4_16 -- using only the first
      identity;
      ^^^^^^^^
-port.p4(452): warning: : Multiple algorithms in a field list not supported in P4_16 -- using only the first
+port.p4(447): warning: : Multiple algorithms in a field list not supported in P4_16 -- using only the first
      identity;
      ^^^^^^^^
+multicast.p4(670): warning: Could not infer type for dmac_idx, using bit<8>
+action inner_replica_from_rid(bd, dmac_idx, tunnel_index, tunnel_type, header_count) {
+                                  ^^^^^^^^
+multicast.p4(670): warning: Could not infer type for tunnel_index, using bit<8>
+action inner_replica_from_rid(bd, dmac_idx, tunnel_index, tunnel_type, header_count) {
+                                            ^^^^^^^^^^^^
+multicast.p4(670): warning: Could not infer type for tunnel_type, using bit<8>
+action inner_replica_from_rid(bd, dmac_idx, tunnel_index, tunnel_type, header_count) {
+                                                          ^^^^^^^^^^^
+multicast.p4(670): warning: Could not infer type for header_count, using bit<8>
+action inner_replica_from_rid(bd, dmac_idx, tunnel_index, tunnel_type, header_count) {
+                                                                       ^^^^^^^^^^^^
 l3.p4(229): warning: -1: negative value with unsigned type
     add_to_field(ipv4.ttl, -1);
                             ^
@@ -75,7 +87,7 @@ tunnel.p4(1589): warning: Could not infer type for smac_idx, using bit<8>
 tunnel.p4(1589): warning: Could not infer type for dmac_idx, using bit<8>
                               label3, exp3, ttl3, smac_idx, dmac_idx, bos) {
                                                             ^^^^^^^^
-port.p4(603): warning: Could not infer type for egress_if_label, using bit<8>
+port.p4(598): warning: Could not infer type for egress_if_label, using bit<8>
 action set_egress_if_params_tagged(vlan_id, egress_if_label) {
                                             ^^^^^^^^^^^^^^^
 acl.p4(1577): warning: Could not infer type for session_id, using bit<8>
@@ -87,28 +99,25 @@ action egress_mirror_coal_hdr(session_id, id) {
 acl.p4(1536): warning: Could not infer type for reason_code, using bit<8>
 action egress_mirror_and_drop(reason_code) {
                               ^^^^^^^^^^^
-port.p4(526): warning: Could not infer type for mlag_member, using bit<8>
+port.p4(521): warning: Could not infer type for mlag_member, using bit<8>
 action egress_port_type_normal(qos_group, port_lag_label, mlag_member) {
                                                           ^^^^^^^^^^^
-port.p4(183): warning: Could not infer type for tc_qos_group, using bit<8>
-                                   qos_group, tc_qos_group,
-                                              ^^^^^^^^^^^^
 switch_config.p4(28): warning: Could not infer type for enable_flowlet, using bit<8>
 action set_config_parameters(enable_flowlet, switch_id) {
                              ^^^^^^^^^^^^^^
-port.p4(227): warning: Could not infer type for ipv4_mcast_key, using bit<8>
+port.p4(225): warning: Could not infer type for ipv4_mcast_key, using bit<8>
                          ipv4_mcast_key, ipv4_mcast_key_type,
                          ^^^^^^^^^^^^^^
-port.p4(227): warning: Could not infer type for ipv4_mcast_key_type, using bit<8>
+port.p4(225): warning: Could not infer type for ipv4_mcast_key_type, using bit<8>
                          ipv4_mcast_key, ipv4_mcast_key_type,
                                          ^^^^^^^^^^^^^^^^^^^
-port.p4(228): warning: Could not infer type for ipv6_mcast_key, using bit<8>
+port.p4(226): warning: Could not infer type for ipv6_mcast_key, using bit<8>
                          ipv6_mcast_key, ipv6_mcast_key_type) {
                          ^^^^^^^^^^^^^^
-port.p4(228): warning: Could not infer type for ipv6_mcast_key_type, using bit<8>
+port.p4(226): warning: Could not infer type for ipv6_mcast_key_type, using bit<8>
                          ipv6_mcast_key, ipv6_mcast_key_type) {
                                          ^^^^^^^^^^^^^^^^^^^
-port.p4(313): warning: Could not infer type for if_label, using bit<8>
+port.p4(308): warning: Could not infer type for if_label, using bit<8>
 action set_ingress_interface_properties(ingress_rid, ifindex, if_label) {
                                                               ^^^^^^^^
 acl.p4(375): warning: Could not infer type for acl_meter_index, using bit<8>

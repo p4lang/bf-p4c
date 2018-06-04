@@ -229,7 +229,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port[6:0]") ;
-            hdr.ethernet.dmac               : exact @name("ethernet.dmac") ;
+            hdr.ethernet.dmac[31:0]         : exact @name("ethernet.dmac[31:0]") ;
         }
         size = 65536;
         default_action = NoAction_0();

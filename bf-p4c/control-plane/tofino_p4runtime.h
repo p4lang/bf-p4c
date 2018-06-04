@@ -9,7 +9,9 @@ class BFN_Options;
 
 namespace BFN {
 
-/// A convenience wrapper for P4::generateP4Runtime().
+/// A convenience wrapper for P4::generateP4Runtime(). This must be called
+/// before the translation pass and will generate the correct P4Info message
+/// based on the original architecture (v1model, PSA, TNA or JNA).
 void generateP4Runtime(const IR::P4Program* program,
                        const BFN_Options& options);
 

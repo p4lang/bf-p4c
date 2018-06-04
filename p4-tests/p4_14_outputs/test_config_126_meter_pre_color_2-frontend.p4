@@ -196,7 +196,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".meter_0") direct_meter<bit<4>>(MeterType.bytes) meter_1;
+    @name(".meter_0") @pre_color(hdr.pkt.pre_color_0) direct_meter<bit<4>>(MeterType.bytes) meter_1;
     @name(".action_0") action action_0_1(bit<8> param0) {
         meter_1.read(hdr.pkt.color_0);
     }

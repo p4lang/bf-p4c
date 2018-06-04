@@ -31,6 +31,7 @@ run_pd=false
 ptftestdir=""
 device="tofino"
 p4info=true
+bfrt=false
 
 die() {
     if [ $# -gt 0 ]; then
@@ -127,6 +128,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "   -gdb           run p4c-barefoot under gdb"
         echo >&2 "   -jbay          target jbay"
         echo >&2 "   -nop4info      not generate p4info"
+        echo >&2 "   -bfrt          generate the BF-RT JSON"
         echo >&2 "   -norun         don't run tests, just the compiler"
         echo >&2 "   -pd            run PTF PD tests if available"
         echo >&2 "   -ptf           run PTF tests if available"
@@ -165,6 +167,9 @@ while [ $# -gt 1 ]; do
         ;;
     -nop4info)
         p4info=false
+        ;;
+    -bfrt)
+        bfrt=true
         ;;
     -ptfdir)
         ptftestdir=$2
@@ -237,6 +242,8 @@ if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; th
         P4C_ARGS="$P4C_ARGS --target ${device} --arch jna"
     elif grep -q "psa.p4" "$file"; then
         P4C_ARGS="$P4C_ARGS --target ${device} --arch psa"
+        # TODO(antonin): P4Info generation not supported for PSA yet
+        p4info=false
     else
         P4C_ARGS="$P4C_ARGS --target ${device} --arch v1model"
     fi
@@ -265,6 +272,11 @@ fi
 if $p4info; then
     p4runtime_out=$testdir/${name}${out_ext}.out/p4info.proto.txt
     P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
+fi
+
+if $bfrt; then
+    bfrt_out=$testdir/${name}${out_ext}.out/bfrt.json
+    P4C_ARGS="$P4C_ARGS --bf-rt-schema $bfrt_out"
 fi
 
 if $run_ptf || $run_stf2ptf; then

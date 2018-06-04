@@ -5,13 +5,13 @@ packet_test_setup_check("tofino")
 # experimental -- doesn't quite work yet
 # bfn_add_switch("tofino")
 
-set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main|common_v1_test")
+set (V1_SEARCH_PATTERNS "include.*v1model.p4" "main|common_v1_test")
 set (V1_EXCLUDE_PATTERNS "package" "extern")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
 p4c_find_tests("${P4TESTS_FOR_TOFINO}" v1tests INCLUDE "${V1_SEARCH_PATTERNS}" EXCLUDE "${V1_EXCLUDE_PATTERNS}")
 
-set (P16_INCLUDE_PATTERNS "include.*(v1model|psa|tofino|tna).p4" "main|common_v1_test")
+set (P16_INCLUDE_PATTERNS "include.*(v1model|tofino|tna).p4" "main|common_v1_test")
 set (P16_EXCLUDE_PATTERNS "tofino.h")
 set (P16_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
 p4c_find_tests("${P16_FOR_TOFINO}" p16tests INCLUDE "${P16_INCLUDE_PATTERNS}" EXCLUDE "${P16_EXCLUDE_PATTERNS}")

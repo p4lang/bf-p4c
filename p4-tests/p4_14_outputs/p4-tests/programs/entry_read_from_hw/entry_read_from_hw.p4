@@ -562,7 +562,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: ternary;
             hdr.tcp.dstPort : range;
         }
-        size = 1024;
+        size = 512;
     }
     @name(".tcam_range_2") table tcam_range_2 {
         actions = {

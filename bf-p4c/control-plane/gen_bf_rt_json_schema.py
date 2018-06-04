@@ -160,6 +160,20 @@ class TableWithoutActionSpec(TableCommon):
               "Selector",
               "Counter", "Meter"])
 
+class LearnListFieldField(BaseDataField):
+    class Options(object):
+        title = "LearnListField"
+        description = "Field entry in learn list"
+    repeated = jsl.BooleanField(required=True, enum=[False])
+
+class LearnList(NamedObject):
+    class Options(object):
+        title = "LearnList"
+        description = "One learn list, corresponds to one digest emit call in program"
+    fields = jsl.ArrayField(
+        required=True,
+        items=jsl.DocumentField(LearnListFieldField, as_ref=True))
+
 class BfRtSchema(jsl.Document):
     # TODO(antonin): metadata information, e.g. program name
     tables = jsl.ArrayField(
@@ -168,6 +182,10 @@ class BfRtSchema(jsl.Document):
             jsl.DocumentField(TableWithActionSpec, as_ref=True),
             jsl.DocumentField(TableWithoutActionSpec, as_ref=True)]),
         description="All table objects (fixed tables and P4 tables)")
+    learn_filters = jsl.ArrayField(
+        required=True,
+        items=jsl.DocumentField(LearnList, as_ref=True),
+        description="All learn lists from the P4 program")
 
 def main():
     parser = argparse.ArgumentParser(

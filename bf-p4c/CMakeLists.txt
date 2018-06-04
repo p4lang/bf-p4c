@@ -18,8 +18,10 @@ if (ENABLE_JBAY)
 endif()
 include_directories(${BFN_P4C_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}
-  ${P4C_BINARY_DIR}/control-plane
   ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
+# The generated code for protobuf has an excessive number of warnings so we
+# include the build directory as a system directory
+include_directories(SYSTEM ${P4C_BINARY_DIR}/control-plane)
 set (HAVE_LIBBOOST_GRAPH 1)
 set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY};${OPENSSL_LIBRARIES}")
 

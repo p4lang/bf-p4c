@@ -171,7 +171,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".meter_0") direct_meter<bit<4>>(MeterType.bytes) meter_0;
+    @name(".meter_0") @pre_color(hdr.pkt.pre_color_0) direct_meter<bit<4>>(MeterType.bytes) meter_0;
     @name(".meter_1") meter(32w500, MeterType.bytes) meter_1;
     @name(".do_nothing") action do_nothing_0() {
     }

@@ -346,7 +346,7 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
         if (deparserParams.count(tempField))
             hasDeparserParam = true;
         // If this has alignment constraints due to the parser, ensure we pad it correctly.
-        int alignment;
+        int alignment = 0;
         ordered_set<const IR::StructField*> addedPadding;
         if (parserAlignedFields.count(tempField)) {
             const PHV::Field* source = parserAlignedFields.at(tempField);

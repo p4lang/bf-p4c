@@ -196,9 +196,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".meter_0") direct_meter<bit<4>>(MeterType.bytes) meter_0;
-    @name(".meter_2") direct_meter<bit<8>>(MeterType.bytes) meter_2;
-    @name(".meter_3") direct_meter<bit<8>>(MeterType.bytes) meter_3;
+    @name(".meter_0") @pre_color(hdr.pkt.pre_color_0) direct_meter<bit<4>>(MeterType.bytes) meter_0;
+    @name(".meter_2") @pre_color(hdr.pkt.pre_color_2) direct_meter<bit<8>>(MeterType.bytes) meter_2;
+    @name(".meter_3") @pre_color(hdr.pkt.pre_color_3) direct_meter<bit<8>>(MeterType.bytes) meter_3;
     @name(".action_0") action action_0(bit<8> param0) {
     }
     @name(".do_nothing") action do_nothing() {

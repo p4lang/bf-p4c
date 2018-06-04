@@ -313,10 +313,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_egr") action set_egr_0(bit<9> egress_spec) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_spec;
     }
-    @name(".set_egr") action set_egr_3(bit<9> egress_spec) {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_spec;
-    }
-    @name(".set_egr") action set_egr_4(bit<9> egress_spec) {
+    @name(".set_egr") action set_egr_2(bit<9> egress_spec) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_spec;
     }
     @name(".nop") action nop_1() {
@@ -423,7 +420,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".keyless_table") table keyless_table {
         actions = {
             keyless_action_0();
-            set_egr_3();
         }
         default_action = keyless_action_0(12w1901, 3w3, 8w32, 9w56);
     }
@@ -471,7 +467,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".tcam_dir") table tcam_dir {
         actions = {
             act_2();
-            set_egr_4();
+            set_egr_2();
             nop_10();
             @defaultonly NoAction_14();
         }

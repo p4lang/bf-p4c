@@ -1,8 +1,28 @@
 syntax = "proto3";
 
-import "p4/p4types.proto";
+import "p4/config/v1/p4types.proto";
 
 package barefoot;
+
+message P4Ids {
+  enum Prefix {
+    UNSPECIFIED = 0;
+    ACTION_PROFILE = 0x81;
+    ACTION_SELECTOR = 0x82;
+    COUNTER = 0x83;
+    DIRECT_COUNTER = 0x84;
+    METER = 0x85;
+    DIRECT_METER = 0x86;
+    WRED = 0x87;
+    DIRECT_WRED = 0x88;
+    LPF = 0x89;
+    DIRECT_LPF = 0x8A;
+    REGISTER = 0x8B;
+    REGISTER_PARAM = 0x8C;
+    DIGEST = 0x8D;
+    HASH = 0x8E;
+  }
+}
 
 message MeterSpec {
   enum Unit {
@@ -26,7 +46,7 @@ message CounterSpec {
     UNSPECIFIED = 0;
     BYTES = 1;
     PACKETS = 2;
-    BYTES_AND_PACKETS = 3;
+    PACKETS_AND_BYTES = 3;
   }
 
   Unit unit = 1;
@@ -80,24 +100,24 @@ message DirectLpf {
 }
 
 message Register {
-  p4.P4DataTypeSpec type_spec = 1;
+  p4.config.v1.P4DataTypeSpec type_spec = 1;
   int64 size = 2;
 }
 
 message RegisterParam {
-  p4.P4DataTypeSpec type_spec = 1;
+  p4.config.v1.P4DataTypeSpec type_spec = 1;
 }
 
 message Digest {
-  p4.P4DataTypeSpec type_spec = 1;
+  p4.config.v1.P4DataTypeSpec type_spec = 1;
 }
 
 message Hash {
   //TODO(msharif): Not sure if hash algorithm is needed?
-  p4.P4DataTypeSpec type_spec = 1;
+  p4.config.v1.P4DataTypeSpec type_spec = 1;
 }
 
 // Any metadata associated with ingress port.
 message PortMetadata {
-  p4.P4DataTypeSpec type_spec = 1;
+  p4.config.v1.P4DataTypeSpec type_spec = 1;
 }

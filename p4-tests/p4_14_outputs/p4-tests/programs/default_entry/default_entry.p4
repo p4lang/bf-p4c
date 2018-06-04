@@ -381,7 +381,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".keyless_table") table keyless_table {
         actions = {
             keyless_action;
-            set_egr;
         }
         default_action = keyless_action(1901, 3, 32, 56);
     }

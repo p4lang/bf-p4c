@@ -156,9 +156,9 @@ void CheckTofinoPhvContainerResources(int scale_factor = 1) {
             // MAU groups should not be empty.
             EXPECT_LE(0, containers.min());
             // Each MAU group should have an entry in the groupsToTypes map.
-            EXPECT_EQ(1, groupsToTypes.count(s));
+            EXPECT_EQ(1u, groupsToTypes.count(s));
             // For Tofino, each group should have exactly one type associated with it.
-            EXPECT_EQ(1, groupsToTypes.at(s).size());
+            EXPECT_EQ(1u, groupsToTypes.at(s).size());
             auto t = *(groupsToTypes.at(s).begin());
 
             // Containers in each group should have the same type.

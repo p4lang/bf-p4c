@@ -781,16 +781,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".add_9") action add_9() {
         two_instr_no_idx_alu_1.execute((bit<32>)hdr.ig_intr_md.ingress_port);
-        hdr.ig_intr_md_for_tm.drop_ctl = 3w0;
+        hdr.ig_intr_md_for_tm.drop_ctl[0:0] = 1w0;
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
     }
     @name(".rsub_17") action rsub_17() {
         two_instr_no_idx_alu_2.execute((bit<32>)hdr.ig_intr_md.ingress_port);
-        hdr.ig_intr_md_for_tm.drop_ctl = 3w0;
+        hdr.ig_intr_md_for_tm.drop_ctl[0:0] = 1w0;
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
     }
     @name(".do_undrop") action do_undrop() {
-        hdr.ig_intr_md_for_tm.drop_ctl = 3w0;
+        hdr.ig_intr_md_for_tm.drop_ctl[0:0] = 1w0;
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
     }
     @stage(0) @name(".bloom_filter_1") table bloom_filter_1_0 {

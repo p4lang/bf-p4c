@@ -19,8 +19,9 @@ limitations under the License.
 /**
  *   P4-16 declaration of the Portable Switch Architecture
  */
-typedef bit<9> PortId_t;
-typedef bit<16> MulticastGroup_t;
+
+typedef bit<10> PortId_t;
+typedef bit<10> MulticastGroup_t;
 typedef bit<10> CloneSessionId_t;
 typedef bit<3>  ClassOfService_t;
 typedef bit<14> PacketLength_t;
@@ -28,10 +29,18 @@ typedef bit<16> EgressInstance_t;
 typedef bit<48> Timestamp_t;
 typedef error   ParserError_t;
 
-const   PortId_t         PORT_RECIRCULATE = 254;
-const   PortId_t         PORT_CPU = 255;
+const   PortId_t         PSA_PORT_RECIRCULATE = 254;
+const   PortId_t         PSA_PORT_CPU = 255;
 
 const   CloneSessionId_t PSA_CLONE_SESSION_TO_CPU = 0;
+
+typedef bit<16> PortIdInHeader_t;
+typedef bit<32> MulticastGroupInHeader_t;
+typedef bit<16> CloneSessionIdInHeader_t;
+typedef bit<8>  ClassOfServiceInHeader_t;
+typedef bit<16> PacketLengthInHeader_t;
+typedef bit<16> EgressInstanceInHeader_t;
+typedef bit<64> TimestampInHeader_t;
 
 // BEGIN:Metadata_types
 enum PSA_PacketPath_t {
@@ -149,7 +158,7 @@ extern bool psa_clone_e2e(in psa_egress_output_metadata_t istd);
 /// be inside an if statement that only allows those assignments to
 /// execute if psa_recirculate(istd) returns true.  psa_recirculate
 /// can be implemented by returning (!istd.drop && (edstd.egress_port
-/// == PORT_RECIRCULATE))
+/// == PSA_PORT_RECIRCULATE))
 
 extern bool psa_recirculate(in psa_egress_output_metadata_t istd,
                             in psa_egress_deparser_input_metadata_t edstd);
@@ -158,7 +167,7 @@ extern bool psa_recirculate(in psa_egress_output_metadata_t istd,
 // BEGIN:Match_kinds
 match_kind {
     range,   /// Used to represent min..max intervals
-    selector /// Used for implementing dynamic_action_selection
+    selector /// Used for dynamic action selection via the ActionSelector extern
 }
 // END:Match_kinds
 
@@ -234,7 +243,7 @@ extern BufferingQueueingEngine {
 }
 
 // BEGIN:Hash_algorithms
-enum HashAlgorithm_t {
+enum PSA_HashAlgorithm_t {
   IDENTITY,
   CRC32,
   CRC32_CUSTOM,
@@ -249,7 +258,7 @@ enum HashAlgorithm_t {
 // BEGIN:Hash_extern
 extern Hash<O> {
   /// Constructor
-  Hash(HashAlgorithm_t algo);
+  Hash(PSA_HashAlgorithm_t algo);
 
   /// Compute the hash for data.
   /// @param data The data over which to calculate the hash.
@@ -261,7 +270,10 @@ extern Hash<O> {
   /// @param data The data over which to calculate the hash.
   /// @param max The hash value is divided by max to get modulo.
   ///        An implementation may limit the largest value supported,
-  ///        e.g. to a value like 32, or 256.
+  ///        e.g. to a value like 32, or 256, and may also only
+  ///        support powers of 2 for this value.  P4 developers should
+  ///        limit their choice to such values if they wish to
+  ///        maximize portability.
   /// @return (base + (h % max)) where h is the hash value.
   O get_hash<T, D>(in T base, in D data, in T max);
 }
@@ -270,9 +282,14 @@ extern Hash<O> {
 // BEGIN:Checksum_extern
 extern Checksum<W> {
   /// Constructor
-  Checksum(HashAlgorithm_t hash);
+  Checksum(PSA_HashAlgorithm_t hash);
 
-  /// Reset internal state and prepare unit for computation
+  /// Reset internal state and prepare unit for computation.
+  /// Every instance of a Checksum object is automatically initialized as
+  /// if clear() had been called on it. This initialization happens every
+  /// time the object is instantiated, that is, whenever the parser or control
+  /// containing the Checksum object are applied.
+  /// All state maintained by the Checksum object is independent per packet.
   void clear();
 
   /// Add data to checksum
@@ -285,7 +302,7 @@ extern Checksum<W> {
 
 // BEGIN:InternetChecksum_extern
 // Checksum based on `ONES_COMPLEMENT16` algorithm used in IPv4, TCP, and UDP.
-// Supports incremental updating via `remove` method.
+// Supports incremental updating via `subtract` method.
 // See IETF RFC 1624.
 extern InternetChecksum {
   /// Constructor
@@ -322,7 +339,7 @@ extern InternetChecksum {
 // END:InternetChecksum_extern
 
 // BEGIN:CounterType_defn
-enum CounterType_t {
+enum PSA_CounterType_t {
     PACKETS,
     BYTES,
     PACKETS_AND_BYTES
@@ -334,7 +351,7 @@ enum CounterType_t {
 /// every counter value has a data plane size specified by type W.
 
 extern Counter<W, S> {
-  Counter(bit<32> n_counters, CounterType_t type);
+  Counter(bit<32> n_counters, PSA_CounterType_t type);
   void count(in S index);
 
   /*
@@ -363,7 +380,7 @@ extern Counter<W, S> {
 
 // BEGIN:DirectCounter_extern
 extern DirectCounter<W> {
-  DirectCounter(CounterType_t type);
+  DirectCounter(PSA_CounterType_t type);
   void count();
 
   /*
@@ -381,31 +398,31 @@ extern DirectCounter<W> {
 // END:DirectCounter_extern
 
 // BEGIN:MeterType_defn
-enum MeterType_t {
+enum PSA_MeterType_t {
     PACKETS,
     BYTES
 }
 // END:MeterType_defn
 
 // BEGIN:MeterColor_defn
-enum MeterColor_t { RED, GREEN, YELLOW };
+enum PSA_MeterColor_t { RED, GREEN, YELLOW };
 // END:MeterColor_defn
 
 // BEGIN:Meter_extern
 // Indexed meter with n_meters independent meter states.
 
 extern Meter<S> {
-  Meter(bit<32> n_meters, MeterType_t type);
+  Meter(bit<32> n_meters, PSA_MeterType_t type);
 
   // Use this method call to perform a color aware meter update (see
   // RFC 2698). The color of the packet before the method call was
   // made is specified by the color parameter.
-  MeterColor_t execute(in S index, in MeterColor_t color);
+  PSA_MeterColor_t execute(in S index, in PSA_MeterColor_t color);
 
   // Use this method call to perform a color blind meter update (see
   // RFC 2698).  It may be implemented via a call to execute(index,
   // MeterColor_t.GREEN), which has the same behavior.
-  MeterColor_t execute(in S index);
+  PSA_MeterColor_t execute(in S index);
 
   /*
   @ControlPlaneAPI
@@ -420,10 +437,10 @@ extern Meter<S> {
 
 // BEGIN:DirectMeter_extern
 extern DirectMeter {
-  DirectMeter(MeterType_t type);
+  DirectMeter(PSA_MeterType_t type);
   // See the corresponding methods for extern Meter.
-  MeterColor_t execute(in MeterColor_t color);
-  MeterColor_t execute();
+  PSA_MeterColor_t execute(in PSA_MeterColor_t color);
+  PSA_MeterColor_t execute();
 
   /*
   @ControlPlaneAPI
@@ -438,7 +455,13 @@ extern DirectMeter {
 
 // BEGIN:Register_extern
 extern Register<T, S> {
+  /// Instantiate an array of <size> registers. The initial value is
+  /// undefined.
   Register(bit<32> size);
+  /// Initialize an array of <size> registers and set their value to
+  /// initial_value.
+  Register(bit<32> size, T initial_value);
+
   T    read  (in S index);
   void write (in S index, in T value);
 
@@ -455,6 +478,12 @@ extern Register<T, S> {
 
 // BEGIN:Random_extern
 extern Random<T> {
+
+  /// Return a random value in the range [min, max], inclusive.
+  /// Implementations are allowed to support only ranges where (max -
+  /// min + 1) is a power of 2.  P4 developers should limit their
+  /// arguments to such values if they wish to maximize portability.
+
   Random(T min, T max);
   T read();
 
@@ -490,7 +519,7 @@ extern ActionSelector {
   /// @param algo hash algorithm to select a member in a group
   /// @param size number of entries in the action selector
   /// @param outputWidth size of the key
-  ActionSelector(HashAlgorithm_t algo, bit<32> size, bit<32> outputWidth);
+  ActionSelector(PSA_HashAlgorithm_t algo, bit<32> size, bit<32> outputWidth);
 
   /*
   @ControlPlaneAPI
@@ -509,7 +538,7 @@ extern ActionSelector {
 
 // BEGIN:Digest_extern
 extern Digest<T> {
-  Digest(PortId_t receiver);         /// define a digest stream to receiver
+  Digest();                       /// define a digest stream to the control plane
   void pack(in T data);           /// emit data into the stream
 
   /*
@@ -521,6 +550,27 @@ extern Digest<T> {
   */
 }
 // END:Digest_extern
+
+// BEGIN:ValueSet_extern
+extern ValueSet<D> {
+    ValueSet(int<32> size);
+    bool is_member(in D data);
+
+    /*
+    @ControlPlaneAPI
+    message ValueSetEntry {
+        uint32 value_set_id = 1;
+        // FieldMatch allows specification of exact, lpm, ternary, and
+        // range matching on fields for tables, and these options are
+        // permitted for the ValueSet extern as well.
+        repeated FieldMatch match = 2;
+    }
+
+    // ValueSetEntry should be added to the 'message Entity'
+    // definition, inside its 'oneof Entity' list of possibilities.
+    */
+}
+// END:ValueSet_extern
 
 // BEGIN:Programmable_blocks
 parser IngressParser<H, M, RESUBM, RECIRCM>(

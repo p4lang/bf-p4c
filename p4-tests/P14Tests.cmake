@@ -22,26 +22,26 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
   extensions/p4_tests/p4_14/test_config_309_wide_dyn_selection.p4
   extensions/p4_tests/p4_14/test_config_314_sym_hash.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-548/case2895.p4
   extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
   extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
   extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
+  extensions/p4_tests/p4_14/c1/BRIG-372/case4346.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-413/mirror_test.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/pvs/pvs.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/fifo/fifo_pair.p4
   # proprietary algorithms for hash
   extensions/p4_tests/p4_14/p4-tests/programs/dyn_hash/dyn_hash.p4
   extensions/p4_tests/p4_14/p4-tests/programs/exm_direct/exm_direct.p4
   # hash_test.p4(171): error: set_p: parameter p must be bound
   extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
-  # knet_mgr_test.p4(10): error: add_cpu_header: parameter fabric_color must be bound
-  extensions/p4_tests/p4_14/p4-tests/programs/knet_mgr_test/knet_mgr_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/mod_field_conditionally/mod_field_conditionally.p4
   # tofino hash function extensions not supported with p4test
   extensions/p4_tests/p4_14/brig-540.p4
   extensions/p4_tests/p4_14/brig-540-2.p4
   )
 
 # p4-tests has all the includes at the same level with the programs.
-set (BFN_EXCLUDE_PATTERNS "tofino.p4")
+set (BFN_EXCLUDE_PATTERNS "tofino.p4" ".*netcache.*")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/*/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 

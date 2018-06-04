@@ -1450,19 +1450,7 @@ control process_rid(inout headers hdr, inout metadata meta, inout standard_metad
         meta.tunnel_metadata.egress_header_count = header_count;
         meta.tunnel_metadata.tunnel_dmac_index = dmac_idx;
     }
-    @name(".encap_replica_from_rid") action encap_replica_from_rid(bit<14> bd, bit<12> dmac_idx, bit<14> tunnel_index, bit<5> tunnel_type, bit<4> header_count, bit<14> outer_bd) {
-        meta.egress_metadata.bd = bd;
-        meta.egress_metadata.outer_bd = outer_bd;
-        meta.multicast_metadata.replica = 1w1;
-        meta.multicast_metadata.inner_replica = 1w1;
-        meta.egress_metadata.routed = meta.l3_metadata.routed;
-        meta.egress_metadata.same_bd_check = bd ^ meta.ingress_metadata.bd;
-        meta.tunnel_metadata.tunnel_index = tunnel_index;
-        meta.tunnel_metadata.egress_tunnel_type = tunnel_type;
-        meta.tunnel_metadata.egress_header_count = header_count;
-        meta.tunnel_metadata.tunnel_dmac_index = dmac_idx;
-    }
-    @name(".inner_replica_from_rid") action inner_replica_from_rid(bit<14> bd) {
+    @name(".inner_replica_from_rid") action inner_replica_from_rid(bit<14> bd, bit<8> dmac_idx, bit<8> tunnel_index, bit<8> tunnel_type, bit<8> header_count) {
         meta.egress_metadata.bd = bd;
         meta.egress_metadata.outer_bd = bd;
         meta.multicast_metadata.replica = 1w1;
@@ -1478,7 +1466,6 @@ control process_rid(inout headers hdr, inout metadata meta, inout standard_metad
         actions = {
             nop();
             outer_replica_from_rid();
-            encap_replica_from_rid();
             inner_replica_from_rid();
             unicast_replica_from_rid();
             @defaultonly NoAction();
@@ -1565,7 +1552,7 @@ control process_mirroring(inout headers hdr, inout metadata meta, inout standard
         hdr.ethernet.srcAddr = smac;
         hdr.ethernet.dstAddr = dmac;
     }
-    @ignore_table_dependency("rid") @egress_pkt_length_stage(0) @name(".mirror") table mirror {
+    @ignore_table_dependency("rid") @name(".mirror") table mirror {
         actions = {
             nop();
             set_mirror_bd();
@@ -1641,7 +1628,7 @@ control process_vlan_decap(inout headers hdr, inout metadata meta, inout standar
         hdr.ethernet.etherType = hdr.vlan_tag_[0].etherType;
         hdr.vlan_tag_[0].setInvalid();
     }
-    @name(".vlan_decap") table vlan_decap {
+    @ternary(1) @name(".vlan_decap") table vlan_decap {
         actions = {
             nop();
             remove_vlan_single_tagged();
@@ -2900,10 +2887,11 @@ control process_ingress_port_mapping(inout headers hdr, inout metadata meta, ino
         meta.ingress_metadata.port_lag_index = port_lag_index;
         meta.ingress_metadata.port_type = port_type;
     }
-    @name(".set_ingress_port_properties") action set_ingress_port_properties(bit<16> port_lag_label, bit<9> exclusion_id, bit<5> qos_group, bit<8> tc_qos_group, bit<8> tc, bit<2> color, bit<1> learning_enabled, bit<1> trust_dscp, bit<1> trust_pcp) {
+    @name(".set_ingress_port_properties") action set_ingress_port_properties(bit<16> port_lag_label, bit<9> exclusion_id, bit<5> qos_group, bit<5> tc_qos_group, bit<8> tc, bit<2> color, bit<1> learning_enabled, bit<1> trust_dscp, bit<1> trust_pcp) {
         hdr.ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
         meta.acl_metadata.port_lag_label = port_lag_label;
         meta.qos_metadata.ingress_qos_group = qos_group;
+        meta.qos_metadata.tc_qos_group = tc_qos_group;
         meta.qos_metadata.lkp_tc = tc;
         meta.meter_metadata.packet_color = color;
         meta.qos_metadata.trust_dscp = trust_dscp;
@@ -3146,6 +3134,7 @@ control process_bfd_rx_packet(inout headers hdr, inout metadata meta, inout stan
 control process_port_vlan_mapping(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".set_bd_properties") action set_bd_properties(bit<14> bd, bit<14> vrf, bit<10> stp_group, bit<1> learning_enabled, bit<16> bd_label, bit<14> stats_idx, bit<10> rmac_group, bit<1> ipv4_unicast_enabled, bit<1> ipv6_unicast_enabled, bit<2> ipv4_urpf_mode, bit<2> ipv6_urpf_mode, bit<1> igmp_snooping_enabled, bit<1> mld_snooping_enabled, bit<1> ipv4_multicast_enabled, bit<1> ipv6_multicast_enabled, bit<14> mrpf_group, bit<8> ipv4_mcast_key, bit<8> ipv4_mcast_key_type, bit<8> ipv6_mcast_key, bit<8> ipv6_mcast_key_type) {
         meta.ingress_metadata.bd = bd;
+        meta.ingress_metadata.outer_bd = bd;
         meta.acl_metadata.bd_label = bd_label;
         meta.l2_metadata.stp_group = stp_group;
         meta.l2_metadata.bd_stats_idx = stats_idx;

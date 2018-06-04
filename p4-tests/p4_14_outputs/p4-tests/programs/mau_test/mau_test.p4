@@ -1,15 +1,18 @@
 #include <core.p4>
 #include <v1model.p4>
 
-struct metadata_t {
+@command_line("--no-dead-code-elimination") struct metadata_t {
+    bit<1>  run_stats_test;
+    bit<1>  run_idle_notify_test;
+    bit<1>  run_idle_poll_test;
+    bit<1>  run_meter_test;
+    bit<1>  run_sel_test;
+    bit<1>  run_move_reg_test;
     bit<32> stats_key;
     bit<8>  m1_clr;
     bit<32> m1_idx;
-    bit<1>  m1_drop;
-    bit<1>  drop_it;
     bit<2>  count_it;
-    bit<1>  resubmit_for_meter_test;
-    bit<1>  dummy;
+    bit<1>  do_dataplane_sel_tbl_update;
     bit<8>  mr_clr;
     bit<8>  e3_meter;
     bit<8>  t3_meter;
@@ -29,8 +32,6 @@ struct metadata_t {
     bit<32> t6_lpf_tmp2;
     bit<32> e1_stful;
     bit<32> t1_stful;
-    bit<32> mr1_fail;
-    bit<16> etherType_hi;
 }
 
 header egress_intrinsic_metadata_t {
@@ -148,13 +149,8 @@ header ingress_parser_control_signals {
     bit<8> parser_counter;
 }
 
-header move_reg_key_t {
-    bit<8> hi;
-    bit<8> lo;
-}
-
 struct metadata {
-    @name(".md") 
+    @pa_solitary("ingress", "md.run_stats_test") @pa_solitary("ingress", "md.run_idle_notify_test") @pa_solitary("ingress", "md.run_idle_poll_test") @pa_solitary("ingress", "md.run_meter_test") @pa_solitary("ingress", "md.run_sel_test") @pa_solitary("ingress", "md.run_move_reg_test") @name(".md") 
     metadata_t md;
 }
 
@@ -167,7 +163,7 @@ struct headers {
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
     @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name(".eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
-    @pa_fragment("egress", "ethernet.etherType") @name(".ethernet") 
+    @pa_container_size("egress", "ethernet.etherType", 8, 8) @pa_container("egress", "ethernet.etherType", 80, 81) @name(".ethernet") 
     ethernet_t                                     ethernet;
     @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name(".ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
@@ -181,29 +177,18 @@ struct headers {
     generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @pa_fragment("egress", "mrk.hi") @pa_fragment("egress", "mrk.lo") @name(".mrk") 
-    move_reg_key_t                                 mrk;
 }
 #include <tofino/lpf.p4>
 #include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".drop_tag") state drop_tag {
-        meta.md.drop_it = 1w1;
-        transition accept;
-    }
-    @name(".get_move_reg_key") state get_move_reg_key {
-        packet.extract(hdr.mrk);
-        transition accept;
-    }
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0xccc1: stat_tag_one;
             16w0xccc2: stat_tag_two;
             16w0xccc3: stat_tag_three;
-            16w0xdead: drop_tag;
-            default: get_move_reg_key;
+            default: accept;
         }
     }
     @name(".start") state start {
@@ -282,30 +267,30 @@ struct vpp6_alu_layout {
 @name(".vpp6_reg") register<vpp6_alu_layout>(32w0) vpp6_reg;
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @lrt_enable(0) @lrt_scale(154) @name(".e1_cntr") @min_width(64) direct_counter(CounterType.packets) e1_cntr;
-    @lrt_enable(0) @lrt_scale(15811) @name(".e2_cntr") @min_width(32) direct_counter(CounterType.packets) e2_cntr;
-    @lrt_enable(0) @lrt_scale(154) @name(".e3_cntr") @min_width(64) direct_counter(CounterType.bytes) e3_cntr;
-    @lrt_enable(0) @lrt_scale(15811) @name(".e4_cntr") direct_counter(CounterType.packets) e4_cntr;
-    @lrt_enable(0) @lrt_scale(154) @name(".e5_cntr") @min_width(32) direct_counter(CounterType.bytes) e5_cntr;
-    @lrt_enable(0) @lrt_scale(15811) @name(".e6_cntr") direct_counter(CounterType.packets) e6_cntr;
-    @lrt_enable(0) @lrt_scale(154) @name(".t1_cntr") @min_width(64) direct_counter(CounterType.packets) t1_cntr;
-    @lrt_enable(0) @lrt_scale(15811) @name(".t2_cntr") @min_width(32) direct_counter(CounterType.packets) t2_cntr;
-    @lrt_enable(0) @lrt_scale(154) @name(".t3_cntr") @min_width(64) direct_counter(CounterType.bytes) t3_cntr;
-    @lrt_enable(0) @lrt_scale(15811) @name(".t4_cntr") direct_counter(CounterType.packets) t4_cntr;
-    @lrt_enable(0) @lrt_scale(154) @name(".t5_cntr") @min_width(32) direct_counter(CounterType.bytes) t5_cntr;
-    @lrt_enable(0) @lrt_scale(15811) @name(".t6_cntr") direct_counter(CounterType.packets) t6_cntr;
+    @lrt_enable(1) @lrt_scale(154) @name(".e1_cntr") @min_width(32) direct_counter(CounterType.packets) e1_cntr;
+    @lrt_enable(1) @lrt_scale(15811) @name(".e2_cntr") @min_width(32) direct_counter(CounterType.packets) e2_cntr;
+    @lrt_enable(1) @lrt_scale(154) @name(".e3_cntr") @min_width(32) direct_counter(CounterType.bytes) e3_cntr;
+    @lrt_enable(1) @lrt_scale(15811) @name(".e4_cntr") @min_width(32) direct_counter(CounterType.packets) e4_cntr;
+    @lrt_enable(1) @lrt_scale(154) @name(".e5_cntr") @min_width(32) direct_counter(CounterType.bytes) e5_cntr;
+    @lrt_enable(1) @lrt_scale(15811) @name(".e6_cntr") @min_width(32) direct_counter(CounterType.packets) e6_cntr;
+    @lrt_enable(1) @lrt_scale(154) @name(".t1_cntr") @min_width(32) direct_counter(CounterType.packets) t1_cntr;
+    @lrt_enable(1) @lrt_scale(15811) @name(".t2_cntr") @min_width(32) direct_counter(CounterType.packets) t2_cntr;
+    @lrt_enable(1) @lrt_scale(154) @name(".t3_cntr") @min_width(32) direct_counter(CounterType.bytes) t3_cntr;
+    @lrt_enable(1) @lrt_scale(15811) @name(".t4_cntr") @min_width(32) direct_counter(CounterType.packets) t4_cntr;
+    @lrt_enable(1) @lrt_scale(154) @name(".t5_cntr") @min_width(32) direct_counter(CounterType.bytes) t5_cntr;
+    @lrt_enable(1) @lrt_scale(15811) @name(".t6_cntr") @min_width(32) direct_counter(CounterType.packets) t6_cntr;
     @name(".v3_cntr") direct_counter(CounterType.bytes) v3_cntr;
     @name(".v4_cntr") direct_counter(CounterType.packets) v4_cntr;
     @name(".v5_cntr") direct_counter(CounterType.bytes) v5_cntr;
     @name(".v6_cntr") direct_counter(CounterType.packets) v6_cntr;
-    @lrt_enable(1) @name(".eg_cntr_1") @min_width(32) counter(32w32768, CounterType.packets_and_bytes) eg_cntr_1;
-    @lrt_enable(1) @name(".eg_cntr_2") @min_width(32) counter(32w4096, CounterType.packets_and_bytes) eg_cntr_2;
+    @lrt_enable(1) @lrt_scale(64) @name(".eg_cntr_1") @min_width(32) counter(32w22528, CounterType.packets_and_bytes) eg_cntr_1;
+    @lrt_enable(1) @lrt_scale(65) @name(".eg_cntr_2") @min_width(32) counter(32w10240, CounterType.packets_and_bytes) eg_cntr_2;
     @name(".eg_cntr_3") counter(32w16384, CounterType.packets_and_bytes) eg_cntr_3;
     @name(".eg_cntr_4") counter(32w2048, CounterType.packets) eg_cntr_4;
-    @meter_sweep_interval(0) @name(".e3_meter") direct_meter<bit<8>>(MeterType.bytes) e3_meter;
-    @meter_sweep_interval(0) @name(".e4_meter") direct_meter<bit<8>>(MeterType.packets) e4_meter;
-    @meter_sweep_interval(0) @name(".t3_meter") direct_meter<bit<8>>(MeterType.bytes) t3_meter;
-    @meter_sweep_interval(0) @name(".t4_meter") direct_meter<bit<8>>(MeterType.packets) t4_meter;
+    @meter_sweep_interval(0) @name(".e3_meter") @pre_color(meta.md.mr_clr) direct_meter<bit<8>>(MeterType.bytes) e3_meter;
+    @meter_sweep_interval(0) @name(".e4_meter") @pre_color(meta.md.mr_clr) direct_meter<bit<8>>(MeterType.packets) e4_meter;
+    @meter_sweep_interval(0) @name(".t3_meter") @pre_color(meta.md.mr_clr) direct_meter<bit<8>>(MeterType.bytes) t3_meter;
+    @meter_sweep_interval(0) @name(".t4_meter") @pre_color(meta.md.mr_clr) direct_meter<bit<8>>(MeterType.packets) t4_meter;
     @name(".e1_alu") RegisterAction<e1_alu_layout, int<32>>(e1_reg) e1_alu = {
         void apply(inout e1_alu_layout value, out int<32> rv) {
             e1_alu_layout in_value;
@@ -418,8 +403,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         meta.md.t6_lpf = meta.md.t6_lpf;
         meta.md.e6_lpf = meta.md.e6_lpf;
         meta.md.mr_clr = meta.md.mr_clr;
-        hdr.mrk.hi = 8w0x30;
-        hdr.mrk.lo = 8w0x30;
     }
     @name(".nothing") action nothing() {
     }
@@ -438,8 +421,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".inc_eg_cntr_4") action inc_eg_cntr_4(bit<32> cntr_index) {
         eg_cntr_4.count((bit<32>)cntr_index);
     }
-    @name(".mr1_verify_fail") action mr1_verify_fail() {
-        meta.md.mr1_fail = 32w1;
+    @name(".drop_now") action drop_now() {
+        mark_to_drop();
     }
     @name(".mr_verify_setup_action") action mr_verify_setup_action() {
         meta.md.t5_lpf_tmp1 = meta.md.t5_lpf >> 4;
@@ -483,14 +466,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         e1_cntr.count();
         meta.md.e1_stful = (bit<32>)e1_alu.execute();
     }
-    @idletime_precision(1) @stage(0) @pack(1) @ways(4) @random_seed(1027) @name(".e1") table e1 {
+    @idletime_precision(1) @stage(9) @pack(1) @ways(4) @random_seed(1027) @name(".e1") table e1 {
         support_timeout = true;
         actions = {
             e1_action_0;
         }
         key = {
-            hdr.mrk.lo: exact;
-            hdr.mrk.hi: exact;
+            hdr.ethernet.etherType: exact;
         }
         size = 4096;
         counters = e1_cntr;
@@ -505,8 +487,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             e2_action_0;
         }
         key = {
-            hdr.mrk.lo: exact;
-            hdr.mrk.hi: exact;
+            hdr.ethernet.etherType: exact;
         }
         size = 4096;
         counters = e2_cntr;
@@ -520,8 +501,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             e3_action_0;
         }
         key = {
-            hdr.mrk.lo: exact;
-            hdr.mrk.hi: exact;
+            hdr.ethernet.etherType: exact;
         }
         size = 4096;
         counters = e3_cntr;
@@ -536,8 +516,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             e4_action_0;
         }
         key = {
-            hdr.mrk.lo: exact;
-            hdr.mrk.hi: exact;
+            hdr.ethernet.etherType: exact;
         }
         size = 4096;
         counters = e4_cntr;
@@ -552,8 +531,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             e5_action_0;
         }
         key = {
-            hdr.mrk.lo: exact;
-            hdr.mrk.hi: exact;
+            hdr.ethernet.etherType: exact;
         }
         size = 4096;
         counters = e5_cntr;
@@ -567,8 +545,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             e6_action_0;
         }
         key = {
-            hdr.mrk.lo: exact;
-            hdr.mrk.hi: exact;
+            hdr.ethernet.etherType: exact;
         }
         size = 4096;
         counters = e6_cntr;
@@ -578,43 +555,43 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             eg_dummy_action;
         }
     }
-    @stage(3) @include_idletime(1) @idletime_precision(1) @name(".eg_idle_1") table eg_idle_1 {
+    @stage(4) @include_idletime(1) @idletime_precision(1) @name(".eg_idle_1") table eg_idle_1 {
         support_timeout = true;
         actions = {
             nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[19:0]: exact;
         }
         size = 131072;
     }
-    @stage(3) @include_idletime(1) @idletime_precision(1) @name(".eg_idle_2") table eg_idle_2 {
+    @stage(4) @include_idletime(1) @idletime_precision(1) @name(".eg_idle_2") table eg_idle_2 {
         support_timeout = true;
         actions = {
             nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[19:0]: exact;
         }
         size = 65536;
     }
-    @stage(3) @include_idletime(1) @idletime_precision(1) @name(".eg_idle_3") table eg_idle_3 {
+    @stage(4) @include_idletime(1) @idletime_precision(1) @name(".eg_idle_3") table eg_idle_3 {
         support_timeout = true;
         actions = {
             nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[19:0]: exact;
         }
         size = 65536;
     }
-    @stage(3) @include_idletime(1) @idletime_precision(1) @name(".eg_idle_4") table eg_idle_4 {
+    @stage(4) @include_idletime(1) @idletime_precision(1) @name(".eg_idle_4") table eg_idle_4 {
         support_timeout = true;
         actions = {
             nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[19:0]: exact;
         }
         size = 65536;
     }
@@ -641,7 +618,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 4096;
     }
-    @stage(6) @name(".eg_stat_3") table eg_stat_3 {
+    @stage(2) @name(".eg_stat_3") table eg_stat_3 {
         actions = {
             inc_eg_cntr_3;
         }
@@ -650,7 +627,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 4096;
     }
-    @stage(6) @name(".eg_stat_4") table eg_stat_4 {
+    @stage(2) @name(".eg_stat_4") table eg_stat_4 {
         actions = {
             inc_eg_cntr_4;
         }
@@ -659,10 +636,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 4096;
     }
-    @stage(10) @name(".mr1_verify") table mr1_verify {
+    @stage(2) @name(".eg_stats_discard") table eg_stats_discard {
         actions = {
-            mr1_verify_fail;
+            drop_now;
         }
+        size = 1;
+        default_action = drop_now();
     }
     @stage(10) @name(".mr_verify_setup") table mr_verify_setup {
         actions = {
@@ -673,7 +652,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         t1_cntr.count();
         meta.md.t1_stful = (bit<32>)t1_alu.execute();
     }
-    @idletime_precision(1) @stage(0) @name(".t1") table t1 {
+    @idletime_precision(1) @stage(9) @name(".t1") table t1 {
         support_timeout = true;
         actions = {
             t1_action_0;
@@ -832,68 +811,68 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
     }
     apply {
-        t1.apply();
-        e1.apply();
-        eg_mr_meter_clr_setup.apply();
-        if (2w1 == meta.md.count_it || 2w2 == meta.md.count_it || 2w3 == meta.md.count_it || meta.md.m1_drop == 1w1) {
-            eg_stat_1.apply();
-            eg_stat_2.apply();
+        if (meta.md.run_move_reg_test == 1w1) {
+            eg_mr_meter_clr_setup.apply();
+            t5.apply();
+            e5.apply();
+            t6.apply();
+            e6.apply();
+            t1.apply();
+            e1.apply();
+            t2.apply();
+            e2.apply();
+            t3.apply();
+            e3.apply();
+            t4.apply();
+            e4.apply();
+            mr_verify_setup.apply();
+            if (meta.md.t3_meter == meta.md.e3_meter) {
+                v3.apply();
+            }
+            if (meta.md.t4_meter == meta.md.e4_meter) {
+                v4.apply();
+            }
+            if (meta.md.t5_lpf == meta.md.e5_lpf) {
+                v5.apply();
+            }
+            if (meta.md.t6_lpf == meta.md.e6_lpf) {
+                v6.apply();
+            }
+            if (meta.md.t5_lpf_tmp1 == meta.md.e5_lpf_tmp1) {
+                vp5.apply();
+            }
+            if (meta.md.t5_lpf_tmp2 == meta.md.e5_lpf_tmp2) {
+                vpp5.apply();
+            }
+            if (meta.md.t6_lpf_tmp1 == meta.md.e6_lpf_tmp1) {
+                vp6.apply();
+            }
+            if (meta.md.t6_lpf_tmp2 == meta.md.e6_lpf_tmp2) {
+                vpp6.apply();
+            }
+            eg_dummy.apply();
         }
-        eg_idle_1.apply();
-        eg_idle_2.apply();
-        eg_idle_3.apply();
-        eg_idle_4.apply();
-        eg_stat_3.apply();
-        eg_stat_4.apply();
-        t5.apply();
-        e5.apply();
-        t6.apply();
-        e6.apply();
-        t2.apply();
-        e2.apply();
-        if (meta.md.t1_stful != meta.md.e1_stful) {
-            mr1_verify.apply();
+        else {
+            if (meta.md.run_stats_test == 1w1) {
+                eg_stat_1.apply();
+                eg_stat_2.apply();
+                eg_stat_3.apply();
+                eg_stat_4.apply();
+                eg_stats_discard.apply();
+            }
+            else {
+                if (meta.md.run_idle_poll_test == 1w1) {
+                    eg_idle_1.apply();
+                    eg_idle_2.apply();
+                    eg_idle_3.apply();
+                    eg_idle_4.apply();
+                }
+            }
         }
-        t3.apply();
-        e3.apply();
-        t4.apply();
-        e4.apply();
-        mr_verify_setup.apply();
-        if (meta.md.t3_meter == meta.md.e3_meter) {
-            v3.apply();
-        }
-        if (meta.md.t4_meter == meta.md.e4_meter) {
-            v4.apply();
-        }
-        if (meta.md.t5_lpf == meta.md.e5_lpf) {
-            v5.apply();
-        }
-        if (meta.md.t6_lpf == meta.md.e6_lpf) {
-            v6.apply();
-        }
-        if (meta.md.t5_lpf_tmp1 == meta.md.e5_lpf_tmp1) {
-            vp5.apply();
-        }
-        if (meta.md.t5_lpf_tmp2 == meta.md.e5_lpf_tmp2) {
-            vpp5.apply();
-        }
-        if (meta.md.t6_lpf_tmp1 == meta.md.e6_lpf_tmp1) {
-            vp6.apply();
-        }
-        if (meta.md.t6_lpf_tmp2 == meta.md.e6_lpf_tmp2) {
-            vpp6.apply();
-        }
-        eg_dummy.apply();
     }
 }
 
-@name(".mrk_hi_reg") register<bit<16>>(32w1024) mrk_hi_reg;
-
-@name(".mrk_lo_reg") register<bit<16>>(32w1024) mrk_lo_reg;
-
-@name(".sel_res_reg") register<bit<16>>(32w64) sel_res_reg;
-
-@name(".sel_tbl_reg") register<bit<1>>(32w131072) sel_tbl_reg;
+@name(".sel_res_reg") register<bit<16>>(32w72) sel_res_reg;
 
 struct stats_key_alu1_layout {
     bit<32> lo;
@@ -901,47 +880,18 @@ struct stats_key_alu1_layout {
 }
 
 @name(".stats_key_reg") register<stats_key_alu1_layout>(32w2048) stats_key_reg;
-#include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".ig_m1_cntr") direct_counter(CounterType.bytes) ig_m1_cntr;
-    @lrt_enable(1) @name(".ig_cntr_1") @min_width(32) counter(32w32768, CounterType.packets_and_bytes) ig_cntr_1;
-    @lrt_enable(1) @name(".ig_cntr_2") @min_width(32) counter(32w4096, CounterType.packets_and_bytes) ig_cntr_2;
+    @lrt_enable(1) @lrt_scale(64) @name(".ig_cntr_1") @min_width(32) counter(32w22528, CounterType.packets_and_bytes) ig_cntr_1;
+    @lrt_enable(1) @lrt_scale(65) @name(".ig_cntr_2") @min_width(32) counter(32w10240, CounterType.packets_and_bytes) ig_cntr_2;
     @name(".ig_cntr_3") counter(32w16384, CounterType.packets_and_bytes) ig_cntr_3;
     @name(".ig_cntr_4") counter(32w2048, CounterType.packets) ig_cntr_4;
-    @meter_per_flow_enable(1) @meter_pre_color_aware_per_flow_enable(1) @meter_sweep_interval(0) @name(".m1") meter(32w20480, MeterType.bytes) m1;
     @name(".sel_res_alu") RegisterAction<bit<16>, bit<16>>(sel_res_reg) sel_res_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             bit<16> in_value;
             in_value = value;
             rv = 16w0;
             value = (bit<16>)hdr.ig_intr_md_for_tm.ucast_egress_port;
-        }
-    };
-    @name(".set_mrk_hi_alu") RegisterAction<bit<16>, bit<16>>(mrk_hi_reg) set_mrk_hi_alu = {
-        void apply(inout bit<16> value, out bit<16> rv) {
-            bit<16> in_value;
-            in_value = value;
-            rv = 16w0;
-            value = meta.md.etherType_hi;
-            rv = value;
-        }
-    };
-    @name(".set_mrk_lo_alu") RegisterAction<bit<16>, bit<16>>(mrk_lo_reg) set_mrk_lo_alu = {
-        void apply(inout bit<16> value, out bit<16> rv) {
-            bit<16> in_value;
-            in_value = value;
-            rv = 16w0;
-            value = hdr.ethernet.etherType & 16w0xff;
-            rv = value;
-        }
-    };
-    @name(".stateful_selection_alu") selector_action(sel_tbl_ap) stateful_selection_alu = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            bit<1> in_value;
-            in_value = value;
-            rv = 1w0;
-            value = 1w0;
         }
     };
     @name(".stats_key_alu1") RegisterAction<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu1 = {
@@ -978,25 +928,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".set_dest") action set_dest() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
-        meta.md.etherType_hi = hdr.ethernet.etherType >> 8;
-    }
-    @name(".update_stful_sel_tbl") action update_stful_sel_tbl(bit<32> index) {
-        stateful_selection_alu.execute(index);
     }
     @name(".nothing") action nothing() {
     }
-    @name(".m1") action m1_0(bit<32> index) {
-        execute_meter_with_color(m1, index, meta.md.m1_clr, meta.md.m1_clr);
-        meta.md.m1_idx = index;
-    }
-    @name(".set_m1_clr") action set_m1_clr() {
-        meta.md.m1_clr[1:0] = ((bit<8>)hdr.ethernet.etherType)[1:0];
-    }
-    @name(".mark_meter_resubmit") action mark_meter_resubmit() {
-        meta.md.resubmit_for_meter_test = 1w1;
-    }
-    @name(".m1_tag_for_drop") action m1_tag_for_drop() {
-        meta.md.m1_drop = 1w1;
+    @name(".drop_now") action drop_now() {
+        mark_to_drop();
     }
     @name(".inc_ig_cntr_1") action inc_ig_cntr_1(bit<32> cntr_index) {
         ig_cntr_1.count((bit<32>)cntr_index);
@@ -1010,24 +946,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".inc_ig_cntr_4") action inc_ig_cntr_4(bit<32> cntr_index) {
         ig_cntr_4.count((bit<32>)cntr_index);
     }
-    @name(".do_resubmit") action do_resubmit() {
-        resubmit({  });
+    @name(".set_test") action set_test(bit<1> do_stats, bit<1> do_idle_notify, bit<1> do_idle_poll, bit<1> do_meter, bit<1> do_sel, bit<1> do_mr) {
+        meta.md.run_stats_test = do_stats;
+        meta.md.run_idle_notify_test = do_idle_notify;
+        meta.md.run_idle_poll_test = do_idle_poll;
+        meta.md.run_meter_test = do_meter;
+        meta.md.run_sel_test = do_sel;
+        meta.md.run_move_reg_test = do_mr;
     }
     @name(".log_egr_port") action log_egr_port() {
         {
-            bit<6> temp;
-            hash(temp, HashAlgorithm.identity, 6w0, { hdr.ethernet.dstAddr }, 7w64);
+            bit<8> temp;
+            hash(temp, HashAlgorithm.identity, 8w0, { hdr.ethernet.dstAddr }, 9w256);
             sel_res_alu.execute((bit<32>)temp);
         }
     }
     @name(".set_egr_port") action set_egr_port(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
-    }
-    @name(".do_set_mrk_hi") action do_set_mrk_hi() {
-        hdr.mrk.hi = (bit<8>)set_mrk_hi_alu.execute(32w0);
-    }
-    @name(".do_set_mrk_lo") action do_set_mrk_lo() {
-        hdr.mrk.lo = (bit<8>)set_mrk_lo_alu.execute(32w0);
     }
     @name(".do_set_stats_key1") action do_set_stats_key1() {
         meta.md.stats_key = stats_key_alu1.execute(32w0);
@@ -1038,91 +973,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_set_stats_key3") action do_set_stats_key3() {
         meta.md.stats_key = stats_key_alu3.execute(32w1);
     }
-    @command_line("--no-dead-code-elimination") @name(".dest") table dest {
+    @name(".do_resubmit") action do_resubmit() {
+        resubmit({ meta.md.run_stats_test, meta.md.run_idle_notify_test, meta.md.run_idle_poll_test, meta.md.run_meter_test, meta.md.run_sel_test, meta.md.run_move_reg_test });
+    }
+    @stage(0) @name(".dest") table dest {
         actions = {
             set_dest;
         }
-    }
-    @stage(5) @name(".dummy_tbl") table dummy_tbl {
-        actions = {
-            update_stful_sel_tbl;
-        }
-        key = {
-            hdr.ethernet.dstAddr: exact;
-        }
         size = 1;
+        default_action = set_dest();
     }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_1") table ig_idle_1 {
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_1") table ig_idle_1 {
         support_timeout = true;
         actions = {
             nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[13:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact;
         }
         size = 18432;
     }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_10") table ig_idle_10 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: ternary;
-        }
-        size = 1536;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_11") table ig_idle_11 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: ternary;
-        }
-        size = 1536;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_12") table ig_idle_12 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: ternary;
-        }
-        size = 1536;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_13") table ig_idle_13 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: ternary;
-        }
-        size = 1536;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_14") table ig_idle_14 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: ternary;
-        }
-        size = 1536;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_15") table ig_idle_15 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: ternary;
-        }
-        size = 1536;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_16") table ig_idle_16 {
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_10") table ig_idle_10 {
         support_timeout = true;
         actions = {
             nothing;
@@ -1132,124 +1003,152 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1536;
     }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_2") table ig_idle_2 {
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_11") table ig_idle_11 {
         support_timeout = true;
         actions = {
             nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[13:0]: exact;
-        }
-        size = 8192;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_3") table ig_idle_3 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: exact;
-        }
-        size = 8192;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_4") table ig_idle_4 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: exact;
-        }
-        size = 8192;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_5") table ig_idle_5 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: exact;
-        }
-        size = 8192;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_6") table ig_idle_6 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: exact;
-        }
-        size = 8192;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_7") table ig_idle_7 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: exact;
-        }
-        size = 8192;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_8") table ig_idle_8 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: exact;
-        }
-        size = 8192;
-    }
-    @stage(2) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_9") table ig_idle_9 {
-        support_timeout = true;
-        actions = {
-            nothing;
-        }
-        key = {
-            hdr.ethernet.srcAddr[13:0]: ternary;
+            hdr.ethernet.srcAddr[15:0]: ternary;
         }
         size = 1536;
     }
-    @stage(4) @name(".ig_m1") table ig_m1 {
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_12") table ig_idle_12 {
+        support_timeout = true;
         actions = {
-            m1_0;
             nothing;
         }
         key = {
-            hdr.ethernet.dstAddr[47:32]: exact;
+            hdr.ethernet.srcAddr[15:0]: ternary;
         }
-        size = 1024;
+        size = 1536;
     }
-    @name(".nothing") action nothing_4() {
-        ig_m1_cntr.count();
-    }
-    @name(".ig_m1_cnt") table ig_m1_cnt {
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_13") table ig_idle_13 {
+        support_timeout = true;
         actions = {
-            nothing_4;
+            nothing;
         }
         key = {
-            meta.md.m1_idx: exact;
-            meta.md.m1_clr: exact;
+            hdr.ethernet.srcAddr[15:0]: ternary;
         }
-        size = 1024;
-        counters = ig_m1_cntr;
+        size = 1536;
     }
-    @name(".ig_m1_color") table ig_m1_color {
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_14") table ig_idle_14 {
+        support_timeout = true;
         actions = {
-            set_m1_clr;
+            nothing;
         }
+        key = {
+            hdr.ethernet.srcAddr[15:0]: ternary;
+        }
+        size = 1536;
     }
-    @name(".ig_meter_resubmit") table ig_meter_resubmit {
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_15") table ig_idle_15 {
+        support_timeout = true;
         actions = {
-            mark_meter_resubmit;
+            nothing;
         }
+        key = {
+            hdr.ethernet.srcAddr[15:0]: ternary;
+        }
+        size = 1536;
     }
-    @name(".ig_meter_test_discard") table ig_meter_test_discard {
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_16") table ig_idle_16 {
+        support_timeout = true;
         actions = {
-            m1_tag_for_drop;
+            nothing;
         }
+        key = {
+            hdr.ethernet.srcAddr[15:0]: ternary;
+        }
+        size = 1536;
+    }
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_2") table ig_idle_2 {
+        support_timeout = true;
+        actions = {
+            nothing;
+        }
+        key = {
+            hdr.ethernet.srcAddr[15:0]: exact;
+        }
+        size = 8192;
+    }
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_3") table ig_idle_3 {
+        support_timeout = true;
+        actions = {
+            nothing;
+        }
+        key = {
+            hdr.ethernet.srcAddr[15:0]: exact;
+        }
+        size = 8192;
+    }
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_4") table ig_idle_4 {
+        support_timeout = true;
+        actions = {
+            nothing;
+        }
+        key = {
+            hdr.ethernet.srcAddr[15:0]: exact;
+        }
+        size = 8192;
+    }
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_5") table ig_idle_5 {
+        support_timeout = true;
+        actions = {
+            nothing;
+        }
+        key = {
+            hdr.ethernet.srcAddr[15:0]: exact;
+        }
+        size = 8192;
+    }
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_6") table ig_idle_6 {
+        support_timeout = true;
+        actions = {
+            nothing;
+        }
+        key = {
+            hdr.ethernet.srcAddr[15:0]: exact;
+        }
+        size = 8192;
+    }
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_7") table ig_idle_7 {
+        support_timeout = true;
+        actions = {
+            nothing;
+        }
+        key = {
+            hdr.ethernet.srcAddr[15:0]: exact;
+        }
+        size = 8192;
+    }
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name(".ig_idle_8") table ig_idle_8 {
+        support_timeout = true;
+        actions = {
+            nothing;
+        }
+        key = {
+            hdr.ethernet.srcAddr[15:0]: exact;
+        }
+        size = 8192;
+    }
+    @stage(3) @include_idletime(1) @idletime_precision(3) @idletime_two_way_notification(1) @idletime_per_flow_idletime(0) @name(".ig_idle_9") table ig_idle_9 {
+        support_timeout = true;
+        actions = {
+            nothing;
+        }
+        key = {
+            hdr.ethernet.srcAddr[15:0]: ternary;
+        }
+        size = 1536;
+    }
+    @stage(4) @name(".ig_idle_discard") table ig_idle_discard {
+        actions = {
+            drop_now;
+        }
+        size = 1;
+        default_action = drop_now();
     }
     @stage(1) @name(".ig_stat_1") table ig_stat_1 {
         actions = {
@@ -1269,7 +1168,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 4096;
     }
-    @stage(6) @name(".ig_stat_3") table ig_stat_3 {
+    @stage(2) @name(".ig_stat_3") table ig_stat_3 {
         actions = {
             inc_ig_cntr_3;
         }
@@ -1278,7 +1177,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 4096;
     }
-    @stage(6) @name(".ig_stat_4") table ig_stat_4 {
+    @stage(2) @name(".ig_stat_4") table ig_stat_4 {
         actions = {
             inc_ig_cntr_4;
         }
@@ -1287,12 +1186,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 4096;
     }
-    @name(".resubmit_2_tbl") table resubmit_2_tbl {
+    @phase0(1) @name(".p0") table p0 {
         actions = {
-            do_resubmit;
+            set_test;
         }
+        key = {
+            hdr.ig_intr_md.ingress_port: exact;
+        }
+        size = 288;
     }
-    @name(".sel_res") table sel_res {
+    @stage(7) @name(".sel_res") table sel_res {
         actions = {
             log_egr_port;
             nothing;
@@ -1300,10 +1203,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.ethernet.dstAddr: ternary;
         }
-        size = 64;
+        size = 72;
         default_action = nothing();
     }
-    @action_default_only("nothing") @stage(5) @name(".sel_tbl") table sel_tbl {
+    @action_default_only("nothing") @stage(6) @name(".sel_tbl") table sel_tbl {
         actions = {
             set_egr_port;
             nothing;
@@ -1316,32 +1219,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         implementation = sel_tbl_ap;
     }
-    @stage(1) @name(".set_mrk_hi") table set_mrk_hi {
-        actions = {
-            do_set_mrk_hi;
-        }
-    }
-    @stage(0) @name(".set_mrk_lo") table set_mrk_lo {
-        actions = {
-            do_set_mrk_lo;
-        }
-    }
-    @name(".set_stats_key1") table set_stats_key1 {
+    @stage(0) @name(".set_stats_key1") table set_stats_key1 {
         actions = {
             do_set_stats_key1;
         }
+        size = 1;
+        default_action = do_set_stats_key1();
     }
-    @name(".set_stats_key2") table set_stats_key2 {
+    @stage(0) @name(".set_stats_key2") table set_stats_key2 {
         actions = {
             do_set_stats_key2;
         }
+        size = 1;
+        default_action = do_set_stats_key2();
     }
-    @name(".set_stats_key3") table set_stats_key3 {
+    @stage(0) @name(".set_stats_key3") table set_stats_key3 {
         actions = {
             do_set_stats_key3;
         }
+        size = 1;
+        default_action = do_set_stats_key3();
     }
-    @name(".stats_resubmit") table stats_resubmit {
+    @stage(2) @name(".stats_resubmit") table stats_resubmit {
         actions = {
             nothing;
             do_resubmit;
@@ -1352,71 +1251,70 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = nothing();
     }
     apply {
+        if (1w0 == hdr.ig_intr_md.resubmit_flag) {
+            p0.apply();
+        }
         dest.apply();
-        set_mrk_lo.apply();
-        if (1w0 == hdr.ig_intr_md.resubmit_flag && 1w0 == meta.md.drop_it) {
-            stats_resubmit.apply();
-        }
-        if (2w1 == meta.md.count_it) {
-            set_stats_key1.apply();
-        }
-        else {
-            if (2w2 == meta.md.count_it) {
-                set_stats_key2.apply();
+        if (meta.md.run_stats_test == 1w1) {
+            if (2w1 == meta.md.count_it) {
+                set_stats_key1.apply();
             }
             else {
-                if (2w3 == meta.md.count_it) {
-                    set_stats_key3.apply();
+                if (2w2 == meta.md.count_it) {
+                    set_stats_key2.apply();
+                }
+                else {
+                    if (2w3 == meta.md.count_it) {
+                        set_stats_key3.apply();
+                    }
                 }
             }
-        }
-        if (32w1 == hdr.ethernet.srcAddr & 32w1 && 1w0 == hdr.ig_intr_md.resubmit_flag && 1w0 == meta.md.drop_it) {
-            ig_meter_resubmit.apply();
-        }
-        set_mrk_hi.apply();
-        if (2w1 == meta.md.count_it || 2w2 == meta.md.count_it || 2w3 == meta.md.count_it) {
             ig_stat_1.apply();
             ig_stat_2.apply();
-        }
-        ig_idle_1.apply();
-        ig_idle_2.apply();
-        ig_idle_3.apply();
-        ig_idle_4.apply();
-        ig_idle_5.apply();
-        ig_idle_6.apply();
-        ig_idle_7.apply();
-        ig_idle_8.apply();
-        ig_idle_9.apply();
-        ig_idle_10.apply();
-        ig_idle_11.apply();
-        ig_idle_12.apply();
-        ig_idle_13.apply();
-        ig_idle_14.apply();
-        ig_idle_15.apply();
-        ig_idle_16.apply();
-        if (1w1 == meta.md.resubmit_for_meter_test && 1w0 == hdr.ig_intr_md.resubmit_flag) {
-            resubmit_2_tbl.apply();
-        }
-        else {
-            ig_m1_color.apply();
-            if (ig_m1.apply().hit) {
-                ig_m1_cnt.apply();
-                if (meta.md.m1_clr == 8w3) {
-                    ig_meter_test_discard.apply();
-                }
+            ig_stat_3.apply();
+            ig_stat_4.apply();
+            if (1w0 == hdr.ig_intr_md.resubmit_flag) {
+                stats_resubmit.apply();
             }
         }
-        if (1w0 == meta.md.dummy) {
-            if (sel_tbl.apply().hit) {
-                sel_res.apply();
+        else {
+            if (meta.md.run_meter_test == 1w1) {
             }
             else {
-                ig_stat_3.apply();
-                ig_stat_4.apply();
+                if (meta.md.run_idle_notify_test == 1w1) {
+                    ig_idle_1.apply();
+                    ig_idle_2.apply();
+                    ig_idle_3.apply();
+                    ig_idle_4.apply();
+                    ig_idle_5.apply();
+                    ig_idle_6.apply();
+                    ig_idle_7.apply();
+                    ig_idle_8.apply();
+                    ig_idle_9.apply();
+                    ig_idle_10.apply();
+                    ig_idle_11.apply();
+                    ig_idle_12.apply();
+                    ig_idle_13.apply();
+                    ig_idle_14.apply();
+                    ig_idle_15.apply();
+                    ig_idle_16.apply();
+                    ig_idle_discard.apply();
+                }
+                else {
+                    if (meta.md.run_idle_poll_test == 1w1) {
+                    }
+                    else {
+                        if (meta.md.run_sel_test == 1w1) {
+                            if (meta.md.do_dataplane_sel_tbl_update == 1w1) {
+                            }
+                            else {
+                                sel_tbl.apply();
+                                sel_res.apply();
+                            }
+                        }
+                    }
+                }
             }
-        }
-        else {
-            dummy_tbl.apply();
         }
     }
 }
@@ -1424,7 +1322,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
-        packet.emit(hdr.mrk);
     }
 }
 

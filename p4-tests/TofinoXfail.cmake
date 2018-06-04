@@ -132,64 +132,22 @@ if (PTF_REQUIREMENTS_MET)
     smoketest_switch_dc_basic_L3VxlanUnicastTunnelECMPLagReflectionSMTest
     smoketest_switch_dc_basic_L3VxlanUnicastTunnelSMTest
     p4testgen_emulation
-    smoketest_switch_ent_dc_general_IPAclStatsTest
-    smoketest_switch_ent_dc_general_AclLabelTest
-    smoketest_switch_ent_dc_general_IPIngressAclRangeTcamTest
-    smoketest_switch_ent_dc_general_IPAclTest
-    smoketest_switch_ent_dc_general_MirrorAclTest_i2e
-    smoketest_switch_ent_dc_general_HostIfRxTxTest
     smoketest_switch_ent_dc_general_L3VxlanUnicastTunnelSMTest
-    smoketest_switch_ent_dc_general_L3VIIPv4HostVlanTaggingTest
-    smoketest_switch_ent_dc_general_L3IPv4HostTest
-    smoketest_switch_ent_dc_general_ExceptionPacketsTest_IPV6
-    smoketest_switch_ent_dc_general_L3IPv4SubIntfHostTest
-    smoketest_switch_ent_dc_general_L3IPv6LpmTest
-    smoketest_switch_ent_dc_general_L3IPv6HostTest
-    smoketest_switch_ent_dc_general_MalformedPacketsTest_tunnel
-    smoketest_switch_ent_dc_general_L3VIIPv4HostFloodTest
-    smoketest_switch_ent_dc_general_L3IPv4HostJumboTest
-    smoketest_switch_ent_dc_general_L3VIIPv4HostMacMoveTest
-    smoketest_switch_ent_dc_general_L3IPv4LpmTest
-    smoketest_switch_ent_dc_general_L3VINhopGleanTest
-    smoketest_switch_ent_dc_general_ExceptionPacketsTest
-    smoketest_switch_ent_dc_general_HostIfV6Test
-    smoketest_switch_ent_dc_general_L3VIIPv6HostTest
     smoketest_switch_ent_dc_general_L2VxlanUnicastBasicTest
-    smoketest_switch_ent_dc_general_L3IPv4HostModifyTest
-    smoketest_switch_ent_dc_general_L3VIIPv4HostTest
     smoketest_switch_ent_dc_general_L2VxlanArpUnicastBasicTest
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: Did not receive any expected packet on any of ports"
     smoketest_switch_ent_dc_general_L3VxlanUnicastTunnelECMPLagReflectionSMTest
-    smoketest_switch_ent_dc_general_L3VxlanUnicastTunnelECMPSMTest
-    smoketest_switch_ent_dc_general_L3IPv6LagTest
-    smoketest_switch_ent_dc_general_L3IPv6EcmpTest
-    smoketest_switch_ent_dc_general_L3IPv6LpmEcmpTest
-    smoketest_switch_ent_dc_general_L3IPv4EcmpTest
-    smoketest_switch_ent_dc_general_L3IPv4LagTest
-    smoketest_switch_ent_dc_general_L3EcmpLagTest
-    smoketest_switch_ent_dc_general_L3IPv4EcmpSeedTest
-    smoketest_switch_ent_dc_general_L3IPv4LpmEcmpTest
-    smoketest_switch_ent_dc_general_L2VxlanUnicastLagBasicTest   
-    smoketest_switch_ent_dc_general_L3VIIPv4LagTest 
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: Received packet that we expected not to receive on device"
-    smoketest_switch_ent_dc_general_L2StpTest
     )
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: A packet was received on device"
-    smoketest_switch_ent_dc_general_L2StpEgressBlockingTest
+    smoketest_switch_ent_dc_general_L2DynamicMacLearnTest
+    smoketest_switch_ent_dc_general_L2LagFloodTest
+    smoketest_switch_ent_dc_general_L2VxlanUnicastLagBasicTest
     )
 
-  # TypeError: format_failure() takes exactly 2 arguments (1 given)
   p4c_add_xfail_reason("tofino"
-    "TypeError: format_failure"
-    smoketest_switch_ent_dc_general_CpuTxTest
+    "AssertionError: False is not true"
+    smoketest_switch_ent_dc_general_L3IPv4EcmpSeedTest
     )
     
   p4c_add_xfail_reason("tofino"
@@ -268,7 +226,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/axon.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   testdata/p4_16_samples/issue737-bmv2.p4
-  testdata/p4_16_samples/psa-ether-wire.p4
   testdata/p4_16_samples/array-copy-bmv2.p4
   )
 
@@ -378,6 +335,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_7.0_l2
   switch_msdc_l3
+  switch_7.0_ent_dc_general
   )
 
 # BRIG-113
@@ -591,11 +549,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/shared_names.p4
   )
 
-# new p4lang/p4c tests that fail
-p4c_add_xfail_reason("tofino"
-    "Failed to transform the program into a P4Runtime-compatible form"
-    testdata/p4_16_samples/issue841.p4
-    )
 p4c_add_xfail_reason("tofino"
     "visitor returned non-MethodCallExpression type"
     testdata/p4_16_samples/issue955.p4
@@ -929,7 +882,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "invalid exact key expression"
+  "invalid key expression"
   # This test attempts to match on a field of `error` type.
   testdata/p4_16_samples/issue1062-bmv2.p4
   )
@@ -1078,11 +1031,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Identifier with no name"
-  testdata/p4_16_samples/issue1208-1.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "source of modify_field invalid"
   testdata/p4_16_samples/saturated-bmv2.p4
 )
@@ -1188,14 +1136,4 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "no definitions"
   extensions/p4_tests/p4_14/p4-tests/programs/pvs/pvs.p4
-)
-
-# 05/31/2018: Need to update p4c refpoint to take commit 8319d32, The update is
-# currently blocked by a P4Runtime PR that Antonin's working on. Once the
-# P4Runtime PR is in and p4c refpoint is updated. this xfail can then be
-# removed.
-p4c_add_xfail_reason("tofino"
-  "Exiting with SIGSEGV"
-  easy-ternary-archive
-  tor-archive
 )

@@ -302,7 +302,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".colorCntr") counter(32w100, CounterType.packets) colorCntr;
     @name(".meter_1") direct_meter<bit<8>>(MeterType.bytes) meter_1;
-    @name(".meter_3") direct_meter<bit<8>>(MeterType.bytes) meter_3;
+    @name(".meter_3") @pre_color(hdr.ipv4.diffserv) direct_meter<bit<8>>(MeterType.bytes) meter_3;
     @name(".meter_0") meter(32w500, MeterType.bytes) meter_0;
     @meter_pre_color_aware_per_flow_enable(1) @name(".meter_2") meter(32w500, MeterType.bytes) meter_2;
     @name(".meter_lpf") Lpf<bit<32>, bit<32>>(32w500) meter_lpf;
