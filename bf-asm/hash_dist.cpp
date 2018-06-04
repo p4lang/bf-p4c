@@ -113,12 +113,6 @@ void HashDistribution::pass1(Table *tbl) {
             if (use->hash_group != hash_group) {
                 error(lineno, "hash_dist %d and %d use different hash groups", id, m);
                 warning(use->lineno, "previous use here"); } } }
-    if (meter_pre_color) {
-        for (meter_mask_index = 7; meter_mask_index >= 0; meter_mask_index--)
-            if (mask == 3 << (meter_mask_index*2)) break;
-        if (meter_mask_index < 0)
-            error(lineno, "Invalid mask 0x%x for meter pre color in table %s, must be bit pair",
-                  mask, tbl->name()); }
 }
 
 template<class REGS>

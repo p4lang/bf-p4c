@@ -349,9 +349,11 @@ void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
     for (auto &hash_dist : *hash_dist_use) {
         for (auto slice : hash_dist.slices) {
             out << indent <<  slice << ": { ";
-            out << "hash: " << hash_dist.groups.at(slice) << ", ";
-            out << "mask: 0x" << hash_dist.masks.at(slice) << ", ";
-            out << "shift: " << hash_dist.shifts.at(slice);
+            out << "hash: " << hash_dist.groups.at(slice);
+            if (hash_dist.masks.count(slice) > 0)
+                out << ", mask: 0x" << hash_dist.masks.at(slice);
+            if (hash_dist.shifts.count(slice) > 0)
+                out << ", shift: " << hash_dist.shifts.at(slice);
             if (hash_dist.expand.count(slice) > 0)
                 out << ", expand: " << hash_dist.expand.at(slice);
             out << " }" << std::endl;
@@ -2439,6 +2441,25 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
         out << " , nodrop: " << meter->red_nodrop_value;
         out << " } " << std::endl;
     }
+
+    if (meter->pre_color) {
+        const IXBar::HashDistUse *hd_use = nullptr;
+        for (auto &hash_dist_use : tbl->resources->hash_dists) {
+            if (meter->pre_color == hash_dist_use.original_hd) {
+                hd_use = &hash_dist_use;
+                break;
+            }
+        }
+        BUG_CHECK(hd_use != nullptr, "Could not find hash distribution unit in link up "
+                                     "for meter precolor");
+        out << indent << "pre_color: hash_dist(";
+        int lo = hd_use->use.hash_dist_hash.bit_mask.min().index() % IXBar::HASH_DIST_BITS;
+        int hi = lo + IXBar::METER_PRECOLOR_SIZE - 1;
+        out << hd_use->slices[0] << ", " << lo << ".." << hi << ")" << std::endl;
+        out << indent << "color_aware: true" << std::endl;
+    }
+
+
     cstring count_type;
     switch (meter->type) {
         case IR::MAU::DataAggregation::PACKETS:

@@ -1445,7 +1445,7 @@ class ConstructSymbolTable : public Inspector {
         if (auto em = mi->to<P4::ExternMethod>()) {
             cstring name = em->actualExternType->name;
             if (name == "direct_meter") {
-                DirectMeterConverter cvt(structure);
+                DirectMeterConverter cvt(structure, refMap);
                 structure->_map.emplace(node, node->apply(cvt));
             } else if (name == "meter") {
                 MeterConverter cvt(structure);

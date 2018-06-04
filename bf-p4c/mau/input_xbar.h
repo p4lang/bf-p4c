@@ -34,6 +34,7 @@ struct IXBar {
     static constexpr int RESILIENT_MODE_HASH_BITS = 51;
     static constexpr int FAIR_MODE_HASH_BITS = 14;
     static constexpr int METER_ALU_HASH_BITS = 51;
+    static constexpr int METER_PRECOLOR_SIZE = 2;
 
     struct Loc {
         int group = -1, byte = -1;
@@ -658,6 +659,9 @@ struct IXBar {
         bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name);
     bool allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionFormat::Use *af,
         const bitvec used_hash_dist_slices, const unsigned &hash_table_input, bitvec &slice,
+        bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name);
+    bool allocHashDistPreColor(const bitvec used_hash_dist_slices,
+        const bitvec used_hash_dist_bits, const unsigned &hash_table_input, bitvec &slice,
         bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name);
 };
 

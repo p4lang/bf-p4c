@@ -2395,6 +2395,62 @@ bool IXBar::allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionForm
     return true;
 }
 
+/** Allocate space for a pre-color.  A pre-color has to be in a pair of bits starting at an even
+ *  numbered bit, but can be anywhere within all of hash distribution, as the OXBar can pick
+ *  any 2 of all 6 of the hash distribution units to use as an input xbar.
+ *
+ *  FIXME: Due to mask calculation, currently an entire meter pre-color group has to
+ *  reserve an entire slice of a hash distribution unit, when it could fit anywhere.  This
+ *  is a larger issue within the allocation of hash distribution in general, and needs
+ *  to be fixed eventually.  However, this is not a large issue, as pre-color currently
+ *  is rarely realistically used in switch profiles.
+ *
+ *  This also is an issue with the current output of hash distribution within the assembler,
+ *  as the current syntax is unclear.
+ */
+bool IXBar::allocHashDistPreColor(const bitvec used_hash_dist_slices,
+    const bitvec used_hash_dist_bits, const unsigned &hash_table_input, bitvec &slice,
+    bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name) {
+    int group = -1;
+    int bit_pos = -1;
+    for (int i = HASH_DIST_SLICES - 1; i >= 0; i--) {
+        if (used_hash_dist_slices.getbit(i))
+            continue;
+        group = i;
+        break;
+    }
+
+    if (group == -1)
+        return false;
+
+    for (int i = 0; i < HASH_DIST_BITS; i += METER_PRECOLOR_SIZE) {
+        int start_bit = i + group * HASH_DIST_BITS;
+        if (!used_hash_dist_bits.getslice(start_bit, METER_PRECOLOR_SIZE).empty())
+            continue;
+        bit_pos = start_bit;
+        break;
+    }
+
+    if (bit_pos == -1)
+        return false;
+
+    for (int i = 0; i < HASH_TABLES; i++) {
+        if ((hash_table_input & (1 << i)) == 0) continue;
+        hash_dist_use[i][group] = name;
+        hash_dist_inuse[i].setbit(group);
+
+        for (int j = 0; j < METER_PRECOLOR_SIZE; j++) {
+            hash_dist_bit_use[i][bit_pos + j] = name;
+        }
+        hash_dist_bit_inuse[i].setrange(bit_pos, METER_PRECOLOR_SIZE);
+    }
+
+    slice.setbit(group);
+    bit_mask.setrange(bit_pos, METER_PRECOLOR_SIZE);
+    bit_starts[bit_pos] = { 0, METER_PRECOLOR_SIZE - 1 };
+    return true;
+}
+
 /** Allocation for an individual hash distribution requirement.  Hash distribution is a piece of
  *  match central that can take PHV information through the hash matrix/input xbar, where this
  *  information can be used within the performatnce of the action.  The following uses are:
@@ -2490,6 +2546,9 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_typ
                 used_hash_dist_bits, hash_table_input, slice, bit_mask, bit_starts, name);
         else if (hdt == IXBar::Use::IMMEDIATE)
             can_allocate = allocHashDistImmediate(hd, af, used_hash_dist_slices,
+                hash_table_input, slice, bit_mask, bit_starts, name);
+        else if (hdt == IXBar::Use::PRECOLOR)
+            can_allocate = allocHashDistPreColor(used_hash_dist_slices, used_hash_dist_bits,
                 hash_table_input, slice, bit_mask, bit_starts, name);
         else
             BUG("Unknown hash dist requirement type for IXBar");
@@ -2615,6 +2674,8 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
     IXBar::Use::hash_dist_type_t hdt = IXBar::Use::UNKNOWN;
     if (findContext<IR::MAU::Instruction>()) {
         hdt = IXBar::Use::IMMEDIATE;
+    } else if (findContext<IR::MAU::Meter>()) {
+        hdt = IXBar::Use::PRECOLOR;
     } else if (auto back_at = findContext<IR::MAU::BackendAttached>()) {
         auto at_mem = back_at->attached;
         if (at_mem->is<IR::MAU::Counter>())
@@ -2632,7 +2693,6 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
     else
         bits_required = hd->bit_width;
 
-    LOG1("Bits required " << bits_required);
     if (!self.allocHashDist(hd, hdt, phv, af, hd_use.use, false, bits_required, tbl->name) &&
         !self.allocHashDist(hd, hdt, phv, af, hd_use.use, true, bits_required, tbl->name)) {
         allocation_passed = false;

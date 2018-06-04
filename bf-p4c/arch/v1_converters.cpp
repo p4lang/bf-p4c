@@ -669,12 +669,22 @@ const IR::Node* DirectMeterConverter::postorder(IR::MethodCallStatement* node) {
 
     auto member = mce->method->to<IR::Member>();
     auto method = new IR::Member(node->srcInfo, member->expr, "execute");
+    auto args = new IR::Vector<IR::Argument>();
+
+    auto meter_pe = member->expr->to<IR::PathExpression>();
+    BUG_CHECK(meter_pe != nullptr, "Direct meter is not a path expression");
+
+
+    auto inst = refMap->getDeclaration(meter_pe->path);
+    auto annot = inst->getAnnotation("pre_color");
+    if (annot != nullptr) {
+        args->push_back(new IR::Argument(new IR::Cast(IR::Type::Bits::get(2), annot->expr.at(0))));
+    }
 
     auto meterColor = mce->arguments->at(0)->expression;
     auto size = meterColor->type->width_bits();
     BUG_CHECK(size != 0, "meter color width cannot be bit<0>");
-    auto methodcall = new IR::MethodCallExpression(node->srcInfo, method,
-                                                   new IR::Vector<IR::Argument>());
+    auto methodcall = new IR::MethodCallExpression(node->srcInfo, method, args);
     IR::AssignmentStatement* assign = nullptr;
     if (size > 8) {
         assign = new IR::AssignmentStatement(

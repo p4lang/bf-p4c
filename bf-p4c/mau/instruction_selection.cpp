@@ -479,8 +479,7 @@ ssize_t index_operand(const IR::Primitive *prim) {
         return 1;
     else if (prim->name.startsWith("Lpf") || prim->name.startsWith("Wred"))
         return 2;
-    else if (prim->name.startsWith("DirectLpf") || prim->name.startsWith("DirectWred") ||
-             prim->name.startsWith("DirectCounter") || prim->name.startsWith("DirectMeter"))
+    else if (prim->name.startsWith("Direct"))
         return -1;
     return 1;
 }
@@ -491,6 +490,14 @@ size_t input_operand(const IR::Primitive *prim) {
         return 1;
     else
         return -1;
+}
+
+size_t precolor_operand(const IR::Primitive *prim) {
+    if (prim->name.startsWith("DirectMeter"))
+        return 1;
+    else if (prim->name.startsWith("Meter"))
+        return 2;
+    return -1;
 }
 
 
@@ -694,17 +701,21 @@ const IR::MAU::Instruction *StatefulAttachmentSetup::Update::preorder(IR::MAU::I
     return inst;
 }
 
-bool LPFSetup::Scan::preorder(const IR::MAU::Instruction *) {
+bool MeterSetup::Scan::preorder(const IR::MAU::Instruction *) {
     return false;
 }
 
-/** Linking the input for an LPF found in the action call with the IR node.  The Scan pass finds
- *  the PHV field, and the Update pass updates the AttachedMemory object
- */
-bool LPFSetup::Scan::preorder(const IR::Primitive *prim) {
+const IR::Expression *MeterSetup::Scan::convert_cast_to_slice(const IR::Expression *expr) {
+    if (auto c = expr->to<IR::Cast>()) {
+        return convert_cast_to_slice(MakeSlice(c->expr, 0, c->type->width_bits() - 1));
+    }
+    return expr;
+}
+
+void MeterSetup::Scan::find_input(const IR::Primitive *prim) {
     int input_index = input_operand(prim);
     if (input_index == -1)
-        return false;
+        return;
 
     auto gref = prim->operands[0]->to<IR::GlobalRef>();
     // typechecking should catch this too
@@ -717,7 +728,7 @@ bool LPFSetup::Scan::preorder(const IR::Primitive *prim) {
 
     if (self.update_lpfs.count(mtr) == 0) {
         self.update_lpfs[mtr] = input;
-        return false;
+        return;
     }
 
     auto *act = findContext<IR::MAU::Action>();
@@ -728,10 +739,46 @@ bool LPFSetup::Scan::preorder(const IR::Primitive *prim) {
                 "a different input %s than another lpf.execute on %s in the same table %s. "
                 "The other input is %s.", prim->srcInfo, act->name, field->name, mtr->name,
                 tbl->name, other_field->name);
+}
+
+void MeterSetup::Scan::find_pre_color(const IR::Primitive *prim) {
+    int pre_color_index = precolor_operand(prim);
+    if (pre_color_index == -1)
+        return;
+    if (static_cast<int>(prim->operands.size() - 1) < pre_color_index)
+        return;
+    auto gref = prim->operands[0]->to<IR::GlobalRef>();
+    // typechecking should catch this too
+    BUG_CHECK(gref, "No object named %s", prim->operands[0]);
+    auto mtr = gref->obj->to<IR::MAU::Meter>();
+    BUG_CHECK(mtr, "%s: Operand in LPF execute is not a meter", prim->srcInfo);
+    auto pre_color = prim->operands[pre_color_index];
+    pre_color = convert_cast_to_slice(pre_color);
+    auto *field = self.phv.field(pre_color);
+    BUG_CHECK(field, "%s: Not a phv field in the lpf execute: %s", prim->srcInfo, field->name);
+
+    if (self.update_pre_colors.count(mtr) == 0) {
+        self.update_pre_colors[mtr] = pre_color;
+    }
+
+    auto *other_field = self.phv.field(self.update_pre_colors.at(mtr));
+    auto *act = findContext<IR::MAU::Action>();
+    ERROR_CHECK(field == other_field, "%s: The meter execute with a pre-color in action %s has "
+                "a different pre-color %s than another meter execute on %s.  This other "
+                "pre-color is %s.", prim->srcInfo, act->name, field->name, mtr->name,
+                other_field->name);
+}
+
+/** Linking the input for an LPF found in the action call with the IR node.  The Scan pass finds
+ *  the PHV field, and the Update pass updates the AttachedMemory object
+ */
+bool MeterSetup::Scan::preorder(const IR::Primitive *prim) {
+    find_input(prim);
+    find_pre_color(prim);
     return false;
 }
 
-bool LPFSetup::Update::preorder(IR::MAU::Meter *mtr) {
+void MeterSetup::Update::update_input(IR::MAU::Meter *mtr) {
     auto orig_meter = getOriginal()->to<IR::MAU::Meter>();
     bool should_have_input = mtr->implementation.name == "lpf" ||
                              mtr->implementation.name == "wred";
@@ -743,8 +790,27 @@ bool LPFSetup::Update::preorder(IR::MAU::Meter *mtr) {
                     "but is provided one through an action", mtr->srcInfo, mtr->name);
     }
     if (!(has_input && should_have_input))
-        return false;
+        return;
     mtr->input = self.update_lpfs.at(orig_meter);
+}
+
+void MeterSetup::Update::update_pre_color(IR::MAU::Meter *mtr) {
+    auto orig_meter = getOriginal()->to<IR::MAU::Meter>();
+    bool has_pre_color = self.update_pre_colors.count(orig_meter) > 0;
+
+    if (has_pre_color) {
+        auto pre_color = self.update_pre_colors.at(orig_meter);
+        auto hd = new IR::MAU::HashDist(pre_color->srcInfo, IR::Type::Bits::get(2), pre_color,
+                       IR::MAU::hash_function::identity(), nullptr);
+        hd->bit_width = 2;
+        mtr->pre_color = hd;
+    }
+}
+
+
+bool MeterSetup::Update::preorder(IR::MAU::Meter *mtr) {
+    update_input(mtr);
+    update_pre_color(mtr);
     return false;
 }
 
@@ -1300,7 +1366,7 @@ InstructionSelection::InstructionSelection(PhvInfo &phv) : PassManager {
     new DoInstructionSelection(phv),
     new ConvertCastToSlice,
     new StatefulAttachmentSetup(phv),
-    new LPFSetup(phv),
+    new MeterSetup(phv),
     new DLeftSetup,
     new CollectPhvInfo(phv),
     new BackendCopyPropagation(phv),

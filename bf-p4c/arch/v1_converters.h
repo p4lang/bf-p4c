@@ -167,9 +167,10 @@ class MeterConverter : public ExternConverter {
 };
 
 class DirectMeterConverter : public ExternConverter {
+    const P4::ReferenceMap *refMap;
  public:
-    explicit DirectMeterConverter(ProgramStructure* structure)
-    : ExternConverter(structure) { CHECK_NULL(structure); }
+    DirectMeterConverter(ProgramStructure* structure, const P4::ReferenceMap *rm)
+    : ExternConverter(structure), refMap(rm) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::MethodCallStatement* node) override;
 };
 

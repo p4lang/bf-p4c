@@ -355,8 +355,6 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         for (auto anno : annot->annotations) {
             if (anno->name == "result")
                 mtr->result = anno->expr.at(0);
-            else if (anno->name == "pre_color")
-                mtr->pre_color = anno->expr.at(0);
             else if (anno->name == "implementation")
                 mtr->implementation = anno->expr.at(0)->as<IR::StringLiteral>();
             else

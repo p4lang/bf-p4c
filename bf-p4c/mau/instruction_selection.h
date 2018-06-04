@@ -230,27 +230,40 @@ class EliminateAllButLastWrite : public PassManager {
         addPasses({ new Scan(*this), new Update(*this) }); }
 };
 
-class LPFSetup : public PassManager {
+/** This pass will set up the IR to include any inputs to an LPF/WRED meter, as well
+ *  as determine the pre-color for any meter.  The primitive information holds the
+ *  field that is either the input/pre-color and in the update, the IR::MAU::Meter is
+ *  updated.
+ */
+class MeterSetup : public PassManager {
+    // Tracks the inputs per lpf
     ordered_map<const IR::MAU::Meter *, const IR::Expression *> update_lpfs;
+    // Tracks the pre-color per meter
+    ordered_map<const IR::MAU::Meter *, const IR::Expression *> update_pre_colors;
     const PhvInfo &phv;
 
     class Scan : public MauInspector {
-        LPFSetup &self;
+        MeterSetup &self;
+        void find_input(const IR::Primitive *);
+        void find_pre_color(const IR::Primitive *);
+        const IR::Expression *convert_cast_to_slice(const IR::Expression *);
         bool preorder(const IR::MAU::Instruction *) override;
         bool preorder(const IR::Primitive *) override;
      public:
-        explicit Scan(LPFSetup &self) : self(self) {}
+        explicit Scan(MeterSetup &self) : self(self) {}
     };
 
     class Update : public MauModifier {
-        LPFSetup &self;
+        MeterSetup &self;
+        void update_input(IR::MAU::Meter *);
+        void update_pre_color(IR::MAU::Meter *);
         bool preorder(IR::MAU::Meter *) override;
      public:
-        explicit Update(LPFSetup &self) : self(self) {}
+        explicit Update(MeterSetup &self) : self(self) {}
     };
 
  public:
-    explicit LPFSetup(const PhvInfo &p) : phv(p) {
+    explicit MeterSetup(const PhvInfo &p) : phv(p) {
         addPasses({ new Scan(*this), new Update(*this) }); }
 };
 

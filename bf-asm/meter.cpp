@@ -25,11 +25,23 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
                 if (auto *vpn = get(kv.value.map, "vpn"))
                     if (CHECKTYPE(*vpn, tVEC))
                         setup_vpns(color_maprams, &vpn->vec, true); }
-        } else if (kv.key == "hash_dist") {
-            // parsed in common_init_setup
-            for (auto &hd : hash_dist) hd.meter_pre_color = true;
-            if (hash_dist.size() > 1)
-                error(kv.key.lineno, "More than one hast_dist in a meter table not supported");
+        } else if (kv.key == "pre_color") {
+            if (CHECKTYPE(kv.value, tCMD)) {
+                if (kv.value != "hash_dist")
+                    error(kv.value.lineno, "Pre color must come from hash distribution");
+                if (kv.value.vec.size != 3)
+                    error(kv.value.lineno, "Pre color hash distribution requires two parameters,"
+                          " but has %d", kv.value.vec.size);
+                if (CHECKTYPE(kv.value.vec[1], tINT))
+                    pre_color_hash_dist_unit = kv.value.vec[1].i;
+                if (CHECKTYPE(kv.value.vec[2], tRANGE)) {
+                    auto range = kv.value.vec[2];
+                    int diff = range.hi - range.lo + 1;
+                    if (diff != 2 || range.lo % 2 != 0)
+                        error(kv.value.lineno, "Invalid hash distribution range for precolor");
+                    pre_color_bit_lo = range.lo;
+                }
+            }
         } else if (kv.key == "type") {
             if (kv.value == "standard")
                 type = STANDARD;
@@ -76,8 +88,6 @@ void MeterTable::pass1() {
     stage->table_use[gress] |= Stage::USE_METER;
     if (type == LPF || type == RED)
         stage->table_use[gress] |= Stage::USE_METER_LPF_RED;
-    for (auto &hd : hash_dist)
-        hd.pass1(this);
     if (input_xbar) input_xbar->pass1();
     int prev_row = -1;
     for (auto &row : layout) {
@@ -94,6 +104,16 @@ void MeterTable::pass1() {
 void MeterTable::pass2() {
     LOG1("### Meter table " << name() << " pass2");
     if (input_xbar) input_xbar->pass2();
+
+    for (auto match_table : get_match_tables()) {
+        for (auto &hd : match_table->hash_dist) {
+            if (hd.id == pre_color_hash_dist_unit) {
+                hd.meter_pre_color = true;
+                hd.meter_mask_index = pre_color_bit_lo/2;
+            }
+        }
+    }
+    
 }
 
 void MeterTable::pass3() {

@@ -1322,6 +1322,8 @@ public:
     bool                color_aware = false;
     bool                color_aware_per_flow_enable = false;
     bool                color_used = false;
+    int                 pre_color_hash_dist_unit = -1;
+    int                 pre_color_bit_lo = -1;
     bool run_at_eop() override { return type == STANDARD; }
     int unitram_type() override { return UnitRam::METER; }
     int home_row() const override { return layout.at(0).row | 3; }
