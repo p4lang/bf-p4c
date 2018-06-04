@@ -43,7 +43,7 @@ std::string get_filename(const char* s) {
     return fname;
 }
 
-/* Remove augmented names - These dont exist in user program and serve to say
+/* Remove augmented names - These don't exist in user program and serve to say
  * something special about a name to the assembler. The right way to handle this
  * is to attach attributes to names. We should do that if this list gets longer
  */
@@ -57,23 +57,9 @@ bool remove_aug_names(std::string  &name) {
     return false;
 }
 
-/* Convert assembler stack field names back to their original P4 name.
- * In P4, fields on header stacks have names like "mpls[2].label".
- * For assembly output, this name is converted to "mpls$2.label".
- * This function is used to go back to the original P4 name, which
- * is the desired value to be output in context.json.
- */
-void stack_asm_name_to_p4(std::string& name) {
-    std::regex re ("([a-z_][a-z0-9_]*)\\$([0-9])+\\.", std::regex::icase);
-    std::cmatch match;
-    bool found = std::regex_match(name.c_str(), match, re);
-    if (found)
-        name = match[1].str() + "[" + match[2].str() + "]." + match[3].str();
-}
-
 /* Given a p4 name, split into instance and field names if possible
  *  - else return a copy of the original name */
-bool gen_instfield_name(const std::string &fullname, std::string &instname,
+void gen_instfield_name(const std::string &fullname, std::string &instname,
                          std::string &field_name) {
     auto dotpos = fullname.rfind('.');
     if (dotpos == std::string::npos) {
@@ -83,5 +69,4 @@ bool gen_instfield_name(const std::string &fullname, std::string &instname,
         instname = fullname.substr(0, dotpos);
         field_name = fullname.substr(dotpos+1, fullname.size());
     }
-    return true;
 }

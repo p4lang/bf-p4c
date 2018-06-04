@@ -404,6 +404,7 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                             else if (w.key == "size") p.bit_width = w.value.i;
                             else if (w.key == "full_size") p.bit_width_full = w.value.i;
                             else if (w.key == "alias") p.alias = w.value.s;
+                            else if (w.key == "key_name") p.key_name = w.value.s;
                             else error(lineno, "Incorrect param type %s in p4_param_order", w.key.s); } }
                     p4_params_list.emplace_back(p); } } }
     } else if (kv.key == "context_json") {
@@ -1789,6 +1790,11 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
 
     if (source != "")
         output_field_to_pack_format(field_list, basebit, name, source, start_bit, field);
+
+    // Convert fields with slices embedded in the name, eg. "foo.bar[4:0]", to
+    // slice-free field names with the start_bit incremented by the low bit of
+    // the slice.
+    canon_field_list(field_list);
 }
 
 void Table::output_field_to_pack_format(json::vector &field_list,
@@ -1963,7 +1969,6 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
                 json::vector field_list;
                 for (auto it = format->begin(i); it != format->end(i); ++it)
                     add_field_to_pack_format(field_list, basebit, it->first, it->second, act);
-                canon_field_list(field_list);
                 entry_list.push_back( json::map {
                         { "entry_number", json::number(i) },
                         { "fields", std::move(field_list) }}); }
@@ -1972,7 +1977,6 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
                 json::vector field_list;
                 for (auto &field : *format)
                     add_field_to_pack_format(field_list, basebit, field.first, field.second, act);
-                canon_field_list(field_list);
                 entry_list.push_back( json::map {
                         { "entry_number", json::number(i) },
                         { "fields", std::move(field_list) }});
@@ -2006,8 +2010,8 @@ void Table::common_tbl_cfg(json::map &tbl) {
         for (auto &p : p4_params_list) {
             unsigned start_bit = 0;
             json::map param;
-            stack_asm_name_to_p4(p.name);
-            param["name"] = p.name;
+            std::string name = p.key_name.empty() ? p.name : p.key_name;
+            param["name"] = name;
             param["position"] = p.position;
             param["match_type"] = p.type;
             param["start_bit"] = start_bit;
@@ -2016,7 +2020,7 @@ void Table::common_tbl_cfg(json::map &tbl) {
             param["is_valid"] = p.is_valid;
             /* BRIG-288 */
             std::string fieldname, instname;
-            gen_instfield_name(p.name, instname, fieldname);
+            gen_instfield_name(name, instname, fieldname);
             param["instance_name"] = instname;
             param["field_name"] = fieldname;
             if (!p.alias.empty())

@@ -794,17 +794,34 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
             int start_bit = 0;
             get_cjson_source(mw_name, act, source, immediate_name, start_bit);
             if (source == "")
-                error(lineno, "Cannot determne proper source for field %s", name.c_str());
+                error(lineno, "Cannot determine proper source for field %s", name.c_str());
             int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
             int width = hi - lo + 1;
             std::string field_name = mw->second.name();
             remove_aug_names(field_name);
-            stack_asm_name_to_p4(field_name);
+
+            // If the name has a slice in it, remove it and add the lo bit of
+            // the slice to field_bit.  This takes the place of
+            // canon_field_list(), rather than extracting the slice component
+            // of the field name, if present, and appending it to the key name.
+            int slice_offset = remove_name_tail_range(field_name);
+
+            // Look up this field in the param list to get a custom key
+            // name, if present.
+            std::string key_name = field_name;
+            p4_param* p = find_p4_param(field_name);
+            if (!p && !p4_params_list.empty()) {
+                warning(lineno, "Cannot find field name %s in p4_param_order "
+                        "for table %s", field_name.c_str(), this->name());
+            } else if (p && !p->key_name.empty()) {
+                key_name = p->key_name;
+                remove_aug_names(key_name); }
+
             field_list.push_back( json::map {
-                    { "field_name", json::string(field_name) },
+                    { "field_name", json::string(key_name) },
                     { "source", json::string(source) },
                     { "lsb_mem_word_offset", json::number(offset) },
-                    { "start_bit", json::number(start_bit + lo + mw->second.lobit()) },
+                    { "start_bit", json::number(start_bit + lo + slice_offset + mw->second.lobit()) },
                     { "immediate_name", json::string(immediate_name) },
                     { "lsb_mem_word_idx", json::number(lsb_mem_word_idx) },
                     { "msb_mem_word_idx", json::number(msb_mem_word_idx) },

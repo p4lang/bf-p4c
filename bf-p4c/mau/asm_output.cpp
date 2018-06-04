@@ -1,4 +1,6 @@
 #include "bf-p4c/mau/asm_output.h"
+#include <regex>
+#include <string>
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/resource.h"
@@ -1902,10 +1904,64 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         expr = expr->apply(ReinstateAliasSources());
         auto size = expr->type->width_bits();
 
-        out << indent << canon_name(phv.field(expr)->externalName()) << ": ";
+        // Check for @name annotation.
+        cstring name = phv.field(expr)->externalName();
+
+        out << indent << canon_name(name) << ": ";
         out << "{ type: " << ixbar_read->match_type.name << ", ";
         out << "size: " << size << ", ";
         out << "full_size: " << phv.field(expr)->size;
+
+        if (auto ann = ixbar_read->getAnnotation(IR::Annotation::nameAnnotation)) {
+            auto annName = IR::Annotation::getName(ann);
+
+            // P4_14-->P4_16 translation names valid matches with a
+            // "$valid$" suffix (note the trailing "$").  However, Brig
+            // and pdgen use "$valid".
+            if (annName.endsWith("$valid$"))
+                annName = annName.substr(0, annName.size() - 1);
+
+            // XXX(cole): This is a hack to remove slices from key annName annotations,
+            // eg. "foo.bar[3:0]" becomes "foo.bar".
+            std::string s(annName.c_str());
+            std::smatch sm;
+            std::regex sliceRegex(R"(\[[0-9]+:[0-9]+\])");
+            std::regex_search(s, sm, sliceRegex);
+            if (sm.size()) {
+                auto newAnnName = s.substr(0, sm.position(sm.size() - 1));
+                // XXX(cole): It would be nice to report srcInfo here.
+                ::warning("Table key name not supported.  "
+                          "Replacing \"%1%\" with \"%2%\".", annName, newAnnName);
+                annName = newAnnName; }
+
+            // XXX(cole): This is a hack to remove mask syntax from key names.
+            // This is specifically a problem because
+            //
+            //   1. P4_14-->P4_16 translation replaces `field mask val :
+            //      exact` with `field & val : exact` match keys in some
+            //      cases.
+            //   2. The front end automatically adds @name annotations to
+            //      match keys (if not supplied by the user) converting the
+            //      key to a string literal, eg. @name("field & val").
+            //   3. However, PD generation/etc. expects @name("field"),
+            //      not @name("field & val"), for P4_14 programs.
+            //
+            // Hence, we remove the trailing " & val".  However, this mean
+            // P4_16 programmers can't use that syntax either.
+            s = annName.c_str();
+            sliceRegex = std::regex(R"( & .*$)");
+            std::regex_search(s, sm, sliceRegex);
+            if (sm.size()) {
+                auto newAnnName = s.substr(0, sm.position(sm.size() - 1));
+                // XXX(cole): It would be nice to report srcInfo here.
+                ::warning("Table key name syntax not supported.  "
+                          "Replacing \"%1%\" with \"%2%\".", annName, newAnnName);
+                annName = newAnnName; }
+
+            out << ", key_name: \"" << canon_name(annName) << "\"";
+            LOG1(ann << ": setting external annName of key " << ixbar_read
+                 << " to " << annName); }
+
         out << " }" << std::endl;
         p4_param_index++;
     }

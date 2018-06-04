@@ -674,20 +674,6 @@ std::ostream &operator<<(std::ostream &, const std::vector<Field::alloc_slice> &
 
 }  // namespace PHV
 
-/// Walk the IR, converting `@name` pragmas on IR::KeyElement nodes to PHV
-/// field external names.
-class CollectNameAnnotations : public Inspector {
-    PhvInfo& phv;
-
-    /// For each back-end table, check if it has a pointer to the corresponding
-    /// front-end table.  If so, walk its IR::KeyElement nodes and look for
-    /// `@name` annotations.
-    bool preorder(const IR::MAU::Table* t) override;
-
- public:
-    explicit CollectNameAnnotations(PhvInfo& phv) : phv(phv) { }
-};
-
 /**
  * PhvInfo stores information about the PHV-backed storage in the program -
  * fields of header and metadata instances, header stacks, TempVars, and POV

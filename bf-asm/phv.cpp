@@ -69,7 +69,6 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
                 if (!CHECKTYPE(cjkv.key, tSTR)) continue;
                 if (!CHECKTYPE(cjkv.value, tMAP)) continue;
                 std::string name = cjkv.key.s;
-                stack_asm_name_to_p4(name);
                 for (auto& prop : cjkv.value.map)
                     field_context_json[name][prop.key.s] = toJson(prop.value); }
         } else {
@@ -209,10 +208,10 @@ int Phv::get_position_offset(gress_t gress, std::string name) {
     return 0;
 }
 
-// Generate a map of phv field names and their total sizes Iterates through all
+// Generate a map of phv field names and their total sizes. Iterates through all
 // user defined fields and adds any field slices if present to create a map of
-// phv field names and their total sizes This map is also be used to get a
-// position offset for a field
+// phv field names and their total sizes. This map is also be used to get a
+// position offset for a field.
 void Phv::gen_phv_field_size_map() {
     for (auto &slot : phv.user_defined) {
         gress_t gress = slot.second.first;
@@ -264,14 +263,12 @@ void Phv::output(json::map &ctxt_json) {
                 if (field_size == 0)
                     field_size = phv_container_size;
                 phv_record["position_offset"] = get_position_offset(gress, field_name);
-                std::string fix_name(field_name);
-                stack_asm_name_to_p4(fix_name);  // convert name back to original P4 name
-                phv_record["field_name"] = fix_name;
+                phv_record["field_name"] = field_name;
                 phv_record["field_msb"] = field_lo + field_size - 1;
                 phv_record["field_lsb"] = field_lo;
                 // Pass through per-field context_json information from the compiler.
-                if (field_context_json.count(fix_name))
-                    phv_record.merge(field_context_json.at(fix_name));
+                if (field_context_json.count(field_name))
+                    phv_record.merge(field_context_json.at(field_name));
                 // Field width is set to total field width irrespective of current
                 // field slice width
                 phv_record["field_width"] = phv_field_sizes[gress][field_name];
@@ -295,7 +292,6 @@ void Phv::output(json::map &ctxt_json) {
                     pov_header["bit_index"] = phv_lsb;
                     pov_header["position_offset"] = get_position_offset(gress, field_name);
                     remove_aug_names(field_name);
-                    stack_asm_name_to_p4(field_name);
                     pov_header["header_name"] = field_name;
                     // FIXME: Checks for reserved POV bits, not supported?
                     pov_header["hidden"] = false;;

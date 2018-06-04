@@ -315,6 +315,7 @@ public:
     struct p4_param {
         std::string name;
         std::string alias;
+        std::string key_name;
         unsigned position;
         unsigned bit_width;
         unsigned bit_width_full;
@@ -856,7 +857,7 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     std::string get_lpm_field_name() {
         std::string lpm = "lpm";
         if(auto *p = find_p4_param_type(lpm))
-            return p->name;
+            return p->key_name.empty() ? p->name : p->key_name;
         else error(lineno,
             "'lpm' type field not found in alpm atcam '%s-%s' p4 param order",
                 name(), p4_name());

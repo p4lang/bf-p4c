@@ -693,15 +693,19 @@ class GetBackendTables : public MauInspector {
 
  private:
     void setup_match_mask(IR::MAU::Table *tt, const IR::Mask *mask, IR::ID match_id,
-                          int p4_param_order) {
-         auto slices = convertMaskToSlices(mask);
-         for (auto slice : slices) {
-             auto ixbar_read = new IR::MAU::InputXBarRead(slice, match_id);
-             ixbar_read->from_mask = true;
-             if (match_id.name != "selector")
-                 ixbar_read->p4_param_order = p4_param_order;
-             tt->match_key.push_back(ixbar_read);
-         }
+                          int p4_param_order, boost::optional<cstring> ann) {
+        auto slices = convertMaskToSlices(mask);
+        for (auto slice : slices) {
+            auto ixbar_read = new IR::MAU::InputXBarRead(slice, match_id);
+            ixbar_read->from_mask = true;
+            if (match_id.name != "selector")
+                ixbar_read->p4_param_order = p4_param_order;
+            if (ann) {
+                ixbar_read->annotations = ixbar_read->annotations->addAnnotationIfNew(
+                   IR::Annotation::nameAnnotation,
+                   new IR::StringLiteral(*ann)); }
+            tt->match_key.push_back(ixbar_read);
+        }
     }
 
     void setup_tt_match(IR::MAU::Table *tt, const IR::P4Table *table) {
@@ -710,6 +714,11 @@ class GetBackendTables : public MauInspector {
             return;
         int p4_param_order = 0;
         for (auto key_elem : key->keyElements) {
+            // Get name annotation, if present.
+            boost::optional<cstring> ann = boost::none;
+            if (auto nameAnn = key_elem->getAnnotation(IR::Annotation::nameAnnotation))
+                ann = IR::Annotation::getName(nameAnn);
+
             auto key_expr = key_elem->expression;
             IR::ID match_id(key_elem->matchType->srcInfo, key_elem->matchType->path->name);
             if (auto *b_and = key_expr->to<IR::BAnd>()) {
@@ -723,13 +732,17 @@ class GetBackendTables : public MauInspector {
                              b_and->srcInfo, b_and);
                 if (mask == nullptr)
                     continue;
-                setup_match_mask(tt, mask, match_id, p4_param_order);
+                setup_match_mask(tt, mask, match_id, p4_param_order, ann);
             } else if (auto *mask = key_expr->to<IR::Mask>()) {
-                setup_match_mask(tt, mask, match_id, p4_param_order);
+                setup_match_mask(tt, mask, match_id, p4_param_order, ann);
             } else {
                 auto ixbar_read = new IR::MAU::InputXBarRead(key_expr, match_id);
                 if (match_id.name != "selector")
                     ixbar_read->p4_param_order = p4_param_order;
+                if (ann) {
+                    ixbar_read->annotations = ixbar_read->annotations->addAnnotationIfNew(
+                       IR::Annotation::nameAnnotation,
+                       new IR::StringLiteral(*ann)); }
                 tt->match_key.push_back(ixbar_read);
             }
             if (match_id.name != "selector")

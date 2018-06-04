@@ -662,7 +662,7 @@ class MultiOperand : ListExpression {
         : ListExpression(le), name(n), is_phv(ip) {}
 }
 
-class InputXBarRead : Expression {
+class InputXBarRead : Expression, IAnnotated {
     Expression expr;
     ID match_type;
     int p4_param_order = -1;
@@ -674,6 +674,9 @@ class InputXBarRead : Expression {
     bool for_match() const { return !for_selection() && !for_dleft(); }
 
     dbprint { out << expr << ": " << match_type.name; }
+
+    optional Annotations        annotations = Annotations::empty;
+    Annotations getAnnotations() const { return annotations; }
 }
 
 }  // end namespace MAU

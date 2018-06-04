@@ -98,7 +98,7 @@ void MatchTable::pass1(int type) {
             // in p4 program.
             if (!p.bit_width_full)
                 p.bit_width_full = p.bit_width;
-            stack_asm_name_to_p4(p.name);
+            remove_aug_names(p.key_name);
             bool found = remove_aug_names(p.name);
             if (found)
                 p.is_valid = true; } }
@@ -403,18 +403,27 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
             json::map field;
             if (auto ref = input_xbar->get_hashtable_bit(hash_table_id, bit)) {
                 std::string field_name = ref.name();
+
                 // FIXME -- if field_name is a raw register name, should lookup in PHV for alias?
                 // Make names compatible with PD Gen API
                 remove_aug_names(field_name);
-                stack_asm_name_to_p4(field_name);
                 field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
-                // Sanity check to see if field_name is also in p4_param_list.
-                if (!find_p4_param(field_name) && !p4_params_list.empty())
+
+                // Look up this field in the param list to get a custom key
+                // name, if present.
+                std::string key_name = field_name;
+                p4_param* p = find_p4_param(field_name);
+                if (!p && !p4_params_list.empty()) {
                     warning(col.second.lineno, "Cannot find field name %s in p4_param_order "
                             "for table %s", field_name.c_str(), name());
-                field["field_name"] = field_name;
+                } else if (p && !p->key_name.empty()) {
+                    key_name = p->key_name;
+                    remove_aug_names(key_name); }
+
+                field["field_name"] = key_name;
                 field["hash_match_group"] = input_xbar->hash_group();
-                field["hash_match_group_bit"] = 0;  // FIXME: input_xbar->get_group_bit(input_xbar->get_group() col.first);
+                field["hash_match_group_bit"] = 0;
+                // FIXME: input_xbar->get_group_bit(input_xbar->get_group() col.first);
             }
             if (!hash_bit_added)
                 bits_to_xor.push_back(std::move(field));
@@ -493,9 +502,12 @@ void MatchTable::add_static_entries(json::map &tbl) {
                         int idx = 0;
                         for (auto m : s.match_key_fields_values) {
                             json::map match_key_field;
-                            match_key_field["field_name"] = p4_params_list[idx++].name;
+                            match_key_field["field_name"] = p4_params_list[idx].key_name.empty() ?
+                                                            p4_params_list[idx].name :
+                                                            p4_params_list[idx].key_name;
                             match_key_field["value"] = m;
                             match_key_fields_values.push_back(std::move(match_key_field));
+                            idx++;
                         }
                     }
                 }
@@ -504,4 +516,3 @@ void MatchTable::add_static_entries(json::map &tbl) {
         }
     }
 }
-

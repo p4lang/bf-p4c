@@ -459,21 +459,33 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
         std::string source, unsigned start_bit, unsigned field_width, \
         unsigned index) {
     remove_aug_names(name);
-    auto *p = find_p4_param(name, "range");
+    std::string fix_name(name);
+
+    // If the name has a slice in it, remove it and add the lo bit of
+    // the slice to field_bit.  This takes the place of
+    // canon_field_list(), rather than extracting the slice component
+    // of the field name, if present, and appending it to the key name.
+    int slice_offset = remove_name_tail_range(fix_name);
+
+    // Get the key name, if any.
+    if (auto *param = find_p4_param(fix_name)) {
+        if (!param->key_name.empty()) {
+            fix_name = param->key_name;
+            remove_aug_names(fix_name); } }
+
     // For range match we need bytes to decide which nibble is being used, hence
     // split the field in bytes. For normal match entire slice can be used
     // directly.
+    auto *p = find_p4_param(name, "range");
     unsigned field_bytes = p ? field_width/8 : 1;
     for (int i = 0; i < field_bytes; i++) {
         json::map entry;
-        std::string fix_name(name);
-        stack_asm_name_to_p4(fix_name);  // convert name back to original P4 name
         entry["field_name"] = fix_name;
         entry["lsb_mem_word_offset"] = lsb_offset;
         entry["lsb_mem_word_idx"] = lsb_idx;
         entry["msb_mem_word_idx"] = msb_idx;
         entry["source"] = source;
-        entry["start_bit"] = start_bit;
+        entry["start_bit"] = start_bit + slice_offset;
         entry["field_width"] = field_width;
         auto dirtcam_mode = (name != "--unused--") ?
             get_dirtcam_mode(index, (lsb_offset + i*8)/8) : TCAM_NORMAL;
@@ -483,7 +495,8 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
                     (dirtcam_mode == DIRTCAM_4B_HI))) {
             entry["source"] = "range";
             // Shift start bit based on which nibble is used in range
-            entry["start_bit"] = i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4;
+            entry["start_bit"] =
+                i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4 + slice_offset;
             entry["field_width"] = 4;
             entry["lsb_mem_word_offset"] = lsb_offset + i*8;
             json::map &entry_range = entry["range"];
@@ -570,7 +583,6 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             std::string source = "spec";
             std::string field_name = field.second.what.name();
             remove_aug_names(field_name);
-            stack_asm_name_to_p4(field_name);
             unsigned lsb_mem_word_offset = 0;
             if (field.second.hi > 40) {
                 // FIXME -- no longer needed if we always convert these to Group::BYTE?
@@ -615,7 +627,6 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
                 std::string source = "spec";
                 std::string field_name = field.second.what.name();
                 remove_aug_names(field_name);
-                stack_asm_name_to_p4(field_name);
                 int byte_lo = field.second.lo;
                 int field_lo = field.second.what.lobit();
                 int width = field.second.what.size();
@@ -663,7 +674,6 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
                 idx_lo, 0, 0, "zero", 0, format_width - (idx_lo + 1), -1); }
     }
 
-    canon_field_list(match_field_list);
     pack_fmt["entries"] = json::vector {
         json::map {
             { "entry_number",  json::number(0) },

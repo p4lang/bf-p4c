@@ -1109,33 +1109,6 @@ void AddAliasAllocation::end_apply() {
                 return l.field_bit > r.field_bit; }); }
 }
 
-bool CollectNameAnnotations::preorder(const IR::MAU::Table* t) {
-    if (t->match_table) {
-        forAllMatching<IR::KeyElement>(t->match_table,
-            [&](const IR::KeyElement* e) {
-                // XXX(cole): This method is applied to mid-end IR but needs to
-                // look up the back-end version of field names.  The following
-                // code basically reapplies the name mangling that the back end
-                // does.  There must be a better way.
-
-                for (auto gress : { INGRESS, EGRESS }) {
-                    auto prefix = gress == INGRESS ? "ingress::" : "egress::";
-                    StringRef name = e->expression->toString();
-                    if (auto* p1 = name.findlast('.')) {
-                        StringRef n1 = name.before(p1);
-                        if (auto* p2 = n1.findlast('.')) {
-                            name = name.after(p2 + 1); } }
-                    auto* field = phv.field(prefix + name);
-                    if (!field) return true;
-                    if (auto ann = e->getAnnotation(IR::Annotation::nameAnnotation)) {
-                        field->setExternalName(prefix + IR::Annotation::getName(ann));
-                        LOG1(ann << ": setting external name of field " << field->name
-                             << " to " << field->externalName()); } }
-                    return true;
-            }); }
-    return true;
-}
-
 /** The timestamp and version fields are located in a special part of the input
  * buffer, and PHV allocation needs to take care when allocating these fields:
  * Their start/end bits can't be placed too deep within a PHV container,

@@ -162,10 +162,9 @@ Backend::Backend(const BFN_Options& options) :
         &table_alloc,
         new CollectPhvInfo(phv),
         &defuse,
-        new CollectNameAnnotations(phv),
 
         // Bridged metadata related passes in the backend.
-        // Needs to be run after InstructionSelection and CollectNameAnnotations, but before
+        // Needs to be run after InstructionSelection but before
         // deadcode elimination.
         new BridgedMetadataPacking(phv, deps, bridged_fields, table_alloc),
         // Run after bridged metadata packing as bridged packing updates the parser state.
@@ -186,12 +185,11 @@ Backend::Backend(const BFN_Options& options) :
         Device::currentDevice() == "JBay" ? new DarkPrivatization(phv) : nullptr,
                                     // Allow allocation into dark PHVs for testing purposes
 #endif
-        // SetExternalNameForBridgedMetadata must run after
-        // CollectNameAnnotations.  DO NOT RUN CollectPhvInfo afterwards, as
-        // this will destroy the external names for bridged metadata PHV::Field
-        // objects.
         new CollectPhvInfo(phv),
         &defuse,
+
+        // DO NOT RUN CollectPhvInfo afterwards, as this will destroy the
+        // external names for bridged metadata PHV::Field objects.
         new SetExternalNameForBridgedMetadata(phv, bridged_fields),
 
         new CheckForHeaders(),
