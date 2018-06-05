@@ -928,7 +928,7 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
         } else if (tableType == "MatchAction_Indirect") {
             auto* f = makeCommonDataField(
                 BF_RT_DATA_ACTION_MEMBER_ID, "$ACTION_MEMBER_ID",
-                makeTypeInt("uint64"), false /* repeated */);
+                makeTypeInt("uint32"), false /* repeated */);
             addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
         } else if (tableType == "MatchAction_Indirect_Selector") {
             // action member id and selector group id are mutually-exclusive, so
@@ -936,7 +936,7 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
             auto* choicesDataJson = new Util::JsonArray();
             choicesDataJson->append(makeCommonDataField(
                 BF_RT_DATA_ACTION_MEMBER_ID, "$ACTION_MEMBER_ID",
-                makeTypeInt("uint64"), false /* repeated */));
+                makeTypeInt("uint32"), false /* repeated */));
             choicesDataJson->append(makeCommonDataField(
                 BF_RT_DATA_SELECTOR_GROUP_ID, "$SELECTOR_GROUP_ID",
                 makeTypeInt("uint32"), false /* repeated */));
