@@ -25,6 +25,8 @@ class MapFieldToExpr : public Inspector {
     /// work out ok solely becuase this is a preorder and you don't prune, so it
     /// will also visit the child, which is the field, and then replace the entry in the map.
     bool preorder(const IR::Expression* expr) override {
+        if (expr->is<IR::Cast>() || expr->is<IR::Slice>())
+            return true;
         auto* f = phv.field(expr);
         if (!f)
             return true;
