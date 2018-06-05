@@ -116,7 +116,7 @@ class CollectInlineSubparser : public Inspector {
         bool never_use = true;
         VisitFollowingStates visit_following(state, refMap);
         visit_following.run([&] (const IR::ParserState* s) {
-            if (hasUse(s, src)) {
+            if (s != state && hasUse(s, src)) {
                 never_use = false; }
         });
         return never_use;
