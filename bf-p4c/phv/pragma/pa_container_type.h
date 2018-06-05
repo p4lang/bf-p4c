@@ -23,9 +23,6 @@ class PragmaContainerType : public Inspector {
         return rv;
     }
 
-    /// Set the is_*_candidate() properties for field @f.
-    void set_field_properties(PHV::Field* field, bool mocha, bool dark) const;
-
     /// Adds the constraint that @field_name should be allocated to container type @kind.
     bool add_constraint(cstring field_name, cstring kind);
 

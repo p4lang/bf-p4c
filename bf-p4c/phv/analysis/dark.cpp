@@ -1,15 +1,13 @@
 #include "bf-p4c/phv/analysis/dark.h"
 #include <queue>
 
-Visitor::profile_t CollectDarkCandidates::init_apply(const IR::Node* root) {
+Visitor::profile_t CollectNonDarkUses::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);
     nonDarkMauUses.clear();
-    darkCount = 0;
-    darkSize = 0;
     return rv;
 }
 
-bool CollectDarkCandidates::preorder(const IR::MAU::Action* act) {
+bool CollectNonDarkUses::preorder(const IR::MAU::Action* act) {
     for (auto* prim : act->stateful) {
         for (auto* operand : prim->operands) {
             const PHV::Field* f = phv.field(operand);
@@ -19,7 +17,7 @@ bool CollectDarkCandidates::preorder(const IR::MAU::Action* act) {
     return true;
 }
 
-bool CollectDarkCandidates::preorder(const IR::MAU::Table* tbl) {
+bool CollectNonDarkUses::preorder(const IR::MAU::Table* tbl) {
     LOG5("Table: " << tbl->name);
     for (auto kv : tbl->gateway_rows) {
         if (kv.first == nullptr) continue;
@@ -44,7 +42,7 @@ bool CollectDarkCandidates::preorder(const IR::MAU::Table* tbl) {
     return true;
 }
 
-bool CollectDarkCandidates::preorder(const IR::MAU::InputXBarRead* read) {
+bool CollectNonDarkUses::preorder(const IR::MAU::InputXBarRead* read) {
     const PHV::Field* f = phv.field(read->expr);
     if (!f) return true;
     nonDarkMauUses[f->id] = true;
@@ -52,7 +50,7 @@ bool CollectDarkCandidates::preorder(const IR::MAU::InputXBarRead* read) {
     return true;
 }
 
-bool CollectDarkCandidates::preorder(const IR::MAU::Meter* mtr) {
+bool CollectNonDarkUses::preorder(const IR::MAU::Meter* mtr) {
     const PHV::Field* f = phv.field(mtr->result);
     if (f) {
         LOG5("    Meter result: " << f);
@@ -68,7 +66,7 @@ bool CollectDarkCandidates::preorder(const IR::MAU::Meter* mtr) {
     return true;
 }
 
-bool CollectDarkCandidates::preorder(const IR::MAU::HashDist* hd) {
+bool CollectNonDarkUses::preorder(const IR::MAU::HashDist* hd) {
     auto* listExpr = hd->field_list->to<IR::ListExpression>();
     if (listExpr) {
         for (auto e : listExpr->components) {
@@ -86,7 +84,31 @@ bool CollectDarkCandidates::preorder(const IR::MAU::HashDist* hd) {
     return true;
 }
 
-void CollectDarkCandidates::end_apply() {
+bool CollectNonDarkUses::preorder(const IR::MAU::SaluAction* act) {
+    for (const auto* prim : act->action) {
+        for (const auto* operand : prim->operands) {
+            const PHV::Field* f = phv.field(operand);
+            if (!f) continue;
+            nonDarkMauUses[f->id] = true;
+            LOG5("    Stateful ALU Operand: " << f);
+        }
+    }
+    return false;
+}
+
+bool CollectNonDarkUses::hasNonDarkUse(const PHV::Field* f) const {
+    return nonDarkMauUses[f->id];
+}
+
+Visitor::profile_t MarkDarkCandidates::init_apply(const IR::Node* root) {
+    profile_t rv = Inspector::init_apply(root);
+    nonDarkMauUses.clear();
+    darkCount = 0;
+    darkSize = 0;
+    return rv;
+}
+
+void MarkDarkCandidates::end_apply() {
     for (PHV::Field& f : phv) {
         std::stringstream ss;
         // Ignore dark analysis is field is not a mocha candidate.
@@ -109,7 +131,7 @@ void CollectDarkCandidates::end_apply() {
             LOG5(ss.str());
             continue; }
 
-        if (nonDarkMauUses[f.id]) {
+        if (nonDarkUses.hasNonDarkUse(&f)) {
             ss << "    ...used for non-dark MAU operations.";
             LOG5(ss.str());
             continue; }
@@ -135,90 +157,18 @@ void CollectDarkCandidates::end_apply() {
 Visitor::profile_t CollectDarkPrivatizationCandidates::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);
     fieldsWritten.clear();
-    fieldsNotWrittenForDarkPrivatization.clear();
     darkPrivCandidates = 0;
     darkPrivCandidatesSize = 0;
     return rv;
 }
 
-bool CollectDarkPrivatizationCandidates::preorder(const IR::MAU::Table* tbl) {
-    for (auto kv : tbl->gateway_rows) {
-        if (kv.first == nullptr) continue;
-        auto* op = kv.first->to<IR::Operation_Binary>();
-        if (!op) continue;
-        const PHV::Field* left = phv.field(op->left);
-        if (left) {
-            LOG5("    Input crossbar read, field in gateway condition: " << left);
-            fieldsNotWrittenForDarkPrivatization[left->id] = true;
-        }
-        const PHV::Field* right = phv.field(op->right);
-        if (right) {
-            LOG5("    Input crossbar read, field in gateway condition: " << right);
-            fieldsNotWrittenForDarkPrivatization[right->id] = true;
-        }
-    }
-    return true;
-}
-
-bool CollectDarkPrivatizationCandidates::preorder(const IR::MAU::InputXBarRead* read) {
-    const PHV::Field* f = phv.field(read->expr);
-    if (!f) return true;
-    fieldsNotWrittenForDarkPrivatization[f->id] = true;
-    LOG5("    Input crossbar read: " << f);
-    return true;
-}
-
-bool CollectDarkPrivatizationCandidates::preorder(const IR::MAU::HashDist* hd) {
-    auto* listExpr = hd->field_list->to<IR::ListExpression>();
-    if (listExpr) {
-        for (auto e : listExpr->components) {
-            const PHV::Field* f = phv.field(e);
-            if (!f) continue;
-            LOG5("    Input crossbar read in hash distribution: " << f);
-            fieldsNotWrittenForDarkPrivatization[f->id] = true;
-        }
-    } else {
-        const PHV::Field* f = phv.field(hd->field_list);
-        if (!f) return true;
-        LOG5("    Input crossbar read in hash distribution: " << f);
-        fieldsNotWrittenForDarkPrivatization[f->id] = true;
-    }
-    return true;
-}
-
-bool CollectDarkPrivatizationCandidates::preorder(const IR::MAU::Meter* mtr) {
-    const PHV::Field* f = phv.field(mtr->result);
-    if (f) {
-        LOG5("    Meter result: " << f);
-        fieldsNotWrittenForDarkPrivatization[f->id] = true;
-    }
-    f = phv.field(mtr->pre_color);
-    if (f) {
-        LOG5("    Meter pre color: " << f);
-        fieldsNotWrittenForDarkPrivatization[f->id] = true;
-    }
-    f = phv.field(mtr->input);
-    if (f) {
-        LOG5("    Meter input: " << f);
-        fieldsNotWrittenForDarkPrivatization[f->id] = true;
-    }
-    return true;
-}
-
-bool CollectDarkPrivatizationCandidates::preorder(const IR::MAU::Action* act) {
-    for (auto* prim : act->stateful) {
-        for (auto* operand : prim->operands) {
-            const PHV::Field* f = phv.field(operand);
-            if (!f) continue;
-            LOG5("    Input crossbar read, stateful primitive: " << f);
-            fieldsNotWrittenForDarkPrivatization[f->id] = true;
-        }
-    }
-    return true;
-}
-
 void CollectDarkPrivatizationCandidates::end_apply() {
+    const ordered_map<const PHV::Field*, cstring> pragmaFields = pragma.getFields();
     for (PHV::Field& f : phv) {
+        if (pragmaFields.count(&f)) {
+            LOG5("    Field " << f << " has a container type pragma.");
+            continue;
+        }
         if (darkPrivCandidates > 48 || darkPrivCandidatesSize > 512) {
             LOG1("    Too many dark candidates created.");
             break;
@@ -255,7 +205,7 @@ void CollectDarkPrivatizationCandidates::end_apply() {
             LOG5(ss.str());
             continue;
         }
-        if (fieldsNotWrittenForDarkPrivatization[f.id]) {
+        if (nonDarkUses.hasNonDarkUse(&f)) {
             ss << "    ...involved in MAU operations not supported by dark containers.";
             LOG5(ss.str());
             continue;

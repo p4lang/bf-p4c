@@ -7,6 +7,35 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/analysis/mocha.h"
 
+/** XXX(Deep): The PhvUse pass only classifies a field as being used in the MAU or in the
+  * parser/deparser. It does not break down the MAU uses into normal, dark, mocha. In fact, in the
+  * long term, I would like to remove this class altogether and instead, reconstruct this information
+  * using FieldDefUse.
+  */
+
+/** This pass analyses all fields used in the program and marks fields that have nondark uses in the
+  * MAU (used on the input crossbar). This pass is used by two different passes:
+  * CollectDarkCandidates and CollectDarkPrivatizationCandidates.
+  */
+class CollectNonDarkUses : public MauInspector {
+ private:
+    const PhvInfo&    phv;
+    bitvec            nonDarkMauUses;
+
+    profile_t init_apply(const IR::Node* root) override;
+    bool preorder(const IR::MAU::Table* tbl) override;
+    bool preorder(const IR::MAU::Action* act) override;
+    bool preorder(const IR::MAU::InputXBarRead* read) override;
+    bool preorder(const IR::MAU::Meter* mtr) override;
+    bool preorder(const IR::MAU::HashDist* hd) override;
+    bool preorder(const IR::MAU::SaluAction* act) override;
+
+ public:
+    explicit CollectNonDarkUses(const PhvInfo& p) : phv(p) { }
+
+    bool hasNonDarkUse(const PHV::Field* f) const;
+};
+
 /** This pass analyzes all fields used in the program and marks fields suitable for allocation in
   * dark containers by setting the `is_dark_candidate()` property of the corresponding PHV::Field
   * object to true. Fields amenable for allocation to dark containers must satisfy all the
@@ -17,10 +46,11 @@
   * This pass must be run after the CollectMochaCandidates pass as we use the fields marked with 
   * is_mocha_candidate() as the starting point for this pass.
   */
-class CollectDarkCandidates : public Inspector {
+class MarkDarkCandidates : public Inspector {
  private:
-    PhvInfo&            phv;
-    const PhvUse&       uses;
+    PhvInfo&                    phv;
+    const PhvUse&               uses;
+    const CollectNonDarkUses&   nonDarkUses;
 
     /// Represents all fields with MAU uses that prevent allocation into dark containers.
     /// E.g. use on input crossbar, participation in meter operations, etc.
@@ -32,15 +62,11 @@ class CollectDarkCandidates : public Inspector {
     size_t          darkSize;
 
     profile_t init_apply(const IR::Node* root) override;
-    bool preorder(const IR::MAU::Table* tbl) override;
-    bool preorder(const IR::MAU::Action* act) override;
-    bool preorder(const IR::MAU::InputXBarRead *read) override;
-    bool preorder(const IR::MAU::Meter* mtr) override;
-    bool preorder(const IR::MAU::HashDist* hd) override;
     void end_apply() override;
 
  public:
-    explicit CollectDarkCandidates(PhvInfo& p, const PhvUse& u) : phv(p), uses(u) { }
+    explicit MarkDarkCandidates(PhvInfo& p, const PhvUse& u, const CollectNonDarkUses& d)
+        : phv(p), uses(u), nonDarkUses(d) { }
 };
 
 /** This pass marks all the fields used in the program and determines the mocha field candidates
@@ -52,13 +78,13 @@ class CollectDarkCandidates : public Inspector {
   */
 class CollectDarkPrivatizationCandidates : public Inspector {
  private:
-    PhvInfo&            phv;
-    const PhvUse&       uses;
+    PhvInfo&                    phv;
+    const PhvUse&               uses;
+    const CollectNonDarkUses&   nonDarkUses;
+    const PragmaContainerType&  pragma;
 
     /// Represents fields written in the MAU.
     bitvec              fieldsWritten;
-    /// Represents fields not suited for dark privatization because of input crossbar reads.
-    bitvec              fieldsNotWrittenForDarkPrivatization;
 
     /// Number of fields identified for dark privatization.
     size_t              darkPrivCandidates;
@@ -66,15 +92,15 @@ class CollectDarkPrivatizationCandidates : public Inspector {
     size_t              darkPrivCandidatesSize;
 
     profile_t init_apply(const IR::Node* root) override;
-    bool preorder(const IR::MAU::Table* tbl) override;
-    bool preorder(const IR::MAU::Action* act) override;
-    bool preorder(const IR::MAU::InputXBarRead* read) override;
-    bool preorder(const IR::MAU::Meter* mtr) override;
-    bool preorder(const IR::MAU::HashDist* hd) override;
     void end_apply() override;
 
  public:
-    explicit CollectDarkPrivatizationCandidates(PhvInfo& p, const PhvUse& u) : phv(p), uses(u) { }
+    explicit CollectDarkPrivatizationCandidates(
+            PhvInfo& p,
+            const PhvUse& u,
+            const CollectNonDarkUses& d,
+            const PragmaContainerType& t)
+        : phv(p), uses(u), nonDarkUses(d), pragma(t) { }
 };
 
 /** This class takes as constructor arguments, an empty map of PHV::Field* to PHV::Expression* and
@@ -158,6 +184,18 @@ class AddPrivatizedDarkTableInit : public MauTransform {
         : phv(p), darkFields(d), fieldExpressions(f) { }
 };
 
+class CollectDarkCandidates : public PassManager {
+ private:
+    CollectNonDarkUses  nonDarkUses;
+ public:
+    explicit CollectDarkCandidates(PhvInfo& p, PhvUse& u) : nonDarkUses(p) {
+        addPasses({
+            &nonDarkUses,
+            new MarkDarkCandidates(p, u, nonDarkUses)
+        });
+    }
+};
+
 /** The occupancy of dark containers for most programs is negligible as most fields are used in the
   * parser/deparser, or the input crossbar. The best utilization of dark containers requires their
   * use as extra PHVs available for spilling fields that are not used in particular stages. However,
@@ -169,19 +207,24 @@ class AddPrivatizedDarkTableInit : public MauTransform {
   */
 class DarkPrivatization : public PassManager {
  private:
-    PhvInfo&    phv;
-    PhvUse      uses;
+    PhvInfo&            phv;
+    PhvUse              uses;
+    CollectNonDarkUses  nonDarkUses;
+    PragmaContainerType pragma;
 
     ordered_map<const PHV::Field*, const IR::TempVar*>      darkFields;
     ordered_map<const PHV::Field*, const IR::Expression*>   fieldExpressions;
 
  public:
-    explicit DarkPrivatization(PhvInfo& p) : phv(p), uses(p) {
+    explicit DarkPrivatization(PhvInfo& p)
+        : phv(p), uses(p), nonDarkUses(p), pragma(p) {
         addPasses({
             &uses,
             new CollectMochaCandidates(p, uses),
-            new CollectDarkCandidates(p, uses),
-            new CollectDarkPrivatizationCandidates(p, uses),
+            &nonDarkUses,
+            new MarkDarkCandidates(p, uses, nonDarkUses),
+            &pragma,
+            new CollectDarkPrivatizationCandidates(p, uses, nonDarkUses, pragma),
             new MapDarkFieldToExpr(p, fieldExpressions),
             new AddDarkFieldUses(p, darkFields),
             new AddPrivatizedDarkTableInit(p, darkFields, fieldExpressions)

@@ -4,14 +4,6 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "lib/log.h"
 
-void PragmaContainerType::set_field_properties(
-        PHV::Field* field,
-        bool mocha,
-        bool dark) const {
-    field->set_mocha_candidate(mocha);
-    field->set_dark_candidate(dark);
-}
-
 bool PragmaContainerType::add_constraint(cstring field_name, cstring kind) {
     // check field name
     PHV::Field* field = phv_i.field(field_name);
