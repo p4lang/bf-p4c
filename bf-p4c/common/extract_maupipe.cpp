@@ -449,7 +449,7 @@ class FixP4Table : public Inspector {
             tt->attached.push_back(new IR::MAU::BackendAttached(obj->srcInfo, obj));
             if (side_obj)
                 tt->attached.push_back(new IR::MAU::BackendAttached(side_obj->srcInfo, side_obj));
-        } else if (prop->name == "support_timeout") {
+        } else if (prop->name == "idle_timeout") {
             auto bool_lit = ev->expression->to<IR::BoolLiteral>();
             if (bool_lit == nullptr || bool_lit->value == false)
                 return false;

@@ -203,10 +203,10 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::MoveDeclarations(),
         (options.arch == "psa") ?
             new P4::ValidateTableProperties({"implementation", "size", "psa_direct_counters",
-                                             "psa_direct_meters", "support_timeout"}) : nullptr,
+                                             "psa_direct_meters", "idle_timeout"}) : nullptr,
         (options.arch == "v1model") ?
             new P4::ValidateTableProperties({"implementation", "size", "counters",
-                                             "meters", "support_timeout"}) : nullptr,
+                                             "meters", "idle_timeout"}) : nullptr,
         (options.arch == "tna") ?
             new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
                                              "filters", "idle_timeout"}) : nullptr,

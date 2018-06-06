@@ -165,94 +165,6 @@ class LoadTargetArchitecture : public Inspector {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-class IdleTimeoutTranslation : public Transform {
-    ordered_map<const IR::P4Table *, IR::Expression *> propertyMap;
-
- public:
-    IdleTimeoutTranslation() {
-        setName("IdleTimeoutTranslation");
-    }
-
-    /*
-     * translate support_timeout = true and idletime pragma to extern in the form of
-     * implementation = idle_timeout(6, true, true);
-     * where the parameters are:
-     * - precision
-     * - two_way_notification
-     * - per_flow_idletime_enable
-     */
-    const IR::Node *postorder(IR::Property *node) override {
-        if (node->name == "support_timeout") {
-            auto table = findContext<IR::P4Table>();
-            auto precision = table->getAnnotation("idletime_precision");
-            auto two_way_notify = table->getAnnotation("idletime_two_way_notification");
-            auto per_flow_enable = table->getAnnotation("idletime_per_flow_idletime");
-            auto type = new IR::Type_Name("idle_timeout");
-            auto param = new IR::Vector<IR::Argument>();
-            /// XXX(hanw): check default value for two_way_notify and per_flow_enable
-            param->push_back(precision ?
-                             new IR::Argument(precision->expr.at(0)) :
-                             new IR::Argument(new IR::Constant(IR::Type::Bits::get(3), 3)));
-            param->push_back(two_way_notify ?
-                             new IR::Argument(new IR::BoolLiteral(two_way_notify)) :
-                             new IR::Argument(new IR::BoolLiteral(false)));
-            param->push_back(per_flow_enable ?
-                             new IR::Argument(new IR::BoolLiteral(per_flow_enable)) :
-                             new IR::Argument(new IR::BoolLiteral(false)));
-            auto constructorExpr = new IR::ConstructorCallExpression(type, param);
-            propertyMap.emplace(table, constructorExpr);
-        }
-        return node;
-    }
-
-    const IR::Node *postorder(IR::P4Table *node) override {
-        auto it = propertyMap.find(node);
-        if (it == propertyMap.end())
-            return node;
-        auto impl = node->properties->getProperty("implementation");
-        if (impl) {
-            auto newProperties = new IR::IndexedVector<IR::Property>();
-            IR::ListExpression *newList = nullptr;
-            if (auto list = impl->to<IR::ListExpression>()) {
-                // if implementation already has a list of attached tables.
-                auto components = new IR::Vector<IR::Expression>(list);
-                components->push_back(it->second);
-                newList = new IR::ListExpression(*components);
-            } else {
-                // if implementation has only one attached table
-                auto components = new IR::Vector<IR::Expression>();
-                components->push_back(it->second);
-                newList = new IR::ListExpression(*components);
-            }
-            for (auto prop : node->properties->properties) {
-                if (prop->name == "implementation") {
-                    auto pv = new IR::ExpressionValue(newList);
-                    newProperties->push_back(new IR::Property("implementation", pv, true));
-                } else {
-                    newProperties->push_back(prop);
-                }
-            }
-        } else {
-            // if there is no attached table yet
-            auto newProperties = new IR::IndexedVector<IR::Property>();
-            for (auto prop : node->properties->properties) {
-                newProperties->push_back(prop);
-            }
-            auto components = new IR::Vector<IR::Expression>();
-            components->push_back(it->second);
-            auto newList = new IR::ListExpression(*components);
-            auto pv = new IR::ExpressionValue(newList);
-            newProperties->push_back(new IR::Property("implementation", pv, true));
-        }
-        auto allprops = new IR::IndexedVector<IR::Property>(node->properties->properties);
-        auto properties = new IR::TableProperties(*allprops);
-        auto table = new IR::P4Table(node->srcInfo, node->name, node->annotations, properties);
-        return table;
-    }
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-
 class RemoveNodesWithNoMapping : public Transform {
     // following fields are showing up in struct H, because in P4-14
     // these structs are declared as header type.
@@ -1497,6 +1409,14 @@ class ConstructSymbolTable : public Inspector {
             } else {
                 BUG("unexpected reference to global instance from %1%", control->name);
             }
+        }
+    }
+
+    void postorder(const IR::Property *node) override {
+        if (node->name == "support_timeout") {
+            auto idle_timeout = new IR::Property("idle_timeout", node->annotations,
+                    node->value, node->isConstant);
+            structure->_map.emplace(node, idle_timeout);
         }
     }
 };
