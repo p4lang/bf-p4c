@@ -557,7 +557,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     for (auto gress : {INGRESS, EGRESS}) {
         const auto* mirror_id = phv.field(
                 cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_id");
-        if (mirror_id) {
+        if (mirror_id && phv.get_alloc(mirror_id).size()) {
             const auto& id_alloc = phv.get_alloc(mirror_id);
             BUG_CHECK(id_alloc.size() == 1,
                       "%1% is splitted, but it should not.", mirror_id->name);
@@ -568,7 +568,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         const auto* mirror_src = phv.field(
                 cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_source");
-        if (mirror_src) {
+        if (mirror_src && phv.get_alloc(mirror_src).size()) {
             const auto& src_alloc = phv.get_alloc(mirror_src);
             BUG_CHECK(src_alloc.size() == 1,
                       "%1% is splitted, but it should not.", mirror_src->name);

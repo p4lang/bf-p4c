@@ -178,7 +178,7 @@ if (PTF_REQUIREMENTS_MET)
 
   # fails also with Glass.
   p4c_add_xfail_reason("tofino"
-    ".* is splitted, but it should not."
+    "Expected packet was not received on device 0, port 64"
     11-simple_l3_mirror
     )
   # broken test: https://github.com/barefootnetworks/p4examples/issues/5
