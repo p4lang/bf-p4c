@@ -9,12 +9,12 @@ template<> void VLIWInstruction::write_regs(Target::Tofino::mau_regs &regs,
         LOG3("skipping " << tbl->name() << '.' << act->name << " as its imem is used by " <<
              tbl->stage->imem_addr_use[tbl->gress][act->addr]->name);
         return; }
+    LOG2(this);
     auto &imem = regs.dp.imem;
     int iaddr = act->addr/ACTION_IMEM_COLORS;
     int color = act->addr%ACTION_IMEM_COLORS;
     unsigned bits = encode();
     assert(slot >= 0);
-    LOG2(this);
     switch (Phv::reg(slot)->size) {
     case 8:
         imem.imem_subword8[slot-64][iaddr].imem_subword8_instr = bits;

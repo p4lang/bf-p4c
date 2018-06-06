@@ -252,12 +252,14 @@ class ActionBus_Source_Printer:
         elif self.val['type'] == 2:
             rv = "HashDist"
         elif self.val['type'] == 3:
-            rv = "TableOutput"
+            rv = "RandomGen"
         elif self.val['type'] == 4:
-            rv = "TableColor"
+            rv = "TableOutput"
         elif self.val['type'] == 5:
-            rv = "NameRef"
+            rv = "TableColor"
         elif self.val['type'] == 6:
+            rv = "NameRef"
+        elif self.val['type'] == 7:
             rv = "ColorRef"
         else:
             rv = '<bad type 0x%x>' % int(self.val['type'])
@@ -277,9 +279,9 @@ class ActionBus_Source_Printer:
                 return ("field", self.val['field'])
             elif type == 2:
                 return ("hd", self.val['hd'])
-            elif type == 3 or type == 4:
+            elif type == 4 or type == 5:
                 return ("table", self.val['table'])
-            elif type == 5 or type == 6:
+            elif type == 6 or type == 7:
                 return ("name_ref", self.val['name_ref'])
             else:
                 raise StopIteration

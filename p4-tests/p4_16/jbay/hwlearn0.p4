@@ -4,10 +4,21 @@ struct metadata {
     bit<16> src_port;
     bit<16> dst_port;
     @pa_container_size("ingress", "meta.cache_id", 32)
+    @pa_atomic("ingress", "meta.cache_id")
     bit<12> cache_id;
     @pa_container_size("ingress", "meta.flow_id", 32)
+    @pa_atomic("ingress", "meta.flow_id")
     bit<16> flow_id;
     bit<1>  new_flow;
+    @pa_container_size("ingress", "meta.fix32w1", 32)
+    @pa_atomic("ingress", "meta.fix32w1")
+    bit<32> fix32w1;
+    @pa_container_size("ingress", "meta.tmp32", 32)
+    @pa_atomic("ingress", "meta.tmp32")
+    bit<32> tmp32;
+    @pa_container_size("ingress", "meta.digest", 32)
+    @pa_container_type("ingress", "meta.digest", "normal")
+    bit<16> tmp16;
     bit<64> digest;
     bit<16> learn;
 }
@@ -17,7 +28,9 @@ struct metadata {
     M.cache_id = 0; \
     M.flow_id = 0; \
     M.new_flow = 0; \
-    M.digest = 1; \
+    M.fix32w1 = 1; \
+    M.tmp32 = 0; \
+    M.digest = 0; \
     M.learn = 0;
 
 struct pair {
@@ -39,8 +52,8 @@ control ingress(inout headers hdr, inout metadata meta,
     Hash<bit<32>>(HashAlgorithm_t.RANDOM) digest_hash;
     Hash<bit<12>>(HashAlgorithm_t.RANDOM) lookup_hash;
     action compute_digest() {
-        meta.digest[63:32] = digest_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
-                                               hdr.ipv4.protocol, meta.src_port, meta.dst_port }); }
+        meta.tmp32 = digest_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
+                                       hdr.ipv4.protocol, meta.src_port, meta.dst_port }); }
     action set_egress_port() { ig_intr_tm_md.ucast_egress_port = 3; }
 
     /* dleft cache table -- 1 way in one stage (so no sbus) */
@@ -84,24 +97,29 @@ control ingress(inout headers hdr, inout metadata meta,
         void apply(inout bit<32> fid, out bit<32> rv) { rv = fid; } };
     action new_flow() {
         meta.new_flow = 1;
-        meta.flow_id = (bit<16>)new_fid.pop(); }
+        meta.flow_id = (bit<16>)new_fid.dequeue(); }
     action old_flow() { meta.new_flow = 0; }
     action failed_overflow() { }
+    @stage(5)
     table get_new_fid {
         key = { meta.learn : ternary; }
         actions = { new_flow; old_flow; failed_overflow; }
     }
-#if 0
+
+    // only needed for stf to insert things into the input fifo
     RegisterAction<bit<32>, bit<32>>(fid_fifo) insert_fid = {
-        void apply(inout bit<32> fid) { fid = (bit<32>)meta.flow_id; } };
-    action insert_new_fid() { insert_fid.push(); }
-#endif
+        void apply(inout bit<32> fid) { fid = (bit<32>)meta.tmp16; } };
+    action insert_new_fid() { insert_fid.enqueue(); }
+    @stage(5)
+    table do_insert_new_fid {
+        actions = { insert_new_fid; }
+        default_action = insert_new_fid(); }
 
     /* output fifo -- outputs cache ids of new flows */
     Register<bit<32>>(4096) output_fifo;
     RegisterAction<bit<32>, bit<32>>(output_fifo) report_cacheid = {
         void apply(inout bit<32> val) { val = (bit<32>)meta.cache_id; } };
-    action do_report_cacheid() { report_cacheid.push(); }
+    action do_report_cacheid() { report_cacheid.enqueue(); }
 
     /* map table -- records mapping from cache id to flow id */
     Register<map_pair>(4096) cid2fidmap;
@@ -121,7 +139,7 @@ control ingress(inout headers hdr, inout metadata meta,
         void apply(inout bit<16> val) { val = val + 1; } };
 
     apply {
-        meta.digest[31:0] = 1;  // FIXME setting to 1 in parser fails?
+        meta.fix32w1 = 1;  // FIXME -- setting this to 1 in the parser doesn't work?
         if (hdr.tcp.isValid()) {
             meta.src_port = hdr.tcp.src_port;
             meta.dst_port = hdr.tcp.dst_port;
@@ -129,25 +147,26 @@ control ingress(inout headers hdr, inout metadata meta,
             meta.src_port = hdr.udp.src_port;
             meta.dst_port = hdr.udp.dst_port;
         }
-#if 0
-        // FIXME -- compiler can't determine table mutual exclusivity with return
+
         // only need this to prime the fifo with STF as it does not support directly pushing
-        else if (hdr.ethernet.ether_type == 0xffff) {
-            meta.flow_id = hdr.ethernet.dst_addr[15:0];
-            insert_new_fid();
-            return; }
-#endif
-        compute_digest();
-        set_egress_port();
-        learn_match.apply();
-        get_new_fid.apply();
-        if (meta.new_flow == 1) {
-            do_report_cacheid();
-            register_new_flow.execute(meta.cache_id);
+        if (hdr.ethernet.ether_type == 0xffff) {
+            meta.tmp16 = hdr.ethernet.dst_addr[15:0];
+            do_insert_new_fid.apply();
         } else {
-            meta.flow_id = existing_flow.execute(meta.cache_id);
+            compute_digest();
+            meta.digest[31:0] = meta.fix32w1;  // hack to force 32bit phv use
+            meta.digest[63:32] = meta.tmp32;  // hack to force 32bit phv use
+            set_egress_port();
+            learn_match.apply();
+            get_new_fid.apply();
+            if (meta.new_flow == 1) {
+                do_report_cacheid();
+                register_new_flow.execute(meta.cache_id);
+            } else {
+                meta.flow_id = existing_flow.execute(meta.cache_id);
+            }
+            inc_flow_counter.execute(meta.flow_id);
         }
-        inc_flow_counter.execute(meta.flow_id);
     }
 }
 

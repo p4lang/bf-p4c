@@ -39,10 +39,14 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
         if (objType == "RegisterAction" && salu->direct != direct_access)
             error("%s: %sdirect access to %sdirect register", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");
-        int bit = 32;
         unsigned idx = method == "execute_direct" ? 1 : 2;
+        int output = 1;
+        int output_offsets[] = { 0, 64, 32, 96 };
 
-        for (; idx < prim->operands.size(); ++idx, bit += 32) {
+        for (; idx < prim->operands.size(); ++idx, ++output) {
+            BUG_CHECK(size_t(output) < sizeof(output_offsets)/sizeof(output_offsets[0]),
+                      "too many outputs");
+            int bit = output_offsets[output];
             auto ao = new IR::MAU::AttachedOutput(IR::Type::Bits::get(bit+32), salu);
             auto instr = new IR::MAU::Instruction(prim->srcInfo, "set", prim->operands[idx],
                                                   MakeSlice(ao, bit, bit+31));

@@ -629,11 +629,17 @@ int ActionBus::find(Table::Format::Field *f, int off, int size /* in bytes */) {
     return -1;
 }
 int ActionBus::find(const char *name, int off, int size, int *len) {
-    for (auto &slot : by_byte)
-        if (slot.second.name == name) {
-            if (size && !(size & slot_sizes[slot.first/32U])) continue;
-            if (len) *len = slot.second.size;
-            return slot.first + off/8; }
+    for (auto &slot : by_byte) {
+        int offset = off;
+        if (slot.second.name != name) continue;
+        for (auto &d : slot.second.data) {
+            if (d.first.type == Source::TableOutput || d.first.type == Source::NameRef)
+                offset -= d.second;
+                break; }
+        if (size && !(size & slot_sizes[slot.first/32U])) continue;
+        if (offset >= slot.second.size) continue;
+        if (len) *len = slot.second.size;
+        return slot.first + offset/8; }
     return -1;
 }
 

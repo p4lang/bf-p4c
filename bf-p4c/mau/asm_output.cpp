@@ -1363,7 +1363,7 @@ class MauAsmOutput::EmitAction : public Inspector {
             auto *at = prim->operands.at(0)->to<IR::GlobalRef>()
                            ->obj->to<IR::MAU::AttachedMemory>();
             auto *salu = at->to<IR::MAU::StatefulAlu>();
-            if (prim->operands.size() < 2 && (!salu || salu->instruction.size() <= 1)) continue;
+            if (at->direct && (!salu || salu->instruction.size() <= 1)) continue;
             out << indent << "- " << self.find_attached_name(table, at) << '(';
             const char *sep = "";
             if (salu) {

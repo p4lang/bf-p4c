@@ -9,6 +9,7 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
         LOG3("skipping " << tbl->name() << '.' << act->name << " as its imem is used by " <<
              tbl->stage->imem_addr_use[tbl->gress][act->addr]->name);
         return; }
+    LOG2(this);
     auto &imem = regs.dp.imem;
     int iaddr = act->addr/ACTION_IMEM_COLORS;
     int color = act->addr%ACTION_IMEM_COLORS;
@@ -33,7 +34,6 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
         case 13: side = 1; group = 2; break;
         default: assert(0); }
 
-    LOG2(this);
     switch (Phv::reg(slot)->type) {
     case Phv::Register::NORMAL:
         switch (Phv::reg(slot)->size) {

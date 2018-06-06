@@ -141,9 +141,9 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
                 mode = call->args.at(1).count_mode();
         // adrdist.mau_stateful_log_counter_logical_map[m->logical_id] = ???
         merge.mau_stateful_log_counter_ctl[m->logical_id/8U][0].set_subfield(
-            mode & PUSHPOP_MASK , 3*(m->logical_id % 8U), 3);
+            mode & PUSHPOP_MASK , 4*(m->logical_id % 8U), 4);
         merge.mau_stateful_log_counter_ctl[m->logical_id/8U][1].set_subfield(
-            (mode >> PUSHPOP_BITS) & PUSHPOP_MASK , 3*(m->logical_id % 8U), 3);
+            (mode >> PUSHPOP_BITS) & PUSHPOP_MASK , 4*(m->logical_id % 8U), 4);
         for (auto &rep : merge.mau_stateful_log_ctl_ixbar_map[m->logical_id/8U]) {
             if (mode & PUSHPOP_MASK)
                 rep[0].set_subfield(meter_group() | 0x4, 3*(m->logical_id % 8U), 3);
