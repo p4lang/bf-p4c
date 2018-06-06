@@ -907,11 +907,21 @@ const IR::Node *ConvertCastToSlice::postorder(IR::MAU::Instruction *instr) {
         bool size_set = false;
         bool all_equal = true;
         auto s1 = new IR::MAU::Instruction(instr->srcInfo, instr->name);
-        int operand_size;
+        int operand_size = 0;
         for (auto operand : instr->operands) {
             auto expr = operand;
             if (auto c = operand->to<IR::Cast>()) {
                 expr = c->expr;
+                // If it's a downcast for source for add/sub, we can add slice for them.
+                if (size_set && expr->type->width_bits() > operand_size
+                    && (instr->name == "add" || instr->name == "sub")
+                    && c->destType) {
+                    if (auto* type_bits = c->destType->to<IR::Type_Bits>()) {
+                        if (type_bits->width_bits() == operand_size) {
+                            expr = MakeSlice(expr, 0, operand_size - 1);
+                        }
+                    }
+                }
             }
             if (!size_set) {
                 size_set = true;

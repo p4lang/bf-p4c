@@ -579,7 +579,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "warning: : Currently the Barefoot HW compiler cannot handle any non direct assignment instruction that has missized rvalues"
-  extensions/p4_tests/p4_16/cast_narrowing_add.p4
   extensions/p4_tests/p4_16/cast_widening_add.p4
   )
 
