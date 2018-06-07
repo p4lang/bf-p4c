@@ -28,8 +28,7 @@ class PhvInfo;
  */
 class PHV_Field_Operations : public Inspector {
  private:
-    PhvInfo &phv;                     // phv object referenced through constructor
-    PHV::Field *dst_i = nullptr;  // destination of current statement
+    PhvInfo &phv;
     bool preorder(const IR::MAU::Instruction *p) override;
     void end_apply() override;
 
