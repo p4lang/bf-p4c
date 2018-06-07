@@ -173,6 +173,23 @@ UnrollParserCounter::findLoopStateAfter(const IR::ParserState* state) const {
     return nullptr;
 }
 
+boost::optional<int>
+UnrollParserCounter::getMaxLoopDepthPragma(const IR::ParserState* state) {
+    auto* anno = state->getAnnotation("max_loop_depth");
+    if (!anno) {
+        return boost::none; }
+    if (anno->expr.size() != 1) {
+        ::warning("@pragma max_loop_depth must have 1 argument, skipping: %1%", anno);
+        return boost::none; }
+    auto max_loop = anno->expr[0]->to<IR::Constant>();
+    if (!max_loop || max_loop->asInt() < 1) {
+        ::warning("@pragma max_loop_depth must >= 1, skipping: %1%", anno);
+        return boost::none;
+    }
+    ::warning("apply on %1%", state);
+    return max_loop->asInt();
+}
+
 /// @returns the loop state after @p state, if exist.
 boost::optional<UnrollParserCounter::CounterLoopState>
 UnrollParserCounter::collectLoopState(const IR::ParserState* state, cstring counter_name) {
@@ -182,11 +199,14 @@ UnrollParserCounter::collectLoopState(const IR::ParserState* state, cstring coun
 
     // process loop
     int delta = calcDelta(loop_state, counter_name);
-    int n_header_stack = extractHeaderStackSize(loop_state);
     auto exit_values = calcExitValues(loop_state);
+    int n_header_stack = extractHeaderStackSize(loop_state);
+    auto max_loop_depth_pragma = getMaxLoopDepthPragma(loop_state);
+    if (max_loop_depth_pragma) {
+        n_header_stack = std::min(n_header_stack, *max_loop_depth_pragma); }
 
     // only unroll when the use of counter is simple.
-    if (exit_values.first != 0 || delta >= 0 || n_header_stack > MAX_UNROLL) {
+    if (exit_values.first != 0 || delta >= 0) {
         return boost::none;
     } else {
         return UnrollParserCounter::CounterLoopState(

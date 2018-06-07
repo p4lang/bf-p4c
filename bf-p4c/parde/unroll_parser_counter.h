@@ -112,6 +112,8 @@ class UnrollParserCounter : public Modifier {
 
     int extractHeaderStackSize(const IR::ParserState* loop_state);
 
+    boost::optional<int> getMaxLoopDepthPragma(const IR::ParserState* state);
+
     IR::IndexedVector<IR::StatOrDecl>
     filterOutCounter(const IR::IndexedVector<IR::StatOrDecl>& primitives) const;
 

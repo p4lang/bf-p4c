@@ -83,6 +83,21 @@ struct ParserPragmas : public Inspector {
             } else {
                 ::warning("packet_entry %1% may be ignored.", ps->name);
             }
+        } else if (pragma_name == "max_loop_depth") {
+            auto& exprs = annot->expr;
+            if (!checkNumArgs(pragma_name, exprs, 1))
+            return false;
+
+            auto max_loop = exprs[0]->to<IR::Constant>();
+            if (!max_loop || max_loop->asInt() < 1) {
+                ::warning("@pragma max_loop_depth must >= 1, skipping: %1%", annot);
+                return false;
+            }
+
+            ::warning("@pragma %1% will at most be unrolled to %2% "
+                      "states due to max_loop_depth pragma.", ps->name, max_loop->asInt());
+
+            max_loop_depth[ps] = max_loop->asInt();
         }
 
         return false;
@@ -92,6 +107,7 @@ struct ParserPragmas : public Inspector {
     const IR::ParserState* mirror_e2e_start = nullptr;
     std::set<const IR::ParserState*> terminate_parsing;
     std::map<const IR::ParserState*, unsigned> force_shift;
+    std::map<const IR::ParserState*, unsigned> max_loop_depth;
 };
 
 /// A helper type that represents a transition in the parse graph that led to
@@ -247,6 +263,7 @@ class GetBackendParser {
     TransitionStack                             transitionStack;
 
     std::map<cstring, IR::BFN::ParserState *>   states;
+    std::map<cstring, int>                      max_loop_depth;
     std::map<cstring, cstring>                  p4StateNameToStateName;
 
     P4::ReferenceMap* refMap;
@@ -264,6 +281,8 @@ GetBackendParser::extract(const IR::BFN::TranslatedP4Parser* parser) {
           new IR::BFN::ParserState(state,
                                    createThreadName(parser->thread, stateName),
                                    parser->thread);
+        if (parserPragmas.max_loop_depth.count(state)) {
+            max_loop_depth[stateName] = parserPragmas.max_loop_depth.at(state); }
         return true;
     });
 
@@ -653,6 +672,12 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
     // sure that the resulting loop is legal.
     auto* state = states[name];
     if (transitionStack.alreadyVisited(state)) {
+        if (max_loop_depth.count(name)) {
+            max_loop_depth[name]--;
+            // no more loop is allowed
+            if (max_loop_depth.at(name) == 0) {
+                return nullptr; }
+        }
         // We're inside a loop. We don't want loops in the actual IR graph, so
         // we'll unroll the loop by creating a new, empty instance of this
         // state, which we'll convert again.
@@ -680,8 +705,11 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
     // Compute the new state's shift.
     auto bitShift = rewriteStatements.bitTotalShift();
 
-    if (parserPragmas.force_shift.count(state->p4State))
-        bitShift += parserPragmas.force_shift.at(state->p4State);
+    if (parserPragmas.force_shift.count(state->p4State)) {
+        bitShift = parserPragmas.force_shift.at(state->p4State);
+        ::warning("state %1% will shift %2% bits because @pragma force_shift",
+                  state->name, bitShift);
+    }
 
     nw_bitinterval bitsAdvanced(0, bitShift);
     if (!bitsAdvanced.isHiAligned())
