@@ -47,8 +47,8 @@ class ControlConverter : public Transform {
     explicit ControlConverter(ProgramStructure* structure)
     : structure(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::MethodCallStatement* node) override;
-    // REM
     const IR::Node* postorder(IR::Declaration_Instance* node) override;
+    const IR::Node* postorder(IR::Property* node) override;
     const IR::P4Control* convert(const IR::Node* node) {
         auto conv = node->apply(*this);
         auto result = conv->to<IR::P4Control>();

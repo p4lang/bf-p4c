@@ -30,6 +30,14 @@ const IR::Node* ControlConverter::postorder(IR::MethodCallStatement* node) {
     return node;
 }
 
+const IR::Node* ControlConverter::postorder(IR::Property* node) {
+    auto* orig = getOriginal<IR::Property>();
+    if (structure->_map.count(orig)) {
+        auto result = structure->_map.at(orig);
+        return result; }
+    return node;
+}
+
 const IR::Node* ParserConverter::postorder(IR::AssignmentStatement* node) {
     auto* orig = getOriginal<IR::AssignmentStatement>();
     if (structure->_map.count(orig)) {
