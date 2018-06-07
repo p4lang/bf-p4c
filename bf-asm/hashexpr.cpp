@@ -6,11 +6,10 @@
 static bitvec crc(bitvec poly, bitvec val) {
     int poly_size = poly.max().index() + 1;
     if (!poly_size) return bitvec(0);
-    val <<= poly_size;
+    val <<= poly_size - 1;
     for (auto i = val.max(); i.index() >= (poly_size-1); --i) {
         assert(*i);
-        val ^= poly << (i.index() - (poly_size-1));
-    }
+        val ^= poly << (i.index() - (poly_size-1)); }
     return val;
 }
 
@@ -79,7 +78,7 @@ class HashExpr::Crc : HashExpr {
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) override;
     void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) override;
-    int width() override { return poly.max().index() - 1; }
+    int width() override { return poly.max().index(); }
     int input_size() override {
         if (what.empty()) {
             int rv = 0;
@@ -197,7 +196,9 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
             if (what[1].type == tBIGINT)
                 rv->poly.setraw(what[1].bigi.data, what[1].bigi.size);
             else
-                rv->poly.setraw(what[1].i);
+                rv->poly.setraw(what[1].i & 0xFFFFFFFF);
+            // Shift and set LSB to 1 to generate polynomial from Koopman number
+            // provided in assembly
             rv->poly <<= 1;
             rv->poly[0] = 1;
             int i = 3;
@@ -205,7 +206,7 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
                 if (what[2].type == tBIGINT)
                     rv->init.setraw(what[2].bigi.data, what[2].bigi.size);
                 else if (what[2].type == tINT)
-                    rv->init.setraw(what[2].i);
+                    rv->init.setraw(what[2].i & 0xFFFFFFFF);
                 else
                     i--; }
             if (what.vec.size == i+1 && what[i].type == tMAP) {
@@ -299,22 +300,20 @@ bool HashExpr::Crc::check_ixbar(InputXbar *ix, int grp) {
 
 void HashExpr::Crc::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
     bitvec init = this->init << input_size();
+    // A crc_rev reverses the bits used in the polynomial
+    if (reverse)
+        bit = poly.max().index() - 1 - bit;
     for (auto &ref : what) {
         auto *in = ix->find_exact(*ref.second, grp);
-        if (!in || in->lo < 0)
-            continue;
-        bitvec crcbit(1UL);
-        if (reverse)
-            crcbit <<= input_size() - 1 - ref.first;
-        else
-            crcbit <<= ref.first;
-        int off = in->lo%64U - in->what->lo;
-        for (int i = ref.second->lo; i <= ref.second->hi; i++) {
-            data[i + off] = crc(poly, init|crcbit).getbit(bit);
+        if (!in || in->lo < 0) continue;
+        int off = in->lo%64U - in->what->lo + ref.second->lo;
+        for (int i = 0; i < ref.second->size(); i++) {
+            bitvec crcinput = init;
             if (reverse)
-                crcbit >>= 1;
+                crcinput[(ref.first + i)^7] = 1;  // reverse the bits of each byte.
             else
-                crcbit <<= 1; } }
+                crcinput[ref.first + i] = 1;
+            data[i + off] = crc(poly, crcinput).getbit(bit); } }
 }
 
 void HashExpr::Xor::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {

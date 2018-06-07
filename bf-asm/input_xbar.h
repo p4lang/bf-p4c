@@ -15,6 +15,12 @@ struct HashCol {
     bitvec                  data;
     unsigned                valid = 0;  // FIXME jbay valid bits are gone; should
                     // issue an error if one tries to use them.  For now just ignored.
+    void dbprint(std::ostream & out) const { 
+        out << "HashCol: " << 
+               " lineno: " << lineno << 
+               " bit: " << bit << 
+               " data: " << data << 
+               " valid: " << valid; }
 };
 
 class InputXbar {

@@ -717,7 +717,11 @@ void MauAsmOutput::emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
         const safe_vector<PHV::Field::Slice> &field_list_order) const {
     for (auto sl : match_data) {
         int order_bit = 0;
-        for (auto fs : field_list_order) {
+        // Traverse field list in reverse order. For a field list the convention
+        // seems to indicate the field offsets are determined based on first
+        // field  MSB and last at LSB.
+        for (auto fs_itr = field_list_order.rbegin(); fs_itr <= field_list_order.rend(); fs_itr++) {
+            auto fs = *fs_itr;
             if (fs.field() != sl.get_field()) {
                 order_bit += fs.size();
                 continue;

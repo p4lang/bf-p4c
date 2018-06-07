@@ -121,7 +121,7 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                             if (el.value.type == tBIGINT) {
                                 hash_groups[index].seed = el.value.bigi.data[0];
                             } else
-                                hash_groups[index].seed = el.value.i;
+                                hash_groups[index].seed = el.value.i & 0xFFFFFFFF;
                         } else if (el.key == "table") {
                             if (el.value.type == tINT) {
                                 if (el.value.i < 0 || el.value.i >= HASH_TABLES)
@@ -637,7 +637,7 @@ void InputXbar::write_regs(REGS &regs) {
             regs.dp.mau_match_input_xbar_exact_match_enable[table->gress] |= hg.second.tables; }
         if (hg.second.seed) {
             for (int bit = 0; bit < 52; ++bit)
-                if ((hg.second.seed >> bit) & 1)
+                if ((hg.second.seed >> bit) & 1) 
                     hash.hash_seed[bit] |= 1U << grp; }
         if (table->gress == INGRESS)
             regs.dp.hashout_ctl.hash_group_ingress_enable |= 1 << grp;

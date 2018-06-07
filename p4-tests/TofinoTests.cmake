@@ -76,6 +76,7 @@ set (P4FACTORY_REGRESSION_TESTS
   exm_indirect_1
   exm_smoke_test
   fast_reconfig
+  hash_test
   # meters -- timeout on a single test!!
   mirror_test
   # # multicast_scale
@@ -169,6 +170,8 @@ bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/mirror_test/mirror_te
    test.TestBasicIngMir
    test.TestBasicEgrMir
    test.TestBatching")
+bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/hash_test/hash_test.p4"
+    "test.TestCrc16")
 
 # add netcache test
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_netcache" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/netcache/netcache.p4"

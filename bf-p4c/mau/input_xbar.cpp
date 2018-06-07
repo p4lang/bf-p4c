@@ -1221,7 +1221,7 @@ void IXBar::field_management(ContByteConversion &map_alloc,
  *
  *  Furthermore, each byte is classified by a byte_speciaility_t.  Bytes with different
  *  specialities themselves will not be overlaid during the allocation process.  This management
- *  just becomes difficult 
+ *  just becomes difficult
  *
  */
 void IXBar::create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc) {

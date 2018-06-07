@@ -121,21 +121,8 @@ if (PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/p4-tests/programs/resubmit/resubmit.p4
     04-simple_l3_nexthop
     05-simple_l3_arping
-    smoketest_switch_dc_basic_L2GeneveUnicastBasicTest
-    smoketest_switch_dc_basic_L2IPv4InIPv6VxlanUnicastBasicTest
     smoketest_switch_dc_basic_L2MplsPopTest
-    smoketest_switch_dc_basic_L2NvgreUnicastBasicTest
-    smoketest_switch_dc_basic_L2VxlanArpUnicastBasicTest
-    smoketest_switch_dc_basic_L2VxlanToGeneveUnicastBasicTest
-    smoketest_switch_dc_basic_L2VxlanUnicastBasicTest
-    smoketest_switch_dc_basic_L3VxlanUnicastMultiTunnelSMTest
-    smoketest_switch_dc_basic_L3VxlanUnicastTunnelECMPLagReflectionSMTest
-    smoketest_switch_dc_basic_L3VxlanUnicastTunnelSMTest
     p4testgen_emulation
-    smoketest_switch_ent_dc_general_L3VxlanUnicastTunnelSMTest
-    smoketest_switch_ent_dc_general_L2VxlanUnicastBasicTest
-    smoketest_switch_ent_dc_general_L2VxlanArpUnicastBasicTest
-    smoketest_switch_ent_dc_general_L3VxlanUnicastTunnelECMPLagReflectionSMTest
     )
 
   p4c_add_xfail_reason("tofino"
@@ -149,7 +136,7 @@ if (PTF_REQUIREMENTS_MET)
     "AssertionError: False is not true"
     smoketest_switch_ent_dc_general_L3IPv4EcmpSeedTest
     )
-    
+
   p4c_add_xfail_reason("tofino"
     ".*InvalidSnapshotOperation.*"
     smoketest_programs_alpm_test_TestSnapshot
@@ -906,7 +893,7 @@ p4c_add_xfail_reason("tofino"
   "Currently the field .* in action .* is assigned in a way too complex for the compiler"
   testdata/p4_16_samples/slice-def-use1.p4
   )
-  
+
 
 p4c_add_xfail_reason("tofino"
   "The action .* manipulates field .* that requires multiple stages from an action"
