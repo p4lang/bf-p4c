@@ -404,6 +404,11 @@ class ActionPhvConstraints : public Inspector {
         return meter_color_destinations;
     }
 
+    /// @returns all the fields that are written using meter color fields.
+    const ordered_set<const PHV::Field*>& meter_color_dests() const {
+        return meter_color_destinations;
+    }
+
     /// @returns the set of all the actions which write field @f.
     ordered_set<const IR::MAU::Action*> actions_writing_fields(const PHV::Field* f) const {
         return constraint_tracker.written_in(PHV::FieldSlice(f, StartLen(0, f->size)));

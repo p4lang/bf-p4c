@@ -192,20 +192,6 @@ PragmaContainerSize::unsatisfiable_fields(
     return rst;
 }
 
-void
-PragmaContainerSize::ignore_fields(const std::set<const PHV::Field*>& fields) {
-    for (const auto* f : fields) {
-        pa_container_sizes_i.erase(f);
-        ::warning("@pragma pa_container_size: field %1% related pragmas are ignored",
-                  cstring::to_cstring(f)); }
-    for (auto it = field_slice_req_i.cbegin(); it != field_slice_req_i.cend(); ) {
-        if (fields.count(it->first.field()))
-            it = field_slice_req_i.erase(it);
-        else
-            ++it;
-    }
-}
-
 std::ostream& operator<<(std::ostream& out, const PragmaContainerSize& pa_cs) {
     std::stringstream logs;
     for (const auto& kv : pa_cs.field_to_sizes()) {

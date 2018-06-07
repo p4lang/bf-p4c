@@ -601,6 +601,17 @@ p4c_add_xfail_reason("tofino"
   #extensions/p4_tests/p4_14/c1/COMPILER-347/switch_bug.p4
   )
 
+# Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
+p4c_add_xfail_reason("tofino"
+  "No way to slice the following to satisfy @pa_container_size"
+  extensions/p4_tests/p4_14/test_config_593_reduce_extraction_bandwidth_32.p4
+  extensions/p4_tests/p4_14/test_config_593_reduce_extraction_bandwidth_16.p4
+  extensions/p4_tests/p4_14/test_config_227_set_meta_packing.p4
+  extensions/p4_tests/p4_14/test_config_303_static_table.p4
+  extensions/p4_tests/p4_14/test_config_262_req_packing.p4
+  extensions/p4_tests/p4_14/test_config_275_match_key_range.p4
+  )
+
 # We can't (without some complex acrobatics) support conditional computed
 # checksums on Tofino. In P4-14, these are operations of the form:
 #   update ipv4_checksum if(ipv4.ihl == 5);
@@ -918,14 +929,17 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
   extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
+  testdata/p4_14_samples/issue894.p4
+  extensions/p4_tests/p4_14/hash_calculation_max_size.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Unimplemented compiler support.*: Currently the compiler cannot support allocation of meter color destination field"
+  testdata/p4_14_samples/meter.p4
   testdata/p4_14_samples/meter1.p4
   testdata/p4_16_samples/named_meter_1-bmv2.p4
   testdata/p4_16_samples/named_meter_bmv2.p4
-  testdata/p4_14_samples/issue894.p4
-  testdata/p4_14_samples/meter.p4
-  testdata/p4_14_samples/meter.p4
-  extensions/p4_tests/p4_14/hash_calculation_max_size.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
   )
 
 # missing support for random in extract_maupipe

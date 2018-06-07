@@ -139,10 +139,10 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
- "the packing is too complicated .* speciality action data combined with other action data"
- testdata/p4_14_samples/meter.p4
- testdata/p4_14_samples/meter1.p4
- )
+  "Unimplemented compiler support.*: Currently the compiler cannot support allocation of meter color"
+  testdata/p4_14_samples/meter.p4
+  testdata/p4_14_samples/meter1.p4
+  )
 
 p4c_add_xfail_reason("jbay"
   "condition too complex"

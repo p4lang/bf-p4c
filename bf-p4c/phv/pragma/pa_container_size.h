@@ -74,10 +74,6 @@ class PragmaContainerSize : public Inspector {
     std::set<const PHV::Field*>
     unsatisfiable_fields(const std::list<PHV::SuperCluster*>& sliced) const;
 
-    /** Ignore unsatisfiable fields related pragma.
-     */
-    void ignore_fields(const std::set<const PHV::Field*>& fields);
-
     /** Add ad-lib constraint.
      *
      *  In phv allocation, use this at the begging.

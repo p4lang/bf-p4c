@@ -1780,6 +1780,7 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
 #endif  // HAVE_JBAY
 
     std::list<PHV::SuperCluster*> allocated_sc;
+    auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
     for (auto* sc : cluster_groups) {
         // clusters with slice lists are not considered.
         if (sc->slice_lists().size()) {
@@ -1802,6 +1803,14 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
                 for (auto* new_sc : *slice_rst) {
                     LOG5(new_sc); } }
 
+            // If the pounder slicing does not satisfy pa_container_size requirements, then ignore
+            // and go to the next slicing. This is required to ensure that pa_container_size pragma
+            // is always respected after preslicing.
+            std::set<const PHV::Field*> unsatisfiable_fields =
+                pa_container_sizes.unsatisfiable_fields(*slice_rst);
+            if (unsatisfiable_fields.size() > 0)
+                continue;
+
             std::list<PHV::SuperCluster*> sliced_sc = *slice_rst;
             auto try_this_slicing = rst.makeTransaction();
             allocLoop(try_this_slicing, sliced_sc, container_groups);
@@ -1823,6 +1832,7 @@ BruteForceAllocationStrategy::slice_clusters(
         std::list<PHV::SuperCluster*>& unsliceable) {
     LOG5("===================  Pre-Slicing ===================");
     std::list<PHV::SuperCluster*> rst;
+    auto& meter_color_dests = core_alloc_i.actionConstraints().meter_color_dests();
     for (auto* sc : cluster_groups) {
         LOG5("PRESLICING " << sc);
         auto it = PHV::SlicingIterator(sc);
@@ -1838,11 +1848,16 @@ BruteForceAllocationStrategy::slice_clusters(
                 ++it; }
             // If failed to find it, use the first slicing as pre-slicing.
             if (it.done()) {
-                ::warning("%1% No way to slice to satisfy "
-                          "@pa_container_size",
-                          cstring::to_cstring(sc));
+                unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it);
+                for (const auto* f : unsatisfiable_fields) {
+                    if (meter_color_dests.count(f))
+                        P4C_UNIMPLEMENTED("Currently the compiler cannot support allocation of "
+                                          "meter color destination field %1% to a non 8-bit "
+                                          "container.", f->name); }
+                ::error("No way to slice the following to satisfy @pa_container_size: \n%1%",
+                        cstring::to_cstring(sc));
                 it = PHV::SlicingIterator(sc);
-                unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it); }
+                unsliceable.push_back(sc); }
 
             LOG5("--- into new slices -->");
             for (auto* new_sc : *it) {
@@ -1850,13 +1865,16 @@ BruteForceAllocationStrategy::slice_clusters(
                 rst.push_back(new_sc); }
         } else {
             unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields({ sc });
-            if (unsatisfiable_fields.size() > 0) {
-                ::warning("%1% can not be sliced, and it can not satisfy "
-                          "@pa_container_size",
-                          cstring::to_cstring(sc)); }
+            for (const auto* f : unsatisfiable_fields) {
+                if (meter_color_dests.count(f))
+                    P4C_UNIMPLEMENTED("Currently the compiler cannot support allocation of "
+                            "meter color destination field %1% to a non 8-bit "
+                            "container.", f->name); }
+            if (unsatisfiable_fields.size() > 0)
+                ::error("No way to slice the following to satisfy @pa_container_size: \n%1%",
+                        cstring::to_cstring(sc));
             LOG5("    ...but preslicing failed");
-            unsliceable.push_back(sc); }
-        pa_container_sizes.ignore_fields(unsatisfiable_fields); }
+            unsliceable.push_back(sc); } }
     return rst;
 }
 
@@ -2171,6 +2189,7 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
         int n_tried = 0;
         if (slice_it.done())
             LOG4("    ...but there are no valid slicings");
+        auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
         while (!slice_it.done()) {
             auto slicing_alloc = rst.makeTransaction();
 
@@ -2178,6 +2197,15 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                 LOG4("Trying to allocate these SUPERCLUSTER slices:");
                 for (auto* sc : *slice_it)
                     LOG4(sc); }
+
+            // If the current slicing does not satisfy pa_container_size requirements, then ignore
+            // and go to the next slice. This is required to ensure that later slicings (after
+            // pre-slicing) respect the pa_container_size pragma.
+            std::set<const PHV::Field*> unsatisfiable_fields =
+                pa_container_sizes.unsatisfiable_fields(*slice_it);
+            if (unsatisfiable_fields.size() > 0) {
+                ++slice_it;
+                continue; }
 
             // Place all slices, then get score for that placement.
             bool succeeded = true;
