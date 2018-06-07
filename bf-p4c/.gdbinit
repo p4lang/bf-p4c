@@ -77,6 +77,18 @@ class ordered_map_Printer:
         return self._iter(self.eltype, self.val['data']['_M_impl']['_M_node']['_M_next'],
                           self.val['data']['_M_impl']['_M_node'].address)
 
+class ActionFormatUsePrinter(object):
+    "Print an ActionFormat::Use"
+    def __init__(self, val):
+        self.val = val
+    def to_string(self):
+        rv = ""
+        try:
+            rv = "ActionFormat::Use"
+        except Exception as e:
+            rv += "{crash: "+str(e)+"}\n"
+        return rv
+
 class cstringPrinter(object):
     "Print a cstring"
     def __init__(self, val):
@@ -252,6 +264,29 @@ def vec_size(vec):
 def vec_at(vec, i):
     return (vec_begin(vec) + i).dereference()
 
+class safe_vector_Printer:
+    "Print a safe_vector<>"
+    def __init__(self, val):
+        self.val = val
+    def to_string(self):
+        return "" if vec_size(self.val) > 0 else "[]"
+    class _iter:
+        def __init__(self, val):
+            self.val = val
+            self.size = vec_size(val)
+            self.idx = 0
+        def __iter__(self):
+            return self
+        def __next__(self):
+            if self.idx >= self.size:
+                raise StopIteration
+            idx = self.idx
+            self.idx = idx + 1
+            return ("[%d]" % idx, vec_at(self.val, idx));
+        def next(self): return self.__next__()
+    def children(self):
+        return self._iter(self.val)
+
 class MemoriesUsePrinter(object):
     "Print a Memories::Use object"
     def __init__(self, val):
@@ -390,6 +425,10 @@ class SlicePrinter(object):
 def find_pp(val):
     if str(val.type.tag).startswith('ordered_map<'):
         return ordered_map_Printer(val)
+    if str(val.type.tag).startswith('safe_vector<'):
+        return safe_vector_Printer(val)
+    if val.type.tag == 'ActionFormat::Use':
+        return ActionFormatUsePrinter(val)
     if val.type.tag == 'bitvec':
         return bitvecPrinter(val)
     if val.type.tag == 'cstring':

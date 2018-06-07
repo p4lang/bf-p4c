@@ -101,7 +101,7 @@ control ingress(inout headers hdr, inout metadata meta,
     action old_flow() { meta.new_flow = 0; }
     action failed_overflow() { }
     @stage(5)
-    table get_new_fid {
+    table process_dleft_result {
         key = { meta.learn : ternary; }
         actions = { new_flow; old_flow; failed_overflow; }
     }
@@ -158,7 +158,7 @@ control ingress(inout headers hdr, inout metadata meta,
             meta.digest[63:32] = meta.tmp32;  // hack to force 32bit phv use
             set_egress_port();
             learn_match.apply();
-            get_new_fid.apply();
+            process_dleft_result.apply();
             if (meta.new_flow == 1) {
                 do_report_cacheid();
                 register_new_flow.execute(meta.cache_id);
