@@ -255,6 +255,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             tableDeclaration, refMap, typeMap);
         auto directMeter = Helpers::getDirectCounterlike<MeterExtern>(
             tableDeclaration, refMap, typeMap);
+        auto supportsTimeout = getSupportsTimeout(tableDeclaration);
 
         if (implementation) {
             auto id = implementation->getId(symbols);
@@ -285,6 +286,35 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             table->add_direct_resource_ids(id);
             addMeter(symbols, p4info, *directMeter);
         }
+
+        // TODO(antonin): idle timeout will change for TNA in the future and we
+        // will need to rely on P4Info table specific extensions.
+        if (supportsTimeout) {
+            table->set_idle_timeout_behavior(p4configv1::Table::NOTIFY_CONTROL);
+        } else {
+            table->set_idle_timeout_behavior(p4configv1::Table::NO_TIMEOUT);
+        }
+    }
+
+    /// @return true if @table's 'idle_timeout' property exists and is
+    /// true. This indicates that @table supports entry ageing.
+    static bool getSupportsTimeout(const IR::P4Table* table) {
+        auto timeout = table->properties->getProperty("idle_timeout");
+        if (timeout == nullptr) return false;
+        if (!timeout->value->is<IR::ExpressionValue>()) {
+            ::error("Unexpected value %1% for idle_timeout on table %2%",
+                    timeout, table);
+            return false;
+        }
+
+        auto expr = timeout->value->to<IR::ExpressionValue>()->expression;
+        if (!expr->is<IR::BoolLiteral>()) {
+            ::error("Unexpected non-boolean value %1% for idle_timeout "
+                    "property on table %2%", timeout, table);
+            return false;
+        }
+
+        return expr->to<IR::BoolLiteral>()->value;
     }
 
     void addExternInstance(const P4RuntimeSymbolTableIface& symbols,

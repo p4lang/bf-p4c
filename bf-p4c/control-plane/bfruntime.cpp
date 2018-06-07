@@ -964,11 +964,15 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
 
         tableJson->emplace("supported_operations", operationsJson);
 
-        // TODO(antonin): idle-timeout support
-
         auto* attributesJson = new Util::JsonArray();
         attributesJson->append("EntryScope");
         if (table.is_const_table()) attributesJson->append("ConstTable");
+        // TODO(antonin): this will probably change when idle-timeout support is
+        // finalized in TNA
+        if (table.idle_timeout_behavior() == p4configv1::Table::NOTIFY_CONTROL)
+            attributesJson->append("IdleTimeout");
+        // TODO(antonin): add 'UpdateHitState' to supported operations when
+        // enabled in TNA & P4Info
         tableJson->emplace("attributes", attributesJson);
 
         tablesJson->append(tableJson);
