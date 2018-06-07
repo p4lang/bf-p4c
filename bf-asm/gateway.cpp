@@ -414,11 +414,12 @@ void GatewayTable::write_regs(REGS &regs) {
             gw_reg.gateway_table_data_entry[lineno][1] = (line.val.word1 >> 32) & 0xffffff; }
         if (!line.run_table) {
             merge.gateway_next_table_lut[logical_id][lineno] =
-                line.next ? line.next->table_id() : 0xff;
+                line.next ? line.next->table_id() : Target::END_OF_PIPE();
             merge.gateway_inhibit_lut[logical_id] |= 1 << lineno; }
         lineno--; }
     if (!miss.run_table) {
-        merge.gateway_next_table_lut[logical_id][4] = miss.next ? miss.next->table_id() : 0xff;
+        merge.gateway_next_table_lut[logical_id][4] = miss.next ? miss.next->table_id()
+                                                                : Target::END_OF_PIPE();
         merge.gateway_inhibit_lut[logical_id] |= 1 << 4; }
     merge.gateway_en |= 1 << logical_id;
     setup_muxctl(merge.gateway_to_logicaltable_xbar_ctl[logical_id], row.row*2 + gw_unit);

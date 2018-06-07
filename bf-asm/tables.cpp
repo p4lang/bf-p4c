@@ -1493,7 +1493,7 @@ void Table::Actions::add_next_table_mapping(Table *table, json::map &tbl) {
         json::map &map = tbl["action_to_next_table_mapping"][act.name];
         map["next_table_address_to_use"] = hit_index;
         map["action_name"] = act.name;
-        map["next_table_full_address"] = next ? next->table_id() : 0xff;
+        map["next_table_full_address"] = next ? next->table_id() : Target::END_OF_PIPE();
         if (next)
             map["next_table_name"] = next->name(); }
 }

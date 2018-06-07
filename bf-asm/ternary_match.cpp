@@ -568,10 +568,10 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
     // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
     // to. Otherwise, set it to the default next table for this stage.
-    //stage_tbl["default_next_table"] = 255;
+    //stage_tbl["default_next_table"] = Target::END_OF_PIPE();
     // FIXME: How to deal with multiple next hit tables?
-    stage_tbl["default_next_table"] = (hit_next.size() > 0) ?
-        ((hit_next[0].name != "END") ? hit_next[0]->logical_id : 255) : 255;
+    stage_tbl["default_next_table"] = hit_next.size() > 0 && hit_next[0].name != "END"
+                                    ? hit_next[0]->logical_id : Target::END_OF_PIPE();
     add_result_physical_buses(stage_tbl);
     for (auto field : *input_xbar) {
         switch(field.first.type) {

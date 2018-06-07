@@ -265,8 +265,8 @@ void AlgTcamMatchTable::gen_unit_cfg(json::vector &units, int size) {
     tbl["table_type"] = "match";
     json::map &stage_tbl = *add_common_sram_tbl_cfgs(tbl, "algorithmic_tcam_unit", "algorithmic_tcam_match");
     // Assuming atcam next hit table cannot be multiple tables
-    stage_tbl["default_next_table"] = (hit_next.size() > 0) ?
-        ((hit_next[0].name != "END") ? hit_next[0]->table_id() : 255) : 255;
+    stage_tbl["default_next_table"] = (hit_next.size() > 0 && hit_next[0].name != "END")
+                                    ? hit_next[0]->table_id() : Target::END_OF_PIPE();
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg();
     add_pack_format(stage_tbl, format, false);
     units.push_back(std::move(tbl));
