@@ -1,7 +1,7 @@
 import ptf.testutils as testutils
 from ptf.mask import Mask
 
-from p4 import p4runtime_pb2
+from p4.v1 import p4runtime_pb2
 
 from base_test import P4RuntimeTest, autocleanup
 from base_test import stringify, ipv4_to_binary, mac_to_binary

@@ -207,7 +207,6 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_16/ONLab_packetio.p4
   extensions/p4_tests/p4_14/easy.p4
   extensions/p4_tests/p4_14/easy_no_match.p4
-  extensions/p4_tests/p4_14/ecmp_pi.p4
   fabric.p4
   tor.p4
   extensions/p4_tests/p4_16/large_action_data_constant.p4

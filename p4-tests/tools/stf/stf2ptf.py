@@ -13,9 +13,9 @@ from ptf.mask import Mask
 
 import ptf.testutils as testutils
 
-from p4 import p4runtime_pb2
+from p4.v1 import p4runtime_pb2
 from p4.tmp import p4config_pb2
-from p4.config import p4info_pb2
+from p4.config.v1 import p4info_pb2
 
 from base_test import P4RuntimeTest
 from base_test import stringify

@@ -3,9 +3,9 @@ import os
 from ptf import config
 import ptf.testutils as testutils
 
-from p4 import p4runtime_pb2
+from p4.v1 import p4runtime_pb2
 from p4.tmp import p4config_pb2
-from p4.config import p4info_pb2
+from p4.config.v1 import p4info_pb2
 import google.protobuf.text_format
 
 from base_test import P4RuntimeTest, stringify, autocleanup, skip_on_hw
