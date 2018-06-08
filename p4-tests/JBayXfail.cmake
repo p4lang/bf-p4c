@@ -249,6 +249,12 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_14/em_ghost4.p4
 )
 
+#BRIG-698
+p4c_add_xfail_reason("jbay"
+  "mismatch from expected(.*) at byte .*"
+  extensions/p4_tests/p4_16/stateful2x16phv.p4
+)
+
 # BRIG-711
 p4c_add_xfail_reason("jbay"
   "Converting a bitvec to a bitrange requires the bitrange to be continuous"

@@ -21,6 +21,9 @@ parser ingressParser(packet_in packet, out headers hdr, out metadata meta,
     }
     state data {
         packet.extract(hdr.data);
+#ifdef METADATA_INIT
+        METADATA_INIT(meta)
+#endif
         transition accept;
     }
 }
