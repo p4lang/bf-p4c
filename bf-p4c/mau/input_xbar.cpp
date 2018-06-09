@@ -2305,7 +2305,6 @@ bool IXBar::allocHashDistAddress(int bits_required, const bitvec used_hash_dist_
                 = { HASH_DIST_BITS, bits_required };
         }
     }
-    LOG1("Slice " << slice << " 0x" << hex(hash_table_input));
     return true;
 }
 
@@ -2330,7 +2329,7 @@ bool IXBar::allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionForm
         auto &arg_loc = placement.arg_locs[0];
         immed_bitmask |= (placement.slot_bits << (placement.start * 8));
         le_bitrange br = { arg_loc.field_bit, arg_loc.field_hi() };
-        immed_bit_positions[placement.start * 8] = br;
+        immed_bit_positions[placement.start * 8 + placement.slot_bits.min().index()] = br;
     }
 
     safe_vector<bitvec> masks;
