@@ -83,7 +83,7 @@ const IR::MAU::Table *SplitComplexGateways::preorder(IR::MAU::Table *tbl) {
             rest->gateway_rows.erase(rest->gateway_rows.begin(), rest->gateway_rows.begin() + i);
             tbl->gateway_rows.erase(tbl->gateway_rows.begin() + i, tbl->gateway_rows.end());
             tbl->gateway_rows.emplace_back(nullptr, "$gwcont");
-            tbl->next.addUnique("$gwcont", new IR::MAU::TableSeq(rest));
+            tbl->next.emplace("$gwcont", new IR::MAU::TableSeq(rest));
             erase_unused_next(rest);
             erase_unused_next(tbl);
             return tbl; } }

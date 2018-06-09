@@ -102,7 +102,7 @@ ActionAnalysis::classify_attached_output(const IR::MAU::AttachedOutput *ao) {
 }
 
 /** Similar to phv.field, it returns the IR structure that corresponds to actiondata,
- *  If it is an ActionArg, HashDist, or AttachedOutput then the type is ACTIONDATA
+ *  If it is an MAU::ActionArg, HashDist, or AttachedOutput then the type is ACTIONDATA
  *  If it is an ActionDataConstant, then the type is CONSTANT
  */
 const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
@@ -115,12 +115,12 @@ const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
         if (e->is<IR::MAU::ActionDataConstant>())
             BUG("No ActionDataConstant should be a member of a Slice");
     }
-    if (e->is<IR::ActionArg>() || e->is<IR::MAU::ActionDataConstant>()
+    if (e->is<IR::MAU::ActionArg>() || e->is<IR::MAU::ActionDataConstant>()
         || e->is<IR::MAU::AttachedOutput>() || e->is<IR::MAU::HashDist>()
         || e->is<IR::MAU::RandomNumber>()) {
         if (bits_out)
             *bits_out = bits;
-        if ((e->is<IR::ActionArg>() || e->is<IR::MAU::AttachedOutput>()
+        if ((e->is<IR::MAU::ActionArg>() || e->is<IR::MAU::AttachedOutput>()
             || e->is<IR::MAU::HashDist>() || e->is<IR::MAU::RandomNumber>()) && type)
             *type = ActionParam::ACTIONDATA;
         if (e->is<IR::MAU::ActionDataConstant>() && type)
@@ -130,7 +130,7 @@ const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
     return nullptr;
 }
 
-const IR::ActionArg *ActionAnalysis::isActionArg(const IR::Expression *e,
+const IR::MAU::ActionArg *ActionAnalysis::isActionArg(const IR::Expression *e,
     le_bitrange *bits_out) {
     le_bitrange bits = { 0, e->type->width_bits() - 1 };
     if (auto *sl = e->to<IR::Slice>()) {
@@ -139,7 +139,7 @@ const IR::ActionArg *ActionAnalysis::isActionArg(const IR::Expression *e,
         e = sl->e0;
     }
 
-    if (auto aa = e->to<IR::ActionArg>()) {
+    if (auto aa = e->to<IR::MAU::ActionArg>()) {
         if (bits_out)
            *bits_out = bits;
         return aa;
@@ -186,7 +186,7 @@ bool ActionAnalysis::preorder(const IR::MAU::Instruction *instr) {
     return true;
 }
 
-bool ActionAnalysis::preorder(const IR::ActionArg *arg) {
+bool ActionAnalysis::preorder(const IR::MAU::ActionArg *arg) {
     if (!findContext<IR::MAU::Instruction>())
         return false;
 
@@ -540,7 +540,7 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
                                      "ActionAnalysis pass");
     cstring arg_name;
     if (type == ActionParam::ACTIONDATA)
-        arg_name = action_arg->to<IR::ActionArg>()->name;
+        arg_name = action_arg->to<IR::MAU::ActionArg>()->name;
     else if (type == ActionParam::CONSTANT)
         arg_name = action_arg->to<IR::MAU::ActionDataConstant>()->name;
 
@@ -994,7 +994,7 @@ bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv) {
 }
 
 void ActionAnalysis::add_to_single_ad_params(ContainerAction &cont_action) {
-    const IR::ActionArg *aa = nullptr;
+    const IR::MAU::ActionArg *aa = nullptr;
     for (auto &field_action : cont_action.field_actions) {
         for (auto &param : field_action.reads) {
             le_bitrange aa_range = { 0, 0 };
@@ -1013,7 +1013,7 @@ void ActionAnalysis::add_to_single_ad_params(ContainerAction &cont_action) {
 void ActionAnalysis::check_single_ad_params(ContainerAction &cont_action) {
     if (cont_action.field_actions.size() != 1)
         return;
-    const IR::ActionArg *aa = nullptr;
+    const IR::MAU::ActionArg *aa = nullptr;
     for (auto &param : cont_action.field_actions[0].reads) {
         le_bitrange aa_range = { 0, 0 };
         aa = isActionArg(param.expr, &aa_range);

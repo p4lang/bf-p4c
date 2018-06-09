@@ -141,9 +141,9 @@ class AddDarkFieldUses : public MauTransform {
     const IR::MAU::Action* currentAction = nullptr;
 
     profile_t init_apply(const IR::Node* root) override;
-    IR::Node* preorder(IR::MAU::Action* act) override;
-    IR::Node* preorder(IR::Expression* expr) override;
-    IR::Node* postorder(IR::MAU::Action* act) override;
+    const IR::Node* preorder(IR::MAU::Action* act) override;
+    const IR::Node* preorder(IR::Expression* expr) override;
+    const IR::Node* postorder(IR::MAU::Action* act) override;
 
  public:
     explicit AddDarkFieldUses(

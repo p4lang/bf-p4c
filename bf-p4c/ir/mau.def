@@ -84,8 +84,13 @@ class Table : BFN::Unit {
     // match_table never visited, keys are in match_key, default action also in action
     NullOK IR::P4Table                          match_table;
     inline Vector<BackendAttached>              attached;
-    inline NameMap<Action, ordered_map>         actions;
-    inline NameMap<TableSeq>                    next;
+    // ordered_map is used because assembly assumes the order of actions
+    // matches to the next table name in the hit list.
+    inline ordered_map<cstring, Action>         actions;
+    // std::map is used because using ordered_map fails stful.p4 by generating
+    // stful alu that are supposed to be in the same stage to different stages.
+    // XXX(hanw): we should get to the bottom of this issue.
+    inline std::map<cstring, TableSeq>          next;
     inline Vector<InputXBarRead>                match_key;
     int                                         random_seed = -1;
 
@@ -288,8 +293,8 @@ class Table : BFN::Unit {
                 for (auto &action : Values(actions)) {
                     auto &clone2(clone.flow_clone());
                     clone2.visit(action);
-                    if (next.count(action->name)) {
-                        clone2.visit(next.at(action->name), action->name.name);
+                    if (next.count(action->internal_name)) {
+                        clone2.visit(next.at(action->internal_name), action->internal_name);
                         v.flow_merge(clone2);
                     } else {
                         default_action.flow_merge(clone2);
@@ -554,9 +559,26 @@ class Instruction : Primitive {
     validate { BUG_CHECK(name, "empty name in instruction"); }
 }
 
+/// The IR::MAU::Action argument.
+class ActionArg : Expression {
+    cstring     action_name;
+    ID          name;
+    ActionArg { if (!srcInfo) srcInfo = name.srcInfo; }
+    dbprint{ out << action_name << ':' << name; }
+    toString{ return name.name; }
+}
+
+/// The base class for MAU::Action and MAU::SaluAction, both represent a wide VLIW action.
+abstract VLIWInstruction {
+}
+
 /// The Action part of an action table -- basically a single VLIW instruction, which is a
 /// set of instructions on different PHV containers that all run simultaneously
-class Action : ActionFunction {
+class Action : VLIWInstruction {
+    optional ID                 name;
+    inline Vector<Primitive>    action = {};
+    safe_vector<ActionArg>      args = {};
+    optional Annotations        annotations = Annotations::empty;
     bool miss_action_only = false;
     bool init_default = false;
     bool default_allowed = false;
@@ -583,8 +605,6 @@ class Action : ActionFunction {
     bool hit_only() const { return default_allowed == false; }
     bool miss_only() const { return miss_action_only == true; }
 
-
-
     validate {
         ERROR_CHECK(!(hit_only() && miss_only()), "Action %s cannot be both a hit only and a "
                     "miss only action.  Can only be at most one of those categories", name);
@@ -593,8 +613,17 @@ class Action : ActionFunction {
 /// A stateful ALU VLIW instruction -- multiple instructions that all run together
 /// "simultanesouly" in different ALUs (certain ALUs are actually later in the pipeline)
 /// in the stateful ALU block (there are 2 comparison, 4 "normal" and 1 output alus)
-class SaluAction : ActionFunction {
+class SaluAction : VLIWInstruction {
+    cstring                     name;
+    inline Vector<Primitive>    action = {};
+    safe_vector<ActionArg>      args = {};
+    optional Annotations        annotations = Annotations::empty;
     NullOK Expression  output_dst = nullptr;  // implicit write of output to this lvalue
+
+    toString {
+        return cstring("action ") + name + " {\n" +
+                 cstring::join(action.begin(), action.end(), ";\n") +
+                 " }"; }
 }
 
 
@@ -676,7 +705,7 @@ class InputXBarRead : Expression, IAnnotated {
     dbprint { out << expr << ": " << match_type.name; }
 
     optional Annotations        annotations = Annotations::empty;
-    Annotations getAnnotations() const { return annotations; }
+    Annotations getAnnotations() const override { return annotations; }
 }
 
 }  // end namespace MAU

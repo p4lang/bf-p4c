@@ -645,7 +645,7 @@ class ApplyAlwaysInit : public MauTransform {
         action->default_allowed = action->init_default = true;
         auto* table  = new IR::MAU::Table(
                 "__init_metadata_begin_" + cstring::to_cstring(gress), gress);
-        table->actions[action->name] = action;
+        table->actions[action->internal_name] = action;
         auto p4name = "__init_metadata_begin_p4_" + cstring::to_cstring(gress);
         table->match_table = new IR::P4Table(
                 p4name.c_str(), new IR::TableProperties());

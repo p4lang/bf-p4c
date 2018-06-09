@@ -58,7 +58,7 @@ const IR::MAU::Instruction *SplitInstructions::preorder(IR::MAU::Instruction *in
     return instr;
 }
 
-const IR::ActionArg *SplitInstructions::preorder(IR::ActionArg *arg) {
+const IR::MAU::ActionArg *SplitInstructions::preorder(IR::MAU::ActionArg *arg) {
     return arg;
 }
 
@@ -203,7 +203,7 @@ const IR::MAU::Instruction *ConstantsToActionData::preorder(IR::MAU::Instruction
     return instr;
 }
 
-const IR::ActionArg *ConstantsToActionData::preorder(IR::ActionArg *arg) {
+const IR::MAU::ActionArg *ConstantsToActionData::preorder(IR::MAU::ActionArg *arg) {
     return arg;
 }
 
@@ -415,7 +415,7 @@ const IR::Expression *MergeInstructions::preorder(IR::Expression *expr) {
     return expr;
 }
 
-const IR::ActionArg *MergeInstructions::preorder(IR::ActionArg *aa) {
+const IR::MAU::ActionArg *MergeInstructions::preorder(IR::MAU::ActionArg *aa) {
     prune();
     return aa;
 }

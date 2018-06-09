@@ -1316,7 +1316,6 @@ class MauAsmOutput::EmitAction : public Inspector {
     indent_t                    indent;
     const char                  *sep = nullptr;
     std::map<cstring, cstring>  alias;
-    cstring                     act_name;
     bool                        is_empty;
 
     void action_context_json(const IR::MAU::Action *act) {
@@ -1332,16 +1331,15 @@ class MauAsmOutput::EmitAction : public Inspector {
             out << " }" << std::endl; }
     }
     bool preorder(const IR::MAU::Action *act) override {
-        act_name = act->name;
         for (auto prim : act->stateful) {
             auto *at = prim->operands.at(0)->to<IR::GlobalRef>()->obj
                        ->to<IR::MAU::AttachedMemory>();
             if (prim->operands.size() < 2) continue;
-            if (auto aa = prim->operands.at(1)->to<IR::ActionArg>()) {
+            if (auto aa = prim->operands.at(1)->to<IR::MAU::ActionArg>()) {
                 alias[aa->name] = self.find_indirect_index(at, true, nullptr, table); } }
         auto &instr_mem = table->resources->instr_mem;
         out << indent << canon_name(act->name);
-        auto &vliw_instr = instr_mem.all_instrs.at(act->name);
+        auto &vliw_instr = instr_mem.all_instrs.at(act->name.name);
         out << "(" << vliw_instr.mem_code << ", " << vliw_instr.gen_addr() << "):" << std::endl;
         action_context_json(act);
         out << indent << "- default_" << (act->miss_action_only ? "only_" : "") << "action: {"
@@ -1367,7 +1365,7 @@ class MauAsmOutput::EmitAction : public Inspector {
             out << indent << "- " << self.find_attached_name(table, at) << '(';
             const char *sep = "";
             if (salu) {
-                out << salu->action_map.at(act->name);
+                out << salu->action_map.at(act->internal_name);
                 sep = ", "; }
             for (size_t i = 1; i < prim->operands.size(); ++i) {
                 // FIXME -- some execute primitives for attached tables have additional
@@ -1377,11 +1375,11 @@ class MauAsmOutput::EmitAction : public Inspector {
                 if (auto *k = prim->operands.at(i)->to<IR::Constant>()) {
                     out << sep << k->value;
                     sep = ", ";
-                } else if (auto *a = prim->operands.at(i)->to<IR::ActionArg>()) {
+                } else if (auto *a = prim->operands.at(i)->to<IR::MAU::ActionArg>()) {
                     out << sep << a->name;
                     sep = ", ";
                 } else if (auto *c = prim->operands.at(i)->to<IR::Cast>()) {
-                    if (auto *a = c->expr->to<IR::ActionArg>()) {
+                    if (auto *a = c->expr->to<IR::MAU::ActionArg>()) {
                         out << sep << a->name;
                         sep = ", "; } } }
             out << ')' << std::endl;
@@ -1391,7 +1389,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << indent << canon_name(act->name) << ":" << std::endl;
         is_empty = true;
         return true; }
-    void postorder(const IR::ActionFunction *) override {
+    void postorder(const IR::MAU::Action *) override {
         if (is_empty) out << indent << "- 0" << std::endl; }
     bool preorder(const IR::Annotations *) override { return false; }
 
@@ -1531,7 +1529,7 @@ class MauAsmOutput::EmitAction : public Inspector {
             handle_random_number(sl);
         }
         visit(sl->e0);
-        if (sl->e0->is<IR::ActionArg>()) {
+        if (sl->e0->is<IR::MAU::ActionArg>()) {
             out << "." << sl->getL() << "-" << sl->getH();
         } else {
             out << "(" << sl->getL() << ".." << sl->getH() << ")";
@@ -1556,7 +1554,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         sep = ", ";
         return false;
     }
-    bool preorder(const IR::ActionArg *a) override {
+    bool preorder(const IR::MAU::ActionArg *a) override {
         assert(sep);
         out << sep << a->toString();
         sep = ", ";
@@ -1721,16 +1719,16 @@ static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNe
     if (what == "$miss") {
         cstring tns = "$try_next_stage";
         if (tbl->next.count(tns)) {
-            if (!tbl->next[tns]->empty())
-                return tbl->next[tns]->front()->name;
+            if (!tbl->next.at(tns)->empty())
+                return tbl->next.at(tns)->front()->name;
         }
     }
     if (tbl->next.count(what)) {
-        if (tbl->next[what] && !tbl->next[what]->empty())
-            return tbl->next[what]->front()->name;
+        if (tbl->next.at(what) && !tbl->next.at(what)->empty())
+            return tbl->next.at(what)->front()->name;
     } else if (tbl->next.count("$default")) {
-        if (!tbl->next["$default"]->empty())
-            return tbl->next["$default"]->front()->name; }
+        if (!tbl->next.at("$default")->empty())
+            return tbl->next.at("$default")->front()->name; }
     return def.next_in_thread(tbl);
 }
 
@@ -2133,7 +2131,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         }
         for (auto act : Values(tbl->actions)) {
             if (act->miss_action_only) continue;
-            out << sep << next_for(tbl, act->name, default_next);
+            out << sep << next_for(tbl, act->internal_name, default_next);
             sep = ", ";
         }
         out << " ]" << std::endl;
@@ -2170,7 +2168,6 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     assert(have_indirect == (tbl->layout.ternary || tbl->layout.no_match_miss_path()));
     BUG_CHECK(have_action || tbl->layout.action_data_bytes_in_table == 0,
               "have action data with no action data table?");
-
 
     if (!have_indirect)
         emit_table_indir(out, indent, tbl);

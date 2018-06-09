@@ -36,7 +36,7 @@ class ActionArgSetup : public MauTransform {
         return pe; }
 
  public:
-    void add_arg(const IR::ActionArg *a) { args[a->name] = a; }
+    void add_arg(const IR::MAU::ActionArg *a) { args[a->name] = a; }
     void add_arg(cstring name, const IR::Expression *e) { args[name] = e; }
 };
 
@@ -209,7 +209,7 @@ class ActionBodySetup : public Inspector {
 
 static const IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
     const IR::P4Action *ac, const IR::Vector<IR::Argument> *args) {
-    auto rv = new IR::MAU::Action;
+    auto rv = new IR::MAU::Action();
     rv->srcInfo = ac->srcInfo;
     rv->name = ac->externalName();
     rv->internal_name = ac->name;
@@ -218,7 +218,7 @@ static const IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4:
     for (auto param : *ac->parameters->getEnumerator()) {
         if ((param->direction == IR::Direction::None) ||
             ((!args || arg_idx >= args->size()) && param->direction == IR::Direction::In)) {
-            auto arg = new IR::ActionArg(param->srcInfo, param->type, rv->name, param->name);
+            auto arg = new IR::MAU::ActionArg(param->srcInfo, param->type, rv->name, param->name);
             aas.add_arg(arg);
             rv->args.push_back(arg);
         } else {
@@ -548,7 +548,7 @@ void AttachTables::InitializeStatefulAlus
     }
 
     auto act = findContext<IR::MAU::Action>();
-    if (!salu->action_map.emplace(act->name, ext->name).second)
+    if (!salu->action_map.emplace(act->internal_name, ext->name).second)
         error("%s: multiple calls to execute in action %s", gref->srcInfo, act->name);
 }
 
@@ -762,8 +762,8 @@ class GetBackendTables : public MauInspector {
             auto newaction = createActionFunction(refMap, typeMap, decl, mce->arguments);
             DefaultActionInit dai(table, act, refMap);
             auto newaction_defact = newaction->apply(dai)->to<IR::MAU::Action>();
-            if (!tt->actions.count(newaction_defact->name))
-                tt->actions.addUnique(newaction_defact->name, newaction_defact);
+            if (!tt->actions.count(newaction_defact->internal_name))
+                tt->actions.emplace(newaction_defact->internal_name, newaction_defact);
             else
                 error("%s: action %s appears multiple times in table %s", decl->name.srcInfo,
                           decl->name, tt->name);
@@ -816,12 +816,12 @@ class GetBackendTables : public MauInspector {
                 label = "$default";
             else
                 label = refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
-                              ->externalName();
+                              ->getName();
             if (c->statement) {
                 auto n = getseq(c->statement);
-                tt->next[label] = n;
+                tt->next.emplace(label, n);
                 for (auto ft : fallthrough)
-                    tt->next[ft] = n;
+                    tt->next.emplace(ft, n);
                 fallthrough.clear();
             } else {
                 fallthrough.push_back(label); } } }
@@ -840,9 +840,9 @@ class GetBackendTables : public MauInspector {
             T = lnot ? "$miss" : "$hit";
             F = lnot ? "$hit" : "$miss"; }
         if (c->ifTrue && !c->ifTrue->is<IR::EmptyStatement>())
-            tables.at(c)->next[T] = getseq(c->ifTrue);
+            tables.at(c)->next.emplace(T, getseq(c->ifTrue));
         if (c->ifFalse && !c->ifFalse->is<IR::EmptyStatement>())
-            tables.at(c)->next[F] = getseq(c->ifFalse);
+            tables.at(c)->next.emplace(F, getseq(c->ifFalse));
     }
 
     // need to understand architecture to process the correct control block

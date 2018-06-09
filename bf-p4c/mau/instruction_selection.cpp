@@ -182,7 +182,7 @@ bool DoInstructionSelection::checkSrc1(const IR::Expression *e) {
         return checkSrc1(slice->e0);
     if (e->is<IR::Constant>()) return true;
     if (e->is<IR::BoolLiteral>()) return true;
-    if (e->is<IR::ActionArg>()) return true;
+    if (e->is<IR::MAU::ActionArg>()) return true;
     if (e->is<IR::MAU::HashDist>()) return true;
     if (e->is<IR::MAU::RandomNumber>()) return true;
     if (e->is<IR::MAU::AttachedOutput>()) return true;

@@ -332,7 +332,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool preorder(const IR::MAU::TableSeq *) override { visitOnce(); return true; }
 
     bool preorder(const IR::Slice *) override;
-    bool preorder(const IR::ActionArg *) override;
+    bool preorder(const IR::MAU::ActionArg *) override;
     bool preorder(const IR::Cast *) override;
     bool preorder(const IR::Expression *) override;
     bool preorder(const IR::MAU::ActionDataConstant *) override;
@@ -374,7 +374,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
  public:
     const IR::Expression *isActionParam(const IR::Expression *expr,
         le_bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
-    const IR::ActionArg *isActionArg(const IR::Expression *expr,
+    const IR::MAU::ActionArg *isActionArg(const IR::Expression *expr,
         le_bitrange *bits_out = nullptr);
 
     bool misaligned_actiondata() {

@@ -459,7 +459,6 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/c1/COMPILER-608/case3263.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
   # extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-271/case1834.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-263/case1795.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-264/case1822.p4
@@ -468,6 +467,11 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/c1/COMPILER-276/case1844.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-282/case1864.p4
   )
+
+p4c_add_xfail_reason("tofino"
+  "No size count in action"
+  extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
+)
 
 # p4c_add_xfail_reason("tofino"
 #   "Action for .* has some unbound arguments"
@@ -937,12 +941,6 @@ p4c_add_xfail_reason("tofino"
 
 #-------- New tests, new failures
 p4c_add_xfail_reason("tofino"
-  "multiple calls to execute in action"
-  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/pgrs/pgrs.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "error: Expression .* cannot be the target of an assignment"
   testdata/p4_16_samples/issue1079-bmv2.p4
   )
@@ -1079,10 +1077,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/selenium_0.p4
 )
 
-# BRIG-677
-# error: MAU::TableSeq: duplicated name (MAU::TableSeq is previous instance)
 p4c_add_xfail_reason("tofino"
-  "duplicated name"
+  "condition too complex"
   extensions/p4_tests/p4_14/p4smith_regression/basseterre_0.p4
 )
 

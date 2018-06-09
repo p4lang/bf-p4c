@@ -2804,7 +2804,8 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
 
     XBarHashDist xbar_hash_dist(*this, phv, alloc, af, lo, tbl);
     tbl->attached.apply(xbar_hash_dist);
-    tbl->actions.apply(xbar_hash_dist);
+    for (auto v : Values(tbl->actions))
+        v->apply(xbar_hash_dist);
     if (!xbar_hash_dist.passed_allocation()) {
         alloc.clear_ixbar();
         return false;

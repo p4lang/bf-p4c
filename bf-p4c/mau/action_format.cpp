@@ -457,9 +457,9 @@ void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &fie
                 ActionDataForSingleALU adp;
                 cstring arg_name;
                 if (auto *sl = read.expr->to<IR::Slice>())
-                    arg_name = sl->e0->to<IR::ActionArg>()->name;
+                    arg_name = sl->e0->to<IR::MAU::ActionArg>()->name;
                 else
-                    arg_name = read.expr->to<IR::ActionArg>()->name;
+                    arg_name = read.expr->to<IR::MAU::ActionArg>()->name;
 
                 adp.arg_locs.emplace_back(arg_name, data_location, 0, single_loc);
                 adp.alu_size = container_size;
@@ -473,7 +473,7 @@ void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &fie
     init_alu_format[action_name] = adp_vector;
 }
 
-/** Creates an ActionDataPlacement from an ActionArg, correctly verified from the PHV allocation
+/** Creates an ActionDataPlacement from an MAU::ActionArg, correctly verified from the PHV allocation
  */
 void ActionFormat::create_from_actiondata(ActionDataForSingleALU &adp,
         const ActionAnalysis::ActionParam &read, int container_bit,
@@ -495,7 +495,7 @@ void ActionFormat::create_from_actiondata(ActionDataForSingleALU &adp,
         arg_name = "random";
         *rn = read.unsliced_expr()->to<IR::MAU::RandomNumber>();
     } else if (read.speciality == ActionAnalysis::ActionParam::NO_SPECIAL) {
-        arg_name = read.unsliced_expr()->to<IR::ActionArg>()->name;
+        arg_name = read.unsliced_expr()->to<IR::MAU::ActionArg>()->name;
     } else if (read.speciality == ActionAnalysis::ActionParam::METER_COLOR) {
         arg_name = "meter";
     } else {

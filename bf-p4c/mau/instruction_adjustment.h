@@ -72,7 +72,7 @@ class SplitInstructions : public MauTransform, TofinoWriteContext {
 
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
-    const IR::ActionArg *preorder(IR::ActionArg *) override;
+    const IR::MAU::ActionArg *preorder(IR::MAU::ActionArg *) override;
     const IR::Expression *preorder(IR::Expression *) override;
     const IR::Constant *preorder(IR::Constant *) override;
     const IR::Primitive *preorder(IR::Primitive *) override;
@@ -98,7 +98,7 @@ class ConstantsToActionData : public MauTransform, TofinoWriteContext {
 
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
-    const IR::ActionArg *preorder(IR::ActionArg *) override;
+    const IR::MAU::ActionArg *preorder(IR::MAU::ActionArg *) override;
     const IR::Expression *preorder(IR::Expression *) override;
     const IR::Constant *preorder(IR::Constant *) override;
     const IR::Slice *preorder(IR::Slice *) override;
@@ -145,7 +145,7 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
     const IR::Slice *preorder(IR::Slice *) override;
     void analyze_phv_field(IR::Expression *);
     const IR::MAU::ActionDataConstant *preorder(IR::MAU::ActionDataConstant *) override;
-    const IR::ActionArg *preorder(IR::ActionArg *) override;
+    const IR::MAU::ActionArg *preorder(IR::MAU::ActionArg *) override;
     const IR::Constant *preorder(IR::Constant *) override;
     const IR::Primitive *preorder(IR::Primitive *) override;
 

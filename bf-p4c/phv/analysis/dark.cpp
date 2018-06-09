@@ -243,19 +243,19 @@ Visitor::profile_t AddDarkFieldUses::init_apply(const IR::Node* root) {
     return Transform::init_apply(root);
 }
 
-IR::Node* AddDarkFieldUses::preorder(IR::MAU::Action* act) {
+const IR::Node* AddDarkFieldUses::preorder(IR::MAU::Action* act) {
     inAction = true;
     currentAction = act;
     return act;
 }
 
-IR::Node* AddDarkFieldUses::postorder(IR::MAU::Action* act) {
+const IR::Node* AddDarkFieldUses::postorder(IR::MAU::Action* act) {
     currentAction = nullptr;
     inAction = false;
     return act;
 }
 
-IR::Node* AddDarkFieldUses::preorder(IR::Expression* expr) {
+const IR::Node* AddDarkFieldUses::preorder(IR::Expression* expr) {
     if (!inAction) return expr;
     const PHV::Field* f = phv.field(expr);
     if (!f) return expr;

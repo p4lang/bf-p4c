@@ -17,7 +17,7 @@ const IR::MAU::Table* SplitAlpm::create_pre_classifier_tcam(
     clone->name = tbl->name + "__alpm_preclassifier";
 
     auto action_name = clone->name + "__set_partition_index";
-    auto action_arg = new IR::ActionArg(IR::Type_Bits::get(partition_index_bits),
+    auto action_arg = new IR::MAU::ActionArg(IR::Type_Bits::get(partition_index_bits),
                                         action_name,
                                         IR::ID("partition_index"));
     auto prim = new IR::MAU::Instruction("set", tv, action_arg);
@@ -29,7 +29,7 @@ const IR::MAU::Table* SplitAlpm::create_pre_classifier_tcam(
 
     /// pre_classifier table has only one action.
     clone->actions.clear();
-    clone->actions.addUnique(action_name, action);
+    clone->actions.emplace(action_name, action);
 
     // These values belong with the ATCAM table, not the pre-classifier
     clone->next.clear();

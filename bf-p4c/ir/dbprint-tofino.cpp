@@ -89,7 +89,15 @@ void IR::MAU::TableSeq::dbprint(std::ostream &out) const {
 }
 
 void IR::MAU::Action::dbprint(std::ostream &out) const {
-    ActionFunction::dbprint(out);
+    out << "action " << name << "(";
+    const char *sep = "";
+    for (auto &arg : args) {
+        out << sep << *arg->type << ' ' << arg->name;
+        sep = ", "; }
+    out << ") {" << indent;
+    for (auto &p : action)
+        out << endl << p;
+    out << unindent << " }";
     if (!stateful.empty()) {
         out << " + {" << indent;
         for (auto &p : stateful)
@@ -98,7 +106,15 @@ void IR::MAU::Action::dbprint(std::ostream &out) const {
 }
 
 void IR::MAU::SaluAction::dbprint(std::ostream &out) const {
-    ActionFunction::dbprint(out);
+    out << "action " << name << "(";
+    const char *sep = "";
+    for (auto &arg : args) {
+        out << sep << *arg->type << ' ' << arg->name;
+        sep = ", "; }
+    out << ") {" << indent;
+    for (auto &p : action)
+        out << endl << p;
+    out << unindent << " }";
 }
 
 void IR::RangeMatch::dbprint(std::ostream &out) const {

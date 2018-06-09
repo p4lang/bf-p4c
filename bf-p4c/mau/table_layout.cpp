@@ -465,7 +465,8 @@ void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
     LOG2("Determining no match table layouts " << tbl->name);
     GetHashDistReqs ghdr;
     tbl->attached.apply(ghdr);
-    tbl->actions.apply(ghdr);
+    for (auto v : Values(tbl->actions))
+        v->apply(ghdr);
     if (ghdr.is_hash_dist_needed()) {
         tbl->layout.hash_action = true;
     }
