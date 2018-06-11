@@ -34,8 +34,12 @@ static mpz_class SliceReduce(IR::Operation::Relation *rel, mpz_class val) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
+    LOG5("     " << "IR::Rel " << e);
     // only called for Equ and Neq
-    if (e->left->is<IR::Constant>()) {
+    // If comparing with a constant, normalize the condition.
+    // However, if both terms are constant, do not swap them, otherwise the IR tree
+    // will continuously change, resulting in an infinite loop for GatewayOpt::PassRepeat
+    if (e->left->is<IR::Constant>() && !e->right->is<IR::Constant>()) {
         auto *t = e->left;
         e->left = e->right;
         e->right = t; }
@@ -43,12 +47,16 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Leq *e) {
+    LOG5("     " << "IR::Leq " << e);
     if (e->left->is<IR::Constant>())
         return postorder(new IR::Geq(e->right, e->left));
     if (auto k = e->right->to<IR::Constant>())
         return postorder(new IR::Lss(e->left, new IR::Constant(k->value + 1)));
-    return e; }
+    return e;
+}
+
 const IR::Expression *CanonGatewayExpr::postorder(IR::Lss *e) {
+    LOG5("     " << "IR::Lss " << e);
     if (auto k = e->left->to<IR::Constant>()) {
         BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
         return postorder(new IR::Geq(e->right, new IR::Constant(k->value + 1))); }
@@ -61,8 +69,11 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Lss *e) {
                 return new IR::BoolLiteral(false); } }
         if (SliceReduce(e, k->value) == 1 && !isSigned(e->left->type))
             return new IR::Equ(e->left, new IR::Constant(0)); }
-    return e; }
+    return e;
+}
+
 const IR::Expression *CanonGatewayExpr::postorder(IR::Geq *e) {
+    LOG5("     " << "IR::Geq " << e);
     if (auto k = e->left->to<IR::Constant>()) {
         BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
         return postorder(new IR::Lss(e->right, new IR::Constant(k->value + 1))); }
@@ -75,14 +86,20 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Geq *e) {
                 return new IR::BoolLiteral(true); } }
         if (SliceReduce(e, k->value) == 1 && !isSigned(e->left->type))
             return new IR::Neq(e->left, new IR::Constant(0)); }
-    return e; }
+    return e;
+}
+
 const IR::Expression *CanonGatewayExpr::postorder(IR::Grt *e) {
+    LOG5("     " << "IR::Grt " << e);
     if (e->left->is<IR::Constant>())
         return postorder(new IR::Lss(e->right, e->left));
     if (auto k = e->right->to<IR::Constant>())
         return postorder(new IR::Geq(e->left, new IR::Constant(k->value + 1)));
-    return e; }
+    return e;
+}
+
 const IR::Expression *CanonGatewayExpr::postorder(IR::LAnd *e) {
+    LOG5("     " << "IR::LAnd " << e);
     const IR::Expression *rv = e;
     if (auto k = e->left->to<IR::Constant>()) {
         return k->value ? e->right : k; }
@@ -116,6 +133,7 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LAnd *e) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::LOr *e) {
+    LOG5("     " << "IR::LOr " << e);
     if (auto k = e->left->to<IR::Constant>()) {
         return k->value ? k : e->right; }
     if (auto k = e->left->to<IR::BoolLiteral>()) {
@@ -131,6 +149,7 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LOr *e) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::LNot *e) {
+    LOG5("     " << "IR::LNot " << e);
     const IR::Expression *rv = e;
     if (auto a = e->expr->to<IR::LAnd>()) {
         rv = new IR::LOr(new IR::LNot(a->left), new IR::LNot(a->right));
@@ -295,7 +314,9 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
         info_to_uses[&info] = *aliasSourceName;
         LOG5("Adding entry to info_to_uses: " << &info << " : " << *aliasSourceName);
     }
-    return false; }
+    return false;
+}
+
 void CollectGatewayFields::postorder(const IR::Literal *) {
     if (xor_match && getParent<IR::Operation::Relation>())
         info[xor_match].const_eq = true;
