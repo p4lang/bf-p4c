@@ -9,7 +9,7 @@
  * state in some way. Then all select on input buffer are replaced by selecting
  * on match registers, and corresponding saves are inserted.
  *
- * If you add to the parser program after the initial run of this pass, you
+ * If you made any change to parsers after the initial run of this pass, you
  * should rerun it. Removing parts of the parser program (e.g. via dead code
  * elimination) is safe as long as the removal is otherwise correct.
  *

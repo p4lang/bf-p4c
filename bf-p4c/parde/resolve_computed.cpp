@@ -356,9 +356,6 @@ struct CopyPropagateParserValues : public ParserInspector {
     void propagateToUse(const IR::BFN::ParserState* state,
                         const IR::BFN::ComputedRVal* value,
                         const ReachingDefs& defs) {
-        // XXX(seth): This obviously isn't sound, but it's consistent with what
-        // we're doing elsewhere in the parser code. This is just a hack until
-        // we eliminate casts correctly in an earlier pass.
         // XXX(yumin): The size that is casted to is used to form the match range.
         // It would make match value incorrect if we don't respect it.
         boost::optional<int> size_cast_to = boost::make_optional(false, int());
@@ -376,7 +373,6 @@ struct CopyPropagateParserValues : public ParserInspector {
 
         // Create a string representation of this computed value. We consider
         // values to be equal if they have the same string representation.
-        // XXX(seth): It'd be nice to move away from using strings.
         auto sourceName = sourceExpr->toString();
 
         // Does some definition for this computed value reach this point?
@@ -623,7 +619,13 @@ class CheckResolvedParserExpressions : public ParserTransform {
 
         // Update mapping.
         auto* newComputed = select->source->to<IR::BFN::ComputedRVal>();
-        updatedDefValues[newComputed] = multiDefValues.at(original);
+        updatedDefValues[newComputed] = {};
+        for (const auto& def : multiDefValues.at(original)) {
+                // Ignore computedRval as definition of a use,
+                // because it means resolution failed to find a defintion
+                // for this select on some path.
+                if (def.rval->is<IR::BFN::BufferlikeRVal>()) {
+                    updatedDefValues[newComputed].push_back(def); } }
 
         if (LOGGING(4)) {
             LOG4("Found computed value with multiple possible data source: ");
@@ -745,29 +747,26 @@ class ComputeSaveAndSelect: public ParserInspector {
         nw_bitrange source() const {
             const IR::BFN::BufferlikeRVal* buf = nullptr;
             if (preferred_source) {
-                if (preferred_source.value().rval->is<IR::BFN::ComputedRVal>()) {
-                    return nw_bitrange(-1, -1); }
                 buf = (*preferred_source).rval->to<IR::BFN::BufferlikeRVal>();
             } else {
-                buf = select->source->to<IR::BFN::BufferlikeRVal>(); }
+                buf = select->source->to<IR::BFN::BufferlikeRVal>();
+            }
 
             if (buf) {
                 return buf->range().shiftedByBytes(byte_shifted);
             } else {
                 ::error("select on a field that is impossible to implement for hardware, "
-                        "likely selecting on a field that is written by constants: %1%", select);
-                return nw_bitrange(); }
+                        "likely selecting on a field that is written by constants: %1%",
+                        select);
+                return nw_bitrange();
+            }
         }
 
         bool
         isExtractedEarlier(const State* state) const {
             // For multipledef selects, only when state maches, source is meaningful.
             if (preferred_source) {
-                // An undefined use.
-                if (preferred_source.value().rval->is<IR::BFN::ComputedRVal>()) {
-                    return true; }
-                return state->gress != (*preferred_source).state->gress
-                       || (*preferred_source).state->name != state->name;
+                return (*preferred_source).state->name != state->name;
             } else {
                 return source().lo < 0; }
         }
