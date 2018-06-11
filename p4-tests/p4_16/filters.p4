@@ -151,7 +151,7 @@ control SwitchEgress(
         }
 
         actions = {
-            NoAction;
+            @defaultonly NoAction;
             set_wred_flag;
         }
 

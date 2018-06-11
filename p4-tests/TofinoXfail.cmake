@@ -200,6 +200,14 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/overlay_add_header.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "Attached object .* in table .* is executed in some actions and not executed in others"
+  testdata/p4_16_samples/named_meter_1-bmv2.p4
+  testdata/p4_16_samples/issue364-bmv2.p4
+  testdata/p4_16_samples/named_meter_bmv2.p4
+  testdata/p4_16_samples/unused-counter-bmv2.p4
+  )
+
 # BRIG-104
 #p4c_add_xfail_reason("tofino"
 #  "Unhandled action bitmask constraint"
@@ -929,8 +937,6 @@ p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*: Currently the compiler cannot support allocation of meter color destination field"
   testdata/p4_14_samples/meter.p4
   testdata/p4_14_samples/meter1.p4
-  testdata/p4_16_samples/named_meter_1-bmv2.p4
-  testdata/p4_16_samples/named_meter_bmv2.p4
   )
 
 # missing support for random in extract_maupipe

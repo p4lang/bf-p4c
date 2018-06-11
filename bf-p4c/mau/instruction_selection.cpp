@@ -19,20 +19,43 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
     if (findContext<IR::MAU::SaluAction>())
         return prim;
 
-    if (findContext<IR::MAU::Action>() == nullptr)
+    auto act = findContext<IR::MAU::Action>();
+    if (act == nullptr)
         return prim;
 
     auto dot = prim->name.find('.');
     auto objType = dot ? prim->name.before(dot) : cstring();
     IR::Node *rv = prim;
 
+    const IR::GlobalRef *glob = nullptr;
+
+    IR::MAU::Action::meter_type_t meter_type = IR::MAU::Action::UNUSED;
+
     cstring method = dot ? cstring(dot+1) : prim->name;
     if (objType == "RegisterAction" || objType == "LearnAction" ||
         objType == "selector_action") {
         bool direct_access = (prim->operands.size() == 1 && method == "execute") ||
                              method == "execute_direct";
-        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
+        BUG_CHECK(salu->action_map.count(act->internal_name), "%s: Stateful Alu %s does not have "
+                  "an action in it's action map", prim->srcInfo, salu->name);
+        auto pos = salu->action_map.find(act->internal_name);
+        int salu_index = std::distance(salu->action_map.begin(), pos);
+        switch (salu_index) {
+            case 0:
+                meter_type = IR::MAU::Action::STFUL_INST0; break;
+            case 1:
+                meter_type = IR::MAU::Action::STFUL_INST1; break;
+            case 2:
+                meter_type = IR::MAU::Action::STFUL_INST2; break;
+            case 3:
+                meter_type = IR::MAU::Action::STFUL_INST3; break;
+            default:
+                BUG("%s: An stateful instruction %s is outside the bounds of the stateful "
+                    "memory in %s", prim->srcInfo, pos->second, salu->name);
+        }
+
         // needed to setup the index and/or type properly
         stateful.push_back(prim);
 
@@ -56,25 +79,38 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
         rv = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
                                       new IR::MAU::AttachedOutput(prim->type, salu));
     } else if (prim->name == "Counter.count") {
+        glob = prim->operands.at(0)->to<IR::GlobalRef>();
         stateful.push_back(prim);  // needed to setup the index
         rv = nullptr;
     } else if (prim->name == "Lpf.execute" || prim->name == "Wred.execute" ||
                prim->name == "Meter.execute" || prim->name == "DirectLpf.execute" ||
                prim->name == "DirectWred.execute") {
-        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto mtr = glob->obj->to<IR::MAU::Meter>();
         BUG_CHECK(mtr != nullptr, "%s: Cannot find associated meter for the method call %s",
                   prim->srcInfo, *prim);
         stateful.push_back(prim);
         rv = new IR::MAU::AttachedOutput(prim->type, mtr);
     } else if (prim->name == "DirectCounter.count") {
+        glob = prim->operands.at(0)->to<IR::GlobalRef>();
         stateful.push_back(prim);
         rv = nullptr;
     } else if (prim->name == "DirectMeter.execute") {
-        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto mtr = glob->obj->to<IR::MAU::Meter>();
         stateful.push_back(prim);
         rv = new IR::MAU::AttachedOutput(IR::Type::Bits::get(8), mtr);
+    }
+
+    if (glob != nullptr) {
+        auto at_mem = glob->obj->to<IR::MAU::AttachedMemory>();
+        auto u_id = at_mem->unique_id();
+        if (per_flow_enables.count(u_id) > 0) {
+            ::error("%s: An attached table can only be executed once per action", prim->srcInfo);
+        }
+        per_flow_enables.insert(u_id);
+        if (meter_type != IR::MAU::Action::UNUSED)
+            meter_types[u_id] = meter_type;
     }
 
     if (findContext<IR::Primitive>() != nullptr)
@@ -95,8 +131,8 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
 
 const IR::MAU::Action *Synth2PortSetup::postorder(IR::MAU::Action *act) {
     act->stateful.append(stateful);
-    act->meter_pfe = meter_pfe;
-    act->stats_pfe = stats_pfe;
+    act->per_flow_enables.insert(per_flow_enables.begin(), per_flow_enables.end());
+    act->meter_types.insert(meter_types.begin(), meter_types.end());
     return act;
 }
 
@@ -375,9 +411,6 @@ static const IR::Primitive *makeDepositField(IR::Primitive *prim, long) {
 const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
     if (!af) return prim;
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
-    auto dot = prim->name.find('.');
-    auto objType = dot ? prim->name.before(dot) : cstring();
-    cstring method = dot ? cstring(dot+1) : prim->name;
     if (prim->name == "modify_field") {
         long mask;
         if ((prim->operands.size() | 1) != 3) {
@@ -745,17 +778,31 @@ void MeterSetup::Scan::find_input(const IR::Primitive *prim) {
                 tbl->name, other_field->name);
 }
 
+/** This determines the field to be used for the pre-cplor.  It will also mark a meter as
+ *  color-aware or color-blind.
+ */
 void MeterSetup::Scan::find_pre_color(const IR::Primitive *prim) {
-    int pre_color_index = precolor_operand(prim);
-    if (pre_color_index == -1)
-        return;
-    if (static_cast<int>(prim->operands.size() - 1) < pre_color_index)
+    auto act = findContext<IR::MAU::Action>();
+    if (act == nullptr)
         return;
     auto gref = prim->operands[0]->to<IR::GlobalRef>();
     // typechecking should catch this too
     BUG_CHECK(gref, "No object named %s", prim->operands[0]);
     auto mtr = gref->obj->to<IR::MAU::Meter>();
-    BUG_CHECK(mtr, "%s: Operand in LPF execute is not a meter", prim->srcInfo);
+    int pre_color_index = precolor_operand(prim);
+    BUG_CHECK(!(mtr == nullptr && pre_color_index != -1), "%s: Operation requiring pre-color is "
+             "not a meter", prim->srcInfo);
+
+    if (mtr == nullptr)
+        return;
+
+    // A pre-color only appears as an extra parameter on direct/indirect meters.  If the meter
+    // either doesn't have a pre-color or is an lpf/wred, then the type is normal
+    if (pre_color_index == -1 || static_cast<int>(prim->operands.size() - 1) < pre_color_index) {
+        self.standard_types[act] = mtr->unique_id();
+        return;
+    }
+
     auto pre_color = prim->operands[pre_color_index];
     pre_color = convert_cast_to_slice(pre_color);
     auto *field = self.phv.field(pre_color);
@@ -766,11 +813,11 @@ void MeterSetup::Scan::find_pre_color(const IR::Primitive *prim) {
     }
 
     auto *other_field = self.phv.field(self.update_pre_colors.at(mtr));
-    auto *act = findContext<IR::MAU::Action>();
     ERROR_CHECK(field == other_field, "%s: The meter execute with a pre-color in action %s has "
                 "a different pre-color %s than another meter execute on %s.  This other "
                 "pre-color is %s.", prim->srcInfo, act->name, field->name, mtr->name,
                 other_field->name);
+    self.pre_color_types[act] = mtr->unique_id();
 }
 
 /** Linking the input for an LPF found in the action call with the IR node.  The Scan pass finds
@@ -815,7 +862,17 @@ void MeterSetup::Update::update_pre_color(IR::MAU::Meter *mtr) {
 bool MeterSetup::Update::preorder(IR::MAU::Meter *mtr) {
     update_input(mtr);
     update_pre_color(mtr);
-    return false;
+    return true;
+}
+
+bool MeterSetup::Update::preorder(IR::MAU::Action *act) {
+    auto orig_act = getOriginal()->to<IR::MAU::Action>();
+    if (self.standard_types.count(orig_act) > 0) {
+        act->meter_types[self.standard_types.at(orig_act)] = IR::MAU::Action::COLOR_BLIND;
+    } else if (self.pre_color_types.count(orig_act) > 0) {
+        act->meter_types[self.pre_color_types.at(orig_act)] = IR::MAU::Action::COLOR_AWARE;
+    }
+    return true;
 }
 
 void DLeftSetup::postorder(IR::MAU::Table *tbl) {
@@ -1012,6 +1069,195 @@ struct ValidateInvalidatePrimitive : public PassManager {
             });
     }
 };
+
+/** The execution of Counters, Meters, and Stateful ALUs can be per action.  In the following 
+ *  example, a table has two actions a1 and a2, and an associated counter cnt.  But only
+ *  one of the actions has an associated execution.
+ *
+ *  a1(index) { cnt.execute(index); }
+ *  a2() { }
+ *
+ *  The addresses for counters/meter/stateful alus (as well as all other addresses) have
+ *  a per_flow_enable bit.  If this pfe == true, then the associated counter/meter/stateful
+ *  alu will run, and if pfe == false, then the table will not run.  This per flow enable
+ *  bit is described in section 6.4.3.5.2 Per Entry Enable
+ *
+ *  The per flow enable bit can be defaulted to true in all addresses.  This can happen
+ *  only if all actions run the associated object.  However, if the object is not executed
+ *  in all hit actions, then the per flow enable bit must come from match overhead.
+ *
+ *  A similar concept to per flow enable bit is meter type.  The meter address, which goes
+ *  to meters, stateful alus, and selectors, has a 3 bit type associated with the address.
+ *  This type is described in section 6.4.4.11. Address Distribution Non-Address Bit
+ *  Encodings.
+ *
+ *  For selectors, there is only one type.  For Meters, a meter can either use a pre-color
+ *  value or not.  For Stateful ALUs, one of up to 4 stateful ALUs instructions can be used.
+ *  Similar to per flow enable, the meter type can be defaulted, if the object executed
+ *  has an identical meter type for all actions.  If the meter type is different per action,
+ *  however, the meter type has to come from overhead.
+ *
+ *  Examine the following example: a table with two actions a1 and a2, and an associated
+ *  meter.
+ *
+ *  a1 (index) { meter.execute(index, pre_color); }
+ *  a2 (index) { meter.execute(index);  // no pre_color }
+ *
+ *  Now both actions execute a meter, so the per_flow_enable can be defaulted on.  However,
+ *  because actions have a different meter_type, one with color awareness and one without
+ *  color awareness, the meter type has to come from overhead.
+ *
+ *  When a table is associated with a gateway, a pfe must come from overhead, though that is
+ *  not known until table placement, and is not associated with this analysis.  Currently
+ *  this needs some work during TableFormat and TablePlacement, and does not yet fully
+ *  work.
+ */
+bool SetupAttachedAddressing::InitializeAttachedInfo::preorder(const IR::MAU::BackendAttached *ba) {
+    auto at_mem = ba->attached;
+    if (!(at_mem->is<IR::MAU::Counter>() || at_mem->is<IR::MAU::Meter>()
+          || at_mem->is<IR::MAU::StatefulAlu>())) {
+        return false;
+    }
+
+    AttachedActionCoord aac;
+    auto tbl = findContext<IR::MAU::Table>();
+    auto &attached_info = self.all_attached_info[tbl];
+    attached_info[at_mem->unique_id()] = aac;
+    return false;
+}
+
+bool SetupAttachedAddressing::ScanActions::preorder(const IR::MAU::Action *act) {
+    auto tbl = findContext<IR::MAU::Table>();
+    LOG1("Table " << tbl->name << " " << act->name);
+    if (act->miss_only())
+        return false;
+
+    LOG1("Not miss only");
+    auto &attached_info = self.all_attached_info[tbl];
+    for (auto &kv : attached_info) {
+        auto &uid = kv.first;
+        auto &aac = kv.second;
+
+
+        if (act->per_flow_enables.count(uid) == 0) {
+            aac.all_per_flow_enabled = false;
+            LOG1("pfe not enabled " << uid);
+        }
+        if (uid.has_meter_type()) {
+            if (act->meter_types.count(uid) == 0)
+                continue;
+            if (!aac.meter_type_set) {
+                aac.meter_type = act->meter_types.at(uid);
+                aac.meter_type_set = true;
+            } else if (aac.meter_type != act->meter_types.at(uid)) {
+                aac.all_same_meter_type = false;
+            }
+        }
+    }
+    return false;
+}
+
+/** In the case of direct tables, or tables where there isn't any match overhead, but have
+ *  an associated address through hash, then a per flow enable bit must always be defaulted
+ *  on.  (The hash may not apply for JBay, but unsupported).
+ *
+ *  The reason for this is that unlike an indirect address, which can be different per
+ *  entry, the address is pulled from the same place per direct entry, and the associated
+ *  pfe must be identical for all entries.
+ *
+ *  The meter type must also be identical for these types of tables, as the meter type
+ *  must be pulled from after the shift of the address, which is impossible in a direct
+ *  entry as the address is at the MSB of the payload.  This pass verifies that this
+ *  behavior is correct.
+ */
+bool SetupAttachedAddressing::VerifyAttached::preorder(const IR::MAU::BackendAttached *ba) {
+    auto at_mem = ba->attached;
+    if (!(at_mem->is<IR::MAU::Counter>() || at_mem->is<IR::MAU::Meter>()
+        || at_mem->is<IR::MAU::StatefulAlu>())) {
+        return false;
+    }
+
+    auto tbl = findContext<IR::MAU::Table>();
+    bool direct = at_mem->direct;
+    bool from_hash = ba->hash_dist != nullptr;
+
+    bool keyless = true;
+    for (auto key : tbl->match_key) {
+        if (key->for_match()) {
+            keyless = false;
+            break;
+        }
+    }
+
+    bool singular_functionality = (direct || (from_hash && keyless));
+
+    auto &aac = self.all_attached_info.at(tbl).at(at_mem->unique_id());
+    if (!aac.all_per_flow_enabled && singular_functionality) {
+        std::string problem = direct ? "direct attached objects"
+                                     : "objects attached to a hash action";
+
+        std::string solution = direct ? "" : "either have match data or ";
+        std::string meter_type_problem = at_mem->is<IR::MAU::Meter>()
+                                       ? "color aware per flow meters"
+                                       : "multiple stateful ALU actions";
+        ERROR_CHECK(aac.all_per_flow_enabled, "%s: Attached object %s in table %s is executed "
+            "in some actions and not executed in others.  However, %s must be enabled in all "
+            "hit actions.  If you require this functionality, consider converting this to "
+            "%sindirect addressing", ba->srcInfo, at_mem->name, tbl->name, problem, solution);
+        ERROR_CHECK(aac.all_same_meter_type, "%s: Attached object %s in table %s requires "
+            "multiple different types of meter addressing due to %s.  However %s must "
+            "have the same type in all hit actions.  If you require this functionality "
+            "consider converting this to %sindirect addressing", ba->srcInfo, at_mem->name,
+            tbl->name, meter_type_problem, problem, solution);
+    }
+    self.attached_coord[ba] = aac;
+    return false;
+}
+
+void SetupAttachedAddressing::UpdateAttached::simple_attached(IR::MAU::BackendAttached *ba) {
+    auto at_mem = ba->attached;
+    if (at_mem->direct)
+        ba->addr_location = IR::MAU::BackendAttached::ADDR_DIRECT;
+    else
+        ba->addr_location = IR::MAU::BackendAttached::ADDR_OVERHEAD;
+    ba->pfe_location = IR::MAU::BackendAttached::PFE_DEFAULT;
+    if (at_mem->is<IR::MAU::Selector>())
+        ba->type_location = IR::MAU::BackendAttached::TYPE_DEFAULT;
+}
+
+bool SetupAttachedAddressing::UpdateAttached::preorder(IR::MAU::BackendAttached *ba) {
+    auto at_mem = ba->attached;
+    if (!(at_mem->is<IR::MAU::Counter>() || at_mem->is<IR::MAU::Meter>()
+        || at_mem->is<IR::MAU::StatefulAlu>())) {
+        simple_attached(ba);
+        return false;
+    }
+
+    auto orig_ba = getOriginal()->to<IR::MAU::BackendAttached>();
+    auto &aac = self.attached_coord.at(orig_ba);
+
+    IR::MAU::BackendAttached::pfe_location_t pfe_loc = IR::MAU::BackendAttached::PFE_DEFAULT;
+    IR::MAU::BackendAttached::type_location_t type_loc = IR::MAU::BackendAttached::TYPE_DEFAULT;
+
+    if (!aac.all_per_flow_enabled)
+        pfe_loc = IR::MAU::BackendAttached::PFE_OVERHEAD;
+    if (!aac.all_same_meter_type)
+        type_loc = IR::MAU::BackendAttached::TYPE_OVERHEAD;
+
+    if (at_mem->direct) {
+        ba->addr_location = IR::MAU::BackendAttached::ADDR_DIRECT;
+    } else if (ba->hash_dist != nullptr) {
+        ba->addr_location = IR::MAU::BackendAttached::ADDR_HASH;
+    } else {
+        ba->addr_location = IR::MAU::BackendAttached::ADDR_OVERHEAD;
+    }
+
+    ba->pfe_location = pfe_loc;
+    if (at_mem->is<IR::MAU::StatefulAlu>() || at_mem->is<IR::MAU::Meter>())
+        ba->type_location = type_loc;
+    return false;
+}
+
 
 /** The purpose of BackendCopyPropagation is to propagate reads written in previous sets.
  *  This will only work for set operations, i.e. the following action:
@@ -1382,6 +1628,7 @@ InstructionSelection::InstructionSelection(PhvInfo &phv) : PassManager {
     new StatefulAttachmentSetup(phv),
     new MeterSetup(phv),
     new DLeftSetup,
+    new SetupAttachedAddressing,
     new CollectPhvInfo(phv),
     new BackendCopyPropagation(phv),
     new VerifyParallelWritesAndReads(phv),

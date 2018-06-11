@@ -17,9 +17,9 @@ class PhvInfo;
 class Synth2PortSetup : public MauTransform {
     const PhvInfo &phv;
     safe_vector<const IR::Primitive *> stateful;
-    bool stats_pfe = false;
-    bool meter_pfe = false;
-    IR::MAU::Action::meter_type_t meter_type = IR::MAU::Action::UNUSED;
+    std::set<UniqueAttachedId> per_flow_enables;
+    std::map<UniqueAttachedId, IR::MAU::Action::meter_type_t> meter_types;
+
     safe_vector<IR::MAU::Instruction *> created_instrs;
 
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;
@@ -28,9 +28,8 @@ class Synth2PortSetup : public MauTransform {
 
     void clear_action() {
         stateful.clear();
-        stats_pfe = false;
-        meter_pfe = false;
-        meter_type = IR::MAU::Action::UNUSED;
+        per_flow_enables.clear();
+        meter_types.clear();
     }
 
  public:
@@ -240,6 +239,9 @@ class MeterSetup : public PassManager {
     ordered_map<const IR::MAU::Meter *, const IR::Expression *> update_lpfs;
     // Tracks the pre-color per meter
     ordered_map<const IR::MAU::Meter *, const IR::Expression *> update_pre_colors;
+    // Marks an action for setting a meter type
+    ordered_map<const IR::MAU::Action *, UniqueAttachedId> pre_color_types;
+    ordered_map<const IR::MAU::Action *, UniqueAttachedId> standard_types;
     const PhvInfo &phv;
 
     class Scan : public MauInspector {
@@ -258,6 +260,7 @@ class MeterSetup : public PassManager {
         void update_input(IR::MAU::Meter *);
         void update_pre_color(IR::MAU::Meter *);
         bool preorder(IR::MAU::Meter *) override;
+        bool preorder(IR::MAU::Action *) override;
      public:
         explicit Update(MeterSetup &self) : self(self) {}
     };
@@ -274,6 +277,60 @@ class DLeftSetup : public MauModifier, TofinoWriteContext {
 
  public:
     DLeftSetup() {}
+};
+
+class SetupAttachedAddressing : public PassManager {
+    struct AttachedActionCoord {
+        bool all_per_flow_enabled = true;
+        bool all_same_meter_type = true;
+        bool meter_type_set = false;
+        IR::MAU::Action::meter_type_t meter_type = IR::MAU::Action::UNUSED;
+    };
+
+    using AttachedInfo = std::map<UniqueAttachedId, AttachedActionCoord>;
+    // coordinate the Attached Info across all inspectors
+    ordered_map<const IR::MAU::Table *, AttachedInfo> all_attached_info;
+    // Just to run the modifier on BackendAttached Objects
+    ordered_map<const IR::MAU::BackendAttached *, AttachedActionCoord> attached_coord;
+
+    class InitializeAttachedInfo : public MauInspector {
+        SetupAttachedAddressing &self;
+        bool preorder(const IR::MAU::BackendAttached *) override;
+     public:
+        explicit InitializeAttachedInfo(SetupAttachedAddressing &self) : self(self) { }
+    };
+
+    class ScanActions : public MauInspector {
+        SetupAttachedAddressing &self;
+        bool preorder(const IR::MAU::Action *) override;
+     public:
+        explicit ScanActions(SetupAttachedAddressing &self) : self(self) { }
+    };
+
+    class VerifyAttached : public MauInspector {
+        SetupAttachedAddressing &self;
+        bool preorder(const IR::MAU::BackendAttached *) override;
+     public:
+        explicit VerifyAttached(SetupAttachedAddressing &self) : self(self) { }
+    };
+
+    class UpdateAttached : public MauModifier {
+        SetupAttachedAddressing &self;
+        void simple_attached(IR::MAU::BackendAttached *);
+        bool preorder(IR::MAU::BackendAttached *) override;
+     public:
+        explicit UpdateAttached(SetupAttachedAddressing &self) : self(self) { }
+    };
+
+ public:
+    SetupAttachedAddressing() {
+        addPasses({
+            new InitializeAttachedInfo(*this),
+            new ScanActions(*this),
+            new VerifyAttached(*this),
+            new UpdateAttached(*this)
+        });
+    }
 };
 
 class ConvertCastToSlice : public MauTransform, P4WriteContext {

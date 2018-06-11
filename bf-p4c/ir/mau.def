@@ -12,6 +12,10 @@ struct TableResourceAlloc;
 #include "extensions/bf-p4c/mau/resource.h"
 #end
 
+#emit
+#include "extensions/bf-p4c/ir/unique_id.h"
+#end
+
 
 #emit
 namespace IR {
@@ -376,6 +380,8 @@ abstract AttachedMemory : Attached {
     bool direct = false;
     int size = 0;
     virtual bool indexed() const override { return !direct; }
+    virtual UniqueAttachedId::type_t get_id_type() const = 0;
+    UniqueAttachedId unique_id() const { return UniqueAttachedId(name, get_id_type()); }
 }
 
 /** Any attached table that has a keeps stateful information about flows.
@@ -401,6 +407,7 @@ class Counter : Synth2Port {
     const char *kind() const override { return "stats"; }
 #nodbprint
     const Type *getType() const override { return Type_Counter::get(); }
+    UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::COUNTER; } 
 }
 
 class Meter : Synth2Port {
@@ -414,6 +421,7 @@ class Meter : Synth2Port {
     ID                 implementation = {};  // Normal, LPF, WRED
     const char *kind() const override { return "meter"; }
     const Type *getType() const override { return Type_Meter::get(); }
+    UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::METER; }
     bool alu_output() const { return implementation.name == "lpf"
                                || implementation.name == "wred"; }
     bool color_output() const { return implementation.name == "normal"
@@ -453,6 +461,7 @@ class StatefulAlu : Synth2Port {
 
     const char *kind() const override { return "stateful"; }
     const Type *getType() const override { return Type_Register::get(); }
+    UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::STATEFUL_ALU; }
 
     int source_width() const {
         if (dual)
@@ -466,6 +475,7 @@ class Selector : AttachedMemory {
     ID mode = {};
     hash_function algorithm = {};
     const char *kind() const override { return "selector"; }
+    UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::SELECTOR; }
     int num_groups = 0;
     int group_size = 0;
 #nodbprint
@@ -481,6 +491,9 @@ class TernaryIndirect : AttachedMemory {
 #nodbprint
     TernaryIndirect(cstring tbl_name) { name = IR::ID(tbl_name + "$tind"); direct = true; }
     const char *kind() const override { return "indirect"; }
+    UniqueAttachedId::type_t get_id_type() const override {
+        return UniqueAttachedId::TERNARY_INDIRECT;
+    }
 }
 
 /** Action data table used to hold action parameters */
@@ -488,6 +501,9 @@ class ActionData : AttachedMemory {
 #nodbprint
     const char *kind() const override { return "action"; }
     bool indexed() const override { return !direct; }
+    UniqueAttachedId::type_t get_id_type() const override {
+        return UniqueAttachedId::ACTION_DATA;
+    }
 }
 
 /** Idletime table **/
@@ -500,6 +516,9 @@ class IdleTime : AttachedMemory {
 #nodbprint
     IdleTime(cstring tbl_name) { name = IR::ID(tbl_name + "$idletime"); direct = true; }
     const char *kind() const override { return "idletime"; }
+    UniqueAttachedId::type_t get_id_type() const override {
+        return UniqueAttachedId::IDLETIME;
+    }
 }
 
 // a sequence of tables -- may be reordered if deps allow.
@@ -593,13 +612,13 @@ class Action : VLIWInstruction {
 
     // Separate stateful primitives from actions, as they aren't instructions
     // as such.
-    bool meter_pfe = false;
-    bool stats_pfe = false;
 #emit
     enum meter_type_t { UNUSED, STFUL_INST0, COLOR_BLIND, STFUL_INST1, SELECTOR, STFUL_INST2,
                         COLOR_AWARE, STFUL_INST3 };
 #end
-    meter_type_t meter_type = UNUSED;
+    std::set<UniqueAttachedId> per_flow_enables = {};
+    std::map<UniqueAttachedId, meter_type_t> meter_types = {};
+
     inline Vector<Primitive>    stateful = {};
 
     bool hit_only() const { return default_allowed == false; }

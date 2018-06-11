@@ -49,6 +49,7 @@ set (BF_P4C_IR_HDRS
   ir/gress.h
   ir/thread_visitor.h
   ir/tofino_write_context.h
+  ir/unique_id.h
   mau/hash_function.h
   parde/clot.h
   parde/marshal.h
