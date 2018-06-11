@@ -96,8 +96,10 @@ findbin() {
 }
 
 P4C=./p4c
+P4C_pd=""
 testdir=tofino
 filter_P4C_ARGS=""
+keep_PTF_LOGS=""
 for p4c_arg in $P4C_ARGS; do
     if [ "$p4c_arg" = "-norun" ]; then
         run_stf=false
@@ -133,6 +135,8 @@ while [ $# -gt 1 ]; do
         echo >&2 "   -pd            run PTF PD tests if available"
         echo >&2 "   -ptf           run PTF tests if available"
         echo >&2 "   -ptfdir <dir>  directory containing PTF tests"
+        echo >&2 "   -p4c <p4cpath> p4c compiler path for PD tests (glass/brig)"
+        echo >&2 "   -keep-logs     if specified, keep PTF logs"
         echo >&2 "   -time          time commands as they run"
         echo >&2 "   -tofino        target tofino (default)"
         echo >&2 "   -to <sec>      timeout programs after <sec> seconds (default $TIMEOUT)"
@@ -174,6 +178,13 @@ while [ $# -gt 1 ]; do
     -ptfdir)
         ptftestdir=$2
         shift
+        ;;
+    -p4c)
+        P4C_pd=$2
+        shift
+        ;;
+    -keep-logs)
+        keep_PTF_LOGS="--keep-logs"
         ;;
     -tofino)
         device="tofino"
@@ -376,7 +387,7 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
         || die
 fi
 
-PTF_EXTRA_ARGS="--default-negative-timeout=0.2 $PTF_TEST_SPECS"
+PTF_EXTRA_ARGS="$keep_PTF_LOGS --default-negative-timeout=0.2 $PTF_TEST_SPECS"
 
 clean_process() {
     process_name=$1
@@ -418,6 +429,11 @@ if $run_pd ; then
 
     if [ ! -d $testout ]; then
         mkdir -p $testout
+    fi
+    # If P4C_pd specified and running a pd test, apply the path based on the 
+    # compiler choice
+    if [ ! -z "$P4C_pd" ]; then
+        P4C=$P4C_pd
     fi
     p4c=$(realpath $P4C)
     export MAKEFLAGS="-j $(nproc)"
