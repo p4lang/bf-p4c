@@ -350,48 +350,94 @@ bool ActionFormat::Use::is_meter_color(int start_byte, bool immediate) const {
     return meter_reserved && immediate && start_byte == (IMMEDIATE_BYTES - 1);
 }
 
-/** Coordination of where a particular slice of hash distribution is allocated within the
- *   action format, based on where the lo and hi provided field_lo and field_hi
+/** During output to assembly, the hash distribution unit in the allocation needs to be
+ *  resolved on its location.  The purpose of this function is to coordinate the field range,
+ *  which is the range used in an action, to the position within the 32 possible bits of
+ *  immediate from.
+ *
+ *  if the instruction was:
+ *      set f1 (8 bit field), hash_dist
+ *
+ *  Let's say that the hash_dist field appears in bits 8..15 of the immediate data bits.
+ *  The field_range would be 0..7, and the hash_dist_range that will be returned will be
+ *  the position in the immeidate data bits, 0..7
+ * 
+ *  The hash distribution units are in 16 bit sections of 6 sections.  The sections are defined
+ *  in the input xbar allocation of the hash distribution unit.  The unit indexes returned are
+ *  the index of 16 bit sections stored in the input xbar allocation
+ *
+ *  If only one index is used, then the section in which the hash distribution is used will
+ *  be the index of which section is used.  If only bits 0..15 are used, then section = 0,
+ *  if only bits 16..31 are used then section = 1
+ *
+ *  This is also based on the assumption that the hash dist allocation is identical to the
+ *  slot location of the arg_loc.  One in theory could adjust the slot loc to better fit
+ *  into the input xbar, but this is not yet done.
  */
-int ActionFormat::Use::find_hash_dist(const IR::MAU::HashDist *hd, int field_lo, int field_hi,
-        int &hash_lo, int &hash_hi, int &section) const {
+safe_vector<int> ActionFormat::Use::find_hash_dist(const IR::MAU::HashDist *hd,
+       le_bitrange field_range, bool bit_required, le_bitrange &hash_dist_range,
+       int &section) const {
     BUG_CHECK(hash_dist_placement.find(hd) != hash_dist_placement.end(), "Hash Dist IR cannot "
               "be found within the action format");
+
+    bool found = false;
     auto &hd_vec = hash_dist_placement.at(hd);
-    bitvec field_bv = bitvec(field_lo, field_hi - field_lo + 1);
-    int unit_index = -1;
-    int bit_offset = -1;
+    bitvec field_bv = bitvec(field_range.lo, field_range.size());
+    bitvec hash_dist_output;
+    bitvec hash_dist_bv;
+    bitvec all_hash_dist_bv;
+    int alu_size = -1;
 
-    bool split_needed = false;
+    safe_vector<int> unit_indexes;
 
-    int min_start = ActionFormat::IMMEDIATE_BYTES;
-    for (auto &placement : hd_vec) {
-        min_start = std::min(min_start, placement.start);
-    }
-
+    // Currently assumed to be a single slot, as the packing does not pack multiple hash
+    // dist slots together.  Once the allocation is more fine-grained, this will have to change.
     for (auto &placement : hd_vec) {
         auto &arg_loc = placement.arg_locs[0];
+        all_hash_dist_bv |= arg_loc.slot_loc;
         bitvec arg_loc_bv(arg_loc.field_bit, arg_loc.width());
         if ((arg_loc_bv & field_bv) == arg_loc_bv) {
-            int potential_unit_index = ((placement.start - min_start) * 8) / IXBar::HASH_DIST_BITS;
-            BUG_CHECK(unit_index == -1 || potential_unit_index == unit_index, "Hash distribution "
-                      "illegally split over 16 bit boundary");
-            unit_index = potential_unit_index;
-            bit_offset = (placement.start * 8) % IXBar::HASH_DIST_BITS;
-            section = (placement.start * 8) / IXBar::HASH_DIST_BITS;
-            if (placement.alu_size == CONTAINER_SIZES[BYTE])
-                split_needed = true;
+            BUG_CHECK(!found, "Hash distribution splitting too complicated");
+            hash_dist_bv |= arg_loc.slot_loc << (placement.start * 8);
+            found = true;
+            alu_size = placement.alu_size;
         } else if ((arg_loc_bv & field_bv).empty()) {
             continue;
         } else {
             BUG("Cannot find hash distribution correctly");
         }
-        if (split_needed) {
-            hash_lo = bit_offset;
-            hash_hi = bit_offset + 7;
-        }
     }
-    return unit_index;
+    BUG_CHECK(found, "Cannot find hash distribution correctly");
+
+    // If no allocation exists in a 16 bit section, then there is no unit index for that section
+    int unit_index = -1;
+    for (int i = 0; i < IMMEDIATE_BYTES * 8; i += IXBar::HASH_DIST_BITS) {
+        bitvec hash_dist_slice(i, IXBar::HASH_DIST_BITS);
+        if (!(hash_dist_slice & all_hash_dist_bv).empty())
+            unit_index++;
+        if (!(hash_dist_slice & hash_dist_bv).empty())
+            unit_indexes.push_back(unit_index);
+    }
+
+    int mod_value = unit_indexes.size() * IXBar::HASH_DIST_BITS;
+
+    int hash_lo = -1;
+    int hash_hi = -1;
+    // Bit granularity needed for action outputs
+    if (bit_required) {
+        hash_lo = hash_dist_bv.min().index() % mod_value;
+        hash_hi = hash_dist_bv.max().index() % mod_value;
+    } else {
+        // Slot granularity needed for action data bus output
+        hash_lo = (hash_dist_bv.min().index() / alu_size) * alu_size;
+        hash_hi = hash_lo + alu_size - 1;
+    }
+    hash_dist_range = { hash_lo, hash_hi };
+
+    if (unit_indexes.size() == 1) {
+        section = hash_dist_bv.min().index() / IXBar::HASH_DIST_BITS;
+    }
+    return unit_indexes;
 }
 
 /** The allocation scheme for the action data format and immediate format.

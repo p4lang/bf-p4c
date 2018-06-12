@@ -1133,25 +1133,24 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
             safe_vector<int> units;
             BUG_CHECK(hd_use->slices.size() <= 2, "Currently do not support more than 2 units "
                       "of hash distribution per table");
-
-            int hash_lo = -1; int hash_hi = -1; int section = -1;
-            if (rs.location.type == ActionFormat::FULL && hd_use->slices.size() == 2) {
-                units.insert(units.end(), hd_use->slices.begin(), hd_use->slices.end());
-            } else {
-                int unit_index = use.find_hash_dist(hd, lo, hi, hash_lo, hash_hi, section);
+            le_bitrange field_range = { lo, hi };
+            le_bitrange hd_range = { 0, 0 };
+            int section = -1;
+            safe_vector<int> unit_indexes = use.find_hash_dist(hd, field_range, false, hd_range,
+                                                               section);
+            for (auto unit_index : unit_indexes)
                 units.push_back(hd_use->slices[unit_index]);
-            }
 
             out << "hash_dist(";
             size_t unit_index = 0;
             for (auto unit : units) {
                 out << unit;
                 if (unit_index != units.size() - 1)
-                    out << ",";
+                    out << ", ";
                 unit_index++;
             }
-            if (hash_lo >= 0 && hash_hi >= 0) {
-                out << ", " << hash_lo << ".." << hash_hi;
+            if (hd_range.size() != IXBar::HASH_DIST_BITS) {
+                out << ", " << hd_range.lo << ".." << hd_range.hi;
             }
             // 16 bit hash dist in a 32 bit slot have to determine whether the hash distribution
             // unit goes in the lo section or the hi section
@@ -1452,6 +1451,8 @@ class MauAsmOutput::EmitAction : public Inspector {
             hi = sl->getH();
         } else {
             hd = expr->to<IR::MAU::HashDist>();
+            lo = 0;
+            hi = hd->type->width_bits();
         }
         assert(sep);
         BUG_CHECK(hd != nullptr, "Printing an invalid the hash distribution in assembly");
@@ -1468,26 +1469,24 @@ class MauAsmOutput::EmitAction : public Inspector {
 
         BUG_CHECK(hd_use != nullptr, "Could not find hash distribution unit in link up of tables");
         safe_vector<int> units;
-        int hash_lo = -1; int hash_hi = -1;
+
         int section = -1;
-        if (lo >= 0 && hi >= 0) {
-            auto af = table->resources->action_format;
-            int unit_index = af.find_hash_dist(hd, lo, hi, hash_lo, hash_hi, section);
+        le_bitrange field_range = { lo, hi };
+        le_bitrange hd_range = { 0, 0 };
+        auto af = table->resources->action_format;
+        safe_vector<int> unit_indexes = af.find_hash_dist(hd, field_range, true, hd_range,
+                                                          section);
+        for (auto unit_index : unit_indexes) {
             units.push_back(hd_use->slices[unit_index]);
-        } else {
-            units.insert(units.end(), hd_use->slices.begin(), hd_use->slices.end());
         }
+
 
         for (size_t i = 0; i < units.size(); i++) {
             out << units[i];
             if (i != units.size() - 1)
                 out << ", ";
         }
-
-        if (hash_lo >= 0 && hash_hi >= 0) {
-            out << ", " << hash_lo << ".." << hash_hi;
-        }
-
+        out << ", " << hd_range.lo << ".." << hd_range.hi;
         out << ")";
         sep = ", ";
     }

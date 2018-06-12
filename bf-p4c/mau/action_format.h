@@ -467,8 +467,8 @@ struct ActionFormat {
         bool is_meter_color(int start_byte, bool immediate) const;
         bool is_hash_dist(int byte_offset, const IR::MAU::HashDist **hd, int &field_lo,
                           int &field_hi) const;
-        int find_hash_dist(const IR::MAU::HashDist *hd, int field_lo, int field_hi,
-                           int &hash_lo, int &hash_hi, int &section) const;
+        safe_vector<int> find_hash_dist(const IR::MAU::HashDist *hd, le_bitrange field_range,
+            bool bit_required, le_bitrange &hash_dist_range, int &section) const;
         bool is_rand_num(int byte_offset, const IR::MAU::RandomNumber **rn) const;
         void find_rand_num(const IR::MAU::RandomNumber *rn, int field_lo, int field_hi,
                            int &rng_lo, int &rng_hi) const;

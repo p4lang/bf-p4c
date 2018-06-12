@@ -230,6 +230,7 @@ struct operand {
 
         HashDist(int line, Table *t) : Base(line), table(t) {}
         HashDist(int line, Table *t, int unit) : Base(line), table(t) { units.push_back(unit); }
+        unsigned bitoffset(int group) const override { return lo >= 0 ? lo : 0; }
         static HashDist *parse(Table *tbl, const VECTOR(value_t) &v) {
             if (v.size < 2 || v[0] != "hash_dist") return nullptr;
             auto *rv = new HashDist(v[0].lineno, tbl);

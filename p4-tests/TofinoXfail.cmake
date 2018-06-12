@@ -121,7 +121,6 @@ if (PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/p4-tests/programs/resubmit/resubmit.p4
     04-simple_l3_nexthop
     05-simple_l3_arping
-    smoketest_switch_dc_basic_L2MplsPopTest
     p4testgen_emulation
     )
 

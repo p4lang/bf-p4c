@@ -308,6 +308,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_8"
         "switch_hostif.HostIfPtpTest
         switch_tests.HostIfTest
         switch_tests.HostIfV6Test
+        switch_tests.L2MplsPopTest
         switch_tests.L3VINhopGleanBGPTest
         switch_tests.L3VINhopGleanTest
         switch_tests.MalformedPacketsTest_tunnel")
@@ -319,10 +320,6 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L2IPv4InIPv6Vx
         "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L2IPv4InIPv6VxlanUnicastBasicTest"
         "switch_tests.L2IPv4InIPv6VxlanUnicastBasicTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L2MplsPopTest" ${SWITCH_P4}
-        "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L2MplsPopTest"
-        "switch_tests.L2MplsPopTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L2NvgreUnicastBasicTest" ${SWITCH_P4}
         "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L2NvgreUnicastBasicTest"
