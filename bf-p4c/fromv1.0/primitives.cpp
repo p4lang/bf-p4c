@@ -182,6 +182,18 @@ CONVERT_PRIMITIVE(invalidate) {
                                        { new IR::Argument(arg) });
 }
 
+CONVERT_PRIMITIVE(invalidate_digest) {
+    if (primitive->operands.size() != 0) return nullptr;
+    structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+    ExpressionConverter conv(structure);
+    // Since V1model does not understand the Tofino metadata, this is a simple pass through
+    // and will be translated to `invalidate(ig_intr_md_for_dprs.digest_type)` in
+    // arch/simple_switch.cpp during Tofino mapping.
+    return new IR::MethodCallStatement(primitive->srcInfo, IR::ID(primitive->srcInfo,
+                                                                  "invalidate_digest"),
+                                       {});
+}
+
 CONVERT_PRIMITIVE(recirculate, 5) {
     if (primitive->operands.size() != 1) return nullptr;
     ExpressionConverter conv(structure);

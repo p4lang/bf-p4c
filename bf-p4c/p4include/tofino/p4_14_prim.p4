@@ -33,6 +33,7 @@ extern void recirculate_raw(in bit<9> port);
 
 extern void invalidate<T>(in T field);
 extern void invalidate_raw(in bit<9> field);
+extern void invalidate_digest();
 
 extern void sample3(in CloneType type, in bit<32> session, in bit<32> length);
 extern void sample4<T>(in CloneType type, in bit<32> session, in bit<32> length, in T data);

@@ -716,6 +716,31 @@ class ConstructSymbolTable : public Inspector {
         structure->ingressDeparserDeclarations.push_back(decl);
     }
 
+    /**
+     * invalidate_digest
+     *
+     * translate the invalid_digest() call in ingress control block to
+     * invalidate(ig_intr_md_for_dprsr.digest_type)
+     *
+     */
+    void cvtInvalidateDigestFunction(const IR::MethodCallStatement *node) {
+        /*
+         * \TODO: Check that generate_digest has been called before
+         */
+        auto mce = node->methodCall->to<IR::MethodCallExpression>();
+        BUG_CHECK(mce != nullptr, "malformed IR in digest() function");
+        auto control = findContext<IR::P4Control>();
+        BUG_CHECK(control != nullptr, "digest() must be used in a control block");
+        BUG_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
+                  "digest() can only be used in %1%",
+                  structure->getBlockName(ProgramStructure::INGRESS));
+        IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
+        auto mem = new IR::Member(path, "digest_type");
+        auto stmt = new IR::MethodCallStatement(node->srcInfo, IR::ID(node->srcInfo, "invalidate"),
+                                                { new IR::Argument(mem) } );
+        structure->_map.emplace(node, stmt);
+    }
+
     void cvtCloneFunction(const IR::MethodCallStatement *node, bool hasData) {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "malformed IR in clone() function");
@@ -1161,7 +1186,7 @@ class ConstructSymbolTable : public Inspector {
                                 structure->_map.emplace(stmt, stmt->apply(cvt));
                             }
                         // handle parser counter in select() expression
-                        } else if (auto select = findContext<IR::SelectExpression>()) {
+                        } else if (findContext<IR::SelectExpression>()) {
                             ParserCounterSelectionConverter cvt(structure);
                             structure->_map.emplace(node, node->apply(cvt));
                         } else {
@@ -1381,6 +1406,8 @@ class ConstructSymbolTable : public Inspector {
                 cvtCloneFunction(node, /* hasData = */ false);
             } else if (name == "clone3") {
                 cvtCloneFunction(node, /* hasData = */ true);
+            } else if (name == "invalidate_digest") {
+                cvtInvalidateDigestFunction(node);
             } else if (name == "update_checksum") {
                 cvtUpdateChecksum(node);
             } else if (name == "execute_meter_with_color") {
