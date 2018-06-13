@@ -75,6 +75,18 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
         }
     }
 
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+        regs.cfg_regs.amod_pre_drain_delay[gress] = pipelength(gress) - 9;
+        if (this[1].stage_dep[gress] == MATCH_DEP)
+            regs.cfg_regs.amod_wide_bubble_rsp_delay[gress] = pipelength(gress) - 3;
+        else
+            regs.cfg_regs.amod_wide_bubble_rsp_delay[gress] = 0;
+    }
+    regs.cfg_regs.amod_req_interval = 0x3FF;
+    regs.cfg_regs.amod_req_limit = 1;
+
+
+
     if (stageno == 0) {
         /* MFerrera: "After some debug on the emulator, we've found a programming issue due to
         * incorrect documentation and CSR description of match_ie_input_mux_sel in JBAY"
