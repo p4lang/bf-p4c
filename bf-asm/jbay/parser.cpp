@@ -12,7 +12,15 @@ template <> void Parser::Checksum::write_config(Target::JBay::parser_regs &regs,
 template <>
 void Parser::Checksum::write_output_config(Target::JBay::parser_regs &regs, Parser *pa, void *_map, unsigned &used) const
 {
-    // TODO
+    if (type != 0 || !dest) return;
+
+    // checksum verification outputs "steal" extractors, see parser uArch (6.3.6)
+
+    for (int i = 0; i < 20; ++i) {
+        if (used & (1 << i)) continue;
+        used |= 1 << i;
+        return; }
+    error(lineno, "Ran out of phv output slots");
 }
 
 template <> void Parser::CounterInit::write_config(Target::JBay::parser_regs &regs,

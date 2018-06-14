@@ -437,7 +437,7 @@ void write_jbay_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int pov,
         entry.zero_l_s_b = 0;
         break;
     default:
-        assert(0); }
+        break; }
 }
 
 template<class CSUM, class POV, class ENTRIES>

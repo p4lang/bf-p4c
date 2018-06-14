@@ -357,10 +357,16 @@ void Parser::Checksum::pass1(Parser *parser) {
             parser->checksum_use[gress][addr] = this; }
     if (dest.check() && dest->reg.parser_id() < 0)
         error(dest.lineno, "%s is not accessable in the parser", dest->reg.name);
+    if (dest && dest->reg.size == 32)
+        error(dest.lineno, "checksum unit cannot write to 32-bit container");
     if (type == 0 && dest) {
         if (dest->lo != dest->hi)
             error(dest.lineno, "checksum verification destination must be single bit");
         else dst_bit_hdr_end_pos = dest->lo;
+#if HAVE_JBAY
+        if (options.target == JBAY && dest->reg.deparser_id() % 2)
+            dst_bit_hdr_end_pos += 8;
+#endif // HAVE_JBAY
     } else if (type == 1 && dest.size() != dest->reg.size) {
         error(dest.lineno, "residual checksum must write whole container"); }
 }
