@@ -18,7 +18,7 @@ class Synth2PortSetup : public MauTransform {
     const PhvInfo &phv;
     safe_vector<const IR::Primitive *> stateful;
     std::set<UniqueAttachedId> per_flow_enables;
-    std::map<UniqueAttachedId, IR::MAU::Action::meter_type_t> meter_types;
+    std::map<UniqueAttachedId, IR::MAU::MeterType> meter_types;
 
     safe_vector<IR::MAU::Instruction *> created_instrs;
 
@@ -284,7 +284,7 @@ class SetupAttachedAddressing : public PassManager {
         bool all_per_flow_enabled = true;
         bool all_same_meter_type = true;
         bool meter_type_set = false;
-        IR::MAU::Action::meter_type_t meter_type = IR::MAU::Action::UNUSED;
+        IR::MAU::MeterType meter_type = IR::MAU::MeterType::UNUSED;
     };
 
     using AttachedInfo = std::map<UniqueAttachedId, AttachedActionCoord>;

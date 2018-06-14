@@ -1138,3 +1138,8 @@ p4c_add_xfail_reason("tofino"
   "no definitions"
   extensions/p4_tests/p4_14/p4-tests/programs/pvs/pvs.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "Exiting with SIGSEGV"
+  testdata/p4_16_samples/issue1043-bmv2.p4
+)

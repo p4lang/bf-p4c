@@ -29,7 +29,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
 
     const IR::GlobalRef *glob = nullptr;
 
-    IR::MAU::Action::meter_type_t meter_type = IR::MAU::Action::UNUSED;
+    IR::MAU::MeterType meter_type = IR::MAU::MeterType::UNUSED;
 
     cstring method = dot ? cstring(dot+1) : prim->name;
     if (objType == "RegisterAction" || objType == "LearnAction" ||
@@ -44,13 +44,13 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
         int salu_index = std::distance(salu->action_map.begin(), pos);
         switch (salu_index) {
             case 0:
-                meter_type = IR::MAU::Action::STFUL_INST0; break;
+                meter_type = IR::MAU::MeterType::STFUL_INST0; break;
             case 1:
-                meter_type = IR::MAU::Action::STFUL_INST1; break;
+                meter_type = IR::MAU::MeterType::STFUL_INST1; break;
             case 2:
-                meter_type = IR::MAU::Action::STFUL_INST2; break;
+                meter_type = IR::MAU::MeterType::STFUL_INST2; break;
             case 3:
-                meter_type = IR::MAU::Action::STFUL_INST3; break;
+                meter_type = IR::MAU::MeterType::STFUL_INST3; break;
             default:
                 BUG("%s: An stateful instruction %s is outside the bounds of the stateful "
                     "memory in %s", prim->srcInfo, pos->second, salu->name);
@@ -109,7 +109,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
             ::error("%s: An attached table can only be executed once per action", prim->srcInfo);
         }
         per_flow_enables.insert(u_id);
-        if (meter_type != IR::MAU::Action::UNUSED)
+        if (meter_type != IR::MAU::MeterType::UNUSED)
             meter_types[u_id] = meter_type;
     }
 
@@ -868,9 +868,9 @@ bool MeterSetup::Update::preorder(IR::MAU::Meter *mtr) {
 bool MeterSetup::Update::preorder(IR::MAU::Action *act) {
     auto orig_act = getOriginal()->to<IR::MAU::Action>();
     if (self.standard_types.count(orig_act) > 0) {
-        act->meter_types[self.standard_types.at(orig_act)] = IR::MAU::Action::COLOR_BLIND;
+        act->meter_types[self.standard_types.at(orig_act)] = IR::MAU::MeterType::COLOR_BLIND;
     } else if (self.pre_color_types.count(orig_act) > 0) {
-        act->meter_types[self.pre_color_types.at(orig_act)] = IR::MAU::Action::COLOR_AWARE;
+        act->meter_types[self.pre_color_types.at(orig_act)] = IR::MAU::MeterType::COLOR_AWARE;
     }
     return true;
 }
