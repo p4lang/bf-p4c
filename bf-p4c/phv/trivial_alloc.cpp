@@ -87,8 +87,9 @@ void TrivialAlloc::do_alloc(const FieldGroup& group, Regs *use, Regs *skip) {
         while (size > rtype.size - 8 || (size > 16 && i->metadata)) {
             int abits = rtype.size;
             while (isize < abits && merge_follow) {
-                i->alloc_i.emplace_back(i, use->*rtype.alloc, 0, abits-isize, isize);
-                LOG3("   allocated " << i->alloc_i << " for " << i->gress);
+                auto slice = PHV::Field::alloc_slice(i, use->*rtype.alloc, 0, abits-isize, isize);
+                i->add_alloc(slice);
+                LOG3("   allocated " << slice << " for " << i->gress);
                 abits -= isize;
                 i = group.fields[++group_index];
                 merge_follow--;
@@ -96,11 +97,12 @@ void TrivialAlloc::do_alloc(const FieldGroup& group, Regs *use, Regs *skip) {
             if ((isize -= abits) < 0) {
                 abits += isize;
                 isize = 0; }
-            i->alloc_i.emplace_back(i, (use->*rtype.alloc)++, isize, 0, abits);
+            i->add_alloc(i, (use->*rtype.alloc)++, isize, 0, abits);
             if (skip && use->*rtype.alloc == skip[0].*rtype.alloc)
                 use->*rtype.alloc = skip[1].*rtype.alloc;
             size -= rtype.size; } }
-    LOG3("   allocated " << i->alloc_i << " for " << i->name);
+
+    LOG3("   allocated " << i->get_alloc() << " for " << i->name);
 }
 
 static void adjust_skip_for_egress(PHV::Container &reg, unsigned group_size,
@@ -142,7 +144,7 @@ bool TrivialAlloc::preorder(const IR::BFN::Pipe *pipe) {
         for (auto &field : phv) {
             if (field.gress != gr)
                 continue;
-            if (field.alloc_i.empty()) {
+            if (field.is_unallocated()) {
                 if (field.pov) {
                     pov_fields.push_back(field);
                 } else {
@@ -281,7 +283,7 @@ void ManualAlloc::allocateFieldGroup(const FieldGroup& group,
     for (auto field : group.fields) {
         LOG2(" - " << field->id << ": " << (field->metadata ? "metadata " : "header ")
                    << field->name << " size=" << field->size);
-        BUG_CHECK(field->alloc_i.empty(), "Already allocated field in field group?");
+        BUG_CHECK(field->is_unallocated(), "Already allocated field in field group?");
 
         // Bit 0 is the LSB, but the fields in @group are in network byte order,
         // so we start at the MSB and count down.
@@ -323,12 +325,11 @@ void ManualAlloc::allocateFieldGroup(const FieldGroup& group,
             remainingBits -= width;
             BUG_CHECK(remainingBits >= 0, "Overflowed field group");
 
-            field->alloc_i.emplace_back(field, container, fieldBit,
-                                        containerBit, width);
+            field->add_alloc(field, container, fieldBit, containerBit, width);
             phv.add_container_to_field_entry(container, field);
         }
 
-        LOG3("   " << field->alloc_i);
+        LOG3("   allocated " << field->get_alloc() << " for " << field->name);
     }
 
     BUG_CHECK(remainingBits == 0, "Didn't allocate entire group?");
@@ -367,8 +368,8 @@ bool ManualAlloc::preorder(const IR::BFN::Pipe *pipe) {
 
         for (auto& slice : slices) {
             alloc.allocate(field->gress, slice.container, manualAllocationSource);
-            field->alloc_i.emplace_back(field, slice.container, slice.field_bit,
-                                        slice.container_bit, slice.width);
+            field->add_alloc(field, slice.container, slice.field_bit,
+                             slice.container_bit, slice.width);
             phv.add_container_to_field_entry(slice.container, field);
         }
     }
@@ -380,7 +381,7 @@ bool ManualAlloc::preorder(const IR::BFN::Pipe *pipe) {
     // Allocate all fields except for POV bits.
     FieldGroup povFields[2] = { FieldGroup(INGRESS), FieldGroup(EGRESS) };
     for (auto& field : phv) {
-        if (!field.alloc_i.empty()) continue;
+        if (!field.is_unallocated()) continue;
         if (field.pov) {
             povFields[field.gress].push_back(field);
             continue;
@@ -395,7 +396,7 @@ bool ManualAlloc::preorder(const IR::BFN::Pipe *pipe) {
                group.back().offset > 0) {
             auto* nextField = phv.field(group.back().id + 1);
             if (nextField == nullptr) break;
-            BUG_CHECK(nextField->alloc_i.empty(), "Adding allocated field to group?");
+            BUG_CHECK(nextField->is_unallocated(), "Adding allocated field to group?");
             group.push_back(*nextField);
         }
 

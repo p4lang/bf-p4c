@@ -84,7 +84,7 @@ class TofinoPHVTrivialAllocators : public TofinoBackendTest {
     // This class is a friend of PHV::Field, so it has access to
     // Field::alloc_i; this helper makes that member available to subclasses.
     static const safe_vector<PHV::Field::alloc_slice>&
-        alloc(const PHV::Field* field) { return field->alloc_i; }
+        alloc(const PHV::Field* field) { return field->get_alloc(); }
 };
 
 typedef ::testing::Types<PHV::TrivialAlloc, PHV::ManualAlloc> TrivialAllocators;
@@ -268,7 +268,7 @@ class TofinoPHVManualAlloc : public TofinoBackendTest {
             ASSERT_TRUE(field != nullptr);
 
             auto& requested = assignment.second;
-            auto& actual = field->alloc_i;
+            auto& actual = field->get_alloc();
             ASSERT_EQ(requested.size(), actual.size());
             for (unsigned i = 0; i < requested.size(); ++i) {
                 EXPECT_EQ(field, actual[i].field);

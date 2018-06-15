@@ -562,37 +562,6 @@ bool CoreAllocation::satisfies_constraints(
     return true;
 }
 
-bool CoreAllocation::satisfies_CCGF_constraints(
-        const PHV::Allocation& alloc,
-        const PHV::Field *f, PHV::Container c) const {
-    // Check gress.
-    if (alloc.gress(c) && *alloc.gress(c) != f->gress) {
-        LOG5("    ...but CCGF gress does not match container gress");
-        return false; }
-
-    // Check parser group gress.
-    auto parserGroupGress = alloc.parserGroupGress(c);
-    bool isExtracted = uses_i.is_extracted(f);
-    if (isExtracted && parserGroupGress && *parserGroupGress != f->gress) {
-        LOG5("    ...but CCGF is deparsed and does not match parser group gress");
-        return false; }
-
-    // Check deparser group gress.
-    auto deparserGroupGress = alloc.deparserGroupGress(c);
-    bool isDeparsed = uses_i.is_deparsed(f);
-    if (isDeparsed && deparserGroupGress && *deparserGroupGress != f->gress) {
-        LOG5("    ...but CCGF is deparsed and does not match deparser group gress");
-        return false; }
-
-    // Check mocha and dark candidates.
-    // XXX(Deep): Hack. Just ignore mocha and dark for now.
-    if (c.is(PHV::Kind::mocha) || c.is(PHV::Kind::dark)) {
-        LOG5("    ...but CCGF cannot be allocated to mocha or dark");
-        return false; }
-
-    return true;
-}
-
 /* static */
 bool
 CoreAllocation::satisfies_constraints(const PHV::ContainerGroup& g, const PHV::SuperCluster& sc) {
@@ -613,99 +582,6 @@ CoreAllocation::satisfies_constraints(const PHV::ContainerGroup& g, const PHV::S
             return false; } }
 
     return true;
-}
-
-boost::optional<PHV::Transaction> CoreAllocation::tryAllocCCGF(
-        const PHV::Allocation& alloc,
-        const PHV::ContainerGroup& group,
-        PHV::Field* f,
-        int start) const {
-    if (!f->is_ccgf())
-        return boost::none;
-    LOG5("    ...and field is a CCGF");
-
-    BUG_CHECK(f->header_stack_pov_ccgf(), "CCGF is not a header stack POV CCGF: %1%",
-              cstring::to_cstring(f));
-
-    PHV::Transaction alloc_attempt = alloc.makeTransaction();
-    int container_size = int(group.width());
-    int ccgf_size = 0;
-
-    // Calculate CCGF size
-    for (auto* member : f->ccgf_fields_i)
-        ccgf_size += member->size;
-
-    if (container_size < ccgf_size + start) {
-        LOG4("    ...but CCGF is " << ccgf_size << "b, which is too big for an " <<
-             container_size << "b container starting at bit " << start);
-        return boost::none;
-    } else if (f->exact_containers() && container_size != ccgf_size) {
-        // XXX(cole): This is a hack to deal with the fact that CCGFs have special
-        // constraints right now, eg. all the fields might be "exact_containers",
-        // but that really means the whole CCGF must be placed in exact containers.
-        LOG4("    ...but a CCGF has " << ccgf_size << " bits total and requires an exact "
-             "container");
-        return boost::none;
-    }
-
-    // For each container, check if it satisfies the constraints on each CCGF
-    // member.  If so, allocate the whole CCGF to it.
-    boost::optional<PHV::Container> candidate = boost::none;
-    for (const PHV::Container c : group) {
-        // XXX(cole): This assumes that CCGF fields can be allocated
-        // together and the constraints have already been checked, but this
-        // should really check CCGF/container or even member/container
-        // constraints, if there are such constraints.
-        if (!satisfies_CCGF_constraints(alloc_attempt, f, c)) {
-            LOG5("    ...but CCGF constraints not met");
-            continue; }
-
-        bool container_empty = alloc_attempt.slices(c).size() == 0;
-        if (can_overlay(mutex_i, f, alloc_attempt.slices(c)) && !container_empty) {
-            LOG5("    ...and can overlay" << alloc_attempt.slices(c));
-            candidate = c;
-            break;
-        } else if (container_empty) {
-            LOG5("    ...and container is empty");
-            candidate = c;
-        } else {
-            LOG5("    ...but " << c << " already contains slices at this position"); } }
-
-    if (!candidate) {
-        LOG5("    ...but there is no free container for (non-special) CCGF field");
-        return boost::none; }
-
-    // Create an aligned slice for each CCGF member and allocate it to the
-    // candidate container.
-    int offset = start;
-
-    // Walk CCGF and make an AllocSlice for each field in the CCGF, taking care
-    // to iterate in reverse.
-    for (auto* member : boost::adaptors::reverse(f->ccgf_fields_i)) {
-        BUG_CHECK(offset + member->size <= container_size,
-            "When allocating CCGF of size %1% with owner %2% to a container of size %3%, "
-            "ran out of container space when allocating field %4% of size %5% at offset %6%.",
-            ccgf_size, cstring::to_cstring(f), container_size, cstring::to_cstring(member),
-            member->size, offset);
-
-        // Only allocate referenced fields.
-        if (uses_i.is_referenced(member)) {
-            LOG5("    ...attempt allocating CCGF member at offset " << offset << ": " << member);
-            alloc_attempt.allocate(
-                PHV::AllocSlice(member, *candidate,
-                                StartLen(0, member->size),            // field range
-                                StartLen(offset, member->size))); }   // container range
-
-        // Increment the offset regardless of whether this member was
-        // allocated or skipped, in order to preserve the alignment of its
-        // adjecent members.
-        offset += member->size; }
-
-    // Allocate the $stkvalid field, which overlays the CCGF member fields.
-    auto stkvalid = PHV::AllocSlice(f, *candidate, StartLen(0, f->size), StartLen(start, f->size));
-    alloc_attempt.allocate(stkvalid);
-
-    return alloc_attempt;
 }
 
 boost::optional<PHV::Transaction>
@@ -800,33 +676,6 @@ CoreAllocation::tryAllocSliceList(
     for (auto& slice : slices) {
         if (!satisfies_constraints(group, slice)) {
             LOG5("    ...but slice " << slice << " doesn't satisfy slice<-->group constraints");
-            return boost::none; } }
-
-    // XXX(cole): If the list is entirely comprised of a CCGF, allocate it.
-    bool all_ccgf = std::all_of(slices.begin(), slices.end(),
-                        [](const PHV::FieldSlice& s) { return s.field()->is_ccgf(); });
-    if (all_ccgf && slices.size() > 0) {
-        boost::optional<PHV::FieldSlice> acc = boost::none;
-        boost::optional<int> min_start_pos = boost::none;
-        for (auto& slice : slices) {
-            if (!acc) {
-                acc = slice;
-                min_start_pos = start_positions.at(slice).bitPosition;
-                continue; }
-            if (slice.field() != acc->field()) {
-                LOG5("    ...but slice list contains CCGF slices of different fields");
-                return boost::none; }
-            min_start_pos = std::min(*min_start_pos, start_positions.at(slice).bitPosition); }
-        PHV::Field* acc_field = phv_i.field(acc->field()->id);
-        auto rst = tryAllocCCGF(alloc, group, acc_field, *min_start_pos);
-        if (!rst) return boost::none;
-        return *rst; }
-
-    // XXX(cole): fail (for now) if a slice list contains a CCGF
-    // owner or member.
-    for (auto& slice : slices) {
-        if (slice.field()->is_ccgf() || slice.field()->ccgf() != nullptr) {
-            LOG5("    ...but slice list contains a CCGF field " << slice);
             return boost::none; } }
 
     // Return if the slices can't fit together in a container.
@@ -1232,11 +1081,8 @@ std::list<PHV::ContainerGroup *> AllocatePHV::makeDeviceContainerGroups() {
 
 void AllocatePHV::clearSlices(PhvInfo& phv) {
     phv.clear_container_to_fields();
-    for (auto& f : phv) {
-        f.alloc_i.clear();
-        // ccgf members, if any
-        for (auto* m : f.ccgf_fields())
-            m->alloc_i.clear(); }
+    for (auto& f : phv)
+        f.clear_alloc();
 }
 
 /* static */
@@ -1246,7 +1092,7 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
     for (auto container_and_slices : alloc) {
         for (PHV::AllocSlice slice : container_and_slices.second.slices) {
             auto* f = slice.field();
-            f->alloc_i.emplace_back(
+            f->add_alloc(
                 slice.field(),
                 slice.container(),
                 slice.field_slice().lo,
@@ -1256,10 +1102,8 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
 
     // later passes assume that phv alloc info is sorted in field bit order,
     // msb first
-    for (auto& f : phv) {
-        std::sort(f.alloc_i.begin(), f.alloc_i.end(),
-            [](PHV::Field::alloc_slice l, PHV::Field::alloc_slice r) {
-                return l.field_bit > r.field_bit; }); }
+    for (auto& f : phv)
+        f.sort_alloc();
 
     // Merge adjacent field slices that have been allocated adjacently in the
     // same container.  This can happen when the field is involved in a set
@@ -1269,7 +1113,7 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
     for (auto& f : phv) {
         boost::optional<PHV::Field::alloc_slice> last = boost::none;
         safe_vector<PHV::Field::alloc_slice> merged_alloc;
-        for (auto& slice : f.alloc_i) {
+        for (auto& slice : f.get_alloc()) {
             if (last == boost::none) {
                 last = slice;
                 continue; }
@@ -1296,7 +1140,7 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
                 last = slice; } }
         if (last)
             merged_alloc.push_back(*last);
-        f.alloc_i = merged_alloc; }
+        f.set_alloc(merged_alloc); }
 }
 
 /// Log (at LOGGING(3)) the device-specific PHV resources.

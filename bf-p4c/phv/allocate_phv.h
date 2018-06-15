@@ -189,13 +189,6 @@ class CoreAllocation {
     /// statis in @alloc.
     bool satisfies_constraints(const PHV::Allocation& alloc, PHV::AllocSlice slice) const;
 
-    /// @returns true if @c satisfies CCGF constraints on CCGF field @f given
-    /// allocation @alloc.
-    bool satisfies_CCGF_constraints(
-        const PHV::Allocation& alloc,
-        const PHV::Field *f,
-        PHV::Container c) const;
-
     /// @returns true if @container_group and @cluster_group satisfy constraints.
     /// XXX(cole): figure out what, if any, constraints should go here.
     static bool satisfies_constraints(const PHV::ContainerGroup& container_group,
@@ -261,16 +254,6 @@ class CoreAllocation {
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
         const ordered_map<PHV::FieldSlice, int>& start_positions) const;
-
-    /** Helper function for tryAlloc that tries to allocate all the fields of a single CCGF.
-     *
-     * XXX(cole): It would be great not to have to special-case this.
-     */
-    boost::optional<PHV::Transaction> tryAllocCCGF(
-            const PHV::Allocation& alloc,
-            const PHV::ContainerGroup& group,
-            PHV::Field* f,
-            int start) const;
 
     const PhvUse& uses() const                            { return uses_i; }
     const SymBitMatrix& mutex() const                     { return mutex_i; }

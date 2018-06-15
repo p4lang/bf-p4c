@@ -1044,8 +1044,6 @@ class SlicingIterator {
 
 std::ostream &operator<<(std::ostream &out, const Allocation&);
 std::ostream &operator<<(std::ostream &out, const Allocation*);
-std::ostream &operator<<(std::ostream &out, const FieldSlice&);
-std::ostream &operator<<(std::ostream &out, const FieldSlice*);
 std::ostream &operator<<(std::ostream &out, const AllocSlice&);
 std::ostream &operator<<(std::ostream &out, const AllocSlice*);
 std::ostream &operator<<(std::ostream &out, const ContainerGroup&);
@@ -1058,8 +1056,6 @@ std::ostream &operator<<(std::ostream &out, const SuperCluster&);
 std::ostream &operator<<(std::ostream &out, const SuperCluster*);
 std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList&);
 std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList*);
-std::ostream &operator<<(std::ostream &out, const FieldSlice&);
-std::ostream &operator<<(std::ostream &out, const FieldSlice*);
 
 }   // namespace PHV
 

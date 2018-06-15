@@ -207,15 +207,6 @@ const PHV::Field *PhvInfo::field(const cstring& name_) const {
     return nullptr;
 }
 
-//
-//***********************************************************************************
-//
-// PhvInfo::allocatePOV
-// simple header pov & header stack pov ccgfs
-//
-//***********************************************************************************
-//
-
 void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
     LOG3("BEGIN PhvInfo::allocatePOV");
     if (pov_alloc_done) BUG("trying to reallocate POV");
@@ -347,10 +338,10 @@ boost::optional<cstring> PhvInfo::get_alias_name(const IR::Expression* expr) con
 
 // figure out how many disinct container bytes contain info from a le_bitrange of a particular field
 //
-int PHV::Field::container_bytes(le_bitrange bits) const {
-    if (bits.hi < 0) bits.hi = size - 1;
-    if (alloc_i.empty())
-        return bits.hi/8U + bits.lo/8U + 1;
+int PHV::Field::container_bytes(boost::optional<le_bitrange> optBits) const {
+    BUG_CHECK(!alloc_i.empty(), "Trying to get PHV container bytes for unallocated field %1%",
+              this);
+    le_bitrange bits = optBits.get_value_or(StartLen(0, size));
     int rv = 0, w;
     for (int bit = bits.lo; bit <= bits.hi; bit += w) {
         auto &sl = for_bit(bit);
@@ -370,20 +361,13 @@ int PHV::Field::container_bytes(le_bitrange bits) const {
 //***********************************************************************************
 //
 
-safe_vector<PHV::Field::alloc_slice> *
-PhvInfo::alloc(const IR::Member *member) {
-    PHV::Field *info = field(member);
-    BUG_CHECK(nullptr != info, "; Cannot find PHV allocation for %s", member->toString());
-    return &info->alloc_i;
-}
-
 void PHV::Field::foreach_byte(
         le_bitrange range,
-        std::function<void(const PHV::Field::Slice&)> fn) const {
+        std::function<void(const PHV::FieldSlice&)> fn) const {
     le_bitrange window = StartLen(range.lo, 8);
     while (window.overlaps(range)) {
         // Create a Slice of the window intersected with the range.
-        PHV::Field::Slice slice(this, *toClosedRange(window.intersectWith(range)));
+        PHV::FieldSlice slice(this, *toClosedRange(window.intersectWith(range)));
 
         // Apply @fn.
         fn(slice);
@@ -526,55 +510,12 @@ PHV::Field::constrained(bool packing_constraint) const {
     return  pack_c || deparsed_bottom_bits_i;
 }
 
-bool
-PHV::Field::is_ccgf() const {
-    if (ccgf_i == this || header_stack_pov_ccgf_i || simple_header_pov_ccgf_i) {
-        BUG_CHECK(ccgf_fields_i.size(), "ccgf fields empty");
-        return true;
-    }
-    return false;
-}
-
 bool PHV::Field::is_tphv_candidate(const PhvUse& uses) const {
     // Privatized fields are the TPHV copies of header fields. Therefore, privatized fields are
     // always TPHV candidates.
     if (privatized_i) return true;
     if (alwaysPackable) return false;  // __pad_ fields are not considered as tphv.
     return !uses.is_used_mau(this) && !pov && !metadata && !deparsed_to_tm_i;
-}
-
-boost::optional<int>
-PHV::Field::phv_alignment(bool get_ccgf_alignment) const {
-    // the parameter get_ccgf_alignment distinguishes between requesting alignment
-    // of the CCGF as a whole vs the alignment of a ccgf member field
-    if (alignment) {
-        if (get_ccgf_alignment && ccgf_fields_i.size()) {
-            // return alignment of last field of ccgf as [m1,m2,m3] placed m3.m2.m1 in phv[0..w]
-            return ccgf_fields_i.back()->phv_alignment();
-        }
-        return alignment->littleEndian;
-    }
-    return boost::none;
-}
-
-boost::optional<int> PHV::Field::phv_alignment_network() const {
-    if (alignment)
-        return alignment->network;
-    return boost::none;
-}
-
-int
-PHV::Field::ccgf_width() const {
-    int ccgf_width_l = 0;
-    for (auto &f : ccgf_fields_i) {
-        if (f->is_ccgf() && !f->header_stack_pov_ccgf()) {
-            // ccgf owner appears as member, phv_use_width = aggregate size of members
-            ccgf_width_l += f->size;
-        } else {
-            ccgf_width_l += f->size;
-        }
-    }
-    return ccgf_width_l;
 }
 
 void PHV::Field::updateAlignment(const FieldAlignment& newAlignment) {
@@ -607,11 +548,11 @@ bitvec PHV::Field::getStartBits(PHV::Size size) const {
     return startBitsByContainerSize_i.at(size);
 }
 
-void PHV::Field::Slice::setStartBits(PHV::Size size, bitvec startPositions) {
+void PHV::FieldSlice::setStartBits(PHV::Size size, bitvec startPositions) {
     startBitsByContainerSize_i[size] = startPositions;
 }
 
-bitvec PHV::Field::Slice::getStartBits(PHV::Size size) const {
+bitvec PHV::FieldSlice::getStartBits(PHV::Size size) const {
     if (!startBitsByContainerSize_i.count(size))
         return bitvec(0, int(size));
     return startBitsByContainerSize_i.at(size);
@@ -1173,7 +1114,7 @@ void AddAliasAllocation::addAllocation(
             alloc.container_bit,
             alloc.width);
         LOG5("Adding allocation slice for aliased field: " << aliasSource << " " << new_slice);
-        aliasSource->alloc_i.push_back(new_slice);
+        aliasSource->add_alloc(new_slice);
         phv.add_container_to_field_entry(alloc.container, aliasSource);
     });
 }
@@ -1203,10 +1144,8 @@ bool AddAliasAllocation::preorder(const IR::BFN::AliasSlice* alias) {
 void AddAliasAllocation::end_apply() {
     // Later passes assume that PHV allocation is sorted in field bit order
     // MSB first
-    for (auto& f : phv) {
-        std::sort(f.alloc_i.begin(), f.alloc_i.end(),
-                [](PHV::Field::alloc_slice l, PHV::Field::alloc_slice r) {
-                return l.field_bit > r.field_bit; }); }
+    for (auto& f : phv)
+        f.sort_alloc();
 }
 
 /** The timestamp and version fields are located in a special part of the input
@@ -1318,31 +1257,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.privatizable()) out << " PHV-priv";
     if (field.is_mocha_candidate()) out << " mocha";
     if (field.is_dark_candidate()) out << " dark";
-    if (field.header_stack_pov_ccgf()) out << " header_stack_pov_ccgf";
-    if (field.simple_header_pov_ccgf()) out << " simple_header_pov_ccgf";
     if (field.is_checksummed()) out << " checksummed";
-    if (field.ccgf()) out << " ccgf=" << field.ccgf()->id << ':' << field.ccgf()->name;
-    if (field.ccgf_fields().size()) {
-        // aggregate widths of members in "container contiguous group fields"
-        out << std::endl << '[';
-        for (auto &f : field.ccgf_fields()) {
-            out << '\t';
-            if (f->is_ccgf() && !f->header_stack_pov_ccgf()) {
-                // ccgf owner appears as member, phv_use_width = aggregate size of members
-                out << f->id << ':' << f->name << '<' << f->size << ">*";
-            } else {
-                if (f->id == field.id) {
-                    // originally f was ccgf owner but after container assignment
-                    // ownership got terminated although f remains ccgf member of itself
-                    out << f->id << ':' << f->name << '<' << f->size << ">#";
-                } else {
-                    out << f;
-                }
-            }
-            out << std::endl;
-        }
-        out << ']';
-    }
     return out;
 }
 
@@ -1387,6 +1302,50 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldAccessType &op) {
         default: out << "<FieldAccessType " << int(op) << ">"; }
     return out;
 }
+
+namespace PHV {
+
+std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
+    if (fs.field() == nullptr) {
+        out << "-field-slice-of-null-field-ptr-";
+        return out; }
+
+    auto& field = *fs.field();
+    out << field.name << "<" << field.size << ">";
+    if (fs.alignment())
+        out << " ^" << fs.alignment()->littleEndian;
+    if (fs.validContainerRange() != ZeroToMax())
+        out << " ^" << fs.validContainerRange();
+    if (field.bridged) out << " bridge";
+    if (field.metadata) out << " meta";
+    if (field.mirror_field_list.member_field)
+        out << " mirror%{"
+            << field.mirror_field_list.member_field->id
+            << ":" << field.mirror_field_list.member_field->name
+            << "#" << field.mirror_field_list.field_list
+            << "}%";
+    if (field.pov) out << " pov";
+    if (field.deparsed()) out << " deparsed";
+    if (field.no_pack()) out << " no_pack";
+    if (field.no_split()) out << " no_split";
+    if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
+    if (field.deparsed_to_tm()) out << " deparsed_to_tm";
+    if (field.exact_containers()) out << " exact_containers";
+    if (field.privatized()) out << " TPHV-priv";
+    if (field.privatizable()) out << " PHV-priv";
+    out << " [" << fs.range().lo << ":" << fs.range().hi << "]";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice* fs) {
+    if (fs)
+        out << *fs;
+    else
+        out << "-null-field-slice ";
+    return out;
+}
+
+}   // namespace PHV
 
 namespace std {
 

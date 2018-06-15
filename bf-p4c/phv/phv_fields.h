@@ -21,40 +21,8 @@
 #include "lib/symbitmatrix.h"
 
 namespace PHV {
-class ManualAlloc;
-class TrivialAlloc;
-class ValidateAllocation;
-class AlignedCluster;
-}  // end namespace PHV
 
-namespace Test {
-template <typename T> class TofinoPHVTrivialAllocators;
-class TofinoPHVManualAlloc;
-}  // namespace Test
-
-class ActionPhvConstraints;
-class AllocSlice;
-class ClearPhvInfo;
-class Clustering;
-class CollectPhvFields;
-struct ComputeFieldAlignments;
-class PHV_Field_Operations;
-class PhvInfo;
-class PHVManualAlloc;
-class Phv_Parde_Mau_Use;
-class PHVTrivialAlloc;
-class PhvUse;
-class Slice;
-class CoreAllocation;
-class FieldInterference;
-
-namespace PHV {
-class Field;
-}  // namespace PHV
-
-std::ostream &operator<<(std::ostream &out, const Slice &sl);
-
-namespace PHV {
+class FieldSlice;
 
 enum class FieldKind : unsigned short {
     header   = 0,   // header fields
@@ -107,8 +75,7 @@ class Field {
     /// particular alignment requirement.
     boost::optional<FieldAlignment> alignment;
 
-    /// See documentation for `Field::validContainerRange()`.
-    /// TODO(cole): Refactor this.
+    /// @see Field::validContainerRange().
     nw_bitrange validContainerRange_i = ZeroToMax();
 
     /// Offset of lsb from lsb (last) bit of containing header.
@@ -139,144 +106,6 @@ class Field {
     /// True if this Field is a validity bit.
     bool            pov;
 
-    /// return True if this field is a packet field
-    bool isPacketField() const {
-        return (!metadata && !pov);
-    }
-
-    /** Represents a slice (range of bits) of a PHV::Field.  Constraints on the
-     * field that are related to position, like alignment, are tailored for
-     * each slice.
-     */
-    class Slice {
-        // There is no reason for a Slice to change the field it is representing, so make this
-        // const (also used in ActionPhvConstraints)
-        const PHV::Field* field_i;
-        le_bitrange range_i;
-        boost::optional<FieldAlignment> alignment_i = boost::none;
-        nw_bitrange validContainerRange_i = ZeroToMax();
-
-        /// Marks the valid starting bit positions (little Endian) for this field.
-        /// Valid bit positions may vary depending on container size.
-
-        // TODO(cole): This is currently only used for SALU operands.  However,
-        // it's general enough to support bit-in-byte alignment requirements
-        // (alignment_i), valid container range requirements, and deparsed_to_tm.
-        std::map<PHV::Size, bitvec> startBitsByContainerSize_i;
-
-     public:
-        Slice(const Field* field, le_bitrange range) : field_i(field), range_i(range) {
-            BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start");
-            BUG_CHECK(range.size() <= field->size,
-                      "Trying to create field slice larger than field");
-
-            // Calculate relative alignment for this field slice.
-            if (field->alignment) {
-                le_bitrange field_range = StartLen(field->alignment->littleEndian, field->size);
-                le_bitrange slice_range = field_range.shiftedByBits(range_i.lo)
-                                                     .resizedToBits(range_i.size());
-                alignment_i = FieldAlignment(slice_range);
-                LOG5("Adjusting alignment of field " << field << " to " << *alignment_i <<
-                     " for slice " << range); }
-
-            // The valid starting bits (by container size C) for a slice s[Y:X]
-            // equal the valid bits for the field shifted by X mod C.  For example,
-            // if a 12b field f can start at bits 0 and 8 in a 16b container, then
-            // f[11:8] can start at bits 0 and 8.
-            for (auto size : Device::phvSpec().containerSizes())
-                for (auto idx : field->getStartBits(size))
-                    startBitsByContainerSize_i[size].setbit((idx + range.lo) % int(size));
-
-            // Calculate valid container range for this slice by shrinking
-            // the valid range of the field by the size of the "tail"
-            // (i.e. the least significant bits) not in this slice.
-            if (field_i->validContainerRange_i == ZeroToMax()) {
-                validContainerRange_i = ZeroToMax();
-            } else {
-                int new_size = field_i->validContainerRange_i.size() - range.lo;
-                validContainerRange_i = field_i->validContainerRange_i.resizedToBits(new_size); }
-        }
-
-        /// Create a slice that holds the entirety of @field.
-        explicit Slice(const Field* field)
-        : Slice(field, le_bitrange(StartLen(0, field->size))) { }
-
-        /// Creates a subslice of @slice from @range.lo to @range.hi.
-        Slice(Slice slice, le_bitrange range) : Slice(slice.field(), range) {
-            BUG_CHECK(slice.range().contains(range),
-                      "Trying to create field sub-slice larger than the original slice");
-        }
-
-        bool operator==(const Slice& other) const {
-            return field_i == other.field() && range_i == other.range();
-        }
-
-        bool operator!=(const Slice& other) const {
-            return !(*this == other);
-        }
-
-        bool operator<(const Slice& other) const {
-            if (field_i != other.field())
-                return field_i < other.field();
-            if (range_i.lo != other.range().lo)
-                return range_i.lo < other.range().lo;
-            return range_i.hi < other.range().hi;
-        }
-
-        /// Whether the Field is ingress or egress.
-        gress_t gress() const { return field_i->gress; }
-
-        /// Total size of Slice in bits.
-        int size() const { return range_i.size(); }
-
-        /// The alignment requirement of this field slice. If boost::none, there is
-        /// no particular alignment requirement.
-        boost::optional<FieldAlignment> alignment() const { return alignment_i; }
-
-        /// See documentation for `Field::validContainerRange()`.
-        /// TODO(cole): Refactor this.
-        nw_bitrange validContainerRange() const { return validContainerRange_i; }
-
-        /// Kind of field of this slice.
-        FieldKind kind() const {
-            // XXX(cole): PHV::Field::metadata and PHV::Field::pov should be
-            // replaced by FieldKind.
-            if (field_i->pov)
-                return FieldKind::pov;
-            else if (field_i->metadata)
-                return FieldKind::metadata;
-            else
-                return FieldKind::header;
-        }
-
-        /// @returns the field this is a slice of.
-        const PHV::Field* field() const   { return field_i; }
-
-        /// @returns the bits of the field included in this field slice.
-        le_bitrange range() const   { return range_i; }
-
-        /// Sets the valid starting bit positions (little Endian) for this field.
-        /// For example, setStartBits(PHV::Size::b8, bitvec(0,1)) means that the least
-        /// significant bit of this field must start at bit 0 in 8b containers.
-        void setStartBits(PHV::Size size, bitvec startPositions);
-
-        /// @returns the bit positions (little Endian) at which the least significant
-        /// bit of this field may be placed.
-        bitvec getStartBits(PHV::Size size) const;
-    };
-
-    /// Apply @fn to each byte-sized subslice of the slice @range of @this
-    /// field, starting at bit @range.lo.  If @range is not a byte multiple,
-    /// then the last slice will be smaller than 8 bits.
-    void foreach_byte(le_bitrange range, std::function<void(const Slice &)> fn) const;
-
-    /** Equivalent to `foreach_byte(StartLen(0, this->size), fn)`.
-     *
-     * @see foreach_byte(le_bitrange, std::function<void(const Slice &)>).
-     */
-    void foreach_byte(std::function<void(const Slice &)> fn) const {
-        foreach_byte(StartLen(0, this->size), fn);
-    }
 
     /// Represents an allocation of a field slice to a container slice.
     struct alloc_slice {
@@ -297,6 +126,164 @@ class Field {
         bool operator!=(const alloc_slice& other) const {
             return !operator==(other); }
     };
+
+
+    /// Sets the valid starting bit positions (little Endian) for this field.
+    /// For example, setStartBits(PHV::Size::b8, bitvec(0,1)) means that the least
+    /// significant bit of this field must start at bit 0 in 8b containers.
+    void setStartBits(PHV::Size size, bitvec startPositions);
+
+    /// @return the bit positions (little Endian) at which the least significant
+    /// bit of this field may be placed.
+    bitvec getStartBits(PHV::Size size) const;
+
+ private:
+    /// When set, use this name rather than PHV::Field::name when generating
+    /// assembly.
+    boost::optional<cstring> externalName_i;
+
+    // constraints on this field
+    //
+    bool            mau_phv_no_pack_i = false;         /// true if op on field not "move based"
+                                                       /// set by PHV_Field_Operations
+    bool            deparsed_i = false;                /// true if deparsed field
+    bool            no_pack_i = false;                 /// prevents field from being placed in a
+                                                       /// container with any other field
+    bool            deparsed_bottom_bits_i = false;    /// true when learning digest, no shifter
+    bool            exact_containers_i = false;        /// place in container exactly (no holes)
+
+    bool            deparsed_to_tm_i = false;          /// true if field is read by TM
+    size_t          numNoPack = 0;                     /// Number of fields with which this field
+                                                       /// cannot be packed
+
+    bool            privatizable_i = false;            /// true for the PHV version of a
+                                                       /// privatized field
+    bool            privatized_i = false;              /// true for the TPHV version of a
+                                                       /// privatized field
+    bool            is_checksummed_i = false;          /// true for fields used in checksum.
+    bool            mocha_i = false;                   /// true if field is a candidate for mocha
+                                                       /// PHV.
+    bool            dark_i = false;                    /// true if field is a candidate for dark
+                                                       /// PHV.
+#if HAVE_JBAY
+    /// XXX(Deep): Until we move to a stage-based allocation that allows us to move fields into and
+    /// out of dark containers, the utilization of dark containers in JBay is not significant. To
+    /// address this and enable testing, I am introducing a privatizable dark category of fields.
+    /// These fields satisfy all the requirements for dark containers, except that they are used in
+    /// the parser/deparser. So, we create two versions of such a field--the normal/mocha version
+    /// which is involved in the parde operations and the privatized dark version. The
+    /// privatizable_dark_i property is set to true for all mocha fields that could be allocated
+    /// into dark containers with dark privatization.
+    bool            privatizable_dark_i = false;
+#endif
+
+    /// Ranges of this field that can not be split.
+    /// E.g. in a<32b> = b<32b> + c[0:31]<48b>, [0:31] will be the no_split range for c.
+    /// you can create a fieldslice for c as long as it
+    /// does not split c[0:31]. E.g. c[32:47] is allowed, but c[15:31] is not.
+    std::vector<le_bitrange> no_split_ranges_i;
+
+    /** Marshaled fields are metadata fields serialized between a Tofino deparser and parser.
+     *  For example, mirrored field lists can be serialized from ingress deparser (when the mirrored
+     *  header is being created) to the ingress parser (when the mirrored header is being processed).
+     *
+     *  Marshaled fields differ from deparsed fields (i.e. the `deparsed_i` constraint) in that they
+     *  are not emitted on the wire.
+     *
+     *  XXX(yumin): Currently, only mirrored field lists are marked as marshaled, but the same
+     *  mechanism can be used for learning, recirculation, and bridged metadata.
+     **/
+    bool            is_marshaled_i = false;
+
+    /// true if hardware read the container validity bit, e.g. deparser paramerter, digest index
+    bool            read_container_valid_bit_i = false;
+
+    /// MAU operations performed on this field.
+    safe_vector<FieldOperation> operations_i;
+
+    /// Maps slices of @this field to PHV containers.  Sorted by field MSB
+    /// first.
+    safe_vector<alloc_slice> alloc_i;
+
+    friend std::ostream &operator<<(std::ostream &out, const Field &field);
+
+ public:
+    /// @returns true if this field can be placed in TPHV containers.
+    bool is_tphv_candidate(const PhvUse& uses) const;
+    bool is_mocha_candidate() const                        { return mocha_i; }
+    bool is_dark_candidate() const                         { return dark_i; }
+    void set_mocha_candidate(bool c)                       { mocha_i = c; }
+    void set_dark_candidate(bool c)                        { dark_i = c; }
+
+#if HAVE_JBAY
+    bool is_privatizable_dark() const                      { return privatizable_dark_i; }
+    void set_privatizable_dark(bool c)                     { privatizable_dark_i = c; }
+#endif
+
+    //
+    // constraints
+    //
+    bool mau_phv_no_pack() const                           { return mau_phv_no_pack_i; }
+    void set_mau_phv_no_pack(bool b)                       { mau_phv_no_pack_i = b; }
+    bool deparsed() const                                  { return deparsed_i; }
+    void set_deparsed(bool b)                              { deparsed_i = b; }
+    bool no_pack() const                                   { return no_pack_i; }
+    void set_no_pack(bool b)                               { no_pack_i = b; }
+    bool deparsed_bottom_bits() const                      { return deparsed_bottom_bits_i; }
+    void set_deparsed_bottom_bits(bool b)                  { deparsed_bottom_bits_i = b; }
+    bool exact_containers() const                          { return exact_containers_i; }
+    void set_exact_containers(bool b)                      { exact_containers_i = b; }
+
+    bool no_split() const;
+    void set_no_split(bool b);
+    bool no_split_at(int pos) const;
+    void set_no_split_at(le_bitrange range);
+    std::vector<le_bitrange> no_split_ranges() const       { return no_split_ranges_i; }
+
+    bool deparsed_to_tm() const                            { return deparsed_to_tm_i; }
+    void set_deparsed_to_tm(bool b)                        { deparsed_to_tm_i = b; }
+
+    bool read_container_valid_bit() const                  { return read_container_valid_bit_i; }
+    void set_read_container_valid_bit(bool b)              { read_container_valid_bit_i = b; }
+    bool is_marshaled() const                              { return is_marshaled_i; }
+    void set_is_marshaled(bool b)                          { is_marshaled_i = b; }
+
+    bool privatizable() const                              { return privatizable_i; }
+    void set_privatizable(bool b)                          { privatizable_i = b; }
+    bool privatized() const                                { return privatized_i; }
+    void set_privatized(bool b)                            { privatized_i = b; }
+    bool is_checksummed() const                            { return is_checksummed_i; }
+    void set_is_checksummed(bool b)                        { is_checksummed_i = b; }
+
+    // @returns the set of MAU operations on this field.
+    const safe_vector<FieldOperation>& operations() const   { return  operations_i; }
+
+    // @returns the set of MAU operations on this field.
+    safe_vector<FieldOperation>& operations()               { return  operations_i; }
+
+    void set_num_pack_conflicts(size_t no)                 { numNoPack = no; }
+
+    size_t num_pack_conflicts() const                      { return numNoPack; }
+
+    bool constrained(bool packing_constraint = false) const;
+
+    /// @returns true if this field is a packet field.
+    bool isPacketField() const {
+        return (!metadata && !pov);
+    }
+
+    /// Apply @fn to each byte-sized subslice of the slice @range of @this
+    /// field, starting at bit @range.lo.  If @range is not a byte multiple,
+    /// then the last slice will be smaller than 8 bits.
+    void foreach_byte(le_bitrange range, std::function<void(const FieldSlice &)> fn) const;
+
+    /** Equivalent to `foreach_byte(StartLen(0, this->size), fn)`.
+     *
+     * @see foreach_byte(le_bitrange, std::function<void(const FieldSlice &)>).
+     */
+    void foreach_byte(std::function<void(const FieldSlice &)> fn) const {
+        foreach_byte(StartLen(0, this->size), fn);
+    }
 
     /// @returns the alloc_slice in which field @bit is allocated.  Fails
     /// catastrophically if @bit is not allocated or not within the range of
@@ -362,33 +349,49 @@ class Field {
         foreach_alloc(r ? *r : StartLen(0, this->size), fn);
     }
 
-    /// XXX(cole): These should be commented (or removed if unused).
-    cstring header() const { return name.before(strrchr(name, '.')); }
-    int container_bytes(le_bitrange bits = {0, -1}) const;
+    /// @returns the number of distinct container bytes that contain slices of
+    /// the @bits of this field.
+    int container_bytes(boost::optional<le_bitrange> bits = boost::none) const;
+
+    /// Clear any PHV allocation for this field.
     void clear_alloc() { alloc_i.clear(); }
 
-    /// Maps slices of @this field to PHV containers.  Sorted by field MSB
-    /// first.
-    /// XXX(cole): This should be private.
-    safe_vector<alloc_slice> alloc_i;
+    /// Allocate a slice of this field.
+    void add_alloc(const Field* f, PHV::Container c, int fb, int cb, int w) {
+        alloc_i.emplace_back(f, c, fb, cb, w);
+    }
+
+    /// Allocate a slice of this field.
+    void add_alloc(const alloc_slice& alloc) {
+        alloc_i.push_back(alloc);
+    }
+
+    /// Set all allocated slices of this field.
+    void set_alloc(const safe_vector<PHV::Field::alloc_slice>& alloc) {
+        alloc_i = alloc;
+    }
+
+    /// @returns the PHV allocation for this field, if any.
+    const safe_vector<PHV::Field::alloc_slice>& get_alloc() const {
+        return alloc_i;
+    }
+
+    /// @returns the number of allocated slices of this field.
+    size_t alloc_size() const { return alloc_i.size(); }
+
+    /// @returns true if there are no allocated slices of this field.
+    bool is_unallocated() const { return alloc_i.empty(); }
+
+    /// Sort by field MSB.
+    void sort_alloc() {
+        std::sort(alloc_i.begin(), alloc_i.end(),
+            [](PHV::Field::alloc_slice l, PHV::Field::alloc_slice r) {
+                return l.field_bit > r.field_bit; });
+    }
 
     /// Update the alignment requirement for this field. Reports an error if
     /// conflicting requirements render the alignment unsatisfiable.
     void updateAlignment(const FieldAlignment& newAlignment);
-
-    /// Sets the valid starting bit positions (little Endian) for this field.
-    /// For example, setStartBits(PHV::Size::b8, bitvec(0,1)) means that the least
-    /// significant bit of this field must start at bit 0 in 8b containers.
-    void setStartBits(PHV::Size size, bitvec startPositions);
-
-    /// @return the bit positions (little Endian) at which the least significant
-    /// bit of this field may be placed.
-    bitvec getStartBits(PHV::Size size) const;
-
- private:
-    /// When set, use this name rather than PHV::Field::name when generating
-    /// assembly.
-    boost::optional<cstring> externalName_i;
 
     /**
      * Update the valid range of container positions for this field.
@@ -402,200 +405,6 @@ class Field {
      */
     void updateValidContainerRange(nw_bitrange newValidRange);
 
-    //
-    // friends of phv_assignment interface
-    //
-    friend class ::CollectPhvFields;
-    friend struct ::ComputeFieldAlignments;
-    friend class ::PHV::ManualAlloc;        // phv/trivial_alloc
-    friend class ::PHV::TrivialAlloc;       // phv/trivial_alloc
-    friend class ::PHV::ValidateAllocation;  // phv/validate_allocation
-    friend class ::PHV::AlignedCluster;
-    friend class ::CoreAllocation;
-    //
-    template <typename T> friend class ::Test::TofinoPHVTrivialAllocators;
-    friend class ::Test::TofinoPHVManualAlloc;
-    //
-    friend std::ostream &::operator<<(std::ostream &out, const ::Slice &sl);
-    //
-    // **********************************************************************
-    // end phv_assignment (phv_bind) interface
-    // **********************************************************************
-    //
-    // **********************************************************************
-    // begin phv_analysis interface
-    // **********************************************************************
-    //
-    // constraints on this field
-    //
-    bool            mau_phv_no_pack_i = false;         /// true if op on field not "move based"
-                                                       /// set by PHV_Field_Operations
-    bool            deparsed_i = false;                /// true if deparsed field
-    bool            no_pack_i = false;                 /// prevents field from being placed in a
-                                                       /// container with any other field
-    bool            deparsed_bottom_bits_i = false;    /// true when learning digest, no shifter
-    bool            exact_containers_i = false;        /// place in container exactly (no holes)
-
-    bool            deparsed_to_tm_i = false;          /// true if field is read by TM
-    size_t          numNoPack = 0;                     /// Number of fields with which this field
-                                                       /// cannot be packed
-
-    bool            privatizable_i = false;            /// true for the PHV version of a
-                                                       /// privatized field
-    bool            privatized_i = false;              /// true for the TPHV version of a
-                                                       /// privatized field
-    bool            is_checksummed_i = false;          /// true for fields used in checksum.
-    bool            mocha_i = false;                   /// true if field is a candidate for mocha
-                                                       /// PHV.
-    bool            dark_i = false;                    /// true if field is a candidate for dark
-                                                       /// PHV.
-#if HAVE_JBAY
-    /// XXX(Deep): Until we move to a stage-based allocation that allows us to move fields into and
-    /// out of dark containers, the utilization of dark containers in JBay is not significant. To
-    /// address this and enable testing, I am introducing a privatizable dark category of fields.
-    /// These fields satisfy all the requirements for dark containers, except that they are used in
-    /// the parser/deparser. So, we create two versions of such a field--the normal/mocha version
-    /// which is involved in the parde operations and the privatized dark version. The
-    /// privatizable_dark_i property is set to true for all mocha fields that could be allocated
-    /// into dark containers with dark privatization.
-    bool            privatizable_dark_i = false;
-#endif
-
-    /// Ranges of this field that can not be split.
-    /// E.g. in a<32b> = b<32b> + c[0:31]<48b>, [0:31] will be the no_split range for c.
-    /// you can create a fieldslice for c as long as it
-    /// does not split c[0:31]. E.g. c[32:47] is allowed, but c[15:31] is not.
-    std::vector<le_bitrange> no_split_ranges_i;
-
-    /** Marshaled fields are metadata fields serialized between a Tofino deparser and parser.
-     *  For example, mirrored field lists can be serialized from ingress deparser (when the mirrored
-     *  header is being created) to the ingress parser (when the mirrored header is being processed).
-     *
-     *  Marshaled fields differ from deparsed fields (i.e. the `deparsed_i` constraint) in that they
-     *  are not emitted on the wire.
-     *
-     *  XXX(yumin): Currently, only mirrored field lists are marked as marshaled, but the same
-     *  mechanism can be used for learning, recirculation, and bridged metadata.
-     **/
-    bool            is_marshaled_i = false;
-
-    /// true if hardware read the container validity bit, e.g. deparser paramerter, digest index
-    bool            read_container_valid_bit_i = false;
-
-    //
-    // operations on this field
-    //
-    safe_vector<FieldOperation> operations_i;
-                                                       /// all operations performed on field
-    //
-    // ccgf fields
-    //
-    bool            header_stack_pov_ccgf_i = false;   /// header stack pov owner
-    bool            simple_header_pov_ccgf_i = false;  /// simple header ccgf
-    Field *ccgf_i = nullptr;           /// container contiguous group fields (ccgf)
-                                       // (i) header stack povs: container FULL, no holes
-                                       //     only when .$push exists -- see allocatePOV()
-                                       //     owner".$stkvalid"->ccgf = 0, member->ccgf = owner
-                                       //     owner->ccgf_fields (members)
-                                       //     owner is not in ccgf_fields
-                                       //     it "overlaps" members in phv container
-                                       //     e.g.,
-                                       //     PHV-64.B0.I.Fp  76543221
-                                       //     1= 63:ingress::data.$valid<1>           B0<1:7..7>
-                                       //     2= 64:ingress::extra.$push<2:0..1>      B0<2:5..6>
-                                       //     3= 65:ingress::extra[0].$valid<1>       B0<1:4..4>
-                                       //     4= 66:ingress::extra[1].$valid<1>       B0<1:3..3>
-                                       //     5= 67:ingress::extra[2].$valid<1>       B0<1:2..2>
-                                       //     6= 68:ingress::extra[3].$valid<1>       B0<1:1..1>
-                                       //     72^ 70:ingress::extra.$stkvalid<7:0..6> B0<7:0..6>
-                                       //     extra.$push.ccgf_i --> extra.$stkvalid
-                                       //     extra[0].$valid.ccgf_i --> extra.$stkvalid
-                                       //     extra.$stkvalid.ccgf_i --> 0
-                                       //
-                                       // (ii) simple header povs: container may be PARTIAL
-                                       //      owner->ccgf = owner, member->ccgf = owner
-                                       //      owner->ccgf_fields = (owner + members)
-                                       //
-                                       // (iii) sub-byte & byte boundary accumulation
-                                       //                                 -- deparser constraint
-                                       //      owner->ccgf = owner, member->ccgf = owner
-                                       //      owner->ccgf_fields = (owner + members)
-    safe_vector<Field *> ccgf_fields_i;  // member fields of ccgfs
-                                         // members are in same container as owner
-
-    //
-    // operations on this field
-    //
-    const safe_vector<FieldOperation>& operations() const   { return  operations_i; }
-    safe_vector<FieldOperation>& operations()               { return  operations_i; }
-    //
-    // ccgf
-    //
-    bool is_ccgf() const;
-    bool simple_header_pov_ccgf() const                    { return simple_header_pov_ccgf_i; }
-    void set_simple_header_pov_ccgf(bool b)                { simple_header_pov_ccgf_i = b; }
-    bool header_stack_pov_ccgf() const                     { return header_stack_pov_ccgf_i; }
-    void set_header_stack_pov_ccgf(bool b)                 { header_stack_pov_ccgf_i = b; }
-    Field *ccgf() const                                    { return ccgf_i; }
-    void set_ccgf(Field *f)                                { ccgf_i = f; }
-
- public:
-    safe_vector<Field *>& ccgf_fields()                    { return ccgf_fields_i; }
-    const safe_vector<Field *>& ccgf_fields() const        { return ccgf_fields_i; }
-
-    int ccgf_width() const;  // phv width = aggregate size of members
-
-    bool is_tphv_candidate(const PhvUse& uses) const;
-    bool is_mocha_candidate() const                        { return mocha_i; }
-    bool is_dark_candidate() const                         { return dark_i; }
-    void set_mocha_candidate(bool c)                       { mocha_i = c; }
-    void set_dark_candidate(bool c)                        { dark_i = c; }
-
-#if HAVE_JBAY
-    bool is_privatizable_dark() const                      { return privatizable_dark_i; }
-    void set_privatizable_dark(bool c)                     { privatizable_dark_i = c; }
-#endif
-
-    //
-    // constraints
-    //
-    bool mau_phv_no_pack() const                           { return mau_phv_no_pack_i; }
-    void set_mau_phv_no_pack(bool b)                       { mau_phv_no_pack_i = b; }
-    bool deparsed() const                                  { return deparsed_i; }
-    void set_deparsed(bool b)                              { deparsed_i = b; }
-    bool no_pack() const                                   { return no_pack_i; }
-    void set_no_pack(bool b)                               { no_pack_i = b; }
-    bool deparsed_bottom_bits() const                      { return deparsed_bottom_bits_i; }
-    void set_deparsed_bottom_bits(bool b)                  { deparsed_bottom_bits_i = b; }
-    bool exact_containers() const                          { return exact_containers_i; }
-    void set_exact_containers(bool b)                      { exact_containers_i = b; }
-
-    bool no_split() const;
-    void set_no_split(bool b);
-    bool no_split_at(int pos) const;
-    void set_no_split_at(le_bitrange range);
-    std::vector<le_bitrange> no_split_ranges() const       { return no_split_ranges_i; }
-
-    bool deparsed_to_tm() const                            { return deparsed_to_tm_i; }
-    void set_deparsed_to_tm(bool b)                        { deparsed_to_tm_i = b; }
-
-    bool read_container_valid_bit() const                  { return read_container_valid_bit_i; }
-    void set_read_container_valid_bit(bool b)              { read_container_valid_bit_i = b; }
-    bool is_marshaled() const                              { return is_marshaled_i; }
-    void set_is_marshaled(bool b)                          { is_marshaled_i = b; }
-
-    bool privatizable() const                              { return privatizable_i; }
-    void set_privatizable(bool b)                          { privatizable_i = b; }
-    bool privatized() const                                { return privatized_i; }
-    void set_privatized(bool b)                            { privatized_i = b; }
-    bool is_checksummed() const                            { return is_checksummed_i; }
-    void set_is_checksummed(bool b)                        { is_checksummed_i = b; }
-
-    void set_num_pack_conflicts(size_t no)                 { numNoPack = no; }
-
-    size_t num_pack_conflicts() const                      { return numNoPack; }
-
-    bool constrained(bool packing_constraint = false) const;
 
     /// If a field is privatized (TPHV copy of header field), @returns the name of the PHV field
     /// (name of the privatized field less the PHV::Field::TPHV_PRIVATIZE_SUFFIX).
@@ -639,35 +448,6 @@ class Field {
         externalName_i = boost::none;
     }
 
- private:
-    /**
-     * Returns alignment constraint (little Endian bit position within
-     * container, mod 8) on this field, if any.
-     *
-     * @param get_ccgf_alignment  When `true`, returns the alignment
-     *                            constraint of the whole CCGF; otherwise,
-     *                            returns the alignment constraint of the
-     *                            member field within the CCGF. Has no
-     *                            effect for non-CCGF fields.
-     */
-    boost::optional<int> phv_alignment(bool get_ccgf_alignment = true) const;
-                                                          // alignment in phv container
-                                                          // ccgf as a whole vs ccgf member
-    boost::optional<int> phv_alignment_network() const;   // alignment in network order
-
-    //
-    // friends of phv_analysis interface
-    //
-    friend class ::ActionPhvConstraints;
-    friend class ::Clustering;
-    friend class ::PhvInfo;
-    friend class ::Phv_Parde_Mau_Use;
-    friend class ::PHV_Field_Operations;
-    friend class ::FieldInterference;
-    //
-    friend std::ostream &operator<<(std::ostream &out, const Field &field);
-
- public:  // class Field
     /** The range of possible bit positions at which this field can be placed
      * in a container, in network order.  For example, suppose we have an 8-bit
      * field with `validContainerRange = [0, 11]` and a 16-bit container.
@@ -690,21 +470,10 @@ class Field {
      * And so the field must be placed in what are considered the "upper" bits
      * of the container.
      *
-     * If this field is a CCGF owner, recomputes and returns the valid
-     * container range for all CCGF fields (including the owner).
-     *
      * XXX(cole): This range always starts at 0, which is an invariant that
      * other parts of the compiler rely on.
      */
-    nw_bitrange validContainerRange() {
-        if (this->is_ccgf() && !this->pov) {
-            auto last_member = ccgf_fields_i.back();
-            if (last_member->validContainerRange_i == ZeroToMax())
-                return ZeroToMax();
-            int extra_valid_bits = last_member->validContainerRange_i.size() - this->size;
-            return last_member->validContainerRange_i.resizedToBits(
-                this->ccgf_width() + extra_valid_bits);
-        }
+    nw_bitrange validContainerRange() const {
         return validContainerRange_i;
     }
 
@@ -724,14 +493,130 @@ class Field {
     }
 };
 
-// XXX(cole): Eventually, we should replace FieldSlice with Field::Slice
-// everywhere.
-using FieldSlice = Field::Slice;
+/** Represents a slice (range of bits) of a PHV::Field.  Constraints on the
+ * field that are related to position, like alignment, are tailored for
+ * each slice.
+ */
+class FieldSlice {
+    // There is no reason for a FieldSlice to change the field it is representing, so make this
+    // const (also used in ActionPhvConstraints)
+    const PHV::Field* field_i;
+    le_bitrange range_i;
+    boost::optional<FieldAlignment> alignment_i = boost::none;
+    nw_bitrange validContainerRange_i = ZeroToMax();
+
+    /// Marks the valid starting bit positions (little Endian) for this field.
+    /// Valid bit positions may vary depending on container size.
+
+    // TODO(cole): This is currently only used for SALU operands.  However,
+    // it's general enough to support bit-in-byte alignment requirements
+    // (alignment_i), valid container range requirements, and deparsed_to_tm.
+    std::map<PHV::Size, bitvec> startBitsByContainerSize_i;
+
+ public:
+    FieldSlice(const Field* field, le_bitrange range) : field_i(field), range_i(range) {
+        BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start");
+        BUG_CHECK(range.size() <= field->size,
+                  "Trying to create field slice larger than field");
+
+        // Calculate relative alignment for this field slice.
+        if (field->alignment) {
+            le_bitrange field_range = StartLen(field->alignment->littleEndian, field->size);
+            le_bitrange slice_range = field_range.shiftedByBits(range_i.lo)
+                                                 .resizedToBits(range_i.size());
+            alignment_i = FieldAlignment(slice_range);
+            LOG5("Adjusting alignment of field " << field << " to " << *alignment_i <<
+                 " for slice " << range); }
+
+        // The valid starting bits (by container size C) for a slice s[Y:X]
+        // equal the valid bits for the field shifted by X mod C.  For example,
+        // if a 12b field f can start at bits 0 and 8 in a 16b container, then
+        // f[11:8] can start at bits 0 and 8.
+        for (auto size : Device::phvSpec().containerSizes())
+            for (auto idx : field->getStartBits(size))
+                startBitsByContainerSize_i[size].setbit((idx + range.lo) % int(size));
+
+        // Calculate valid container range for this slice by shrinking
+        // the valid range of the field by the size of the "tail"
+        // (i.e. the least significant bits) not in this slice.
+        if (field_i->validContainerRange_i == ZeroToMax()) {
+            validContainerRange_i = ZeroToMax();
+        } else {
+            int new_size = field_i->validContainerRange_i.size() - range.lo;
+            validContainerRange_i = field_i->validContainerRange_i.resizedToBits(new_size); }
+    }
+
+    /// Create a slice that holds the entirety of @field.
+    explicit FieldSlice(const Field* field)
+    : FieldSlice(field, le_bitrange(StartLen(0, field->size))) { }
+
+    /// Creates a subslice of @slice from @range.lo to @range.hi.
+    FieldSlice(FieldSlice slice, le_bitrange range) : FieldSlice(slice.field(), range) {
+        BUG_CHECK(slice.range().contains(range),
+                  "Trying to create field sub-slice larger than the original slice");
+    }
+
+    bool operator==(const FieldSlice& other) const {
+        return field_i == other.field() && range_i == other.range();
+    }
+
+    bool operator!=(const FieldSlice& other) const {
+        return !(*this == other);
+    }
+
+    bool operator<(const FieldSlice& other) const {
+        if (field_i != other.field())
+            return field_i < other.field();
+        if (range_i.lo != other.range().lo)
+            return range_i.lo < other.range().lo;
+        return range_i.hi < other.range().hi;
+    }
+
+    /// Whether the Field is ingress or egress.
+    gress_t gress() const { return field_i->gress; }
+
+    /// Total size of FieldSlice in bits.
+    int size() const { return range_i.size(); }
+
+    /// The alignment requirement of this field slice. If boost::none, there is
+    /// no particular alignment requirement.
+    boost::optional<FieldAlignment> alignment() const { return alignment_i; }
+
+    /// See documentation for `Field::validContainerRange()`.
+    /// TODO(cole): Refactor this.
+    nw_bitrange validContainerRange() const { return validContainerRange_i; }
+
+    /// Kind of field of this slice.
+    FieldKind kind() const {
+        // XXX(cole): PHV::Field::metadata and PHV::Field::pov should be
+        // replaced by FieldKind.
+        if (field_i->pov)
+            return FieldKind::pov;
+        else if (field_i->metadata)
+            return FieldKind::metadata;
+        else
+            return FieldKind::header;
+    }
+
+    /// @returns the field this is a slice of.
+    const PHV::Field* field() const   { return field_i; }
+
+    /// @returns the bits of the field included in this field slice.
+    le_bitrange range() const   { return range_i; }
+
+    /// Sets the valid starting bit positions (little Endian) for this field.
+    /// For example, setStartBits(PHV::Size::b8, bitvec(0,1)) means that the least
+    /// significant bit of this field must start at bit 0 in 8b containers.
+    void setStartBits(PHV::Size size, bitvec startPositions);
+
+    /// @returns the bit positions (little Endian) at which the least significant
+    /// bit of this field may be placed.
+    bitvec getStartBits(PHV::Size size) const;
+};
 
 std::ostream &operator<<(std::ostream &out, const Field &);
 std::ostream &operator<<(std::ostream &out, const Field *);
 std::ostream &operator<<(std::ostream &, const Field::alloc_slice &);
-std::ostream &operator<<(std::ostream &, const AllocSlice &);
 std::ostream &operator<<(std::ostream &, const std::vector<Field::alloc_slice> &);
 
 }  // namespace PHV
@@ -862,8 +747,6 @@ class PhvInfo {
      *  - A "stack.$pop" field if the pop_front primitive is used.
      *  - A "stack.$stkvalid" field.
      *
-     * POV fields are grouped into container contiguous group fields (CCGFs) as follows:
-     *
      * @pre CollectHeaderStackInfo and CollectPhvFields.
      * @post POV fields for all headers added to PhvInfo.
      */
@@ -885,8 +768,6 @@ class PhvInfo {
         return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
     PHV::Field *field(const IR::Member *fr, le_bitrange *bits = 0) {
         return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
-
-    safe_vector<PHV::Field::alloc_slice> *alloc(const IR::Member *member);
     const StructInfo struct_info(cstring name) const;
     const StructInfo struct_info(const IR::HeaderRef *hr) const {
         return struct_info(hr->toString()); }
@@ -1006,6 +887,13 @@ std::ostream &operator<<(std::ostream &, const ordered_set<PHV::Field *>&);
 std::ostream &operator<<(std::ostream &, const ordered_set<const PHV::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);
 std::ostream &operator<<(std::ostream &, const PHV::FieldAccessType &);
+
+namespace PHV {
+
+std::ostream &operator<<(std::ostream &, const PHV::FieldSlice &sl);
+std::ostream &operator<<(std::ostream &, const PHV::FieldSlice *sl);
+
+}   // namespace PHV
 
 // These overloads must be declared directly in `namespace std` to work around
 // ADL limitations for lookup of names in sibling namespaces.

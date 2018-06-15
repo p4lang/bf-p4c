@@ -671,7 +671,7 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
 
 void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
-        const safe_vector<PHV::Field::Slice> &field_list_order) const {
+        const safe_vector<PHV::FieldSlice> &field_list_order) const {
     if (mah.algorithm.type == IR::MAU::hash_function::IDENTITY) {
         for (auto &slice : match_data) {
             if (mah.identity_positions.count(slice.get_field()) == 0)
@@ -714,7 +714,7 @@ void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
  */
 void MauAsmOutput::emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
         safe_vector<Slice> &match_data,
-        const safe_vector<PHV::Field::Slice> &field_list_order) const {
+        const safe_vector<PHV::FieldSlice> &field_list_order) const {
     for (auto sl : match_data) {
         int order_bit = 0;
         // Traverse field list in reverse order. For a field list the convention
@@ -1415,7 +1415,7 @@ class MauAsmOutput::EmitAction : public Inspector {
                     count++;
                 });
                 if (count == 1) {
-                    bool single_loc = (field->alloc_i.size() == 1);
+                    bool single_loc = (field->get_alloc().size() == 1);
                     field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
                         if (!(alloc.field_bit <= bits.lo && alloc.field_hi() >= bits.hi))
                             return;

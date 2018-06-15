@@ -72,7 +72,7 @@ class MauAsmOutput : public MauInspector {
             std::map<int, std::map<int, Slice>> &sort) const;
     void emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
             safe_vector<Slice> &match_data,
-            const safe_vector<PHV::Field::Slice> &field_list_order) const;
+            const safe_vector<PHV::FieldSlice> &field_list_order) const;
     void emit_ixbar_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
             safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
             int &ident_bits_prev_alloc, const IR::Expression *hd_expr) const;
@@ -90,7 +90,7 @@ class MauAsmOutput : public MauInspector {
              const IR::Expression *hd_expr) const;
     void emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
             safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
-            const safe_vector<PHV::Field::Slice> &field_list_order) const;
+            const safe_vector<PHV::FieldSlice> &field_list_order) const;
     void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
             const TableMatch *fmt, const IR::Expression *hd_expr = nullptr) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;

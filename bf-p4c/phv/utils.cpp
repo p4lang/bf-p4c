@@ -327,24 +327,7 @@ PHV::Allocation::mutually_exclusive(
         SymBitMatrix mutex,
         const PHV::Field *f1,
         const PHV::Field *f2) {
-    // NB: We use std::set here because ordered_set doesn't implement
-    // `insert(Iterator first, Iterator last)`, and the order we check the
-    // Cartesian product of two sets doesn't matter anyway.
-    std::set<const PHV::Field *> f1_fields, f2_fields;
-
-    // Insert f1 and f2 and CCGF members, if any.
-    f1_fields.insert(f1);
-    f1_fields.insert(f1->ccgf_fields().begin(), f1->ccgf_fields().end());
-    f2_fields.insert(f2);
-    f2_fields.insert(f2->ccgf_fields().begin(), f2->ccgf_fields().end());
-
-    // Check that all fields associated with `f1` are mutually exclusive with
-    // all fields associated with `f2`.
-    for (auto f1_x : f1_fields)
-        for (auto f2_x : f2_fields)
-            if (!mutex(f1_x->id, f2_x->id))
-                return false;
-    return true;
+    return mutex(f1->id, f2->id);
 }
 
 std::set<PHV::Allocation::AvailableSpot>
@@ -2205,46 +2188,6 @@ std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList* list)
         out << *list;
     else
         out << "-null-slice-list-";
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
-    if (fs.field() == nullptr) {
-        out << "-field-slice-of-null-field-ptr-";
-        return out; }
-
-    auto& field = *fs.field();
-    out << field.name << "<" << field.size << ">";
-    if (fs.alignment())
-        out << " ^" << fs.alignment()->littleEndian;
-    if (fs.validContainerRange() != ZeroToMax())
-        out << " ^" << fs.validContainerRange();
-    if (field.bridged) out << " bridge";
-    if (field.metadata) out << " meta";
-    if (field.mirror_field_list.member_field)
-        out << " mirror%{"
-            << field.mirror_field_list.member_field->id
-            << ":" << field.mirror_field_list.member_field->name
-            << "#" << field.mirror_field_list.field_list
-            << "}%";
-    if (field.pov) out << " pov";
-    if (field.deparsed()) out << " deparsed";
-    if (field.no_pack()) out << " no_pack";
-    if (field.no_split()) out << " no_split";
-    if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
-    if (field.deparsed_to_tm()) out << " deparsed_to_tm";
-    if (field.exact_containers()) out << " exact_containers";
-    if (field.privatized()) out << " TPHV-priv";
-    if (field.privatizable()) out << " PHV-priv";
-    out << " [" << fs.range().lo << ":" << fs.range().hi << "]";
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice* fs) {
-    if (fs)
-        out << *fs;
-    else
-        out << "-null-field-slice ";
     return out;
 }
 

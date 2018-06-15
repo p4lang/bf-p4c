@@ -40,9 +40,9 @@ TEST_F(TofinoField, foreach_byte) {
     f->set_exact_containers(true);
 
     // Simple allocation to one container.
-    f->alloc_i = {
+    f->set_alloc({
         // Field MSB-->LSB.
-        PHV::Field::alloc_slice(f, c16, 0, 0, 16) };
+        PHV::Field::alloc_slice(f, c16, 0, 0, 16) });
 
     expected_slices = {
         // Field LSB-->MSB (opposite alloc_i).
@@ -55,9 +55,9 @@ TEST_F(TofinoField, foreach_byte) {
     });
 
     // Simple allocation to one container with limited range.
-    f->alloc_i = {
+    f->set_alloc({
         // Field MSB-->LSB.
-        PHV::Field::alloc_slice(f, c16, 0, 0, 16) };
+        PHV::Field::alloc_slice(f, c16, 0, 0, 16) });
 
     expected_slices = {
         // Field LSB-->MSB (opposite alloc_i).
@@ -70,10 +70,10 @@ TEST_F(TofinoField, foreach_byte) {
     });
 
     // Simple allocation to two containers.
-    f->alloc_i = {
+    f->set_alloc({
         // Field MSB-->LSB.
         PHV::Field::alloc_slice(f, c8, 8, 0, 8),
-        PHV::Field::alloc_slice(f, c16, 0, 0, 8), };
+        PHV::Field::alloc_slice(f, c16, 0, 0, 8), });
 
     expected_slices = {
         // Field LSB-->MSB (opposite alloc_i).
@@ -87,10 +87,10 @@ TEST_F(TofinoField, foreach_byte) {
 
     // Simple allocation to two containers, but the allocation to c16 spans two
     // container bytes.
-    f->alloc_i = {
+    f->set_alloc({
         // Field MSB-->LSB.
         PHV::Field::alloc_slice(f, c8, 8, 0, 8),
-        PHV::Field::alloc_slice(f, c16, 0, 4, 8), };
+        PHV::Field::alloc_slice(f, c16, 0, 4, 8), });
 
     expected_slices = {
         // Field LSB-->MSB (opposite alloc_i).
@@ -104,11 +104,11 @@ TEST_F(TofinoField, foreach_byte) {
     });
 
     // Test a corner case that triggered a bug in foreach_byte on switch_dc_basic.
-    f->alloc_i = {
+    f->set_alloc({
         // Field MSB-->LSB.
         PHV::Field::alloc_slice(f, c8,  11, 0, 5),
         PHV::Field::alloc_slice(f, c8,  10, 7, 1),
-        PHV::Field::alloc_slice(f, c16, 0, 0, 10) };
+        PHV::Field::alloc_slice(f, c16, 0, 0, 10) });
 
     expected_slices = {
         // Field LSB-->MSB (opposite alloc_i).

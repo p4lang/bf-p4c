@@ -182,9 +182,6 @@ FieldInterference::printFieldColorMap(FieldInterference::SliceColorMap& m) const
             } else {
                 ss << " \t \t"; }
             ss << slice;
-            // if (f->is_ccgf())
-            //     ss << " (ccgf, " << f->ccgf_width() << "b) ";
-            // else
             ss << " (" << slice.size() << "b) " << std::endl;
         }
         LOG4(ss.str()); }

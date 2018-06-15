@@ -50,7 +50,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     for (auto& field : phv) {
         if (!uses.is_referenced(&field)) {
             // FIXME(zma) ExternLVal field can be allocated to clot, e.g. csum
-            WARN_CHECK(field.alloc_i.empty() /*&& !clot.clot(&field)*/ ,
+            WARN_CHECK(field.is_unallocated() /*&& !clot.clot(&field)*/ ,
                         "PHV allocation for unreferenced %1%field %2% (width %3%)",
                         field.bridged ? "bridged " : "",
                         cstring::to_cstring(field),
@@ -58,7 +58,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        if (field.privatized() && (field.alloc_i.empty() && !clot.clot(&field))) {
+        if (field.privatized() && (field.is_unallocated() && !clot.clot(&field))) {
             boost::optional<cstring> privatizedFieldName = field.getPHVPrivateFieldName();
             if (!privatizedFieldName)
                 BUG("Did not find PHV name of privatized field %1%", field.name);
@@ -67,12 +67,12 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             throwPrivatizeException = true;
             continue;
         } else {
-            ERROR_CHECK(!field.alloc_i.empty() || clot.clot(&field),
+            ERROR_CHECK(!field.is_unallocated() || clot.clot(&field),
                     "No PHV or CLOT allocation for referenced field %1%",
                     cstring::to_cstring(field));
         }
 
-        ERROR_CHECK(!field.bridged || field.deparsed_i || field.gress == EGRESS,
+        ERROR_CHECK(!field.bridged || field.deparsed() || field.gress == EGRESS,
                     "Ingress field is bridged, but not deparsed: %1%",
                     cstring::to_cstring(field));
 
@@ -82,7 +82,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         bitvec assignedContainers;
         bitvec allocatedBits;
-        for (auto& slice : field.alloc_i) {
+        for (auto& slice : field.get_alloc()) {
             // XXX(seth): For fields which are parsed or deparsed, this can
             // never work, but there are some odd situations in which it could
             // in theory be useful (e.g. we can rotate containers in the MAU in
@@ -124,7 +124,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         // Verify that slices are sorted in descending MSB order.
         int last_msb_idx = -1;
-        for (auto& slice : boost::adaptors::reverse(field.alloc_i)) {
+        for (auto& slice : boost::adaptors::reverse(field.get_alloc())) {
             ERROR_CHECK(last_msb_idx < slice.field_bits().hi,
                 "Field %1% has allocated slices out of order.  Slice %2% is the first out of "
                 "order slice.",
@@ -175,7 +175,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     for (auto& field : phv) {
         if (!uses.is_referenced(&field) || clot.clot(&field)) continue;
         if (!field.deparsed()) continue;
-        for (auto& slice : field.alloc_i) {
+        for (auto& slice : field.get_alloc()) {
             auto this_cid = phvSpec.containerToId(slice.container);
             if (visitedCIDs.count(this_cid)) continue;
 
@@ -309,11 +309,11 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     //   - Fields in digests may only be packed with other fields in the same
     //     digest.
 
-    auto isDeparsed = [](const PHV::Field* f) { return f->deparsed_i; };
+    auto isDeparsed = [](const PHV::Field* f) { return f->deparsed(); };
     auto isMetadata = [](const PHV::Field* f) { return f->metadata || f->pov; };
     auto hasOverlay = [](const PHV::Field* f) {
         le_bitrange allocated;
-        for (auto& slice : f->alloc_i) {
+        for (auto& slice : f->get_alloc()) {
             if (allocated.overlaps(slice.field_bits()))
                 return true;
             allocated |= slice.field_bits(); }
@@ -427,7 +427,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             // overlays the validity bits for each stack field as well as
             // $push and $pop fields.  We can (and in fact should) ignore
             // it when checking for overlapping fields.
-            if (field->header_stack_pov_ccgf())
+            if (field->name.endsWith("$stkvalid"))
                 continue;
 
             for (auto& slice : slicesForField)

@@ -44,8 +44,8 @@ void emit_alloc(std::ostream& out, const PHV::Field::alloc_slice& alloc, PHV::Fi
 }
 
 void emit_phv_field(std::ostream& out, PHV::Field& field) {
-    for (auto& alloc : field.alloc_i)
-        emit_alloc(out, alloc, field);
+    field.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
+        emit_alloc(out, slice, field); });
 }
 
 void PhvAsmOutput::emit_phv_field_info(std::ostream& out, PHV::Field& f) const {
@@ -84,7 +84,7 @@ std::ostream &operator<<(std::ostream &out, const PhvAsmOutput& phvasm) {
             emit_phv_field(out, f); } }
     out << "  " << "context_json:\n";
     for (auto &f : phvasm.phv) {
-        if (f.gress == INGRESS && f.alloc_i.size()) {
+        if (f.gress == INGRESS && !f.is_unallocated()) {
             phvasm.emit_phv_field_info(out, f); } }
 
     out << "phv egress:\n";
@@ -93,7 +93,7 @@ std::ostream &operator<<(std::ostream &out, const PhvAsmOutput& phvasm) {
             emit_phv_field(out, f); } }
     out << "  " << "context_json:\n";
     for (auto &f : phvasm.phv) {
-        if (f.gress == EGRESS && f.alloc_i.size()) {
+        if (f.gress == EGRESS && !f.is_unallocated()) {
             phvasm.emit_phv_field_info(out, f); } }
 
     return out;

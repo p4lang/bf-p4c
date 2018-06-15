@@ -1146,7 +1146,7 @@ IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
 /* This is for adding fields to be allocated in the ixbar allocation scheme.  Used by
    match tables, selectors, and hash distribution */
 void IXBar::field_management(ContByteConversion &map_alloc,
-        safe_vector<PHV::Field::Slice> &field_list_order, const IR::Expression *field,
+        safe_vector<PHV::FieldSlice> &field_list_order, const IR::Expression *field,
         std::map<cstring, bitvec> &fields_needed, cstring name, bool hash_dist, const PhvInfo &phv,
         bool is_atcam, bool partition) {
     const PHV::Field *finfo = nullptr;

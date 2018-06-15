@@ -192,7 +192,7 @@ class EliminateAllButLastWrite : public PassManager {
     const PhvInfo &phv;
 
  public:
-    using LastInstrMap = ordered_map<PHV::Field::Slice, const IR::MAU::Instruction *>;
+    using LastInstrMap = ordered_map<PHV::FieldSlice, const IR::MAU::Instruction *>;
     ordered_map<const IR::MAU::Action *, LastInstrMap> last_instr_per_action_map;
 
  private:

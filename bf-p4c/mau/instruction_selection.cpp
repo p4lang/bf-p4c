@@ -1575,7 +1575,7 @@ bool EliminateAllButLastWrite::Scan::preorder(const IR::MAU::Instruction *instr)
                 act->name);
         return false;
     }
-    PHV::Field::Slice fs(field, bits);
+    PHV::FieldSlice fs(field, bits);
     // Ensures that the last instruction relating to this instruction is marked
     last_instr_map[fs] = instr;
     return false;
@@ -1607,7 +1607,7 @@ const IR::MAU::Instruction *
                 current_af->name);
         return instr;
     }
-    PHV::Field::Slice fs(field, bits);
+    PHV::FieldSlice fs(field, bits);
     BUG_CHECK(last_instr_map.count(fs) != 0, "A write was not found in the inspect pass, but "
               "was found in the update pass");
     // Remove if not the last instruction

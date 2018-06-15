@@ -14,6 +14,8 @@ namespace PHV {
 class Field;
 }  // namespace PHV
 
+class Clustering;
+
 /** @brief Reduce cluster requirements by identifying clusters
  * that can be overlaid with other clusters.
  *
