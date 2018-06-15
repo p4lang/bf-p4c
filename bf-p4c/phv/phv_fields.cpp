@@ -560,6 +560,26 @@ void PHV::Field::updateAlignment(const FieldAlignment& newAlignment) {
                 cstring::to_cstring(*alignment));
 }
 
+void PHV::Field::setStartBits(PHV::Size size, bitvec startPositions) {
+    startBitsByContainerSize_i[size] = startPositions;
+}
+
+bitvec PHV::Field::getStartBits(PHV::Size size) const {
+    if (!startBitsByContainerSize_i.count(size))
+        return bitvec(0, int(size));
+    return startBitsByContainerSize_i.at(size);
+}
+
+void PHV::Field::Slice::setStartBits(PHV::Size size, bitvec startPositions) {
+    startBitsByContainerSize_i[size] = startPositions;
+}
+
+bitvec PHV::Field::Slice::getStartBits(PHV::Size size) const {
+    if (!startBitsByContainerSize_i.count(size))
+        return bitvec(0, int(size));
+    return startBitsByContainerSize_i.at(size);
+}
+
 void PHV::Field::updateValidContainerRange(nw_bitrange newValidRange) {
     LOG3("Inferred valid container range " << newValidRange <<
          " for field " << name);

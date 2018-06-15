@@ -1017,20 +1017,19 @@ bitvec PHV::AlignedCluster::validContainerStart(PHV::Size container_size) const 
     if (!opt_valid_start_range)
         return bitvec();
     auto valid_start_range = *opt_valid_start_range;
+    bitvec rv = bitvec(valid_start_range.lo, valid_start_range.size());
 
-    if (!this->alignment())
-        return bitvec(valid_start_range.lo, valid_start_range.size());
+    for (auto slice : *this)
+        rv &= slice.getStartBits(container_size);
 
-    // account for relative alignment
-    int align_start = valid_start_range.lo;
-    if (align_start % 8 != int(*this->alignment())) {
-        bool next_byte = align_start % 8 > int(*this->alignment());
-        align_start += *this->alignment() + (next_byte ? 8 : 0) - align_start % 8; }
-
-    bitvec rv;
-    while (valid_start_range.contains(align_start)) {
-        rv.setbit(align_start);
-        align_start += 8; }
+    // Account for relative alignment.
+    if (this->alignment()) {
+        bitvec bitInByteStarts;
+        int idx(*this->alignment());
+        while (idx < int(container_size)) {
+            bitInByteStarts.setbit(idx);
+            idx += 8; }
+        rv &= bitInByteStarts; }
 
     return rv;
 }

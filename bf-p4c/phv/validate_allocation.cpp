@@ -503,6 +503,24 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             previousField = field;
             previousFieldOccurrences = fieldOccurrences;
         }
+
+        // Check that nothing is packed in the lower order bits of containers
+        // that hold sources of non-bitwise instructions.
+        std::vector<Slice> slicesInLittleEndianOrder(slices.begin(), slices.end());
+        std::sort(slicesInLittleEndianOrder.begin(), slicesInLittleEndianOrder.end(),
+                  [](const Slice& a, const Slice& b) {
+            return a.container_bits().toOrder<Endian::Little>(a.container.size()).lo
+                 < b.container_bits().toOrder<Endian::Little>(b.container.size()).lo;
+        });
+        bool lowerBitsPacked = false;
+        for (auto slice : slicesInLittleEndianOrder) {
+            for (auto op : slice.field->operations())
+                if (op.range.overlaps(slice.field_bits()) && !op.is_bitwise_op && lowerBitsPacked)
+                    BUG("PHV allocation incorrectly packed other fields in the lower order bits "
+                        "of the same container as %1%, which is the source of a non-bitwise "
+                        "operation: %2%", slice.field->name, op.inst);
+            lowerBitsPacked = true;
+        }
     }
 
     // Check that the allocation respects parser alignment limitations.

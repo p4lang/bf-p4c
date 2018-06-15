@@ -1143,3 +1143,11 @@ p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"
   testdata/p4_16_samples/issue1043-bmv2.p4
 )
+
+# This passes locally but not within the required timeout.  It's due to PHV
+# allocation taking too long/exploring too many paths.
+p4c_add_xfail_reason("tofino"
+  "" # TIMEOUT
+  switch_7.0_dc_basic
+  switch_7.0_l2
+)

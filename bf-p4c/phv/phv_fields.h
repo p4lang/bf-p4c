@@ -5,6 +5,7 @@
 #include <boost/range/irange.hpp>
 #include <limits>
 
+#include "bf-p4c/device.h"
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/tofino_write_context.h"
@@ -64,15 +65,20 @@ enum class FieldKind : unsigned short {
 enum class FieldAccessType { NONE = 0, R = 1, W = 2, RW = 3 };
 
 struct FieldOperation {
-    bool is_move_op;
-    bool is_salu_op;
-    cstring inst_name;
+    bool is_bitwise_op;
+    bool is_salu_inst;
+    const IR::MAU::Instruction *inst;
     FieldAccessType rw_type;
-    boost::optional<le_bitrange> range;  // if only part of the field is involved
-    FieldOperation(bool is_move_op, bool is_salu_op, cstring inst_name, FieldAccessType rw_type,
-                  boost::optional<le_bitrange> range = boost::none)
-        : is_move_op(is_move_op), is_salu_op(is_salu_op),
-          inst_name(inst_name), rw_type(rw_type), range(range) { }
+    le_bitrange range;  // If range.size() == this->size, then the operation is
+                        // over the whole field.
+    FieldOperation(
+        bool is_bitwise_op,
+        bool is_salu_inst,
+        const IR::MAU::Instruction* inst,
+        FieldAccessType rw_type,
+        le_bitrange range)
+        : is_bitwise_op(is_bitwise_op), is_salu_inst(is_salu_inst),
+          inst(inst), rw_type(rw_type), range(range) { }
 };
 
 class Field {
@@ -150,6 +156,14 @@ class Field {
         boost::optional<FieldAlignment> alignment_i = boost::none;
         nw_bitrange validContainerRange_i = ZeroToMax();
 
+        /// Marks the valid starting bit positions (little Endian) for this field.
+        /// Valid bit positions may vary depending on container size.
+
+        // TODO(cole): This is currently only used for SALU operands.  However,
+        // it's general enough to support bit-in-byte alignment requirements
+        // (alignment_i), valid container range requirements, and deparsed_to_tm.
+        std::map<PHV::Size, bitvec> startBitsByContainerSize_i;
+
      public:
         Slice(const Field* field, le_bitrange range) : field_i(field), range_i(range) {
             BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start");
@@ -164,6 +178,14 @@ class Field {
                 alignment_i = FieldAlignment(slice_range);
                 LOG5("Adjusting alignment of field " << field << " to " << *alignment_i <<
                      " for slice " << range); }
+
+            // The valid starting bits (by container size C) for a slice s[Y:X]
+            // equal the valid bits for the field shifted by X mod C.  For example,
+            // if a 12b field f can start at bits 0 and 8 in a 16b container, then
+            // f[11:8] can start at bits 0 and 8.
+            for (auto size : Device::phvSpec().containerSizes())
+                for (auto idx : field->getStartBits(size))
+                    startBitsByContainerSize_i[size].setbit((idx + range.lo) % int(size));
 
             // Calculate valid container range for this slice by shrinking
             // the valid range of the field by the size of the "tail"
@@ -232,6 +254,15 @@ class Field {
 
         /// @returns the bits of the field included in this field slice.
         le_bitrange range() const   { return range_i; }
+
+        /// Sets the valid starting bit positions (little Endian) for this field.
+        /// For example, setStartBits(PHV::Size::b8, bitvec(0,1)) means that the least
+        /// significant bit of this field must start at bit 0 in 8b containers.
+        void setStartBits(PHV::Size size, bitvec startPositions);
+
+        /// @returns the bit positions (little Endian) at which the least significant
+        /// bit of this field may be placed.
+        bitvec getStartBits(PHV::Size size) const;
     };
 
     /// Apply @fn to each byte-sized subslice of the slice @range of @this
@@ -344,6 +375,15 @@ class Field {
     /// Update the alignment requirement for this field. Reports an error if
     /// conflicting requirements render the alignment unsatisfiable.
     void updateAlignment(const FieldAlignment& newAlignment);
+
+    /// Sets the valid starting bit positions (little Endian) for this field.
+    /// For example, setStartBits(PHV::Size::b8, bitvec(0,1)) means that the least
+    /// significant bit of this field must start at bit 0 in 8b containers.
+    void setStartBits(PHV::Size size, bitvec startPositions);
+
+    /// @return the bit positions (little Endian) at which the least significant
+    /// bit of this field may be placed.
+    bitvec getStartBits(PHV::Size size) const;
 
  private:
     /// When set, use this name rather than PHV::Field::name when generating
@@ -486,6 +526,7 @@ class Field {
     //
     // operations on this field
     //
+    const safe_vector<FieldOperation>& operations() const   { return  operations_i; }
     safe_vector<FieldOperation>& operations()               { return  operations_i; }
     //
     // ccgf
@@ -659,6 +700,21 @@ class Field {
                 this->ccgf_width() + extra_valid_bits);
         }
         return validContainerRange_i;
+    }
+
+ private:
+    /// Marks the valid starting bit positions (little Endian) for this field.
+    /// Valid bit positions may vary depending on container size.
+
+    // TODO(cole): This is currently only used for SALU operands.  However,
+    // it's general enough to support bit-in-byte alignment requirements
+    // (alignment_i), valid container range requirements, and deparsed_to_tm.
+    std::map<PHV::Size, bitvec> startBitsByContainerSize_i;
+
+ public:
+    Field() {
+        for (auto size : Device::phvSpec().containerSizes())
+            startBitsByContainerSize_i[size] = bitvec(0, int(size));
     }
 };
 

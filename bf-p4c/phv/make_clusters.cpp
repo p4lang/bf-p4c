@@ -148,8 +148,9 @@ Visitor::profile_t Clustering::MakeAlignedClusters::init_apply(const IR::Node *r
 // but we don't care about those here.)
 bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst) {
     LOG5("Clustering::MakeAlignedClusters: visiting instruction " << inst);
-    if (findContext<IR::MAU::SaluAction>())
-        LOG5("    ...found SALU instruction " << inst);
+    if (findContext<IR::MAU::SaluAction>()) {
+        LOG5("    ...skipping SALU instruction " << inst);
+        return false; }
 
     if (inst->operands.size() == 0) {
         return false; }
@@ -171,16 +172,6 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst)
         // require the source and destination to be aligned.
         bool needs_alignment = src && dst && src->size == dst_range.size() &&
                                              dst->size != dst_range.size();
-
-        // XXX(cole) [Artificial Constraint]: Right now, SALU operands require
-        // bit-in-byte alignment, which we don't yet support.  In the meantime,
-        // require their absolute alignment.  Eventually, better input crossbar
-        // packing + allocating hash table space will allow for arbitrary bit
-        // reswizzling.
-        if (findContext<IR::MAU::SaluAction>()) {
-            LOG5("    ...inducing alignment for set operands of SALU instruction " << inst);
-            needs_alignment = true; }
-
         if (!needs_alignment) {
             LOG5("    ...skipping 'set', because it doesn't induce alignment constraints");
             return false; } }

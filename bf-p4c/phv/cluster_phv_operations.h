@@ -29,8 +29,42 @@ class PhvInfo;
 class PHV_Field_Operations : public Inspector {
  private:
     PhvInfo &phv;
-    bool preorder(const IR::MAU::Instruction *p) override;
-    void end_apply() override;
+
+    /** "Bitwise" operations are ALU instructions that operate independently on
+     * each bit of the source(s) and destination.  For example, a logical AND
+     * operation is bitwise, because dst[i] = src1[i] & src2[i] for each bit i.
+     *
+     * Operands of bitwise instructions can be split across PHV containers,
+     * because bitwise instructions themselves can be split across ALUs.
+     * Operands of non-bitwise instructions, on the other hand, cannot be
+     * split, with the exception of certain arithmetic operations that can be
+     * split across adjacent (even/odd) PHV containers.
+     *
+     * XXX(cole): We don't currently support splitting operands of arithmetic
+     * instructions.
+     *
+     * The following instructions are bitwise.
+     */
+    ordered_set<cstring> bitwise_ops = {
+        "set",
+        "and",
+        "or",
+        "not",
+        "nor",
+        "andca",
+        "andcb",
+        "nand",
+        "orca",
+        "orcb",
+        "xnor"
+        // XXX(cole): "xor" should be on this list, but adding it causes PHV
+        // allocation to fail for some switch profiles.
+        // "xor"
+    };
+
+    void processSaluInst(const IR::MAU::Instruction*);
+    void processInst(const IR::MAU::Instruction*);
+    bool preorder(const IR::MAU::Instruction*) override;
 
  public:
     explicit PHV_Field_Operations(PhvInfo &phv_f) : phv(phv_f) { }
