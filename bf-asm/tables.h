@@ -866,8 +866,13 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
         if (p4_table) return p4_table->get_partition_action_handle();
         return 0; }
     std::string get_partition_field_name() {
-        if (p4_table) return p4_table->get_partition_field_name();
-        return ""; }
+        if (!p4_table) return "";
+        auto name = p4_table->get_partition_field_name();
+        if (auto* p = find_p4_param(name))
+            if (!p->key_name.empty())
+                return p->key_name;
+        return name;
+    }
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",

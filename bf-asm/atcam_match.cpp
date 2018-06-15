@@ -17,8 +17,11 @@ void AlgTcamMatchTable::setup(VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tINT))
                 number_partitions = kv.value.i;
         } else if (kv.key == "partition_field_name") {
-            if (CHECKTYPE(kv.value, tSTR))
+            if (CHECKTYPE(kv.value, tSTR)) {
                 partition_field_name = kv.value.s;
+                if (auto* p = find_p4_param(partition_field_name))
+                    if (!p->key_name.empty())
+                        partition_field_name = p->key_name; }
         } else if (kv.key == "subtrees_per_partition") {
             if (CHECKTYPE(kv.value, tINT))
                 max_subtrees_per_partition = kv.value.i;

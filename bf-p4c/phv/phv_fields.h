@@ -622,6 +622,12 @@ class Field {
         return boost::get_optional_value_or(externalName_i, name);
     }
 
+    /// @returns true if this field as an external name set independently of
+    /// its name.
+    bool hasExternalName() const {
+        return externalName_i != boost::none;
+    }
+
     /// Set the external name of this field, which will be used in place of
     /// PHV::Field::name when generating assembly.
     void setExternalName(cstring name) {
@@ -867,17 +873,19 @@ class PhvInfo {
     explicit PhvInfo(SymBitMatrix& m) : field_mutex(m) {}
 
     const PHV::Field *field(int idx) const {
-        return (size_t)idx < by_id.size() ? by_id.at(idx) : 0;
-    }
+        return size_t(idx) < by_id.size() ? by_id.at(idx) : 0; }
     const PHV::Field *field(const cstring&) const;
     const PHV::Field *field(const IR::Expression *, le_bitrange *bits = 0) const;
     const PHV::Field *field(const IR::Member *, le_bitrange *bits = 0) const;
-    PHV::Field *field(int idx) { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
-    PHV::Field *field(cstring name) { return all_fields.count(name) ? &all_fields.at(name) : 0; }
+    PHV::Field *field(int idx) {
+        return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
+    PHV::Field *field(const cstring& name) {
+        return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(name)); }
     PHV::Field *field(const IR::Expression *e, le_bitrange *bits = 0) {
         return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
     PHV::Field *field(const IR::Member *fr, le_bitrange *bits = 0) {
         return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
+
     safe_vector<PHV::Field::alloc_slice> *alloc(const IR::Member *member);
     const StructInfo struct_info(cstring name) const;
     const StructInfo struct_info(const IR::HeaderRef *hr) const {

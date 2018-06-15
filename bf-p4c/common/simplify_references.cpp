@@ -28,7 +28,7 @@ const IR::Expression *ApplyParamBindings::postorder(IR::PathExpression *pe) {
                 LOG2("binding " << pe << " to " << ref);
                 return ref;
             } else {
-                LOG3("no binding for " << param); }
+                LOG3("no binding for " << param->name); }
         } else if (auto var = decl->to<IR::Declaration_Variable>()) {
             if (auto ref = bindings->get(var)) {
                 LOG3("return existing instance for var " << var->name);
@@ -39,15 +39,20 @@ const IR::Expression *ApplyParamBindings::postorder(IR::PathExpression *pe) {
                 return bindings->get(var);
             }
         } else {
-            LOG3(decl << " is not a parameter"); }
+            LOG4(decl << " is not a parameter"); }
     } else {
         LOG3("nothing in blockMap for " << pe); }
     return pe;
 }
 
 const IR::Expression *ApplyParamBindings::postorder(IR::Member *mem) {
-    if (auto iref = mem->expr->to<IR::InstanceRef>()) {
-        if ((iref = iref->nested.get<IR::InstanceRef>(mem->member))) {
+    if (auto iref = mem->expr->to<IR::V1InstanceRef>()) {
+        if ((iref = iref->nested.get<IR::V1InstanceRef>(mem->member))) {
+            LOG2("collapsing " << mem << " to " << iref);
+            return iref; }
+        LOG3("not collapsing " << mem << " (no nested iref)");
+    } else if (auto iref = mem->expr->to<IR::InstanceRef>()) {
+        if ((iref = iref->nested.get<IR::InstanceRef>(iref->name + "." + mem->member))) {
             LOG2("collapsing " << mem << " to " << iref);
             return iref; }
         LOG3("not collapsing " << mem << " (no nested iref)");
@@ -70,6 +75,7 @@ class SplitComplexInstanceRef : public Transform {
  * We do this as a perorder function so after splitting, we'll recursively visit the split
  * children, splitting further as needed.
  */
+
 const IR::Node *SplitComplexInstanceRef::preorder(IR::MethodCallStatement *mc) {
     if (mc->methodCall->arguments->size() == 0) return mc;
     auto dest = mc->methodCall->arguments->at(0)->expression->to<IR::InstanceRef>();
@@ -232,7 +238,7 @@ SimplifyReferences::SimplifyReferences(ParamBinding* bindings,
                                        P4::TypeMap* typeMap) {
     addPasses({
         new ApplyParamBindings(bindings, refMap),
-        new SplitComplexInstanceRef,
+        new SplitComplexInstanceRef(),
         new RemoveInstanceRef,
         new SimplifyHeaderValidMethods,
         new ConvertIndexToHeaderStackItemRef,

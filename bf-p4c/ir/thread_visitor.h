@@ -11,6 +11,6 @@ class ThreadVisitor : public virtual Visitor {
     friend gress_t VisitingThread(ThreadVisitor *v) { return v->thread; }
 };
 
-extern gress_t VisitingThread(Visitor *v);
+extern gress_t VisitingThread(const Visitor *v);
 
 #endif /* BF_P4C_IR_THREAD_VISITOR_H_ */

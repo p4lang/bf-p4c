@@ -971,12 +971,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_324_tcam_range_11.p4
   )
 
-# BRIG-435
-p4c_add_xfail_reason("tofino"
-  "unexpected reads expression"
-  testdata/p4_16_samples/issue486-bmv2.p4
-  )
-
 # This test is expected to fail (for now) because it includes multiple writes
 # to the same field in the same action.  However, in this case the sources are
 # constants, which could theoretically be merged into one write by the

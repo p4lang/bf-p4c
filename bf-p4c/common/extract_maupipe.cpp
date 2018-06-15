@@ -998,7 +998,9 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
         if (!pkg.second) continue;
         if (!pkg.second->is<IR::PackageBlock>()) continue;
         auto rv = new IR::BFN::Pipe();
-        auto bindings = new ParamBinding(typeMap);
+        auto bindings =
+            new ParamBinding(typeMap,
+                             options.langVersion == CompilerOptions::FrontendVersion::P4_14);
         /// SimplifyReferences passes are fixup passes that modifies the visited IR tree.
         /// Unfortunately, the modifications by simplifyReferences will transform IR tree towards
         /// the backend IR, which means we can no longer run typeCheck pass after applying
@@ -1048,7 +1050,9 @@ void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Option
     toplevel->getMain()->apply(*arch);
 
     auto rv = new IR::BFN::Pipe();
-    auto bindings = new ParamBinding(typeMap);
+    auto bindings =
+        new ParamBinding(typeMap,
+                         options.langVersion == CompilerOptions::FrontendVersion::P4_14);
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
     // ParamBinding pass must be applied to IR::P4Program* node,
     // see comments in param_binding.h for the reason.

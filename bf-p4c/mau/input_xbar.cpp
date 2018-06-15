@@ -1553,7 +1553,7 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
                          tbl->name, false, phv, tbl->layout.atcam, true);
     }
     create_alloc(map_alloc, alloc);
-    BUG_CHECK(alloc.use.size() > 0, "No partition index found");
+    BUG_CHECK(alloc.use.size() > 0, "No partition index found for %1%", tbl);
 
     bool rv = find_alloc(alloc.use, false, alloced, hm_reqs);
     alloc.type = Use::MATCH;

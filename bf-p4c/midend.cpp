@@ -34,6 +34,7 @@
 #include "common/check_header_alignment.h"
 #include "common/flatten_emit_args.h"
 #include "bf-p4c/arch/arch.h"
+#include "bf-p4c/common/normalize_params.h"
 #include "bf-p4c/parde/unroll_parser_counter.h"
 #include "bf-p4c/parde/inline_subparser.h"
 
@@ -233,6 +234,10 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::MoveActionsToTables(&refMap, &typeMap),
         new P4::UniqueNames(&refMap),
         new P4::UniqueParameters(&refMap, &typeMap),
+        new P4::TypeChecking(&refMap, &typeMap, true),
+        evaluator,
+        new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
+        new NormalizeParams(&refMap, &typeMap, toplevel),
         new P4::TypeChecking(&refMap, &typeMap, true),
         new FillFromBlockMap(&refMap, &typeMap),
         new FlattenEmitArgs(),

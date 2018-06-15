@@ -1,4 +1,5 @@
 #include "bf-p4c/common/bridged_metadata_packing.h"
+#include <cstring>
 #include "bf-p4c/lib/pad_alignment.h"
 
 // XXX(Deep): BRIG-333
@@ -49,7 +50,7 @@ bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
     return true;
 }
 
-cstring PackBridgedMetadata::getEgressFieldName(cstring ingressName) {
+cstring PackBridgedMetadata::getEgressFieldName(cstring ingressName) const {
     if (!ingressName.startsWith(INGRESS_FIELD_PREFIX)) {
         BUG("Called getEgressFieldName on ingress fieldname %1%", ingressName);
         return cstring(); }
@@ -57,8 +58,12 @@ cstring PackBridgedMetadata::getEgressFieldName(cstring ingressName) {
     return (EGRESS_FIELD_PREFIX + ingressName.substr(9));
 }
 
-cstring PackBridgedMetadata::getFieldName(const IR::Header* hdr, const IR::StructField* field) {
-    return hdr->name + "." + field->name;
+cstring
+PackBridgedMetadata::getFieldName(const IR::Header* hdr, const IR::StructField* field) const {
+    auto name = hdr->name + "." + field->name;
+    if (auto* fieldInfo = phv.field(name))
+        return fieldInfo->name;
+    return name;
 }
 
 Visitor::profile_t PackBridgedMetadata::init_apply(const IR::Node* root) {
@@ -470,7 +475,7 @@ void ReplaceBridgedMetadataUses::addBridgedFields(const IR::Header* header) {
     unsigned packetIndex = 0;
     if (!header) return;
     for (auto f : header->type->fields) {
-        cstring fieldName = PackBridgedMetadata::getFieldName(header, f);
+        cstring fieldName = pack.getFieldName(header, f);
         LOG3("    Field Name: " << fieldName << " Type: " << f->type << " Offset: " << packetIndex);
         bridgedFields[fieldName] = f->type;
         bridgedOffsets[fieldName] = packetIndex;
@@ -573,9 +578,9 @@ IR::Node* ReplaceBridgedMetadataUses::preorder(IR::BFN::Emit* e) {
     const IR::Expression* source = e->source->field;
     const PHV::Field* f = phv.field(source);
     if (!f) return e;
-    cstring name = cstring(PackBridgedMetadata::INGRESS_FIELD_PREFIX) +
-                   cstring(PackBridgedMetadata::BRIDGED_FIELD_PREFIX);
-    if (f->name.startsWith(name)) {
+    bool isIngress = f->name.startsWith(PackBridgedMetadata::INGRESS_FIELD_PREFIX);
+    bool isBridged = strstr(f->name.c_str(), PackBridgedMetadata::BRIDGED_FIELD_PREFIX);
+    if (isIngress && isBridged) {
         replaceEmit(e);
         return nullptr; }
     return e;
@@ -587,7 +592,7 @@ IR::Node* ReplaceBridgedMetadataUses::postorder(IR::BFN::Deparser* d) {
     unsigned numEmit = 0;
     for (auto it = h->type->fields.rbegin(); it != h->type->fields.rend(); ++it) {
         auto* f = *it;
-        cstring fieldName = PackBridgedMetadata::getFieldName(h, f);
+        cstring fieldName = pack.getFieldName(h, f);
         BUG_CHECK(newEmits.count(fieldName), "New emit corresponding to field name %1% not found",
                 fieldName);
         d->emits.insert(d->emits.begin(), newEmits.at(fieldName)); }
@@ -605,13 +610,13 @@ IR::Node* RemoveUnusedExtracts::preorder(IR::BFN::Extract* e) {
     if (!fieldLVal) return e;
     auto* f = phv.field(fieldLVal->field);
     if (!f) return e;
-    cstring fieldName = cstring(PackBridgedMetadata::EGRESS_FIELD_PREFIX) +
-        cstring(PackBridgedMetadata::BRIDGED_FIELD_PREFIX) + ".";
-    cstring bmIndicator = cstring(PackBridgedMetadata::EGRESS_FIELD_PREFIX) + cstring(BM_INDICATOR);
-    if (f->name != bmIndicator && f->name.startsWith(fieldName)) {
+    bool isEgress = f->name.startsWith(PackBridgedMetadata::EGRESS_FIELD_PREFIX);
+    bool isBridged = strstr(f->name.c_str(), PackBridgedMetadata::BRIDGED_FIELD_PREFIX);
+    cstring bmIndicator = cstring(PackBridgedMetadata::EGRESS_FIELD_PREFIX) +
+                          cstring(BM_INDICATOR);
+    if (f->name != bmIndicator && isEgress && isBridged) {
         LOG4("    Removing extract corresponding to egress version of bridged field: " << f);
-        return nullptr;
-    }
+        return nullptr; }
     return e;
 }
 

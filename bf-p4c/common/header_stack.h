@@ -16,6 +16,7 @@ struct CollectHeaderStackInfo : public Modifier {
     CollectHeaderStackInfo();
 
  private:
+    Visitor::profile_t init_apply(const IR::Node* root) override;
     void postorder(IR::HeaderStack* stack) override;
     void postorder(IR::Primitive* primitive) override;
     void postorder(IR::BFN::Pipe* pipe) override;

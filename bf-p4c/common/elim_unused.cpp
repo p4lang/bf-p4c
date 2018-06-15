@@ -14,11 +14,6 @@ class ElimUnused::Instructions : public Transform {
     bool elim_extract(const IR::BFN::Unit* unit, const IR::Expression* field) {
         if (!self.defuse.getUses(unit, field).empty())
             return false;
-
-        // XXX(cole): We should find a better mechanism rather than overlaying stkvalid.
-        if (strstr(field->toString().c_str(), "$stkvalid"))
-            return false;
-
         return true;
     }
 

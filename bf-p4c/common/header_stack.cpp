@@ -2,11 +2,22 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/phv/phv_fields.h"
 
-CollectHeaderStackInfo::CollectHeaderStackInfo()
-  : stacks(new BFN::HeaderStackInfo) { }
+CollectHeaderStackInfo::CollectHeaderStackInfo() { }
+
+Visitor::profile_t CollectHeaderStackInfo::init_apply(const IR::Node* root) {
+    auto rv = Modifier::init_apply(root);
+    stacks = new BFN::HeaderStackInfo;
+    LOG3("Begin CollectHeaderStackInfo");
+    return rv;
+}
 
 void CollectHeaderStackInfo::postorder(IR::HeaderStack* hs) {
+    if (stacks->info.count(hs->name))
+        return;
+
     auto &i = stacks->info[hs->name];
+    LOG4("Adding header stack " << cstring(hs->name));
+
     i.name = hs->name;
     i.size = hs->size;
     i.maxpush = i.maxpop = 0;
@@ -22,6 +33,7 @@ void CollectHeaderStackInfo::postorder(IR::HeaderStack* hs) {
 
 void CollectHeaderStackInfo::postorder(IR::Primitive* prim) {
     if (prim->name == "push_front" || prim->name == "pop_front") {
+        LOG3("CollectHeaderStackInfo: visiting " << prim);
         BUG_CHECK(prim->operands.size() == 2, "wrong number of operands to %s", prim);
         cstring hsname = prim->operands[0]->toString();
         if (!stacks->info.count(hsname)) {
@@ -32,18 +44,30 @@ void CollectHeaderStackInfo::postorder(IR::Primitive* prim) {
                                                 : stacks->at(hsname).maxpop;
         if (auto count = prim->operands[1]->to<IR::Constant>()) {
             auto countval = count->asInt();
-            if (countval <= 0)
+            if (countval <= 0) {
                 error("%s: %s amount must be > 0", count->srcInfo, prim->name);
-            else if (countval > max)
+            } else if (countval > max) {
                 max = countval;
+                LOG3("CollectHeaderStackInfo: ...setting max to " << max);
+            } else {
+                LOG3("CollectHeaderStackInfo: ...max " << max << " >= " << countval);
+            }
         } else {
-            error("%s: %s amount must be constant", prim->operands[1]->srcInfo, prim->name); } }
+            error("%s: %s amount must be constant", prim->operands[1]->srcInfo, prim->name); }
+        LOG3("CollectHeaderStackInfo: ...maxpush: " << stacks->at(hsname).maxpush);
+        LOG3("CollectHeaderStackInfo: ...maxpop: " << stacks->at(hsname).maxpop);
+    }
 }
 
 void CollectHeaderStackInfo::postorder(IR::BFN::Pipe* pipe) {
     // Store the information we've collected in
     // `IR::BFN::Pipe::headerStackInfo` so other passes can access it.
     pipe->headerStackInfo = stacks;
+    if (LOGGING(3)) {
+        LOG3("CollectHeaderStackInfo: Collected");
+        for (auto kv : stacks->info) {
+            LOG3("  " << kv.first << ": " << kv.second.name <<
+                 " (" << kv.second.maxpush << " / " << kv.second.maxpop <<")"); } }
 }
 
 void ElimUnusedHeaderStackInfo::Find::postorder(const IR::HeaderStack* hs) {

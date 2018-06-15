@@ -94,7 +94,32 @@ class InstanceRef : HeaderRef {
 #noconstructor
     InstanceRef(cstring prefix, ID n, Type t, bool forceMeta = false);
     InstanceRef(ID n, Type t, bool forceMeta = false) : InstanceRef(cstring(), n, t, forceMeta) {}
+    InstanceRef(Type t) : HeaderRef(t) { }
     HeaderOrMetadata baseRef() const override { return obj; }
+    toString { return obj ? obj->name : name; }
+    dbprint { out << toString(); }
+}
+
+/** A normal InstanceRef preserves the instance structure in the name of the
+ * object it constructs, eg. struct.hdr.field becomes three nested
+ * InstanceRefs, with names "struct", "struct.hdr", and "struct.hdr.field".
+ * This preserves the name qualifications and prevents name conflicts.
+ *
+ * These fully-qualified names are also exposed to the control plane in a few
+ * places:
+ *
+ *  - In table match keys, unless a @name annotation removes the qualification.
+ *  - In PHV field names, which impacts digests as well as the snapshot
+ *    mechanism.
+ *
+ * Unfortunately, existing P4_14 control-plane code was written to assume that
+ * all of the prefix up to "hdr.field" would be removed.  For now, we use
+ * V1InstanceRef to preserve that behavior.
+ */
+class V1InstanceRef : InstanceRef {
+#noconstructor
+    V1InstanceRef(cstring prefix, ID n, Type t, bool forceMeta = false);
+    V1InstanceRef(ID n, Type t, bool forceMeta = false) : V1InstanceRef(cstring(), n, t, forceMeta) {}
     toString { return obj ? obj->name : name; }
     dbprint { out << toString(); }
 }

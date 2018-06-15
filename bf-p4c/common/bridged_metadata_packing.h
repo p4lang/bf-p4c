@@ -168,10 +168,10 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
 
     /// @returns the backend name of the field, given the @header and the the @field.
     /// This performs a simple string concatenation.
-    static cstring getFieldName(const IR::Header* hdr, const IR::StructField* field);
+    cstring getFieldName(const IR::Header* hdr, const IR::StructField* field) const;
 
     /// @returns the egress version of a field name when the @ingressName is specified.
-    static cstring getEgressFieldName(cstring ingressName);
+    cstring getEgressFieldName(cstring ingressName) const;
 
     /// @returns the ingress bridged metadata header created by this pass.
     const IR::Header* getIngressBridgedHeader() const {

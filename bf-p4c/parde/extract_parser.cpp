@@ -808,7 +808,7 @@ void ExtractParser::end_apply() {
 /// in the backend though. The compiler should be able to insert placeholder
 /// parser state in the midend instead, and let the backend to insert the
 /// intrinsic metadata extraction logic based on the target device (tofino/jbay).
-ProcessParde::ProcessParde(IR::BFN::Pipe* rv, bool useTna) {
+ProcessParde::ProcessParde(const IR::BFN::Pipe* rv, bool useTna) {
     setName("ProcessParde");
     addPasses({
         // Attempt to resolve header stack ".next" and ".last" members.

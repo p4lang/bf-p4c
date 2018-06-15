@@ -65,9 +65,18 @@ void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU:
         auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
         ERROR_CHECK(pragma_val != nullptr, "%s: Please provide a valid atcam_partition_index "
                     "for table %s", tbl->srcInfo, tbl->name);
-        if (pragma_val)
-            partition_index = pragma_val->value;
-        index_found = true;
+        if (pragma_val) {
+            // The pragma name may not be fully qualified, eg. "bar.f" instead
+            // of the full "foo.bar.f".  PHV::Field objects use fully qualified
+            // names, but `phv.field()` can look up partial names; use that to
+            // look up the Field object using the partial name from the
+            // annotation, so that all name comparisons are done using
+            // fully-qualified names.
+            auto gress = cstring::to_cstring(tbl->gress);
+            auto* partition_index_field = phv.field(gress + "::" + pragma_val->value);
+            if (partition_index_field) {
+                partition_index = partition_index_field->name;
+                index_found = true; } }
     }
 
     if (auto s = annot->getSingle("atcam_number_partitions")) {
@@ -184,7 +193,8 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
              * is consistent.  Should fix PHV alloc to not make such bad allocations */
             bool is_partition = false;
             if (layout.atcam) {
-                if (field->name == partition_index) {
+                auto* partition_index_field = phv.field(partition_index);
+                if (partition_index_field && partition_index_field->name == field->name) {
                     match_multiplier = 0;
                     is_partition = true;
                     partition_found = true;
@@ -685,7 +695,12 @@ bool TableLayout::preorder(IR::MAU::InputXBarRead *read) {
             else
                 partition_index = "egress::" + partition_index;
         }
-        if (phv.field(read->expr)->name == partition_index)
+
+        // Look up the PHV::Field objects to ensure that we compare
+        // fully-qualified names.
+        auto* readInfo = phv.field(read->expr);
+        auto* indexInfo = phv.field(partition_index);
+        if (readInfo && indexInfo && readInfo->name == indexInfo->name)
             read->partition_index = true;
     }
     return false;

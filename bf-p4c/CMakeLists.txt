@@ -108,6 +108,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/live_range_overlay.cpp
   common/metadata_init.cpp
   common/multiple_apply.cpp
+  common/normalize_params.cpp
   common/param_binding.cpp
   common/parser_overlay.cpp
   common/parser_critical_path.cpp
@@ -140,6 +141,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/live_range_overlay.h
   common/metadata_init.h
   common/multiple_apply.h
+  common/normalize_params.h
   common/param_binding.h
   common/parser_graph.h
   common/parser_overlay.h

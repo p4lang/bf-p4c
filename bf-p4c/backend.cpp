@@ -122,6 +122,7 @@ Backend::Backend(const BFN_Options& options) :
     table_alloc(phv.field_mutex) {
     addPasses({
         new DumpPipe("Initial table graph"),
+        new CreateThreadLocalInstances,
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
         new MultipleApply,
@@ -134,9 +135,6 @@ Backend::Backend(const BFN_Options& options) :
 #endif  // HAVE_JBAY
         new CollectPhvInfo(phv),
         &defuse,
-        // only needed to avoid warnings about otherwise unused ingress/egress_port?
-        new CollectPhvInfo(phv),
-        new CreateThreadLocalInstances,
         new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances, but
                                      // cannot be run after InstructionSelection.
         new RemovePushInitialization,
@@ -174,7 +172,8 @@ Backend::Backend(const BFN_Options& options) :
         &defuse,
         new AlpmSetup,
         new CollectPhvInfo(phv),
-        new ValidToStkvalid(phv),   // Alias header stack $valid fields with $stkvalid slices
+        new ValidToStkvalid(phv),   // Alias header stack $valid fields with $stkvalid slices.
+                                    // Must happen before ElimUnused.
         new CollectPhvInfo(phv),
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,

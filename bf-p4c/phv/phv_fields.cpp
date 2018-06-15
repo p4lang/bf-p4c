@@ -3,10 +3,13 @@
 #include <boost/optional.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/range/irange.hpp>
+#include <regex>
 #include <string>
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
+#include "frontends/p4/toP4/toP4.h"
 #include "ir/ir.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
@@ -161,11 +164,45 @@ const PHV::Field *PhvInfo::field(const cstring& name_) const {
         if (auto *rv = getref(all_fields, name))
             return rv; }
 
+    // PHV field names are fully qualified, but we sometimes look up a partial
+    // name when it's unique.  Eg. using "ingress::bar.f" to find
+    // "ingress::foo.bar.f" when there are no other "bar.f" suffixes.  This is
+    // not common; it comes up mostly with aliases, which often use local
+    // names.
+    name = name_;
+    StringRef prefixRef;
+    StringRef suffixRef = name;
+    if (auto* p = name.findstr("::")) {
+        prefixRef = name.before(p);
+        suffixRef = name.after(p + 2); }
+    cstring prefix = prefixRef.toString();
+    cstring suffix = suffixRef.toString();
+
+    LOG4("Looking for PHV field " << name_);
+    LOG4("    ...with prefix " << prefix);
+    LOG4("    ...with suffix " << suffix);
+    std::set<std::pair<cstring, const PHV::Field*>> matches;
+    for (auto& kv : all_fields) {
+        cstring name = kv.first;
+        if (name.endsWith(suffix)) LOG4("    ...found suffix: " << kv.first);
+        if (name.startsWith(prefix) && name.endsWith(suffix))
+            matches.insert(std::make_pair(kv.first, &kv.second)); }
+    if (matches.size() > 1) {
+        std::stringstream msg;
+        for (auto& kv : matches)
+            msg << " " << kv.first;
+        LOG4("Name '" << name_ << "' could refer to:" << msg.str());
+        warning("Name '%1%' could refer to:%2%", name_, msg.str());
+    } else if (matches.size() == 1) {
+        return matches.begin()->second;
+    }
+
     // XXX(seth): The warning spew from POV bits prior to allocatePOV() being
     // called is just too great. We need to improve how that's handled, but for
     // now, silence those warnings.
-    if (!name.toString().endsWith(".$valid"))
-        warning("can't find field '%s'", name);
+    if (!name.toString().endsWith(".$valid")) {
+        LOG4("   ...can't find field " << name);
+        warning("can't find field '%s'", name); }
 
     return nullptr;
 }
@@ -644,64 +681,110 @@ class ClearPhvInfo : public Inspector {
  *
  * Note that this pass also collects field information for alias sources by
  * explicitly visiting the `source` children of AliasMembers and AliasSlices.
+ * In this mode (i.e. when @gress is supplied to the constructor), the internal
+ * data structures are NOT cleared in init_apply.
  */
 class CollectPhvFields : public Inspector {
     PhvInfo& phv;
+
+    // WARNING(cole): CollectPhvFields is usually invoked on an entire IR, not
+    // a subtree, which means that we can get the gress from
+    // VisitingThread(this).  However, AliasMember and AliasSlice nodes have
+    // untraversed pointers to the alias sources, which we need to get PHV info
+    // for, as the allocation of their associated alias destinations will be
+    // copies to the sources in AddAliasAllocation.
+    //
+    // In order to avoid code duplication, CollectPhvFields can be supplied
+    // with a thread.  If present, (a) use this instead of
+    // VisitingThread(this), and (b) don't clear the phv object in init_apply.
+    //
+    // This seems needlessly complex, but I can't think of a better way.
+
+    /// Provided at construction when the visitor is intended to be invoked on
+    /// a subtree, rather than the entire IR.  If not present, the gress is
+    /// acquired from VisitingThread(this), which looks up the gress from the
+    /// enclosing IR::BFN::Pipe.  This never changes after construction.
     boost::optional<gress_t> gress;
 
-    bool preorder(const IR::BFN::Parser*) override {
-        gress = VisitingThread(this);
-        return true;
+    /// Tracks the header/metadata instances that have been added, to avoid
+    /// duplication.
+    ordered_set<cstring> seen;
+
+    /// @returns the input gress (at construction) if provided, or
+    /// VisitingThread(this) if not.
+    gress_t getGress() const {
+        return gress ? *gress : VisitingThread(this);
+    }
+
+    Visitor::profile_t init_apply(const IR::Node* root) override {
+        auto rv = Inspector::init_apply(root);
+
+        // Only clear if this is a new pass, i.e. gress == boost::none.
+        if (!gress) {
+            seen.clear();
+            LOG3("Begin CollectPhvFields");
+        } else {
+            LOG3("Begin CollectPhvFields (recursive)"); }
+
+        return rv;
     }
 
     /// Collect field information for alias sources.
     bool preorder(const IR::BFN::AliasMember* alias) override {
-        alias->source->apply(CollectPhvFields(phv, gress));
+        alias->source->apply(CollectPhvFields(phv, getGress()));
         return true;
     }
 
     /// Collect field information for alias sources.
     bool preorder(const IR::BFN::AliasSlice* alias) override {
-        alias->source->apply(CollectPhvFields(phv, gress));
+        alias->source->apply(CollectPhvFields(phv, getGress()));
         return true;
     }
 
     bool preorder(const IR::Header* h) override {
-        BUG_CHECK(gress, "Trying to collect PHV field info from an IR subtree "
-                  "without supplying a thread");
+        // Skip headers that have already been visited.
+        if (seen.find(h->name) != seen.end()) return false;
+        seen.insert(h->name);
+
         int start = phv.by_id.size();
-        phv.add_hdr(h->name, h->type, *gress, false);
+        phv.add_hdr(h->name.name, h->type, getGress(), false);
         int end = phv.by_id.size();
-        phv.simple_headers.emplace(h->name,
-                                   PhvInfo::StructInfo(false, *gress, start, end - start));
+        phv.simple_headers.emplace(
+            h->name.name,
+            PhvInfo::StructInfo(false, getGress(), start, end - start));
         return false;
     }
 
     bool preorder(const IR::HeaderStack* h) override {
+        // Skip headers that have already been visited.
+        if (seen.find(h->name) != seen.end()) return false;
+        seen.insert(h->name);
+
         if (!h->type) return false;
-        BUG_CHECK(gress, "Trying to collect PHV field info from an IR subtree "
-                  "without supplying a thread");
         char buffer[16];
         int start = phv.by_id.size();
         for (int i = 0; i < h->size; i++) {
             snprintf(buffer, sizeof(buffer), "[%d]", i);
-            phv.add_hdr(h->name + buffer, h->type, *gress, false); }
+            phv.add_hdr(h->name.name + buffer, h->type, getGress(), false); }
         int end = phv.by_id.size();
-        phv.all_structs.emplace(h->name, PhvInfo::StructInfo(false, *gress, start, end - start));
+        LOG3("Adding header stack " << h->name);
+        phv.all_structs.emplace(
+            h->name.name,
+            PhvInfo::StructInfo(false, getGress(), start, end - start));
         return false;
     }
 
     bool preorder(const IR::Metadata* h) override {
-        BUG_CHECK(gress, "Trying to collect PHV field info from an IR subtree "
-                  "without supplying a thread");
-        phv.add_hdr(h->name, h->type, *gress, true);
+        // Skip headers that have already been visited.
+        if (seen.find(h->name) != seen.end()) return false;
+        seen.insert(h->name);
+
+        phv.add_hdr(h->name.name, h->type, getGress(), true);
         return false;
     }
 
     bool preorder(const IR::TempVar* tv) override {
-        BUG_CHECK(gress, "Trying to collect PHV field info from an IR subtree "
-                  "without supplying a thread");
-        phv.addTempVar(tv, *gress);
+        phv.addTempVar(tv, getGress());
 
         // XXX(seth): `^bridged_metadata_indicator` is a special case, because
         // it looks like bridged metadata in the IR, but it *must* be placed in
@@ -948,8 +1031,6 @@ class CollectPardeConstraints : public Inspector {
         // hidden container validity bit and break the program.
         f->set_no_pack(true);
         f->set_read_container_valid_bit(true);
-        LOG1(".....Deparser No-Pack Constraint '" << param->name
-              << "' on field..... " << f);
     }
 
     void postorder(const IR::BFN::Digest* entry) override {
@@ -974,20 +1055,19 @@ class CollectPardeConstraints : public Inspector {
         // the no_pack here.
         f->set_no_pack(true);
         f->set_read_container_valid_bit(true);
-        LOG1(".....Deparser Constraint " << entry->name << " 'digest' on field..... " << f);
 
         if (entry->name == "resubmit") {
-            LOG1("\t resubmit metadata field (" << f << ") is set to be "
+            LOG3("\t resubmit metadata field (" << f << ") is set to be "
                  << "exact container and is_marshaled.");
             for (auto* fieldList : entry->fieldLists) {
-                LOG1("\t.....resubmit metadata field list....." << fieldList);
+                LOG3("\t.....resubmit metadata field list....." << fieldList);
                 for (auto* resubmit_field_expr : fieldList->sources) {
                     PHV::Field* resubmit_field = phv.field(resubmit_field_expr->field);
                     if (resubmit_field) {
                         if (resubmit_field->metadata) {
                             resubmit_field->set_exact_containers(true);
                             resubmit_field->set_is_marshaled(true);
-                            LOG1("\t\t" << resubmit_field);
+                            LOG3("\t\t" << resubmit_field);
                         }
                     } else {
                         BUG("\t\t resubmit field does not exist: %1%",
@@ -1007,27 +1087,27 @@ class CollectPardeConstraints : public Inspector {
                     if (fieldInfo->metadata) {
                         fieldInfo->updateAlignment(
                                 FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
-                        LOG1(fieldInfo << " is marked to be byte_aligned "
+                        LOG3(fieldInfo << " is marked to be byte_aligned "
                              "because it's in a field_list and digested."); } } }
 
-            // Logging...
-            for (auto* fieldList : entry->fieldLists) {
-                LOG1("\t.....learning field list..... ");
-                for (auto* fieldListEntry : fieldList->sources) {
-                    auto* fieldInfo = phv.field(fieldListEntry->field);
-                    if (fieldInfo)
-                        LOG1("\t\t" << fieldInfo);
-                    else
-                        LOG1("\t\t" <<"-f?"); } }
+            if (LOGGING(3)) {
+                for (auto* fieldList : entry->fieldLists) {
+                    LOG3("\t.....learning field list..... ");
+                    for (auto* fieldListEntry : fieldList->sources) {
+                        auto* fieldInfo = phv.field(fieldListEntry->field);
+                        if (fieldInfo)
+                            LOG3("\t\t" << fieldInfo);
+                        else
+                            LOG3("\t\t" <<"-f?"); } } }
             return; }
 
         // For mirror digests, associate the mirror field with its field list,
         // which is used during constraint checks for bridge-metadata phv
         // allocation.
-        LOG1(".....mirror fields in field list " << f->id << ":" << f->name);
+        LOG3(".....mirror fields in field list " << f->id << ":" << f->name);
         int fieldListIndex = 0;
         for (auto* fieldList : entry->fieldLists) {
-            LOG1("\t.....mirror metadata field list....." << fieldList);
+            LOG3("\t.....mirror metadata field list....." << fieldList);
 
             // The first two entries in the field list are both special and may
             // not be split between containers. The first indicates the mirror
@@ -1058,7 +1138,7 @@ class CollectPardeConstraints : public Inspector {
                         mirror->mirror_field_list = {f, fieldListIndex};
                         mirror->set_exact_containers(true);
                         mirror->set_is_marshaled(true);
-                        LOG1("\t\t" << mirror);
+                        LOG3("\t\t" << mirror);
                     }
                 } else {
                     BUG("\t\t mirror field does not exist: %1%", mirroredField->field);
@@ -1165,7 +1245,7 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
         new AllocatePOVBits(phv),
         new CollectPardeConstraints(phv),
         new ComputeFieldAlignments(phv),
-        new MarkTimestampAndVersion(phv)
+        new MarkTimestampAndVersion(phv),
     });
 }
 //

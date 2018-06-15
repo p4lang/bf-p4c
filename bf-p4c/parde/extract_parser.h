@@ -41,7 +41,7 @@ class ExtractParser : public ParserInspector {
 /// for intrinsic metadata, must be applied to IR::BFN::Parser and IR::BFN::Deparser.
 class ProcessParde : public PassManager {
  public:
-    ProcessParde(IR::BFN::Pipe *rv, bool useTna);
+    ProcessParde(const IR::BFN::Pipe *rv, bool useTna);
 };
 
 }  // namespace BFN
