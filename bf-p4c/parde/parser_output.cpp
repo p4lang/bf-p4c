@@ -243,7 +243,7 @@ struct ParserAsmSerializer : public ParserInspector {
 
         if (csum->type == 0 && csum->csum_err)
             out << indent << "dest: " << csum->csum_err << std::endl;
-        else if (csum->type == 1)
+        else if (csum->type == 1 && csum->phv_dest)
             out << indent << "dest: " << csum->phv_dest << std::endl;
         else if (csum->type == 2)
             out << indent << "dest: " << csum->clot_dest << std::endl;

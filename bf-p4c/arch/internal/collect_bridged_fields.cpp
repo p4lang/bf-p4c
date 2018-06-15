@@ -148,12 +148,15 @@ CollectBridgedFields::findTnaContext() const {
         return TnaContext(control->thread, control->tnaParams);
     else if (auto* parser = findContext<IR::BFN::TranslatedP4Parser>())
         return TnaContext(parser->thread, parser->tnaParams);
+    else if (auto* deparser = findContext<IR::BFN::TranslatedP4Deparser>())
+        return TnaContext(deparser->thread, deparser->tnaParams);
     else
         return boost::none;
+    // FIXME(zma) the code above could use better abstraction?
 }
 
 bool CollectBridgedFields::analyzePathlikeExpression(const IR::Expression* expr) {
-    // If we're not inside a TNA parser or control, ignore this expression.
+    // If we're not inside a TNA parser, deparser or control, ignore this expression.
     auto tnaContext = findTnaContext();
     if (!tnaContext) {
         LOG4("[CollectBridgedFields]  no TNA context!");
@@ -254,7 +257,7 @@ bool CollectBridgedFields::preorder(const IR::Annotation* annot) {
 }
 
 bool CollectBridgedFields::preorder(const IR::Member* member) {
-    LOG4("[CollectBridgedFields] visit: " << member);
+    LOG4("[CollectBridgedFields] visit " << member);
     return analyzePathlikeExpression(member);
 }
 
@@ -271,6 +274,13 @@ void CollectBridgedFields::end_apply() {
             if (doNotBridge.count(fieldRef.second)) {
                 LOG1("Not Bridging field: " << fieldName << " marked by pa_do_not_bridge");
             } else {
+                std::string f_name(fieldName.c_str());
+                if (f_name.find("compiler_generated_meta") != std::string::npos
+                    && (f_name.find("mirror_source") != std::string::npos ||
+                        f_name.find("mirror_id") != std::string::npos)) {
+                    continue;
+                }
+
                 LOG1("Bridging field: " << fieldName);
                 fieldsToBridge.emplace(fieldRef);
             }

@@ -67,32 +67,25 @@ createComputedChecksumTestCase(const std::string& computeChecksumSource,
 }
 
 void checkComputedChecksum(const IR::BFN::Pipe* pipe,
-                           const std::vector<cstring>& expected) {
-    for (auto gress : { INGRESS, EGRESS }) {
-        auto actual = pipe->thread[gress].deparser
-                           ->to<IR::BFN::Deparser>()->emits.clone();
+                           const std::vector<cstring>& expected,
+                           gress_t gress = EGRESS) {
+    auto actual = pipe->thread[gress].deparser
+                       ->to<IR::BFN::Deparser>()->emits.clone();
 
-        /// ingress deparser emit additional bridged metadata indicator, which should
-        /// be skipped in checking.
-        if (gress == INGRESS) {
-            actual->erase(actual->begin());
+    for (size_t i = 0; i < expected.size(); ++i) {
+        if (i >= actual->size()) {
+            ADD_FAILURE() << "#" << i << " Missing: " << expected[i] << std::endl;
+            continue;
         }
 
-        for (size_t i = 0; i < expected.size(); ++i) {
-            if (i >= actual->size()) {
-                ADD_FAILURE() << "#" << i << " Missing: " << expected[i] << std::endl;
-                continue;
-            }
-
-            if (expected[i] != cstring::to_cstring(actual->at(i)))
-                ADD_FAILURE() << "#" << i << " Expected: " << expected[i] << std::endl
-                              << "#" << i << " Actual: " << cstring::to_cstring(actual->at(i))
-                              << std::endl;
-        }
-
-        for (auto i = expected.size(); i < actual->size(); ++i)
-            ADD_FAILURE() << "#" << i << " Unexpected: " << expected[i] << std::endl;
+        if (expected[i] != cstring::to_cstring(actual->at(i)))
+            ADD_FAILURE() << "#" << i << " Expected: " << expected[i] << std::endl
+                          << "#" << i << " Actual: " << cstring::to_cstring(actual->at(i))
+                          << std::endl;
     }
+
+    for (auto i = expected.size(); i < actual->size(); ++i)
+        ADD_FAILURE() << "#" << i << " Unexpected: " << expected[i] << std::endl;
 }
 
 }  // namespace
@@ -372,20 +365,6 @@ TEST_F(TofinoComputedChecksum, DISABLED_ErrorUnexpectedStatement) {
                         headers.h1.checksum,
                         HashAlgorithm.csum16);
         headers.h1.field2 = headers.h1.checksum;
-    )"), P4_SOURCE(P4Headers::NONE, R"(
-        packet.emit(headers.h1);
-    )"));
-
-    ASSERT_FALSE(test);
-}
-
-TEST_F(TofinoComputedChecksum, ErrorUnexpectedSource) {
-    auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        update_checksum(true, {
-                        headers.h1.field1,
-                        headers.h1.field3 + 1 },
-                        headers.h1.checksum,
-                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));

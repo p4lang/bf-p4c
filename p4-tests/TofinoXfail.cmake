@@ -122,6 +122,7 @@ if (PTF_REQUIREMENTS_MET)
     04-simple_l3_nexthop
     05-simple_l3_arping
     p4testgen_emulation
+    extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     )
 
   p4c_add_xfail_reason("tofino"

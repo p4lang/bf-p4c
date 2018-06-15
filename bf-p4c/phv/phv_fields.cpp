@@ -515,6 +515,11 @@ bool PHV::Field::is_tphv_candidate(const PhvUse& uses) const {
     // always TPHV candidates.
     if (privatized_i) return true;
     if (alwaysPackable) return false;  // __pad_ fields are not considered as tphv.
+    // TODO(zma) derive these rather than hard-coding the name
+    std::string f_name(name.c_str());
+    if (f_name.find("compiler_generated_meta") != std::string::npos
+     && f_name.find("residual_checksum_") != std::string::npos) {
+        return true; }
     return !uses.is_used_mau(this) && !pov && !metadata && !deparsed_to_tm_i;
 }
 
@@ -727,9 +732,7 @@ class CollectPhvFields : public Inspector {
     bool preorder(const IR::TempVar* tv) override {
         phv.addTempVar(tv, getGress());
 
-        // XXX(seth): `^bridged_metadata_indicator` is a special case, because
-        // it looks like bridged metadata in the IR, but it *must* be placed in
-        // a single 8-bit container so that the egress parser works correctly.
+        // bridged_metadata_indicator must be placed in 8-bit container
         if (tv->name.endsWith("^bridged_metadata_indicator")) {
             PHV::Field* f = phv.field(tv);
             BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
@@ -752,6 +755,18 @@ class CollectPhvFields : public Inspector {
     void postorder(const IR::BFN::LoweredParser*) override {
         BUG("Running CollectPhvInfo after the parser IR has been lowered; "
             "this will produce invalid results.");
+    }
+
+    void end_apply() {
+        for (auto& f : phv) {
+            std::string f_name(f.name.c_str());
+            if (f_name.find("compiler_generated_meta") != std::string::npos
+             && f_name.find("residual_checksum_") != std::string::npos) {
+                f.set_exact_containers(true);
+                f.set_no_pack(true);
+                f.set_no_split(true);
+            }
+        }
     }
 
  public:

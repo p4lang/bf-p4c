@@ -47,7 +47,7 @@ class ElimUnused::Instructions : public Transform {
         return extract;
     }
 
-    const IR::BFN::VerifyChecksum* preorder(IR::BFN::VerifyChecksum* verify) override {
+    const IR::BFN::ChecksumVerify* preorder(IR::BFN::ChecksumVerify* verify) override {
         auto unit = findOrigCtxt<IR::BFN::Unit>();
         if (!unit) return verify;
         if (verify->dest && !self.defuse.getUses(unit, verify->dest->field).empty())

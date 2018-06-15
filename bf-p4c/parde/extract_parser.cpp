@@ -351,7 +351,15 @@ struct RewriteParserStatements : public Transform {
 
  private:
     const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteExtract(Util::SourceInfo srcInfo, const IR::Expression* dest) {
+    rewriteExtract(IR::MethodCallStatement* statement) {
+        auto* call = statement->methodCall;
+
+        BUG_CHECK(call->arguments->size() == 1,
+                  "Wrong number of arguments for method call: %1%", statement);
+
+        Util::SourceInfo srcInfo = statement->srcInfo;
+        auto dest = (*call->arguments)[0]->expression;
+
         auto* hdr = dest->to<IR::HeaderRef>();
         BUG_CHECK(hdr != nullptr,
                   "Extracting something other than a header: %1%", dest);
@@ -408,7 +416,14 @@ struct RewriteParserStatements : public Transform {
     }
 
     const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteAdvance(const IR::Expression* bits) {
+    rewriteAdvance(IR::MethodCallStatement* statement) {
+        auto* call = statement->methodCall;
+
+        auto bits = (*call->arguments)[0]->expression;
+
+        BUG_CHECK(call->arguments->size() == 1,
+                  "Wrong number of arguments for method call: %1%", statement);
+
         if (!bits->is<IR::Constant>()) {
             ::error("Advancing by a non-constant distance is not supported on "
                     "%1%: %2%", Device::currentDevice(), bits);
@@ -427,7 +442,14 @@ struct RewriteParserStatements : public Transform {
     }
 
     const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteChecksumAdd(const IR::Expression* src) {
+    rewriteChecksumAddOrSubtract(const IR::MethodCallExpression* call) {
+        auto* method = call->method->to<IR::Member>();
+        auto* path = method->expr->to<IR::PathExpression>()->path;
+        cstring declName = path->name;
+
+        auto src = (*call->arguments)[0]->expression;
+        bool isAdd = method->member == "add";
+
         auto rv = new IR::Vector<IR::BFN::ParserPrimitive>;
         IR::Vector<IR::Expression> list;
         if (auto member = src->to<IR::Member>()) {
@@ -446,66 +468,83 @@ struct RewriteParserStatements : public Transform {
         for (auto expr : list) {
             auto member = expr->to<IR::Member>();
             BUG_CHECK(member != nullptr,
-                      "Invalid field in the checksum verification field list : %1%",
+                      "Invalid field in the checksum field calculation list : %1%",
                       expr->srcInfo);
             auto hdr = member->expr->to<IR::HeaderRef>();
             BUG_CHECK(hdr != nullptr,
-                      "Invalid field in the checksum verification field list."
+                      "Invalid field in the checksum field calculation list."
                       " Expecting a header field : %1%", member->srcInfo);
             auto hdr_type = hdr->type->to<IR::Type_StructLike>();
             BUG_CHECK(hdr_type != nullptr,
                       "Header type isn't a structlike: %1%", hdr_type);
 
             auto rval = extractedFields.at(member->member);
-            auto* add = new IR::BFN::AddToChecksum(rval);
-            rv->push_back(add);
+            if (isAdd) {
+                auto* add = new IR::BFN::ChecksumAdd(declName, rval);
+                rv->push_back(add);
+            } else {
+                auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval);
+                rv->push_back(subtract);
+            }
         }
         return rv;
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteChecksumVerify(const IR::MethodCallExpression* call) {
+        auto* method = call->method->to<IR::Member>();
+        auto* path = method->expr->to<IR::PathExpression>()->path;
+        cstring declName = path->name;
+
+        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+        rv->push_back(new IR::BFN::ChecksumVerify(declName));
+        return rv;
+    }
+
+    static bool isExtern(const IR::Member* method, cstring externName) {
+        if (auto pe = method->expr->to<IR::PathExpression>()) {
+            if (auto type = pe->type->to<IR::Type_SpecializedCanonical>()) {
+                if (auto baseType = type->baseType->to<IR::Type_Extern>())
+                    if (baseType->name == externName)
+                        return true;
+            } else if (auto type = pe->type->to<IR::Type_Extern>()) {
+                if (type->name == externName)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteChecksumCall(IR::MethodCallStatement* statement) {
+        auto* call = statement->methodCall;
+        auto* method = call->method->to<IR::Member>();
+
+        if (method->member == "add" || method->member == "subtract") {
+            return rewriteChecksumAddOrSubtract(call);
+        } else if (method->member == "verify") {
+            return rewriteChecksumVerify(call);
+        }
+
+        ::error("Unexpected method call in checksum: %1%", method);
+        return nullptr;
     }
 
     const IR::Vector<IR::BFN::ParserPrimitive>*
     preorder(IR::MethodCallStatement* statement) override {
         auto* call = statement->methodCall;
         auto* method = call->method->to<IR::Member>();
-        BUG_CHECK(method != nullptr, "Invalid method call: %1%", statement);
 
-        if (method->member == "extract") {
-            BUG_CHECK(call->arguments->size() == 1,
-                      "Wrong number of arguments for method call: %1%", statement);
-            return rewriteExtract(statement->srcInfo, (*call->arguments)[0]->expression);
-        }
-
-        if (method->member == "advance") {
-            BUG_CHECK(call->arguments->size() == 1,
-                      "Wrong number of arguments for method call: %1%", statement);
-            return rewriteAdvance((*call->arguments)[0]->expression);
-        }
-
-        if (method->member == "set") {
-            WARNING("packet priority set is not yet implemented");
-            return nullptr;
-        }
-
-        if (method->member == "increment" || method->member == "decrement") {
-            WARNING("parser counter is not yet implemented");
-            return nullptr;
-        }
-
-        if (method->member == "add") {
-            BUG_CHECK(call->arguments->size() == 1,
-                      "Wrong number of arguments for method call: %1%", statement);
-            return rewriteChecksumAdd((*call->arguments)[0]->expression);
-        }
-
-        if (method->member == "remove") {
-            WARNING("checksum.remove is not yet implemented");
-            return nullptr;
-        }
-
-        if (method->member == "verify") {
-            auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
-            rv->push_back(new IR::BFN::VerifyChecksum());
-            return rv;
+        if (isExtern(method, "Checksum")) {
+            return rewriteChecksumCall(statement);
+        } else if (isExtern(method, "ParserCounter")) {
+            return nullptr;  // TODO
+        } else if (isExtern(method, "ParserPriority")) {
+            return nullptr;  // TODO
+        } else if (method->member == "extract") {
+            return rewriteExtract(statement);
+        } else if (method->member == "advance") {
+            return rewriteAdvance(statement);
         }
 
         ::error("Unexpected method call in parser: %1%", statement->toString());
@@ -534,19 +573,29 @@ struct RewriteParserStatements : public Transform {
             rhs = rhs->to<IR::Cast>()->expr;
 
         if (auto mc = rhs->to<IR::MethodCallExpression>()) {
-            auto* method = mc->method->to<IR::Member>();
-            if (method && method->member == "verify") {
-                auto verify = new IR::BFN::VerifyChecksum();
-                if (auto mem = s->left->to<IR::Member>())
-                    verify->dest = new IR::BFN::FieldLVal(mem);
-                else if (auto sl = s->left->to<IR::Slice>())
-                    verify->dest = new IR::BFN::FieldLVal(sl);
-                return verify;
+            if (auto* method = mc->method->to<IR::Member>()) {
+                if (isExtern(method, "Checksum")) {
+                    auto* path = method->expr->to<IR::PathExpression>()->path;
+                    cstring declName = path->name;
+
+                    if (method->member == "verify") {
+                        auto verify = new IR::BFN::ChecksumVerify(declName);
+                        if (auto mem = s->left->to<IR::Member>())
+                            verify->dest = new IR::BFN::FieldLVal(mem);
+                        else if (auto sl = s->left->to<IR::Slice>())
+                            verify->dest = new IR::BFN::FieldLVal(sl);
+                        return verify;
+                    } else if (method->member == "get") {
+                        auto mem = s->left->to<IR::Member>();
+                        auto get = new IR::BFN::ChecksumGet(declName, new IR::BFN::FieldLVal(mem));
+                        return get;
+                    }
+                }
             }
         }
 
         if (auto mem = s->left->to<IR::Member>()) {
-            if (mem->member == "ingress_parser_err"|| mem->member == "egress_parser_err")
+            if (mem->member == "ingress_parser_err" || mem->member == "egress_parser_err")
                 return nullptr;
         }
 

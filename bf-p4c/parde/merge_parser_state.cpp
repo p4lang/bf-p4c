@@ -122,7 +122,7 @@ class ComputeMergeableState : public ParserInspector {
             for (const auto* stmt : st->statements) {
                 if (auto* extract = stmt->to<IR::BFN::Extract>()) {
                     extractions.push_back(rightShiftSource(extract, shifted));
-                } else if (auto* add_checksum = stmt->to<IR::BFN::AddToChecksum>()) {
+                } else if (auto* add_checksum = stmt->to<IR::BFN::ChecksumAdd>()) {
                     extractions.push_back(rightShiftSource(add_checksum, shifted));
                 } else {
                     extractions.push_back(stmt);
@@ -138,7 +138,7 @@ class ComputeMergeableState : public ParserInspector {
         for (const auto* stmt : tail->statements) {
             if (auto* extract = stmt->to<IR::BFN::Extract>()) {
                 extractions.push_back(rightShiftSource(extract, shifted));
-            } else if (auto* add_checksum = stmt->to<IR::BFN::AddToChecksum>()) {
+            } else if (auto* add_checksum = stmt->to<IR::BFN::ChecksumAdd>()) {
                 extractions.push_back(rightShiftSource(add_checksum, shifted));
             } else {
                 extractions.push_back(stmt); }

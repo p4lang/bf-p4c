@@ -230,18 +230,45 @@ class SaveToRegister {
     MatchRegister dest;
 };
 
-class VerifyChecksum : ParserPrimitive {
+abstract ParserChecksumPrimitive : ParserPrimitive {
+
+    cstring declName;
+
+}
+
+class ChecksumVerify : ParserChecksumPrimitive {
 
     dbprint { out << "verify checksum"; }
 
     optional NullOK FieldLVal dest;
 }
 
-class AddToChecksum : ParserPrimitive {
+class ChecksumUpdate : ParserChecksumPrimitive {
+
+    dbprint { out << "update checksum"; }
+
+    FieldLVal dest;
+}
+
+class ChecksumGet : ParserChecksumPrimitive {
+
+    dbprint { out << "get checksum"; }
+
+    FieldLVal dest;
+}
+
+class ChecksumAdd : ParserChecksumPrimitive {
 
     dbprint { out << "add " << source << " to checksum"; }
 
-    ParserRVal source;
+    PacketRVal source;
+}
+
+class ChecksumSubtract : ParserChecksumPrimitive {
+
+    dbprint { out << "subtract " << source << " from checksum"; }
+
+    PacketRVal source;
 }
 
 abstract ParserMatchValue { }

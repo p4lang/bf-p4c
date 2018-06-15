@@ -23,12 +23,6 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
     if (!member || member->member != "update")
         return false;
 
-    if (methodCall->arguments->size() != 1) {
-        ::error("Residual checksum is not implemented for checksum update: %1%",
-                methodCall);
-        return false;
-    }
-
     if (!destField || !destField->expr->is<IR::HeaderRef>()) {
         ::error("Destination of checksum calculation must be a header field: %1%",
                 destField);
@@ -52,10 +46,13 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
 
     for (auto* source : sourceList->components) {
         LOG2("Checksum would include field: " << source);
-        auto* member = source->to<IR::Member>();
-        if (!member || !member->expr->is<IR::HeaderRef>()) {
-            ::error("Invalid field in the checksum calculation field list: %1%", source);
-            return false;
+        if (auto* member = source->to<IR::Member>()) {
+            if (!member->expr->is<IR::HeaderRef>()) {
+                ::error("Invalid field in the checksum calculation field list: %1%", source);
+                return false;
+            }
+        } else if (source->is<IR::Constant>()) {
+            // TODO can constant be any bit width? signed?
         }
     }
 
@@ -90,9 +87,15 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
 
     auto* sources = new ChecksumSources;
     for (auto* source : sourceList->components) {
-        LOG2("Checksum would include field: " << source);
-        auto* member = source->to<IR::Member>();
-        sources->push_back(new IR::BFN::FieldLVal(member));
+        if (auto* member = source->to<IR::Member>()) {
+            LOG2("Checksum would include field: " << source);
+            sources->push_back(new IR::BFN::FieldLVal(member));
+        } else if (auto* constant = source->to<IR::Constant>()) {
+            if (constant->asInt() != 0) {
+                ::error("Non-zero constant entry in checksum calculation"
+                        " not implemented yet: %1%", source);
+            }
+        }
     }
 
     LOG2("Validated computed checksum for field: " << destField);
@@ -142,8 +145,7 @@ analyzeUpdateChecksumStatement(const IR::IfStatement* ifStatement) {
  * checksum to the list of source fields that the checksum is computed from.
  *
  */
-ChecksumSourceMap findUpdateChecksumsNative(/*const IR::P4Control* control*/
-                                      const IR::IndexedVector<IR::StatOrDecl>& stmts) {
+ChecksumSourceMap findUpdateChecksumsNative(const IR::IndexedVector<IR::StatOrDecl>& stmts) {
     ChecksumSourceMap checksums;
 
     for (auto *statement : stmts) {
@@ -191,8 +193,8 @@ struct SubstituteUpdateChecksums : public Transform {
     const ChecksumSourceMap& checksums;
 };
 
-struct SubStub : public Transform {
-    explicit SubStub(const ChecksumSourceMap& checksums)
+struct SubstituteExternLVal : public Transform {
+    explicit SubstituteExternLVal(const ChecksumSourceMap& checksums)
         : checksums(checksums) { }
 
     IR::BFN::ParserPrimitive* preorder(IR::BFN::Extract* extract) override {
@@ -218,7 +220,7 @@ namespace BFN {
 /// This function extracts checksum from the translated tofino.p4 checksum extern.
 /// Error checking should be done during the translation, not in this function.
 IR::BFN::Pipe*
-extractChecksumFromDeparser(const IR::P4Control* deparser, IR::BFN::Pipe* pipe) {
+extractChecksumFromDeparser(const IR::BFN::TranslatedP4Deparser* deparser, IR::BFN::Pipe* pipe) {
     CHECK_NULL(pipe);
     if (!deparser) return pipe;
 
@@ -226,11 +228,11 @@ extractChecksumFromDeparser(const IR::P4Control* deparser, IR::BFN::Pipe* pipe) 
     if (checksums.empty()) return pipe;
 
     SubstituteUpdateChecksums substituteChecksums(checksums);
-    SubStub subStub(checksums);
-    for (auto gress : { INGRESS, EGRESS }) {
-        pipe->thread[gress].deparser = pipe->thread[gress].deparser->apply(substituteChecksums);
-        pipe->thread[gress].parser = pipe->thread[gress].parser->apply(subStub);
-    }
+    SubstituteExternLVal substituteExternLVal(checksums);
+
+    auto gress = deparser->thread;
+    pipe->thread[gress].deparser = pipe->thread[gress].deparser->apply(substituteChecksums);
+    pipe->thread[gress].parser = pipe->thread[gress].parser->apply(substituteExternLVal);
 
     return pipe;
 }

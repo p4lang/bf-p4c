@@ -263,6 +263,7 @@ build_unified(BF_P4C_BACKEND_PARDE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_PARDE_HDRS
   parde/add_parde_metadata.h
+  parde/allocate_parser_checksum.h
   parde/adjust_extract.h
   parde/asm_output.h
   parde/checksum.h

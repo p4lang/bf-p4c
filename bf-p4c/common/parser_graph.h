@@ -115,6 +115,25 @@ class ParserGraph : public DirectedGraph {
         return _preds;
     }
 
+    /// Is "src" an ancestor of "dst"?
+    bool is_ancestor(const IR::BFN::ParserState* src, const IR::BFN::ParserState* dst) const {
+        if (src == dst)
+            return false;
+
+        if (!predecessors().count(dst))
+            return false;
+
+        if (predecessors().at(dst).count(src))
+            return true;
+
+        /// DANGER -- this assumes parser graph is a unrolled DAG
+        for (auto p : predecessors().at(dst))
+            if (is_ancestor(src, p))
+                return true;
+
+        return false;
+    }
+
     std::vector<const IR::BFN::ParserState*> topological_sort() const {
         std::vector<int> result = DirectedGraph::topological_sort();
         std::vector<const IR::BFN::ParserState*> mapped_result;
@@ -192,8 +211,9 @@ class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector 
     Visitor::profile_t init_apply(const IR::Node* root) override {
         auto rv = Inspector::init_apply(root);
 
-        for (auto m : _mutex)
-            clear_mutex(m.second);
+        _graphs.clear();
+        _mutex.clear();
+        _state_to_parser.clear();
 
         return rv;
     }

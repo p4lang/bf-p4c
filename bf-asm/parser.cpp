@@ -364,10 +364,10 @@ void Parser::Checksum::pass1(Parser *parser) {
             error(dest.lineno, "checksum verification destination must be single bit");
         else dst_bit_hdr_end_pos = dest->lo;
 #if HAVE_JBAY
-        if (options.target == JBAY && dest->reg.deparser_id() % 2)
+        if (options.target == JBAY && dest->reg.size == 8 && dest->reg.deparser_id() % 2)
             dst_bit_hdr_end_pos += 8;
 #endif // HAVE_JBAY
-    } else if (type == 1 && dest.size() != dest->reg.size) {
+    } else if (type == 1 && dest && dest.size() != dest->reg.size) {
         error(dest.lineno, "residual checksum must write whole container"); }
 }
 void Parser::Checksum::pass2(Parser *parser) {
