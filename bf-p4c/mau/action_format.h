@@ -250,6 +250,8 @@ struct ActionFormat {
         int gen_index() const {
             return ceil_log2(slot_size / 8);
         }
+
+        void shift_up(int shift_bits);
         bool deletable = false;
 
         int byte_start = -1;
@@ -514,6 +516,7 @@ struct ActionFormat {
     void optimize_sharing();
     void condense_action_data(SingleActionSlotPlacement &info);
     void set_slot_bits(SingleActionSlotPlacement &info);
+    void pack_slot_bits(SingleActionSlotPlacement &info);
 
     void create_placement_non_phv(ActionAnalysis::FieldActionsMap &field_actions_map,
                                   cstring action_name);

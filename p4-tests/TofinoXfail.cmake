@@ -125,13 +125,6 @@ if (PTF_REQUIREMENTS_MET)
     )
 
   p4c_add_xfail_reason("tofino"
-    "AssertionError: A packet was received on device"
-    smoketest_switch_ent_dc_general_L2DynamicMacLearnTest
-    smoketest_switch_ent_dc_general_L2LagFloodTest
-    smoketest_switch_ent_dc_general_L2VxlanUnicastLagBasicTest
-    )
-
-  p4c_add_xfail_reason("tofino"
     "AssertionError: False is not true"
     smoketest_switch_ent_dc_general_L3IPv4EcmpSeedTest
     )
@@ -329,7 +322,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_7.0_l2
   switch_msdc_l3
-  switch_7.0_ent_dc_general
   )
 
 # BRIG-113

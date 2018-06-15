@@ -722,6 +722,7 @@ void ActionFormat::optimize_sharing() {
     for (auto &single_action : init_slot_format) {
         condense_action_data(single_action.second);
         set_slot_bits(single_action.second);
+        pack_slot_bits(single_action.second);
     }
 }
 
@@ -824,6 +825,64 @@ void ActionFormat::set_slot_bits(SingleActionSlotPlacement &info) {
                 ad_alu->set_slot_bits(*most_const);
             }
             sap.total_range |= ad_alu->slot_bits;
+        }
+    }
+}
+
+void ActionFormat::ActionDataFormatSlot::shift_up(int shift_bits) {
+    for (auto &ad_alu : action_data_alus) {
+        for (auto &arg_loc : ad_alu->arg_locs) {
+            arg_loc.slot_loc <<= shift_bits;
+        }
+        ad_alu->slot_bits <<= shift_bits;
+    }
+    total_range <<= shift_bits;
+}
+
+/** If two action data parameters are only used in move operations, and do not require
+ *  isolation, then can be packed within the same slot on the RAM line.  This currently will
+ *  only pack data that is in the same sized slot, as the algorithm requires each action data
+ *  slot size to be packed separately.
+ *
+ *  The whole action data packing could really use either a SAT solving approach or an
+ *  approach like PHV in order to really tightly pack information in
+ */
+void ActionFormat::pack_slot_bits(SingleActionSlotPlacement &info) {
+    for (size_t i = 0; i < info.size(); i++) {
+        for (size_t j = 0; j < info.size(); j++) {
+            if (i == j) continue;
+            auto &orig_sap = info[i];
+            auto &comp_sap = info[j];
+            if (orig_sap.global_constraints != 0 || orig_sap.specialities != 0)
+                break;
+            if (comp_sap.global_constraints != 0 || comp_sap.specialities != 0)
+                continue;
+            if (comp_sap.deletable) continue;
+            if (orig_sap.slot_size != comp_sap.slot_size)
+                continue;
+
+            int orig_sap_max = orig_sap.total_range.max().index() + 1;
+            int comp_sap_max = comp_sap.total_range.max().index() + 1;
+
+            if (orig_sap_max + comp_sap_max > orig_sap.slot_size)
+                continue;
+
+            orig_sap.shift_up(comp_sap_max);
+            comp_sap.action_data_alus.insert(comp_sap.action_data_alus.end(),
+                                             orig_sap.action_data_alus.begin(),
+                                             orig_sap.action_data_alus.end());
+            comp_sap.total_range |= orig_sap.total_range;
+            orig_sap.deletable = true;
+            break;
+        }
+    }
+
+    auto it = info.begin();
+    while (it != info.end()) {
+        if (it->deletable) {
+            it = info.erase(it);
+        } else {
+            it++;
         }
     }
 }

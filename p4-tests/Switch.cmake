@@ -445,15 +445,10 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_7"
 	switch_tests.L2StpTest
 	switch_tests.L3VIIPv4LagTest
 	switch_tests.L3IPv4HostModifyTest
+        switch_tests.L2DynamicMacLearnTest
+        switch_tests.L2LagFloodTest
+        switch_tests.L2VxlanUnicastLagBasicTest
 	switch_tests.L3VIIPv4HostTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_L2LagFloodTest" ${SWITCH_P4}
-        "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_L2LagFloodTest"
-	"switch_tests.L2LagFloodTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_L2DynamicMacLearnTest" ${SWITCH_P4}
-        "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_L2DynamicMacLearnTest"
-	"switch_tests.L2DynamicMacLearnTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_L3VxlanUnicastTunnelECMPLagReflectionSMTest" ${SWITCH_P4}
         "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_L3VxlanUnicastTunnelECMPLagReflectionSMTest"
@@ -470,10 +465,6 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_L2VxlanU
         "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_L2VxlanUnicastBasicTest"
         "switch_tests.L2VxlanUnicastBasicTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_L2VxlanUnicastLagBasicTest" ${SWITCH_P4}
-        "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_L2VxlanUnicastLagBasicTest"
-        "switch_tests.L2VxlanUnicastLagBasicTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_L2VxlanArpUnicastBasicTest" ${SWITCH_P4}
         "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_L2VxlanArpUnicastBasicTest"
