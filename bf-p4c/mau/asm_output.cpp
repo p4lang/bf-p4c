@@ -1962,7 +1962,7 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
                 annName = newAnnName; }
 
             out << ", key_name: \"" << canon_name(annName) << "\"";
-            LOG1(ann << ": setting external annName of key " << ixbar_read
+            LOG3(ann << ": setting external annName of key " << ixbar_read
                  << " to " << annName); }
 
         out << " }" << std::endl;

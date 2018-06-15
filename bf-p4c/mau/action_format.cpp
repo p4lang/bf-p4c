@@ -394,7 +394,7 @@ safe_vector<int> ActionFormat::Use::find_hash_dist(const IR::MAU::HashDist *hd,
     // dist slots together.  Once the allocation is more fine-grained, this will have to change.
     for (auto &placement : hd_vec) {
         auto &arg_loc = placement.arg_locs[0];
-        all_hash_dist_bv |= arg_loc.slot_loc;
+        all_hash_dist_bv |= arg_loc.slot_loc << (placement.start * 8);
         bitvec arg_loc_bv(arg_loc.field_bit, arg_loc.width());
         if ((arg_loc_bv & field_bv) == arg_loc_bv) {
             BUG_CHECK(!found, "Hash distribution splitting too complicated");
@@ -429,8 +429,8 @@ safe_vector<int> ActionFormat::Use::find_hash_dist(const IR::MAU::HashDist *hd,
         hash_hi = hash_dist_bv.max().index() % mod_value;
     } else {
         // Slot granularity needed for action data bus output
-        hash_lo = (hash_dist_bv.min().index() / alu_size) * alu_size;
-        hash_hi = hash_lo + alu_size - 1;
+        hash_lo = ((hash_dist_bv.min().index() / alu_size) * alu_size) % mod_value;
+        hash_hi = (hash_lo + alu_size - 1) % mod_value;
     }
     hash_dist_range = { hash_lo, hash_hi };
 
