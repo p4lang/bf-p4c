@@ -1163,8 +1163,9 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
         if (lt != 0) {
             tbl->gateway_rows.clear();
         }
+        int entries = placed->use.preferred()->partition_sizes[lt] * Memories::SRAM_DEPTH;
         table_set_resources(table_part, placed->resources->clone_atcam(tbl, lt, suffix),
-                            0);  // table_part->ways[0].entries);
+                            entries);  // table_part->ways[0].entries);
         if (!rv) {
             rv = table_part;
             assert(!prev);

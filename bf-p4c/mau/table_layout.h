@@ -96,7 +96,7 @@ class TableLayout : public MauModifier, Backtrack {
     static constexpr int MIN_PACK = 1;
     static constexpr int MAX_PACK = 9;
     // FIXME: Technically this is 5, but need to update version bit information
-    static constexpr int MAX_ENTRIES_PER_ROW = 4;
+    static constexpr int MAX_ENTRIES_PER_ROW = 5;
 
     const PhvInfo &phv;
     LayoutChoices &lc;

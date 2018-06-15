@@ -680,6 +680,22 @@ bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &
         }
     }
 
+    // Pick any available byte
+    for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
+        bitvec version_bits(0, VERSION_BITS);
+        int initial_byte = (width_sect * SINGLE_RAM_BYTES) + i;
+        if (match_byte_use.getbit(initial_byte) || byte_attempt.getbit(initial_byte))
+            continue;
+        auto use_slice = total_use.getslice(initial_byte * 8, 8);
+        use_slice |= bit_attempt.getslice(initial_byte * 8, 8);
+        if (!(use_slice & version_bits).empty())
+            continue;
+        version_loc = version_bits << (initial_byte * 8);
+        bit_attempt |= version_loc;
+        byte_attempt.setbit(initial_byte);
+        return true;
+    }
+
     return false;
 }
 
