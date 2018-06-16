@@ -587,6 +587,7 @@ IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container 
  */
 IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container container,
          ActionAnalysis::ContainerAction &cont_action) {
+    LOG1("Build merge instruction " << cont_action << " " << cont_action.error_code);
     if (cont_action.is_shift()) {
         unsigned error_mask = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE;
         BUG_CHECK((cont_action.error_code & error_mask) != 0,
@@ -668,7 +669,6 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         }
     }
 
-    BUG_CHECK(src1 != nullptr, "No src1 in a merged instruction");
     auto *dst_mo = new IR::MAU::MultiOperand(components, container.toString(), true);
     fill_out_write_multi_operand(cont_action, dst_mo);
     dst = dst_mo;
@@ -685,7 +685,10 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
 
     IR::MAU::Instruction *merged_instr = new IR::MAU::Instruction(instr_name);
     merged_instr->operands.push_back(dst);
-    merged_instr->operands.push_back(src1);
+    if (!cont_action.no_sources()) {
+        BUG_CHECK(src1 != nullptr, "No src1 in a merged instruction");
+        merged_instr->operands.push_back(src1);
+    }
     if (src2)
         merged_instr->operands.push_back(src2);
     // Currently bitmasked-set requires at least 2 source operands, or it crashes

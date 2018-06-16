@@ -260,6 +260,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return adi.field_affects > 1 || unresolved_ad();
         }
 
+        bool no_sources() const {
+            return name == "invalidate";
+        }
+
         void set_mismatch(ActionParam::type_t type) {
             if (type == ActionParam::PHV)
                 error_code |= READ_PHV_MISMATCH;
