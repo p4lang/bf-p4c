@@ -126,11 +126,6 @@ if (PTF_REQUIREMENTS_MET)
     )
 
   p4c_add_xfail_reason("tofino"
-    "AssertionError: False is not true"
-    smoketest_switch_ent_dc_general_L3IPv4EcmpSeedTest
-    )
-
-  p4c_add_xfail_reason("tofino"
     ".*InvalidSnapshotOperation.*"
     smoketest_programs_alpm_test_TestSnapshot
     )
@@ -321,8 +316,21 @@ p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-  switch_7.0_l2
   switch_msdc_l3
+  )
+
+p4c_add_xfail_reason("tofino"
+  "not allocated contiguously by bit on the input xbar and cannot be resolved."
+  switch_8.2_ent_fin_postcard
+  switch_8.2_msdc_spine_int
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: checksum unit cannot write to 32-bit container"
+  switch_8.2_msdc
+  switch_8.2_ent_dc_general
+  switch_8.2_msdc_ipv4
+  switch_8.2_msdc_l3
   )
 
 # BRIG-113
@@ -999,9 +1007,11 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
-  switch_7.0_dc_basic
-  switch_7.0_l2
   smoketest_programs_netcache
+  switch_8.2_dc_basic
+  switch_8.2_msdc_leaf_int
+  switch_8.2_msdc_l3_heavy_int_leaf
+  switch_8.2_msdc_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1129,12 +1139,4 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"
   testdata/p4_16_samples/issue1043-bmv2.p4
-)
-
-# This passes locally but not within the required timeout.  It's due to PHV
-# allocation taking too long/exploring too many paths.
-p4c_add_xfail_reason("tofino"
-  "" # TIMEOUT
-  switch_7.0_dc_basic
-  switch_7.0_l2
 )
