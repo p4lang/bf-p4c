@@ -33,12 +33,7 @@ typedef error ParserError_t;
 /// Meter
 enum MeterType_t { PACKETS, BYTES }
 
-//TODO(msharif): Use serializable enum when it's supported by the compiler
-// See https://github.com/p4lang/p4-spec/issues/611
-typedef bit<2> MeterColor_t;
-const MeterColor_t METER_COLOR_GREEN = 0b00;
-const MeterColor_t METER_COLOR_YELLOW = 0b01;
-const MeterColor_t METER_COLOR_RED = 0b11;
+enum MeterColor_t { GREEN, YELLOW, RED }
 
 /// Counter
 enum CounterType_t {
@@ -127,7 +122,8 @@ struct ingress_intrinsic_metadata_for_tm_t {
 
     bool copy_to_cpu;                   // Request for copy to cpu.
 
-    MeterColor_t packet_color;          // Packet color (G,Y,R) that is
+    // XXX(hanw): cannot use MeterColor_t until serializable enum is supported.
+    bit<2> packet_color;                // Packet color (G,Y,R) that is
                                         // typically derived from meters and
                                         // used for color-based tail dropping.
 
@@ -323,6 +319,16 @@ struct egress_intrinsic_metadata_for_output_port_t {
 // A triggered event may generate programmable number of batches with
 // programmable number of packets per batch.
 
+header pktgen_generic_header_t {
+    bit<3> _pad0;
+    bit<3> app_id;
+    bit<2> pipe_id;
+    bit<8> key_msb;   // Only valid for recirc triggers.
+    bit<16> batch_id; // Overloaded to port# or lsbs of key for port down and
+                      // recirc triggers.
+    bit<16> packet_id;
+}
+
 header pktgen_timer_header_t {
     bit<3> _pad1;
     bit<2> pipe_id;                     // Pipe id
@@ -495,7 +501,7 @@ extern Random<W> {
 
     /// Return a random number with uniform distribution.
     /// @return : random number between 0 and 2**W - 1
-    W get();
+    W get(W d);
 }
 
 // -----------------------------------------------------------------------------
@@ -506,11 +512,11 @@ extern T max<T>(T t1, T t2);
 
 extern T min<T>(T t1, T t2);
 
-// Invalidates a PHV container by setting the container’s validity bit to 0 and
-// clearing the container to all zeros.  If the dst argument is a packet or
-// metadata field, all PHV containers that contain all or part of the field
-// will be invalidated.
-extern void invalidate<T>(in T field);
+// // Invalidates a PHV container by setting the container’s validity bit to 0 and
+// // clearing the container to all zeros.  If the dst argument is a packet or
+// // metadata field, all PHV containers that contain all or part of the field
+// // will be invalidated.
+// extern void invalidate<T>(in T field);
 
 /// Counter
 /// Indexed counter with `size’ independent counter values.
@@ -579,6 +585,14 @@ extern Register<T> {
     /// Initialize an array of <size> registers and set their value to
     /// initial_value.
     Register(bit<32> size, T initial_value);
+
+    ///XXX(hanw): BRIG-212
+    /// following two methods are not supported in the Barefoot backend
+    /// they are present to help with the transition from v1model to tofino.p4
+    /// after the transition, these two methods should be removed
+    /// and the corresponding test cases should be marked as XFAILs.
+    void read(out T result, in bit<32> index);
+    void write(in bit<32> index, in T value);
 }
 
 extern RegisterParam<T> {
@@ -596,7 +610,7 @@ extern RegisterParam<T> {
 // change. See https://github.com/p4lang/p4-spec/issues/561
 extern RegisterAction<T, U> {
     RegisterAction(Register<T> reg);
-    abstract void apply(inout T value, out U rv);
+    abstract void apply(inout T value, @optional out U rv);
     U execute();
     U execute(in bit<32> index); /* {
         U rv;
@@ -605,6 +619,7 @@ extern RegisterAction<T, U> {
         reg.write(index, value);
         return rv;
     } */
+    U execute_log(); /* execute at an index that increments each time */
 }
 
 extern ActionSelector {
@@ -663,6 +678,20 @@ extern Digest<T> {
     /// Digest instances in the same deparser control block, and call the pack
     /// method once during a single execution of the control block
     void pack(in T data);
+}
+
+// TODO(hanw) need to remove following externs from tofino.p4
+extern void truncate(in bit<32> length);
+
+extern selector_action {
+    selector_action(ActionSelector sel);
+    abstract void apply(inout bit<1> value, @optional out bit<1> rv);
+    bit<1> execute(@optional in bit<32> index);
+}
+
+extern math_unit<T, U> {
+    math_unit(bool invert, int<2> shift, int<6> scale, U data);
+    T execute(in T x);
 }
 
 #endif  /* _TOFINO_P4_ */

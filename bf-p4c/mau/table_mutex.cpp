@@ -110,7 +110,7 @@ bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::AttachedMemory *am)
 
 void SharedIndirectAttachedAnalysis::end_apply() {
     for (const auto& kv : backend_users) {
-        if (auto* action_data = kv.first->to<IR::MAU::ActionData>()) {
+        if (kv.first->is<IR::MAU::ActionData>()) {
             for (const auto* tbl_i : kv.second) {
                 for (const auto* tbl_j : kv.second) {
                     if (tbl_i != tbl_j) {

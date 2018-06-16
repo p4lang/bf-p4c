@@ -722,7 +722,7 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
 
     // Remove any casts around the source of the assignment.
     if (auto cast = right->to<IR::Cast>()) {
-        if (auto type = cast->destType->to<IR::Type_Bits>()) {
+        if (cast->destType->is<IR::Type_Bits>()) {
             right = cast->expr;
         }
     }

@@ -1,5 +1,11 @@
+#include <limits.h>
 #include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
 #include <initializer_list>
+#include <map>
 #include <set>
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/strengthReduction.h"
@@ -155,9 +161,58 @@ class LoadTargetArchitecture : public Inspector {
     void postorder(const IR::P4Program *) override {
         setupMetadataRenameMap();
 
-        /// append tofino.p4 architecture definition
-        structure->include("tofino/stratum.p4", &structure->targetTypes);
-        structure->include("tofino/p4_14_prim.p4", &structure->targetTypes);
+        /// append device specific architecture definition
+
+        // CODE_HACK
+        // we are concatenating all the include files that define an architecture
+        // because the current parsing does not take context into account, and thus
+        // we can't safely separate metadata definitions (which are device specific)
+        // from control block definitions (which are not device specific).
+        char * drvP4IncludePath = getenv("P4C_16_INCLUDE_PATH");
+        Util::PathName path(drvP4IncludePath ? drvP4IncludePath : p4includePath);
+        char tempPath[PATH_MAX];
+        snprintf(tempPath, PATH_MAX-1, "/tmp/arch_XXXXXX.p4");
+        std::vector<const char *>filenames;
+        if (Device::currentDevice() == "Tofino")
+            filenames.push_back("tofino.p4");
+#if HAVE_JBAY
+        else
+            filenames.push_back("jbay.p4");
+#endif  // HAVE_JBAY
+        filenames.push_back("tofino/stratum.p4");
+        filenames.push_back("tofino/p4_14_prim.p4");
+
+        // create a temporary file. The safe method is to create and open the file
+        // in exclusive mode. Since we can only open a C++ stream with a hack, we'll close
+        // the file and then open it again as an ofstream.
+        auto fd = mkstemps(tempPath, 3);
+        if (fd < 0) {
+            ::error("Error mkstemp(%1%): %2%", tempPath, strerror(errno));
+            return;
+        }
+        // close the file descriptor and open as stream
+        close(fd);
+        std::ofstream result(tempPath, std::ios::out);
+        if (!result.is_open()) {
+            ::error("Failed to open arch include file %1%", tempPath);
+            return;
+        }
+        for (auto f : filenames) {
+            Util::PathName fPath = path.join(f);
+            std::ifstream inFile(fPath.toString(), std::ios::in);
+            if (inFile.is_open()) {
+                result << inFile.rdbuf();
+                inFile.close();
+            } else {
+                ::error("Failed to open architecture include file %1%", fPath.toString());
+                result.close();
+                unlink(tempPath);
+                return;
+            }
+        }
+        result.close();
+        structure->include(tempPath, &structure->targetTypes);
+        unlink(tempPath);
 
         analyzeTofinoModel();
     }
@@ -638,10 +693,21 @@ class ConstructSymbolTable : public Inspector {
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
     const std::map<const IR::Expression*, IR::Member*>& parserResidualChecksums;
-    unsigned resubmitIndex;
-    unsigned digestIndex;
-    unsigned igCloneIndex;
-    unsigned egCloneIndex;
+    // cloneIndex assignment algorithm:
+    // - we assign a unique index per gress/per table since there is only one action
+    //   per table that executes and may call clone
+    // - \TODO: assign the same id to tables that are mutually exclusive, however, we
+    //   can only do that in the backend.
+    // a map of previously seen indices, gress -> [(tableName, index)]*
+    std::map<gress_t, std::map<cstring, unsigned> > cloneIndex;
+    // resubmitIndex assignment algorithm:
+    // - we assign a unique index per ingress table since there is only one action
+    //   per table that can execute and may call resubmit
+    // a map of previously seen indices, tableName -> index
+    std::map<cstring, unsigned> resubmitIndex;
+    // digestIndex is similar to resubmitIndex and generate_digest() can only be called in ingress
+    std::map<cstring, unsigned>  digestIndex;
+
     std::set<cstring> globals;
 
  public:
@@ -650,8 +716,7 @@ class ConstructSymbolTable : public Inspector {
                          const std::map<const IR::Expression*,
                                         IR::Member*>& parserResidualChecksums)
             : structure(structure), refMap(refMap), typeMap(typeMap),
-              parserResidualChecksums(parserResidualChecksums),
-              resubmitIndex(0), digestIndex(0), igCloneIndex(0), egCloneIndex(0) {
+              parserResidualChecksums(parserResidualChecksums) {
         CHECK_NULL(structure);
         setName("ConstructSymbolTable");
     }
@@ -678,7 +743,29 @@ class ConstructSymbolTable : public Inspector {
                   structure->getBlockName(ProgramStructure::INGRESS));
         IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
         auto mem = new IR::Member(path, "digest_type");
-        auto idx = new IR::Constant(IR::Type::Bits::get(3), digestIndex++);
+        auto action = findContext<IR::P4Action>();
+        unsigned digestId = 0xFFFFFFFF;
+        if (action) {
+            auto table = findTable(control, action);
+            if (table == nullptr) {
+                ::error("Could not find table for action %1% in control %2%",
+                        action->getName(), control->name);
+                return;
+            }
+            digestId = getDigestIndex(table->getName());
+        } else {
+            // in P4_16, digest can be called directly in the apply block of the
+            // control, not in an action or table. While a table may be synthesized later
+            // we need to allocate the id here -- one more reason to push the allocation into
+            // the backend.
+            digestId = getDigestIndex(control->name + "_apply");
+        }
+        if (digestId > Device::maxDigestId()) {
+            ::error("Too many digest() calls in %1%", control->name);
+            return;
+        }
+        unsigned bits = static_cast<unsigned>(std::ceil(std::log2(Device::maxDigestId())));
+        auto idx = new IR::Constant(IR::Type::Bits::get(bits), digestId);
         auto stmt = new IR::AssignmentStatement(mem, idx);
         structure->_map.emplace(node, stmt);
 
@@ -746,6 +833,7 @@ class ConstructSymbolTable : public Inspector {
     }
 
     void cvtCloneFunction(const IR::MethodCallStatement *node, bool hasData) {
+        LOG1("cvtCloneFunction: (id= " << node->id << " ) " << node);
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "malformed IR in clone() function");
         auto control = findContext<IR::P4Control>();
@@ -753,23 +841,39 @@ class ConstructSymbolTable : public Inspector {
 
         const bool isIngress =
                 (control->name == structure->getBlockName(ProgramStructure::INGRESS));
+        const gress_t gress = isIngress? INGRESS : EGRESS;
         auto *deparserMetadataPath =
                 new IR::PathExpression(isIngress ? "ig_intr_md_for_dprsr"
                                                  : "eg_intr_md_for_dprsr");
         auto *compilerMetadataPath =
                 new IR::PathExpression("compiler_generated_meta");
 
+        auto action = findContext<IR::P4Action>();
+        unsigned cloneId = 0xFFFFFFFF;
+        if (action) {
+            auto table = findTable(control, action);
+            if (table == nullptr) {
+                ::error("Could not find table for action %1% in control %2%",
+                        action->getName(), control->name);
+                return;
+            }
+            cloneId = getCloneIndex(gress, table->getName());
+        } else {
+            // in P4_16, clone can be called directly in the apply block of the
+            // control, not in an action or table. While a table may be synthesized later
+            // we need to allocate the id here -- one more reason to push cloneId allocation into
+            // the backend.
+            cloneId = getCloneIndex(gress, control->name + "_apply");
+        }
         // Generate a fresh index for this clone field list. This is used by the
         // hardware to select the correct mirror table entry, and to select the
         // correct parser for this field list.
-        auto *idx =
-                new IR::Constant(IR::Type::Bits::get(3), isIngress ? igCloneIndex++
-                                                                   : egCloneIndex++);
-        if ((isIngress ? igCloneIndex : egCloneIndex) > 8) {
-            ::error("Too many clone() calls in %1%",
-                    isIngress ? ProgramStructure::INGRESS : ProgramStructure::EGRESS);
+        if (cloneId > Device::maxCloneId(gress)) {
+            ::error("Too many clone() calls in %1%", control->name);
             return;
         }
+        unsigned bits = static_cast<unsigned>(std::ceil(std::log2(Device::maxCloneId(gress))));
+        auto *idx = new IR::Constant(IR::Type::Bits::get(bits), cloneId);
 
         {
             auto *block = new IR::BlockStatement;
@@ -826,7 +930,17 @@ class ConstructSymbolTable : public Inspector {
          */
 
         // Only instantiate the extern for the first instance of clone()
-        if ((isIngress ? igCloneIndex : egCloneIndex) == 1) {
+        auto findDecl = [](std::vector<const IR::Declaration*> decls,
+                           cstring name) -> const IR::Declaration * {
+            for (auto d : decls)
+                if (d->getName() == name) return d;
+            return nullptr;
+        };
+        const IR::Declaration* mirrorDeclared = isIngress ?
+            findDecl(structure->ingressDeparserDeclarations, "mirror") :
+            findDecl(structure->egressDeparserDeclarations, "mirror");
+
+        if (mirrorDeclared == nullptr) {
             auto declArgs = new IR::Vector<IR::Argument>({});
             auto declType = new IR::Type_Name("Mirror");
             auto decl = new IR::Declaration_Instance("mirror", declType, declArgs);
@@ -1000,7 +1114,29 @@ class ConstructSymbolTable : public Inspector {
                   "resubmit() can only be used in ingress control");
         IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
         auto mem = new IR::Member(path, "resubmit_type");
-        auto idx = new IR::Constant(IR::Type::Bits::get(3), resubmitIndex++);
+        auto action = findContext<IR::P4Action>();
+        unsigned resubmitId = 0xFFFFFFFF;
+        if (action) {
+            auto table = findTable(control, action);
+            if (table == nullptr) {
+                ::error("Could not find table for action %1% in control %2%",
+                        action->getName(), control->name);
+                return;
+            }
+            resubmitId = getResubmitIndex(table->getName());
+        } else {
+            // in P4_16, resubmit can be called directly in the apply block of the
+            // control, not in an action or table. While a table may be synthesized later
+            // we need to allocate the id here -- one more reason to push the allocation into
+            // the backend.
+            resubmitId = getResubmitIndex(control->name + "_apply");
+        }
+        if (resubmitId > Device::maxResubmitId()) {
+            ::error("Too many resubmit() calls in %1%", control->name);
+            return;
+        }
+        unsigned bits = static_cast<unsigned>(std::ceil(std::log2(Device::maxResubmitId())));
+        auto idx = new IR::Constant(IR::Type::Bits::get(bits), resubmitId);
         auto stmt = new IR::AssignmentStatement(mem, idx);
         structure->_map.emplace(node, stmt);
 
@@ -1013,13 +1149,17 @@ class ConstructSymbolTable : public Inspector {
          *
          */
 
-        if (resubmitIndex > 8) {
-            ::error("Too many resubmit() calls in %1%", ProgramStructure::INGRESS);
-            return;
-        }
-
         // Only instantiate the extern for the first instance of resubmit()
-        if (resubmitIndex == 1) {
+        auto findDecl = [](std::vector<const IR::Declaration*> decls,
+                           cstring name) -> const IR::Declaration * {
+            for (auto d : decls)
+                if (d->getName() == name) return d;
+            return nullptr;
+        };
+        const IR::Declaration* resubmitDeclared =
+            findDecl(structure->ingressDeparserDeclarations, "resubmit");
+
+        if (resubmitDeclared == nullptr) {
             auto declArgs = new IR::Vector<IR::Argument>({});
             auto declType = new IR::Type_Name("Resubmit");
             auto decl = new IR::Declaration_Instance("resubmit",
@@ -1075,7 +1215,7 @@ class ConstructSymbolTable : public Inspector {
 
         auto baseType = mce->arguments->at(0)->expression;
         auto typeArgs = new IR::Vector<IR::Type>({baseType->type});
-        auto type = new IR::Type_Specialized(new IR::Type_Name("random"), typeArgs);
+        auto type = new IR::Type_Specialized(new IR::Type_Name("Random"), typeArgs);
         auto param = new IR::Vector<IR::Argument>();
         auto randName = cstring::make_unique(structure->unique_names, "random", '_');
         structure->unique_names.insert(randName);
@@ -1459,6 +1599,103 @@ class ConstructSymbolTable : public Inspector {
             structure->_map.emplace(node, idle_timeout);
         }
     }
+
+ private:
+    /**
+     * Find the "first" table in which the action is present
+     */
+    const IR::P4Table *findTable(const IR::P4Control *control, const IR::P4Action *action) {
+        auto tables = control->getDeclarations()->where([action] (const IR::IDeclaration *d) {
+                if (!d->is<IR::P4Table>())
+                    return false;
+                auto t = d->to<IR::P4Table>();
+                LOG3("Searching for " << action->getName() << " in table " << t->getName());
+                return t->getActionList()->getDeclaration(action->getName()) != nullptr;
+            });
+        try {
+            auto t = tables->single();
+            LOG3("found " << t->getName() << " as table candidate");
+            return t->to<IR::P4Table>();
+        } catch (...) {
+            tables->reset();  // Enumerators are weird!!
+            if (tables->count() > 1)
+                P4C_UNIMPLEMENTED("action %1% present in multiple tables", action->getName());
+            return nullptr;
+        }
+        return nullptr;
+    }
+
+    unsigned getCloneIndex(gress_t gress, cstring tableName) {
+        if (cloneIndex.count(gress) == 0) {
+            std::map<cstring, unsigned> ti;
+            ti[tableName] = 0;
+            cloneIndex[gress] = ti;
+            return 0;
+        } else {
+            std::map<cstring, unsigned> &ti = cloneIndex[gress];
+            if (ti.count(tableName) > 0) {
+                return ti[tableName];
+            } else {
+                // the next index is the size of the map for the gress
+                ti.emplace(tableName, ti.size());
+                return ti[tableName];
+            }
+        }
+    }
+
+    unsigned getResubmitIndex(cstring tableName) {
+        if (resubmitIndex.count(tableName) == 0)
+            // the next index is the size of the map for the gress
+            resubmitIndex.emplace(tableName, resubmitIndex.size());
+        return resubmitIndex[tableName];
+    }
+
+    unsigned getDigestIndex(cstring tableName) {
+        if (digestIndex.count(tableName) == 0)
+            // the next index is the size of the map for the gress
+            digestIndex.emplace(tableName, digestIndex.size());
+        return digestIndex[tableName];
+    }
+};
+
+// In P4-14, struct field can only be Type_Bits, therefore, when translating to
+// P4-16, all the corresponding struct field should also be Type_Bits.
+// However, target architectures such as jbay.p4 or tofino.p4 have Type_Boolean
+// in some of the struct fields, this pass will convert these fields to
+// Type_Bits.  The conversion only apply to struct fields that are defined in
+// the target architecture file and are annotated with "__intrinsic_metadata".
+class LoweringType : public Transform {
+    std::map<cstring, unsigned> enum_encoding;
+
+ public:
+    LoweringType() {}
+
+    const IR::Node* postorder(IR::StructField* node) override {
+        auto ctxt = findOrigCtxt<IR::Type_StructLike>();
+        if (!ctxt)
+            return node;
+        if (!ctxt->annotations->getSingle("__intrinsic_metadata"))
+            return node;
+        if (!node->type->is<IR::Type_Boolean>())
+            return node;
+        return new IR::StructField(node->srcInfo, node->name,
+                                   node->annotations, new IR::Type_Bits(1, false));
+    }
+
+    const IR::Node* postorder(IR::Type_Enum* node) override {
+        if (node->name == "MeterColor_t")
+            enum_encoding.emplace(node->name, 2);
+        return node;
+    }
+
+    const IR::Node* postorder(IR::Type_Name* node) override {
+        auto name = node->path->name;
+        if (enum_encoding.count(name)) {
+            auto size = enum_encoding.at(name);
+            return new IR::Type_Bits(size, false);
+        }
+        return node;
+    }
 };
 
 class CollectParserChecksums : public Inspector {
@@ -1763,6 +2000,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new V1::ConstructSymbolTable(structure, refMap, typeMap,
                                      translateParserChecksums->parserResidualChecksums),
         new GenerateTofinoProgram(structure),
+        new V1::LoweringType(),
         new TranslationLast(),
         new AddIntrinsicMetadata,
         new P4::ClonePathExpressions,

@@ -248,3 +248,9 @@ p4c_add_xfail_reason("jbay"
   "all ways in use"
   extensions/p4_tests/p4_14/em_ghost4.p4
 )
+
+# BRIG-711
+p4c_add_xfail_reason("jbay"
+  "Converting a bitvec to a bitrange requires the bitrange to be continuous"
+  switch_msdc
+)

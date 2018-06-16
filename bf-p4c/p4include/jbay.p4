@@ -19,7 +19,6 @@
 #ifndef JBAY_P4_
 #define JBAY_P4_
 
-
 //XXX Open issues:
 // Meter color
 // Math unit
@@ -194,7 +193,7 @@ struct ingress_intrinsic_metadata_for_deparser_t {
 
     bit<3> resubmit_type;
 
-    bit<3> mirror_type;                 // The user-selected mirror field list
+    bit<4> mirror_type;                 // The user-selected mirror field list
                                         // index.
 }
 
@@ -284,7 +283,7 @@ struct egress_intrinsic_metadata_for_deparser_t {
                                         //    - bit 1 disables copy-to-cpu
                                         //    - bit 2 disables mirroring
 
-    bit<3> mirror_type;
+    bit<4> mirror_type;
 
     bit<1> coalesce_flush;              // Flush the coalesced mirror buffer
 
@@ -325,6 +324,16 @@ struct egress_intrinsic_metadata_for_output_port_t {
 // recirculated packet matches the application match value and mask.
 // A triggered event may generate programmable number of batches with
 // programmable number of packets per batch.
+
+header pktgen_generic_header_t {
+    bit<3> _pad0;
+    bit<3> app_id;
+    bit<2> pipe_id;
+    bit<8> key_msb;   // Only valid for recirc triggers.
+    bit<16> batch_id; // Overloaded to port# or lsbs of key for port down and
+                      // recirc triggers.
+    bit<16> packet_id;
+}
 
 header pktgen_timer_header_t {
     bit<3> _pad1;
@@ -445,9 +454,9 @@ extern ParserCounter<W> {
 // Tofino ingress parser compare the priority with a configurable!!! threshold
 // to determine to whether drop the packet if the input buffer is congested.
 // Egress parser does not perform any dropping.
-extern Priority {
+extern ParserPriority {
     /// Constructor
-    Priority();
+    ParserPriority();
 
     /// Set a new priority for the packet.
     void set(in bit<3> prio);
@@ -480,7 +489,7 @@ extern Random<W> {
 
     /// Return a random number with uniform distribution.
     /// @return : ranom number between 0 and 2**W - 1
-    W get();
+    W get(W d);
 }
 
 /// Idle timeout
@@ -497,11 +506,11 @@ extern T max<T>(T t1, T t2);
 
 extern T min<T>(T t1, T t2);
 
-// Invalidates a PHV container by setting the container’s validity bit to 0 and
-// clearing the container to all zeros.  If the dst argument is a packet or
-// metadata field, all PHV containers that contain all or part of the field
-// will be invalidated.
-extern void invalidate<T>(in T field);
+// // Invalidates a PHV container by setting the container’s validity bit to 0 and
+// // clearing the container to all zeros.  If the dst argument is a packet or
+// // metadata field, all PHV containers that contain all or part of the field
+// // will be invalidated.
+// extern void invalidate<T>(in T field);
 
 /// Counter
 extern Counter<W, I> {
@@ -563,6 +572,14 @@ extern Register<T> {
     /// Initialize an array of <size> registers and set their value to
     /// initial_value.
     Register(bit<32> size, T initial_value);
+
+    ///XXX(hanw): BRIG-212
+    /// following two methods are not supported in the Barefoot backend
+    /// they are present to help with the transition from v1model to tofino.p4
+    /// after the transition, these two methods should be removed
+    /// and the corresponding test cases should be marked as XFAILs.
+    void read(out T result, in bit<32> index);
+    void write(in bit<32> index, in T value);
 }
 
 /// Direct Register
@@ -659,14 +676,28 @@ extern Resubmit {
     void emit<T>(in T hdr);
 }
 
-extern Digest {
+extern Digest<T> {
     /// define a digest stream to the control plane
     Digest();
 
     /// Emit data into the stream.  The p4 program can instantiate multiple
     /// Digest instances in the same deparser control block, and call the pack
     /// method once during a single execution of the control block
-    void pack<T>(in T data);
+    void pack(in T data);
+}
+
+// TODO(hanw) need to remove following externs from jbay.p4
+extern void truncate(in bit<32> length);
+
+extern selector_action {
+    selector_action(ActionSelector sel);
+    abstract void apply(inout bit<1> value, @optional out bit<1> rv);
+    bit<1> execute(@optional in bit<32> index);
+}
+
+extern math_unit<T, U> {
+    math_unit(bool invert, int<2> shift, int<6> scale, U data);
+    T execute(in T x);
 }
 
 #endif  /* _JBAY_P4_ */

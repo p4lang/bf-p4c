@@ -318,18 +318,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_msdc_l3
   switch_8.2_msdc_ipv4
-  switch_8.2_ent_dc_general
   )
 
 p4c_add_xfail_reason("tofino"
   "not allocated contiguously by bit on the input xbar and cannot be resolved."
   switch_8.2_ent_fin_postcard
   switch_8.2_msdc_spine_int
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error.*Ran out of phv output slots"
-  switch_8.2_msdc_l3
   )
 
 # BRIG-113
@@ -1139,3 +1133,11 @@ p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"
   testdata/p4_16_samples/issue1043-bmv2.p4
 )
+
+# v1model program cannot used PortId_t as instance name, because it is reserved
+# by tna.p4
+p4c_add_xfail_reason("tofino"
+  "Duplicates declaration PortId_t"
+  testdata/p4_16_samples/issue1210.p4
+)
+

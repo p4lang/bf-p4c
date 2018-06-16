@@ -315,6 +315,29 @@ NormalizeNativeProgram::NormalizeNativeProgram(P4::ReferenceMap* refMap,
     });
 }
 
+class LoweringType : public Transform {
+    std::map<cstring, unsigned> enum_encoding;
+
+ public:
+    LoweringType() {}
+
+    // lower MeterColor_t to bit<2> because it is used
+    const IR::Node* postorder(IR::Type_Enum* node) override {
+        if (node->name == "MeterColor_t")
+            enum_encoding.emplace(node->name, 2);
+        return node;
+    }
+
+    const IR::Node* postorder(IR::Type_Name* node) override {
+        auto name = node->path->name;
+        if (enum_encoding.count(name)) {
+            auto size = enum_encoding.at(name);
+            return new IR::Type_Bits(size, false);
+        }
+        return node;
+    }
+};
+
 LowerTofinoToStratum::LowerTofinoToStratum(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
                                            BFN_Options &options) {
     setName("LowerTofinoToStratum");
@@ -328,6 +351,7 @@ LowerTofinoToStratum::LowerTofinoToStratum(P4::ReferenceMap *refMap, P4::TypeMap
             toplevel->getMain()->apply(*parseTna);
         }),
         new RewriteControlAndParserBlocks(&parseTna->toBlockInfo),
+        new LoweringType(),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
     });

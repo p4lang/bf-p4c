@@ -44,6 +44,9 @@ class Device {
     struct StatefulAluSpec;
     static const StatefulAluSpec& statefulAluSpec() { return Device::get().getStatefulAluSpec(); }
     static int numStages() { return Device::get().getNumStages(); }
+    static unsigned maxCloneId(gress_t gress) { return Device::get().getMaxCloneId(gress); }
+    static unsigned maxResubmitId() { return Device::get().getMaxResubmitId(); }
+    static unsigned maxDigestId() { return Device::get().getMaxDigestId(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -54,6 +57,9 @@ class Device {
     virtual const PardeSpec& getPardeSpec() const = 0;
     virtual const StatefulAluSpec& getStatefulAluSpec() const = 0;
     virtual int getNumStages() const = 0;
+    virtual unsigned getMaxCloneId(gress_t) const = 0;
+    virtual unsigned getMaxResubmitId() const = 0;
+    virtual unsigned getMaxDigestId() const = 0;
 
     cstring name_;
 
@@ -69,6 +75,15 @@ class TofinoDevice : public Device {
  public:
     TofinoDevice() : Device("Tofino"), parde_() {}
     int getNumStages() const override { return 12; }
+    unsigned getMaxCloneId(gress_t gress) const override {
+        switch (gress) {
+        case INGRESS: return 7;  // one id reserved for IBuf
+        case EGRESS:  return 8;
+        default:      return 8;
+        }
+    }
+    unsigned getMaxResubmitId() const override { return 8; }
+    unsigned getMaxDigestId() const override { return 8; }
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
@@ -83,6 +98,9 @@ class JBayDevice : public Device {
  public:
     JBayDevice() : Device("JBay"), parde_() {}
     int getNumStages() const override { return 20; }
+    unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
+    unsigned getMaxResubmitId() const override { return 8; }
+    unsigned getMaxDigestId() const override { return 8; }
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }

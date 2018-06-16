@@ -530,7 +530,7 @@ class TranslateProgram : public Inspector {
         if (auto em = mi->to<P4::ExternMethod>()) {
             cstring name = em->actualExternType->name;
             addExternMethodCall(name, node);
-        } else if (auto ef = mi->to<P4::ExternFunction>()) {
+        } else if (mi->is<P4::ExternFunction>()) {
             WARNING("extern function translation is not supported");
         }
     }
@@ -540,7 +540,7 @@ class TranslateProgram : public Inspector {
         if (auto em = mi->to<P4::ExternMethod>()) {
             cstring name = em->actualExternType->name;
             addExternMethodCall(name, node);
-        } else if (auto ef = mi->to<P4::ExternFunction>()) {
+        } else if (mi->is<P4::ExternFunction>()) {
             WARNING("extern function translation is not supported");
         }
     }

@@ -218,7 +218,11 @@ class ComputeMergeableState : public ParserInspector {
     }
 
     cstring strip_gress(cstring name) {
-        return cstring(name.findlast(':') + 1);
+        auto p = name.findlast(':');
+        if (p)
+            return cstring(p + 1);
+        else
+            return name;
     }
 
     cstring strip_common_prefix(std::string current, std::string to_append) {

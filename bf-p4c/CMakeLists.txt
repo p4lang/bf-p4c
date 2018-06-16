@@ -626,7 +626,6 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/portable_switch.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/resolve_computed.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp

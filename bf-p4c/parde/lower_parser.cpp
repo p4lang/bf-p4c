@@ -1574,7 +1574,7 @@ class ExtractorAllocator {
                     use_extractor = extract->dest->container.size();
                     n_extractor_used = 1;
                     byteInterval = source->byteInterval();
-                } else if (auto* source = extract->source->to<IR::BFN::LoweredBufferRVal>()) {
+                } else if (extract->source->is<IR::BFN::LoweredBufferRVal>()) {
                     use_extractor = extract->dest->container.size();
                     n_extractor_used = 1;
                 } else if (auto* cons = extract->source->to<IR::BFN::LoweredConstantRVal>()) {

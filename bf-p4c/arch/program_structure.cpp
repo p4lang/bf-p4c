@@ -36,11 +36,14 @@ void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node> *ve
     // line for the preporicessor
     char *drvP4IncludePath = getenv("P4C_16_INCLUDE_PATH");
     Util::PathName path(drvP4IncludePath ? drvP4IncludePath : p4includePath);
-    path = path.join(filename);
 
     CompilerOptions options;
+    if (filename.startsWith("/"))
+        options.file = filename;
+    else
+        options.file = path.join(filename).toString();
+
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.file = path.toString();
     if (FILE *file = options.preprocess()) {
         if (::errorCount() > 0) {
             ::error("Failed to preprocess architecture file %1%", options.file);
@@ -70,6 +73,13 @@ void ProgramStructure::createTofinoArch() {
     for (auto decl : targetTypes) {
         if (decl->is<IR::Type_Error>())
             continue;
+        if (auto td = decl->to<IR::Type_Typedef>()) {
+            if (auto def = declarations.getDeclaration(td->name)) {
+                WARNING("Type " << td->name << " is already defined to "
+                                << def->getName() << ", ignored.");
+                continue;
+            }
+        }
         declarations.push_back(decl);
     }
 }

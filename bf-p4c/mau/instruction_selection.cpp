@@ -481,7 +481,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                                          prim->operands[1], algorithm, prim);
         hd->bit_width = size;
         return new IR::Cast(IR::Type::Bits::get(size), hd);
-    } else if (prim->name == "random.get") {
+    } else if (prim->name == "Random.get") {
         auto max_value = prim->operands[1]->to<IR::Constant>()->value;
         max_value += mpz_class(1);
         int one_pos = mpz_scan1(max_value.get_mpz_t(), 0);
