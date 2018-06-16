@@ -1163,6 +1163,33 @@ static void log_device_stats() {
     LOG3("Egress  only: " << numEgress);
 }
 
+/// XXX(Deep): These fields could go in either an 8-bit container or a 16-bit container. Currently,
+/// we do not have the infrastructure to specify multiple options for pa_container_size pragmas.
+/// Therefore, we are just allocating these fields to 16-bit containers.
+bool AllocatePHV::preorder(const IR::BFN::ChecksumVerify* verify) {
+    if (!verify->dest) return false;
+    const PHV::Field* field = phv_i.field(verify->dest->field);
+    if (!field) return false;
+    pragmas_i.pa_container_sizes().add_constraint(field, { PHV::Size::b16 });
+    return true;
+}
+
+bool AllocatePHV::preorder(const IR::BFN::ChecksumUpdate* update) {
+    if (!update->dest) return false;
+    const PHV::Field* field = phv_i.field(update->dest->field);
+    if (!field) return false;
+    pragmas_i.pa_container_sizes().add_constraint(field, { PHV::Size::b16 });
+    return true;
+}
+
+bool AllocatePHV::preorder(const IR::BFN::ChecksumGet* get) {
+    if (!get->dest) return false;
+    const PHV::Field* field = phv_i.field(get->dest->field);
+    if (!field) return false;
+    pragmas_i.pa_container_sizes().add_constraint(field, { PHV::Size::b16 });
+    return true;
+}
+
 void AllocatePHV::end_apply() {
     LOG1("--- BEGIN PHV ALLOCATION ----------------------------------------------------");
     log_device_stats();

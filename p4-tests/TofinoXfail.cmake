@@ -313,10 +313,12 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: tofino supports up to 12 stages"
+  "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_msdc_l3
+  switch_8.2_msdc_ipv4
+  switch_8.2_ent_dc_general
   )
 
 p4c_add_xfail_reason("tofino"
@@ -326,10 +328,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: checksum unit cannot write to 32-bit container"
-  switch_8.2_msdc
-  switch_8.2_ent_dc_general
-  switch_8.2_msdc_ipv4
+  "error.*Ran out of phv output slots"
   switch_8.2_msdc_l3
   )
 

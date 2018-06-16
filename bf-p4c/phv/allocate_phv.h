@@ -423,6 +423,10 @@ class AllocatePHV : public Inspector {
     const CalcCriticalPathClusters& critical_path_clusters_i;
     FieldInterference field_interference_i;
 
+    bool preorder(const IR::BFN::ChecksumVerify* verify) override;
+    bool preorder(const IR::BFN::ChecksumUpdate* update) override;
+    bool preorder(const IR::BFN::ChecksumGet* get) override;
+
     /** The entry point.  This "pass" doesn't actually traverse the IR, but it
      * marks the place in the back end where PHV allocation does its work,
      * which is triggered by a call to `end_apply`.
