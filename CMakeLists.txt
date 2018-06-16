@@ -11,6 +11,9 @@ project (BFN_P4C)
 
 OPTION(ENABLE_JBAY "Enable JBay" OFF)
 
+SET(BOOST_MIN_VERSION "1.58.0")
+FIND_PACKAGE(Boost ${BOOST_MIN_VERSION} REQUIRED)
+
 # Additional P4C_CPP_FLAGS may be passed (via bootstrap_bfn_compilers.sh script) 
 # from p4factory when configuring bf-p4c-compilers to specify certain predefined 
 # features when building the compiler
