@@ -322,8 +322,18 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "not allocated contiguously by bit on the input xbar and cannot be resolved."
+  switch_ent_fin_postcard
+  switch_msdc_spine_int
   switch_8.2_ent_fin_postcard
   switch_8.2_msdc_spine_int
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error.*invalid operand, invalidate"
+  switch_l3_heavy_int_leaf
+  switch_generic_int_leaf
+  switch_8.2_l3_heavy_int_leaf
+  switch_8.2_generic_int_leaf
   )
 
 # BRIG-113
@@ -1002,9 +1012,8 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   smoketest_programs_netcache
   switch_8.2_dc_basic
+  switch_msdc_leaf_int
   switch_8.2_msdc_leaf_int
-  switch_8.2_msdc_l3_heavy_int_leaf
-  switch_8.2_msdc_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
