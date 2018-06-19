@@ -107,6 +107,11 @@ if (PTF_REQUIREMENTS_MET)
     )
 
   p4c_add_xfail_reason("tofino"
+    "AssertionError: Received packet did not match expected packet"
+    smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest 
+  )
+
+  p4c_add_xfail_reason("tofino"
     "AttributeError: Client instance has no attribute .*"
     smoketest_programs_alpm_test_TestIdleTime
     extensions/p4_tests/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4

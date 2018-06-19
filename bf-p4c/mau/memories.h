@@ -156,9 +156,16 @@ struct Memories {
         };
         struct Gateway {
             int payload_value = 0;
-            int payload_row, payload_bus;
-            int unit;
+            int payload_row = -1;
+            int payload_bus = -1;
+            int unit = -1;
             type_t bus_type;
+            void clear() {
+                payload_value = 0;
+                payload_row = -1;
+                payload_bus = -1;
+                unit = -1;
+            }
         };
 
         safe_vector<Row>                         row;
@@ -166,7 +173,16 @@ struct Memories {
         safe_vector<std::pair<int, int>>         home_row;
         safe_vector<Way>                         ways;
         Gateway                                  gateway;
-        int                                      per_row;
+        int                                      per_row = 1;
+
+        void clear_allocation() {
+            row.clear();
+            color_mapram.clear();
+            home_row.clear();
+            gateway.clear();
+            per_row = 1;
+        }
+
         std::map<cstring, cstring>               unattached_tables;
         // depth in memory units + mask to use for memory selection per way
         void visit(Memories &mem, std::function<void(cstring &)>) const;
@@ -406,8 +422,10 @@ struct Memories {
     int mems_needed(int entries, int depth, int per_mem_row, bool is_twoport);
     void clear_table_vectors();
     void clear_uses();
+    void clear_allocation();
     bool analyze_tables(mem_info &mi);
     void calculate_column_balance(const mem_info &mi, unsigned &row);
+    bool single_allocation_balance(mem_info &mi, unsigned row);
     bool cut_from_left_side(const mem_info &mi, int left_given_columns, int right_given_columns);
     bool allocate_all_atcam(mem_info &mi);
     bool allocate_all_exact(unsigned column_mask);

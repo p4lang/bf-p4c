@@ -76,20 +76,25 @@ int Memories::mems_needed(int entries, int depth, int per_mem_row, bool is_twopo
 
 void Memories::clear_uses() {
     sram_use.clear();
+    memset(sram_inuse, 0, sizeof(sram_inuse));
     tcam_use.clear();
-    mapram_use.clear();
+    gateway_use.clear();
     sram_search_bus.clear();
-    sram_match_bus.clear();
     sram_print_search_bus.clear();
+    sram_match_bus.clear();
+    memset(tcam_midbyte_use, -1, sizeof(tcam_midbyte_use));
     tind_bus.clear();
     action_data_bus.clear();
-    stateful_bus.clear();
     overflow_bus.clear();
+    twoport_bus.clear();
     vert_overflow_bus.clear();
-    memset(sram_inuse, 0, sizeof(sram_inuse));
-    memset(gw_bytes_reserved, false, sizeof(gw_bytes_reserved));
+    mapram_use.clear();
     memset(mapram_inuse, 0, sizeof(mapram_inuse));
-    memset(tcam_midbyte_use, -1, sizeof(tcam_midbyte_use));
+    stateful_bus.clear();
+    idletime_bus.clear();
+    memset(gw_bytes_reserved, false, sizeof(gw_bytes_reserved));
+    stats_alus.clear();
+    meter_alus.clear();
 }
 
 void Memories::clear() {
@@ -122,6 +127,14 @@ void Memories::clear_table_vectors() {
     idletime_groups.clear();
 }
 
+void Memories::clear_allocation() {
+    for (auto ta : tables) {
+        for (auto &kv : *(ta->memuse)) {
+            kv.second.clear_allocation();
+        }
+    }
+}
+
 /* Creates a new table_alloc object for each of the tables within the memory allocation */
 void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                          TableResourceAlloc *resources, const LayoutOption *lo,
@@ -146,11 +159,62 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
     }
 }
 
+/** Due to gateways potentially requiring search buses that could may be used
+ *  by exact match tables, the memories allocation can be run multiple times.  The difference
+ *  factor would be the total number of RAMs per row exact match tables can be allocated to.
+ *  If an exact match table can fit in a single row, only one search bus is required, which
+ *  will provide access for gateways.
+ *
+ *  The algorithm is making a trade-off between search buses, and balance for other tables
+ *  such as tind, synth2port, and action tables later.
+ */
+bool Memories::single_allocation_balance(mem_info &mi, unsigned row) {
+    LOG3(" Allocating all ATCAM partitions");
+    if (!allocate_all_atcam(mi))
+        return false;
+
+    LOG3(" Allocating all exact tables");
+    if (!allocate_all_exact(row))
+        return false;
+
+    LOG3(" Allocating all ternary tables");
+    if (!allocate_all_ternary()) {
+        return false;
+    }
+
+    LOG3(" Allocating all ternary indirect tables");
+    if (!allocate_all_tind()) {
+        return false;
+    }
+
+    LOG3(" Allocating all action tables");
+    if (!allocate_all_swbox_users()) {
+        return false;
+    }
+
+    LOG3(" Allocating all idletime tables");
+    if (!allocate_all_idletime()) {
+        return false;
+    }
+
+    LOG3(" Allocating all gateway tables");
+    if (!allocate_all_gw()) {
+        return false;
+    }
+
+    LOG3(" Allocate all no match miss");
+    if (!allocate_all_no_match_miss()) {
+        return false;
+    }
+
+    return true;
+}
+
 /* Function that tests whether all added tables can be allocated to the stage */
 bool Memories::allocate_all() {
     mem_info mi;
 
-    LOG3("Analyzing tables");
+    LOG3(" Analyzing tables");
     if (!analyze_tables(mi)) {
         return false;
     }
@@ -159,49 +223,22 @@ bool Memories::allocate_all() {
 
     do {
         clear_uses();
+        clear_allocation();
         calculate_column_balance(mi, row);
-        LOG3("Allocating all exact tables");
-        if (allocate_all_atcam(mi) && allocate_all_exact(row)) {
+        LOG2(" Column balance 0x" << hex(row));
+        if (single_allocation_balance(mi, row)) {
             finished = true;
         }
-        LOG3("Row size " << bitcount(row));
+
+        if (!finished)
+            LOG2(" Increasing balance");
     } while (bitcount(row) < SRAM_COLUMNS && !finished);
 
     if (!finished) {
         return false;
     }
 
-    LOG3("Allocating all ternary tables");
-    if (!allocate_all_ternary()) {
-        return false;
-    }
-
-    LOG3("Allocating all ternary indirect tables");
-    if (!allocate_all_tind()) {
-        return false;
-    }
-
-    LOG3("Allocating all action tables");
-    if (!allocate_all_swbox_users()) {
-        return false;
-    }
-
-    LOG3("Allocating all idletime tables");
-    if (!allocate_all_idletime()) {
-        return false;
-    }
-
-    LOG3("Allocating all gateway tables");
-    if (!allocate_all_gw()) {
-        return false;
-    }
-
-    LOG3("Allocate all no match miss");
-    if (!allocate_all_no_match_miss()) {
-        return false;
-    }
-
-    LOG3("Memory allocation fits");
+    LOG2("Memory allocation fits");
     return true;
 }
 
@@ -1346,6 +1383,7 @@ bool Memories::allocate_all_ternary() {
 /* Breaks up the tables requiring tinds into groups that can be allocated within the
    SRAM array */
 void Memories::find_tind_groups() {
+    tind_groups.clear();
     for (auto *ta : tind_tables) {
         int depth = (ta->calculated_entries + 2047) / 2048;
         tind_groups.push_back(new SRAM_group(ta, depth, 0, SRAM_group::TIND));
@@ -1623,6 +1661,10 @@ void Memories::swbox_bus_meters_counters() {
 /* Breaks up all tables requiring an action to be parsed into SRAM_group, a structure
    designed for adding to SRAM array  */
 void Memories::find_swbox_bus_users() {
+    action_bus_users.clear();
+    synth_bus_users.clear();
+    must_be_placed_in_half.clear();
+
     for (auto *ta : action_tables) {
         int width = 1;
         int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
@@ -2109,6 +2151,11 @@ void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFL
         }
     }
 
+    if (nexts[ACTION])
+        LOG1(" next " << nexts[ACTION]);
+    if (best_fits[ACTION])
+        LOG1(" best_fist " << best_fits[ACTION]);
+
 #ifdef HAVE_JBAY
     // The algorithm, in order to place the action tables within the same half, must guarantee
     // that there is enough room for that particular table
@@ -2173,6 +2220,10 @@ void Memories::find_swbox_candidates(int row, RAM_side_t side, swbox_fill candid
                                       swbox_fill &curr_oflow, swbox_fill &sel_oflow) {
     if (action_bus_users.empty() && synth_bus_users.empty()) {
         return;
+    }
+
+    if (curr_oflow) {
+        LOG1(" curr_oflow " << curr_oflow.group);
     }
 
     int RAMs_avail[OFLOW] = {0, 0};
@@ -2309,6 +2360,7 @@ void Memories::fill_swbox_side(swbox_fill candidates[SWBOX_TYPES], int row, RAM_
         auto sb_type = static_cast<switchbox_t>(i);
         auto &candidate = candidates[i];
         if (!candidate) continue;
+        LOG1(" type: " << sb_type << " " << candidate.group);
         if (bitcount(candidate.mask) == 0 && bitcount(candidate.mapram_mask) == 0)
             BUG("Trying to fill in a use object with nothing to allocate");
         fill_RAM_use(candidates[i], row, side, sb_type);
@@ -2654,6 +2706,7 @@ void Memories::action_bus_users_log() {
 
 void Memories::swbox_logical_row(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
                                  swbox_fill &curr_oflow, swbox_fill &sel_oflow) {
+    LOG1("Row and side " << row << " " << side);
     for (int k = 0; k < SWBOX_TYPES; k++)
         candidates[k].clear();
 
@@ -2662,12 +2715,14 @@ void Memories::swbox_logical_row(int row, RAM_side_t side, swbox_fill candidates
 
     bool stats_available = true; bool meter_available = true;
 
-    // FIXME: This is too loosely constrained
-    if (row == 7 || stats_alus[(row+1)/2]) {
+    // FIXME: A stats alu is available on even rows while a meter alu is available on odd rows.
+    // Now this could be loosened through a check to see if one could overflow up to a higher
+    // ALU, but that is unimplemented
+    if ((row % 2) == 1 || stats_alus[(row+1)/2]) {
         stats_available = false;
     }
 
-    if (meter_alus[row/2]) {
+    if (meter_alus[row/2] || (row % 2) == 0) {
         meter_available = false;
     }
 
@@ -3073,6 +3128,10 @@ bool Memories::allocate_all_no_match_gw() {
  *  3.  Reserve gateway unit, result bus
  */
 bool Memories::allocate_all_gw() {
+    payload_gws.clear();
+    normal_gws.clear();
+    no_match_gws.clear();
+
     for (auto *ta_gw : gw_tables) {
         bool pushed_back = false;
         for (auto *ta_nm : no_match_hit_tables) {
@@ -3097,6 +3156,14 @@ bool Memories::allocate_all_gw() {
         }
         if (!linked) {
             no_match_gws.push_back(ta_nm);
+        }
+    }
+
+    int search_bus_free = 0;
+    for (int i = 0; i < SRAM_ROWS; i++) {
+        for (int j = 0; j < 2; j++) {
+            if (sram_search_bus[i][j].free())
+                search_bus_free++;
         }
     }
 
@@ -3247,6 +3314,7 @@ bool Memories::allocate_idletime(SRAM_group* idletime_group) {
 }
 
 bool Memories::allocate_all_idletime() {
+    idletime_groups.clear();
     for (auto *ta : idletime_tables) {
         for (auto back_at : ta->table->attached) {
             auto at = back_at->attached;
