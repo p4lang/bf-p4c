@@ -143,6 +143,18 @@ class ActionPhvConstraints : public Inspector {
             const IR::MAU::Action *act,
             const ActionAnalysis::FieldActionsMap field_actions_map);
 
+        /// @returns true if @field is written in @act only using a PHV source. If an action data or
+        /// constant source is used, then @returns false. @returns boost::none if the field is not
+        /// written in this action.
+        boost::optional<bool>
+        hasPHVSource(const PHV::Field* field, const IR::MAU::Action* act) const;
+
+        /// @returns false if @field is written in @act using a PHV source. If an action data or
+        /// constant source is used, then @returns true. @returns boost::none if the field is not
+        /// written in this action.
+        boost::optional<bool>
+        hasActionDataOrConstantSource(const PHV::Field* field, const IR::MAU::Action* act) const;
+
         /** If @dst is a slice of the destination operand of an instruction
          * in @act, then return one OperandInfo for each corresponding slice
          * of each source, if any.  Returns an empty vector if @dst is not
@@ -481,6 +493,11 @@ class ActionPhvConstraints : public Inspector {
     /** @returns the set of fields that are written in action @act
       */
     ordered_set<const PHV::Field*> actionWrites(const IR::MAU::Action* act) const;
+
+    /** @returns true if the candidate bridged metadata packing @packing satisfies action
+      * constraints
+      */
+    bool checkBridgedPackingConstraints(const ordered_set<const PHV::Field*>& packing) const;
 
     /** For GTest function.
       * Checks if the field_writes_to_actions ordered_map entry is valid or not

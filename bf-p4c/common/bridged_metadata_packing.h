@@ -147,12 +147,48 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
             const PHV::Field* f1,
             const PHV::Field* f2) const;
 
+    /// Returns a map of field to starting position within the nearest byte aligned chunk for fields
+    /// that can be packed in the bridged metadata header @h with field @f in the same byte.
+    /// @alignment is the number of bits available for packing.
+    /// @candidates are the candidate fields for bridged metadata packing.
+    /// @alreadyPackedFields are the list of bridged fields that have already been packed.
+    /// @alignmentConstraints refers to the alignment constarints on bridged fields.
+    /// @conflictingAlignmentConstraints refers to the set of fields that may have mutually
+    /// conflicting alignment constraints, and hence may never be packed together.
+    ordered_map<const IR::StructField*, int> packWithField(
+            const int alignment,
+            const IR::Header* h,
+            const IR::StructField* f,
+            const std::vector<const IR::StructField*>& candidates,
+            const ordered_set<const PHV::Field*>& alreadyPackedFields,
+            const ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
+            const ordered_set<const IR::StructField*>& conflictingAlignmentConstraints) const;
+
+    /// Given the map of alignment constraints for fields @alignmentConstraints, a set of
+    /// potentially packable fields @potentiallyPackableFields and the base field @f, @return the
+    /// list of fields that must be eliminated from consideration to avoid alignment conflicts. E.g.
+    /// if field A (2b) must be packed in bits 2-3, and field B (3b) must be packed in bits 1-3,
+    /// then field B is added to the set to the be returned (always pick the smaller sized fields as
+    /// the reason for alignment conflict).
+    ordered_set<const IR::StructField*> checkPotentialPackAlignmentReqs(
+            const ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
+            ordered_set<const IR::StructField*>& potentiallyPackableFields,
+            const IR::StructField* f) const;
+
     /// Determine alignment constraints associated with the set of @nonByteAlignedFields in header
     /// @h. The result is stored in the @alignmentConstraints map.
     void determineAlignmentConstraints(
             const IR::Header* h,
             const std::vector<const IR::StructField*>& nonByteAlignedFields,
-            ordered_set<const IR::StructField*>& alignmentConstraints);
+            ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
+            ordered_set<const IR::StructField*>& conflictingAlignmentConstraints);
+
+    /// @returns true if @field1 and @field2 are written in the same action, where the map
+    /// @acts contains mapping of fields to the actions in which they are written.
+    bool fieldsWrittenSameAction(
+            const PHV::Field* field1,
+            const PHV::Field* field2,
+            const ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>>& acts) const;
 
  public:
     explicit PackBridgedMetadata(

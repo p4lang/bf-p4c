@@ -132,8 +132,27 @@ void PackBridgedMetadata::printNoPackConstraint(
         cstring errorMessage,
         const PHV::Field* f1,
         const PHV::Field* f2) const {
-    LOG4("\t" << errorMessage << ": " << f1->name << " (" << f1->size << "b), " << f2->name << " ("
-         << f2->size << "b)");
+    LOG4("\t" << errorMessage << ": " << f1->name << " (" << f1->id << ") (" << f1->size << "b), "
+         << f2->name << " (" << f2->id << ") (" << f2->size << "b)");
+}
+
+bool PackBridgedMetadata::fieldsWrittenSameAction(
+        const PHV::Field* field1,
+        const PHV::Field* field2,
+        const ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>>& acts) const {
+    if (!acts.count(field1))
+        return false;
+    if (!acts.count(field2))
+        return false;
+    if (acts.at(field1).size() == 0 || acts.at(field2).size() == 0)
+        return false;
+    for (const IR::MAU::Action* a1 : acts.at(field1))
+        for (const IR::MAU::Action* a2 : acts.at(field2))
+            if (a1 == a2) {
+                LOG4("\t\t" << field1->name << " and " << field2->name << " are written in the "
+                     "same action " << a1->name);
+                return true; }
+    return false;
 }
 
 void PackBridgedMetadata::bridgedActionAnalysis(
@@ -169,9 +188,13 @@ void PackBridgedMetadata::bridgedActionAnalysis(
                 printNoPackConstraint("Marshaled", field1, field2);
             } else if (isSpecialityDest1 || isSpecialityDest2) {
                 // Do not pack fields together if one or both of them is the result of a speciality
-                // operation (HASH_DIST, METER_ALU, METER_COLOR, or RANDOM).
-                doNotPack(field1->id, field2->id) = true;
-                printNoPackConstraint("Speciality Destination", field1, field2);
+                // operation (HASH_DIST, METER_ALU, METER_COLOR, or RANDOM) and they are written in
+                // the same action.
+                if (fieldsWrittenSameAction(field1, field2, fieldToActionWrites)) {
+                    doNotPack(field1->id, field2->id) = true;
+                    printNoPackConstraint("Speciality Destination written in same action", field1,
+                            field2);
+                }
             } else if (!isMoveOnlyDest1 || !isMoveOnlyDest2) {
                 // Do not pack fields together if one or both of them is written by a non-MOVE
                 // operation.
@@ -188,24 +211,191 @@ void PackBridgedMetadata::bridgedActionAnalysis(
                 printNoPackConstraint("Phase 0 conflict", field1, field2); } } }
 }
 
+ordered_map<const IR::StructField*, int> PackBridgedMetadata::packWithField(
+        const int alignment,
+        const IR::Header* h,
+        const IR::StructField* f,
+        const std::vector<const IR::StructField*>& candidates,
+        const ordered_set<const PHV::Field*>& alreadyPackedFields,
+        const ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
+        const ordered_set<const IR::StructField*>& conflictingAlignmentConstraints) const {
+    static ordered_map<const IR::StructField*, int> emptyMap;
+    ordered_map<const IR::StructField*, int> rv;
+    ordered_set<const IR::StructField*> potentiallyPackableFields;
+    const PHV::Field* field1 = phv.field(getFieldName(h, f));
+    potentiallyPackableFields.insert(f);
+
+    if (alignment == 0) return emptyMap;
+    // trying to pack to the nearest byte boundary.
+    int bitsize = alignment + field1->size;
+    // represents set of bits that have not yet been assigned to fields.
+    std::set<int> unOccupied;
+    for (int i = 0; i < bitsize; i++)
+        unOccupied.insert(i);
+
+    // Check packing possibility of every candidate field. By the end of this loop, all fields that
+    // can potentially be packed with the given field @f.
+    for (auto f2 : candidates) {
+        const PHV::Field* field2 = phv.field(getFieldName(h, f2));
+        // If the field under consideration has already been packed, then ignore it.
+        if (alreadyPackedFields.count(field2)) {
+            LOG4("\t\tB. Already packed " << field2->name);
+            continue; }
+        if (field2->size > alignment) {
+            LOG4("\t\tC. Cannot pack " << field2->name << " within the same byte.");
+            continue; }
+        if (doNotPack(field1->id, field2->id)) {
+            LOG4("\t\tD. Detected no pack condition for " << field1->name << " and " <<
+                 field2->name);
+            continue; }
+        if (conflictingAlignmentConstraints.count(f2)) {
+            LOG4("\t\tG. Detected field with conflicting alignment requirements " << field2->name);
+            continue; }
+        bool packingOkay = true;
+        // Ensure that the field under consideration can be packed with every other field in the
+        // potentiallyPackableFields set.
+        for (auto kv : potentiallyPackableFields) {
+            const PHV::Field* field3 = phv.field(getFieldName(h, kv));
+            if (doNotPack(field2->id, field3->id)) {
+                LOG4("\t\tD. Detected no pack condition for " << field1->name << " and " <<
+                     field2->name);
+                packingOkay = false;
+                break; } }
+        // packingOkay is false if the field under consideration cannot be packed with at least one
+        // of the potentially packable fields.
+        if (!packingOkay)
+            continue;
+        // Check the action analysis constraints corresponding to bridged fields packing. However,
+        // since the checkBridgedPackingConstraints() method expects a set of PHV::Field* objects,
+        // we need to construct the set out of all the StructField* objects first.
+        ordered_set<const PHV::Field*> packing;
+        packing.insert(field1);
+        for (auto* f : potentiallyPackableFields)
+            packing.insert(phv.field(getFieldName(h, f)));
+        packing.insert(field2);
+        if (!actionConstraints.checkBridgedPackingConstraints(packing)) {
+            LOG4("\t\tE. Packing violates action constraints " << field2->name);
+            continue; }
+        LOG4("\t\tF. Potentially packable field " << field2->name);
+        potentiallyPackableFields.insert(f2); }
+
+    // Print all fields that can be potentially packed with the given field f.
+    if (LOGGING(4)) {
+        LOG4("\t  Found " << potentiallyPackableFields.size() << " potentially packable fields.");
+        LOG4("\t  Attempting to packing within " << bitsize << " bits.");
+        for (auto* f : potentiallyPackableFields) {
+            std::stringstream ss;
+            ss << "\t\t";
+            if (alignmentConstraints.count(f))
+                ss << "* ";
+            ss << f;
+            LOG4(ss.str()); } }
+
+    // Check if any of the potentially packable fields have mutually conflicting alignment
+    // requirements. For instance, field A may be required at bit position 2, which field B may be
+    // required at bit positions 1-3 (3 bit field). In that case, A and B can never be packed in the
+    // same byte. After a call to checkPotentialPackAlignmentReqs(), alignmentConflicts represents
+    // the set of fields that have conflicting alignment requirements.
+    ordered_set<const IR::StructField*> alignmentConflicts =
+        checkPotentialPackAlignmentReqs(alignmentConstraints, potentiallyPackableFields, f);
+    ordered_set<const IR::StructField*> packedFields;
+    // Pack the base field f first, if it has an alignment constraint.
+    if (alignmentConstraints.count(f)) {
+        int lo = alignmentConstraints.at(f).lo;
+        for (int i = lo; i < lo + field1->size; i++)
+            unOccupied.erase(i);
+        rv[f] = lo; }
+    // Pack fields without alignment constraints next.
+    for (const IR::StructField* candidate : potentiallyPackableFields) {
+        LOG4("\t\t  Checking packing for " << candidate);
+        LOG4("\t\t\tUnoccupied bits: " << unOccupied);
+        if (unOccupied.size() == 0 || candidate->type->width_bits() >
+                static_cast<int>(unOccupied.size()))
+            return rv;
+        if (!alignmentConstraints.count(candidate)) {
+            for (int b : unOccupied) {
+                bool noIssues = true;
+                // Make sure all bits can be allocated consecutively.
+                for (int i = 0; i < candidate->type->width_bits(); i++) {
+                    if (!unOccupied.count(b+i)) {
+                        LOG4("\t\t\tCannot allocate field " << candidate << " to position " <<
+                                (b+i));
+                        noIssues = false;
+                        break; } }
+                if (noIssues) {
+                    rv[candidate] = b;
+                    for (int i = 0; i < candidate->type->width_bits(); i++) {
+                        LOG4("\t\t\tErasing bit " << (b+i));
+                        unOccupied.erase(b+i); }
+                    break; } } } }
+    return rv;
+}
+
+ordered_set<const IR::StructField*> PackBridgedMetadata::checkPotentialPackAlignmentReqs(
+        const ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
+        ordered_set<const IR::StructField*>& potentiallyPackableFields,
+        const IR::StructField* field) const {
+    // Extract fields with alignment constraints.
+    ordered_set<const IR::StructField*> alignedFields;
+    if (alignmentConstraints.count(field))
+        alignedFields.insert(field);
+    for (auto* f : potentiallyPackableFields)
+        if (alignmentConstraints.count(f))
+            alignedFields.insert(f);
+    // Check mutual alignment constraints for alignedFields.
+    ordered_set<const IR::StructField*> conflictingFields;
+    for (auto* f1 : alignedFields) {
+        le_bitrange f1_alignment = alignmentConstraints.at(f1);
+        for (auto* f2 : alignedFields) {
+            le_bitrange f2_alignment = alignmentConstraints.at(f2);
+            if (f1 == f2) continue;
+            if (conflictingFields.count(f1) || conflictingFields.count(f2))
+                continue;
+            if (!f1_alignment.overlaps(f2_alignment))
+                continue;
+            // Always choose the smaller field as having introduced the alignment conflicts.
+            if (f1->type->width_bits() < f2->type->width_bits())
+                conflictingFields.insert(f1);
+            else
+                conflictingFields.insert(f2); } }
+    LOG4("\t  Found the following fields with conflicting alignment: ");
+    for (auto* f : conflictingFields) {
+        LOG4("\t\t" << f);
+        potentiallyPackableFields.erase(f); }
+    return conflictingFields;
+}
+
 void PackBridgedMetadata::determineAlignmentConstraints(
         const IR::Header* h,
         const std::vector<const IR::StructField*>& nonByteAlignedFields,
-        ordered_set<const IR::StructField*>& alignmentConstraints) {
+        ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
+        ordered_set<const IR::StructField*>& conflictingAlignmentConstraints) {
     for (auto structField : nonByteAlignedFields) {
         ordered_set<const PHV::Field*> relatedFields;
         std::queue<const PHV::Field*> fieldsNotVisited;
         cstring fieldName = getFieldName(h, structField);
         const auto* field = phv.field(fieldName);
         BUG_CHECK(field, "No field named %1% found", fieldName);
+
         // If this field is initialized by a ComputedRVal expression in the parser, then consider it
         // as having alignment constraints.
-        if (parserAlignedFields.count(field)) {
-            alignmentConstraints.insert(structField);
-            LOG4("\t  Field " << field << " in parser aligned fields.");
-        } else {
-            LOG4("\t  Field " << field << " not in parser aligned fields.");
-        }
+        if (parserAlignedFields.count(field) && field->alignment) {
+            alignmentConstraints[structField] = le_bitrange(StartLen(field->alignment->littleEndian,
+                        field->size));
+            LOG4("\t\tDetected bit in byte alignment " << alignmentConstraints[structField] <<
+                 " for field " << field->name); }
+
+        // DeparserParams must be in the bottom bits.
+        if (deparserParams.count(field)) {
+            if (alignmentConstraints.count(structField)) {
+                ::warning("Alignment constraint already present for field %1%: %2%", structField,
+                        alignmentConstraints.at(structField).lo);
+                conflictingAlignmentConstraints.insert(structField);
+            } else {
+                alignmentConstraints[structField] = le_bitrange(StartLen(0, field->size));
+                LOG4("\t\tDetected deparser parameter alignment: "  <<
+                     alignmentConstraints[structField] << " for field " << field->name); } }
+
         // Also summarize the egress version of this field, as alignment constraints may be induced
         // by uses of the egress version of the bridged field.
         cstring egressFieldName = getNonBridgedEgressFieldName(fieldName);
@@ -256,13 +446,15 @@ void PackBridgedMetadata::determineAlignmentConstraints(
                                "Conflicting alignment constraints detected for bridged field %1%"
                                ": %2%, %3%", field->name, f->alignment->littleEndian,
                                alignSource->alignment->littleEndian);
+                    conflictingAlignmentConstraints.insert(structField);
                     continue; }
                 fieldAlignmentMap[field] = f;
-                alignmentConstraints.insert(structField); } } }
+                le_bitrange alignment = StartLen(f->alignment->littleEndian, f->size);
+                alignmentConstraints[structField] = alignment; } } }
     if (LOGGING(4)) {
         LOG4("\tPrinting bridged fields with alignment constraints:");
-        for (auto f : alignmentConstraints)
-            LOG4("\t  " << f); }
+        for (auto kv : alignmentConstraints)
+            LOG4("\t  " << kv.first << " : " << kv.second); }
 }
 
 IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
@@ -296,7 +488,7 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
 
     // Ingress bridged metadata header, if it comes here.
     LOG1("Original Ingress header layout: " << h->type);
-    LOG1("New size of ingress bridged header: " << getHeaderBytes(h));
+    LOG1("Size of original ingress bridged header: " << getHeaderBytes(h));
     // Fields that will form the basis of the new repacked header.
     IR::IndexedVector<IR::StructField> fields;
     // Non byte aligned fields in the header.
@@ -333,27 +525,27 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
     bridgedActionAnalysis(h, nonByteAlignedFields);
 
     // Determine nonbyte-aligned bridged fields with alignment constraints.
-    ordered_set<const IR::StructField*> alignmentConstraints;
-    determineAlignmentConstraints(h, nonByteAlignedFields, alignmentConstraints);
+    ordered_map<const IR::StructField*, le_bitrange> alignmentConstraints;
+    ordered_set<const IR::StructField*> conflictingAlignmentConstraints;
+    determineAlignmentConstraints(h, nonByteAlignedFields, alignmentConstraints,
+            conflictingAlignmentConstraints);
 
     unsigned padFieldId = 0;
-    ordered_set<const IR::StructField*> alreadyPackedFields;
+    ordered_set<const PHV::Field*> alreadyPackedFields;
     for (auto f1 : nonByteAlignedFields) {
-        if (alreadyPackedFields.count(f1)) {
-            LOG4("\t  A. Already packed " << f1->name);
+        const PHV::Field* tempField = phv.field(getFieldName(h, f1));
+        if (alreadyPackedFields.count(tempField)) {
+            LOG4("\t  A. Already packed " << tempField->name);
             continue; }
-        bool hasDeparserParam = false;
         std::vector<const IR::StructField*> fieldsPackedTogether;
         fieldsPackedTogether.push_back(f1);
-        alreadyPackedFields.insert(f1);
-        const PHV::Field* tempField = phv.field(getFieldName(h, f1));
-        LOG3("\t  Trying to pack fields with " << tempField->name);
-        if (deparserParams.count(tempField))
-            hasDeparserParam = true;
+        LOG3("\tTrying to pack fields with " << tempField->name);
         // If this has alignment constraints due to the parser, ensure we pad it correctly.
-        int alignment = 0;
+        int alignment = getAlignment(f1->type->width_bits());
+        LOG4("\t  Alignment: " << alignment);
         ordered_set<const IR::StructField*> addedPadding;
         if (parserAlignedFields.count(tempField)) {
+            LOG4("\t\t  F. No other field packed because parser aligned field: " << f1);
             const PHV::Field* source = parserAlignedFields.at(tempField);
             if (source->alignment) {
                 LOG4("\t\tAlignment constraint on " << tempField << " : " << *(source->alignment) <<
@@ -368,61 +560,36 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
                                             fieldAnnotations, IR::Type::Bits::get(postPadding));
                     fieldsPackedTogether.push_back(padding);
                     addedPadding.insert(padding);
-                    LOG3("\tPushing post padding field " << padding->name << " of type " <<
+                    LOG3("\t\tPushing post padding field " << padding->name << " of type " <<
                             padding->type->width_bits() << "b.");
                 }
-                alignment = getAlignment(postPadding + f1->type->width_bits());
-            } else {
-                LOG4("\t\tNo alignment constraint on " << tempField);
-                alignment = getAlignment(f1->type->width_bits());
+                alignment = getAlignment(postPadding + f1->type->width_bits()); } }
+
+        ordered_map<const IR::StructField*, int> packingWithPositions = packWithField(alignment, h,
+                f1, nonByteAlignedFields, alreadyPackedFields, alignmentConstraints,
+                conflictingAlignmentConstraints);
+        LOG1("\t\tResulting packing has " << packingWithPositions.size() << " fields.");
+        for (auto kv : packingWithPositions)
+            LOG1("\t\t  " << kv.first << " @ " << kv.second);
+
+        fieldsPackedTogether.clear();
+        while (!packingWithPositions.empty()) {
+            // One greater than the largest container available on the device.
+            int smallestPosition = 33;
+            const IR::StructField* candidate;
+            for (auto kv : packingWithPositions) {
+                if (smallestPosition > kv.second) {
+                    candidate = kv.first;
+                    smallestPosition = kv.second;
+                }
             }
+            // Pack fields from the smallest bit position to the largest within the byte-aligned
+            // chunk.
+            fieldsPackedTogether.push_back(candidate);
+            packingWithPositions.erase(candidate);
+            const PHV::Field* packingField = phv.field(getFieldName(h, candidate));
+            alreadyPackedFields.insert(packingField);
         }
-
-        // Find other fields to be packed together with field @f1.
-        // As nonByteAlignedFields is sorted in increasing order of width, we start looking from the
-        // end of the vector to find the largest field that could fit within that byte.
-        // If there are alignment constraints, we don't pack anything with this field.
-        // XXX(Deep): A future iteration could pack fields that have alignment constraints into the
-        // correct offset within a byte.
-        // XXX(Deep): A future iteration could look at 32-bit chunks for packing instead of 8-bit
-        // chunks.
-        if (!alignmentConstraints.count(f1) && alignment > 0) {
-            for (auto it = nonByteAlignedFields.rbegin(); it != nonByteAlignedFields.rend(); ++it) {
-                const IR::StructField* candidate = *it;
-                if (f1 == candidate) continue;
-                if (alreadyPackedFields.count(candidate)) {
-                    LOG4("\t\tB. Already packed " << candidate->name);
-                    continue; }
-                if (candidate->type->width_bits() > alignment) {
-                    LOG4("\t\tC. Cannot pack " << candidate->name << " within the same byte");
-                    continue; }
-                if (alignmentConstraints.count(candidate)) {
-                    LOG4("\t\tC. Cannot pack " << candidate->name << " because alignment"
-                         " constraints are present");
-                    continue; }
-                cstring candidateName = getFieldName(h, candidate);
-                const auto* candidateField = phv.field(candidateName);
-                // If packing of these fields possible, then pack is set to true.
-                bool pack = true;
-                // Only one deparser parameter field can be packed into a single byte of the bridged
-                // metadata header.
-                if (hasDeparserParam && deparserParams.count(candidateField))
-                    pack = false;
-                if (deparserParams.count(candidateField))
-                    hasDeparserParam = true;
-                // Check against all fields already packed together
-                for (auto* candidate2 : fieldsPackedTogether) {
-                    if (addedPadding.count(candidate2)) continue;
-                    cstring candidateName2 = getFieldName(h, candidate2);
-                    const auto* candidateField2 = phv.field(candidateName2);
-                    if (doNotPack(candidateField->id, candidateField2->id))
-                        pack = false; }
-
-                if (!pack) continue;
-                LOG3("\t  fieldsPackedTogether: Now contains " << candidate->name);
-                fieldsPackedTogether.push_back(candidate);
-                alreadyPackedFields.insert(candidate);
-                alignment -= candidate->type->width_bits(); } }
 
         int bitSize = 0;
         for (auto f : fieldsPackedTogether)
@@ -435,28 +602,13 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
             const IR::StructField* prePadding = new IR::StructField(padFieldName, fieldAnnotations,
                                                                  IR::Type::Bits::get(alignment));
             fields.push_back(prePadding);
-            LOG4("Pushing padding field " << prePadding->name << " of type " <<
+            LOG4("\t\tPushing padding field " << prePadding->name << " of type " <<
                  prePadding->type->width_bits() << "b.");
         }
 
-        // Ensure that any bridged field used as a deparser parameter will be packed accordingly.
-        // Note that there is only one such field in every fieldsPackedTogether set.
-        std::sort(fieldsPackedTogether.begin(), fieldsPackedTogether.end(),
-            [&](const IR::StructField* a, const IR::StructField* b) {
-                cstring aName = getFieldName(h, a);
-                cstring bName = getFieldName(h, b);
-                const PHV::Field* fieldA = phv.field(aName);
-                const PHV::Field* fieldB = phv.field(bName);
-                if (deparserParams.count(fieldA) && !deparserParams.count(fieldB))
-                    return false;
-                if (!deparserParams.count(fieldA) && deparserParams.count(fieldB))
-                    return true;
-                return aName < bName;
-        });
-
-        for (auto it = fieldsPackedTogether.begin(); it != fieldsPackedTogether.end(); ++it) {
+        for (auto it = fieldsPackedTogether.rbegin(); it != fieldsPackedTogether.rend(); ++it) {
             const PHV::Field* fld = phv.field(getFieldName(h, *it));
-            LOG4("Pushing field " << fld << " of type " << (*it)->type->width_bits() <<
+            LOG4("\t\tPushing field " << fld << " of type " << (*it)->type->width_bits() <<
                  "b.");
             fields.push_back(*it); } }
 
@@ -550,8 +702,10 @@ IR::Node* ReplaceBridgedMetadataUses::preorder(IR::BFN::Extract* e) {
     auto* f = phv.field(fieldLVal->field);
     if (!f) return e;
     auto& egressBridgedMap = pack.getEgressBridgedMap();
-    if (egressBridgedMap.count(f->name))
+    if (egressBridgedMap.count(f->name)) {
+        LOG1("\tReplacing extract for " << f->name);
         return replaceExtract(e, f);
+    }
     return e;
 }
 

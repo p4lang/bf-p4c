@@ -39,6 +39,9 @@ void PackConflicts::end_apply() {
             auto* t1 = row1.first;
             auto* t2 = row2.first;
             if (t1 == t2) continue;
+            // This is the field added for bridged metadata initialization. We don't need to enforce
+            // no-pack conflicts for this table.
+            if (t1->name == "tbl_act_0" || t2->name == "tbl_act_0") continue;
             ordered_set<int> stage = bt.inSameStage(t1, t2);
             if (!stage.empty()) {
                 LOG4("\tGenerate no pack conditions for table " << t1->name << " and table " <<
@@ -71,10 +74,10 @@ void PackConflicts::generateNoPackConstraints(const IR::MAU::Table* t1, const IR
     size_t numSet = 0;
 
     if (!tableActions.count(t1)) {
-        LOG6("No actions in table " << t1);
+        LOG6("\t\tNo actions in table " << t1);
         return; }
     if (!tableActions.count(t2)) {
-        LOG6("No actions in table " << t2);
+        LOG6("\t\tNo actions in table " << t2);
         return; }
     for (auto act1 : tableActions.at(t1)) {
         for (auto act2 : tableActions.at(t2)) {
@@ -90,6 +93,7 @@ void PackConflicts::generateNoPackConstraints(const IR::MAU::Table* t1, const IR
             fields1.size());
     LOG5("\tFor table: " << t2->name << ", number of fields written across actions: " <<
             fields2.size());
+
     for (auto f1 : fields1) {
         for (auto f2 : fields2) {
             if (f1 == f2) {
@@ -103,7 +107,8 @@ void PackConflicts::generateNoPackConstraints(const IR::MAU::Table* t1, const IR
                 LOG6("\t" << fieldNoPack(f1->id, f2->id) << " Setting no pack for " << f1->name <<
                      " (" << f1->id << ") and " << f2->name << " (" << f2->id << ")"); } } }
 
-    LOG4("\tNumber of no pack conditions added: " << numSet / 2);
+    LOG4("\tNumber of no pack conditions added for " << t1->name << " and " << t2->name << " : " <<
+         (numSet / 2));
     totalNumSet += numSet;
 }
 

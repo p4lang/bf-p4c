@@ -1264,6 +1264,82 @@ bool ActionPhvConstraints::all_field_slices_written_together(
     return true;
 }
 
+bool ActionPhvConstraints::checkBridgedPackingConstraints(
+        const ordered_set<const PHV::Field*>& packing) const {
+    // Mapping from a field to the actions in which the field is written.
+    ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> actionToWrittenFieldsMap;
+    // Represents the list of all actions where the fields in the candidate packing @packing are
+    // written.
+    ordered_set<const IR::MAU::Action*> allActions;
+    for (auto f : packing) {
+        auto actions = actions_writing_fields(f);
+        const IR::MAU::Action* act = nullptr;
+        // The action with the name `act` is used to initialize the bridged metadata header version
+        // of the field to the original program version. We do not need to consider the set
+        // operations introduced in this compiler-generated action when checking valid packing for
+        // the bridged metadata fields. Therefore, we remove this action from the list of actions
+        // writing fields.
+        for (auto* a : actions)
+            if (a->name == "act")
+                act = a;
+        if (act != nullptr)
+            actions.erase(act);
+        actionToWrittenFieldsMap[f] = actions;
+        allActions.insert(actionToWrittenFieldsMap[f].begin(), actionToWrittenFieldsMap[f].end()); }
+
+    // If there are bits present in a container that won't be written for a given action, we need to
+    // make sure that the fields that are written all have either a PHV write or an action data
+    // write.
+    for (auto* act : allActions) {
+        // true if we have encountered a PHV source for one of the fields in the packing.
+        boost::optional<bool> foundPHVSource;
+        // true if we have encountered an action data/constant source for one of the fields in the
+        // packing.
+        boost::optional<bool> foundADConstantSource;
+        LOG6("\t\t    Action: " << act->name);
+        BUG_CHECK(act->name != "act", "Action %1% should have been removed earlier", act->name);
+        // For each field in packing:
+        for (auto* f : packing) {
+            boost::optional<bool> hasPHVSource = constraint_tracker.hasPHVSource(f, act);
+            boost::optional<bool> hasADSource = constraint_tracker.hasActionDataOrConstantSource(f,
+                    act);
+            LOG6("\t\t\t  Field: " << f->name);
+            std::stringstream ss;
+            if (hasPHVSource)
+                ss << "\t\t\t\tPHV: " << hasPHVSource;
+            else
+                ss << "\t\t\t\tNo PHV";
+            if (hasADSource)
+                ss << ", AD/Constant: " << hasADSource;
+            else
+                ss << ", No AD/Constant.";
+            LOG6(ss.str());
+            // Mark foundPHVSource as having found the first PHV source.
+            if (!foundPHVSource && hasPHVSource) {
+                foundPHVSource = *hasPHVSource;
+                LOG6("\t\t\t  Setting foundPHVSource to " << foundPHVSource); }
+
+            // Mark foundADConstantSource as having found the first action data/constant source.
+            if (!foundADConstantSource && hasADSource) {
+                foundADConstantSource = *hasADSource;
+                LOG6("\t\t\t  Setting foundADConstantSource to " << foundADConstantSource); }
+
+            // If there was a PHV source, and a field does not have a PHV source, then this packing
+            // is not possible. (Underlying principle: Do not mix action data/PHV sources in bridged
+            // metadata packing because ensuring a valid deposit-field in those cases becomes very
+            // complicated, and such a valid packing is not always possible).
+            if (hasPHVSource && foundPHVSource && *hasPHVSource != *foundPHVSource) {
+                LOG6("\t\t\t  Returning false");
+                return false; }
+
+            // Similarly, if there was an action data/constant source and a field does not have an
+            // action data/constant source, then this packing is not possible.
+            if (hasADSource && foundADConstantSource && *hasADSource != *foundADConstantSource) {
+                LOG6("\t\t\t  Returning false");
+                return false; } } }
+    return true;
+}
+
 boost::optional<ActionPhvConstraints::OperandInfo>
 ActionPhvConstraints::ConstraintTracker::is_written(
         PHV::FieldSlice slice,
@@ -1334,6 +1410,40 @@ bool ActionPhvConstraints::move_only_operations(const PHV::Field* f) const {
         for (auto it = operands.begin(); it != operands.end(); ++it)
             if (it->flags != OperandInfo::MOVE)
                 return false; }
+    return true;
+}
+
+boost::optional<bool> ActionPhvConstraints::ConstraintTracker::hasPHVSource(
+        const PHV::Field* field,
+        const IR::MAU::Action* act) const {
+    PHV::FieldSlice destination(field, StartLen(0, field->size));
+    // Destination field not written in @act, return boost::none.
+    if (!written_in(destination).count(act))
+        return boost::none;
+    // Check each source for the destination field.
+    auto operands = sources(destination, act);
+    for (auto& op : operands) {
+        // If any source has a non-PHV source, then return false.
+        if (op.phv_used == boost::none)
+            return false;
+    }
+    return true;
+}
+
+boost::optional<bool> ActionPhvConstraints::ConstraintTracker::hasActionDataOrConstantSource(
+        const PHV::Field* field,
+        const IR::MAU::Action* act) const {
+    PHV::FieldSlice destination(field, StartLen(0, field->size));
+    // Destination field not written in @act, return boost::none.
+    if (!written_in(destination).count(act))
+        return boost::none;
+    // Check each source for the destination field.
+    auto operands = sources(destination, act);
+    for (auto& op : operands) {
+        // If any source has a non action data or constant source, return false.
+        if (op.ad == false && op.constant == false)
+            return false;
+    }
     return true;
 }
 

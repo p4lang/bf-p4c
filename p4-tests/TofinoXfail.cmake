@@ -107,11 +107,6 @@ if (PTF_REQUIREMENTS_MET)
     )
 
   p4c_add_xfail_reason("tofino"
-    "AssertionError: Received packet did not match expected packet"
-    smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest 
-  )
-
-  p4c_add_xfail_reason("tofino"
     "AttributeError: Client instance has no attribute .*"
     smoketest_programs_alpm_test_TestIdleTime
     extensions/p4_tests/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4
@@ -322,6 +317,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_msdc_l3
+  switch_8.2_msdc_l3
   switch_8.2_msdc_ipv4
   )
 
@@ -1016,7 +1012,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   smoketest_programs_netcache
-  switch_8.2_dc_basic
   switch_msdc_leaf_int
   switch_8.2_msdc_leaf_int
 )

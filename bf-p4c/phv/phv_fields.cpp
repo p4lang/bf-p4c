@@ -1270,8 +1270,10 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.exact_containers()) out << " exact_containers";
     if (field.privatized()) out << " TPHV-priv";
     if (field.privatizable()) out << " PHV-priv";
+#if HAVE_JBAY
     if (field.is_mocha_candidate()) out << " mocha";
     if (field.is_dark_candidate()) out << " dark";
+#endif
     if (field.is_checksummed()) out << " checksummed";
     return out;
 }

@@ -165,6 +165,9 @@ bool AllocScore::operator>(const AllocScore& other) const {
         return delta_clot_bits < 0; }
     if (container_type_score != 0)
         return container_type_score < 0;
+    if (delta_inc_containers != 0) {
+        // This score requires more new containers.
+        return delta_inc_containers < 0; }
     if (delta_wasted_bits != 0) {
         // This score has fewer wasted bits.
         return delta_wasted_bits < 0; }
@@ -177,9 +180,6 @@ bool AllocScore::operator>(const AllocScore& other) const {
     if (delta_packing_priority != 0) {
         // This score is better if it make a more prioritized packing.
         return delta_packing_priority < 0; }
-    if (delta_inc_containers != 0) {
-        // This score requires more new containers.
-        return delta_inc_containers < 0; }
     if (delta_set_gress != 0) {
         // This score pins fewer containers to a new gress.
         return delta_set_gress < 0; }
