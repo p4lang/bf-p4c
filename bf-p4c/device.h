@@ -94,10 +94,15 @@ class TofinoDevice : public Device {
 class JBayDevice : public Device {
     const JBayPhvSpec phv_;
     const JBayPardeSpec parde_;
+#ifdef EMU_OVERRIDE_STAGE_COUNT
+    const int NUM_MAU_STAGES = EMU_OVERRIDE_STAGE_COUNT;
+#else
+    const int NUM_MAU_STAGES = 20;
+#endif
 
  public:
     JBayDevice() : Device("JBay"), parde_() {}
-    int getNumStages() const override { return 20; }
+    int getNumStages() const override { return NUM_MAU_STAGES; }
     unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }
