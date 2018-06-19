@@ -155,10 +155,32 @@ void ActionTable::need_on_actionbus(RandomNumberGen rng, int off, int size) {
     assert(attached_count == 1);
 }
 
+int ActionTable::get_start_vpn() {
+    // Based on the format width, the starting vpn is determined as follows (See
+    // Section 6.2.8.4.3 in MAU MicroArchitecture Doc)
+    //    WIDTH     LOG2SIZE START_VPN 
+    // <= 128 bits  -  7       - 0 
+    //  = 256 bits  -  8       - 0
+    //  = 512 bits  -  9       - 1
+    //  = 1024 bits - 10       - 3
+    int size = get_log2size();
+    if (size <= 8) return 0;
+    if (size == 9) return 1;
+    if (size == 10) return 3;
+    return 0;
+}
+
 void ActionTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) {
     width = 1;
     depth = layout_size();
     period = format ? 1 << std::max((int)format->log2size - 7, 0) : 0;
+    // Based on the format width, the vpn are numbered as follows (See Section
+    // 6.2.8.4.3 in MAU MicroArchitecture Doc)
+    //    WIDTH     PERIOD  VPN'S
+    // <= 128 bits  - +1 - 0, 1, 2, 3, ...
+    //  = 256 bits  - +2 - 2, 4, 6, 8, ...
+    //  = 512 bits  - +4 - 1, 5, 9, 13, ...
+    //  = 1024 bits - +8 - 3, 11, 19, 27, ...
     for (auto fmt : Values(action_formats))
         period = std::max(period, 1 << std::max((int)fmt->log2size - 7, 0));
     period_name = "action data width";

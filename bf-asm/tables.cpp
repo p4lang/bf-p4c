@@ -282,15 +282,12 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
     int period, width, depth;
     const char *period_name;
     vpn_params(width, depth, period, period_name);
-    if (vpn && vpn->size % (depth/period) != 0) {
-        error(vpn->data[0].lineno, "Vpn list length doesn't match layout (is %d, should be %d)",
-              vpn->size, depth/period);
-        return; }
     int word = width;
     Layout *firstrow = 0;
     auto vpniter = vpn ? vpn->begin() : 0;
-    int vpn_ctr = 0;
-    bitvec used_vpns;
+    int vpn_ctr[period];
+    std::fill_n(vpn_ctr, period, get_start_vpn());
+    std::vector<bitvec> used_vpns(period);
     bool on_repeat = false;
     for (auto &row : layout) {
         if (++word < width) {
@@ -301,25 +298,45 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
         word = 0;
         firstrow = &row;
         row.vpns.resize(row.cols.size());
+        value_t *vpncoliter = 0;
         for (int &el : row.vpns) {
+            // If VPN's are provided by the compiler, they need to match each
+            // element in the specified columns. Below code checks if all
+            // elements are present and errors out if there is any discrepancy.
             if (vpniter) {
                 if (vpniter == vpn->end()) {
                     on_repeat = true;
                     vpniter = vpn->begin(); }
-                if (CHECKTYPE(*vpniter, tINT) && (el = vpniter->i) % period != 0)
-                    error(vpniter->lineno, "%d is not a multiple of the %s %d", el,
-                          period_name, period);
-                if (!on_repeat && used_vpns[el/period].set(true))
+                if (CHECKTYPE2(*vpniter, tVEC, tINT)) {
+                    if (vpniter->type == tVEC) {
+                        if (!vpncoliter) {
+                            if ((int)row.vpns.size() != vpniter->vec.size) {
+                                error(vpniter->lineno, \
+                                "Vpn entries for row %d is %d not equal to column "
+                                "entries %d", row.row, vpniter->vec.size,
+                                (int)row.vpns.size());
+                            } else {
+                                vpncoliter = vpniter->vec.begin();
+                            }
+                        }
+                        el = vpncoliter->i;
+                        if (++vpncoliter == &*vpniter->vec.end()) ++vpniter;
+                        continue;
+                    } else if (vpniter->type == tINT)
+                        el = vpniter->i;
+                        ++vpniter;
+                }
+                // Error out if VPN's are repeated in a table. For wide words,
+                // each individual word can have the same vpn
+                if (!on_repeat && used_vpns[period - 1][el].set(true))
                     error(vpniter->lineno, "Vpn %d used twice in table %s", el, name());
-                ++vpniter;
             } else {
-                el = vpn_ctr;
-                if ((vpn_ctr += period) == depth) vpn_ctr = 0; } } }
-    if (vpn && !allow_holes && error_count == 0) {
-        for (int i = 0; i < vpn->size; i++)
-            if (!used_vpns[i]) {
-                error((*vpn)[0].lineno, "Hole in vpn list (%d) for table %s", i*period, name());
-                break; } }
+                // If there is no word information provided in assembly (Ternary
+                // Indirect/Stats) tables, the allocation is always a single
+                // word.
+                if (row.word < 0) row.word = word;
+                el = vpn_ctr[row.word];
+                if ((vpn_ctr[row.word] += period) == depth) vpn_ctr[row.word] = 0; } } }
 }
 
 void Table::common_init_setup(const VECTOR(pair_t) &data, bool, P4Table::type) {
@@ -1607,40 +1624,61 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
     vpn_params(width, depth, period, period_name);
     json::map mra;
     mra["memory_type"] = type;
-    std::vector<json::vector> mem_units;
+    std::vector<std::map<int, int>> mem_units;
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
-    int ctr = 0;
+    int vpn_ctr = 0;
     bool no_vpns = false;
     for (auto &row : layout) {
-        auto vpn = row.vpns.begin();
-        for (auto col : row.cols) {
-            if (vpn == row.vpns.end())
+        int word = row.word >= 0 ? row.word : 0;
+        std::vector<int>::iterator vpn_itr = row.vpns.begin();
+        for (auto col: row.cols) {
+            if (vpn_itr == row.vpns.end())
                 no_vpns = true;
-            else ctr = *vpn++;
-            int unit = ctr++/period;
-            if (size_t(unit) >= mem_units.size())
-                mem_units.resize(unit + 1);
-            mem_units[unit].push_back(memunit(row.row, col)); } }
+            else vpn_ctr = *vpn_itr++;
+            if (size_t(vpn_ctr) >= mem_units.size())
+                mem_units.resize(vpn_ctr + 1);
+            // Create a vector indexed by vpn no where each element is a map
+            // having a RAM entry indexed by word number
+            // VPN WORD RAM
+            //  0 -> 0   90
+            //       1   91
+            //  1 -> 0   92
+            //       1   93
+            //  E.g. VPN 0 has Ram 90 with word 0 and Ram 91 with word 1
+            mem_units[vpn_ctr][word] = memunit(row.row, col); } }
     int vpn = 0;
-    for (auto &mem : mem_units) {
-        if (skip_spare_bank && &mem == &mem_units.back()) {
-            if (mem.size() == 1)
-                mra["spare_bank_memory_unit"] = mem[0]->clone();
+    for (auto &mem_unit : mem_units) {
+        json::vector mem;
+        // Below for loop orders the mem unit as { .., word1, word0 } which is
+        // assumed to be what driver expects.
+        for (int word = mem_unit.size() - 1; word >=0 ; word--) {
+            for (auto m : mem_unit) {
+                if (m.first == word) {
+                    mem.push_back(m.second);
+                    break;
+                }
+            }
+        }
+        if (mem.size() != 0) {
+            if (skip_spare_bank && &mem_unit == &mem_units.back()) {
+                if (mem.size() == 1)
+                    mra["spare_bank_memory_unit"] = mem[0]->clone();
+                else
+                    mra["spare_bank_memory_unit"] = mem.clone();
+                if (table_type() == SELECTION || table_type() == COUNTER ||
+                        table_type() == METER || table_type() == STATEFUL) break; }
+            json::map tmp;
+            tmp["memory_units"] = std::move(mem);
+            json::vector vpns;
+            if (no_vpns)
+                vpns.push_back(nullptr);
             else
-                mra["spare_bank_memory_unit"] = mem.clone();
-            if (table_type() == SELECTION || table_type() == COUNTER ||
-                    table_type() == METER || table_type() == STATEFUL) break; }
-        std::sort(mem.begin(), mem.end(), json::obj::ptrless());
-        json::map tmp;
-        tmp["memory_units"] = std::move(mem);
-        json::vector vpns;
-        if (no_vpns)
-            vpns.push_back(nullptr);
-        else
-            vpns.push_back(vpn);
-        tmp["vpns"] = std::move(vpns);
-        mem_units_and_vpns.push_back(std::move(tmp));
-        vpn += period; }
+                vpns.push_back(vpn);
+            tmp["vpns"] = std::move(vpns);
+            mem_units_and_vpns.push_back(std::move(tmp));
+        }
+        vpn++;
+     }
     return json::mkuniq<json::map>(std::move(mra));
 }
 

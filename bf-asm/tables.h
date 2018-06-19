@@ -78,6 +78,7 @@ protected:
     void setup_vpns(std::vector<Layout> &, VECTOR(value_t) *, bool allow_holes = false);
     virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name)
     { assert(0); }
+    virtual int get_start_vpn() { return 0; }
     void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use = 0);
     void alloc_busses(Alloc2Dbase<Table *> &bus_use);
     void alloc_id(const char *idname, int &id, int &next_id, int max_id,
@@ -1117,6 +1118,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     std::map<std::string, Format *>     action_formats;
     static const std::map<unsigned, std::vector<std::string>> action_data_address_huffman_encoding;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override;
+    int get_start_vpn() override;
     std::string find_field(Format::Field *field) override;
     int find_field_lineno(Format::Field *field) override;
     Format::Field *lookup_field(const std::string &name, const std::string &action) override;
