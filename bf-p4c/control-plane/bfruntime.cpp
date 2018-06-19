@@ -946,6 +946,7 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
         }
 
         auto* operationsJson = new Util::JsonArray();
+        auto* attributesJson = new Util::JsonArray();
 
         // direct resources
         for (auto directResId : table.direct_resource_ids()) {
@@ -960,19 +961,26 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
             }
         }
 
-        tableJson->emplace("data", dataJson);
-
-        tableJson->emplace("supported_operations", operationsJson);
-
-        auto* attributesJson = new Util::JsonArray();
         attributesJson->append("EntryScope");
+
         if (table.is_const_table()) attributesJson->append("ConstTable");
+
         // TODO(antonin): this will probably change when idle-timeout support is
         // finalized in TNA
-        if (table.idle_timeout_behavior() == p4configv1::Table::NOTIFY_CONTROL)
+        if (table.idle_timeout_behavior() ==
+            p4configv1::Table::NOTIFY_CONTROL) {
             attributesJson->append("IdleTimeout");
+            auto* f = makeCommonDataField(
+                BF_RT_DATA_ENTRY_TTL, "$ENTRY_TTL",
+                makeTypeInt("uint32", 0 /* default TTL -> ageing disabled */),
+                false /* repeated */);
+            addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+        }
+
+        tableJson->emplace("data", dataJson);
         // TODO(antonin): add 'UpdateHitState' to supported operations when
         // enabled in TNA & P4Info
+        tableJson->emplace("supported_operations", operationsJson);
         tableJson->emplace("attributes", attributesJson);
 
         tablesJson->append(tableJson);
