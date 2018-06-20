@@ -1819,6 +1819,14 @@ class InsertParserChecksums : public Inspector {
             if (belongsTo(dest_field->to<IR::Member>(), extract)) {
                 BUG_CHECK(decl, "No fields have been added before verify?");
 
+                auto addCall = new IR::MethodCallStatement(csum.second->srcInfo,
+                        new IR::Member(new IR::PathExpression(decl->name), "add"),
+                                                              { new IR::Argument(dest_field) });
+
+                // TODO(zma) verify on ingress only?
+                structure->ingressParserStatements[stateName].push_back(addCall);
+                structure->egressParserStatements[stateName].push_back(addCall);
+
                 auto methodCall = new IR::Member(new IR::PathExpression(decl->name), "verify");
                 auto verifyCall = new IR::MethodCallExpression(csum.second->srcInfo,
                                                                methodCall, {});
@@ -1831,8 +1839,6 @@ class InsertParserChecksums : public Inspector {
 
                 structure->ingressParserStatements[stateName].push_back(
                     new IR::AssignmentStatement(lhs, rhs));
-
-                // TODO(zma) verify on ingress only?
 
                 auto egress_parser_err = new IR::Member(
                     new IR::PathExpression("eg_intr_md_from_prsr"), "parser_err");
