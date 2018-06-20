@@ -259,4 +259,13 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "Converting a bitvec to a bitrange requires the bitrange to be continuous"
   switch_msdc
+  smoketest_switch_msdc
+  smoketest_switch_msdc_set_1
+  smoketest_switch_msdc_set_2
+  smoketest_switch_msdc_set_3
+  smoketest_switch_msdc_set_4
+  smoketest_switch_msdc_set_5
+  smoketest_switch_msdc_set_6
+  smoketest_switch_msdc_set_7
+  smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest
 )

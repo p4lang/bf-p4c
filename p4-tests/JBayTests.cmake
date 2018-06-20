@@ -64,21 +64,5 @@ set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/emulation/*.
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 bfn_add_p4factory_tests("jbay" "smoketest_programs" BFN_TESTS_LIST)
 
-# Switch P4-14 On Master (refpoint must be periodically updated)
-set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
-set  (SWITCH_PTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/ptf-tests/base/api-tests)
-set  (SWITCH_PTF_DIR_MIRROR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/ptf-tests/base/feature-tests)
-file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
-p4c_add_test_with_args ("jbay" ${P4C_RUNTEST} FALSE
-  "switch_dc_basic" ${switchtest} "${testExtraArgs} -DDC_BASIC_PROFILE")
-p4c_add_test_label("jbay" "18Q2Goal" "switch_dc_basic")
-
-p4c_add_test_with_args ("jbay" ${P4C_RUNTEST} FALSE
-  "switch_ent_dc_general" ${switchtest} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
-p4c_add_test_label("jbay" "18Q2Goal" "switch_ent_dc_general")
-
-p4c_add_test_with_args ("jbay" ${P4C_RUNTEST} FALSE
-  "switch_msdc" ${switchtest} "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG")
-p4c_add_test_label("jbay" "18Q2Goal" "switch_msdc")
-
+include(SwitchJBay.cmake)
 include(JBayXfail.cmake)

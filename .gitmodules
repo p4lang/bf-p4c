@@ -41,3 +41,6 @@
 [submodule "p4-tests/p4_14/switch-8.2"]
 	path = p4-tests/p4_14/switch-8.2
 	url = git@github.com:barefootnetworks/switch.git
+[submodule "p4-tests/p4_14/switch-jbay"]
+	path = p4-tests/p4_14/switch-jbay
+	url = git@github.com:barefootnetworks/switch.git

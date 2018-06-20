@@ -441,7 +441,13 @@ if $run_pd ; then
     pushd $testout > /dev/null
     echo "Configuring $name in $testout"
     if [ $name == switch ]; then
-       switchdir="$(dirname $0)/p4_14/switch"
+       if [ $device == jbay ]; then
+          switchdir="$(dirname $0)/p4_14/switch-jbay"
+          withp4c="--with-p4c"
+       else
+          switchdir="$(dirname $0)/p4_14/switch"
+          withp4c="--with-p4c-v6"
+       fi
        if [ ! -r $switchdir/configure ] ; then
           pushd $switchdir > /dev/null
           echo "Reconfiguring switch"
@@ -450,7 +456,7 @@ if $run_pd ; then
        fi
        export P4CV6=yes
        run $switchdir/configure --enable-thrift --disable-static --with-${device} \
-	                --with-switchsai --with-cpu-veth --prefix $testout --with-p4c-v6 \
+	                --with-switchsai --with-cpu-veth --prefix $testout $withp4c \
 	                P4_PREFIX=dc P4_NAME=$name P4_PATH=$file P4PPFLAGS="$P4PPFLAGS" \
 	                > $testout/$name-conf.log || die
        run make install > ${testout}/switch-make.log || die
