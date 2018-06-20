@@ -1,6 +1,3 @@
-import ptf
-import os
-from ptf import config
 import ptf.testutils as testutils
 
 from p4.v1 import p4runtime_pb2

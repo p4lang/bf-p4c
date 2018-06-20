@@ -144,6 +144,11 @@ class LoadTargetArchitecture : public Inspector {
                 EGRESS,
                 MetadataField{"eg_intr_md_from_parser_aux", "clone_digest_id", 4},
                 MetadataField{"compiler_generated_meta", "clone_digest_id", 4});
+
+        structure->addMetadata(
+                EGRESS,
+                MetadataField{"standard_metadata", "egress_rid", 16},
+                MetadataField{"eg_intr_md", "egress_rid", 16});
     }
 
     void analyzeTofinoModel() {
