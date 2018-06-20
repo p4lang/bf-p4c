@@ -1280,6 +1280,8 @@ static void gen_override(json::map &cfg, Table::Call &att) {
             } else {
                 override_full_addr |= arg.value();
             override_addr = true; }
+        } else if (arg.type == Table::Call::Arg::Counter) {
+            // does not affect context json
         } else {
             error(att.lineno, "argument not a constant"); } }
     cfg[base + "_addr"] = override_addr;
