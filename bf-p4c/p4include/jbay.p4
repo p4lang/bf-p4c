@@ -327,8 +327,8 @@ struct egress_intrinsic_metadata_for_output_port_t {
 
 header pktgen_generic_header_t {
     bit<3> _pad0;
-    bit<3> app_id;
     bit<2> pipe_id;
+    bit<3> app_id;
     bit<8> key_msb;   // Only valid for recirc triggers.
     bit<16> batch_id; // Overloaded to port# or lsbs of key for port down and
                       // recirc triggers.
