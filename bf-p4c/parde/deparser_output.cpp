@@ -341,12 +341,10 @@ DeparserAsmOutput::DeparserAsmOutput(const IR::BFN::Pipe* pipe,
 std::ostream&
 operator<<(std::ostream& out, const DeparserAsmOutput& deparserOut) {
     out << "deparser " << deparserOut.deparser->thread() << ":" << std::endl;
-
-    auto* unaliasedDeparser = deparserOut.deparser->apply(ReinstateAliasSources());
-    unaliasedDeparser->apply(OutputDictionary(out, deparserOut.phv, deparserOut.clot));
-    unaliasedDeparser->apply(OutputChecksums(out));
-    unaliasedDeparser->apply(OutputParameters(out));
-    unaliasedDeparser->apply(OutputDigests(out, deparserOut.phv));
+    deparserOut.deparser->apply(OutputDictionary(out, deparserOut.phv, deparserOut.clot));
+    deparserOut.deparser->apply(OutputChecksums(out));
+    deparserOut.deparser->apply(OutputParameters(out));
+    deparserOut.deparser->apply(OutputDigests(out, deparserOut.phv));
 
     return out;
 }

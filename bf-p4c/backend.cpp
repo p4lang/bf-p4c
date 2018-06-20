@@ -212,7 +212,7 @@ Backend::Backend(const BFN_Options& options) :
                                 // Undo results of privatization for the doNotPrivatize fields
         new PHV::ValidateActions(phv, false, true, false),
         new AddAliasAllocation(phv),
-        new ReinstateAliasSources(),    // revert AliasMembers/Slices to their original sources
+        new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         options.privatization ? &defuse : nullptr,
         new TableAllocPass(options, phv, deps),
         new TableSummary,

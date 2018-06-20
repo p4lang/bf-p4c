@@ -27,6 +27,7 @@ void PhvInfo::clear() {
     by_id.clear();
     all_structs.clear();
     simple_headers.clear();
+    aliasMap.clear();
     dummyPaddingNames.clear();
     alloc_done_ = false;
     pov_alloc_done = false;

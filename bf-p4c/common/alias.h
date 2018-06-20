@@ -82,12 +82,28 @@ class Alias : public PassManager {
 
 /// Replace AliasMember and AliasSlice nodes with their alias sources.
 class ReinstateAliasSources : public Transform {
+    PhvInfo&    phv;
+
     IR::Node* preorder(IR::BFN::AliasMember* alias) override {
-        return alias->source->apply(ReinstateAliasSources())->clone();
+        const PHV::Field* aliasSource = phv.field(alias->source);
+        const PHV::Field* aliasDestination = phv.field(alias);
+        BUG_CHECK(aliasSource, "Field %1% not found", alias->source);
+        BUG_CHECK(aliasDestination, "Field %1% not found", alias);
+        phv.addAliasMapEntry(aliasSource, aliasDestination);
+        return alias->source->apply(ReinstateAliasSources(phv))->clone();
     }
+
     IR::Node* preorder(IR::BFN::AliasSlice* alias) override {
-        return alias->source->apply(ReinstateAliasSources())->clone();
+        const PHV::Field* aliasSource = phv.field(alias->source);
+        const PHV::Field* aliasDestination = phv.field(alias);
+        BUG_CHECK(aliasSource, "Field %1% not found", alias->source);
+        BUG_CHECK(aliasDestination, "Field %1% not found", alias);
+        phv.addAliasMapEntry(aliasSource, aliasDestination);
+        return alias->source->apply(ReinstateAliasSources(phv))->clone();
     }
+
+ public:
+    explicit ReinstateAliasSources(PhvInfo& p) : phv(p) { }
 };
 
 #endif  /* EXTENSIONS_BF_P4C_COMMON_ALIAS_H_ */

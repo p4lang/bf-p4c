@@ -7,8 +7,7 @@
 #include <set>
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
-
-class PhvInfo;
+#include "bf-p4c/phv/phv_fields.h"
 
 /* The DependencyGraph data structure is a directed graph in which tables are
  * vertices and edges are dependencies.  An edge from t1 to t2 means that t2
@@ -227,6 +226,12 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
         dg.clear();
         access.clear();
         cont_write.clear();
+
+        const ordered_map<const PHV::Field*, const PHV::Field*>& aliasMap = phv.getAliasMap();
+        LOG1("Printing alias map");
+        for (auto kv : aliasMap)
+            LOG1("  " << kv.first->name << " aliases with " << kv.second->name);
+
         return rv;
     }
 

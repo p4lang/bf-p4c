@@ -75,9 +75,16 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
     }
 
     bool preorder(const IR::Expression *e) override {
-        if (auto *field = self.phv.field(e)) {
-            if (self.access.count(field->name)) {
-                LOG3("add_dependency(" << field->name << ")");
+        auto* originalField = self.phv.field(e);
+        if (!originalField) return true;
+        ordered_set<const PHV::Field*> candidateFields;
+        candidateFields.insert(originalField);
+        if (self.phv.getAliasMap().count(originalField))
+            candidateFields.insert(self.phv.getAliasMap().at(originalField));
+        for (const PHV::Field* field : candidateFields) {
+            cstring field_name = field->name;
+            if (self.access.count(field_name)) {
+                LOG3("add_dependency(" << field_name << ")");
                 if (isWrite()) {
                     // Write-after-read dependence.
                     addDeps(self.access[field->name].read, table, DependencyGraph::ANTI);
@@ -88,17 +95,14 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
                     addDeps(self.access[field->name].write, table, DependencyGraph::DATA);
                 }
             }
-
             if (isWrite() && self.phv.alloc_done()) {
                 field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
                     bitvec range(sl.container_bit, sl.width);
                     cont_writes[sl.container] |= range;
                 });
             }
-
-            return false;
         }
-        return true;
+        return false;
     }
 
     bool preorder(const IR::Annotation *) override { return false; }
@@ -123,7 +127,14 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
     }
 
     bool preorder(const IR::Expression *e) override {
-        if (auto *field = self.phv.field(e)) {
+        auto* originalField = self.phv.field(e);
+        if (!originalField) return true;
+        ordered_set<const PHV::Field*> candidateFields;
+        candidateFields.insert(originalField);
+        if (self.phv.getAliasMap().count(originalField))
+            candidateFields.insert(self.phv.getAliasMap().at(originalField));
+        for (const PHV::Field* field : candidateFields) {
+            cstring field_name = field->name;
             if (isWrite()) {
                 LOG3("update_access write " << field->name);
                 auto &a = self.access[field->name];
@@ -140,9 +151,8 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
                     cont_writes[sl.container] |= range;
                 });
             }
-            return false;
         }
-        return true;
+        return false;
     }
 
     void end_apply() override {

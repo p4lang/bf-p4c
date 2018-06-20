@@ -1904,7 +1904,6 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             expr = expr->to<IR::Slice>()->e0;
         // Replace any alias nodes with their original sources, in order to
         // ensure the original names are emitted.
-        expr = expr->apply(ReinstateAliasSources());
         auto size = expr->type->width_bits();
 
         // Check for @name annotation.

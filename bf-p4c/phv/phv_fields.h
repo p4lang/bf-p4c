@@ -714,6 +714,10 @@ class PhvInfo {
     /// the dummy padding field names.
     ordered_set<cstring> dummyPaddingNames;
 
+    /// Mapping of alias source to alias destination. Used for building the correct table dependency
+    /// graph.
+    ordered_map<const PHV::Field*, const PHV::Field*> aliasMap;
+
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
 
@@ -827,6 +831,18 @@ class PhvInfo {
       * @returns boost::none otherwise.
       */
     boost::optional<cstring> get_alias_name(const IR::Expression* expr) const;
+
+    /// Adds an entry to the aliasMap.
+    void addAliasMapEntry(const PHV::Field* f1, const PHV::Field* f2) {
+        if (aliasMap.count(f1))
+            BUG_CHECK(aliasMap[f1] == f2, "Multiple aliases with the same field found");
+        aliasMap[f1] = f2;
+    }
+
+    /// @returns the aliasMap.
+    const ordered_map<const PHV::Field*, const PHV::Field*>& getAliasMap() const {
+        return aliasMap;
+    }
 };
 
 /**
