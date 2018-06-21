@@ -351,6 +351,7 @@ build_driver () {
         echo "Reusing bf-drivers for $device as is"
     else
         if $rerun_autoconf || [ ! -r $builddir/Makefile ]; then
+            git submodule update --init --recursive
             ./autogen.sh
             cd $builddir
             CFLAGS="-O0" CPPFLAGS="-I $installdir/include" ../configure --enable-thrift --with-avago --without-kdrv --with-build-model --enable-pi  --prefix=$installdir
