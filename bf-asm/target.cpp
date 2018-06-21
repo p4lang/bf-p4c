@@ -124,11 +124,11 @@ void declare_registers(const Target::JBay::parser_regs *regs) {
     declare_registers(&regs->main[INGRESS], sizeof regs->main[INGRESS],
         [=](std::ostream &out, const char *addr, const void *end) {
             out << "parser.ingress.main";
-            regs->merge.emit_fieldname(out, addr, end); });
+            regs->main[INGRESS].emit_fieldname(out, addr, end); });
     declare_registers(&regs->main[EGRESS], sizeof regs->main[EGRESS],
         [=](std::ostream &out, const char *addr, const void *end) {
             out << "parser.egress.main";
-            regs->merge.emit_fieldname(out, addr, end); });
+            regs->main[EGRESS].emit_fieldname(out, addr, end); });
     declare_registers(&regs->merge, sizeof regs->merge,
         [=](std::ostream &out, const char *addr, const void *end) {
             out << "parser.merge";
