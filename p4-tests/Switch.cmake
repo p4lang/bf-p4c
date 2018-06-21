@@ -236,8 +236,6 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_3" ${SWITC
         "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_3"
         "switch_mcast.L3Multicast
-        switch_mcast.L3MulticastBidir
-        switch_mcast.L3MulticastStatsTest
         switch_mcast.L3MulticastToEcmp
         switch_tests.CpuTxTest
         switch_tests.DeviceInfoTest
@@ -345,6 +343,17 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_9"
         switch_tunnel.L3VxlanUnicastMultiTunnelSMTest
         switch_tunnel.L3VxlanUnicastTunnelECMPLagReflectionSMTest
         switch_tunnel.L3VxlanUnicastTunnelSMTest")
+
+
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L3MulticastBidir" ${SWITCH_P4}
+          "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L3MulticastBidir"
+          "switch_mcast.L3MulticastBidir")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L3MulticastStatsTest" ${SWITCH_P4}
+          "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L3MulticastStatsTest"
+          "switch_mcast.L3MulticastStatsTest")
+
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_dc_basic" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_dc_basic_set_1" PROPERTIES TIMEOUT 12000)

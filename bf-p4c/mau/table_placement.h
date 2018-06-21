@@ -48,8 +48,10 @@ class TablePlacement : public MauTransform, public Backtrack {
         cstring suffix = "");
     const Placed *placement;
     bool is_better(const Placed *a, const Placed *b);
-    Placed *try_place_table(const IR::MAU::Table *t, const Placed *done,
-                            const StageUseEstimate &current);
+    safe_vector<Placed *> try_place_table(const IR::MAU::Table *t, const Placed *done,
+        const StageUseEstimate &current);
+    Placed *try_place_table(Placed *rv, const IR::MAU::Table *t, const Placed *done,
+        const StageUseEstimate &current);
     bool try_alloc_ixbar(Placed *next, const Placed *done, TableResourceAlloc *alloc);
     bool try_alloc_format(Placed *next, TableResourceAlloc *resources, bool gw_linked);
     bool try_alloc_mem(Placed *next, const Placed *done, TableResourceAlloc *resources,

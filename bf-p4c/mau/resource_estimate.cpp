@@ -463,9 +463,11 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
         }
 
         if (a_mod == 0 && b_mod != 0)
-            return true;
+            if (b.way.width > 2)
+                return true;
         if (b_mod == 0 && a_mod != 0)
-            return false;
+            if (a.way.width > 2)
+                return false;
 
         if ((t = a.srams - b.srams) != 0) return t < 0;
         if ((t = a.way.width - b.way.width) != 0) return t < 0;
@@ -485,7 +487,8 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
     for (auto &lo : layout_options) {
         LOG3("layout option width " << lo.way.width << " match groups " << lo.way.match_groups
               << " entries " << lo.entries << " srams " << lo.srams
-              << " action data " << lo.layout.direct_ad_required());
+              << " action data " << lo.layout.action_data_bytes_in_table
+              << " immediate " << lo.layout.immediate_bits);
         LOG3("Layout option way sizes " << lo.way_sizes);
     }
 
@@ -508,7 +511,8 @@ void StageUseEstimate::select_best_option_ternary() {
 
     for (auto &lo : layout_options) {
         LOG3("entries " << lo.entries << " srams " << lo.srams << " tcams " << lo.tcams
-              << " action data " << lo.layout.direct_ad_required()
+              << " action data " << lo.layout.action_data_bytes_in_table
+              << " immediate " << lo.layout.immediate_bits
               << " ternary indirect " << lo.layout.ternary_indirect_required());
     }
 
@@ -872,9 +876,12 @@ void StageUseEstimate::srams_left_best_option(int srams_left) {
         }
 
         if (a_mod == 0 && b_mod != 0)
-            return true;
+            if (b.way.width > 2)
+                return true;
         if (b_mod == 0 && a_mod != 0)
-            return false;
+            if (a.way.width > 2)
+                return false;
+
         if (a.srams > srams_left && b.srams <= srams_left)
             return false;
         if (b.srams > srams_left && a.srams <= srams_left)
@@ -891,7 +898,8 @@ void StageUseEstimate::srams_left_best_option(int srams_left) {
     for (auto &lo : layout_options) {
         LOG3("layout option width " << lo.way.width << " match groups " << lo.way.match_groups
               << " entries " << lo.entries << " srams " << lo.srams
-              << " action data " << lo.layout.direct_ad_required());
+              << " action data " << lo.layout.action_data_bytes_in_table
+              << " immediate " << lo.layout.immediate_bits);
         LOG3("Layout option way sizes " << lo.way_sizes);
     }
     preferred_index = 0;
@@ -957,7 +965,8 @@ void StageUseEstimate::tcams_left_best_option() {
 
     for (auto &lo : layout_options) {
         LOG3("entries " << lo.entries << " srams " << lo.srams << " tcams " << lo.tcams
-              << " action data " << lo.layout.direct_ad_required()
+              << " action data " << lo.layout.action_data_bytes_in_table
+              << " immediate " << lo.layout.immediate_bits
               << " ternary indirect " << lo.layout.ternary_indirect_required());
     }
 }

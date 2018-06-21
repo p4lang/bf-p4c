@@ -174,6 +174,11 @@ if (PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_16/large_action_data_constant.p4
     )
 
+  p4c_add_xfail_reason("tofino"
+    "A packet was received .* but we expected no packets"
+    smoketest_switch_dc_basic_L3MulticastBidir
+  )
+
 endif() # PTF_REQUIREMENTS_MET
 
 
@@ -318,6 +323,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_msdc_l3
   switch_8.2_msdc_ipv4
+  switch_msdc_ipv4
   )
 
 p4c_add_xfail_reason("tofino"

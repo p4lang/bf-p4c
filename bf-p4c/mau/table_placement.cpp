@@ -193,7 +193,7 @@ struct TablePlacement::Placed {
     }
 
 
-    TablePlacement::Placed *gateway_merge();
+    bool gateway_merge(ordered_set<const IR::MAU::Table *> &attempted_tables);
     void set_prev(const Placed *p, bool make_new,
                   safe_vector<TableResourceAlloc *> &prev_resources) {
         if (!make_new) {
@@ -281,37 +281,57 @@ static int count(const TablePlacement::Placed *pl) {
     return rv;
 }
 
-TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
+
+bool TablePlacement::Placed::gateway_merge(ordered_set<const IR::MAU::Table *> &attempted_tables) {
+    bool can_have_link = true;
+    bool has_link = false;
     if (gw || !table->uses_gateway() || table->match_table) {
-        return this;
+        can_have_link = false;
     }
     /* table is just a gateway -- look for a dependent match table to combine with */
     cstring result_tag;
     const IR::MAU::Table *match = 0;
-    for (auto it = table->next.rbegin(); it != table->next.rend(); it++) {
-        if (self.seqInfo.at(it->second).refs.size() > 1)
-            continue;
-        int idx = -1;
-        for (auto t : it->second->tables) {
-            ++idx;
-            if (it->second->deps[idx]) continue;
-            if (t->uses_gateway()) continue;
-            // FIXME: Look for notes above preorder for IR::MAU::Table
-            if (t->next.count("$hit") || t->next.count("$miss")) continue;
-            // Currently would potentially require multiple gateways if split into
-            // multiple tables.  Not supported yet during allocation
-            if (t->for_dleft()) continue;
-            match = t;
-            result_tag = it->first;
-            break; }
-        if (match) break; }
+    if (can_have_link) {
+        for (auto it = table->next.rbegin(); it != table->next.rend(); it++) {
+            if (self.seqInfo.at(it->second).refs.size() > 1)
+                continue;
+            int idx = -1;
+            for (auto t : it->second->tables) {
+                ++idx;
+                if (it->second->deps[idx]) continue;
+                if (t->uses_gateway()) continue;
+                // FIXME: Look for notes above preorder for IR::MAU::Table
+                if (t->next.count("$hit") || t->next.count("$miss")) continue;
+                // Currently would potentially require multiple gateways if split into
+                // multiple tables.  Not supported yet during allocation
+                if (t->for_dleft()) continue;
+                has_link = true;
+                if (attempted_tables.count(t))
+                    continue;
+                match = t;
+                result_tag = it->first;
+                break;
+            }
+            if (match) break;
+        }
+    }
     if (match) {
         LOG2(" - making " << name << " gateway on " << match->name);
         name = match->name;
         gw = table;
         table = match;
-        gw_result_tag = result_tag; }
-    return this;
+        gw_result_tag = result_tag;
+        attempted_tables.insert(match);
+        return true;
+    }
+
+    if (!can_have_link || (can_have_link && !has_link)) {
+        if (attempted_tables.count(table) == 0) {
+            attempted_tables.insert(table);
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
@@ -656,11 +676,12 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
                 rv->stage++;
                 LOG2(" - dependency between " << p->table->name << " and gateway advances stage");
             } else if (deps->container_conflict(p->table, rv->table)) {
-                if (!ignoreContainerConflicts)
+                if (!ignoreContainerConflicts) {
                    rv->stage++;
-                LOG2(" - action dependency between " << p->table->name << " and table " <<
+                   LOG2(" - action dependency between " << p->table->name << " and table " <<
                         rv->table->name << " due to PHV allocation advances stage to " <<
                         rv->stage);
+                }
             }
         }
     }
@@ -676,10 +697,33 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
     return true;
 }
 
-TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
-                                                        const StageUseEstimate &current) {
+/** When placing a gateway table, the gateway can potential be combined with a match table
+ *  to build one logical table.  The gateway_merge function picks a legal table to place with
+ *  this table.  This loops through all possible tables to be merged, and will
+ *  return a vector of these possible choices to the is_better function to choose
+ */
+safe_vector<TablePlacement::Placed *> TablePlacement::try_place_table(const IR::MAU::Table *t,
+        const Placed *done, const StageUseEstimate &current) {
     LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
-    auto *rv = (new Placed(*this, t))->gateway_merge();
+    ordered_set<const IR::MAU::Table *> attempted_tables;
+    safe_vector<TablePlacement::Placed *> rv_vec;
+    while (true) {
+        auto *rv = (new Placed(*this, t));
+        bool try_allocation = rv->gateway_merge(attempted_tables);
+        if (!try_allocation) break;
+        rv = try_place_table(rv, t, done, current);
+        if (rv == nullptr) {
+            rv_vec.clear();
+            break;
+        }
+        rv_vec.push_back(rv);
+    }
+    return rv_vec;
+}
+
+
+TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MAU::Table *t,
+        const Placed *done, const StageUseEstimate &current) {
     auto *min_placed = new Placed(*rv);
     TableResourceAlloc *resources = new TableResourceAlloc;
     TableResourceAlloc *min_resources = new TableResourceAlloc;
@@ -693,8 +737,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     rv->stage = done ? done->stage : 0;
     int furthest_stage = (done == nullptr) ? 0 : done->stage + 1;
     int set_entries = 512;
-    if (!initial_stage_and_entries(rv, done, set_entries, furthest_stage))
+    if (!initial_stage_and_entries(rv, done, set_entries, furthest_stage)) {
         return nullptr;
+    }
 
 
     LOG3("Initial stage is " << rv->stage);
@@ -946,8 +991,12 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b) {
     }
 
 
-    int a_extra_stages = a->need_more ? a->extra_use.stages_required() : 0;
-    int b_extra_stages = b->need_more ? b->extra_use.stages_required() : 0;
+    if (b->need_more && !a->need_more) return true;
+    if (a->need_more && !b->need_more) return false;
+    // FIXME: This feels like it shouldn't work but is does, keeping the old code around
+    // as documentation
+    int a_extra_stages = 0;  // a->need_more ? a->extra_use.stages_required() : 0;
+    int b_extra_stages = 0;  // b->need_more ? b->extra_use.stages_required() : 0;
 
     int a_deps_stages = deps->dependence_tail_size(a->table) + a_extra_stages;
     int b_deps_stages = deps->dependence_tail_size(b->table) + b_extra_stages;
@@ -959,9 +1008,6 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b) {
     int b_total_deps = deps->happens_before_dependences(b->table).size() + b_extra_stages;
     if (a_total_deps < b_total_deps) return true;
     if (a_total_deps > b_total_deps) return false;
-
-    if (b->need_more && !a->need_more) return true;
-    if (a->need_more && !b->need_more) return false;
 
     return true;
 }
@@ -1030,21 +1076,30 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                          DumpSeqTables(grp->seq, grp->seq->deps[idx] - seq_placed));
                     done = false;
                     continue; }
-                if (auto pl = try_place_table(t, placed, current)) {
+
+                auto pl_vec = try_place_table(t, placed, current);
+                if (pl_vec.empty())
+                    BUG("Can't find a table to place");
+
+                for (auto pl : pl_vec) {
                     pl->group = grp;
-                    done = false;
-                    if (!partly_placed.count(pl->table)) {
-                        bool defer = false;
-                        for (auto t : partly_placed)
-                            if (!mutex(t, pl->table)) {
-                                LOG3(" - skipping " << pl->name << " as it is not mutually "
-                                     "exclusive with partly placed " << t->name);
-                                defer = true;
-                                break; }
-                        if (defer) continue; }
-                    trial.push_back(pl);
-                } else {
-                    BUG("Can't place a table"); } }
+                    bool defer = false;
+                    for (auto t : partly_placed) {
+                        if (t == pl->table)
+                            continue;
+                        if (!mutex(t, pl->table)) {
+                            LOG3(" - skipping " << pl->name << " as it is not mutually "
+                                 "exclusive with partly placed " << t->name);
+                            defer = true;
+                            break;
+                        }
+                    }
+                    if (!defer) {
+                        done = false;
+                        trial.push_back(pl);
+                    }
+                }
+            }
             if (done) {
                 BUG("Can't find a table to place");
                 it = work.erase(it);
