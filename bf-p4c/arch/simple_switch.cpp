@@ -1801,8 +1801,8 @@ class InsertParserChecksums : public Inspector {
 
         IR::Declaration_Instance* decl = nullptr;
 
-        for (auto extract : extracts) {
-            for (auto f : fieldlist->to<IR::ListExpression>()->components) {
+        for (auto f : fieldlist->to<IR::ListExpression>()->components) {
+            for (auto extract : extracts) {
                 if (belongsTo(f->to<IR::Member>(), extract)) {
                     if (decl == nullptr) {
                         decl = getChecksumDeclaration(structure, csum);
@@ -1820,7 +1820,9 @@ class InsertParserChecksums : public Inspector {
                     structure->egressParserStatements[stateName].push_back(addCall);
                 }
             }
+        }
 
+        for (auto extract : extracts) {
             if (belongsTo(dest_field->to<IR::Member>(), extract)) {
                 BUG_CHECK(decl, "No fields have been added before verify?");
 
