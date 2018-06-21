@@ -119,6 +119,9 @@ int CounterPerWord(const IR::MAU::Counter *ctr);
 int CounterWidth(const IR::MAU::Counter *ctr);
 int RegisterPerWord(const IR::MAU::StatefulAlu *reg);
 int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width);
+int ActionDataHuffmanVPNBits(const IR::MAU::Table::Layout *layout);
+int ActionDataVPNStartPosition(const IR::MAU::Table::Layout *layout);
+int ActionDataVPNIncrement(const IR::MAU::Table::Layout *layout);
 int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl);
 int IdleTimePerWord(const IR::MAU::IdleTime *idletime);
 

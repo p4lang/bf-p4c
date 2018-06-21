@@ -140,7 +140,7 @@ struct Memories {
          * each memory is allocated to?  For now, we do not. */
         struct Row {
             int         row, bus, word, alloc;
-            safe_vector<int> col, mapcol;
+            safe_vector<int> col, mapcol, vpn;
             Row() : row(-1), bus(-1), word(-1), alloc(-1) {}
             explicit Row(int r, int b = -1, int w = -1, int a = -1)
                 : row(r), bus(b), word(w), alloc(a) {}
@@ -220,6 +220,8 @@ struct Memories {
         int number = 0;   // Used to keep track of wide action tables and way numbers in exact match
         int hash_group = -1;  // Which hash group the exact match way is using
         int logical_table = 0;  // For ATCAM tables, which logical table this partition is based
+        int vpn_increment = 1;
+        int vpn_offset = 0;
         bool direct = false;  // Whether the attached table is directly or indirectly addressed
         const IR::MAU::AttachedMemory *attached = nullptr;
         int recent_home_row = -1;  // For swbox users, most recent row to oflow to
@@ -354,6 +356,9 @@ struct Memories {
         }
         cstring get_name() const;
         bool same_wide_action(const SRAM_group &a);
+        int calculate_next_vpn() const {
+            return placed * vpn_increment + vpn_offset;
+        }
     };
 
     struct match_selection {

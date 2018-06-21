@@ -1531,6 +1531,8 @@ void Memories::swbox_bus_selectors_indirects() {
             int width = 1;
             int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
             int depth = mems_needed(ad->size, SRAM_DEPTH, per_row, false);
+            int vpn_increment = ActionDataVPNIncrement(&ta->layout_option->layout);
+            int vpn_offset = ActionDataVPNStartPosition(&ta->layout_option->layout);
             SRAM_group *selector = nullptr;
 
             for (auto grp : synth_bus_users) {
@@ -1542,6 +1544,8 @@ void Memories::swbox_bus_selectors_indirects() {
             for (int i = 0; i < width; i++) {
                 auto action_group = new SRAM_group(ta, depth, i, SRAM_group::ACTION);
                 action_group->attached = ad;
+                action_group->vpn_increment = vpn_increment;
+                action_group->vpn_offset = vpn_offset;
                 if (selector != nullptr) {
                     action_group->sel.sel_group = selector;
                     selector->sel.action_groups.insert(action_group);
@@ -1668,6 +1672,8 @@ void Memories::find_swbox_bus_users() {
     for (auto *ta : action_tables) {
         int width = 1;
         int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
+        int vpn_increment = ActionDataVPNIncrement(&ta->layout_option->layout);
+        int vpn_offset = ActionDataVPNStartPosition(&ta->layout_option->layout);
         if (ta->table->layout.atcam) {
             int search_bus_per_lt = (ta->table->layout.partition_count + SRAM_DEPTH - 1)
                                      / SRAM_DEPTH;
@@ -1680,14 +1686,20 @@ void Memories::find_swbox_bus_users() {
                     auto *act_group = new SRAM_group(ta, depth, i, SRAM_group::ACTION);
                     act_group->logical_table = logical_table;
                     act_group->direct = true;
+                    act_group->vpn_increment = vpn_increment;
+                    act_group->vpn_offset = vpn_offset;
                     action_bus_users.insert(act_group);
                 }
                 logical_table++;
             }
         } else {
             int depth = mems_needed(ta->calculated_entries, SRAM_DEPTH, per_row, false);
-            for (int i = 0; i < width; i++)
-                action_bus_users.insert(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
+            for (int i = 0; i < width; i++) {
+                auto act_group = new SRAM_group(ta, depth, i, SRAM_group::ACTION);
+                act_group->vpn_increment = vpn_increment;
+                act_group->vpn_offset = vpn_offset;
+                action_bus_users.insert(act_group);
+            }
         }
     }
     swbox_bus_selectors_indirects();
@@ -2412,6 +2424,8 @@ void Memories::fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, swi
         if ((1 << k) & candidate.mask) {
             sram_use[row][k] = name;
             alloc.row.back().col.push_back(k);
+            alloc.row.back().vpn.push_back(candidate.group->calculate_next_vpn());
+            candidate.group->placed++;
             if (candidate.group->is_synth_type()) {
                 mapram_use[row][k - LEFT_SIDE_COLUMNS] = name;
                 alloc.row.back().mapcol.push_back(k - LEFT_SIDE_COLUMNS);
@@ -2426,8 +2440,6 @@ void Memories::fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, swi
         else
             meter_alus[row/2] = name;
     }
-
-    candidate.group->placed += bitcount(candidate.mask);
 }
 
 /** The algorithm operates under the assumption that anything left within the action_bus_users and

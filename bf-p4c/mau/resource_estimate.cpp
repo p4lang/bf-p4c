@@ -61,6 +61,57 @@ int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
     return 16 >> size;
 }
 
+/** Information necessary for the calculation of VPN addressing on action data tables.  This
+ *  comes from section 6.2.8.4.3 Action RAM Addressing.
+ *
+ *  Essentially action table addresses have different sizes that are programmed through the
+ *  Huffman encoding bits.  The address itself has 5 bits pre-pended to the lower portion
+ *  of the address to indicate the action data size.  However, for entries of 256, 512, or 1024
+ *  bit width, 6, 7, and 8 bits respectively are required to indicate what the encoding is.
+ *  These bits are contained in the upper part of the address, and thus need to be part of
+ *  the address that comes from match overhead.
+ *
+ *  Furthermore the encoding scheme affects the VPN allocation of the action data tables, as
+ *  the Huffman Encoding appears in the VPN space of the action data table.  The increment is
+ *  the difference between VPN per action data RAM.  The offset is the address within the
+ *  VPN space for that table type.
+ *
+ *  ___Action_Data_Bits___|___VPN_Increment___|___VPN_Offset___
+ *           256          |         2         |        0
+ *           512          |         4         |        1
+ *          1024          |         8         |        3
+ */
+int ActionDataHuffmanVPNBits(const IR::MAU::Table::Layout *layout) {
+    int size = 0;
+    if (layout->action_data_bytes_in_table > 0)
+        size = ceil_log2(layout->action_data_bytes_in_table);
+    int huffman_not_req_max_size = 4;
+    return std::max(size - huffman_not_req_max_size, 0);
+}
+
+int ActionDataVPNStartPosition(const IR::MAU::Table::Layout *layout) {
+    int size = 0;
+    if (layout->action_data_bytes_in_table > 0)
+        size = ceil_log2(layout->action_data_bytes_in_table);
+    switch (size) {
+        case 6:
+           return 1;
+        case 7:
+           return 3;
+        default:
+           return 0;
+    }
+}
+
+int ActionDataVPNIncrement(const IR::MAU::Table::Layout *layout) {
+    int width = 1;
+    int per_word = ActionDataPerWord(layout, &width);
+    if (width == 1)
+        return 1;
+    return (1 << ceil_log2(width));
+}
+
+
 int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl) {
     int indir_size = ceil_log2(layout->overhead_bits);
     if (indir_size > 8)

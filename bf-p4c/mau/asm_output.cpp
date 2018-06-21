@@ -955,6 +955,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     bool have_mapcol = mem.is_twoport();
     bool have_col = false;
     bool have_word = mem.type == Memories::Use::ACTIONDATA;
+    bool have_vpn = have_word;
 
     for (auto &r : mem.row) {
         if (logical) {
@@ -986,6 +987,12 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             for (auto &r : mem.row)
                 out << indent << "- " << memory_vector(r.mapcol, mem.type, true) << std::endl;
         }
+        if (have_vpn) {
+            out << indent << "vpns: " << std::endl;
+            for (auto &r : mem.row) {
+                out << indent << "- " << r.vpn << std::endl;
+            }
+        }
 
     } else {
         out << indent << "row: " << row[0] << std::endl;
@@ -998,6 +1005,9 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             out << indent << "maprams: " << memory_vector(mem.row[0].mapcol, mem.type, true)
                 << std::endl;
         }
+
+        if (have_vpn)
+           out << indent << "vpns: " << mem.row[0].vpn << std::endl;
     }
 
     for (auto r : mem.home_row) {
