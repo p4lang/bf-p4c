@@ -1168,3 +1168,9 @@ p4c_add_xfail_reason("tofino"
   "Duplicates declaration PortId_t"
   testdata/p4_16_samples/issue1210.p4
 )
+
+# truncate is not supported in tna
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for truncate"
+  testdata/p4_14_samples/truncate.p4
+)

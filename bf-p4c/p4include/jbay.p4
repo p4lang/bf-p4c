@@ -686,9 +686,6 @@ extern Digest<T> {
     void pack(in T data);
 }
 
-// TODO(hanw) need to remove following externs from jbay.p4
-extern void truncate(in bit<32> length);
-
 extern selector_action {
     selector_action(ActionSelector sel);
     abstract void apply(inout bit<1> value, @optional out bit<1> rv);

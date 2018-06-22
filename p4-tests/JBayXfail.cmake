@@ -269,3 +269,9 @@ p4c_add_xfail_reason("jbay"
   smoketest_switch_msdc_set_7
   smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest
 )
+
+# truncate is not supported in jna
+p4c_add_xfail_reason("jbay"
+  "Could not find declaration for truncate"
+  testdata/p4_14_samples/truncate.p4
+)
