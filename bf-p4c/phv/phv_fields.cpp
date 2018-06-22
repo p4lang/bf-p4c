@@ -193,7 +193,6 @@ const PHV::Field *PhvInfo::field(const cstring& name_) const {
         for (auto& kv : matches)
             msg << " " << kv.first;
         LOG4("Name '" << name_ << "' could refer to:" << msg.str());
-        warning("Name '%1%' could refer to:%2%", name_, msg.str());
     } else if (matches.size() == 1) {
         return matches.begin()->second;
     }
@@ -202,8 +201,7 @@ const PHV::Field *PhvInfo::field(const cstring& name_) const {
     // called is just too great. We need to improve how that's handled, but for
     // now, silence those warnings.
     if (!name.toString().endsWith(".$valid")) {
-        LOG4("   ...can't find field " << name);
-        warning("can't find field '%s'", name); }
+        LOG4("   ...can't find field " << name); }
 
     return nullptr;
 }
