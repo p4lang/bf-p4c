@@ -1051,7 +1051,7 @@ struct CheckInvalidate : public Inspector {
         if (prim->name == "invalidate") {
             auto* f = phv.field(prim->operands[0]);
             if (!invalidatable_fields.count(f)) {
-                error("%s: invalid operand, %s", prim->srcInfo, prim);
+                error("%s: invalid operand %s for primitive %s", prim->srcInfo, f->name, prim);
             }
         }
     }
@@ -1070,7 +1070,7 @@ struct ValidateInvalidatePrimitive : public PassManager {
     }
 };
 
-/** The execution of Counters, Meters, and Stateful ALUs can be per action.  In the following 
+/** The execution of Counters, Meters, and Stateful ALUs can be per action.  In the following
  *  example, a table has two actions a1 and a2, and an associated counter cnt.  But only
  *  one of the actions has an associated execution.
  *
@@ -1278,8 +1278,8 @@ bool SetupAttachedAddressing::UpdateAttached::preorder(IR::MAU::BackendAttached 
  *  Currently the algorithm does not copy propagate forward any non-set operation.  The following
  *  would be considered to be too difficult to copy_propagate
  *
- *      xor c, b, a 
- *      add e, c, d 
+ *      xor c, b, a
+ *      add e, c, d
  *
  *  as it is not a guarantee that any action can possibly be handled within a single stage.
  *  At some point, this could be loosened
@@ -1300,7 +1300,7 @@ bool SetupAttachedAddressing::UpdateAttached::preorder(IR::MAU::BackendAttached 
  *
  *  would be considered too difficult to copy propagate correctly in the short term, as this
  *  itself would require the instructions to first be split into the minimal field slice in
- *  order to correctly copy propagate.  Perhaps this can be done at a later time 
+ *  order to correctly copy propagate.  Perhaps this can be done at a later time
  *
  *  However, instruction with mutually exclusive bitranges would be completely acceptable.
  *  Note that no instructions are eliminated, as this should be the job of ElimUnused
@@ -1327,9 +1327,9 @@ const IR::MAU::Instruction *BackendCopyPropagation::preorder(IR::MAU::Instructio
     prune();
     return instr;
 }
-/** Mark instr->operands[1] as the most recent replacement for instr->operands[0] when @inst 
-  * is a set instruction.  Otherwise, remove instr->operands[0] from the set of copy propagation 
-  * candidates. 
+/** Mark instr->operands[1] as the most recent replacement for instr->operands[0] when @inst
+  * is a set instruction.  Otherwise, remove instr->operands[0] from the set of copy propagation
+  * candidates.
   */
 void BackendCopyPropagation::update(const IR::MAU::Instruction *instr) {
     const IR::Expression *e = instr->operands[0];
@@ -1376,9 +1376,9 @@ void BackendCopyPropagation::update(const IR::MAU::Instruction *instr) {
     }
 }
 
-/** @returns the copy propagation candidate for @e if @e can be replaced (setting 
-  * @elem_copy_propagated to true), or @e if @e cannot be replaced (setting @elem_copy_propagated 
-  * to false). 
+/** @returns the copy propagation candidate for @e if @e can be replaced (setting
+  * @elem_copy_propagated to true), or @e if @e cannot be replaced (setting @elem_copy_propagated
+  * to false).
   */
 const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instruction *instr,
     const IR::Expression *e, bool &elem_copy_propagated) {
@@ -1450,7 +1450,7 @@ const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instructi
  *
  *  In the future, an action could possibly be split across multiple stages, given that
  *  the following is implemented:
- * 
+ *
  *      1. Splitting a complex actions into multiple actions that are single stage.
  *      2. Chaining the next table with these action splitting
  *      3. Somehow update the context JSON, in the case that this requires either stateful
@@ -1474,7 +1474,7 @@ const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instructi
  *   The splitting of an action is relatively easy.  The chaining could have many corner
  *   cases, but would be only compiler.  However, if instead of f3, the compiler had
  *   an action data parameter, an API would be required for the splitting of this table
- *   to write to two logical tables, which definitely does not yet have driver support. 
+ *   to write to two logical tables, which definitely does not yet have driver support.
  *
  */
 bool VerifyParallelWritesAndReads::is_parallel(const IR::Expression *e, bool is_write) {
@@ -1553,7 +1553,7 @@ bool VerifyParallelWritesAndReads::preorder(const IR::MAU::Action *) {
  *  This pass has to follow VerifyParallelWritesAndReads, due to the following example:
  *
  *      add f1, f2, f3
- *      add f1, f1, f4 
+ *      add f1, f1, f4
  *
  *  This could not be considered parallel, as long as the check happens before the elimination
  */

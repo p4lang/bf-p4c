@@ -21,7 +21,7 @@
  *      inout my_meta_t ig_md,
  *      in ingress_intrinsic_metadata_t ig_intr_md,
  *      in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
- *      inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprs,
+ *      inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
  *      inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm);
  *
  * However, the `parser_hdr` value produced by the parser is actually the same

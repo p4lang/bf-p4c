@@ -335,7 +335,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error.*invalid operand, invalidate"
+  "error.*invalid operand.* for primitive invalidate"
   switch_l3_heavy_int_leaf
   switch_generic_int_leaf
   switch_8.2_l3_heavy_int_leaf

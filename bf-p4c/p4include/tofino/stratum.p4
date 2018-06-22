@@ -70,7 +70,7 @@ control Ingress<H, M, CG>(
     inout M ig_md,
     in ingress_intrinsic_metadata_t ig_intr_md,
     in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
-    inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprs,
+    inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
     inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
     inout CG aux);
 
@@ -79,7 +79,7 @@ control Egress<H, M, CG>(
     inout M eg_md,
     in egress_intrinsic_metadata_t eg_intr_md,
     in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
-    inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs,
+    inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
     inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport,
     // following two arguments are bridged metadata
     inout ingress_intrinsic_metadata_t ig_intr_md,
@@ -91,7 +91,7 @@ control IngressDeparser<H, M, CG>(
     packet_out pkt,
     inout H hdr,
     in M metadata,
-    in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprs,
+    in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
     in ingress_intrinsic_metadata_t ig_intr_md,
     inout CG aux);
 
@@ -99,7 +99,7 @@ control EgressDeparser<H, M, CG>(
     packet_out pkt,
     inout H hdr,
     in M metadata,
-    in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs,
+    in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
     in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
     in egress_intrinsic_metadata_t eg_intr_md,
     in ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
