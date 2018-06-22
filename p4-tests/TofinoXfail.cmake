@@ -123,6 +123,14 @@ if (PTF_REQUIREMENTS_MET)
     05-simple_l3_arping
     p4testgen_emulation
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
+    smoketest_switch_8.2_l3_msdc_WredIpv6Test
+    smoketest_switch_8.2_l3_msdc_WredStatsTest
+    smoketest_switch_8.2_l3_msdc_WredIpv4Test
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: Lag path1 is not equally balanced"
+    smoketest_switch_8.2_l3_msdc_L3EcmpLagTest
     )
 
   p4c_add_xfail_reason("tofino"

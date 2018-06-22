@@ -445,8 +445,13 @@ if $run_pd ; then
           switchdir="$(dirname $0)/p4_14/switch-jbay"
           withp4c="--with-p4c"
        else
-          switchdir="$(dirname $0)/p4_14/switch"
-          withp4c="--with-p4c-v6"
+	  if [[ "$file" == *8.2* ]]; then
+            switchdir="$(dirname $0)/p4_14/switch-8.2"
+	    withp4c="--with-p4c"
+	  else
+            switchdir="$(dirname $0)/p4_14/switch"
+            withp4c="--with-p4c-v6"
+	  fi
        fi
        if [ ! -r $switchdir/configure ] ; then
           pushd $switchdir > /dev/null
