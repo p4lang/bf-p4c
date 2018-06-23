@@ -988,7 +988,7 @@ class CollectPardeConstraints : public Inspector {
         f->set_read_container_valid_bit(true);
     }
 
-    void postorder(const IR::BFN::Digest* entry) override {
+    void postorder(const IR::BFN::Digest* digest) override {
         // TODO:
         // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit
         // as they have differing constraints -- bottom-bits, bridge-metadata mirror packing
@@ -996,11 +996,11 @@ class CollectPardeConstraints : public Inspector {
         // 301:ingress::$learning<3:0..2>
         // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
         // currently, IR::BFN::Digest node has a string field to distinguish them by name
-        if (entry->name != "learning" && entry->name != "mirror"
-            && entry->name != "resubmit")
+        if (digest->name != "learning" && digest->name != "mirror"
+            && digest->name != "resubmit")
             return;
 
-        PHV::Field* f = phv.field(entry->selector->field);
+        PHV::Field* f = phv.field(digest->selector->field);
         BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
         f->set_deparsed_bottom_bits(true);
         f->set_no_split(true);
@@ -1010,11 +1010,19 @@ class CollectPardeConstraints : public Inspector {
         // the no_pack here.
         f->set_no_pack(true);
         f->set_read_container_valid_bit(true);
+        f->set_is_digest(true);
 
-        if (entry->name == "resubmit") {
+        for (auto* flist : digest->fieldLists) {
+            for (auto* flval : flist->sources) {
+                f = phv.field(flval->field);
+                f->set_is_digest(true);
+            }
+        }
+
+        if (digest->name == "resubmit") {
             LOG3("\t resubmit metadata field (" << f << ") is set to be "
                  << "exact container and is_marshaled.");
-            for (auto* fieldList : entry->fieldLists) {
+            for (auto* fieldList : digest->fieldLists) {
                 LOG3("\t.....resubmit metadata field list....." << fieldList);
                 for (auto* resubmit_field_expr : fieldList->sources) {
                     PHV::Field* resubmit_field = phv.field(resubmit_field_expr->field);
@@ -1033,10 +1041,10 @@ class CollectPardeConstraints : public Inspector {
             return;
         }
 
-        if (entry->name == "learning") {
+        if (digest->name == "learning") {
             // Add byte-aligned constraint to metadata field in learning field_list
             // TODO(yumin): This constraint can be relaxed to be no_pack in a same byte.
-            for (auto* fieldList : entry->fieldLists) {
+            for (auto* fieldList : digest->fieldLists) {
                 for (auto* fieldListEntry : fieldList->sources) {
                     auto* fieldInfo = phv.field(fieldListEntry->field);
                     if (fieldInfo->metadata) {
@@ -1046,7 +1054,7 @@ class CollectPardeConstraints : public Inspector {
                              "because it's in a field_list and digested."); } } }
 
             if (LOGGING(3)) {
-                for (auto* fieldList : entry->fieldLists) {
+                for (auto* fieldList : digest->fieldLists) {
                     LOG3("\t.....learning field list..... ");
                     for (auto* fieldListEntry : fieldList->sources) {
                         auto* fieldInfo = phv.field(fieldListEntry->field);
@@ -1061,7 +1069,7 @@ class CollectPardeConstraints : public Inspector {
         // allocation.
         LOG3(".....mirror fields in field list " << f->id << ":" << f->name);
         int fieldListIndex = 0;
-        for (auto* fieldList : entry->fieldLists) {
+        for (auto* fieldList : digest->fieldLists) {
             LOG3("\t.....mirror metadata field list....." << fieldList);
 
             // The first two entries in the field list are both special and may

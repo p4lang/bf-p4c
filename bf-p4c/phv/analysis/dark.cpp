@@ -146,6 +146,11 @@ void MarkDarkCandidates::end_apply() {
             LOG5(ss.str());
             continue; }
 
+        if (f.is_digest()) {
+            ss << "    ...digest field encountered.";
+            LOG5(ss.str());
+            continue; }
+
         f.set_dark_candidate(true);
         ++darkCount;
         darkSize += f.size;
@@ -200,6 +205,11 @@ void CollectDarkPrivatizationCandidates::end_apply() {
             LOG5(ss.str());
             continue;
         }
+        if (f.is_digest()) {
+            ss << "    ...digest field encountered.";
+            LOG5(ss.str());
+            continue;
+        }
         if (f.deparsed_to_tm()) {
             ss << "    ...intrinsic metadata field enocuntered";
             LOG5(ss.str());
@@ -215,6 +225,7 @@ void CollectDarkPrivatizationCandidates::end_apply() {
             LOG5(ss.str());
             continue;
         }
+
         f.set_privatizable_dark(true);
         ++darkPrivCandidates;
         darkPrivCandidatesSize += f.size;

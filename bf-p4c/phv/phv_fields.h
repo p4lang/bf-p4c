@@ -161,6 +161,7 @@ class Field {
     bool            privatized_i = false;              /// true for the TPHV version of a
                                                        /// privatized field
     bool            is_checksummed_i = false;          /// true for fields used in checksum.
+    bool            is_digest_i = false;               /// true for fields used in digest.
     bool            mocha_i = false;                   /// true if field is a candidate for mocha
                                                        /// PHV.
     bool            dark_i = false;                    /// true if field is a candidate for dark
@@ -254,6 +255,8 @@ class Field {
     void set_privatized(bool b)                            { privatized_i = b; }
     bool is_checksummed() const                            { return is_checksummed_i; }
     void set_is_checksummed(bool b)                        { is_checksummed_i = b; }
+    bool is_digest() const                                 { return is_digest_i; }
+    void set_is_digest(bool b)                             { is_digest_i = b; }
 
     // @returns the set of MAU operations on this field.
     const safe_vector<FieldOperation>& operations() const   { return  operations_i; }
