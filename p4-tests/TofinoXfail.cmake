@@ -123,8 +123,6 @@ if (PTF_REQUIREMENTS_MET)
     05-simple_l3_arping
     p4testgen_emulation
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
-    smoketest_switch_8.2_l3_msdc_WredIpv6Test
-    smoketest_switch_8.2_l3_msdc_WredStatsTest
     smoketest_switch_8.2_l3_msdc_WredIpv4Test
     )
 
@@ -1173,4 +1171,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for truncate"
   testdata/p4_14_samples/truncate.p4
+)
+
+# BRIG-733
+p4c_add_xfail_reason("tofino"
+  "Could not find table for action send_digest in control MyIngress"
+  testdata/p4_16_samples/issue1352-bmv2.p4
 )

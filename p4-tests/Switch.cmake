@@ -816,6 +816,10 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_l3_msdc_WredStatsTe
     "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_8.2_PTF_DIR_WRED}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_l3_msdc_WredStatsTest"
         "switch_wred.WredStatsTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_l3_msdc_WredDropIpv4Test" ${SWITCH_8.2_P4}
+    "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_8.2_PTF_DIR_WRED}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_l3_msdc_WredDropIpv4Test"
+    "switch_wred.WredDropIpv4Test")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_l3_msdc_WredIpv4Test" ${SWITCH_8.2_P4}
     "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_8.2_PTF_DIR_WRED}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_l3_msdc_WredIpv4Test"
