@@ -81,16 +81,16 @@ public:
     void write_action_regs(REGS &regs, Table *tbl, unsigned homerow, unsigned action_slice);
     void do_alloc(Table *tbl, Source src, unsigned use, int lobyte, int bytes, unsigned offset);
     void alloc_field(Table *, Source src, unsigned offset, unsigned sizes_needed);
-    void need_alloc(Table *tbl, Table::Format::Field *f, unsigned off, unsigned size);
-    void need_alloc(Table *tbl, HashDistribution *hd, unsigned off, unsigned size);
-    void need_alloc(Table *tbl, RandomNumberGen rng, unsigned off, unsigned size);
-    void need_alloc(Table *tbl, Table *attached, unsigned off, unsigned size);
-    int find(Table::Format::Field *f, int off, int size);
-    int find(const char *name, int off, int size, int *len = 0);
-    int find(const std::string &name, int off, int size, int *len = 0) {
-        return find(name.c_str(), off, size, len); }
-    int find(HashDistribution *hd, int off, int size);
-    int find(RandomNumberGen rng, int off, int size);
+    void need_alloc(Table *tbl, Table::Format::Field *f, unsigned lo, unsigned hi, unsigned size);
+    void need_alloc(Table *tbl, HashDistribution *hd, unsigned lo, unsigned hi, unsigned size);
+    void need_alloc(Table *tbl, RandomNumberGen rng, unsigned lo, unsigned hi, unsigned size);
+    void need_alloc(Table *tbl, Table *attached, unsigned lo, unsigned hi, unsigned size);
+    int find(Table::Format::Field *f, int lo, int hi, int size);
+    int find(const char *name, int lo, int hi, int size, int *len = 0);
+    int find(const std::string &name, int lo, int hi, int size, int *len = 0) {
+        return find(name.c_str(), lo, hi, size, len); }
+    int find(HashDistribution *hd, int lo, int hi, int size);
+    int find(RandomNumberGen rng, int lo, int hi, int size);
     unsigned size() {
         unsigned rv = 0;
         for (auto &slot : by_byte) rv += slot.second.size;

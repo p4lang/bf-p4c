@@ -245,24 +245,28 @@ class ActionBus_Source_Printer:
     def __init__(self, val):
         self.val = val
     def to_string(self):
-        if self.val['type'] == 0:
-            rv = "None"
-        elif self.val['type'] == 1:
-            rv = "Field"
-        elif self.val['type'] == 2:
-            rv = "HashDist"
-        elif self.val['type'] == 3:
-            rv = "RandomGen"
-        elif self.val['type'] == 4:
-            rv = "TableOutput"
-        elif self.val['type'] == 5:
-            rv = "TableColor"
-        elif self.val['type'] == 6:
-            rv = "NameRef"
-        elif self.val['type'] == 7:
-            rv = "ColorRef"
-        else:
-            rv = '<bad type 0x%x>' % int(self.val['type'])
+        try:
+            if self.val['type'] == 0:
+                rv = "None"
+            elif self.val['type'] == 1:
+                rv = "Field"
+                rv += " %s" % str(self.val['field'])
+            elif self.val['type'] == 2:
+                rv = "HashDist"
+            elif self.val['type'] == 3:
+                rv = "RandomGen"
+            elif self.val['type'] == 4:
+                rv = "TableOutput"
+            elif self.val['type'] == 5:
+                rv = "TableColor"
+            elif self.val['type'] == 6:
+                rv = "NameRef"
+            elif self.val['type'] == 7:
+                rv = "ColorRef"
+            else:
+                rv = '<bad type 0x%x>' % int(self.val['type'])
+        except Exception as e:
+                    rv += "{crash: "+str(e)+"}"
         return rv
     class _iter:
         def __init__(self, val, type):

@@ -62,67 +62,67 @@ void ActionTable::apply_to_field(const std::string &n, std::function<void(Format
     if (format)
         format->apply_to_field(n, fn);
 }
-int ActionTable::find_on_actionbus(Table::Format::Field *f, int off, int size) {
+int ActionTable::find_on_actionbus(Table::Format::Field *f, int lo, int hi, int size) {
     int rv;
-    if (action_bus && (rv = action_bus->find(f, off, size)) >= 0)
+    if (action_bus && (rv = action_bus->find(f, lo, hi, size)) >= 0)
         return rv;
     for (auto *match_table : match_tables) {
         assert((Table *)match_table != (Table *)this);
-        if ((rv = match_table->find_on_actionbus(f, off, size)) >= 0)
+        if ((rv = match_table->find_on_actionbus(f, lo, hi, size)) >= 0)
             return rv; }
     return -1;
 }
-int ActionTable::find_on_actionbus(const char *name, int off, int size, int *len) {
+int ActionTable::find_on_actionbus(const char *name, int lo, int hi, int size, int *len) {
     int rv;
-    if (action_bus && (rv = action_bus->find(name, off, size, len)) >= 0)
+    if (action_bus && (rv = action_bus->find(name, lo, hi, size, len)) >= 0)
         return rv;
     for (auto *match_table : match_tables) {
         assert((Table *)match_table != (Table *)this);
-        if ((rv = match_table->find_on_actionbus(name, off, size, len)) >= 0)
+        if ((rv = match_table->find_on_actionbus(name, lo, hi, size, len)) >= 0)
             return rv; }
     return -1;
 }
-int ActionTable::find_on_actionbus(HashDistribution *hd, int off, int size) {
+int ActionTable::find_on_actionbus(HashDistribution *hd, int lo, int hi, int size) {
     int rv;
-    if (action_bus && (rv = action_bus->find(hd, off, size)) >= 0)
+    if (action_bus && (rv = action_bus->find(hd, lo, hi, size)) >= 0)
         return rv;
     for (auto *match_table : match_tables) {
         if (match_table->find_hash_dist(hd->id) == hd) {
-            if ((rv = match_table->find_on_actionbus(hd, off, size)) >= 0)
+            if ((rv = match_table->find_on_actionbus(hd, lo, hi, size)) >= 0)
                 return rv; } }
     return -1;
 }
-int ActionTable::find_on_actionbus(RandomNumberGen rng, int off, int size) {
+int ActionTable::find_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) {
     int rv;
-    if (action_bus && (rv = action_bus->find(rng, off, size)) >= 0)
+    if (action_bus && (rv = action_bus->find(rng, lo, hi, size)) >= 0)
         return rv;
     for (auto *match_table : match_tables) {
-        if ((rv = match_table->find_on_actionbus(rng, off, size)) >= 0)
+        if ((rv = match_table->find_on_actionbus(rng, lo, hi, size)) >= 0)
             return rv; }
     return -1;
 }
 
-void ActionTable::need_on_actionbus(Format::Field *f, int off, int size) {
+void ActionTable::need_on_actionbus(Format::Field *f, int lo, int hi, int size) {
     if (f->fmt == format) {
-        Table::need_on_actionbus(f, off, size);
+        Table::need_on_actionbus(f, lo, hi, size);
         return; }
     for (auto af : Values(action_formats)) {
         if (f->fmt == af) {
-            Table::need_on_actionbus(f, off, size);
+            Table::need_on_actionbus(f, lo, hi, size);
             return; } }
     for (auto *match_table : match_tables) {
         assert((Table *)match_table != (Table *)this);
-        if (f->fmt == match_table->format) {
-            match_table->need_on_actionbus(f, off, size);
+        if (f->fmt == match_table->get_format()) {
+            match_table->need_on_actionbus(f, lo, hi, size);
             return; } }
     assert(!"Can't find table associated with field");
 }
 
-void ActionTable::need_on_actionbus(Table *attached, int off, int size) {
+void ActionTable::need_on_actionbus(Table *attached, int lo, int hi, int size) {
     int attached_count = 0;
     for (auto *match_table : match_tables) {
         if (match_table->is_attached(attached)) {
-            match_table->need_on_actionbus(attached, off, size);
+            match_table->need_on_actionbus(attached, lo, hi, size);
             ++attached_count; } }
     // FIXME -- if its attached to more than one match table (mutex match tables that
     // share attached action table and attached other table), then it needs to be allocated
@@ -131,22 +131,22 @@ void ActionTable::need_on_actionbus(Table *attached, int off, int size) {
     assert(attached_count == 1);
 }
 
-void ActionTable::need_on_actionbus(HashDistribution *hd, int off, int size) {
+void ActionTable::need_on_actionbus(HashDistribution *hd, int lo, int hi, int size) {
     for (auto &hash_dist : this->hash_dist) {
         if (&hash_dist == hd) {
-            Table::need_on_actionbus(hd, off, size);
+            Table::need_on_actionbus(hd, lo, hi, size);
             return; } }
     for (auto *match_table : match_tables) {
         if (match_table->find_hash_dist(hd->id) == hd) {
-            match_table->need_on_actionbus(hd, off, size);
+            match_table->need_on_actionbus(hd, lo, hi, size);
             return; } }
     assert(!"Can't find table associated with hash_dist");
 }
 
-void ActionTable::need_on_actionbus(RandomNumberGen rng, int off, int size) {
+void ActionTable::need_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) {
     int attached_count = 0;
     for (auto *match_table : match_tables) {
-        match_table->need_on_actionbus(rng, off, size);
+        match_table->need_on_actionbus(rng, lo, hi, size);
         ++attached_count; }
     // FIXME -- if its attached to more than one match table (mutex match tables that
     // share actions in an attached action data table, then it needs to be allocated

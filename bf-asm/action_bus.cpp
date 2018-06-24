@@ -384,30 +384,34 @@ bool ActionBus::check_atcam_sharing(Table *tbl1, Table *tbl2) {
     return (atcam_share_bytes || atcam_action_share_bytes);
 }
 
-void ActionBus::need_alloc(Table *tbl, Table::Format::Field *f, unsigned off, unsigned size) {
-    LOG3("need_alloc(" << tbl->name() << ") " << tbl->find_field(f) << " off=" << off <<
-         " size=0x" << hex(size));
-    need_place[f][off] |= size;
-    byte_use.setrange((f->immed_bit(0) + off)/8U, size);
+void ActionBus::need_alloc(Table *tbl, Table::Format::Field *f,
+                           unsigned lo, unsigned hi, unsigned size) {
+    LOG3("need_alloc(" << tbl->name() << ") " << tbl->find_field(f) << " lo=" << lo <<
+         " hi=" << hi << " size=0x" << hex(size));
+    need_place[f][lo] |= size;
+    byte_use.setrange((f->immed_bit(0) + lo)/8U, size);
 }
-void ActionBus::need_alloc(Table *tbl, HashDistribution *hd, unsigned off, unsigned size) {
-    LOG3("need_alloc(" << tbl->name() << ") hash_dist " << hd->id << " off=" << off <<
-         " size=0x" << hex(size));
-    need_place[hd][off] |= size;
-    byte_use.setrange(off/8U, size);
+void ActionBus::need_alloc(Table *tbl, HashDistribution *hd,
+                           unsigned lo, unsigned hi, unsigned size) {
+    LOG3("need_alloc(" << tbl->name() << ") hash_dist " << hd->id << " lo=" << lo <<
+         " hi=" << hi << " size=0x" << hex(size));
+    need_place[hd][lo] |= size;
+    byte_use.setrange(lo/8U, size);
 }
-void ActionBus::need_alloc(Table *tbl, RandomNumberGen rng, unsigned off, unsigned size) {
-    LOG3("need_alloc(" << tbl->name() << ") rng " << rng.unit << " off=" << off <<
-         " size=0x" << hex(size));
-    need_place[rng][off] |= size;
-    byte_use.setrange(off/8U, size);
+void ActionBus::need_alloc(Table *tbl, RandomNumberGen rng,
+                           unsigned lo, unsigned hi, unsigned size) {
+    LOG3("need_alloc(" << tbl->name() << ") rng " << rng.unit << " lo=" << lo <<
+         " hi=" << hi << " size=0x" << hex(size));
+    need_place[rng][lo] |= size;
+    byte_use.setrange(lo/8U, size);
 }
-void ActionBus::need_alloc(Table *tbl, Table *attached, unsigned off, unsigned size) {
-    LOG3("need_alloc(" << tbl->name() << ") table " << attached->name() << " off=" << off <<
-         " size=0x" << hex(size));
+void ActionBus::need_alloc(Table *tbl, Table *attached,
+                           unsigned lo, unsigned hi, unsigned size) {
+    LOG3("need_alloc(" << tbl->name() << ") table " << attached->name() << " lo=" << lo <<
+         " hi=" << hi << " size=0x" << hex(size));
     attached->set_output_used();
-    need_place[attached][off] |= size;
-    byte_use.setrange(off/8U, size);
+    need_place[attached][lo] |= size;
+    byte_use.setrange(lo/8U, size);
 }
 
 /**
@@ -615,22 +619,36 @@ static int slot_sizes[] = {
     4   /* 32-bit only */
 };
 
-int ActionBus::find(Table::Format::Field *f, int off, int size /* in bytes */) {
+/**
+ * ActionBus::find
+ * @brief find an action bus slot that contains the requested thing.
+ * @usage Overloads allow looking for different kinds of things -- a Format::Field,
+ *        a HashDistribution, a RandomNumberGen, or something by name (generally a table output).
+ * @param f     a Format::Field to look for
+ * @param name  named slot to look for -- generally a table output, but may be a field
+ * @param hd    a HashDistribution to look for
+ * @param rng   a RandomNumberGen to look for
+ * @param lo, hi range of bits in the thing specified by the first arg
+ * @param size  bitmask of needed size classes -- 3 bits that denote need for a 8/16/32 bit
+ *              actionbus slot.  Generally will only have 1 bit set, but might be 0.
+ */
+int ActionBus::find(Table::Format::Field *f, int lo, int hi, int size) {
     for (auto &slot : by_byte) {
         if (!slot.second.data.count(f)) continue;
-        if ((int)slot.second.data[f] > off) continue;
+        if ((int)slot.second.data[f] > lo) continue;
+        if ((int)slot.second.data[f] + slot.second.size <= hi) continue;
         /* FIXME -- off < f->size check is wrong, but needed for old compiler broken asm */
         /* FIXME -- see test/action_bus1.p4 */
-        if (off < (int)f->size && off - slot.second.data[f] >= slot.second.size) continue;
+        if (lo < (int)f->size && lo - slot.second.data[f] >= slot.second.size) continue;
         if (size && !(size & slot_sizes[slot.first/32U])) continue;
         // Check if slot can accommodate the desired field size
-        if (std::min((int)f->size - off, size * 8) > slot.second.size) continue;
-        return slot.first + (off - slot.second.data[f])/8U; }
+        // if (std::min((int)f->size - lo, size * 8) > slot.second.size) continue;
+        return slot.first + (lo - slot.second.data[f])/8U; }
     return -1;
 }
-int ActionBus::find(const char *name, int off, int size, int *len) {
+int ActionBus::find(const char *name, int lo, int hi, int size, int *len) {
     for (auto &slot : by_byte) {
-        int offset = off;
+        int offset = lo;
         if (slot.second.name != name) continue;
         for (auto &d : slot.second.data) {
             if (d.first.type == Source::TableOutput || d.first.type == Source::NameRef)
@@ -643,20 +661,20 @@ int ActionBus::find(const char *name, int off, int size, int *len) {
     return -1;
 }
 
-int ActionBus::find(HashDistribution *hd, int off, int size) {
+int ActionBus::find(HashDistribution *hd, int lo, int hi, int size) {
     for (auto &slot : by_byte)
         if (slot.second.data.count(hd)) {
             if (size && !(size & slot_sizes[slot.first/32U])) continue;
             // if (len) *len = slot.second.size;
-            return slot.first + off/8; }
+            return slot.first + lo/8; }
     return -1;
 }
 
-int ActionBus::find(RandomNumberGen rng, int off, int size) {
+int ActionBus::find(RandomNumberGen rng, int lo, int hi, int size) {
     for (auto &slot : by_byte)
         if (slot.second.data.count(rng)) {
             if (size && !(size & slot_sizes[slot.first/32U])) continue;
-            return slot.first + off/8; }
+            return slot.first + lo/8; }
     return -1;
 }
 

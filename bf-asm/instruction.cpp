@@ -60,7 +60,7 @@ struct operand {
         virtual void dbprint(std::ostream &) const = 0;
         virtual bool equiv(const Base *) const = 0;
         virtual void phvRead(std::function<void (const ::Phv::Slice &sl)>) {}
-        virtual void pass2(int) const {}
+        virtual void pass2(int) {}
         virtual void gen_prim_cfg(json::map& ) = 0;
     } *op;
     struct Const : Base {
@@ -137,16 +137,16 @@ struct operand {
             if (!a || lo != a->lo || hi != a->hi) return false;
             if (name == a->name && table == a->table && field == a->field) return true;
             if (field != a->field && (!field || !a->field)) return false;
-            int b1 = field ? table->find_on_actionbus(field, 0, 0)
-                           : table->find_on_actionbus(name, 0, 0);
-            int b2 = a->field ? a->table->find_on_actionbus(a->field, 0, 0)
-                              : a->table->find_on_actionbus(a->name, 0, 0);
+            int b1 = field ? table->find_on_actionbus(field, lo, hi, 0)
+                           : table->find_on_actionbus(name, lo, hi, 0);
+            int b2 = a->field ? a->table->find_on_actionbus(a->field, lo, hi, 0)
+                              : a->table->find_on_actionbus(a->name, lo, hi, 0);
             return b1 == b2 && b1 >= 0; }
         Action *clone() override { return new Action(*this); }
         int bits(int group) override {
             int size = group_size[group]/8U;
-            int byte = field ? table->find_on_actionbus(field, lo, size)
-                             : table->find_on_actionbus(name, lo, size);
+            int byte = field ? table->find_on_actionbus(field, lo, hi, size)
+                             : table->find_on_actionbus(name, lo, hi, size);
             if (byte < 0) {
                 if (lo > 0 || (field && hi+1 < field->size))
                     error(lineno, "%s(%d..%d) is not on the action bus", name.c_str(), lo, hi);
@@ -164,28 +164,28 @@ struct operand {
             else
                 return ACTIONBUS_OPERAND + byte/size;
             return -1; }
-        void pass2(int group) const override {
+        void pass2(int group) override {
             unsigned bits = group_size[group];
             unsigned bytes = bits/8U;
-            if (field && table->find_on_actionbus(field, lo, bytes) < 0) {
+            if (field && table->find_on_actionbus(field, lo, hi, bytes) < 0) {
                 int immed_offset = 0;
                 if (table->format && table->format->immed)
                     immed_offset = table->format->immed->bit(0);
                 int l = field->bit(lo) - immed_offset, h = field->bit(hi) - immed_offset;
                 if (l%bits != 0 && l/bits != h/bits)
                     error(lineno, "%s misaligned for action bus", name.c_str());
-                table->need_on_actionbus(field, lo & ~7, bytes);
-            } else if (!field && table->find_on_actionbus(name, lo, bytes) < 0) {
+                table->need_on_actionbus(field, lo, hi, bytes);
+            } else if (!field && table->find_on_actionbus(name, lo, hi, bytes) < 0) {
                 if (Table::all.count(name))
-                    table->need_on_actionbus(Table::all.at(name), lo & ~7, bytes);
+                    table->need_on_actionbus(Table::all.at(name), lo, hi, bytes);
                 else
                     error(lineno, "Can't find any operand named %s", name.c_str()); } }
         void mark_use(Table *tbl) override {
             if (field) field->flags |= Table::Format::Field::USED_IMMED; }
         unsigned bitoffset(int group) const override {
             int size = group_size[group]/8U;
-            int byte = field ? table->find_on_actionbus(field, lo, size)
-                             : table->find_on_actionbus(name, lo, size);
+            int byte = field ? table->find_on_actionbus(field, lo, hi, size)
+                             : table->find_on_actionbus(name, lo, hi, size);
             return 8*(byte % size) + lo % 8; }
         void dbprint(std::ostream &out) const override {
             out << name << '(' << lo << ".." << hi << ')';
@@ -254,18 +254,22 @@ struct operand {
             auto *a = dynamic_cast<const HashDist *>(a_);
             if (!a || units != a->units || lo != a->lo || hi != a->hi) return false;
             if (table == a->table) return true;
+            int lo = this->lo < 0 ? 0 : lo;
+            int hi = this->hi < 0 ? 15 : hi;
             for (auto unit : units) {
-                int b1 = table->find_on_actionbus(find_hash_dist(unit), 0, 0);
-                int b2 = a->table->find_on_actionbus(a->find_hash_dist(unit), 0, 0);
+                int b1 = table->find_on_actionbus(find_hash_dist(unit), lo, hi, 0);
+                int b2 = a->table->find_on_actionbus(a->find_hash_dist(unit), lo, hi, 0);
                 if (b1 != b2 || b1 < 0) return false; }
             return true; }
         HashDist *clone() override { return new HashDist(*this); }
-        void pass2(int group) const override {
+        void pass2(int group) override {
             // FIXME -- check lo/hi for sanity
             if (units.size() > 2) {
                 error(lineno, "Can't use more than 2 hash_dist units together in an action");
                 return; }
             int size = group_size[group]/8U;
+            if (lo < 0) lo = 0;
+            if (hi < 0) hi = 8*size - 1;;
             if (units.size() == 2) {
                 if (size != 4)
                     error(lineno, "Can't combine hash_dist units in %d bit operation", size*8);
@@ -282,18 +286,18 @@ struct operand {
             } else error(lineno, "No hash dist %d in table %s", units.at(0), table->name());
             for (auto u : units) {
                 if (auto hd = find_hash_dist(u)) {
-                    if (table->find_on_actionbus(hd, 0, size) < 0)
-                        table->need_on_actionbus(hd, 0, size); } } }
+                    if (table->find_on_actionbus(hd, lo, hi, size) < 0)
+                        table->need_on_actionbus(hd, lo, hi, size); } } }
         int bits(int group) override {
             int size = group_size[group]/8U;
             auto hd = find_hash_dist(units.at(0));
-            int byte = table->find_on_actionbus(hd, 0, size);
+            int byte = table->find_on_actionbus(hd, lo, hi, size);
             if (byte < 0) {
                 error(lineno, "hash dist %d is not on the action bus", hd->id);
                 return -1; }
             if (units.size() == 2) {
                 auto hd1 = find_hash_dist(units.at(1));
-                if (table->find_on_actionbus(hd1, 0, size) != byte + 2)
+                if (table->find_on_actionbus(hd1, lo, hi, size) != byte + 2)
                     error(lineno, "hash dists %d and %d not contiguous on the action bus",
                           hd->id, hd1->id); }
             if (size == 2) byte -= 32;
@@ -333,15 +337,16 @@ struct operand {
                 return rng == a->rng && lo == a->lo && hi == a->hi;
             } else return false; }
         RandomGen *clone() override { return new RandomGen(*this); }
-        void pass2(int group) const override {
+        void pass2(int group) override {
             unsigned size = group_size[group];
-            if (hi >= 0 && lo/size != hi/size)
+            if (hi < 0) hi = 8*size - 1;
+            if (lo/size != hi/size)
                 error(lineno, "invalid slice of rng %d for use with %d bit PHV", rng.unit, size);
-            if (table->find_on_actionbus(rng, lo, size/8U))
-                table->need_on_actionbus(rng, lo, size/8U); }
+            if (table->find_on_actionbus(rng, lo, hi, size/8U))
+                table->need_on_actionbus(rng, lo, hi, size/8U); }
         int bits(int group) override {
             int size = group_size[group]/8U;
-            int byte = table->find_on_actionbus(rng, 0, size);
+            int byte = table->find_on_actionbus(rng, lo, hi, size);
             if (byte < 0) {
                 error(lineno, "rng %d is not on the action bus", rng.unit);
                 return -1; }
@@ -479,7 +484,7 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
             ref = new Action(lineno, name, tbl, field, lo >= 0 ? lo : 0,
                              hi >= 0 ? hi : field->size - 1, p4name);
         }
-    } else if (tbl->find_on_actionbus(name, lo >= 0 ? lo : 0, 7, &len) >= 0) {
+    } else if (tbl->find_on_actionbus(name, lo >= 0 ? lo : 0, hi >= 0 ? hi : 7, 0, &len) >= 0) {
         ref = new Action(lineno, name, tbl, 0, lo >= 0 ? lo : 0,
                          hi >= 0 ? hi : len - 1, p4name);
     } else if (::Phv::get(tbl->gress, name)) {
