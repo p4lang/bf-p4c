@@ -118,9 +118,9 @@ bool Visualization::preorder(const IR::BFN::Pipe *p) {
             default:    BUG("Unknown PHV container kind"); } };
 
     // Build PhvContainerType JSON objects for each container type.
-    for (auto kind : PHV::KINDS) {
+    for (auto kind : Device::phvSpec().containerKinds()) {
         auto bySize = new Util::JsonArray();
-        for (auto size : PHV::SIZES) {
+        for (auto size : Device::phvSpec().containerSizes()) {
             auto* addresses = containersByType[PHV::Type(kind, size)];
             if (!addresses || !addresses->size()) continue;
             auto* sizeObject = new Util::JsonObject();
