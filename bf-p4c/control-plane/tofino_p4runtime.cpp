@@ -55,6 +55,16 @@ template<> struct CounterlikeTraits<::BFN::CounterExtern> {
     static const cstring directTypeName() {
         return "DirectCounter";
     }
+    static const cstring sizeParamName() {
+        return "size";
+    }
+    static ::barefoot::CounterSpec::Unit mapUnitName(const cstring name) {
+        using ::barefoot::CounterSpec;
+        if (name == "PACKETS") return CounterSpec::PACKETS;
+        else if (name == "BYTES") return CounterSpec::BYTES;
+        else if (name == "PACKETS_AND_BYTES") return CounterSpec::PACKETS_AND_BYTES;
+        return CounterSpec::UNSPECIFIED;
+    }
 };
 
 /// CounterlikeTraits<> specialization for MeterExtern
@@ -68,6 +78,15 @@ template<> struct CounterlikeTraits<::BFN::MeterExtern> {
     }
     static const cstring directTypeName() {
         return "DirectMeter";
+    }
+    static const cstring sizeParamName() {
+        return "size";
+    }
+    static ::barefoot::MeterSpec::Unit mapUnitName(const cstring name) {
+        using ::barefoot::MeterSpec;
+        if (name == "PACKETS") return MeterSpec::PACKETS;
+        else if (name == "BYTES") return MeterSpec::BYTES;
+        return MeterSpec::UNSPECIFIED;
     }
 };
 
@@ -331,10 +350,10 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         auto p4RtTypeInfo = p4info->mutable_type_info();
         // Direct resources are handled by addTableProperties.
         if (externBlock->type->name == "ActionProfile") {
-            auto actionProfile = getActionProfile(decl, externBlock->type);
+            auto actionProfile = getActionProfile(externBlock);
             if (actionProfile) addActionProfile(symbols, p4info, *actionProfile);
         } else if (externBlock->type->name == "ActionSelector") {
-            auto actionSelector = getActionProfile(decl, externBlock->type);
+            auto actionSelector = getActionProfile(externBlock);
             if (actionSelector) addActionSelector(symbols, p4info, *actionSelector);
         } else if (externBlock->type->name == "Counter") {
             auto counter = Counterlike<CounterExtern>::from(externBlock);
@@ -392,7 +411,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     static boost::optional<ActionProfile>
     getActionProfile(cstring name,
                      const IR::Type_Extern* type,
-                     const IR::Vector<IR::Argument>* arguments,
+                     int64_t size,
                      const IR::IAnnotated* annotations) {
         auto actionProfileType = SymbolType::ACTION_PROFILE();
         if (type->name == "ActionSelector") {
@@ -403,14 +422,6 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             return boost::none;
         }
 
-        auto sizeExpression = arguments->at(0)->expression;
-        if (!sizeExpression->is<IR::Constant>()) {
-            ::error("Action profile '%1%' has non-constant size '%1%'",
-                    name, sizeExpression);
-            return boost::none;
-        }
-
-        const int64_t size = sizeExpression->to<IR::Constant>()->asInt();
         return ActionProfile{name, actionProfileType, size, annotations};
     }
 
@@ -422,14 +433,29 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         auto instance =
             getExternInstanceFromProperty(table, "implementation", refMap, typeMap);
         if (!instance) return boost::none;
-        return getActionProfile(*instance->name, instance->type, instance->arguments,
+        auto size = instance->substitution.lookupByName("size")->expression;
+        if (!size->is<IR::Constant>()) {
+            ::error("Action profile '%1%' has non-constant size '%2%'",
+                    *instance->name, size);
+            return boost::none;
+        }
+        return getActionProfile(*instance->name, instance->type,
+                                size->to<IR::Constant>()->asInt(),
                                 getTableImplementationAnnotations(table, refMap));
     }
 
-    /// @return the action profile declared with @decl
+    /// @return the action profile corresponding to @instance.
     static boost::optional<ActionProfile>
-    getActionProfile(const IR::Declaration_Instance* decl, const IR::Type_Extern* type) {
-        return getActionProfile(decl->controlPlaneName(), type, decl->arguments,
+    getActionProfile(const IR::ExternBlock* instance) {
+        auto decl = instance->node->to<IR::IDeclaration>();
+        auto size = instance->getParameterValue("size");
+        if (!size->is<IR::Constant>()) {
+            ::error("Action profile '%1%' has non-constant size '%2%'",
+                    decl->controlPlaneName(), size);
+            return boost::none;
+        }
+        return getActionProfile(decl->controlPlaneName(), instance->type,
+                                size->to<IR::Constant>()->asInt(),
                                 decl->to<IR::IAnnotated>());
     }
 
@@ -476,17 +502,10 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     template <typename Kind>
     void setCounterCommon(Kind *counter,
                           const Helpers::Counterlike<CounterExtern>& counterInstance) {
-        using ::barefoot::CounterSpec;
         auto counter_spec = counter->mutable_spec();
-        if (counterInstance.unit == "PACKETS") {
-            counter_spec->set_unit(CounterSpec::PACKETS);
-        } else if (counterInstance.unit == "BYTES") {
-            counter_spec->set_unit(CounterSpec::BYTES);
-        } else if (counterInstance.unit == "PACKETS_AND_BYTES") {
-            counter_spec->set_unit(CounterSpec::PACKETS_AND_BYTES);
-        } else {
-            counter_spec->set_unit(CounterSpec::UNSPECIFIED);
-        }
+        using Helpers::CounterlikeTraits;
+        counter_spec->set_unit(
+            CounterlikeTraits<CounterExtern>::mapUnitName(counterInstance.unit));
     }
 
     void addCounter(const P4RuntimeSymbolTableIface& symbols,
@@ -519,19 +538,14 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void setMeterCommon(Kind *meter,
                         const Helpers::Counterlike<MeterExtern>& meterInstance) {
         using ::barefoot::MeterSpec;
+        using Helpers::CounterlikeTraits;
         auto meter_spec = meter->mutable_spec();
         if (colorAwareMeters.find(meterInstance.name) != colorAwareMeters.end()) {
             meter_spec->set_type(MeterSpec::COLOR_AWARE);
         } else {
             meter_spec->set_type(MeterSpec::COLOR_UNAWARE);
         }
-        if (meterInstance.unit == "PACKETS") {
-            meter_spec->set_unit(MeterSpec::PACKETS);
-        } else if (meterInstance.unit == "BYTES") {
-            meter_spec->set_unit(MeterSpec::BYTES);
-        } else {
-            meter_spec->set_unit(MeterSpec::UNSPECIFIED);
-        }
+        meter_spec->set_unit(CounterlikeTraits<MeterExtern>::mapUnitName(meterInstance.unit));
     }
 
     void addMeter(const P4RuntimeSymbolTableIface& symbols,
