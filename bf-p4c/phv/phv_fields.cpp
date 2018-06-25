@@ -567,7 +567,7 @@ void PHV::Field::updateValidContainerRange(nw_bitrange newValidRange) {
          " for field " << name);
 
     const auto intersection = validContainerRange_i.intersectWith(newValidRange);
-    if (intersection.empty() || intersection.size() < size) {
+    if (intersection.empty()) {
         ::error("Inferred valid container ranges %1% and %2% for field %3% "
                 "which cannot both be satisfied for a field of size %4%b",
                 cstring::to_cstring(validContainerRange_i),
