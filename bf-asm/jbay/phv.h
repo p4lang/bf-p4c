@@ -9,7 +9,9 @@ class Target::JBay::Phv : public Target::Phv {
         short     parser_id_, deparser_id_;
         int parser_id() const override { return parser_id_; } 
         int mau_id() const override { return uid < 280 ? uid : -1; }
-        int ixbar_id() const override { return deparser_id_; }
+        int ixbar_id() const override {
+            static const int ixbar_permute[16] = { 0,0,0,0,0,0,2,2,2,2,2,2,-6,-6,0,0 };
+            return deparser_id_ + ixbar_permute[deparser_id_&0xf]; }
         int deparser_id() const override { return deparser_id_; }
     };
     void init_regs(::Phv &phv) override;
