@@ -102,7 +102,7 @@ p4c_add_test_label("tofino" "18Q2Goal" "switch_8.2_generic_int_leaf")
 set  (SWITCH_P4_16 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch/p4_16src/switch.p4)
 file (RELATIVE_PATH switch_p4_16_test ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_p4_16" ${switch_p4_16_test} "${testExtraArgs} -bfrt")
+  "switch_p4_16" ${switch_p4_16_test} "${testExtraArgs} -bfrt -tofino -arch tna")
 
 # Switch Rel 8.1 MSDC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc" ${SWITCH_P4}

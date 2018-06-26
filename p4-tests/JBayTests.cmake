@@ -8,12 +8,15 @@ set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_JBAY "${P4TESTDATA}/p4_16_samples/*.p4")
 p4c_find_tests("${P4TESTS_FOR_JBAY}" v1tests INCLUDE "${V1_SEARCH_PATTERNS}")
 
-set (P16_INCLUDE_PATTERNS "include.*(v1model|psa|jbay).p4" "main|common_v1_test")
-set (P16_EXCLUDE_PATTERNS "tofino.h")
-set (P16_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
-p4c_find_tests("${P16_FOR_TOFINO}" p16tests INCLUDE "${P16_INCLUDE_PATTERNS}" EXCLUDE "${P16_EXCLUDE_PATTERNS}")
+set (P16_V1_INCLUDE_PATTERNS "include.*v1model.p4" "main|common_v1_test")
+set (P16_V1_EXCLUDE_PATTERNS "tofino.h")
+set (P16_V1_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
+p4c_find_tests("${P16_V1_FOR_JBAY}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
-set (p16tests ${p16tests} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ipv4_checksum.p4)
+set (P16_JNA_INCLUDE_PATTERNS "include.*(jna).p4" "main")
+set (P16_JNA_EXCLUDE_PATTERNS "tofino.h")
+set (P16_JNA_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
+p4c_find_tests("${P16_JNA_FOR_JBAY}" p16_jna_tests INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
 
 file (GLOB STF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.stf")
 string (REGEX REPLACE "\\.stf;" ".p4;" STF_P4_TESTS "${STF_TESTS};")
@@ -21,11 +24,10 @@ string (REGEX REPLACE "\\.stf;" ".p4;" STF_P4_TESTS "${STF_TESTS};")
 file (GLOB PTF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.ptf")
 string (REGEX REPLACE "\\.ptf;" ".p4;" PTF_P4_TESTS "${PTF_TESTS};")
 
-set (JBAY_TEST_SUITES
+set (JBAY_V1_TEST_SUITES
   ${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4
 #  ${P4TESTDATA}/p4_14_samples/switch_*/switch.p4
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
-   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c1/*/*.p4
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c2/*/*.p4
@@ -40,12 +42,18 @@ set (JBAY_TEST_SUITES
 #  ${BFN_TESTS_LIST}
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
 #  ${v1tests}
-  ${p16tests}
+  ${p16_v1tests}
   ${STF_P4_TESTS}
   ${PTF_P4_TESTS}
   )
 
-p4c_add_bf_backend_tests("jbay" "base" "${JBAY_TEST_SUITES}")
+p4c_add_bf_backend_tests("jbay" "v1model" "base" "${JBAY_V1_TEST_SUITES}")
+
+set (JBAY_JNA_TEST_SUITES
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4
+  ${p16_jna_tests}
+  )
+p4c_add_bf_backend_tests("jbay" "jna" "base" "${JBAY_JNA_TEST_SUITES}")
 
 set (testExtraArgs "${testExtraArgs} -jbay")
 

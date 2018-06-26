@@ -22,7 +22,11 @@
  ******************************************************************************/
 
 #include <core.p4>
+#ifdef __TARGET_JBAY__
+#include <jna.p4>
+#elif __TARGET_TOFINO__
 #include <tna.p4>
+#endif
 #include "util.h"
 
 #define ETHERTYPE_IPV4 0x0800
@@ -62,7 +66,12 @@ parser SwitchIngressParser(
     }
 
     state parse_port_metadata {
+#ifdef __TARGET_TOFINO__
         pkt.advance(64);
+#endif
+#ifdef __TARGET_JBAY__
+        pkt.advance(196);
+#endif
         transition parse_ethernet;
     }
 

@@ -30,6 +30,7 @@ run_ptf=false
 run_pd=false
 ptftestdir=""
 device="tofino"
+arch="v1model"
 p4info=true
 bfrt=false
 
@@ -139,6 +140,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "   -keep-logs     if specified, keep PTF logs"
         echo >&2 "   -time          time commands as they run"
         echo >&2 "   -tofino        target tofino (default)"
+        echo >&2 "   -arch <arch>   p4 architecture (default v1model)"
         echo >&2 "   -to <sec>      timeout programs after <sec> seconds (default $TIMEOUT)"
         echo >&2 "   -v             verbose -- print commands before running them"
         echo >&2 "other arguments passed to p4c-barefoot:"
@@ -194,6 +196,10 @@ while [ $# -gt 1 ]; do
         device="jbay"
         testdir=jbay
         ;;
+    -arch)
+        arch=$2
+        shift
+        ;;
     -stf2ptf)
         run_stf2ptf=true
         run_ptf=true
@@ -240,28 +246,11 @@ name=$(basename $file .p4)
 P4C_ARGS="$P4C_ARGS -g"
 
 if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
-    # XXX(cole): This is a hack.  There are some P4_16 tests written against the
-    # v1model architecture; in the future, this will be deprecated, and only
-    # translated P4_14 programs will use the v1model architecture.  Even better,
-    # eventually architecture files might include enough information to uniquely
-    # identify the target, making the "--target" flag obsolete.  For the time
-    # being, we grep for "v1model.p4" to determine whether a test uses the v1model
-    # or TNA architecture.
-    if grep -q "tofino.p4\|tna.p4" "$file"; then
-        P4C_ARGS="$P4C_ARGS --target ${device} --arch tna"
-    elif grep -q "jbay.p4\|jna.p4" "$file"; then
-        P4C_ARGS="$P4C_ARGS --target ${device} --arch jna"
-    elif grep -q "psa.p4" "$file"; then
-        P4C_ARGS="$P4C_ARGS --target ${device} --arch psa"
-        # TODO(antonin): P4Info generation not supported for PSA yet
-        p4info=false
-    else
-        P4C_ARGS="$P4C_ARGS --target ${device} --arch v1model"
-    fi
-    P4C_ARGS="$P4C_ARGS -x p4-16"
+    P4C_ARGS="$P4C_ARGS --target ${device} --arch ${arch}"
+    P4C_ARGS="$P4C_ARGS --std p4-16"
 else
     P4C_ARGS="$P4C_ARGS --target ${device} --arch v1model"
-    P4C_ARGS="$P4C_ARGS -x p4-14"
+    P4C_ARGS="$P4C_ARGS --std p4-14"
 fi
 
 if [ "$ptftestdir" != "" ] && [ ! -d ${ptftestdir} ]; then
@@ -430,7 +419,7 @@ if $run_pd ; then
     if [ ! -d $testout ]; then
         mkdir -p $testout
     fi
-    # If P4C_pd specified and running a pd test, apply the path based on the 
+    # If P4C_pd specified and running a pd test, apply the path based on the
     # compiler choice
     if [ ! -z "$P4C_pd" ]; then
         P4C=$P4C_pd

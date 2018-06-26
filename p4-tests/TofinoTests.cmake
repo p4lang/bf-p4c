@@ -11,14 +11,19 @@ set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
 p4c_find_tests("${P4TESTS_FOR_TOFINO}" v1tests INCLUDE "${V1_SEARCH_PATTERNS}" EXCLUDE "${V1_EXCLUDE_PATTERNS}")
 
-set (P16_INCLUDE_PATTERNS "include.*(v1model|tofino|tna).p4" "main|common_v1_test")
-set (P16_EXCLUDE_PATTERNS "tofino.h")
-set (P16_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
-p4c_find_tests("${P16_FOR_TOFINO}" p16tests INCLUDE "${P16_INCLUDE_PATTERNS}" EXCLUDE "${P16_EXCLUDE_PATTERNS}")
+set (P16_V1_INCLUDE_PATTERNS "include.*v1model.p4" "main|common_v1_test")
+set (P16_V1_EXCLUDE_PATTERNS "tofino.h")
+set (P16_V1MODEL_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
+p4c_find_tests("${P16_V1MODEL_FOR_TOFINO}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
-set (TOFINO_TEST_SUITES
+set (P16_TNA_INCLUDE_PATTERNS "include.*(tofino|tna).p4" "main")
+set (P16_TNA_EXCLUDE_PATTERNS "tofino.h")
+set (P16_TNA_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
+p4c_find_tests("${P16_TNA_FOR_TOFINO}" p16_tna_tests INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
+
+set (TOFINO_V1_TEST_SUITES
   ${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4
-  ${p16tests}
+  ${p16_v1tests}
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
   # temporarily disable all customer tests -- we're failing many of them
   # and we want to save some Travis time
@@ -34,8 +39,12 @@ set (TOFINO_TEST_SUITES
   # p4smith regression tests
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4smith_regression/*.p4
   )
+p4c_add_bf_backend_tests("tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES}")
 
-p4c_add_bf_backend_tests("tofino" "base" "${TOFINO_TEST_SUITES}")
+set (TOFINO_TNA_TEST_SUITES
+  ${p16_tna_tests}
+  )
+p4c_add_bf_backend_tests("tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
@@ -185,7 +194,7 @@ foreach (t IN LISTS ALL_BFN_TESTS)
     list (APPEND P4F_COMPILE_ONLY ${t})
   endif()
 endforeach()
-p4c_add_bf_backend_tests("tofino" "smoketest_programs" "${P4F_COMPILE_ONLY}")
+p4c_add_bf_backend_tests("tofino" "v1model" "smoketest_programs" "${P4F_COMPILE_ONLY}")
 
 # Other PD tests
 

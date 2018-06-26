@@ -185,7 +185,7 @@ macro(packet_test_setup_check device)
   endif()
 endmacro(packet_test_setup_check)
 
-macro(p4c_add_bf_backend_tests device label tests)
+macro(p4c_add_bf_backend_tests device arch label tests)
   set (testExtraArgs)
   # do not add the device directly to testExtraArgs
   # this is used later to add other tests for multiple configurations.
@@ -208,7 +208,7 @@ macro(p4c_add_bf_backend_tests device label tests)
   endif()
 
   p4c_add_tests (${device} ${P4C_RUNTEST} "${tests}"
-     "" "${testExtraArgs} -${device}")
+     "" "${testExtraArgs} -${device} -arch ${arch}")
 
   # If label is not empty, add it to the tests
   foreach (ts "${tests}")
