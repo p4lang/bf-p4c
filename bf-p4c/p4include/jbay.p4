@@ -195,6 +195,8 @@ struct ingress_intrinsic_metadata_for_deparser_t {
 
     bit<4> mirror_type;                 // The user-selected mirror field list
                                         // index.
+    
+    bit<1> mirr_io_sel;                 // Mirror incoming or outgoing packet
 }
 
 // -----------------------------------------------------------------------------
@@ -290,6 +292,8 @@ struct egress_intrinsic_metadata_for_deparser_t {
     bit<7> coalesce_length;             // The number of bytes in the current
                                         // packet to collect in the mirror
                                         // buffer
+
+    bit<1> mirr_io_sel;                 // Mirror incoming or outgoing packet
 }
 
 @__intrinsic_metadata

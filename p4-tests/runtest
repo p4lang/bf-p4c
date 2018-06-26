@@ -413,6 +413,12 @@ if $run_pd || $run_ptf ; then
     fi
 fi
 
+if [ $(uname -s) == 'Darwin' ]; then
+    nproc=$(sysctl -n hw.physicalcpu)
+else
+    nproc=$(nproc)
+fi
+
 if $run_pd ; then
     testout=$(realpath $testdir/$name${out_ext}.out)
 
@@ -425,7 +431,7 @@ if $run_pd ; then
         P4C=$P4C_pd
     fi
     p4c=$(realpath $P4C)
-    export MAKEFLAGS="-j $(nproc)"
+    export MAKEFLAGS="-j $nproc"
     export P4C=$p4c
     pushd $testout > /dev/null
     echo "Configuring $name in $testout"

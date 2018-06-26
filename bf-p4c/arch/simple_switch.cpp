@@ -714,6 +714,10 @@ class ConstructSymbolTable : public Inspector {
     std::map<cstring, unsigned>  digestIndex;
 
     std::set<cstring> globals;
+#if HAVE_JBAY
+    static constexpr int JBAY_MIRR_IO_SEL_INCOMING = 0;
+    static constexpr int JBAY_MIRR_IO_SEL_OUTGOING = 1;
+#endif
 
  public:
     ConstructSymbolTable(ProgramStructure *structure,
@@ -922,7 +926,14 @@ class ConstructSymbolTable : public Inspector {
             auto *castedMirrorIdValue = new IR::Cast(IR::Type::Bits::get(10), mirrorIdValue);
             block->components.push_back(new IR::AssignmentStatement(mirrorId,
                                                                     castedMirrorIdValue));
-
+#if HAVE_JBAY
+            if (Device::currentDevice() == "JBay") {
+                auto selSource = isIngress ? JBAY_MIRR_IO_SEL_INCOMING : JBAY_MIRR_IO_SEL_OUTGOING;
+                auto selMeta = new IR::Member(deparserMetadataPath, "mirr_io_sel");
+                auto selVal = new IR::Constant(IR::Type::Bits::get(1), selSource);
+                block->components.push_back(new IR::AssignmentStatement(selMeta, selVal));
+            }
+#endif
             structure->_map.emplace(node, block);
         }
 

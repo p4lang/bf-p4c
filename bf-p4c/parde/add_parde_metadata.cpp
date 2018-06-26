@@ -136,6 +136,10 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
 
     auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
     addDeparserParam(d, dpMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
+#if HAVE_JBAY
+    if (Device::currentDevice() == "JBay")
+        addDeparserParam(d, dpMeta, "mirr_io_sel", "mirr_io_sel", true);
+#endif
 }
 
 void AddDeparserMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
@@ -147,7 +151,10 @@ void AddDeparserMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
 
     auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser");
     addDeparserParam(d, dpMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
-
+#if HAVE_JBAY
+    if (Device::currentDevice() == "JBay")
+        addDeparserParam(d, dpMeta, "mirr_io_sel", "mirr_io_sel", true);
+#endif
     /* egress_port is how the egress deparser knows where to push
      * the reassembled header and is absolutely necessary
      */
