@@ -17,6 +17,7 @@ class LayoutOption {
     int select_bus_split = -1;
     int action_format_index = -1;
     bool previously_widened = false;
+    bool identity = false;
     LayoutOption() {}
     explicit LayoutOption(const IR::MAU::Table::Layout l, int i)
         : layout(l), action_format_index(i) {}

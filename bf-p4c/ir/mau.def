@@ -144,6 +144,7 @@ class Table : BFN::Unit {
         int             entries = 0;
         bool            pre_classifier = false;
         bool            gateway = false;
+        bool            exact = false;
         bool            ternary = false;
         bool            hash_action = false;
         bool            atcam = false;

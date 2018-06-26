@@ -134,7 +134,6 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
         if (self.phv.getAliasMap().count(originalField))
             candidateFields.insert(self.phv.getAliasMap().at(originalField));
         for (const PHV::Field* field : candidateFields) {
-            cstring field_name = field->name;
             if (isWrite()) {
                 LOG3("update_access write " << field->name);
                 auto &a = self.access[field->name];

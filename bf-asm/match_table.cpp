@@ -387,7 +387,7 @@ int MatchTable::get_address_mau_actiondata_adr_default(unsigned log2size, bool p
 
 // Create json node for all hash bits
 void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
-        unsigned hash_table_id, json::vector &hash_bits) {
+        unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no) {
     for (auto &col: hash_table) {
         json::map hash_bit;
         bool hash_bit_added = false;
@@ -397,7 +397,7 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                 bits_to_xor_prev = &(hb->to<json::map>()["bits_to_xor"]->to<json::vector>());
                 hash_bit_added = true; } }
         hash_bit["hash_bit"] = col.first;
-        hash_bit["seed"] = input_xbar->get_seed_bit(hash_table_id, col.first);
+        hash_bit["seed"] = input_xbar->get_seed_bit(hash_group_no, col.first);
         json::vector &bits_to_xor = hash_bit["bits_to_xor"] = json::vector();
         for (const auto &bit: col.second.data) {
             json::map field;
@@ -455,7 +455,7 @@ void MatchTable::add_hash_functions(json::map &stage_tbl) {
             json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
             for (const auto hash_table : ht) {
                 hash_function["hash_function_number"] = hash_table.first;
-                gen_hash_bits(hash_table.second, hash_table.first, hash_bits);
+                gen_hash_bits(hash_table.second, hash_table.first, hash_bits, hash_table.first);
             hash_functions.push_back(std::move(hash_function)); } } }
 }
 

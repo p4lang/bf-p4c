@@ -3,6 +3,7 @@
 
 #include <array>
 #include <map>
+#include <random>
 #include <unordered_set>
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -13,6 +14,20 @@
 
 class IXBarRealign;
 struct TableResourceAlloc;
+
+/// Compiler generated random number function for use as hash seed on the input crossbar.
+struct IXBarRandom {
+    static std::random_device seed_generator;
+    static unsigned seed;
+    static std::mt19937 mersenne_generator;
+    /// Uniform distribution producing a 10-bit random number.
+    static std::uniform_int_distribution<unsigned> distribution10;
+    /// Uniform distribution producing either a 0 or a 1.
+    static std::uniform_int_distribution<unsigned> distribution1;
+    /// @returns a new random number which can be represented by @numBits.
+    /// If numBits != 10 or numBits != 12, then this function returns a random bit.
+    static unsigned nextRandomNumber(unsigned numBits = 1);
+};
 
 struct IXBar {
     static constexpr int EXACT_GROUPS = 8;
@@ -56,7 +71,6 @@ struct IXBar {
             }
         }
     };
-
 
     enum byte_speciality_t {
         NONE,
@@ -255,6 +269,8 @@ struct IXBar {
 
         /* which of the 16 hash tables we are using (bitvec) */
         unsigned        hash_table_inputs[HASH_GROUPS] = { 0 };
+        /* hash seed for different hash groups */
+        bitvec          hash_seed[HASH_GROUPS];
         /* values fed through the hash tables onto the upper 12 bits of the hash bus via
          * an identity matrix */
         struct matrix_position {
@@ -276,6 +292,8 @@ struct IXBar {
         struct Way {
             int         group, slice;  // group refers to which 8 of the hash groups used,
                                        // slice refers to the 10b way used
+                                       // slice = bit / 10
+            // Upper 12 bits. Also want a seed over the bits used in the mask.
             unsigned    mask;
             Way() = delete;
             Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {} };
@@ -328,9 +346,18 @@ struct IXBar {
         safe_vector<PHV::FieldSlice> field_list_order;
         HashDistHash hash_dist_hash;
 
-        void clear() { use.clear(); memset(hash_table_inputs, 0, sizeof(hash_table_inputs));
-                       bit_use.clear(); way_use.clear(); meter_alu_hash.clear();
-                       hash_dist_hash.clear(); field_list_order.clear(); }
+        void clear() {
+            use.clear();
+            memset(hash_table_inputs, 0, sizeof(hash_table_inputs));
+            bit_use.clear();
+            way_use.clear();
+            meter_alu_hash.clear();
+            for (size_t i = 0; i < HASH_GROUPS; i++)
+                hash_seed[i].clear();
+            hash_dist_hash.clear();
+            field_list_order.clear();
+        }
+
         unsigned compute_hash_tables();
         int groups() const;  // how many different groups in this use
         void add(const Use &alloc);

@@ -653,6 +653,13 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
             // According to Henry Wang, alpm requires one extra entry per partition
             set_entries += t->layout.partition_count;
         }
+        if (t->layout.exact) {
+            if (t->layout.ixbar_width_bits < ceil_log2(set_entries)) {
+                set_entries = 1 << t->layout.ixbar_width_bits;
+                ::warning("Shrinking table %1%: with %2% match bits, can only have %3% entries",
+                          t->name, t->layout.ixbar_width_bits, set_entries);
+            }
+        }
     }
 
     for (auto *p = done; p; p = p->prev) {

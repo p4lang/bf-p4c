@@ -169,6 +169,8 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
         check_for_atcam(layout, tbl, partition_index, phv);
     if (!layout.atcam)
         check_for_ternary(layout, tbl);
+    if (!layout.alpm && !layout.atcam && !layout.ternary)
+        layout.exact = true;
 
     safe_vector<int> byte_sizes;
     bool partition_found = false;

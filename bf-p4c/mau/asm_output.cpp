@@ -869,8 +869,8 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
         midbytes.clear();
         emit_ixbar_gather_bytes(use->use, sort, midbytes, use->ternary, use->atcam);
     }
-    int hash_group = 0;
-    for (auto hash_table_input : use->hash_table_inputs) {
+    for (int hash_group = 0; hash_group < IXBar::HASH_GROUPS; hash_group++) {
+        unsigned hash_table_input = use->hash_table_inputs[hash_group];
         int ident_bits_prev_alloc = 0;
         if (hash_table_input) {
             for (int ht : bitvec(hash_table_input)) {
@@ -887,9 +887,9 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
             out << indent++ << "hash group " << hash_group << ":" << std::endl;
             out << indent << "table: [" << emit_vector(bitvec(hash_table_input), ", ") << "]"
                 << std::endl;
+            out << indent << "seed: 0x" << use->hash_seed[hash_group] << std::endl;
             --indent;
         }
-        hash_group++;
     }
 }
 

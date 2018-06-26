@@ -158,7 +158,7 @@ void ExactMatchTable::add_hash_functions(json::map &stage_tbl) {
                 for (unsigned hash_table_id: bitvec(hash_group->tables)) {
                     auto hash_table = input_xbar->get_hash_table(hash_table_id);
                     hash_function["hash_function_number"] = hash_table_id;
-                    gen_hash_bits(hash_table, hash_table_id, hash_bits); }
+                    gen_hash_bits(hash_table, hash_table_id, hash_bits, hash_group_no); }
             hash_functions.push_back(std::move(hash_function));
             // Mark hash group as visited
             visited_groups[hash_group_no] = 1; } } }

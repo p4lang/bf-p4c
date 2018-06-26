@@ -715,7 +715,7 @@ public:
     void gen_idletime_tbl_cfg(json::map &stage_tbl);
     int direct_shiftcount() const override { return 64; }
     void gen_hash_bits(const std::map<int, HashCol> &hash_table,
-            unsigned hash_table_id, json::vector &hash_bits);
+            unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no);
     virtual void add_hash_functions(json::map &stage_tbl);
     void add_all_reference_tables(json::map &tbl, Table *math_table=nullptr);
     void add_static_entries(json::map &tbl);

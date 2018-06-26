@@ -17,6 +17,18 @@ constexpr int IXBar::HASH_SINGLE_BITS;
 constexpr int IXBar::METER_ALU_HASH_BITS;
 constexpr int IXBar::TOFINO_METER_ALU_BYTE_OFFSET;
 
+unsigned IXBarRandom::seed = 0x0572f1fa;
+std::uniform_int_distribution<unsigned> IXBarRandom::distribution10(0, 1023);
+std::uniform_int_distribution<unsigned> IXBarRandom::distribution1(0, 1);
+std::mt19937 IXBarRandom::mersenne_generator(IXBarRandom::seed);
+
+unsigned IXBarRandom::nextRandomNumber(unsigned numBits) {
+    if (numBits == 10)
+        return distribution10(mersenne_generator);
+    else
+        return distribution1(mersenne_generator);
+}
+
 void IXBar::clear() {
     exact_use.clear();
     ternary_use.clear();
@@ -250,6 +262,9 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
         if (hash_table_inputs[i] != 0 && alloc.hash_table_inputs[i] != 0)
             BUG("When adding allocs of ways, somehow ended up on the same hash group");
         hash_table_inputs[i] |= alloc.hash_table_inputs[i];
+        BUG_CHECK(hash_seed[i].popcount() == 0 || alloc.hash_seed[i].popcount() == 0,
+                  "Hash seed already present for group %1%", i);
+        hash_seed[i] |= alloc.hash_seed[i];
     }
 }
 
@@ -1433,6 +1448,43 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
        table requires multiple hash groups */
     alloc.hash_table_inputs[hash_group] = hash_table_input;
     hash_group_use[hash_group] |= hash_table_input;
+
+    // If a random_seed is specified via pragma, do not generate the random seed here.
+    if (tbl->random_seed >= 0)
+        return true;
+
+    LOG3("IXBarRandom seed: " << IXBarRandom::seed);
+    if (layout_option->identity) {
+        LOG3(" Used as identity function.");
+        return true;
+    }
+
+    std::map<unsigned, std::set<std::pair<unsigned, unsigned>>> requiredSeedCombinations;
+    for (auto way : alloc.way_use)
+        requiredSeedCombinations[way.group].insert(std::make_pair(way.slice, way.mask));
+
+    for (auto kv : requiredSeedCombinations) {
+        unsigned group = kv.first;
+        for (auto v : kv.second) {
+            LOG3("  Way details: " << kv.first << ", " << v.first << ", " << v.second);
+            unsigned slice = v.first;
+            unsigned mask = v.second;
+            unsigned random_number = IXBarRandom::nextRandomNumber(10);
+            bitvec random_seed = bitvec(random_number) << (10 * slice);
+            bitvec mask_bits(mask);
+            bitvec mask_seed;
+            for (auto b : mask_bits) {
+                unsigned random_bit = IXBarRandom::nextRandomNumber();
+                bitvec random_bit_seed = bitvec(random_bit) << b;
+                mask_seed |= random_bit_seed;
+            }
+            LOG3("    Random number: " << random_number << ", Random seed: " << random_seed <<
+                 ", Mask bits: " << mask_bits << ", Mask seed: " << (mask_seed << 40));
+            random_seed |= (mask_seed << 40);
+            LOG3("  Random seed: " << random_seed);
+            alloc.hash_seed[group] |= random_seed;
+        }
+    }
     return true;
 }
 
