@@ -123,30 +123,38 @@ struct operand {
     struct Action : Base {
         std::string             name;
         std::string             p4name;
+        TableOutputModifier     mod = TableOutputModifier::NONE;
         Table                   *table;
         Table::Format::Field    *field;
-        unsigned                lo, hi;
+        int                     lo, hi;
 
         Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
                unsigned l, unsigned h) : Base(line), name(n), table(tbl), field(f), lo(l), hi(h) {}
+        Action(int line, const std::string &n, TableOutputModifier mod, Table *tbl,
+               unsigned l, unsigned h)
+        : Base(line), name(n), mod(mod), table(tbl), field(nullptr), lo(l), hi(h) {}
         Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
-               unsigned l, unsigned h, const std::string &m) :
-                Base(line), name(n), p4name(m), table(tbl), field(f), lo(l), hi(h) {}
+               unsigned l, unsigned h, const std::string &m)
+        : Base(line), name(n), p4name(m), table(tbl), field(f), lo(l), hi(h) {}
+        Action(int line, const std::string &n, TableOutputModifier mod, Table *tbl,
+               unsigned l, unsigned h, const std::string &m)
+        : Base(line), name(n), p4name(m), mod(mod), table(tbl), field(nullptr), lo(l), hi(h) {}
         bool equiv(const Base *a_) const override {
             auto *a = dynamic_cast<const Action *>(a_);
             if (!a || lo != a->lo || hi != a->hi) return false;
-            if (name == a->name && table == a->table && field == a->field) return true;
+            if (name == a->name && table == a->table && field == a->field && mod == a->mod)
+                return true;
             if (field != a->field && (!field || !a->field)) return false;
             int b1 = field ? table->find_on_actionbus(field, lo, hi, 0)
-                           : table->find_on_actionbus(name, lo, hi, 0);
+                           : table->find_on_actionbus(name, mod, lo, hi, 0);
             int b2 = a->field ? a->table->find_on_actionbus(a->field, lo, hi, 0)
-                              : a->table->find_on_actionbus(a->name, lo, hi, 0);
+                              : a->table->find_on_actionbus(a->name, mod, lo, hi, 0);
             return b1 == b2 && b1 >= 0; }
         Action *clone() override { return new Action(*this); }
         int bits(int group) override {
             int size = group_size[group]/8U;
             int byte = field ? table->find_on_actionbus(field, lo, hi, size)
-                             : table->find_on_actionbus(name, lo, hi, size);
+                             : table->find_on_actionbus(name, mod, lo, hi, size);
             if (byte < 0) {
                 if (lo > 0 || (field && hi+1 < field->size))
                     error(lineno, "%s(%d..%d) is not on the action bus", name.c_str(), lo, hi);
@@ -167,6 +175,8 @@ struct operand {
         void pass2(int group) override {
             unsigned bits = group_size[group];
             unsigned bytes = bits/8U;
+            if (lo < 0) lo = 0;
+            if (hi < 0) hi = lo + bits - 1;
             if (field && table->find_on_actionbus(field, lo, hi, bytes) < 0) {
                 int immed_offset = 0;
                 if (table->format && table->format->immed)
@@ -175,9 +185,9 @@ struct operand {
                 if (l%bits != 0 && l/bits != h/bits)
                     error(lineno, "%s misaligned for action bus", name.c_str());
                 table->need_on_actionbus(field, lo, hi, bytes);
-            } else if (!field && table->find_on_actionbus(name, lo, hi, bytes) < 0) {
+            } else if (!field && table->find_on_actionbus(name, mod, lo, hi, bytes) < 0) {
                 if (Table::all.count(name))
-                    table->need_on_actionbus(Table::all.at(name), lo, hi, bytes);
+                    table->need_on_actionbus(Table::all.at(name), mod, lo, hi, bytes);
                 else
                     error(lineno, "Can't find any operand named %s", name.c_str()); } }
         void mark_use(Table *tbl) override {
@@ -188,7 +198,7 @@ struct operand {
                              : table->find_on_actionbus(name, lo, hi, size);
             return 8*(byte % size) + lo % 8; }
         void dbprint(std::ostream &out) const override {
-            out << name << '(' << lo << ".." << hi << ')';
+            out << name << mod << '(' << lo << ".." << hi << ')';
             if (field)
                 out << '[' << field->bits[0].lo << ':' << field->size << ", "
                     << field->group << ']'; }
@@ -284,10 +294,12 @@ struct operand {
                 if (!(hd->xbar_use & HashDistribution::IMMEDIATE_HIGH))
                     hd->xbar_use |= HashDistribution::IMMEDIATE_LOW;
             } else error(lineno, "No hash dist %d in table %s", units.at(0), table->name());
+            int lo = this->lo;
             for (auto u : units) {
                 if (auto hd = find_hash_dist(u)) {
                     if (table->find_on_actionbus(hd, lo, hi, size) < 0)
-                        table->need_on_actionbus(hd, lo, hi, size); } } }
+                        table->need_on_actionbus(hd, lo, hi, size);
+                    lo += 16; } } }
         int bits(int group) override {
             int size = group_size[group]/8U;
             auto hd = find_hash_dist(units.at(0));
@@ -297,7 +309,7 @@ struct operand {
                 return -1; }
             if (units.size() == 2) {
                 auto hd1 = find_hash_dist(units.at(1));
-                if (table->find_on_actionbus(hd1, lo, hi, size) != byte + 2)
+                if (table->find_on_actionbus(hd1, lo+16, hi, size) != byte + 2)
                     error(lineno, "hash dists %d and %d not contiguous on the action bus",
                           hd->id, hd1->id); }
             if (size == 2) byte -= 32;
@@ -339,7 +351,7 @@ struct operand {
         RandomGen *clone() override { return new RandomGen(*this); }
         void pass2(int group) override {
             unsigned size = group_size[group];
-            if (hi < 0) hi = 8*size - 1;
+            if (hi < 0) hi = lo + 8*size - 1;
             if (lo/size != hi/size)
                 error(lineno, "invalid slice of rng %d for use with %d bit PHV", rng.unit, size);
             if (table->find_on_actionbus(rng, lo, hi, size/8U))
@@ -361,16 +373,24 @@ struct operand {
         void gen_prim_cfg(json::map& out) override { /* what should this be? */ }
     };
     struct Named : Base {
-        std::string     name;
-        std::string     p4name;
-        int             lo, hi;
-        Table           *tbl;
-        std::string     action;
+        std::string             name;
+        std::string             p4name;
+        TableOutputModifier     mod = TableOutputModifier::NONE;
+        int                     lo, hi;
+        Table                   *tbl;
+        std::string             action;
 
         Named(int line, const std::string &n, int l, int h, Table *t, const std::string &act)
         : Base(line), name(n), lo(l), hi(h), tbl(t), action(act) {}
-        Named(int line, const std::string &n, int l, int h, Table *t, const std::string &act, std::string &m)
+        Named(int line, const std::string &n, TableOutputModifier m, int l, int h,
+              Table *t, const std::string &act)
+        : Base(line), name(n), mod(m), lo(l), hi(h), tbl(t), action(act) {}
+        Named(int line, const std::string &n, int l, int h,
+              Table *t, const std::string &act, std::string &m)
         : Base(line), name(n), p4name(m), lo(l), hi(h), tbl(t), action(act) {}
+        Named(int line, const std::string &n, TableOutputModifier mod, int l, int h,
+              Table *t, const std::string &act, std::string &m)
+        : Base(line), name(n), p4name(m), mod(mod), lo(l), hi(h), tbl(t), action(act) {}
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Named *>(a_)) {
                 return name == a->name && lo == a->lo && hi == a->hi && tbl == a->tbl &&
@@ -441,14 +461,16 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
     } else if (CHECKTYPE2(v, tSTR, tCMD)) {
         std::string name = v.type == tSTR ? v.s : v[0].s;
         std::string p4name = name;
+        TableOutputModifier mod = TableOutputModifier::NONE;
         int lo = -1, hi = -1;
         if (v.type == tCMD) {
             if (v == "hash_dist" && (op = HashDist::parse(tbl, v.vec)))
                 return;
             if (v == "rng" && (op = new RandomGen(tbl, v.vec)))
                 return;
-            if (v.vec.size > 1 && v[1] == "color") {
-                // FIXME -- mark the Named as being table color rather than table output?
+            if (v.vec.size > 1 && (v[1] == "color" || v[1] == "address")) {
+                if (v[1] == "color") mod = TableOutputModifier::Color;
+                if (v[1] == "address") mod = TableOutputModifier::Address;
                 if (v[1].type == tCMD)
                     parse_slice(v[1].vec, 1, lo, hi);
                 else if (v.vec.size > 2)
@@ -463,41 +485,41 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
                 hd->hi = v[1].hi; }
             op = hd;
             return; }
-        op = new Named(v.lineno, name, lo, hi, tbl, act->name, p4name); }
+        op = new Named(v.lineno, name, mod, lo, hi, tbl, act->name, p4name); }
 }
 
 auto operand::Named::lookup(Base *&ref) -> Base * {
     int slot, len = -1;
     if (tbl->action) tbl = tbl->action;
+    int lo = this->lo >= 0 ? this->lo : 0;
     if (auto *field = tbl->lookup_field(name, action)) {
         if (!options.match_compiler) {
             /* FIXME -- The old compiler generates refs past the end of action table fields
              * like these, and just accesses whatever bits happen to be there.  So we
              * supress these error checks for compatibility (ex: tests/action_bus1.p4) */
-            if (lo >= 0 && (unsigned)lo >= field->size) {
+            if ((unsigned)lo >= field->size) {
                 error(lineno, "Bit %d out of range for field %s", lo, name.c_str());
                 ref = 0;
             } else if (hi >= 0 && (unsigned)hi >= field->size) {
                 error(lineno, "Bit %d out of range for field %s", hi, name.c_str());
                 ref = 0; } }
         if (ref) {
-            ref = new Action(lineno, name, tbl, field, lo >= 0 ? lo : 0,
+            ref = new Action(lineno, name, tbl, field, lo,
                              hi >= 0 ? hi : field->size - 1, p4name);
         }
-    } else if (tbl->find_on_actionbus(name, lo >= 0 ? lo : 0, hi >= 0 ? hi : 7, 0, &len) >= 0) {
-        ref = new Action(lineno, name, tbl, 0, lo >= 0 ? lo : 0,
-                         hi >= 0 ? hi : len - 1, p4name);
+    } else if (tbl->find_on_actionbus(name, mod, lo, hi >= 0 ? hi : 7, 0, &len) >= 0) {
+        ref = new Action(lineno, name, mod, tbl, lo, hi >= 0 ? hi : len - 1, p4name);
     } else if (::Phv::get(tbl->gress, name)) {
         ref = new Phv(lineno, tbl->gress, name, lo, hi);
     } else if (sscanf(name.c_str(), "A%d%n", &slot, &len) >= 1 &&
                len == (int)name.size() && slot >= 0 && slot < 32) {
-        ref = new RawAction(lineno, slot, lo >= 0 ? lo : 0);
-    } else if (name == "hash_dist" && lo == hi) {
+        ref = new RawAction(lineno, slot, lo);
+    } else if (name == "hash_dist" && (lo == hi || hi < 0)) {
         ref = new HashDist(lineno, tbl, lo);
     } else if (Table::all.count(name)) {
-        ref = new Action(lineno, name, tbl, nullptr, lo >= 0 ? lo : 0, hi >= 0 ? hi : 31, p4name);
+        ref = new Action(lineno, name, mod, tbl, lo, hi, p4name);
     } else {
-        ref = new Phv(lineno, tbl->gress, name, lo, hi); }
+        ref = new Phv(lineno, tbl->gress, name, this->lo, hi); }
     if (ref != this) delete this;
     return ref;
 }

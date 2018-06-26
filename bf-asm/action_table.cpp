@@ -72,13 +72,14 @@ int ActionTable::find_on_actionbus(Table::Format::Field *f, int lo, int hi, int 
             return rv; }
     return -1;
 }
-int ActionTable::find_on_actionbus(const char *name, int lo, int hi, int size, int *len) {
+int ActionTable::find_on_actionbus(const char *name, TableOutputModifier mod, int lo, int hi,
+                                   int size, int *len) {
     int rv;
-    if (action_bus && (rv = action_bus->find(name, lo, hi, size, len)) >= 0)
+    if (action_bus && (rv = action_bus->find(name, mod, lo, hi, size, len)) >= 0)
         return rv;
     for (auto *match_table : match_tables) {
         assert((Table *)match_table != (Table *)this);
-        if ((rv = match_table->find_on_actionbus(name, lo, hi, size, len)) >= 0)
+        if ((rv = match_table->find_on_actionbus(name, mod, lo, hi, size, len)) >= 0)
             return rv; }
     return -1;
 }
@@ -118,11 +119,11 @@ void ActionTable::need_on_actionbus(Format::Field *f, int lo, int hi, int size) 
     assert(!"Can't find table associated with field");
 }
 
-void ActionTable::need_on_actionbus(Table *attached, int lo, int hi, int size) {
+void ActionTable::need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size) {
     int attached_count = 0;
     for (auto *match_table : match_tables) {
-        if (match_table->is_attached(attached)) {
-            match_table->need_on_actionbus(attached, lo, hi, size);
+        if (match_table->is_attached(att)) {
+            match_table->need_on_actionbus(att, mod, lo, hi, size);
             ++attached_count; } }
     // FIXME -- if its attached to more than one match table (mutex match tables that
     // share attached action table and attached other table), then it needs to be allocated
@@ -308,7 +309,8 @@ void ActionTable::pass1() {
             if (prev && prev->row == row->row) prev->home_row = false;
             home_row = row->row;
             row->home_row = true;
-            final_home_rows |= 1 << row->row; }
+            final_home_rows |= 1 << row->row;
+            need_bus(row->lineno, stage->action_data_use, row->row, "action data"); }
         if (row->word >= 0) {
             if (row->word > width) {
                 error(row->lineno, "Invalid word %u for row %d", row->word, row->row);

@@ -104,7 +104,9 @@ void OutOP::decode_output_mux(Target::Tofino, value_t &op) {
         { "alu_hi", 4 }, { "alu_lo", 5 },
         { "alu_hi_out", 4 }, { "alu_lo_out", 5 },
         { "predicate", 6 } };
-    if (op.type == tSTR && ops_mux_lookup.count(op.s))
+    if (op.type == tCMD && ops_mux_lookup.count(op[0].s))
+        output_mux = ops_mux_lookup.at(op[0].s);
+    else if (op.type == tSTR && ops_mux_lookup.count(op.s))
         output_mux = ops_mux_lookup.at(op.s);
     else
         output_mux = -1;

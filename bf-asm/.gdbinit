@@ -260,9 +260,13 @@ class ActionBus_Source_Printer:
             elif self.val['type'] == 5:
                 rv = "TableColor"
             elif self.val['type'] == 6:
-                rv = "NameRef"
+                rv = "TableAddress"
             elif self.val['type'] == 7:
+                rv = "NameRef"
+            elif self.val['type'] == 8:
                 rv = "ColorRef"
+            elif self.val['type'] == 9:
+                rv = "AddressRef"
             else:
                 rv = '<bad type 0x%x>' % int(self.val['type'])
         except Exception as e:
@@ -279,13 +283,15 @@ class ActionBus_Source_Printer:
             if self.done:
                 raise StopIteration
             self.done = True
-            if type == 1:
+            if self.type == 1:
                 return ("field", self.val['field'])
-            elif type == 2:
+            elif self.type == 2:
                 return ("hd", self.val['hd'])
-            elif type == 4 or type == 5:
+            elif self.type == 3:
+                return ("rng", self.val['rng'])
+            elif self.type == 4 or self.type == 5 or self.type == 6:
                 return ("table", self.val['table'])
-            elif type == 6 or type == 7:
+            elif self.type == 7 or self.type == 8 or self.type == 9:
                 return ("name_ref", self.val['name_ref'])
             else:
                 raise StopIteration

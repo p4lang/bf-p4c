@@ -713,6 +713,11 @@ const IR::Node *AdjustStatefulInstructions::preorder(IR::Node *node) {
     return node;
 }
 
+const IR::Annotations *AdjustStatefulInstructions::preorder(IR::Annotations *annot) {
+    prune();
+    return annot;
+}
+
 const IR::MAU::Instruction *AdjustStatefulInstructions::preorder(IR::MAU::Instruction *instr) {
     if (!findContext<IR::MAU::SaluAction>())
         prune();

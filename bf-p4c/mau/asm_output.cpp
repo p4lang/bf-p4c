@@ -356,6 +356,18 @@ void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
                 out << ", shift: " << hash_dist.shifts.at(slice);
             if (hash_dist.expand.count(slice) > 0)
                 out << ", expand: " << hash_dist.expand.at(slice);
+            if (hash_dist.outputs.count(slice)) {
+                auto &set = hash_dist.outputs.at(slice);
+                if (set.size() > 0) {
+                    out << ", output: ";
+                    if (set.size() > 1) {
+                        const char *sep = "[ ";
+                        for (auto el : set) {
+                            out << sep << el;
+                            sep = ", "; }
+                        out << " ]";
+                    } else {
+                        out << *set.begin(); } } }
             out << " }" << std::endl;
         }
     }
@@ -1590,6 +1602,13 @@ class MauAsmOutput::EmitAction : public Inspector {
         }
         sep = ", ";
         return false; }
+    bool preorder(const IR::Member *m) override {
+        if (m->expr->is<IR::MAU::AttachedOutput>()) {
+            visit(m->expr, "expr");
+            out << " " << m->member;
+            return false;
+        } else {
+            return preorder(static_cast<const IR::Expression *>(m)); } }
     bool preorder(const IR::MAU::HashDist *hd) override {
         handle_hash_dist(hd);
         return false; }
@@ -2248,7 +2267,21 @@ std::string MauAsmOutput::find_indirect_index(const IR::MAU::AttachedMemory *at_
             }
         }
         BUG_CHECK(hd_use != nullptr, "No associated hash distribution group for an address");
-        return "hash_dist " + std::to_string(hd_use->slices[0]);
+        std::string rv = "";
+        if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
+            if (salu->instruction.size() > 1 && !index_only) {
+                cstring salu_act;
+                for (auto &act : tbl->actions) {
+                    if (!salu->action_map.count(act.first))
+                        continue;
+                    if (salu_act && salu_act != salu->action_map.at(act.first))
+                        salu_act = "meter_type";
+                    else
+                        salu_act = salu->action_map.at(act.first); }
+                if (salu_act)
+                    rv = salu_act + ", "; } }
+        rv += "hash_dist " + std::to_string(hd_use->slices[0]);
+        return rv;
     }
 
     if (at_mem->is<IR::MAU::Counter>()) {
@@ -2631,6 +2664,18 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     if (!memuse.dleft_match.empty())
         out << indent << "match: [" << emit_vector(memuse.dleft_match) << "]" << std::endl;
 
+    if (salu->chain_vpn) {
+        out << indent << "offset_vpn: true" << std::endl;
+        auto *back_at = getParent<IR::MAU::BackendAttached>();
+        // if the address comes from hash_dist, we'll have allocated it with
+        // IXBar::Use::METER_ADR_AND_IMMEDIATE, so need to use meter_adr_shift
+        // see IXBar::XBarHashDist::initialize_hash_dist_unit
+        if (back_at->hash_dist)
+            out << indent << "address_shift: " << ceil_log2(salu->width) << std::endl;
+    }
+    if (salu->chain_total_size > salu->size)
+        out << indent << "log_vpn: 0.." << ((salu->chain_total_size * salu->width >> 17) - 1)
+            << std::endl;
     return false;
 }
 

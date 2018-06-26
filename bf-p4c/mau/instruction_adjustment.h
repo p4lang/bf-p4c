@@ -185,6 +185,7 @@ class AdjustStatefulInstructions : public MauTransform {
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
     const IR::Expression *preorder(IR::Expression *expr) override;
     const IR::Node *preorder(IR::Node *) override;
+    const IR::Annotations *preorder(IR::Annotations *) override;
     bool check_bit_positions(std::map<int, le_bitrange> &salu_inputs, int field_size,
         int starting_bit);
     bool verify_on_search_bus(const IR::MAU::StatefulAlu *, const IXBar::Use &salu_ixbar,

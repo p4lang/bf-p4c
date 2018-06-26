@@ -253,7 +253,10 @@ bool ActionAnalysis::preorder(const IR::Expression *expr) {
     }
     return false;
 }
-
+bool ActionAnalysis::preorder(const IR::Member *mem) {
+    if (mem->expr->is<IR::MAU::AttachedOutput>()) return true;
+    return preorder(static_cast<const IR::Expression *>(mem));
+}
 
 /** Responsible for adding the instruction into which containers they actually affect.
  *  Thus multiple field based actions can be added to the same container, and then evalauted

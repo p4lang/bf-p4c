@@ -168,6 +168,15 @@ bool FieldDefUse::preorder(const IR::BFN::LoweredParser*) {
     return false;
 }
 
+bool FieldDefUse::preorder(const IR::MAU::Action *act) {
+    // stateful table arguments are read before the the action code runs which reads
+    // them.  FIXME -- should only visit the SaluAction that is triggered by this action,
+    // not all of them.
+    visit(act->stateful, "stateful");
+    visit(act->action, "action");
+    return false;
+}
+
 bool FieldDefUse::preorder(const IR::Primitive* prim) {
     // XXX(yumin): consider h.f1 = h.f1 + 1; When we visit it,
     // we should first visit the source on the RHS, as how hardware does.

@@ -406,6 +406,10 @@ class StatefulAlu : Synth2Port {
     // overflow and underflow actions, if any
     cstring                                             overflow = {};
     cstring                                             underflow = {};
+    // chain to subsequent stage  FIXME -- do we need more info here -- the field used to chain
+    // the address?  Or perhaps put this in Synth2Port if other such tables can also chain
+    bool                                                chain_vpn = false;
+    int                                                 chain_total_size = size;
 
     class MathUnit {
         bool            valid = false;
@@ -422,6 +426,7 @@ class StatefulAlu : Synth2Port {
     const char *kind() const override { return "stateful"; }
     const Type *getType() const override { return Type_Register::get(); }
     UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::STATEFUL_ALU; }
+    bool alu_output() const;   // has output to VLIW alus via action data bus
 
     int source_width() const {
         if (dual)

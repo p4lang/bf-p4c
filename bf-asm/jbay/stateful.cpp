@@ -87,6 +87,11 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
     } else if (kv.key == "overflow") {
         if (CHECKTYPE(kv.value, tSTR))
             overflow_action = kv.value;
+    } else if (kv.key == "offset_vpn") {
+        offset_vpn = get_bool(kv.value);
+    } else if (kv.key == "address_shift") {
+        if (CHECKTYPE(kv.value, tINT))
+            meter_adr_shift = kv.value.i;
     } else
         return false;
     return true;
@@ -131,15 +136,26 @@ void StatefulTable::set_counter_mode(Target::JBay target, int mode) {
         stateful_counter_mode = mode;
 }
 
+// This is called write_logging_regs, but it handles all target (jbay) specific
+// registers, as write_regs is not specialized and this is.  Should rename?
 template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) {
-    auto &adrdist =  regs.rams.match.adrdist;
-    auto &merge =  regs.rams.match.merge;
+    auto &adrdist = regs.rams.match.adrdist;
+    auto &merge = regs.rams.match.merge;
+    auto &vpn_range = adrdist.mau_meter_alu_vpn_range[meter_group()];
+    int minvpn, maxvpn;
+    layout_vpn_bounds(minvpn, maxvpn, true);
+    vpn_range.meter_vpn_base = minvpn;
+    vpn_range.meter_vpn_limit = maxvpn;
+    vpn_range.meter_vpn_range_check_enable = 1;
     for (MatchTable *m : match_tables) {
         int mode = stateful_counter_mode;
         if (auto *call = m->get_call(this))
             if (call->args.size() >= 2 && call->args.at(1).type == Call::Arg::Counter)
                 mode = call->args.at(1).count_mode();
-        // adrdist.mau_stateful_log_counter_logical_map[m->logical_id] = ???
+        if (address_used) {
+            auto &slog_map = adrdist.mau_stateful_log_counter_logical_map[m->logical_id];
+            slog_map.stateful_log_counter_logical_map_ctl = meter_group();
+            slog_map.stateful_log_counter_logical_map_enable = 1; }
         merge.mau_stateful_log_counter_ctl[m->logical_id/8U][0].set_subfield(
             mode & PUSHPOP_MASK , 4*(m->logical_id % 8U), 4);
         merge.mau_stateful_log_counter_ctl[m->logical_id/8U][1].set_subfield(
@@ -148,30 +164,41 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
             if (mode & PUSHPOP_MASK)
                 rep[0].set_subfield(meter_group() | 0x4, 3*(m->logical_id % 8U), 3);
             if ((mode >> PUSHPOP_BITS) & PUSHPOP_MASK)
-                rep[1].set_subfield(meter_group() | 0x4, 3*(m->logical_id % 8U), 3); } }
-    // adrdist.mau_meter_alu_vpn_range[meter_goup] = ???
-    auto &oxbar_map = adrdist.mau_stateful_log_counter_oxbar_map[meter_group()];
-    oxbar_map.stateful_log_counter_oxbar_ctl = meter_group();
-    oxbar_map.stateful_log_counter_oxbar_enable = 1;
-    auto &ctl2 = merge.mau_stateful_log_counter_ctl2[meter_group()];
-    ctl2.slog_counter_function = stateful_counter_mode >> FUNCTION_SHIFT;
-    ctl2.slog_instruction_width = format->log2size - 3;
-    if (stateful_counter_mode & PUSHPOP_CONTROLPLANE)
-        ctl2.slog_push_event_ctl = 1;
-    if ((stateful_counter_mode >> PUSHPOP_BITS) & PUSHPOP_CONTROLPLANE)
-        ctl2.slog_pop_event_ctl = 1;
-    ctl2.slog_vpn_base = logvpn_min;
-    ctl2.slog_vpn_limit = logvpn_max;
-    if (watermark_level) {
-        ctl2.slog_watermark_ctl = watermark_pop_not_push;
-        ctl2.slog_watermark_enable = 1;
-        merge.mau_stateful_log_watermark_threshold[meter_group()] = watermark_level; }
-    auto &ctl3 = merge.mau_stateful_log_counter_ctl3[meter_group()];
-    if (underflow_action.set())
-        // 4-bit stateful address MSB encoding for instruction, as given by table 6-67 (6.4.4.11)
-        ctl3.slog_underflow_instruction = actions->action(underflow_action.name)->code * 2 + 1;
-    if (overflow_action.set())
-        ctl3.slog_overflow_instruction = actions->action(overflow_action.name)->code * 2 + 1;
+                rep[1].set_subfield(meter_group() | 0x4, 3*(m->logical_id % 8U), 3); }
+        adrdist.meter_alu_adr_range_check_icxbar_map[meter_group()] |= 1U << m->logical_id;
+        if (offset_vpn) {
+            adrdist.mau_stateful_log_stage_vpn_offset[m->logical_id]
+                .stateful_log_stage_vpn_offset = maxvpn - minvpn + 1; }
+        adrdist.stateful_instr_width_logical[m->logical_id] = format->log2size - 3; }
+    switch (meter_group()) {
+    case 0: adrdist.meter_adr_shift.meter_adr_shift0 = meter_adr_shift; break;
+    case 1: adrdist.meter_adr_shift.meter_adr_shift1 = meter_adr_shift; break;
+    case 2: adrdist.meter_adr_shift.meter_adr_shift2 = meter_adr_shift; break;
+    case 3: adrdist.meter_adr_shift.meter_adr_shift3 = meter_adr_shift; break; }
+    if (stateful_counter_mode) {
+        auto &oxbar_map = adrdist.mau_stateful_log_counter_oxbar_map[meter_group()];
+        oxbar_map.stateful_log_counter_oxbar_ctl = meter_group();
+        oxbar_map.stateful_log_counter_oxbar_enable = 1;
+        auto &ctl2 = merge.mau_stateful_log_counter_ctl2[meter_group()];
+        ctl2.slog_counter_function = stateful_counter_mode >> FUNCTION_SHIFT;
+        ctl2.slog_instruction_width = format->log2size - 3;
+        if (stateful_counter_mode & PUSHPOP_CONTROLPLANE)
+            ctl2.slog_push_event_ctl = 1;
+        if ((stateful_counter_mode >> PUSHPOP_BITS) & PUSHPOP_CONTROLPLANE)
+            ctl2.slog_pop_event_ctl = 1;
+        ctl2.slog_vpn_base = logvpn_min;
+        ctl2.slog_vpn_limit = logvpn_max;
+        if (watermark_level) {
+            ctl2.slog_watermark_ctl = watermark_pop_not_push;
+            ctl2.slog_watermark_enable = 1;
+            merge.mau_stateful_log_watermark_threshold[meter_group()] = watermark_level; }
+        auto &ctl3 = merge.mau_stateful_log_counter_ctl3[meter_group()];
+        if (underflow_action.set())
+            // 4-bit stateful addr MSB encoding for instruction, as given by table 6-67 (6.4.4.11)
+            ctl3.slog_underflow_instruction = actions->action(underflow_action.name)->code * 2 + 1;
+        if (overflow_action.set())
+            ctl3.slog_overflow_instruction = actions->action(overflow_action.name)->code * 2 + 1;
+    }
 }
 
 void StatefulTable::gen_tbl_cfg(Target::JBay, json::map &tbl, json::map &stage_tbl) {

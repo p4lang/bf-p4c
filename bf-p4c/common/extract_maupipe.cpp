@@ -537,8 +537,13 @@ void AttachTables::InitializeStatefulAlus
         } else {
             salu->direct = true; }
         salu->width = regtype ? regtype->arguments->at(0)->width_bits() : 1;
-        salu_inits[reg] = salu;
-    }
+        if (auto cts = reg->annotations->getSingle("chain_total_size")) {
+            const IR::Constant *k;
+            if (cts->expr.size() != 1 || !(k = cts->expr[0]->to<IR::Constant>()))
+                error("%s: chain_total_size must be a constant", cts->srcInfo);
+            else
+                salu->chain_total_size = k->asInt(); }
+        salu_inits[reg] = salu; }
 
     // If the register action hasn't been seen before, this creates an SALU Instruction
     if (register_actions.count(ext) == 0) {
@@ -547,6 +552,10 @@ void AttachTables::InitializeStatefulAlus
         ext->apply(CreateSaluInstruction(salu));
     }
 
+    auto prim = findContext<IR::Primitive>();
+    if (prim && prim->name == "RegisterAction.address") {
+        salu->chain_vpn = true;
+        return; }
     auto act = findContext<IR::MAU::Action>();
     if (!salu->action_map.emplace(act->internal_name, ext->name).second)
         error("%s: multiple calls to execute in action %s", gref->srcInfo, act->name);

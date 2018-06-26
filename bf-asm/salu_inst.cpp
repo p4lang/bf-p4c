@@ -217,6 +217,7 @@ struct SaluInstruction : public Instruction {
     SaluInstruction(int lineno): Instruction(lineno) {};
     //Stateful ALU's dont access PHV's directly
     void phvRead(std::function<void (const Phv::Slice &sl)>) final {};
+    bool salu_output() const override { return slot >= ALUOUT; }
     static int decode_predicate(const value_t &exp);
 };
 

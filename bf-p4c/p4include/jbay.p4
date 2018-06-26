@@ -625,23 +625,30 @@ extern RegisterAction<T, U> {
                  @optional out U rv3, @optional out U rv4); /* {
         U rv;
         T value = reg.read(index);
-        apply(value, rv);
+        apply(value, rv, rv2, rv3, rv4);
         reg.write(index, value);
         return rv;
     } */
-    U execute_log(); /* stateful logging execute at an index that increments each time */
-    U enqueue();  /* fifo push operation */
-    U dequeue();  /* fifo push operation */
-    U push();  /* stack push operation */
-    U pop();  /* stack pop operation */
-    U address(); /* return the match address */
-    U predicate(); /* return the predicate value */
+    U execute_direct(@optional out U rv2, @optional out U rv3, @optional out U rv4);
+
+    /* stateful logging execute at an index that increments each time */
+    U execute_log(@optional out U rv2, @optional out U rv3, @optional out U rv4);
+    U enqueue(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* fifo push */
+    U dequeue(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* fifo pop */
+    U push(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* stack push */
+    U pop(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* stack pop */
+
     @optional abstract void overflow(@optional inout T value,
                                      @optional out U rv1, @optional out U rv2,
                                      @optional out U rv3, @optional out U rv4);
     @optional abstract void underflow(@optional inout T value,
                                       @optional out U rv1, @optional out U rv2,
                                       @optional out U rv3, @optional out U rv4);
+
+    /* These routines can be called in apply/overflow/underflow methods to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address(); /* return the match address */
+    U predicate(); /* return the predicate value */
 }
 
 extern LearnAction<T, D, U> {

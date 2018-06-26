@@ -32,11 +32,17 @@ std::ostream &operator<<(std::ostream &out, const ActionBus::Source &src) {
     case ActionBus::Source::TableColor:
         out << "TableColor(" << (src.table ? src.table->name() : "0") << ")";
         break;
+    case ActionBus::Source::TableAddress:
+        out << "TableAddress(" << (src.table ? src.table->name() : "0") << ")";
+        break;
     case ActionBus::Source::NameRef:
         out << "NameRef(" << (src.name_ref ? src.name_ref->name : "0") << ")";
         break;
     case ActionBus::Source::ColorRef:
         out << "ColorRef(" << (src.name_ref ? src.name_ref->name : "0") << ")";
+        break;
+    case ActionBus::Source::AddressRef:
+        out << "AddressRef(" << (src.name_ref ? src.name_ref->name : "0") << ")";
         break;
     default:
         out << "<invalid type 0x" << hex(src.type) << ">";
@@ -119,10 +125,13 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 continue;
             } else if (kv.value == "meter") {
                 src = Source(MeterBus);
-                if (kv.value.type == tCMD && kv.value[1] == "color") {
-                    src.type = Source::ColorRef;
-                    // FIXME -- meter color could be ORed into any byte of the immediate?
-                    if (!sz) off = 24, sz = 8; }
+                if (kv.value.type == tCMD)
+                    if (kv.value[1] == "color") {
+                        src.type = Source::ColorRef;
+                        // FIXME -- meter color could be ORed into any byte of the immediate?
+                        if (!sz) off = 24, sz = 8;
+                    } else if (kv.value[1] == "address") {
+                        src.type = Source::AddressRef; }
             } else if (kv.value.type == tCMD && kv.value == "hash_dist") {
                 if (auto hd = tbl->find_hash_dist(kv.value[1].i))
                     src = Source(hd);
@@ -158,10 +167,13 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                     sz = kv.value[2].hi + 1 - off; }
             } else if (name_ref) {
                 src = Source(new Table::Ref(*name_ref));
-                if (kv.value.type == tCMD && kv.value[1] == "color") {
-                    src.type = Source::ColorRef;
-                    // FIXME -- meter color could be ORed into any byte of the immediate?
-                    if (!sz) off = 24, sz = 8; }
+                if (kv.value.type == tCMD) {
+                    if (kv.value[1] == "color") {
+                        src.type = Source::ColorRef;
+                        // FIXME -- meter color could be ORed into any byte of the immediate?
+                        if (!sz) off = 24, sz = 8;
+                    } else if (kv.value[1] == "address") {
+                        src.type = Source::AddressRef; } }
             } else if (tbl->format) {
                 error(kv.value.lineno, "No field %s in format", name);
                 continue; }
@@ -244,18 +256,27 @@ void ActionBus::pass1(Table *tbl) {
     Slot *use[ACTION_DATA_BUS_SLOTS] = { 0 };
     for (auto &slot : Values(by_byte)) {
         for (auto it = slot.data.begin(); it != slot.data.end();) {
-            if (it->first.type == Source::NameRef || it->first.type == Source::ColorRef) {
+            if (it->first.type >= Source::NameRef && it->first.type <= Source::AddressRef) {
                 // Remove all NameRef and replace with TableOutputs or Fields
-                // ColorRef turns into TableColor
+                // ColorRef turns into TableColor,  AddressRef into TableAddress
                 if (it->first.name_ref) {
                     bool ok = false;
                     if (*it->first.name_ref) {
                         Source src(*it->first.name_ref);
-                        if (it->first.type == Source::ColorRef) {
+                        switch (it->first.type) {
+                        case Source::NameRef:
+                            src.table->set_output_used();
+                            break;
+                        case Source::ColorRef:
                             src.type = Source::TableColor;
                             src.table->set_color_used();
-                        } else {
-                            src.table->set_output_used(); }
+                            break;
+                        case Source::AddressRef:
+                            src.type = Source::TableAddress;
+                            src.table->set_address_used();
+                            break;
+                        default:
+                            assert(0); }
                         slot.data[src] = it->second;
                         ok = true;
                     } else if (tbl->actions) {
@@ -289,11 +310,20 @@ void ActionBus::pass1(Table *tbl) {
                         error(lineno, "Multiple meter tables attached to %s", tbl->name());
                     else {
                         Source src(att->meters.at(0));
-                        if (it->first.type == Source::ColorRef) {
+                        switch (it->first.type) {
+                        case Source::NameRef:
+                            src.table->set_output_used();
+                            break;
+                        case Source::ColorRef:
                             src.type = Source::TableColor;
                             src.table->set_color_used();
-                        } else {
-                            src.table->set_output_used(); }
+                            break;
+                        case Source::AddressRef:
+                            src.type = Source::TableAddress;
+                            src.table->set_address_used();
+                            break;
+                        default:
+                            assert(0); }
                         slot.data[src] = it->second; } }
                 it = slot.data.erase(it);
             } else {
@@ -384,33 +414,26 @@ bool ActionBus::check_atcam_sharing(Table *tbl1, Table *tbl2) {
     return (atcam_share_bytes || atcam_action_share_bytes);
 }
 
-void ActionBus::need_alloc(Table *tbl, Table::Format::Field *f,
+void ActionBus::need_alloc(Table *tbl, Source src,
                            unsigned lo, unsigned hi, unsigned size) {
-    LOG3("need_alloc(" << tbl->name() << ") " << tbl->find_field(f) << " lo=" << lo <<
+    LOG3("need_alloc(" << tbl->name() << ") " << src << " lo=" << lo <<
          " hi=" << hi << " size=0x" << hex(size));
-    need_place[f][lo] |= size;
-    byte_use.setrange((f->immed_bit(0) + lo)/8U, size);
-}
-void ActionBus::need_alloc(Table *tbl, HashDistribution *hd,
-                           unsigned lo, unsigned hi, unsigned size) {
-    LOG3("need_alloc(" << tbl->name() << ") hash_dist " << hd->id << " lo=" << lo <<
-         " hi=" << hi << " size=0x" << hex(size));
-    need_place[hd][lo] |= size;
-    byte_use.setrange(lo/8U, size);
-}
-void ActionBus::need_alloc(Table *tbl, RandomNumberGen rng,
-                           unsigned lo, unsigned hi, unsigned size) {
-    LOG3("need_alloc(" << tbl->name() << ") rng " << rng.unit << " lo=" << lo <<
-         " hi=" << hi << " size=0x" << hex(size));
-    need_place[rng][lo] |= size;
-    byte_use.setrange(lo/8U, size);
-}
-void ActionBus::need_alloc(Table *tbl, Table *attached,
-                           unsigned lo, unsigned hi, unsigned size) {
-    LOG3("need_alloc(" << tbl->name() << ") table " << attached->name() << " lo=" << lo <<
-         " hi=" << hi << " size=0x" << hex(size));
-    attached->set_output_used();
-    need_place[attached][lo] |= size;
+    need_place[src][lo] |= size;
+    switch (src.type) {
+    case Source::Field:
+        lo += src.field->immed_bit(0);
+        break;
+    case Source::TableOutput:
+        src.table->set_output_used();
+        break;
+    case Source::TableColor:
+        src.table->set_color_used();
+        break;
+    case Source::TableAddress:
+        src.table->set_address_used();
+        break;
+    default:
+        break; }
     byte_use.setrange(lo/8U, size);
 }
 
@@ -490,8 +513,7 @@ int ActionBus::find_merge(Table *tbl, int offset, int bytes, int use) {
 
 void ActionBus::do_alloc(Table *tbl, Source src, unsigned use, int lobyte,
                          int bytes, unsigned offset) {
-    auto name = src.toString(tbl);
-    LOG2("putting " << name << '(' << offset << ".." << (offset + bytes*8 - 1) <<
+    LOG2("putting " << src << '(' << offset << ".." << (offset + bytes*8 - 1) <<
          ")[" << (lobyte*8) << ".." << ((lobyte+bytes)*8 - 1) << "] at action_bus " << use);
     unsigned hv_slice = use / ACTION_HV_XBAR_SLICE_SIZE;
     auto &hv_groups = action_hv_slice_byte_groups.at(hv_slice);
@@ -508,7 +530,7 @@ void ActionBus::do_alloc(Table *tbl, Source src, unsigned use, int lobyte,
         if (!Table::allow_bus_sharing(tbl, slot_tbl))
             assert(!slot_tbl || (slot_tbl == tbl));
         tbl->stage->action_bus_use[slot] = tbl;
-        Slot &sl = by_byte.emplace(use, Slot(name, use, bytes*8U)).first->second;
+        Slot &sl = by_byte.emplace(use, Slot(src.name(tbl), use, bytes*8U)).first->second;
         if (sl.size < bytes*8U) sl.size = bytes*8U;
         sl.data.emplace(src, offset);
         LOG4("  slot " << sl.byte << "(" << sl.name << ") data += " <<
@@ -532,7 +554,8 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
         lineno = tbl->find_field_lineno(src.field);
     } else {
         lo = offset;
-        if (src.type == Source::TableOutput)
+        if (src.type == Source::TableOutput || src.type == Source::TableColor ||
+            src.type == Source::TableAddress)
             can_merge = false;
         if (src.type == Source::HashDist && !(src.hd->xbar_use & HashDistribution::IMMEDIATE_LOW))
             lo += 16;
@@ -632,7 +655,7 @@ static int slot_sizes[] = {
  * @param size  bitmask of needed size classes -- 3 bits that denote need for a 8/16/32 bit
  *              actionbus slot.  Generally will only have 1 bit set, but might be 0.
  */
-int ActionBus::find(Table::Format::Field *f, int lo, int hi, int size) {
+int ActionBus::find(Table::Format::Field *f, int lo, int hi, int size, int *len) {
     for (auto &slot : by_byte) {
         if (!slot.second.data.count(f)) continue;
         if ((int)slot.second.data[f] > lo) continue;
@@ -643,14 +666,19 @@ int ActionBus::find(Table::Format::Field *f, int lo, int hi, int size) {
         if (size && !(size & slot_sizes[slot.first/32U])) continue;
         // Check if slot can accommodate the desired field size
         // if (std::min((int)f->size - lo, size * 8) > slot.second.size) continue;
+        if (len) *len = slot.second.size;
         return slot.first + (lo - slot.second.data[f])/8U; }
     return -1;
 }
-int ActionBus::find(const char *name, int lo, int hi, int size, int *len) {
+int ActionBus::find(const char *name, TableOutputModifier mod, int lo, int hi, int size, int *len) {
+    if (Table::all.count(name))
+        return find(Source(Table::all.at(name), mod), lo, hi, size, len);
+    if (mod != TableOutputModifier::NONE) return -1;
     for (auto &slot : by_byte) {
         int offset = lo;
         if (slot.second.name != name) continue;
         for (auto &d : slot.second.data) {
+            // FIXME -- is this needed still?  or superceded by the Table call to find above?
             if (d.first.type == Source::TableOutput || d.first.type == Source::NameRef)
                 offset -= d.second;
                 break; }
@@ -661,20 +689,19 @@ int ActionBus::find(const char *name, int lo, int hi, int size, int *len) {
     return -1;
 }
 
-int ActionBus::find(HashDistribution *hd, int lo, int hi, int size) {
-    for (auto &slot : by_byte)
-        if (slot.second.data.count(hd)) {
-            if (size && !(size & slot_sizes[slot.first/32U])) continue;
-            // if (len) *len = slot.second.size;
-            return slot.first + lo/8; }
-    return -1;
-}
-
-int ActionBus::find(RandomNumberGen rng, int lo, int hi, int size) {
-    for (auto &slot : by_byte)
-        if (slot.second.data.count(rng)) {
-            if (size && !(size & slot_sizes[slot.first/32U])) continue;
-            return slot.first + lo/8; }
+int ActionBus::find(Source src, int lo, int hi, int size, int *len) {
+    int alignmask = 127;  // default align to 128 bits
+    if (size && (size & (size-1)) == 0)
+        alignmask = size * 8 - 1;
+    if (lo > alignmask) alignmask = 127;
+    for (auto &slot : by_byte) {
+        if (!slot.second.data.count(src)) continue;
+        int offset = slot.second.data[src] & alignmask;
+        if (offset > lo) continue;
+        if (offset + slot.second.size <= hi) continue;
+        if (size && !(size & slot_sizes[slot.first/32U])) continue;
+        if (len) *len = slot.second.size;
+        return slot.first + (lo - offset)/8; }
     return -1;
 }
 
@@ -891,6 +918,18 @@ FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void ActionBus::write_immed_regs, m
 
 ActionBus::MeterBus_t ActionBus::MeterBus;
 
+std::string ActionBus::Source::name(Table *tbl) const {
+    switch (type) {
+    case Field:
+        return tbl->find_field(field);
+    case TableOutput: case TableColor: case TableAddress:
+        return table->name();
+    case NameRef: case ColorRef: case AddressRef:
+        return name_ref->name;
+    default:
+        return ""; }
+}
+
 std::string ActionBus::Source::toString(Table *tbl) const {
     std::stringstream tmp;
     switch (type) {
@@ -906,14 +945,27 @@ std::string ActionBus::Source::toString(Table *tbl) const {
         return tmp.str();
     case TableOutput:
         return table->name();
-    case NameRef:
+    case TableColor:
+        return table->name_ + " color";
+    case TableAddress:
+        return table->name_ + " address";
+    case NameRef: case ColorRef: case AddressRef:
         tmp <<  "name ";
         if (name_ref) tmp << name_ref->name;
         else tmp << "(meter)";
+        if (type == ColorRef) tmp << " color";
+        if (type == AddressRef) tmp << " address";
         return tmp.str();
     default:
         tmp << "<invalid source " << int(type) << ">";
         return tmp.str(); }
+}
+
+std::ostream &operator<<(std::ostream &out, TableOutputModifier mod) {
+    switch (mod) {
+    case TableOutputModifier::Color: out << " color"; break;
+    case TableOutputModifier::Address: out << " address"; break; }
+    return out;
 }
 
 std::ostream &operator<<(std::ostream &out, const ActionBus::Slot &sl) {

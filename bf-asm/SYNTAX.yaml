@@ -626,6 +626,11 @@ stage <constant> <thread>:
           # controls when the stack/fifo is pushed or popped
         watermark: push <level> | pop <level>
           # watermark interrupts sent every <level> pushes or pops
+        offset_vpn: true | false
+          # adjust immediate data by vpn offset to compute vpns for multistage
+          # fifo/stack (jbay only)
+        address_shift: <int>
+          # shift up the incoming meter address before vpn/index/subword extract (jbay only)
     dependency: concurrent | action | match
         # set the interstage dependency between this stage and the
         # previous stage.  Ignored in stage 0

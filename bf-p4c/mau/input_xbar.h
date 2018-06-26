@@ -203,8 +203,8 @@ struct IXBar {
         enum type_t { MATCH, GATEWAY, SELECTOR, METER, STATEFUL_ALU, HASH_DIST, TYPES }
             type = TYPES;
 
-        enum hash_dist_type_t { COUNTER_ADR, METER_ADR, ACTION_ADR, IMMEDIATE, PRECOLOR,
-                                HASHMOD, UNKNOWN } hash_dist_type = UNKNOWN;
+        enum hash_dist_type_t { COUNTER_ADR, METER_ADR, METER_ADR_AND_IMMEDIATE, ACTION_ADR,
+                                IMMEDIATE, PRECOLOR, HASHMOD, UNKNOWN } hash_dist_type = UNKNOWN;
 
         std::string used_by;
         std::string used_for() const;
@@ -423,6 +423,7 @@ struct IXBar {
         std::map<int, int> groups;  // Indicates which hash group the hash dist is linked to
         std::map<int, int> shifts;  // Controls the mau_hash_group_shift register per unit
         std::map<int, bitvec> masks;  // Control the mau_hash_group_mask register per unit
+        std::map<int, std::set<cstring>> outputs;  // (extra) outputs per slice
         // Classification of what the hash distribution is used for
         const IR::MAU::HashDist *original_hd;
         const IR::Expression *field_list;  // For a comparison between IR::HashDist and this

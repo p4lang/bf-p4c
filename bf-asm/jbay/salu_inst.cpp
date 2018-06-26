@@ -158,7 +158,9 @@ void OutOP::decode_output_mux(Target::JBay, value_t &op) {
         { "alu_hi_out", 5 }, { "alu_lo_out", 4 },
         { "predicate", 6 }, { "address", 7 },
         { "div", 8 }, { "mod", 9 } };
-    if (op.type == tSTR && ops_mux_lookup.count(op.s))
+    if (op.type == tCMD && ops_mux_lookup.count(op[0].s))
+        output_mux = ops_mux_lookup.at(op[0].s);
+    else if (op.type == tSTR && ops_mux_lookup.count(op.s))
         output_mux = ops_mux_lookup.at(op.s);
     else
         output_mux = -1;

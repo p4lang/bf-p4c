@@ -339,6 +339,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool preorder(const IR::MAU::ActionArg *) override;
     bool preorder(const IR::Cast *) override;
     bool preorder(const IR::Expression *) override;
+    bool preorder(const IR::Member *) override;
     bool preorder(const IR::MAU::ActionDataConstant *) override;
     bool preorder(const IR::Constant *) override;
     bool preorder(const IR::MAU::AttachedOutput *) override;

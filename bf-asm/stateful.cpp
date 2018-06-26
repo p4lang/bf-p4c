@@ -167,9 +167,18 @@ void StatefulTable::pass1() {
             error(format->lineno, "only two fields allowed in a stateful table"); } }
     if ((idx == 2) && (format->size == 2*size))
         dual_mode = true;
-    if (actions)
+    if (actions) {
         actions->pass1(this);
-    else
+        bool stop = false;
+        for (auto &act : *actions) {
+            for (auto inst : act.instr) {
+                if (inst->salu_output()) {
+                    need_bus(layout.at(0).lineno, stage->action_data_use,
+                             home_row(), "action data");
+                    stop = true;
+                    break; } }
+            if (stop) break; }
+    } else
         error(lineno, "No actions in stateful table %s", name());
     if (math_table)
         math_table.check();
@@ -205,7 +214,7 @@ void StatefulTable::pass2() {
     if (stateful_counter_mode) {
         if (logvpn_min < 0)
             layout_vpn_bounds(logvpn_min, logvpn_max, true);
-        else {
+        else if (!offset_vpn) {
             int min, max;
             layout_vpn_bounds(min, max, true);
             if (logvpn_min < min || logvpn_max > max)
@@ -225,7 +234,7 @@ int StatefulTable::indirect_shiftcount() const {
 }
 
 int StatefulTable::address_shift() const {
-    return ceil_log2(format->size);
+    return ceil_log2(format->size) - meter_adr_shift;
 }
 
 unsigned StatefulTable::per_flow_enable_bit(MatchTable *match) const {
@@ -283,9 +292,9 @@ template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable
                     args[0].field()->bit(0) - ptr_field->bit(0) - 1 + address_shift();
         } else if (args[0].type == Call::Arg::Name) {
             stateful_adr_default |=
-                actions->action(args[1].name())->code << (METER_TYPE_START_BIT + 1);
+                actions->action(args[0].name())->code << (METER_TYPE_START_BIT + 1);
         } else if (args[0].type == Call::Arg::Const) {
-            stateful_adr_default |= args[1].value() << (METER_TYPE_START_BIT + 1);
+            stateful_adr_default |= args[0].value() << (METER_TYPE_START_BIT + 1);
         } else {
             assert(!"unhandled argument type"); } }
 
@@ -422,8 +431,7 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
         if (push_on_overflow)
             adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;
         adrdist.packet_action_at_headertime[1][meter_group] = 1; }
-    if (stateful_counter_mode)
-        write_logging_regs(regs);
+    write_logging_regs(regs);
     //for (auto &hd : hash_dist)
     //    hd.write_regs(regs, this, 0, non_linear_hash);
     if (gress == INGRESS) {

@@ -23,6 +23,13 @@ const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
 }
 #endif
 
+bool IR::MAU::StatefulAlu::alu_output() const {
+    for (auto act : Values(instruction))
+        for (auto inst : act->action)
+            if (inst->name == "output")
+                return true;
+    return false;
+}
 
 std::ostream &operator<<(std::ostream &out, CreateSaluInstruction::LocalVar::use_t u) {
     static const char *use_names[] = { "NONE", "ALUHI", "MEMLO", "MEMHI", "MEMALL" };
@@ -155,6 +162,7 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
     LOG3("Creating action " << name << " for stateful table " << salu->name);
     LOG5(func);
     action = new IR::MAU::SaluAction(func->srcInfo, name);
+    action->annotations = reg_action->annotations;
     outputs.clear();
     onebit = nullptr;
     onebit_cmpl = false;
@@ -282,6 +290,15 @@ bool CreateSaluInstruction::preorder(const IR::Member *e) {
     LOG4("Member operand: " << operands.back());
     return false;
 }
+bool CreateSaluInstruction::preorder(const IR::Slice *sl) {
+    visit(sl->e0, "e0");
+    if (operands.back() == sl->e0)
+        operands.back() = sl;
+    else
+        operands.back() = new IR::Slice(sl->srcInfo, operands.back(), sl->e1, sl->e2);
+    return false;
+}
+
 bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
     if (prim->name == "math_unit.execute") {
         BUG_CHECK(prim->operands.size() == 2, "typechecking failure");
@@ -689,6 +706,9 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
         BUG_CHECK(salu->width == 1 && salu->dual == false, "wrong size for selector action");
         return false; }
     auto regtype = salu->reg->type->to<IR::Type_Specialized>()->arguments->at(0);
+    if (auto td = regtype->to<IR::Type_Typedef>())
+        // FIXME -- Type_Typedef should have been resolved and removed by Typechecking in the midend
+        regtype = td->type;
     auto bits = regtype->to<IR::Type::Bits>();
     if (auto str = regtype->to<IR::Type_Struct>()) {
         auto nfields = str->fields.size();
@@ -739,5 +759,18 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
             instr_action->action.push_back(set_clr_instr);
         }
     }
+
+    const IR::MAU::SaluAction *first = nullptr;;
+    for (auto salu_action : Values(salu->instruction)) {
+        auto chain = salu_action->annotations->getSingle("chain_address");
+        if (first) {
+            if (salu->chain_vpn != (chain != nullptr))
+                error("Inconsistent chaining for %s and %s", first, salu_action);
+        } else {
+            salu->chain_vpn = chain != nullptr;
+            first = salu_action;
+        }
+    }
+
     return false;
 }

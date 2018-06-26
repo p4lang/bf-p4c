@@ -38,6 +38,10 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
                              method == "execute_direct";
         glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
+        if (method == "address") {
+            auto t = IR::Type::Bits::get(32);
+            return new IR::Member(prim->srcInfo, t,
+                                  new IR::MAU::AttachedOutput(t, salu), "address"); }
         BUG_CHECK(salu->action_map.count(act->internal_name), "%s: Stateful Alu %s does not have "
                   "an action in it's action map", prim->srcInfo, salu->name);
         auto pos = salu->action_map.find(act->internal_name);
@@ -62,7 +66,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
         if (objType == "RegisterAction" && salu->direct != direct_access)
             error("%s: %sdirect access to %sdirect register", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");
-        unsigned idx = method == "execute_direct" ? 1 : 2;
+        unsigned idx = method == "execute" ? 2 : 1;
         int output = 1;
         int output_offsets[] = { 0, 64, 32, 96 };
 
@@ -222,6 +226,9 @@ bool DoInstructionSelection::checkSrc1(const IR::Expression *e) {
     if (e->is<IR::MAU::HashDist>()) return true;
     if (e->is<IR::MAU::RandomNumber>()) return true;
     if (e->is<IR::MAU::AttachedOutput>()) return true;
+    if (auto m = e->to<IR::Member>())
+        if (m->expr->is<IR::MAU::AttachedOutput>())
+            return true;
     return phv.field(e);
 }
 
@@ -512,8 +519,10 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
 
 ssize_t index_operand(const IR::Primitive *prim) {
     if (prim->name.startsWith("Counter") || prim->name.startsWith("Meter") ||
-        prim->name.startsWith("RegisterAction"))
+        prim->name == "RegisterAction.execute")
         return 1;
+    else if (prim->name.startsWith("RegisterAction."))
+        return -1;
     else if (prim->name.startsWith("Lpf") || prim->name.startsWith("Wred"))
         return 2;
     else if (prim->name.startsWith("Direct"))

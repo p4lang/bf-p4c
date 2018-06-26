@@ -1609,6 +1609,7 @@ void Memories::swbox_bus_stateful_alus() {
             auto reg_group = new SRAM_group(ta, depth, 0, SRAM_group::REGISTER);
             reg_group->attached = salu;
             synth_bus_users.insert(reg_group);
+            reg_group->requires_ab = salu->alu_output();
         }
     }
 
@@ -1627,6 +1628,7 @@ void Memories::swbox_bus_stateful_alus() {
                 reg_group->attached = salu;
                 reg_group->logical_table = lt;
                 synth_bus_users.insert(reg_group);
+                reg_group->requires_ab = salu->alu_output();
             }
         }
     }

@@ -1576,13 +1576,14 @@ void Table::need_on_actionbus(Format::Field *f, int lo, int hi, int size) {
     action_bus->need_alloc(this, f, lo, hi, size);
 }
 
-int Table::find_on_actionbus(const char *name, int lo, int hi, int size, int *len) {
-    return action_bus ? action_bus->find(name, lo, hi, size, len) : -1;
+int Table::find_on_actionbus(const char *name, TableOutputModifier mod,
+                             int lo, int hi, int size, int *len) {
+    return action_bus ? action_bus->find(name, mod, lo, hi, size, len) : -1;
 }
 
-void Table::need_on_actionbus(Table *attached, int lo, int hi, int size) {
+void Table::need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size) {
     if (!action_bus) action_bus = new ActionBus();
-    action_bus->need_alloc(this, attached, lo, hi, size);
+    action_bus->need_alloc(this, att, mod, lo, hi, size);
 }
 
 int Table::find_on_actionbus(HashDistribution *hd, int lo, int hi, int size) {

@@ -43,6 +43,9 @@ struct RandomNumberGen {
     bool operator==(const RandomNumberGen &a) const { return unit == a.unit; }
 };
 
+enum class TableOutputModifier { NONE, Color, Address };
+std::ostream &operator<<(std::ostream &, TableOutputModifier);
+
 class Table {
 public:
     struct Layout {
@@ -483,6 +486,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual MeterTable* get_meter() const { return 0; }
     virtual void set_stateful (StatefulTable *s) { assert(0); }
     virtual StatefulTable *get_stateful() const { return 0; }
+    virtual void set_address_used() { assert(0); }
     virtual void set_color_used() { assert(0); }
     virtual void set_output_used() { assert(0); }
     virtual const Call &get_action() const { return action; }
@@ -577,10 +581,16 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     // than being overloaded in all these different ways
     virtual int find_on_actionbus(Format::Field *f, int lo, int hi, int size);
     virtual void need_on_actionbus(Format::Field *f, int lo, int hi, int size);
-    virtual int find_on_actionbus(const char *n, int lo, int hi, int size, int *len = 0);
+    virtual int find_on_actionbus(const char *n, TableOutputModifier mod, int lo, int hi,
+                                   int size, int *len = 0);
+    int find_on_actionbus(const char *n, int lo, int hi, int size, int *len = 0) {
+        return find_on_actionbus(n, TableOutputModifier::NONE, lo, hi, size, len); }
+    int find_on_actionbus(const std::string &n, TableOutputModifier mod, int lo, int hi,
+                          int size, int *len = 0) {
+        return find_on_actionbus(n.c_str(), mod, lo, hi, size, len); }
     int find_on_actionbus(const std::string &n, int lo, int hi, int size, int *len = 0) {
-        return find_on_actionbus(n.c_str(), lo, hi, size, len); }
-    virtual void need_on_actionbus(Table *attached, int lo, int hi, int size);
+        return find_on_actionbus(n.c_str(), TableOutputModifier::NONE, lo, hi, size, len); }
+    virtual void need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size);
     virtual int find_on_actionbus(HashDistribution *hd, int lo, int hi, int size);
     virtual void need_on_actionbus(HashDistribution *hd, int lo, int hi, int size);
     virtual int find_on_actionbus(RandomNumberGen rng, int lo, int hi, int size);
@@ -925,18 +935,19 @@ public:
     void need_on_actionbus(Format::Field *f, int lo, int hi, int size) override {
         indirect ? indirect->need_on_actionbus(f, lo, hi, size)
                  : Table::need_on_actionbus(f, lo, hi, size); }
-    void need_on_actionbus(Table *attached, int lo, int hi, int size) override {
-        indirect ? indirect->need_on_actionbus(attached, lo, hi, size)
-                 : Table::need_on_actionbus(attached, lo, hi, size); }
+    void need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size) override {
+        indirect ? indirect->need_on_actionbus(att, mod, lo, hi, size)
+                 : Table::need_on_actionbus(att, mod, lo, hi, size); }
     void need_on_actionbus(HashDistribution *hd, int lo, int hi, int size) override {
         indirect ? indirect->need_on_actionbus(hd, lo, hi, size)
                  : Table::need_on_actionbus(hd, lo, hi, size); }
     void need_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) override {
         indirect ? indirect->need_on_actionbus(rng, lo, hi, size)
                  : Table::need_on_actionbus(rng, lo, hi, size); }
-    int find_on_actionbus(const char *n, int lo, int hi, int size, int *len = 0) override {
-        return indirect ? indirect->find_on_actionbus(n, lo, hi, size, len)
-                        : Table::find_on_actionbus(n, lo, hi, size, len); }
+    int find_on_actionbus(const char *n, TableOutputModifier mod, int lo, int hi,
+                          int size, int *len = 0) override {
+        return indirect ? indirect->find_on_actionbus(n, mod, lo, hi, size, len)
+                        : Table::find_on_actionbus(n, mod, lo, hi, size, len); }
     const Call &get_action() const override { return indirect ? indirect->get_action() : action; }
     Actions *get_actions() override { return actions ? actions :
         (action ? action->actions : indirect ? indirect->actions ? indirect->actions :
@@ -1124,11 +1135,12 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     Format::Field *lookup_field(const std::string &name, const std::string &action) override;
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn) override;
     int find_on_actionbus(Format::Field *f, int lo, int hi, int size) override;
-    int find_on_actionbus(const char *n, int lo, int hi, int size, int *len) override;
+    int find_on_actionbus(const char *n, TableOutputModifier mod, int lo, int hi,
+                          int size, int *len) override;
     int find_on_actionbus(HashDistribution *hd, int lo, int hi, int size) override;
     int find_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) override;
     void need_on_actionbus(Format::Field *f, int lo, int hi, int size) override;
-    void need_on_actionbus(Table *attached, int lo, int hi, int size) override;
+    void need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size) override;
     void need_on_actionbus(HashDistribution *hd, int lo, int hi, int size) override;
     void need_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) override;
     table_type_t table_type() const override { return ACTION; }
@@ -1371,6 +1383,9 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
         void check();
     }                   math_table;
     bool dual_mode = false;
+    bool offset_vpn = false;
+    bool address_used = false;  // FIXME offset_vpn and address_used are the same?
+    int meter_adr_shift = 0;
     int stateful_counter_mode = 0;
     int watermark_level = 0;
     int watermark_pop_not_push = 0;
@@ -1393,6 +1408,7 @@ public:
     int home_row() const override { return layout.at(0).row | 3; }
     unsigned meter_group() const { return layout.at(0).row/4U; }
     unsigned per_flow_enable_bit(MatchTable *m = nullptr) const override;
+    void set_address_used() override { address_used = true; }
     void set_output_used() override { output_used = true; }
     FOR_ALL_TARGETS(TARGET_OVERLOAD, static int parse_counter_mode, const value_t &)
     static int parse_counter_mode(const value_t &v) {

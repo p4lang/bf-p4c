@@ -398,6 +398,10 @@ clean_process() {
     fi
 }
 
+if ${SKIP_PTFPD:=false}; then
+    exit
+fi
+
 # Extract the tools install directory based on the install path of bf_switchd
 # and set the exec and python paths to pick the locally installed paths first
 if $run_pd || $run_ptf ; then

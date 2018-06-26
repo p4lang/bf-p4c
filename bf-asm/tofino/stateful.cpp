@@ -25,12 +25,13 @@ template<> void StatefulTable::write_logging_regs(Target::Tofino::mau_regs &regs
                 mode, 3*(m->logical_id % 8U), 3);
             for (auto &rep : merge.mau_stateful_log_ctl_ixbar_map[m->logical_id/8U])
                 rep.set_subfield(meter_group | 0x4, 3*(m->logical_id % 8U), 3); } }
-    merge.mau_stateful_log_instruction_width
-        .set_subfield(format->log2size - 3, 2 * meter_group, 2);
-    merge.mau_stateful_log_vpn_offset[meter_group/2]
-        .set_subfield(logvpn_min, 6 * (meter_group%2), 6);
-    merge.mau_stateful_log_vpn_limit[meter_group/2]
-        .set_subfield(logvpn_max, 6 * (meter_group%2), 6);
+    if (stateful_counter_mode) {
+        merge.mau_stateful_log_instruction_width
+            .set_subfield(format->log2size - 3, 2 * meter_group, 2);
+        merge.mau_stateful_log_vpn_offset[meter_group/2]
+            .set_subfield(logvpn_min, 6 * (meter_group%2), 6);
+        merge.mau_stateful_log_vpn_limit[meter_group/2]
+            .set_subfield(logvpn_max, 6 * (meter_group%2), 6); }
 }
 
 void StatefulTable::gen_tbl_cfg(Target::Tofino, json::map &tbl, json::map &stage_tbl) {

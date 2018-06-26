@@ -7,7 +7,8 @@
 class ActionBus {
     static struct MeterBus_t {} MeterBus;
     struct Source {
-        enum { None, Field, HashDist, RandomGen, TableOutput, TableColor, NameRef, ColorRef }
+        enum { None, Field, HashDist, RandomGen, TableOutput, TableColor, TableAddress,
+               NameRef, ColorRef, AddressRef }
                                                         type;
         union {
             Table::Format::Field                        *field;
@@ -19,14 +20,27 @@ class ActionBus {
         Source() : type(None) { field = nullptr; }
         Source(Table::Format::Field *f) : type(Field) { field = f; }
         Source(HashDistribution *h) : type(HashDist) { hd = h; }
-        Source(Table *t) : type(TableOutput) { table = t; }
-        Source(Table::Ref *t) : type(NameRef) { name_ref = t; }
-        Source(MeterBus_t) : type(NameRef) { name_ref = nullptr; }
+        Source(Table *t, TableOutputModifier m = TableOutputModifier::NONE) : type(TableOutput) {
+            switch (m) {
+            case TableOutputModifier::Color: type = TableColor; break;
+            case TableOutputModifier::Address: type = TableAddress; break; }
+            table = t; }
+        Source(Table::Ref *t, TableOutputModifier m = TableOutputModifier::NONE) : type(NameRef) {
+            switch (m) {
+            case TableOutputModifier::Color: type = ColorRef; break;
+            case TableOutputModifier::Address: type = AddressRef; break; }
+            name_ref = t; }
+        Source(MeterBus_t, TableOutputModifier m = TableOutputModifier::NONE) : type(NameRef) {
+            switch (m) {
+            case TableOutputModifier::Color: type = ColorRef; break;
+            case TableOutputModifier::Address: type = AddressRef; break; }
+            name_ref = nullptr; }
         Source(RandomNumberGen r) : type(RandomGen) { field = nullptr; rng = r; }
         bool operator==(const Source &a) const {
             return type == a.type && field == a.field; }
         bool operator<(const Source &a) const {
             return type == a.type ? field < a.field : type < a.type; }
+        std::string name(Table *tbl) const;
         std::string toString(Table *tbl) const;
     };
     // Check two Source refs to ensure that they are compatible (can be at the same
@@ -81,16 +95,23 @@ public:
     void write_action_regs(REGS &regs, Table *tbl, unsigned homerow, unsigned action_slice);
     void do_alloc(Table *tbl, Source src, unsigned use, int lobyte, int bytes, unsigned offset);
     void alloc_field(Table *, Source src, unsigned offset, unsigned sizes_needed);
-    void need_alloc(Table *tbl, Table::Format::Field *f, unsigned lo, unsigned hi, unsigned size);
-    void need_alloc(Table *tbl, HashDistribution *hd, unsigned lo, unsigned hi, unsigned size);
-    void need_alloc(Table *tbl, RandomNumberGen rng, unsigned lo, unsigned hi, unsigned size);
-    void need_alloc(Table *tbl, Table *attached, unsigned lo, unsigned hi, unsigned size);
-    int find(Table::Format::Field *f, int lo, int hi, int size);
-    int find(const char *name, int lo, int hi, int size, int *len = 0);
+    void need_alloc(Table *tbl, Source src, unsigned lo, unsigned hi, unsigned size);
+    void need_alloc(Table *tbl, Table *attached, TableOutputModifier mod,
+                    unsigned lo, unsigned hi, unsigned size) {
+        need_alloc(tbl, Source(attached, mod), lo, hi, size); }
+
+    int find(Table::Format::Field *f, int lo, int hi, int size, int *len = 0);
+    int find(const char *name, TableOutputModifier mod, int lo, int hi, int size, int *len = 0);
+    int find(const char *name, int lo, int hi, int size, int *len = 0) {
+        return find(name, TableOutputModifier::NONE, lo, hi, size, len); }
+    int find(const std::string &name, TableOutputModifier mod, int lo, int hi,
+             int size, int *len = 0) {
+        return find(name.c_str(), mod, lo, hi, size, len); }
     int find(const std::string &name, int lo, int hi, int size, int *len = 0) {
         return find(name.c_str(), lo, hi, size, len); }
-    int find(HashDistribution *hd, int lo, int hi, int size);
-    int find(RandomNumberGen rng, int lo, int hi, int size);
+    int find(Source src, int lo, int hi, int size, int *len = 0);
+    int find(Table *attached, TableOutputModifier mod, int lo, int hi, int size, int *len = 0) {
+        return find(Source(attached, mod), lo, hi, size, len); }
     unsigned size() {
         unsigned rv = 0;
         for (auto &slot : by_byte) rv += slot.second.size;

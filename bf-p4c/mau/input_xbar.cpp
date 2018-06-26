@@ -301,6 +301,8 @@ std::string IXBar::Use::hash_dist_used_for() const {
             return "Counter Address";
         case METER_ADR:
             return "Meter Address";
+        case METER_ADR_AND_IMMEDIATE:
+            return "Meter Address and Immediate";
         case ACTION_ADR:
             return "Action Data Address";
         case IMMEDIATE:
@@ -2604,7 +2606,7 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_typ
             used_hash_dist_slices |= hash_dist_inuse[j];
         }
         if (hdt == IXBar::Use::COUNTER_ADR || hdt == IXBar::Use::METER_ADR
-            || hdt == IXBar::Use::ACTION_ADR)
+            || hdt == IXBar::Use::ACTION_ADR || hdt == IXBar::Use::METER_ADR_AND_IMMEDIATE)
             can_allocate = allocHashDistAddress(bits_required, used_hash_dist_slices,
                 used_hash_dist_bits, hash_table_input, slice, bit_mask, bit_starts, name);
         else if (hdt == IXBar::Use::IMMEDIATE)
@@ -2662,7 +2664,9 @@ void IXBar::XBarHashDist::initialize_hash_dist_unit(IXBar::HashDistUse &hd_use) 
 
     // Preslices refer to before expand block, Slices are after expand block
     if (hdt == IXBar::Use::COUNTER_ADR || hdt == IXBar::Use::METER_ADR
-        || hdt == IXBar::Use::ACTION_ADR) {
+        || hdt == IXBar::Use::ACTION_ADR || hdt == IXBar::Use::METER_ADR_AND_IMMEDIATE) {
+        if (hdt == IXBar::Use::METER_ADR_AND_IMMEDIATE)
+            hd_use.outputs[hd_use.pre_slices[0]].insert("lo");
         if (hd_use.pre_slices.size() > 1) {
             if (!(hd_use.pre_slices.size() == 2
                 || (hd_use.pre_slices[1] % IXBar::HASH_DIST_SLICES) == 2))
@@ -2670,6 +2674,9 @@ void IXBar::XBarHashDist::initialize_hash_dist_unit(IXBar::HashDistUse &hd_use) 
             hd_use.expand.emplace(hd_use.pre_slices[0],
                                   (7 * (hd_use.pre_slices[0] % IXBar::HASH_DIST_SLICES)));
             hd_use.slices.push_back(hd_use.pre_slices[0]);
+            if (hdt == IXBar::Use::METER_ADR_AND_IMMEDIATE) {
+                hd_use.outputs[hd_use.pre_slices[1]].insert("hi");
+                hd_use.slices.push_back(hd_use.pre_slices[1]); }
             slices_set = true;
         }
     }
@@ -2705,6 +2712,13 @@ void IXBar::XBarHashDist::initialize_hash_dist_unit(IXBar::HashDistUse &hd_use) 
             hd_use.shifts[hd_use.slices[0]] = shift;
             hd_use.masks[hd_use.slices[0]] = mask;
         }
+    } else if (hdt == IXBar::Use::METER_ADR_AND_IMMEDIATE) {
+        // don't shift here -- use meter_adr_shift instead.  This seems fragile as we don't
+        // mark that anywhere; MauAsmOutput::EmitAttached::preorder(IR::MAU::StatefulAlu)
+        // checks to see if it is addressed with a HashDist and has chain_vpn set.
+        bitvec mask(0, hdh.bits_required);
+        hd_use.shifts[hd_use.slices[0]] = 0;
+        hd_use.masks[hd_use.slices[0]] = mask;
     } else if (hdt == IXBar::Use::IMMEDIATE) {
         for (auto slice : hd_use.slices) {
             hd_use.shifts[slice] = 0;
@@ -2743,10 +2757,11 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
         auto at_mem = back_at->attached;
         if (at_mem->is<IR::MAU::Counter>())
             hdt = IXBar::Use::COUNTER_ADR;
-        else if (at_mem->is<IR::MAU::Meter>() || at_mem->is<IR::MAU::StatefulAlu>())
+        else if (at_mem->is<IR::MAU::Meter>())
             hdt = IXBar::Use::METER_ADR;
+        else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>())
+            hdt = salu->chain_vpn ? IXBar::Use::METER_ADR_AND_IMMEDIATE : IXBar::Use::METER_ADR;
     }
-
 
     IXBar::HashDistUse hd_use(hd);
 

@@ -327,8 +327,16 @@ void TableLayout::setup_action_layout(IR::MAU::Table *tbl) {
     tbl->layout.action_data_bytes = 0;
     safe_vector<ActionFormat::Use> uses;
     ActionFormat af(tbl, phv, alloc_done);
+    bool immediate_allowed = true;
     // Action Profiles cannot have any immediate data
-    af.allocate_format(uses, tbl->layout.action_addr_bits == 0);
+    if (tbl->layout.action_addr_bits != 0)
+        immediate_allowed = false;
+    // chained salus need the immediate path for the address, so can't use it for data
+    for (auto att : tbl->attached)
+        if (auto salu = att->attached->to<IR::MAU::StatefulAlu>())
+            if (salu->chain_vpn)
+                immediate_allowed = false;
+    af.allocate_format(uses, immediate_allowed);
     lc.total_action_formats[tbl->name] = uses;
     tbl->layout.action_data_bytes = af.action_data_bytes;
 }
