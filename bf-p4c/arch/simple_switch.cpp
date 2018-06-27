@@ -25,6 +25,7 @@ namespace BFN {
 //////////////////////////////////////////////////////////////////////////////////////////////
 namespace V1 {
 
+
 class LoadTargetArchitecture : public Inspector {
     ProgramStructure *structure;
 
@@ -163,6 +164,93 @@ class LoadTargetArchitecture : public Inspector {
         }
     }
 
+    // XXX(hanw): Code to generate extra type declarations that we do not wish to publish yet.
+
+    /* header pktgen_generic_header_t {
+        bit<3> _pad0;
+        bit<2> pipe_id;
+        bit<3> app_id;
+        bit<8> key_msb;
+        bit<16> batch_id;
+        bit<16> packet_id; } */
+    const IR::Node* create_pktgen_generic_header_t() {
+        auto fields = new IR::IndexedVector<IR::StructField>({
+            new IR::StructField("_pad0", IR::Type_Bits::get(3)),
+            new IR::StructField("pipe_id", IR::Type_Bits::get(2)),
+            new IR::StructField("app_id", IR::Type_Bits::get(3)),
+            new IR::StructField("key_msb", IR::Type_Bits::get(8)),
+            new IR::StructField("batch_id", IR::Type_Bits::get(16)),
+            new IR::StructField("packet_id", IR::Type_Bits::get(16))
+        });
+        return new IR::Type_Header("pktgen_generic_header_t", *fields);
+    }
+
+    /* extern selector_action {
+        selector_action(ActionSelector sel);
+        abstract void apply(inout bit<1> value, @optional out bit<1> rv);
+        bit<1> execute(@optional in bit<32> index); } */
+    const IR::Node* create_selector_action() {
+        auto methods = new IR::Vector<IR::Method>({
+            new IR::Method(
+                "selector_action",
+                new IR::Type_Method(
+                new IR::ParameterList({
+                    new IR::Parameter("sel", IR::Direction::None,
+                        new IR::Type_Name("ActionSelector"))})), false),
+            new IR::Method(
+                "apply",
+                new IR::Type_Method(
+                new IR::Type_Void(),
+                new IR::ParameterList({
+                    new IR::Parameter("value", IR::Direction::InOut, IR::Type_Bits::get(1)),
+                    new IR::Parameter("rv",
+                        new IR::Annotations({new IR::Annotation(IR::ID("optional"), {})}),
+                        IR::Direction::Out, IR::Type_Bits::get(1))})), true),
+            new IR::Method(
+                "execute",
+                new IR::Type_Method(
+                IR::Type_Bits::get(1),
+                new IR::ParameterList({
+                    new IR::Parameter("index",
+                        new IR::Annotations({new IR::Annotation(IR::ID("optional"), {})}),
+                        IR::Direction::In, IR::Type_Bits::get(32))})), false),
+        });
+        return new IR::Type_Extern("selector_action", *methods);
+    }
+
+    /* extern math_unit<T, U> {
+        math_unit(bool invert, int<2> shift, int<6> scale, U data);
+        T execute(in T x);
+    } */
+    const IR::Node* create_math_unit() {
+        auto methods = new IR::Vector<IR::Method>({
+            new IR::Method(
+                "math_unit",
+                new IR::Type_Method(
+                new IR::ParameterList({
+                    new IR::Parameter("invert", IR::Direction::None,
+                        IR::Type_Boolean::get()),
+                    new IR::Parameter("shift", IR::Direction::None,
+                        IR::Type_Bits::get(2, true)),
+                    new IR::Parameter("scale", IR::Direction::None,
+                        IR::Type_Bits::get(6, true)),
+                    new IR::Parameter("data", IR::Direction::None,
+                        new IR::Type_Name("U"))})), false),
+            new IR::Method(
+                "execute",
+                new IR::Type_Method(
+                new IR::Type_Name("T"),
+                new IR::ParameterList({
+                    new IR::Parameter("x",
+                        IR::Direction::In, new IR::Type_Name("T"))})), false),
+        });
+        auto typeVars = new IR::IndexedVector<IR::Type_Var>({
+            new IR::Type_Var("T"), new IR::Type_Var("U")
+        });
+        auto typeParams = new IR::TypeParameters(*typeVars);
+        return new IR::Type_Extern("math_unit", typeParams, *methods);
+    }
+
     void postorder(const IR::P4Program *) override {
         setupMetadataRenameMap();
 
@@ -218,6 +306,11 @@ class LoadTargetArchitecture : public Inspector {
         result.close();
         structure->include(tempPath, &structure->targetTypes);
         unlink(tempPath);
+
+        // XXX(hanw): add extra type declaration that are not ready to publish
+        structure->targetTypes.push_back(create_pktgen_generic_header_t());
+        structure->targetTypes.push_back(create_selector_action());
+        structure->targetTypes.push_back(create_math_unit());
 
         analyzeTofinoModel();
     }
@@ -621,6 +714,7 @@ class AnalyzeProgram : public Inspector {
             new IR::StructField("mirror_id", IR::Type::Bits::get(10)));
         cgm->fields.push_back(
             new IR::StructField("mirror_source", IR::Type::Bits::get(8)));
+        // XXX(hanw): we can probably remove these two fields.
         cgm->fields.push_back(
             new IR::StructField("clone_src", IR::Type::Bits::get(4)));
         cgm->fields.push_back(

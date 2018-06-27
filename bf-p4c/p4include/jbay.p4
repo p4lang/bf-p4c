@@ -329,16 +329,6 @@ struct egress_intrinsic_metadata_for_output_port_t {
 // A triggered event may generate programmable number of batches with
 // programmable number of packets per batch.
 
-header pktgen_generic_header_t {
-    bit<3> _pad0;
-    bit<2> pipe_id;
-    bit<3> app_id;
-    bit<8> key_msb;   // Only valid for recirc triggers.
-    bit<16> batch_id; // Overloaded to port# or lsbs of key for port down and
-                      // recirc triggers.
-    bit<16> packet_id;
-}
-
 header pktgen_timer_header_t {
     bit<3> _pad1;
     bit<2> pipe_id;                     // Pipe id
@@ -688,17 +678,6 @@ extern Digest<T> {
     /// Digest instances in the same deparser control block, and call the pack
     /// method once during a single execution of the control block
     void pack(in T data);
-}
-
-extern selector_action {
-    selector_action(ActionSelector sel);
-    abstract void apply(inout bit<1> value, @optional out bit<1> rv);
-    bit<1> execute(@optional in bit<32> index);
-}
-
-extern math_unit<T, U> {
-    math_unit(bool invert, int<2> shift, int<6> scale, U data);
-    T execute(in T x);
 }
 
 #endif  /* _JBAY_P4_ */

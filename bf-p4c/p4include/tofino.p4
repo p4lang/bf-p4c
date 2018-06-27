@@ -122,7 +122,6 @@ struct ingress_intrinsic_metadata_for_tm_t {
 
     bool copy_to_cpu;                   // Request for copy to cpu.
 
-    // XXX(hanw): cannot use MeterColor_t until serializable enum is supported.
     bit<2> packet_color;                // Packet color (G,Y,R) that is
                                         // typically derived from meters and
                                         // used for color-based tail dropping.
@@ -211,15 +210,16 @@ header egress_intrinsic_metadata_t {
     bit<2> enq_congest_stat;            // Queue congestion status at the packet
                                         // enqueue time.
 
-    bit<32> enq_tstamp;                 // Time snapshot taken when the packet
+    bit<14> _pad3;
+    bit<18> enq_tstamp;                 // Time snapshot taken when the packet
                                         // is enqueued (in nsec).
 
-    bit<5> _pad3;
+    bit<5> _pad4;
 
     bit<19> deq_qdepth;                 // Queue depth at the packet dequeue
                                         // time.
 
-    bit<6> _pad4;
+    bit<6> _pad5;
 
     bit<2> deq_congest_stat;            // Queue congestion status at the packet
                                         // dequeue time.
@@ -228,34 +228,34 @@ header egress_intrinsic_metadata_t {
                                         // congestion status. 2bits per
                                         // pool.
 
-    bit<32> deq_timedelta;              // Time delta between the packet's
+    bit<14> _pad6;
+    bit<18> deq_timedelta;              // Time delta between the packet's
                                         // enqueue and dequeue time.
 
     ReplicationId_t egress_rid;         // L3 replication id for multicast
                                         // packets.
 
-    bit<7> _pad5;
+    bit<7> _pad7;
 
     bit<1> egress_rid_first;            // Flag indicating the first replica for
                                         // the given multicast group.
 
-    bit<3> _pad6;
+    bit<3> _pad8;
 
     QueueId_t egress_qid;               // Egress (physical) queue id via which
                                         // this packet was served.
 
-    bit<5> _pad7;
+    bit<5> _pad9;
 
     bit<3> egress_cos;                  // Egress cos (eCoS) value.
 
-    bit<7> _pad8;
+    bit<7> _pad10;
 
     bit<1> deflection_flag;             // Flag indicating whether a packet is
                                         // deflected due to deflect_on_drop.
 
     bit<16> pkt_length;                 // Packet length, in bytes
 }
-
 
 @__intrinsic_metadata
 struct egress_intrinsic_metadata_from_parser_t {
@@ -318,17 +318,6 @@ struct egress_intrinsic_metadata_for_output_port_t {
 // recirculated packet matches the application match value and mask.
 // A triggered event may generate programmable number of batches with
 // programmable number of packets per batch.
-
-header pktgen_generic_header_t {
-    bit<3> _pad0;
-    bit<2> pipe_id;
-    bit<3> app_id;
-    bit<8> key_msb;   // Only valid for recirc triggers.
-    bit<16> batch_id; // Overloaded to port# or lsbs of key for port down and
-                      // recirc triggers.
-    bit<16> packet_id;
-}
-
 header pktgen_timer_header_t {
     bit<3> _pad1;
     bit<2> pipe_id;                     // Pipe id
@@ -678,17 +667,6 @@ extern Digest<T> {
     /// Digest instances in the same deparser control block, and call the pack
     /// method once during a single execution of the control block
     void pack(in T data);
-}
-
-extern selector_action {
-    selector_action(ActionSelector sel);
-    abstract void apply(inout bit<1> value, @optional out bit<1> rv);
-    bit<1> execute(@optional in bit<32> index);
-}
-
-extern math_unit<T, U> {
-    math_unit(bool invert, int<2> shift, int<6> scale, U data);
-    T execute(in T x);
 }
 
 #endif  /* _TOFINO_P4_ */
