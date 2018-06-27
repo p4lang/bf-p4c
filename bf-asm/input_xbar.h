@@ -114,6 +114,7 @@ public:
         /* used by gateways and stateful to get the associated match group */
         if (groups.size() != 1 || groups.begin()->first.type != Group::EXACT) return -1;
         return groups.begin()->first.index; }
+    bitvec bytemask();
     /* functions for tcam ixbar that take into account funny byte/word group stuff */
     unsigned tcam_width();
     int tcam_byte_group(int n);

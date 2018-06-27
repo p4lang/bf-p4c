@@ -675,6 +675,24 @@ bitvec InputXbar::hash_group_bituse(int grp) const {
     return rv;
 }
 
+// Used by LPF/WRED meters to determine the bytemask input
+bitvec InputXbar::bytemask() {
+    bitvec bytemask;
+    // Only one ixbar group allowed for a meter input
+    if (match_group() == -1)
+        return bytemask;
+    for (auto group : groups) {
+        auto &inputs = group.second;
+        for (auto &input : inputs) {
+            int byte_lo = input.lo / 8;
+            int byte_hi = input.hi / 8;
+            int byte_size = byte_hi - byte_lo + 1;
+            bytemask.setrange(byte_lo, byte_size);
+        }
+    }
+    return bytemask;
+}
+
 std::vector<const HashCol *> InputXbar::hash_column(int col, int grp) const {
     unsigned tables = 0;
     std::vector<const HashCol *> rv;

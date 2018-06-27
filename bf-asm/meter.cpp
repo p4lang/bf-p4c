@@ -294,9 +294,12 @@ void MeterTable::write_regs(REGS &regs) {
                     vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
                     hashdata_bytemask;
                 } else {
-                    // FIXME: This should really reflect the bytes only in use, rather than
-                    // the whole 32 bits.  JIRA ticket will be made in reference
-                    data_ctl.stateful_meter_alu_data_bytemask = 0xf;
+                    // FIXME: Need to be some validation between Tofino and JBay if the input
+                    // xbar is valid for these meters.
+                    bitvec bytemask = input_xbar->bytemask();
+                    bytemask >>= bytemask.min().index();
+                    unsigned u_bytemask = bytemask.getrange(0, bytemask.max().index() + 1); 
+                    data_ctl.stateful_meter_alu_data_bytemask = u_bytemask;
                     data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | input_xbar->match_group();
                 }
             }
