@@ -284,10 +284,22 @@ void MeterTable::write_regs(REGS &regs) {
             if (input_xbar) {
                 auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
                 auto &data_ctl = regs.rams.array.row[row].vh_xbar[side].stateful_meter_alu_data_ctl;
-                vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
-                bitmask2bytemask(input_xbar->hash_group_bituse());
-                data_ctl.stateful_meter_alu_data_bytemask = 0xf;
-                data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | input_xbar->match_group(); }
+                // FIXME: Currently in the compiler, the data headed to the meter alu/stateful alu
+                // can only come from hash or the search bus, but not both, thus it is
+                // currenlty safe for them to be mutually exclusive.  If the compiler was to
+                // allocate fields to both, this would have to interpret the information
+                // correctly
+                auto hashdata_bytemask = bitmask2bytemask(input_xbar->hash_group_bituse());
+                if (hashdata_bytemask != 0U) {
+                    vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
+                    hashdata_bytemask;
+                } else {
+                    // FIXME: This should really reflect the bytes only in use, rather than
+                    // the whole 32 bits.  JIRA ticket will be made in reference
+                    data_ctl.stateful_meter_alu_data_bytemask = 0xf;
+                    data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | input_xbar->match_group();
+                }
+            }
             if (output_used) {
                 auto &action_ctl = map_alu.meter_alu_group_action_ctl[meter_group_index];
                 action_ctl.right_alu_action_enable = 1;

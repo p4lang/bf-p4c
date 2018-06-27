@@ -283,6 +283,18 @@ PhvInfo::fields_in_container(const PHV::Container c) const {
     return empty_list;
 }
 
+bitvec PhvInfo::bits_allocated(const PHV::Container c) const {
+    bitvec ret_bitvec;
+    for (auto* field : fields_in_container(c)) {
+        if (field->alwaysPackable) continue;
+        field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
+            if (alloc.container != c) return;
+            le_bitrange bits = alloc.container_bits();
+            ret_bitvec.setrange(bits.lo, bits.size());
+        }); }
+    return ret_bitvec;
+}
+
 bitvec PhvInfo::bits_allocated(
         const PHV::Container c, const ordered_set<const PHV::Field*>& writes) const {
     bitvec ret_bitvec;

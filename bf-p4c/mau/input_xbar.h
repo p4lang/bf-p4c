@@ -217,6 +217,8 @@ struct IXBar {
             Loc         loc;
             // the PHV container bits the match will be performed on
             bitvec      bit_use;
+            // the PHV container bits that are potentially non-zero valued
+            bitvec      non_zero_bits;
             // flags describing alignment and gateway use/requirements
             int         flags = 0;
             unsigned specialities = 0;

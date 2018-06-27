@@ -1077,8 +1077,9 @@ int need_align_flags[4][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
 
 /* Add the pre-allocated bytes to the Use structure */
 static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *field,
-                    boost::optional<cstring> aliasSourceName, const le_bitrange *bits = nullptr,
-                    int flags = 0, IXBar::byte_type_t byte_type = IXBar::NO_BYTE_TYPE,
+                    const PhvInfo &phv, boost::optional<cstring> aliasSourceName,
+                    const le_bitrange *bits = nullptr, int flags = 0,
+                    IXBar::byte_type_t byte_type = IXBar::NO_BYTE_TYPE,
                     unsigned extra_align = 0) {
     bool ok = false;
     int index = 0;
@@ -1088,12 +1089,18 @@ static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *fiel
     // to change
     field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
         ok = true;  // FIXME -- better sanity check?
+        // FIXME: This will not work if moved before PHV allocation
         IXBar::FieldInfo fi(field->name, sl.field_bit, sl.field_hi(), sl.container_bit % 8,
                 aliasSourceName);
-        // FIXME: before PHV allocation
+
+        // FIXME: Unclear if this is too constrained, as the bits that aren't live at the same
+        // time may still be non-zero even though they aren't live.  This will always mark
+        // all bits that are ever allocated
+        bitvec all_bits = phv.bits_allocated(sl.container);
         IXBar::Use::Byte byte(sl.container.toString(), (sl.container_bit/8U) * 8U);
 
         byte.bit_use.setrange(sl.container_bit % 8, sl.width);
+        byte.non_zero_bits = all_bits.getslice((sl.container_bit / 8U) * 8U, 8);
         byte.flags =
             flags | need_align_flags[sl.container.log2sz()][(sl.container_bit/8U) & 3]
                   | need_align_flags[extra_align][index & 3];
@@ -1207,7 +1214,7 @@ void IXBar::field_management(ContByteConversion &map_alloc,
         fields_needed[finfo->name] = field_bits;
     }
     field_list_order.emplace_back(finfo, bits);
-    add_use(map_alloc, finfo, aliasSourceName, &bits, 0, byte_type);
+    add_use(map_alloc, finfo, phv, aliasSourceName, &bits, 0, byte_type);
 }
 
 /** In order to prevent some overlay bugs by the driver, this guarantees that if a table matches
@@ -1704,9 +1711,11 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             aliasSourceName = collect.info_to_uses[&info.second];
         }
         if (aliasSourceName)
-            add_use(map_alloc, info.first, aliasSourceName, &info.second.bits, flags, NO_BYTE_TYPE);
+            add_use(map_alloc, info.first, phv, aliasSourceName, &info.second.bits, flags,
+                    NO_BYTE_TYPE);
         else
-            add_use(map_alloc, info.first, boost::none, &info.second.bits, flags, NO_BYTE_TYPE);
+            add_use(map_alloc, info.first, phv, boost::none, &info.second.bits, flags,
+                    NO_BYTE_TYPE);
     }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;
 
@@ -1957,6 +1966,9 @@ bool IXBar::can_allocate_on_search_bus(IXBar::Use &alloc, const PHV::Field *fiel
     bitvec seen_bits;
 
     for (auto &byte : alloc.use) {
+        // Because the mask is per byte rather than per bit, the rest of the bit needs to be empty
+        if (byte.bit_use != byte.non_zero_bits)
+            return false;
         if (byte.field_bytes.size() > 1)
             return false;
         auto &fi = byte.field_bytes[0];
@@ -2005,7 +2017,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
               mtr->name);
     if (!fields_needed.count(finfo->name)) {
         fields_needed.insert(finfo->name);
-        add_use(map_alloc, finfo, aliasSourceName, &bits, 0, IXBar::NO_BYTE_TYPE);
+        add_use(map_alloc, finfo, phv, aliasSourceName, &bits, 0, IXBar::NO_BYTE_TYPE);
     }
     create_alloc(map_alloc, alloc);
 

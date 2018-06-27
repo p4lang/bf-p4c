@@ -823,6 +823,10 @@ class PhvInfo {
     /// @returns the set of fields assigned (partially or entirely) to @c
     const ordered_set<const PHV::Field *>& fields_in_container(const PHV::Container c) const;
 
+    /** @returns a bitvec showing all potentially allocated bits within a container
+     */
+    bitvec bits_allocated(const PHV::Container) const;
+
     /** @returns a bitvec showing the currently allocated bits in a container corresponding to
       * fields simultaneously live with the fields passed in the argument set.
       * Note that one common bitvec is used to represent all fields that may be in a container
