@@ -175,11 +175,6 @@ if (PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_16/large_action_data_constant.p4
     )
 
-  p4c_add_xfail_reason("tofino"
-    "A packet was received .* but we expected no packets"
-    smoketest_switch_dc_basic_L3MulticastBidir
-  )
-
 endif() # PTF_REQUIREMENTS_MET
 
 
