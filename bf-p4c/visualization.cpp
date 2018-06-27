@@ -425,11 +425,6 @@ void Visualization::add_table_usage(cstring name, const IR::MAU::Table *table) {
 
     _stageResources[stage]._memoriesUsage.push_back(MemoriesResource(name, alloc));
 
-    for (auto at : table->attached) {
-        auto attached = at->attached;
-        _stageResources[stage]._memoriesUsage.push_back(MemoriesResource(attached->name, alloc));
-    }
-
     add_xbar_bytes_usage(stage, alloc->match_ixbar);
     add_xbar_bytes_usage(stage, alloc->salu_ixbar);
     add_xbar_bytes_usage(stage, alloc->meter_ixbar);
@@ -520,6 +515,29 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
         for (auto &use : res._use->memuse) {
             Memories::Use memuse = use.second;
             std::string memTypeName = typeName(memuse.type);
+            std::string ext = "";
+
+            switch (memuse.type) {
+            case Memories::Use::TIND:
+                ext = "$tind"; break;
+            case Memories::Use::ACTIONDATA:
+                ext = "$action_data"; break;
+            case Memories::Use::COUNTER:
+                ext = "$stats"; break;
+            case Memories::Use::METER:
+                ext = "$meter"; break;
+            case Memories::Use::STATEFUL:
+                ext = "$salu"; break;
+            case Memories::Use::SELECTOR:
+                ext = "$sel"; break;
+            case Memories::Use::IDLETIME:
+                ext = "$idle"; break;
+            case Memories::Use::GATEWAY:
+                ext = "$gw"; break;
+            default:
+                break;
+            }
+
             LOG3("MemUse: (" << res._tableName << ", p4name: " << p4name(res)
                  << memuse.type << ")");
             switch (memuse.type) {
@@ -529,17 +547,18 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
             case Memories::Use::ACTIONDATA:
                 for (auto &r : memuse.row)
                     for (auto &c : r.col)
-                        mkItem(rams, p4name(res), memTypeName, r.row, c, "column");
+                        mkItem(rams, p4name(res) + ext, memTypeName, r.row, c, "column");
                 break;
             case Memories::Use::TERNARY:
                 for (auto &r : memuse.row)
                     for (auto &c : r.col)
-                        mkItem(tcams, p4name(res), memTypeName, r.row, c, "column");
+                        mkItem(tcams, p4name(res) + ext, memTypeName, r.row, c, "column");
+                LOG1("TCAMS");
                 break;
             case Memories::Use::GATEWAY: {
                 auto row = memuse.row[0].row;
                 auto unit = memuse.gateway.unit;
-                mkItem(gateways, p4name(res), memTypeName, row, unit, "unit_id");
+                mkItem(gateways, p4name(res) + ext, memTypeName, row, unit, "unit_id");
 
                 break; }
             case Memories::Use::COUNTER:
@@ -556,14 +575,14 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
 
                 for (auto &r : memuse.row) {
                     for (auto &c : r.col)
-                        mkItem(rams, p4name(res), memTypeName, r.row, c, "column");
+                        mkItem(rams, p4name(res) + ext, memTypeName, r.row, c, "column");
                     for (auto c : r.mapcol)
-                        mkItem(map_rams, p4name(res), memTypeName, r.row, c, "unit_id");
+                        mkItem(map_rams, p4name(res) + ext, memTypeName, r.row, c, "unit_id");
                 }
 
                 for (auto &r : memuse.color_mapram)
                     for (auto &col : r.col)
-                        mkItem(map_rams, p4name(res), memTypeName, r.row, col, "unit_id");
+                        mkItem(map_rams, p4name(res) + ext, memTypeName, r.row, col, "unit_id");
 
                 break;
             case Memories::Use::IDLETIME:
