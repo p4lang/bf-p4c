@@ -327,8 +327,6 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-  switch_msdc_l3
-  switch_8.2_msdc_ipv4
   switch_msdc_ipv4
   )
 

@@ -4,7 +4,6 @@
 Visitor::profile_t PackConflicts::init_apply(const IR::Node *root) {
     profile_t rv = Inspector::init_apply(root);
     totalNumSet = 0;
-    fieldNoPack.clear();
     // Initialize the fieldNoPack matrix to allow all fields to be packed together
     for (auto& f1 : phv) {
         for (auto& f2 : phv)

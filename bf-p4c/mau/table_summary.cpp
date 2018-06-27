@@ -89,7 +89,7 @@ void TableSummary::throwBacktrackException() {
     // invoked If first round of table placement places tables in more than device stages, then
     // a NoContainerConflictTrigger() is thrown which redoes table placement, ignoring container
     // conflicts (second round of table placement)
-    if (numInvoked == 1 && maxStage > Device::numStages()) {
+    if ((numInvoked == 1 || numInvoked == 3) && maxStage > Device::numStages()) {
         LOG1("Invoking table placement without container conflicts");
         throw NoContainerConflictTrigger::failure(true); }
 
@@ -97,7 +97,7 @@ void TableSummary::throwBacktrackException() {
     // If second round of table placement fits in less than device stages, then trigger a
     // PHVTrigger::failure to initiate a second round of PHV allocation with additional no pack
     // constraints between fields written in the same stage.
-    if (numInvoked == 2 && maxStage <= Device::numStages()) {
+    if ((numInvoked == 2 || numInvoked == 4) && maxStage <= Device::numStages()) {
         LOG1("Invoking reallocation of PHVs");
         throw PHVTrigger::failure(tableAlloc); }
 }
