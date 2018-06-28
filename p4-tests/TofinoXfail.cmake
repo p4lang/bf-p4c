@@ -1173,6 +1173,6 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-733
 p4c_add_xfail_reason("tofino"
-  "Could not find table for action send_digest in control MyIngress"
+  "FieldLVal contains unexpected value"
   testdata/p4_16_samples/issue1352-bmv2.p4
 )

@@ -848,15 +848,13 @@ class ConstructSymbolTable : public Inspector {
         auto mem = new IR::Member(path, "digest_type");
         auto action = findContext<IR::P4Action>();
         unsigned digestId = 0xFFFFFFFF;
+        const IR::P4Table *table = nullptr;
         if (action) {
-            auto table = findTable(control, action);
-            if (table == nullptr) {
-                ::error("Could not find table for action %1% in control %2%",
-                        action->getName(), control->name);
-                return;
-            }
-            digestId = getDigestIndex(table->getName());
-        } else {
+            table = findTable(control, action);
+            if (table)
+                digestId = getDigestIndex(table->getName());
+        }
+        if (table == nullptr) {
             // in P4_16, digest can be called directly in the apply block of the
             // control, not in an action or table. While a table may be synthesized later
             // we need to allocate the id here -- one more reason to push the allocation into
@@ -904,8 +902,8 @@ class ConstructSymbolTable : public Inspector {
 
         auto declArgs = new IR::Vector<IR::Argument>({});
         auto declType = new IR::Type_Specialized(new IR::Type_Name("Digest"), mce->typeArguments);
-        auto decl = new IR::Declaration_Instance(typeName->path->name,
-                                                 new IR::Annotations({declAnno}),
+        auto annotations = declAnno ? new IR::Annotations({declAnno}) : new IR::Annotations();
+        auto decl = new IR::Declaration_Instance(typeName->path->name, annotations,
                                                  declType, declArgs);
         structure->ingressDeparserDeclarations.push_back(decl);
     }
@@ -953,15 +951,13 @@ class ConstructSymbolTable : public Inspector {
 
         auto action = findContext<IR::P4Action>();
         unsigned cloneId = 0xFFFFFFFF;
+        const IR::P4Table *table = nullptr;
         if (action) {
-            auto table = findTable(control, action);
-            if (table == nullptr) {
-                ::error("Could not find table for action %1% in control %2%",
-                        action->getName(), control->name);
-                return;
-            }
-            cloneId = getCloneIndex(gress, table->getName());
-        } else {
+            table = findTable(control, action);
+            if (table)
+                cloneId = getCloneIndex(gress, table->getName());
+        }
+        if (table == nullptr) {
             // in P4_16, clone can be called directly in the apply block of the
             // control, not in an action or table. While a table may be synthesized later
             // we need to allocate the id here -- one more reason to push cloneId allocation into
@@ -1226,15 +1222,13 @@ class ConstructSymbolTable : public Inspector {
         auto mem = new IR::Member(path, "resubmit_type");
         auto action = findContext<IR::P4Action>();
         unsigned resubmitId = 0xFFFFFFFF;
+        const IR::P4Table *table = nullptr;
         if (action) {
-            auto table = findTable(control, action);
-            if (table == nullptr) {
-                ::error("Could not find table for action %1% in control %2%",
-                        action->getName(), control->name);
-                return;
-            }
-            resubmitId = getResubmitIndex(table->getName());
-        } else {
+            table = findTable(control, action);
+            if (table)
+                resubmitId = getResubmitIndex(table->getName());
+        }
+        if (table == nullptr) {
             // in P4_16, resubmit can be called directly in the apply block of the
             // control, not in an action or table. While a table may be synthesized later
             // we need to allocate the id here -- one more reason to push the allocation into
