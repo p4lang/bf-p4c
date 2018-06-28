@@ -170,6 +170,12 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         if (dst && dst != field && field_bits.size() < dest_bits.size()) {
             LOG3("Marking " << field->name << " as 'no pack' because it is a source of a "
                  "non-MOVE operation to a larger field " << dst->name);
+            field->set_no_pack(true); }
+
+        // For shift operations, the sources must be assigned no-pack.
+        if (shift_ops.count(inst->name)) {
+            LOG3("Marking "  << field->name << " as 'no pack' because it is a source of a "
+                 "shift operation " << inst);
             field->set_no_pack(true); } }
 }
 

@@ -62,6 +62,14 @@ class PHV_Field_Operations : public Inspector {
         // "xor"
     };
 
+    // The following instructions are shift instructions, for which even the sources should have a
+    // no-pack property.
+    ordered_set<cstring> shift_ops = {
+        "shl",
+        "shru",
+        "shrs"
+    };
+
     void processSaluInst(const IR::MAU::Instruction*);
     void processInst(const IR::MAU::Instruction*);
     bool preorder(const IR::MAU::Instruction*) override;

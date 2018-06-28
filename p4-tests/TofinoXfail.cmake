@@ -127,11 +127,6 @@ if (PTF_REQUIREMENTS_MET)
     )
 
   p4c_add_xfail_reason("tofino"
-    "AssertionError: Lag path1 is not equally balanced"
-    smoketest_switch_8.2_l3_msdc_L3EcmpLagTest
-    )
-
-  p4c_add_xfail_reason("tofino"
     ".*InvalidSnapshotOperation.*"
     smoketest_programs_alpm_test_TestSnapshot
     )
@@ -328,6 +323,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_msdc_ipv4
+  switch_msdc_l3
   )
 
 p4c_add_xfail_reason("tofino"
