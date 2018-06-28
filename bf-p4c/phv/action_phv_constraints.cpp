@@ -740,6 +740,15 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                         "clobbered because there is at least one PHV source and another action"
                         " data/ constant source");
                 return boost::none; }
+            // Any unallocated PHV slices must all be packed within the same container, as there can
+            // only be a maximum of one PHV source when an action data/constant source is present.
+            // Generate these conditional constraints for this particular case.
+            if (sources.num_unallocated > 0) {
+                if (!masks_valid(container_state, action)) {
+                    LOG5("\t\t\t\tThe action data used for this packing is not contiguous");
+                    return boost::none; }
+                pack_slices_together(alloc, container_state, copacking_constraints, action, false);
+            }
             // At this point, analysis determines there is at least 1 PHV source. So
             // phvMustBeAligned for this action is true.
             LOG6("\t\t\t\t\tSetting phvMustBeAligned for action " << action->name << " to TRUE");
@@ -1020,6 +1029,19 @@ bool ActionPhvConstraints::masks_valid(ordered_map<size_t, ordered_set<PHV::Allo
         LOG5("\t\t\t\tInvalid masks found");
         return false; }
     return true;
+}
+
+bool ActionPhvConstraints::masks_valid(
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const IR::MAU::Action* action) const {
+    bitvec actionDataConstantMask;
+    for (auto slice : container_state)
+        if (has_ad_or_constant_sources({ slice }, action))
+            actionDataConstantMask |= bitvec(slice.container_slice().lo, slice.width());
+    LOG5("\t\t\t\tRequired action data constant mask : " << actionDataConstantMask);
+    if (actionDataConstantMask.is_contiguous())
+        return true;
+    return false;
 }
 
 inline int ActionPhvConstraints::getOffset(le_bitrange a, le_bitrange b, PHV::Container c) const {

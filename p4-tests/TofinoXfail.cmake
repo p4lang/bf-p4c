@@ -329,9 +329,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "not allocated contiguously by bit on the input xbar and cannot be resolved."
   switch_ent_fin_postcard
-  switch_msdc_spine_int
   switch_8.2_ent_fin_postcard
-  switch_8.2_msdc_spine_int
   )
 
 p4c_add_xfail_reason("tofino"
@@ -602,6 +600,7 @@ p4c_add_xfail_reason("tofino"
   # Expected to fail, which means that action analysis is working correctly.
   extensions/p4_tests/p4_14/action_conflict_1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
+  extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
   #extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   #extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
   #extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
@@ -695,11 +694,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/01-FlexCounter.p4
   extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Action.* writes fields using the same assignment type but different source operands"
-  extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
   )
 
 # p4c_add_xfail_reason("tofino"
@@ -1019,6 +1013,8 @@ p4c_add_xfail_reason("tofino"
   smoketest_programs_netcache
   switch_msdc_leaf_int
   switch_8.2_msdc_leaf_int
+  switch_msdc_spine_int
+  switch_8.2_msdc_spine_int
 )
 
 p4c_add_xfail_reason("tofino"

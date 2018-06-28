@@ -345,6 +345,13 @@ class ActionPhvConstraints : public Inspector {
             ordered_map<size_t, ordered_set<PHV::AllocSlice>>& sources,
             const PHV::Container c) const;
 
+    /** @returns true if a packing with one PHV source and one action data constant can be realized
+      * such that the action data mask is contiguous
+      */
+    bool masks_valid(
+            const PHV::Allocation::MutuallyLiveSlices& container_state,
+            const IR::MAU::Action* action) const;
+
     /** For each set generated in @copacking_constraints, populate map @req_container with the
       * unallocated field slice and the container to which it should be allocated (same as the
       * container used by other allocated sources in that set).

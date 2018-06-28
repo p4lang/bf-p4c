@@ -255,9 +255,8 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_16/stateful2x16phv.p4
 )
 
-# BRIG-711
 p4c_add_xfail_reason("jbay"
-  "Converting a bitvec to a bitrange requires the bitrange to be continuous"
+  "PHV allocation was not successful"
   switch_msdc
   smoketest_switch_msdc
   smoketest_switch_msdc_set_1
