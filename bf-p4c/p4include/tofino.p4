@@ -490,7 +490,7 @@ extern Random<W> {
 
     /// Return a random number with uniform distribution.
     /// @return : random number between 0 and 2**W - 1
-    W get(W d);
+    W get(W max);
 }
 
 // -----------------------------------------------------------------------------
@@ -500,12 +500,6 @@ extern Random<W> {
 extern T max<T>(T t1, T t2);
 
 extern T min<T>(T t1, T t2);
-
-// // Invalidates a PHV container by setting the container’s validity bit to 0 and
-// // clearing the container to all zeros.  If the dst argument is a packet or
-// // metadata field, all PHV containers that contain all or part of the field
-// // will be invalidated.
-// extern void invalidate<T>(in T field);
 
 /// Counter
 /// Indexed counter with `size’ independent counter values.
@@ -575,12 +569,10 @@ extern Register<T> {
     /// initial_value.
     Register(bit<32> size, T initial_value);
 
-    ///XXX(hanw): BRIG-212
-    /// following two methods are not supported in the Barefoot backend
-    /// they are present to help with the transition from v1model to tofino.p4
-    /// after the transition, these two methods should be removed
-    /// and the corresponding test cases should be marked as XFAILs.
+    /// Return the value of register at specified index.
     void read(out T result, in bit<32> index);
+
+    /// Write value to register at specified index.
     void write(in bit<32> index, in T value);
 }
 

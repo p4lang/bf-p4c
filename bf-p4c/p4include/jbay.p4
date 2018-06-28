@@ -500,12 +500,6 @@ extern T max<T>(T t1, T t2);
 
 extern T min<T>(T t1, T t2);
 
-// // Invalidates a PHV container by setting the container’s validity bit to 0 and
-// // clearing the container to all zeros.  If the dst argument is a packet or
-// // metadata field, all PHV containers that contain all or part of the field
-// // will be invalidated.
-// extern void invalidate<T>(in T field);
-
 /// Counter
 extern Counter<W, I> {
     Counter(bit<32> size, CounterType_t type);
