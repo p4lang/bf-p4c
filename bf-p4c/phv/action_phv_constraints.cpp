@@ -569,6 +569,73 @@ void ActionPhvConstraints::pack_slices_together(
         packing_constraints.makeUnion(*firstSlice, slice); }
 }
 
+// At this point, any packing is valid, having passed the can_pack() method. Also, if fields are
+// mutually exclusive, they are written by different actions and in different tables, so the writes
+// to those mutually exclusive fields should not have an effect on the number of bitmasked-set
+// instructions detected.
+int ActionPhvConstraints::count_bitmasked_set_instructions(
+        const std::vector<PHV::AllocSlice>& slices) const {
+    int numBitmaskedSet = 0;
+    if (slices.size() == 0)
+        return 0;
+    // Create a set out of the vector of slices, because has_ad_or_constant_sources() only takes the
+    // set.
+    ordered_set<PHV::AllocSlice> setOfSlices;
+    for (auto& slice : slices)
+        setOfSlices.insert(slice);
+
+    // Merge actions for all candidate fields into a set.
+    ordered_set<const IR::MAU::Action*> allActionsForSlices;
+    for (auto& slice : slices) {
+        const auto& writingActions = constraint_tracker.written_in(slice);
+        allActionsForSlices.insert(writingActions.begin(), writingActions.end()); }
+    // For every action, check if bitmasked-set would be synthesized for the writes to slices.
+    for (auto& action : allActionsForSlices) {
+        bool has_ad_constant_sources = has_ad_or_constant_sources(setOfSlices, action);
+        // Bitmasked-set instructions require an action data source.
+        if (!has_ad_constant_sources)
+            continue;
+        // Determine the set of fields in the packing (slices) that are not written by action.
+        ordered_set<PHV::AllocSlice> fieldsNotWrittenTo;
+        for (auto slice : slices)
+            if (!constraint_tracker.is_written(slice, action))
+                fieldsNotWrittenTo.insert(slice);
+        if (is_bitmasked_set(slices, fieldsNotWrittenTo))
+            numBitmaskedSet++;
+    }
+    return numBitmaskedSet;
+}
+
+bool ActionPhvConstraints::is_bitmasked_set(
+        const std::vector<PHV::AllocSlice>& container_state,
+        const ordered_set<PHV::AllocSlice>& fields_not_written_to) const {
+    bitvec written;
+    for (auto& slice : container_state) {
+        if (fields_not_written_to.count(slice))
+            continue;
+        auto container_range = slice.container_slice();
+        bitvec writtenThisSlice(container_range.lo, container_range.size());
+        written |= writtenThisSlice; }
+    // Contiguity is enough because we don't currently support making action data rotationally
+    // equivalent. If the bits written are contiguous, then this instruction is going to be realized
+    // using deposit-field rather than bitmasked-set.
+    if (written.is_contiguous())
+        return false;
+    return true;
+}
+
+bool ActionPhvConstraints::pack_conflicts_present(
+        const PHV::Allocation::MutuallyLiveSlices& container_state) const {
+    for (auto sl1 : container_state) {
+        for (auto sl2 : container_state) {
+            if (sl1.field() == sl2.field()) continue;
+            if (hasPackConflict(sl1.field(), sl2.field())) {
+                LOG5("\t\t\t" << sl1.field()->name << " cannot be packed in the same stage with " <<
+                     sl2.field()->name);
+                return true; } } }
+    return false;
+}
+
 boost::optional<PHV::Allocation::ConditionalConstraints>
 ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, const PHV::AllocSlice& slice) {
     std::vector<PHV::AllocSlice> slices;
@@ -611,13 +678,8 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
 
     // Check if table placement induced any no pack constraints on fields that are candidates for
     // packing. If yes, packing not possible.
-    for (auto sl1 : container_state) {
-        for (auto sl2 : container_state) {
-            if (sl1.field() == sl2.field()) continue;
-            if (hasPackConflict(sl1.field(), sl2.field())) {
-                    LOG5("\t\t\t" << sl1.field()->name << " cannot be packed in the same stage with"
-                            << " " << sl2.field()->name);
-                    return boost::none; } } }
+    if (pack_conflicts_present(container_state))
+        return boost::none;
 
     // Merge actions for all the candidate fields into a set
     ordered_set<const IR::MAU::Action *> set_of_actions;

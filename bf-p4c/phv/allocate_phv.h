@@ -105,16 +105,22 @@ struct AllocScore {
     int n_mocha_on_phv_bits;
     int n_dark_on_phv_bits;
     int n_dark_on_mocha_bits;
+    /// Number of bitmasked-set operations introduced by this transaction.
+    int n_num_bitmasked_set;
 
     AllocScore() : n_tphv_on_phv_bits(0), n_mocha_on_phv_bits(0), n_dark_on_phv_bits(0),
-                   n_dark_on_mocha_bits(0) { }
+                   n_dark_on_mocha_bits(0), n_num_bitmasked_set(0) { }
 
     /** Construct a score from a Transaction.
      *
      * @p alloc: new allocation
      * @p group: the container group where allocations were made to.
      */
-    AllocScore(const PHV::Transaction& alloc, const ClotInfo& clot, const PhvUse& uses);
+    AllocScore(
+            const PHV::Transaction& alloc,
+            const ClotInfo& clot,
+            const PhvUse& uses,
+            const int bitmasks = 0);
 
     bool operator>(const AllocScore& other) const;
     static AllocScore make_lowest();

@@ -455,6 +455,10 @@ class ActionPhvConstraints : public Inspector {
             const PHV::Allocation::MutuallyLiveSlices& container_state,
             const ordered_set<const IR::MAU::Action*>& set_of_actions) const;
 
+    /// @returns true if there is a no-pack conflict between the fields in @container_state.
+    bool pack_conflicts_present(
+            const PHV::Allocation::MutuallyLiveSlices& container_state) const;
+
     /** Checks whether packing @slices into a container will violate MAU action
      * constraints.
      *
@@ -478,6 +482,17 @@ class ActionPhvConstraints : public Inspector {
     /// which is passed to `can_pack` above.
     boost::optional<PHV::Allocation::ConditionalConstraints>
     can_pack(const PHV::Allocation& alloc, const PHV::AllocSlice& slice);
+
+    /// Counts the number of bitmasked-set instructions corresponding to @slices in container @c and
+    /// allocation object @alloc.
+    int count_bitmasked_set_instructions(const std::vector<PHV::AllocSlice>& slices) const;
+
+    /// @returns true if the allocation @container_state in a particular container, where slices in
+    /// @fields_not_written_to are not written in the given action, would result in the synthesis of
+    /// a bitmasked-set instruction.
+    bool is_bitmasked_set(
+            const std::vector<PHV::AllocSlice>& container_state,
+            const ordered_set<PHV::AllocSlice>& fields_not_written_to) const;
 
     /** Approximates a topographical sorting of field lists such that all source-only slice lists
       * are considered for allocation before destination-only slice lists.

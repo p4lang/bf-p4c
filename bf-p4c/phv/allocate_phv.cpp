@@ -165,6 +165,11 @@ bool AllocScore::operator>(const AllocScore& other) const {
         return delta_clot_bits < 0; }
     if (container_type_score != 0)
         return container_type_score < 0;
+    // Opt for the AllocScore, which minimizes the number of bitmasked-set instructions. This helps
+    // with action data packing and gives table placement a better shot at fitting within the number
+    // of stages available on the device.
+    if (n_num_bitmasked_set != other.n_num_bitmasked_set)
+        return n_num_bitmasked_set < other.n_num_bitmasked_set;
     if (delta_packing_bits != 0) {
         // This score has more packing bits.
         return delta_packing_bits > 0; }
@@ -213,11 +218,15 @@ AllocScore AllocScore::make_lowest() {
  * + n_wasted_bits: if field is no_pack, container.size() - slice.width().
  * + container_imbalance: the sum of the difference between free 8b, 16b, and 32b containers.
  */
-AllocScore::AllocScore(const PHV::Transaction& alloc,
-                       const ClotInfo& clot,
-                       const PhvUse& uses) : AllocScore() {
+AllocScore::AllocScore(
+        const PHV::Transaction& alloc,
+        const ClotInfo& clot,
+        const PhvUse& uses,
+        const int bitmasks) : AllocScore() {
     using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
     const auto* parent = alloc.getParent();
+
+    n_num_bitmasked_set = bitmasks;
 
     // Forall allocated slices group by container.
     for (const auto kv : alloc.getTransactionStatus()) {
@@ -357,7 +366,8 @@ std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
         s << "packing_prio: " << score.score.at(kind).n_packing_priority << ", ";
         s << "inc_containers: " << score.score.at(kind).n_inc_containers << ", ";
         s << "set_gress: " << score.score.at(kind).n_set_gress << ", ";
-        s << "free container imbalance: " << score.score.at(kind).container_imbalance;
+        s << "free container imbalance: " << score.score.at(kind).container_imbalance << ", ";
+        s << "bitmasked-set: " << score.n_num_bitmasked_set;
         s << "]"; }
 
     if (!any_positive_score)
@@ -691,6 +701,7 @@ CoreAllocation::tryAllocSliceList(
     AllocScore best_score = AllocScore::make_lowest();
     boost::optional<PHV::Transaction> best_candidate = boost::none;
     for (const PHV::Container c : group) {
+        int num_bitmasks = 0;
         // If any slices were already allocated, ensure that unallocated slices
         // are allocated to the same container.
         if (previous_container && *previous_container != c) {
@@ -835,7 +846,10 @@ CoreAllocation::tryAllocSliceList(
                 for (auto& slice : **slice_list) {
                     (*action_constraints)[slice] =
                         PHV::Allocation::ConditionalConstraintData(required_offset);
-                    required_offset += slice.range().size(); } } }
+                    required_offset += slice.range().size(); } }
+        } else {
+            LOG5("        ...action constraint: can pack into container " << c);
+            num_bitmasks = actions_i.count_bitmasked_set_instructions(candidate_slices); }
 
         // Create this alloc for calculating score.
         auto this_alloc = alloc_attempt.makeTransaction();
@@ -863,7 +877,7 @@ CoreAllocation::tryAllocSliceList(
             LOG5("    ...and conditional constraints are satisfied");
             this_alloc.commit(*action_alloc); }
 
-        auto score = AllocScore(this_alloc, clot_i, uses_i);
+        auto score = AllocScore(this_alloc, clot_i, uses_i, num_bitmasks);
         LOG5("    ...SLICE LIST score: " << score);
 
         // update the best
