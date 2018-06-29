@@ -11,9 +11,57 @@ function version_LT() {
     test "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" != "$1";
 }
 
-SUDO=sudo
-LDCONFIG=ldconfig
-LDLIB_EXT=so
+# determine the OS and OS version
+os=$(uname -s)
+case $os in
+    Linux)
+        SUDO=sudo
+        LDCONFIG=ldconfig
+        LDLIB_EXT=so
+        linux_distro=$(cat /etc/os-release | grep -e "^NAME" | cut -f 2 -d '=' | tr -d "\"")
+        nprocs=$(cat /proc/cpuinfo | grep processor | wc -l)
+        case $linux_distro in
+            Debian*)
+                linux_distro="Debian"
+                linux_version=$(lsb_release -r -s)
+                linux_codename=$(lsb_release -c -s)
+                ;;
+            Ubuntu)
+                linux_version=$(lsb_release -r -s)
+                linux_codename=$(lsb_release -c -s)
+                ;;
+            "Linux Mint")
+                linux_distro="Ubuntu" # Linux Mint is like Ubuntu
+                linux_version=$(lsb_release -r -s)
+                linux_codename=$(lsb_release -c -s)
+                ;;
+            Fedora)
+                linux_version=$(cat /etc/os-release | grep -e "^VERSION_ID" | cut -f 2 -d '=' | tr -d "\"")
+                linux_codename=$(cat /etc/os-release | grep -e "^ID" | cut -f 2 -d '=' | tr -d "\"")
+                ;;
+            *)
+                echo "Unsupported Linux distribution $linux_distro"
+                exit 1
+                ;;
+            esac
+    ;;
+    Darwin)
+        SUDO=
+        LDCONFIG=:
+        LDLIB_EXT=dylib
+        nprocs=$(sysctl -n hw.physicalcpu)
+    ;;
+    *)
+        echo "Unsuported OS $os"
+        exit 1
+        ;;
+esac
+
+if [[ $os == "Linux" ]]; then
+    echo "Detected: $os OS $linux_distro, version $linux_version ($linux_codename)"
+else
+    echo "Detected: $os"
+fi
 
 install_python_packages() {
     # do not upgrade pip until Ubuntu sorts out their issues
@@ -27,11 +75,9 @@ install_python_packages() {
 }
 
 install_linux_packages() {
-    local ubuntu_release=$(lsb_release -r | cut -f 2)
-    local nprocs=$(cat /proc/cpuinfo | grep processor | wc -l)
-
-    # please keep this list in alphabetical order
-    apt_packages="automake autopoint bison curl doxygen ethtool flex g++ git \
+    if [[ $linux_distro == "Ubuntu" || $linux_distro == "Debian" ]]; then
+        # please keep this list in alphabetical order
+        apt_packages="automake autopoint bison curl doxygen ethtool flex g++ git \
                  libcli-dev libedit-dev libeditline-dev libevent-dev \
                  libgc-dev libgmp-dev libjson0 libjson0-dev libjudy-dev \
                  libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev \
@@ -40,36 +86,77 @@ install_linux_packages() {
                  python-scapy python-yaml \
                  realpath rpm texinfo unzip"
 
-    echo "Need sudo privs to install apt packages"
-    $SUDO apt-get update || die "Failed to update apt"
-    $SUDO apt-get install -y $apt_packages || \
+        echo "Need sudo privs to install apt packages"
+        $SUDO apt-get update || die "Failed to update apt"
+        $SUDO apt-get install -y $apt_packages || \
         die "Failed to install needed packages"
-    if [[ $ubuntu_release =~ "14.04" ]]; then
-        $SUDO add-apt-repository ppa:ubuntu-toolchain-r/test
-        $SUDO apt-get install -y g++-4.9
-        $SUDO update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 10
-        $SUDO update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
-        $SUDO update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 10
-        $SUDO update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 20
+        if [[ $linux_distro == "Ubuntu" && linux_version =~ "14.04" ]]; then
+            $SUDO add-apt-repository ppa:ubuntu-toolchain-r/test
+            $SUDO apt-get install -y g++-4.9
+            $SUDO update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 10
+            $SUDO update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
+            $SUDO update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 10
+            $SUDO update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 20
+        fi
+
+        $SUDO apt-get remove -y python-thrift    # remove this broken package in case it was installed
+        install_rapidjson "1.1.0"
+        install_cmake "3.5.2"
+        install_boost "1.58.0"
+    fi
+    if [[ $linux_version == "Fedora" ]]; then
+        # please keep this list in alphabetical order
+        yum_packages="automake bison boost-devel cmake curl doxygen flex gcc-c++ git \
+                 libcli-devel libedit-devel libevent-devel \
+                 gc gmp-devel json-devel Judy-devel \
+                 libpcap-devel openssl-devel \
+                 libtool pkg-config protobuf-devel \
+                 python2 python python-ipaddr python-pip python-yaml \
+                 rapidjson-devel rpm texinfo unzip"
+
+        echo "Need sudo privs to install yum packages"
+        $SUDO yum update || die "Failed to update apt"
+        $SUDO yum install -y $yum_packages || \
+            die "Failed to install needed packages"
+
+        install_libgc
+        $SUDO pip install scapy
     fi
 
-    $SUDO apt-get remove -y python-thrift    # remove this broken package in case it was installed
     install_python_packages
+}
 
-    install_cmake "3.5.2"
-    install_boost "1.58.0"
-    if ! `pkg-config RapidJSON` || version_LT `pkg-config --modversion RapidJSON` "1.1.0"; then
-        install_rapidjson "1.1.0"
+function install_libgc() {
+    echo "Checking for and installing the Boehm-Demers-Weiser GC library"
+    if ! `pkg-config bdw-gc` || version_LT `pkg-config --modversion bdw-gc` "7.2.0"; then
+        tmpdir=$(mktemp -d)
+        echo "Using $tmpdir for temporary build files"
+        pushd $tmpdir
+
+        git clone git://github.com/ivmai/libatomic_ops.git
+        git clone git://github.com/ivmai/bdwgc.git
+        ln -s  $tmpdir/libatomic_ops $tmpdir/bdwgc/libatomic_ops
+        cd bdwgc
+        autoreconf -vif
+        automake --add-missing
+        ./configure --enable-cplusplus
+        make -j $nprocs
+        $SUDO make install
     fi
 }
 
 function install_cmake() {
     # ARG: cmake version
     cmake_ver=$1
+
+    if [[ ! ($linux_distro == "Ubuntu" || $linux_distro == "Debian") ]]; then
+        echo "Don't know how to install cmake $cmake_ver for $linux_distro"
+        exit 1
+    fi
+
     cmake_dir=$(echo ${cmake_ver} | cut -f 1-2 -d ".")
     rc=($SUDO apt-get install -y cmake=${cmake_ver})
     if [ $? != 0 ]; then
-        local nprocs=$(cat /proc/cpuinfo | grep processor | wc -l)
         cd /tmp
         wget http://www.cmake.org/files/v${cmake_dir}/cmake-${cmake_ver}.tar.gz && \
             tar zxvf cmake-${cmake_ver}.tar.gz && \
@@ -89,10 +176,15 @@ function install_cmake() {
 function install_boost() {
     # ARG: boost_version
     # test for ubuntu version, and check if we have a local package
-    local ubuntu_release=$(cat /etc/issue | awk '/Ubuntu/ {print $2 }' | cut -d "." -f 1-2)
-    local debian_release=$(egrep -ic debian /etc/issue)
-    if [[ $ubuntu_release =~ "14.04" ]] || [[ $debian_release =~ 1 ]]; then
-        sudo apt-get install -y python-dev libbz2-dev
+
+    if [[ ! ($linux_distro == "Ubuntu" || $linux_distro == "Debian") ]]; then
+        echo "Don't know how to install boost $1 for $linux_distro"
+        exit 1
+    fi
+
+    if [[ ($linux_distro == "Ubuntu" && $linux_version =~ "14.04") || \
+              $linux_distro == "Debian" ]]; then
+        $SUDO apt-get install -y python-dev libbz2-dev
         b_ver=$1
         boost_ver=$(echo $b_ver | tr "." "_")
         cd /tmp
@@ -115,28 +207,31 @@ function install_boost() {
 function install_rapidjson() {
     # ARG: rapidjson version
     local rj_ver=$1
-    # test for ubuntu version, and check if we have a local package
-    local ubuntu_release=$(lsb_release -r | cut -f 2)
-    # rapidjson is not available on Ubuntu 14.04 and too old on Ubuntu 16.04,
-    # so we build from source
-    if [[ $ubuntu_release =~ "16.04" ]]; then
-        $SUDO apt-get remove -y rapidjson-dev
+
+    if [[ ! ($linux_distro == "Ubuntu" || $linux_distro == "Debian") ]]; then
+        echo "Don't know how to install rapidjson $rj_ver for $linux_distro"
+        exit 1
     fi
-    if [[ $ubuntu_release =~ "14.04" || $ubuntu_release =~ "16.04" ]]; then
-        build_rapidjson_from_source ${rj_ver} && \
-        $SUDO apt-get remove -y rapidjson-dev && \
-        $SUDO dpkg -i /tmp/RapidJSON-dev-${rj_ver}-Linux.deb || \
-            die "failed to install rapidjson"
-    else
-        $SUDO apt-get install -y rapidjson-dev || \
-            die "Failed to update rapidjson-dev"
+
+    if ! `pkg-config RapidJSON` || version_LT `pkg-config --modversion RapidJSON` "1.1.0"; then
+        # rapidjson is not available on Ubuntu 14.04 and too old on Ubuntu 16.04,
+        # so we build from source (or install from the p4c server)
+        rc=($SUDO apt-get install -y rapidjson-dev=${rj_ver})
+        if [ $? != 0 ]; then
+            if [[ $linux_distro == "Ubuntu" && $linux_version =~ "16.04" ]]; then
+                $SUDO apt-get remove -y rapidjson-dev
+            fi
+            build_rapidjson_from_source ${rj_ver} && \
+                $SUDO apt-get remove -y rapidjson-dev && \
+                $SUDO dpkg -i /tmp/RapidJSON-dev-${rj_ver}-Linux.deb || \
+                    die "failed to install rapidjson"
+        fi
     fi
 }
 
 function build_rapidjson_from_source() {
     # ARG: rapidjson version
     local rj_ver=$1
-    local nprocs=$(cat /proc/cpuinfo | grep processor | wc -l)
     local builddir=$(mktemp --directory -t rjson_XXXXXX)
     cd $builddir
     # add packaging info
@@ -181,9 +276,6 @@ EOF
 }
 
 install_macos_packages() {
-    SUDO=
-    LDCONFIG=:
-    LDLIB_EXT=dylib
     # check for brew and install if not available
     if [ -z $(which brew) ]; then
 	xcode-select --install
@@ -204,10 +296,19 @@ install_macos_packages() {
 
 function install_protobuf() {
     tmpdir=$(mktemp -d)
-    echo "Using $tmpdir for temporary build files"
 
     echo "Checking for and installing protobuf"
     if ! `pkg-config protobuf` || version_LT `pkg-config --modversion protobuf` "3.0.0"; then
+        if [[ $linux_distro == "Ubuntu" || $linux_distro == "Debian" ]]; then
+            rc=($SUDO apt-get install -y protobuf-dev=3.2.0 grpc-dev=1.3.2)
+            if [ $? == 0 ]; then
+                $SUDO pip install protobuf grpcio || die "Failed to install python grpc packages"
+                return
+            fi
+        fi
+
+        # Couldn't find a package so install from source
+        echo "Using $tmpdir for temporary build files"
         pushd $tmpdir
         git clone https://github.com/google/protobuf
         cd protobuf
@@ -215,7 +316,7 @@ function install_protobuf() {
         git submodule update --init --recursive
         ./autogen.sh && \
         ./configure && \
-        make && \
+        make -j $nprocs && \
         $SUDO make install && \
         $SUDO $LDCONFIG || \
             die "Failed to install protobuf"
@@ -232,7 +333,55 @@ function install_protobuf() {
         cd grpc
         git checkout tags/v1.3.2
         git submodule update --init --recursive
-        make && \
+        # openssl 1.1.0 has changed the visibility of struct fields so we need to patch the RSA code
+        if ! version_LT `pkg-config --modversion openssl` "1.1.0"; then
+            cat > openssl-1.1.0.patch <<EOF
+diff --git a/src/core/lib/security/credentials/jwt/jwt_verifier.c b/src/core/lib/security/credentials/jwt/jwt_verifier.c
+index 0e2a264371..5c1e6a70f7 100644
+--- a/src/core/lib/security/credentials/jwt/jwt_verifier.c
++++ b/src/core/lib/security/credentials/jwt/jwt_verifier.c
+@@ -493,6 +493,7 @@ static EVP_PKEY *pkey_from_jwk(grpc_exec_ctx *exec_ctx, const grpc_json *json,
+     gpr_log(GPR_ERROR, "Could not create rsa key.");
+     goto end;
+   }
++#if OPENSSL_VERSION_NUMBER < 0x10100005L
+   for (key_prop = json->child; key_prop != NULL; key_prop = key_prop->next) {
+     if (strcmp(key_prop->key, "n") == 0) {
+       rsa->n =
+@@ -508,6 +509,28 @@ static EVP_PKEY *pkey_from_jwk(grpc_exec_ctx *exec_ctx, const grpc_json *json,
+     gpr_log(GPR_ERROR, "Missing RSA public key field.");
+     goto end;
+   }
++#else
++  {
++    BIGNUM *bn_n = NULL;
++    BIGNUM *bn_e = NULL;
++    for (key_prop = json->child; key_prop != NULL; key_prop = key_prop->next) {
++      if (strcmp(key_prop->key, "n") == 0) {
++       bn_n =
++          bignum_from_base64(exec_ctx, validate_string_field(key_prop, "n"));
++       if (bn_n == NULL) goto end;
++      } else if (strcmp(key_prop->key, "e") == 0) {
++       bn_e =
++          bignum_from_base64(exec_ctx, validate_string_field(key_prop, "e"));
++       if (bn_e == NULL) goto end;
++      }
++    }
++    RSA_set0_key(rsa, bn_n, bn_e, NULL);
++    if (bn_e == NULL || bn_n == NULL) {
++      gpr_log(GPR_ERROR, "Missing RSA public key field.");
++      goto end;
++    }
++  }
++#endif
+   result = EVP_PKEY_new();
+   EVP_PKEY_set1_RSA(result, rsa); /* uprefs rsa. */
+
+EOF
+            git apply openssl-1.1.0.patch
+        fi
+        # gcc-7 gives errors
+        make -j $nprocs CFLAGS="-Wno-error" && \
         $SUDO make install && \
         $SUDO $LDCONFIG || \
                 die "Failed to install grpc"
@@ -249,9 +398,31 @@ function install_protobuf() {
 
 
 # the main routine
-if [ $(uname -s) == 'Darwin' ]; then
-    install_macos_packages
-else
-    install_linux_packages
-fi
-install_protobuf
+case $os in
+    Linux)
+        p4c_apt_server_available=false
+        p4c_server=compiler-svr4.swlab.barefootnetworks.com
+        # check that we are on the Barefoot intranet and can access the package server.
+        nc -z $p4c_server 22 > /dev/null 2>&1
+        if [[ $? == 0 && $linux_distro == "Ubuntu" ]]; then
+            p4c_apt_server_available=true
+            echo "Found compiler server for prebuilt packages"
+            if [[ ! -e /etc/apt/sources.list.d/p4c.list ]]; then
+                echo "deb https://${p4c_server}/apt/ubuntu/ ${linux_codename} main" >/tmp/p4c.list
+                $SUDO mv /tmp/p4c.list /etc/apt/sources.list.d/
+                wget -O - http://$p4c_server/apt/p4c.gpg.key | sudo apt-key add -
+                $SUDO apt-get update
+            fi
+        fi
+        install_linux_packages
+        install_protobuf
+    ;;
+    Darwin)
+        install_macos_packages
+        install_protobuf
+    ;;
+    *)
+        echo "Unsuported OS $os"
+        exit 1
+        ;;
+esac
