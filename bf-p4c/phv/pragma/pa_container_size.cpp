@@ -114,7 +114,7 @@ void PragmaContainerSize::update_field_slice_req(
         while (rest_width > 0) {
             int end = std::min(field->size - 1, offset + sz_int - 1);
             PHV::FieldSlice slice(field, FromTo(offset, end));
-            offset += end + 1;
+            offset = end + 1;
             rest_width -= sz_int;
             field_slice_req_i[slice] = sz;
         }

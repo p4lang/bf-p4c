@@ -612,9 +612,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "No way to slice the following to satisfy @pa_container_size"
   extensions/p4_tests/p4_14/test_config_593_reduce_extraction_bandwidth_32.p4
-  extensions/p4_tests/p4_14/test_config_593_reduce_extraction_bandwidth_16.p4
   extensions/p4_tests/p4_14/test_config_227_set_meta_packing.p4
-  extensions/p4_tests/p4_14/test_config_303_static_table.p4
   extensions/p4_tests/p4_14/test_config_262_req_packing.p4
   extensions/p4_tests/p4_14/test_config_275_match_key_range.p4
   )
