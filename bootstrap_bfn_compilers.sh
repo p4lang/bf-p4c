@@ -54,9 +54,18 @@ if [ ! -e bf-p4c ]; then ln -sf ../../bf-p4c bf-p4c; fi
 if [ ! -e p4_tests ]; then ln -sf ../../p4-tests p4_tests; fi
 popd # p4c/extensions
 
+# install the commit-msg hook if the user doesn't already have one defined
+if [[ -d .git && -e scripts/hooks/commit-msg && ! -e .git/hooks/commit-msg ]]; then
+    pushd .git/hooks > /dev/null
+    ln -sf ../../scripts/hooks/commit-msg commit-msg
+    popd > /dev/null
+fi
+
 mkdir -p ${builddir}
 pushd ${builddir}
-cmake ${mydir} -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=ON -DP4C_CPP_FLAGS="$P4C_CPP_FLAGS" $*
+cmake ${mydir} -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=ON \
+      -DENABLE_EBPF=OFF \
+      -DP4C_CPP_FLAGS="$P4C_CPP_FLAGS" $*
 popd # builddir
 
 if [ "$RUN_BOOTSTRAP_PTF" == "yes" ]; then
