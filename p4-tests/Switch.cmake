@@ -338,7 +338,10 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_8"
         switch_tests.L3VINhopGleanBGPTest
         switch_tests.L3VINhopGleanTest
         switch_tests.MalformedPacketsTest_tunnel
-        switch_mcast.L3MulticastBidir")
+        switch_mcast.L3MulticastBidir
+        switch_tests.SnapshotIgL2Test
+        switch_tests.SnapshotEgL3Ipv4Test")
+
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_9" ${SWITCH_P4}
         "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_9"

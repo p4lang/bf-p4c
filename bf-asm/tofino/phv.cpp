@@ -11,7 +11,7 @@ void Target::Tofino::Phv::init_regs(::Phv &phv) {
         for (unsigned j = 0; j < sizes[i].count; j++, uid++) {
             auto reg = phv.regs[uid] = new Register;
             memset(reg->name, 0, sizeof(reg->name));
-            reg->type = reg->name[0] == 'T' ? Register::TAGALONG : Register::NORMAL;
+            reg->type = (uid >= FIRST_TPHV) ? Register::TAGALONG : Register::NORMAL;
             reg->index = j;
             reg->uid = uid;
             reg->size = sizes[i].size;

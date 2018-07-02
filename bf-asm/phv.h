@@ -90,6 +90,7 @@ private:
                 user_defined;
     bitvec      phv_use[2];
     std::map<std::string, int> phv_field_sizes [2];
+    std::map<std::string, int> phv_pov_field_sizes [2];
 
     // Maps P4-level field names (i.e. returned by stack_asm_name_to_p4()) to a
     // map to be embedded in the field's context_json "records" node.
@@ -100,6 +101,16 @@ private:
     void gen_phv_field_size_map();
     int addreg(gress_t gress, const char *name, const value_t &what);
     int get_position_offset(gress_t gress, std::string name);
+    void add_phv_field_sizes(gress_t gress, std::string name, int size) {
+        bool is_pov = (name.find(".$valid") != std::string::npos);
+        auto &phv_field_map = is_pov ? phv_pov_field_sizes : phv_field_sizes;
+        phv_field_map[gress][name] += size; }
+    int get_phv_field_size(gress_t gress, std::string name) {
+        if (phv_field_sizes[gress].count(name) > 0)
+            return phv_field_sizes[gress][name];
+        if (phv_pov_field_sizes[gress].count(name) > 0)
+            return phv_pov_field_sizes[gress][name];
+        return 0; }
 public:
     static const Slice *get(gress_t gress, const std::string &name) {
         phv.init_phv(options.target);
@@ -159,7 +170,6 @@ public:
         bool merge(const Ref &r);
         void dbprint(std::ostream &out) const;
     };
-    void process() override { gen_phv_field_size_map(); }
     static const Register *reg(int idx)
         { assert(idx >= 0 && size_t(idx) < phv.regs.size()); return phv.regs[idx]; }
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
@@ -168,10 +178,6 @@ public:
     static void output_names(json::map &);
     static std::string db_regset(const bitvec &s);
     static unsigned mau_groupsize();
-    /* Return phv field size in bytes */
-    static int get_phv_field_size(gress_t gress, const std::string field_name) {
-        return (phv.phv_field_sizes[gress].count(field_name) > 0) ?
-            phv.phv_field_sizes[gress][field_name] : 0; }
 };
 
 extern void merge_phv_vec(std::vector<Phv::Ref> &vec, const Phv::Ref &r);

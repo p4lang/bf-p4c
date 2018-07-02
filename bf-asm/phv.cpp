@@ -34,12 +34,15 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what) {
         return -1;
     auto reg = what.type == tSTR ? what.s : what[0].s;
     if (const Slice *sl = get(gress, reg)) {
+        std::string phv_name = name;
+        remove_name_tail_range(phv_name);
         if (sl->valid) {
             phv_use[gress][sl->reg.uid] = true;
             user_defined[&sl->reg].first = gress;
             user_defined[&sl->reg].second.push_back(name); }
         if (what.type == tSTR) {
             names[gress].emplace(name, *sl);
+            add_phv_field_sizes(gress, phv_name, sl->size());
             return 0; }
         if (what.vec.size != 2) {
             error(what.lineno, "Syntax error, expecting bit or slice");
@@ -52,6 +55,7 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what) {
         if (!sl->valid) {
             error(what.lineno, "Invalid register slice");
             return -1; }
+        add_phv_field_sizes(gress, phv_name, sl->size());
         return 0;
     } else {
         error(what.lineno, "No register named %s", reg);
@@ -196,39 +200,27 @@ std::string Phv::db_regset(const bitvec &s) {
 }
 
 
-// Loop through the phv_field_sizes map and add byte sizes for each field until
-// you reach the specified field. This gives the position offset for that field
-// Position offset is unique for a field and is used by the driver to determine
-// position of the field in the buffer it allocates for all fields.
+// For snapshot, the driver (generate pd script) generates a buffer of all phv
+// fields and indexes through the buffer with a position offset to determine its
+// location. It assumes the phv fields are arranged with the pov fields at the
+// end. To maintain this ordering while generating the position offsets for each
+// phv field, we initially generate 2 separate maps for normal and pov phv
+// fields. We loop through the normap phv map first and then the pov phv map
+// adding field sizes. The fields are byte aligned and put into 8/16/32 bit
+// containers.
 int Phv::get_position_offset(gress_t gress, std::string name) {
     int position_offset = 0;
     for (auto f : phv_field_sizes[gress]) {
         if (f.first == name) return position_offset;
-        position_offset += f.second; }
+        auto bytes_to_add = (f.second + 7)/8U;
+        if (bytes_to_add == 3) bytes_to_add++;
+        position_offset += bytes_to_add; }
+    for (auto f : phv_pov_field_sizes[gress]) {
+        if (f.first == name) return position_offset;
+        // POV should be single bit
+        assert(f.second == 1);
+        position_offset += 1; }
     return 0;
-}
-
-// Generate a map of phv field names and their total sizes. Iterates through all
-// user defined fields and adds any field slices if present to create a map of
-// phv field names and their total sizes. This map is also be used to get a
-// position offset for a field.
-void Phv::gen_phv_field_size_map() {
-    for (auto &slot : phv.user_defined) {
-        gress_t gress = slot.second.first;
-        unsigned phv_container_size = slot.first->size;
-        for (auto field_name : slot.second.second) {
-            int field_size = 0, field_size_bytes = 0;
-            unsigned field_lo = remove_name_tail_range(field_name, &field_size);
-            if (field_size == 0)
-                field_size = phv_container_size;
-            // Fields can be stored only in 8/16/32 bit containers
-            field_size_bytes = field_size/8;
-            if (field_size % 8) field_size_bytes++; //round up if not byte-aligned
-            if (field_size_bytes == 3) field_size_bytes++;
-            if (phv_field_sizes[gress].count(field_name) == 0)
-                phv_field_sizes[gress][field_name] = field_size_bytes;
-            else
-                phv_field_sizes[gress][field_name] += field_size_bytes; } }
 }
 
 // Output function sets the 'phv_allocation' node in context json Contains info
@@ -259,8 +251,8 @@ void Phv::output(json::map &ctxt_json) {
                 phv_lsb = sl->lo;
                 phv_msb = sl->hi;
                 field_lo = remove_name_tail_range(field_name, &field_size);
-                if (field_size == 0)
-                    field_size = phv_container_size;
+                auto field_width = get_phv_field_size(gress, field_name);
+                if (field_size == 0) field_size = field_width;
                 phv_record["position_offset"] = get_position_offset(gress, field_name);
                 phv_record["field_name"] = field_name;
                 phv_record["field_msb"] = field_lo + field_size - 1;
@@ -268,9 +260,8 @@ void Phv::output(json::map &ctxt_json) {
                 // Pass through per-field context_json information from the compiler.
                 if (field_context_json.count(field_name))
                     phv_record.merge(field_context_json.at(field_name));
-                // Field width is set to total field width irrespective of current
-                // field slice width
-                phv_record["field_width"] = phv_field_sizes[gress][field_name];
+                auto field_width_bytes = (field_width + 7)/8U;
+                phv_record["field_width"] = field_width_bytes;
                 phv_record["phv_msb"] = phv_msb;
                 phv_record["phv_lsb"] = phv_lsb;
                 // FIXME: 'is_compiler_generated' is set to false as there is no

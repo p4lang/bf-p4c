@@ -126,11 +126,6 @@ if (PTF_REQUIREMENTS_MET)
     smoketest_switch_8.2_l3_msdc_WredIpv4Test
     )
 
-  p4c_add_xfail_reason("tofino"
-    ".*InvalidSnapshotOperation.*"
-    smoketest_programs_alpm_test_TestSnapshot
-    )
-
 # BRIG-686
 # NameError: global name 'smoke_large_tbls_idle_stats_tbl_match_spec_t' is not defined
   p4c_add_xfail_reason("tofino"
