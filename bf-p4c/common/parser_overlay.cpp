@@ -58,9 +58,15 @@ void BuildMutex::end_apply() {
     for (auto it1 = fields_encountered.begin();
          it1 != fields_encountered.end();
          ++it1 ) {
+        const PHV::Field* f1 = phv.field(*it1);
         if (neverOverlay[*it1]) {
-            LOG5("Excluding field from overlay: " << *it1);
-            continue; }
+            if (f1->alwaysPackable) {
+                ::warning("Ignoring pa_no_overlay for padding field %1%", f1->name);
+            } else {
+                LOG5("Excluding field from overlay: " << *it1);
+            continue;
+            }
+        }
         for (auto it2 = it1; it2 != fields_encountered.end(); ++it2) {
             // Consider fields that are part of headers that can be added in the
             // MAU pipeline to always be mutually inclusive.
@@ -68,13 +74,19 @@ void BuildMutex::end_apply() {
             // more precise.
             if (*it1 == *it2) {
                 continue; }
+            const PHV::Field* f2 = phv.field(*it2);
             if (neverOverlay[*it2]) {
-                LOG5("Excluding field from overlay: " << *it2);
-                continue; }
+                if (f2->alwaysPackable) {
+                    ::warning("Ignoring pa_no_overlay for padding field %1%", f2->name);
+                } else {
+                    LOG5("Excluding field from overlay: " << *it2);
+                    continue;
+                }
+            }
             if (mutually_inclusive(*it1, *it2))
                 continue;
             mutually_exclusive(*it1, *it2) = true;
-            LOG4("(" << phv.field(*it1)->name << ", " << phv.field(*it2)->name << ")"); } }
+            LOG4("(" << f1->name << ", " << f2->name << ")"); } }
 
     // Mark fields specified by pa_mutually_exclusive pragmas
     const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& parsedPragma =
