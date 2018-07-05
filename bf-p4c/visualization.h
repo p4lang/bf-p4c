@@ -37,20 +37,6 @@ class Visualization : public Inspector {
         add_table_usage(tblName, tbl);
         return true;
     }
-    void postorder(const IR::MAU::Selector *as) override {
-        auto *tbl = findContext<IR::MAU::Table>();
-        if (tbl == nullptr) {
-            LOG1("Can't find table for selector" << *as);
-            return;
-        }
-        auto name = tbl->get_use_name(as);
-        if (tbl->resources->memuse.count(name))
-            // selector_memory[as] = &tbl->resources->memuse.at(name);
-            add_table_usage(name, tbl);  // \TODO: handle only selector resources
-    }
-    bool preorder(const IR::MAU::StatefulAlu *) override {
-        return false;
-    }
 
  private:
     enum node_t { USED_BY, USED_FOR, DETAILS };

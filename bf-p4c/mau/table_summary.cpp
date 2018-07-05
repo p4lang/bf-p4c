@@ -39,6 +39,7 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
     BUG_CHECK(order.count(t->logical_id) == 0, "Encountering table multiple times in IR traversal");
     assert(order.count(t->logical_id) == 0);
     order[t->logical_id] = t;
+    LOG1("Table " << t->name);
     tableNames[t->name] = getTableName(t);
     if (t->gateway_name) {
         mergedGateways[t->name] = t->gateway_name;

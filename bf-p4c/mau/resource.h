@@ -11,11 +11,14 @@
 #include "lib/safe_vector.h"
 
 struct TableResourceAlloc {
+    // TODO: Currently we only have a std::map for the UniqueId objects for Memories.  This would
+    // make sense to eventually move to IXBar::Use, and even potentially
+    // ActionFormat::Use/ActionDataBus::Use for the different types of allocations
     IXBar::Use                          match_ixbar, gateway_ixbar, selector_ixbar,
                                         salu_ixbar, meter_ixbar;
     safe_vector<IXBar::HashDistUse>     hash_dists;
     TableFormat::Use                    table_format;
-    std::map<cstring, Memories::Use>    memuse;
+    std::map<UniqueId, Memories::Use>   memuse;
     ActionFormat::Use                   action_format;
     ActionDataBus::Use                  action_data_xbar;
     InstructionMemory::Use              instr_mem;
@@ -33,33 +36,8 @@ struct TableResourceAlloc {
         rv->action_data_xbar = action_data_xbar;
         rv->instr_mem = instr_mem;
         return rv; }
-    TableResourceAlloc *clone_rename(cstring ext, const cstring name) const {
-        TableResourceAlloc *rv = clone_ixbar();
-        for (auto &use : memuse) {
-            if (name == use.first) {
-                rv->memuse.emplace(name + ext, use.second);
-                auto &unattached = rv->memuse.at(name + ext).unattached_tables;
-                unattached.clear();
-                for (auto entry : use.second.unattached_tables) {
-                    cstring back = entry.first.findlast('$');
-                    if (back)
-                        unattached.emplace(name + ext + back, entry.second);
-                    else
-                        unattached.emplace(name + ext, entry.second);
-                }
-            } else {
-                cstring back = use.first.findlast('$');
-                if (back)
-                    rv->memuse.emplace(name + ext + back, use.second);
-                else
-                    rv->memuse.emplace(use.first + ext, use.second);
-            }
-        }
-        return rv; }
-    TableResourceAlloc *clone_atcam(const IR::MAU::Table *tbl, int logical_table,
-                                    cstring suffix) const;
-    TableResourceAlloc *clone_dleft(const IR::MAU::Table *tbl, int logical_table,
-                                    cstring suffix) const;
+    TableResourceAlloc *clone_rename(const IR::MAU::Table *tbl, int stage_table = -1,
+                                     int logical_table = -1) const;
     void clear_ixbar() {
         match_ixbar.clear();
         gateway_ixbar.clear();

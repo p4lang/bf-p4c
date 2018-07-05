@@ -30,11 +30,13 @@ add_subdirectory(logging)
 set (BF_P4C_IR_SRCS
   ir/dbprint-tofino.cpp
   ir/bitrange.cpp
+  ir/ir_enums.cpp
   ir/gress.cpp
   ir/mau.cpp
   ir/thread_visitor.cpp
   ir/tofino.cpp
   ir/tofino_write_context.cpp
+  ir/unique_id.cpp
   mau/hash_function.cpp
   parde/clot.cpp
   parde/marshal.cpp
@@ -47,6 +49,7 @@ set (BF_P4C_IR_HDRS
   ir/bitrange.h
   ir/control_flow_visitor.h
   ir/gress.h
+  ir/ir_enums.h
   ir/thread_visitor.h
   ir/tofino_write_context.h
   ir/unique_id.h

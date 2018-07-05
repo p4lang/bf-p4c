@@ -59,11 +59,11 @@ void IR::MAU::BackendAttached::dbprint(std::ostream &out) const {
     out << *attached;
     if (hash_dist) out << " hd=" << *hash_dist;
     switch (use) {
-    case LOG: out << " {log}"; break;
-    case FIFO_PUSH: out << " {enq}"; break;
-    case FIFO_POP: out << " {deq}"; break;
-    case STACK_PUSH: out << " {push}"; break;
-    case STACK_POP: out << " {pop}"; break;
+    case StatefulUse::LOG: out << " {log}"; break;
+    case StatefulUse::FIFO_PUSH: out << " {enq}"; break;
+    case StatefulUse::FIFO_POP: out << " {deq}"; break;
+    case StatefulUse::STACK_PUSH: out << " {push}"; break;
+    case StatefulUse::STACK_POP: out << " {pop}"; break;
     default: break; }
 }
 

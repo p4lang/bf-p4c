@@ -49,9 +49,9 @@ class MauAsmOutput : public MauInspector {
         return true; }
     void postorder(const IR::MAU::Selector *as) override {
         auto tbl = findContext<IR::MAU::Table>();
-        auto name = tbl->get_use_name(as);
-        if (tbl->resources->memuse.count(name))
-            selector_memory[as] = &tbl->resources->memuse.at(name);
+        auto unique_id = tbl->unique_id(as);
+        if (tbl->resources->memuse.count(unique_id))
+            selector_memory[as] = &tbl->resources->memuse.at(unique_id);
     }
     bool preorder(const IR::MAU::StatefulAlu *) override { return false; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);

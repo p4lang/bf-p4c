@@ -48,9 +48,12 @@ class CheckTableNameDuplicate : public MauInspector {
         names.clear();
         return MauInspector::init_apply(root); }
     bool preorder(const IR::MAU::Table *t) override {
-        if (names.count(t->name))
-            BUG("Multiple tables named '%s'", t->name);
-        names.insert(t->name);
+        auto name = t->name;
+        if (t->is_placed())
+            name = t->unique_id().build_name();
+        if (names.count(name))
+            BUG("Multiple tables named '%s'", name);
+        names.insert(name);
         return true; }
 };
 

@@ -46,61 +46,73 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
     return *this;
 }
 
-/** The name provided back is a unique assembly name to output to the bfa file.  Furthermore,
- *  the key is a unique name in the Memories::Use map within the TableResourceAlloc object.
- *  Unfortunately, because an individual table can have multiple of the same kind of attached
- *  table, one cannot uniquely key that map with the type of the table.  Rather it has to
- *  be done some other way.
+/** This function can only be used before TablePlacement, or essentially when the IR::MAU::Table
+ *  resources object is not yet saved.
  *
- *  There has to be a better way to manage this map while still being able to print out a
- *  unique key within the table.  The managment of these names has given me significant
- *  headaches in debugging when trying to add a new table.  If anyone has a better solution
- *  to this, then I'm all ears.
+ *  This is currently created as a key during the try_place_table algorithm.  These keys,
+ *  after the IR is updated in the TablePlacement preorders, should be identical to the keys
+ *  after table placement 
  */
-cstring IR::MAU::Table::get_use_name(const IR::MAU::AttachedMemory *at, bool is_gw, int type,
-                                     int logical_table) const {
-    cstring rv = name;
-    // After table placement, the atcam partition is actually part of the table name
-    // while before table placement, the name is the original backend table name
-    if (layout.atcam && !is_placed()) {
-         rv += "$atcam" + (logical_table == -1 ? std::to_string(0)
-                                              : std::to_string(logical_table));
-    } else if (layout.atcam && is_placed() && logical_table >= 0) {
-        BUG("Atcam becomes part of the table name after table placement, so atcam won't be "
-            "append to the table name");
-    }
-    if (for_dleft() && !is_placed()) {
-        rv += "$dleft" + ((logical_table == -1) ? std::to_string(0)
-                                               : std::to_string(logical_table));
-    }
+UniqueId IR::MAU::Table::pp_unique_id(const IR::MAU::AttachedMemory *at,
+        bool is_gw, int stage_table, int logical_table,
+        UniqueAttachedId::pre_placed_type_t ppt) const {
+    BUG_CHECK(!is_placed(), "Illegal call of the pp_unique_id function");
 
-    if (is_gw) {
-        return rv +"$gw";
-    } else if (at == nullptr) {
-        if (type == IR::MAU::Table::TIND_NAME)
-            return rv + "$tind";
-        else if (type == IR::MAU::Table::AD_NAME)
-            return rv + "$action";
-        else
-            return rv;
-    } else if (at->is<IR::MAU::Counter>()) {
-        rv += "$counter." + at->name;
-    } else if (at->is<IR::MAU::Meter>()) {
-        rv += "$meter." + at->name;
-    } else if (at->is<IR::MAU::StatefulAlu>()) {
-        rv += "$salu." + at->name;
-    } else if (at->is<IR::MAU::Selector>()) {
-        rv += "$act_sel." + at->name;
-    } else if (at->is<IR::MAU::ActionData>()) {
-        rv += "$action";
-    } else if (at->is<IR::MAU::TernaryIndirect>()) {
-        rv += "$tind";
-    } else if (at->is<IR::MAU::IdleTime>()) {
-        rv += "$idletime";
-    } else {
-        BUG("Unrecgonized attached table %s", at->name);
-        return "";
-    }
+    UniqueId rv;
+    rv.name = name;
+    if (for_dleft())
+        rv.speciality = UniqueId::DLEFT;
+    if (layout.atcam)
+        rv.speciality = UniqueId::ATCAM;
+
+    // Note that for ATCAM/DLEFT tables, if the logical table isn't provided, then the
+    // logical table is initialized to 0.  This is because all indirect attached tables
+    // for an ATCAM are attached to logical table 0 in the assembler.  It is a lot easier
+    // to call particular functions with this known ahead of time
+    if (rv.speciality != UniqueId::NONE && logical_table == -1)
+        rv.logical_table = 0;
+    else
+        rv.logical_table = logical_table;
+
+    rv.stage_table = stage_table;
+    rv.is_gw = is_gw;
+    if (ppt != UniqueAttachedId::NO_PP)
+        rv.a_id = UniqueAttachedId(ppt);
+    else if (at != nullptr)
+        rv.a_id = at->unique_id();
+
+    return rv;
+}
+
+/** Building a unique id for a table after table placement.  Stage Table and Logical Table
+ *  information as well as speciality information come directly from the IR.
+ *
+ *  If creating a unique id for an AttachedMemory table underneath a table in the DAG,
+ *  then an AttachedMemory can be passed to the function.  The same is true for gateway information
+ *
+ *  A unique_id was created every time this function is called.  The reason these stay
+ *  consistent through all of the passes is that the name of the table, the stage split of
+ *  the table and the logical split of the table do not change after table placement.
+ *
+ *  For the AttachedMemory ids, these stay consistent if the name and type of the IR class
+ *  remain consistent throughout the entirety of the allocation, which is the current invariant
+ */
+UniqueId IR::MAU::Table::unique_id(const IR::MAU::AttachedMemory *at, bool is_gw) const {
+    BUG_CHECK(is_placed(), "Illegal call of the unique_id function");
+
+    UniqueId rv;
+    rv.name = name;
+    rv.stage_table = stage_split;
+    rv.logical_table = logical_split;
+
+    if (for_dleft())
+        rv.speciality = UniqueId::DLEFT;
+    if (layout.atcam)
+        rv.speciality = UniqueId::ATCAM;
+
+    rv.is_gw = is_gw;
+    if (at != nullptr)
+        rv.a_id = at->unique_id();
 
     return rv;
 }

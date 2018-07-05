@@ -21,6 +21,8 @@ class UniqueAttachedId {
     enum type_t { INVALID, TERNARY_INDIRECT, IDLETIME, COUNTER, METER, SELECTOR,
                         STATEFUL_ALU, ACTION_DATA } type = INVALID;
 
+    enum pre_placed_type_t { NO_PP, TIND_PP, ADATA_PP };
+
     bool operator==(const UniqueAttachedId &uai) const {
         return name == uai.name && type == uai.type;
     }
@@ -37,8 +39,26 @@ class UniqueAttachedId {
         return false;
     }
 
+    operator bool() const { return type != INVALID; }
+    bool name_valid() const {
+        return !name.isNull();
+    }
+
     UniqueAttachedId() {}
-    UniqueAttachedId(cstring n, type_t t) : name(n), type(t) {}
+    UniqueAttachedId(cstring n, bool direct, type_t t) {
+        type = t;
+        if (!(type == IDLETIME || type == TERNARY_INDIRECT || (type == ACTION_DATA && direct))) {
+            name = n;
+        }
+    }
+
+    explicit UniqueAttachedId(pre_placed_type_t ppt) {
+        BUG_CHECK(ppt != NO_PP, "Attached ID not initialized correct");
+        if (ppt == TIND_PP)
+            type = TERNARY_INDIRECT;
+        if (ppt == ADATA_PP)
+            type = ACTION_DATA;
+    }
 
     void toJSON(JSONGenerator &json) const {
         json << json.indent << "\"name\": " << name << ",\n"
@@ -56,6 +76,8 @@ class UniqueAttachedId {
     bool has_meter_type() const {
         return type == METER || type == STATEFUL_ALU || type == SELECTOR;
     }
+
+    std::string build_name() const;
 };
 
 inline std::ostream &operator <<(std::ostream &out, const UniqueAttachedId::type_t type) {
@@ -107,4 +129,45 @@ inline std::ostream &operator <<(std::ostream &out, const UniqueAttachedId &uai)
     return out;
 }
 
+/** The UniqueId is a unique identifier for an individual table after table placement. 
+ *  The UniqueId can be used to build a unique name for the assembler.
+ *
+ *  This is currently the key for the Memories::Use map, as well as how the tables know if
+ *  the allocation is attached to a particular table.
+ *
+ *  The unique identifier will be unique between each table as long as none of the tables have
+ *  the same name.  After TablePlacement, tables that have been split into multiple tables, due
+ *  to either stage splits or logical table splits, should have a unique stage_table and
+ *  logical_table.  Both of these should be validated by the CheckTableNameDuplicate pass.
+ */
+
+class UniqueId {
+ public:
+    cstring name;
+    // The stage table index of a table across multiple stages
+    int stage_table = -1;
+    // The logical table index of a table in a single stage (i.e. ATCAM tables have multiple
+    // logical tables per stage)
+    int logical_table = -1;
+
+    bool stage_table_used() const { return stage_table != -1; }
+    bool logical_table_used() const { return logical_table != -1; }
+    bool is_gw = false;
+
+    // An attached Id for determining a unique name for an Attached Table Name
+    UniqueAttachedId a_id;
+    enum speciality_t { NONE, ATCAM, DLEFT } speciality = NONE;
+
+    bool operator==(const UniqueId &ui) const;
+    bool operator!=(const UniqueId &ui) const { return !(*this == ui); }
+    bool operator<(const UniqueId &ui) const;
+
+    bool equal_table(const UniqueId &ui) const;
+
+    std::string build_name() const;
+
+    UniqueId() {}
+};
+
+std::ostream &operator <<(std::ostream &out, const UniqueId &ui);
 #endif /* EXTENSIONS_BF_P4C_IR_UNIQUE_ID_H_ */

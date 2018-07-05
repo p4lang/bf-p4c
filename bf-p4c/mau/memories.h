@@ -173,17 +173,36 @@ struct Memories {
         safe_vector<std::pair<int, int>>         home_row;
         safe_vector<Way>                         ways;
         Gateway                                  gateway;
-        int                                      per_row = 1;
+
+        /** This is a map of AttachedMemory UniqueIds that are shared with other tables, i.e.
+         *  Action Profiles.  The AttachedMemory though shared, is only allocated on one table
+         *  The key is the id of the table underneath the current table, and the value is the
+         *  id of where the allocation of that table is.
+         *
+         *  In the assembly, the name from associated with the value will point to the correct
+         *  assembly allocated name.
+         *
+         *  The map will only be valid under the associated match portion, i.e the EXACT/TERNARY
+         *  portion of the key
+         */
+        std::map<UniqueId, UniqueId>             unattached_tables;
+        safe_vector<UniqueId>                    dleft_learn;
+        safe_vector<UniqueId>                    dleft_match;
 
         void clear_allocation() {
             row.clear();
             color_mapram.clear();
             home_row.clear();
             gateway.clear();
-            per_row = 1;
         }
 
-        std::map<cstring, cstring>               unattached_tables;
+        void clear() {
+            clear_allocation();
+            unattached_tables.clear();
+            dleft_learn.clear();
+            dleft_match.clear();
+        }
+
         // depth in memory units + mask to use for memory selection per way
         void visit(Memories &mem, std::function<void(cstring &)>) const;
     };
@@ -193,21 +212,27 @@ struct Memories {
         const IR::MAU::Table *table;
         const IXBar::Use *match_ixbar;
         const TableFormat::Use *table_format;
-        std::map<cstring, Memories::Use>* memuse;
+        std::map<UniqueId, Memories::Use>* memuse;
         const LayoutOption *layout_option;
         int provided_entries;
         int calculated_entries;
         int attached_gw_bytes = 0;
+        int stage_table = -1;
         // Linked gw/match table that uses the same result bus
         table_alloc *table_link = nullptr;
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi,
                              const TableFormat::Use *tf,
-                             std::map<cstring, Memories::Use> *mu,
-                             const LayoutOption *lo, const int e)
+                             std::map<UniqueId, Memories::Use> *mu,
+                             const LayoutOption *lo, const int e, const int st)
                 : table(t), match_ixbar(mi), table_format(tf), memuse(mu),
                   layout_option(lo), provided_entries(e),
-                  calculated_entries(0), attached_gw_bytes(0), table_link(nullptr) {}
+                  calculated_entries(0), attached_gw_bytes(0), stage_table(st),
+                  table_link(nullptr) {}
         void link_table(table_alloc *ta) {table_link = ta;}
+
+        UniqueId build_unique_id(const IR::MAU::AttachedMemory *at = nullptr,
+             bool is_gw = false, int logical_table = -1,
+             UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
     };
     friend std::ostream & operator<<(std::ostream &out, const Memories::table_alloc &ta);
 
@@ -219,11 +244,12 @@ struct Memories {
         int placed = 0;   // How many have been allocated so far
         int number = 0;   // Used to keep track of wide action tables and way numbers in exact match
         int hash_group = -1;  // Which hash group the exact match way is using
-        int logical_table = 0;  // For ATCAM tables, which logical table this partition is based
+        int logical_table = -1;  // For ATCAM tables, which logical table this partition is based
         int vpn_increment = 1;
         int vpn_offset = 0;
         bool direct = false;  // Whether the attached table is directly or indirectly addressed
         const IR::MAU::AttachedMemory *attached = nullptr;
+        UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP;
         int recent_home_row = -1;  // For swbox users, most recent row to oflow to
         enum type_t { EXACT, ACTION, STATS, METER, REGISTER, SELECTOR, TIND, IDLETIME, ATCAM,
                       GROUP_TYPES } type;
@@ -354,7 +380,8 @@ struct Memories {
                 return left_to_place();
             }
         }
-        cstring get_name() const;
+        // cstring get_name() const;
+        UniqueId build_unique_id() const;
         bool same_wide_action(const SRAM_group &a);
         int calculate_next_vpn() const {
             return placed * vpn_increment + vpn_offset;
@@ -545,12 +572,13 @@ struct Memories {
  public:
     bool allocate_all();
     void update(cstring table_name, const Use &alloc);
-    void update(const std::map<cstring, Use> &alloc);
+    void update(const std::map<UniqueId, Use> &alloc);
     void remove(cstring table_name, const Use &alloc);
-    void remove(const std::map<cstring, Use> &alloc);
+    void remove(const std::map<UniqueId, Use> &alloc);
     void clear();
     void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
-                   TableResourceAlloc *resources, const LayoutOption *lo, int entries);
+                   TableResourceAlloc *resources, const LayoutOption *lo, int entries,
+                   int stage_table);
     friend std::ostream &operator<<(std::ostream &, const Memories &);
 };
 

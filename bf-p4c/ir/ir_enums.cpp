@@ -1,0 +1,142 @@
+#include "bf-p4c/ir/ir_enums.h"
+
+static const char *data_aggr_to_str[] = {
+    "NONE", "PACKETS", "BYTES", "BOTH"
+};
+
+std::ostream &operator<<(std::ostream &out, const IR::MAU::DataAggregation &d) {
+    out << data_aggr_to_str[static_cast<int>(d)];
+    return out;
+}
+
+bool operator>>(cstring s, IR::MAU::DataAggregation &d) {
+    if (!s || s == "") {
+        d = IR::MAU::DataAggregation::NONE;
+        return true;
+    }
+    for (int i = 0; i < static_cast<int>(IR::MAU::DataAggregation::AGGR_TYPES); i++) {
+        if (data_aggr_to_str[i] == s) {
+            d = static_cast<IR::MAU::DataAggregation>(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+
+static const char *meter_type_to_str[] = {
+    "UNUSED", "STFUL_INST0", "COLOR_BLIND", "STFUL_INST1", "SELECTOR", "STFUL_INST2",
+    "COLOR_AWARE", "STFUL_INSTR3"
+};
+
+std::ostream &operator<<(std::ostream &out, const IR::MAU::MeterType &m) {
+    out << meter_type_to_str[static_cast<int>(m)];
+    return out;
+}
+
+bool operator>>(cstring s, IR::MAU::MeterType &m) {
+    if (!s || s == "") {
+        m = IR::MAU::MeterType::UNUSED;
+        return true;
+    }
+    for (int i = 0; i < static_cast<int>(IR::MAU::MeterType::METER_TYPES); i++) {
+        if (meter_type_to_str[i] == s) {
+            m = static_cast<IR::MAU::MeterType>(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+static const char *stateful_use_to_str[] = {
+    "NO_USE", "DIRECT", "INDIRECT", "LOG", "STACK_PUSH", "STACK_POP", "FIFO_PUSH", "FIFO_POP"
+};
+
+
+std::ostream &operator<<(std::ostream &out, const IR::MAU::StatefulUse &s) {
+    out << stateful_use_to_str[static_cast<int>(s)];
+    return out;
+}
+
+bool operator>>(cstring s, IR::MAU::StatefulUse &u) {
+    if (!s || s == "") {
+        u = IR::MAU::StatefulUse::NO_USE;
+        return true;
+    }
+    for (int i = 0; i < static_cast<int>(IR::MAU::StatefulUse::STFUL_TYPES); i++) {
+        if (stateful_use_to_str[i] == s) {
+            u = static_cast<IR::MAU::StatefulUse>(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+
+static const char *addr_location_to_str[] = {
+    "DIRECT", "OVERHEAD", "HASH", "NOT_SET"
+};
+
+std::ostream &operator<<(std::ostream &out, const IR::MAU::AddrLocation &a) {
+    out << addr_location_to_str[static_cast<int>(a)];
+    return out;
+}
+
+bool operator>>(cstring s, IR::MAU::AddrLocation &a) {
+    if (!s || s == "") {
+        a = IR::MAU::AddrLocation::NOT_SET;
+        return true;
+    }
+    for (int i = 0; i <= static_cast<int>(IR::MAU::AddrLocation::NOT_SET); i++) {
+        if (addr_location_to_str[i] == s) {
+            a = static_cast<IR::MAU::AddrLocation>(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+static const char *pfe_location_to_str[] = {
+    "DEFAULT", "OVERHEAD", "PAYLOAD", "NOT_SET"
+};
+
+std::ostream &operator<<(std::ostream &out, const IR::MAU::PfeLocation &p) {
+    out << pfe_location_to_str[static_cast<int>(p)];
+    return out;
+}
+
+bool operator>>(cstring s, IR::MAU::PfeLocation &p) {
+    if (!s || s == "") {
+        p = IR::MAU::PfeLocation::NOT_SET;
+        return true;
+    }
+    for (int i = 0; i <= static_cast<int>(IR::MAU::PfeLocation::NOT_SET); i++) {
+        if (pfe_location_to_str[i] == s) {
+            p = static_cast<IR::MAU::PfeLocation>(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+static const char *type_location_to_str[] = {
+    "DEFAULT", "OVERHEAD", "NOT_SET"
+};
+
+std::ostream &operator<<(std::ostream &out, const IR::MAU::TypeLocation &t) {
+    out << type_location_to_str[static_cast<int>(t)];
+    return out;
+}
+
+bool operator>>(cstring s, IR::MAU::TypeLocation &t) {
+    if (!s || s == "") {
+        t = IR::MAU::TypeLocation::NOT_SET;
+        return true;
+    }
+    for (int i = 0; i <= static_cast<int>(IR::MAU::TypeLocation::NOT_SET); i++) {
+        if (type_location_to_str[i] == s) {
+            t = static_cast<IR::MAU::TypeLocation>(i); return true;
+        }
+    }
+    return false;
+}

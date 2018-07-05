@@ -163,6 +163,10 @@ struct TablePlacement::Placed {
     cstring                     gw_result_tag;
     const IR::MAU::Table        *table, *gw = 0;
     int                         stage, logical_id;
+    /// Information on which stage table this table is associated with.  If the table is
+    /// never split, then the stage_split should be -1
+    int                         initial_stage_split = -1;
+    int                         stage_split = -1;
     StageUseEstimate            use;
     StageUseEstimate            extra_use;
     const TableResourceAlloc    *resources;
@@ -186,12 +190,6 @@ struct TablePlacement::Placed {
                 return p->group; }
         BUG("Can't find group for %s", tbl->name);
         return nullptr; }
-    void copy(const Placed *p) {
-        name = p->name; entries = p->entries; placed = p->placed;
-        need_more = p->need_more; gw_result_tag = p->gw_result_tag; table = p->table;
-        gw = p->gw; stage = p->stage; logical_id = p->logical_id; use = p->use;
-    }
-
 
     bool gateway_merge(ordered_set<const IR::MAU::Table *> &attempted_tables);
     void set_prev(const Placed *p, bool make_new,
@@ -212,7 +210,6 @@ struct TablePlacement::Placed {
             auto *prev_p = p;
             while (stage != -1) {
                 auto *new_p = new Placed(*prev_p);
-                new_p->traceCreation();
                 new_p->resources = prev_resources[index];
                 index++;
                 curr_p->prev = new_p;
@@ -223,7 +220,8 @@ struct TablePlacement::Placed {
                     stage = -1;
                 }
             }
-            assert(size_t(index) == prev_resources.size());
+            BUG_CHECK(size_t(index) == prev_resources.size(), "Table Placement could not "
+                      "correctly clear a stage");
         }
     }
     friend std::ostream &operator<<(std::ostream &out, const TablePlacement::Placed *pl) {
@@ -234,8 +232,9 @@ struct TablePlacement::Placed {
         : self(p.self), id(uid_counter++), prev(p.prev), group(p.group), name(p.name),
           entries(p.entries), placed(p.placed), need_more(p.need_more),
           gw_result_tag(p.gw_result_tag), table(p.table), gw(p.gw), stage(p.stage),
-          logical_id(p.logical_id), use(p.use), extra_use(p.extra_use),
-          resources(p.resources) { traceCreation(); }
+          logical_id(p.logical_id), initial_stage_split(p.initial_stage_split),
+          stage_split(p.stage_split), use(p.use), extra_use(p.extra_use), resources(p.resources)
+          { traceCreation(); }
 
  private:
     Placed(Placed &&) = delete;
@@ -444,10 +443,11 @@ bool TablePlacement::try_alloc_mem(Placed *next, const Placed *done,
     int i = 0;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
          current_mem.add_table(p->table, p->gw, prev_resources[i], p->use.preferred(),
-                               p->entries);
+                               p->entries, p->stage_split);
          i++;
     }
-    current_mem.add_table(next->table, next->gw, resources, next->use.preferred(), next->entries);
+    current_mem.add_table(next->table, next->gw, resources, next->use.preferred(), next->entries,
+                          next->stage_split);
     resources->memuse.clear();
     for (auto *prev_resource : prev_resources) {
         prev_resource->memuse.clear();
@@ -569,7 +569,7 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
         if ((as = at->attached->to<IR::MAU::Selector>()) != nullptr) break;
     }
     if (as == nullptr) return;
-    auto loc = resource->memuse.find(curr->table->get_use_name(as));
+    auto loc = resource->memuse.find(curr->table->pp_unique_id(as, false, curr->stage_split));
     if (loc == resource->memuse.end() || (loc != resource->memuse.end()
         && !resource->selector_ixbar.use.empty()))
         return;
@@ -662,12 +662,14 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
         }
     }
 
+    int prev_stage_tables = 0;
     for (auto *p = done; p; p = p->prev) {
         if (p->name == rv->name) {
             if (p->need_more == false) {
                 BUG(" - can't place %s as its already done");
                 return false; }
             set_entries -= p->entries;
+            prev_stage_tables++;
             if (p->stage == rv->stage) {
                 LOG2("Cannot place multiple sections of an individual table in the same stage");
                 rv->stage++;
@@ -701,6 +703,12 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
         ::warning("%s: Table %s has not been provided a stage even though forced placement of "
                   "tables is turned on", t->srcInfo, t->name);
     }
+
+    if (prev_stage_tables > 0) {
+        rv->initial_stage_split = prev_stage_tables;
+        rv->stage_split = prev_stage_tables;
+    }
+
     return true;
 }
 
@@ -765,6 +773,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
 
 
     min_placed->stage = rv->stage;
+    min_placed->initial_stage_split = rv->initial_stage_split;
+    min_placed->stage_split = rv->stage_split;
+
     if (done && rv->stage != done->stage)
         stage_current.clear();
 
@@ -775,7 +786,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         bool advance_to_next_stage = false;
         allocated = false;
         rv->use = StageUseEstimate(t, rv->entries, &lc, stage_current.shared_attached);
-        LOG1("Set entries " << set_entries << " " << rv->entries);
         if (t->for_dleft() && set_entries > rv->entries) {
             advance_to_next_stage = true;
             LOG3("Cannot split a dleft hash table");
@@ -838,11 +848,17 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         while (!advance_to_next_stage &&
                (!(rv->use <= avail) ||
                (allocated = try_alloc_mem(rv, done, resources, prev_resources)) == false)) {
-            rv->need_more = true;
             if (!shrink_estimate(rv, done, resources, srams_left, tcams_left,
                                  min_placed->entries)) {
                 advance_to_next_stage = true;
                 break;
+            }
+
+            if (rv->entries < set_entries) {
+                rv->need_more = true;
+                // If the table is split for the first time, then the stage_split is set to 0
+                if (rv->initial_stage_split == -1)
+                    rv->stage_split = 0;
             }
 
             if (!try_alloc_adb(rv, done, resources)) {
@@ -860,10 +876,13 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
 
         if (advance_to_next_stage) {
             rv->stage++;
+            rv->stage_split = rv->initial_stage_split;
             min_placed->stage++;
+            min_placed->stage_split = min_placed->initial_stage_split;
             stage_current.clear();
         }
     } while (!allocated && rv->stage <= furthest_stage);
+
 
     if (!t->gateway_only()) {
         auto format = rv->use.preferred_action_format();
@@ -871,10 +890,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
                   "option.");
         resources->action_format = *format;
     }
-
-    // FIXME: for a particular test case, adding more entries actually filled in the table better
-    if (rv->need_more && rv->entries >= set_entries)
-        rv->need_more = false;
 
     if (rv->stage > furthest_stage) {
         if (error_message != "")
@@ -916,6 +931,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         int extra_entries = set_entries - rv->entries;
         rv->extra_use = StageUseEstimate(t, extra_entries, &lc);
     }
+
     return rv;
 }
 
@@ -1121,6 +1137,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             if (!best || is_better(t, best))
                 best = t;
         placed = place_table(work, best);
+
         if (placed->need_more)
             partly_placed.insert(placed->table);
         else
@@ -1156,7 +1173,7 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
     tbl->resources = resources;
     tbl->layout.entries = entries;
     if (!tbl->ways.empty()) {
-        auto &mem = resources->memuse.at(tbl->name);
+        auto &mem = resources->memuse.at(tbl->unique_id());
         if (!tbl->layout.atcam) {
             assert(tbl->ways.size() == mem.ways.size());
             for (unsigned i = 0; i < tbl->ways.size(); ++i)
@@ -1208,17 +1225,15 @@ static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_
  *  the next stage
  */
 IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed *placed,
-    cstring suffix, IR::MAU::Table **last) {
+    int stage_table, IR::MAU::Table **last) {
     IR::MAU::Table *rv = nullptr;
     IR::MAU::Table *prev = nullptr;
     int logical_tables = placed->use.preferred()->logical_tables();
     for (int lt = 0; lt < logical_tables; lt++) {
-        cstring atcam_suffix = "$atcam" + std::to_string(lt);
         auto *table_part = tbl->clone();
         // Clear gateway_name for the split tables
         if (lt != 0)
             table_part->gateway_name = cstring();
-        table_part->name = table_part->name + atcam_suffix + suffix;
         table_part->logical_id = placed->logical_id + lt;
         table_part->logical_split = lt;
         table_part->logical_tables_in_stage = logical_tables;
@@ -1226,7 +1241,7 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
             tbl->gateway_rows.clear();
         }
         int entries = placed->use.preferred()->partition_sizes[lt] * Memories::SRAM_DEPTH;
-        table_set_resources(table_part, placed->resources->clone_atcam(tbl, lt, suffix),
+        table_set_resources(table_part, placed->resources->clone_rename(tbl, stage_table, lt),
                             entries);  // table_part->ways[0].entries);
         if (!rv) {
             rv = table_part;
@@ -1251,17 +1266,15 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
  *  from the hit miss chaining
  */
 IR::Vector<IR::MAU::Table> *TablePlacement::break_up_dleft(IR::MAU::Table *tbl,
-    const Placed *placed, cstring suffix) {
+    const Placed *placed, int stage_table) {
     auto dleft_vector = new IR::Vector<IR::MAU::Table>();
     int logical_tables = placed->use.preferred()->logical_tables();
 
     for (int lt = 0; lt < logical_tables; lt++) {
-        cstring dleft_suffix = "$dleft" +std::to_string(lt);
         auto *table_part = tbl->clone();
 
         if (lt != 0)
             table_part->gateway_name = cstring();
-        table_part->name = table_part->name + dleft_suffix + suffix;
         table_part->logical_id = placed->logical_id + lt;
         table_part->logical_split = lt;
         table_part->logical_tables_in_stage = logical_tables;
@@ -1277,7 +1290,7 @@ IR::Vector<IR::MAU::Table> *TablePlacement::break_up_dleft(IR::MAU::Table *tbl,
         int per_row = RegisterPerWord(salu);
         int entries = placed->use.preferred()->dleft_hash_sizes[lt] * Memories::SRAM_DEPTH
                       * per_row;
-        table_set_resources(table_part, placed->resources->clone_dleft(tbl, lt, suffix),
+        table_set_resources(table_part, placed->resources->clone_rename(tbl, stage_table, lt),
                             entries);
         if (lt != logical_tables - 1)
             table_part->next.clear();
@@ -1338,10 +1351,13 @@ IR::Vector<IR::MAU::Table> *TablePlacement::break_up_dleft(IR::MAU::Table *tbl,
 
 IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     auto it = table_placed.find(tbl->name);
-    if (it == table_placed.end()) {
-        BUG_CHECK(strchr(tbl->name, '.') || strchr(tbl->name, '$'), "Trying to place "
-                  "a table %s that is already placed", tbl->name);
-        return tbl; }
+    BUG_CHECK(it != table_placed.end(), "Trying to place a table %s that was never placed",
+              tbl->name);
+    if (tbl->is_placed()) {
+        BUG_CHECK(tbl->stage_split >= 0 || tbl->logical_split >= 0,
+                  "Trying to place a table %s that is already placed", tbl->name);
+        return tbl;
+    }
     tbl->logical_id = it->second->logical_id;
     // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information
     // in split tables.  In the future, there should be no gw_layout for split tables
@@ -1419,29 +1435,30 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             table_set_resources(tbl, it->second->resources, it->second->entries);
         return tbl;
     }
-    int counter = 0;
+    int stage_table = 0;
     IR::MAU::Table *rv = 0, *prev = 0;
     IR::MAU::Table *atcam_last = nullptr;
     /* split the table into multiple parts per the placement */
     LOG1("splitting " << tbl->name << " across " << table_placed.count(tbl->name) << " stages");
     for (it = table_placed.find(tbl->name); it->first == tbl->name; it++) {
-        cstring suffix = "." + std::to_string(++counter);
         auto *table_part = tbl->clone();
         // When a gateway is merged against a split table, only the first table created from the
         // split must have the name of the merged gateway
-        if (counter != 1)
+        if (stage_table != 0)
             table_part->gateway_name = cstring();
+        BUG_CHECK(stage_table == it->second->stage_split, "Splitting table %s cannot be resolved",
+                  "for stage table %d", table_part->name, stage_table);
         select_layout_option(table_part, it->second->use.preferred());
         add_attached_tables(table_part, it->second->use.preferred());
         if (gw_layout_used)
             table_part->layout += gw_layout;
         table_part->logical_id = it->second->logical_id;
+        table_part->stage_split = stage_table;
 
         if (table_part->layout.atcam) {
-            table_part = break_up_atcam(table_part, it->second, suffix, &atcam_last);
+            table_part = break_up_atcam(table_part, it->second, stage_table, &atcam_last);
         } else {
-            table_part->name += suffix;
-            table_set_resources(table_part, it->second->resources->clone_rename(suffix, tbl->name),
+            table_set_resources(table_part, it->second->resources->clone_rename(tbl, stage_table),
                                 it->second->entries);
         }
         if (!rv) {
@@ -1460,6 +1477,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             prev->next["$try_next_stage"] = new IR::MAU::TableSeq(table_part);
             prev->next.erase("$miss");
         }
+        stage_table++;
         prev = table_part;
         if (atcam_last)
             prev = atcam_last;
@@ -1480,34 +1498,6 @@ IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
         });
     }
     return seq;
-}
-
-/** For setting up the learn/match sections of a dleft hash table in IR.  Perhaps it doesn't
- *  belong there, but rather in an outside data structure.
- */
-IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
-    auto *tbl = findContext<IR::MAU::Table>();
-    const IR::MAU::StatefulAlu *salu = ba->attached->to<IR::MAU::StatefulAlu>();
-    if (!tbl->for_dleft() || salu == nullptr)
-        return ba;
-
-    visitAgain();
-    auto salu_name = tbl->get_use_name(salu);
-    auto salu_back = salu_name.findlast('$');
-
-    auto orig_name = tbl->name.before(tbl->name.find('$'));
-    for (int i = 0; i < tbl->logical_split; i++) {
-        cstring learn_name = orig_name + "$dleft" + std::to_string(i) + salu_back;
-        ba->learn.push_back(learn_name);
-    }
-
-    for (int i = 0; i < tbl->logical_tables_in_stage; i++) {
-        if (i == tbl->logical_split)
-            continue;
-        cstring match_name = orig_name + "$dleft" + std::to_string(i) + salu_back;
-        ba->match.push_back(match_name);
-    }
-    return ba;
 }
 
 std::multimap<cstring, const TablePlacement::Placed *>::const_iterator

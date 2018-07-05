@@ -33,7 +33,7 @@ class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
     cstring next_in_thread(const IR::MAU::Table *t) const {
         if (auto *n = next(t))
             if (n->gress == t->gress)
-                return n->name;
+                return n->unique_id().build_name();
         return "END"; }
 };
 

@@ -585,7 +585,7 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Instruction *instr)
 
 void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
     const IR::Attached *obj = nullptr;
-    use_t use = IR::MAU::BackendAttached::NO_USE;
+    use_t use = IR::MAU::StatefulUse::NO_USE;
     auto dot = prim->name.find('.');
     auto objType = dot ? prim->name.before(dot) : cstring();
     cstring method = dot ? cstring(dot+1) : prim->name;
@@ -593,35 +593,35 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
         BUG_CHECK(obj, "invalid object");
         if (method == "execute") {
-            use = prim->operands.size() == 1 ? IR::MAU::BackendAttached::DIRECT
-                                             : IR::MAU::BackendAttached::INDIRECT;
+            use = prim->operands.size() == 1 ? IR::MAU::StatefulUse::DIRECT
+                                             : IR::MAU::StatefulUse::INDIRECT;
         } else if (method == "execute_log") {
-            use = IR::MAU::BackendAttached::LOG;
+            use = IR::MAU::StatefulUse::LOG;
         } else if (method == "enqueue") {
-            use = IR::MAU::BackendAttached::FIFO_PUSH;
+            use = IR::MAU::StatefulUse::FIFO_PUSH;
         } else if (method == "dequeue") {
-            use = IR::MAU::BackendAttached::FIFO_POP;
+            use = IR::MAU::StatefulUse::FIFO_POP;
         } else if (method == "push") {
-            use = IR::MAU::BackendAttached::STACK_PUSH;
+            use = IR::MAU::StatefulUse::STACK_PUSH;
         } else if (method == "pop") {
-            use = IR::MAU::BackendAttached::STACK_POP;
+            use = IR::MAU::StatefulUse::STACK_POP;
         } else {
             BUG("Unknown %s method %s in: %s", objType, method, prim); }
     } else if (method == "execute") {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Meter>();
         BUG_CHECK(obj, "invalid object");
-        use = objType.startsWith("Direct") ? IR::MAU::BackendAttached::DIRECT
-                                           : IR::MAU::BackendAttached::INDIRECT;
+        use = objType.startsWith("Direct") ? IR::MAU::StatefulUse::DIRECT
+                                           : IR::MAU::StatefulUse::INDIRECT;
     } else if (method == "count") {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Counter>();
         BUG_CHECK(obj, "invalid object");
-        use = objType.startsWith("Direct") ? IR::MAU::BackendAttached::DIRECT
-                                           : IR::MAU::BackendAttached::INDIRECT;
+        use = objType.startsWith("Direct") ? IR::MAU::StatefulUse::DIRECT
+                                           : IR::MAU::StatefulUse::INDIRECT;
     }
     if (obj) {
         auto *act = findContext<IR::MAU::Action>();
         use_t &prev_use = self.action_use[act][obj];
-        if (prev_use && prev_use != use)
+        if (prev_use != IR::MAU::StatefulUse::NO_USE && prev_use != use)
             error("Inconsistent use of %s in action %s", obj, act);
         prev_use = use;
     }
@@ -721,13 +721,17 @@ const IR::MAU::BackendAttached *
     HashDistKey hdk = std::make_pair(ba->attached, tbl);
     if (auto hd = ::get(self.update_hd, hdk)) {
         ba->hash_dist = hd; }
-    use_t use = IR::MAU::BackendAttached::NO_USE;
+    use_t use = IR::MAU::StatefulUse::NO_USE;
     for (auto act : Values(tbl->actions)) {
-        if (auto use2 = self.action_use[act][ba->attached]) {
-            if (use && use != use2) {
+        auto use2 = self.action_use[act][ba->attached];
+        if (use2 != IR::MAU::StatefulUse::NO_USE) {
+            if (use != IR::MAU::StatefulUse::NO_USE && use != use2) {
                 error("inconsistent use of %s in table %s", ba->attached, tbl);
-                break; }
-            use = use2; } }
+                break;
+            }
+            use = use2;
+        }
+    }
     ba->use = use;
     prune();
     return ba;
@@ -1217,12 +1221,12 @@ bool SetupAttachedAddressing::VerifyAttached::preorder(const IR::MAU::BackendAtt
 void SetupAttachedAddressing::UpdateAttached::simple_attached(IR::MAU::BackendAttached *ba) {
     auto at_mem = ba->attached;
     if (at_mem->direct)
-        ba->addr_location = IR::MAU::BackendAttached::ADDR_DIRECT;
+        ba->addr_location = IR::MAU::AddrLocation::DIRECT;
     else
-        ba->addr_location = IR::MAU::BackendAttached::ADDR_OVERHEAD;
-    ba->pfe_location = IR::MAU::BackendAttached::PFE_DEFAULT;
+        ba->addr_location = IR::MAU::AddrLocation::OVERHEAD;
+    ba->pfe_location = IR::MAU::PfeLocation::DEFAULT;
     if (at_mem->is<IR::MAU::Selector>())
-        ba->type_location = IR::MAU::BackendAttached::TYPE_DEFAULT;
+        ba->type_location = IR::MAU::TypeLocation::DEFAULT;
 }
 
 bool SetupAttachedAddressing::UpdateAttached::preorder(IR::MAU::BackendAttached *ba) {
@@ -1236,20 +1240,20 @@ bool SetupAttachedAddressing::UpdateAttached::preorder(IR::MAU::BackendAttached 
     auto orig_ba = getOriginal()->to<IR::MAU::BackendAttached>();
     auto &aac = self.attached_coord.at(orig_ba);
 
-    IR::MAU::BackendAttached::pfe_location_t pfe_loc = IR::MAU::BackendAttached::PFE_DEFAULT;
-    IR::MAU::BackendAttached::type_location_t type_loc = IR::MAU::BackendAttached::TYPE_DEFAULT;
+    IR::MAU::PfeLocation pfe_loc = IR::MAU::PfeLocation::DEFAULT;
+    IR::MAU::TypeLocation type_loc = IR::MAU::TypeLocation::DEFAULT;
 
     if (!aac.all_per_flow_enabled)
-        pfe_loc = IR::MAU::BackendAttached::PFE_OVERHEAD;
+        pfe_loc = IR::MAU::PfeLocation::OVERHEAD;
     if (!aac.all_same_meter_type)
-        type_loc = IR::MAU::BackendAttached::TYPE_OVERHEAD;
+        type_loc = IR::MAU::TypeLocation::OVERHEAD;
 
     if (at_mem->direct) {
-        ba->addr_location = IR::MAU::BackendAttached::ADDR_DIRECT;
+        ba->addr_location = IR::MAU::AddrLocation::DIRECT;
     } else if (ba->hash_dist != nullptr) {
-        ba->addr_location = IR::MAU::BackendAttached::ADDR_HASH;
+        ba->addr_location = IR::MAU::AddrLocation::HASH;
     } else {
-        ba->addr_location = IR::MAU::BackendAttached::ADDR_OVERHEAD;
+        ba->addr_location = IR::MAU::AddrLocation::OVERHEAD;
     }
 
     ba->pfe_location = pfe_loc;

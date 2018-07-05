@@ -8,91 +8,16 @@ struct TableResourceAlloc;
 #include "bf-p4c/mau/resource.h"
 #end
 
+#emit
+#include "bf-p4c/ir/unique_id.h"
+#end
 #emit_impl
 #include "extensions/bf-p4c/mau/resource.h"
 #end
 
 
 #emit
-namespace IR {
-namespace MAU {
-enum class DataAggregation { NONE, PACKETS, BYTES, BOTH };
-enum class MeterType { UNUSED, STFUL_INST0, COLOR_BLIND, STFUL_INST1, SELECTOR, STFUL_INST2,
-                       COLOR_AWARE, STFUL_INST3 };
-}
-}
-
-inline std::ostream& operator<<(std::ostream &out, IR::MAU::DataAggregation d) {
-    switch (d) {
-        case IR::MAU::DataAggregation::NONE:
-            out << "NONE";
-            break;
-        case IR::MAU::DataAggregation::PACKETS:
-            out << "PACKETS";
-            break;
-        case IR::MAU::DataAggregation::BYTES:
-            out << "BYTES";
-            break;
-        case IR::MAU::DataAggregation::BOTH:
-            out << "BOTH";
-            break;
-        default:
-            BUG("Unhandled case");
-    }
-    return out;
-}
-
-inline bool operator>>(cstring s, IR::MAU::DataAggregation &d) {
-    if (!s || s == "" || s == "NONE") d = IR::MAU::DataAggregation::NONE;
-    else if (s == "PACKETS") d = IR::MAU::DataAggregation::PACKETS;
-    else if (s == "BYTES") d = IR::MAU::DataAggregation::BYTES;
-    else if (s == "BOTH") d = IR::MAU::DataAggregation::BOTH;
-    else return false;
-    return true;
-}
-
-inline std::ostream& operator<<(std::ostream &out, IR::MAU::MeterType m) {
-    switch(m) {
-        case IR::MAU::MeterType::UNUSED:
-            out << "UNUSED";
-            break;
-        case IR::MAU::MeterType::STFUL_INST0:
-            out << "STFUL_INST0";
-            break;
-        case IR::MAU::MeterType::COLOR_BLIND:
-            out << "COLOR_BLIND";
-            break;
-        case IR::MAU::MeterType::STFUL_INST1:
-            out << "STFUL_INST1";
-            break;
-        case IR::MAU::MeterType::SELECTOR:
-            out << "SELECTOR";
-            break;
-        case IR::MAU::MeterType::STFUL_INST2:
-            out << "STFUL_INST2";
-            break;
-        case IR::MAU::MeterType::COLOR_AWARE:
-            out << "COLOR_AWARE";
-            break;
-        case IR::MAU::MeterType::STFUL_INST3:
-            out << "STFUL_INST3";
-            break;
-    }
-    return out;
-}
-
-inline bool operator>>(cstring s, IR::MAU::MeterType &m) {
-    if (!s || s == "" || s == "UNUSED") m = IR::MAU::MeterType::UNUSED;
-    else if (s == "STFUL_INST0") m = IR::MAU::MeterType::STFUL_INST0;
-    else if (s == "COLOR_BLIND") m = IR::MAU::MeterType::COLOR_BLIND;
-    else if (s == "STFUL_INST1") m = IR::MAU::MeterType::STFUL_INST1;
-    else if (s == "SELECTOR") m = IR::MAU::MeterType::SELECTOR;
-    else if (s == "STFUL_INST2") m = IR::MAU::MeterType::STFUL_INST2;
-    else if (s == "COLOR_AWARE") m = IR::MAU::MeterType::COLOR_AWARE;
-    else if (s == "STFUL_INST3") m = IR::MAU::MeterType::STFUL_INST3;
-    else return false;
-    return true;
-}
+#include "bf-p4c/ir/ir_enums.h"
 #end
 
 namespace MAU {
@@ -116,6 +41,7 @@ class Table : BFN::Unit {
      */
     int                                         logical_id = -1;
     // The split within the stage for an atcam/dleft table
+    int                                         stage_split = -1;
     int                                         logical_split = -1;
     int                                         logical_tables_in_stage = -1;
     safe_vector<std::pair<Expression, cstring>> gateway_rows;
@@ -255,12 +181,11 @@ class Table : BFN::Unit {
     int get_random_seed() const;
     bool for_dleft() const;
 
-#emit
-    static constexpr int TIND_NAME = 1;
-    static constexpr int AD_NAME = 2;
-#end
-    cstring get_use_name(const IR::MAU::AttachedMemory *at = nullptr, bool is_gw = false,
-                         int type = 0, int logical_table = -1) const;
+    UniqueId pp_unique_id(const IR::MAU::AttachedMemory *at = nullptr,
+       bool is_gw = false, int stage_table = -1, int logical_table = -1,
+       UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
+
+    UniqueId unique_id(const IR::MAU::AttachedMemory *at = nullptr, bool is_gw = false) const;
 
 #noconstructor
     Table(cstring n, gress_t gr) : name(n), gress(gr) {}
@@ -403,73 +328,20 @@ class Table : BFN::Unit {
 // the match tables are mutually exclusive
 class BackendAttached {
     NullOK HashDist hash_dist = nullptr;
-#emit
-    enum use_t { NO_USE, DIRECT, INDIRECT, LOG, STACK_PUSH, STACK_POP, FIFO_PUSH, FIFO_POP };
-    enum addr_location_t { ADDR_DIRECT, ADDR_OVERHEAD, ADDR_HASH, ADDR_NOT_SET };
-    enum pfe_location_t { PFE_DEFAULT, PFE_OVERHEAD, PFE_PAYLOAD, PFE_NOT_SET };
-    enum type_location_t { TYPE_DEFAULT, TYPE_OVERHEAD, TYPE_NOT_SET };
-#end
-    use_t use = NO_USE;
-    addr_location_t addr_location = ADDR_NOT_SET;
-    pfe_location_t pfe_location = PFE_NOT_SET;
-    type_location_t type_location = TYPE_NOT_SET;
-    safe_vector<cstring>                                learn = {};
-    safe_vector<cstring>                                match = {};
+    StatefulUse use = StatefulUse::NO_USE;
+    AddrLocation addr_location = AddrLocation::NOT_SET;
+    PfeLocation pfe_location = PfeLocation::NOT_SET;
+    TypeLocation type_location = TypeLocation::NOT_SET;
     AttachedMemory attached;
 }
 
-#emit
-inline bool operator>>(cstring s, IR::MAU::BackendAttached::use_t &u) {
-    if (!s || s == "" || s == "NO_USE") u = IR::MAU::BackendAttached::NO_USE;
-    else if (s == "DIRECT") u = IR::MAU::BackendAttached::DIRECT;
-    else if (s == "INDIRECT") u = IR::MAU::BackendAttached::INDIRECT;
-    else if (s == "LOG") u = IR::MAU::BackendAttached::LOG;
-    else if (s == "FIFO_PUSH") u = IR::MAU::BackendAttached::FIFO_PUSH;
-    else if (s == "FIFO_POP") u = IR::MAU::BackendAttached::FIFO_POP;
-    else if (s == "STACK_PUSH") u = IR::MAU::BackendAttached::STACK_PUSH;
-    else if (s == "STACK_POP") u = IR::MAU::BackendAttached::STACK_POP;
-    else return false;
-    return true;
-}
-
-inline bool operator>>(cstring s, IR::MAU::BackendAttached::addr_location_t &a) {
-    if (!s || s == "" || s == "ADDR_NOT_SET") a = IR::MAU::BackendAttached::ADDR_NOT_SET;
-    else if (s == "ADDR_DIRECT") a = IR::MAU::BackendAttached::ADDR_DIRECT;
-    else if (s == "ADDR_OVERHEAD") a = IR::MAU::BackendAttached::ADDR_OVERHEAD;
-    else if (s == "ADDR_HASH") a = IR::MAU::BackendAttached::ADDR_HASH;
-    else return false;
-    return true;
-}
-
-inline bool operator>>(cstring s,  IR::MAU::BackendAttached::pfe_location_t &p) {
-    if (!s || s == "" || s == "PFE_NOT_SET") p = IR::MAU::BackendAttached::PFE_NOT_SET;
-    else if (s == "PFE_DEFAULT") p = IR::MAU::BackendAttached::PFE_DEFAULT;
-    else if (s == "PFE_OVERHEAD") p = IR::MAU::BackendAttached::PFE_OVERHEAD;
-    else if (s == "PFE_PAYLOAD") p = IR::MAU::BackendAttached::PFE_PAYLOAD;
-    else return false;
-    return true;
-}
-
-inline bool operator>>(cstring s, IR::MAU::BackendAttached::type_location_t &t) {
-    if (!s || s == "" || s == "TYPE_NOT_SET") t = IR::MAU::BackendAttached::TYPE_NOT_SET;
-    else if (s == "TYPE_DEFAULT") t = IR::MAU::BackendAttached::TYPE_DEFAULT;
-    else if (s == "TYPE_OVERHEAD") t = IR::MAU::BackendAttached::TYPE_OVERHEAD;
-    else return false;
-    return true;
-}
-#end
-
-
-#emit
-#include "extensions/bf-p4c/ir/unique_id.h"
-#end
 
 abstract AttachedMemory : Attached {
     bool direct = false;
     int size = 0;
     virtual bool indexed() const override { return !direct; }
     virtual UniqueAttachedId::type_t get_id_type() const = 0;
-    UniqueAttachedId unique_id() const { return UniqueAttachedId(name, get_id_type()); }
+    UniqueAttachedId unique_id() const { return UniqueAttachedId(name, direct, get_id_type()); }
 }
 
 /** Any attached table that has a keeps stateful information about flows.

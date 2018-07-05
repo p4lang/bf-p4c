@@ -101,7 +101,7 @@ class StatefulAttachmentSetup : public PassManager {
     ordered_set<const IR::Node *> remove_instr;
     ordered_map<cstring, const IR::MAU::HashDist *> stateful_alu_from_hash_dists;
     ordered_map<HashDistKey, const IR::MAU::HashDist *> update_hd;
-    typedef IR::MAU::BackendAttached::use_t use_t;
+    typedef IR::MAU::StatefulUse use_t;
     ordered_map<const IR::MAU::Action *, ordered_map<const IR::Attached *, use_t>>   action_use;
 
     profile_t init_apply(const IR::Node *root) override {
