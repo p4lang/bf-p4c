@@ -21,6 +21,15 @@ bool LiveRangeOverlay::is_dead_at(const PHV::Field &f, const IR::BFN::Unit *u) c
         const IR::BFN::Unit *use_unit = use.first;
         for (auto def : defuse.getDefs(use)) {
             const IR::BFN::Unit *def_unit = def.first;
+            // If the field is specified as pa_no_init and if it has uninitialized reads, then
+            // ignore the parser unit defs.
+            if (noInitFields.count(&f) && defuse.hasUninitializedRead(f.id)) {
+                if (def_unit->is<IR::BFN::ParserState>()) {
+                    LOG2("Ignoring def of field " << f << " with uninitialized read and def in "
+                         " parser state " << DBPrint::Brief << def_unit);
+                    continue;
+                }
+            }
             // If uw may happen before u and u may happen before ur, then f may
             // be live.
             if (may_happen_before(def_unit, u) && may_happen_before(u, use_unit))
@@ -150,7 +159,8 @@ void LiveRangeOverlay::printLiveRanges(ordered_map<int, ordered_set<const IR::BF
     ordered_map<unsigned, unsigned> minStage;
     ordered_map<unsigned, unsigned> maxStage;
     std::stringstream dashes;
-    auto numStages = 12;
+
+    auto numStages = Device::numStages();
     const unsigned dashWidth = 95 + (numStages + 2) * 3;
     for (unsigned i = 0; i < dashWidth; i++)
         dashes << "-";
@@ -175,9 +185,9 @@ void LiveRangeOverlay::printLiveRanges(ordered_map<int, ordered_set<const IR::BF
             if (const auto *t = dynamic_cast<const IR::MAU::Table *>(u))
                 stages.insert(dg.min_stage(t));
         }
-        minStage[entry.first] = std::accumulate(stages.begin(), stages.end(), 13, [](int a, int b)
-                { return std::min(a, b); });
-        maxStage[entry.first] = std::accumulate(stages.begin(), stages.end(), 0, [](int a, int b)
+        minStage[entry.first] = std::accumulate(stages.begin(), stages.end(), numStages + 1, [](int
+                    a, int b) { return std::min(a, b); });
+        maxStage[entry.first] = std::accumulate(stages.begin(), stages.end(), -1, [](int a, int b)
                 { return std::max(a, b); });
         std::stringstream ss;
         ss << boost::format("%=70s") % f->name << "|" << boost::format("%=9s") % f->gress << "|";

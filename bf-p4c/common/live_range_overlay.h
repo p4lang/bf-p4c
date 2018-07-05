@@ -29,11 +29,12 @@
  */
 class LiveRangeOverlay : public Inspector {
  private:
-    PhvInfo                 &phv;
-    DependencyGraph         &dg;
-    FieldDefUse             &defuse;
-    const PragmaNoOverlay   &noOverlay;
-    SymBitMatrix            &overlay;
+    PhvInfo                                 &phv;
+    DependencyGraph                         &dg;
+    FieldDefUse                             &defuse;
+    const PragmaNoOverlay                   &noOverlay;
+    SymBitMatrix                            &overlay;
+    const ordered_set<const PHV::Field*>    &noInitFields;
 
     ordered_set<const IR::BFN::Unit *> all_ingress_units;
     ordered_set<const IR::BFN::Unit *> all_egress_units;
@@ -115,7 +116,8 @@ class LiveRangeOverlay : public Inspector {
       dg(dg),
       defuse(defuse),
       noOverlay(pragmas.pa_no_overlay()),
-      overlay(phv.field_mutex)
+      overlay(phv.field_mutex),
+      noInitFields(pragmas.pa_no_init().getFields())
     { }
 };
 

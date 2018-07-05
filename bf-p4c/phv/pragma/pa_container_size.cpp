@@ -42,10 +42,8 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
             continue;
 
         // check gress correct
-        if (gress->value != "ingress" && gress->value != "egress") {
-            ::warning("@pragma pa_container_size's first argument "
-                      "must be either ingress/egress, instead of %1%, skipped", gress);
-            continue; }
+        if (!PHV::Pragmas::gressValid("pa_container_size", gress->value))
+            continue;
 
         // check field name
         auto field_name = gress->value + "::" + field_ir->value;

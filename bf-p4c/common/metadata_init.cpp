@@ -504,6 +504,7 @@ class ComputeMetadataInit : public Inspector {
     const FieldDefUse                    &defuse;
     const DependencyGraph                &dg;
     const AfterWriteTables               &after_write_tables;
+    const ordered_set<const PHV::Field*> &pragma_no_init;
 
     std::vector<const PHV::Field*> to_be_inited;
     DataDependencyGraph graph;
@@ -520,6 +521,10 @@ class ComputeMetadataInit : public Inspector {
             if (f.read_container_valid_bit()) continue;
             if (f.deparsed_to_tm()) continue;
             if (f.bridged) continue;
+            if (pragma_no_init.count(&f)) {
+                LOG1("\tIgnoring metadata initialization because of pa_no_init: " << f);
+                continue;
+            }
             if (!defuse.hasUninitializedRead(f.id)) continue;
 
             auto& defs = defuse.getAllDefs(f.id);
@@ -582,9 +587,10 @@ class ComputeMetadataInit : public Inspector {
                         const PhvInfo& phv,
                         const FieldDefUse& defuse,
                         const DependencyGraph& dg,
-                        const AfterWriteTables& after_write)
+                        const AfterWriteTables& after_write,
+                        const ordered_set<const PHV::Field*>& pragma)
         : mutex(mutex), shared(shared), phv(phv),
-          defuse(defuse), dg(dg), after_write_tables(after_write) { }
+          defuse(defuse), dg(dg), after_write_tables(after_write), pragma_no_init(pragma) { }
 
     std::map<const IR::MAU::Table*, std::vector<const PHV::Field*>> init_summay;
 
@@ -673,7 +679,7 @@ class ApplyAlwaysInit : public MauTransform {
             auto* prim = phv_to_expr.generateInitInstruction(&f);
             action->action.push_back(prim);
         }
-        LOG1("Adding init table to the begging");
+        LOG1("Adding init table to the beginning");
         LOG1(table);
         return table_seq;
     }
@@ -804,8 +810,10 @@ MetadataInitialization::MetadataInitialization(bool always_init_metadata, const 
     auto* shared_tables = new SharedIndirectAttachedAnalysis(*mutex);
     auto* field_to_expr = new MapFieldToExpr(phv);
     auto* after_write = new AfterWriteTables(phv, *shared_tables);
+    auto* pragma_no_init = new PragmaNoInit(phv);
     auto* gen_init_plans = new ComputeMetadataInit(*mutex, *shared_tables,
-                                                   phv, defuse, dg, *after_write);
+                                                   phv, defuse, dg, *after_write,
+                                                   pragma_no_init->getFields());
     auto* apply_init_insert =
         new ApplyMetadataInitialization(*gen_init_plans, *field_to_expr, *after_write);
     addPasses({
@@ -814,6 +822,7 @@ MetadataInitialization::MetadataInitialization(bool always_init_metadata, const 
         field_to_expr,
         after_write,
         // new TableGraphGen(dg, init_alloc->getDataDepGraph()),
+        pragma_no_init,
         gen_init_plans,
         apply_init_insert,
         always_init_metadata ? new ApplyAlwaysInit(phv, defuse, *field_to_expr) : nullptr,

@@ -27,15 +27,13 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
         auto field1_ir = exprs[1]->to<IR::StringLiteral>();
         auto field2_ir = exprs[2]->to<IR::StringLiteral>();
 
-        // check gress correct
         if (!check_pragma_string(gress) || !check_pragma_string(field1_ir)
             || !check_pragma_string(field2_ir))
             continue;
 
-        if (gress->value != "ingress" && gress->value != "egress") {
-            ::warning("@pragma pa_mutually_exclusive's first argument "
-                      "must be either ingress/egress, instead of %1%, skipped", gress);
-            continue; }
+        // check gress correct
+        if (!PHV::Pragmas::gressValid("pa_mutually_exclusive", gress->value))
+            continue;
 
         auto field1_name = gress->value + "::" + field1_ir->value;
         auto field2_name = gress->value + "::" + field2_ir->value;

@@ -19,6 +19,7 @@
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/pragma/pa_no_init.h"
 #include "lib/stringref.h"
 
 namespace {
@@ -2261,6 +2262,9 @@ class ComputeInitZeroContainers : public ParserModifier {
             if (f.gress != parser->gress) continue;
 
             if (defuse.hasUninitializedRead(f.id)) {
+                // If pa_no_init specified, then the field does not have to rely on parser zero
+                // initialization.
+                if (no_init_fields.count(&f)) continue;
                 f.foreach_alloc([&] (const PHV::Field::alloc_slice& alloc) {
                     zero_init_containers.insert(alloc.container);
                 }); }
@@ -2271,11 +2275,15 @@ class ComputeInitZeroContainers : public ParserModifier {
     }
 
  public:
-    ComputeInitZeroContainers(const PhvInfo& phv, const FieldDefUse& defuse)
-        : phv(phv), defuse(defuse) { }
+    ComputeInitZeroContainers(
+            const PhvInfo& phv,
+            const FieldDefUse& defuse,
+            const ordered_set<const PHV::Field*>& f)
+        : phv(phv), defuse(defuse), no_init_fields(f) { }
 
     const PhvInfo& phv;
     const FieldDefUse& defuse;
+    const ordered_set<const PHV::Field*>& no_init_fields;
 };
 
 /// Compute the number of bytes which must be available for each parser match to
@@ -2367,14 +2375,16 @@ class ComputeDeparserChecksumPhvSwap : public PassManager {
 }  // namespace
 
 LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse) {
+    auto* pragma_no_init = new PragmaNoInit(phv);
     addPasses({
+        pragma_no_init,
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
         new SplitBigStates,
 #if HAVE_JBAY
         Device::currentDevice() == "JBay" ? new ComputeDeparserChecksumPhvSwap : nullptr,
 #endif  // HAVE_JBAY
-        new ComputeInitZeroContainers(phv, defuse),
+        new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields()),
         new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.
         new ComputeBufferRequirements,
     });

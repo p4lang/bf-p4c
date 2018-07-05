@@ -63,10 +63,8 @@ bool PragmaAtomic::preorder(const IR::BFN::Pipe* pipe) {
             continue;
 
         // check gress correct
-        if (gress->value != "ingress" && gress->value != "egress") {
-            ::warning("@pragma pa_atomic's first argument "
-                      "must be either ingress/egress, instead of %1%, skipped", gress);
-            continue; }
+        if (!PHV::Pragmas::gressValid("pa_atomic", gress->value))
+            continue;
 
         auto field_name = gress->value + "::" + field_ir->value;
         add_constraint(field_name);

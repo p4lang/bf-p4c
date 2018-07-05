@@ -10,7 +10,8 @@ CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
     PHV::pragma::CONTAINER_TYPE,
     PHV::pragma::MUTUALLY_EXCLUSIVE,
     PHV::pragma::NO_OVERLAY,
-    PHV::pragma::SOLITARY
+    PHV::pragma::SOLITARY,
+    PHV::pragma::NO_INIT
 };
 
 bool CollectGlobalPragma::preorder(const IR::Annotation *annotation) {
