@@ -101,10 +101,10 @@ bfn_set_ptf_test_spec("jbay" "smoketest_switch_msdc_set_7"
         switch_acl.MirrorAclTest_e2e
         switch_acl.MirrorAclTest_i2e
         switch_acl.MirrorSessionTest")
-p4c_add_ptf_test_with_ptfdir ("jbay" "smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest" ${SWITCH_P4}
-          "${testExtraArgs} -DMSDC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("jbay" "smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest"
-	  "switch_acl.Acl_i2e_ErspanRewriteTest")
+#p4c_add_ptf_test_with_ptfdir ("jbay" "smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest" ${SWITCH_P4}
+#          "${testExtraArgs} -DMSDC_PROFILE -pd" "${SWITCH_PTF_DIR}")
+#bfn_set_ptf_test_spec("jbay" "smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest"
+#	  "switch_acl.Acl_i2e_ErspanRewriteTest")
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("jbay/smoketest_switch_msdc" PROPERTIES TIMEOUT 12000)
 set_tests_properties("jbay/smoketest_switch_msdc_set_1" PROPERTIES TIMEOUT 12000)

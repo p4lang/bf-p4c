@@ -157,6 +157,7 @@ class ExcludeDeparsedIntrinsicMetadata : public Inspector {
     profile_t init_apply(const IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         phv.field_mutex.clear();
+        neverOverlay.clear();
         return rv;
     }
 

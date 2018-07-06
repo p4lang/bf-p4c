@@ -256,8 +256,7 @@ p4c_add_xfail_reason("jbay"
 )
 
 p4c_add_xfail_reason("jbay"
-  "PHV allocation was not successful"
-  switch_msdc
+  "fatal error:.*switchapi/switch_handle.h:.*No such file or directory"
   smoketest_switch_msdc
   smoketest_switch_msdc_set_1
   smoketest_switch_msdc_set_2
@@ -266,7 +265,6 @@ p4c_add_xfail_reason("jbay"
   smoketest_switch_msdc_set_5
   smoketest_switch_msdc_set_6
   smoketest_switch_msdc_set_7
-  smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest
 )
 
 # truncate is not supported in jna
