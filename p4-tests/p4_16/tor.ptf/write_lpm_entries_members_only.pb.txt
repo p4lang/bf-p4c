@@ -46,6 +46,7 @@ updates {
           }
         }
       }
+      priority: 1
     }
   }
 }
@@ -92,6 +93,7 @@ updates {
           }
         }
       }
+      priority: 1
     }
   }
 }

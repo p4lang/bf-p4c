@@ -321,6 +321,9 @@ class P4RuntimeTest(BaseTest):
             mf.field_id = mf_id
             mf.exact.value = self.v
 
+        def is_ternary(self):
+            return False
+
     class Lpm(MF):
         def __init__(self, name, v, pLen):
             super(P4RuntimeTest.Lpm, self).__init__(name)
@@ -351,6 +354,9 @@ class P4RuntimeTest(BaseTest):
             for i in range(first_byte_masked + 1, len(self.v)):
                 mf.lpm.value += '\x00'
 
+        def is_ternary(self):
+            return False
+
     class Ternary(MF):
         def __init__(self, name, v, mask):
             super(P4RuntimeTest.Ternary, self).__init__(name)
@@ -371,6 +377,9 @@ class P4RuntimeTest(BaseTest):
             # case of Ternary, "don't-care" bits in the value must be set to 0
             for i in xrange(len(self.mask)):
                 mf.ternary.value += chr(ord(self.v[i]) & ord(self.mask[i]))
+
+        def is_ternary(self):
+            return True
 
     class Range(MF):
         def __init__(self, name, low, high):
@@ -393,12 +402,20 @@ class P4RuntimeTest(BaseTest):
             mf.range.low = self.low
             mf.range.high = self.high
 
+        def is_ternary(self):
+            return True
+
     # Sets the match key for a p4::TableEntry object. mk needs to be an iterable
     # object of MF instances
-    def set_match_key(self, table_entry, t_name, mk):
+    def set_match_key(self, table_entry, t_name, mk, priority=None):
         for mf in mk:
+            if priority is None and mf.is_ternary():
+                priority = 1
             mf_id = self.get_mf_id(t_name, mf.name)
             mf.add_to(mf_id, table_entry.match)
+        if priority is None:
+            priority = 0
+        table_entry.priority = priority
 
     def set_action(self, action, a_name, params):
         action.action_id = self.get_action_id(a_name)
@@ -503,55 +520,62 @@ class P4RuntimeTest(BaseTest):
     # list used for autocleanup, by passing store=False to write_request calls.
     #
 
-    def push_update_add_entry_to_action(self, req, t_name, mk, a_name, params):
+    def push_update_add_entry_to_action(self, req, t_name, mk, a_name, params,
+                                        priority=None):
         update = req.updates.add()
         update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
         if mk is not None:
-            self.set_match_key(table_entry, t_name, mk)
+            self.set_match_key(table_entry, t_name, mk, priority)
         else:
             table_entry.is_default_action = True
         self.set_action_entry(table_entry, a_name, params)
 
-    def send_request_add_entry_to_action(self, t_name, mk, a_name, params):
+    def send_request_add_entry_to_action(self, t_name, mk, a_name, params,
+                                         priority=None):
         req = p4runtime_pb2.WriteRequest()
         req.device_id = self.device_id
-        self.push_update_add_entry_to_action(req, t_name, mk, a_name, params)
+        self.push_update_add_entry_to_action(
+            req, t_name, mk, a_name, params, priority)
         return req, self.write_request(req, store=(mk is not None))
 
-    def push_update_add_entry_to_member(self, req, t_name, mk, mbr_id):
+    def push_update_add_entry_to_member(self, req, t_name, mk, mbr_id,
+                                        priority=None):
         update = req.updates.add()
         update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
         if mk is not None:
-            self.set_match_key(table_entry, t_name, mk)
+            self.set_match_key(table_entry, t_name, mk, priority)
         else:
             table_entry.is_default_action = True
         table_entry.action.action_profile_member_id = mbr_id
 
-    def send_request_add_entry_to_member(self, t_name, mk, mbr_id):
+    def send_request_add_entry_to_member(self, t_name, mk, mbr_id,
+                                         priority=None):
         req = p4runtime_pb2.WriteRequest()
         req.device_id = self.device_id
-        self.push_update_add_entry_to_member(req, t_name, mk, mbr_id)
+        self.push_update_add_entry_to_member(req, t_name, mk, mbr_id, priority)
         return req, self.write_request(req, store=(mk is not None))
 
-    def push_update_add_entry_to_group(self, req, t_name, mk, grp_id):
+    def push_update_add_entry_to_group(self, req, t_name, mk, grp_id,
+                                       priority=None):
         update = req.updates.add()
         update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
         if mk is not None:
-            self.set_match_key(table_entry, t_name, mk)
+            self.set_match_key(table_entry, t_name, mk, priority)
         else:
             table_entry.is_default_action = True
         table_entry.action.action_profile_group_id = grp_id
 
-    def send_request_add_entry_to_group(self, t_name, mk, grp_id):
+    def send_request_add_entry_to_group(self, t_name, mk, grp_id,
+                                        priority=None):
         req = p4runtime_pb2.WriteRequest()
         req.device_id = self.device_id
-        self.push_update_add_entry_to_group(req, t_name, mk, grp_id)
+        self.push_update_add_entry_to_group(req, t_name, mk, grp_id, priority)
         return req, self.write_request(req, store=(mk is not None))
 
     # iterates over all requests in reverse order; if they are INSERT updates,
