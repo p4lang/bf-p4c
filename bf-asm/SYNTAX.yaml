@@ -643,7 +643,7 @@ deparser <thread>:
             pov: <bit-location>
             length: <int>
                 # maximum length of the clot
-            <int>: <phv_location> | checksum <int> 
+            <int>: <phv_location> | checksum <int>
                 # offset in clot to replace with a PHV or checksum value
     pov: <phv-location> | '[' <phv-location>, ... ']'
         # optional explicit use/ordering of phvs for POV.  All phvs used for POV bits
@@ -673,7 +673,7 @@ deparser <thread>:
     drop_ctl: <phv-location> [ ':' <pov-bit> ]
     # jbay only, ingress or egress
     afc: '{' <phv->location> ':' <pov-bit> '}'
-    mirr_c2c_ctrl: '{' <phv->location> ':' <pov-bit> '}'
+    mirr_egress_port: '{' <phv->location> ':' <pov-bit> '}'
     mirr_c2c_ctrl: '{' <phv->location> ':' <pov-bit> '}'
     mirr_coal_smpl_len: '{' <phv->location> ':' <pov-bit> '}'
     mirr_dond_ctrl: '{' <phv->location> ':' <pov-bit> '}'

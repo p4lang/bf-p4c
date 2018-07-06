@@ -150,6 +150,16 @@ class LoadTargetArchitecture : public Inspector {
                 EGRESS,
                 MetadataField{"standard_metadata", "egress_rid", 16},
                 MetadataField{"eg_intr_md", "egress_rid", 16});
+#ifdef HAVE_JBAY
+        structure->addMetadata(
+                INGRESS,
+                MetadataField{"ig_intr_md_for_mb", "mirror_io_select", 1},
+                MetadataField{"ig_intr_md_for_dprsr", "mirror_io_select", 1});
+        structure->addMetadata(
+                EGRESS,
+                MetadataField{"eg_intr_md_for_mb", "mirror_io_select", 1},
+                MetadataField{"eg_intr_md_for_dprsr", "mirror_io_select", 1});
+#endif
     }
 
     void analyzeTofinoModel() {
@@ -808,10 +818,6 @@ class ConstructSymbolTable : public Inspector {
     std::map<cstring, unsigned>  digestIndex;
 
     std::set<cstring> globals;
-#if HAVE_JBAY
-    static constexpr int JBAY_MIRR_IO_SEL_INCOMING = 0;
-    static constexpr int JBAY_MIRR_IO_SEL_OUTGOING = 1;
-#endif
 
  public:
     ConstructSymbolTable(ProgramStructure *structure,
@@ -1016,14 +1022,6 @@ class ConstructSymbolTable : public Inspector {
             auto *castedMirrorIdValue = new IR::Cast(IR::Type::Bits::get(10), mirrorIdValue);
             block->components.push_back(new IR::AssignmentStatement(mirrorId,
                                                                     castedMirrorIdValue));
-#if HAVE_JBAY
-            if (Device::currentDevice() == "JBay") {
-                auto selSource = isIngress ? JBAY_MIRR_IO_SEL_INCOMING : JBAY_MIRR_IO_SEL_OUTGOING;
-                auto selMeta = new IR::Member(deparserMetadataPath, "mirr_io_sel");
-                auto selVal = new IR::Constant(IR::Type::Bits::get(1), selSource);
-                block->components.push_back(new IR::AssignmentStatement(selMeta, selVal));
-            }
-#endif
             structure->_map.emplace(node, block);
         }
 

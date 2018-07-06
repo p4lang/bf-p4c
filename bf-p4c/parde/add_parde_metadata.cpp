@@ -137,8 +137,16 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
     addDeparserParam(d, dpMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
 #if HAVE_JBAY
-    if (Device::currentDevice() == "JBay")
-        addDeparserParam(d, dpMeta, "mirr_io_sel", "mirr_io_sel", true);
+    if (Device::currentDevice() == "JBay") {
+        addDeparserParam(d, dpMeta, "mirror_hash", "mirr_hash", true);
+        addDeparserParam(d, dpMeta, "mirror_io_select", "mirr_io_sel", true);
+        addDeparserParam(d, dpMeta, "mirror_egress_port", "mirr_egress_port", true);
+        addDeparserParam(d, dpMeta, "mirror_qid", "mirr_qid", true);
+        addDeparserParam(d, dpMeta, "mirror_deflect_on_drop", "mirr_dond_ctrl", true);
+        addDeparserParam(d, dpMeta, "mirror_ingress_cos", "mirr_icos", true);
+        addDeparserParam(d, dpMeta, "mirror_multicast_ctrl", "mirr_mc_ctrl", true);
+        addDeparserParam(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl", true);
+    }
 #endif
 }
 
@@ -152,8 +160,16 @@ void AddDeparserMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
     auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser");
     addDeparserParam(d, dpMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
 #if HAVE_JBAY
-    if (Device::currentDevice() == "JBay")
-        addDeparserParam(d, dpMeta, "mirr_io_sel", "mirr_io_sel", true);
+    if (Device::currentDevice() == "JBay") {
+        addDeparserParam(d, dpMeta, "mirror_hash", "mirr_hash", true);
+        addDeparserParam(d, dpMeta, "mirror_io_select", "mirr_io_sel", true);
+        addDeparserParam(d, dpMeta, "mirror_egress_port", "mirr_egress_port", true);
+        addDeparserParam(d, dpMeta, "mirror_qid", "mirr_qid", true);
+        addDeparserParam(d, dpMeta, "mirror_deflect_on_drop", "mirr_dond_ctrl", true);
+        addDeparserParam(d, dpMeta, "mirror_ingress_cos", "mirr_icos", true);
+        addDeparserParam(d, dpMeta, "mirror_multicast_ctrl", "mirr_mc_ctrl", true);
+        addDeparserParam(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl", true);
+    }
 #endif
     /* egress_port is how the egress deparser knows where to push
      * the reassembled header and is absolutely necessary

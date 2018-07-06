@@ -195,8 +195,23 @@ struct ingress_intrinsic_metadata_for_deparser_t {
 
     bit<4> mirror_type;                 // The user-selected mirror field list
                                         // index.
-    
-    bit<1> mirr_io_sel;                 // Mirror incoming or outgoing packet
+
+    bit<1> mirror_io_select;            // Mirror incoming or outgoing packet
+
+    // Setting the following metadata will override the value in mirror table
+    bit<13> mirror_hash;                // Mirror hash field.
+    bit<3> mirror_ingress_cos;          // Mirror ingress cos for PG mapping.
+    bool mirror_deflect_on_drop;        // Mirror enable deflection on drop if true.
+    bool mirror_copy_to_cpu_ctrl;       // Mirror enable copy-to-cpu if true.
+    bool mirror_multicast_ctrl;         // Mirror enable multicast if true.
+    bit<9> mirror_egress_port;          // Mirror packet egress port.
+    bit<7> mirror_qid;                  // Mirror packet qid.
+    bit<8> mirror_coalesce_length;      // Mirror coalesced packet max sample
+                                        // length. Unit is quad bytes.
+    // TODO:
+    // afc
+    // mtu_trunc_len;
+    // mtu_trunc_err_f
 }
 
 // -----------------------------------------------------------------------------
@@ -293,7 +308,22 @@ struct egress_intrinsic_metadata_for_deparser_t {
                                         // packet to collect in the mirror
                                         // buffer
 
-    bit<1> mirr_io_sel;                 // Mirror incoming or outgoing packet
+    bit<1> mirror_io_select;            // Mirror incoming or outgoing packet
+
+    // Setting the following metadata will override the value in mirror table
+    bit<13> mirror_hash;                // Mirror hash field.
+    bit<3> mirror_ingress_cos;          // Mirror ingress cos for PG mapping.
+    bool mirror_deflect_on_drop;        // Mirror enable deflection on drop if true.
+    bool mirror_copy_to_cpu_ctrl;       // Mirror enable copy-to-cpu if true.
+    bool mirror_multicast_ctrl;         // Mirror enable multicast if true.
+    bit<9> mirror_egress_port;          // Mirror packet egress port.
+    bit<7> mirror_qid;                  // Mirror packet qid.
+    bit<8> mirror_coalesce_length;      // Mirror coalesced packet max sample
+                                        // length. Unit is quad bytes.
+    // TODO:
+    // afc
+    // mtu_trunc_len;
+    // mtu_trunc_err_f
 }
 
 @__intrinsic_metadata

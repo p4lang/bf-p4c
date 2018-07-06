@@ -499,6 +499,13 @@ set (p4_14include_HEADERS
   p4_14include/tofino/wred_blackbox.p4
   )
 
+if (ENABLE_JBAY)
+set (p4_14include_HEADERS
+  ${p4_14include_HEADERS}
+  p4_14include/jbay/intrinsic_metadata.p4
+  )
+endif (ENABLE_JBAY)
+
 set (BF_P4C_SOURCES
   ${BF_P4C_BACKEND_COMMON_SRCS}
   ${BF_P4C_BACKEND_CONTROL_PLANE_SRCS}
@@ -549,8 +556,8 @@ set (DRIVER_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg
   )
 if (ENABLE_JBAY)
-  set (DRIVER_FILES ${DRIVER_FILES}
-    ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.jbay.cfg)
+set (DRIVER_FILES ${DRIVER_FILES}
+  ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.jbay.cfg)
 endif (ENABLE_JBAY)
 
 install (FILES ${DRIVER_FILES} ${P4C_DRIVER_MACROS}
@@ -565,6 +572,7 @@ add_custom_target(linkp4cbarefoot
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4include/tofino
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/tofino
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/jbay
   COMMAND for h in ${p4include_HEADERS} ${p4_14include_HEADERS} \; do
      ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${P4C_BINARY_DIR}/\$$h \;
   done
