@@ -18,16 +18,18 @@ sed -i -e "/os.environ\['P4C_14_INCLUDE_PATH/a os.environ['P4C_DEFAULT_TARGET'] 
 make -j $parallel_make package
 
 # verify that the package has no JBay references
+set +e
 pushd _CPack_Packages/Linux/DEB/p4c-compilers-*
 p4c_bin=$(find . -name p4c-barefoot)
+echo $p4c_bin
 jbay_refs=$(strings $p4c_bin | c++filt | grep -i jbay)
-if [ $? == 0 ] ; then
+if [[ -n $jbay_refs ]] ; then
     echo "Need to remove all JBay references from bf-p4c sources"
     echo $jbay_refs
     exit 1
 fi
 jbay_other=$(grep -ri jbay *)
-if [ $? == 0 ] ; then
+if [[ -n $jbay_other ]] ; then
     echo "Please remove all JBay references from:"
     echo "$jbay_other"
     exit 1
