@@ -8,7 +8,6 @@ template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs,
         &mp[0].next_table_map_data2, &mp[0].next_table_map_data3, &mp[1].next_table_map_data0,
         &mp[1].next_table_map_data1, &mp[1].next_table_map_data2, &mp[1].next_table_map_data3 };
     int next_bits = 0;
-    int action_bits = 0;
     std::map<std::string, unsigned> next_table_encodings;
     if (auto nf = tbl->get_format()) {
         if (auto next_field = nf->field("next")) {

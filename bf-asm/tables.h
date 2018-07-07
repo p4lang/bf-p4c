@@ -797,6 +797,7 @@ protected:
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                   const Table::Format::Field &field,
                                   const Table::Actions::Action *act) override;
+    Actions *get_actions() override { return actions ? actions : (action ? action->actions : nullptr); }
 public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") override;
     void setup_word_ixbar_group();
@@ -827,7 +828,6 @@ public:
             if (way.group == grp) return true;
         return false; }
     void add_hash_functions(json::map &stage_tbl) override;
-    Actions *get_actions() override { return actions ? actions : (action ? action->actions : nullptr); }
 )
 
 DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
