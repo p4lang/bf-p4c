@@ -367,13 +367,13 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
             if (&logical_row == home) {
                 auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
                 auto &data_ctl = regs.rams.array.row[row].vh_xbar[side].stateful_meter_alu_data_ctl;
-                //setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus],
-                //             selection_hash);
                 if (input_xbar) {
                     auto hashdata_bytemask = bitmask2bytemask(input_xbar->hash_group_bituse());
                     if (hashdata_bytemask != 0U) {
                         vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
                         hashdata_bytemask;
+                        setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + side],
+                                     input_xbar->hash_group());
                     } else {
                         data_ctl.stateful_meter_alu_data_bytemask = phv_byte_mask;
                         data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | input_xbar->match_group();

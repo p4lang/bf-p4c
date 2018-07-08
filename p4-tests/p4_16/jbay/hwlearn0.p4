@@ -61,10 +61,10 @@ control ingress(inout headers hdr, inout metadata meta,
     RegisterAction<pair, bit<32>>(learn_cache) learn_act = {
         void apply(inout pair value, out bit<32> cid, out bit<32> pred) {
             if (value.first & -31 == meta.digest) {
-                value.first = value.first | 30;
+                value.first = meta.digest | 31;
                 cid = this.address();
             } else if (value.second & -31 == meta.digest) {
-                value.second = value.second | 30;
+                value.second = meta.digest | 31;
                 cid = this.address();
             } else if (value.first & 1 == 0) {
                 value.first = meta.digest | 31;
