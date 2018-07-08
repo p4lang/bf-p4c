@@ -205,11 +205,9 @@ p4c_add_xfail_reason("jbay"
   "AssertionError: Expected packet was not received on device .*, port .*"
   extensions/p4_tests/p4_16/ingress_checksum.p4
   extensions/p4_tests/p4_16/ONLab_packetio.p4
-  extensions/p4_tests/p4_14/easy.p4
   extensions/p4_tests/p4_14/easy_no_match.p4
   fabric.p4
   tor.p4
-  extensions/p4_tests/p4_16/large_action_data_constant.p4
   )
 
 endif() # PTF_REQUIREMENTS_MET
