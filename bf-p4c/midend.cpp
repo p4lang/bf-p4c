@@ -13,11 +13,13 @@
 #include "frontends/p4/unusedDeclarations.h"
 #include "midend/actionSynthesis.h"
 #include "midend/compileTimeOps.h"
+#include "midend/complexComparison.h"
 #include "midend/convertEnums.h"
 #include "midend/copyStructures.h"
 #include "midend/eliminateTuples.h"
 #include "midend/eliminateNewtype.h"
 #include "midend/eliminateSerEnums.h"
+#include "midend/expandEmit.h"
 #include "midend/expandLookahead.h"
 #include "midend/local_copyprop.h"
 #include "midend/nestedStructs.h"
@@ -182,19 +184,20 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::OrderArguments(&refMap, &typeMap),
         new BFN::ArchTranslation(&refMap, &typeMap, options),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
-        new P4::SimplifyKey(&refMap, &typeMap,
-                            new P4::OrPolicy(new P4::OrPolicy(
-                                new P4::IsValid(&refMap, &typeMap),
-                                new P4::IsMask()),
-                                new BFN::IsPhase0())),
+        new P4::SimplifyKey(
+            &refMap, &typeMap,
+            new P4::OrPolicy(new P4::OrPolicy(new P4::IsValid(&refMap, &typeMap), new P4::IsMask()),
+                             new BFN::IsPhase0())),
         new P4::RemoveExits(&refMap, &typeMap),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
         new P4::SimplifySelectCases(&refMap, &typeMap, true),  // constant keysets
         new P4::ExpandLookahead(&refMap, &typeMap),
+        new P4::ExpandEmit(&refMap, &typeMap),
         new P4::SimplifyParsers(&refMap),
         new P4::StrengthReduction(),
         new P4::EliminateTuples(&refMap, &typeMap),
+        new P4::SimplifyComparisons(&refMap, &typeMap),
         new InlineSubparserParameter(&refMap),  // run before CopyStructures
         new P4::CopyStructures(&refMap, &typeMap),
         new P4::NestedStructs(&refMap, &typeMap),
@@ -208,15 +211,18 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
         new P4::MoveDeclarations(),
-        (options.arch == "psa") ?
-            new P4::ValidateTableProperties({"implementation", "size", "psa_direct_counters",
-                                             "psa_direct_meters", "idle_timeout"}) : nullptr,
-        (options.arch == "v1model") ?
-            new P4::ValidateTableProperties({"implementation", "size", "counters",
-                                             "meters", "idle_timeout"}) : nullptr,
-        (options.arch == "tna") ?
-            new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
-                                             "filters", "idle_timeout"}) : nullptr,
+        (options.arch == "psa")
+            ? new P4::ValidateTableProperties({"implementation", "size", "psa_direct_counters",
+                                               "psa_direct_meters", "idle_timeout"})
+            : nullptr,
+        (options.arch == "v1model")
+            ? new P4::ValidateTableProperties(
+                  {"implementation", "size", "counters", "meters", "idle_timeout"})
+            : nullptr,
+        (options.arch == "tna")
+            ? new P4::ValidateTableProperties(
+                  {"implementation", "size", "counters", "meters", "filters", "idle_timeout"})
+            : nullptr,
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::CompileTimeOperations(),
         new P4::TableHit(&refMap, &typeMap),

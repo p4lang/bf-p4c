@@ -427,7 +427,6 @@ p4c_add_xfail_reason("tofino"
   "error: : conditional assignment not supported"
   extensions/p4_tests/p4_14/p4-tests/programs/entry_read_from_hw/entry_read_from_hw.p4
   extensions/p4_tests/p4_14/test_config_219_modify_field_conditionally.p4
-  testdata/p4_16_samples/issue232-bmv2.p4
   testdata/p4_16_samples/issue420.p4
   testdata/p4_16_samples/issue512.p4
   extensions/p4_tests/p4_14/p4-tests/programs/mod_field_conditionally/mod_field_conditionally.p4
@@ -660,7 +659,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "visitor returned non-Statement type"
+  "Conditional emit b.emit not supported"
   testdata/p4_16_samples/issue887.p4
 )
 

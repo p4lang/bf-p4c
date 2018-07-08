@@ -19,7 +19,6 @@ struct TableResourceAlloc;
 #include "extensions/bf-p4c/mau/resource.h"
 #end
 
-
 namespace MAU {
 
 /** A Tofino logical table (group) -- a gateway and/or match table
