@@ -1,6 +1,7 @@
 #ifndef BF_P4C_MAU_GATEWAY_H_
 #define BF_P4C_MAU_GATEWAY_H_
 
+#include <set>
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "lib/safe_vector.h"
@@ -12,9 +13,20 @@ class Field;
 class PhvInfo;
 
 class CanonGatewayExpr : public MauTransform {
+ public:
+    CanonGatewayExpr(): _debugIndent(6) {}
+
+ private:
     IR::MAU::Action *preorder(IR::MAU::Action *af) override { prune(); return af; }
     IR::P4Table *preorder(IR::P4Table *t) override { prune(); return t; }
     IR::Attached *preorder(IR::Attached *a) override { prune(); return a; }
+
+    /// Use preorder visitors to simplify all the expressions that have reduntant terms
+    /// before going into other more complicated rules (deMorgan, distributions, etc.)
+    const IR::Expression *preorder(IR::LAnd *) override;
+    const IR::Expression *preorder(IR::LOr *) override;
+    const IR::Expression *preorder(IR::LNot *) override;
+
     const IR::Expression *postorder(IR::Operation::Relation *) override;
     const IR::Expression *postorder(IR::Leq *) override;
     const IR::Expression *postorder(IR::Lss *) override;
@@ -27,6 +39,29 @@ class CanonGatewayExpr : public MauTransform {
     const IR::Expression *postorder(IR::BOr *) override;
     const IR::Node *postorder(IR::MAU::Table *) override;
     class NeedNegate;
+
+ private:
+    /// check whether e has been visited.
+    /// Rather than pointer comparison, use the equiv method to check for expression equality.
+    bool isVisited(const IR::Expression *e) const {
+        for (auto *other : _visited)
+            if (other->equiv(*e))
+                return true;
+        return false;
+    }
+
+    void resetVisited() { _visited.erase(_visited.begin(), _visited.end()); }
+
+    void addVisited(const IR::Expression *e) {
+        if (!isVisited(e)) _visited.insert(e);
+    }
+
+    /// keep track of visited expressions such that we avoid infinite permutations
+    /// of an expression.
+    std::set<const IR::Expression *>_visited;
+
+    /// indentation for debugging nested invocations of postorder methods
+    indent_t _debugIndent;
 };
 
 class CollectGatewayFields : public Inspector {

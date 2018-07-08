@@ -34,8 +34,12 @@ static mpz_class SliceReduce(IR::Operation::Relation *rel, mpz_class val) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
-    LOG5("     " << "IR::Rel " << e);
+    if (isVisited(e)) return e;
+    addVisited(e);
+    LOG5(_debugIndent << "IR::Rel " << e);
     // only called for Equ and Neq
+    if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
+        return new IR::BoolLiteral(e->is<IR::Equ>() ? true : false);
     // If comparing with a constant, normalize the condition.
     // However, if both terms are constant, do not swap them, otherwise the IR tree
     // will continuously change, resulting in an infinite loop for GatewayOpt::PassRepeat
@@ -47,7 +51,11 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Leq *e) {
-    LOG5("     " << "IR::Leq " << e);
+    if (isVisited(e)) return e;
+    addVisited(e);
+    LOG5(_debugIndent << "IR::Leq " << e);
+    if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
+        return new IR::BoolLiteral(true);
     if (e->left->is<IR::Constant>())
         return postorder(new IR::Geq(e->right, e->left));
     if (auto k = e->right->to<IR::Constant>())
@@ -56,7 +64,11 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Leq *e) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Lss *e) {
-    LOG5("     " << "IR::Lss " << e);
+    if (isVisited(e)) return e;
+    addVisited(e);
+    LOG5(_debugIndent << "IR::Lss " << e);
+    if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
+        return new IR::BoolLiteral(false);
     if (auto k = e->left->to<IR::Constant>()) {
         BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
         return postorder(new IR::Geq(e->right, new IR::Constant(k->value + 1))); }
@@ -73,7 +85,11 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Lss *e) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Geq *e) {
-    LOG5("     " << "IR::Geq " << e);
+    if (isVisited(e)) return e;
+    addVisited(e);
+    LOG5(_debugIndent << "IR::Geq " << e);
+    if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
+        return new IR::BoolLiteral(true);
     if (auto k = e->left->to<IR::Constant>()) {
         BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
         return postorder(new IR::Lss(e->right, new IR::Constant(k->value + 1))); }
@@ -90,7 +106,11 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Geq *e) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Grt *e) {
-    LOG5("     " << "IR::Grt " << e);
+    if (isVisited(e)) return e;
+    addVisited(e);
+    LOG5(_debugIndent << "IR::Grt " << e);
+    if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
+        return new IR::BoolLiteral(false);
     if (e->left->is<IR::Constant>())
         return postorder(new IR::Lss(e->right, e->left));
     if (auto k = e->right->to<IR::Constant>())
@@ -98,17 +118,60 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Grt *e) {
     return e;
 }
 
+/// Simplify as fast as possible to avoid expansion when going between deMorgan
+/// and distribution
+const IR::Expression *CanonGatewayExpr::preorder(IR::LAnd *e) {
+    if (e->left->equiv(*e->right))
+        return e->left;
+    if (auto k = e->left->to<IR::Constant>())
+        return k->value ? e->right : k;
+    if (auto k = e->left->to<IR::BoolLiteral>())
+        return k->value ? e->right : k;
+    if (auto k = e->right->to<IR::Constant>())
+        return k->value ? e->left : k;
+    if (auto k = e->right->to<IR::BoolLiteral>())
+        return k->value ? e->left : k;
+    return e;
+}
+
+const IR::Expression *CanonGatewayExpr::preorder(IR::LOr *e) {
+    if (e->left->equiv(*e->right))
+        return e->left;
+    if (auto k = e->left->to<IR::Constant>())
+        return k->value ? k : e->right;
+    if (auto k = e->left->to<IR::BoolLiteral>())
+        return k->value ? k : e->right;
+    if (auto k = e->right->to<IR::Constant>())
+        return k->value ? k : e->left;
+    if (auto k = e->right->to<IR::BoolLiteral>())
+        return k->value ? k : e->left;
+    return e;
+}
+
+const IR::Expression *CanonGatewayExpr::preorder(IR::LNot *e) {
+    if (auto a = e->expr->to<IR::LNot>()) {
+        LOG5(_debugIndent << "r IR::LNot " << e);
+        return a->expr;
+    }
+    return e;
+}
+
 const IR::Expression *CanonGatewayExpr::postorder(IR::LAnd *e) {
-    LOG5("     " << "IR::LAnd " << e);
+    if (isVisited(e)) return e;
+    LOG5(_debugIndent << "IR::LAnd " << e);
+    _debugIndent++;
+    addVisited(e);
     const IR::Expression *rv = e;
-    if (auto k = e->left->to<IR::Constant>()) {
-        return k->value ? e->right : k; }
-    if (auto k = e->left->to<IR::BoolLiteral>()) {
-        return k->value ? e->right : k; }
-    if (auto k = e->right->to<IR::Constant>()) {
-        return k->value ? e->left : k; }
-    if (auto k = e->right->to<IR::BoolLiteral>()) {
-        return k->value ? e->left : k; }
+    if (e->left->equiv(*e->right))
+        return e->left;
+    if (auto k = e->left->to<IR::Constant>())
+        return k->value ? e->right : k;
+    if (auto k = e->left->to<IR::BoolLiteral>())
+        return k->value ? e->right : k;
+    if (auto k = e->right->to<IR::Constant>())
+        return k->value ? e->left : k;
+    if (auto k = e->right->to<IR::BoolLiteral>())
+        return k->value ? e->left : k;
     while (auto r = e->right->to<IR::LAnd>()) {
         e->left = postorder(new IR::LAnd(e->left, r->left));
         e->right = r->right; }
@@ -119,42 +182,63 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LAnd *e) {
             auto c3 = postorder(new IR::LAnd(l->right, r->left));
             auto c4 = postorder(new IR::LAnd(l->right, r->right));
             rv = new IR::LOr(new IR::LOr(new IR::LOr(c1, c2), c3), c4);
+            LOG5(_debugIndent << "? IR::LAnd " << rv);
         } else {
             auto c1 = postorder(new IR::LAnd(l->left, e->right));
             auto c2 = postorder(new IR::LAnd(l->right, e->right));
             rv = new IR::LOr(c1, c2); }
+        LOG5(_debugIndent << "/ IR::LAnd " << rv);
     } else if (auto r = e->right->to<IR::LOr>()) {
         auto c1 = postorder(new IR::LAnd(e->left, r->left));
         auto c2 = postorder(new IR::LAnd(e->left, r->right));
-        rv = new IR::LOr(c1, c2); }
+        rv = new IR::LOr(c1, c2);
+        LOG5(_debugIndent << "* IR::LAnd " << rv);
+    }
     if (rv != e)
         visit(rv);
+    _debugIndent--;
+    LOG5(_debugIndent << "- IR::LAnd " << rv);
     return rv;
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::LOr *e) {
-    LOG5("     " << "IR::LOr " << e);
-    if (auto k = e->left->to<IR::Constant>()) {
-        return k->value ? k : e->right; }
-    if (auto k = e->left->to<IR::BoolLiteral>()) {
-        return k->value ? k : e->right; }
-    if (auto k = e->right->to<IR::Constant>()) {
-        return k->value ? k : e->left; }
-    if (auto k = e->right->to<IR::BoolLiteral>()) {
-        return k->value ? k : e->left; }
+    if (isVisited(e)) return e;
+    addVisited(e);
+    LOG5(_debugIndent << "IR::LOr " << e);
+    _debugIndent++;
+    if (e->left->equiv(*e->right))
+        return e->left;
+    if (auto k = e->left->to<IR::Constant>())
+        return k->value ? k : e->right;
+    if (auto k = e->left->to<IR::BoolLiteral>())
+        return k->value ? k : e->right;
+    if (auto k = e->right->to<IR::Constant>())
+        return k->value ? k : e->left;
+    if (auto k = e->right->to<IR::BoolLiteral>())
+        return k->value ? k : e->left;
     while (auto r = e->right->to<IR::LOr>()) {
         e->left = postorder(new IR::LOr(e->left, r->left));
         e->right = r->right; }
+    _debugIndent--;
+    LOG5(_debugIndent << "-IR::LOr " << e);
     return e;
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::LNot *e) {
-    LOG5("     " << "IR::LNot " << e);
+    if (isVisited(e)) return e;
+    addVisited(e);
+    LOG5(_debugIndent << "IR::LNot " << e);
+    _debugIndent++;
     const IR::Expression *rv = e;
+    if (auto a = e->expr->to<IR::LNot>()) {
+        LOG5(_debugIndent << "r IR::LNot " << e);
+        _debugIndent--;
+        return a->expr;
+    }
     if (auto a = e->expr->to<IR::LAnd>()) {
-        rv = new IR::LOr(new IR::LNot(a->left), new IR::LNot(a->right));
+        rv = new IR::LOr(postorder(new IR::LNot(a->left)), postorder(new IR::LNot(a->right)));
     } else if (auto a = e->expr->to<IR::LOr>()) {
-        rv = new IR::LAnd(new IR::LNot(a->left), new IR::LNot(a->right));
+        rv = new IR::LAnd(postorder(new IR::LNot(a->left)), postorder(new IR::LNot(a->right)));
     } else if (auto a = e->expr->to<IR::Equ>()) {
         rv = new IR::Neq(a->left, a->right);
     } else if (auto a = e->expr->to<IR::Neq>()) {
@@ -169,10 +253,14 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LNot *e) {
         rv = new IR::Grt(a->left, a->right); }
     if (rv != e)
         visit(rv);
+    _debugIndent--;
+    LOG5(_debugIndent << "-IR::LNot " << rv);
     return rv;
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::BAnd *e) {
+    if (isVisited(e)) return e;
+    addVisited(e);
     if (e->left->is<IR::Constant>()) {
         auto *t = e->left;
         e->left = e->right;
@@ -180,6 +268,8 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::BAnd *e) {
     return e;
 }
 const IR::Expression *CanonGatewayExpr::postorder(IR::BOr *e) {
+    if (isVisited(e)) return e;
+    addVisited(e);
     if (e->left->is<IR::Constant>()) {
         auto *t = e->left;
         e->left = e->right;
@@ -188,6 +278,10 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::BOr *e) {
 }
 
 const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
+    // reset the visited expressions for every new condition.
+    // Each condition is associated with a Gateway table.
+    resetVisited();
+
     auto &rows = tbl->gateway_rows;
     if (rows.empty() || !rows[0].first)
         return tbl;

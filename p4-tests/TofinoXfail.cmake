@@ -969,6 +969,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
   extensions/p4_tests/p4_14/test_config_324_tcam_range_11.p4
+  extensions/p4_tests/p4_14/p4smith_regression/basseterre_0.p4
   )
 
 # This test is expected to fail (for now) because it includes multiple writes
@@ -1059,20 +1060,14 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-652
 p4c_add_xfail_reason("tofino"
-  "condition too complex, one operand must be constant"
+  "error: No phv record gaff.craftspeople"
   extensions/p4_tests/p4_14/p4smith_regression/injection_0.p4
 )
-
 
 # BRIG-654
 p4c_add_xfail_reason("tofino"
   "Two containers in the same action are at the same place?"
   extensions/p4_tests/p4_14/p4smith_regression/selenium_0.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "condition too complex"
-  extensions/p4_tests/p4_14/p4smith_regression/basseterre_0.p4
 )
 
 # BRIG-678
