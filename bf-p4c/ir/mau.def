@@ -9,16 +9,16 @@ struct TableResourceAlloc;
 #end
 
 #emit
+#include "bf-p4c/ir/ir_enums.h"
+#end
+
+#emit
 #include "bf-p4c/ir/unique_id.h"
 #end
 #emit_impl
 #include "extensions/bf-p4c/mau/resource.h"
 #end
 
-
-#emit
-#include "bf-p4c/ir/ir_enums.h"
-#end
 
 namespace MAU {
 
@@ -367,7 +367,7 @@ class Counter : Synth2Port {
     const char *kind() const override { return "stats"; }
 #nodbprint
     const Type *getType() const override { return Type_Counter::get(); }
-    UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::COUNTER; } 
+    UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::COUNTER; }
 }
 
 class Meter : Synth2Port {

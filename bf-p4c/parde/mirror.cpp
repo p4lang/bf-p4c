@@ -217,7 +217,6 @@ struct AddMirroredFieldListParser : public Transform {
       if (!parser) return state;
       if (state->name != createThreadName(parser->gress, "$mirrored")) return state;
 
-      LOG1("add mirror state");
       // This is the '$mirrored' placeholder state. Generate code to extract
       // mirrored field lists.
       return addMirroredFieldListParser(parser, state->transitions[0]->next);

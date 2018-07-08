@@ -80,6 +80,9 @@ struct ParserPragmas : public Inspector {
             } else if (ps->name == "start_e2e_mirrored") {
                 LOG1("Found e2e mirror start state: " << ps->name);
                 mirror_e2e_start = ps;
+            } else if (ps->name == "start_egress") {
+                LOG1("Found egress start state: " << ps->name);
+                egress_start = ps;
             } else {
                 ::warning("packet_entry %1% may be ignored.", ps->name);
             }
@@ -105,6 +108,7 @@ struct ParserPragmas : public Inspector {
 
     const IR::ParserState* mirror_i2e_start = nullptr;
     const IR::ParserState* mirror_e2e_start = nullptr;
+    const IR::ParserState* egress_start = nullptr;
     std::set<const IR::ParserState*> terminate_parsing;
     std::map<const IR::ParserState*, unsigned> force_shift;
     std::map<const IR::ParserState*, unsigned> max_loop_depth;
@@ -286,8 +290,20 @@ GetBackendParser::extract(const IR::BFN::TranslatedP4Parser* parser) {
         return true;
     });
 
-    BUG_CHECK(p4StateNameToStateName.count("start"), "No entry point in parser?");
-    auto* startState = getState(p4StateNameToStateName.at("start"));
+    IR::BFN::ParserState* startState = nullptr;
+    if (parser->thread == EGRESS) {
+        if (parserPragmas.egress_start) {
+            BUG_CHECK(p4StateNameToStateName.count(parserPragmas.egress_start->name),
+                      "No such state in parser: %1%", parserPragmas.egress_start->name);
+            startState = getState(p4StateNameToStateName.at(parserPragmas.egress_start->name));
+        } else {
+            BUG_CHECK(p4StateNameToStateName.count("start"), "No entry point in parser?");
+            startState = getState(p4StateNameToStateName.at("start"));
+        }
+    } else {
+        BUG_CHECK(p4StateNameToStateName.count("start"), "No entry point in parser?");
+        startState = getState(p4StateNameToStateName.at("start"));
+    }
     auto* backend_parser = new IR::BFN::Parser(parser->thread, startState);
     // In egress parser, mirror state might have different starts.
     if (parser->thread == EGRESS) {

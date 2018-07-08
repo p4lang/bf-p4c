@@ -16,6 +16,8 @@
 #include "midend/convertEnums.h"
 #include "midend/copyStructures.h"
 #include "midend/eliminateTuples.h"
+#include "midend/eliminateNewtype.h"
+#include "midend/eliminateSerEnums.h"
 #include "midend/expandLookahead.h"
 #include "midend/local_copyprop.h"
 #include "midend/nestedStructs.h"
@@ -23,6 +25,7 @@
 #include "midend/predication.h"
 #include "midend/removeLeftSlices.h"
 #include "midend/removeParameters.h"
+#include "midend/removeSelectBooleans.h"
 #include "midend/removeExits.h"
 #include "midend/simplifyBitwise.h"
 #include "midend/simplifyKey.h"
@@ -170,6 +173,8 @@ MidEnd::MidEnd(BFN_Options& options) {
     cstring args_to_skip[] = { "ingress_deparser", "egress_deparser"};
 
     addPasses({
+        new P4::EliminateNewtype(&refMap, &typeMap),
+        new P4::EliminateSerEnums(&refMap, &typeMap),
         new P4::TypeChecking(&refMap, &typeMap, true),
         new BFN::CheckHeaderAlignment(&typeMap),
         new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
@@ -194,6 +199,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::CopyStructures(&refMap, &typeMap),
         new P4::NestedStructs(&refMap, &typeMap),
         new P4::SimplifySelectList(&refMap, &typeMap),
+        new P4::RemoveSelectBooleans(&refMap, &typeMap),
         new P4::Predication(&refMap),
         new P4::MoveDeclarations(),  // more may have been introduced
         new P4::ConstantFolding(&refMap, &typeMap),

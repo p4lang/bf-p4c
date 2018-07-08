@@ -526,8 +526,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/arith5-bmv2.p4
   )
 
+# needs copy propagation in parser
 p4c_add_xfail_reason("tofino"
-  "Invalid select case expression"
+  "Assignment cannot be supported in the parser: true"
   testdata/p4_16_samples/issue361-bmv2.p4
   )
 
@@ -1118,7 +1119,7 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-673
 p4c_add_xfail_reason("tofino"
-  "no definitions"
+  "Match register not allocated"
   extensions/p4_tests/p4_14/p4-tests/programs/pvs/pvs.p4
 )
 

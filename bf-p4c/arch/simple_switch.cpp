@@ -70,27 +70,19 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"standard_metadata", "drop", 1},
                                MetadataField{"eg_intr_md_for_dprsr", "drop_ctl", 3});
 
-        // standard_metadata.mcast_grp does not have a mapping tofino.
-        // we default to ig_intr_md_for_tm.mcast_grp_a just to pass the translation.
         structure->addMetadata(INGRESS,
                                MetadataField{"standard_metadata", "mcast_grp", 16},
                                MetadataField{"ig_intr_md_for_tm", "mcast_grp_a", 16});
 
-        structure->addMetadata(
-                INGRESS,
-                MetadataField{"standard_metadata", "checksum_error", 1},
-                MetadataField{"ig_intr_md_from_prsr", "parser_err", 1, 12});
+        structure->addMetadata(INGRESS, MetadataField{"standard_metadata", "checksum_error", 1},
+                               MetadataField{"ig_intr_md_from_prsr", "parser_err", 1, 12});
 
-        structure->addMetadata(
-                EGRESS,
-                MetadataField{"standard_metadata", "checksum_error", 1},
-                MetadataField{"eg_intr_md_from_prsr", "parser_err", 1, 12});
+        structure->addMetadata(EGRESS, MetadataField{"standard_metadata", "checksum_error", 1},
+                               MetadataField{"eg_intr_md_from_prsr", "parser_err", 1, 12});
 
-        // XXX(seth): We need to figure out what to map this to.
-        // structure->addMetadata("standard_metadata", "instance_type",
-        //             "eg_intr_md", "instance_type", 32);
+        structure->addMetadata(MetadataField{"standard_metadata", "instance_type", 32},
+                               MetadataField{"compiler_generated_meta", "instance_type", 32});
 
-        // drop_ctl is moved to ingress/egress_metadata_for_deparser_t in tofino architecture.
         structure->addMetadata(INGRESS,
                                MetadataField{"ig_intr_md_for_tm", "drop_ctl", 3},
                                MetadataField{"ig_intr_md_for_dprsr", "drop_ctl", 3});
@@ -729,6 +721,9 @@ class AnalyzeProgram : public Inspector {
             new IR::StructField("clone_src", IR::Type::Bits::get(4)));
         cgm->fields.push_back(
             new IR::StructField("clone_digest_id", IR::Type::Bits::get(4)));
+        // Used to support separate egress_start parser state.
+        cgm->fields.push_back(
+            new IR::StructField("instance_type", IR::Type::Bits::get(32)));
 
         structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
 
@@ -2064,19 +2059,15 @@ class InsertParserChecksums : public Inspector {
 
 class TranslateParserChecksums : public PassManager {
  public:
-    std::map<const IR::Expression*, IR::Member*> parserResidualChecksums;
+    std::map<const IR::Expression *, IR::Member *> parserResidualChecksums;
 
-    explicit TranslateParserChecksums(ProgramStructure *structure,
-                                      P4::ReferenceMap* refMap,
-                                      P4::TypeMap* typeMap) {
+    explicit TranslateParserChecksums(ProgramStructure *structure, P4::ReferenceMap *refMap,
+                                      P4::TypeMap *typeMap) {
         auto pc = new BFN::V1::CollectParserChecksums(refMap, typeMap);
 
-        addPasses({pc,
-                   new BFN::V1::InsertParserChecksums(pc->verifyChecksums,
-                                                      pc->residualChecksums,
-                                                      structure,
-                                                      parserResidualChecksums)
-                  });
+        addPasses(
+            {pc, new BFN::V1::InsertParserChecksums(pc->verifyChecksums, pc->residualChecksums,
+                                                    structure, parserResidualChecksums)});
     }
 };
 

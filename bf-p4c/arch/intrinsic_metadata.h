@@ -7,7 +7,17 @@
 namespace BFN {
 
 /// Add parser code to extract the standard TNA intrinsic metadata.
-struct AddIntrinsicMetadata : public Transform {
+class AddIntrinsicMetadata : public Transform {
+    const IR::ParserState* start_i2e_mirrored = nullptr;
+    const IR::ParserState* start_e2e_mirrored = nullptr;
+    const IR::ParserState* start_egress = nullptr;
+    // map the name of 'start_i2e_mirrored' ... to the IR::SelectCase
+    // that is used to transit to these state. Used to support extra
+    // entry point to P4-14 parser.
+    std::map<cstring, const IR::SelectCase*> selectCaseMap;
+
+ public:
+    AddIntrinsicMetadata() { setName("AddIntrinsicMetadata"); }
     /// @return a parser state with a name that's distinct from the states in
     /// the P4 program and an `@name` annotation with a '$' prefix. Downstream,
     /// we search for certain '$' states and replace them with more generated
@@ -203,20 +213,46 @@ struct AddIntrinsicMetadata : public Transform {
 
     /// Add the standard TNA egress metadata to the given parser. The original
     /// start state will remain in the program, but with a new name.
-    static void addEgressMetadata(IR::BFN::TranslatedP4Parser *parser) {
+    static void addEgressMetadata(IR::BFN::TranslatedP4Parser *parser,
+                                  const IR::ParserState *start_i2e_mirrored,
+                                  const IR::ParserState *start_e2e_mirrored,
+                                  const IR::ParserState *start_egress,
+                                  std::map<cstring, const IR::SelectCase*> selMap) {
         auto *p4EntryPointState =
             convertStartStateToNormalState(parser, "egress_p4_entry_point");
 
         // Add a state that parses bridged metadata. This is just a placeholder;
         // we'll replace it once we know which metadata need to be bridged.
-        auto *bridgedMetadataState =
-            createGeneratedParserState("bridged_metadata", {}, p4EntryPointState->name);
+        auto *bridgedMetadataState = createGeneratedParserState(
+            "bridged_metadata", {}, ((start_egress) ? "start_egress" : p4EntryPointState->name));
         parser->states.push_back(bridgedMetadataState);
 
         // Similarly, this state is a placeholder which will eventually hold the
         // parser for mirrored data.
-        auto *mirroredState =
-            createGeneratedParserState("mirrored", {}, p4EntryPointState->name);
+        IR::Vector<IR::Expression> selectOn;
+        IR::Vector<IR::SelectCase> branchTo;
+        if (start_i2e_mirrored || start_e2e_mirrored)
+            selectOn.push_back(new IR::Member(
+                new IR::PathExpression(new IR::Path("compiler_generated_meta")), "instance_type"));
+        if (start_i2e_mirrored) {
+            BUG_CHECK(selMap.count("start_i2e_mirrored") != 0,
+                      "Couldn't find the start_i2e_mirrored state?");
+            branchTo.push_back(selMap.at("start_i2e_mirrored"));
+        }
+        if (start_e2e_mirrored) {
+            BUG_CHECK(selMap.count("start_e2e_mirrored") != 0,
+                      "Couldn't find the start_e2e_mirrored state?");
+            branchTo.push_back(selMap.at("start_e2e_mirrored"));
+        }
+
+        IR::ParserState* mirroredState = nullptr;
+        if (branchTo.size()) {
+            mirroredState = createGeneratedParserState(
+                "mirrored", {},
+                new IR::SelectExpression(new IR::ListExpression(selectOn), branchTo));
+        } else {
+            mirroredState = createGeneratedParserState("mirrored", {}, p4EntryPointState->name);
+        }
         parser->states.push_back(mirroredState);
 
         // If this is a mirrored packet, the hardware will have prepended the
@@ -226,7 +262,7 @@ struct AddIntrinsicMetadata : public Transform {
         // distinguish a mirrored packet from a normal packet because we always
         // begin the bridged metadata we attach to normal packet with an extra byte
         // which has the mirror indicator flag set to zero.
-        IR::Vector<IR::Expression> selectOn = {createLookaheadExpr(parser, 8)};
+        selectOn = {createLookaheadExpr(parser, 8)};
         auto *checkMirroredState =
             createGeneratedParserState("check_mirrored", {},
                                        new IR::SelectExpression(new IR::ListExpression(selectOn), {
@@ -260,14 +296,61 @@ struct AddIntrinsicMetadata : public Transform {
         addNewStartState(parser, "egress_tna_entry_point", egMetadataState->name);
     }
 
-    IR::BFN::TranslatedP4Parser *preorder(IR::BFN::TranslatedP4Parser *parser) override {
-        prune();
+    IR::ParserState* preorder(IR::ParserState* state) override {
+        auto anno = state->getAnnotation("packet_entry");
+        if (!anno) return state;
+        anno = state->getAnnotation("name");
+        auto name = anno->expr.at(0)->to<IR::StringLiteral>();
+        if (name->value == ".start_i2e_mirrored") {
+            start_i2e_mirrored = state;
+        } else if (name->value == ".start_e2e_mirrored") {
+            start_e2e_mirrored = state;
+        } else if (name->value == ".start_egress") {
+            start_egress = state;
+        }
+        return state;
+    }
 
+    // Delete the compiler-generated start state from frontend.
+    IR::ParserState* postorder(IR::ParserState* state) override {
+        auto anno = state->getAnnotation("name");
+        if (!anno) return state;
+        auto name = anno->expr.at(0)->to<IR::StringLiteral>();
+        if (name->value == ".start") {
+            LOG1("found start state ");
+            // Frontend renames 'start' to 'start_0' if the '@packet_entry' pragma is used.
+            // The renamed 'start' state has a "@name('.start')" annotation.
+            // The translation is introduced at frontends/p4/fromv1.0/converters.cpp#L1121
+            // As we will create Tofino-specific start state in this pass, we will need to ensure
+            // that the frontend-generated start state is removed and the original start
+            // state is restored before the logic in this pass modifies the start state.
+            // Basically, the invariant here is to ensure the start state is unmodified,
+            // with or w/o the @packet_entry pragma.
+            state->name = "start";
+            return state;
+        } else if (name->value == ".$start") {
+            auto selExpr = state->selectExpression->to<IR::SelectExpression>();
+            BUG_CHECK(selExpr != nullptr, "Couldn't find the select expression?");
+            for (auto c : selExpr->selectCases) {
+                if (c->state->path->name == "start_i2e_mirrored") {
+                    selectCaseMap.emplace("start_i2e_mirrored", c);
+                } else if (c->state->path->name == "start_e2e_mirrored") {
+                    selectCaseMap.emplace("start_e2e_mirrored", c);
+                } else if (c->state->path->name == "start_egress") {
+                    selectCaseMap.emplace("start_egress", c);
+                }
+            }
+            return nullptr;
+        }
+        return state;
+    }
+
+    IR::BFN::TranslatedP4Parser* postorder(IR::BFN::TranslatedP4Parser *parser) override {
         if (parser->thread == INGRESS)
             addIngressMetadata(parser);
         else
-            addEgressMetadata(parser);
-
+            addEgressMetadata(parser, start_i2e_mirrored, start_e2e_mirrored, start_egress,
+                              selectCaseMap);
         return parser;
     }
 };
