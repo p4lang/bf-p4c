@@ -72,7 +72,7 @@ class PragmaContainerSize : public Inspector {
      *  exists in @p sliced.
      */
     std::set<const PHV::Field*>
-    unsatisfiable_fields(const std::list<PHV::SuperCluster*>& sliced) const;
+    unsatisfiable_fields(const std::list<PHV::SuperCluster*>& sliced);
 
     /** Add ad-lib constraint.
      *
