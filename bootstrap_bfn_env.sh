@@ -273,7 +273,7 @@ get_repo () {
     local dirname=$3
     local branch=$4
     if [ ! -d $repo_name ]; then
-        $(mkdir $repo_name)
+        $(mkdir -p $repo_name)
     fi
     pushd $repo_name >/dev/null
     if [ ! -d $dirname ]; then
@@ -301,7 +301,7 @@ build_PI () {
     pushd PI/$dirname >/dev/null
     builddir=$topdir/PI/$dirname/build
     if [ ! -d $builddir ]; then
-        $(mkdir $builddir)
+        $(mkdir -p $builddir)
     fi
     if $reuse_asis && [ -x $installdir/lib/libpi.${LDLIB_EXT} ]; then
         echo "Reusing PI for $device as is"
@@ -345,7 +345,7 @@ build_driver () {
     pushd bf-drivers/$dirname >/dev/null
     builddir=$topdir/bf-drivers/$dirname/build
     if [ ! -d $builddir ]; then
-        $(mkdir $builddir)
+        $(mkdir -p $builddir)
     fi
     if $reuse_asis && [ -x $builddir/bf-switchd ]; then
         echo "Reusing bf-drivers for $device as is"
@@ -392,7 +392,7 @@ build_model () {
         else
             builddir=$topdir/model/$branch/build
             if [ ! -d $builddir ]; then
-                $(mkdir $builddir)
+                $(mkdir -p $builddir)
             fi
         fi
         if $reuse_asis && [ -x $builddir/tests/simple_test_harness/simple_test_harness ]; then
