@@ -100,6 +100,7 @@ class CollectInlineSubparser : public Inspector {
     bool neverUseBefore(const std::vector<const IR::ParserState*>& stack,
                         cstring dest,
                         cstring src) const {
+        if (!stack.size()) return true;
         for (auto i = stack.rbegin() + 1; i < stack.rend(); ++i) {
             auto* state = (*i);
             // If this state is where value copied in, do not check further.
