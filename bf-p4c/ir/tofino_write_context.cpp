@@ -47,6 +47,7 @@ bool TofinoWriteContext::isWrite(bool root_value) {
         else
             return false; } } } } } } }
 
+    // Write in first index, read in all others
     if (ctxt->node->to<IR::MAU::Instruction>())
         return ctxt->child_index == 0;
 
@@ -137,4 +138,34 @@ bool TofinoWriteContext::isRead(bool root_value) {
                     return true; } } }
 
     return rv;
+}
+
+bool TofinoWriteContext::isIxbarRead(bool root_value) {
+    bool rv = isRead();
+    const IR::Node *current = getCurrentNode();
+    const Context *ctxt = getContext();
+    if (!ctxt || !ctxt->node || !current || !rv)
+        return false;
+    while (ctxt->child_index == 0 &&
+            (ctxt->node->is<IR::ArrayIndex>() ||
+             ctxt->node->is<IR::HeaderStackItemRef>() ||
+             ctxt->node->is<IR::Slice>() ||
+             ctxt->node->is<IR::Member>())) {
+        ctxt = ctxt->parent;
+        if (!ctxt || !ctxt->node)
+            return false;
+    }
+
+    if (ctxt->node->is<IR::MAU::InputXBarRead>()) {
+        return true;
+    }
+
+    if (findContext<IR::MAU::HashDist>()) {
+        return true;
+    }
+
+    if (findContext<IR::MAU::AttachedMemory>()) {
+        return true;
+    }
+    return false;
 }

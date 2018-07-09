@@ -32,7 +32,8 @@
 struct DependencyGraph {
     typedef enum {
         CONTROL,     // Control dependence.
-        DATA,        // Read-after-write (data) dependence.
+        IXBAR_READ,        // Read-after-write (data) dependence.
+        ACTION_READ,
         ANTI,        // Write-after-read (anti) dependence.
         OUTPUT       // Write-after-write (output) dependence.
     } dependencies_t;
@@ -199,7 +200,7 @@ struct DependencyGraph {
 class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
  public:
     typedef ordered_map<const IR::MAU::Table*, bitvec> cont_write_t;
-    typedef struct { ordered_set<const IR::MAU::Table*> read, write; } access_t;
+    typedef struct { ordered_set<const IR::MAU::Table*> ixbar_read, action_read, write; } access_t;
 
  private:
     const PhvInfo&                                        phv;

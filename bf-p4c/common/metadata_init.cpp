@@ -550,7 +550,9 @@ class ComputeMetadataInit : public Inspector {
             if (dg.g[*e] == DependencyGraph::CONTROL ||
                 dg.g[*e] == DependencyGraph::ANTI) continue;
 
-            BUG_CHECK(dg.g[*e] == DependencyGraph::DATA || dg.g[*e] == DependencyGraph::OUTPUT,
+            BUG_CHECK(dg.g[*e] == DependencyGraph::IXBAR_READ ||
+                      dg.g[*e] == DependencyGraph::ACTION_READ ||
+                      dg.g[*e] == DependencyGraph::OUTPUT,
                      "Unknown dependency table label");
 
             auto src = boost::source(*e, dg.g);
@@ -750,8 +752,10 @@ class TableGraphGen : public Inspector {
             } else if (edge_type == DependencyGraph::CONTROL) {
                 label = "ctrl";
                 continue;
-            } else if (edge_type == DependencyGraph::DATA) {
-                label = "data";
+            } else if (edge_type == DependencyGraph::IXBAR_READ) {
+                label = "ixbar_read";
+            } else if (edge_type == DependencyGraph::ACTION_READ) {
+                label = "action_read";
             } else if (edge_type == DependencyGraph::OUTPUT) {
                 label = "output";
             }

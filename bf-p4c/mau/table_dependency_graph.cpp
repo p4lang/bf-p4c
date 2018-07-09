@@ -9,7 +9,7 @@
 #include "ir/ir.h"
 #include "lib/log.h"
 
-static const char *dep_types[] = { "CONTROL", "DATA", "ANTI", "OUTPUT" };
+static const char *dep_types[] = { "CONTROL", "IXBAR_READ", "ACTION_READ", "ANTI", "OUTPUT" };
 
 std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     out << "GRAPH" << std::endl;
@@ -75,6 +75,7 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
     }
 
     bool preorder(const IR::Expression *e) override {
+        LOG3("Starting action preorder");
         auto* originalField = self.phv.field(e);
         if (!originalField) return true;
         ordered_set<const PHV::Field*> candidateFields;
@@ -87,12 +88,18 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
                 LOG3("add_dependency(" << field_name << ")");
                 if (isWrite()) {
                     // Write-after-read dependence.
-                    addDeps(self.access[field->name].read, table, DependencyGraph::ANTI);
+                    addDeps(self.access[field->name].ixbar_read, table, DependencyGraph::ANTI);
+                    addDeps(self.access[field->name].action_read, table, DependencyGraph::ANTI);
                     // Write-after-write dependence.
                     addDeps(self.access[field->name].write, table, DependencyGraph::OUTPUT);
                 } else {
                     // Read-after-write dependence.
-                    addDeps(self.access[field->name].write, table, DependencyGraph::DATA);
+                    if (isIxbarRead()) {
+                        addDeps(self.access[field->name].write, table, DependencyGraph::IXBAR_READ);
+                    } else {
+                        addDeps(self.access[field->name].write, table,
+                                DependencyGraph::ACTION_READ);
+                    }
                 }
             }
             if (isWrite() && self.phv.alloc_done()) {
@@ -137,12 +144,17 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
             if (isWrite()) {
                 LOG3("update_access write " << field->name);
                 auto &a = self.access[field->name];
-                a.read.clear();
+                a.ixbar_read.clear();
+                a.action_read.clear();
                 a.write.clear();
                 a.write.insert(table);
             } else {
                 LOG3("update_access read " << field->name);
-                self.access[field->name].read.insert(table);
+                if (isIxbarRead()) {
+                    self.access[field->name].ixbar_read.insert(table);
+                } else {
+                    self.access[field->name].action_read.insert(table);
+                }
             }
             if (isWrite() && self.phv.alloc_done()) {
                 field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
@@ -173,7 +185,8 @@ class FindDependencyGraph::UpdateAttached : public Inspector {
             auto *field = self.phv.field(meter->result);
             BUG_CHECK(field, "meter writing to %s", meter->result);
             auto &a = self.access[field->name];
-            a.read.clear();
+            a.ixbar_read.clear();
+            a.action_read.clear();
             a.write.clear();
             a.write.insert(table);
         }
@@ -291,7 +304,8 @@ void FindDependencyGraph::flow_dead() {
 
 void FindDependencyGraph::flow_merge(Visitor &v) {
     for (auto &a : dynamic_cast<FindDependencyGraph &>(v).access) {
-        access[a.first].read |= a.second.read;
+        access[a.first].ixbar_read |= a.second.ixbar_read;
+        access[a.first].action_read |= a.second.action_read;
         access[a.first].write |= a.second.write;
     }
 

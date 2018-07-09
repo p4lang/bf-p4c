@@ -21,6 +21,9 @@ class TofinoWriteContext : public P4WriteContext {
      *    - Any arguments to a Primitive after the first (which is written)
      *    - Extern args marked In or InOut
      */
-    bool isRead(bool root_value = false);};
+    bool isRead(bool root_value = false);
+
+    bool isIxbarRead(bool root_value = false);
+};
 
 #endif /* EXTENSIONS_BF_P4C_IR_TOFINO_WRITE_CONTEXT_H_ */
