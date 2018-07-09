@@ -432,7 +432,8 @@ using LoweredParserIRStates = std::map<const IR::BFN::ParserState*,
 /// sequence is the shortest one which maintains these properties.
 std::pair<IR::Vector<IR::BFN::ContainerRef>, std::vector<Clot> >
 lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
-            const IR::Vector<IR::BFN::FieldLVal>& fields) {
+            const IR::Vector<IR::BFN::FieldLVal>& fields,
+            std::set<const IR::BFN::ContainerRef*>* phvSwaps = nullptr) {
     struct LastContainerInfo {
         /// The container into which the last field was placed.
         IR::BFN::ContainerRef* containerRef;
@@ -454,6 +455,8 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
                 clots.push_back(*clot);
             continue;
         }
+
+        auto phvField = phv.field(fieldRef->field);
 
         std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
 
@@ -496,6 +499,12 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
                                      containerRange};
             last->containerRef->debug.info.push_back(debugInfoFor(fieldRef, slice));
             containers.push_back(last->containerRef);
+
+            if (phvSwaps && !phvField->metadata) {
+                if (slice.container_bits().hi % 16 !=
+                    (phvField->offset + slice.field_bits().hi) % 16)
+                    phvSwaps->insert(last->containerRef);
+            }
         }
     }
 
@@ -1177,15 +1186,19 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 // Allocate a checksum unit and generate the configuration for it.
                 auto* unitConfig = new IR::BFN::ChecksumUnitConfig(nextChecksumUnit);
                 IR::Vector<IR::BFN::ContainerRef> phvSources;
+                std::set<const IR::BFN::ContainerRef*> phvSwaps;
                 std::vector<Clot> clotSources;
                 std::tie(phvSources, clotSources) =
-                    lowerFields(phv, clotInfo, emitChecksum->sources);
+                    lowerFields(phv, clotInfo, emitChecksum->sources, &phvSwaps);
                 auto* loweredPovBit = lowerPovBit(phv, emitChecksum->povBit);
                 for (auto* source : phvSources) {
                     auto* input = new IR::BFN::ChecksumPhvInput(source);
 #if HAVE_JBAY
-                    if (Device::currentDevice() == "JBay")
+                    if (Device::currentDevice() == "JBay") {
                         input->povBit = loweredPovBit;
+                        if (phvSwaps.count(source))
+                            input->swap = true;
+                    }
 #endif
                     unitConfig->phvs.push_back(input);
                 }
@@ -2327,51 +2340,6 @@ class ComputeBufferRequirements : public ParserModifier {
     }
 };
 
-class ComputeDeparserChecksumPhvSwap : public PassManager {
-    struct GetContainerToRVal : public ParserInspector {
-        std::map<PHV::Container,
-                 const IR::BFN::LoweredPacketRVal*> containerToRVal;
-
-        bool preorder(const IR::BFN::LoweredExtractPhv* extract) override {
-            if (auto rval = extract->source->to<IR::BFN::LoweredPacketRVal>())
-                if (extract->dest)
-                    containerToRVal[extract->dest->container] = rval;
-            return false;
-        }
-    };
-
-    struct ModifyDeparserChecksumPhvSwap : public DeparserModifier {
-        const std::map<PHV::Container,
-                       const IR::BFN::LoweredPacketRVal*>& containerToRVal;
-
-        explicit ModifyDeparserChecksumPhvSwap(
-            const std::map<PHV::Container,
-                           const IR::BFN::LoweredPacketRVal*>& containerToRVal) :
-                containerToRVal(containerToRVal) { }
-
-        void postorder(IR::BFN::ChecksumPhvInput* phvInput) {
-            auto container = phvInput->source->container;
-            auto it = containerToRVal.find(container);
-            if (it != containerToRVal.end()) {
-                auto rval = it->second;
-                if (rval->range.lo % 2)
-                    phvInput->swap = true;
-                else if (container.size() == 8)
-                    phvInput->swap = true;
-            }
-        }
-    };
-
- public:
-    ComputeDeparserChecksumPhvSwap() {
-        auto* getContainerToRVal = new GetContainerToRVal;
-        addPasses({
-            getContainerToRVal,
-            new ModifyDeparserChecksumPhvSwap(getContainerToRVal->containerToRVal)
-        });
-    }
-};
-
 }  // namespace
 
 LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse) {
@@ -2381,9 +2349,6 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
         new SplitBigStates,
-#if HAVE_JBAY
-        Device::currentDevice() == "JBay" ? new ComputeDeparserChecksumPhvSwap : nullptr,
-#endif  // HAVE_JBAY
         new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields()),
         new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.
         new ComputeBufferRequirements,
