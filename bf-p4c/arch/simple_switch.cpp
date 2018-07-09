@@ -143,14 +143,56 @@ class LoadTargetArchitecture : public Inspector {
                 MetadataField{"standard_metadata", "egress_rid", 16},
                 MetadataField{"eg_intr_md", "egress_rid", 16});
 #ifdef HAVE_JBAY
-        structure->addMetadata(
-                INGRESS,
-                MetadataField{"ig_intr_md_for_mb", "mirror_io_select", 1},
-                MetadataField{"ig_intr_md_for_dprsr", "mirror_io_select", 1});
-        structure->addMetadata(
-                EGRESS,
-                MetadataField{"eg_intr_md_for_mb", "mirror_io_select", 1},
-                MetadataField{"eg_intr_md_for_dprsr", "mirror_io_select", 1});
+        structure->addMetadata(INGRESS, MetadataField{"ig_intr_md_for_mb", "mirror_io_select", 1},
+                               MetadataField{"ig_intr_md_for_dprsr", "mirror_io_select", 1});
+        structure->addMetadata(EGRESS, MetadataField{"eg_intr_md_for_mb", "mirror_io_select", 1},
+                               MetadataField{"eg_intr_md_for_dprsr", "mirror_io_select", 1});
+        structure->addMetadata(INGRESS, MetadataField{"ig_intr_md_for_mb", "mirror_hash", 13},
+                               MetadataField{"ig_intr_md_for_dprsr", "mirror_hash", 13});
+        structure->addMetadata(EGRESS, MetadataField{"eg_intr_md_for_mb", "mirror_hash", 13},
+                               MetadataField{"eg_intr_md_for_dprsr", "mirror_hash", 13});
+        structure->addMetadata(INGRESS, MetadataField{"ig_intr_md_for_mb", "mirror_ingress_cos", 3},
+                               MetadataField{"ig_intr_md_for_dprsr", "mirror_ingress_cos", 3});
+        structure->addMetadata(EGRESS, MetadataField{"eg_intr_md_for_mb", "mirror_ingress_cos", 3},
+                               MetadataField{"eg_intr_md_for_dprsr", "mirror_ingress_cos", 3});
+        structure->addMetadata(INGRESS,
+                               MetadataField{"ig_intr_md_for_mb", "mirror_deflect_on_drop", 1},
+                               MetadataField{"ig_intr_md_for_dprsr", "mirror_deflect_on_drop", 1});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"eg_intr_md_for_mb", "mirror_deflect_on_drop", 1},
+                               MetadataField{"eg_intr_md_for_dprsr", "mirror_deflect_on_drop", 1});
+        structure->addMetadata(INGRESS,
+                               MetadataField{"ig_intr_md_for_mb", "mirror_copy_to_cpu_ctrl", 1},
+                               MetadataField{"ig_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"eg_intr_md_for_mb", "mirror_copy_to_cpu_ctrl", 1},
+                               MetadataField{"eg_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1});
+        structure->addMetadata(INGRESS,
+                               MetadataField{"ig_intr_md_for_mb", "mirror_copy_to_cpu_ctrl", 1},
+                               MetadataField{"ig_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"eg_intr_md_for_mb", "mirror_copy_to_cpu_ctrl", 1},
+                               MetadataField{"eg_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1});
+        structure->addMetadata(INGRESS,
+                               MetadataField{"ig_intr_md_for_mb", "mirror_multicast_ctrl", 1},
+                               MetadataField{"ig_intr_md_for_dprsr", "mirror_multicast_ctrl", 1});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"eg_intr_md_for_mb", "mirror_multicast_ctrl", 1},
+                               MetadataField{"eg_intr_md_for_dprsr", "mirror_multicast_ctrl", 1});
+        structure->addMetadata(INGRESS, MetadataField{"ig_intr_md_for_mb", "mirror_egress_port", 9},
+                               MetadataField{"ig_intr_md_for_dprsr", "mirror_egress_port", 9});
+        structure->addMetadata(EGRESS, MetadataField{"eg_intr_md_for_mb", "mirror_egress_port", 9},
+                               MetadataField{"eg_intr_md_for_dprsr", "mirror_egress_port", 9});
+        structure->addMetadata(INGRESS, MetadataField{"ig_intr_md_for_mb", "mirror_qid", 7},
+                               MetadataField{"ig_intr_md_for_dprsr", "mirror_qid", 7});
+        structure->addMetadata(EGRESS, MetadataField{"eg_intr_md_for_mb", "mirror_qid", 7},
+                               MetadataField{"eg_intr_md_for_dprsr", "mirror_qid", 7});
+        structure->addMetadata(INGRESS,
+                               MetadataField{"ig_intr_md_for_mb", "mirror_coalesce_length", 8},
+                               MetadataField{"ig_intr_md_for_dprsr", "mirror_coalesce_length", 8});
+        structure->addMetadata(EGRESS,
+                               MetadataField{"eg_intr_md_for_mb", "mirror_coalesce_length", 8},
+                               MetadataField{"eg_intr_md_for_dprsr", "mirror_coalesce_length", 8});
 #endif
     }
 
