@@ -138,7 +138,7 @@ class BarefootBackend(BackendDriver):
         if opts.skip_linker:
             self.add_command_option('assembler', "--no-bin")
 
-        if opts.create_graphs:
+        if opts.create_graphs or opts.archive:
             self.add_command_option('compiler', '--create-graphs')
 
         if opts.bf_rt_schema is not None:
