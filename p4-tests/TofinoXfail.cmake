@@ -1155,14 +1155,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1352-bmv2.p4
 )
 
-# BRIG-760
-p4c_add_xfail_reason("tofino"
-  "error: action data bus conflict on row .* between tables"
-  extensions/p4_tests/p4_14/sful_sel1.p4
-  extensions/p4_tests/p4_14/test_config_170_stateful_selection_table_update.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
-)
-
 # backend does not support this example
 p4c_add_xfail_reason("tofino"
   "Tofino does not allow stats to use different address schemes on one table"

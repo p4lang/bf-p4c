@@ -19,13 +19,14 @@ class CreateSaluApplyFunction : public Inspector {
     const IR::Type::Bits *utype;
     cstring math_unit_name;
     IR::BlockStatement *body;
-    IR::Function *apply;
+    IR::Function *apply = nullptr;
     const IR::Expression *cond_lo = nullptr;
     const IR::Expression *cond_hi = nullptr;
     const IR::Expression *math_input = nullptr;
     const IR::Expression *pred = nullptr;
     const IR::Statement *output = nullptr;
     enum expr_index_t { LO1, LO2, HI1, HI2, OUT } expr_index;
+    bool have_output = false;
     bool defer_out = false;
     bool cmpl_out = false;
     bool need_alu_hi = false;
@@ -161,6 +162,7 @@ class CreateSaluApplyFunction : public Inspector {
             if (expr_index != HI2) pred = nullptr;
             idx = 1;
         } else if (prop->name == "output_value") {
+            have_output = true;
             if (expr_index != OUT) pred = nullptr;
             idx = -1;
         } else {
@@ -195,17 +197,9 @@ class CreateSaluApplyFunction : public Inspector {
         body = new IR::BlockStatement({
             new IR::Declaration_Variable("in_value", rtype),
             new IR::AssignmentStatement(new IR::PathExpression("in_value"),
-                                        new IR::PathExpression("value")),
-            new IR::AssignmentStatement(new IR::PathExpression("rv"),
-                                        new IR::Constant(utype, 0)) });
+                                        new IR::PathExpression("value")) });
         if (auto st = rtype->to<IR::Type_StructLike>())
-            rtype = new IR::Type_Name(st->name);
-        apply = new IR::Function("apply", new IR::Type_Method(
-                                 IR::Type_Void::get(), new IR::ParameterList({
-                                     new IR::Parameter("value", IR::Direction::InOut, rtype),
-                                     new IR::Parameter("rv", IR::Direction::Out, utype) })),
-                                 body);
-    }
+            rtype = new IR::Type_Name(st->name); }
     void end_apply(const IR::Node *) {
         if (need_alu_hi)
             body->components.insert(body->components.begin(),
@@ -213,6 +207,15 @@ class CreateSaluApplyFunction : public Inspector {
             // FIXME -- should initialize to 0 to avoid warnings about uninitialized values?
             // FIXME -- doing so causes a redundant assgnment of 0 which may cause asm
             // FIXME -- failure due to too many instructions in the stateful action.
+        auto apply_params = new IR::ParameterList({
+                     new IR::Parameter("value", IR::Direction::InOut, rtype) });
+        if (have_output) {
+            body->components.insert(body->components.begin(),
+                new IR::AssignmentStatement(new IR::PathExpression("rv"),
+                                            new IR::Constant(utype, 0)));
+            apply_params->push_back(new IR::Parameter("rv", IR::Direction::Out, utype)); }
+        apply = new IR::Function("apply",
+                                 new IR::Type_Method(IR::Type_Void::get(), apply_params), body);
         if (output && defer_out)
             body->push_back(output); }
     static const IR::Function *create(P4V1::ProgramStructure *structure,

@@ -136,7 +136,10 @@ bool skipRegisterActionOutput(const Visitor::Context *ctxt, const IR::Expression
     if (!type) return true;
 
     auto name = type->baseType->to<IR::Type_Name>();
-    if (name->path->name != "RegisterAction") return true;
+    if (name->path->name != "RegisterAction" &&
+        name->path->name != "LearnAction" &&
+        name->path->name != "selector_action")
+        return true;
 
     auto f = findContext<IR::Function>(ctxt);
     if (!f) return true;
@@ -147,17 +150,17 @@ bool skipRegisterActionOutput(const Visitor::Context *ctxt, const IR::Expression
     auto params = method->parameters->to<IR::ParameterList>();
     if (!params) return true;
 
-    ERROR_CHECK(params->size() == 2, "Expecting 2 parameters in extern method %1%", method);
-    auto param = params->parameters.at(1)->to<IR::Parameter>();
-    if (!param) return true;
+    auto assign = dynamic_cast<const IR::AssignmentStatement*>(ctxt->parent->node);
+    if (!assign) return true;
 
-    if (auto *rv = dynamic_cast<const IR::AssignmentStatement*>(ctxt->parent->node)) {
-        if (auto path = rv->left->to<IR::PathExpression>()) {
-            if (path->path->name == param->name) {
+    auto dest_path = assign->left->to<IR::PathExpression>();
+    if (!dest_path) return true;
+
+    for (unsigned i = 1; i < params->size(); ++i)
+        if (auto param = params->parameters.at(i)->to<IR::Parameter>())
+            if (dest_path->path->name == param->name)
                 return false;
-            }
-        }
-    }
+
     return true;
 }
 

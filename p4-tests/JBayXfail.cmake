@@ -270,9 +270,3 @@ p4c_add_xfail_reason("jbay"
   "Could not find declaration for truncate"
   testdata/p4_14_samples/truncate.p4
 )
-
-# BRIG-760
-p4c_add_xfail_reason("jbay"
-  "error: action data bus conflict on row .* between tables"
-  extensions/p4_tests/p4_14/sful_sel1.p4
-)

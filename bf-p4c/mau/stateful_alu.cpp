@@ -610,8 +610,6 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             opcode = k->value ? "set_bit" : "clr_bit";
             if (onebit_cmpl) opcode += 'c';
             rv = onebit = new IR::MAU::Instruction(opcode);
-            setup_output(outputs, 0, nullptr, {
-                new IR::MAU::SaluReg(IR::Type::Bits::get(1), "alu_lo", false) });
             break; }
         if (predicate)
             operands.insert(operands.begin(), predicate);
