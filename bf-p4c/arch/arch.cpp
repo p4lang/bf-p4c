@@ -1,8 +1,8 @@
 #include "bf-p4c/arch/arch.h"
-#include "bf-p4c/arch/tofino_native.h"
-#include "bf-p4c/arch/jbay_native.h"
-#include "bf-p4c/arch/simple_switch.h"
-#include "bf-p4c/arch/portable_switch.h"
+#include "bf-p4c/arch/jna.h"
+#include "bf-p4c/arch/psa.h"
+#include "bf-p4c/arch/tna.h"
+#include "bf-p4c/arch/v1model.h"
 
 namespace BFN {
 

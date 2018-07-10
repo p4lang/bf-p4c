@@ -21,6 +21,12 @@ set (P16_TNA_EXCLUDE_PATTERNS "tofino.h")
 set (P16_TNA_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
 p4c_find_tests("${P16_TNA_FOR_TOFINO}" p16_tna_tests INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
 
+set (PSA_SEARCH_PATTERNS "include.*psa.p4")
+set (PSA_EXCLUDE_PATTERNS "package" "extern")
+set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
+set (P16_PSA_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
+p4c_find_tests("${P16_PSA_FOR_TOFINO}" p16_psa_tests INCLUDE "${PSA_SEARCH_PATTERNS}" EXCLUDE "${PSA_EXCLUDE_PATTERNS}")
+
 set (TOFINO_V1_TEST_SUITES
   ${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4
   ${p16_v1tests}
@@ -45,6 +51,11 @@ set (TOFINO_TNA_TEST_SUITES
   ${p16_tna_tests}
   )
 p4c_add_bf_backend_tests("tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}")
+
+set (TOFINO_PSA_TEST_SUITES
+  ${p16_psa_tests}
+  )
+p4c_add_bf_backend_tests("tofino" "psa" "base" "${TOFINO_PSA_TEST_SUITES}")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4

@@ -669,9 +669,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Header present in IR not under Member"
   testdata/p4_16_samples/issue907-bmv2.p4
-  testdata/p4_16_samples/issue1210.p4
   )
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -1133,10 +1131,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1043-bmv2.p4
 )
 
-# v1model program cannot used PortId_t as instance name, because it is reserved
-# by tna.p4
 p4c_add_xfail_reason("tofino"
-  "Duplicates declaration PortId_t"
+  "Cannot extract field .* from .* which has type .*"
   testdata/p4_16_samples/issue1210.p4
 )
 
@@ -1158,4 +1154,67 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/sful_sel1.p4
   extensions/p4_tests/p4_14/test_config_170_stateful_selection_table_update.p4
   extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
+)
+
+# backend does not support this example
+p4c_add_xfail_reason("tofino"
+  "Tofino does not allow stats to use different address schemes on one table"
+  testdata/p4_16_samples/psa-counter2.p4
+)
+
+# frontend does not support {} on psa_direct_counter table property
+p4c_add_xfail_reason("tofino"
+  "Expected .* property value for table .* to resolve to an extern instance"
+  testdata/p4_16_samples/psa-counter5.p4
+)
+
+# backend does not support this example
+p4c_add_xfail_reason("tofino"
+  "Attached object .* in table .* is executed in some actions and not executed in others"
+  testdata/p4_16_samples/psa-counter6.p4
+)
+
+# psa translation bug
+p4c_add_xfail_reason("tofino"
+  "Interface .* does not have a method named .*"
+  testdata/p4_16_samples/psa-hash.p4
+  testdata/p4_16_samples/psa-random.p4
+)
+
+# psa.p4 bug, frontend failure
+p4c_add_xfail_reason("tofino"
+  "Action parameter color has a type which is not bit<> or int<> or bool"
+  testdata/p4_16_samples/psa-meter1.p4
+)
+
+# psa.p4 bug, cannot test equal with bits and PSA_Meter_Color_t
+p4c_add_xfail_reason("tofino"
+  "==: not defined on bit<8> and MeterColor_t"
+  testdata/p4_16_samples/psa-meter3.p4
+)
+
+# p4Runtime bug
+p4c_add_xfail_reason("tofino"
+  "expected one type argument"
+  testdata/p4_16_samples/psa-register1.p4
+  testdata/p4_16_samples/psa-register2.p4
+  testdata/p4_16_samples/psa-register3.p4
+  testdata/p4_16_samples/psa-example-register2-bmv2.p4
+)
+
+# program error
+p4c_add_xfail_reason("tofino"
+  "Cannot unify .* to .*"
+  testdata/p4_16_samples/psa-example-counters-bmv2.p4
+  testdata/p4_16_samples/psa-example-digest-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Assignment cannot be supported in the parser"
+  testdata/p4_16_samples/psa-fwd-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Identifier with no name"
+  testdata/p4_16_samples/issue1208-1.p4
 )

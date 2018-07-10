@@ -1,4 +1,4 @@
-#include "bf-p4c/arch/jbay_native.h"
+#include "bf-p4c/arch/jna.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
 
 namespace BFN {

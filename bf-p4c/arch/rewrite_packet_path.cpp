@@ -98,6 +98,8 @@ struct RewriteResubmit : public Transform {
         } else if (auto *control = findContext<IR::BFN::TranslatedP4Deparser>()) {
             if (control->thread != INGRESS) {
                 return node; }
+        } else {
+            return node;
         }
 
         if (pathname == resubmit.paramNameInParser) {
@@ -181,6 +183,8 @@ struct RewriteRecirculate : public Transform {
         } else if (auto *control = findContext<IR::BFN::TranslatedP4Deparser>()) {
             if (control->thread != EGRESS)
                 return node;
+        } else {
+            return node;
         }
 
         if (node->path->name == recirculate.paramNameInParser ||

@@ -2,7 +2,7 @@
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/cloner.h"
-#include "bf-p4c/arch/tofino_native.h"
+#include "bf-p4c/arch/tna.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/arch.h"
 

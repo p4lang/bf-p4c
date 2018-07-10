@@ -1,5 +1,5 @@
-#ifndef BF_P4C_ARCH_PORTABLE_SWITCH_H_
-#define BF_P4C_ARCH_PORTABLE_SWITCH_H_
+#ifndef BF_P4C_ARCH_PSA_H_
+#define BF_P4C_ARCH_PSA_H_
 
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
@@ -29,4 +29,4 @@ class PortableSwitchTranslation : public PassManager {
 
 }  // namespace BFN
 
-#endif /* BF_P4C_ARCH_PORTABLE_SWITCH_H_ */
+#endif /* BF_P4C_ARCH_PSA_H_ */

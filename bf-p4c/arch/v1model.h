@@ -1,5 +1,5 @@
-#ifndef BF_P4C_ARCH_SIMPLE_SWITCH_H_
-#define BF_P4C_ARCH_SIMPLE_SWITCH_H_
+#ifndef BF_P4C_ARCH_V1MODEL_H_
+#define BF_P4C_ARCH_V1MODEL_H_
 
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
@@ -33,4 +33,4 @@ class SimpleSwitchTranslation : public PassManager {
 
 }  // namespace BFN
 
-#endif /* BF_P4C_ARCH_SIMPLE_SWITCH_H_ */
+#endif /* BF_P4C_ARCH_V1MODEL_H_ */

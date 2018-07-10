@@ -379,21 +379,21 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/bridge_metadata.cpp
   arch/internal/collect_bridged_fields.cpp
   arch/phase0.cpp
-  arch/portable_switch.cpp
   arch/program_structure.cpp
+  arch/psa.cpp
   arch/psa_converters.cpp
   arch/psa_model.cpp
   arch/psa_program_structure.cpp
   arch/remove_set_metadata.cpp
   arch/rewrite_packet_path.cpp
-  arch/simple_switch.cpp
-  arch/tofino_native.cpp
+  arch/tna.cpp
   arch/v1_converters.cpp
   arch/v1_program_structure.cpp
+  arch/v1model.cpp
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_ARCH_SRCS
-  arch/jbay_native.cpp)
+  arch/jna.cpp)
 endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
 build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -404,21 +404,21 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/bridge_metadata.h
   arch/internal/collect_bridged_fields.h
   arch/phase0.h
-  arch/portable_switch.h
   arch/program_structure.h
+  arch/psa.h
   arch/psa_converters.h
   arch/psa_model.h
   arch/psa_program_structure.h
   arch/remove_set_metadata.h
   arch/rewrite_packet_path.h
-  arch/simple_switch.h
-  arch/tofino_native.h
+  arch/tna.h
   arch/v1_converters.h
   arch/v1_program_structure.h
+  arch/v1model.h
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_ARCH_HDRS
-  arch/jbay_native.h)
+  arch/jna.h)
 endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")
 

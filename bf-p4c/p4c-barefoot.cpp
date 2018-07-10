@@ -6,7 +6,6 @@
 #include <iostream>
 #include <string>
 
-#include "arch/simple_switch.h"
 #include "asm.h"
 #include "backend.h"
 #include "bf-p4c-options.h"

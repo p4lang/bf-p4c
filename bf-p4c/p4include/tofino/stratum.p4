@@ -25,19 +25,6 @@ agreement with Barefoot Networks, Inc.
 
 #include "core.p4"
 
-
-enum PSA_PacketPath_t {
-    NORMAL,     /// Packet received by ingress that is none of the cases below.
-    NORMAL_UNICAST,   /// Normal packet received by egress which is unicast
-    NORMAL_MULTICAST, /// Normal packet received by egress which is multicast
-    CLONE_I2E,  /// Packet created via a clone operation in ingress,
-                /// destined for egress
-    CLONE_E2E,  /// Packet created via a clone operation in egress,
-                /// destined for egress
-    RESUBMIT,   /// Packet arrival is the result of a resubmit operation
-    RECIRCULATE /// Packet arrival is the result of a recirculate operation
-}
-
 /// A hack to support v1model to tofino translation, the enum is required
 /// as long as we still support v1model.p4
 enum CloneType {

@@ -75,7 +75,7 @@ void ProgramStructure::createTofinoArch() {
             continue;
         if (auto td = decl->to<IR::Type_Typedef>()) {
             if (auto def = declarations.getDeclaration(td->name)) {
-                WARNING("Type " << td->name << " is already defined to "
+                LOG3("Type " << td->name << " is already defined to "
                                 << def->getName() << ", ignored.");
                 continue;
             }
@@ -94,6 +94,11 @@ void ProgramStructure::createErrors() {
 
 void ProgramStructure::createTypes() {
     for (auto h : type_declarations) {
+        if (auto def = declarations.getDeclaration(h.first)) {
+            LOG3("Type " << h.first << " is already defined to " << def->getName()
+                            << ", ignored.");
+            continue;
+        }
         declarations.push_back(h.second);
     }
 }

@@ -452,6 +452,24 @@ const IR::Node* EgressDeparserConverter::postorder(IR::P4Control* node) {
     return result;
 }
 
+const IR::Node* TypeNameExpressionConverter::postorder(IR::TypeNameExpression* node) {
+    auto typeName = node->typeName->to<IR::Type_Name>();
+    auto path = typeName->path->to<IR::Path>();
+    auto mapped = enumsToTranslate.find(path->name);
+    if (mapped != enumsToTranslate.end()) {
+        auto newName = mapped->second;
+        auto newType = structure->enums.find(newName);
+        if (newType == structure->enums.end()) {
+            BUG("No translation for type ", node);
+            return node;
+        }
+        auto retval =
+            new IR::TypeNameExpression(node->srcInfo, newType->second, new IR::Type_Name(newName));
+        return retval;
+    }
+    return node;
+}
+
 /// map path expression
 const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
     auto membername = node->member.name;

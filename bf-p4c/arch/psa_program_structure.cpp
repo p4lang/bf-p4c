@@ -114,9 +114,10 @@ void ProgramStructure::createMain() {
 
 /// Remap paths, member expressions, and type names according to the mappings
 /// specified in the given ProgramStructure.
-struct ConvertPsaNames : public PassManager {
-    explicit ConvertPsaNames(ProgramStructure *structure) {
-        addPasses({new BFN::PSA::PathExpressionConverter(structure)});
+struct ConvertNames : public PassManager {
+    explicit ConvertNames(ProgramStructure *structure) {
+        addPasses({new BFN::PSA::PathExpressionConverter(structure),
+                   new BFN::PSA::TypeNameExpressionConverter(structure)});
     }
 };
 
@@ -131,7 +132,7 @@ const IR::P4Program *ProgramStructure::create(const IR::P4Program *program) {
     createMain();
     auto *convertedProgram = new IR::P4Program(program->srcInfo, declarations);
 
-    ConvertPsaNames nameConverter(this);
+    ConvertNames nameConverter(this);
     return convertedProgram->apply(nameConverter);
 }
 

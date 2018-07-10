@@ -11,14 +11,13 @@
 #include "frontends/p4/strengthReduction.h"
 #include "frontends/p4/uselessCasts.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
-#include "bf-p4c/arch/phase0.h"
-#include "bf-p4c/arch/remove_set_metadata.h"
 #include "bf-p4c/arch/bridge_metadata.h"
+#include "bf-p4c/arch/intrinsic_metadata.h"
+#include "bf-p4c/arch/phase0.h"
+#include "bf-p4c/arch/program_structure.h"
+#include "bf-p4c/arch/remove_set_metadata.h"
+#include "bf-p4c/arch/v1model.h"
 #include "bf-p4c/device.h"
-#include "program_structure.h"
-#include "remove_set_metadata.h"
-#include "simple_switch.h"
-#include "intrinsic_metadata.h"
 
 namespace BFN {
 

@@ -1,7 +1,8 @@
 #include <cmath>
+#include <fstream>
 #include "bf-p4c/device.h"
 #include "intrinsic_metadata.h"
-#include "portable_switch.h"
+#include "psa.h"
 #include "rewrite_packet_path.h"
 #include "lib/bitops.h"
 #include "midend/convertEnums.h"
@@ -68,13 +69,6 @@ class AnalyzeProgram : public Inspector {
     void postorder(const IR::Type_StructLike* node) override
     { structure->type_declarations.emplace(node->name, node); }
     void postorder(const IR::Type_Typedef* node) override {
-        if (node->name == "PortId_t"         ||
-            node->name == "MulticastGroup_t" ||
-            node->name == "ClassOfService_t" ||
-            node->name == "PacketLength_t"   ||
-            node->name == "Timestamp_t"      ||
-            node->name == "EgressInstance_t") return;
-
         structure->type_declarations.emplace(node->name, node);
     }
     void postorder(const IR::Type_Enum* node) override {
@@ -515,7 +509,6 @@ class TranslateProgram : public Inspector {
     }
 
     void addExternMethodCall(cstring name, const IR::Node* node) {
-        LOG1("extern type " << name);
         if (structure->methodcalls.count(name) == 0) {
             TranslationMap m;
             structure->methodcalls.emplace(name, m);
@@ -633,30 +626,7 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"compiler_generated_meta", "mirror_id", 10});
     }
 
-    void setup_psa_typedef() {
-        structure->type_declarations.emplace(
-                "PortId_t", new IR::Type_Typedef("PortId_t", IR::Type_Bits::get(9)));
-        structure->type_declarations.emplace(
-                "MulticastGroup_t",
-                new IR::Type_Typedef("MulticastGroup_t", IR::Type_Bits::get(16)));
-        structure->type_declarations.emplace(
-                "ClassOfService_t",
-                new IR::Type_Typedef("ClassOfService_t", IR::Type_Bits::get(3)));
-        structure->type_declarations.emplace(
-                "PacketLength_t",
-                new IR::Type_Typedef("PacketLength_t", IR::Type_Bits::get(14)));
-        structure->type_declarations.emplace(
-                "Timestamp_t",
-                new IR::Type_Typedef("Timestamp_t", IR::Type_Bits::get(48)));
-        structure->type_declarations.emplace(
-                "EgressInstance_t",
-                new IR::Type_Typedef("EgressInstance_t", IR::Type_Bits::get(16)));
-    }
-
-    void postorder(const IR::P4Program*) override {
-        setup_metadata_map();
-        structure->include("tofino/stratum.p4", &structure->targetTypes);
-        structure->include("tofino/p4_14_prim.p4", &structure->targetTypes);
+    void analyzeTofinoModel() {
         for (auto decl : structure->targetTypes) {
             if (auto v = decl->to<IR::Type_Enum>()) {
                 structure->enums.emplace(v->name, v);
@@ -666,7 +636,57 @@ class LoadTargetArchitecture : public Inspector {
                 }
             }
         }
-        setup_psa_typedef();
+    }
+
+    void postorder(const IR::P4Program*) override {
+        setup_metadata_map();
+        char* drvP4IncludePath = getenv("P4C_16_INCLUDE_PATH");
+        Util::PathName path(drvP4IncludePath ? drvP4IncludePath : p4includePath);
+        char tempPath[PATH_MAX];
+        snprintf(tempPath, PATH_MAX-1, "/tmp/arch_XXXXXX.p4");
+        std::vector<const char *>filenames;
+        if (Device::currentDevice() == "Tofino")
+            filenames.push_back("tofino.p4");
+#if HAVE_JBAY
+        else
+            filenames.push_back("jbay.p4");
+#endif  // HAVE_JBAY
+        filenames.push_back("tofino/stratum.p4");
+        filenames.push_back("tofino/p4_14_prim.p4");
+
+        // create a temporary file. The safe method is to create and open the file
+        // in exclusive mode. Since we can only open a C++ stream with a hack, we'll close
+        // the file and then open it again as an ofstream.
+        auto fd = mkstemps(tempPath, 3);
+        if (fd < 0) {
+            ::error("Error mkstemp(%1%): %2%", tempPath, strerror(errno));
+            return;
+        }
+        // close the file descriptor and open as stream
+        close(fd);
+        std::ofstream result(tempPath, std::ios::out);
+        if (!result.is_open()) {
+            ::error("Failed to open arch include file %1%", tempPath);
+            return;
+        }
+        for (auto f : filenames) {
+            Util::PathName fPath = path.join(f);
+            std::ifstream inFile(fPath.toString(), std::ios::in);
+            if (inFile.is_open()) {
+                result << inFile.rdbuf();
+                inFile.close();
+            } else {
+                ::error("Failed to open architecture include file %1%", fPath.toString());
+                result.close();
+                unlink(tempPath);
+                return;
+            }
+        }
+        result.close();
+        structure->include(tempPath, &structure->targetTypes);
+        unlink(tempPath);
+
+        analyzeTofinoModel();
     }
 };
 
@@ -684,8 +704,8 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new P4::CopyStructures(refMap, typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
         evaluator,
-        new VisitFunctor([structure, evaluator]() {
-            structure->toplevel = evaluator->getToplevelBlock(); }),
+        new VisitFunctor(
+            [structure, evaluator]() { structure->toplevel = evaluator->getToplevelBlock(); }),
         new TranslationFirst(),
         new PSA::LoadTargetArchitecture(structure),
         new PSA::AnalyzeProgram(structure, refMap, typeMap),
@@ -694,10 +714,10 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new AddIntrinsicMetadata,
         new PSA::RewritePacketPath(structure),
         new TranslationLast(),
-        new AddPsaBridgeMetadata(refMap, typeMap, structure),
+        // new AddPsaBridgeMetadata(refMap, typeMap, structure),
+        new P4::ClearTypeMap(typeMap),
+        new P4::TypeChecking(refMap, typeMap, true),
     });
 }
-
-
 
 }  // namespace BFN
