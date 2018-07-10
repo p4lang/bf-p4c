@@ -185,8 +185,9 @@ macro(packet_test_setup_check device)
   endif()
 endmacro(packet_test_setup_check)
 
+# extra test args can be passed as unamed arguments
 macro(p4c_add_bf_backend_tests device arch label tests)
-  set (testExtraArgs)
+  set (testExtraArgs "${ARGN}")
   # do not add the device directly to testExtraArgs
   # this is used later to add other tests for multiple configurations.
   # set (testExtraArgs "${testExtraArgs} -${device}")

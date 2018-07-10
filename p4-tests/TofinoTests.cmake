@@ -50,7 +50,7 @@ p4c_add_bf_backend_tests("tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES}")
 set (TOFINO_TNA_TEST_SUITES
   ${p16_tna_tests}
   )
-p4c_add_bf_backend_tests("tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}")
+p4c_add_bf_backend_tests("tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}" "-bfrt")
 
 set (TOFINO_PSA_TEST_SUITES
   ${p16_psa_tests}
