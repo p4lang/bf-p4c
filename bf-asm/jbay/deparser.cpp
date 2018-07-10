@@ -497,6 +497,13 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
     // FIXME -- use/set csum.csum_constant and csum.zeros_as_ones?
 }
 
+template<class CONS>
+void write_jbay_constant_config(CONS &cons, const std::set<int> &vals) {
+    unsigned idx = 0;
+    for (auto v : vals) {
+        cons[idx] = v;
+        idx++; }
+}
 
 template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     regs.dprsrreg.dprsr_csr_ring.disable();
@@ -514,6 +521,11 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
         r.out_ingr.disable();
     for (auto &r : regs.dprsrreg.ho_e)
         r.out_egr.disable();
+
+    for (auto &r : regs.dprsrreg.ho_i)
+        write_jbay_constant_config(r.hir.h.hdr_xbar_const.value, constants[INGRESS]);
+    for (auto &r : regs.dprsrreg.ho_e)
+        write_jbay_constant_config(r.her.h.hdr_xbar_const.value, constants[EGRESS]);
 
     for (int i = 0; i < Target::JBay::DEPARSER_CHECKSUM_UNITS; i++) {
         if (!checksum[INGRESS][i].empty()) {
@@ -618,6 +630,10 @@ template<> Phv::Slice Deparser::RefOrChksum::lookup<Target::JBay>() const {
 
 template<> unsigned Deparser::FDEntry::Checksum::encode<Target::JBay>() {
     return 232 + unit;
+}
+
+template<> unsigned Deparser::FDEntry::Constant::encode<Target::JBay>() {
+    return 224 + Deparser::constant_idx(gress, val);
 }
 
 template<> void Deparser::gen_learn_quanta(Target::JBay::parser_regs &regs, json::vector &learn_quanta) {

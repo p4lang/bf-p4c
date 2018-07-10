@@ -414,5 +414,10 @@ template<> unsigned Deparser::FDEntry::Checksum::encode<Target::Tofino>() {
     return 224 + gress * 6 + unit;
 }
 
+template<> unsigned Deparser::FDEntry::Constant::encode<Target::Tofino>() {
+    error(lineno, "Tofino deparser does not support constant entries");
+    return -1;
+}
+
 template<> void Deparser::gen_learn_quanta(Target::Tofino::parser_regs &regs, json::vector &learn_quanta) {
 }

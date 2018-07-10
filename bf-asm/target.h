@@ -24,6 +24,7 @@
     M(const char *, name) \
     M(int, PARSER_CHECKSUM_UNITS) \
     M(int, DEPARSER_CHECKSUM_UNITS) M(int, DEPARSER_MAX_POV_BYTES) \
+    M(int, DEPARSER_CONSTANTS) \
     M(int, MAU_BASE_DELAY) M(int, MAU_BASE_PREDICATION_DELAY) \
     M(int, NUM_MAU_STAGES) M(int, END_OF_PIPE) \
     M(int, STATEFUL_CMP_UNITS) M(int, STATEFUL_OUTPUT_UNITS) M(int, STATEFUL_PRED_MASK) \
@@ -91,6 +92,7 @@ class Target::Tofino : public Target {
         NUM_MAU_STAGES = 12,
         ACTION_INSTRUCTION_MAP_WIDTH = 7,
         DEPARSER_CHECKSUM_UNITS = 6,
+        DEPARSER_CONSTANTS = 0,
         DEPARSER_MAX_POV_BYTES = 32,
         DEPARSER_MAX_FD_ENTRIES = 384,
         END_OF_PIPE = 0xff,
@@ -166,6 +168,7 @@ class Target::JBay : public Target {
 #endif
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
         DEPARSER_CHECKSUM_UNITS = 8,
+        DEPARSER_CONSTANTS = 8,
         DEPARSER_MAX_POV_BYTES = 16,
         DEPARSER_CHUNKS_PER_GROUP = 8,
         DEPARSER_CHUNK_SIZE = 8,

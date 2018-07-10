@@ -44,6 +44,7 @@ public:
     std::vector<Phv::Ref>                           pov_order[2];
     ordered_map<const Phv::Register *, unsigned>    pov[2];
     bitvec                                          phv_use[2];
+    std::set<int>                                   constants[2];
     struct Intrinsic {
         struct Type;
         Type                    *type;
@@ -71,8 +72,24 @@ public:
     void output(json::map &);
     template<class REGS> void gen_learn_quanta(REGS &, json::vector&);
     template<class REGS> void write_config(REGS &);
+
     static const bitvec &PhvUse(gress_t gr) {
         return singleton_object.phv_use[gr]; }
+
+    static bool add_constant(gress_t gr, int c) {
+        if (!singleton_object.constants[gr].count(c)) {
+            singleton_object.constants[gr].insert(c);
+            if (singleton_object.constants[gr].size() > Target::DEPARSER_CONSTANTS())
+                return false;
+        }
+        return true;
+    }
+
+    static int constant_idx(gress_t gr, int c) {
+        if (singleton_object.constants[gr].count(c))
+            return std::distance(singleton_object.constants[gr].begin(),
+                                 singleton_object.constants[gr].find(c));
+        return -1; }
 };
 
 #endif /* _deparser_h_ */

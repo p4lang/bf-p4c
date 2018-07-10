@@ -640,9 +640,11 @@ deparser <thread>:
     dictionary:
         # ordered list of phv locations to write out as the output deparser
         - <phv-location> : <bit-location>
-            # single value to write iff the referred to bit is set
+            # single value to write iff the referred bit is set
         - checksum <int> : <bit-location>
-            # checksum result to write iff the referred to bit is set
+            # checksum result to write iff the referred bit is set
+        - <constant> : <bit-location>
+            # constant to write iff the referred bit is set (jbay only)
         - clot <tag>:
             # clot to output (jbay only)
             pov: <bit-location>

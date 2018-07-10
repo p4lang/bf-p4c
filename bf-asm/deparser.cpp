@@ -46,6 +46,23 @@ struct Deparser::FDEntry {
         unsigned encode() override;
         unsigned size() override { return 2; }
     };
+    struct Constant : Base {
+        int              lineno;
+        gress_t          gress;
+        int              val;
+        Constant(gress_t g, const value_t &v) : gress(g), val(v.i) {
+            lineno = v.lineno;
+            if (v.i < 0 || v.i >> 8)
+                error(lineno, "Invalid deparser constant %ld, valid constant range is 0-255", v.i);
+            bool ok = Deparser::add_constant(gress, val);
+            if (!ok)
+                error(lineno, "Ran out of deparser constants");
+        } 
+        void check(bitvec &phv_use) override { }
+        template<class TARGET> unsigned encode();
+        unsigned encode() override;
+        unsigned size() override { return 1; }
+    };
     struct Clot : Base {
         int                                     lineno;
         gress_t                                 gress;
@@ -111,6 +128,9 @@ struct Deparser::FDEntry {
             what = new Clot(gress, v.vec[1], p, pov);
         } else if (v.type == tCMD && v.vec.size == 2 && v == "checksum") {
             what = new Checksum(gress, v.vec[1]);
+            pov = ::Phv::Ref(gress, p);
+        } else if (v.type == tINT) {
+            what = new Constant(gress, v);
             pov = ::Phv::Ref(gress, p);
         } else {
             what = new Phv(gress, v);
@@ -407,6 +427,11 @@ void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
 }
 
 unsigned Deparser::FDEntry::Checksum::encode() {
+    SWITCH_FOREACH_TARGET(options.target, return encode<TARGET>(); );
+    return -1;
+}
+
+unsigned Deparser::FDEntry::Constant::encode() {
     SWITCH_FOREACH_TARGET(options.target, return encode<TARGET>(); );
     return -1;
 }
