@@ -218,16 +218,9 @@ struct ParserAsmSerializer : public ParserInspector {
     }
 
     void outputChecksum(const IR::BFN::LoweredParserChecksum* csum) {
-        cstring type;
-        switch (csum->type) {
-            case 0: type = "verify";   break;
-            case 1: type = "residual"; break;
-            case 2: type = "clot";     break;
-            default: BUG("Unknown parser checksum type");
-        }
         out << indent << "checksum " << csum->unit_id << ":" << std::endl;
         AutoIndent indentCsum(indent, 1);
-        out << indent << "type: " << type << std::endl;
+        out << indent << "type: " << csum->type << std::endl;
 
         out << indent << "mask: ";
         const char *sep = "[ ";
@@ -241,14 +234,14 @@ struct ParserAsmSerializer : public ParserInspector {
         out << indent << "start: " << csum->start  << std::endl;
         out << indent << "end: " << csum->end  << std::endl;
 
-        if (csum->type == 0 && csum->csum_err)
+        if (csum->type == IR::BFN::ChecksumMode::VERIFY && csum->csum_err)
             out << indent << "dest: " << csum->csum_err << std::endl;
-        else if (csum->type == 1 && csum->phv_dest)
+        else if (csum->type == IR::BFN::ChecksumMode::RESIDUAL && csum->phv_dest)
             out << indent << "dest: " << csum->phv_dest << std::endl;
-        else if (csum->type == 2)
+        else if (csum->type == IR::BFN::ChecksumMode::CLOT)
             out << indent << "dest: " << csum->clot_dest << std::endl;
 
-        if (csum->type == 2)
+        if (csum->type == IR::BFN::ChecksumMode::CLOT)
             clot_tag_to_checksum_unit[csum->clot_dest.tag] = csum->unit_id;
     }
 

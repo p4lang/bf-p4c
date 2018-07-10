@@ -2,6 +2,7 @@
 #include <set>
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/ir/ir_enums.h"
 #include "bf-p4c/parde/clot.h"
 #include "bf-p4c/parde/epb_config.h"
 #include "bf-p4c/parde/match_register.h"
@@ -139,7 +140,7 @@ class LoweredParserChecksum : LoweredParserPrimitive {
     unsigned swap;
     bool start;
     bool end;
-    unsigned type;  // 0 = verify, 1 = residue, 2 = clot
+    BFN::ChecksumMode type;
 
     optional NullOK BFN::ContainerBitRef csum_err;
     optional Clot clot_dest;

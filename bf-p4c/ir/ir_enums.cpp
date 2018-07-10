@@ -140,3 +140,22 @@ bool operator>>(cstring s, IR::MAU::TypeLocation &t) {
     }
     return false;
 }
+
+static const char *checksum_mode_to_str[] = {
+    "VERIFY", "RESIDUAL", "CLOT"
+};
+
+std::ostream &operator<<(std::ostream &out, const IR::BFN::ChecksumMode &t) {
+    out << checksum_mode_to_str[static_cast<int>(t)];
+    return out;
+}
+
+bool operator>>(cstring s, IR::BFN::ChecksumMode &t) {
+    for (int i = 0; i < 3; i++) {
+        if (checksum_mode_to_str[i] == s) {
+            t = static_cast<IR::BFN::ChecksumMode>(i); return true;
+        }
+    }
+    return false;
+}
+

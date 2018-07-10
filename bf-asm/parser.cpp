@@ -284,9 +284,9 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
     for (auto &kv : MapIterChecked(data.value.map, true)) {
         if (kv.key == "type") {
             if (CHECKTYPE(kv.value, tSTR)) {
-                     if (kv.value == "verify")   type = 0;
-                else if (kv.value == "residual") type = 1;
-                else if (kv.value == "clot")     type = 2;
+                     if (kv.value == "VERIFY")   type = 0;
+                else if (kv.value == "RESIDUAL") type = 1;
+                else if (kv.value == "CLOT")     type = 2;
                 else error(kv.value.lineno, "Unknown parser checksum type");
             }
             if (kv.value == "clot") {

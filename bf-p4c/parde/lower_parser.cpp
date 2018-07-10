@@ -615,9 +615,9 @@ struct ComputeLoweredParserIR : public ParserInspector {
         bool start = state == checksumAlloc.declToStartState.at(declName);
         bool end = state == checksumAlloc.declToEndState.at(declName);
 
-        unsigned type = 0;  // verify
+        auto type = IR::BFN::ChecksumMode::VERIFY;
         if (last->is<IR::BFN::ChecksumSubtract>() || last->is<IR::BFN::ChecksumGet>())
-            type = 1;  // residual
+            type = IR::BFN::ChecksumMode::RESIDUAL;
 
         const IR::BFN::FieldLVal* dest = nullptr;
         std::vector<nw_byterange> masked_ranges;
@@ -647,7 +647,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                    "multiple containers?", dest->field);
             }
 
-            if (type == 0 && dest) {
+            if (type == IR::BFN::ChecksumMode::VERIFY && dest) {
                 if (auto sl = dest->field->to<IR::Slice>()) {
                     BUG_CHECK(sl->getL() == sl->getH(), "checksum error must write to single bit");
                     csum->csum_err = new IR::BFN::ContainerBitRef(
@@ -656,7 +656,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 } else {
                     csum->csum_err = lowerPovBit(phv, dest);
                 }
-            } else if (type == 1 && dest) {
+            } else if (type == IR::BFN::ChecksumMode::RESIDUAL && dest) {
                 csum->phv_dest = new IR::BFN::ContainerRef(slices.back().container);
             }
 
@@ -1011,7 +1011,7 @@ struct InsertClotChecksums : public ParserModifier {
                        const std::vector<nw_byterange>& mask,
                        const Clot& clot) {
         auto csum = new IR::BFN::LoweredParserChecksum(
-                id, mask, 0x0, true, true, /* type */2);
+                id, mask, 0x0, true, true, IR::BFN::ChecksumMode::CLOT);
         csum->clot_dest = clot;
         return csum;
     }
@@ -1571,8 +1571,8 @@ class ExtractorAllocator {
             // reserve extractors for checksum unit.
             for (auto* cks : checksums) {
                 // In verify mode, we need to reserve a 16 bit extractor.
-                if (cks->type == 1) {
-                    auto use_extractor = 16;
+                if (cks->type == IR::BFN::ChecksumMode::VERIFY && cks->csum_err) {
+                    auto use_extractor = cks->csum_err->container->container.size();
                     allocatedExtractorsBySize[use_extractor]++;
                     BUG_CHECK(allocatedExtractorsBySize[use_extractor] <=
                               pardeSpec.extractorSpec().at(use_extractor),
@@ -1645,14 +1645,14 @@ class ExtractorAllocator {
                 // If it does, we need to handle it like what we did on tofino.
                 if (extract->dest) {
                     switch (extract->dest->container.size()) {
-                    case 8:  allocatedExtractors++;  break;
-                    case 16: allocatedExtractors++;  break;
-                    case 32: allocatedExtractors+=2; break;
-                    default: BUG("Unknown container size");
+                        case 8:  allocatedExtractors++;  break;
+                        case 16: allocatedExtractors++;  break;
+                        case 32: allocatedExtractors+=2; break;
+                        default: BUG("Unknown container size");
                     }
                 }
 
-                // XXX(zma) we could pack two 8-bit extract into a single exact
+                // TODO(zma) we could pack two 8-bit extract into a single exact
                 // if the two containers are an even-odd pair.
                 rst.extractedInterval |= byteInterval;
                 rst.allocatedExtracts.push_back(extract);

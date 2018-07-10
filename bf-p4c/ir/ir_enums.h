@@ -13,6 +13,11 @@ enum class PfeLocation { DEFAULT, OVERHEAD, PAYLOAD, NOT_SET };
 enum class TypeLocation { DEFAULT, OVERHEAD, NOT_SET };
 
 }  // end namespace MAU
+
+namespace BFN {
+enum class ChecksumMode { VERIFY, RESIDUAL, CLOT };
+}  // end namespace BFN
+
 }  // end namespace IR
 
 std::ostream& operator<<(std::ostream &out, const IR::MAU::DataAggregation &d);
@@ -32,5 +37,8 @@ bool operator>>(cstring s, IR::MAU::PfeLocation &a);
 
 std::ostream& operator<<(std::ostream &out, const IR::MAU::TypeLocation &t);
 bool operator>>(cstring s, IR::MAU::TypeLocation &t);
+
+std::ostream& operator<<(std::ostream &out, const IR::BFN::ChecksumMode &t);
+bool operator>>(cstring s, IR::BFN::ChecksumMode &t);
 
 #endif /* BF_P4C_IR_IR_ENUMS_H_ */
