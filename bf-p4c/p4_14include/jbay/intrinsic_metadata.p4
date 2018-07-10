@@ -256,12 +256,16 @@ header_type ingress_intrinsic_metadata_for_mirror_buffer_t {
                                         // packets.
         _pad2 : 7;
         mirror_io_select : 1;           // Mirror incoming(0) or outgoing(1) packet
+        _pad3 : 3;
         mirror_hash : 13;               // Mirror hash field.
+        _pad4 : 2;
         mirror_ingress_cos : 3;         // Mirror ingress cos for PG mapping.
         mirror_deflect_on_drop : 1;     // Mirror enable deflection on drop if true.
         mirror_copy_to_cpu_ctrl : 1;    // Mirror enable copy-to-cpu if true.
         mirror_multicast_ctrl : 1;      // Mirror enable multicast if true.
+        _pad5 : 7;
         mirror_egress_port : 9;         // Mirror packet egress port.
+        _pad6 : 1;
         mirror_qid : 7;                 // Mirror packet qid.
         mirror_coalesce_length : 8;     // Mirror coalesced packet max sample
                                         // length. Unit is quad bytes.
@@ -423,12 +427,16 @@ header_type egress_intrinsic_metadata_for_mirror_buffer_t {
 
         _pad2 : 7;
         mirror_io_select : 1;           // Mirror incoming(0) or outgoing(1) packet
+        _pad3 : 3;
         mirror_hash : 13;               // Mirror hash field.
+        _pad4 : 2;
         mirror_ingress_cos : 3;         // Mirror ingress cos for PG mapping.
         mirror_deflect_on_drop : 1;     // Mirror enable deflection on drop if true.
         mirror_copy_to_cpu_ctrl : 1;    // Mirror enable copy-to-cpu if true.
         mirror_multicast_ctrl : 1;      // Mirror enable multicast if true.
+        _pad5 : 7;
         mirror_egress_port : 9;         // Mirror packet egress port.
+        _pad6 : 1;
         mirror_qid : 7;                 // Mirror packet qid.
         mirror_coalesce_length : 8;     // Mirror coalesced packet max sample
                                         // length. Unit is quad bytes.
