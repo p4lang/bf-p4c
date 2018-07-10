@@ -88,6 +88,7 @@ class BfRtSchemaGenerator {
 
         BF_RT_DATA_METER_INDEX,
         BF_RT_DATA_COUNTER_INDEX,
+        BF_RT_DATA_REGISTER_INDEX,
     };
 
     /// Common counter representation between PSA and Tofino architectures
@@ -99,6 +100,8 @@ class BfRtSchemaGenerator {
     struct ActionProf;
     /// Common digest representation between PSA and Tofino architectures
     struct Digest;
+    /// Common register representation between PSA and Tofino architectures
+    struct Register;
 
     void addMatchTables(Util::JsonArray* tablesJson) const;
     void addActionProfs(Util::JsonArray* tablesJson) const;
@@ -110,6 +113,7 @@ class BfRtSchemaGenerator {
 
     void addCounterCommon(Util::JsonArray* tablesJson, const Counter& counter) const;
     void addMeterCommon(Util::JsonArray* tablesJson, const Meter& meter) const;
+    void addRegisterCommon(Util::JsonArray* tablesJson, const Register& meter) const;
     void addActionProfCommon(Util::JsonArray* tablesJson, const ActionProf& actionProf) const;
     void addLearnFilterCommon(Util::JsonArray* learnFiltersJson, const Digest& digest) const;
 
@@ -117,6 +121,18 @@ class BfRtSchemaGenerator {
     Util::JsonArray* makeActionSpecs(const p4configv1::Table& table) const;
     boost::optional<Counter> getDirectCounter(P4Id counterId) const;
     boost::optional<Meter> getDirectMeter(P4Id meterId) const;
+    boost::optional<Register> getDirectRegister(P4Id registerId) const;
+
+    /// Transforms a P4Info @typeSpec to a list of JSON objects matching the
+    /// BF-RT format. @instanceType and @instanceName are used for logging error
+    /// messages. This method currenty only supports fixed-width bitstrings as
+    /// well as non-nested structs and tuples. All field names are prefixed with
+    /// @prefix.
+    void transformTypeSpecToDataFields(Util::JsonArray* fieldsJson,
+                                       const p4configv1::P4DataTypeSpec& typeSpec,
+                                       cstring instanceType,
+                                       cstring instanceName,
+                                       cstring prefix = "") const;
 
     static Util::JsonObject* makeCommonDataField(P4Id id, const std::string& name,
                                                  Util::JsonObject* type, bool repeated,
@@ -133,6 +149,7 @@ class BfRtSchemaGenerator {
     static void addCounterDataFields(Util::JsonArray* dataJson, const Counter& counter);
 
     static void addMeterDataFields(Util::JsonArray* dataJson, const Meter& meter);
+    void addRegisterDataFields(Util::JsonArray* dataJson, const Register& register_) const;
 
     const p4configv1::P4Info& p4info;
 };
@@ -505,6 +522,24 @@ struct BfRtSchemaGenerator::Digest {
     }
 };
 
+/// Common register / stateful representation between PSA and Tofino architectures
+struct BfRtSchemaGenerator::Register {
+    std::string name;
+    P4Id id;
+    int64_t size;
+    p4configv1::P4DataTypeSpec typeSpec;
+
+    static boost::optional<Register> fromTofino(const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::Register register_;
+        if (!externInstance.info().UnpackTo(&register_)) {
+            ::error("Extern instance %1% does not pack a Register object", pre.name());
+            return boost::none;
+        }
+        return Register{pre.name(), pre.id(), register_.size(), register_.type_spec()};
+    }
+};
+
 boost::optional<BfRtSchemaGenerator::Counter>
 BfRtSchemaGenerator::getDirectCounter(P4Id counterId) const {
     if (isOfType(counterId, p4configv1::P4Ids::DIRECT_COUNTER)) {
@@ -531,6 +566,18 @@ BfRtSchemaGenerator::getDirectMeter(P4Id meterId) const {
         return Meter::fromTofinoDirect(*externInstance);
     }
     return boost::none;
+}
+
+boost::optional<BfRtSchemaGenerator::Register>
+BfRtSchemaGenerator::getDirectRegister(P4Id registerId) const {
+    if (!isOfType(registerId, ::barefoot::P4Ids::REGISTER)) return boost::none;
+    auto* externInstance = Tofino::findExternInstance(p4info, registerId);
+    if (externInstance == nullptr) return boost::none;
+    auto register_ = Register::fromTofino(*externInstance);
+    // There is no DirectRegister extern in TNA today and no DirectRegister
+    // message in P4Info; instead we rely on the size.
+    if (!register_ || register_->size != 0) return boost::none;
+    return register_;
 }
 
 Util::JsonObject*
@@ -647,6 +694,94 @@ BfRtSchemaGenerator::addMeterCommon(Util::JsonArray* tablesJson, const Meter& me
     tableJson->emplace("data", dataJson);
 
     tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
+}
+
+void
+BfRtSchemaGenerator::transformTypeSpecToDataFields(Util::JsonArray* fieldsJson,
+                                                   const p4configv1::P4DataTypeSpec& typeSpec,
+                                                   cstring instanceType,
+                                                   cstring instanceName,
+                                                   cstring prefix) const {
+    auto addField = [&](P4Id id, const std::string& name,
+                        const p4configv1::P4DataTypeSpec& fSpec) {
+        if (!fSpec.has_bitstring() || !fSpec.bitstring().has_bit()) {
+            ::error("Error when generating BF-RT info for '%1%' '%2%': "
+                    "packed type is too complex",
+                    instanceType, instanceName);
+            return;
+        }
+        auto* f = makeCommonDataField(
+            id, prefix + name,
+            makeTypeBytes(fSpec.bitstring().bit().bitwidth()), false /* repeated */);
+        fieldsJson->append(f);
+    };
+
+    const auto& typeInfo = p4info.type_info();
+
+    if (typeSpec.has_struct_()) {
+        auto structName = typeSpec.struct_().name();
+        auto p_it = typeInfo.structs().find(structName);
+        BUG_CHECK(p_it != typeInfo.structs().end(),
+                  "Struct name '%1%' not found in P4Info map", structName);
+        P4Id id = 1;
+        for (const auto& member : p_it->second.members())
+            addField(id++, member.name(), member.type_spec());
+    } else if (typeSpec.has_tuple()) {
+        P4Id id = 1;
+        for (const auto& member : typeSpec.tuple().members()) {
+            // TODO(antonin): we do not really have better names for now, do we
+            // need to add support for annotations of tuple members in P4Info?
+            std::string fName("f" + std::to_string(id));
+            addField(id++, fName, member);
+        }
+    } else if (typeSpec.has_bitstring()) {
+        // TODO(antonin): same as above, we need a way to pass name annotations
+        addField(1, "f1", typeSpec);
+    } else {
+        ::error("Error when generating BF-RT info for '%1%' '%2%': "
+                "only structs, tuples and bitstrings are currently supported for packed type",
+                instanceType, instanceName);
+    }
+}
+
+void
+BfRtSchemaGenerator::addRegisterDataFields(Util::JsonArray* dataJson,
+                                           const Register& register_) const {
+    auto* fieldsJson = new Util::JsonArray();
+    transformTypeSpecToDataFields(
+        fieldsJson, register_.typeSpec, "Register", register_.name, register_.name + ".");
+    for (auto* f : *fieldsJson) {
+        addSingleton(dataJson, f->to<Util::JsonObject>(),
+                     true /* mandatory */, false /* read-only */);
+    }
+}
+
+void
+BfRtSchemaGenerator::addRegisterCommon(Util::JsonArray* tablesJson,
+                                       const Register& register_) const {
+    auto* tableJson = new Util::JsonObject();
+
+    tableJson->emplace("name", register_.name);
+    tableJson->emplace("id", register_.id);
+    tableJson->emplace("table_type", "Register");
+    tableJson->emplace("size", register_.size);
+
+    auto* keyJson = new Util::JsonArray();
+    addKeyField(keyJson, BF_RT_DATA_REGISTER_INDEX, "$REGISTER_INDEX",
+                true /* mandatory */, "Exact", makeTypeInt("uint32"));
+    tableJson->emplace("key", keyJson);
+
+    auto* dataJson = new Util::JsonArray();
+    addRegisterDataFields(dataJson, register_);
+    tableJson->emplace("data", dataJson);
+
+    auto* operationsJson = new Util::JsonArray();
+    operationsJson->append("Sync");
+    tableJson->emplace("supported_operations", operationsJson);
+
     tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
@@ -791,43 +926,7 @@ BfRtSchemaGenerator::addLearnFilterCommon(Util::JsonArray* learnFiltersJson,
     learnFilterJson->emplace("id", digest.id);
 
     auto* fieldsJson = new Util::JsonArray();
-    const auto& typeInfo = p4info.type_info();
-    const auto& typeSpec = digest.typeSpec;
-
-    auto addField = [fieldsJson, &digest](P4Id id, const std::string& name,
-                                          const p4configv1::P4DataTypeSpec& fSpec) {
-        if (!fSpec.has_bitstring() || !fSpec.bitstring().has_bit()) {
-            ::error("Error when generating BF-RT info for Digest '%1%': "
-                    "packed type is too complex",
-                    digest.name);
-            return;
-        }
-        auto* f = makeCommonDataField(
-            id, name, makeTypeBytes(fSpec.bitstring().bit().bitwidth()), false /* repeated */);
-        fieldsJson->append(f);
-    };
-
-    if (typeSpec.has_struct_()) {
-        auto structName = typeSpec.struct_().name();
-        for (auto& p : typeInfo.structs()) {
-            if (p.first != structName) continue;
-            P4Id id = 1;
-            for (const auto& member : p.second.members())
-                addField(id++, member.name(), member.type_spec());
-        }
-    } else if (typeSpec.has_tuple()) {
-        P4Id id = 1;
-        for (const auto& member : typeSpec.tuple().members()) {
-            // TODO(antonin): we do not really have better names for now, do we
-            // need to add support for annotations of tuple members in P4Info?
-            std::string fName("f" + std::to_string(id));
-            addField(id++, fName, member);
-        }
-    } else {
-        ::error("Error when generating BF-RT info for Digest '%1%': "
-                "only structs and tuples are currently supported for packed type",
-                digest.name);
-    }
+    transformTypeSpecToDataFields(fieldsJson, digest.typeSpec, "Digest", digest.name);
     learnFilterJson->emplace("fields", fieldsJson);
 
     learnFiltersJson->append(learnFilterJson);
@@ -955,6 +1054,9 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
                 operationsJson->append("SyncCounters");
             } else if (auto meter = getDirectMeter(directResId)) {
                 addMeterDataFields(dataJson, *meter);
+            } else if (auto register_ = getDirectRegister(directResId)) {
+                addRegisterDataFields(dataJson, *register_);
+                operationsJson->append("SyncRegisters");
             } else {
                 ::error("Unknown direct resource id '%1%'", directResId);
                 continue;
@@ -1053,6 +1155,13 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
                 auto digest = Digest::fromTofino(externInstance);
                 if (digest != boost::none) addLearnFilterCommon(learnFiltersJson, *digest);
             }
+        } else if (externTypeId == ::barefoot::P4Ids::REGISTER) {
+            for (const auto& externInstance : externType.instances()) {
+                auto register_ = Register::fromTofino(externInstance);
+                // skip direct registers
+                if (register_ != boost::none && register_->size != 0)
+                    addRegisterCommon(tablesJson, *register_);
+            }
         }
     }
 }
@@ -1067,6 +1176,7 @@ BfRtSchemaGenerator::genSchema() const {
     addActionProfs(tablesJson);
     addCounters(tablesJson);
     addMeters(tablesJson);
+    // TODO(antonin): handle "standard" (v1model / PSA) registers
 
     auto* learnFiltersJson = new Util::JsonArray();
     json->emplace("learn_filters", learnFiltersJson);

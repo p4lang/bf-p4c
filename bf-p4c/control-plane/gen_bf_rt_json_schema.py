@@ -158,7 +158,7 @@ class TableWithoutActionSpec(TableCommon):
         enum=["MatchAction_Indirect",
               "MatchAction_Indirect_Selector",
               "Selector",
-              "Counter", "Meter"])
+              "Counter", "Meter", "Register"])
 
 class LearnListFieldField(BaseDataField):
     class Options(object):

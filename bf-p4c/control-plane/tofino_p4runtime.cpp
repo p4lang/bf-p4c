@@ -14,6 +14,8 @@
 #include "control-plane/p4RuntimeSerializer.h"
 #include "control-plane/typeSpecConverter.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
+#include "frontends/p4/externInstance.h"
+#include "frontends/p4/methodInstance.h"
 #include "frontends/p4/typeMap.h"
 #include "lib/nullstream.h"
 #include "p4/config/v1/p4info.pb.h"
@@ -126,6 +128,9 @@ class SymbolType final : public P4RuntimeSymbolType {
     static P4RuntimeSymbolType DIGEST() {
         return P4RuntimeSymbolType::make(barefoot::P4Ids::DIGEST);
     }
+    static P4RuntimeSymbolType REGISTER() {
+        return P4RuntimeSymbolType::make(barefoot::P4Ids::REGISTER);
+    }
 };
 
 /// The information about an action profile which is necessary to generate its
@@ -148,6 +153,98 @@ struct Digest {
     const p4configv1::P4DataTypeSpec* typeSpec;  // The format of the packed data.
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this digest
                                         // declaration.
+};
+
+/// The information about a register instance which is needed to serialize it.
+struct Register {
+    const cstring name;       // The fully qualified external name of the register
+    const p4configv1::P4DataTypeSpec* typeSpec;  // The format of the packed data.
+    int64_t size;
+    const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this register
+                                        // declaration.
+
+    /// @return the information required to serialize an @instance of register
+    /// or boost::none in case of error.
+    static boost::optional<Register>
+    from(const IR::ExternBlock* instance,
+         const ReferenceMap* refMap,
+         const TypeMap* typeMap,
+         p4configv1::P4TypeInfo* p4RtTypeInfo) {
+        CHECK_NULL(instance);
+        auto declaration = instance->node->to<IR::Declaration_Instance>();
+
+        auto size = instance->getParameterValue("size");
+        if (!size->is<IR::Constant>()) {
+            ::error("Register '%1%' has a non-constant size: %2%", declaration, size);
+            return boost::none;
+        }
+        if (!size->to<IR::Constant>()->fitsInt()) {
+            ::error("Register '%1%' has a size that doesn't fit in an integer: %2%",
+                    declaration, size);
+            return boost::none;
+        }
+
+        // retrieve type parameter for the register instance and convert it to P4DataTypeSpec
+        BUG_CHECK(declaration->type->is<IR::Type_Specialized>(),
+                  "%1%: expected Type_Specialized", declaration->type);
+        auto type = declaration->type->to<IR::Type_Specialized>();
+        BUG_CHECK(type->arguments->size() == 1,
+                  "%1%: expected one type argument", instance);
+        auto typeArg = type->arguments->at(0);
+        auto typeSpec = TypeSpecConverter::convert(typeMap, refMap, typeArg, p4RtTypeInfo);
+        CHECK_NULL(typeSpec);
+
+        return Register{declaration->controlPlaneName(),
+                        typeSpec,
+                        size->to<IR::Constant>()->value.get_si(),
+                        declaration->to<IR::IAnnotated>()};
+    }
+
+    /// @return the information required to serialize an @instance of a direct
+    /// register or boost::none in case of error.
+    static boost::optional<Register>
+    fromDirect(const P4::ExternInstance& instance,
+               const IR::P4Table* table,
+               // Instantiation::resolve does not declare parameters as const
+               /* const */ ReferenceMap* refMap,
+               /* const */ TypeMap* typeMap,
+               p4configv1::P4TypeInfo* p4RtTypeInfo) {
+        CHECK_NULL(table);
+        BUG_CHECK(instance.name != boost::none,
+                  "Caller should've ensured we have a name");
+
+        auto size = instance.substitution.lookupByName("size")->expression;
+        if (!size->is<IR::Constant>()) {
+            ::error("Register '%1%' has a non-constant size: %2%", instance.expression, size);
+            return boost::none;
+        }
+        if (!size->to<IR::Constant>()->fitsInt()) {
+            ::error("Register '%1%' has a size that doesn't fit in an integer: %2%",
+                    instance.expression, size);
+            return boost::none;
+        }
+        if (size->to<IR::Constant>()->value.get_si() != 0) {
+            ::error("Direct register '%1%' has a non-zero size", instance.expression);
+            return boost::none;
+        }
+
+        // retrieve type parameter for the register instance and convert it to P4DataTypeSpec
+        if (!instance.expression->is<IR::PathExpression>()) {
+            return boost::none;
+        }
+        auto path = instance.expression->to<IR::PathExpression>()->path;
+        auto decl = refMap->getDeclaration(path, true);
+        auto instantiation = P4::Instantiation::resolve(
+            decl->to<IR::Declaration_Instance>(), refMap, typeMap);
+
+        BUG_CHECK(instantiation->typeArguments->size() == 1,
+                  "%1%: expected one type argument", instance.expression);
+        auto typeArg = instantiation->typeArguments->at(0);
+        auto typeSpec = TypeSpecConverter::convert(typeMap, refMap, typeArg, p4RtTypeInfo);
+        CHECK_NULL(typeSpec);
+
+        return Register{*instance.name, typeSpec, 0, instance.annotations};
+    }
 };
 
 /// Implements @ref P4RuntimeArchHandlerIface for the Tofino architecture. The
@@ -215,6 +312,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             symbols->add(SymbolType::ACTION_SELECTOR(), decl);
         } else if (externBlock->type->name == "Digest") {
             symbols->add(SymbolType::DIGEST(), decl);
+        } else if (externBlock->type->name == "Register") {
+            symbols->add(SymbolType::REGISTER(), decl);
         }
     }
 
@@ -269,11 +368,15 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
         using P4::ControlPlaneAPI::Helpers::isExternPropertyConstructedInPlace;
 
+        auto p4RtTypeInfo = p4info->mutable_type_info();
+
         auto implementation = getActionProfile(tableDeclaration, refMap, typeMap);
         auto directCounter = Helpers::getDirectCounterlike<CounterExtern>(
             tableDeclaration, refMap, typeMap);
         auto directMeter = Helpers::getDirectCounterlike<MeterExtern>(
             tableDeclaration, refMap, typeMap);
+        auto directRegister = getDirectRegister(
+            tableDeclaration, refMap, typeMap, p4RtTypeInfo);
         auto supportsTimeout = getSupportsTimeout(tableDeclaration);
 
         if (implementation) {
@@ -306,6 +409,13 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             addMeter(symbols, p4info, *directMeter);
         }
 
+        if (directRegister) {
+            BUG_CHECK(directRegister->size == 0, "Direct register with non-zero size");
+            auto id = symbols.getId(SymbolType::REGISTER(), directRegister->name);
+            table->add_direct_resource_ids(id);
+            addRegister(symbols, p4info, *directRegister);
+        }
+
         // TODO(antonin): idle timeout will change for TNA in the future and we
         // will need to rely on P4Info table specific extensions.
         if (supportsTimeout) {
@@ -336,6 +446,20 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         return expr->to<IR::BoolLiteral>()->value;
     }
 
+    /// @return the direct register associated with @table, if it has one, or
+    /// boost::none otherwise.
+    static boost::optional<Register> getDirectRegister(
+        const IR::P4Table* table,
+        ReferenceMap* refMap,
+        TypeMap* typeMap,
+        p4configv1::P4TypeInfo* p4RtTypeInfo) {
+        auto directRegisterInstance = Helpers::getExternInstanceFromProperty(
+            table, "registers", refMap, typeMap);
+        if (!directRegisterInstance) return boost::none;
+        return Register::fromDirect(
+            *directRegisterInstance, table, refMap, typeMap, p4RtTypeInfo);
+    }
+
     void addExternInstance(const P4RuntimeSymbolTableIface& symbols,
                            p4configv1::P4Info* p4info,
                            const IR::ExternBlock* externBlock) override {
@@ -364,6 +488,10 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         } else if (externBlock->type->name == "Digest") {
             auto digest = getDigest(decl, p4RtTypeInfo);
             if (digest) addDigest(symbols, p4info, *digest);
+        } else if (externBlock->type->name == "Register") {
+            auto register_ = Register::from(externBlock, refMap, typeMap, p4RtTypeInfo);
+            // skip direct registers
+            if (register_ && register_->size != 0) addRegister(symbols, p4info, *register_);
         }
     }
 
@@ -495,6 +623,18 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         addP4InfoExternInstance(
             symbols, SymbolType::DIGEST(), "Digest",
             digestInstance.name, digestInstance.annotations, digest,
+            p4Info);
+    }
+
+    void addRegister(const P4RuntimeSymbolTableIface& symbols,
+                     p4configv1::P4Info* p4Info,
+                     const Register& registerInstance) {
+        ::barefoot::Register register_;
+        register_.set_size(registerInstance.size);
+        register_.mutable_type_spec()->CopyFrom(*registerInstance.typeSpec);
+        addP4InfoExternInstance(
+            symbols, SymbolType::REGISTER(), "Register",
+            registerInstance.name, registerInstance.annotations, register_,
             p4Info);
     }
 
