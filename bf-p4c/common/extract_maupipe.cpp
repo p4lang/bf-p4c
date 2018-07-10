@@ -50,17 +50,28 @@ class ActionArgSetup : public MauTransform {
 /// by an earlier pass.
 ///    tmp = method.execute();
 ///    var = tmp + 1;
+/// CTD -- the above is not true -- this code would work fine for more complex expressions,
+/// however, earlier passes will transform the complex expressions as noted above, so we could
+/// assume that if we wanted to.
 class ConvertMethodCall : public MauTransform {
     P4::ReferenceMap        *refMap;
     P4::TypeMap             *typeMap;
 
-    const IR::Primitive *preorder(IR::MethodCallExpression *mc) {
+    const IR::Expression *preorder(IR::MethodCallExpression *mc) {
         auto mi = P4::MethodInstance::resolve(mc, refMap, typeMap, true);
         cstring name;
-        const IR::Expression *recv = nullptr;
+        const IR::Expression *recv = nullptr, *extra_arg = nullptr;
         if (auto bi = mi->to<P4::BuiltInMethod>()) {
             name = bi->name;
             recv = bi->appliedTo;
+            /* FIXME(CTD) -- duplicates SimplifyHeaderValidMethods a bit, as this may (will?)
+             * run before that, and it can't deal with MAU::TypedPrimitives */
+            if (name == "isValid") {
+                return new IR::Member(mc->srcInfo, IR::Type::Bits::get(1), recv, "$valid");
+            } else if (name == "setValid" || name == "setInvalid") {
+                recv = new IR::Member(IR::Type::Bits::get(1), recv, "$valid");
+                extra_arg = new IR::Constant(IR::Type::Bits::get(1), name == "setValid");
+                name = "modify_field"; }
         } else if (auto em = mi->to<P4::ExternMethod>()) {
             name = em->actualExternType->name + "." + em->method->name;
             auto mem = mc->method->to<IR::Member>();
@@ -73,12 +84,15 @@ class ConvertMethodCall : public MauTransform {
             name = ef->method->name;
         } else {
             BUG("method call %s not yet implemented", mc); }
-        auto prim = new IR::Primitive(mc->srcInfo, mc->type, name);
+        IR::Primitive *prim;
         if (mc->method && mc->method->type)
             prim = new IR::MAU::TypedPrimitive(mc->srcInfo, mc->type, mc->method->type, name);
+        else
+            prim = new IR::Primitive(mc->srcInfo, mc->type, name);
         if (recv) prim->operands.push_back(recv);
         for (auto arg : *mc->arguments)
             prim->operands.push_back(arg->expression);
+        if (extra_arg) prim->operands.push_back(extra_arg);
         // if method call returns a value
         return prim;
     }

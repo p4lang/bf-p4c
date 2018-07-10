@@ -140,6 +140,10 @@ class RemoveInstanceRef : public Transform {
  * references to make sure everything is still correct. Doing it here feels a
  * bit hacky by comparison. This is considerably simpler, though, so it makes
  * sense as a first step.
+ *
+ * FIXME(CTD) -- this functionality is duplicated in ConvertMethodCall in extract_maupipe.cpp
+ * because that runs before this pass for action bodies, and it converts them to backend
+ * form (IR::MAU::TypedPrimitives), which this code cannot handle (and ignores).
  */
 struct SimplifyHeaderValidMethods : public Transform {
     const IR::Expression* preorder(IR::MethodCallExpression* call) override {

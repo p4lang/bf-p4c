@@ -9,6 +9,7 @@ if $_isvoid($bpnum)
     break ErrorReporter::emit_message
     disable
     break Util::CompilerBug::CompilerBug<>
+    break BaseCompileContext::getDefaultErrorDiagnosticAction
 end
 
 define pn

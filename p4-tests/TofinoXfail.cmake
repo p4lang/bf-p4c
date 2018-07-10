@@ -961,7 +961,7 @@ p4c_add_xfail_reason("tofino"
 
 # # BRIG-372
 # p4c_add_xfail_reason("tofino"
-#   "error: Could not find declaration for key_1"
+#   "Stage pragma provided to table .* has multiple parameters"
 #   extensions/p4_tests/p4_14/c1/BRIG-372/case4346.p4
 #   )
 
