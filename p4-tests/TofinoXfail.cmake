@@ -124,6 +124,9 @@ if (PTF_REQUIREMENTS_MET)
     p4testgen_emulation
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     smoketest_switch_8.2_l3_msdc_WredIpv4Test
+    smoketest_switch_msdc_L3IPv4MtuTest
+    smoketest_switch_dc_basic_L3IPv4MtuTest
+    smoketest_switch_ent_dc_general_L3IPv4MtuTest
     )
 
 # BRIG-686
@@ -312,6 +315,10 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: Could not find declaration for key_7"
   switch_msdc_ipv4
   switch_msdc_l3
   )
