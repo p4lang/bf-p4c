@@ -13,6 +13,7 @@
 #include "bf-p4c/common/metadata_init.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
@@ -80,7 +81,9 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
+        new InstructionSelection(phv),
         &defuse,
+        new CollectPhvInfo(phv),
         new FindDependencyGraph(phv, deps),
     };
     return pipe->apply(quick_backend);

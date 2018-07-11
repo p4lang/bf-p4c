@@ -75,7 +75,6 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
     }
 
     bool preorder(const IR::Expression *e) override {
-        LOG3("Starting action preorder");
         auto* originalField = self.phv.field(e);
         if (!originalField) return true;
         ordered_set<const PHV::Field*> candidateFields;
@@ -113,6 +112,15 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
     }
 
     bool preorder(const IR::Annotation *) override { return false; }
+
+    bool preorder(const IR::Primitive *) override {
+        return false;
+    }
+
+    bool preorder(const IR::MAU::Instruction *) override {
+        return true;
+    }
+
     void end_apply() override {
         for (auto entry : cont_writes) {
             addContDeps(self.cont_write[entry.first], table, entry.second, entry.first);
@@ -131,6 +139,19 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
     profile_t init_apply(const IR::Node* root) override {
         cont_writes.clear();
         return Inspector::init_apply(root);
+    }
+
+    // Don't track dependencies of items from
+    // attached tables left as primitives by exploring
+    // via the primitive. Instead track them by exploring
+    // the attached tables directly.
+    bool preorder(const IR::Primitive *) override {
+        return false;
+    }
+
+    // We do still want to explore instructions.
+    bool preorder(const IR::MAU::Instruction *) override {
+        return true;
     }
 
     bool preorder(const IR::Expression *e) override {
@@ -268,6 +289,8 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
         ixbar_read->apply(AddDependencies(*this, t, ignore_tables));
     for (auto &action : Values(t->actions))
         action->apply(AddDependencies(*this, t, ignore_tables));
+    for (auto &at : t->attached)
+        at->apply(AddDependencies(*this, t, ignore_tables));
 
     // Mark fields read/written by this table in accesses.
     // FIXME: Should have a separate gateway row IR to visit rather than other information
@@ -276,7 +299,9 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
 
     // FIXME: Need to have this as part of the visitors on Actions, rather than on Attached
     // Tables, but these visitor information really needs to be cleaned up.
-    t->apply(UpdateAttached(*this, t));
+    for (auto &at : t->attached)
+        at->apply(UpdateAccess(*this, t));
+
     return true;
 }
 

@@ -10,7 +10,9 @@
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
@@ -71,10 +73,13 @@ V1Switch(parse(), verifyChecksum(), mau(), mau(),
 }
 
 const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
-                                   PhvInfo& phv) {
+                                   PhvInfo& phv, FieldDefUse& defuse) {
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
+        new InstructionSelection(phv),
+        new CollectPhvInfo(phv),
+        &defuse,
     };
     return pipe->apply(quick_backend);
 }
@@ -152,10 +157,12 @@ TEST_F(TableDependencyGraphTest, GraphA) {
 
     SymBitMatrix mutex;
     PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
     DependencyGraph dg;
-    auto *find_dg = new FindDependencyGraph(phv, dg);
 
-    runMockPasses(test->pipe, phv);
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+
+    auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
 
 
