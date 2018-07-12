@@ -499,9 +499,10 @@ set (p4_14include_HEADERS
   p4_14include/tofino/wred_blackbox.p4
   )
 
+# hack to support jbay clone metadata in p4-14.
+# used by mirror_test.p4 which should be rewritten to p4-16.
 if (ENABLE_JBAY)
-set (p4_14include_HEADERS
-  ${p4_14include_HEADERS}
+set (hack_p4_14include_HEADERS
   p4_14include/jbay/intrinsic_metadata.p4
   )
 endif (ENABLE_JBAY)
@@ -536,12 +537,15 @@ if (NOT ENABLE_JBAY)
   install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4include
     DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}
     REGEX "jbay|jna" EXCLUDE)
+  install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4_14include
+    DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}
+    REGEX "jbay|jna" EXCLUDE)
 else()
   install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4include
     DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY})
+  install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4_14include
+    DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY})
 endif()
-install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4_14include
-  DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY})
 install (PROGRAMS ${BFN_P4C_SOURCE_DIR}/scripts/p4_14-to-p4_16
   DESTINATION ${P4C_RUNTIME_OUTPUT_DIRECTORY})
 install (PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/control-plane/gen_bf_rt_json_schema.py
@@ -572,7 +576,6 @@ add_custom_target(linkp4cbarefoot
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4include/tofino
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/tofino
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/jbay
   COMMAND for h in ${p4include_HEADERS} ${p4_14include_HEADERS} \; do
      ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${P4C_BINARY_DIR}/\$$h \;
   done
@@ -583,6 +586,18 @@ add_custom_target(linkp4cbarefoot
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${P4C_BINARY_DIR}/p4_14include ${CMAKE_CURRENT_BINARY_DIR}/p4_14include
   )
 add_dependencies(p4c_driver linkp4cbarefoot)
+
+# hack used to compile p4-14 program to JBay, we should not develop anything
+# significant with P4-14, it is only used to support existing programs.
+if (ENABLE_JBAY)
+add_custom_target(jbay_hack
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/jbay
+  COMMAND for h in ${hack_p4_14include_HEADERS} \; do
+     ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${P4C_BINARY_DIR}/\$$h \;
+  done
+)
+add_dependencies(p4c_driver jbay_hack)
+endif (ENABLE_JBAY)
 
 ################ Proto
 set (BFN_P4RUNTIME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/control-plane/proto)
