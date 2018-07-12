@@ -117,11 +117,8 @@ if (PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
-    extensions/p4_tests/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4
     extensions/p4_tests/p4_14/p4-tests/programs/resubmit/resubmit.p4
-    04-simple_l3_nexthop
     05-simple_l3_arping
-    p4testgen_emulation
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     smoketest_switch_8.2_l3_msdc_WredIpv4Test
     smoketest_switch_msdc_L3IPv4MtuTest
@@ -150,6 +147,15 @@ if (PTF_REQUIREMENTS_MET)
     fabric-DWITH_SPGW-DWITH_INT_TRANSIT
     )
 
+  # Incorrect next_table_full entry in context.json for default_only_action
+  # See BRIG-782
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: Expected packet was not received on device"
+    fabric
+    fabric-DWITH_SPGW
+    fabric-DWITH_INT_TRANSIT
+    )
+
   # fails also with Glass.
   p4c_add_xfail_reason("tofino"
     "Expected packet was not received on device 0, port 64"
@@ -165,12 +171,6 @@ if (PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "ImportError: No module named simple_l3.p4_pd_rpc.ttypes"
     06-simple_l3_dir_cntr
-    )
-
-  # default action not programmed by drivers
-  p4c_add_xfail_reason("tofino"
-    "Expected packet was not received on device"
-    extensions/p4_tests/p4_16/large_action_data_constant.p4
     )
 
 endif() # PTF_REQUIREMENTS_MET

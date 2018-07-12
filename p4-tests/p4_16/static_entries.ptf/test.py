@@ -52,12 +52,10 @@ class IPv4ChecksumTest(P4RuntimeTest):
         logger.info("Expecting packet on port %d", eg_port)
         testutils.verify_packets(self, exp_pkt, [eg_port])
 
-        #XXX Currently driver only supports the default_action for key-less
-        # tables - DRV-1348.
         pkt = testutils.simple_arp_packet(
             pktlen=100, eth_src='00:00:11:22:33:44')
         exp_pkt = testutils.simple_arp_packet(
-            pktlen=100, eth_src='00:00:00:00:00:00')
+            pktlen=100, eth_src='00:00:00:00:00:01')
         logger.info("Sending packet on port %d", ig_port)
         testutils.send_packet(self, ig_port, str(pkt))
 
