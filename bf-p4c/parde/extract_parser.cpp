@@ -547,6 +547,21 @@ struct RewriteParserStatements : public Transform {
     }
 
     const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteParserPriorityCall(IR::MethodCallStatement* statement) {
+        auto* call = statement->methodCall;
+        auto* method = call->method->to<IR::Member>();
+
+        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+
+        if (method->member == "set") {
+            auto priority = (*call->arguments)[0]->expression->to<IR::Constant>();
+            rv->push_back(new IR::BFN::ParserPrioritySet(priority->asInt()));
+        }
+
+        return rv;
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
     preorder(IR::MethodCallStatement* statement) override {
         auto* call = statement->methodCall;
         auto* method = call->method->to<IR::Member>();
@@ -556,7 +571,7 @@ struct RewriteParserStatements : public Transform {
         } else if (isExtern(method, "ParserCounter")) {
             return nullptr;  // TODO
         } else if (isExtern(method, "ParserPriority")) {
-            return nullptr;  // TODO
+            return rewriteParserPriorityCall(statement);
         } else if (method->member == "extract") {
             return rewriteExtract(statement);
         } else if (method->member == "advance") {

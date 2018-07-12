@@ -242,6 +242,9 @@ class LoweredParserMatch {
     /// Checksum calculations
     inline Vector<LoweredParserChecksum> checksums;
 
+    /// Priority set
+    NullOK ParserPrioritySet priority;
+
     /// The number of packet bytes which must be available in the input buffer
     /// for the extractions to be performed successfully. If `boost::none`,
     /// there is no particular requirement; the assembler will choose a default.

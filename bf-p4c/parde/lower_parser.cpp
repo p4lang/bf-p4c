@@ -681,6 +681,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
         loweredState->debug.mergeWith(state->debug);
 
         std::vector<const IR::BFN::ParserChecksumPrimitive*> checksums;
+        const IR::BFN::ParserPrioritySet* priority = nullptr;
 
         // Collect all the extract operations; we'll lower them as a group so we
         // can merge extracts that write to the same PHV containers.
@@ -691,6 +692,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 simplifier.add(extract);
             } else if (auto* csum = prim->to<IR::BFN::ParserChecksumPrimitive>()) {
                 checksums.push_back(csum);
+            } else if (auto* prio = prim->to<IR::BFN::ParserPrioritySet>()) {
+                priority = prio;
             } else {
                 // Report other kinds of parser primitives, which we currently can't
                 // handle, in the debug info.
@@ -759,6 +762,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                     loweredStatements,
                     saves,
                     loweredChecksums,
+                    priority,
                     loweredStates[transition->next]);
             loweredState->match.push_back(loweredMatch);
         }

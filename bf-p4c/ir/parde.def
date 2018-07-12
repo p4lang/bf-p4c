@@ -230,6 +230,14 @@ class SaveToRegister {
     MatchRegister dest;
 };
 
+class ParserPrioritySet : ParserPrimitive {
+
+    dbprint { out << "priority set " << val; }
+
+    unsigned val;
+
+}
+
 abstract ParserChecksumPrimitive : ParserPrimitive {
 
     cstring declName;

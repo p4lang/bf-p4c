@@ -129,6 +129,9 @@ struct ParserAsmSerializer : public ParserInspector {
 
         AutoIndent indentMatch(indent);
 
+        if (match->priority)
+            out << indent << "priority: " << match->priority->val << std::endl;
+
         for (auto* ck : match->checksums) {
             if (auto* csum = ck->to<IR::BFN::LoweredParserChecksum>())
                 outputChecksum(csum);
