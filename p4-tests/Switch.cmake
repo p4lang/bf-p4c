@@ -195,14 +195,11 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_7"
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_8" ${SWITCH_P4}
         "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR_WRED}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_8"
-        "switch_wred.WredDropIpv4Test
+        "switch_tests.L3IPv4MtuTest
+        switch_wred.WredDropIpv4Test
         switch_wred.WredIpv6Test
         switch_wred.WredLookupTest
         switch_wred.WredStatsTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_L3IPv4MtuTest" ${SWITCH_P4}
-        "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_L3IPv4MtuTest"
-        "switch_tests.L3IPv4MtuTest")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_msdc" PROPERTIES TIMEOUT 12000)
@@ -341,6 +338,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_8"
         switch_tests.L3IPv4LookupTest
         switch_tests.L3IPv4LpmEcmpTest
         switch_tests.L3IPv4LpmTest
+        switch_tests.L3IPv4MtuTest
         switch_tests.L3IPv4SubIntfHostTest
         switch_tests.L3IPv6EcmpTest
         switch_tests.L3IPv6HostTest
@@ -374,10 +372,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_10"
         switch_tunnel.L3VxlanUnicastTunnelECMPSMTest
         switch_tunnel.L3VxlanUnicastTunnelSMSVITest
         switch_tunnel.L3VxlanUnicastTunnelSMTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L3IPv4MtuTest" ${SWITCH_P4}
-          "${testExtraArgs} -DDC_BASIC_PROFILE -pd" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L3IPv4MtuTest"
-          "switch_tests.L3IPv4MtuTest")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_dc_basic" PROPERTIES TIMEOUT 12000)
@@ -442,10 +436,11 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_3"
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_set_4" ${SWITCH_P4}
         "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_4"
-	"switch_tests.L3IPv4LagTest
+	    "switch_tests.L3IPv4LagTest
         switch_tests.L3IPv4LookupTest
         switch_tests.L3IPv4LpmEcmpTest
         switch_tests.L3IPv4LpmTest
+        switch_tests.L3IPv4MtuTest
         switch_tests.L3IPv4SubIntfHostTest
         switch_tests.L3IPv6EcmpTest
         switch_tests.L3IPv6HostTest
@@ -479,10 +474,6 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_set_7" $
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_7"
         "switch_api_tests.IPEgressAclRangeTcamTest
         switch_api_tests.IPEgressAclTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_L3IPv4MtuTest" ${SWITCH_P4}
-        "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_L3IPv4MtuTest"
-        "switch_tests.L3IPv4MtuTest")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_ent_dc_general" PROPERTIES TIMEOUT 12000)

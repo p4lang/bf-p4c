@@ -38,8 +38,8 @@ env:
       DOCKERFILE=Dockerfile.tofino
     # Run all jbay tests (including cpplint and gtest)
     - TEST_SUITE="^jbay|cpplint|gtest"
-      TEST_EXTRA_OPTS=""
-      TEST_EXTRA_OPTS2=""
+      TEST_EXTRA_OPTS="-E"
+      TEST_EXTRA_OPTS2="smoketest"
       TARGET=jbay
       IMAGE_TAG="bf-p4c-compilers_jbay"
       DOCKERFILE="Dockerfile.jbay"

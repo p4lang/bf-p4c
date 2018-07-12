@@ -839,21 +839,25 @@ class ConstructSymbolTable : public Inspector {
     P4::TypeMap *typeMap;
     const std::map<const IR::Expression*, IR::Member*>& parserResidualChecksums;
     // cloneIndex assignment algorithm:
-    // - we assign a unique index per gress/per table since there is only one action
-    //   per table that executes and may call clone
-    // - \TODO: assign the same id to tables that are mutually exclusive, however, we
-    //   can only do that in the backend.
-    // a map of previously seen indices, gress -> [(tableName, index)]*
-    std::map<gress_t, std::map<cstring, unsigned> > cloneIndex;
+    // - we assign a unique index per field list per gress
+    // - there could be multiple actions calling clone within a table
+    // - for a gress, a map of hashes is generated for a field list string
+    // - the clone index is the value stored for hash key of element within the
+    // map
+    std::map<unsigned long, unsigned> cloneIndexHashes[2];
     // resubmitIndex assignment algorithm:
-    // - we assign a unique index per ingress table since there is only one action
-    //   per table that can execute and may call resubmit
-    // a map of previously seen indices, tableName -> index
-    std::map<cstring, unsigned> resubmitIndex;
+    // - we assign a unique index per resubmit field list
+    // - there could be multiple actions calling resubmit within a table
+    // - can only be called in one gress
+    // - a map of hashes is generated for a field list string
+    // - the resubmit index is the value stored for hash key of element within
+    // the map
+    std::map<unsigned long, unsigned> resubmitIndexHashes;
     // digestIndex is similar to resubmitIndex and generate_digest() can only be called in ingress
-    std::map<cstring, unsigned>  digestIndex;
+    std::map<unsigned long, unsigned> digestIndexHashes;
 
     std::set<cstring> globals;
+    bool i2eCloneIdxZeroAdded = false;
 
  public:
     ConstructSymbolTable(ProgramStructure *structure,
@@ -889,20 +893,7 @@ class ConstructSymbolTable : public Inspector {
         IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
         auto mem = new IR::Member(path, "digest_type");
         auto action = findContext<IR::P4Action>();
-        unsigned digestId = 0xFFFFFFFF;
-        const IR::P4Table *table = nullptr;
-        if (action) {
-            table = findTable(control, action);
-            if (table)
-                digestId = getDigestIndex(table->getName());
-        }
-        if (table == nullptr) {
-            // in P4_16, digest can be called directly in the apply block of the
-            // control, not in an action or table. While a table may be synthesized later
-            // we need to allocate the id here -- one more reason to push the allocation into
-            // the backend.
-            digestId = getDigestIndex(control->name + "_apply");
-        }
+        unsigned digestId = getIndex(node, digestIndexHashes);
         if (digestId > Device::maxDigestId()) {
             ::error("Too many digest() calls in %1%", control->name);
             return;
@@ -991,24 +982,17 @@ class ConstructSymbolTable : public Inspector {
         auto *compilerMetadataPath =
                 new IR::PathExpression("compiler_generated_meta");
 
-        auto action = findContext<IR::P4Action>();
-        unsigned cloneId = 0xFFFFFFFF;
-        const IR::P4Table *table = nullptr;
-        if (action) {
-            table = findTable(control, action);
-            if (table)
-                cloneId = getCloneIndex(gress, table->getName());
-        }
-        if (table == nullptr) {
-            // in P4_16, clone can be called directly in the apply block of the
-            // control, not in an action or table. While a table may be synthesized later
-            // we need to allocate the id here -- one more reason to push cloneId allocation into
-            // the backend.
-            cloneId = getCloneIndex(gress, control->name + "_apply");
-        }
         // Generate a fresh index for this clone field list. This is used by the
         // hardware to select the correct mirror table entry, and to select the
         // correct parser for this field list.
+        unsigned cloneId = getIndex(node, cloneIndexHashes[gress]);
+
+        // COMPILER-914: In Tofino, Disable clone id - 0 which is reserved in
+        // i2e due to a hardware bug. Hence, valid clone ids are 1 - 7.  All
+        // clone id's 0 - 7 are valid for e2e
+        if ((Device::currentDevice() == "Tofino") && (gress == INGRESS)) {
+                cloneId++;
+        }
         if (cloneId > Device::maxCloneId(gress)) {
             ::error("Too many clone() calls in %1%", control->name);
             return;
@@ -1117,6 +1101,29 @@ class ConstructSymbolTable : public Inspector {
             structure->ingressDeparserStatements.push_back(cond);
         else
             structure->egressDeparserStatements.push_back(cond);
+
+        // Due to COMPILER-914 (see above), add a statement to ingress deparser
+        // to prepend mirror metadata for clone id (mirror_type) == 0 which is
+        // reserved. The actual indexing for i2e starts at 1 but we cannot keep
+        // index 0 empty as compiler later complains on having an empty field
+        // list
+        // phv_fields.cpp: CollectPardeConstraints - postorder - digest
+        if (gress == INGRESS && cloneId == 1 && !i2eCloneIdxZeroAdded) {
+            auto args = new IR::Vector<IR::Argument>();
+            args->push_back(new IR::Argument(new IR::Member(compilerMetadataPath, "mirror_id")));
+            args->push_back(new IR::Argument(newFieldList));
+
+            auto pathExpr = new IR::PathExpression(new IR::Path("mirror"));
+            auto member = new IR::Member(pathExpr, "emit");
+            auto typeArgs = new IR::Vector<IR::Type>();
+            auto mcs = new IR::MethodCallStatement(
+                    new IR::MethodCallExpression(member, typeArgs, args));
+            auto condExprPath = new IR::Member(deparserMetadataPath, "mirror_type");
+            auto zero_idx = new IR::Constant(IR::Type::Bits::get(bits), 0);
+            auto condExpr = new IR::Equ(condExprPath, zero_idx);
+            auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
+            structure->ingressDeparserStatements.push_back(cond);
+        }
     }
 
     void cvtDropFunction(const IR::MethodCallStatement *node) {
@@ -1255,20 +1262,7 @@ class ConstructSymbolTable : public Inspector {
         IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
         auto mem = new IR::Member(path, "resubmit_type");
         auto action = findContext<IR::P4Action>();
-        unsigned resubmitId = 0xFFFFFFFF;
-        const IR::P4Table *table = nullptr;
-        if (action) {
-            table = findTable(control, action);
-            if (table)
-                resubmitId = getResubmitIndex(table->getName());
-        }
-        if (table == nullptr) {
-            // in P4_16, resubmit can be called directly in the apply block of the
-            // control, not in an action or table. While a table may be synthesized later
-            // we need to allocate the id here -- one more reason to push the allocation into
-            // the backend.
-            resubmitId = getResubmitIndex(control->name + "_apply");
-        }
+        unsigned resubmitId = getIndex(node, resubmitIndexHashes);
         if (resubmitId > Device::maxResubmitId()) {
             ::error("Too many resubmit() calls in %1%", control->name);
             return;
@@ -1763,36 +1757,35 @@ class ConstructSymbolTable : public Inspector {
         return nullptr;
     }
 
-    unsigned getCloneIndex(gress_t gress, cstring tableName) {
-        if (cloneIndex.count(gress) == 0) {
-            std::map<cstring, unsigned> ti;
-            ti[tableName] = 0;
-            cloneIndex[gress] = ti;
-            return 0;
-        } else {
-            std::map<cstring, unsigned> &ti = cloneIndex[gress];
-            if (ti.count(tableName) > 0) {
-                return ti[tableName];
-            } else {
-                // the next index is the size of the map for the gress
-                ti.emplace(tableName, ti.size());
-                return ti[tableName];
+    // Concatenate a field string with list of fields within a method call
+    // argument. The field list is specified as a ListExpression
+    void generate_fields_string(const IR::MethodCallStatement *node,
+                                                std::string& fieldString) {
+        std::ostringstream fieldListString;
+        for (auto argument : *node->methodCall->arguments) {
+            if (auto fieldList = argument->expression->to<IR::ListExpression>()) {
+                for (auto comp : fieldList->components) {
+                    fieldListString << comp;
+                }
             }
+            fieldString += fieldListString.str();
         }
     }
 
-    unsigned getResubmitIndex(cstring tableName) {
-        if (resubmitIndex.count(tableName) == 0)
-            // the next index is the size of the map for the gress
-            resubmitIndex.emplace(tableName, resubmitIndex.size());
-        return resubmitIndex[tableName];
-    }
+    // Generate a 64-bit hash for input field string, lookup hash vector for
+    // presence of hash, add new entry if not found. This function is common to
+    // resubmit, digest and clone indexing
+    unsigned getIndex(const IR::MethodCallStatement *node,
+            std::map<unsigned long, unsigned>& hashIndexMap) {
+        std::string fieldsString;
+        generate_fields_string(node, fieldsString);
+        std::hash<std::string> hashFn;
 
-    unsigned getDigestIndex(cstring tableName) {
-        if (digestIndex.count(tableName) == 0)
-            // the next index is the size of the map for the gress
-            digestIndex.emplace(tableName, digestIndex.size());
-        return digestIndex[tableName];
+        auto fieldsStringHash = hashFn(fieldsString);
+        if (hashIndexMap.count(fieldsStringHash) == 0)
+            hashIndexMap.emplace(fieldsStringHash, hashIndexMap.size());
+
+        return hashIndexMap[fieldsStringHash];
     }
 };
 

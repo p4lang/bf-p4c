@@ -37,6 +37,12 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/issue1000-bmv2.p4
     )
 
+  # BRIG-781
+  p4c_add_xfail_reason("tofino"
+      "error: Action code must be the same as action instruction address when there are more than 8 actions"
+    extensions/p4_tests/p4_14/test_config_303_static_table.p4
+    )
+
 endif() # HARLYN_STF_tofino
 
 # Tests that run packets:
@@ -121,9 +127,6 @@ if (PTF_REQUIREMENTS_MET)
     05-simple_l3_arping
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     smoketest_switch_8.2_l3_msdc_WredIpv4Test
-    smoketest_switch_msdc_L3IPv4MtuTest
-    smoketest_switch_dc_basic_L3IPv4MtuTest
-    smoketest_switch_ent_dc_general_L3IPv4MtuTest
     )
 
 # BRIG-686

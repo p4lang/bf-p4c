@@ -53,7 +53,6 @@ header_type meta_t {
         i2e_4 : 64;
         i2e_5 : 80;
         i2e_6 : 96;
-        i2e_7 : 128;
 
         e2e_0 : 8;
         e2e_1 : 16;
@@ -81,7 +80,6 @@ header tcp_t tcp;
 @pragma pa_container_size ingress meta.i2e_4 32 32
 @pragma pa_container_size ingress meta.i2e_5 16 32 32
 @pragma pa_container_size ingress meta.i2e_6 32 32 32
-@pragma pa_container_size ingress meta.i2e_7 32
 
 @pragma pa_container_size egress meta.e2e_0 8
 @pragma pa_container_size egress meta.e2e_1 16
@@ -121,7 +119,6 @@ field_list i2e_3 { meta.i2e_3; }
 field_list i2e_4 { meta.i2e_4; }
 field_list i2e_5 { meta.i2e_5; }
 field_list i2e_6 { meta.i2e_6; }
-field_list i2e_7 { meta.i2e_7; }
 
 field_list e2e_0 { meta.e2e_0; }
 field_list e2e_1 { meta.e2e_1; }
@@ -147,7 +144,6 @@ action ic3() { modify_field(meta.i2e_3, 3); clone_ingress_pkt_to_egress(3, i2e_3
 action ic4() { modify_field(meta.i2e_4, 4); clone_ingress_pkt_to_egress(4, i2e_4); }
 action ic5() { modify_field(meta.i2e_5, 5); clone_ingress_pkt_to_egress(5, i2e_5); }
 action ic6() { modify_field(meta.i2e_6, 6); clone_ingress_pkt_to_egress(6, i2e_6); }
-action ic7() { modify_field(meta.i2e_7, 7); clone_ingress_pkt_to_egress(7, i2e_7); }
 
 action set_pkt(p){
    modify_field(ethernet.dstAddr, 0xffffffffffff);
@@ -185,7 +181,6 @@ table it1 {
        ic4;
        ic5;
        ic6;
-       ic7;
        do_nothing;
    }
    size : 256;
