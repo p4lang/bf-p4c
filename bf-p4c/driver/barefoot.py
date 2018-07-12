@@ -77,6 +77,9 @@ class BarefootBackend(BackendDriver):
                                     action="store_true", default=False)
         self._argGroup.add_argument("--bf-rt-schema", action="store",
                                     help="Generate and write BF-RT JSON schema  to the specified file")
+        self._argGroup.add_argument("--backward-compatible", 
+                                    action="store_true", default=False,
+                                    help="Set compiler to be backward compatible with p4c-tofino")
 
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self._argGroup.add_argument("--validate-output", action="store_true", default=False,
@@ -140,6 +143,9 @@ class BarefootBackend(BackendDriver):
 
         if opts.create_graphs or opts.archive:
             self.add_command_option('compiler', '--create-graphs')
+
+        if opts.backward_compatible:
+            self.add_command_option('compiler', '--backward-compatible')
 
         if opts.bf_rt_schema is not None:
             self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))

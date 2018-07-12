@@ -23,6 +23,7 @@ class BFN_Options : public CompilerOptions {
     bool create_graphs = false;
     bool privatization = false;
     bool always_init_metadata = false;
+    bool backward_compatible = false;
 
     cstring bfRtSchema = "";
     std::vector<cstring> outputFiles;

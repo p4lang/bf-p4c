@@ -24,6 +24,22 @@ namespace BFN {
 //////////////////////////////////////////////////////////////////////////////////////////////
 namespace V1 {
 
+class FixupBackwardCompatibility : public Transform {
+ public:
+    FixupBackwardCompatibility() {}
+
+    const IR::Node* postorder(IR::Parameter* param) {
+        auto ctxt = findOrigCtxt<IR::Type_Control>();
+        if (!ctxt) return param;
+        if (ctxt->name != "Egress") return param;
+        if (auto tn = param->type->to<IR::Type_Name>()) {
+            if (tn->path->name != "egress_intrinsic_metadata_t")
+                return param;
+            param->direction = IR::Direction::InOut;
+        }
+        return param;
+    }
+};
 
 class LoadTargetArchitecture : public Inspector {
     ProgramStructure *structure;
@@ -356,6 +372,9 @@ class LoadTargetArchitecture : public Inspector {
         structure->targetTypes.push_back(create_math_unit());
 
         analyzeTofinoModel();
+
+        if (structure->backward_compatible)
+            structure->targetTypes = *(structure->targetTypes.apply(FixupBackwardCompatibility()));
     }
 };
 
@@ -2119,6 +2138,8 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
     addDebugHook(options.getDebugHook());
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto structure = new BFN::V1::ProgramStructure;
+    if (options.backward_compatible)
+        structure->backward_compatible = true;
     auto translateParserChecksums = new V1::TranslateParserChecksums(structure, refMap, typeMap);
     addPasses({
         new P4::TypeChecking(refMap, typeMap, true),

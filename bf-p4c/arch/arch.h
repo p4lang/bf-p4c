@@ -61,7 +61,7 @@ class GenerateTofinoProgram : public Transform {
  public:
     explicit GenerateTofinoProgram(ProgramStructure* structure)
             : structure(structure) { CHECK_NULL(structure); setName("GenerateTofinoProgram"); }
-    //
+
     const IR::Node* preorder(IR::P4Program* program) override {
         auto *rv = structure->create(program);
         return rv;

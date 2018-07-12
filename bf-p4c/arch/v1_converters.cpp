@@ -134,7 +134,11 @@ const IR::Node* EgressControlConverter::preorder(IR::P4Control *node) {
     // add eg_intr_md
     auto path = new IR::Path("egress_intrinsic_metadata_t");
     auto type = new IR::Type_Name(path);
-    auto param = new IR::Parameter("eg_intr_md", IR::Direction::In, type);
+    IR::Parameter* param = nullptr;
+    if (structure->backward_compatible)
+        param = new IR::Parameter("eg_intr_md", IR::Direction::InOut, type);
+    else
+        param = new IR::Parameter("eg_intr_md", IR::Direction::In, type);
     tnaParams.emplace("eg_intr_md", param->name);
     paramList->push_back(param);
 

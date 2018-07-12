@@ -25,45 +25,45 @@ BFN_Options::BFN_Options() {
                    "Write output to outfiles.\n");
     registerOption("--trivpa", nullptr,
         [this](const char *) { trivial_phvalloc = true; return true; },
-        "use the trivial PHV allocator");
+        "Use the trivial PHV allocator");
     registerOption("--nophvintf", nullptr,
         [this](const char *) { phv_interference = false; return true; },
-        "do not use cluster_phv_interference interference-graph based PHV reduction");
+        "Do not use cluster_phv_interference interference-graph based PHV reduction");
     registerOption("--noclusterintf", nullptr,
         [this](const char *) { cluster_interference = false; return true; },
-        "do not use cluster_to_cluster interference interference-graph based PHV reduction");
+        "Do not use cluster_to_cluster interference interference-graph based PHV reduction");
     registerOption("--nophvslice", nullptr,
         [this](const char *) { phv_slicing = false; return true; },
-        "do not use cluster_phv_slicing based PHV slices");
+        "Do not use cluster_phv_slicing based PHV slices");
     registerOption("--nophvover", nullptr,
         [this](const char *) { phv_overlay = false; return true; },
-        "do not use cluster_phv_overlay based PHV overlays");
+        "Do not use cluster_phv_overlay based PHV overlays");
     registerOption("--allowUnimplemented", nullptr,
         [this](const char *) { allowUnimplemented = true; return true; },
-        "allow assembly generation even if there are unimplemented features in the P4 code");
+        "Allow assembly generation even if there are unimplemented features in the P4 code");
     registerOption("-g", nullptr,
         [this](const char *) { debugInfo = true; return true; },
-        "generate debug information");
+        "Generate debug information");
     registerOption("--create-graphs", nullptr,
         [this](const char *) { create_graphs = true; return true; },
         "Create parse and table flow graphs");
     registerOption("--no-dead-code-elimination", nullptr,
         [this](const char *) { no_deadcode_elimination = true; return true; },
-        "do not use dead code elimination");
+        "Do not use dead code elimination");
     registerOption("--placement", nullptr,
         [this](const char *) { forced_placement = true; return true; },
-        "ignore all dependencies during table placement");
+        "Ignore all dependencies during table placement");
 #if HAVE_JBAY
     registerOption("--no-clot", nullptr,
         [this](const char *) {
             use_clot = false;
             return true;
-        }, "do not use clots in JBay");
+        }, "Do not use clots in JBay");
     registerOption("--jbay-phv-analysis", nullptr,
         [this](const char *) {
             jbay_analysis = true;
             return true;
-        }, "perform JBay mocha and dark analysis");
+        }, "Perform JBay mocha and dark analysis");
 #endif
     registerOption("--phv_scale_factor", "arg",
         [this](const char* arg) {
@@ -77,16 +77,19 @@ BFN_Options::BFN_Options() {
          "Scale number of phvs by a factor");
     registerOption("--use-pa-solitary", nullptr,
         [this](const char *) { use_pa_solitary = true; return true; },
-        "use phv solitary pragma");
+        "Use phv solitary pragma");
     registerOption("--no-phv-privatization", nullptr,
         [this](const char *) { privatization = false; return true; },
-        "do not use TPHV/PHV privatization");
+        "Do not use TPHV/PHV privatization");
     registerOption("--always-init-metadata", nullptr,
         [this](const char *) { always_init_metadata = true; return true; },
         "Insert a table to init metadata in the beginning of pipeline");
     registerOption("--bf-rt-schema", "file",
         [this](const char *arg) { bfRtSchema = arg; return true; },
-        "Generate and write BF-RT JSON schema to the specified file.");
+        "Generate and write BF-RT JSON schema to the specified file");
+    registerOption("--backward-compatible", nullptr,
+        [this](const char *) { backward_compatible = true; return true; },
+        "Set compiler to be backward compatible with p4c-tofino");
 }
 
 using Target = std::pair<cstring, cstring>;
