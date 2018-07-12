@@ -1195,10 +1195,30 @@ p4c_add_xfail_reason("tofino"
   "Identifier with no name"
   testdata/p4_16_samples/issue1208-1.p4
 )
-
 # BRIG-791
 p4c_add_xfail_reason("tofino"
   "Split cannot work on this scenario"
   extensions/p4_tests/p4_14/p4smith_regression/ghosted_0.p4
 )
 
+# Uncharacterized crash failures preivously missed
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: Header present in IR not under Member:"
+  testdata/p4_16_samples/issue907-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: visitor returned invalid type .* for Vector<Primitive>"
+  testdata/p4_16_samples/psa-meter6.p4
+  testdata/p4_16_samples/issue430-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: No object named <TypeNameExpression>.*CloneType.E2E"
+  extensions/p4_tests/p4_14/test_config_183_sample_e2e.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: An stateful instruction alu1_0 is outside the bounds of the stateful memory"
+  extensions/p4_tests/p4_14/p4-tests/programs/pgrs/pgrs.p4
+)
