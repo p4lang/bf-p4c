@@ -150,15 +150,6 @@ if (PTF_REQUIREMENTS_MET)
     fabric-DWITH_SPGW-DWITH_INT_TRANSIT
     )
 
-  # Incorrect next_table_full entry in context.json for default_only_action
-  # See BRIG-782
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: Expected packet was not received on device"
-    fabric
-    fabric-DWITH_SPGW
-    fabric-DWITH_INT_TRANSIT
-    )
-
   # fails also with Glass.
   p4c_add_xfail_reason("tofino"
     "Expected packet was not received on device 0, port 64"
@@ -1023,11 +1014,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Currently non contiguous byte allocation in table format"
   # extensions/p4_tests/p4_14/test_config_215_nondphv.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "expected packet on port .* not seen"
-  testdata/p4_14_samples/action_chain1.p4
 )
 
 p4c_add_xfail_reason("tofino"

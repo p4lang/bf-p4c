@@ -1417,6 +1417,9 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
         if (table->hit_next.size() == hit_index + 1)
             next = table->hit_next[hit_index];
         if (set_miss_table) next = table->miss_next;
+        // If action is labelled default only, it cannot be a hit action, i.e.
+        // it is a miss action and must be assigned a miss table if specified.
+        if (act.default_only && (table->miss_next)) next = table->miss_next;
         if(next && next->name_ == "END") next = Table::Ref();
         std::string next_table_name = next ? next->name() : "--END_OF_PIPELINE--";
         //unsigned next_table = next ? table->get_format_field_size("next") == 8 ?
