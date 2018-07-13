@@ -16,6 +16,9 @@ add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
 if (ENABLE_JBAY)
   add_definitions("-DHAVE_JBAY=1")
 endif()
+if (ENABLE_BAREFOOT_INTERNAL)
+  add_definitions("-DBAREFOOT_INTERNAL=1")
+endif()
 include_directories(${BFN_P4C_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
@@ -184,6 +187,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/action_format.cpp
   mau/action_mutex.cpp
   mau/asm_output.cpp
+  mau/characterize_power.cpp
   mau/field_use.cpp
   mau/db-gateway.cpp
   mau/gateway.cpp
@@ -215,6 +219,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/action_format.h
   mau/action_mutex.h
   mau/asm_output.h
+  mau/characterize_power.h
   mau/default_next.h
   mau/field_use.h
   mau/gateway.h
@@ -667,4 +672,4 @@ set (GTEST_BF_P4C_SOURCES
   )
 
 set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)
-set (GTEST_LDADD ${GTEST_LDADD} tofinobackend PARENT_SCOPE)
+set (GTEST_LDADD ${GTEST_LDADD} "tofinobackend;${OPENSSL_LIBRARIES}" PARENT_SCOPE)

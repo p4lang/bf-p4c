@@ -35,7 +35,8 @@ struct DependencyGraph {
         IXBAR_READ,        // Read-after-write (data) dependence.
         ACTION_READ,
         ANTI,        // Write-after-read (anti) dependence.
-        OUTPUT       // Write-after-write (output) dependence.
+        OUTPUT,      // Write-after-write (output) dependence. (ACTION?)
+        CONCURRENT   // No dependency.
     } dependencies_t;
     typedef boost::adjacency_list<
         boost::vecS,
@@ -98,6 +99,11 @@ struct DependencyGraph {
     std::map<const IR::MAU::Table*,
              typename Graph::vertex_descriptor> labelToVertex;
 
+    // Map from <t1, t2> to its dependency type
+    // e.g.  <tbl1, tbl2> = MATCH means that tbl1 has a match dependency on tbl2
+    std::map<std::pair<const IR::MAU::Table*, const IR::MAU::Table*>,
+             DependencyGraph::dependencies_t> dependency_map;
+
     struct StageInfo {
         int min_stage,      // Minimum stage at which a table can be placed.
         dep_stages;         // Number of tables that depend on this table and
@@ -112,6 +118,7 @@ struct DependencyGraph {
         g.clear();
         finalized = false;
         happens_before_map.clear();
+        dependency_map.clear();
         labelToVertex.clear();
         stage_info.clear();
     }
@@ -152,7 +159,9 @@ struct DependencyGraph {
             // Inserting edges should always create new edges.
             BUG("Boost Graph Library failed to add edge.");
         g[maybe_new_e.first] = edge_label;
-
+        auto p = std::make_pair(dst, src);
+        dependency_map.emplace(p, edge_label);
+        // LOG1("DST " << dst->name << " has dep " << edge_label << " to SRC " << src->name);
         return {maybe_new_e.first, true};
     }
 
@@ -171,6 +180,23 @@ struct DependencyGraph {
             return happens_before_map.at(t1).count(t2);
         } else {
             return false; }
+    }
+
+    /**
+      * Returns the dependency type from t1 to t2.
+      *
+      */
+    DependencyGraph::dependencies_t get_dependency(const IR::MAU::Table* t1,
+                                                   const IR::MAU::Table* t2) const {
+        if (!finalized)
+            BUG("Dependence graph used before being fully constructed.");
+
+        auto p = std::make_pair(t1, t2);
+        if (dependency_map.find(p) != dependency_map.end()) {
+            return dependency_map.at(p);
+        }
+        // No dependency between tables
+        return DependencyGraph::CONCURRENT;
     }
 
     int dependence_tail_size(const IR::MAU::Table* t) const {
@@ -193,6 +219,21 @@ struct DependencyGraph {
     }
 
     friend std::ostream &operator<<(std::ostream &, const DependencyGraph&);
+    static cstring dep_to_name(dependencies_t dep) {
+        if (dep == CONTROL) {
+            return "control";
+        } else if (dep == IXBAR_READ) {
+            return "ixbar_read";
+        } else if (dep == ACTION_READ) {
+            return "action_read";
+        } else if (dep == ANTI) {
+            return "anti";
+        } else if (dep == OUTPUT) {
+            return "output";
+        } else {
+            return "concurrent";
+        }
+    }
 };
 
 

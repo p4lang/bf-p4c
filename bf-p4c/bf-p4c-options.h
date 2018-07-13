@@ -24,6 +24,11 @@ class BFN_Options : public CompilerOptions {
     bool privatization = false;
     bool always_init_metadata = false;
     bool backward_compatible = false;
+    bool display_power_budget = false;
+    bool disable_power_check = false;
+#if BAREFOOT_INTERNAL
+    bool no_power_check = false;
+#endif
 
     cstring bfRtSchema = "";
     std::vector<cstring> outputFiles;

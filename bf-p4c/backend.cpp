@@ -13,6 +13,7 @@
 #include "bf-p4c/common/metadata_init.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/common/parser_overlay.h"
+#include "bf-p4c/mau/characterize_power.h"
 #include "bf-p4c/mau/empty_controls.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/instruction_adjustment.h"
@@ -234,6 +235,15 @@ Backend::Backend(const BFN_Options& options) :
 
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),
+
+        new FindDependencyGraph(phv, deps),  // must be called right before characterize power
+
+        new CharacterizePower(deps,
+#if BAREFOOT_INTERNAL
+                              options.no_power_check,
+#endif
+                              options.display_power_budget,
+                              options.disable_power_check)
     });
     setName("Barefoot backend");
 

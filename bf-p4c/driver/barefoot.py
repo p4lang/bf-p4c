@@ -66,6 +66,9 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--create-graphs",
                                     help="Create parse and table flow graphs",
                                     action="store_true", default=False)
+        self._argGroup.add_argument("--display-power-budget",
+                                    help="Display MAU power summary after compilation.",
+                                    action="store_true", default=False)
         self._argGroup.add_argument("--no-link", dest="skip_linker",
                                     help="Run up to linker",
                                     action="store_true", default=False)
@@ -77,7 +80,7 @@ class BarefootBackend(BackendDriver):
                                     action="store_true", default=False)
         self._argGroup.add_argument("--bf-rt-schema", action="store",
                                     help="Generate and write BF-RT JSON schema  to the specified file")
-        self._argGroup.add_argument("--backward-compatible", 
+        self._argGroup.add_argument("--backward-compatible",
                                     action="store_true", default=False,
                                     help="Set compiler to be backward compatible with p4c-tofino")
 
@@ -146,6 +149,9 @@ class BarefootBackend(BackendDriver):
 
         if opts.backward_compatible:
             self.add_command_option('compiler', '--backward-compatible')
+
+        if opts.display_power_budget:
+            self.add_command_option('compiler', '--display-power-budget')
 
         if opts.bf_rt_schema is not None:
             self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))

@@ -699,5 +699,3 @@ class RangeMatch : Operation_Unary {
     precedence = DBPrint::Prec_Equ;
     stringOp = " in ";
 }
-
-

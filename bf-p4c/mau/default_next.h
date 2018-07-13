@@ -35,6 +35,13 @@ class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
             if (n->gress == t->gress)
                 return n->unique_id().build_name();
         return "END"; }
+    UniqueId next_in_thread_uniq_id(const IR::MAU::Table *t) const {
+      if (auto *n = next(t))
+          if (n->gress == t->gress)
+              return n->unique_id();
+      UniqueId rv;
+      rv.name = "END";
+      return rv; }
 };
 
 #endif /* BF_P4C_MAU_DEFAULT_NEXT_H_ */

@@ -41,6 +41,19 @@ BFN_Options::BFN_Options() {
     registerOption("--allowUnimplemented", nullptr,
         [this](const char *) { allowUnimplemented = true; return true; },
         "Allow assembly generation even if there are unimplemented features in the P4 code");
+    registerOption("--display-power-budget", nullptr,
+        [this](const char *) { display_power_budget = true; return true; },
+        "Display MAU power summary after compilation");
+    registerOption("--disable-power-check", nullptr,
+        [this](const char *) { disable_power_check = true; return true; },
+        "Raises the threshold for the power budget check",
+        OptionFlags::Hide);
+#if BAREFOOT_INTERNAL
+    registerOption("--no-power-check", nullptr,
+        [this](const char *) { no_power_check = true; return true; },
+        "Turns off the MAU power budget check",
+        OptionFlags::Hide);
+#endif
     registerOption("-g", nullptr,
         [this](const char *) { debugInfo = true; return true; },
         "Generate debug information");

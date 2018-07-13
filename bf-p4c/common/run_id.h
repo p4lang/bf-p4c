@@ -4,6 +4,7 @@
 #include <openssl/sha.h>
 #include <ctime>
 #include <string>
+#include <cstring>
 
 class RunId {
  public:
@@ -27,7 +28,11 @@ class RunId {
         for (int n = 0; n < SHA256_DIGEST_LENGTH; n++)
             snprintf(outputHash + (n*2), 64-(n*2), "%02x", hash[n]);
         outputHash[64] = 0;
-        _runId = outputHash;
+        char ss[17];
+        for (int n =0; n < 16; ++n)
+            ss[n] = outputHash[n];
+        ss[16] = 0;
+        _runId = ss;
     }
 
  public:

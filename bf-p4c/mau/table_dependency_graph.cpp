@@ -37,7 +37,9 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
     std::map<PHV::Container, bitvec>    cont_writes;
 
  public:
-    AddDependencies(FindDependencyGraph &self, const IR::MAU::Table *t, ordered_set<cstring>& t1) :
+    AddDependencies(FindDependencyGraph &self,
+                    const IR::MAU::Table *t,
+                    ordered_set<cstring>& t1) :
         self(self), table(t), ignoreDep(t1) { }
 
  private:
@@ -94,7 +96,8 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
                 } else {
                     // Read-after-write dependence.
                     if (isIxbarRead()) {
-                        addDeps(self.access[field->name].write, table, DependencyGraph::IXBAR_READ);
+                        addDeps(self.access[field->name].write,
+                                table, DependencyGraph::IXBAR_READ);
                     } else {
                         addDeps(self.access[field->name].write, table,
                                 DependencyGraph::ACTION_READ);
@@ -235,7 +238,6 @@ class FindDependencyGraph::UpdateAttached : public Inspector {
     }
     */
 };
-
 
 bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *seq) {
     const Context *ctxt = getContext();
