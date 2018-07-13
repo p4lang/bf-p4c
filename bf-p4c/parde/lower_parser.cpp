@@ -1567,101 +1567,76 @@ class ExtractorAllocator {
         SplitExtractResult rst;
         auto& pardeSpec = Device::pardeSpec();
         int inputBufferLastByte = pardeSpec.byteInputBufferSize() - 1;
-        // Allocate. We have a limited number of extractions of each size per
+        // Allocate a limited number of extractions of each size per
         // state. We also ensure that we don't overflow the input buffer.
-        if (Device::currentDevice() == "Tofino") {
-            std::map<size_t, unsigned> allocatedExtractorsBySize;
 
-            // reserve extractors for checksum unit.
-            for (auto* cks : checksums) {
-                // In verify mode, we need to reserve a 16 bit extractor.
-                if (cks->type == IR::BFN::ChecksumMode::VERIFY && cks->csum_err) {
-                    auto use_extractor = cks->csum_err->container->container.size();
-                    allocatedExtractorsBySize[use_extractor]++;
-                    BUG_CHECK(allocatedExtractorsBySize[use_extractor] <=
-                              pardeSpec.extractorSpec().at(use_extractor),
-                              "too much checksum, use up extractors.");
-                }
+        std::map<size_t, unsigned> allocatedExtractorsBySize;
+
+        // reserve extractor for checksum verification.
+        for (auto* cks : checksums) {
+            if (cks->type == IR::BFN::ChecksumMode::VERIFY && cks->csum_err) {
+                auto extractor_size = cks->csum_err->container->container.size();
+                BUG_CHECK(extractor_size != 32,
+                  "Checksum verification cannot write to 32-bit container");
+#if HAVE_JBAY
+                if (Device::currentDevice() == "JBay")
+                    extractor_size = 16;  // JBay has one size, 16-bit extractors
+#endif  // HAVE_JBAY
+                allocatedExtractorsBySize[extractor_size]++;
             }
+        }
 
-            for (auto* extract : extractPhvs) {
-                nw_byteinterval byteInterval;
-                size_t use_extractor = 0;
-                unsigned n_extractor_used = 1;
-                if (auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>()) {
-                    use_extractor = extract->dest->container.size();
-                    n_extractor_used = 1;
-                    byteInterval = source->byteInterval();
-                } else if (extract->source->is<IR::BFN::LoweredBufferRVal>()) {
-                    use_extractor = extract->dest->container.size();
-                    n_extractor_used = 1;
-                } else if (auto* cons = extract->source->to<IR::BFN::LoweredConstantRVal>()) {
-                    int container_size = extract->dest->container.size();
-                    int value = cons->constant;
-                    std::tie(use_extractor, n_extractor_used) =
-                        calcConstantExtractorUses(value, container_size);
-                } else {
-                    BUG("Extract to unknown source: %1%", extract);
-                }
+        for (auto* extract : extractPhvs) {
+            if (!extract->dest)
+                continue;
 
-                bool extractorsAvail = true;
-                if (n_extractor_used &&
-                    allocatedExtractorsBySize[use_extractor] + n_extractor_used >
-                    pardeSpec.extractorSpec().at(use_extractor)) {
-                    extractorsAvail = false; }
-
-                if (!extractorsAvail || byteInterval.hiByte() > inputBufferLastByte) {
-                    rst.remainingPhvExtracts.push_back(extract);
-                    rst.remainingBytes = rst.remainingBytes.unionWith(byteInterval);
-                    continue;
-                }
-                rst.extractedInterval |= byteInterval;
-                if (extract->dest)
-                    allocatedExtractorsBySize[extract->dest->container.size()] += n_extractor_used;
-                rst.allocatedExtracts.push_back(extract);
+            nw_byteinterval byteInterval;
+            size_t extractor_size = 0;
+            unsigned n_extractor_used = 1;
+            if (auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>()) {
+                extractor_size = extract->dest->container.size();
+                n_extractor_used = 1;
+                byteInterval = source->byteInterval();
+            } else if (extract->source->is<IR::BFN::LoweredBufferRVal>()) {
+                extractor_size = extract->dest->container.size();
+                n_extractor_used = 1;
+            } else if (auto* cons = extract->source->to<IR::BFN::LoweredConstantRVal>()) {
+                int container_size = extract->dest->container.size();
+                int value = cons->constant;
+                std::tie(extractor_size, n_extractor_used) =
+                    calcConstantExtractorUses(value, container_size);
+            } else {
+                BUG("Extract to unknown source: %1%", extract);
             }
 
 #if HAVE_JBAY
-        } else if (Device::currentDevice() == "JBay") {
-            // JBay has one size, 16-bit extractors
-            unsigned allocatedExtractors = 0;
-            unsigned totalExtractors = pardeSpec.extractorSpec().at(16);
+            if (Device::currentDevice() == "JBay") {
+                if (extractor_size == 32)
+                    n_extractor_used++;
+                extractor_size = 16;  // JBay has one size, 16-bit extractors
+                // TODO(zma) we could pack two 8-bit extract into a single 16-bit extract
+            }
+#endif  // HAVE_JBAY
 
             bool extractorsAvail = true;
-            for (auto* extract : extractPhvs) {
-                if (extract->dest) {
-                    if (allocatedExtractors == totalExtractors)
-                    extractorsAvail = false;
-                }
+            if (n_extractor_used &&
+                allocatedExtractorsBySize[extractor_size] + n_extractor_used >
+                pardeSpec.extractorSpec().at(extractor_size)) {
+                extractorsAvail = false; }
 
-                const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
-                    ? extract->source->to<IR::BFN::LoweredPacketRVal>()->byteInterval()
-                    : nw_byteinterval();
-
-                if (!extractorsAvail ||
-                    byteInterval.hiByte() > inputBufferLastByte) {
-                    rst.remainingPhvExtracts.push_back(extract);
-                    rst.remainingBytes = rst.remainingBytes.unionWith(byteInterval);
-                    continue;
-                }
-
-                // TODO(yumin): Does Jbay has same limitation as tofino when extract constants?
-                // If it does, we need to handle it like what we did on tofino.
-                if (extract->dest) {
-                    switch (extract->dest->container.size()) {
-                        case 8:  allocatedExtractors++;  break;
-                        case 16: allocatedExtractors++;  break;
-                        case 32: allocatedExtractors+=2; break;
-                        default: BUG("Unknown container size");
-                    }
-                }
-
-                // TODO(zma) we could pack two 8-bit extract into a single exact
-                // if the two containers are an even-odd pair.
-                rst.extractedInterval |= byteInterval;
-                rst.allocatedExtracts.push_back(extract);
+            if (!extractorsAvail || byteInterval.hiByte() > inputBufferLastByte) {
+                rst.remainingPhvExtracts.push_back(extract);
+                rst.remainingBytes = rst.remainingBytes.unionWith(byteInterval);
+                continue;
             }
+            rst.extractedInterval |= byteInterval;
 
+            allocatedExtractorsBySize[extract->dest->container.size()] += n_extractor_used;
+            rst.allocatedExtracts.push_back(extract);
+        }
+
+#if HAVE_JBAY
+        if (Device::currentDevice() == "JBay") {
             for (auto* extract : extractClots) {
                 const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
                     ? extract->source->to<IR::BFN::LoweredPacketRVal>()->byteInterval()
@@ -1684,8 +1659,8 @@ class ExtractorAllocator {
                 rst.extractedInterval |= byteInterval;
                 rst.allocatedExtracts.push_back(extract);
             }
-#endif  // HAVE_JBAY
         }
+#endif  // HAVE_JBAY
         return rst;
     }
 

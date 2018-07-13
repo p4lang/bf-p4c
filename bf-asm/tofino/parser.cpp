@@ -208,7 +208,7 @@ int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs 
             if (flags & ROTATE) *map[i].offset_rot = 1; }
         used |= slot.usemask;
         return hi; }
-    error(where.lineno, "Ran out of phv output slots");
+    error(where.lineno, "Ran out of phv output extractor slots");
     return -1;
 }
 
@@ -268,7 +268,7 @@ void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs 
             shift -= slot.size; }
         used |= slot.usemask;
         return; }
-    error(where.lineno, "Ran out of phv output slots");
+    error(where.lineno, "Ran out of phv output extractor slots");
 }
 
 #define OUTPUT_MAP_INIT(MAP, ROW, SIZE, INDEX) \

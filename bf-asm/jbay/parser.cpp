@@ -20,7 +20,7 @@ void Parser::Checksum::write_output_config(Target::JBay::parser_regs &regs, Pars
         if (used & (1 << i)) continue;
         used |= 1 << i;
         return; }
-    error(lineno, "Ran out of phv output slots");
+    error(lineno, "Ran out of phv output extractor slots");
 }
 
 template <> void Parser::CounterInit::write_config(Target::JBay::parser_regs &regs,
