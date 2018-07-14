@@ -37,12 +37,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/issue1000-bmv2.p4
     )
 
-  # BRIG-781
-  p4c_add_xfail_reason("tofino"
-      "error: Action code must be the same as action instruction address when there are more than 8 actions"
-    extensions/p4_tests/p4_14/test_config_303_static_table.p4
-    )
-
 endif() # HARLYN_STF_tofino
 
 # Tests that run packets:

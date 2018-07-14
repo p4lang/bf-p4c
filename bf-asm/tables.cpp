@@ -1143,8 +1143,14 @@ void Table::Actions::pass2(Table *tbl) {
     /* figure out if we need more codes than can fit in the action_instruction_adr_map.
      * use code = -1 to signal that condition. */
     int non_nop_actions = by_code.size();
-    if (by_code.count(0) && by_code.at(0)->instr.empty()) {
-        --non_nop_actions;  // don't count code 0 action if its a noop
+    // Check if a nop action is defined. The action will be empty (no
+    // instructions). By default we will use code '0' for nop action, unless
+    // compiler has assigned a different value.
+    int nop_code = 0;
+    for (auto &bc : by_code) {
+        if (bc.second->instr.empty()) nop_code = bc.first; }
+    if (by_code.count(nop_code) && by_code.at(nop_code)->instr.empty()) {
+        --non_nop_actions;  // don't count nop code action
         code = 1; }
     for (auto &act : *this) {
         if (act.default_only) continue;
