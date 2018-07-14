@@ -1050,6 +1050,13 @@ struct CollectInvalidatableFields : public Inspector {
         return true;
     }
 
+    bool preorder(const IR::Member* parameter) override {
+        if (parameter->member.name.endsWith("digest_type")) {
+            invalidatable_fields.insert(phv.field(parameter->toString()));
+        }
+        return true;
+    }
+
     std::set<const PHV::Field*> invalidatable_fields;
     const PhvInfo& phv;
 };
