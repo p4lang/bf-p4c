@@ -312,8 +312,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: Could not find declaration for key_7"
-  switch_msdc_ipv4
+  "Power worst case estimated budget exceeded by 1.54W"
   switch_msdc_l3
   )
 
@@ -1003,6 +1002,7 @@ p4c_add_xfail_reason("tofino"
   switch_8.2_msdc_leaf_int
   switch_msdc_spine_int
   switch_8.2_msdc_spine_int
+  switch_msdc_ipv4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1183,7 +1183,7 @@ p4c_add_xfail_reason("tofino"
 
 # p4Runtime bug
 p4c_add_xfail_reason("tofino"
-  "expected one type argument"
+  "Type Register has 1 type parameter"
   testdata/p4_16_samples/psa-register1.p4
   testdata/p4_16_samples/psa-register2.p4
   testdata/p4_16_samples/psa-register3.p4
@@ -1206,3 +1206,10 @@ p4c_add_xfail_reason("tofino"
   "Identifier with no name"
   testdata/p4_16_samples/issue1208-1.p4
 )
+
+# BRIG-791
+p4c_add_xfail_reason("tofino"
+  "Split cannot work on this scenario"
+  extensions/p4_tests/p4_14/p4smith_regression/ghosted_0.p4
+)
+
