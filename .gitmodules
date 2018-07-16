@@ -11,6 +11,8 @@
 [submodule "p4-tests/p4_16/bf-onos"]
 	path = p4-tests/p4_16/bf-onos
 	url = git@github.com:barefootnetworks/bf-onos.git
+        branch = bf-onos-old
+        shallow = true
 [submodule "p4-tests/p4_14/p4-tests"]
 	path = p4-tests/p4_14/p4-tests
 	url = git@github.com:barefootnetworks/p4-tests.git
@@ -44,3 +46,6 @@
 [submodule "p4-tests/p4_14/switch-jbay"]
 	path = p4-tests/p4_14/switch-jbay
 	url = git@github.com:barefootnetworks/switch.git
+[submodule "p4-tests/p4_16/bf-onos-new"]
+	path = p4-tests/p4_16/bf-onos-new
+	url = git@github.com:barefootnetworks/bf-onos.git

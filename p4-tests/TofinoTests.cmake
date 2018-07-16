@@ -82,6 +82,18 @@ p4c_add_ptf_test_with_ptfdir_and_spec (
     "${testExtraArgs} -DWITH_INT_TRANSIT"
     ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf "all ^spgw")
 
+# newer version of fabric; the old one (above) can be removed once we reach
+# feature parity.
+set (ONOS_FABRIC_NEW_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-new/pipelines/fabric/src/main/resources/fabric-tofino.p4)
+p4c_add_ptf_test_with_ptfdir_and_spec (
+    "tofino" fabric-new ${ONOS_FABRIC_NEW_P4}
+    "${testExtraArgs} "
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all ^spgw")
+p4c_add_ptf_test_with_ptfdir_and_spec (
+    "tofino" fabric-new-DWITH_SPGW ${ONOS_FABRIC_NEW_P4}
+    "${testExtraArgs} -DWITH_SPGW"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all")
+
 # subset of p4factory tests that we want to run as part of regressions
 # One # means it fails badly but should get it to run soon
 # Two # means it is not required for switch, but we should still try to compile
