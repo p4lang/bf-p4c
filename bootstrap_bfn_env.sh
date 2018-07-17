@@ -8,12 +8,14 @@ topdir=$(dirname $PWD)
 keep_files=false
 no_tofino=false
 no_jbay=false
+skip_os_deps=false
 
 show_help () {
     echo >&2 "bootstrap_bfn_env script options"
     echo >&2 "   -keep_files    keep the build repo and files"
     echo >&2 "   -no_tofino     do not build tofino"
     echo >&2 "   -no_jbay       do not build jbay"
+    echo >&2 "   -skip_os_deps  skip running os deps script"
 }
 
 while [ $# -gt 0 ]; do
@@ -31,6 +33,9 @@ while [ $# -gt 0 ]; do
     -no_jbay|--no_jbay)
         no_jbay=true
         ;;
+    -skip_os_deps|--skip_os_deps)
+	skip_os_deps=true
+	;;
     *)
         echo "Invalid argument supplied"
         show_help
@@ -57,10 +62,12 @@ if [ $no_jbay = false ]; then
     mkdir -p $jbay_installdir
 fi
 
-os_deps=${topdir}/${curdir}/install_os_deps.sh
-if [ ! -x $os_deps ]; then
-    echo "Can not find script to install OS dependencies: $os_deps"
-    exit 1
+if [ $skip_os_deps = false ]; then
+    os_deps=${topdir}/${curdir}/install_os_deps.sh
+    if [ ! -x $os_deps ]; then
+        echo "Can not find script to install OS dependencies: $os_deps"
+        exit 1
+    fi
 fi
 
 confirm () {
@@ -157,7 +164,9 @@ PI_clean_before_rebuild=$clean_before_rebuild
 # install all necessary packages
 # and set SUDO, LDCONFIG, LDLIB_EXT as appropriate for the OS
 # also sets PI_clean_before_rebuild if the protobuf/grpc have been re-installed
-. $os_deps
+if [ $skip_os_deps = false ]; then
+    . $os_deps
+fi
 
 
 ### Behavioral Model setup
@@ -262,8 +271,8 @@ install_bf_repo () {
 
 # build the modules only on Linux
 if [ $(uname -s) == 'Linux' ]; then
-    install_bf_repo "bf-syslibs" "master" "$tofino_installdir/lib/libbfsys.${LDLIB_EXT}" ""
-    install_bf_repo "bf-utils" "master" "$tofino_installdir/lib/libbfutils.${LDLIB_EXT}" ""
+    install_bf_repo "bf-syslibs" "brig-stable" "$tofino_installdir/lib/libbfsys.${LDLIB_EXT}" ""
+    install_bf_repo "bf-utils" "brig-stable" "$tofino_installdir/lib/libbfutils.${LDLIB_EXT}" ""
 fi
 
 # Get a specific branch of given repo
