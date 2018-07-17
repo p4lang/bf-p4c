@@ -22,6 +22,16 @@ void generateEmits(const IR::Expression* expression, Func func) {
     }
 }
 
+IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
+    const IR::Type *ftype = nullptr;
+    auto f = hdr->type->getField(field);
+    if (f != nullptr)
+        ftype = f->type;
+    else
+        BUG("Couldn't find metadata field %s in %s", field, hdr->name);
+    return new IR::Member(ftype, new IR::ConcreteHeaderRef(hdr), field);
+}
+
 class GenerateDeparser : public Inspector {
     IR::BFN::Deparser                           *dprsr;
     const IR::Expression                        *pred = nullptr;
@@ -132,6 +142,12 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
     } else if (auto* list = expr->to<IR::ListExpression>()) {
         for (auto* item : list->components)
           sources.push_back(new IR::BFN::FieldLVal(item));
+    } else if (auto *ref = expr->to<IR::ConcreteHeaderRef>()) {
+        if (auto *st = expr->type->to<IR::Type_StructLike>()) {
+            for (auto *item : st->fields) {
+                sources.push_back(new IR::BFN::FieldLVal(gen_fieldref(ref->ref, item->name)));
+            }
+        }
     } else {
         sources.push_back(new IR::BFN::FieldLVal(expr));
     }

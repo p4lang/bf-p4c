@@ -1137,12 +1137,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/truncate.p4
 )
 
-# BRIG-733
-p4c_add_xfail_reason("tofino"
-  "FieldLVal contains unexpected value"
-  testdata/p4_16_samples/issue1352-bmv2.p4
-)
-
 # backend does not support this example
 p4c_add_xfail_reason("tofino"
   "Tofino does not allow stats to use different address schemes on one table"
