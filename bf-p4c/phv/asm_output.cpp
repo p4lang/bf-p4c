@@ -78,23 +78,29 @@ void PhvAsmOutput::emit_phv_field_info(std::ostream& out, PHV::Field& f) const {
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvAsmOutput& phvasm) {
+    bool dumpCtxt = BFNContext::get().options().debugInfo;
+
     out << "phv ingress:\n";
     for (auto &f : phvasm.phv) {
         if (f.gress == INGRESS) {
             emit_phv_field(out, f); } }
-    out << "  " << "context_json:\n";
-    for (auto &f : phvasm.phv) {
-        if (f.gress == INGRESS && !f.is_unallocated()) {
-            phvasm.emit_phv_field_info(out, f); } }
+
+    if (dumpCtxt) {
+        out << "  " << "context_json:\n";
+        for (auto &f : phvasm.phv) {
+            if (f.gress == INGRESS && !f.is_unallocated()) {
+                phvasm.emit_phv_field_info(out, f); } } }
 
     out << "phv egress:\n";
     for (auto &f : phvasm.phv) {
         if (f.gress == EGRESS) {
             emit_phv_field(out, f); } }
-    out << "  " << "context_json:\n";
-    for (auto &f : phvasm.phv) {
-        if (f.gress == EGRESS && !f.is_unallocated()) {
-            phvasm.emit_phv_field_info(out, f); } }
+
+    if (dumpCtxt) {
+        out << "  " << "context_json:\n";
+        for (auto &f : phvasm.phv) {
+            if (f.gress == EGRESS && !f.is_unallocated()) {
+                phvasm.emit_phv_field_info(out, f); } } }
 
     return out;
 }
