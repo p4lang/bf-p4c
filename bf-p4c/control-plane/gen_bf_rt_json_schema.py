@@ -158,7 +158,8 @@ class TableWithoutActionSpec(TableCommon):
         enum=["MatchAction_Indirect",
               "MatchAction_Indirect_Selector",
               "Selector",
-              "Counter", "Meter", "Register"])
+              "Counter", "Meter", "Register",
+              "PortMetadata"])
 
 class LearnListFieldField(BaseDataField):
     class Options(object):

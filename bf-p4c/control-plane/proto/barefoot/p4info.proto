@@ -21,6 +21,7 @@ message P4Ids {
     REGISTER_PARAM = 0x8C;
     DIGEST = 0x8D;
     HASH = 0x8E;
+    PORT_METADATA = 0x8F;
   }
 }
 

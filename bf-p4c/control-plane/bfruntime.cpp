@@ -89,6 +89,9 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_METER_INDEX,
         BF_RT_DATA_COUNTER_INDEX,
         BF_RT_DATA_REGISTER_INDEX,
+
+        BF_RT_DATA_PORT_METADATA_PORT,
+        BF_RT_DATA_PORT_METADATA_DEFAULT_FIELD,
     };
 
     /// Common counter representation between PSA and Tofino architectures
@@ -103,6 +106,8 @@ class BfRtSchemaGenerator {
     /// Common register representation between PSA and Tofino architectures
     struct Register;
 
+    struct PortMetadata;
+
     void addMatchTables(Util::JsonArray* tablesJson) const;
     void addActionProfs(Util::JsonArray* tablesJson) const;
     void addCounters(Util::JsonArray* tablesJson) const;
@@ -110,12 +115,15 @@ class BfRtSchemaGenerator {
     void addLearnFilters(Util::JsonArray* learnFiltersJson) const;
     void addTofinoExterns(Util::JsonArray* tablesJson,
                           Util::JsonArray* learnFiltersJson) const;
+    void addPortMetadataExtern(Util::JsonArray* tablesJson) const;
 
     void addCounterCommon(Util::JsonArray* tablesJson, const Counter& counter) const;
     void addMeterCommon(Util::JsonArray* tablesJson, const Meter& meter) const;
     void addRegisterCommon(Util::JsonArray* tablesJson, const Register& meter) const;
     void addActionProfCommon(Util::JsonArray* tablesJson, const ActionProf& actionProf) const;
     void addLearnFilterCommon(Util::JsonArray* learnFiltersJson, const Digest& digest) const;
+    void addPortMetadata(Util::JsonArray* tablesJson, const PortMetadata& portMetadata) const;
+    void addPortMetadataDefault(Util::JsonArray* tablesJson) const;
 
     boost::optional<bool> actProfHasSelector(P4Id actProfId) const;
     Util::JsonArray* makeActionSpecs(const p4configv1::Table& table) const;
@@ -540,6 +548,26 @@ struct BfRtSchemaGenerator::Register {
     }
 };
 
+struct BfRtSchemaGenerator::PortMetadata {
+    static const std::string name() { return "$PORT_METADATA"; }
+    static constexpr P4Id id() {
+        return makeBfRtId(0, ::barefoot::P4Ids::PORT_METADATA);
+    }
+
+    p4configv1::P4DataTypeSpec typeSpec;
+
+    static boost::optional<PortMetadata> fromTofino(
+        const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::PortMetadata portMetadata;
+        if (!externInstance.info().UnpackTo(&portMetadata)) {
+            ::error("Extern instance %1% does not pack a PortMetadata object", pre.name());
+            return boost::none;
+        }
+        return PortMetadata{portMetadata.type_spec()};
+    }
+};
+
 boost::optional<BfRtSchemaGenerator::Counter>
 BfRtSchemaGenerator::getDirectCounter(P4Id counterId) const {
     if (isOfType(counterId, p4configv1::P4Ids::DIRECT_COUNTER)) {
@@ -932,6 +960,52 @@ BfRtSchemaGenerator::addLearnFilterCommon(Util::JsonArray* learnFiltersJson,
     learnFiltersJson->append(learnFilterJson);
 }
 
+void
+BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
+                                     const PortMetadata& portMetadata) const {
+    auto* tableJson = new Util::JsonObject();
+    tableJson->emplace("name", PortMetadata::name());
+    tableJson->emplace("id", PortMetadata::id());
+    tableJson->emplace("table_type", "PortMetadata");
+    // omit size, doesn't mean anything for phase0
+
+    auto* keyJson = new Util::JsonArray();
+    addKeyField(keyJson, BF_RT_DATA_PORT_METADATA_PORT, "$PORT",
+                true /* mandatory */, "Exact", makeTypeInt("uint32"));
+    tableJson->emplace("key", keyJson);
+
+    auto* dataJson = new Util::JsonArray();
+    if (portMetadata.typeSpec.type_spec_case() !=
+        ::p4::config::v1::P4DataTypeSpec::TYPE_SPEC_NOT_SET) {
+        auto* fieldsJson = new Util::JsonArray();
+        transformTypeSpecToDataFields(
+            fieldsJson, portMetadata.typeSpec, "PortMetadata",
+            PortMetadata::name(), PortMetadata::name() + ".");
+        for (auto* f : *fieldsJson) {
+            addSingleton(dataJson, f->to<Util::JsonObject>(),
+                         true /* mandatory */, false /* read-only */);
+      }
+    } else {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_PORT_METADATA_DEFAULT_FIELD, "$DEFAULT_FIELD",
+            makeTypeInt("uint64", 0ull), false /* repeated */);
+        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+    }
+    tableJson->emplace("data", dataJson);
+
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
+}
+
+void
+BfRtSchemaGenerator::addPortMetadataDefault(Util::JsonArray* tablesJson) const {
+    // we use an unset protobuf field (default) to indicate that there is no
+    // programmer-defined PortMetadata extern
+    addPortMetadata(tablesJson, PortMetadata{});
+}
+
 boost::optional<bool>
 BfRtSchemaGenerator::actProfHasSelector(P4Id actProfId) const {
     if (isOfType(actProfId, p4configv1::P4Ids::ACTION_PROFILE)) {
@@ -1166,6 +1240,24 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
     }
 }
 
+// I chose to do this in a separate function rather than in addTofinoExterns
+// because if there is no PortMetadata extern in P4Info, we need to generate a
+// default one.
+void
+BfRtSchemaGenerator::addPortMetadataExtern(Util::JsonArray* tablesJson) const {
+    for (const auto& externType : p4info.externs()) {
+        auto externTypeId = static_cast<::barefoot::P4Ids::Prefix>(externType.extern_type_id());
+        if (externTypeId == ::barefoot::P4Ids::PORT_METADATA) {
+            for (const auto& externInstance : externType.instances()) {
+                auto portMetadata = PortMetadata::fromTofino(externInstance);
+                if (portMetadata != boost::none) addPortMetadata(tablesJson, *portMetadata);
+                return;
+            }
+        }
+    }
+    addPortMetadataDefault(tablesJson);
+}
+
 const Util::JsonObject*
 BfRtSchemaGenerator::genSchema() const {
     auto* json = new Util::JsonObject();
@@ -1183,6 +1275,8 @@ BfRtSchemaGenerator::genSchema() const {
     addLearnFilters(learnFiltersJson);
 
     addTofinoExterns(tablesJson, learnFiltersJson);
+
+    addPortMetadataExtern(tablesJson);
 
     return json;
 }

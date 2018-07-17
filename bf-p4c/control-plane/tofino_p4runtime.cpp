@@ -131,6 +131,9 @@ class SymbolType final : public P4RuntimeSymbolType {
     static P4RuntimeSymbolType REGISTER() {
         return P4RuntimeSymbolType::make(barefoot::P4Ids::REGISTER);
     }
+    static P4RuntimeSymbolType PORT_METADATA() {
+        return P4RuntimeSymbolType::make(barefoot::P4Ids::PORT_METADATA);
+    }
 };
 
 /// The information about an action profile which is necessary to generate its
@@ -247,6 +250,14 @@ struct Register {
     }
 };
 
+struct PortMetadata {
+  const p4configv1::P4DataTypeSpec* typeSpec;  // format of port metadata
+  static const cstring name() { return "$PORT_METADATA"; }
+  static p4rt_id_t id() {
+      return static_cast<p4rt_id_t>(SymbolType::PORT_METADATA()) << 24;
+  }
+};
+
 /// Implements @ref P4RuntimeArchHandlerIface for the Tofino architecture. The
 /// overridden metods will be called by the @P4RuntimeSerializer to collect and
 /// serialize Tofino-specific symbols which are exposed to the control-plane.
@@ -319,12 +330,23 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
     void collectExternFunction(P4RuntimeSymbolTableIface* symbols,
                                const P4::ExternFunction* externFunction) override {
-        (void)symbols;
-        (void)externFunction;
+        auto portMetadata = getPortMetadataExtract(externFunction, refMap, typeMap, nullptr);
+        if (portMetadata) {
+            if (hasUserPortMetadata) {
+                // TODO(antonin): improve error message when extern added to TNA
+                ::error("Cannot have multiple calls to port_metadata_extract");
+                return;
+            }
+            hasUserPortMetadata = true;
+            // It is not strictly required to update the symbol table here, but
+            // I think it makes things more consistent.
+            symbols->add(SymbolType::PORT_METADATA(), PortMetadata::name(), PortMetadata::id());
+        }
     }
 
     void postCollect(const P4RuntimeSymbolTableIface& symbols) override {
         (void)symbols;
+
         // analyze action profiles / selectors and build a mapping from action
         // profile / selector name to the set of tables referencing them
         Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
@@ -498,12 +520,23 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void addExternFunction(const P4RuntimeSymbolTableIface& symbols,
                            p4configv1::P4Info* p4info,
                            const P4::ExternFunction* externFunction) override {
-        // no extern functions are exposed to the control-plane for tofino,
-        // everything is an extern instance which makes things much more
-        // convenient
-        (void)symbols;
-        (void)p4info;
-        (void)externFunction;
+        auto p4RtTypeInfo = p4info->mutable_type_info();
+        auto portMetadata = getPortMetadataExtract(externFunction, refMap, typeMap, p4RtTypeInfo);
+        if (portMetadata) addPortMetadata(symbols, p4info, *portMetadata);
+    }
+
+    /// @return serialization information for the digest() call represented by
+    /// @call, or boost::none if @call is not a digest() call or is invalid.
+    static boost::optional<PortMetadata>
+    getPortMetadataExtract(const P4::ExternFunction* function,
+                           ReferenceMap* refMap,
+                           TypeMap* typeMap,
+                           p4configv1::P4TypeInfo* p4RtTypeInfo) {
+        (void)refMap; (void)typeMap; (void)p4RtTypeInfo;
+        // TODO(antonin)
+        if (function->method->name != "port_metadata_extract")
+            return boost::none;
+        return boost::none;
     }
 
     boost::optional<Digest> getDigest(const IR::Declaration_Instance* decl,
@@ -624,6 +657,16 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             symbols, SymbolType::DIGEST(), "Digest",
             digestInstance.name, digestInstance.annotations, digest,
             p4Info);
+    }
+
+    void addPortMetadata(const P4RuntimeSymbolTableIface& symbols,
+                         p4configv1::P4Info* p4Info,
+                         const PortMetadata& portMetadataExtract) {
+        ::barefoot::PortMetadata portMetadata;
+        portMetadata.mutable_type_spec()->CopyFrom(*portMetadataExtract.typeSpec);
+        addP4InfoExternInstance(
+            symbols, SymbolType::PORT_METADATA(), "PortMetadata",
+            PortMetadata::name(), nullptr, portMetadata, p4Info);
     }
 
     void addRegister(const P4RuntimeSymbolTableIface& symbols,
@@ -805,6 +848,10 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     std::unordered_map<cstring, std::set<cstring> > actionProfilesRefs;
     /// The set of color-aware meters in the program.
     std::unordered_set<cstring> colorAwareMeters;
+
+    /// True if the TNA P4 program explicitly extracts phase0 metadata to a
+    /// programmer-defined struct.
+    bool hasUserPortMetadata{false};
 };
 
 /// The architecture handler builder implementation for Tofino.
