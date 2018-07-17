@@ -836,7 +836,7 @@ analyzeChecksumCall(const IR::MethodCallStatement *statement, cstring which) {
 
 static IR::Declaration_Instance*
 getChecksumDeclaration(ProgramStructure *structure,
-                                     ChecksumSourceMap::value_type csum) {
+                       ChecksumSourceMap::value_type csum) {
     auto typeArgs = new IR::Vector<IR::Type>();
     typeArgs->push_back(csum.second->arguments->at(2)->expression->type);
     auto inst = new IR::Type_Specialized(new IR::Type_Name("Checksum"), typeArgs);
@@ -852,11 +852,42 @@ getChecksumDeclaration(ProgramStructure *structure,
     return decl;
 }
 
+static std::vector<gress_t>
+getChecksumUpdateLocations(const IR::BlockStatement* block, cstring pragma) {
+    std::vector<gress_t> updateLocations;
+
+    if (pragma == "calculated_field_update_location")
+        updateLocations = { EGRESS };
+    else if (pragma == "residual_checksum_parser_update_location")
+        updateLocations = { INGRESS };
+    else
+        BUG("Invalid use of function getChecksumUpdateLocation");
+
+    for (auto annot : block->annotations->annotations) {
+        if (annot->name.name == pragma) {
+            auto& exprs = annot->expr;
+            auto gress = exprs[0]->to<IR::StringLiteral>();
+
+            if (gress->value == "ingress")
+                updateLocations = { INGRESS };
+            else if (gress->value == "egress")
+                updateLocations = { EGRESS };
+            else if (gress->value == "ingress_and_egress")
+                updateLocations = { INGRESS, EGRESS };
+            else
+                BUG("Invalid use of @pragma %1%, valid value "
+                    " is ingress/egress/ingress_and_egress", pragma);
+        }
+    }
+
+    return updateLocations;
+}
+
 class ConstructSymbolTable : public Inspector {
     ProgramStructure *structure;
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
-    const std::map<const IR::Expression*, IR::Member*>& parserResidualChecksums;
+    const std::map<const IR::Expression*, IR::Member*>& bridgedResidualChecksums;
     // cloneIndex assignment algorithm:
     // - we assign a unique index per field list per gress
     // - there could be multiple actions calling clone within a table
@@ -882,9 +913,9 @@ class ConstructSymbolTable : public Inspector {
     ConstructSymbolTable(ProgramStructure *structure,
                          P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
                          const std::map<const IR::Expression*,
-                                        IR::Member*>& parserResidualChecksums)
+                                        IR::Member*>& bridgedResidualChecksums)
             : structure(structure), refMap(refMap), typeMap(typeMap),
-              parserResidualChecksums(parserResidualChecksums) {
+              bridgedResidualChecksums(bridgedResidualChecksums) {
         CHECK_NULL(structure);
         setName("ConstructSymbolTable");
     }
@@ -1381,48 +1412,66 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
-    void implementUpdateChecksum(ChecksumSourceMap::value_type csum, cstring which) {
+    void implementUpdateChecksum(ChecksumSourceMap::value_type csum, cstring which,
+                                 std::vector<gress_t> deparserUpdateLocations) {
         auto fieldlist = csum.second->arguments->at(1)->expression;
-        auto dest_field = csum.second->arguments->at(2)->expression;
+        auto destfield = csum.second->arguments->at(2)->expression;
 
-        IR::Declaration_Instance* decl = getChecksumDeclaration(structure, csum);
-        structure->egressDeparserDeclarations.push_back(decl);
+        for (auto location : deparserUpdateLocations) {
+            IR::Declaration_Instance* decl = getChecksumDeclaration(structure, csum);
 
-        IR::Vector<IR::Expression> exprs;
+            if (location == INGRESS)
+                 structure->ingressDeparserDeclarations.push_back(decl);
+            else if (location == EGRESS)
+                 structure->egressDeparserDeclarations.push_back(decl);
 
-        for (auto f : fieldlist->to<IR::ListExpression>()->components)
-            exprs.push_back(f);
+            IR::Vector<IR::Expression> exprs;
 
-        if (which == "update_checksum_with_payload") {
-            auto pr = parserResidualChecksums.at(dest_field);
-            exprs.push_back(pr);
-        }
+            for (auto f : fieldlist->to<IR::ListExpression>()->components)
+                exprs.push_back(f);
 
-        IR::ListExpression* list = new IR::ListExpression(exprs);
-        auto* updateCall = new IR::MethodCallExpression(
-                csum.second->srcInfo,
-                new IR::Member(new IR::PathExpression(decl->name), "update"),
-                { new IR::Argument(list) });
-
-        IR::Statement* stmt = new IR::AssignmentStatement(dest_field, updateCall);
-        if (auto boolLiteral = csum.second->arguments->at(0)->expression->to<IR::BoolLiteral>()) {
-            if (!boolLiteral->value) {
-                // Do not add the if-statement if the condition is always true.
-                stmt = nullptr;
+            if (which == "update_checksum_with_payload") {
+                if (location == EGRESS && bridgedResidualChecksums.count(destfield)) {
+                    auto pr = bridgedResidualChecksums.at(destfield);
+                    exprs.push_back(pr);
+                }
             }
-        } else {
-            stmt = new IR::IfStatement(csum.second->arguments->at(0)->expression,
-                                            stmt, nullptr);
-        }
 
-        if (stmt)
-            structure->egressDeparserStatements.push_back(stmt);
+            IR::ListExpression* list = new IR::ListExpression(exprs);
+            auto* updateCall = new IR::MethodCallExpression(
+                    csum.second->srcInfo,
+                    new IR::Member(new IR::PathExpression(decl->name), "update"),
+                    { new IR::Argument(list) });
+
+            IR::Statement* stmt = new IR::AssignmentStatement(destfield, updateCall);
+            if (auto boolLiteral =
+                csum.second->arguments->at(0)->expression->to<IR::BoolLiteral>()) {
+                if (!boolLiteral->value) {
+                    // Do not add the if-statement if the condition is always true.
+                    stmt = nullptr;
+                }
+            } else {
+                stmt = new IR::IfStatement(csum.second->arguments->at(0)->expression,
+                                                stmt, nullptr);
+            }
+
+            if (stmt) {
+                if (location == INGRESS)
+                    structure->ingressDeparserStatements.push_back(stmt);
+                else if (location == EGRESS)
+                    structure->egressDeparserStatements.push_back(stmt);
+            }
+        }
     }
 
     void cvtUpdateChecksum(const IR::MethodCallStatement *method, cstring which) {
+        auto block = findContext<IR::BlockStatement>();
+        std::vector<gress_t> deparserUpdateLocations =
+            getChecksumUpdateLocations(block, "calculated_field_update_location");
+
         auto checksum = analyzeChecksumCall(method, which);
         if (checksum)
-            implementUpdateChecksum(*checksum, which);
+            implementUpdateChecksum(*checksum, which, deparserUpdateLocations);
     }
 
     /// build up a table for all metadata member that need to be translated.
@@ -1855,6 +1904,8 @@ class CollectParserChecksums : public Inspector {
  public:
     std::vector<const IR::MethodCallStatement*> verifyChecksums;
     std::vector<const IR::MethodCallStatement*> residualChecksums;
+    std::map<const IR::MethodCallStatement*, std::vector<gress_t>> parserUpdateLocations;
+    std::map<const IR::MethodCallStatement*, std::vector<gress_t>> deparserUpdateLocations;
 
     CollectParserChecksums(P4::ReferenceMap *refMap, P4::TypeMap *typeMap)
             : refMap(refMap), typeMap(typeMap) {
@@ -1870,6 +1921,12 @@ class CollectParserChecksums : public Inspector {
                 verifyChecksums.push_back(node);
             } else if (ef->method->name == "update_checksum_with_payload") {
                 residualChecksums.push_back(node);
+
+                auto block = findContext<IR::BlockStatement>();
+                parserUpdateLocations[node] =
+                    getChecksumUpdateLocations(block, "residual_checksum_parser_update_location");
+                deparserUpdateLocations[node] =
+                    getChecksumUpdateLocations(block, "calculated_field_update_location");
             }
         }
     }
@@ -1877,23 +1934,37 @@ class CollectParserChecksums : public Inspector {
 
 class InsertParserChecksums : public Inspector {
  public:
-    InsertParserChecksums(const std::vector<const IR::MethodCallStatement*>& verify_csums,
-                          const std::vector<const IR::MethodCallStatement*>& residual_csums,
+    InsertParserChecksums(const std::vector<const IR::MethodCallStatement*>& verifyChecksums,
+                          const std::vector<const IR::MethodCallStatement*>& residualChecksums,
+                          const std::map<const IR::MethodCallStatement*, std::vector<gress_t>>&
+                              parserUpdateLocations,
+                          const std::map<const IR::MethodCallStatement*, std::vector<gress_t>>&
+                              deparserUpdateLocations,
                           ProgramStructure *structure,
-                          std::map<const IR::Expression*, IR::Member*>& parserResidualChecksums)
-        : verifyChecksums(verify_csums),
-          residualChecksums(residual_csums),
+                          std::map<const IR::Expression*, IR::Member*>& bridgedResidualChecksums)
+        : verifyChecksums(verifyChecksums),
+          residualChecksums(residualChecksums),
+          parserUpdateLocations(parserUpdateLocations),
+          deparserUpdateLocations(deparserUpdateLocations),
           structure(structure),
-          parserResidualChecksums(parserResidualChecksums) { }
+          bridgedResidualChecksums(bridgedResidualChecksums) { }
 
  private:
     const std::vector<const IR::MethodCallStatement*>& verifyChecksums;
     const std::vector<const IR::MethodCallStatement*>& residualChecksums;
+    const std::map<const IR::MethodCallStatement*, std::vector<gress_t>>&
+        parserUpdateLocations;
+    const std::map<const IR::MethodCallStatement*, std::vector<gress_t>>&
+        deparserUpdateLocations;
     ProgramStructure *structure;
-    std::map<const IR::Expression*, IR::Member*>& parserResidualChecksums;
+
     std::map<const IR::MethodCallStatement*,
-             IR::Declaration_Instance*> parserResidualChecksumDecls;
+             IR::Declaration_Instance*> ingressParserResidualChecksumDecls;
+    std::map<const IR::MethodCallStatement*,
+             IR::Declaration_Instance*> egressParserResidualChecksumDecls;
     unsigned residualChecksumCnt = 0;
+
+    std::map<const IR::Expression*, IR::Member*>& bridgedResidualChecksums;
 
     struct CollectExtractMembers : public Inspector {
         CollectExtractMembers() {}
@@ -1940,7 +2011,7 @@ class InsertParserChecksums : public Inspector {
     void implementVerifyChecksum(ChecksumSourceMap::value_type csum, cstring stateName,
                                  const std::vector<const IR::Member*>& extracts) {
         auto fieldlist = csum.second->arguments->at(1)->expression;
-        auto dest_field = csum.second->arguments->at(2)->expression;
+        auto destfield = csum.second->arguments->at(2)->expression;
 
         // check if any of the fields or dest belong to extracts
 
@@ -1962,22 +2033,20 @@ class InsertParserChecksums : public Inspector {
 
                     // TODO(zma) verify on ingress only?
                     structure->ingressParserStatements[stateName].push_back(addCall);
-                    structure->egressParserStatements[stateName].push_back(addCall);
                 }
             }
         }
 
         for (auto extract : extracts) {
-            if (belongsTo(dest_field->to<IR::Member>(), extract)) {
+            if (belongsTo(destfield->to<IR::Member>(), extract)) {
                 BUG_CHECK(decl, "No fields have been added before verify?");
 
                 auto addCall = new IR::MethodCallStatement(csum.second->srcInfo,
                         new IR::Member(new IR::PathExpression(decl->name), "add"),
-                                                              { new IR::Argument(dest_field) });
+                                                              { new IR::Argument(destfield) });
 
                 // TODO(zma) verify on ingress only?
                 structure->ingressParserStatements[stateName].push_back(addCall);
-                structure->egressParserStatements[stateName].push_back(addCall);
 
                 auto methodCall = new IR::Member(new IR::PathExpression(decl->name), "verify");
                 auto verifyCall = new IR::MethodCallExpression(csum.second->srcInfo,
@@ -2002,90 +2071,109 @@ class InsertParserChecksums : public Inspector {
         }
     }
 
-    void implementResidualChecksum(const IR::MethodCallStatement *statement, cstring stateName,
-                                   const std::vector<const IR::Member*>& extracts) {
+    void implementParserResidualChecksum(const IR::MethodCallStatement *statement,
+                                         const std::vector<const IR::Member*>& extracts,
+                                         cstring stateName,
+                                         const std::vector<gress_t>& parserUpdateLocations,
+                                         const std::vector<gress_t>& deparserUpdateLocations) {
         auto csum = analyzeChecksumCall(statement, "update_checksum_with_payload");
         if (!csum) return;
 
         auto fieldlist = csum->second->arguments->at(1)->expression;
-        auto dest_field = csum->second->arguments->at(2)->expression;
+        auto destfield = csum->second->arguments->at(2)->expression;
 
-        IR::Declaration_Instance* decl = nullptr;
+        bool needBridging = parserUpdateLocations.size() == 1 &&
+                            parserUpdateLocations[0] == INGRESS &&
+                            deparserUpdateLocations.size() == 1 &&
+                            deparserUpdateLocations[0] == EGRESS;
 
-        auto it = parserResidualChecksumDecls.find(statement);
-        if (it == parserResidualChecksumDecls.end()) {
-            decl = getChecksumDeclaration(structure, *csum);
-            structure->ingressParserDeclarations.push_back(decl);
-            parserResidualChecksumDecls[statement] = decl;
-        } else {
-            decl = parserResidualChecksumDecls.at(statement);
+        if (needBridging && !bridgedResidualChecksums.count(destfield)) {
+            auto *compilerMetadataPath =
+                    new IR::PathExpression("compiler_generated_meta");
+
+            auto *compilerMetadataDecl = const_cast<IR::Type_Struct*>(
+                structure->type_declarations.at("compiler_generated_metadata_t")
+                         ->to<IR::Type_Struct>());
+
+            std::stringstream residualFieldName;
+            residualFieldName << "residual_checksum_";
+            residualFieldName << residualChecksumCnt++;
+
+            auto* residualChecksum = new IR::Member(compilerMetadataPath,
+                                              residualFieldName.str().c_str());
+
+            compilerMetadataDecl->fields.push_back(
+                new IR::StructField(residualFieldName.str().c_str(),
+                                    IR::Type::Bits::get(16)));
+
+            bridgedResidualChecksums[destfield] = residualChecksum;
         }
 
-        auto *compilerMetadataPath =
-                new IR::PathExpression("compiler_generated_meta");
+        for (auto location : parserUpdateLocations) {
+            std::vector<const IR::Declaration *>* parserDeclarations = nullptr;
+            std::vector<const IR::StatOrDecl *>* parserStatements = nullptr;
 
-        auto *compilerMetadataDecl = const_cast<IR::Type_Struct*>(
-            structure->type_declarations.at("compiler_generated_metadata_t")
-                     ->to<IR::Type_Struct>());
+            std::map<const IR::MethodCallStatement*,
+                    IR::Declaration_Instance*>* parserResidualChecksumDecls = nullptr;
 
-        for (auto extract : extracts) {
-            for (auto f : fieldlist->to<IR::ListExpression>()->components) {
-                if (belongsTo(f->to<IR::Member>(), extract)) {
-                    if (decl == nullptr) {
-                        decl = getChecksumDeclaration(structure, *csum);
-                        structure->ingressParserDeclarations.push_back(decl);
-                    }
-
-                    auto subtractCall = new IR::MethodCallStatement(csum->second->srcInfo,
-                        new IR::Member(new IR::PathExpression(decl->name), "subtract"),
-                                                              { new IR::Argument(f) });
-
-                    structure->ingressParserStatements[stateName].push_back(subtractCall);
-                }
+            if (location == INGRESS) {
+                parserDeclarations = &structure->ingressParserDeclarations;
+                parserStatements = &structure->ingressParserStatements[stateName];
+                parserResidualChecksumDecls = &ingressParserResidualChecksumDecls;
+            } else if (location == EGRESS) {
+                parserDeclarations = &structure->egressParserDeclarations;
+                parserStatements = &structure->egressParserStatements[stateName];
+                parserResidualChecksumDecls = &egressParserResidualChecksumDecls;
             }
 
-            if (belongsTo(dest_field->to<IR::Member>(), extract)) {
-                auto subtractCall = new IR::MethodCallStatement(csum->second->srcInfo,
-                    new IR::Member(new IR::PathExpression(decl->name), "subtract"),
-                                                          { new IR::Argument(dest_field) });
+            IR::Declaration_Instance* decl = nullptr;
+            auto it = parserResidualChecksumDecls->find(statement);
+            if (it == parserResidualChecksumDecls->end()) {
+                decl = getChecksumDeclaration(structure, *csum);
+                parserDeclarations->push_back(decl);
+                (*parserResidualChecksumDecls)[statement] = decl;
+            } else {
+                decl = parserResidualChecksumDecls->at(statement);
+            }
 
-                structure->ingressParserStatements[stateName].push_back(subtractCall);
+            for (auto extract : extracts) {
+                for (auto f : fieldlist->to<IR::ListExpression>()->components) {
+                    if (belongsTo(f->to<IR::Member>(), extract)) {
+                        auto subtractCall = new IR::MethodCallStatement(csum->second->srcInfo,
+                            new IR::Member(new IR::PathExpression(decl->name), "subtract"),
+                                                                  { new IR::Argument(f) });
 
-                IR::Member* residualChecksum = nullptr;
-
-                if (parserResidualChecksums.find(dest_field) ==  parserResidualChecksums.end()) {
-                    std::stringstream residualFieldName;
-                    residualFieldName << "residual_checksum_";
-                    residualFieldName << residualChecksumCnt++;
-
-                    residualChecksum = new IR::Member(compilerMetadataPath,
-                                                            residualFieldName.str().c_str());
-
-                    compilerMetadataDecl->fields.push_back(
-                        new IR::StructField(residualFieldName.str().c_str(),
-                                            IR::Type::Bits::get(16)));
-
-                    parserResidualChecksums[dest_field] = residualChecksum;
-                } else {
-                    residualChecksum = parserResidualChecksums.at(dest_field);
-                }
-
-                auto* getCall = new IR::MethodCallExpression(
-                        csum->second->srcInfo,
-                        new IR::Member(new IR::PathExpression(decl->name), "get"),
-                        { });
-
-                IR::Statement* stmt = new IR::AssignmentStatement(residualChecksum, getCall);
-                if (auto boolLiteral = csum->second->arguments->at(0)
-                                                  ->expression->to<IR::BoolLiteral>()) {
-                    if (!boolLiteral->value) {
-                        // Do not add the if-statement if the condition is always true.
-                        stmt = nullptr;
+                        parserStatements->push_back(subtractCall);
                     }
                 }
 
-                if (stmt)
-                    structure->ingressParserStatements[stateName].push_back(stmt);
+                if (belongsTo(destfield->to<IR::Member>(), extract)) {
+                    auto subtractCall = new IR::MethodCallStatement(csum->second->srcInfo,
+                        new IR::Member(new IR::PathExpression(decl->name), "subtract"),
+                                                              { new IR::Argument(destfield) });
+
+                    parserStatements->push_back(subtractCall);
+
+                    auto* getCall = new IR::MethodCallExpression(
+                            csum->second->srcInfo,
+                            new IR::Member(new IR::PathExpression(decl->name), "get"),
+                            { });
+
+                    auto* residualChecksum = needBridging ? bridgedResidualChecksums.at(destfield) :
+                                                            destfield;
+
+                    IR::Statement* stmt = new IR::AssignmentStatement(residualChecksum, getCall);
+                    if (auto boolLiteral = csum->second->arguments->at(0)
+                                                      ->expression->to<IR::BoolLiteral>()) {
+                        if (!boolLiteral->value) {
+                            // Do not add the if-statement if the condition is always true.
+                            stmt = nullptr;
+                        }
+                    }
+
+                    if (stmt)
+                        parserStatements->push_back(stmt);
+                }
             }
         }
     }
@@ -2105,22 +2193,29 @@ class InsertParserChecksums : public Inspector {
 
         for (auto* rc : residualChecksums) {
             auto checksum = analyzeChecksumCall(rc, "update_checksum_with_payload");
-            implementResidualChecksum(rc, state->name, collectExtractMembers.extracts);
+            implementParserResidualChecksum(rc, collectExtractMembers.extracts,
+                                            state->name,
+                                            parserUpdateLocations.at(rc),
+                                            deparserUpdateLocations.at(rc));
         }
     }
 };
 
 class TranslateParserChecksums : public PassManager {
  public:
-    std::map<const IR::Expression *, IR::Member *> parserResidualChecksums;
+    std::map<const IR::Expression *, IR::Member *> bridgedResidualChecksums;
 
     explicit TranslateParserChecksums(ProgramStructure *structure, P4::ReferenceMap *refMap,
                                       P4::TypeMap *typeMap) {
         auto pc = new BFN::V1::CollectParserChecksums(refMap, typeMap);
 
         addPasses(
-            {pc, new BFN::V1::InsertParserChecksums(pc->verifyChecksums, pc->residualChecksums,
-                                                    structure, parserResidualChecksums)});
+            {pc, new BFN::V1::InsertParserChecksums(pc->verifyChecksums,
+                                                    pc->residualChecksums,
+                                                    pc->parserUpdateLocations,
+                                                    pc->deparserUpdateLocations,
+                                                    structure,
+                                                    bridgedResidualChecksums)});
     }
 };
 
@@ -2154,7 +2249,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new V1::AnalyzeProgram(structure),
         translateParserChecksums,
         new V1::ConstructSymbolTable(structure, refMap, typeMap,
-                                     translateParserChecksums->parserResidualChecksums),
+                                     translateParserChecksums->bridgedResidualChecksums),
         new GenerateTofinoProgram(structure),
         new V1::LoweringType(),
         new TranslationLast(),
