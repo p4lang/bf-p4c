@@ -292,6 +292,7 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
     /* FIXME -- most of the values set here are 'placeholder' constants copied
      * from build_pipeline_output_2.py in the compiler */
     auto &merge = regs.rams.match.merge;
+    auto &adrdist = regs.rams.match.adrdist;
     //merge.exact_match_delay_config.exact_match_delay_ingress = tcam_delay(INGRESS);
     //merge.exact_match_delay_config.exact_match_delay_egress = tcam_delay(EGRESS);
     for (gress_t gress : Range(INGRESS, EGRESS)) {
@@ -305,6 +306,21 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
         regs.dp.pipelength_added_stages[gress] = pipelength(gress) - TARGET::MAU_BASE_DELAY;
         if (stageno > 0 && stage_dep[gress] == MATCH_DEP)
             regs.dp.match_ie_input_mux_sel |= 1 << gress;
+    }
+
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+      if (stageno == 0) {
+        /* Credit is set to 2 - Every 512 cycles the credit is reset and every
+         * bubble request decrements this credit. Acts like a filter to cap bubble
+         * requests */
+        adrdist.bubble_req_ctl[gress].bubble_req_fltr_crd = 0x2;
+        adrdist.bubble_req_ctl[gress].bubble_req_fltr_en = 0x1;
+      }
+      adrdist.bubble_req_ctl[gress].bubble_req_interval = 0x100;
+      adrdist.bubble_req_ctl[gress].bubble_req_en = 0x1;
+      adrdist.bubble_req_ctl[gress].bubble_req_interval_eop = 0x100;
+      adrdist.bubble_req_ctl[gress].bubble_req_en_eop = 0x1;
+      adrdist.bubble_req_ctl[gress].bubble_req_ext_fltr_en = 0x1;
     }
 
     /* FIXME -- need to set based on interstage dependencies */

@@ -267,8 +267,11 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
         if (gress)
             regs.cfg_regs.mau_cfg_dram_thread |= 1 << stats_group_index;
         movereg_stats_ctl.movereg_stats_ctl_deferred = 1;
-    } else
+        adrdist.stats_bubble_req[gress].bubble_req_1x_class_en |= 1 << (4 + stats_group_index);
+    } else {
         adrdist.packet_action_at_headertime[0][stats_group_index] = 1;
+        adrdist.stats_bubble_req[gress].bubble_req_1x_class_en |= 1 << stats_group_index;
+    }
     if (push_on_overflow) {
         adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
         adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::STATISTICS; }

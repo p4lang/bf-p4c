@@ -137,6 +137,7 @@ void IdletimeTable::write_regs(REGS &regs) {
     adrdist.movereg_idle_ctl[logical_id].movereg_idle_ctl_size = precision_bits[precision];
     adrdist.movereg_idle_ctl[logical_id].movereg_idle_ctl_direct = 1;
     adrdist.movereg_ad_direct[MoveReg::IDLE] |= 1 << logical_id;
+    adrdist.idle_bubble_req[gress].bubble_req_1x_class_en |=  1 << logical_id;
 }
 
 void IdletimeTable::gen_stage_tbl_cfg(json::map &out) {
