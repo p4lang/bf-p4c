@@ -558,37 +558,40 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
                                                  IR::Annotation(IR::ID("hidden"), { }) });
                     const IR::StructField* padding = new IR::StructField(padFieldName,
                                             fieldAnnotations, IR::Type::Bits::get(postPadding));
-                    fieldsPackedTogether.push_back(padding);
+                    fieldsPackedTogether.insert(fieldsPackedTogether.begin(), padding);
                     addedPadding.insert(padding);
                     LOG3("\t\tPushing post padding field " << padding->name << " of type " <<
                             padding->type->width_bits() << "b.");
                 }
-                alignment = getAlignment(postPadding + f1->type->width_bits()); } }
-
-        ordered_map<const IR::StructField*, int> packingWithPositions = packWithField(alignment, h,
-                f1, nonByteAlignedFields, alreadyPackedFields, alignmentConstraints,
-                conflictingAlignmentConstraints);
-        LOG1("\t\tResulting packing has " << packingWithPositions.size() << " fields.");
-        for (auto kv : packingWithPositions)
-            LOG1("\t\t  " << kv.first << " @ " << kv.second);
-
-        fieldsPackedTogether.clear();
-        while (!packingWithPositions.empty()) {
-            // One greater than the largest container available on the device.
-            int smallestPosition = 33;
-            const IR::StructField* candidate;
-            for (auto kv : packingWithPositions) {
-                if (smallestPosition > kv.second) {
-                    candidate = kv.first;
-                    smallestPosition = kv.second;
-                }
+                alignment = getAlignment(postPadding + f1->type->width_bits());
+                alreadyPackedFields.insert(tempField);
             }
-            // Pack fields from the smallest bit position to the largest within the byte-aligned
-            // chunk.
-            fieldsPackedTogether.push_back(candidate);
-            packingWithPositions.erase(candidate);
-            const PHV::Field* packingField = phv.field(getFieldName(h, candidate));
-            alreadyPackedFields.insert(packingField);
+        } else {
+            ordered_map<const IR::StructField*, int> packingWithPositions = packWithField(alignment,
+                    h, f1, nonByteAlignedFields, alreadyPackedFields, alignmentConstraints,
+                    conflictingAlignmentConstraints);
+            LOG1("\t\tResulting packing has " << packingWithPositions.size() << " fields.");
+            for (auto kv : packingWithPositions)
+                LOG1("\t\t  " << kv.first << " @ " << kv.second);
+
+            fieldsPackedTogether.clear();
+            while (!packingWithPositions.empty()) {
+                // One greater than the largest container available on the device.
+                int smallestPosition = 33;
+                const IR::StructField* candidate;
+                for (auto kv : packingWithPositions) {
+                    if (smallestPosition > kv.second) {
+                        candidate = kv.first;
+                        smallestPosition = kv.second;
+                    }
+                }
+                // Pack fields from the smallest bit position to the largest within the byte-aligned
+                // chunk.
+                fieldsPackedTogether.push_back(candidate);
+                packingWithPositions.erase(candidate);
+                const PHV::Field* packingField = phv.field(getFieldName(h, candidate));
+                alreadyPackedFields.insert(packingField);
+            }
         }
 
         int bitSize = 0;
