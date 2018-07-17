@@ -223,8 +223,8 @@ MidEnd::MidEnd(BFN_Options& options) {
                   {"implementation", "size", "counters", "meters", "idle_timeout"})
             : nullptr,
         (options.arch == "tna")
-            ? new P4::ValidateTableProperties(
-                  {"implementation", "size", "counters", "meters", "filters", "idle_timeout"})
+            ? new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
+                                               "filters", "idle_timeout", "registers"})
             : nullptr,
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::CompileTimeOperations(),
