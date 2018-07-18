@@ -996,8 +996,12 @@ p4c_add_xfail_reason("tofino"
   smoketest_programs_netcache
   switch_msdc_spine_int
   switch_8.2_msdc_spine_int
-  switch_msdc_ipv4
   switch_generic_int_leaf
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: Can't find a table to place"
+  switch_msdc_ipv4
 )
 
 p4c_add_xfail_reason("tofino"

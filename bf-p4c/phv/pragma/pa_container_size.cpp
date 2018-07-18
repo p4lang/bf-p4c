@@ -146,6 +146,10 @@ PragmaContainerSize::unsatisfiable_fields(
     std::set<const PHV::Field*> rst;
     std::set<const PHV::Field*> is_in_slicelist;
     // field is not sliced in the way specified.
+    LOG3("Calling unsatisfiable_fields on list of superclusters: ");
+    for (const auto* sup_cluster : sliced)
+        LOG3(sup_cluster);
+
     for (const auto* sup_cluster : sliced) {
         for (const auto* slice_list : sup_cluster->slice_lists()) {
             bool sliceListCheckRequired = false;
@@ -167,7 +171,7 @@ PragmaContainerSize::unsatisfiable_fields(
                                 [] (int a, const PHV::FieldSlice& fs) {
                                     return a + fs.size(); });
             for (const auto& slice : *slice_list) {
-                LOG1("Slice: " << slice);
+                LOG3("  Slice: " << slice);
                 // not a specified field
                 if (!is_specified(slice.field()))
                     continue;
@@ -203,6 +207,7 @@ PragmaContainerSize::unsatisfiable_fields(
                 if (!field_slice_req_i.count(slice)) {
                     rst.insert(slice.field());
                     sliceListCheckRequired = true;
+                    LOG3("    " << slice << " requires slice list check");
                     continue; }
                 // not possible because of the form of slice list.
                 if (int(field_slice_req_i.at(slice)) != slice_list_size)
@@ -255,7 +260,7 @@ PragmaContainerSize::unsatisfiable_fields(
             if (errorCombinedSliceCheck || !prevSlice)
                 continue;
             PHV::FieldSlice combinedSlice(prevSlice->field(), range);
-            LOG1("  Combined slice produced: " << combinedSlice);
+            LOG3("  Combined slice produced: " << combinedSlice);
             // If the combined slice does not have a specified requirement, then ignore the
             // remaining checks.
             if (!field_slice_req_i.count(combinedSlice))
@@ -276,7 +281,24 @@ PragmaContainerSize::unsatisfiable_fields(
             // are checked.
             for (auto& sl : toBeAddedReq)
                 field_slice_req_i[sl] = field_slice_req_i.at(combinedSlice);
+
+            // Additionally, for all fields that share a rotational cluster with the toBeAddedReq
+            // slices, we must add field_slice_req_i entries for those fields too.
+            for (auto& sl : toBeAddedReq) {
+                LOG3("    Checking added slice: " << sl);
+                const auto& rot_cluster = sup_cluster->cluster(sl);
+                LOG3("      Rotational cluster: " << rot_cluster);
+                for (auto& sl1 : rot_cluster.slices()) {
+                    if (sl1 == sl) continue;
+                    LOG3("      Adding " << sl1 << " to field_slice_req_i");
+                    field_slice_req_i[sl1] = field_slice_req_i.at(combinedSlice);
+                }
+            }
         }
+
+        LOG4("Printing field_slice_req_i map");
+        for (auto kv : field_slice_req_i)
+            LOG4("\t" << kv.first << "\t:\t" << kv.second);
 
         for (const auto* rot_cluster : sup_cluster->clusters()) {
             for (const auto* ali_cluster : rot_cluster->clusters()) {
@@ -287,6 +309,9 @@ PragmaContainerSize::unsatisfiable_fields(
                         rst.insert(slice.field());
                 } } }
     }
+    LOG3(rst.size() << " unsatisfiable field(s) found.");
+    for (auto& sl : rst)
+        LOG3("  Unsatisfiable field: " << sl);
     return rst;
 }
 
