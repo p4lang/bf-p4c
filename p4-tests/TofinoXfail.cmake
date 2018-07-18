@@ -306,13 +306,13 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
-  extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   )
 
 p4c_add_xfail_reason("tofino"
-  "Power worst case estimated budget exceeded by 1.54W"
+  "error.*Power worst case estimated budget exceeded by*"
   switch_msdc_l3
+  extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   )
 
 p4c_add_xfail_reason("tofino"

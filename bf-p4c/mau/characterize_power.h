@@ -14,6 +14,7 @@
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+#include "lib/error.h"
 
 
 class SimpleTableNode {
@@ -407,6 +408,8 @@ class CharacterizePower: public MauInspector {
        minimum_egress_pipe_latency_ = 160;
      } else {
 #if HAVE_JBAY
+      // Need a positive number so power check isn't always hit on JBay.
+      max_power_ = 1.0;
       // Do not know power numbers yet for JBay, so skip.
       WARNING("Tofino2 power characterization has not been implemented yet.");
 #endif  // HAVE_JBAY

@@ -61,7 +61,7 @@ void CharacterizePower::end_apply() {
               WARNING(warn_msg);
               WARNING(error_msg);
           } else {
-              ERROR(error_msg);
+              ::error("%s", error_msg);
           }
       }
 }
