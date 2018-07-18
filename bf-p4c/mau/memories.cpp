@@ -397,7 +397,7 @@ class SetupAttachedTables : public MauInspector {
             mi.stateful_RAMs += RAMs_needed;
             (*ta->memuse)[salu_id].type = Memories::Use::STATEFUL;
             // For setting up the learn/match associated IDs with a particular dleft hash table
-            for (int lt_learn = 0; lt_learn < lt; lt++) {
+            for (int lt_learn = 0; lt_learn < lt; lt_learn++) {
                 auto salu_learn_id = ta->build_unique_id(salu, false, lt_learn);
                 (*ta->memuse)[salu_id].dleft_learn.push_back(salu_learn_id);
             }

@@ -2659,10 +2659,13 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         out << indent << "per_flow_enable: meter_pfe" << std::endl;
 
     auto &memuse = tbl->resources->memuse.at(unique_id);
-    if (!memuse.dleft_learn.empty())
-        out << indent << "learn: [" << emit_vector(memuse.dleft_learn) << "]" << std::endl;
-    if (!memuse.dleft_match.empty())
-        out << indent << "match: [" << emit_vector(memuse.dleft_match) << "]" << std::endl;
+    if (!memuse.dleft_learn.empty() || !memuse.dleft_match.empty()) {
+        out << indent++ << "sbus:" << std::endl;
+        if (!memuse.dleft_learn.empty())
+            out << indent << "learn: [" << emit_vector(memuse.dleft_learn) << "]" << std::endl;
+        if (!memuse.dleft_match.empty())
+            out << indent << "match: [" << emit_vector(memuse.dleft_match) << "]" << std::endl;
+        --indent; }
 
     if (salu->chain_vpn) {
         out << indent << "offset_vpn: true" << std::endl;

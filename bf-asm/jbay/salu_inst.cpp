@@ -128,6 +128,7 @@ void TMatchOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Acti
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_cmp_alu[act->code][slot];
+    auto &salu_tmatch = meter_group.stateful.salu_instr_tmatch_alu[act->code][slot];
     auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
     salu.salu_cmp_tmatch_enable = 1;
     salu.salu_cmp_asrc_enable = 1;
@@ -144,6 +145,9 @@ void TMatchOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Acti
     salu.salu_cmp_sbus_or = 0;
     salu.salu_cmp_sbus_and = learn ? 1 : 0;
     salu.salu_cmp_sbus_invert = learn_not ? 1 : 0;
+    // we set the learn output unconditionally if there's a tmatch -- should it be controllable?
+    salu_tmatch.salu_tmatch_vld_ctl = 1;
+    // salu_tmatch.salu_tmatch_invert = 0;  -- when can this be useful?
 }
 
 void TMatchOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {

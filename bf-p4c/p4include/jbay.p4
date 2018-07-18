@@ -66,7 +66,8 @@ match_kind {
     // ternary,
     // lpm,               // Longest-prefix match.
     range,
-    selector              // Used for implementing dynamic action selection
+    selector,             // Used for implementing dynamic action selection
+    dleft_hash            // Used for dleft dynamic caching
 }
 
 error {
@@ -653,8 +654,15 @@ extern RegisterAction<T, U> {
 
 extern LearnAction<T, D, U> {
     LearnAction(Register<T> reg);
-    abstract void apply(inout T value, in D digest, in bool learn, out bit<2> match);
-    U execute();
+    abstract void apply(inout T value, in D digest, in bool learn,
+                        @optional out U rv1, @optional out U rv2,
+                        @optional out U rv3, @optional out U rv4);
+    U execute(@optional out U rv2, @optional out U rv3, @optional out U rv4);
+
+    /* These routines can be called in apply method to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address(); /* return the match address */
+    U predicate(); /* return the predicate value */
 }
 
 extern ActionSelector {

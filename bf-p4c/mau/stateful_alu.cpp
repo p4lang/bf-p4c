@@ -266,7 +266,12 @@ bool CreateSaluInstruction::preorder(const IR::IfStatement *s) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::PathExpression *pe) {
-    applyArg(pe, cstring());
+    if (!applyArg(pe, cstring())) {
+        if (negate)
+            operands.push_back(new IR::Neg(pe));
+        else
+            operands.push_back(pe);
+        LOG4("Path operand: " << operands.back()); }
     return false;
 }
 
@@ -325,9 +330,9 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
                     math.table[i++] = k->asInt(); }
         } else {
             error("initializer %s is not a list expression", mu->arguments->at(3)->expression); }
-    } else if (prim->name == "RegisterAction.address") {
+    } else if (prim->name.endsWith(".address")) {
         operands.push_back(new IR::MAU::SaluReg(prim->type, "address", false));
-    } else if (prim->name == "RegisterAction.predicate") {
+    } else if (prim->name.endsWith(".predicate")) {
         operands.push_back(new IR::MAU::SaluReg(prim->type, "predicate", false));
     } else {
         error("%s: expression too complex for register action", prim->srcInfo); }
@@ -681,7 +686,8 @@ CreateSaluInstruction::function_param_types = {
                                           param_t::OUTPUT, param_t::OUTPUT }},
 #ifdef HAVE_JBAY
     {{ "LearnAction", "apply" },        { param_t::VALUE, param_t::HASH, param_t::LEARN,
-                                          param_t::MATCH }},
+                                          param_t::OUTPUT, param_t::OUTPUT,
+                                          param_t::OUTPUT, param_t::OUTPUT }},
 #endif
     {{ "selector_action", "apply" },    { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
                                           param_t::OUTPUT, param_t::OUTPUT }}
@@ -695,7 +701,9 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
     if (auto st = type->to<IR::Type_Specialized>())
         type = st->baseType;
     action_type_name = type->toString();
-    return true;
+    // don't visit constructor arguments...
+    visit(di->initializer, "initializer");
+    return false;
 }
 
 bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {

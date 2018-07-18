@@ -143,9 +143,9 @@ void InstructionMemory::update(cstring name, const Use &alloc, gress_t gress) {
                 use[row][color] = a_name;
 
         } else {
-            if (!use[row][color].isNull()) {
+            if (!use[row][color].isNull() && use[row][color] != a_name) {
                 BUG("Instructions %s and %s are assigned to the same slot.",
-                     use[row][color]);
+                     use[row][color], a_name);
             }
             use[row][color] = a_name;
         }
