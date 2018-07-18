@@ -24,9 +24,14 @@ void Phv::init_phv(target_t target_type) {
 
 void Phv::start(int lineno, VECTOR(value_t) args) {
     init_phv(options.target);
+    // The only argument to phv is the thread.  We allow phv section with no thread argument
+    // which defines aliases for all threads.  Does that really make sense when threads can't
+    // share registers?  We never use this capability in the compiler.
     if (args.size > 1 ||
-        (args.size == 1 && args[0] != "ingress" && args[0] != "egress"))
-        error(lineno, "phv can only be ingress or egress");
+        (args.size == 1 && args[0] != "ingress" && args[0] != "egress"
+                        && (args[0] != "ghost" || options.target < JBAY)))
+        error(lineno, "phv can only be ingress%s or egress",
+              (options.target >= JBAY ? ", ghost" : 0));
 }
 
 int Phv::addreg(gress_t gress, const char *name, const value_t &what) {
@@ -64,7 +69,10 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what) {
 
 void Phv::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
-    gress_t gress = (args.size == 1 && args[0] == "egress") ? EGRESS : INGRESS;
+    gress_t gress = args[0] == "ingress" ? INGRESS
+                  : args[0] == "egress" ? EGRESS
+                  : args[0] == "ghost" && options.target >= JBAY ? GHOST
+                  : (error(args[1].lineno, "Invalid thread %s", value_desc(args[1])), INGRESS);
     for (auto &kv : data.map) {
         if (!CHECKTYPE(kv.key, tSTR)) continue;
         if (kv.key == "context_json") {
@@ -76,11 +84,15 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
                 for (auto& prop : cjkv.value.map)
                     field_context_json[name][prop.key.s] = toJson(prop.value); }
         } else {
-            if (get(gress, kv.key.s) || (!args.size && get(EGRESS, kv.key.s))) {
+            if (get(gress, kv.key.s) ||
+                (!args.size && get(EGRESS, kv.key.s)) ||
+                (!args.size && get(GHOST, kv.key.s))) {
                 error(kv.key.lineno, "Duplicate phv name '%s'", kv.key.s);
                 continue; }
-            if (!addreg(gress, kv.key.s, kv.value) && args.size == 0)
-                addreg(EGRESS, kv.key.s, kv.value); } }
+            if (!addreg(gress, kv.key.s, kv.value) && args.size == 0) {
+                addreg(EGRESS, kv.key.s, kv.value);
+                if (options.target >= JBAY)
+                    addreg(GHOST, kv.key.s, kv.value); } } }
 }
 
 void Phv::output_names(json::map &out) {
@@ -106,9 +118,8 @@ Phv::Ref::Ref(gress_t g, const value_t &n) : gress(g), lo(-1), hi(-1), lineno(n.
                         hi = n[1].lo; } } } } }
 }
 
-Phv::Ref::Ref(const Phv::Register &r) : gress(EGRESS), lo(-1), hi(-1), lineno(-1) {
-    name_ = r.name;
-}
+Phv::Ref::Ref(const Phv::Register &r, gress_t gr, int l, int h)
+: gress(gr), name_(r.name), lo(l), hi(h < 0 ? l : h), lineno(-1) { }
 
 bool Phv::Ref::merge(const Phv::Ref &r) {
     if (r.name_ != name_ || r.gress != gress) return false;
@@ -291,7 +302,9 @@ void Phv::output(json::map &ctxt_json) {
             if (gress == INGRESS) {
                 phv_alloc_stage_ingress.push_back(std::move(phv_container));
             } else if (gress == EGRESS) {
-                phv_alloc_stage_egress.push_back(std::move(phv_container)); } }
+                phv_alloc_stage_egress.push_back(std::move(phv_container));
+            } else if (gress == GHOST) {
+                /* FIXME -- deal with ghost phv */ } }
         phv_alloc_stage["stage_number"] = i;
         phv_alloc.push_back(std::move(phv_alloc_stage)); }
     // FIXME: Fix json clone method to do above loops more efficiently

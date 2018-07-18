@@ -4,7 +4,8 @@
 #   <name>      ::= a string of 1 or more letters, digits, '_', '-', '.',
 #                   '$', or '@' not starting with a digit.  Cannot start or
 #                   end with '-' or '.' or have two consecutive '-' or '.'
-#   <thread>    ::= "ingress" | "egress"
+#   <thread>    ::= "ingress" | "egress" | "ghost"
+#                   ghost is only availble in jbay mau and phv sections
 #   <register>  ::= <name> that matches a predefined register name
 #   <slice>     ::= <name>(<lo>..<hi>) | <name>(<bit>)
 #                   no spaces between parts of the <slice>
@@ -29,9 +30,9 @@
 #                  | rng <unit> [ <lo>..<hi> ]
 #
 phv [<thread>]:
-    # Defines PHV alias names for registers.  <thread> is 'ingress' or
+    # Defines PHV alias names for registers.  <thread> is 'ingress', 'ghost' or
     # 'egress' and is optional.  If present, aliases are defined only for
-    # that thread.  If not present, aliases are for both threads
+    # that thread.  If not present, aliases are for all threads
     <name>: <register> | <slice>
         # Makes <name> an alias for a register or piece of a register.
         # register B0 through B63 for byte registers, H0-H95 for half

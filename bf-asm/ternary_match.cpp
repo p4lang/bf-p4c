@@ -162,10 +162,10 @@ void TernaryMatchTable::pass1() {
     MatchTable::pass1(1);
     if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
     else p4_table->check(this);
-    stage->table_use[gress] |= Stage::USE_TCAM;
+    stage->table_use[timing_thread(gress)] |= Stage::USE_TCAM;
     /* FIXME -- unconditionally setting piped mode -- only need it for wide
      * match across a 4-row boundary */
-    stage->table_use[gress] |= Stage::USE_TCAM_PIPED;
+    stage->table_use[timing_thread(gress)] |= Stage::USE_TCAM_PIPED;
     alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
     // alloc_busses(stage->tcam_match_bus_use); -- now hardwired
@@ -314,6 +314,10 @@ void TernaryMatchTable::pass3() {
 
 extern int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable);
 
+template<class REGS> inline static void tcam_ghost_enable(REGS &regs, int row, int col) {
+    regs.tcams.col[col].tcam_ghost_thread_en[row] = 1; }
+template<> void tcam_ghost_enable(Target::Tofino::mau_regs &regs, int row, int col) {}
+
 template<class REGS>
 void TernaryMatchTable::write_regs(REGS &regs) {
     LOG1("### Ternary match table " << name() << " write_regs");
@@ -330,8 +334,10 @@ void TernaryMatchTable::write_regs(REGS &regs) {
             tcam_mode.tcam_chain_out_enable = (chain_rows[col] >> row.row) & 1;
             if (gress == INGRESS)
                 tcam_mode.tcam_ingress = 1;
-            else
+            else if (gress == EGRESS)
                 tcam_mode.tcam_egress = 1;
+            else if (gress == GHOST)
+                tcam_ghost_enable(regs, row.row, col);
             tcam_mode.tcam_match_output_enable =
                 ((~chain_rows[col] | ALWAYS_ENABLE_ROW) >> row.row) & 1;
             tcam_mode.tcam_vpn = *vpn++;
@@ -359,7 +365,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
     setup_muxctl(merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id], logical_id);
     /* FIXME -- setting piped mode if any table in the stage is piped -- perhaps
      * FIXME -- tables can be different? */
-    if (stage->table_use[gress] & Stage::USE_TCAM_PIPED)
+    if (stage->table_use[timing_thread(gress)] & Stage::USE_TCAM_PIPED)
         merge.tcam_table_prop[tcam_id].tcam_piped = 1;
     merge.tcam_table_prop[tcam_id].thread = gress;
     merge.tcam_table_prop[tcam_id].enabled = 1;

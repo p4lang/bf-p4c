@@ -365,7 +365,6 @@ template<class REGS> void GatewayTable::standalone_write_regs(REGS &regs) { }
 template<class REGS>
 void GatewayTable::write_regs(REGS &regs) {
     LOG1("### Gateway table " << name() << " write_regs");
-    if (!match_table) standalone_write_regs(regs);
     auto &row = layout[0];
     if (input_xbar) {
         input_xbar->write_regs(regs);
@@ -441,15 +440,15 @@ void GatewayTable::write_regs(REGS &regs) {
             xbar_ctl.tind_inhibit_enable = 1; }
     } else {
         merge.predication_ctl[gress].table_thread |= 1 << logical_id;
-        if (gress) {
+        if (gress == INGRESS) {
+            merge.logical_table_thread[0].logical_table_thread_ingress |= 1 << logical_id;
+            merge.logical_table_thread[1].logical_table_thread_ingress |= 1 << logical_id;
+            merge.logical_table_thread[2].logical_table_thread_ingress |= 1 << logical_id;
+        } else if (gress == EGRESS) {
             regs.dp.imem_table_addr_egress |= 1 << logical_id;
             merge.logical_table_thread[0].logical_table_thread_egress |= 1 << logical_id;
             merge.logical_table_thread[1].logical_table_thread_egress |= 1 << logical_id;
-            merge.logical_table_thread[2].logical_table_thread_egress |= 1 << logical_id;
-        } else {
-            merge.logical_table_thread[0].logical_table_thread_ingress |= 1 << logical_id;
-            merge.logical_table_thread[1].logical_table_thread_ingress |= 1 << logical_id;
-            merge.logical_table_thread[2].logical_table_thread_ingress |= 1 << logical_id; }
+            merge.logical_table_thread[2].logical_table_thread_egress |= 1 << logical_id; }
         auto &adrdist = regs.rams.match.adrdist;
         adrdist.adr_dist_table_thread[gress][0] |= 1 << logical_id;
         adrdist.adr_dist_table_thread[gress][1] |= 1 << logical_id;
@@ -457,7 +456,8 @@ void GatewayTable::write_regs(REGS &regs) {
             payload_write_regs(regs, layout[1].row, layout[1].bus >> 1, layout[1].bus & 1);
         // FIXME -- allow table_counter on standalone gateay?  What can it count?
         if (options.match_compiler)
-            merge.mau_table_counter_ctl[logical_id/8U].set_subfield(4, 3 * (logical_id%8U), 3); }
+            merge.mau_table_counter_ctl[logical_id/8U].set_subfield(4, 3 * (logical_id%8U), 3);
+        standalone_write_regs(regs); }
     if (stage->tcam_delay(gress) > 0)
         merge.exact_match_logical_result_delay |= 1 << logical_id;
 }

@@ -90,9 +90,9 @@ void SelectionTable::pass1() {
         int words = (size + SELECTOR_PORTS_PER_WORD - 1)/SELECTOR_PORTS_PER_WORD;
         if (words < min_words) min_words = words;
         if (words > max_words) max_words = words; }
-    stage->table_use[gress] |= Stage::USE_SELECTOR;
+    stage->table_use[timing_thread(gress)] |= Stage::USE_SELECTOR;
     if (max_words > 1) {
-        stage->table_use[gress] |= Stage::USE_WIDE_SELECTOR;
+        stage->table_use[timing_thread(gress)] |= Stage::USE_WIDE_SELECTOR;
         for (auto &hd : hash_dist)
             hd.xbar_use |= HashDistribution::HASHMOD_DIVIDEND; }
     for (auto &hd : hash_dist)

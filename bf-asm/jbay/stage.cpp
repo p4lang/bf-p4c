@@ -96,7 +96,7 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
     }
 
     merge.pred_stage_id = stageno;
-    for (gress_t gress : Range(INGRESS, EGRESS)) {
+    for (gress_t gress : Range(INGRESS, GHOST)) {
         merge.mpr_stage_id[gress] = stageno;
     }
 

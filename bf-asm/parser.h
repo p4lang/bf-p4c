@@ -145,7 +145,7 @@ class Parser : public Section {
                 template<class REGS>
                 void write_output_config(REGS &, void *, unsigned &) const;
                 OutputUse output_use() const;
-                bool merge(const Set &a);
+                bool merge(gress_t, const Set &a);
                 bool operator==(const Set &a) const { return where == a.where && what == a.what
                     && flags == a.flags; }
             };

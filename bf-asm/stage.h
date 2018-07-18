@@ -37,16 +37,21 @@ public:
                                                         stats_bus_use,
                                                         selector_adr_bus_use,
                                                         overflow_bus_use;
+    bitvec      action_bus_use_bit_mask;
     Alloc2D<Table::Actions::Action *, 2, ACTION_IMEM_ADDR_MAX>          imem_addr_use;
     bitvec      imem_use[ACTION_IMEM_SLOTS];
+
+    // for timing, ghost thread is tied to ingress, so we track ghost as ingress here
     enum { USE_TCAM=1, USE_TCAM_PIPED=2, USE_STATEFUL=4, USE_METER=8, USE_METER_LPF_RED=16,
            USE_SELECTOR=32, USE_WIDE_SELECTOR=64, USE_STATEFUL_DIVIDE=128 };
     int /* enum */      table_use[2], group_table_use[2];
+
     enum { NONE=0, CONCURRENT=1, ACTION_DEP=2, MATCH_DEP=3 } stage_dep[2];
-    bitvec              match_use[2], action_use[2], action_set[2];
+    bitvec              match_use[3], action_use[3], action_set[3];
+
+    // there's no error mode registers for ghost thread, so we don't allow it to be set
     enum { NO_CONFIG=0, PROPAGATE, MAP_TO_IMMEDIATE, DISABLE_ALL_TABLES }
                         error_mode[2];
-    bitvec      action_bus_use_bit_mask;
 
     int                         pass1_logical_id, pass1_tcam_id;
 protected:

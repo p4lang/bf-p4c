@@ -1087,12 +1087,12 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
                 auto &b = set[i2];
                 if (a == b) continue;
                 if (a.where->reg == b.where->reg) {
-                    if(a.merge(b)) {
+                    if(a.merge(state->gress, b)) {
                         set.erase(set.begin() + i2);
                         --i2; }
                     else {
-                        error(a.where.lineno, \
-                                "Cannot merge phv slices %s and %s", a.where.name(), b.where.name());
+                        error(a.where.lineno, "Cannot merge phv slices %s and %s",
+                              a.where.name(), b.where.name());
                         break; } } } } }
     for (auto &s : set) {
         if (!s.where.check()) continue;
@@ -1124,7 +1124,7 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
         c.pass1(pa);
 }
 
-bool Parser::State::Match::Set::merge(const Set &a) {
+bool Parser::State::Match::Set::merge(gress_t gress, const Set &a) {
     auto orig = where;
     if (where->reg != a.where->reg) return false;
     if (!(where->hi < a.where->lo || a.where->hi < where->lo)) {
@@ -1132,7 +1132,8 @@ bool Parser::State::Match::Set::merge(const Set &a) {
                 , where.name(), a.where.name()); }
     what = ((what << where->lo) | (a.what << a.where->lo))
         >> (std::min(where->lo, a.where->lo));
-    where = Phv::Ref(where->reg, std::min(where->lo, a.where->lo), std::max(where->hi, a.where->hi));
+    where = Phv::Ref(where->reg, gress, std::min(where->lo, a.where->lo),
+                     std::max(where->hi, a.where->hi));
     LOG1("Merging phv slices " << orig << " + " << a.where << " = " << where);
     return true;
 }

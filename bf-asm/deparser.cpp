@@ -321,7 +321,7 @@ void Deparser::process() {
                 if (ent.pov->lo != ent.pov->hi)
                     error(ent.pov.lineno, "POV bits should be single bits");
                 if (!pov_use[gress][ent.pov->reg.uid]) {
-                    pov_order[gress].emplace_back(ent.pov->reg);
+                    pov_order[gress].emplace_back(ent.pov->reg, gress);
                     pov_use[gress][ent.pov->reg.uid] = 1; } } }
         for (int i = 0; i < MAX_DEPARSER_CHECKSUM_UNITS; i++)
             for (auto &ent : checksum[gress][i])
@@ -336,7 +336,7 @@ void Deparser::process() {
                 if (el.pov->lo != el.pov->hi)
                     error(el.pov.lineno, "POV bits should be single bits");
                 if (!pov_use[intrin.type->gress][el.pov->reg.uid]) {
-                    pov_order[intrin.type->gress].emplace_back(el.pov->reg);
+                    pov_order[intrin.type->gress].emplace_back(el.pov->reg, intrin.type->gress);
                     pov_use[intrin.type->gress][el.pov->reg.uid] = 1; } } }
         if (intrin.vals.size() > (size_t)intrin.type->max)
             error(intrin.lineno, "Too many values for %s", intrin.type->name.c_str()); }
@@ -354,7 +354,8 @@ void Deparser::process() {
             if (digest.select.pov->lo != digest.select.pov->hi)
                 error(digest.select.pov.lineno, "POV bits should be single bits");
             if (!pov_use[digest.type->gress][digest.select.pov->reg.uid]) {
-                pov_order[digest.type->gress].emplace_back(digest.select.pov->reg);
+                pov_order[digest.type->gress].emplace_back(digest.select.pov->reg,
+                                                           digest.type->gress);
                 pov_use[digest.type->gress][digest.select.pov->reg.uid] = 1; } }
         for (auto &set : digest.layout)
             for (auto &reg : set.second)

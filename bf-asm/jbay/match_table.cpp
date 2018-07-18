@@ -15,6 +15,8 @@ template<> void MatchTable::write_regs(Target::JBay::mau_regs &regs, int type, T
     write_common_regs<Target::JBay>(regs, type, result);
     // FIXME -- factor this with JBay GatewayTable::standalone_write_regs
     auto &merge = regs.rams.match.merge;
+    if (gress == GHOST)
+            merge.pred_ghost_thread |= 1 << logical_id;
     if (pred.empty())
         merge.pred_always_run[gress] |= 1 << logical_id;
     // FIXME -- should set this only if pred is empty or contains tables in the current stage?
@@ -25,5 +27,6 @@ template<> void MatchTable::write_regs(Target::JBay::mau_regs &regs, int type, T
     merge.pred_is_a_brch |= 1 << logical_id;
 
     merge.mpr_glob_exec_thread |= merge.logical_table_thread[0].logical_table_thread_egress &
-                                ~(merge.logical_table_thread[0].logical_table_thread_ingress);
+                                  ~merge.logical_table_thread[0].logical_table_thread_ingress &
+                                  ~merge.pred_ghost_thread;
 }

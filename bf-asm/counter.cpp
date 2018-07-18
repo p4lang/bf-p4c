@@ -72,7 +72,7 @@ void CounterTable::pass1() {
     alloc_maprams();
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
-    //stage->table_use[gress] |= Stage::USE_SELECTOR;
+    //stage->table_use[timing_thread(gress)] |= Stage::USE_SELECTOR;
     int prev_row = -1;
     for (auto &row : layout) {
         if (prev_row >= 0)

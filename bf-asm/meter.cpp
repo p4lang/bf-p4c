@@ -85,9 +85,9 @@ void MeterTable::pass1() {
         setup_vpns(color_maprams, 0);
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
-    stage->table_use[gress] |= Stage::USE_METER;
+    stage->table_use[timing_thread(gress)] |= Stage::USE_METER;
     if (type == LPF || type == RED)
-        stage->table_use[gress] |= Stage::USE_METER_LPF_RED;
+        stage->table_use[timing_thread(gress)] |= Stage::USE_METER_LPF_RED;
     if (input_xbar) input_xbar->pass1();
     int prev_row = -1;
     for (auto &row : layout) {

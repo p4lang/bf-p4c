@@ -84,13 +84,13 @@ public:
     };
 protected:
     std::vector<Register *> regs;
-    std::map<std::string, Slice> names[2];
+    std::map<std::string, Slice> names[3];
 private:
     std::map<const Register *, std::pair<gress_t, std::vector<std::string>>, ptrless<Register>>
                 user_defined;
-    bitvec      phv_use[2];
-    std::map<std::string, int> phv_field_sizes [2];
-    std::map<std::string, int> phv_pov_field_sizes [2];
+    bitvec      phv_use[3];
+    std::map<std::string, int> phv_field_sizes [3];
+    std::map<std::string, int> phv_pov_field_sizes [3];
 
     // Maps P4-level field names (i.e. returned by stack_asm_name_to_p4()) to a
     // map to be embedded in the field's context_json "records" node.
@@ -133,7 +133,7 @@ public:
         Ref(const Ref &r, int l, int h) : gress(r.gress), name_(r.name_),
             lo(r.lo < 0 ? l : r.lo + l), hi(r.lo < 0 ? h : r.lo + h),
             lineno(r.lineno) { assert(r.hi < 0 || hi <= r.hi); }
-        Ref(const Register &r);
+        Ref(const Register &r, gress_t gr, int lo = -1, int hi = -1);
         explicit operator bool() const { return lineno >= 0; }
         Slice operator*() const {
             if (auto *s = phv.get(gress, name_)) {

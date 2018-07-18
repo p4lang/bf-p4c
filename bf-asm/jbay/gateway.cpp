@@ -3,6 +3,8 @@
 template<> void GatewayTable::standalone_write_regs(Target::JBay::mau_regs &regs) {
     // FIXME -- factor this with JBay MatchTable::write_regs
     auto &merge = regs.rams.match.merge;
+    if (gress == GHOST)
+        merge.pred_ghost_thread |= 1 << logical_id; 
     if (pred.empty()) 
         merge.pred_always_run[gress] |= 1 << logical_id;
     // FIXME -- should set this only if pred is empty or contains tables in the current stage?
@@ -13,5 +15,6 @@ template<> void GatewayTable::standalone_write_regs(Target::JBay::mau_regs &regs
     merge.pred_is_a_brch |= 1 << logical_id;
 
     merge.mpr_glob_exec_thread |= merge.logical_table_thread[0].logical_table_thread_egress &
-                                ~(merge.logical_table_thread[0].logical_table_thread_ingress);
+                                ~merge.logical_table_thread[0].logical_table_thread_ingress &
+                                ~merge.pred_ghost_thread;
 }

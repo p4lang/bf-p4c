@@ -65,7 +65,7 @@ void HashActionTable::pass2() {
         error(lineno, "Need explicit row/bus in hash_action table"); // FIXME
     //if (hash_dist.empty())
     //    error(lineno, "Need explicit hash_dist in hash_action table"); // FIXME
-    //if (bus >= 2) stage->table_use[gress] |= Stage::USE_TCAM;
+    //if (bus >= 2) stage->table_use[timing_thread(gress)] |= Stage::USE_TCAM;
     if (input_xbar)
         input_xbar->pass2();
     if (actions) actions->pass2(this);

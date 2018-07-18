@@ -131,14 +131,14 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
     auto &merge = regs.rams.match.merge;
     auto &adrdist = regs.rams.match.adrdist;
     merge.predication_ctl[gress].table_thread |= 1 << logical_id;
-    if (gress) {
-        merge.logical_table_thread[0].logical_table_thread_egress |= 1 << logical_id;
-        merge.logical_table_thread[1].logical_table_thread_egress |= 1 << logical_id;
-        merge.logical_table_thread[2].logical_table_thread_egress |= 1 << logical_id;
-    } else {
+    if (gress == INGRESS) {
         merge.logical_table_thread[0].logical_table_thread_ingress |= 1 << logical_id;
         merge.logical_table_thread[1].logical_table_thread_ingress |= 1 << logical_id;
-        merge.logical_table_thread[2].logical_table_thread_ingress |= 1 << logical_id; }
+        merge.logical_table_thread[2].logical_table_thread_ingress |= 1 << logical_id;
+    } else if (gress == EGRESS) {
+        merge.logical_table_thread[0].logical_table_thread_egress |= 1 << logical_id;
+        merge.logical_table_thread[1].logical_table_thread_egress |= 1 << logical_id;
+        merge.logical_table_thread[2].logical_table_thread_egress |= 1 << logical_id; }
     adrdist.adr_dist_table_thread[gress][0] |= 1 << logical_id;
     adrdist.adr_dist_table_thread[gress][1] |= 1 << logical_id;
 

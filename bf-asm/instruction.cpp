@@ -901,7 +901,7 @@ struct DepositField : VLIWInstruction {
     DepositField(Table *tbl, const Table::Actions::Action *act, const value_t &d,
                  const value_t &s1, const value_t &s2)
     : VLIWInstruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
-    DepositField(const Set &);
+    DepositField(Table *tbl, const Set &);
     std::string name() { return "deposit_field"; }
     void gen_prim_cfg(json::map& out) {
       out["name"] = "ModifyFieldPrimitive";
@@ -1021,8 +1021,8 @@ struct Set : VLIWInstruction {
 
 };
 
-DepositField::DepositField(const Set &s)
-: VLIWInstruction(s), dest(s.dest), src1(s.src), src2(s.dest->reg) {}
+DepositField::DepositField(Table *tbl, const Set &s)
+: VLIWInstruction(s), dest(s.dest), src1(s.src), src2(::Phv::Ref(s.dest->reg, tbl->gress)) {}
 
 Instruction *Set::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                  const VECTOR(value_t) &op) const {
@@ -1044,7 +1044,7 @@ Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
         error(dest.lineno, "%s not accessable in mau", dest->reg.name);
         return this; }
     if (dest->lo || dest->hi != dest->reg.size-1)
-        return (new DepositField(*this))->pass1(tbl, act);
+        return (new DepositField(tbl, *this))->pass1(tbl, act);
     if (auto *k = src.to<operand::Const>()) {
         if (dest->reg.type == Phv::Register::DARK) {
             error(dest.lineno, "can't set dark phv to a constant");

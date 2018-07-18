@@ -54,8 +54,11 @@ void AsmStage::start(int lineno, VECTOR(value_t) args) {
     size_t oldsize = stage.size();
     if (stage.size() < Target::NUM_MAU_STAGES())
         stage.resize(Target::NUM_MAU_STAGES());
-    if (args.size != 2 || args[0].type != tINT || (args[1] != "ingress" && args[1] != "egress"))
-        error(lineno, "stage must specify number and ingress or egress");
+    if (args.size != 2 || args[0].type != tINT ||
+        (args[1] != "ingress" && args[1] != "egress" &&
+         (args[1] != "ghost" || options.target < JBAY)))
+        error(lineno, "stage must specify number and ingress%s or egress",
+            options.target >= JBAY ? ", ghost" : "");
     else if (args[0].i < 0)
         error(lineno, "invalid stage number");
     else if ((unsigned)args[0].i >= stage.size()) {
@@ -68,12 +71,18 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
     int stageno = args[0].i;
     assert(stageno >= 0 && (unsigned)stageno < stage.size());
-    gress_t gress = args[1] == "egress" ? EGRESS : INGRESS;
+    gress_t gress = args[1] == "ingress" ? INGRESS
+                  : args[1] == "egress" ? EGRESS
+                  : args[1] == "ghost" && options.target >= JBAY ? GHOST
+                  : (error(args[1].lineno, "Invalid thread %s", value_desc(args[1])), INGRESS);
     for (auto &kv : MapIterChecked(data.map, true)) {
         if (kv.key == "dependency") {
             if (stageno == 0)
                 warning(kv.key.lineno, "Stage dependency in stage 0 will be ignored");
-            if (kv.value == "concurrent") {
+            if (gress == GHOST) {
+                error(kv.key.lineno, "Can't specify dependency in ghost thread; it is "
+                      "locked to ingress");
+            } else if (kv.value == "concurrent") {
                 stage[stageno].stage_dep[gress] = Stage::CONCURRENT;
                 if (stageno == Target::NUM_MAU_STAGES()/2)
                     error(kv.value.lineno, "stage %d must be match dependent", stageno);
@@ -91,7 +100,9 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                 error(kv.value.lineno, "Invalid stage dependency %s", value_desc(kv.value));
             continue;
         } else if (kv.key == "error_mode") {
-            if (kv.value == "no_config")
+            if (gress == GHOST)
+                error(kv.key.lineno, "Can't specify error mode in ghost thread");
+            else if (kv.value == "no_config")
                 stage[stageno].error_mode[gress] = Stage::NO_CONFIG;
             else if (kv.value == "propagate")
                 stage[stageno].error_mode[gress] = Stage::PROPAGATE;
@@ -144,7 +155,7 @@ void AsmStage::process() {
              * FIXME -- use the same PHV slots differently, but the compiler always uses them
              * FIXME -- consistently, so we need this to get bit-identical results
              * FIXME -- we also don't correctly determine liveness, so need this */
-            for (gress_t gress : Range(INGRESS, EGRESS)) {
+            for (gress_t gress : Range(INGRESS, GHOST)) {
                 Phv::setuse(gress, stage[i].match_use[gress]);
                 Phv::setuse(gress, stage[i].action_use[gress]);
                 Phv::setuse(gress, stage[i].action_set[gress]); }
@@ -253,23 +264,23 @@ Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
 }
 
 int Stage::tcam_delay(gress_t gress) {
-    if (group_table_use[gress] & Stage::USE_TCAM_PIPED)
+    if (group_table_use[timing_thread(gress)] & Stage::USE_TCAM_PIPED)
         return 2;
-    if (group_table_use[gress] & Stage::USE_TCAM)
+    if (group_table_use[timing_thread(gress)] & Stage::USE_TCAM)
         return 2;
-    if (group_table_use[gress] & Stage::USE_WIDE_SELECTOR)
+    if (group_table_use[timing_thread(gress)] & Stage::USE_WIDE_SELECTOR)
         return 2;
     return 0;
 }
 
 int Stage::adr_dist_delay(gress_t gress) {
-    if (group_table_use[gress] & Stage::USE_SELECTOR)
+    if (group_table_use[timing_thread(gress)] & Stage::USE_SELECTOR)
         return 8;
-    else if (group_table_use[gress] & Stage::USE_STATEFUL_DIVIDE)
+    else if (group_table_use[timing_thread(gress)] & Stage::USE_STATEFUL_DIVIDE)
         return 5;
-    else if (group_table_use[gress] & Stage::USE_STATEFUL)
+    else if (group_table_use[timing_thread(gress)] & Stage::USE_STATEFUL)
         return 4;
-    else if (group_table_use[gress] & Stage::USE_METER_LPF_RED)
+    else if (group_table_use[timing_thread(gress)] & Stage::USE_METER_LPF_RED)
         return 4;
     else
         return 0;

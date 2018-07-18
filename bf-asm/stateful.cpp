@@ -135,7 +135,7 @@ void StatefulTable::pass1() {
         alloc_rams(true, stage->sram_use); }
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
-    stage->table_use[gress] |= Stage::USE_STATEFUL;
+    stage->table_use[timing_thread(gress)] |= Stage::USE_STATEFUL;
     for (auto &hd : hash_dist)
         hd.pass1(this);
     if (input_xbar) input_xbar->pass1();
