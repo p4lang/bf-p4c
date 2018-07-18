@@ -968,9 +968,9 @@ cstring CharacterizePower::printFeatures() {
            << "|" << std::endl;
 
         if (stage >= Device::numStages()) {
-            etbl << line;
+            etbl << line.str();
         } else {
-            itbl << line;
+            itbl << line.str();
         }
     }
 
@@ -978,12 +978,12 @@ cstring CharacterizePower::printFeatures() {
     ss << "Ingress MAU Features by Stage" << std::endl;
     ss << heading.str();
     ss << itbl.str();
-    ss << sep << std::endl;
+    ss << sep.str() << std::endl;
 
     ss << "Egress MAU Features by Stage" << std::endl;
     ss << heading.str();
     ss << etbl.str();
-    ss << sep << std::endl;
+    ss << sep.str() << std::endl;
 
     return ss.str();
 }
@@ -1072,10 +1072,10 @@ cstring CharacterizePower::printLatency() {
              << "|" << std::endl;
 
         if (stage >= Device::numStages()) {
-            etbl << line;
+            etbl << line.str();
             elat += add_to_lat;
         } else {
-            itbl << line;
+            itbl << line.str();
             ilat += add_to_lat;
         }
     }
@@ -1084,14 +1084,14 @@ cstring CharacterizePower::printLatency() {
     ss << "Ingress MAU Latency" << std::endl;
     ss << heading.str();
     ss << itbl.str();
-    ss << sep;
+    ss << sep.str();
     ss << "Total latency for ingress: " << ilat << std::endl;
     ss << std::endl;
 
     ss << "Egress MAU Latency" << std::endl;
     ss << heading.str();
     ss << etbl.str();
-    ss << sep;
+    ss << sep.str();
     ss << "Total latency for egress: " << elat << std::endl;
     ss << std::endl;
 
@@ -1277,7 +1277,7 @@ cstring CharacterizePower::printLatency() {
              << "|" << boost::format("%=16s") % pcent.str()
              << "|" << std::endl;
 
-        itbl << line;
+        itbl << line.str();
       }
 
       bool i_always = false;
@@ -1304,7 +1304,7 @@ cstring CharacterizePower::printLatency() {
              << "|" << boost::format("%=16s") % pcent.str()
              << "|" << std::endl;
 
-        itbl << line;
+        itbl << line.str();
       }
 
       std::stringstream itotal, itot_wt, blank;
@@ -1323,14 +1323,14 @@ cstring CharacterizePower::printLatency() {
              << "|" << boost::format("%=16s") % " "
              << "|" << std::endl;
 
-      itbl << blank;
-      itbl << itotal;
+      itbl << blank.str();
+      itbl << itotal.str();
 
       std::stringstream ss;
       ss << "Worst case ingress table flow" << std::endl;
       ss << heading.str();
       ss << itbl.str();
-      ss << sep;
+      ss << sep.str();
       if (i_always) {
           ss << "  * A 'Yes' value in the Always Run column indicates that a table, though not "
              << std::endl
@@ -1371,7 +1371,7 @@ cstring CharacterizePower::printLatency() {
              << "|" << boost::format("%=16s") % pcent.str()
              << "|" << std::endl;
 
-        etbl << line;
+        etbl << line.str();
       }
 
       bool e_always = false;
@@ -1398,7 +1398,7 @@ cstring CharacterizePower::printLatency() {
              << "|" << boost::format("%=16s") % pcent.str()
              << "|" << std::endl;
 
-        etbl << line;
+        etbl << line.str();
       }
 
       std::stringstream etotal, etot_wt;
@@ -1410,13 +1410,13 @@ cstring CharacterizePower::printLatency() {
              << "|" << boost::format("%=16s") % "100%"
              << "|" << std::endl;
 
-      etbl << blank;
-      etbl << etotal;
+      etbl << blank.str();
+      etbl << etotal.str();
 
       ss << "Worst case egress table flow" << std::endl;
       ss << heading.str();
       ss << etbl.str();
-      ss << sep;
+      ss << sep.str();
       if (e_always) {
           ss << "  * A 'Yes' value in the Always Run column indicates that a table, though not "
              << std::endl
