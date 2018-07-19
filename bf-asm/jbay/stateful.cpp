@@ -142,6 +142,7 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
     auto &adrdist = regs.rams.match.adrdist;
     auto &merge = regs.rams.match.merge;
     auto &vpn_range = adrdist.mau_meter_alu_vpn_range[meter_group()];
+    auto &salu = regs.rams.map_alu.meter_group[meter_group()].stateful;
     int minvpn, maxvpn;
     layout_vpn_bounds(minvpn, maxvpn, true);
     vpn_range.meter_vpn_base = minvpn;
@@ -199,6 +200,12 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
         if (overflow_action.set())
             ctl3.slog_overflow_instruction = actions->action(overflow_action.name)->code * 2 + 1;
     }
+
+    for (size_t i = 0; i < const_vals.size(); ++i) {
+        salu.salu_const_regfile[i] = const_vals[i] & 0xffffffffU;
+        salu.salu_const_regfile_msbs[i] = (const_vals[i] >> 32) & 0x3;
+    }
+
 }
 
 void StatefulTable::gen_tbl_cfg(Target::JBay, json::map &tbl, json::map &stage_tbl) {

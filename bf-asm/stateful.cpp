@@ -451,8 +451,6 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
         salu.salu_mathunit_ctl.salu_mathunit_output_scale = math_table.scale & 0x2fU;
         salu.salu_mathunit_ctl.salu_mathunit_exponent_invert = math_table.invert;
         salu.salu_mathunit_ctl.salu_mathunit_exponent_shift = math_table.shift & 0x2U; }
-    for (size_t i = 0; i < const_vals.size(); ++i)
-        salu.salu_const_regfile[i] = const_vals[i] & 0xffffffffU;
 }
 
 void StatefulTable::gen_tbl_cfg(json::vector &out) {

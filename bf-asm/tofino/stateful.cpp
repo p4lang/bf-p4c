@@ -16,6 +16,7 @@ void StatefulTable::set_counter_mode(Target::Tofino target, int mode) {
 template<> void StatefulTable::write_logging_regs(Target::Tofino::mau_regs &regs) {
     auto &merge =  regs.rams.match.merge;
     unsigned meter_group = layout.at(0).row/4U;
+    auto &salu = regs.rams.map_alu.meter_group[meter_group].stateful;
     for (MatchTable *m : match_tables) {
         auto *call = m->get_call(this);
         if (!call || call->args.size() < 2 || call->args.at(1).type != Call::Arg::Counter)
@@ -32,6 +33,9 @@ template<> void StatefulTable::write_logging_regs(Target::Tofino::mau_regs &regs
             .set_subfield(logvpn_min, 6 * (meter_group%2), 6);
         merge.mau_stateful_log_vpn_limit[meter_group/2]
             .set_subfield(logvpn_max, 6 * (meter_group%2), 6); }
+
+    for (size_t i = 0; i < const_vals.size(); ++i)
+        salu.salu_const_regfile[i] = const_vals[i] & 0xffffffffU;
 }
 
 void StatefulTable::gen_tbl_cfg(Target::Tofino, json::map &tbl, json::map &stage_tbl) {
