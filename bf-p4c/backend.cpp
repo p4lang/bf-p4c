@@ -194,6 +194,7 @@ Backend::Backend(const BFN_Options& options) :
         // DO NOT RUN CollectPhvInfo afterwards, as this will destroy the
         // external names for bridged metadata PHV::Field objects.
         new SetExternalNameForBridgedMetadata(phv, bridged_fields),
+        new GatherExternalNames(phv),
 
         new CheckForHeaders(),
 #if HAVE_JBAY

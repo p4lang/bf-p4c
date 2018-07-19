@@ -721,6 +721,10 @@ class PhvInfo {
     /// graph.
     ordered_map<const PHV::Field*, const PHV::Field*> aliasMap;
 
+    /// Mapping of external name to Field pointers, for fields that have a different external
+    /// name.
+    ordered_map<cstring, PHV::Field*> externalNameMap;
+
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
 
@@ -846,6 +850,11 @@ class PhvInfo {
         aliasMap[f1] = f2;
     }
 
+    /// Adds an entry to the externalNameMap.
+    void addExternalNameMapEntry(PHV::Field* f, cstring externalName) {
+        externalNameMap[externalName] = f;
+    }
+
     /// @returns the aliasMap.
     const ordered_map<const PHV::Field*, const PHV::Field*>& getAliasMap() const {
         return aliasMap;
@@ -900,6 +909,26 @@ class AddAliasAllocation : public Inspector {
 
  public:
     explicit AddAliasAllocation(PhvInfo& p) : phv(p) { }
+};
+
+/** For bridged metadata fields, the field's external name is different from the name of the field.
+  * We populate the externalNameMap in PhvInfo for such entries to enable lookup of Field objects
+  * using the external name. This is mandatory for supporting pragmas, as pragmas on bridged fields
+  * are specified on the external name (and not the bridged name internally used in the backend).
+  */
+class GatherExternalNames : public Inspector {
+    PhvInfo& phv_i;
+
+    void end_apply() {
+        for (auto& f : phv_i) {
+            if (!f.hasExternalName()) continue;
+            phv_i.addExternalNameMapEntry(&f, f.externalName());
+            LOG3("Setting externalNameMap for " << f.name << " to " << f.externalName());
+        }
+    }
+
+ public:
+    explicit GatherExternalNames(PhvInfo& phv) : phv_i(phv) { }
 };
 
 void dump(const PhvInfo *);

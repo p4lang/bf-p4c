@@ -322,7 +322,6 @@ p4c_add_xfail_reason("tofino"
   switch_8.2_msdc_leaf_int
   switch_l3_heavy_int_leaf
   switch_8.2_l3_heavy_int_leaf
-  switch_8.2_generic_int_leaf
   )
 
 # BRIG-113
@@ -996,6 +995,7 @@ p4c_add_xfail_reason("tofino"
   switch_msdc_spine_int
   switch_8.2_msdc_spine_int
   switch_generic_int_leaf
+  switch_8.2_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"

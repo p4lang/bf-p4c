@@ -29,6 +29,7 @@ void PhvInfo::clear() {
     simple_headers.clear();
     aliasMap.clear();
     dummyPaddingNames.clear();
+    externalNameMap.clear();
     alloc_done_ = false;
     pov_alloc_done = false;
 }
@@ -154,6 +155,10 @@ const PHV::Field *PhvInfo::field(const IR::Member *fr, le_bitrange *bits) const 
 }
 
 const PHV::Field *PhvInfo::field(const cstring& name_) const {
+    if (externalNameMap.count(name_)) {
+        LOG4("  Looking up PHV field from external name map entry: " << name_);
+        return externalNameMap.at(name_);
+    }
     StringRef name = name_;
     if (auto *p = name.find('[')) {
         if (name.after(p).find(':'))
@@ -185,7 +190,8 @@ const PHV::Field *PhvInfo::field(const cstring& name_) const {
     std::set<std::pair<cstring, const PHV::Field*>> matches;
     for (auto& kv : all_fields) {
         cstring name = kv.first;
-        if (name.endsWith(suffix)) LOG4("    ...found suffix: " << kv.first);
+        if (name.endsWith(suffix))
+            LOG4("    ...found suffix: " << kv.first);
         if (name.startsWith(prefix) && name.endsWith(suffix))
             matches.insert(std::make_pair(kv.first, &kv.second)); }
     if (matches.size() > 1) {
@@ -1220,7 +1226,7 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
         new AllocatePOVBits(phv),
         new CollectPardeConstraints(phv),
         new ComputeFieldAlignments(phv),
-        new MarkTimestampAndVersion(phv),
+        new MarkTimestampAndVersion(phv)
     });
 }
 //

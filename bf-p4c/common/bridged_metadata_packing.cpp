@@ -401,10 +401,10 @@ void PackBridgedMetadata::determineAlignmentConstraints(
         cstring egressFieldName = getNonBridgedEgressFieldName(fieldName);
         BUG_CHECK(egressFieldName, "No egress version of the field %1%", fieldName);
         const auto* egressField = phv.field(egressFieldName);
-        BUG_CHECK(egressField, "No egress field %1%", egressFieldName);
         // Add the ingress field and its egress version to visit.
         fieldsNotVisited.push(field);
-        fieldsNotVisited.push(egressField);
+        if (egressField)
+            fieldsNotVisited.push(egressField);
 
         while (!fieldsNotVisited.empty()) {
             const PHV::Field* currentField = fieldsNotVisited.front();
