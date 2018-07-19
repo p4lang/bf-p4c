@@ -54,7 +54,8 @@ void LiveRangeOverlay::end_apply() {
         LOG4("checking liveness of " << f.name);
         livemap[f.id] = { };
         ordered_set<const IR::BFN::Unit *> *all_units;
-        all_units = f.gress == INGRESS ? &all_ingress_units : &all_egress_units;
+        all_units = f.gress == INGRESS ? &all_ingress_units
+                  : f.gress == EGRESS ? &all_egress_units : &all_ghost_units;
         for (const IR::BFN::Unit *u : *all_units) {
             if (f.alwaysPackable) {
                 // Bridged metadata padding field is valid only in ingress deparser and egress

@@ -9,7 +9,8 @@ class cstring;
 /// An enumeration identifying a thread in the Tofino architecture.
 enum gress_t {
   INGRESS = 0,
-  EGRESS = 1
+  EGRESS = 1,
+  GHOST = 2,
 };
 
 /// @return, given a thread @gress, the _other_ thread.

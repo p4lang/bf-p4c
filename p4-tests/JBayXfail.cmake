@@ -272,8 +272,16 @@ p4c_add_xfail_reason("jbay"
   "Could not find declaration for truncate"
   testdata/p4_14_samples/truncate.p4
 )
+
 # work in progress -- hardware learning dleft.
 p4c_add_xfail_reason("jbay"
   "error: action instruction addr .* in use elsewhere"
   extensions/p4_tests/p4_16/jbay/hwlearn1.p4
 )
+
+# work in progress -- ghost thread
+p4c_add_xfail_reason("jbay"
+  "Trying to get PHV container bytes for unallocated field"
+  extensions/p4_tests/p4_16/jbay/ghost1.p4
+)
+

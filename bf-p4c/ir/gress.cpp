@@ -6,7 +6,8 @@
 cstring toString(gress_t gress) {
   switch (gress) {
     case INGRESS: return "ingress";
-    case EGRESS: return "egress"; }
+    case EGRESS: return "egress";
+    case GHOST: return "ghost"; }
   BUG("Unexpected *gress value");
 }
 
@@ -31,6 +32,8 @@ bool operator>>(cstring s, gress_t& gressOut) {
         gressOut = INGRESS;
     else if (s == "egress")
         gressOut = EGRESS;
+    else if (s == "ghost")
+        gressOut = GHOST;
     else
         return false;
     return true;

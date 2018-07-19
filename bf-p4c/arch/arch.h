@@ -158,6 +158,14 @@ class ParseTna : public Inspector {
         toBlockInfo.emplace(egress_deparser->to<IR::ControlBlock>()->container, ed);
 
         threads->emplace(std::make_pair(index, EGRESS), thread_e);
+
+        if (auto ghost = block->findParameterValue("ghost")) {
+            auto ghost_cb = ghost->to<IR::ControlBlock>()->container;
+            auto thread_g = new IR::BFN::P4Thread();
+            thread_g->mau = ghost_cb;
+            threads->emplace(std::make_pair(index, GHOST), thread_g);
+            toBlockInfo.emplace(ghost_cb, BlockInfo(index, GHOST, MAU));
+        }
     }
 
     bool preorder(const IR::PackageBlock* block) override {

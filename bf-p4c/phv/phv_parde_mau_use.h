@@ -22,7 +22,7 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     bitvec      used_alu_i;
 
     /// Fields extracted in the parser.
-    bitvec      extracted_i[2];
+    bitvec      extracted_i[3];
 
     /// Used to associate $stkvalid and $valid fields for header stacks.
     BFN::HeaderStackInfo* stacks;
@@ -31,12 +31,12 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     enum { PARDE = 0, MAU = 1 };
 
  public:
-    bitvec      use_i[2][2];
+    bitvec      use_i[2][3];
     /*                |  ^- gress                 */
     /*                0 == use in parser/deparser */
     /*                1 == use in mau             */
 
-    bitvec      deparser_i[2];
+    bitvec      deparser_i[3];
     /*                |    ^- gress               */
     /*                 == use in deparser         */
 

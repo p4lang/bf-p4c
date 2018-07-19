@@ -38,11 +38,13 @@ class LiveRangeOverlay : public Inspector {
 
     ordered_set<const IR::BFN::Unit *> all_ingress_units;
     ordered_set<const IR::BFN::Unit *> all_egress_units;
+    ordered_set<const IR::BFN::Unit *> all_ghost_units;
 
     profile_t init_apply(const IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         all_ingress_units.clear();
         all_egress_units.clear();
+        all_ghost_units.clear();
         return rv;
     }
 
@@ -50,6 +52,8 @@ class LiveRangeOverlay : public Inspector {
         if (u->gress == INGRESS)
             all_ingress_units.insert(u);
         else if (u->gress == EGRESS)
+            all_egress_units.insert(u);
+        else if (u->gress == GHOST)
             all_egress_units.insert(u);
         else
             BUG("Unexpected gress."); }

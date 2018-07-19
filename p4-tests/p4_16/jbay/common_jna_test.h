@@ -35,5 +35,9 @@ control egressDeparser(packet_out packet, inout headers hdr, in metadata meta,
     }
 }
 
-Pipeline(ingressParser(), ingress(), ingressDeparser(), egressParser(), egress(), egressDeparser()) pipe;
+Pipeline(ingressParser(), ingress(), ingressDeparser(), egressParser(), egress(), egressDeparser()
+#ifdef USE_GHOST
+    , ghost()
+#endif
+) pipe;
 Switch(pipe) main;

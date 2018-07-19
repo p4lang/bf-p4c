@@ -347,6 +347,7 @@ void IR::BFN::LoweredDeparser::dbprint(std::ostream &out) const {
 }
 
 void IR::BFN::Pipe::dbprint(std::ostream &out) const {
+    if (ghost_thread) out << "ghost:" << indent << ghost_thread << unindent << endl;
     out << "ingress:" << indent << thread[0].parser << endl << thread[0].mau << endl
                                 << thread[0].deparser << unindent << endl
         << "egress:" << indent << thread[1].parser << endl << thread[1].mau << endl

@@ -214,6 +214,16 @@ struct ingress_intrinsic_metadata_for_deparser_t {
     // mtu_trunc_len;
     // mtu_trunc_err_f
 }
+// -----------------------------------------------------------------------------
+// GHOST INTRINSIC METADATA
+// -----------------------------------------------------------------------------
+@__intrinsic_metadata
+header ghost_intrinsic_metadata_t {
+    bit<1>      ping_pong;              // ping-pong bit to control which version to update
+    bit<18>     qlength;
+    bit<11>     qid;                    // queue id for update
+    bit<2>      pipe_id;
+}
 
 // -----------------------------------------------------------------------------
 // EGRESS INTRINSIC METADATA

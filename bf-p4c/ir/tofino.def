@@ -48,6 +48,7 @@ class BFN::Pipe {
         }
     }
     thread_t[2] thread = {};  // INGRESS and EGRESS
+    NullOK MAU::TableSeq ghost_thread = nullptr;  // GHOST -- just mau, no parser or deparser
 
 #emit
     /// If non-null, the phase 0 metadata for this pipe.
@@ -62,17 +63,22 @@ class BFN::Pipe {
                         phase0Info == a.phase0Info &&
                         headerStackInfo == a.headerStackInfo &&
                         thread[0] == a.thread[0] &&
-                        thread[1] == a.thread[1]; }
+                        thread[1] == a.thread[1] &&
+                        ghost_thread == a.ghost_thread; }
     visit_children {
         if (auto *th = dynamic_cast<ThreadVisitor *>(&v)) {
-            v.visit(thread[th->thread].parser, "parser");
-            v.visit(thread[th->thread].mau, "mau");
-            v.visit(thread[th->thread].deparser, "deparser");
+            if (th->thread == GHOST) {
+                v.visit(ghost_thread, "ghost_thread");
+            } else {
+                v.visit(thread[th->thread].parser, "parser");
+                v.visit(thread[th->thread].mau, "mau");
+                v.visit(thread[th->thread].deparser, "deparser"); }
         } else {
             for (auto &th : thread) {
                 v.visit(th.parser, "parser");
                 v.visit(th.mau, "mau");
-                v.visit(th.deparser, "deparser"); } } }
+                v.visit(th.deparser, "deparser"); }
+            v.visit(ghost_thread, "ghost_thread"); } }
 }
 
 abstract BFN::Unit {

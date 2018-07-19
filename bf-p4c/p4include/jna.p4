@@ -43,7 +43,10 @@ control Ingress<H, M>(
     in ingress_intrinsic_metadata_t ig_intr_md,
     in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-    inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm);
+    inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
+    @optional in ghost_intrinsic_metadata_t gh_intr_md);
+
+control Ghost(in ghost_intrinsic_metadata_t gh_intr_md);
 
 control Egress<H, M>(
     inout H hdr,
@@ -71,7 +74,8 @@ package Pipeline<IH, IM, EH, EM>(
     IngressDeparser<IH, IM> ingress_deparser,
     EgressParser<EH, EM> egress_parser,
     Egress<EH, EM> egress,
-    EgressDeparser<EH, EM> egress_deparser);
+    EgressDeparser<EH, EM> egress_deparser,
+    @optional Ghost ghost);
 
 package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
                IH2, IM2, EH2, EM2, IH3, IM3, EH3, EM3>(
