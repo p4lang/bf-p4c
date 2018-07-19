@@ -218,6 +218,8 @@ public:
     int                                 pvs_handle = 512;
     std::map<std::string, int>          pvs_handle_use;
     Phv::Ref                            parser_error[2];
+    Phv::Ref                            ghost_parser;   // the ghost "parser" extracts a single
+                                                        // 32-bit value
     std::vector<Phv::Ref>               multi_write, init_zero;
     bitvec                              phv_use[2], phv_allow_multi_write, phv_init_valid;
     // FIXME -- multi_write stuff should be split by gress?

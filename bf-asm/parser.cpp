@@ -31,12 +31,17 @@ void Parser::start(int lineno, VECTOR(value_t) args) {
     if (args.size == 0) {
         this->lineno[INGRESS] = this->lineno[EGRESS] = lineno;
         return; }
-    if (args.size != 1 || (args[0] != "ingress" && args[0] != "egress"))
-        error(lineno, "parser must specify ingress or egress");
+    if (args.size != 1 || (args[0] != "ingress" && args[0] != "egress" &&
+                           (args[0] != "ghost" || options.target < JBAY)))
+        error(lineno, "parser must specify ingress%s or egress",
+              options.target >= JBAY ? ", ghost" : "");
     gress_t gress = args[0] == "egress" ? EGRESS : INGRESS;
     if (!this->lineno[gress]) this->lineno[gress] = lineno;
 }
 void Parser::input(VECTOR(value_t) args, value_t data) {
+    if (args[0] == "ghost") {
+        ghost_parser = Phv::Ref(GHOST, data);
+        return; }
     if (!CHECKTYPE(data, tMAP)) return;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         if (args.size > 0) {
@@ -222,6 +227,9 @@ void Parser::process() {
         if (parser_error[gress].lineno >= 0)
             if (parser_error[gress].check())
                 phv_use[gress][parser_error[gress]->reg.uid] = 1; }
+    if (ghost_parser && ghost_parser.check()) {
+        if (ghost_parser.size() != 32)
+            error(ghost_parser.lineno, "ghost thread input must be 32 bits"); }
     if (error_count > 0) return;
     int all_index = 0;
     for (auto st : all) st->all_idx = all_index++;

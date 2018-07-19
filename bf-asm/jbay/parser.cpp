@@ -319,7 +319,10 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
     int e_start = Stage::first_table(EGRESS) & 0x1ff;
     for (auto &reg : regs.merge.lr1.e_start_table)
         reg.table = e_start;
-    regs.merge.lr1.g_start_table.table = 0x1ff;
+    regs.merge.lr1.g_start_table.table = Stage::first_table(GHOST) & 0x1ff;
+    if (ghost_parser) {
+        regs.merge.lr1.tm_status_phv.phv = ghost_parser->reg.parser_id();
+        regs.merge.lr1.tm_status_phv.en = 1; }
 
     for (auto &ref : regs.ingress.prsr)
         ref.set("regs.parser.main.ingress", &regs.main[INGRESS]);
