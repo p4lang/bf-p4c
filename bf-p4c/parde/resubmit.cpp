@@ -13,7 +13,7 @@
 namespace BFN {
 
 /**
- * Analyze the resubmit_packet `emit` method within the deparser block,
+ * Analyze the Resubmit `emit` method within the deparser block,
  * and try to extract the source field list.
  *
  * @param statement  The `emit` method to analyze
@@ -91,13 +91,13 @@ class FindResubmit : public DeparserInspector {
         auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
         if (auto* em = mi->to<P4::ExternMethod>()) {
             cstring externName = em->actualExternType->name;
-            if (externName != "resubmit_packet") {
+            if (externName != "Resubmit") {
                 return false;
             }
         }
         auto ifStatement = findContext<IR::IfStatement>();
         if (!ifStatement) {
-            ::warning("Expected resubmit_packet to be used within an If statement");
+            ::warning("Expected Resubmit to be used within an If statement");
         }
         auto resubmit_type = checkIfStatement(ifStatement);
         if (!resubmit_type) {
@@ -175,7 +175,7 @@ class AddResubmitParser : public ParserModifier {
 
       auto start = transformAllMatching<IR::BFN::ParserState>(parser->start,
                    [this](const IR::BFN::ParserState* state) {
-          if (state->name != "$resubmit") return state;
+          if (state->name != createThreadName(INGRESS, "$resubmit")) return state;
 
           // This is the '$resubmit' placeholder state. We'll replace it with our
           // generated parser program. After resubmit, we'll transition to the
