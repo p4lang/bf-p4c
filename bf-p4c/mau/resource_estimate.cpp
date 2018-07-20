@@ -363,12 +363,9 @@ void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl, int &
             break;
     }
 
-    LOG1("Salu " << salu->width << " " << salu->dual);
     int per_row = RegisterPerWord(salu);
-    LOG1("Per row " << per_row);
     int total_stateful_rams = (entries + per_row * Memories::SRAM_DEPTH - 1)
                                / (per_row * Memories::SRAM_DEPTH);
-    LOG1("Entries " << entries << " " << total_stateful_rams);
     int available_alus = MAX_METER_ALUS - meter_alus;
 
     for (auto &lo : layout_options) {

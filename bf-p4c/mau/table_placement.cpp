@@ -781,6 +781,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
 
     /* Loop to find the right size of entries for a table to place into stage */
     do {
+        rv->need_more = false;
         rv->entries = set_entries;
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
