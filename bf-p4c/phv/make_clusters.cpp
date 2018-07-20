@@ -557,6 +557,9 @@ void Clustering::MakeSuperClusters::end_apply() {
         if (any_pack_conflicts) {
             LOG5("Ignoring POV bit " << f.name << " because of a pack conflict");
             continue; }
+        if (f.no_pack()) {
+            ::error("POV Bit %1% is marked as no-pack", f.name);
+            continue; }
 
         current_list->push_back(PHV::FieldSlice(&f));
         current_list_bits += f.size;

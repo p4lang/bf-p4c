@@ -249,12 +249,6 @@ p4c_add_xfail_reason("jbay"
   extensions/p4_tests/p4_16/stateful2x16phv.p4
 )
 
-# introducing digest_type no_pack constraint makes MSDC on jbay to fail
-# phv allocation -- until Deep gets his opts in.
-p4c_add_xfail_reason("jbay"
-  "PHV allocation was not successful"
-  switch_msdc)
-
 p4c_add_xfail_reason("jbay"
   "fatal error:.*switchapi/switch_handle.h:.*No such file or directory"
   smoketest_switch_msdc

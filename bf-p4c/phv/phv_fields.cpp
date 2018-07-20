@@ -783,7 +783,7 @@ class CollectPhvFields : public Inspector {
                 f.set_no_pack(true);
                 f.set_no_split(true);
             }
-            if (f_name.find("ig_intr_md_for_dprsr.digest_type") != std::string::npos)
+            if (f_name == "ingress::ig_intr_md_for_dprsr.digest_type")
                 f.set_no_pack(true);
         }
     }
