@@ -11,8 +11,53 @@ CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
     PHV::pragma::MUTUALLY_EXCLUSIVE,
     PHV::pragma::NO_OVERLAY,
     PHV::pragma::SOLITARY,
-    PHV::pragma::NO_INIT
+    PHV::pragma::NO_INIT,
+    PHV::pragma::DISABLE_DEPARSE_ZERO
 };
+
+cstring CollectGlobalPragma::getStructFieldName(const IR::StructField* s) const {
+    const auto nameAnnotation = s->annotations->getSingle("name");
+    if (!nameAnnotation || nameAnnotation->expr.size() != 1)
+        return cstring();
+    auto structName = nameAnnotation->expr.at(0)->to<IR::StringLiteral>();
+    if (!structName) return cstring();
+    return structName->value;
+}
+
+bool CollectGlobalPragma::preorder(const IR::StructField* s) {
+    if (!s->annotations) return true;
+    cstring structFieldName = getStructFieldName(s);
+    // The header names are prefixed with a '.'. For the purposes of PHV allocation, we do not need
+    // the period.
+    cstring structFieldNameWithoutDot = (structFieldName != cstring()) ? structFieldName.substr(1)
+                                        : structFieldName;
+    for (auto ann : s->annotations->annotations) {
+        // Ignore annotations that are not NOT_PARSED or NOT_DEPARSED
+        bool notParsedDeparsedAnnotation = (ann->name.name == PHV::pragma::NOT_PARSED ||
+                ann->name.name == PHV::pragma::NOT_DEPARSED);
+        if (!notParsedDeparsedAnnotation)
+            continue;
+        if (structFieldName == cstring())
+            BUG("Pragma %1% on Struct Field %2% without a name", ann->name.name, s);
+        // For the notParsedDeparsedAnnotation, create a new annotation that includes
+        // structFieldName.
+        const IR::StringLiteral* gress = ann->expr.at(0)->to<IR::StringLiteral>();
+        if (!gress || (gress->value != "ingress" && gress->value != "egress")) {
+            ::warning("Ignoring @pragma %1% on %2% as it does not apply to ingress or egress",
+                      ann->name.name, structFieldNameWithoutDot);
+            continue;
+        }
+        // Create a new annotation that includes the pragma not_parsed or not_deparsed and also adds
+        // the name of the header with which the pragma is associated. The format is equivalent to:
+        // @pragma not_parsed <gress> <hdr_name>. PHV allocation can then consume this added
+        // annotation when implementing the deparsed zero optimization.
+        auto* name = new IR::StringLiteral(IR::ID(structFieldNameWithoutDot));
+        IR::Annotation* newAnnotation = new IR::Annotation(IR::ID(ann->name.name), {gress, name});
+        LOG1("      Adding global annotation: " << newAnnotation);
+        global_pragmas_.push_back(newAnnotation);
+    }
+    return true;
+}
 
 bool CollectGlobalPragma::preorder(const IR::Annotation *annotation) {
     auto pragma_name = annotation->name.name;

@@ -91,10 +91,11 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             // middle, and then rotate it into place when needed). However,
             // until we make the PHV allocator more sophisticated, this is
             // probably just a bug.
-            ERROR_CHECK(field.metadata ||
-                        !assignedContainers[phvSpec.containerToId(slice.container)],
-                        "Multiple slices in the same container are allocated "
-                        "to field %1%", cstring::to_cstring(field));
+            if (!field.is_deparser_zero_candidate())
+                ERROR_CHECK((field.metadata ||
+                            !assignedContainers[phvSpec.containerToId(slice.container)]),
+                            "Multiple slices in the same container are allocated "
+                            "to field %1%", cstring::to_cstring(field));
 
             assignedContainers[phvSpec.containerToId(slice.container)] = true;
             allocations[slice.container].emplace_back(slice);
@@ -318,13 +319,17 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 return true;
             allocated |= slice.field_bits(); }
         return false; };
-    auto allMutex = [&](const ordered_set<const::PHV::Field*> left,
-                        const ordered_set<const::PHV::Field*> right) {
+    auto allMutex = [&](const ordered_set<const PHV::Field*> left,
+                        const ordered_set<const PHV::Field*> right) {
         for (auto* f1 : left) {
             for (auto* f2 : right) {
                 if (f1 == f2) continue;
                 if (!mutually_exclusive_field_ids(f1->id, f2->id))
                     return false; } }
+        return true; };
+    auto allDeparsedZero = [&](const ordered_set<const PHV::Field*> fieldSet) {
+        for (auto* f : fieldSet)
+            if (!f->is_deparser_zero_candidate()) return false;
         return true; };
 
     // Check that we've marked a field as deparsed if and only if it's actually
@@ -417,9 +422,11 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             bitvec allocatedBitsForField;
             for (auto& slice : slicesForField) {
                 bitvec sliceBits(slice.container_bit, slice.width);
-                ERROR_CHECK(!sliceBits.intersects(allocatedBitsForField),
-                            "Container %1% contains overlapping slices of field %2%",
-                            container, cstring::to_cstring(field));
+                if (!slice.field->is_deparser_zero_candidate())
+                    ERROR_CHECK(!slice.field->is_deparser_zero_candidate() &&
+                                !sliceBits.intersects(allocatedBitsForField),
+                                "Container %1% contains overlapping slices of field %2%",
+                                container, cstring::to_cstring(field));
                 allocatedBitsForField |= sliceBits;
             }
 
@@ -438,7 +445,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         for (auto& kv : bits_to_fields) {
-            ERROR_CHECK(allMutex(kv.second, kv.second),
+            ERROR_CHECK(allMutex(kv.second, kv.second) || allDeparsedZero(kv.second),
                         "Container %1% contains fields which overlap:\n%2%",
                         container, cstring::to_cstring(kv.second));
         }

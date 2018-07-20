@@ -137,6 +137,9 @@ class Field {
     /// bit of this field may be placed.
     bitvec getStartBits(PHV::Size size) const;
 
+    /// @returns the header to which this field belongs.
+    cstring header() const { return name.before(strrchr(name, '.')); }
+
  private:
     /// When set, use this name rather than PHV::Field::name when generating
     /// assembly.
@@ -166,6 +169,8 @@ class Field {
                                                        /// PHV.
     bool            dark_i = false;                    /// true if field is a candidate for dark
                                                        /// PHV.
+    bool            deparser_zero_i = false;           /// true if the field is a candidate for the
+                                                       /// deparser zero optimization.
 #if HAVE_JBAY
     /// XXX(Deep): Until we move to a stage-based allocation that allows us to move fields into and
     /// out of dark containers, the utilization of dark containers in JBay is not significant. To
@@ -213,8 +218,10 @@ class Field {
     bool is_tphv_candidate(const PhvUse& uses) const;
     bool is_mocha_candidate() const                        { return mocha_i; }
     bool is_dark_candidate() const                         { return dark_i; }
+    bool is_deparser_zero_candidate() const                { return deparser_zero_i; }
     void set_mocha_candidate(bool c)                       { mocha_i = c; }
     void set_dark_candidate(bool c)                        { dark_i = c; }
+    void set_deparser_zero_candidate(bool c)               { deparser_zero_i = c; }
 
 #if HAVE_JBAY
     bool is_privatizable_dark() const                      { return privatizable_dark_i; }
@@ -728,6 +735,10 @@ class PhvInfo {
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
 
+    /// Set of containers that must be set to 0 (and their container validity bit set
+    /// unconditionally to 1) for the deparsed zero optimization.
+    std::set<PHV::Container>    zeroContainers;
+
     void clear();
     void add(cstring fieldName, gress_t gress, int size, int offset,
              bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false);
@@ -858,6 +869,18 @@ class PhvInfo {
     /// @returns the aliasMap.
     const ordered_map<const PHV::Field*, const PHV::Field*>& getAliasMap() const {
         return aliasMap;
+    }
+
+    /// @returns the set of deparsed zero containers.
+    const std::set<PHV::Container>& getZeroContainers() const {
+        return zeroContainers;
+    }
+
+    /// adds container @c to the set of deparsed zero containers.
+    void addZeroContainer(PHV::Container c) {
+        zeroContainers.insert(c);
+        BUG_CHECK(zeroContainers.size() <= 2,
+                  "Only two zero containers allowed: one for each gress");
     }
 };
 

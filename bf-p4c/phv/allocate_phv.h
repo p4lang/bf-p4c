@@ -226,6 +226,15 @@ class CoreAllocation {
         const PHV::ContainerGroup& group,
         PHV::SuperCluster& cluster) const;
 
+    /** Helper function that tries to allocate all fields in the deparser zero supercluster
+      * @cluster to containers B0 (for ingress) and B16 (for egress). The DeparserZero analysis
+      * earlier in PHV allocation already ensures that these fields can be safely allocated to the
+      * zero-ed containers.
+      */
+    boost::optional<PHV::Transaction> tryDeparserZeroAlloc(
+        const PHV::Allocation& alloc,
+        PHV::SuperCluster& cluster) const;
+
     /** Helper function for tryAlloc that tries to allocate all fields in
      * @start_positions simultaneously. Deparsed fields in particular need to be
      * placed simultaneously with their neighbors; otherwise, the `deparsed`
@@ -353,29 +362,41 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
                   std::list<PHV::ContainerGroup *>& container_groups) override;
 
  protected:
-    std::list<PHV::SuperCluster*>
-    remove_unreferenced_clusters(
-            const std::list<PHV::SuperCluster*>& cluster_groups_input);
+    /// remove singleton unreferenced fields.
+    std::list<PHV::SuperCluster*> remove_unreferenced_clusters(
+            const std::list<PHV::SuperCluster*>& cluster_groups_input) const;
 
-    std::list<PHV::SuperCluster*>
-    crush_clusters(
+    /// remove superclusters with deparser zero fields.
+    std::list<PHV::SuperCluster*> remove_deparser_zero_superclusters(
+            const std::list<PHV::SuperCluster*>& cluster_groups_input,
+            std::list<PHV::SuperCluster*>& deparser_zero_superclusters) const;
+
+    std::list<PHV::SuperCluster*> crush_clusters(
             const std::list<PHV::SuperCluster*>& cluster_groups);
 
-    std::list<PHV::SuperCluster*>
-    slice_clusters(
+    /// slice clusters into clusters with container-sized chunks.
+    std::list<PHV::SuperCluster*> slice_clusters(
             const std::list<PHV::SuperCluster*>& cluster_groups,
             std::list<PHV::SuperCluster*>& unsliceable);
 
-    std::list<PHV::SuperCluster*>
-    remove_singleton_slicelist_metadata(
-            const std::list<PHV::SuperCluster*>& cluster_groups);
+    /// remove singleton metadata slice list. This was introduced because some metadata fields are
+    /// placed in a supercluster but they should not be.
+    std::list<PHV::SuperCluster*> remove_singleton_slicelist_metadata(
+            const std::list<PHV::SuperCluster*>& cluster_groups) const;
 
+    /// Sort list of superclusters into the order in which they should be allocated.
     void sortClusters(std::list<PHV::SuperCluster*>& cluster_groups);
 
     std::list<PHV::SuperCluster*>
     allocLoop(PHV::Transaction& rst,
               std::list<PHV::SuperCluster*>& cluster_groups,
               const std::list<PHV::ContainerGroup *>& container_groups);
+
+    /// Allocate deparser zero fields to zero-initialized containers. B0 for ingress and B16 for
+    /// egress.
+    std::list<PHV::SuperCluster*> allocDeparserZeroSuperclusters(
+            PHV::Transaction& rst,
+            std::list<PHV::SuperCluster*>& cluster_groups);
 
     /** Return a vector of slicing schemas for @p sc, that
      *

@@ -32,6 +32,7 @@ void PhvInfo::clear() {
     externalNameMap.clear();
     alloc_done_ = false;
     pov_alloc_done = false;
+    zeroContainers.clear();
 }
 
 void PhvInfo::add(
@@ -1283,7 +1284,10 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
             << "#" << field.mirror_field_list.field_list
             << "}%";
     if (field.pov) out << " pov";
-    if (field.deparsed()) out << " deparsed";
+    if (field.is_deparser_zero_candidate())
+        out << " deparsed-zero";
+    else if (field.deparsed())
+        out << " deparsed";
     if (field.mau_phv_no_pack()) out << " mau_phv_no_pack";
     if (field.no_pack()) out << " no_pack";
     if (field.alwaysPackable) out << " always_packable";
@@ -1371,7 +1375,10 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
             << "#" << field.mirror_field_list.field_list
             << "}%";
     if (field.pov) out << " pov";
-    if (field.deparsed()) out << " deparsed";
+    if (field.is_deparser_zero_candidate())
+        out << " deparsed-zero";
+    else if (field.deparsed())
+        out << " deparsed";
     if (field.no_pack()) out << " no_pack";
     if (field.no_split()) out << " no_split";
     if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";

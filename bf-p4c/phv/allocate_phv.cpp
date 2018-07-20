@@ -1577,7 +1577,7 @@ void AllocationStrategy::writeTransactionSummary(
 
 std::list<PHV::SuperCluster*>
 BruteForceAllocationStrategy::remove_unreferenced_clusters(
-        const std::list<PHV::SuperCluster*>& cluster_groups_input) {
+        const std::list<PHV::SuperCluster*>& cluster_groups_input) const {
     std::set<PHV::SuperCluster*> un_ref_singleton;
     for (auto* super_cluster : cluster_groups_input) {
         bool should_skip = false;
@@ -1646,6 +1646,62 @@ std::vector<bitvec> BruteForceAllocationStrategy::calc_slicing_schemas(
 
     return rst;
 }
+
+std::list<PHV::SuperCluster*>
+BruteForceAllocationStrategy::allocDeparserZeroSuperclusters(
+        PHV::Transaction& rst,
+        std::list<PHV::SuperCluster*>& cluster_groups) {
+    LOG4("Allocating Deparser Zero Superclusters");
+    std::list<PHV::SuperCluster*> allocated_sc;
+    for (auto* sc : cluster_groups) {
+        LOG4(sc);
+        if (auto partial_alloc = core_alloc_i.tryDeparserZeroAlloc(rst, *sc)) {
+            allocated_sc.push_back(sc);
+            LOG4("  ...Committing allocation for deparser zero supercluster.");
+            rst.commit(*partial_alloc);
+        } else {
+            LOG4("  ...Unable to allocated deparser zero supercluster."); } }
+    // Remove allocated deparser zero superclusters.
+    for (auto* sc : allocated_sc)
+        cluster_groups.remove(sc);
+    return cluster_groups;
+}
+
+boost::optional<PHV::Transaction> CoreAllocation::tryDeparserZeroAlloc(
+        const PHV::Allocation& alloc,
+        PHV::SuperCluster& cluster) const {
+    auto alloc_attempt = alloc.makeTransaction();
+    if (isClotSuperCluster(clot_i, cluster)) {
+        LOG4("  ...Skipping CLOT-allocated super cluster: " << cluster);
+        return alloc_attempt; }
+    for (auto* sl : cluster.slice_lists()) {
+        int slice_list_offset = 0;
+        for (auto slice : *sl) {
+            LOG5("Slice in slice list: " << slice);
+            std::map<gress_t, PHV::Container> zero = { { INGRESS, PHV::Container("B0") },
+                                                       { EGRESS, PHV::Container("B16") }};
+            std::vector<PHV::AllocSlice> candidate_slices;
+            int slice_width = slice.size();
+            // Allocate bytewise chunks of this field to B0 and B16.
+            for (int i = 0; i < slice_width; i += 8) {
+                int alloc_slice_width = std::min(8, slice_width - i);
+                LOG5("  Alloc Slice width: " << alloc_slice_width);
+                LOG5("  Slice list offset: " << slice_list_offset);
+                le_bitrange container_slice = StartLen(slice_list_offset % 8, alloc_slice_width);
+                le_bitrange field_slice = StartLen(i + slice.range().lo, alloc_slice_width);
+                LOG4("  Container slice: " << container_slice << ", field slice: " << field_slice);
+                BUG_CHECK(slice.gress() == INGRESS || slice.gress() == EGRESS,
+                          "Found a field slice for %1% that is neither ingress nor egress",
+                          slice.field()->name);
+                candidate_slices.push_back(PHV::AllocSlice(phv_i.field(slice.field()->id),
+                            zero[slice.gress()], field_slice, container_slice));
+                phv_i.addZeroContainer(zero[slice.gress()]);
+                slice_list_offset += alloc_slice_width; }
+            for (auto& alloc_slice : candidate_slices)
+                alloc_attempt.allocate(alloc_slice); } }
+    return alloc_attempt;
+}
+
 
 std::list<PHV::SuperCluster*>
 BruteForceAllocationStrategy::pounderRoundAllocLoop(
@@ -1764,8 +1820,25 @@ BruteForceAllocationStrategy::slice_clusters(
 }
 
 std::list<PHV::SuperCluster*>
+BruteForceAllocationStrategy::remove_deparser_zero_superclusters(
+        const std::list<PHV::SuperCluster*>& cluster_groups,
+        std::list<PHV::SuperCluster*>& deparser_zero_superclusters) const {
+    std::list<PHV::SuperCluster*> rst;
+    for (auto* sc : cluster_groups) {
+        bool has_deparser_zero_fields = sc->all_of_fieldslices(
+                [&] (const PHV::FieldSlice& fs) { return fs.field()->is_deparser_zero_candidate();
+                });
+        if (has_deparser_zero_fields) {
+            LOG4("    ...removing deparser zero supercluster from unallocated superclusters.");
+            deparser_zero_superclusters.push_back(sc);
+            continue; }
+        rst.push_back(sc); }
+    return rst;
+}
+
+std::list<PHV::SuperCluster*>
 BruteForceAllocationStrategy::remove_singleton_slicelist_metadata(
-        const std::list<PHV::SuperCluster*>& cluster_groups) {
+        const std::list<PHV::SuperCluster*>& cluster_groups) const {
     std::list<PHV::SuperCluster*> rst;
     for (auto* super_cluster : cluster_groups) {
         // Supercluster has more than one slice list.
@@ -1822,12 +1895,29 @@ BruteForceAllocationStrategy::tryAllocation(
                            std::move(alloc.makeTransaction()),
                            std::move(unsliceable)); }
 
+    // remove deparser zero superclusters.
+    std::list<PHV::SuperCluster*> deparser_zero_superclusters;
+    cluster_groups = remove_deparser_zero_superclusters(cluster_groups,
+            deparser_zero_superclusters);
+
+    // Sorting clusters must happen after the deparser zero superclusters are removed.
     sortClusters(cluster_groups);
 
     // Results are not used
     // field_interference_i.calcSliceInterference(cluster_groups);
 
     auto rst = alloc.makeTransaction();
+
+    // Allocate deparser zero fields first.
+    auto allocated_dep_zero_clusters = allocDeparserZeroSuperclusters(rst,
+            deparser_zero_superclusters);
+
+    if (deparser_zero_superclusters.size() > 0) {
+        LOG1("Deparser Zero field allocation failed: " << deparser_zero_superclusters.size());
+        report_i << "Deparser Zero Field Allocation Failed.\n";
+        writeTransactionSummary(rst, allocated_dep_zero_clusters);
+    }
+
     auto allocated_clusters = allocLoop(rst, cluster_groups, container_groups);
 
     // Pounder Round
@@ -1841,7 +1931,7 @@ BruteForceAllocationStrategy::tryAllocation(
         auto allocated_cluster_powders =
             pounderRoundAllocLoop(rst, cluster_groups, container_groups); }
 
-    if (cluster_groups.size() > 0) {
+    if (cluster_groups.size() > 0 || deparser_zero_superclusters.size() > 0) {
         report_i << "BruteForceStrategy Allocation Failed.\n";
         writeTransactionSummary(rst, allocated_clusters);
         return AllocResult(AllocResultCode::FAIL, std::move(rst), std::move(cluster_groups));

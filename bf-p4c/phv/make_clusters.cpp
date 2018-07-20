@@ -344,6 +344,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
     // TODO(yumin): optional<bool> is not good.
     boost::optional<bool> prev_is_tphv = boost::none;
     bool lastNoPack = false;
+    bool lastDeparserZero = false;
     bool break_at_next_byte_boundary = false;
 
     auto StartNewSliceList = [&](void) {
@@ -352,6 +353,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         prev_is_tphv = boost::none;
         accumulator = new PHV::SuperCluster::SliceList();
         lastNoPack = false;
+        lastDeparserZero = false;
         break_at_next_byte_boundary = false;
     };
 
@@ -381,6 +383,12 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             StartNewSliceList();
             LOG5("Starting new slice list (to isolate a no_pack field): "); }
 
+        // If the slice list containers a deparser_zero field and the current field is not a
+        // deparser zero optimization candidate, then start a new slice list.
+        if (lastDeparserZero && !field->is_deparser_zero_candidate()) {
+            StartNewSliceList();
+            LOG5("Starting new slice list (to isolate deparser zero field): "); }
+
         // Privatizable fields are the PHV copies of fields duplicated in TPHVs. So, slice creation
         // has to start a new slice whenever it encounters a privatizable field. By construction,
         // privatizable fields only being at a byte-aligned offset within a header, so this is a
@@ -399,6 +407,11 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             // Break at bottom as well
             StartNewSliceList();
             LOG5("Starting new slice list (for no_pack field):");
+        } else if (accumulator_bits && !lastDeparserZero && field->is_deparser_zero_candidate()) {
+            // Break off the existing slice list if this field is a deparser zero optimization
+            // candidate.
+            StartNewSliceList();
+            LOG5("Starting new slice list (for deparser zero field):");
         } else if (accumulator_bits % int(PHV::Size::b8) == 0 && break_at_next_byte_boundary) {
             StartNewSliceList();
             LOG5("Starting new slice list (at phase 0 field boundary):");
@@ -447,6 +460,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             field_slice_list_size += slice.size(); }
         accumulator_bits += field->size;
         lastNoPack = field->no_pack();
+        lastDeparserZero = field->is_deparser_zero_candidate();
 
         // We use AND because all slices in a slice list must be TPHV
         // candidates for the slice list to be a TPHV candidate.  Note that a
@@ -702,6 +716,24 @@ void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
             LOG4("Added " << padding_fs << " for " <<  slice_list);
         }
     }
+}
+
+Visitor::profile_t Clustering::ValidateDeparserZeroClusters::init_apply(const IR::Node* root) {
+    // Flag an error if the supercluster has a mix of deparsed zero fields and non deparsed zero
+    // fields.
+    for (auto* sc : self.cluster_groups()) {
+        bool has_deparser_zero_fields = sc->any_of_fieldslices(
+                [&] (const PHV::FieldSlice& fs) { return fs.field()->is_deparser_zero_candidate();
+                });
+        bool has_non_deparser_zero_fields = sc->any_of_fieldslices(
+                [&] (const PHV::FieldSlice& fs) { return !fs.field()->is_deparser_zero_candidate();
+                });
+        if (has_deparser_zero_fields == has_non_deparser_zero_fields) {
+            LOG1(sc);
+            ::error("contains a mixture of deparser zero and non deparser zero fields");
+        }
+    }
+    return Inspector::init_apply(root);
 }
 
 //***********************************************************************************

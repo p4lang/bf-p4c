@@ -35,6 +35,8 @@ class PHV_AnalysisPass : public PassManager {
                                                         // table allocation pass
     ActionPhvConstraints action_constraints;            // Action induced constraints for packing
     PHV::Pragmas pragmas;
+    ordered_set<const PHV::Field*> deparser_zero_fields;    // Fields that are going to be deparsed
+                                                            // to zero
 
  public:
     PHV_AnalysisPass(const BFN_Options &options, PhvInfo &phv, PhvUse &uses, const ClotInfo &clot,

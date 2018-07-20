@@ -6,6 +6,7 @@
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/analysis/mocha.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 /** XXX(Deep): The PhvUse pass only classifies a field as being used in the MAU or in the
   * parser/deparser. It does not break down the MAU uses into normal, dark, mocha. In fact, in the

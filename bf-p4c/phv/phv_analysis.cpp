@@ -8,6 +8,7 @@
 #include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/validate_allocation.h"
+#include "bf-p4c/phv/analysis/deparser_zero.h"
 #include "bf-p4c/phv/analysis/field_interference.h"
 #include "bf-p4c/phv/analysis/jbay_phv_analysis.h"
 #include "bf-p4c/phv/analysis/dark.h"
@@ -42,6 +43,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new CollectDarkCandidates(phv, uses),
 #endif
             &pragmas,              // parse and fold PHV-related pragmas
+            new DeparserZeroOptimization(phv, pragmas.pa_deparser_zero(), clot),
+                                   // identify fields for deparsed zero optimization
             new ParserOverlay(phv, pragmas),
                                    // produce pairs of mutually exclusive header
                                    // fields, eg. (arpSrc, ipSrc)
@@ -70,7 +73,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                 : nullptr,
 #endif      // HAVE_JBAY
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
-                            critical_path_clusters),
+                    critical_path_clusters)
         }); }
 
     setName("PHV Analysis");

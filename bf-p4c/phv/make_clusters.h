@@ -245,16 +245,33 @@ class Clustering : public PassManager {
         : self(self), phv_i(self.phv_i), conflicts_i(self.conflicts_i) { }
     };
 
+    /** For the deparser zero optimization, we need to make sure that every deparser zero
+      * optimizable field is never in a supercluster that also contains non deparser zero fields.
+      * This class performs that validation after superclusters are generated.
+      */
+    class ValidateDeparserZeroClusters : public Inspector {
+     private:
+        Clustering& self;
+        PhvInfo&    phv_i;
+
+        profile_t init_apply(const IR::Node* root) override;
+
+     public:
+        explicit ValidateDeparserZeroClusters(Clustering& c) : self(c), phv_i(self.phv_i) { }
+    };
+
  public:
     Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c)
     : phv_i(p), uses_i(u), conflicts_i(c) {
         addPasses({
-            new ClearClusteringStructs(*this),      // clears pre-existing maps
-            new FindComplexValidityBits(*this),     // populates complex_validity_bits_i
-            new MakeSlices(*this),                  // populates fields_to_slices_i
-            new MakeAlignedClusters(*this),         // populates aligned_clusters_i
-            new MakeRotationalClusters(*this),      // populates rotational_clusters_i
-            new MakeSuperClusters(*this)            // populates super_clusters_i
+            new ClearClusteringStructs(*this),          // clears pre-existing maps
+            new FindComplexValidityBits(*this),         // populates complex_validity_bits_i
+            new MakeSlices(*this),                      // populates fields_to_slices_i
+            new MakeAlignedClusters(*this),             // populates aligned_clusters_i
+            new MakeRotationalClusters(*this),          // populates rotational_clusters_i
+            new MakeSuperClusters(*this),               // populates super_clusters_i
+            new ValidateDeparserZeroClusters(*this)     // validate clustering is correct for
+                                                        // deparser zero optimization
         });
     }
 

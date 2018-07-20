@@ -2244,7 +2244,7 @@ class ComputeMultiwriteContainers : public ParserModifier {
 };
 
 /// Compute containers that have fields relying on parser zero initialization. Those containers
-/// $validity bits shoule be set to 1 by parser to avoid a TCAM match issue.
+/// $validity bits should be set to 1 by parser to avoid a TCAM match issue.
 class ComputeInitZeroContainers : public ParserModifier {
     void postorder(IR::BFN::LoweredParser* parser) override {
         ordered_set<PHV::Container> zero_init_containers;
@@ -2263,6 +2263,11 @@ class ComputeInitZeroContainers : public ParserModifier {
         }
 
         for (auto& c : zero_init_containers)
+            parser->initZeroContainers.push_back(new IR::BFN::ContainerRef(c));
+
+        // Also initialize the container validity bits for the zero-ed containers (as part of
+        // deparsed zero optimization) to 1.
+        for (auto& c : phv.getZeroContainers())
             parser->initZeroContainers.push_back(new IR::BFN::ContainerRef(c));
     }
 

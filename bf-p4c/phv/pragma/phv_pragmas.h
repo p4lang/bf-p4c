@@ -5,6 +5,7 @@
 #include "bf-p4c/phv/pragma/pa_atomic.h"
 #include "bf-p4c/phv/pragma/pa_container_size.h"
 #include "bf-p4c/phv/pragma/pa_container_type.h"
+#include "bf-p4c/phv/pragma/pa_deparser_zero.h"
 #include "bf-p4c/phv/pragma/pa_mutually_exclusive.h"
 #include "bf-p4c/phv/pragma/pa_no_init.h"
 #include "bf-p4c/phv/pragma/pa_no_overlay.h"
@@ -21,6 +22,9 @@ constexpr const char* NO_OVERLAY         = "pa_no_overlay";
 constexpr const char* ALIAS              = "pa_alias";
 constexpr const char* CONTAINER_TYPE     = "pa_container_type";
 constexpr const char* NO_INIT            = "pa_no_init";
+constexpr const char* NOT_PARSED         = "not_parsed";
+constexpr const char* NOT_DEPARSED       = "not_deparsed";
+constexpr const char* DISABLE_DEPARSE_ZERO = "pa_disable_deparse_0_optimization";
 
 }   // namespace pragma
 
@@ -44,6 +48,7 @@ class Pragmas : public PassManager {
     PragmaNoOverlay             pa_no_overlay_i;
     PragmaContainerType         pa_container_type_i;
     PragmaNoInit                pa_no_init_i;
+    PragmaDeparserZero          pa_deparser_zero_i;
 
  public:
     const PragmaContainerSize& pa_container_sizes() const { return pa_container_sizes_i; }
@@ -67,9 +72,18 @@ class Pragmas : public PassManager {
     const PragmaNoInit& pa_no_init() const  { return pa_no_init_i; }
     PragmaNoInit& pa_no_init()              { return pa_no_init_i; }
 
+    const PragmaDeparserZero& pa_deparser_zero() const    { return pa_deparser_zero_i; }
+    PragmaDeparserZero& pa_deparser_zero()                { return pa_deparser_zero_i; }
+
     explicit Pragmas(PhvInfo& phv, const BFN_Options &options)
-        : pa_container_sizes_i(phv), pa_mutually_exclusive_i(phv), pa_solitary_i(phv),
-          pa_atomic_i(phv), pa_no_overlay_i(phv), pa_container_type_i(phv), pa_no_init_i(phv) {
+        : pa_container_sizes_i(phv),
+          pa_mutually_exclusive_i(phv),
+          pa_solitary_i(phv),
+          pa_atomic_i(phv),
+          pa_no_overlay_i(phv),
+          pa_container_type_i(phv),
+          pa_no_init_i(phv),
+          pa_deparser_zero_i(phv) {
         addPasses({
             &pa_container_sizes_i,
             &pa_mutually_exclusive_i,
@@ -77,14 +91,21 @@ class Pragmas : public PassManager {
             &pa_atomic_i,
             &pa_no_overlay_i,
             &pa_container_type_i,
-            &pa_no_init_i
+            &pa_no_init_i,
+            &pa_deparser_zero_i
         });
     }
 
     // Constructor only used for GTest.
     explicit Pragmas(PhvInfo& phv)
-        : pa_container_sizes_i(phv), pa_mutually_exclusive_i(phv), pa_solitary_i(phv),
-          pa_atomic_i(phv), pa_no_overlay_i(phv), pa_container_type_i(phv), pa_no_init_i(phv) {
+        : pa_container_sizes_i(phv),
+          pa_mutually_exclusive_i(phv),
+          pa_solitary_i(phv),
+          pa_atomic_i(phv),
+          pa_no_overlay_i(phv),
+          pa_container_type_i(phv),
+          pa_no_init_i(phv),
+          pa_deparser_zero_i(phv) {
         addPasses({
             &pa_container_sizes_i,
             &pa_mutually_exclusive_i,
@@ -92,7 +113,8 @@ class Pragmas : public PassManager {
             &pa_atomic_i,
             &pa_no_overlay_i,
             &pa_container_type_i,
-            &pa_no_init_i
+            &pa_no_init_i,
+            &pa_deparser_zero_i
         });
     }
 };

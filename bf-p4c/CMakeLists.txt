@@ -316,12 +316,14 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/utils.cpp
   phv/validate_allocation.cpp
   phv/analysis/critical_path_clusters.cpp
+  phv/analysis/deparser_zero.cpp
   phv/analysis/field_interference.cpp
   phv/analysis/pack_conflicts.cpp
   phv/pragma/pa_alias.cpp
   phv/pragma/pa_atomic.cpp
   phv/pragma/pa_container_size.cpp
   phv/pragma/pa_container_type.cpp
+  phv/pragma/pa_deparser_zero.cpp
   phv/pragma/pa_mutually_exclusive.cpp
   phv/pragma/pa_no_init.cpp
   phv/pragma/pa_no_overlay.cpp
@@ -359,12 +361,14 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/utils.h
   phv/validate_allocation.h
   phv/analysis/critical_path_clusters.h
+  phv/analysis/deparser_zero.h
   phv/analysis/field_interference.h
   phv/analysis/pack_conflicts.h
   phv/pragma/pa_alias.h
   phv/pragma/pa_atomic.h
   phv/pragma/pa_container_size.h
   phv/pragma/pa_container_type.h
+  phv/pragma/pa_deparser_zero.h
   phv/pragma/pa_mutually_exclusive.h
   phv/pragma/pa_no_init.h
   phv/pragma/pa_no_overlay.h

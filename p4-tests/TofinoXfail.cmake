@@ -122,6 +122,13 @@ if (PTF_REQUIREMENTS_MET)
     smoketest_switch_8.2_l3_msdc_WredIpv4Test
     )
 
+  p4c_add_xfail_reason("tofino"
+    "TTransportException: TSocket read 0 bytes"
+    smoketest_switch_8.2_msdc_Acl_i2e_ErspanRewriteTest
+    smoketest_switch_8.2_l3_msdc_Acl_i2e_ErspanRewriteTest
+    smoketest_switch_8.2_dc_basic_Acl_i2e_ErspanRewriteTest
+    )
+
 # BRIG-686
 # NameError: global name 'smoke_large_tbls_idle_stats_tbl_match_spec_t' is not defined
   p4c_add_xfail_reason("tofino"
@@ -310,18 +317,26 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
-  switch_msdc_l3
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   )
 
 p4c_add_xfail_reason("tofino"
-  "not allocated contiguously by bit on the input xbar and cannot be resolved."
-  switch_ent_fin_postcard
-  switch_8.2_ent_fin_postcard
+  "Compiler Bug.*: Only one value allowed for a node type"
   switch_msdc_leaf_int
   switch_8.2_msdc_leaf_int
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: syntax error, unexpected ':'"
   switch_l3_heavy_int_leaf
   switch_8.2_l3_heavy_int_leaf
+  switch_8.2_generic_int_leaf
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: no size in indirect idletime"
+  switch_ent_fin_postcard
+  switch_8.2_ent_fin_postcard
   )
 
 # BRIG-113
@@ -995,7 +1010,6 @@ p4c_add_xfail_reason("tofino"
   switch_msdc_spine_int
   switch_8.2_msdc_spine_int
   switch_generic_int_leaf
-  switch_8.2_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
