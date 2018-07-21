@@ -358,15 +358,15 @@ void ActionBus::pass1(Table *tbl) {
                     unsigned noff = slot.data.begin()->second;
                     unsigned nstart = 8*(byte - slot.byte) + noff;
                     if (nsrc.type == Source::Field)
-                        nstart = nsrc.field->bit(nstart);
+                        nstart = nsrc.field->immed_bit(nstart);
                     auto osrc = use[slotno]->data.begin()->first;
                     unsigned ooff = use[slotno]->data.begin()->second;
                     unsigned ostart = 8*(byte - use[slotno]->byte) + ooff;
                     if (osrc.type == Source::Field) {
                         if (ostart < osrc.field->size)
-                            ostart = osrc.field->bit(ostart);
+                            ostart = osrc.field->immed_bit(ostart);
                         else
-                            ostart += osrc.field->bit(0); }
+                            ostart += osrc.field->immed_bit(0); }
                     if (ostart != nstart)
                         error(lineno, "Action bus byte %d used inconsistently for fields %s and "
                               "%s in table %s", byte, use[slotno]->name.c_str(),
