@@ -1084,12 +1084,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/underpin_0.p4
 )
 
-# BRIG-648
-p4c_add_xfail_reason("tofino"
-  "Unhandled expression in BuildGatewayMatch"
-  extensions/p4_tests/p4_14/p4smith_regression/drunkards_0.p4
-)
-
 # BRIG-679
 # error: Gateway match key chubs.dr not in matching hash column
 p4c_add_xfail_reason("tofino"

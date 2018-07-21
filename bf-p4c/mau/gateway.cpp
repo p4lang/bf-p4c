@@ -233,8 +233,11 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LNot *e) {
     if (auto a = e->expr->to<IR::LNot>()) {
         LOG5(_debugIndent << "r IR::LNot " << e);
         _debugIndent--;
-        return a->expr;
-    }
+        return a->expr; }
+    if (auto k = e->expr->to<IR::Constant>()) {
+        return new IR::Constant(k->value == 0);
+    } else if (auto k = e->expr->to<IR::BoolLiteral>()) {
+        return new IR::BoolLiteral(!k->value); }
     if (auto a = e->expr->to<IR::LAnd>()) {
         rv = new IR::LOr(postorder(new IR::LNot(a->left)), postorder(new IR::LNot(a->right)));
     } else if (auto a = e->expr->to<IR::LOr>()) {
