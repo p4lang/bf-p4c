@@ -1097,7 +1097,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/vindemiatrixs_0.p4
 )
 
-
 # BRIG-683
 # error: Upper word match of tracker.medicos for range gateway not a multiple of 4 bits
 p4c_add_xfail_reason("tofino"
@@ -1105,11 +1104,67 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/motowns_0.p4
 )
 
-# BRIG-684
-# error: hash expression width mismatch (2 != 1)
+# BRIG-779
+# error: SelectExpression: Cannot unify bit<8> to int<8>
 p4c_add_xfail_reason("tofino"
-  "hash expression width mismatch"
-  extensions/p4_tests/p4_14/p4smith_regression/ghosted_0.p4
+  "SelectExpression: Cannot unify bit<.*> to int<.*>"
+  extensions/p4_tests/p4_14/p4smith_regression/globule_0.p4
+)
+
+# BRIG-809
+# Compiler Bug: /bfn/bf-p4c-compilers/p4c/ir/vector.h:148: Null e
+p4c_add_xfail_reason("tofino"
+  "/bfn/bf-p4c-compilers/p4c/ir/vector.h:148: Null e"
+  extensions/p4_tests/p4_14/p4smith_regression/corroding_0.p4
+)
+
+# BRIG-810
+# Compiler Bug: No fields have been added before verify?
+p4c_add_xfail_reason("tofino"
+  "No fields have been added before verify"
+  extensions/p4_tests/p4_14/p4smith_regression/quotas_0.p4
+)
+
+# BRIG-811
+# error: Output of checksum calculation can only be stored in a 16-bit field: 
+p4c_add_xfail_reason("tofino"
+  "Output of checksum calculation can only be stored in a 16-bit field"
+  extensions/p4_tests/p4_14/p4smith_regression/gradations_0.p4
+)
+
+# BRIG-816
+# error: pipe: Duplicates declaration header pipe
+p4c_add_xfail_reason("tofino"
+  "Duplicates declaration header pipe"
+  extensions/p4_tests/p4_14/p4smith_regression/jenningss_0.p4
+)
+
+# BRIG-817
+# error: : not a compile-time constant when binding to algo
+p4c_add_xfail_reason("tofino"
+  "not a compile-time constant when binding to algo"
+  extensions/p4_tests/p4_14/p4smith_regression/chauncey_0.p4
+)
+
+# BRIG-819
+# Compiler Bug: Invalid context for constant in BuildGatewayMatch
+p4c_add_xfail_reason("tofino"
+  "Invalid context for constant in BuildGatewayMatch"
+  extensions/p4_tests/p4_14/p4smith_regression/shillings_0.p4
+)
+
+# BRIG-747
+# Compiler Bug: complicated save not supported: save packet bytes N[49..50)B(1B) to byte0 in parse_tiaras
+p4c_add_xfail_reason("tofino"
+  "complicated save not supported"
+  extensions/p4_tests/p4_14/p4smith_regression/blatz_0.p4
+)
+
+# BRIG-590
+# Compiler Bug: Match register not allocated
+p4c_add_xfail_reason("tofino"
+  "Match register not allocated"
+  extensions/p4_tests/p4_14/p4smith_regression/utes_0.p4
 )
 
 # BRIG-691
