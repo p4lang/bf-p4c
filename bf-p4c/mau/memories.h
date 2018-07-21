@@ -456,7 +456,7 @@ struct Memories {
     void clear_uses();
     void clear_allocation();
     bool analyze_tables(mem_info &mi);
-    void calculate_column_balance(const mem_info &mi, unsigned &row);
+    void calculate_column_balance(const mem_info &mi, unsigned &row, bool &column_balance_init);
     bool single_allocation_balance(mem_info &mi, unsigned row);
     bool cut_from_left_side(const mem_info &mi, int left_given_columns, int right_given_columns);
     bool allocate_all_atcam(mem_info &mi);

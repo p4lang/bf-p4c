@@ -210,16 +210,18 @@ bool Memories::allocate_all() {
         return false;
     }
     unsigned row = 0;
+    bool column_balance_init = false;
     bool finished = false;
 
     do {
         clear_uses();
         clear_allocation();
-        calculate_column_balance(mi, row);
+        calculate_column_balance(mi, row, column_balance_init);
         LOG2(" Column balance 0x" << hex(row));
         if (single_allocation_balance(mi, row)) {
             finished = true;
         }
+
 
         if (!finished)
             LOG2(" Increasing balance");
@@ -838,12 +840,14 @@ bool Memories::cut_from_left_side(const mem_info &mi, int left_given_columns,
 
 /* Calculates the number of columns and the distribution of columns on the left and
    right side of the SRAM array in order to place all exact match tables */
-void Memories::calculate_column_balance(const mem_info &mi, unsigned &row) {
+void Memories::calculate_column_balance(const mem_info &mi, unsigned &row,
+        bool &column_balance_init) {
     int min_columns_required = (mi.match_RAMs + SRAM_COLUMNS - 1) / SRAM_COLUMNS;
     int left_given_columns = 0;
     int right_given_columns = 0;
 
-    if (bitcount(row) == 0) {
+    if (!column_balance_init) {
+        column_balance_init = true;
         left_given_columns = mi.left_side_RAMs();
         right_given_columns = mi.right_side_RAMs();
 
@@ -857,11 +861,13 @@ void Memories::calculate_column_balance(const mem_info &mi, unsigned &row) {
                 add_to_right = true;
             }
         }
+
         while (min_columns_required > SRAM_COLUMNS - (left_given_columns + right_given_columns)) {
-            if (cut_from_left_side(mi, left_given_columns, right_given_columns))
+            if (cut_from_left_side(mi, left_given_columns, right_given_columns)) {
                 left_given_columns--;
-            else
+            } else {
                 right_given_columns--;
+            }
         }
     } else {
         left_given_columns = bitcount(~row & 0xf);

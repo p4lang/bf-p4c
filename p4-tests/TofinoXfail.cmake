@@ -313,6 +313,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
+  switch_ent_fin_postcard
+  switch_8.2_ent_fin_postcard
   )
 
 p4c_add_xfail_reason("tofino"
@@ -334,7 +336,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: no size in indirect idletime"
+  "can't find per_flow_enable param meter_pfe in format"
   switch_ent_fin_postcard
   switch_8.2_ent_fin_postcard
   )

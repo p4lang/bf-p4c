@@ -2030,6 +2030,14 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
             alloc.clear();
             return false;
         }
+        // Because the names of the Bytes are based on containers, the bytes need to be sorted in
+        // field order for the allocation to work.
+        std::sort(alloc.use.begin(), alloc.use.end(),
+            [&](const IXBar::Use::Byte &a, const IXBar::Use::Byte &b) {
+            auto a_fi = a.field_bytes[0];
+            auto b_fi = b.field_bytes[0];
+            return a_fi < b_fi;
+        });
         // Byte mask for a meter is 4 bytes
         byte_mask = ((1U << LPF_INPUT_BYTES) - 1);
         if (Device::currentDevice() == "Tofino")
@@ -2128,36 +2136,43 @@ bool IXBar::setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &all
             reversed = true;
     }
 
-    byte_mask = (1U << (width * total_sources)) - 1;
-    byte_mask <<= ixbar_initial_position;
+    safe_vector<PHV::FieldSlice> ixbar_source_order;
 
+    // Up to two sources on the stateful ALU.  The sources are ordered from the FindSaluSources.
+    // An order from low bit to high byte is required on the input xbar.  If reversed is true,
+    // then the order of phv_sources is the opposite of the ixbar_source_order
+    for (auto &source : phv_sources) {
+        if (reversed)
+            ixbar_source_order.emplace(ixbar_source_order.begin(), source.first, source.second);
+        else
+            ixbar_source_order.emplace_back(source.first, source.second);
+    }
 
-    if (reversed) {
-        if (phv_sources.size() == 2) {
-            const PHV::Field *first_field = nullptr;
-            for (auto &source : phv_sources) {
-                first_field = source.first;
-                break;
-            }
+    // Because the names of the Bytes are based on containers, the bytes need to be sorted in
+    // field order for the allocation to work.
+    auto first_field = ixbar_source_order[0].field();
+    std::sort(alloc.use.begin(), alloc.use.end(),
+        [&](const IXBar::Use::Byte &a, const IXBar::Use::Byte &b) {
+        auto a_fi = a.field_bytes[0];
+        auto b_fi = b.field_bytes[0];
+        if (a_fi.field == first_field->name && b_fi.field != first_field->name)
+            return true;
+        if (a_fi.field != first_field->name && b_fi.field == first_field->name)
+            return false;
+        return a_fi.lo < b_fi.lo;
+    });
 
-            // Due to the find_alloc algorithm, reverse the order of the fields as the
-            // first field is actually the phv_hi source
-            std::sort(alloc.use.begin(), alloc.use.end(),
-                [&](const IXBar::Use::Byte &a, const IXBar::Use::Byte &b) {
-                auto a_fi = a.field_bytes[0];
-                auto b_fi = b.field_bytes[0];
-                if (a_fi.field == first_field->name && b_fi.field != first_field->name)
-                    return true;
-                if (a_fi.field != first_field->name && b_fi.field == first_field->name)
-                    return false;
-                return a_fi.lo < b_fi.lo;
-            });
-        } else {
-            // The same source is used twice, but can only be placed at the upper position
-            unsigned unused_byte_mask = (1U << width) - 1;
-            unused_byte_mask <<= ixbar_initial_position;
-            byte_mask &= ~unused_byte_mask;
-        }
+    // This handles the corner case of a single source that can only go into the phv_hi slot
+    // of the stateful alu
+    if (reversed && phv_sources.size() == 1) {
+        ixbar_initial_position += width;
+    }
+
+    byte_mask = 0;
+    for (auto source : phv_sources) {
+        unsigned source_byte_mask = (1 << ((source.second.size() + 7) / 8)) - 1;
+        byte_mask |= source_byte_mask << ixbar_initial_position;
+        ixbar_initial_position += width;
     }
     return true;
 }
@@ -2288,6 +2303,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
             return false; }
         hm_reqs = hash_matrix_reqs::max(false);
     }
+
 
     LOG3("Alloc stateful alu " << salu->name << " on_search_bus " << on_search_bus << " with "
           << alloc.use.size() << " bytes");
