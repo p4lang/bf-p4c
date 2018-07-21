@@ -155,7 +155,7 @@ function install_cmake() {
     fi
 
     cmake_dir=$(echo ${cmake_ver} | cut -f 1-2 -d ".")
-    rc=($SUDO apt-get install -y cmake=${cmake_ver})
+    $SUDO apt-get install -y cmake=${cmake_ver}
     if [ $? != 0 ]; then
         cd /tmp
         wget http://www.cmake.org/files/v${cmake_dir}/cmake-${cmake_ver}.tar.gz && \
