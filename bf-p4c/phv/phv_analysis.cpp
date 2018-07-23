@@ -6,6 +6,7 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/table_phv_constraints.h"
 #include "bf-p4c/phv/trivial_alloc.h"
+#include "bf-p4c/phv/add_special_constraints.h"
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/phv/analysis/deparser_zero.h"
@@ -63,15 +64,22 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &pack_conflicts,       // collect list of fields that cannot be packed together based on
                                    // first round of table allocation (only useful if we backtracked
                                    // from table placement to PHV allocation)
-            &clustering,           // cluster analysis
-            new PhvInfo::DumpPhvFields(phv, uses),
             new TablePhvConstraints(phv),
             &critical_path_clusters,
             &action_constraints,
+            // This has to be the last pass in the analysis phase as it adds artificial constraints
+            // to fields and uses results of some of the above passes (specifically
+            // action_constraints).
+            new AddSpecialConstraints(phv, pragmas, action_constraints),
 #if HAVE_JBAY
             options.jbay_analysis ? new JbayPhvAnalysis(phv, uses, deps, defuse, action_constraints)
                 : nullptr,
 #endif      // HAVE_JBAY
+
+            // From this point on, we are starting to transform the PHV related data structures.
+            // Before this is all analysis that collected constraints for PHV allocation to use.
+            &clustering,           // cluster analysis
+            new PhvInfo::DumpPhvFields(phv, uses),
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
                     critical_path_clusters)
         }); }

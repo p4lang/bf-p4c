@@ -298,6 +298,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_HDRS}")
 
 set (BF_P4C_BACKEND_PHV_SRCS
   phv/action_phv_constraints.cpp
+  phv/add_special_constraints.cpp
   phv/allocate_phv.cpp
   phv/asm_output.cpp
   phv/cluster_phv_operations.cpp
@@ -341,6 +342,7 @@ build_unified(BF_P4C_BACKEND_PHV_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_PHV_HDRS
   phv/action_phv_constraints.h
+  phv/add_special_constraints.h
   phv/allocate_phv.h
   phv/asm_output.h
   phv/check_unallocated.h

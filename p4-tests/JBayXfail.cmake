@@ -139,7 +139,7 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "Unimplemented compiler support.*: Currently the compiler cannot support allocation of meter color"
+  "Unimplemented compiler support.*: Currently the compiler only supports allocation of meter color"
   testdata/p4_14_samples/meter.p4
   testdata/p4_14_samples/meter1.p4
   )

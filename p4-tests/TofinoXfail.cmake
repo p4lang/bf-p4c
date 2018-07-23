@@ -602,6 +602,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/action_conflict_1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
+
+  # Expected to fail, which means that constraint conflicts are being correctly detected.
+  extensions/p4_tests/p4_14/mau_test_neg_test.p4
   #extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   #extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
   #extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
@@ -934,7 +937,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Unimplemented compiler support.*: Currently the compiler cannot support allocation of meter color destination field"
+  "Unimplemented compiler support.*: Currently the compiler only supports allocation of meter color destination field"
   testdata/p4_14_samples/meter.p4
   testdata/p4_14_samples/meter1.p4
   )

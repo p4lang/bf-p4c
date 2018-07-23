@@ -1213,33 +1213,6 @@ void AllocatePHV::end_apply() {
         BUG_CHECK(!mutex_i(field.id, field.id),
                   "Field %1% can be overlaid with itself.", field.name); }
 
-    // Mirror metadata allocation constraint:
-    for (auto gress : {INGRESS, EGRESS}) {
-        auto* mirror_id = phv_i.field(
-                cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_id");
-        if (mirror_id) {
-            mirror_id->set_no_split(true);
-            mirror_id->set_deparsed_bottom_bits(true);
-            pragmas_i.pa_container_sizes().add_constraint(mirror_id, { PHV::Size::b16 });
-        }
-
-        auto* mirror_src = phv_i.field(
-                cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_source");
-        if (mirror_src) {
-            mirror_src->set_no_split(true);
-            mirror_src->set_deparsed_bottom_bits(true);
-            pragmas_i.pa_container_sizes().add_constraint(mirror_src, { PHV::Size::b8 });
-        }
-    }
-
-    // HACK WARNING:
-    // The meter hack, all destination of meter color go to 8-bit container.
-    // TODO(yumin): remove this once this hack is removed in mau.
-    for (const auto* f : actions_i.meter_color_dests()) {
-        auto* meter_color_dest = phv_i.field(f->id);
-        meter_color_dest->set_no_split(true);
-        pragmas_i.pa_container_sizes().add_constraint(f, { PHV::Size::b8 }); }
-
     LOG1(pragmas_i.pa_container_sizes());
     LOG1(pragmas_i.pa_atomic());
     auto alloc = make_concrete_allocation();
@@ -1792,9 +1765,10 @@ BruteForceAllocationStrategy::slice_clusters(
                 unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it);
                 for (const auto* f : unsatisfiable_fields) {
                     if (meter_color_dests.count(f))
-                        P4C_UNIMPLEMENTED("Currently the compiler cannot support allocation of "
+                        P4C_UNIMPLEMENTED("Currently the compiler only supports allocation of "
                                           "meter color destination field %1% to a non 8-bit "
-                                          "container.", f->name); }
+                                          "container. However, %1% cannot be allocated to a "
+                                          "8-bit container.", f->name); }
                 ::error("No way to slice the following to satisfy @pa_container_size: \n%1%",
                         cstring::to_cstring(sc));
                 it = PHV::SlicingIterator(sc);
