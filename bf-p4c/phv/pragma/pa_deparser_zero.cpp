@@ -73,6 +73,7 @@ bool PragmaDeparserZero::preorder(const IR::BFN::Pipe* pipe) {
         if (notDeparsedFields.count(f))
             notDeparsedFields.erase(f);
     }
+    return false;
 }
 
 void PragmaDeparserZero::end_apply() {
