@@ -134,6 +134,18 @@ class SymbolType final : public P4RuntimeSymbolType {
     static P4RuntimeSymbolType PORT_METADATA() {
         return P4RuntimeSymbolType::make(barefoot::P4Ids::PORT_METADATA);
     }
+    static P4RuntimeSymbolType LPF() {
+        return P4RuntimeSymbolType::make(barefoot::P4Ids::LPF);
+    }
+    static P4RuntimeSymbolType DIRECT_LPF() {
+        return P4RuntimeSymbolType::make(barefoot::P4Ids::DIRECT_LPF);
+    }
+    static P4RuntimeSymbolType WRED() {
+        return P4RuntimeSymbolType::make(barefoot::P4Ids::WRED);
+    }
+    static P4RuntimeSymbolType DIRECT_WRED() {
+        return P4RuntimeSymbolType::make(barefoot::P4Ids::DIRECT_WRED);
+    }
 };
 
 /// The information about an action profile which is necessary to generate its
@@ -177,15 +189,6 @@ struct Register {
         auto declaration = instance->node->to<IR::Declaration_Instance>();
 
         auto size = instance->getParameterValue("size");
-        if (!size->is<IR::Constant>()) {
-            ::error("Register '%1%' has a non-constant size: %2%", declaration, size);
-            return boost::none;
-        }
-        if (!size->to<IR::Constant>()->fitsInt()) {
-            ::error("Register '%1%' has a size that doesn't fit in an integer: %2%",
-                    declaration, size);
-            return boost::none;
-        }
 
         // retrieve type parameter for the register instance and convert it to P4DataTypeSpec
         BUG_CHECK(declaration->type->is<IR::Type_Specialized>(),
@@ -199,7 +202,7 @@ struct Register {
 
         return Register{declaration->controlPlaneName(),
                         typeSpec,
-                        size->to<IR::Constant>()->value.get_si(),
+                        size->to<IR::Constant>()->asInt(),
                         declaration->to<IR::IAnnotated>()};
     }
 
@@ -217,16 +220,10 @@ struct Register {
                   "Caller should've ensured we have a name");
 
         auto size = instance.substitution.lookupByName("size")->expression;
-        if (!size->is<IR::Constant>()) {
-            ::error("Register '%1%' has a non-constant size: %2%", instance.expression, size);
-            return boost::none;
-        }
-        if (!size->to<IR::Constant>()->fitsInt()) {
-            ::error("Register '%1%' has a size that doesn't fit in an integer: %2%",
-                    instance.expression, size);
-            return boost::none;
-        }
-        if (size->to<IR::Constant>()->value.get_si() != 0) {
+        // An extern constructor parameter is a compile-time value as per the P4
+        // spec. "size" is therefore a bit<32> conmpile-time value.
+        BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
+        if (size->to<IR::Constant>()->asInt() != 0) {
             ::error("Direct register '%1%' has a non-zero size", instance.expression);
             return boost::none;
         }
@@ -247,6 +244,95 @@ struct Register {
         CHECK_NULL(typeSpec);
 
         return Register{*instance.name, typeSpec, 0, instance.annotations};
+    }
+};
+
+/// The information about a LPF instance which is needed to serialize it.
+struct Lpf {
+    const cstring name;       // The fully qualified external name of the filter
+    int64_t size;
+    /// If not none, the instance is a direct resource associated with @table.
+    const boost::optional<cstring> table;
+    const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this Lpf
+                                        // declaration.
+
+    /// @return the information required to serialize an @instance of Lpf or
+    /// boost::none in case of error.
+    static boost::optional<Lpf>
+    from(const IR::ExternBlock* instance) {
+        CHECK_NULL(instance);
+        auto declaration = instance->node->to<IR::Declaration_Instance>();
+
+        auto size = instance->getParameterValue("size");
+
+        return Lpf{declaration->controlPlaneName(),
+                   size->to<IR::Constant>()->asInt(),
+                   boost::none,
+                   declaration->to<IR::IAnnotated>()};
+    }
+
+    /// @return the information required to serialize an @instance of a direct
+    /// Lpf or boost::none in case of error.
+    static boost::optional<Lpf>
+    fromDirect(const P4::ExternInstance& instance,
+               const IR::P4Table* table) {
+        CHECK_NULL(table);
+        BUG_CHECK(instance.name != boost::none,
+                  "Caller should've ensured we have a name");
+        return Lpf{*instance.name, 0, table->controlPlaneName(), instance.annotations};
+    }
+};
+
+/// The information about a Wred instance which is needed to serialize it.
+struct Wred {
+    const cstring name;       // The fully qualified external name of the filter
+    uint8_t dropValue;
+    uint8_t noDropValue;
+    int64_t size;
+    /// If not none, the instance is a direct resource associated with @table.
+    const boost::optional<cstring> table;
+    const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this wred
+                                        // declaration.
+
+    /// @return the information required to serialize an @instance of Wred or
+    /// boost::none in case of error.
+    static boost::optional<Wred>
+    from(const IR::ExternBlock* instance) {
+        CHECK_NULL(instance);
+        auto declaration = instance->node->to<IR::Declaration_Instance>();
+
+        auto size = instance->getParameterValue("size");
+        auto dropValue = instance->getParameterValue("drop_value");
+        auto noDropValue = instance->getParameterValue("no_drop_value");
+
+        return Wred{declaration->controlPlaneName(),
+                    static_cast<uint8_t>(dropValue->to<IR::Constant>()->asUnsigned()),
+                    static_cast<uint8_t>(noDropValue->to<IR::Constant>()->asUnsigned()),
+                    size->to<IR::Constant>()->asInt(),
+                    boost::none,
+                    declaration->to<IR::IAnnotated>()};
+    }
+
+    /// @return the information required to serialize an @instance of a direct
+    /// Wred or boost::none in case of error.
+    static boost::optional<Wred>
+    fromDirect(const P4::ExternInstance& instance,
+               const IR::P4Table* table) {
+        CHECK_NULL(table);
+        BUG_CHECK(instance.name != boost::none,
+                  "Caller should've ensured we have a name");
+
+        auto dropValue = instance.substitution.lookupByName("drop_value")->expression;
+        BUG_CHECK(dropValue->to<IR::Constant>(), "Non-constant drop_value");
+        auto noDropValue = instance.substitution.lookupByName("no_drop_value")->expression;
+        BUG_CHECK(noDropValue->to<IR::Constant>(), "Non-constant no_drop_value");
+
+        return Wred{*instance.name,
+                    static_cast<uint8_t>(dropValue->to<IR::Constant>()->asUnsigned()),
+                    static_cast<uint8_t>(noDropValue->to<IR::Constant>()->asUnsigned()),
+                    0,
+                    table->controlPlaneName(),
+                    instance.annotations};
     }
 };
 
@@ -325,6 +411,14 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             symbols->add(SymbolType::DIGEST(), decl);
         } else if (externBlock->type->name == "Register") {
             symbols->add(SymbolType::REGISTER(), decl);
+        } else if (externBlock->type->name == "Lpf") {
+            symbols->add(SymbolType::LPF(), decl);
+        } else if (externBlock->type->name == "DirectLpf") {
+            symbols->add(SymbolType::DIRECT_LPF(), decl);
+        } else if (externBlock->type->name == "Wred") {
+            symbols->add(SymbolType::WRED(), decl);
+        } else if (externBlock->type->name == "DirectWred") {
+            symbols->add(SymbolType::DIRECT_WRED(), decl);
         }
     }
 
@@ -399,6 +493,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             tableDeclaration, refMap, typeMap);
         auto directRegister = getDirectRegister(
             tableDeclaration, refMap, typeMap, p4RtTypeInfo);
+        auto directLpf = getDirectLpf(tableDeclaration, refMap, typeMap);
+        auto directWred = getDirectWred(tableDeclaration, refMap, typeMap);
         auto supportsTimeout = getSupportsTimeout(tableDeclaration);
 
         if (implementation) {
@@ -436,6 +532,18 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             auto id = symbols.getId(SymbolType::REGISTER(), directRegister->name);
             table->add_direct_resource_ids(id);
             addRegister(symbols, p4info, *directRegister);
+        }
+
+        if (directLpf) {
+            auto id = symbols.getId(SymbolType::DIRECT_LPF(), directLpf->name);
+            table->add_direct_resource_ids(id);
+            addLpf(symbols, p4info, *directLpf);
+        }
+
+        if (directWred) {
+            auto id = symbols.getId(SymbolType::DIRECT_WRED(), directWred->name);
+            table->add_direct_resource_ids(id);
+            addWred(symbols, p4info, *directWred);
         }
 
         // TODO(antonin): idle timeout will change for TNA in the future and we
@@ -482,6 +590,38 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             *directRegisterInstance, table, refMap, typeMap, p4RtTypeInfo);
     }
 
+    /// @return the direct filter instance associated with @table, if it has
+    /// one, or boost::none otherwise. Used as a helper for getDirectLpf and
+    /// getDirectWred.
+    template <typename T>
+    static boost::optional<T> getDirectFilter(const IR::P4Table* table,
+                                              ReferenceMap* refMap,
+                                              TypeMap* typeMap,
+                                              cstring filterType) {
+        auto directFilterInstance = Helpers::getExternInstanceFromProperty(
+            table, "filters", refMap, typeMap);
+        if (!directFilterInstance) return boost::none;
+        CHECK_NULL(directFilterInstance->type);
+        if (directFilterInstance->type->name != filterType) return boost::none;
+        return T::fromDirect(*directFilterInstance, table);
+    }
+
+    /// @return the direct Lpf instance associated with @table, if it has one,
+    /// or boost::none otherwise.
+    static boost::optional<Lpf> getDirectLpf(const IR::P4Table* table,
+                                             ReferenceMap* refMap,
+                                             TypeMap* typeMap) {
+        return getDirectFilter<Lpf>(table, refMap, typeMap, "DirectLpf");
+    }
+
+    /// @return the direct Wred instance associated with @table, if it has one,
+    /// or boost::none otherwise.
+    static boost::optional<Wred> getDirectWred(const IR::P4Table* table,
+                                               ReferenceMap* refMap,
+                                               TypeMap* typeMap) {
+        return getDirectFilter<Wred>(table, refMap, typeMap, "DirectWred");
+    }
+
     void addExternInstance(const P4RuntimeSymbolTableIface& symbols,
                            p4configv1::P4Info* p4info,
                            const IR::ExternBlock* externBlock) override {
@@ -514,6 +654,12 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             auto register_ = Register::from(externBlock, refMap, typeMap, p4RtTypeInfo);
             // skip direct registers
             if (register_ && register_->size != 0) addRegister(symbols, p4info, *register_);
+        } else if (externBlock->type->name == "Lpf") {
+            auto lpf = Lpf::from(externBlock);
+            if (lpf) addLpf(symbols, p4info, *lpf);
+        } else if (externBlock->type->name == "Wred") {
+            auto wred = Wred::from(externBlock);
+            if (wred) addWred(symbols, p4info, *wred);
         }
     }
 
@@ -595,11 +741,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             getExternInstanceFromProperty(table, "implementation", refMap, typeMap);
         if (!instance) return boost::none;
         auto size = instance->substitution.lookupByName("size")->expression;
-        if (!size->is<IR::Constant>()) {
-            ::error("Action profile '%1%' has non-constant size '%2%'",
-                    *instance->name, size);
-            return boost::none;
-        }
+        // size is a bit<32> compile-time value
+        BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
         return getActionProfile(*instance->name, instance->type,
                                 size->to<IR::Constant>()->asInt(),
                                 getTableImplementationAnnotations(table, refMap));
@@ -610,11 +753,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     getActionProfile(const IR::ExternBlock* instance) {
         auto decl = instance->node->to<IR::IDeclaration>();
         auto size = instance->getParameterValue("size");
-        if (!size->is<IR::Constant>()) {
-            ::error("Action profile '%1%' has non-constant size '%2%'",
-                    decl->controlPlaneName(), size);
-            return boost::none;
-        }
+        BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
         return getActionProfile(decl->controlPlaneName(), instance->type,
                                 size->to<IR::Constant>()->asInt(),
                                 decl->to<IR::IAnnotated>());
@@ -752,6 +891,59 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 symbols, SymbolType::METER(),
                 Helpers::CounterlikeTraits<MeterExtern>::typeName(),
                 meterInstance.name, meterInstance.annotations, meter,
+                p4Info);
+        }
+    }
+
+    void addLpf(const P4RuntimeSymbolTableIface& symbols,
+                p4configv1::P4Info* p4Info,
+                const Lpf& lpfInstance) {
+        if (lpfInstance.table) {
+            ::barefoot::DirectLpf lpf;
+            auto tableId = symbols.getId(P4RuntimeSymbolType::TABLE(), *lpfInstance.table);
+            lpf.set_direct_table_id(tableId);
+            addP4InfoExternInstance(
+                symbols, SymbolType::DIRECT_LPF(), "DirectLpf",
+                lpfInstance.name, lpfInstance.annotations, lpf,
+                p4Info);
+        } else {
+            ::barefoot::Lpf lpf;
+            lpf.set_size(lpfInstance.size);
+            addP4InfoExternInstance(
+                symbols, SymbolType::LPF(), "Lpf",
+                lpfInstance.name, lpfInstance.annotations, lpf,
+                p4Info);
+        }
+    }
+
+    /// Set common fields between barefoot::Wred and barefoot::DirectWred.
+    template <typename Kind>
+    void setWredCommon(Kind *wred, const Wred& wredInstance) {
+        using ::barefoot::WredSpec;
+        auto wred_spec = wred->mutable_spec();
+        wred_spec->set_drop_value(wredInstance.dropValue);
+        wred_spec->set_no_drop_value(wredInstance.noDropValue);
+    }
+
+    void addWred(const P4RuntimeSymbolTableIface& symbols,
+                 p4configv1::P4Info* p4Info,
+                 const Wred& wredInstance) {
+        if (wredInstance.table) {
+            ::barefoot::DirectWred wred;
+            setWredCommon(&wred, wredInstance);
+            auto tableId = symbols.getId(P4RuntimeSymbolType::TABLE(), *wredInstance.table);
+            wred.set_direct_table_id(tableId);
+            addP4InfoExternInstance(
+                symbols, SymbolType::DIRECT_WRED(), "DirectWred",
+                wredInstance.name, wredInstance.annotations, wred,
+                p4Info);
+        } else {
+            ::barefoot::Wred wred;
+            setWredCommon(&wred, wredInstance);
+            wred.set_size(wredInstance.size);
+            addP4InfoExternInstance(
+                symbols, SymbolType::WRED(), "Wred",
+                wredInstance.name, wredInstance.annotations, wred,
                 p4Info);
         }
     }

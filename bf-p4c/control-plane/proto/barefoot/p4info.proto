@@ -84,12 +84,19 @@ message DirectMeter {
   uint32 direct_table_id = 2;
 }
 
+message WredSpec {
+  uint32 drop_value = 1;
+  uint32 no_drop_value = 2;
+}
+
 message Wred {
-  int64 size = 1;
+  WredSpec spec = 1;
+  int64 size = 2;
 }
 
 message DirectWred {
-  uint32 direct_table_id = 1;
+  WredSpec spec = 1;
+  uint32 direct_table_id = 2;
 }
 
 message Lpf {

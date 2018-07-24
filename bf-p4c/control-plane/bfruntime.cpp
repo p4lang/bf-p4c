@@ -86,9 +86,21 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_COUNTER_SPEC_BYTES,
         BF_RT_DATA_COUNTER_SPEC_PKTS,
 
+        BF_RT_DATA_LPF_SPEC_TYPE,
+        BF_RT_DATA_LPF_SPEC_GAIN_TIME_CONSTANT_NS,
+        BF_RT_DATA_LPF_SPEC_DECAY_TIME_CONSTANT_NS,
+        BF_RT_DATA_LPF_SPEC_OUT_SCALE_DOWN_FACTOR,
+
+        BF_RT_DATA_WRED_SPEC_TIME_CONSTANT_NS,
+        BF_RT_DATA_WRED_SPEC_MIN_THRESH_CELLS,
+        BF_RT_DATA_WRED_SPEC_MAX_THRESH_CELLS,
+        BF_RT_DATA_WRED_SPEC_MAX_PROBABILITY,
+
         BF_RT_DATA_METER_INDEX,
         BF_RT_DATA_COUNTER_INDEX,
         BF_RT_DATA_REGISTER_INDEX,
+        BF_RT_DATA_LPF_INDEX,
+        BF_RT_DATA_WRED_INDEX,
 
         BF_RT_DATA_PORT_METADATA_PORT,
         BF_RT_DATA_PORT_METADATA_DEFAULT_FIELD,
@@ -105,6 +117,10 @@ class BfRtSchemaGenerator {
     struct Digest;
     /// Common register representation between PSA and Tofino architectures
     struct Register;
+
+    // only for Tofino architectures
+    struct Lpf;
+    struct Wred;
 
     struct PortMetadata;
 
@@ -124,12 +140,16 @@ class BfRtSchemaGenerator {
     void addLearnFilterCommon(Util::JsonArray* learnFiltersJson, const Digest& digest) const;
     void addPortMetadata(Util::JsonArray* tablesJson, const PortMetadata& portMetadata) const;
     void addPortMetadataDefault(Util::JsonArray* tablesJson) const;
+    void addLpf(Util::JsonArray* tablesJson, const Lpf& lpf) const;
+    void addWred(Util::JsonArray* tablesJson, const Wred& wred) const;
 
     boost::optional<bool> actProfHasSelector(P4Id actProfId) const;
     Util::JsonArray* makeActionSpecs(const p4configv1::Table& table) const;
     boost::optional<Counter> getDirectCounter(P4Id counterId) const;
     boost::optional<Meter> getDirectMeter(P4Id meterId) const;
     boost::optional<Register> getDirectRegister(P4Id registerId) const;
+    boost::optional<Lpf> getDirectLpf(P4Id lpfId) const;
+    boost::optional<Wred> getDirectWred(P4Id wredId) const;
 
     /// Transforms a P4Info @typeSpec to a list of JSON objects matching the
     /// BF-RT format. @instanceType and @instanceName are used for logging error
@@ -157,6 +177,8 @@ class BfRtSchemaGenerator {
     static void addCounterDataFields(Util::JsonArray* dataJson, const Counter& counter);
 
     static void addMeterDataFields(Util::JsonArray* dataJson, const Meter& meter);
+    static void addLpfDataFields(Util::JsonArray* dataJson);
+    static void addWredDataFields(Util::JsonArray* dataJson);
     void addRegisterDataFields(Util::JsonArray* dataJson, const Register& register_) const;
 
     const p4configv1::P4Info& p4info;
@@ -299,6 +321,25 @@ static Util::JsonObject* makeTypeBytes(int width,
     auto* typeObj = new Util::JsonObject();
     typeObj->emplace("type", "bytes");
     typeObj->emplace("width", width);
+    if (defaultValue != boost::none)
+        typeObj->emplace("default_value", *defaultValue);
+    return typeObj;
+}
+
+static Util::JsonObject* makeTypeFloat(cstring type) {
+    auto* typeObj = new Util::JsonObject();
+    typeObj->emplace("type", type);
+    return typeObj;
+}
+
+static Util::JsonObject* makeTypeEnum(const std::vector<cstring>& choices,
+                                      boost::optional<cstring> defaultValue = boost::none) {
+    auto* typeObj = new Util::JsonObject();
+    typeObj->emplace("type", "enum");
+    auto* choicesArray = new Util::JsonArray();
+    for (auto choice : choices)
+        choicesArray->append(choice);
+    typeObj->emplace("choices", choicesArray);
     if (defaultValue != boost::none)
         typeObj->emplace("default_value", *defaultValue);
     return typeObj;
@@ -568,6 +609,65 @@ struct BfRtSchemaGenerator::PortMetadata {
     }
 };
 
+// It is tempting to unify the code for Lpf & Wred (using CRTP?) but the
+// resulting code doesn't look too good and is not really less verbose. In
+// particular aggregate initialization is not possible when a class has a base.
+struct BfRtSchemaGenerator::Lpf {
+    std::string name;
+    P4Id id;
+    int64_t size;
+
+    static boost::optional<Lpf> fromTofino(
+        const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::Lpf lpf;
+        if (!externInstance.info().UnpackTo(&lpf)) {
+            ::error("Extern instance %1% does not pack a Lpf object", pre.name());
+            return boost::none;
+        }
+        return Lpf{pre.name(), pre.id(), lpf.size()};
+    }
+
+    static boost::optional<Lpf> fromTofinoDirect(
+        const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::DirectLpf lpf;
+        if (!externInstance.info().UnpackTo(&lpf)) {
+            ::error("Extern instance %1% does not pack a Lpf object", pre.name());
+            return boost::none;
+        }
+        return Lpf{pre.name(), pre.id(), 0};
+    }
+};
+
+struct BfRtSchemaGenerator::Wred {
+    std::string name;
+    P4Id id;
+    int64_t size;
+
+    static boost::optional<Wred> fromTofino(
+        const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::Wred wred;
+        if (!externInstance.info().UnpackTo(&wred)) {
+            ::error("Extern instance %1% does not pack a Wred object", pre.name());
+            return boost::none;
+        }
+        return Wred{pre.name(), pre.id(), wred.size()};
+    }
+
+    static boost::optional<Wred> fromTofinoDirect(
+        const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::DirectWred wred;
+        if (!externInstance.info().UnpackTo(&wred)) {
+            ::error("Extern instance %1% does not pack a Wred object", pre.name());
+            return boost::none;
+        }
+        return Wred{pre.name(), pre.id(), 0};
+    }
+};
+
 boost::optional<BfRtSchemaGenerator::Counter>
 BfRtSchemaGenerator::getDirectCounter(P4Id counterId) const {
     if (isOfType(counterId, p4configv1::P4Ids::DIRECT_COUNTER)) {
@@ -606,6 +706,26 @@ BfRtSchemaGenerator::getDirectRegister(P4Id registerId) const {
     // message in P4Info; instead we rely on the size.
     if (!register_ || register_->size != 0) return boost::none;
     return register_;
+}
+
+boost::optional<BfRtSchemaGenerator::Lpf>
+BfRtSchemaGenerator::getDirectLpf(P4Id lpfId) const {
+    if (isOfType(lpfId, ::barefoot::P4Ids::DIRECT_LPF)) {
+        auto* externInstance = Tofino::findExternInstance(p4info, lpfId);
+        if (externInstance == nullptr) return boost::none;
+        return Lpf::fromTofinoDirect(*externInstance);
+    }
+    return boost::none;
+}
+
+boost::optional<BfRtSchemaGenerator::Wred>
+BfRtSchemaGenerator::getDirectWred(P4Id wredId) const {
+    if (isOfType(wredId, ::barefoot::P4Ids::DIRECT_WRED)) {
+        auto* externInstance = Tofino::findExternInstance(p4info, wredId);
+        if (externInstance == nullptr) return boost::none;
+        return Wred::fromTofinoDirect(*externInstance);
+    }
+    return boost::none;
 }
 
 Util::JsonObject*
@@ -1006,6 +1126,110 @@ BfRtSchemaGenerator::addPortMetadataDefault(Util::JsonArray* tablesJson) const {
     addPortMetadata(tablesJson, PortMetadata{});
 }
 
+void
+BfRtSchemaGenerator::addLpfDataFields(Util::JsonArray* dataJson) {
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_LPF_SPEC_TYPE, "$LPF_SPEC_TYPE",
+            makeTypeEnum({"RATE", "SAMPLE"}), false /* repeated */);
+        addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
+    }
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_LPF_SPEC_GAIN_TIME_CONSTANT_NS, "$LPF_SPEC_GAIN_TIME_CONSTANT_NS",
+            makeTypeFloat("float"), false /* repeated */);
+        addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
+    }
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_LPF_SPEC_DECAY_TIME_CONSTANT_NS, "$LPF_SPEC_DECAY_TIME_CONSTANT_NS",
+            makeTypeFloat("float"), false /* repeated */);
+        addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
+    }
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_LPF_SPEC_OUT_SCALE_DOWN_FACTOR, "$LPF_SPEC_OUT_SCALE_DOWN_FACTOR",
+            makeTypeInt("uint32"), false /* repeated */);
+        addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
+    }
+}
+
+void
+BfRtSchemaGenerator::addLpf(Util::JsonArray* tablesJson, const Lpf& lpf) const {
+    auto* tableJson = new Util::JsonObject();
+
+    tableJson->emplace("name", lpf.name);
+    tableJson->emplace("id", lpf.id);
+    tableJson->emplace("table_type", "Lpf");
+    tableJson->emplace("size", lpf.size);
+
+    auto* keyJson = new Util::JsonArray();
+    addKeyField(keyJson, BF_RT_DATA_LPF_INDEX, "$LPF_INDEX",
+                true /* mandatory */, "Exact", makeTypeInt("uint32"));
+    tableJson->emplace("key", keyJson);
+
+    auto* dataJson = new Util::JsonArray();
+    addLpfDataFields(dataJson);
+    tableJson->emplace("data", dataJson);
+
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
+}
+
+void
+BfRtSchemaGenerator::addWredDataFields(Util::JsonArray* dataJson) {
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_WRED_SPEC_TIME_CONSTANT_NS, "$WRED_SPEC_TIME_CONSTANT_NS",
+            makeTypeFloat("float"), false /* repeated */);
+        addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
+    }
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_WRED_SPEC_MIN_THRESH_CELLS, "$WRED_SPEC_MIN_THRESH_CELLS",
+            makeTypeInt("uint32"), false /* repeated */);
+        addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
+    }
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_WRED_SPEC_MAX_THRESH_CELLS, "$WRED_SPEC_MAX_THRESH_CELLS",
+            makeTypeInt("uint32"), false /* repeated */);
+        addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
+    }
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_WRED_SPEC_MAX_PROBABILITY, "$WRED_SPEC_MAX_PROBABILITY",
+            makeTypeFloat("float"), false /* repeated */);
+        addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
+    }
+}
+
+void
+BfRtSchemaGenerator::addWred(Util::JsonArray* tablesJson, const Wred& wred) const {
+    auto* tableJson = new Util::JsonObject();
+
+    tableJson->emplace("name", wred.name);
+    tableJson->emplace("id", wred.id);
+    tableJson->emplace("table_type", "Wred");
+    tableJson->emplace("size", wred.size);
+
+    auto* keyJson = new Util::JsonArray();
+    addKeyField(keyJson, BF_RT_DATA_WRED_INDEX, "$WRED_INDEX",
+                true /* mandatory */, "Exact", makeTypeInt("uint32"));
+    tableJson->emplace("key", keyJson);
+
+    auto* dataJson = new Util::JsonArray();
+    addWredDataFields(dataJson);
+    tableJson->emplace("data", dataJson);
+
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
+}
+
 boost::optional<bool>
 BfRtSchemaGenerator::actProfHasSelector(P4Id actProfId) const {
     if (isOfType(actProfId, p4configv1::P4Ids::ACTION_PROFILE)) {
@@ -1131,6 +1355,10 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
             } else if (auto register_ = getDirectRegister(directResId)) {
                 addRegisterDataFields(dataJson, *register_);
                 operationsJson->append("SyncRegisters");
+            } else if (auto lpf = getDirectLpf(directResId)) {
+                addLpfDataFields(dataJson);
+            } else if (auto lpf = getDirectWred(directResId)) {
+                addWredDataFields(dataJson);
             } else {
                 ::error("Unknown direct resource id '%1%'", directResId);
                 continue;
@@ -1235,6 +1463,16 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
                 // skip direct registers
                 if (register_ != boost::none && register_->size != 0)
                     addRegisterCommon(tablesJson, *register_);
+            }
+        } else if (externTypeId == ::barefoot::P4Ids::LPF) {
+            for (const auto& externInstance : externType.instances()) {
+                auto lpf = Lpf::fromTofino(externInstance);
+                if (lpf != boost::none) addLpf(tablesJson, *lpf);
+            }
+        } else if (externTypeId == ::barefoot::P4Ids::WRED) {
+            for (const auto& externInstance : externType.instances()) {
+                auto wred = Wred::fromTofino(externInstance);
+                if (wred != boost::none) addWred(tablesJson, *wred);
             }
         }
     }

@@ -58,12 +58,30 @@ class PrimitiveBytesType(PrimitiveTypeBase):
     width = jsl.IntField(required=False)
     default_value = jsl.StringField(required=False)
 
+class PrimitiveFloatType(PrimitiveTypeBase):
+    class Options(object):
+        title = "PrimitiveFloatType"
+        description = "A fixed-width floating-point type"
+    type_ = jsl.StringField(name="type", required=True,
+                            enum=["float", "double"])
+    default_value = jsl.NumberField(required=False)
+
+class PrimitiveEnumType(PrimitiveTypeBase):
+    class Options(object):
+        title = "PrimitiveEnumType"
+        description = "A list of string choices"
+    type_ = jsl.StringField(name="type", required=True, enum=["enum"])
+    choices = jsl.ArrayField(required=True, items=jsl.StringField())
+    default_value = jsl.StringField(required=False)
+
 PrimitiveType = jsl.OneOfField(
     name="type",
     required=True,
     fields=[jsl.DocumentField(PrimitiveIntType, as_ref=True),
             jsl.DocumentField(PrimitiveBoolType, as_ref=True),
-            jsl.DocumentField(PrimitiveBytesType, as_ref=True)]
+            jsl.DocumentField(PrimitiveBytesType, as_ref=True),
+            jsl.DocumentField(PrimitiveFloatType, as_ref=True),
+            jsl.DocumentField(PrimitiveEnumType, as_ref=True)]
 )
 
 class BaseDataField(NamedObject):
@@ -158,7 +176,7 @@ class TableWithoutActionSpec(TableCommon):
         enum=["MatchAction_Indirect",
               "MatchAction_Indirect_Selector",
               "Selector",
-              "Counter", "Meter", "Register",
+              "Counter", "Meter", "Register", "Lpf", "Wred",
               "PortMetadata"])
 
 class LearnListFieldField(BaseDataField):
