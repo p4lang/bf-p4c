@@ -73,6 +73,8 @@ class BfRtSchemaGenerator {
 
         BF_RT_DATA_ENTRY_TTL,
 
+        BF_RT_DATA_METER_SPEC_TYPE,
+
         BF_RT_DATA_METER_SPEC_CIR_KBPS,
         BF_RT_DATA_METER_SPEC_PIR_KBPS,
         BF_RT_DATA_METER_SPEC_CBS_KBITS,
@@ -991,6 +993,13 @@ BfRtSchemaGenerator::addMeterDataFields(Util::JsonArray* dataJson, const Meter& 
         }
     } else {
         BUG("Unknown meter unit");
+    }
+    if (meter.type == Meter::Type::COLOR_AWARE) {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_METER_SPEC_TYPE, "$METER_SPEC_TYPE",
+            makeTypeEnum({"COLOR_AWARE", "COLOR_UNAWARE"}, cstring("COLOR_UNAWARE")),
+            false /* repeated */);
+        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
     }
 }
 
