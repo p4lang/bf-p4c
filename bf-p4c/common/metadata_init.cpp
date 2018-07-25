@@ -1,5 +1,6 @@
 #include "bf-p4c/common/metadata_init.h"
 #include "bf-p4c/common/elim_unused.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "lib/path.h"
 #include "lib/nullstream.h"

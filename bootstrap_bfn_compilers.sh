@@ -66,6 +66,15 @@ pushd ${builddir}
 cmake ${mydir} -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=ON \
       -DENABLE_EBPF=OFF \
       -DP4C_CPP_FLAGS="$P4C_CPP_FLAGS" $*
+if [[ `uname -s` == "Linux" ]]; then
+    linux_distro=$(cat /etc/os-release | grep -e "^NAME" | cut -f 2 -d '=' | tr -d "\"")
+    linux_version=$(cat /etc/os-release | grep -e "^VERSION_ID" | cut -f 2 -d '=' | tr -d "\"")
+    if [[ $linux_distro == "Fedora" && $linux_version == "18" ]]; then
+        # For some peculiar reason, Fedora 18 refuses to see the GC_print_stats symbol
+        # even though cmake detects it. So we disabe it explicitly.
+        sed -e 's/HAVE_GC_PRINT_STATS 1/HAVE_GC_PRINT_STATS 0/' -i"" p4c/config.h
+    fi
+fi
 popd # builddir
 
 if [ "$RUN_BOOTSTRAP_PTF" == "yes" ]; then

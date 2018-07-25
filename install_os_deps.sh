@@ -38,6 +38,9 @@ case $os in
             Fedora)
                 linux_version=$(cat /etc/os-release | grep -e "^VERSION_ID" | cut -f 2 -d '=' | tr -d "\"")
                 linux_codename=$(cat /etc/os-release | grep -e "^ID" | cut -f 2 -d '=' | tr -d "\"")
+		# since we install using make install, new packages go to /usr/local
+		export PATH=/usr/local/bin:$PATH
+		export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
                 ;;
             *)
                 echo "Unsupported Linux distribution $linux_distro"
@@ -90,7 +93,7 @@ install_linux_packages() {
         $SUDO apt-get update || die "Failed to update apt"
         $SUDO apt-get install -y $apt_packages || \
         die "Failed to install needed packages"
-        if [[ $linux_distro == "Ubuntu" && linux_version =~ "14.04" ]]; then
+        if [[ $linux_distro == "Ubuntu" && $linux_version =~ "14.04" ]]; then
             $SUDO add-apt-repository ppa:ubuntu-toolchain-r/test
             $SUDO apt-get install -y g++-4.9
             $SUDO update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 10
@@ -100,18 +103,19 @@ install_linux_packages() {
         fi
 
         $SUDO apt-get remove -y python-thrift    # remove this broken package in case it was installed
-        install_rapidjson "1.1.0"
         install_cmake "3.5.2"
+        install_rapidjson "1.1.0"
         install_boost "1.58.0"
     fi
-    if [[ $linux_version == "Fedora" ]]; then
+    if [[ $linux_distro == "Fedora" ]]; then
         # please keep this list in alphabetical order
-        yum_packages="automake bison boost-devel cmake curl doxygen flex gcc-c++ git \
+        yum_packages="automake bison bzip2-devel cmake curl doxygen flex \
+                 gcc-c++ git \
                  libcli-devel libedit-devel libevent-devel \
                  gc gmp-devel json-devel Judy-devel \
                  libpcap-devel openssl-devel \
-                 libtool pkg-config protobuf-devel \
-                 python2 python python-ipaddr python-pip python-yaml \
+                 libtool pkg-config \
+                 python2 python python-devel python-ipaddr python-pip python-yaml \
                  rapidjson-devel rpm texinfo unzip"
 
         echo "Need sudo privs to install yum packages"
@@ -119,11 +123,54 @@ install_linux_packages() {
         $SUDO yum install -y $yum_packages || \
             die "Failed to install needed packages"
 
+        install_bison "3.0.4"
+        install_gmp "6.1.2"
+        install_cmake "3.5.2"
         install_libgc
+        install_rapidjson "1.1.0"
+        install_boost "1.58.0"
         $SUDO pip install scapy
     fi
 
     install_python_packages
+}
+
+function install_bison() {
+    local bison_ver=$1
+
+    local installed_ver=$(yum info bison | grep Version | awk '{ print $3; }')
+    if versionLT $installed_ver $bison_ver ; then
+        # install a more recent version of bison
+        $SUDO yum remove -y bison
+        pushd /tmp
+        wget https://ftp.gnu.org/gnu/bison/bison-${bison_ver}.tar.gz && \
+        tar zxf bison-${bison_ver}.tar.gz && \
+        cd bison-${bison_ver} && \
+        ./configure && \
+        make && $SUDO make install || die "Failed to install bison ${bison_ver}"
+        cd /tmp && rm -rf bison-${bison_ver}*
+        popd
+    else
+        echo "Found bison version $installed_ver"
+    fi
+}
+
+function install_gmp() {
+    local gmp_ver=$1
+
+    local installed_ver=$(yum info gmp-devel | grep Version | awk '{ print $3; }')
+    if versionLT $installed_ver $bison_ver ; then
+        pushd /tmp
+        wget https://gmplib.org/download/gmp/gmp-${gmp_ver}.tar.bz2
+        tar jxf gmp-${gmp_ver}.tar.bz2
+        cd gmp-${gmp_ver} && ./configure --enable-cxx && \
+        make -j $nprocs && \
+        $SUDO make install || die "Failed to install libgmp"
+        cd .. && rm -rf gmp-${gmp_ver}
+        popd
+    else
+        echo "Found gmp version $installed_ver"
+    fi
 }
 
 function install_libgc() {
@@ -135,13 +182,17 @@ function install_libgc() {
 
         git clone git://github.com/ivmai/libatomic_ops.git
         git clone git://github.com/ivmai/bdwgc.git
-        ln -s  $tmpdir/libatomic_ops $tmpdir/bdwgc/libatomic_ops
         cd bdwgc
+        git checkout v7.6.6
+        ln -s  $tmpdir/libatomic_ops $tmpdir/bdwgc/libatomic_ops
         autoreconf -vif
         automake --add-missing
-        ./configure --enable-cplusplus
+        ./configure --disable-debug --disable-dependency-traking --enable-cplusplus
         make -j $nprocs
         $SUDO make install
+        cd ..
+        rm -rf libatomic_ops bdwgc
+        popd
     fi
 }
 
@@ -150,26 +201,42 @@ function install_cmake() {
     cmake_ver=$1
 
     if [[ ! ($linux_distro == "Ubuntu" || $linux_distro == "Debian") ]]; then
-        echo "Don't know how to install cmake $cmake_ver for $linux_distro"
-        exit 1
+	installed_ver=$(cmake --version | cut -f 3 -d " ")
+	if ! version_LT $cmake_ver $installed_ver ; then
+	    cd /tmp
+	    build_cmake_from_source $cmake_ver 1
+            cd /tmp && rm -rf /tmp/cmake-${cmake_ver}*
+	else
+	    "Found cmake version $installed_ver"
+	fi
+	return
     fi
-
-    cmake_dir=$(echo ${cmake_ver} | cut -f 1-2 -d ".")
+    # On Ubuntu we install a package
     $SUDO apt-get install -y cmake=${cmake_ver}
     if [ $? != 0 ]; then
         cd /tmp
-        wget http://www.cmake.org/files/v${cmake_dir}/cmake-${cmake_ver}.tar.gz && \
-            tar zxvf cmake-${cmake_ver}.tar.gz && \
-            cd cmake-${cmake_ver} && \
-            mkdir build && \
-            cd build && \
-            cmake .. -DCMAKE_BUILD_TYPE=release && \
-            make -j $nprocs && \
+	build_cmake_from_source $cmake_ver 0 && \
             cpack -G DEB && \
             $SUDO apt-get remove -y cmake cmake-data && \
             $SUDO dpkg -i cmake-${cmake_ver}-Linux-x86_64.deb || \
-                die "failed to install cmake"
-        cd /tmp && rm -rf /tmp/cmake-${cmake_ver}
+                  die "failed to install cmake"
+        cd /tmp && rm -rf /tmp/cmake-${cmake_ver}*
+    fi
+}
+
+function build_cmake_from_source() {
+    local cmake_ver=$1
+    local install_it=$2
+    local cmake_dir=$(echo ${cmake_ver} | cut -f 1-2 -d ".")
+    wget http://www.cmake.org/files/v${cmake_dir}/cmake-${cmake_ver}.tar.gz && \
+        tar zxvf cmake-${cmake_ver}.tar.gz && \
+        cd cmake-${cmake_ver} && \
+        mkdir build && \
+        cd build && \
+        cmake .. -DCMAKE_BUILD_TYPE=release && \
+        make -j $nprocs
+    if [[ $install_it == 1 ]]; then
+	$SUDO make install
     fi
 }
 
@@ -177,71 +244,72 @@ function install_boost() {
     # ARG: boost_version
     # test for ubuntu version, and check if we have a local package
 
-    if [[ ! ($linux_distro == "Ubuntu" || $linux_distro == "Debian") ]]; then
-        echo "Don't know how to install boost $1 for $linux_distro"
-        exit 1
-    fi
-
     if [[ ($linux_distro == "Ubuntu" && $linux_version =~ "14.04") || \
               $linux_distro == "Debian" ]]; then
         $SUDO apt-get install -y python-dev libbz2-dev
-        b_ver=$1
-        boost_ver=$(echo $b_ver | tr "." "_")
-        
-        install_pkg=true
-        if [ -f /usr/local/include/boost/version.hpp ]; then
-            installed_ver=$(grep -m 1 "define BOOST_LIB_VERSION" /usr/local/include/boost/version.hpp | cut -d ' ' -f 3 | tr -d '"')
-        fi
-        if [ ! -z "$installed_ver" ]; then
-            boost_ver_trim=${boost_ver%_0}
-            if [[ "$installed_ver" > "$boost_ver_trim" ]] || [[ "$installed_ver" = "$boost_ver_trim" ]]; then
-                echo "Installed boost version is sufficient: $installed_ver"
-                install_pkg=false
-            else
-                echo "Installed boost version is not sufficient: $installed_ver, proceeding with installing required bootst: $boost_ver"
-            fi
-        fi
+    fi
+    b_ver=$1
+    boost_ver=$(echo $b_ver | tr "." "_")
 
-        if [ $install_pkg = true ]; then
-            cd /tmp
-            wget http://downloads.sourceforge.net/project/boost/boost/${b_ver}/boost_${boost_ver}.tar.bz2 && \
-                tar xvjf ./boost_${boost_ver}.tar.bz2 && \
-                cd boost_${boost_ver} && \
-                ./bootstrap.sh --prefix=/usr/local && \
-                ./b2 --build-type=minimal link=shared runtime-link=shared variant=release && \
-                $SUDO ./b2 install --build-type=minimal variant=release \
-                      link=shared runtime-link=shared || \
-                    die "failed to install boost"
-            cd /tmp && rm -rf boost_${boost_ver}
+    if [[ $linux_distro == "Ubuntu" ]]; then
+        if version_LT "16.0" $linux_version ; then
+            boost_libs="libboost-dev libboost-graph-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev libboost-thread-dev"
+            $SUDO apt-get install -y ${boost_libs}
+	    return
         fi
-    else
-        boost_libs="libboost-dev libboost-graph-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev libboost-thread-dev"
-        $SUDO apt-get install -y ${boost_libs}
+    fi
+    if [[ $linux_distro == "Fedora" && $linux_version =~ "26" ]]; then
+	$SUDO yum install -y boost-devel
+	return
     fi
 
+    install_pkg=true
+    installed_ver="1_0"
+    if [ -f /usr/local/include/boost/version.hpp ]; then
+        installed_ver=$(grep -m 1 "define BOOST_LIB_VERSION" /usr/local/include/boost/version.hpp | cut -d ' ' -f 3 | tr -d '"')
+    fi
+    if [ ! -z "$installed_ver" ]; then
+        if ! version_LT $boost_ver $installed_ver ; then
+            echo "Installed boost version is sufficient: $installed_ver"
+            install_pkg=false
+        else
+            echo "Installed boost version is not sufficient: $installed_ver, proceeding with installing required bootst: $boost_ver"
+        fi
+    fi
+
+    if [ $install_pkg = true ]; then
+        cd /tmp
+        wget http://downloads.sourceforge.net/project/boost/boost/${b_ver}/boost_${boost_ver}.tar.bz2 && \
+            tar xvjf ./boost_${boost_ver}.tar.bz2 && \
+            cd boost_${boost_ver} && \
+            ./bootstrap.sh --prefix=/usr/local && \
+            ./b2 --build-type=minimal link=shared runtime-link=shared variant=release && \
+            $SUDO ./b2 install --build-type=minimal variant=release \
+            link=shared runtime-link=shared || \
+            die "failed to install boost"
+        cd /tmp && rm -rf boost_${boost_ver}
+    fi
 }
 
 function install_rapidjson() {
     # ARG: rapidjson version
     local rj_ver=$1
-
-    if [[ ! ($linux_distro == "Ubuntu" || $linux_distro == "Debian") ]]; then
-        echo "Don't know how to install rapidjson $rj_ver for $linux_distro"
-        exit 1
-    fi
+    install_it=1
 
     if ! `pkg-config RapidJSON` || version_LT `pkg-config --modversion RapidJSON` "1.1.0"; then
-        # rapidjson is not available on Ubuntu 14.04 and too old on Ubuntu 16.04,
-        # so we build from source (or install from the p4c server)
-        rc=($SUDO apt-get install -y rapidjson-dev=${rj_ver})
-        if [ $? != 0 ]; then
-            if [[ $linux_distro == "Ubuntu" && $linux_version =~ "16.04" ]]; then
-                $SUDO apt-get remove -y rapidjson-dev
-            fi
-            build_rapidjson_from_source ${rj_ver} && \
-                $SUDO apt-get remove -y rapidjson-dev && \
-                $SUDO dpkg -i /tmp/RapidJSON-dev-${rj_ver}-Linux.deb || \
-                    die "failed to install rapidjson"
+	if [[ $linux_distro == "Ubuntu" || $linux_distro == "Debian" ]]; then
+            $SUDO apt-get install -y rapidjson-dev=${rj_ver}
+            if [ $? == 0 ]; then
+		echo "Installed package rapidjson-dev=1.1.0"
+		return
+	    fi
+	    install_it=0 # we install a package
+	fi
+        build_rapidjson_from_source ${rj_ver} $install_it
+	if [[ $linux_distro == "Ubuntu" || $linux_distro == "Debian" ]]; then
+            $SUDO apt-get remove -y rapidjson-dev && \
+  	    $SUDO dpkg -i /tmp/RapidJSON-dev-${rj_ver}-Linux.deb || \
+            die "failed to install rapidjson"
         fi
     fi
 }
@@ -249,6 +317,7 @@ function install_rapidjson() {
 function build_rapidjson_from_source() {
     # ARG: rapidjson version
     local rj_ver=$1
+    local install_it=$2
     local builddir=$(mktemp --directory -t rjson_XXXXXX)
     cd $builddir
     # add packaging info
@@ -277,7 +346,7 @@ index ceda71b1..21acee18 100644
 +include (CPack)
 +
 EOF
-    git clone --recursive https://github.com/miloyip/rapidjson.git \
+    git clone https://github.com/miloyip/rapidjson.git \
         --branch "v${rj_ver}" && \
         cd rapidjson && \
         git apply ../rj.patch && \
@@ -285,11 +354,14 @@ EOF
         cmake .. -DRAPIDJSON_BUILD_DOC=OFF \
               -DRAPIDJSON_BUILD_EXAMPLES=OFF \
               -DRAPIDJSON_BUILD_TESTS=OFF && \
-        make -j $nprocs && \
-        cpack -G DEB && \
-        cp RapidJSON-dev-${rj_ver}-Linux.deb /tmp && \
+        make -j $nprocs  || die "Failed to build rapidjson"
+        if [[ $install_it == 1 ]] ; then
+	    $SUDO make install  || die "Failed to install rapidjson"
+	else
+            cpack -G DEB && cp RapidJSON-dev-${rj_ver}-Linux.deb /tmp
+	fi
         cd /tmp && \
-        rm -rf $builddir || die "Failed to build rapidjson"
+        rm -rf $builddir
 }
 
 install_macos_packages() {
@@ -421,7 +493,7 @@ case $os in
         p4c_server=compiler-svr4.swlab.barefootnetworks.com
         # check that we are on the Barefoot intranet and can access the package server.
         nc -z $p4c_server 22 > /dev/null 2>&1
-        if [[ $? == 0 && $linux_distro == "Ubuntu" ]]; then
+        if [[ $? == 0 && $linux_distro == "Ubuntu" && $linux_version =~ "16.04" ]]; then
             p4c_apt_server_available=true
             echo "Found compiler server for prebuilt packages"
             if [[ ! -e /etc/apt/sources.list.d/p4c.list ]]; then

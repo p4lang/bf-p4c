@@ -1,6 +1,8 @@
 #ifndef BF_P4C_IR_IR_ENUMS_H_
 #define BF_P4C_IR_IR_ENUMS_H_
 
+#include <iostream>
+
 namespace IR {
 namespace MAU {
 enum class DataAggregation { NONE, PACKETS, BYTES, BOTH, AGGR_TYPES };

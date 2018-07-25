@@ -286,7 +286,7 @@ UnrollParserCounter::unroll(const UnrollParserCounter::CounterSetState& set,
         auto* go_to = unrolled_states[i].head();
         auto* select_val =
             new IR::Constant(IR::Type::Bits::get(set.getSource()->type->width_bits()),
-                             intmax_t(key_value));
+                             mpz_class(key_value));
         auto* select_case = new IR::SelectCase(
                 select_val,
                 new IR::PathExpression(new IR::Path(IR::ID(go_to->name))));

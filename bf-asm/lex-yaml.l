@@ -119,9 +119,9 @@ void bigint_mul(VECTOR(uintptr_t) &val, unsigned f) {
     unsigned carry = 0;
     for (int i = 0; i < val.size; i++) {
 #if defined(uint2ptr_t)
-        uint2ptr_t v = val->data[i];
+        uint2ptr_t v = val.data[i];
         v = v * f + carry;
-        val->data[i] = (uintptr_t)v;
+        val.data[i] = (uintptr_t)v;
         carry = v >> CHAR_BIT * sizeof(uintptr_t);
 #elif defined(uinthptr_t)
         uinthptr_t lo = val.data[i],
