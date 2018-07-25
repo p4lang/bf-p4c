@@ -120,13 +120,7 @@ if (PTF_REQUIREMENTS_MET)
     05-simple_l3_arping
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     smoketest_switch_8.2_l3_msdc_WredIpv4Test
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "TTransportException: TSocket read 0 bytes"
-    smoketest_switch_8.2_msdc_Acl_i2e_ErspanRewriteTest
-    smoketest_switch_8.2_l3_msdc_Acl_i2e_ErspanRewriteTest
-    smoketest_switch_8.2_dc_basic_Acl_i2e_ErspanRewriteTest
+    smoketest_switch_dc_basic_L3IPv4MtuTest
     )
 
 # BRIG-686
@@ -1123,7 +1117,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 # BRIG-811
-# error: Output of checksum calculation can only be stored in a 16-bit field: 
+# error: Output of checksum calculation can only be stored in a 16-bit field:
 p4c_add_xfail_reason("tofino"
   "Output of checksum calculation can only be stored in a 16-bit field"
   extensions/p4_tests/p4_14/p4smith_regression/gradations_0.p4

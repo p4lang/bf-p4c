@@ -10,7 +10,7 @@ set  (testExtraArgs "${testExtraArgs} -Xp4c=\"--disable-power-check\"")
 set  (isXFail TRUE)
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_dc_basic" ${switchtest} "${testExtraArgs} -DDC_BASIC_PROFILE")
+    "switch_dc_basic" ${switchtest} "${testExtraArgs} -DDC_BASIC_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_dc_basic")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
@@ -18,14 +18,14 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
 p4c_add_test_label("tofino" "18Q2Goal" "switch_ent_fin_postcard")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_ent_dc_general" ${switchtest} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
+    "switch_ent_dc_general" ${switchtest} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_ent_dc_general")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_msdc" ${switchtest} "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG")
+    "switch_msdc" ${switchtest} "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE} 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE}
     "switch_msdc_ipv4" ${switchtest} "${testExtraArgs} -DMSDC_IPV4_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_msdc_ipv4")
 
@@ -59,7 +59,7 @@ set  (SWITCH_8.2_PTF_DIR_WRED ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.2/ptf-t
 set  (isXFail TRUE)
 file (RELATIVE_PATH switch_8.2_test ${P4C_SOURCE_DIR} ${SWITCH_8.2_P4})
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_8.2_dc_basic" ${switch_8.2_test} "${testExtraArgs} -DDC_BASIC_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_8.2_dc_basic")
 
@@ -71,7 +71,7 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_8.2_ent_dc_general" ${switch_8.2_test} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_8.2_ent_dc_general")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_8.2_msdc" ${switch_8.2_test} "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_8.2_msdc")
 
@@ -83,11 +83,11 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_8.2_msdc_l3" ${switch_8.2_test} "${testExtraArgs} -DMSDC_L3_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_8.2_msdc_l3")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_8.2_msdc_spine_int" ${switch_8.2_test} "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_8.2_msdc_spine_int")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE 
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_8.2_msdc_leaf_int" ${switch_8.2_test} "${testExtraArgs} -DMSDC_LEAF_DTEL_INT_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_8.2_msdc_leaf_int")
 
@@ -157,6 +157,7 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_4" ${SWITCH_P4
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_4"
         "switch_tests.L3IPv4LpmEcmpTest
         switch_tests.L3IPv4LpmTest
+        switch_tests.L3IPv4MtuTest
         switch_tests.L3IPv4SubIntfHostTest
         switch_tests.L3IPv6EcmpTest
         switch_tests.L3IPv6HostTest
@@ -196,8 +197,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_7"
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_8" ${SWITCH_P4}
         "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR_WRED}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_8"
-        "switch_tests.L3IPv4MtuTest
-        switch_wred.WredDropIpv4Test
+        "switch_wred.WredDropIpv4Test
         switch_wred.WredIpv6Test
         switch_wred.WredLookupTest
         switch_wred.WredStatsTest")
@@ -339,7 +339,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_8"
         switch_tests.L3IPv4LookupTest
         switch_tests.L3IPv4LpmEcmpTest
         switch_tests.L3IPv4LpmTest
-        switch_tests.L3IPv4MtuTest
         switch_tests.L3IPv4SubIntfHostTest
         switch_tests.L3IPv6EcmpTest
         switch_tests.L3IPv6HostTest
@@ -373,6 +372,10 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_10"
         switch_tunnel.L3VxlanUnicastTunnelECMPSMTest
         switch_tunnel.L3VxlanUnicastTunnelSMSVITest
         switch_tunnel.L3VxlanUnicastTunnelSMTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L3IPv4MtuTest" ${SWITCH_P4}
+        "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L3IPv4MtuTest"
+        "switch_tests.L3IPv4MtuTest")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_dc_basic" PROPERTIES TIMEOUT 12000)
@@ -437,11 +440,10 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_3"
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_set_4" ${SWITCH_P4}
         "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_4"
-	    "switch_tests.L3IPv4LagTest
+        "switch_tests.L3IPv4LagTest
         switch_tests.L3IPv4LookupTest
         switch_tests.L3IPv4LpmEcmpTest
         switch_tests.L3IPv4LpmTest
-        switch_tests.L3IPv4MtuTest
         switch_tests.L3IPv4SubIntfHostTest
         switch_tests.L3IPv6EcmpTest
         switch_tests.L3IPv6HostTest
@@ -452,7 +454,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_4"
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_set_5" ${SWITCH_P4}
         "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_5"
-	"switch_tests.L3VIFloodTest
+        "switch_tests.L3VIFloodTest
         switch_tests.L3VIIPv4HostFloodTest
         switch_tests.L3VIIPv4HostMacMoveTest
         switch_tests.L3VIIPv4HostTest
@@ -494,7 +496,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_msdc"
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_msdc_set_1" ${SWITCH_8.2_P4}
     "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_8.2_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_msdc_set_1"
-        "switch_acl.AclLabelTest
+        "switch_acl.Acl_i2e_ErspanRewriteTest
+        switch_acl.AclLabelTest
         switch_acl.IPAclTest
         switch_acl.IPAclStatsTest
         switch_acl.IPIngressAclRangeTcamTest
@@ -576,11 +579,6 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_msdc_set_8" ${SWITC
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_msdc_set_8"
         "mirror_acl_slice_tests.IPv6MirrorAclSliceTest_i2e
         mirror_acl_slice_tests.MirrorAclSliceTest_i2e")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_msdc_Acl_i2e_ErspanRewriteTest"
-        ${SWITCH_8.2_P4} "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000"
-        "${SWITCH_8.2_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_msdc_Acl_i2e_ErspanRewriteTest"
-        "switch_acl.Acl_i2e_ErspanRewriteTest")
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_8.2_msdc" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.2_msdc_set_1" PROPERTIES TIMEOUT 12000)
@@ -723,7 +721,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_l3_msdc"
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_l3_msdc_set_1" ${SWITCH_8.2_P4}
     "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_8.2_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_l3_msdc_set_1"
-        "switch_acl.AclLabelTest
+        "switch_acl.Acl_i2e_ErspanRewriteTest
+        switch_acl.AclLabelTest
         switch_acl.IPAclStatsTest
         switch_acl.IPAclTest
         switch_acl.IPIngressAclRangeTcamTest
@@ -834,11 +833,6 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_l3_msdc_L3EcmpLagTe
     "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_8.2_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_l3_msdc_L3EcmpLagTest"
         "switch_tests.L3EcmpLagTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_l3_msdc_Acl_i2e_ErspanRewriteTest"
-    ${SWITCH_8.2_P4} "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 12000"
-    "${SWITCH_8.2_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_l3_msdc_Acl_i2e_ErspanRewriteTest"
-        "switch_acl.Acl_i2e_ErspanRewriteTest")
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_8.2_l3_msdc" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.2_l3_msdc_set_1" PROPERTIES TIMEOUT 12000)
@@ -863,6 +857,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_dc_basic_set_1"
         fast_reconfig_tests.MultipleWarmInitTest
         fast_reconfig_tests.NormalthanWarmInitTest
         fast_reconfig_tests.RegularWarmInitTest
+        switch_acl.Acl_i2e_ErspanRewriteTest
         switch_acl.AclLabelTest
         switch_acl.IPAclStatsTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_dc_basic_set_2" ${SWITCH_8.2_P4}
@@ -1023,10 +1018,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_dc_basic_set_15"
         switch_tunnel.L3VxlanUnicastTunnelECMPSMTest
         switch_tunnel.L3VxlanUnicastTunnelSMSVITest
         switch_tunnel.L3VxlanUnicastTunnelSMTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_dc_basic_Acl_i2e_ErspanRewriteTest"
-    ${SWITCH_8.2_P4} "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_8.2_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_dc_basic_Acl_i2e_ErspanRewriteTest"
-        "switch_acl.Acl_i2e_ErspanRewriteTest")
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_8.2_dc_basic" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.2_dc_basic_set_1" PROPERTIES TIMEOUT 12000)
