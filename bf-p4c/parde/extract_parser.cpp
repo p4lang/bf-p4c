@@ -251,10 +251,44 @@ struct AutoPushTransition {
     bool isValid;
 };
 
+// Rewrite p4-14's "current(a,b)" or p4-16's "pkt.lookahead<switch_pkt_src_t>()"
+// as IR::BFN::PacketRVal (bit position in the input buffer)
+static const IR::BFN::PacketRVal*
+rewriteLookahead(P4::TypeMap* typeMap,
+                 const IR::MethodCallExpression* call,
+                 const IR::Slice* slice,
+                 int bitShift) {
+    BUG_CHECK(call->typeArguments->size() == 1,
+              "Expected 1 type parameter for %1%", call);
+    auto* typeArg = call->typeArguments->at(0);
+    auto* typeArgType = typeMap->getTypeType(typeArg, true);
+    int width = typeArgType->width_bits();
+    BUG_CHECK(width > 0, "Non-positive width for lookahead type %1%", typeArg);
+
+    nw_bitrange finalRange;
+    if (slice) {
+        le_bitrange sliceRange(slice->getL(), slice->getH());
+        nw_bitinterval lookaheadInterval =
+          sliceRange.toOrder<Endian::Network>(width)
+                    .intersectWith(StartLen(0, width));
+        if (lookaheadInterval.empty())
+            ::error("Slice is empty: %1%", slice);
+
+        auto lookaheadRange = *toClosedRange(lookaheadInterval);
+        finalRange = lookaheadRange.shiftedByBits(bitShift);
+    } else {
+        finalRange = nw_bitrange(StartLen(0, width));
+    }
+    auto rval = new IR::BFN::PacketRVal(finalRange);
+    return rval;
+}
+
 class GetBackendParser {
  public:
-    explicit GetBackendParser(P4::ReferenceMap *refMap, const ParserPragmas& pg) :
-        refMap(refMap), parserPragmas(pg) { }
+    explicit GetBackendParser(P4::TypeMap *typeMap,
+                              P4::ReferenceMap *refMap,
+                              const ParserPragmas& pg) :
+        typeMap(typeMap), refMap(refMap), parserPragmas(pg) { }
 
     const IR::BFN::Parser* extract(const IR::BFN::TranslatedP4Parser* parser);
 
@@ -264,12 +298,16 @@ class GetBackendParser {
  private:
     IR::BFN::ParserState* getState(cstring name);
 
+    const IR::Node* rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
+                                      nw_bitrange& bitrange);
+
     TransitionStack                             transitionStack;
 
     std::map<cstring, IR::BFN::ParserState *>   states;
     std::map<cstring, int>                      max_loop_depth;
     std::map<cstring, cstring>                  p4StateNameToStateName;
 
+    P4::TypeMap*      typeMap;
     P4::ReferenceMap* refMap;
     const ParserPragmas& parserPragmas;
 };
@@ -356,10 +394,8 @@ bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
 }
 
 struct RewriteParserStatements : public Transform {
-    std::map<cstring, const IR::BFN::PacketRVal*> extractedFields;
-
-    RewriteParserStatements(cstring stateName, gress_t gress)
-        : stateName(stateName), gress(gress) { }
+    RewriteParserStatements(P4::TypeMap* typeMap, cstring stateName, gress_t gress)
+        : typeMap(typeMap), stateName(stateName), gress(gress) { }
 
     /// @return the cumulative shift in bits from all statements rewritten up to
     /// this point.
@@ -383,10 +419,6 @@ struct RewriteParserStatements : public Transform {
         BUG_CHECK(hdr_type != nullptr,
                   "Header type isn't a structlike: %1%", hdr_type);
 
-        // XXX(seth): We filter out extracts for types with this annotation.
-        // This is a hack to support some v1model programs in the short term;
-        // long term, the right solution is to use PSA or TNA, which allow the
-        // programmer to define separate ingress and egress parsers.
         if (gress == EGRESS &&
             hdr_type->getAnnotation("not_extracted_in_egress") != nullptr) {
             ::warning("Ignoring egress extract of @not_extracted_in_egress "
@@ -625,6 +657,24 @@ struct RewriteParserStatements : public Transform {
             }
         }
 
+        if (auto* slice = rhs->to<IR::Slice>()) {
+            if (auto* call = slice->e0->to<IR::MethodCallExpression>()) {
+                if (auto* mem = call->method->to<IR::Member>()) {
+                    if (mem->member == "lookahead") {
+                        auto rval = rewriteLookahead(typeMap, call, slice, currentBit);
+                        return new IR::BFN::Extract(s->srcInfo, s->left, rval);
+                    }
+                }
+            }
+        } else if (auto* call = rhs->to<IR::MethodCallExpression>()) {
+            if (auto* mem = call->method->to<IR::Member>()) {
+                if (mem->member == "lookahead") {
+                    auto rval = rewriteLookahead(typeMap, call, slice, currentBit);
+                    return new IR::BFN::Extract(s->srcInfo, s->left, rval);
+                }
+            }
+        }
+
         if (auto mem = s->left->to<IR::Member>()) {
             if (mem->member == "ingress_parser_err" || mem->member == "egress_parser_err")
                 return nullptr;
@@ -633,12 +683,6 @@ struct RewriteParserStatements : public Transform {
         if (rhs->is<IR::Constant>()) {
             return new IR::BFN::Extract(s->srcInfo, s->left,
                      new IR::BFN::ConstantRVal(rhs->to<IR::Constant>()->value));
-        }
-
-        if (auto* lookahead = rhs->to<IR::BFN::LookaheadExpression>()) {
-            auto bits = lookahead->bitRange().shiftedByBits(currentBit);
-            return new IR::BFN::Extract(s->srcInfo, s->left,
-                     new IR::BFN::PacketRVal(bits));
         }
 
         // Allow slices if we'd allow the expression being sliced.
@@ -661,9 +705,11 @@ struct RewriteParserStatements : public Transform {
         BUG("Unhandled statement kind: %1%", s);
     }
 
+    P4::TypeMap* typeMap;
     const cstring stateName;
     const gress_t gress;
     unsigned currentBit = 0;
+    std::map<cstring, const IR::BFN::PacketRVal*> extractedFields;
 };
 
 static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
@@ -716,14 +762,31 @@ static match_t buildMatch(int match_size, const IR::Expression *key,
     return match_t();
 }
 
-const IR::Node* rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
-                                  nw_bitrange& bitrange) {
-    // We can transform a LookaheadExpression immediately to a concrete select
+const IR::Node*
+GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
+                                    nw_bitrange& bitrange) {
+    // We can transform a lookahead expression immediately to a concrete select
     // on bits in the input buffer.
-    if (auto* lookahead = selectExpr->to<IR::BFN::LookaheadExpression>()) {
-        auto finalRange = lookahead->bitRange().shiftedByBits(bitShift);
-        bitrange = finalRange;
-        return new IR::BFN::Select(new IR::BFN::PacketRVal(finalRange), lookahead);
+    if (auto* slice = selectExpr->to<IR::Slice>()) {
+        if (auto* call = slice->e0->to<IR::MethodCallExpression>()) {
+            if (auto* mem = call->method->to<IR::Member>()) {
+                if (mem->member == "lookahead") {
+                    auto rval = rewriteLookahead(typeMap, call, slice, bitShift);
+                    auto select = new IR::BFN::Select(rval, call);
+                    bitrange = rval->range();
+                    return select;
+                }
+            }
+        }
+    } else if (auto* call = selectExpr->to<IR::MethodCallExpression>()) {
+        if (auto* mem = call->method->to<IR::Member>()) {
+            if (mem->member == "lookahead") {
+                auto rval = rewriteLookahead(typeMap, call, nullptr, bitShift);
+                auto select = new IR::BFN::Select(rval, call);
+                bitrange = rval->range();
+                return select;
+            }
+        }
     }
 
     // We can split a Concat into multiple selects. Note that this is quite
@@ -776,9 +839,11 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
     BUG_CHECK(state->p4State != nullptr,
               "Converting a parser state that didn't come from the frontend?");
 
-    // Lower the parser statements from the frontend IR to the Tofino IR.
-    RewriteParserStatements rewriteStatements(state->p4State->controlPlaneName(),
+    // Lower the parser statements from frontend IR to backend IR.
+    RewriteParserStatements rewriteStatements(typeMap,
+                                              state->p4State->controlPlaneName(),
                                               state->gress);
+
     for (auto* statement : state->p4State->components)
         state->statements.pushBackOrAppend(statement->apply(rewriteStatements));
 
@@ -871,7 +936,7 @@ void ExtractParser::postorder(const IR::BFN::TranslatedP4Parser* parser) {
     ParserPragmas pg;
     parser->apply(pg);
 
-    GetBackendParser gp(refMap, pg);
+    GetBackendParser gp(typeMap, refMap, pg);
     rv->thread[parser->thread].parser = gp.extract(parser);
 }
 

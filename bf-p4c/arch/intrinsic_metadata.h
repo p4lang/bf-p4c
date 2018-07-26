@@ -272,18 +272,9 @@ class AddIntrinsicMetadata : public Transform {
         parser->states.push_back(checkMirroredState);
 
         // This state handles the extraction of egress intrinsic metadata.
-        // XXX(seth): We can't easily do it without making
-        // `packet_in.lookahead()` a little more flexible, but a correct
-        // implementation should take the EPB configuration into account. It
-        // should look more like this:
-#if 0
-        const auto epbConfig = Device::pardeSpec().defaultEPBConfig();
-        const auto egMetadataPacking =
-          Device::pardeSpec().egressMetadataLayout(epbConfig, egMeta);
-        auto* egMetadataState =
-          egMetadataPacking.createP4ExtractionState("$egress_metadata",
-                                                    checkMirroredState);
-#endif
+        // TODO(zma): Not all egress intrinsic metadata are used in the program,
+        // we should insert extract statements for those used (probably in the backend),
+        // and config the EPB accordingly in the assembly.
 
         auto *egMetadataState =
             createGeneratedParserState("egress_metadata", {

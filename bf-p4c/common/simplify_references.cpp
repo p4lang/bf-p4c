@@ -4,7 +4,6 @@
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/typeMap.h"
 #include "bf-p4c/common/param_binding.h"
-#include "bf-p4c/common/rewrite.h"
 
 namespace {
 
@@ -239,13 +238,12 @@ class ConvertIndexToHeaderStackItemRef : public Transform {
 
 SimplifyReferences::SimplifyReferences(ParamBinding* bindings,
                                        P4::ReferenceMap* refMap,
-                                       P4::TypeMap* typeMap) {
+                                       P4::TypeMap* ) {
     addPasses({
         new ApplyParamBindings(bindings, refMap),
         new SplitComplexInstanceRef(),
         new RemoveInstanceRef,
         new SimplifyHeaderValidMethods,
-        new ConvertIndexToHeaderStackItemRef,
-        new RewriteForTofino(refMap, typeMap),
+        new ConvertIndexToHeaderStackItemRef
     });
 }

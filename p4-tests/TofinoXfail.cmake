@@ -323,22 +323,22 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: syntax error, unexpected ':'"
-  switch_l3_heavy_int_leaf
-  switch_8.2_l3_heavy_int_leaf
-  switch_8.2_generic_int_leaf
-  )
-
-p4c_add_xfail_reason("tofino"
   "can't find per_flow_enable param meter_pfe in format"
   switch_ent_fin_postcard
   switch_8.2_ent_fin_postcard
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Can't pick tcam id for table"
+  switch_l3_heavy_int_leaf
+  switch_8.2_l3_heavy_int_leaf
   )
 
 # BRIG-113
 p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
+  switch_8.2_generic_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"

@@ -119,7 +119,6 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/parser_overlay.cpp
   common/parser_critical_path.cpp
   common/path_linearizer.cpp
-  common/rewrite.cpp
   common/simplify_references.cpp
   common/slice.cpp
   common/type_categories.cpp
@@ -153,7 +152,6 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/parser_overlay.h
   common/parser_critical_path.h
   common/path_linearizer.h
-  common/rewrite.h
   common/run_id.h
   common/simplify_references.h
   common/slice.h

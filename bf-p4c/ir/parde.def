@@ -8,32 +8,6 @@
 
 namespace BFN {
 
-// An expression representing a `packet_in.lookahead()` call at the P4 level.
-// The interface is very similar to Extract, and that's not a coincidence, since
-// the two concepts are very closely related.
-class LookaheadExpression : Expression {
-#noconstructor
-    LookaheadExpression(Util::SourceInfo si, nw_bitrange range)
-        : Expression(si), range(range) { }
-    LookaheadExpression(nw_bitrange range) : range(range) { }
-
-    dbprint {
-        out << "lookahead " << bitInterval() << "(" << range.size() << "b)";
-    }
-
-    void setBitRange(nw_bitrange newRange) { range = newRange; }
-
-    /// @return the half-open range of bits being extracted, in network order.
-    nw_bitinterval bitInterval() const { return toHalfOpenRange(range); }
-
-    /// @return the closed range of bits being extracted, in network order.
-    nw_bitrange bitRange() const { return range; }
-
-    /// The region of the input buffer which will be extracted, expressed in
-    /// bits in network order.
-    nw_bitrange range;
-}
-
 /// Superclass for all unresolved header stack indices.
 abstract UnresolvedStackRef : Expression {
 #emit
