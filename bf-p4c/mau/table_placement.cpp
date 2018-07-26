@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <list>
+#include <sstream>
 #include "bf-p4c/mau/action_data_bus.h"
 #include "bf-p4c/mau/field_use.h"
 #include "bf-p4c/mau/input_xbar.h"
@@ -998,10 +999,12 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
 }
 
 
-bool TablePlacement::is_better(const Placed *a, const Placed *b) {
+bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choice) {
+    choice = CALC_STAGE;
     if (a->stage < b->stage) return true;
     if (a->stage > b->stage) return false;
 
+    choice = PROV_STAGE;
     int a_provided_stage = a->table->get_provided_stage();
     int b_provided_stage = b->table->get_provided_stage();
 
@@ -1014,7 +1017,7 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b) {
         return false;
     }
 
-
+    choice = NEED_MORE;
     if (b->need_more && !a->need_more) return true;
     if (a->need_more && !b->need_more) return false;
     // FIXME: This feels like it shouldn't work but is does, keeping the old code around
@@ -1025,14 +1028,17 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b) {
     int a_deps_stages = deps->dependence_tail_size(a->table) + a_extra_stages;
     int b_deps_stages = deps->dependence_tail_size(b->table) + b_extra_stages;
 
+    choice = DEP_TAIL_SIZE;
     if (a_deps_stages > b_deps_stages) return true;
     if (a_deps_stages < b_deps_stages) return false;
 
+    choice = TOTAL_DEPS;
     int a_total_deps = deps->happens_before_dependences(a->table).size() + a_extra_stages;
     int b_total_deps = deps->happens_before_dependences(b->table).size() + b_extra_stages;
     if (a_total_deps < b_total_deps) return true;
     if (a_total_deps > b_total_deps) return false;
 
+    choice = DEFAULT;
     return true;
 }
 
@@ -1134,9 +1140,13 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             BUG("No tables placeable, but not all tables placed?");
         LOG2("found " << trial.size() << " tables that could be placed: " << trial);
         const Placed *best = 0;
-        for (auto t : trial)
-            if (!best || is_better(t, best))
+        choice_t choice = DEFAULT;
+        for (auto t : trial) {
+            if (!best || is_better(t, best, choice)) {
+                log_choice(t, best, choice);
                 best = t;
+            }
+        }
         placed = place_table(work, best);
 
         if (placed->need_more)
@@ -1157,6 +1167,34 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             table_placed.emplace_hint(table_placed.find(p->gw->name), p->gw->name, p); } }
     LOG1("Finished table placement");
     return pipe;
+}
+
+/* Human-readable strings for the choice_t enum used to return
+ * is_better decision info.
+ */
+std::ostream &operator<<(std::ostream &out, TablePlacement::choice_t choice) {
+    static const char* choice_names[] = { "earlier stage calculated", "earlier stage provided",
+                                    "more stages needed", "longer dependence tail chain",
+                                    "fewer total dependencies", "default choice" };
+    if (choice < sizeof(choice_names) / sizeof(choice_names[0])) {
+        out << choice_names[choice];
+    } else {
+        out << "unknown choice <0x" << hex(choice) << ">";
+    }
+    return out;
+}
+
+/*  Called when is_better indicates that a better table to place has been found.
+ *  Prints a human-readable explanation for why that new table was chosen over
+ *  the old one.
+ */
+void TablePlacement::log_choice(const Placed *t, const Placed *best, choice_t choice) {
+    if (!best) {
+        LOG3("    Updating best to first table seen: " << t->name);
+    } else {
+        LOG3("    Updating best to " << t->name << " from " << best->name
+             << " for reason: " << choice);
+    }
 }
 
 IR::Node *TablePlacement::postorder(IR::BFN::Pipe *pipe) {

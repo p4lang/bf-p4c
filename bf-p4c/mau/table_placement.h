@@ -20,8 +20,20 @@ class TablePlacement : public MauTransform, public Backtrack {
     struct GroupPlace;
     struct Placed;
 
+ protected:
+    typedef enum {
+        CALC_STAGE,
+        PROV_STAGE,
+        NEED_MORE,
+        DEP_TAIL_SIZE,
+        TOTAL_DEPS,
+        DEFAULT
+    } choice_t;
+
  private:
     struct TableInfo;
+    void log_choice(const Placed *t, const Placed *best, choice_t choice);
+    friend std::ostream &operator<<(std::ostream &out, choice_t choice);
     std::map<const IR::MAU::Table *, struct TableInfo> tblInfo;
     struct TableSeqInfo;
     std::map<const IR::MAU::TableSeq *, struct TableSeqInfo> seqInfo;
@@ -46,7 +58,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     IR::Vector<IR::MAU::Table> *break_up_dleft(IR::MAU::Table *tbl, const Placed *placed,
         int stage_table = -1);
     const Placed *placement;
-    bool is_better(const Placed *a, const Placed *b);
+    bool is_better(const Placed *a, const Placed *b, choice_t& choice);
     safe_vector<Placed *> try_place_table(const IR::MAU::Table *t, const Placed *done,
         const StageUseEstimate &current);
     Placed *try_place_table(Placed *rv, const IR::MAU::Table *t, const Placed *done,
