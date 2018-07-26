@@ -31,16 +31,6 @@ set (TOFINO_V1_TEST_SUITES
   ${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4
   ${p16_v1tests}
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
-  # temporarily disable all customer tests -- we're failing many of them
-  # and we want to save some Travis time
-  # ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c1/*/*.p4
-  # ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c2/*/*.p4
-  # ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c3/*/*.p4
-  # ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c4/*/*.p4
-  # ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c5/*/*.p4
-  # ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c6/*/*.p4
-  # ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c7/*/*.p4
-  # ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c8/*/*.p4
   ${v1tests}
   # p4smith regression tests
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4smith_regression/*.p4
@@ -132,7 +122,7 @@ set (P4FACTORY_REGRESSION_TESTS
 # exclude tofino.p4 which is included in some programs
 # exclude fifo_pair.p4 which is jbay specific test
 # exclude all netcache p4s and add it as a separate test
-set (BFN_EXCLUDE_PATTERNS "tofino.p4" "fifo_pair.p4" "defines.p4" 
+set (BFN_EXCLUDE_PATTERNS "tofino.p4" "fifo_pair.p4" "defines.p4"
                           "fast_update.p4" "headers.p4" "heavy_hitter.p4"
                           "ipv4.p4" "meter.p4" "netcache.p4" "parser.p4"
                           "slow_update.p4")
@@ -337,6 +327,13 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE "tor-archive"
 p4c_add_test_label("tofino" "cpplint" "tor-archive")
 
 include(Switch.cmake)
+
+include(Customer.cmake)
+# Set a small timeout since these are running into an infinite loop in slicing
+# -to 60 should be removed when Deep merges the fix.
+p4c_add_bf_backend_tests("tofino" "v1model" "arista" "${ARISTA_P4_14_TESTS}"
+  "--backward-compatible -to 60")
+
 include(TofinoMustPass.cmake)
 include(TofinoXfail.cmake)
 

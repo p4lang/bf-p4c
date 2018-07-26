@@ -1287,4 +1287,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: An stateful instruction alu1_0 is outside the bounds of the stateful memory"
   extensions/p4_tests/p4_14/p4-tests/programs/pgrs/pgrs.p4
-)
+  )
+
+p4c_add_xfail_reason("tofino"
+  "./p4c TIMEOUT"
+  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
+  ../glass/testsuite/p4_tests/c1/COMPILER-883/case5521.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
+  )
