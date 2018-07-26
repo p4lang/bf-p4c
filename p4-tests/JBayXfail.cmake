@@ -149,12 +149,6 @@ p4c_add_xfail_reason("jbay"
   testdata/p4_14_samples/issue894.p4
   )
 
-# BRIG-421
-p4c_add_xfail_reason("jbay"
-  "condition too complex"
-# PHV packs POV bits incorrectly
-  )
-
 p4c_add_xfail_reason("jbay"
   "counter cnt virtual value .*"
   testdata/p4_14_samples/counter2.p4
@@ -233,7 +227,7 @@ p4c_add_xfail_reason("jbay"
 )
 
 p4c_add_xfail_reason("jbay"
-  "condition expression too complex"
+  "./p4c TIMEOUT"
   testdata/p4_14_samples/header-stack-ops-bmv2.p4
 )
 
@@ -278,4 +272,3 @@ p4c_add_xfail_reason("jbay"
   "Trying to get PHV container bytes for unallocated field"
   extensions/p4_tests/p4_16/jbay/ghost1.p4
 )
-

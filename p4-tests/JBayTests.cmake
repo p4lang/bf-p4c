@@ -1,4 +1,4 @@
-set (jbay_timeout 500)
+set (jbay_timeout 600)
 
 # check for PTF requirements
 packet_test_setup_check("jbay")

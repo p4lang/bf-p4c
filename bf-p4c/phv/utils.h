@@ -148,7 +148,8 @@ class Allocation {
             bitPosition(-1), rotationAllowed(false), container(boost::none) { }
     };
 
-    using ConditionalConstraints = ordered_map<PHV::FieldSlice, ConditionalConstraintData>;
+    using ConditionalConstraint = ordered_map<PHV::FieldSlice, ConditionalConstraintData>;
+    using ConditionalConstraints = ordered_map<int, ConditionalConstraint>;
 
  protected:
     using FieldStatus = ordered_set<AllocSlice>;

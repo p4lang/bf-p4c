@@ -971,8 +971,9 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     // this constraint in the future.
 
     // Find the copacking constraints.
-    ordered_set<PHV::FieldSlice> copacking_set;
+    ordered_map<int, ordered_set<PHV::FieldSlice>> copacking_set;
     ordered_map<PHV::FieldSlice, PHV::Container> req_container;
+    int setIndex = 0;
     for (auto* set : copacking_constraints) {
         // Need to enforce alignment constraints when we have one unallocated PHV source and action
         // data writing to the container in the same action.
@@ -981,11 +982,12 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         if (copacking_set.size() > 0)
             LOG5("\t\t\t\tAction analysis produced more than one set of conditional packing "
                  "constraints.");
-        // copacking_set flattens the UnionFind data structure. Before flattening check if any of
-        // the sources in the same set is already allocated. If yes, set the container requirement
-        // for the unallocated sources in that set.
+        // If some sources in the same set in copacking_constraints are already allocated, set the
+        // container requirement for the unallocated sources in that set.
         assign_containers_to_unallocated_sources(alloc, copacking_constraints, req_container);
-        copacking_set.insert(set->begin(), set->end()); }
+        ordered_set<PHV::FieldSlice> setFieldSlices;
+        setFieldSlices.insert(set->begin(), set->end());
+        copacking_set[setIndex++] = setFieldSlices; }
 
     // If copacking_constraints has exactly two unallocated PHV source slices, force the smaller
     // slice to be aligned with its destination.
@@ -996,58 +998,77 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         boost::optional<PHV::FieldSlice> alignedSlice = get_smaller_source_slice(alloc,
                 copacking_constraints, field_slices_in_current_container);
         if (alignedSlice) {
-            copacking_set.insert(*alignedSlice);
-            LOG5("\t\t\t\tEnforcing alignment constraint on smaller slice: " << *alignedSlice); } }
-
-    // All fields in rv must be placed in the same container.  If there are
-    // overlaps based on required alignment, return boost::none.
-    ordered_map<const PHV::FieldSlice, le_bitrange> placements;
+            bool foundAlignmentConstraint = false;
+            for (auto* set : copacking_constraints) {
+                if (set->size() > 1 && set->count(*alignedSlice)) {
+                    foundAlignmentConstraint = true;
+                    LOG5("\t\t\t\t  Alignment constraint already found on smaller slice: " <<
+                         *alignedSlice); }
+            }
+            if (!foundAlignmentConstraint) {
+                copacking_set[setIndex++] = { *alignedSlice };
+                LOG5("\t\t\t\tEnforcing alignment constraint on smaller slice: " << *alignedSlice);
+            }
+        }
+    }
+    LOG5("Printing UnionFind struct");
+    LOG5(copacking_constraints);
 
     // Find the right alignment for each slice in the copacking constraints.
-    // XXX(cole): We probably already computed this somewhere...
-    for (auto& packing_slice : copacking_set) {
-        ordered_set<int> req_alignment;
-        for (auto& slice : slices) {
-            auto sources = constraint_tracker.source_alignment(slice, packing_slice);
-            req_alignment |= sources; }
+    for (auto kv_unallocated : copacking_set) {
+        PHV::Allocation::ConditionalConstraint per_unallocated_source;
+        // All fields in rv must be placed in the same container.  If there are
+        // overlaps based on required alignment, return boost::none.
+        ordered_map<const PHV::FieldSlice, le_bitrange> placements;
 
-        // PROBLEM: the cross product of slices and copacking_set loses which
-        // slices correspond to which copacking.
+        for (auto& packing_slice : kv_unallocated.second) {
+            ordered_set<int> req_alignment;
+            for (auto& slice : slices) {
+                auto sources = constraint_tracker.source_alignment(slice, packing_slice);
+                req_alignment |= sources; }
 
-        // XXX(cole): Conservatively reject this packing if an operand is
-        // required to be aligned at two different positions.
-        if (req_alignment.size() > 1) {
-            LOG5("\t\t\tPacking failed because " << packing_slice <<
-                 " would (conservatively) need to be aligned at more than one position: "
-                 << cstring::to_cstring(req_alignment));
-            return boost::none; }
+            // PROBLEM: the cross product of slices and copacking_set loses which
+            // slices correspond to which copacking.
 
-        // XXX(cole): This probably shouldn't happen...
-        if (req_alignment.size() == 0)
-            continue;
+            // Conservatively reject this packing if an operand is required to be aligned at two
+            // different positions.
+            // XXX(Deep): Possible optimization could be that allocating some other field
+            // differently would resolve the multiple requirements for this field's alignment.
+            if (req_alignment.size() > 1) {
+                LOG5("\t\t\tPacking failed because " << packing_slice <<
+                        " would (conservatively) need to be aligned at more than one position: "
+                        << cstring::to_cstring(req_alignment));
+                return boost::none; }
 
-        int bitPosition = *(req_alignment.begin());
+            // Alignment requirements could be empty in case the source slices are also unallocated
+            // or due to action data/constant writes.
+            if (req_alignment.size() == 0)
+                continue;
 
-        // Check that no other slices are also required to be at this bit
-        // position, unless they're mutually exclusive and can be overlaid.
-        for (auto& kv : placements) {
-            bool isMutex = PHV::Allocation::mutually_exclusive(phv.field_mutex,
-                                                               kv.first.field(),
-                                                               packing_slice.field());
-            if (kv.second.overlaps(StartLen(bitPosition, packing_slice.size())) && !isMutex) {
-                LOG5("\t\t\tPacking failed because " << packing_slice << " and " << kv.first << " "
-                     "slice would (conservatively) need to be aligned at the same position in the "
-                     "same container.");
-                return boost::none; } }
-        placements[packing_slice] = StartLen(bitPosition, packing_slice.size());
+            int bitPosition = *(req_alignment.begin());
 
-        // Set the required bit position.
-        if (req_container.count(packing_slice))
-            rv[packing_slice] = PHV::Allocation::ConditionalConstraintData(bitPosition,
-                    req_container[packing_slice]);
-        else
-            rv[packing_slice] = PHV::Allocation::ConditionalConstraintData(bitPosition); }
+            // Check that no other slices are also required to be at this bit
+            // position, unless they're mutually exclusive and can be overlaid.
+            for (auto& kv : placements) {
+                bool isMutex = PHV::Allocation::mutually_exclusive(phv.field_mutex,
+                        kv.first.field(),
+                        packing_slice.field());
+                if (kv.second.overlaps(StartLen(bitPosition, packing_slice.size())) && !isMutex) {
+                    LOG5("\t\t\tPacking failed because " << packing_slice << " and " << kv.first <<
+                         " slice would (conservatively) need to be aligned at the same position in "
+                         "the same container.");
+                    return boost::none; } }
+            placements[packing_slice] = StartLen(bitPosition, packing_slice.size());
 
+            // Set the required bit position.
+            if (req_container.count(packing_slice))
+                per_unallocated_source[packing_slice] =
+                    PHV::Allocation::ConditionalConstraintData(bitPosition,
+                            req_container[packing_slice]);
+            else
+                per_unallocated_source[packing_slice] =
+                    PHV::Allocation::ConditionalConstraintData(bitPosition); }
+        rv[kv_unallocated.first] = per_unallocated_source; }
     return rv;
 }
 

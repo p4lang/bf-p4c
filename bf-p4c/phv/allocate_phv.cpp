@@ -600,7 +600,7 @@ CoreAllocation::tryAllocSliceList(
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
         const ordered_map<PHV::FieldSlice, int>& start_positions) const {
-    PHV::Allocation::ConditionalConstraints start_pos;
+    PHV::Allocation::ConditionalConstraint start_pos;
     for (auto kv : start_positions)
         start_pos[kv.first] = PHV::Allocation::ConditionalConstraintData(kv.second);
     return tryAllocSliceList(alloc, group, super_cluster, start_pos);
@@ -623,7 +623,7 @@ CoreAllocation::tryAllocSliceList(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
-        const PHV::Allocation::ConditionalConstraints& start_positions) const {
+        const PHV::Allocation::ConditionalConstraint& start_positions) const {
     PHV::SuperCluster::SliceList slices;
     for (auto& kv : start_positions)
         slices.push_back(kv.first);
@@ -761,92 +761,101 @@ CoreAllocation::tryAllocSliceList(
         } else if (action_constraints->size() > 0) {
             if (LOGGING(5)) {
                 LOG5("    ...but only if the following placements are respected:");
-                for (auto kv : *action_constraints) {
-                    std::stringstream ss;
-                    ss << "        " << kv.first << " @ " << kv.second.bitPosition;
-                    if (kv.second.container)
-                        ss << " and @container " << *(kv.second.container);
-                    LOG5(ss.str()); } }
+                for (auto kv_source : *action_constraints) {
+                    LOG5("      Source " << kv_source.first);
+                    for (auto kv : kv_source.second) {
+                        std::stringstream ss;
+                        ss << "        " << kv.first << " @ " << kv.second.bitPosition;
+                        if (kv.second.container)
+                            ss << " and @container " << *(kv.second.container);
+                        LOG5(ss.str()); } } }
 
             // Find slice lists that contain slices in action_constraints.
-            boost::optional<const PHV::SuperCluster::SliceList*> slice_list = boost::none;
-            bool has_not_in_list = false;
-            for (auto& slice_and_pos : *action_constraints) {
-                const auto& slice_lists = super_cluster.slice_list(slice_and_pos.first);
+            for (auto kv_source : *action_constraints) {
+                boost::optional<const PHV::SuperCluster::SliceList*> slice_list = boost::none;
+                bool has_not_in_list = false;
+                for (auto& slice_and_pos : kv_source.second) {
+                    const auto& slice_lists = super_cluster.slice_list(slice_and_pos.first);
 
-                // Disregard slices that aren't in slice lists.
-                if (slice_lists.size() == 0) {
-                    has_not_in_list = true;
-                    continue; }
-
-                // If a slice is in multiple slice lists, abort.
-                // XXX(cole): This is overly constrained.
-                if (slice_lists.size() > 1) {
-                    LOG5("    ...but a conditional placement is in multiple slice lists");
-                    return boost::none; }
-
-                // If another slice in these action constraints is in a
-                // different slice list, abort.
-                // XXX(cole): This is also overly constrained.
-                if (slice_list && *slice_list != *slice_lists.begin()) {
-                    LOG5("    ...but two conditional placements are in two different slice lists");
-                    return boost::none; }
-
-                slice_list = *slice_lists.begin(); }
-
-            // XXX(cole): Abort if the requirements a mix of slices in slice
-            // lists and those not in slice lists.  This is overly constrained.
-            if (has_not_in_list && slice_list) {
-                LOG5("    ...but action constraints include some slices in a slice list and "
-                     "some that are not");
-                return boost::none; }
-
-            if (slice_list) {
-                // Check that the positions induced by action constraints match
-                // the positions in the slice list.  The offset is relative to
-                // the beginning of the slice list until the first
-                // action-constrained slice is encountered, at which point the
-                // offset is set to the required offset.
-                int offset = 0;
-                bool absolute = false;
-                int size = 0;
-                for (auto& slice : **slice_list) {
-                    size += slice.range().size();
-                    if (action_constraints->find(slice) == action_constraints->end()) {
-                        offset += slice.range().size();
+                    // Disregard slices that aren't in slice lists.
+                    if (slice_lists.size() == 0) {
+                        has_not_in_list = true;
                         continue; }
 
-                    int required_pos = action_constraints->at(slice).bitPosition;
-                    if (!absolute && required_pos < offset) {
-                        // This is the first slice with an action alignment
-                        // constraint.  Check that the constraint is >= the
-                        // bits seen so far.
-                        LOG5("    ...action constraint: " << slice << " must be placed at bit "
-                             << required_pos << " but is " << offset << "b deep in a slice list");
-                        return boost::none;
-                    } else if (!absolute) {
-                        absolute = true;
-                        offset = required_pos + slice.range().size();
-                    } else if (offset != required_pos) {
-                        LOG5("    ...action constraint: " << slice << " must be placed at bit "
-                             << required_pos << " which conflicts with another action-induced "
-                             "constraint for another slice in the slice list");
-                        return boost::none;
-                    } else {
-                        offset += slice.range().size(); } }
+                    // If a slice is in multiple slice lists, abort.
+                    // XXX(cole): This is overly constrained.
+                    if (slice_lists.size() > 1) {
+                        LOG5("    ...but a conditional placement is in multiple slice lists");
+                        return boost::none; }
 
-                // If we've reached here, then all the slices that have
-                // conditional constraints are in slice_list, and the slice
-                // list must be placed with its first field starting at
-                // offset - size.
-                // Update the action constraints with positions for all fields
-                // in the slice list.
-                int required_offset = offset - size;
-                action_constraints->clear();
-                for (auto& slice : **slice_list) {
-                    (*action_constraints)[slice] =
-                        PHV::Allocation::ConditionalConstraintData(required_offset);
-                    required_offset += slice.range().size(); } }
+                    // If another slice in these action constraints is in a
+                    // different slice list, abort.
+                    // XXX(cole): This is also overly constrained.
+                    if (slice_list && *slice_list != *slice_lists.begin()) {
+                        LOG5("    ...but two conditional placements are in two different slice "
+                             "lists");
+                        return boost::none; }
+
+                    slice_list = *slice_lists.begin(); }
+
+                // XXX(cole): Abort if the requirements a mix of slices in slice
+                // lists and those not in slice lists.  This is overly constrained.
+                if (has_not_in_list && slice_list) {
+                    LOG5("    ...but action constraints include some slices in a slice list and "
+                            "some that are not");
+                    return boost::none; }
+
+                if (slice_list) {
+                    // Check that the positions induced by action constraints match
+                    // the positions in the slice list.  The offset is relative to
+                    // the beginning of the slice list until the first
+                    // action-constrained slice is encountered, at which point the
+                    // offset is set to the required offset.
+                    LOG5("      ...Found field in another slice list.");
+                    int offset = 0;
+                    bool absolute = false;
+                    int size = 0;
+                    for (auto& slice : **slice_list) {
+                        size += slice.range().size();
+                        if (kv_source.second.find(slice) == kv_source.second.end()) {
+                            offset += slice.range().size();
+                            continue; }
+
+                        int required_pos = kv_source.second.at(slice).bitPosition;
+                        if (!absolute && required_pos < offset) {
+                            // This is the first slice with an action alignment
+                            // constraint.  Check that the constraint is >= the
+                            // bits seen so far.
+                            LOG5("    ...action constraint: " << slice << " must be placed at bit "
+                                 << required_pos << " but is " << offset << "b deep in a slice " <<
+                                 "list");
+                            return boost::none;
+                        } else if (!absolute) {
+                            absolute = true;
+                            offset = required_pos + slice.range().size();
+                        } else if (offset != required_pos) {
+                            LOG5("    ...action constraint: " << slice << " must be placed at bit "
+                                 << required_pos << " which conflicts with another action-induced "
+                                 "constraint for another slice in the slice list");
+                            return boost::none;
+                        } else {
+                            offset += slice.range().size(); } }
+
+                    // If we've reached here, then all the slices that have
+                    // conditional constraints are in slice_list, and the slice
+                    // list must be placed with its first field starting at
+                    // offset - size.
+                    // Update the action constraints with positions for all fields
+                    // in the slice list.
+                    int required_offset = offset - size;
+                    PHV::Allocation::ConditionalConstraint slice_constraints;
+                    for (auto& slice : **slice_list) {
+                        slice_constraints[slice] =
+                            PHV::Allocation::ConditionalConstraintData(required_offset);
+                        required_offset += slice.range().size(); }
+                    (*action_constraints)[kv_source.first] = slice_constraints;
+                }
+            }
         } else {
             LOG5("        ...action constraint: can pack into container " << c);
             num_bitmasks = actions_i.count_bitmasked_set_instructions(candidate_slices); }
@@ -868,14 +877,21 @@ CoreAllocation::tryAllocSliceList(
         // list first, we guarantee that recursion terminates, because each
         // invocation allocates fields or fails before recursion, and there are
         // finitely many fields.
-        if (action_constraints->size() > 0) {
-            auto action_alloc =
-                tryAllocSliceList(this_alloc, group, super_cluster, *action_constraints);
-            if (!action_alloc) {
-                LOG5("    ...but slice list has conditional constraints that cannot be satisfied");
-                continue; }
-            LOG5("    ...and conditional constraints are satisfied");
-            this_alloc.commit(*action_alloc); }
+        bool conditional_constraints_satisfied = true;
+        for (auto kv : *action_constraints) {
+            if (kv.second.size() > 0) {
+                auto action_alloc =
+                    tryAllocSliceList(this_alloc, group, super_cluster, kv.second);
+                if (!action_alloc) {
+                    LOG5("    ...but slice list has conditional constraints that cannot be "
+                         "satisfied");
+                    conditional_constraints_satisfied = false;
+                    break; }
+                LOG5("    ...and conditional constraints are satisfied");
+                this_alloc.commit(*action_alloc); } }
+
+        if (!conditional_constraints_satisfied)
+            continue;
 
         auto score = AllocScore(this_alloc, clot_i, uses_i, num_bitmasks);
         LOG5("    ...SLICE LIST score: " << score);

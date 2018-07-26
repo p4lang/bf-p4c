@@ -307,8 +307,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-  switch_ent_fin_postcard
-  switch_8.2_ent_fin_postcard
   )
 
 p4c_add_xfail_reason("tofino"
@@ -332,6 +330,8 @@ p4c_add_xfail_reason("tofino"
   "Can't pick tcam id for table"
   switch_l3_heavy_int_leaf
   switch_8.2_l3_heavy_int_leaf
+  switch_msdc_spine_int
+  switch_8.2_msdc_spine_int
   )
 
 # BRIG-113
@@ -1006,8 +1006,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   smoketest_programs_netcache
-  switch_msdc_spine_int
-  switch_8.2_msdc_spine_int
   switch_generic_int_leaf
 )
 
@@ -1294,4 +1292,5 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
   ../glass/testsuite/p4_tests/c1/COMPILER-883/case5521.p4
   extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
-  )
+  testdata/p4_14_samples/header-stack-ops-bmv2.p4
+)

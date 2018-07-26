@@ -260,9 +260,9 @@ class CoreAllocation {
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
-        const PHV::Allocation::ConditionalConstraints& start_positions) const;
+        const PHV::Allocation::ConditionalConstraint& start_positions) const;
 
-    /// Convenience method that transforms start_positions map into a map of ConditionalConstraints,
+    /// Convenience method that transforms start_positions map into a map of ConditionalConstraint,
     /// which is passed to `tryAllocSliceList` above.
     boost::optional<PHV::Transaction> tryAllocSliceList(
         const PHV::Allocation& alloc,
