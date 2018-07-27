@@ -70,4 +70,6 @@ public:
     VersionIter &operator++() { left &= ~1; check(); return *this; }
 };
 
+extern unsigned unique_table_offset;
+
 #endif /* _bfas_h_ */

@@ -4,8 +4,19 @@
 std::map<unsigned, P4Table *>                                   P4Table::by_handle;
 std::map<P4Table::type, std::map<std::string, P4Table *>>       P4Table::by_name;
 unsigned                                P4Table::max_handle[7];
+
+// handle[29:24] is used as type field.
 const char *P4Table::type_name[] = { 0,
 "match", "action", "selection", "statistics", "meter", "stateful" };
+
+// handle[31:30] is used as handle offset field for multipipe
+static unsigned apply_handle_offset(unsigned handle, unsigned offset) {
+    return handle | offset << 30;
+}
+
+static unsigned clear_handle_offset(unsigned handle) {
+    return handle & 0x3fffffff;
+}
 
 P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
     P4Table *rv;
@@ -14,6 +25,7 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
     if (h) {
         if (!CHECKTYPE(*h, tINT)) return nullptr;
         unsigned handle = h->i;
+        handle = clear_handle_offset(handle);
         if (handle >> 24 && handle >> 24 != t) {
             error(h->lineno, "Incorrect handle type %d for %s table", handle >> 24, type_name[t]);
             return 0; }
@@ -23,6 +35,7 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
             return 0; }
         if (handle > max_handle[t]) max_handle[t] = handle;
         handle |= t << 24;
+        handle = apply_handle_offset(handle, unique_table_offset);
         if (!(rv = by_handle[handle])) {
             if (!n || !CHECKTYPE(*n, tSTR) || !by_name[t].count(n->s) ||
                 (rv = by_name[t][n->s])->handle != (unsigned)t << 24)
@@ -33,7 +46,7 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
         if (!(rv = by_name[t][n->s])) {
             rv = by_name[t][n->s] = new P4Table;
             rv->name = n->s;
-            rv->handle = t << 24; }
+            rv->handle = apply_handle_offset(t << 24, unique_table_offset); }
     } else {
         error(data[0].key.lineno, "no handle or name in p4 info");
         return 0; }
@@ -78,7 +91,7 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
 }
 
 P4Table *P4Table::alloc(P4Table::type t, Table *tbl) {
-    unsigned handle = ++max_handle[t] | (t << 24);
+    unsigned handle = apply_handle_offset(++max_handle[t] | (t << 24),  unique_table_offset);
     P4Table *rv = by_handle[handle] = new P4Table;
     rv->handle = handle;
     rv->name = tbl->name();
@@ -87,8 +100,10 @@ P4Table *P4Table::alloc(P4Table::type t, Table *tbl) {
 
 void P4Table::check(Table *tbl) {
     if (name.empty()) name = tbl->name();
-    if (!(handle & 0xffffff))
-        handle += ++max_handle[handle >> 24];
+    if (!(handle & 0xffffff)) {
+        auto table_type = (handle >> 24) & 0x3f;
+        handle += ++max_handle[table_type];
+    }
 }
 
 json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
@@ -98,8 +113,9 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
         config = &tbl;
         tbl["direction"] = table->gress ? "egress" : "ingress";
         if (handle) tbl["handle"] = handle;
+        auto table_type = (handle >> 24) & 0x3f;
         tbl["name"] = p4_name();
-        tbl["table_type"] = type_name[handle >> 24];
+        tbl["table_type"] = type_name[table_type];
         tbl["size"] = explicit_size ? this->size : size; }
     return config;
 }
@@ -120,12 +136,14 @@ void P4Table::base_alpm_tbl_cfg(json::map &out, int size, Table *table, P4Table:
         *alpm_cfg = &out;
         json::map &tbl = out;
         tbl["direction"] = table->gress ? "egress" : "ingress";
+        auto table_type = (handle >> 24) & 0x3f;
         if (!(*alpm_table_handle & 0xffffff))
-            *alpm_table_handle = (P4Table::MatchEntry << 24) + (++max_handle[handle >> 24]);
+            *alpm_table_handle = apply_handle_offset((P4Table::MatchEntry << 24) + (++max_handle[table_type]),
+                                                     unique_table_offset);
         if (*alpm_table_handle)
             tbl["handle"] = *alpm_table_handle;
         tbl["name"] = p4_name();
-        tbl["table_type"] = type_name[handle >> 24];
+        tbl["table_type"] = type_name[table_type];
         tbl["size"] = explicit_size ? this->size : size;
         tbl["stage_tables"] = json::mkuniq<json::vector>(); }
 }

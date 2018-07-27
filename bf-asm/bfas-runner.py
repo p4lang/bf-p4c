@@ -44,6 +44,7 @@ def strip_right(text, suffix):
 def run_assembler(known_args):
     manifest_filename = known_args.manifest
     programs = parse_manifest(manifest_filename)
+    unique_table_offset = 0
     for prog in programs:
         if (type(prog) is not dict or
             "contexts" not in prog):
@@ -65,12 +66,16 @@ def run_assembler(known_args):
             dirname = os.path.dirname(os.path.realpath(manifest_filename))
             if (p4_version == "p4-16"):
                 dirname = os.path.join(dirname, pipe_name)
+            # prepend unique offset to table handle
+            cmd.append("--table-handle-offset{0}".format(unique_table_offset))
             # output dir
             cmd.append("-o")
             cmd.append(dirname)
             # input file
             bfa_filename = p4_filename + ".bfa"
             cmd.append(os.path.join(dirname, bfa_filename))
+            unique_table_offset = unique_table_offset + 1
+            print cmd
             subprocess.check_call(cmd)
 
 def main():

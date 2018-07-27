@@ -40,6 +40,9 @@ static std::string output_dir;
 int indent_t::tabsz = 2;
 extern char *program_name;
 
+// or-ed with table_handle[31:30] to generate unique table handle
+unsigned unique_table_offset = 0;
+
 std::unique_ptr<std::ostream> open_output(const char *name, ...) {
     char namebuf[1024], *p = namebuf, *end = namebuf + sizeof(namebuf);
     va_list args;
@@ -142,6 +145,8 @@ int main(int ac, char **av) {
         } else if (sscanf(av[i], "--pipe%d%n", &val, &len) > 0 && !av[i][len] &&
                    val >= 0 && val < 4) {
             options.binary = static_cast<binary_type_t>(PIPE0 + val);
+        } else if (sscanf(av[i], "--table-handle-offset%d", &val) > 0 && val >= 0 && val < 4) {
+            unique_table_offset = val;
         } else if (!strcmp(av[i], "--target")) {
             ++i;
             if (!av[i]) {
