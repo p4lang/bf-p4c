@@ -118,7 +118,6 @@ if (PTF_REQUIREMENTS_MET)
     05-simple_l3_arping
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     smoketest_switch_8.2_l3_msdc_WredIpv4Test
-    smoketest_switch_dc_basic_L3IPv4MtuTest
     )
 
 # BRIG-686
@@ -326,8 +325,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Can't pick tcam id for table"
-  switch_l3_heavy_int_leaf
-  switch_8.2_l3_heavy_int_leaf
   switch_msdc_spine_int
   switch_8.2_msdc_spine_int
   )
@@ -336,7 +333,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
-  switch_8.2_generic_int_leaf
+  switch_generic_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1004,7 +1001,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   smoketest_programs_netcache
-  switch_generic_int_leaf
+  switch_l3_heavy_int_leaf
+  switch_8.2_l3_heavy_int_leaf
+  switch_8.2_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
