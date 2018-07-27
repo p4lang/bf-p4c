@@ -24,13 +24,11 @@ from p4c_src.driver import BackendDriver
 
 # Search the environment for assets
 if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
-    bfas = find_file('bf-asm', 'bfas')
-    bfrt_gen = os.path.join(
-        os.environ['P4C_BIN_DIR'],
-        '../../bf-p4c/control-plane/gen_bf_rt_json_schema.py')
+    bfas = find_file('bf-asm', 'bfas-runner.py')
 else:
-    bfas = find_file(os.environ['P4C_BIN_DIR'], 'bfas')
-    bfrt_gen = find_file(os.environ['P4C_BIN_DIR'], 'gen_bf_rt_json_schema.py')
+    bfas = find_file(os.environ['P4C_BIN_DIR'], 'bfas-runner.py')
+
+bfrt_gen = find_file(os.environ['P4C_BIN_DIR'], 'p4c-gen-bfrt-schema')
 
 class BarefootBackend(BackendDriver):
     def __init__(self, target, arch, argParser):
@@ -105,7 +103,6 @@ class BarefootBackend(BackendDriver):
     def config_assembler(self, targetName):
         self.add_command_option('assembler', "--target " + targetName)
 
-
     def process_command_line_options(self, opts):
         BackendDriver.process_command_line_options(self, opts)
 
@@ -118,24 +115,21 @@ class BarefootBackend(BackendDriver):
         self.add_command_option('preprocessor', self._source_filename)
 
         self.add_command_option('compiler', "-o")
-        self.add_command_option('compiler', "{}.bfa".format(basepath))
+        self.add_command_option('compiler', "{}".format(output_dir))
         self.add_command_option('compiler', "{}.p4i".format(basepath))
         # cleanup after compiler
         self._postCmds['compiler'] = []
         self._postCmds['compiler'].append(["rm -f {}.p4i".format(basepath)])
 
+        self.add_command_option('assembler', "--manifest {}/manifest.json".format(output_dir))
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self.add_command_option('assembler',
                                     "-vvvvl {}/bfas.config.log".format(output_dir))
-        self.add_command_option('assembler', "-o {}".format(output_dir))
-        self.add_command_option('assembler', "{}.bfa".format(basepath))
+
         # cleanup after assembler
         self._postCmds['assembler'] = []
         if not opts.debug_info:
             self._postCmds['assembler'].append(["rm -f {}.bfa".format(basepath)])
-
-        # cleanup after visualizer
-        self._postCmds['assembler'].append(["rm -f {}.bfa.res.json".format(basepath)])
 
         src_filename, src_extension = os.path.splitext(self._source_filename)
         # local options

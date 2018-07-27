@@ -1,0 +1,93 @@
+#!/usr/bin/env python2
+
+import argparse
+import json
+import os.path
+
+template="""
+{
+    "chip_list": [
+        {
+        "id": "asic-0",
+            "chip_family": "",
+            "instance": 0,
+            "pcie_sysfs_prefix":
+                "/sys/devices/pci0000:00/0000:00:03.0/0000:05:00.0",
+            "pcie_domain": 0,
+            "pcie_bus": 5,
+            "pcie_fn": 0,
+            "pcie_dev":
+                0,
+            "pcie_int_mode":
+                1,
+            "sds_fw_path":
+                "share/tofino_sds_fw/avago/firmware"
+        }
+    ],
+    "instance": 0,
+    "p4_devices": [
+        {
+            "device-id": 0,
+            "p4_programs": [
+                {
+                    "program-name": "",
+                    "bfrt-config": "",
+                    "p4_pipelines": [ ]
+                }
+            ],
+            "agent0": "lib/libpltfm_mgr.so"
+        }
+    ]
+}
+"""
+
+def get_parser():
+    parser = argparse.ArgumentParser(description='STF conf file generator')
+    parser.add_argument('--testdir', help='Location of test outputs',
+                        type=str, action='store', required=True)
+    parser.add_argument('--installdir', help='Location of installed outputs',
+                        type=str, action='store', required=False)
+    parser.add_argument('--name', help='Name of P4 program under test',
+                        type=str, action='store', required=True)
+    parser.add_argument('--device', help='Target device',
+                        choices=['tofino', 'jbay'], default='tofino',
+                        type=str, action='store', required=True)
+    parser.add_argument('--pipe', help='Pipeline Names',
+                        default='', nargs="+",
+                        type=str, required=True)
+    return parser
+
+def main():
+    MAX_PIPES = 4  # For now this is safe enough
+    args = get_parser().parse_args()
+    if args.installdir is None:
+        args.installdir = args.testdir
+    base_conf = json.loads(template)
+    # assume one chip
+    chip = base_conf["chip_list"][0]
+    chip["chip_family"] = args.device
+    # only support one device
+    p4_device = base_conf["p4_devices"][0]
+    # only support one program
+    p4_info = p4_device["p4_programs"][0]
+    p4_info["program-name"] = args.name
+    p4_info["bfrt-config"] = os.path.join(args.installdir, 'bf-rt.json')
+    p4_pipelines=p4_info['p4_pipelines']
+    npipes = len(args.pipe)
+    for index, pipe in zip(range(npipes),args.pipe):
+        pipe_config = {}
+        pipe_config["p4_pipeline_name"] = pipe
+        share_path = os.path.join(args.installdir, pipe)
+        pipe_config["context"] = os.path.join(share_path, 'context.json')
+        pipe_config["config"] = os.path.join(share_path, args.device + '.bin')
+        pipe_config["pipe_scope"] = [x*npipes+index for x in range(MAX_PIPES/npipes)]
+        pipe_config["path"] = args.installdir
+        p4_pipelines.append(pipe_config)
+
+    conf_name = os.path.join(args.testdir, args.name + '.conf')
+    with open(conf_name, 'w') as fconf:
+        json.dump(base_conf, fconf, indent=4, separators=(',', ': '))
+        fconf.write('\n')
+
+if __name__ == '__main__':
+    main()

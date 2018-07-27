@@ -82,6 +82,12 @@ function(bfn_set_pd_build_flag tag p4test pd_build_flag)
     APPEND PROPERTY ENVIRONMENT "PDFLAGS=${pd_build_flag}")
 endfunction()
 
+# add additional arguments to building the pd test, after the call to add_test
+function(bfn_set_p4_build_flag tag p4test p4_build_flag)
+  set_property(TEST "${tag}/${p4test}"
+    APPEND PROPERTY ENVIRONMENT "P4FLAGS=${p4_build_flag}")
+endfunction()
+
 # add additional arguments to a test, after the call to add_test
 # We currently use this for specifying a set of tests, either by tag,
 # a sequence of tags, or a sequence of tests

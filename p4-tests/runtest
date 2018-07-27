@@ -16,6 +16,35 @@ else
     DEBUGGER_COMMAND="gdb --args"
 fi
 
+# -----------------------------------------------
+#                     supported option
+# p4-14 w. stf       -stf, -stf2ptf
+# p4-14 w. ptf       -ptf
+# p4-14 w/o test     -ptf  
+# p4-16 v1 w.stf     -stf, -stf2ptf
+# p4-16 v1 w.ptf     -ptf
+# p4-16 v1 w/o test  -ptf
+# p4-16 tna w.stf    -stf -bfrt, -stf2ptf -bfrt
+# p4-16 tna w.ptf    -ptf -bfrt
+# p4-16 tna w/o test -ptf -bfrt
+
+# option matrix for various tests
+# ------------------------------------------------
+#              -stf     -stf2ptf   -ptf    -pd     
+# run_stf      true     false      false   false  
+# run_stf2ptf  false    true       false   false  
+# run_ptf      false    true       true    false  
+# run_pd       false    false      false   true   
+# ------------------------------------------------
+# -stf         any p4-14 or p4-16 test with *.stf
+# -stf2pdf     any p4-14 or p4-16 test with *.stf, running ptf with pi, 
+#              use --stftest with ptf_runner.py
+# -ptf         any p4-16 test with ptf dir, run ptf with pi,
+#              use --pdtest with ptf_runner.py
+# -pd          any p4-14 test with ptf dir, run ptf with pd,
+#              use --pdtest with ptf_runner.py
+# -bfrt        if used in combination with -ptf, run ptf with bfrt
+
 # Setting this timeout (590) to be lower than the ctest timeout (600)
 # to capture known failures due to test timeout for XFAIL
 TIMEOUT=${P4C_TIMEOUT:-590}
@@ -108,6 +137,8 @@ for p4c_arg in $P4C_ARGS; do
         run_ptf=true
     elif [ "$p4c_arg" = "-pd" ]; then
         run_pd=true
+    elif [ "$p4c_arg" = "-bfrt" ]; then
+        bfrt=true
     elif [ "$p4c_arg" = "-time" ]; then
         TIME_COMMAND="time"
     elif [ "$p4c_arg" = "-v" ]; then
@@ -245,12 +276,15 @@ name=$(basename $file .p4)
 # turn on compiler debug info, regardless
 P4C_ARGS="$P4C_ARGS -g"
 
+p4_version=""
 if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
     P4C_ARGS="$P4C_ARGS --target ${device} --arch ${arch}"
     P4C_ARGS="$P4C_ARGS --std p4-16"
+    p4_version="p4-16"
 else
     P4C_ARGS="$P4C_ARGS --target ${device} --arch v1model"
     P4C_ARGS="$P4C_ARGS --std p4-14"
+    p4_version="p4-14"
 fi
 
 if [ "$ptftestdir" != "" ] && [ ! -d ${ptftestdir} ]; then
@@ -275,7 +309,7 @@ if $p4info; then
 fi
 
 if $bfrt; then
-    bfrt_out=$testdir/${name}${out_ext}.out/bfrt.json
+    bfrt_out=$testdir/${name}${out_ext}.out/bf-rt.json
     P4C_ARGS="$P4C_ARGS --bf-rt-schema $bfrt_out"
 fi
 
@@ -325,53 +359,121 @@ if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
     exit 0
 fi
 
-# delete old outputs so we don't get confused if they're not overwritten
-rm -f $testdir/$name${out_ext}.bfa
-rm -f $testdir/$name${out_ext}.out/$name${out_ext}.bfa
-rm -f $testdir/$name${out_ext}.out/${device}.bin
-rm -f $testdir/$name${out_ext}.out/${device}.bin.gz
-rm -f $testdir/$name${out_ext}.out/*.cfg.json $testdir/$name${out_ext}.out/*.cfg.json.gz
-# PD runs the compiler as part of the p4-build make, so we skip running it here
-if ! $run_pd; then
-    run $P4C $P4C_ARGS $file -o $testdir/${name}${out_ext}.out || die
+manifest=$testdir/${name}${out_ext}.out/manifest.json
+if $run_pd ; then
+    manifest=$testdir/${name}${out_ext}.out/${device}/${name}/manifest.json
 fi
-# compress cfg.json files if they exist
-gzip -f $testdir/$name${out_ext}.out/*.cfg.json &>/dev/null
-if [ -r $testdir/$name${out_ext}.out/${device}.bin ]; then
-    if $run_ptf || $run_pd; then
-        true # ptf requires uncompressed binary
-    elif $run_stf; then
-        # stf can run compressed binaries with recent updates
-        gzip -f $testdir/$name${out_ext}.out/${device}.bin
-    else
-        #binary not needed
-        rm $testdir/$name${out_ext}.out/${device}.bin
-    fi
-fi
-for f in $testdir/$name${out_ext}.out/*.log; do
-    if [ -r $f ]; then
-        gzip -f $f
-    fi
-done
 
-if ! $run_pd && [ ! -r $testdir/$name${out_ext}.out/$name.bfa ]; then
-    echo >&2 "$P4C did not give an error but did not generate output either"
+MANIFEST_CONFIG=$(findbin MANIFEST_CONFIG)
+if [[ x$MANIFEST_CONFIG == x"" ]]; then
+    echo >&2 "manifest-config not found"
     exit 1
+fi
+
+if [ -r $manifest ]; then
+    # find all pipe names from previous compilation
+    pipes=$(${MANIFEST_CONFIG} --pipe ${manifest})
+fi
+
+remove_old_files() {
+    pipes=( $2 )
+    for p in "${pipes[@]}"; do
+        output_dir=$name${out_ext}.out
+        if [ $1 == "p4-16" ]; then
+            output_dir=$output_dir/$p
+        fi
+        rm -f $testdir/$name${out_ext}.bfa
+        rm -f $testdir/$output_dir/$name${out_ext}.bfa
+        rm -f $testdir/$output_dir/${device}.bin
+        rm -f $testdir/$output_dir/${device}.bin.gz
+        rm -f $testdir/$output_dir/*.cfg.json
+        rm -f $testdir/$output_dir/*.cfg.json.gz
+    done
+}
+
+# delete old outputs so we don't get confused if they're not overwritten
+remove_old_files $p4_version $pipes
+
+compress_cfg_json() {
+    pipes=( $2 )
+    for p in "${pipes[@]}"; do
+        output_dir=$name${out_ext}.out
+        if [ $1 == "p4-16" ]; then
+            output_dir=$output_dir/$p
+        fi
+        gzip -f $testdir/$output_dir/*.cfg.json &>/dev/null
+        if [ -r $testdir/$output_dir/${device}.bin ]; then
+            if $run_ptf || $run_pd ; then
+                true # ptf requires uncompressed binary
+            elif $run_stf; then
+                # stf can run compressed binaries with recent updates
+                gzip -f $testdir/$output_dir/${device}.bin
+            else
+                #binary not needed
+                rm $testdir/$output_dir/${device}.bin
+            fi
+        fi
+        for f in $testdir/$output_dir/*.log; do
+            if [ -r $f ]; then
+                gzip -f $f
+            fi
+        done
+    done
+}
+
+check_bfa() {
+    pipes=( $2 )
+    for p in "${pipes[@]}"; do
+        output_dir=$name${out_ext}.out
+        if [ $1 == "p4-16" ]; then
+            output_dir=$output_dir/$p
+        fi
+        if ! $run_pd && [ ! -r $testdir/$output_dir/$name.bfa ]; then
+            echo >&2 "$P4C did not give an error but did not generate output either"
+            exit 1
+        fi
+    done
+}
+
+# PD or BFRT runs the compiler as part of the p4-build make, so we skip running it here
+if $run_stf || [ $run_ptf && ! $bfrt && ! $run_pd ] ; then
+    run $P4C $P4C_ARGS $file -o $testdir/${name}${out_ext}.out || die
+
+    # find all pipe names from manifest.json in current compilation
+    pipes=$(${MANIFEST_CONFIG} --pipe ${manifest})
+
+    # compress cfg.json files if they exist
+    compress_cfg_json $p4_version $pipes
+
+    # sanity check
+    check_bfa $p4_version $pipes
 fi
 
 if $run_stf && [ -r ${file%.p4}.stf ]; then
     STF=$(findbin HARLYN_STF_${device})
+
+    testout=$(realpath $testdir/$name${out_ext}.out)
+    if [ ! -d $testout ]; then
+        mkdir -p $testout
+    fi
 
     if [[ "$file" =~ ^/ ]]; then
         test=${file%.p4}.stf
     else
         test=`pwd`/${file%.p4}.stf
     fi
-    cd $testdir
-    mkdir -p $name${out_ext}.out
+
     obsLog=$name.p4.obs
 
-    run $STF -l $name${out_ext}.out --observation-log $obsLog $test | \
+    conf_args="--name $name --device $device --testdir $testout --pipe ${pipes}"
+    run ./p4c-gen-bfrt-conf $conf_args
+
+    output_dir=$testout
+    if [ $p4_version == "p4-16" ]; then
+        output_dir=$output_dir/${name}.conf
+    fi
+
+    run $STF -l $output_dir --observation-log $obsLog $test | \
         grep -v 'WARN MAU::[a-z_]* Time gone backwards!' \
         || die
 fi
@@ -423,9 +525,31 @@ else
     nproc=$(nproc)
 fi
 
+configure_p4_build() {
+    echo "Configuring $name in $testout"
+    p4c=$(realpath $P4C)
+    export MAKEFLAGS="-j $nproc"
+    export P4C=$p4c
+    p4builddir="$(dirname $0)/p4_14/p4-tests/p4-build"
+    if [ ! -r $p4builddir/configure ] ; then
+        pushd $p4builddir > /dev/null
+        echo "Reconfiguring p4-build"
+        run ./autogen.sh > /dev/null || die
+        popd > /dev/null
+    fi
+    run $p4builddir/configure --with-${device} --with-p4c=$P4C --enable-thrift \
+        --prefix=$testout LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
+        --bindir=${tools_dir}/bin P4_VERSION=$p4_version P4_NAME=$name P4_PATH=$file \
+        P4FLAGS=$P4FLAGS \
+        > ${testout}/p4-build-conf.log || die
+    if $verbose ; then
+        tail -n 10 ${testout}/p4-build-conf.log
+    fi
+    run make install > ${testout}/p4-build-make.log || die
+}
+
 if $run_pd ; then
     testout=$(realpath $testdir/$name${out_ext}.out)
-
     if [ ! -d $testout ]; then
         mkdir -p $testout
     fi
@@ -492,7 +616,7 @@ if $run_pd ; then
                              --name $name \
                              --ptfdir ${ptftestdir} \
                              --top-builddir $(findcmakecache) \
-                             --pdtest $testout/$name.conf \
+                             --pdtest $testout/${name}.conf \
                              --device ${device} \
                              $PTF_EXTRA_ARGS"
         run $PTF_CMD
@@ -509,8 +633,28 @@ if $run_ptf ; then
     # Extract the tools install directory based on the install path of bf_switchd
     bf_switchd=$(findbin BF_SWITCHD_${device})
     tools_dir=$( dirname $( dirname $bf_switchd ) )
+    testout=$(realpath $testdir/$name${out_ext}.out)
+    if [ ! -d $testout ]; then
+        mkdir -p $testout
+    fi
+    # p4-16 bfrt tests are only used for tna tests, not v1model.
+    if $bfrt ; then
+        pushd $testout > /dev/null
+        configure_p4_build $testout
+        popd > /dev/null  # $testout
+    fi
+
+    if [ $p4_version == "p4-16" ]; then
+        conf_args="--name $name --device $device --testdir $testout --pipe ${pipes}"
+        run ./p4c-gen-bfrt-conf $conf_args
+        PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --bfrt-test $testout/${name}.conf"
+        if ! $bfrt ; then
+            PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --run-bfrt-as-pi ${pipes}"
+        fi
+    fi
+
     if [ -d ${ptftestdir} ]; then
-        PTF_CMD="$PTF_RUNNER --testdir $testdir/$name${out_ext}.out --name $name \
+        PTF_CMD="$PTF_RUNNER --testdir $testout --name $name \
                 --ptfdir ${ptftestdir} --top-builddir $(findcmakecache) \
                 --device ${device} $PTF_EXTRA_ARGS"
     elif $run_stf2ptf && [ -r ${file%.p4}.stf ]; then
@@ -521,7 +665,7 @@ if $run_ptf ; then
         else
             stftest=`pwd`/${file%.p4}.stf
         fi
-        PTF_CMD="$PTF_RUNNER --testdir $testdir/$name${out_ext}.out --name $name \
+        PTF_CMD="$PTF_RUNNER --testdir $testout --name $name \
                 --stftest ${stftest} \
                 --ptfdir ${mydir}/tools/stf --top-builddir $(findcmakecache) \
                 --device ${device} \

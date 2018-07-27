@@ -49,6 +49,14 @@ def get_parser():
                         type=str, action="store", required=False)
     parser.add_argument('--pdtest', help='Directory containing the PD conf file',
                         type=str, action="store", required=False, default=None)
+    # mutually exclusive with --pdtest
+    parser.add_argument('--bfrt-test', help='Directory containing the BFRT conf file',
+                        type=str, action="store", required=False, default=None)
+    # This is needed because the existing p4-16 v1model tests are written for PI,
+    # despite that the conf file is generated with bfrt syntax, as a result,
+    # we cannot rely on the conf file information to infer the test type.
+    parser.add_argument('--run-bfrt-as-pi', help='Run test with bfrt conf as PI',
+                        type=str, action='store', default=None, nargs="+")
     parser.add_argument('--top-builddir', help='Build directory root',
                         type=str, action="store", required=False)
     parser.add_argument('--stftest', help='STF file',
@@ -166,6 +174,7 @@ def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
         os.environ['PYTHONPATH'] += ":" + pypath
     else:
         os.environ['PYTHONPATH'] = pypath
+
     for iface_idx, iface_name in port_map.items():
         ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])
     cmd = [PTF]
@@ -243,7 +252,6 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
         return False
     return p.returncode == 0
 
-
 # model uses the context json to lookup names when logging
 def start_model(model, out=None, context_json=None, port_map_path=None, device=None):
     cmd = [model]
@@ -256,7 +264,8 @@ def start_model(model, out=None, context_json=None, port_map_path=None, device=N
     debug("Starting model: {}".format(' '.join(cmd)))
     return subprocess.Popen(cmd, stdout=out, stderr=out)
 
-def start_switchd(switchd, status_port, conf_path, with_pd = None, out=None, device=None, installdir="/usr/local"):
+def start_switchd(switchd, status_port, conf_path, with_pd = None,
+                  out=None, device=None, installdir="/usr/local"):
     cmd = [switchd]
     cmd.extend(['--install-dir', installdir])
     cmd.extend(['--conf-file', conf_path])
@@ -269,7 +278,7 @@ def start_switchd(switchd, status_port, conf_path, with_pd = None, out=None, dev
         cmd.extend(['--no-pi'])
         cmd.extend(['--init-mode', 'cold'])
     cmd.append('--background')
-    debug("Starting switchd: {}".format(' '.join(cmd)))
+    info("Starting switchd: {}".format(' '.join(cmd)))
     return subprocess.Popen(cmd, stdout=out, stderr=out)
 
 # From
@@ -367,6 +376,10 @@ def main():
     else:
         compiler_out_dir = args.testdir
 
+    if args.pdtest is not None and args.bfrt_test is not None:
+        error("--pdtest and --bfrt-test cannot be specified at the same time")
+        sys.exit(1)
+
     if os.getenv('VERBOSE_MODEL_LOG') is not None:
         args.verbose_model_log = True
 
@@ -375,14 +388,26 @@ def main():
         error("P4Info file {} not found".format(p4info_path))
         sys.exit(1)
 
+    conf_path = os.path.join(compiler_out_dir, args.name + '.conf')
+    if args.bfrt_test and not os.path.exists(conf_path):
+        error("Config file {} not found".format(conf_path))
+        sys.exit(1)
+
     device = args.device
+    # some p4-16 tests uses the bfrt conf syntax, but only has PI test.
+    if args.run_bfrt_as_pi is not None:
+        if len(args.run_bfrt_as_pi) != 1:
+            error("PI only supports one tofino.bin and context.json")
+            sys.exit(1)
+        compiler_out_dir = os.path.join(compiler_out_dir, args.run_bfrt_as_pi[0])
+
     bin_path = os.path.join(compiler_out_dir, device + '.bin')
-    if not os.path.exists(bin_path):
+    if args.bfrt_test is None and not os.path.exists(bin_path):
         error("Binary config file {} not found".format(bin_path))
         sys.exit(1)
 
     cxt_json_path = os.path.join(compiler_out_dir, 'context.json')
-    if not os.path.exists(cxt_json_path):
+    if args.bfrt_test is None and not os.path.exists(cxt_json_path):
         error("Context json file {} not found".format(cxt_json_path))
         sys.exit(1)
 
@@ -458,14 +483,18 @@ def main():
 
     if args.test_only:
         success = False
-        if args.pdtest is None:
-            success = run_pi_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
-                                    port_map, args.stftest, args.platform, args.verbose_model_log,
-                                    extra_ptf_args)
-        else:
+        if args.pdtest:
             success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
                                        args.testdir, args.platform, port_map, args.verbose_model_log,
                                        extra_ptf_args, installdir=BFD_INSTALLDIR)
+        elif args.bfrt_test and not args.run_bfrt_as_pi:
+            success = run_pd_ptf_tests(PTF, args.device, args.name, args.bfrt_test, args.ptfdir,
+                                       args.testdir, args.platform, port_map, args.verbose_model_log,
+                                       extra_ptf_args, installdir=BFD_INSTALLDIR)
+        else:
+            success = run_pi_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
+                                    port_map, args.stftest, args.platform, args.verbose_model_log,
+                                    extra_ptf_args)
         if not success:
             error("Error when running PTF tests")
             sys.exit(1)
@@ -518,6 +547,7 @@ def main():
             else:
                 conf_path = os.path.join(
                     os.path.dirname(os.path.realpath(__file__)), device + '.conf')
+            info("conf at {}".format(conf_path))
             assert(os.path.exists(conf_path))
 
             switchd_status_port = 6789
@@ -535,6 +565,10 @@ def main():
 
             if args.pdtest is not None:
                 success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
+                                           args.testdir, args.platform, port_map, args.verbose_model_log,
+                                           extra_ptf_args, installdir=BFD_INSTALLDIR)
+            elif args.bfrt_test and not args.run_bfrt_as_pi:
+                success = run_pd_ptf_tests(PTF, args.device, args.name, args.bfrt_test, args.ptfdir,
                                            args.testdir, args.platform, port_map, args.verbose_model_log,
                                            extra_ptf_args, installdir=BFD_INSTALLDIR)
             else:

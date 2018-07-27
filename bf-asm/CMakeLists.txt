@@ -233,6 +233,9 @@ target_link_libraries (bfas ${BFASM_LIBS} ${BFASM_LIB_DEPS})
 install (TARGETS bfas
   RUNTIME DESTINATION bin)
 
+install (PROGRAMS bfas-runner.py
+  DESTINATION bin)
+
 add_custom_target(check-asm
   COMMAND export BUILDDIR=${BFASM_BINARY_DIR} && cd ${BFASM_SOURCE_DIR}/test &&
           ./runtests asm/*.tfa asm/*.jba)
@@ -262,3 +265,8 @@ add_custom_target(ctags-asm
   COMMAND ctags -R -I VECTOR --exclude=test --exclude=submodules
               "--regex-C++=${CTAGS_CXX_REGEXP}"
   COMMENT "Generating ctags")
+
+add_custom_target(bfas-runner ALL
+  COMMAND ${CMAKE_COMMAND} -E copy ${BFASM_SOURCE_DIR}/bfas-runner.py ${BFASM_BINARY_DIR}/bfas-runner.py
+)
+

@@ -26,10 +26,12 @@ struct Phase0Info;
 #end
 
 class BFN::Pipe {
+    ID name;   // name specified in P4.
     inline NameMap<HeaderOrMetadata> metadata;  // not visited
     inline std::vector<Annotation> global_pragmas;  // not visited
 #noconstructor
     Pipe() = default;
+    Pipe(cstring name) : name(name) {}
     class thread_t {
         BFN::AbstractParser parser = nullptr;
         MAU::TableSeq mau = nullptr;

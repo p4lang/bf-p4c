@@ -119,8 +119,8 @@ class BackendConverter {
     void convert(const IR::P4Program *prog, BFN_Options& options);
     void convertTnaProgram(const IR::P4Program *program, BFN_Options &options);
     void convertV1Program(const IR::P4Program *program, BFN_Options &options);
-
-    std::map<int /* index */, const IR::BFN::Pipe*> pipe;
+    cstring getPipelineName(const IR::P4Program* program, int index);
+    std::vector<const IR::BFN::Pipe*> pipe;
 };
 
 }  // namespace BFN

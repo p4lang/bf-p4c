@@ -31,14 +31,13 @@ ENV P4C_RUNTIME_DEPS cpp \
                      libnl-route-3-dev \
                      libssl1.0.0 \
                      pkg-config \
+                     psmisc \
                      python-ipaddr \
                      python-scapy \
                      python-setuptools \
                      python-yaml \
                      sudo \
-                     tcpdump \
-                     psmisc
-
+                     tcpdump
 
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && \

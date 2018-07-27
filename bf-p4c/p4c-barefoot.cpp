@@ -61,16 +61,7 @@ class OutputAsm : public PassManager {
  private:
     const BFN_Options &_options;
     bool _success;
-
-    // logical pipe id to support generating bfa for 64q, 32q and 16q.
-    // If compiling for 64q arch, all pipes are programmed with the same binary,
-    // the only used logical pipe id is 0.
-    // If compiling for 32q arch, use logical pipe id 0 and 1.
-    // If compiling for 16q arch, use logical pipe id 0, 1, 2, 3.
-    // In all cases, logical pipe id 0 is used for the external-facing pipe (pipe
-    // that has connection to external interface), logical pipe id 1, 2, 3 are used
-    // for internal-face pipe (pipes that use internal loopback).
-    int pipe_id;
+    cstring pipeName;
 
     BFN::Visualization _visualization;
 
@@ -78,12 +69,22 @@ class OutputAsm : public PassManager {
         if (!_options.debugInfo)  // generate resources info only if invoked with -g
             return;
         if (_success) {
-            if (!_options.outputFiles.at(pipe_id)) {
+            std::string outputDir(_options.outputDir.c_str());
+            if (_options.langVersion == BFN_Options::FrontendVersion::P4_16) {
+                outputDir = outputDir + "/" + pipeName;
+            }
+            int rc = mkdir(outputDir.c_str(), 0755);
+            if (rc != 0 && errno != EEXIST) {
+                std::cerr << "Failed to create directory: " << outputDir << std::endl;
                 return;
             }
-            cstring resourcesFile = _options.outputFiles.at(pipe_id) + ".res.json";
+            LOG2("Generating outputs under " << outputDir);
+            std::string dir(outputDir);
+            cstring resourcesFile = dir + "/" + _options.programName + ".res.json";
+            cstring outputFile = dir + "/" + _options.programName + ".bfa";
+
             LOG2("ASM generation for resources: " << resourcesFile);
-            std::ofstream ctxt_stream(_options.outputFiles.at(pipe_id), std::ios_base::app);
+            std::ofstream ctxt_stream(outputFile, std::ios_base::app);
             ctxt_stream << "resources: \"" << resourcesFile << "\"" << std::endl << std::flush;
             std::ofstream res(resourcesFile);
             res << _visualization << std::endl << std::flush;
@@ -100,8 +101,9 @@ class OutputAsm : public PassManager {
                 strftime(build_date, 1024, "%c", localtime(&now));
 
                 std::string outputDir(_options.outputDir.c_str());
-                outputDir += "/pipe.";
-                outputDir += std::to_string(pipe_id);
+                if (_options.langVersion == BFN_Options::FrontendVersion::P4_16) {
+                    outputDir = outputDir + "/" + pipeName;
+                }
                 int rc = mkdir(outputDir.c_str(), 0755);
                 if (rc != 0 && errno != EEXIST) {
                     std::cerr << "Failed to create directory: " << outputDir << std::endl;
@@ -132,12 +134,12 @@ class OutputAsm : public PassManager {
     }
 
  public:
-    explicit OutputAsm(const BFN::Backend &b, const int& pipe_id,
-                       const BFN_Options& o, bool success = true) :
-        _options(o), _success(success), pipe_id(pipe_id) {
+    explicit OutputAsm(const BFN::Backend &b, const BFN_Options& o, cstring pipeName,
+                       bool success = true) :
+        _options(o), _success(success), pipeName(pipeName) {
         setStopOnError(false);
-        addPasses({ new BFN::AsmOutput(b.get_phv(), b.get_clot(),
-                                       b.get_defuse(), o, success, pipe_id),
+        addPasses({ new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(), o,
+                                       pipeName, success),
                     &_visualization
                     });
         setName("Assembly output");
@@ -145,15 +147,14 @@ class OutputAsm : public PassManager {
 };
 
 /// use pipe.n to generate output directory.
-void execute_backend(const IR::BFN::Pipe* maupipe, int pipe_id, BFN_Options& options) {
+void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
     if (::errorCount() > 0)
         return;
     if (!maupipe)
         return;
 
     if (Log::verbose())
-        std::cout << "Compiling" << std::endl;
-
+        std::cout << "Compiling " << maupipe->name << std::endl;
 
     BFN::Backend backend(options);
     try {
@@ -165,7 +166,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, int pipe_id, BFN_Options& opt
 
         // produce resource nodes in context.json regardless of failures
         std::cerr << "compilation failed: producing ctxt.json" << std::endl;
-        OutputAsm as(backend, pipe_id, options, false);
+        OutputAsm as(backend, options, maupipe->name, false);
         maupipe->apply(as);
 
         if (Log::verbose())
@@ -179,7 +180,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, int pipe_id, BFN_Options& opt
     }
 
     // output the .bfa file
-    OutputAsm as(backend, pipe_id, options);
+    OutputAsm as(backend, options, maupipe->name);
     maupipe->apply(as);
 }
 
@@ -263,9 +264,9 @@ int main(int ac, char **av) {
     if (::errorCount() > 0)
         return 1;
 
-    for (auto& kv : conv.pipe) {
-        execute_backend(kv.second, kv.first, options);
-        manifest.addContext(kv.first, "context.json");
+    for (auto& pipe : conv.pipe) {
+        execute_backend(pipe, options);
+        manifest.addContext(pipe->name, "context.json");
     }
     // generate the archive manifest
     manifest.serialize();

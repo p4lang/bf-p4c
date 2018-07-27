@@ -1009,6 +1009,18 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
     });
 }
 
+cstring BackendConverter::getPipelineName(const IR::P4Program* program, int index) {
+    auto decl = program->getDeclByName("main");
+    auto expr = decl->to<IR::Declaration_Instance>()->arguments->at(index)->expression;
+    if (!expr->is<IR::PathExpression>()) {
+        ::error("Anonymous instantiation of Pipeline block in 'main' is not supported");
+        return nullptr;
+    }
+    auto path = expr->to<IR::PathExpression>();
+    auto name = path->path->name;
+    return name;
+}
+
 void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Options& options) {
     auto main = toplevel->getMain();
     DeclarationConversions converted;
@@ -1020,10 +1032,10 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
     for (auto pkg : main->constantValue) {
         if (!pkg.second) continue;
         if (!pkg.second->is<IR::PackageBlock>()) continue;
-        auto rv = new IR::BFN::Pipe();
-        auto bindings =
-            new ParamBinding(typeMap,
-                             options.langVersion == CompilerOptions::FrontendVersion::P4_14);
+        auto name = getPipelineName(program, npipe);
+        auto rv = new IR::BFN::Pipe(name);
+        auto bindings = new ParamBinding(typeMap,
+            options.langVersion == CompilerOptions::FrontendVersion::P4_14);
         /// SimplifyReferences passes are fixup passes that modifies the visited IR tree.
         /// Unfortunately, the modifications by simplifyReferences will transform IR tree towards
         /// the backend IR, which means we can no longer run typeCheck pass after applying
@@ -1068,7 +1080,8 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
 
         ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted, bindings);
         processBackendPipe.addDebugHook(options.getDebugHook());
-        pipe.emplace(npipe /* index 0 */, rv->apply(processBackendPipe));
+
+        pipe.push_back(rv->apply(processBackendPipe));
         npipe++;
     }
 }
@@ -1081,10 +1094,10 @@ void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Option
     auto arch = new ParseTna(&threads);
     toplevel->getMain()->apply(*arch);
 
-    auto rv = new IR::BFN::Pipe();
-    auto bindings =
-        new ParamBinding(typeMap,
-                         options.langVersion == CompilerOptions::FrontendVersion::P4_14);
+    auto name = getPipelineName(program, 0);
+    auto rv = new IR::BFN::Pipe(name);
+    auto bindings = new ParamBinding(typeMap,
+        options.langVersion == CompilerOptions::FrontendVersion::P4_14);
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
     // ParamBinding pass must be applied to IR::P4Program* node,
     // see comments in param_binding.h for the reason.
@@ -1121,7 +1134,7 @@ void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Option
     ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted,
                                           &resubmitPackings, &mirrorPackings, bindings);
     processBackendPipe.addDebugHook(options.getDebugHook());
-    pipe.emplace(0 /* index 0 */, rv->apply(processBackendPipe));
+    pipe.push_back(rv->apply(processBackendPipe));
 }
 
 void BackendConverter::convert(const IR::P4Program *program, BFN_Options& options) {

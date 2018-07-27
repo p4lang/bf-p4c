@@ -15,8 +15,8 @@ OPTION(ENABLE_BAREFOOT_INTERNAL "Enable Barefoot Internal" ON)
 SET(BOOST_MIN_VERSION "1.58.0")
 FIND_PACKAGE(Boost ${BOOST_MIN_VERSION} REQUIRED)
 
-# Additional P4C_CPP_FLAGS may be passed (via bootstrap_bfn_compilers.sh script) 
-# from p4factory when configuring bf-p4c-compilers to specify certain predefined 
+# Additional P4C_CPP_FLAGS may be passed (via bootstrap_bfn_compilers.sh script)
+# from p4factory when configuring bf-p4c-compilers to specify certain predefined
 # features when building the compiler
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${P4C_CPP_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${P4C_CPP_FLAGS}")

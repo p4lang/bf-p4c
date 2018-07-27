@@ -17,6 +17,7 @@
 #include "bf-p4c/phv/asm_output.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "common/run_id.h"
+#include "bf-p4c-options.h"
 
 class FieldDefUse;
 
@@ -29,6 +30,7 @@ class AsmOutput : public Inspector {
     const ClotInfo    &clot;
     const FieldDefUse &defuse;
     const BFN_Options &options;
+    const cstring pipeName;
     /// Tell this pass whether it is called after a succesful compilation
     bool               _successfulCompile = true;
 
@@ -37,16 +39,27 @@ class AsmOutput : public Inspector {
               const ClotInfo &clot,
               const FieldDefUse& defuse,
               const BFN_Options &opts,
-              bool success,
-              int pipe_id)
-          : phv(phv), clot(clot), defuse(defuse), options(opts), _successfulCompile(success) {
+              const cstring pipeName,
+              bool success)
+          : phv(phv), clot(clot), defuse(defuse), options(opts),
+            pipeName(pipeName), _successfulCompile(success) {
         out = &std::cout;
-        if (!options.outputFiles.empty()) {
-            if (auto file = options.outputFiles.at(pipe_id))
-                out = new std::ofstream(file);
+        auto openmode = std::ios_base::out;
+        if (options.outputDir) {
+            std::string outputDir(opts.outputDir.c_str());
+            if (opts.langVersion == BFN_Options::FrontendVersion::P4_16) {
+                outputDir = outputDir + "/" + pipeName;
+            }
+            int rc = mkdir(outputDir.c_str(), 0755);
+            if (rc != 0 && errno != EEXIST) {
+                std::cerr << "Failed to create directory: " << outputDir << std::endl;
+                return;
+            }
+            std::string dir(outputDir);
+            cstring outputFile = dir + "/" + opts.programName + ".bfa";
+            out = new std::ofstream(outputFile, openmode);
         }
     }
-
     bool preorder(const IR::BFN::Pipe* pipe) override {
         LOG1("ASM generation for successful compile? " << (_successfulCompile ? "true" : "false"));
 

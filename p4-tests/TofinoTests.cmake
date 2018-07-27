@@ -40,7 +40,7 @@ p4c_add_bf_backend_tests("tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES}")
 set (TOFINO_TNA_TEST_SUITES
   ${p16_tna_tests}
   )
-p4c_add_bf_backend_tests("tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}" "-bfrt")
+p4c_add_bf_backend_tests("tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}")
 
 set (TOFINO_PSA_TEST_SUITES
   ${p16_psa_tests}
@@ -122,10 +122,11 @@ set (P4FACTORY_REGRESSION_TESTS
 # exclude tofino.p4 which is included in some programs
 # exclude fifo_pair.p4 which is jbay specific test
 # exclude all netcache p4s and add it as a separate test
+# exclude ipv4_checksum.p4 (include it in JBay tests)
 set (BFN_EXCLUDE_PATTERNS "tofino.p4" "fifo_pair.p4" "defines.p4"
                           "fast_update.p4" "headers.p4" "heavy_hitter.p4"
                           "ipv4.p4" "meter.p4" "netcache.p4" "parser.p4"
-                          "slow_update.p4")
+                          "slow_update.p4" "ipv4_checksum.p4")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/*/*.p4")
 bfn_find_tests ("${BFN_TESTS}" ALL_BFN_TESTS EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 # make a list of all the tests that we want to run PTF on

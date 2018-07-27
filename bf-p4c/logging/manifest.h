@@ -24,7 +24,7 @@ namespace Logging {
 /// that code with BFN internals.
 class Manifest : public Inspector {
  private:
-    std::map<int, cstring>     _contexts;
+    std::map<cstring, cstring> _contexts;
     std::map<cstring, cstring> _graphs;
     std::map<cstring, cstring> _logs;
     const BFN_Options &        _options;
@@ -95,6 +95,9 @@ class Manifest : public Inspector {
         writer.Key("program_name");
         cstring program_name = _options.programName + ".p4";
         writer.String(program_name.c_str());
+        writer.Key("p4_version");
+        writer.String((_options.langVersion == BFN_Options::FrontendVersion::P4_14) ?
+                      "p4-14" : "p4-16");
         writer.Key("run_id");
         writer.String(RunId::getId().c_str());
         writer.Key("contexts");
@@ -102,7 +105,7 @@ class Manifest : public Inspector {
         for (auto c : _contexts) {
             writer.StartObject();
             writer.Key("pipe");
-            writer.Int(c.first);
+            writer.String(c.first.c_str());
             writer.Key("path");
             writer.String(c.second.c_str());
             writer.EndObject();
@@ -149,8 +152,8 @@ class Manifest : public Inspector {
     }
 
     // add context
-    void addContext(int pipe_id, cstring path) {
-        _contexts.emplace(pipe_id, path);
+    void addContext(cstring pipe_name, cstring path) {
+        _contexts.emplace(pipe_name, path);
     }
     void addGraph(cstring graph_type, cstring path) {
         _graphs.emplace(path, graph_type);

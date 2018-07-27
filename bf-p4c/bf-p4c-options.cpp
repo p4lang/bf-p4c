@@ -1,6 +1,7 @@
 #include "bf-p4c-options.h"
 #include <libgen.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <boost/algorithm/string.hpp>
 #include <algorithm>
 #include <unordered_set>
@@ -15,14 +16,9 @@ BFN_Options::BFN_Options() {
     arch   = "v1model";
     compilerVersion = BF_P4C_VERSION;
 
-    registerOption("-o", "file1[,file2]",
-                   [this](const char* arg) {
-                       auto copy = strdup(arg);
-                       while (auto file = strsep(&copy, ","))
-                           outputFiles.push_back(file);
-                       return true;
-                   },
-                   "Write output to outfiles.\n");
+    registerOption("-o", "dir",
+                   [this](const char* arg) { outputDir = arg; return true; },
+                   "Write output to outdir.\n");
     registerOption("--trivpa", nullptr,
         [this](const char *) { trivial_phvalloc = true; return true; },
         "Use the trivial PHV allocator");
@@ -140,14 +136,14 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
 
     // Cache the names of the output directory and the program name
     cstring inputFile;
-    if (remainingOptions && remainingOptions->size() > 1) {
+    if (remainingOptions && remainingOptions->size() >= 1) {
         inputFile = cstring(remainingOptions->at(0));
     } else {
-        if (outputFiles.size() > 0)
-            inputFile = cstring(outputFiles.at(0));
-        else
-            inputFile = cstring("dummy.p4i");
+        inputFile = cstring("dummy.p4i");
     }
+    // A complicated way to get a string out of a string, however,
+    // Calin says basename(const_cast<char *>()) does not work on
+    // certain linux distro.
     size_t len = inputFile.size();
     char *buffer = new char[len+1];
     strncpy(buffer, inputFile.c_str(), len);
@@ -155,22 +151,17 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
     char *program_name_ptr = basename(buffer);
     BUG_CHECK(program_name_ptr, "No valid output argument");
     std::string program_name(program_name_ptr);
-    // remove ".p4i"
-    program_name.erase(program_name.size()-4, 4);
-    programName = cstring(program_name);
+    programName = cstring(program_name.substr(0, program_name.rfind(".")));
     delete [] buffer;
 
-    cstring outputFile;
-    if (outputFiles.size() > 0)
-        outputFile = outputFiles.at(0);
-    else
-        outputFile = cstring(programName + "." + target + "/dummy.bfa");
-    len = outputFile.size();
-    buffer = new char[len+1];
-    strncpy(buffer, outputFile.c_str(), len);
-    char *dirname_ptr = dirname(buffer);
-    outputDir = cstring(dirname_ptr ? dirname_ptr : programName + "." + target);
-    delete [] buffer;
+    // same here, could have used dirname(const_char<char *>())
+    if (!outputDir.size())
+        outputDir = cstring(programName + "." + target);
+    int rc = mkdir(outputDir.c_str(), 0755);
+    if (rc != 0 && errno != EEXIST) {
+        std::cerr << "Failed to create directory: " << outputDir << std::endl;
+        return remainingOptions;
+    }
 
     return remainingOptions;
 }
