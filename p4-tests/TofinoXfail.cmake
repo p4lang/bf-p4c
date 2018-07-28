@@ -1088,7 +1088,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-809
 # Compiler Bug: /bfn/bf-p4c-compilers/p4c/ir/vector.h:148: Null e
 p4c_add_xfail_reason("tofino"
-  "/bfn/bf-p4c-compilers/p4c/ir/vector.h:148: Null e"
+  "p4c/ir/vector.h:148: Null e"
   extensions/p4_tests/p4_14/p4smith_regression/corroding_0.p4
 )
 

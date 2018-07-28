@@ -217,7 +217,7 @@ struct ingress_intrinsic_metadata_for_deparser_t {
 // -----------------------------------------------------------------------------
 // GHOST INTRINSIC METADATA
 // -----------------------------------------------------------------------------
-@__intrinsic_metadata
+@__intrinsic_metadata @__ghost_metadata
 header ghost_intrinsic_metadata_t {
     bit<1>      ping_pong;              // ping-pong bit to control which version to update
     bit<18>     qlength;

@@ -1,50 +1,112 @@
 #include "bf-p4c/phv/create_thread_local_instances.h"
 
 #include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/mau/mau_visitor.h"
 
 namespace {
 
 using ThreadLocalMetadataMapping =
     std::map<const IR::HeaderOrMetadata*, const IR::HeaderOrMetadata*>;
 
-/// Create thread-local versions of variables and parser states.
-struct CreateInstancesForThread : public Modifier, ThreadVisitor {
-    explicit CreateInstancesForThread(gress_t th) : ThreadVisitor(th) { }
+class FindSharedStateful : public MauInspector {
+    struct SaluThreadUse {
+        std::set<gress_t>               threads;        // which threads use this salu
+        std::map<cstring, gress_t>      action_thread;  // which threads use each stateful action
+    };
+    std::map<const IR::MAU::StatefulAlu *, SaluThreadUse>       all_salus;
 
-    /// The thread-local versions of each metadata struct; consumed by
+    // This runs before InstructionSelection, so SALU refs are still RegisterAction.execute
+    // primitives within actions, and not in IR::MAU::Action::stateful
+    bool preorder(const IR::MAU::StatefulAlu *salu) {
+        visitAgain();
+        gress_t thread = VisitingThread(this);
+        all_salus[salu].threads.insert(thread);
+        if (auto *act = findContext<IR::MAU::Action>())
+            all_salus.at(salu).action_thread[salu->action_map.at(act->internal_name)] = thread;
+        return false; }
+    bool preorder(const IR::GlobalRef *) { visitAgain(); return true; }
+
+ public:
+    gress_t salu_action_gress(const IR::MAU::StatefulAlu *salu, cstring action) {
+        return all_salus.at(salu).action_thread.at(action); }
+};
+
+/// Create thread-local versions of variables and parser states.
+struct CreateLocalInstances : public Transform {
+    FindSharedStateful  *salus;
+    explicit CreateLocalInstances(FindSharedStateful *salus) :salus(salus) {}
+
+    /// The thread-local versions of each header and metadata struct; consumed by
     /// CreateThreadLocalMetadata.
-    ThreadLocalMetadataMapping localMetadata;
+    ThreadLocalMetadataMapping localMetadata[3];
+    std::map<const IR::TempVar *, const IR::TempVar *> localTempVars[3];
+    std::map<const IR::Expression *, std::set<const IR::Expression *>>    memoizeExpr;
 
  private:
+    const IR::HeaderOrMetadata *ghost_intrinsic_metadata = nullptr;
+    profile_t init_apply(const IR::Node *root) {
+        ghost_intrinsic_metadata = nullptr;
+        return Transform::init_apply(root); }
     /// Prepend "thread-name::" to the names of headers and metadata structs.
-    bool preorder(IR::HeaderOrMetadata* header) override {
-        header->name = IR::ID(cstring::to_cstring(VisitingThread(this)) +
-                                      "::" + header->name);
-        if (auto* metadata = header->to<IR::Metadata>()) {
-            localMetadata[getOriginal()->to<IR::Metadata>()] = metadata;
-        }
-        if (auto* hdr = header->to<IR::Header>()) {
-            localMetadata[getOriginal()->to<IR::Header>()] = hdr;
-        }
-        return false;
+    const IR::HeaderOrMetadata *preorder(IR::HeaderOrMetadata* header) override {
+        const auto *rv = header;
+        auto *orig = getOriginal<IR::HeaderOrMetadata>();
+        visitAgain();
+        gress_t thread;
+        if (header->type->annotations->getSingle("__ghost_metadata")) {
+            // ghost intrinsic metadata is declared separately as arguments to both
+            // ingress and ghost, but both need to refer to the same thing (same PHV)
+            thread = GHOST;
+            if (ghost_intrinsic_metadata)
+                rv = ghost_intrinsic_metadata;
+            else
+                ghost_intrinsic_metadata = header;
+        } else if (auto *salu_action = findContext<IR::MAU::SaluAction>()) {
+            auto *salu = findOrigCtxt<IR::MAU::StatefulAlu>();
+            thread = salus->salu_action_gress(salu, salu_action->name);
+        } else {
+            thread = VisitingThread(this); }
+        if (localMetadata[thread].count(orig)) {
+            rv = localMetadata[thread][orig];
+        } else {
+            if (rv == header)
+                header->name = IR::ID(cstring::to_cstring(thread) + "::" + header->name);
+            localMetadata[thread][orig] = rv; }
+        prune();
+        return rv;
+    }
+    /// Prepend "thread-name::" to TempVars, exactly once per thread
+    const IR::TempVar *preorder(IR::TempVar *var) override {
+        auto *orig = getOriginal<IR::TempVar>();
+        visitAgain();
+        gress_t thread = VisitingThread(this);
+        if (localTempVars[thread].count(orig)) {
+            return localTempVars[thread][orig]; }
+        var->name = cstring::to_cstring(thread) + "::" + var->name;
+        localTempVars[thread][orig] = var;
+        return var;
     }
 
-    /// Prepend "thread-name::" to TempVars.
-    bool preorder(IR::TempVar *var) override {
-        var->name = cstring::to_cstring(VisitingThread(this)) + "::" + var->name;
-        return false;
-    }
+    const IR::Expression *preorder(IR::Expression *hr) {
+        // Need to ensure that any Expression that has a subexpression HeaderOrMetadata or
+        // TempVar that got split based on thread is also split...
+        // is different
+        visitAgain();
+        return hr; }
+    const IR::Expression *postorder(IR::Expression *hr) {
+        // but only if it is different from any previously created clone.
+        auto *orig = getOriginal<IR::Expression>();
+        for (auto *gen : memoizeExpr[orig])
+            if (*gen == *hr) return gen;
+        memoizeExpr[orig].insert(hr);
+        return hr; }
 };
 
 /// Update the set of metadata structs in `BFN::Pipe::metadata` to refer to
 /// the thread-local versions of the structs.
 struct CreateThreadLocalMetadata : public Modifier {
-    CreateThreadLocalMetadata(const ThreadLocalMetadataMapping* ingressMetadata,
-                              const ThreadLocalMetadataMapping* egressMetadata)
-      : localMetadata{ingressMetadata, egressMetadata} {
-        CHECK_NULL(ingressMetadata);
-        CHECK_NULL(egressMetadata);
-    }
+    explicit CreateThreadLocalMetadata(const ThreadLocalMetadataMapping localMetadata[3])
+      : localMetadata(localMetadata) {}
 
  private:
     bool preorder(IR::BFN::Pipe* pipe) override {
@@ -56,9 +118,9 @@ struct CreateThreadLocalMetadata : public Modifier {
         for (auto& item : pipe->metadata) {
             cstring name = item.first;
             auto* metadata = item.second;
-            for (auto gress : { INGRESS, EGRESS }) {
+            for (auto gress : { INGRESS, GHOST }) {
                 auto gressName = cstring::to_cstring(gress) + "::" + name;
-                auto& gressMetadata = *localMetadata[gress];
+                auto& gressMetadata = localMetadata[gress];
                 if (gressMetadata.find(metadata) != gressMetadata.end()) {
                     instancedMetadata.addUnique(gressName, gressMetadata.at(metadata));
                 }
@@ -69,18 +131,17 @@ struct CreateThreadLocalMetadata : public Modifier {
         return false;
     }
 
-    const ThreadLocalMetadataMapping* localMetadata[2];
+    const ThreadLocalMetadataMapping *localMetadata;
 };
 
 }  // namespace
 
 CreateThreadLocalInstances::CreateThreadLocalInstances() {
-    auto* createIngressInstances = new CreateInstancesForThread(INGRESS);
-    auto* createEgressInstances = new CreateInstancesForThread(EGRESS);
+    auto *saluThread = new FindSharedStateful;
+    auto* createLocalInstances = new CreateLocalInstances(saluThread);
     addPasses({
-        createIngressInstances,
-        createEgressInstances,
-        new CreateThreadLocalMetadata(&createIngressInstances->localMetadata,
-                                      &createEgressInstances->localMetadata)
+        saluThread,
+        createLocalInstances,
+        new CreateThreadLocalMetadata(createLocalInstances->localMetadata)
     });
 }

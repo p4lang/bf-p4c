@@ -269,6 +269,6 @@ p4c_add_xfail_reason("jbay"
 
 # work in progress -- ghost thread
 p4c_add_xfail_reason("jbay"
-  "Trying to get PHV container bytes for unallocated field"
+  "error: Tables .* and .* are not mutually exclusive"
   extensions/p4_tests/p4_16/jbay/ghost1.p4
 )
