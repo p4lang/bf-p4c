@@ -20,7 +20,7 @@ fi
 #                     supported option
 # p4-14 w. stf       -stf, -stf2ptf
 # p4-14 w. ptf       -ptf
-# p4-14 w/o test     -ptf  
+# p4-14 w/o test     -ptf
 # p4-16 v1 w.stf     -stf, -stf2ptf
 # p4-16 v1 w.ptf     -ptf
 # p4-16 v1 w/o test  -ptf
@@ -30,14 +30,14 @@ fi
 
 # option matrix for various tests
 # ------------------------------------------------
-#              -stf     -stf2ptf   -ptf    -pd     
-# run_stf      true     false      false   false  
-# run_stf2ptf  false    true       false   false  
-# run_ptf      false    true       true    false  
-# run_pd       false    false      false   true   
+#              -stf     -stf2ptf   -ptf    -pd
+# run_stf      true     false      false   false
+# run_stf2ptf  false    true       false   false
+# run_ptf      false    true       true    false
+# run_pd       false    false      false   true
 # ------------------------------------------------
 # -stf         any p4-14 or p4-16 test with *.stf
-# -stf2pdf     any p4-14 or p4-16 test with *.stf, running ptf with pi, 
+# -stf2pdf     any p4-14 or p4-16 test with *.stf, running ptf with pi,
 #              use --stftest with ptf_runner.py
 # -ptf         any p4-16 test with ptf dir, run ptf with pi,
 #              use --pdtest with ptf_runner.py
@@ -436,7 +436,7 @@ check_bfa() {
 }
 
 # PD or BFRT runs the compiler as part of the p4-build make, so we skip running it here
-if $run_stf || [ $run_ptf && ! $bfrt && ! $run_pd ] ; then
+if ! $run_pd && ! $bfrt ; then
     run $P4C $P4C_ARGS $file -o $testdir/${name}${out_ext}.out || die
 
     # find all pipe names from manifest.json in current compilation
