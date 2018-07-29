@@ -199,6 +199,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/stack_complex-bmv2.p4
   testdata/p4_16_samples/issue737-bmv2.p4
   testdata/p4_16_samples/array-copy-bmv2.p4
+  testdata/p4_16_samples/issue1409-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -773,6 +774,7 @@ p4c_add_xfail_reason("tofino"
   "Only compile-time constants are supported for hash base offset and max value"
   testdata/p4_14_samples/flowlet_switching.p4
   testdata/p4_16_samples/flowlet_switching-bmv2.p4
+  testdata/p4_16_samples/crc32-bmv2.p4
   )
 
 # ingress parser need access pkt_length
@@ -1030,12 +1032,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "condition expression too complex"
   testdata/p4_14_samples/header-stack-ops-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: Type_Name is not a canonical type"
-  testdata/p4_16_samples/pvs-nested-struct.p4
-  testdata/p4_16_samples/pvs-struct.p4
 )
 
 # p4smith and p4testgen regression XFAILs
