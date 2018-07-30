@@ -25,6 +25,7 @@ class CreateSaluApplyFunction : public Inspector {
     const IR::Expression *math_input = nullptr;
     const IR::Expression *pred = nullptr;
     const IR::Statement *output = nullptr;
+    const Util::SourceInfo *applyLoc;
     enum expr_index_t { LO1, LO2, HI1, HI2, OUT } expr_index;
     bool have_output = false;
     bool defer_out = false;
@@ -59,10 +60,16 @@ class CreateSaluApplyFunction : public Inspector {
             int idx = 0;
             IR::Path *var = nullptr;
             if (attr->name == "condition_lo") {
-                BUG_CHECK(self.cond_lo, "condition_lo not specified");
+                if (self.cond_lo == nullptr) {
+                    ::error("condition_lo used and not specified %s", *self.applyLoc);
+                    return new IR::BoolLiteral(false);
+                }
                 return self.cond_lo;
             } else if (attr->name == "condition_hi") {
-                BUG_CHECK(self.cond_hi, "condition_hi not specified");
+                if (self.cond_hi == nullptr) {
+                    ::error("condition_hi used and not specified %s", *self.applyLoc);
+                    return new IR::BoolLiteral(false);
+                }
                 return self.cond_hi;
             } else if (attr->name == "register_lo") {
                 var = new IR::Path("in_value");
@@ -108,7 +115,7 @@ class CreateSaluApplyFunction : public Inspector {
                         "to verify the correctness");
                 return new IR::Constant(self.utype, 1);
             } else {
-                BUG("Unrecognized AttribLocal %s", attr);
+                error("Unrecognized attribute %s", attr);
                 return attr; }
             return self.makeRegFieldMember(
                     new IR::PathExpression(attr->srcInfo, self.rtype, var), idx); }
@@ -124,12 +131,15 @@ class CreateSaluApplyFunction : public Inspector {
         bool predicate = false;
         int idx = 0;
         if (prop->name == "condition_hi") {
+            applyLoc = &prop->value->srcInfo;
             cond_hi = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
             return false;
         } else if (prop->name == "condition_lo") {
+            applyLoc = &prop->value->srcInfo;
             cond_lo = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
             return false;
         } else if (prop->name == "math_unit_input") {
+            applyLoc = &prop->value->srcInfo;
             math_input = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
             if (math_input->type != utype)
                 math_input = new IR::Cast(utype, math_input);
@@ -167,7 +177,9 @@ class CreateSaluApplyFunction : public Inspector {
             idx = -1;
         } else {
             return false; }
+        applyLoc = &prop->value->srcInfo;
         auto e = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
+        if (!e) return false;
         if (predicate) {
             if (e->type != IR::Type::Boolean::get())
                 e = new IR::Cast(IR::Type::Boolean::get(), e);
@@ -192,8 +204,8 @@ class CreateSaluApplyFunction : public Inspector {
  public:
     CreateSaluApplyFunction(P4V1::ProgramStructure *s, const IR::Type *rtype,
                             const IR::Type::Bits *utype, cstring mu)
-    : structure(s), rtype(rtype), utype(utype), math_unit_name(mu),
-      rewrite({ new RewriteExpr(*this), new TypeCheck }) {
+        : structure(s), rtype(rtype), utype(utype), math_unit_name(mu),
+          rewrite({ new RewriteExpr(*this), new TypeCheck }) {
         body = new IR::BlockStatement({
             new IR::Declaration_Variable("in_value", rtype),
             new IR::AssignmentStatement(new IR::PathExpression("in_value"),

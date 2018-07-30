@@ -202,7 +202,7 @@ function install_cmake() {
 
     if [[ ! ($linux_distro == "Ubuntu" || $linux_distro == "Debian") ]]; then
 	installed_ver=$(cmake --version | cut -f 3 -d " ")
-	if ! version_LT $cmake_ver $installed_ver ; then
+	if version_LT $installed_ver $cmake_ver ; then
 	    cd /tmp
 	    build_cmake_from_source $cmake_ver 1
             cd /tmp && rm -rf /tmp/cmake-${cmake_ver}*
@@ -269,11 +269,11 @@ function install_boost() {
         installed_ver=$(grep -m 1 "define BOOST_LIB_VERSION" /usr/local/include/boost/version.hpp | cut -d ' ' -f 3 | tr -d '"')
     fi
     if [ ! -z "$installed_ver" ]; then
-        if ! version_LT $boost_ver $installed_ver ; then
+        if version_LT $installed_ver $boost_ver ; then
+            echo "Installed boost version is not sufficient: $installed_ver, proceeding with installing required bootst: $boost_ver"
+        else
             echo "Installed boost version is sufficient: $installed_ver"
             install_pkg=false
-        else
-            echo "Installed boost version is not sufficient: $installed_ver, proceeding with installing required bootst: $boost_ver"
         fi
     fi
 
