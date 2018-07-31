@@ -864,6 +864,9 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                 // Pack all slices together (both allocated and unallocated)
                 // Can only have src2 as src1 is always the destination container itself
                 pack_slices_together(alloc, container_state, copacking_constraints, action, false);
+                LOG6("\t\t\t\t\tMust pack unallocated fields with allocated fields."
+                     " Setting source containers to 1.");
+                numSourceContainers[action] = 1;
             } else {
                 // For this case, sources need not be packed together as we may have (at most) 2
                 // source containers
