@@ -363,7 +363,11 @@ build_driver () {
             git submodule update --init --recursive
             ./autogen.sh
             cd $builddir
-            CFLAGS="-O0" CPPFLAGS="-I $installdir/include" ../configure --enable-thrift --with-avago --without-kdrv --with-build-model --enable-pi --enable-grpc --prefix=$installdir
+            if [ "$device" == "jbay" ]; then
+                CFLAGS="-O0" CPPFLAGS="-I $installdir/include" ../configure --enable-thrift --with-avago --without-kdrv --with-build-model --enable-pi --prefix=$installdir
+            else
+                CFLAGS="-O0" CPPFLAGS="-I $installdir/include" ../configure --enable-thrift --with-avago --without-kdrv --with-build-model --enable-pi --enable-grpc --prefix=$installdir
+            fi
         else
             cd $builddir
         fi
