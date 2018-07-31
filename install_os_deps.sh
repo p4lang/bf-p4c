@@ -266,11 +266,12 @@ function install_boost() {
     install_pkg=true
     installed_ver="1_0"
     if [ -f /usr/local/include/boost/version.hpp ]; then
-        installed_ver=$(grep -m 1 "define BOOST_LIB_VERSION" /usr/local/include/boost/version.hpp | cut -d ' ' -f 3 | tr -d '"')
+        installed_ver=$(grep -m 1 "define BOOST_LIB_VERSION" /usr/local/include/boost/version.hpp | cut -d ' ' -f 3 | cut -d '_' -f 1-2 | tr -d '"')
     fi
     if [ ! -z "$installed_ver" ]; then
-        if version_LT $installed_ver $boost_ver ; then
-            echo "Installed boost version is not sufficient: $installed_ver, proceeding with installing required bootst: $boost_ver"
+        boost_ver_trim=${boost_ver%_0}
+        if version_LT $installed_ver $boost_ver_trim ; then
+            echo "Installed boost version is not sufficient: $installed_ver, proceeding with installing required boost: $boost_ver_trim"
         else
             echo "Installed boost version is sufficient: $installed_ver"
             install_pkg=false
