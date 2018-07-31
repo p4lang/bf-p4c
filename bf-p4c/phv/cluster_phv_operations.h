@@ -27,9 +27,7 @@ class PhvInfo;
  * @post The operations field of all Field objects in @phv_f will be populated.
  */
 class PHV_Field_Operations : public Inspector {
- private:
-    PhvInfo &phv;
-
+ public:
     /** "Bitwise" operations are ALU instructions that operate independently on
      * each bit of the source(s) and destination.  For example, a logical AND
      * operation is bitwise, because dst[i] = src1[i] & src2[i] for each bit i.
@@ -45,30 +43,14 @@ class PHV_Field_Operations : public Inspector {
      *
      * The following instructions are bitwise.
      */
-    ordered_set<cstring> bitwise_ops = {
-        "set",
-        "and",
-        "or",
-        "not",
-        "nor",
-        "andca",
-        "andcb",
-        "nand",
-        "orca",
-        "orcb",
-        "xnor"
-        // XXX(cole): "xor" should be on this list, but adding it causes PHV
-        // allocation to fail for some switch profiles.
-        // "xor"
-    };
+    static const ordered_set<cstring> BITWISE_OPS;
 
     // The following instructions are shift instructions, for which even the sources should have a
     // no-pack property.
-    ordered_set<cstring> shift_ops = {
-        "shl",
-        "shru",
-        "shrs"
-    };
+    static const ordered_set<cstring> SHIFT_OPS;
+
+ private:
+    PhvInfo &phv;
 
     void processSaluInst(const IR::MAU::Instruction*);
     void processInst(const IR::MAU::Instruction*);

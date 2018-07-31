@@ -1,6 +1,7 @@
 #include "bf-p4c/phv/make_clusters.h"
 #include <boost/range/adaptors.hpp>
 #include "bf-p4c/phv/phv_fields.h"
+#include "lib/algorithm.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 
@@ -663,20 +664,15 @@ void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
         ordered_set<PHV::SuperCluster::SliceList*>& these_lists) {
     // Add paddings for marshaled fields slice list, to the size of the largest
     // slice list, up to the largest container size.
-    // XXX(yumin): To make pa_container_size pragma work on marshaled fields, we
-    // set the minimal slice_list size to be 32-btis, so that slicing should take
-    // care of slicing redundent padding bits out.
-    int max_slice_list_size = 32;
+    int max_slice_list_size = 8;
     for (const auto* slice_list : these_lists) {
         int sum_bits = 0;
         for (const auto& fs : *slice_list) {
             sum_bits += fs.size(); }
         max_slice_list_size = std::max(max_slice_list_size, sum_bits);
     }
-    if (max_slice_list_size % 32 != 0) {
-        // Round up to the closest 32-bit.
-        max_slice_list_size = (max_slice_list_size / 32) * 32 + 32;
-    }
+    // Round up to the closest 8-bit.
+    max_slice_list_size = ROUNDUP(max_slice_list_size, 8) * 8;
 
     for (auto* slice_list : these_lists) {
         if (std::any_of(slice_list->begin(), slice_list->end(),

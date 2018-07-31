@@ -3,6 +3,29 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "lib/log.h"
 
+const ordered_set<cstring> PHV_Field_Operations::BITWISE_OPS = {
+    "set",
+    "and",
+    "or",
+    "not",
+    "nor",
+    "andca",
+    "andcb",
+    "nand",
+    "orca",
+    "orcb",
+    "xnor"
+    // XXX(cole): "xor" should be on this list, but adding it causes PHV
+    // allocation to fail for some switch profiles.
+    // "xor"
+};
+
+const ordered_set<cstring> PHV_Field_Operations::SHIFT_OPS = {
+    "shl",
+    "shru",
+    "shrs"
+};
+
 void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
     // SALU operands have the following constraints:
     //
@@ -24,7 +47,7 @@ void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
     BUG_CHECK(statefulAlu, "Found an SALU instruction not in a Stateful ALU IR node: %1%", inst);
     int sourceWidth = statefulAlu->source_width();
 
-    bool is_bitwise_op = bitwise_ops.count(inst->name);
+    bool is_bitwise_op = BITWISE_OPS.count(inst->name);
     if (!inst->operands.empty()) {
         for (int idx = 0; idx < int(inst->operands.size()); ++idx) {
             le_bitrange field_bits;
@@ -98,7 +121,7 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         if (!field) continue;
 
         // Add details of this operation to the field object.
-        bool is_bitwise_op = bitwise_ops.count(inst->name) > 0;
+        bool is_bitwise_op = BITWISE_OPS.count(inst->name) > 0;
         field->operations().push_back({
             is_bitwise_op,
             false /* is_salu_inst */,
@@ -173,7 +196,7 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
             field->set_no_pack(true); }
 
         // For shift operations, the sources must be assigned no-pack.
-        if (shift_ops.count(inst->name)) {
+        if (SHIFT_OPS.count(inst->name)) {
             LOG3("Marking "  << field->name << " as 'no pack' because it is a source of a "
                  "shift operation " << inst);
             field->set_no_pack(true); } }

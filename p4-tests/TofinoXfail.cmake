@@ -305,7 +305,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-    switch_generic_int_leaf
+  switch_generic_int_leaf
+  switch_msdc_leaf_int
+  switch_8.2_msdc_leaf_int
   )
 
 p4c_add_xfail_reason("tofino"
@@ -314,18 +316,8 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: Only one value allowed for a node type"
-  )
-
-p4c_add_xfail_reason("tofino"
   "can't find per_flow_enable param meter_pfe in format"
-  switch_ent_fin_postcard
-  switch_8.2_ent_fin_postcard
   switch_msdc_spine_int
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Can't pick tcam id for table"
   )
 
 # BRIG-113
@@ -334,6 +326,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
   switch_8.2_msdc_leaf_int
   switch_msdc_leaf_int
+  switch_8.2_msdc_spine_int
   )
 
 p4c_add_xfail_reason("tofino"
@@ -785,7 +778,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: resubmit digest limited to 8 bytes"
   extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4
   )
 
 # translation bug: smeta
@@ -1005,6 +997,7 @@ p4c_add_xfail_reason("tofino"
   switch_l3_heavy_int_leaf
   switch_8.2_l3_heavy_int_leaf
   switch_8.2_generic_int_leaf
+  switch_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1285,4 +1278,10 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/c1/COMPILER-883/case5521.p4
   extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
   testdata/p4_14_samples/header-stack-ops-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Can't allocate space on 8-bit part of action bus for.*"
+  switch_ent_fin_postcard
+  switch_8.2_ent_fin_postcard
 )
