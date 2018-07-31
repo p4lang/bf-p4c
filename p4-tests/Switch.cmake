@@ -8,6 +8,7 @@ set  (SWITCH_PTF_DIR_EGRESS_ACL ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/ptf-tes
 set  (SWITCH_PTF_DIR_WRED ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/ptf-tests/wred/api-tests)
 set  (testExtraArgs "${testExtraArgs} -Xp4c=\"--disable-power-check\"")
 set  (isXFail TRUE)
+
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_dc_basic" ${switchtest} "${testExtraArgs} -DDC_BASIC_PROFILE")
@@ -713,6 +714,8 @@ set_tests_properties("tofino/smoketest_switch_8.2_ent_dc_general_set_10" PROPERT
 # Switch Rel 8.2 MSDC_L3_PROFILE_BRIG tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_l3_msdc" ${SWITCH_8.2_P4}
     "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_8.2_PTF_DIR}")
+bfn_set_p4_build_flag("tofino" "smoketest_switch_8.2_l3_msdc"
+    "-Xp4c=\"--disable-power-check\"")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.2_l3_msdc"
         "switch_acl.MirrorSessionTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.2_l3_msdc_set_1" ${SWITCH_8.2_P4}

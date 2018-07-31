@@ -25,6 +25,7 @@ class TablePlacement : public MauTransform, public Backtrack {
         CALC_STAGE,
         PROV_STAGE,
         NEED_MORE,
+        DEP_TAIL_SIZE_CONTROL,
         DEP_TAIL_SIZE,
         TOTAL_DEPS,
         DEFAULT

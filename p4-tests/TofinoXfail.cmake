@@ -305,6 +305,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
+    switch_generic_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
@@ -314,27 +315,25 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: Only one value allowed for a node type"
-  switch_msdc_leaf_int
-  switch_8.2_msdc_leaf_int
   )
 
 p4c_add_xfail_reason("tofino"
   "can't find per_flow_enable param meter_pfe in format"
   switch_ent_fin_postcard
   switch_8.2_ent_fin_postcard
+  switch_msdc_spine_int
   )
 
 p4c_add_xfail_reason("tofino"
   "Can't pick tcam id for table"
-  switch_msdc_spine_int
-  switch_8.2_msdc_spine_int
   )
 
 # BRIG-113
 p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
-  switch_generic_int_leaf
+  switch_8.2_msdc_leaf_int
+  switch_msdc_leaf_int
   )
 
 p4c_add_xfail_reason("tofino"

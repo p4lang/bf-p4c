@@ -299,6 +299,14 @@ bool TablePlacement::Placed::gateway_merge(ordered_set<const IR::MAU::Table *> &
             for (auto t : it->second->tables) {
                 ++idx;
                 if (it->second->deps[idx]) continue;
+                bool should_skip = false;
+                for (auto t2 : it->second->tables) {
+                    if (self.deps->happens_before_control(t, t2))
+                        should_skip = true;
+                }
+                if (should_skip)
+                    continue;
+                // if (deps->happens_before_control)
                 if (t->uses_gateway()) continue;
                 // FIXME: Look for notes above preorder for IR::MAU::Table
                 if (t->next.count("$hit") || t->next.count("$miss")) continue;
@@ -893,6 +901,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         resources->action_format = *format;
     }
 
+    LOG3("Selected stage: " << rv->stage << "    Furthest stage: " << furthest_stage);
     if (rv->stage > furthest_stage) {
         if (error_message != "")
             BUG("Could not place table : %s", error_message);
@@ -1025,16 +1034,32 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     int a_extra_stages = 0;  // a->need_more ? a->extra_use.stages_required() : 0;
     int b_extra_stages = 0;  // b->need_more ? b->extra_use.stages_required() : 0;
 
-    int a_deps_stages = deps->dependence_tail_size(a->table) + a_extra_stages;
-    int b_deps_stages = deps->dependence_tail_size(b->table) + b_extra_stages;
+    const IR::MAU::Table *a_table_to_use = a->gw ? a->gw : a->table;
+    const IR::MAU::Table *b_table_to_use = b->gw ? b->gw : b->table;
+
+    int a_deps_stages_control = deps->dependence_tail_size_control(a_table_to_use) + a_extra_stages;
+    int b_deps_stages_control = deps->dependence_tail_size_control(b_table_to_use) + b_extra_stages;
+
+    LOG4("        Stage A is " << a->name << " with deps tail control " << a_deps_stages_control <<
+        ", deps tail " << deps->dependence_tail_size(a_table_to_use) << ", and total deps " <<
+        deps->happens_before_dependences(a_table_to_use).size());
+    LOG4("        Stage B is " << b->name << " with deps tail control " << b_deps_stages_control <<
+        ", deps tail " << deps->dependence_tail_size(b_table_to_use) << ", and total deps " <<
+        deps->happens_before_dependences(b_table_to_use).size());
+
+    choice = DEP_TAIL_SIZE_CONTROL;
+    if (a_deps_stages_control > b_deps_stages_control) return true;
+    if (a_deps_stages_control < b_deps_stages_control) return false;
+
+    int a_deps_stages = deps->dependence_tail_size(a_table_to_use) + a_extra_stages;
+    int b_deps_stages = deps->dependence_tail_size(b_table_to_use) + b_extra_stages;
 
     choice = DEP_TAIL_SIZE;
     if (a_deps_stages > b_deps_stages) return true;
     if (a_deps_stages < b_deps_stages) return false;
 
-    choice = TOTAL_DEPS;
-    int a_total_deps = deps->happens_before_dependences(a->table).size() + a_extra_stages;
-    int b_total_deps = deps->happens_before_dependences(b->table).size() + b_extra_stages;
+    int a_total_deps = deps->happens_before_dependences(a_table_to_use).size() + a_extra_stages;
+    int b_total_deps = deps->happens_before_dependences(b_table_to_use).size() + b_extra_stages;
     if (a_total_deps < b_total_deps) return true;
     if (a_total_deps > b_total_deps) return false;
 
@@ -1096,6 +1121,9 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             bool done = true;
             bitvec seq_placed;
             for (auto t : grp->seq->tables) {
+                LOG3("Group table: " << t->name);
+            }
+            for (auto t : grp->seq->tables) {
                 ++idx;
                 if (placed && placed->is_placed(t)) {
                     seq_placed[idx] = true;
@@ -1107,9 +1135,26 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                     done = false;
                     continue; }
 
+                bool should_skip = false;
+                for (auto& grp_tbl : grp->seq->tables) {
+                    if (deps->happens_before_control(t, grp_tbl) &&
+                        (!placed || !(placed->is_placed(grp_tbl)))) {
+                        should_skip = true;
+                        LOG1(" - skipping " << t->name << " due to in-sequence control" <<
+                            " dependence on " << grp_tbl->name);
+                        break;
+                    }
+                }
+                if (should_skip)
+                    continue;
+
                 auto pl_vec = try_place_table(t, placed, current);
                 if (pl_vec.empty())
                     BUG("Can't find a table to place");
+
+                for (auto pl : pl_vec) {
+                    LOG3("Pl vector: " << pl->name);
+                }
 
                 for (auto pl : pl_vec) {
                     pl->group = grp;
@@ -1174,8 +1219,9 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
  */
 std::ostream &operator<<(std::ostream &out, TablePlacement::choice_t choice) {
     static const char* choice_names[] = { "earlier stage calculated", "earlier stage provided",
-                                    "more stages needed", "longer dependence tail chain",
-                                    "fewer total dependencies", "default choice" };
+                                    "more stages needed", "longer control-included"
+                                    " dependence tail chain", "longer control-excluded dependence"
+                                    " tail chain", "fewer total dependencies", "default choice" };
     if (choice < sizeof(choice_names) / sizeof(choice_names[0])) {
         out << choice_names[choice];
     } else {

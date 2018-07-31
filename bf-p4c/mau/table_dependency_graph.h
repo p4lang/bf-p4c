@@ -94,7 +94,8 @@ struct DependencyGraph {
     // happens_before[t1] = {t2, t3} means that t1 happens strictly before t2
     // and t3: t1 MUST be placed in an earlier stage.
     std::map<const IR::MAU::Table*,
-             std::set<const IR::MAU::Table*>> happens_before_map;
+             std::set<const IR::MAU::Table*>> happens_before_map, happens_before_control_map;
+    std::map<const IR::MAU::Table*, std::map<const IR::MAU::Table*, dependencies_t>> dep_type_map;
 
     std::map<const IR::MAU::Table*,
              typename Graph::vertex_descriptor> labelToVertex;
@@ -106,8 +107,9 @@ struct DependencyGraph {
 
     struct StageInfo {
         int min_stage,      // Minimum stage at which a table can be placed.
-        dep_stages;         // Number of tables that depend on this table and
+        dep_stages,         // Number of tables that depend on this table and
                             // must be placed in a stage after it.
+        dep_stages_control;
     };
     std::map<const IR::MAU::Table*, StageInfo> stage_info;
 
@@ -118,6 +120,7 @@ struct DependencyGraph {
         g.clear();
         finalized = false;
         happens_before_map.clear();
+        happens_before_control_map.clear();
         dependency_map.clear();
         labelToVertex.clear();
         stage_info.clear();
@@ -132,7 +135,7 @@ struct DependencyGraph {
             auto v = boost::add_vertex(g);
             g[v] = label;
             labelToVertex[label] = v;
-            stage_info[label] = {0, 0};
+            stage_info[label] = {0, 0, 0};
             return v; }
     }
 
@@ -182,6 +185,15 @@ struct DependencyGraph {
             return false; }
     }
 
+    bool happens_before_control(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+        if (!finalized)
+            BUG("Dependence graph used before being fully constructed.");
+        if (happens_before_control_map.count(t1)) {
+            return happens_before_control_map.at(t1).count(t2);
+        } else {
+            return false; }
+    }
+
     /**
       * Returns the dependency type from t1 to t2.
       *
@@ -203,6 +215,12 @@ struct DependencyGraph {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
         return stage_info.at(t).dep_stages;
+    }
+
+    int dependence_tail_size_control(const IR::MAU::Table* t) const {
+        if (!finalized)
+            BUG("Dependence graph used before being fully constructed.");
+        return stage_info.at(t).dep_stages_control;
     }
 
     int min_stage(const IR::MAU::Table* t) const {
@@ -250,18 +268,19 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     std::map<PHV::Container, cont_write_t>                cont_write;
 
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
-    calc_topological_stage();
+    calc_topological_stage(bool include_control = false);
 
-    void finalize_dependence_graph(void);
 
     /** Check that no ingress table ever depends on an egress table happening
      * first. */
     void verify_dependence_graph(void);
+    void finalize_dependence_graph(void);
 
     bool preorder(const IR::MAU::TableSeq *) override;
     bool preorder(const IR::MAU::Table *) override;
     bool preorder(const IR::MAU::Action *) override;
     bool preorder(const IR::MAU::InputXBarRead *) override;
+    bool preorder(const IR::BFN::Pipe *pipe) override;
 
     Visitor::profile_t init_apply(const IR::Node* node) override {
         auto rv = Inspector::init_apply(node);
@@ -279,8 +298,8 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
 
     void end_apply() override {
         finalize_dependence_graph();
-        if (Log::verbose())
-            std::cout << dg; }
+        LOG3(dg);
+    }
 
     void flow_dead() override;
     void flow_merge(Visitor &v) override;

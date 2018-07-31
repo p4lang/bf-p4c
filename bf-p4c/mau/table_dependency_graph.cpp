@@ -4,12 +4,14 @@
 #include <boost/optional.hpp>
 #include <algorithm>
 #include <numeric>
+#include <sstream>
 #include "bf-p4c/ir/tofino_write_context.h"
+#include "table_injected_deps.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
 #include "lib/log.h"
 
-static const char *dep_types[] = { "CONTROL", "IXBAR_READ", "ACTION_READ", "ANTI", "OUTPUT" };
+static const char *dep_types[] = {"CONTROL", "IXBAR_READ", "ACTION_READ", "ANTI", "OUTPUT"};
 
 std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     out << "GRAPH" << std::endl;
@@ -253,6 +255,12 @@ bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *seq) {
     return true;
 }
 
+bool FindDependencyGraph::preorder(const IR::BFN::Pipe *pipe) {
+    pipe->apply(TableFindInjectedDependencies(dg));
+    // pipe->apply(TableFindInjectedDependencies(dg, EGRESS));
+    return true;
+}
+
 bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
     LOG3("FindDep table " << t->name);
 
@@ -354,7 +362,7 @@ void FindDependencyGraph::flow_merge(Visitor &v) {
  *  means that A, B could be in stage#0 and C, B could be in at least state#1.
  */
 std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
-FindDependencyGraph::calc_topological_stage() {
+FindDependencyGraph::calc_topological_stage(bool include_control) {
     typename DependencyGraph::Graph::vertex_iterator v, v_end;
     typename DependencyGraph::Graph::edge_iterator out, out_end;
 
@@ -377,7 +385,7 @@ FindDependencyGraph::calc_topological_stage() {
          out != out_end;
          ++out) {
         if (dep_graph[*out] != DependencyGraph::ANTI
-            && dep_graph[*out] != DependencyGraph::CONTROL) {
+            && (include_control || dep_graph[*out] != DependencyGraph::CONTROL)) {
             auto dst = boost::target(*out, dep_graph);
             n_depending_on[dst]++; } }
 
@@ -392,6 +400,7 @@ FindDependencyGraph::calc_topological_stage() {
                 this_generation.insert(kv.first); }
         // There are remaining vertices, so it must be a loop.
         if (this_generation.size() == 0) {
+            LOG2(dg);
             ::error("There is a loop in the table dependency graph.");
             break; }
         // Remove out-edge destination of these vertices.
@@ -402,7 +411,7 @@ FindDependencyGraph::calc_topological_stage() {
             const auto* table = dep_graph[v];
             for (; out != out_end; ++out) {
                 if (dep_graph[*out] != DependencyGraph::ANTI
-                    && dep_graph[*out] != DependencyGraph::CONTROL) {
+                    && (include_control || dep_graph[*out] != DependencyGraph::CONTROL)) {
                     auto vertex_later = boost::target(*out, dep_graph);
                     auto table_later = dep_graph[vertex_later];
                     happens_after_map[table_later].insert(table);
@@ -423,24 +432,28 @@ FindDependencyGraph::calc_topological_stage() {
 }
 
 void FindDependencyGraph::finalize_dependence_graph(void) {
-    typename DependencyGraph::Graph::vertex_iterator v, v_end;
-    typename DependencyGraph::Graph::edge_iterator out, out_end;
-
     // Topological sort
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
         topo_rst = calc_topological_stage();
+
 
     if (LOGGING(3)) {
         for (size_t i = 0; i < topo_rst.size(); ++i) {
             LOG3(">>> Stage#" << i << ":");
             for (const auto& vertex : topo_rst[i]) {
-                LOG3("Tabel:  " << vertex << ", " << dg.g[vertex]->name); } } }
+                LOG3("Table:  " << vertex << ", " << dg.g[vertex]->name);
+            }
+        }
+    }
 
     // Build min_stage
     for (size_t i = 0; i < topo_rst.size(); ++i) {
         for (const auto& vertex : topo_rst[i]) {
             const IR::MAU::Table* table = dg.g[vertex];
-            dg.stage_info[table].min_stage = i; } }
+            dg.stage_info[table].min_stage = i;
+        }
+    }
+
 
     // Build dep_stages
     for (int i = int(topo_rst.size()) - 1; i >= 0; --i) {
@@ -451,7 +464,74 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
                 std::accumulate(happens_later.begin(), happens_later.end(), 0,
                                 [this] (int sz, const IR::MAU::Table* later) {
                                     return std::max(sz, dg.stage_info[later].dep_stages + 1); });
-        } }
+        }
+    }
+
+    typename DependencyGraph::Graph::edge_iterator edges, edges_end;
+    dg.dep_type_map.clear();
+    for (boost::tie(edges, edges_end) = boost::edges(dg.g); edges != edges_end; ++edges) {
+        const IR::MAU::Table* src = dg.g[boost::source(*edges, dg.g)];
+        const IR::MAU::Table* dst = dg.g[boost::target(*edges, dg.g)];
+        if ((dg.dep_type_map.count(src) == 0) || (dg.dep_type_map.at(src).count(dst) == 0)
+            || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::CONTROL)) {
+            if (dg.g[*edges] != DependencyGraph::ANTI) {
+                dg.dep_type_map[src][dst] = dg.g[*edges];
+            }
+        }
+    }
+
+    // Build dep_stages_control
+    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
+        topo_rst_control = calc_topological_stage(true);
+    for (int i = int(topo_rst_control.size()) - 1; i >= 0; --i) {
+        for (const auto& vertex : topo_rst_control[i]) {
+            const IR::MAU::Table* table = dg.g[vertex];
+            auto& happens_later = dg.happens_before_map[table];
+            dg.stage_info[table].dep_stages_control = std::accumulate(happens_later.begin(),
+                happens_later.end(), 0, [this, table] (int sz, const IR::MAU::Table* later) {
+                    int stage_addition = 0;
+                    if (dg.dep_type_map.count(table) && dg.dep_type_map.at(table).count(later)
+                        && dg.dep_type_map.at(table).at(later) != DependencyGraph::CONTROL) {
+                            if (dg.dep_type_map.at(table).at(later) == DependencyGraph::ANTI) {
+                                LOG3("Adding stage from anti");
+                            }
+                            stage_addition = 1;
+                    }
+                    return std::max(sz, dg.stage_info[later].dep_stages_control + stage_addition);
+            });
+            LOG3("Dep stages of " << dg.stage_info[table].dep_stages <<
+                " for table " << table->name);
+            LOG3("Dep stages control of " << dg.stage_info[table].dep_stages_control <<
+                " for table " << table->name);
+        }
+    }
+    // dg.happens_before_control_map = dg.happens_before_map;
+    for (const auto& kv : dg.happens_before_map) {
+        auto* table = kv.first;
+        for (const auto* prev : kv.second) {
+            dg.happens_before_control_map[prev].insert(table); } }
+    std::stringstream ss;
+    for (auto& kv : dg.happens_before_control_map) {
+        ss << "Table " << kv.first->name << " has priors of ";
+        for (auto& tbl : kv.second) {
+            ss << tbl->name << ", ";
+        }
+        ss << "\n";
+        LOG1(ss.str());
+    }
+    if (LOGGING(3)) {
+        for (auto& kv_outer : dg.dep_type_map) {
+            for (auto& kv_inner : kv_outer.second) {
+                auto* initial_table = kv_outer.first;
+                auto* later_table = kv_inner.first;
+                auto value = kv_inner.second;
+                LOG3("Initial table " << initial_table->name << " with later table "
+                    << later_table->name << " and value " << value);
+            }
+        }
+    }
+
+    calc_topological_stage();
 
     verify_dependence_graph();
     dg.finalized = true;

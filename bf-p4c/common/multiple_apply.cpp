@@ -1,4 +1,5 @@
 #include "multiple_apply.h"
+#include "bf-p4c/mau/default_next.h"
 
 /** The whole point of the MultipleApply PassManager is to both convert all multiple applies of
  *  an individual match table to one IR::MAU::Table node in the backend.  The extract_maupipe
@@ -163,5 +164,6 @@ MultipleApply::MultipleApply() {
         new EquivalentTableSequence(equiv_seqs),
         new RefactorSequence(equiv_seqs),
         new DistinctTables(distinct_errors),
+        new DefaultNext(),
     });
 }

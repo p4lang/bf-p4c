@@ -28,6 +28,7 @@
 #include "bf-p4c/mau/table_placement.h"
 #include "bf-p4c/mau/table_seqdeps.h"
 #include "bf-p4c/mau/table_summary.h"
+#include "bf-p4c/mau/table_injected_deps.h"
 #include "bf-p4c/parde/add_jbay_pov.h"
 #include "bf-p4c/parde/adjust_extract.h"
 #include "bf-p4c/parde/lower_parser.h"
