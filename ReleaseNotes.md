@@ -1,5 +1,47 @@
 # Release Notes
 
+## Version 8.2.1-alpha.1
+The **Hidden** release
+
+New features
+  - Add power estimation check
+  - add `--backward-compatible` flag to allow read & write on egress_intrinsics
+  - PHV bubble generation config
+  - Deparse Zero Optimization
+JBay
+  - support for multistage fifo
+  - mirror metadata
+  - asm support for deparser constants
+  - Ghost thread support
+  - Support 34 bit stateful registerfile
+BF-RT support
+  - TTL data field
+  - stateful registers
+  - color-aware meters
+  - LPF and WRED
+Table placement
+  - multiple rounds for allocation of memories
+  - optimizations: wide rams, packing, gateways
+  - action_bus allocation management
+  - generate random hash seed
+  - table dependency graph optimizations
+PHVs
+  - better bridged metadata packing
+  - various constraints: no-pack, alignment, etc
+  - ActionPhvConstraints check
+  - actionbus adjacent alignment
+  - heuristics tuning
+Primitives and pragmas
+  - @packet_entry annotation on start_egress state
+Bug fixes
+  - clone id assignment
+  - various checksum improvements
+  - support for egress_rid metadata
+  - input byte mask for LPF/WRED meters
+  - parser priority update
+  - fixed parser lookahead for pvs
+  - dleft table/hardware learning
+
 ## Version 8.2.0-alpha.1
 The **Green Dot** release
 
