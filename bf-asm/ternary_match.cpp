@@ -664,6 +664,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     // Payload at bit 0
     padbits.setrange(0,1);
     for (auto field : *input_xbar) {
+        // these dont participate in the pack_format
+        if (field.first.type == InputXbar::Group::EXACT) continue;
         padbits.setrange(1 + field.second.lo, field.second.hi - field.second.lo + 1);
     }
 
