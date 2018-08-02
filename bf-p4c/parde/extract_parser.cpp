@@ -277,7 +277,7 @@ rewriteLookahead(P4::TypeMap* typeMap,
         auto lookaheadRange = *toClosedRange(lookaheadInterval);
         finalRange = lookaheadRange.shiftedByBits(bitShift);
     } else {
-        finalRange = nw_bitrange(StartLen(0, width));
+        finalRange = nw_bitrange(StartLen(bitShift, width));
     }
     auto rval = new IR::BFN::PacketRVal(finalRange);
     return rval;
