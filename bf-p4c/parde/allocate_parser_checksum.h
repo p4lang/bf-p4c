@@ -274,21 +274,11 @@ class AllocateParserChecksumUnits : public PassManager {
                     parserInfo.graph(parser).is_ancestor(startB, startA)) {
                     return false;
                 }
-            } else if (is_verification(declA) && is_verification(declB)) {
+            } else {
                 for (auto a : pathA)
                     for (auto b : pathB)
                         if (a == b)
                             return false;
-            } else if (is_verification(declA) && is_residual(declB)) {
-                auto startA = *pathA.begin();
-                if (has_ancestor(parser, pathB, startA))
-                    return false;
-            } else if (is_verification(declB) && is_residual(declA)) {
-                auto startB = *pathB.begin();
-                if (has_ancestor(parser, pathA, startB))
-                    return false;
-            } else {
-                BUG("Invalid use of function \"can_share_hw_unit\"");
             }
 
             return true;

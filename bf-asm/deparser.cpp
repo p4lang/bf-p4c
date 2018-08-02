@@ -267,21 +267,11 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                 else if (CHECKTYPE2(kv.value, tVEC, tMAP)) {
                     collapse_list_of_maps(kv.value);
                     int unit = kv.key[1].i;
-                    if (kv.value.type == tVEC) {
-                        for (auto &ent : kv.value.vec)
-                            checksum[gress][unit].emplace_back(gress, ent);
-                    } else {
-                        for (auto &ent : kv.value.map) {
-                            if (ent.key == "swap") {
-                                if (CHECKTYPE(ent.value, tVEC))
-                                    for (auto &val : ent.value.vec)
-                                        checksum_swaps[gress][unit].emplace_back(gress, val);
-                            } else if (ent.key == "clot") {
-                                checksum[gress][unit].emplace_back(gress, ent.key[1].i, ent.value);
-                            } else {
-                                checksum[gress][unit].emplace_back(gress, ent.key, ent.value);
-                            }
-                        }
+                    for (auto &ent : kv.value.map) {
+                        if (ent.key == "clot")
+                            checksum[gress][unit].emplace_back(gress, ent.key[1].i, ent.value);
+                        else 
+                            checksum[gress][unit].emplace_back(gress, ent.key, ent.value);
                     }
                 }
             } else if (auto *itype = ::get(Intrinsic::Type::all[options.target][gress],
@@ -325,8 +315,8 @@ void Deparser::process() {
                     pov_use[gress][ent.pov->reg.uid] = 1; } } }
         for (int i = 0; i < MAX_DEPARSER_CHECKSUM_UNITS; i++)
             for (auto &ent : checksum[gress][i])
-                if (ent.check() && (ent->lo != 0 || ent->hi != ent->reg.size - 1))
-                    error(ent.lineno, "Can only do checksums on full phv registers, not slices"); }
+                if (!ent.check())
+                    error(ent.lineno, "Invalid checksum entry"); }
     for (auto &intrin : intrinsics) {
         for (auto &el : intrin.vals) {
             if (el.check())
@@ -372,6 +362,40 @@ void Deparser::process() {
                 pov_size += ent->reg.size; }
         if (pov_size > 8*Target::DEPARSER_MAX_POV_BYTES())
             error(lineno[gress], "Ran out of space in POV in deparser"); }
+}
+
+template<class ENTRIES> static
+void write_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int id, const char* name = "entry") {
+    assert(swap == 0 || swap == 1);
+    assert(mask == 0 || mask & 3);
+    // XXX(zma) this should be an error; downgrading this as a warning for the time being
+    // because it will cause all tests with UDP checksum to fail (UDP checksum include the
+    // the length field twice). BRIG-864
+    if (entry.modified())
+        warning(-1, "%s appears multiple times in checksum %d", name, id);
+    entry.swap = swap;
+    // CSR: The order of operation: data is swapped or not and then zeroed or not
+    if (swap)
+        mask = (mask & 0x2) >> 1 | (mask & 0x1) << 1;
+    switch (mask) {
+    case 0:
+        entry.zero_m_s_b = 1;
+        entry.zero_l_s_b = 1;
+        break;
+    case 1:
+        entry.zero_m_s_b = 1;
+        entry.zero_l_s_b = 0;
+        break;
+    case 2:
+        entry.zero_m_s_b = 0;
+        entry.zero_l_s_b = 1;
+        break;
+    case 3:
+        entry.zero_m_s_b = 0;
+        entry.zero_l_s_b = 0;
+        break;
+    default:
+        break; }
 }
 
 #include "tofino/deparser.cpp"    // tofino template specializations

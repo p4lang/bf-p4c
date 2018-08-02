@@ -130,31 +130,29 @@ struct OutputChecksums : public Inspector {
     bool preorder(const IR::BFN::ChecksumUnitConfig* checksum) override {
         out << indent << "checksum " << checksum->unit << ":" << std::endl;
 
-        std::vector<const IR::BFN::ContainerRef*> swaps;
         AutoIndent checksumIndent(indent);
         for (auto* input : checksum->phvs) {
             out << indent << "- " << input->source;
-            if (input->povBit) out << ": " << input->povBit;
-            if (input->swap)
-                swaps.push_back(input->source);
+            out << ": {";
+            if (input->source->swap != 0) {
+                out << " swap: ";
+                out << input->source->swap;
+            }
+            if (input->povBit) {
+                if (input->source->swap != 0)
+                    out << ",";
+                out << " pov: ";
+                out << input->povBit;
+            }
+            out << " }";
             outputDebugInfo(out, indent, input->source, input->povBit);
             out << std::endl;
         }
 
-        if (!swaps.empty()) {
-            const char* sep = "";
-            out << indent << "- swap: [ ";
-            for (auto s : swaps) {
-                out << sep << s;
-                sep = ", ";
-            }
-            out << " ]" << std::endl;
-        }
-
 #if HAVE_JBAY
         for (auto* input : checksum->clots) {
-            out << indent << "- clot " << input->clot.tag << ": " << input->povBit;
-            out << std::endl;
+            out << indent << "- clot " << input->clot.tag << ": ";
+            out << input->povBit << std::endl;
         }
 #endif
         return false;

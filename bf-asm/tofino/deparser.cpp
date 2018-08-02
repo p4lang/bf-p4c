@@ -185,6 +185,7 @@ void tofino_phv_ownership(bitvec phv_use[2],
 }
 
 static short tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS][2] = {
+    // normal {LSWord, MSWord}
     {287, 286}, {283, 282}, {279, 278}, {275, 274}, {271, 270}, {267, 266}, {263, 262}, {259, 258},
     {255, 254}, {251, 250}, {247, 246}, {243, 242}, {239, 238}, {235, 234}, {231, 230}, {227, 226},
     {223, 222}, {219, 218}, {215, 214}, {211, 210}, {207, 206}, {203, 202}, {199, 198}, {195, 194},
@@ -219,11 +220,11 @@ static short tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS][2] = {
     { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1},
     { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1},
 
-    /* TODO: rewrite tagalong mappings once they're given to us by the HW team */
-    {  0,   1}, {  2,   3}, {  4,   5}, {  6,   7}, {  8,   9}, { 10,  11}, { 12,  13}, { 14,  15},
-    { 16,  17}, { 18,  19}, { 20,  21}, { 22,  23}, { 24,  25}, { 26,  27}, { 28,  29}, { 30,  31},
-    { 32,  33}, { 34,  35}, { 36,  37}, { 38,  39}, { 40,  41}, { 42,  43}, { 44,  45}, { 46,  47},
-    { 48,  49}, { 50,  51}, { 52,  53}, { 54,  55}, { 56,  57}, { 58,  59}, { 60,  61}, { 62,  63},
+    // tagalong {LSWord, MSWord}
+    {  1,   0}, {  3,   2}, {  5,   4}, {  7,   6}, {  9,   8}, { 11,  10}, { 13,  12}, { 15,  14},
+    { 17,  16}, { 19,  18}, { 21,  20}, { 23,  22}, { 25,  24}, { 27,  26}, { 29,  28}, { 31,  30},
+    { 33,  32}, { 35,  34}, { 37,  36}, { 39,  38}, { 41,  40}, { 43,  42}, { 45,  44}, { 47,  46},
+    { 49,  48}, { 51,  50}, { 53,  52}, { 55,  54}, { 57,  56}, { 59,  58}, { 61,  60}, { 63,  62},
     { 64,  -1}, { 65,  -1}, { 66,  -1}, { 67,  -1}, { 68,  -1}, { 69,  -1}, { 70,  -1}, { 71,  -1},
     { 72,  -1}, { 73,  -1}, { 74,  -1}, { 75,  -1}, { 76,  -1}, { 77,  -1}, { 78,  -1}, { 79,  -1},
     { 80,  -1}, { 81,  -1}, { 82,  -1}, { 83,  -1}, { 84,  -1}, { 85,  -1}, { 86,  -1}, { 87,  -1},
@@ -255,66 +256,61 @@ void copy_csum_cfg_entry(DTYPE & dst_unit, STYPE & src_unit) {
     }
 }
 
+template<class ENTRIES> static
+void init_tofino_checksum_entry(ENTRIES &entry) {
+    entry.zero_l_s_b = 1;
+    entry.zero_l_s_b.rewrite();
+    entry.zero_m_s_b = 1;
+    entry.zero_m_s_b.rewrite();
+    entry.swap = 0;
+    entry.swap.rewrite();
+}
+
 template<typename IPO, typename HPO> static
 void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
                            checked_array_base<HPO> &tagalong_csum_units,
-                           gress_t gress, std::vector<Deparser::Val> checksum[]) {
+                           gress_t gress, std::vector<Deparser::ChecksumVal> checksum[]) {
     assert(tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS-1][0] == 143);
     for (int i = 0; i < Target::Tofino::DEPARSER_CHECKSUM_UNITS; i++) {
         auto &main_unit = main_csum_units[i].csum_cfg_entry;
         auto &tagalong_unit = tagalong_csum_units[i].csum_cfg_entry;
-        for (auto &ent : main_unit) {
-            ent.zero_l_s_b = 1;
-            ent.zero_l_s_b.rewrite();
-            ent.zero_m_s_b = 1;
-            ent.zero_m_s_b.rewrite();
-            ent.swap = 0;
-            ent.swap.rewrite(); }
-        for (auto &ent : tagalong_unit) {
-            ent.zero_l_s_b = 1;
-            ent.zero_l_s_b.rewrite();
-            ent.zero_m_s_b = 1;
-            ent.zero_m_s_b.rewrite();
-            ent.swap = 0;
-            ent.swap.rewrite(); }
+        for (auto &ent : main_unit)
+            init_tofino_checksum_entry(ent);
+        for (auto &ent : tagalong_unit)
+            init_tofino_checksum_entry(ent);
         if (checksum[i].empty())
             continue;
-        int polarity = 0;
         for (auto &reg : checksum[i]) {
+            int mask = reg.mask;
+            int swap = reg.swap;
             int idx = reg->reg.deparser_id();
             if (reg.pov)
                 error(reg.pov.lineno, "No POV support in tofino checksum");
-            assert(tofino_phv2cksum[idx][0] >= 0);
-            if (reg->reg.size == 8)
-                polarity ^= 1;
+            auto cksum_idx0 = tofino_phv2cksum[idx][0];
+            auto cksum_idx1 = tofino_phv2cksum[idx][1];
+            assert(cksum_idx0 >= 0);
             if (idx >= 256) {
-                tagalong_unit[tofino_phv2cksum[idx][0]].zero_l_s_b = 0;
-                tagalong_unit[tofino_phv2cksum[idx][0]].zero_m_s_b = 0;
-                tagalong_unit[tofino_phv2cksum[idx][0]].swap = polarity;
-                if (tofino_phv2cksum[idx][1] >= 0) {
-                    tagalong_unit[tofino_phv2cksum[idx][1]].zero_l_s_b = 0;
-                    tagalong_unit[tofino_phv2cksum[idx][1]].zero_m_s_b = 0;
-                    tagalong_unit[tofino_phv2cksum[idx][1]].swap = polarity; }
+                write_checksum_entry(tagalong_unit[cksum_idx0], mask & 3, swap & 1, i, reg->reg.name);
+                if (cksum_idx1 >= 0)
+                    write_checksum_entry(tagalong_unit[cksum_idx1], mask >> 2, swap >> 1, i, reg->reg.name);
+                else assert((mask >> 2 == 0) && (swap >> 1 == 0));
             } else {
-                main_unit[tofino_phv2cksum[idx][0]].zero_l_s_b = 0;
-                main_unit[tofino_phv2cksum[idx][0]].zero_m_s_b = 0;
-                main_unit[tofino_phv2cksum[idx][0]].swap = polarity;
-                if (tofino_phv2cksum[idx][1] >= 0) {
-                    main_unit[tofino_phv2cksum[idx][1]].zero_l_s_b = 0;
-                    main_unit[tofino_phv2cksum[idx][1]].zero_m_s_b = 0;
-                    main_unit[tofino_phv2cksum[idx][1]].swap = polarity; } } }
+                write_checksum_entry(main_unit[cksum_idx0], mask & 3, swap & 1, i, reg->reg.name);
+                if (cksum_idx1 >= 0)
+                    write_checksum_entry(main_unit[cksum_idx1], mask >> 2, swap >> 1, i, reg->reg.name);
+                else assert((mask >> 2 == 0) && (swap >> 1 == 0));
+            }
+        }
         // Thread non-tagalong checksum results through the tagalong unit
         int idx = i + TAGALONG_THREAD_BASE + gress * Target::Tofino::DEPARSER_CHECKSUM_UNITS;
-        tagalong_unit[idx].zero_l_s_b = 0;
-        tagalong_unit[idx].zero_m_s_b = 0;
-        tagalong_unit[idx].swap = 0;
+        write_checksum_entry(tagalong_unit[idx], 0x3, 0x0, i);
         main_unit.set_modified();
         tagalong_unit.set_modified(); }
 }
 
 static
 void tofino_checksum_units(Target::Tofino::deparser_regs &regs,
-                           std::vector<Deparser::Val> checksum[2][MAX_DEPARSER_CHECKSUM_UNITS]) {
+                           std::vector<Deparser::ChecksumVal> checksum[2][MAX_DEPARSER_CHECKSUM_UNITS]) {
     for (unsigned id = 2; id < MAX_DEPARSER_CHECKSUM_UNITS; id++) {
         if (!checksum[0][id].empty() && !checksum[1][id].empty())
             error(-1, "deparser checksum unit %d used in both ingress and egress", id);

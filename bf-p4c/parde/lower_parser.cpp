@@ -432,19 +432,11 @@ using LoweredParserIRStates = std::map<const IR::BFN::ParserState*,
 /// sequence is the shortest one which maintains these properties.
 std::pair<IR::Vector<IR::BFN::ContainerRef>, std::vector<Clot> >
 lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
-            const IR::Vector<IR::BFN::FieldLVal>& fields,
-            std::set<const IR::BFN::ContainerRef*>* phvSwaps = nullptr) {
-    struct LastContainerInfo {
-        /// The container into which the last field was placed.
-        IR::BFN::ContainerRef* containerRef;
-        /// The range in that container which we've already placed fields into.
-        nw_bitrange containerRange;
-    };
-
-    boost::optional<LastContainerInfo> last;
+            const IR::Vector<IR::BFN::FieldLVal>& fields) {
     IR::Vector<IR::BFN::ContainerRef> containers;
     std::vector<Clot> clots;
 
+    IR::BFN::ContainerRef* last = nullptr;
     // Perform a left fold over the field sequence and merge contiguous fields
     // which have been placed in the same container into a single container
     // reference.
@@ -464,10 +456,11 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
                   "Emitted field didn't receive a PHV allocation: %1%",
                   fieldRef->field);
 
-        // Walk each slice of the field. We need to walk the slices in reverse
-        // because `foreach_alloc()` (and hence `get_alloc()`) enumerates
-        // the slices in increasing order of their little endian offset, which
-        // means that in terms of network order it walks the slices backwards.
+        // FIXME(zma) seth somehow thought it was a brilliant idea to
+        // flip the bit order and then walk the list backward. I'd say it's
+        // deliberate obfuscation. More than that, the side effect of such
+        // bit flipping is that wherever the bit range is consumed downstream,
+        // the bit range needs to be flipped back to its correct order.
         for (auto& slice : boost::adaptors::reverse(slices)) {
             BUG_CHECK(bool(slice.container), "Emitted field was allocated to "
                       "an invalid PHV container: %1%", fieldRef->field);
@@ -475,36 +468,46 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
             const nw_bitrange containerRange = slice.container_bits()
                 .toOrder<Endian::Network>(slice.container.size());
 
-            // If this slice was allocated to the same container as the previous
-            // one and we're monotonically advancing through the container, then
-            // we combine them into a single container reference. We check that
-            // we're advancing to avoid getting tripped up by cases like this:
-            //     packet.emit(h.header);
-            //     packet.emit(h.header);
-            // If `h.header` is small enough to fit in a single container and we
-            // didn't check that we were monotonically advancing through it,
-            // we'd end up merging those two emits and only emitting `h.header`
-            // once, even though the intention is clearly to emit it twice.
-            if (last && last->containerRef->container == slice.container &&
-                        last->containerRange.hi < containerRange.lo) {
-                LOG5(" - Merging in " << fieldRef->field);
-                last->containerRef->debug.info.push_back(debugInfoFor(fieldRef, slice));
-                last->containerRange = last->containerRange.unionWith(containerRange);
-                continue;
+            if (last && last->container == slice.container) {
+                auto lastRange = *(last->range);
+                    if (lastRange.hi < containerRange.lo) {
+                    LOG5(" - Merging in " << fieldRef->field);
+                    last->debug.info.push_back(debugInfoFor(fieldRef, slice));
+                    last->range = lastRange.unionWith(containerRange);
+                    continue;
+                }
             }
 
             LOG5("Deparser: lowering field " << fieldRef->field
                   << " to " << slice.container);
-            last = LastContainerInfo{new IR::BFN::ContainerRef(slice.container),
-                                     containerRange};
-            last->containerRef->debug.info.push_back(debugInfoFor(fieldRef, slice));
-            containers.push_back(last->containerRef);
 
-            if (phvSwaps && !phvField->metadata) {
-                if (slice.container_bits().hi % 16 !=
-                    (phvField->offset + slice.field_bits().hi) % 16)
-                    phvSwaps->insert(last->containerRef);
-            }
+            last = new IR::BFN::ContainerRef(slice.container);
+            last->range = containerRange;
+            last->debug.info.push_back(debugInfoFor(fieldRef, slice));
+            containers.push_back(last);
+
+            // Deparser checksum engine exposes input entries as 16-bit.
+            // PHV container entry needs a swap if the field's 2-byte alignment
+            // in the container is not same as the alignment in the packet layout
+            // i.e. off by 1 byte. For example, this could happen if "ipv4.ttl" is
+            // allocated to a 8-bit container.
+
+            // XXX(zma) it's unclear whether to get field's 2-byte alignment
+            // from the packet layout or the field list layout. The field list
+            // layout is lost in translation from v1 to tna ...
+
+            bool isResidualChecksum = false;
+
+            std::string f_name(phvField->name.c_str());
+            if (f_name.find("compiler_generated_meta") != std::string::npos
+             && f_name.find("residual_checksum_") != std::string::npos)
+                isResidualChecksum = true;
+
+            if (!isResidualChecksum &&
+                slice.container_bits().hi % 16 !=
+                (phvField->offset + slice.field_bits().hi) % 16)
+                last->swap = (1 << slice.container_bits().hi/16U) |
+                             (1 << slice.container_bits().lo/16U);
         }
     }
 
@@ -1190,19 +1193,15 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 // Allocate a checksum unit and generate the configuration for it.
                 auto* unitConfig = new IR::BFN::ChecksumUnitConfig(nextChecksumUnit);
                 IR::Vector<IR::BFN::ContainerRef> phvSources;
-                std::set<const IR::BFN::ContainerRef*> phvSwaps;
                 std::vector<Clot> clotSources;
                 std::tie(phvSources, clotSources) =
-                    lowerFields(phv, clotInfo, emitChecksum->sources, &phvSwaps);
+                    lowerFields(phv, clotInfo, emitChecksum->sources);
                 auto* loweredPovBit = lowerPovBit(phv, emitChecksum->povBit);
                 for (auto* source : phvSources) {
                     auto* input = new IR::BFN::ChecksumPhvInput(source);
 #if HAVE_JBAY
-                    if (Device::currentDevice() == "JBay") {
+                    if (Device::currentDevice() == "JBay")
                         input->povBit = loweredPovBit;
-                        if (phvSwaps.count(source))
-                            input->swap = true;
-                    }
 #endif
                     unitConfig->phvs.push_back(input);
                 }

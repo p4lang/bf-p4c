@@ -77,9 +77,10 @@ parser [<thread>]:
                     # modification of the counter
                 checksum <int>:
                     # modification of checksum unit <int>
-                    type: verify | residual | clot
+                    type: VERIFY | RESIDUAL | CLOT 
                     mask: <vector> # vector of byte ranges of input buffer
                     swap: <vector>
+                    dest: <phv-location> | clot <tag> # write destination
                     start: 0 | 1
                     end: 0 | 1
                 next: <name> | <match-constant>
@@ -657,8 +658,7 @@ deparser <thread>:
         # optional explicit use/ordering of phvs for POV.  All phvs used for POV bits
         # in the dictionary will be added to the end of this, if not already present
     checksum <int>:
-        <phv-location> [ ':' <pov-bit> ]
-        swap: <vector> # containers that need a swap
+        <phv-location> | clot <tag> : { swap: <constant> [, pov: <phv-location> ] } 
         # checksum unit programming -- pov bits for jbay only
     <name>: <phv-location> [ ':' <pov-bit ] | <digest-params>
         # more generally, any deparser param that comes from the phv is

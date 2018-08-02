@@ -210,17 +210,35 @@ class BFN::ContainerRef : BFN::Reference {
 #end
 
     PHV::Container container;
+
+    boost::optional<nw_bitrange> range;
+
+    int swap = 0;
+
     size_t id;
 
 #noconstructor
     ContainerRef(PHV::Container c) : BFN::Reference(), container(c), id(nextId++) { }
-    ContainerRef(Util::SourceInfo si, PHV::Container c)
-    : BFN::Reference(si), container(c), id(nextId++) { }
+    ContainerRef(Util::SourceInfo si, PHV::Container c) :
+        BFN::Reference(si), container(c), id(nextId++) { }
 
     validate {
         BUG_CHECK(bool(container), "Invalid PHV container in ContainerRef");
     }
-    toString { return container.toString(); }
+    toString {
+        auto rv = container.toString();
+        std::stringstream ss;
+        if (range) {
+            const le_bitrange lerange = (*range)
+                .toOrder<Endian::Little>(container.size());
+
+            if (lerange.lo != 0 || lerange.hi != (int)container.size() - 1) {
+                ss << "(" << lerange.lo << ".." << lerange.hi << ")";
+                rv += ss.str();
+            }
+        }
+        return rv;
+    }
     dbprint { out << toString(); }
 
     /// @return a clone of this ContainerRef which does not compare equal
@@ -234,7 +252,7 @@ class BFN::ContainerRef : BFN::Reference {
 
 /// A reference to a single bit within a PHV container. (e.g., a POV bit)
 class BFN::ContainerBitRef : BFN::Reference {
-    toString { return container->toString() + "(" + std::to_string(bit) + ")"; }
+    toString { return container->container.toString() + "(" + std::to_string(bit) + ")"; }
     dbprint { out << toString(); }
 
     /// The container containing the bit.
