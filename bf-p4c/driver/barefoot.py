@@ -89,7 +89,7 @@ class BarefootBackend(BackendDriver):
                                         help="run manifest validation")
 
     def config_preprocessor(self, targetDefine):
-        self.add_command_option('preprocessor', "-E -x c")
+        self.add_command_option('preprocessor', "-E -x assembler-with-cpp")
         self.add_command_option('preprocessor', "-D" + targetDefine)
         self.add_command_option('preprocessor', p4c_version.macro_defs)
 
