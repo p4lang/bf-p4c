@@ -1,3 +1,4 @@
+#include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "lib/log.h"
 
@@ -13,7 +14,13 @@ bool MauBacktracker::backtrack(trigger &trig) {
             for (int st : entry.second)
                 maxStage = (maxStage < st) ? st : maxStage; }
         LOG4("Inserted tables size: " << tables.size());
-        return true; }
+        return true;
+    } else if (trig.is<BridgedPackingTrigger::failure>()) {
+        auto t = dynamic_cast<BridgedPackingTrigger::failure *>(&trig);
+        noPackFields.insert(t->bridgedFieldNames.begin(), t->bridgedFieldNames.end());
+        std::cerr << " Bridged packing trigger" << std::endl;
+        return true;
+    }
     return false;
 }
 

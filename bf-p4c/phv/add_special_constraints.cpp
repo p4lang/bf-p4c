@@ -1,5 +1,29 @@
 #include "bf-p4c/phv/add_special_constraints.h"
 
+bool AddSpecialConstraints::preorder(const IR::BFN::ChecksumVerify* verify) {
+    if (!verify->dest) return false;
+    const PHV::Field* field = phv_i.field(verify->dest->field);
+    if (!field) return false;
+    pragmas_i.pa_container_sizes().add_constraint(field, { PHV::Size::b16 });
+    return true;
+}
+
+bool AddSpecialConstraints::preorder(const IR::BFN::ChecksumUpdate* update) {
+    if (!update->dest) return false;
+    const PHV::Field* field = phv_i.field(update->dest->field);
+    if (!field) return false;
+    pragmas_i.pa_container_sizes().add_constraint(field, { PHV::Size::b16 });
+    return true;
+}
+
+bool AddSpecialConstraints::preorder(const IR::BFN::ChecksumGet* get) {
+    if (!get->dest) return false;
+    const PHV::Field* field = phv_i.field(get->dest->field);
+    if (!field) return false;
+    pragmas_i.pa_container_sizes().add_constraint(field, { PHV::Size::b16 });
+    return true;
+}
+
 void AddSpecialConstraints::end_apply() {
     // Mirror metadata allocation constraint:
     for (auto gress : {INGRESS, EGRESS}) {

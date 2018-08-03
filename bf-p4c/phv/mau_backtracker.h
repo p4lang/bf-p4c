@@ -22,6 +22,9 @@ class MauBacktracker : public Inspector, Backtrack {
     /// (after a backtrack exception has been thrown by TableSummary)
     ordered_map<cstring, ordered_set<int>> tables;
 
+    /// Set of bridged fields that should be interpreted as no-pack, based on backtracking.
+    ordered_set<cstring>    noPackFields;
+
     /// Store the number of stages required by table allocation
     int maxStage = -1;
 
@@ -46,6 +49,11 @@ class MauBacktracker : public Inspector, Backtrack {
 
     /// @returns the stages in which table @t was placed
     ordered_set<int> stage(const IR::MAU::Table* t) const;
+
+    /// @returns true if the associated field with @name is in the noPackFields set.
+    bool isNoPackField(cstring name) const {
+        return noPackFields.count(name);
+    }
 
     /// @returns the number of stages in the table allocation
     int numStages() const;

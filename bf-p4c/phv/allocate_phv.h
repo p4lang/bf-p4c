@@ -20,6 +20,13 @@
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
 
+struct BridgedPackingTrigger {
+    struct failure : public Backtrack::trigger {
+        ordered_set<cstring> bridgedFieldNames;
+        explicit failure(ordered_set<cstring> b) : trigger(OTHER), bridgedFieldNames(b) {}
+    };
+};
+
 /// For each field, calculate the possible packing opportunities, if they are allocated
 /// in the given order, with fields that are allocated later than it.
 /// This object must be created after sorting superclusters, because
@@ -154,6 +161,10 @@ class CoreAllocation {
     ActionPhvConstraints& actions_i;
     PHV::Pragmas& pragmas_i;  // Some might not be satisfied.
 
+    // Alignment failure fields. Right now, this will only contain bridged metadata fields if PHV
+    // allocation fails due to alignment reasons. Used to backtrack to bridged metadata packing.
+    ordered_set<const PHV::Field*> fieldsWithAlignmentConflicts;
+
  public:
     CoreAllocation(const SymBitMatrix& mutex,
                    const Clustering&,
@@ -224,7 +235,8 @@ class CoreAllocation {
     boost::optional<PHV::Transaction> tryAlloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
-        PHV::SuperCluster& cluster) const;
+        PHV::SuperCluster& cluster,
+        ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts) const;
 
     /** Helper function that tries to allocate all fields in the deparser zero supercluster
       * @cluster to containers B0 (for ingress) and B16 (for egress). The DeparserZero analysis
@@ -343,6 +355,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     const CalcCriticalPathClusters& critical_path_clusters_i;
     const FieldInterference& field_interference_i;
     const ClotInfo& clot_i;
+    ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts;
     // XXX(yumin): not used right now
     // Update this everytime after slicing.
     // FieldInterference::SliceColorMap slice_to_color_i;
@@ -352,9 +365,10 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
                                  std::ostream& out,
                                  const CalcCriticalPathClusters& cpc,
                                  const FieldInterference& f,
-                                 const ClotInfo& clot)
-        : AllocationStrategy(alloc, out)
-        , critical_path_clusters_i(cpc), field_interference_i(f), clot_i(clot) { }
+                                 const ClotInfo& clot,
+                                 ordered_set<cstring>& bf)
+        : AllocationStrategy(alloc, out), critical_path_clusters_i(cpc), field_interference_i(f),
+          clot_i(clot), bridgedFieldsWithAlignmentConflicts(bf) { }
 
     AllocResult
     tryAllocation(const PHV::Allocation &alloc,
@@ -450,15 +464,16 @@ class AllocatePHV : public Inspector {
     const CalcCriticalPathClusters& critical_path_clusters_i;
     FieldInterference field_interference_i;
 
-    bool preorder(const IR::BFN::ChecksumVerify* verify) override;
-    bool preorder(const IR::BFN::ChecksumUpdate* update) override;
-    bool preorder(const IR::BFN::ChecksumGet* get) override;
+    // Set of bridged metadata fields that were found to have alignment conflicts during PHV
+    // allocation. This set maintains its state across multiple rounds of PHV allocation, therefore,
+    // the set members are field names rather than the Field pointers.
+    ordered_set<cstring> bridgedFieldsWithAlignmentConflicts;
 
     /** The entry point.  This "pass" doesn't actually traverse the IR, but it
      * marks the place in the back end where PHV allocation does its work,
-     * which is triggered by a call to `end_apply`.
+     * which is triggered by a call to `init_apply`.
      */
-    void end_apply();
+    profile_t init_apply(const IR::Node* root) override;
 
     /** Translate each AllocSlice in @alloc into a PHV::Field::alloc_slice and
      * attach it to the PHV::Field it slices.
@@ -493,6 +508,12 @@ class AllocatePHV : public Inspector {
     /// Throw a pretty-printed ::error when allocation fails due to
     /// unsatisfiable constraints.
     void formatAndThrowUnsat(const std::list<PHV::SuperCluster *>& unallocated) const;
+
+    /// Throws backtracking exception, if we need to backtrack because of conflicting alignment
+    /// constraints induced by bridged metadata packing.
+    void throwBacktrackException(
+            const size_t numBridgedConflicts,
+            const std::list<PHV::SuperCluster*>& unallocated) const;
 
  public:
     AllocatePHV(const Clustering& clustering,

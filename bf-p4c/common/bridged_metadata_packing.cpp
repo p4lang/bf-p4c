@@ -171,6 +171,7 @@ void PackBridgedMetadata::bridgedActionAnalysis(
         const auto* field1 = phv.field(fieldName1);
         bool isSpecialityDest1 = actionConstraints.hasSpecialityReads(field1);
         bool isMoveOnlyDest1 = actionConstraints.move_only_operations(field1);
+        bool hasNoPack1 = alloc.isNoPackField(fieldName1);
         BUG_CHECK(fieldToActionWrites.count(field1), "Did not find actions writing to field %1%",
                 fieldName1);
         for (auto f2 : nonByteAlignedFields) {
@@ -180,8 +181,14 @@ void PackBridgedMetadata::bridgedActionAnalysis(
                     "%1%", fieldName2);
             bool isSpecialityDest2 = actionConstraints.hasSpecialityReads(field2);
             bool isMoveOnlyDest2 = actionConstraints.move_only_operations(field2);
+            bool hasNoPack2 = alloc.isNoPackField(fieldName2);
             if (field1 == field2) {
                 continue;
+            } else if (hasNoPack1 || hasNoPack2) {
+                // Do not pack fields together if one or both of them is specified as no-pack
+                // because of backtracking to bridged metadata packing.
+                doNotPack(field1->id, field2->id) = true;
+                printNoPackConstraint("Backtracking NO-PACK", field1, field2);
             } else if (field1->is_marshaled() || field2->is_marshaled()) {
                 // Do not pack fields together if one or both of them is mirrored/resubmitted.
                 doNotPack(field1->id, field2->id) = true;
@@ -786,7 +793,7 @@ BridgedMetadataPacking::BridgedMetadataPacking(
       packConflicts(p, dg, tMutex, alloc, aMutex),
       actionConstraints(p, packConflicts),
       packMetadata(p, b, actionConstraints, doNotPack, phase0Fields, deparserParams,
-                   parserAlignedFields) {
+                   parserAlignedFields, alloc) {
           addPasses({
               &bridgedFields,
               new ReplaceOriginalFieldWithBridged(p, bridgedFields),

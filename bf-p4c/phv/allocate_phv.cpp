@@ -942,7 +942,8 @@ static bool isClotSuperCluster(const ClotInfo&, const PHV::SuperCluster&) {
 boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& container_group,
-        PHV::SuperCluster& super_cluster) const {
+        PHV::SuperCluster& super_cluster,
+        ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts) const {
     // Make a new transaction.
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
 
@@ -986,6 +987,13 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
             if (!valid_start_options->getbit(le_offset)) {
                 LOG5("    ...but slice list requires slice to start at " << le_offset <<
                      " which its cluster cannot support: " << slice);
+                // The condition to check if fieldsWithAlignmentConflicts has this field already is
+                // essential for convergence.
+                if (slice.field()->bridged &&
+                        !bridgedFieldsWithAlignmentConflicts.count(slice.field()->name)) {
+                    LOG5("   ...alignment constraint for bridged field slice " << slice <<
+                         ". May backtrack if this slice is not allocated.");
+                    bridgedFieldsWithAlignmentConflicts.insert(slice.field()->name); }
                 return boost::none; }
 
             // Return if the slice is part of another slice list but was previously
@@ -1193,34 +1201,7 @@ static void log_device_stats() {
     LOG3("Egress  only: " << numEgress);
 }
 
-/// XXX(Deep): These fields could go in either an 8-bit container or a 16-bit container. Currently,
-/// we do not have the infrastructure to specify multiple options for pa_container_size pragmas.
-/// Therefore, we are just allocating these fields to 16-bit containers.
-bool AllocatePHV::preorder(const IR::BFN::ChecksumVerify* verify) {
-    if (!verify->dest) return false;
-    const PHV::Field* field = phv_i.field(verify->dest->field);
-    if (!field) return false;
-    pragmas_i.pa_container_sizes().add_constraint(field, { PHV::Size::b16 });
-    return true;
-}
-
-bool AllocatePHV::preorder(const IR::BFN::ChecksumUpdate* update) {
-    if (!update->dest) return false;
-    const PHV::Field* field = phv_i.field(update->dest->field);
-    if (!field) return false;
-    pragmas_i.pa_container_sizes().add_constraint(field, { PHV::Size::b16 });
-    return true;
-}
-
-bool AllocatePHV::preorder(const IR::BFN::ChecksumGet* get) {
-    if (!get->dest) return false;
-    const PHV::Field* field = phv_i.field(get->dest->field);
-    if (!field) return false;
-    pragmas_i.pa_container_sizes().add_constraint(field, { PHV::Size::b16 });
-    return true;
-}
-
-void AllocatePHV::end_apply() {
+Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
     LOG1("--- BEGIN PHV ALLOCATION ----------------------------------------------------");
     log_device_stats();
 
@@ -1244,9 +1225,10 @@ void AllocatePHV::end_apply() {
     for (auto* sc : to_remove)
         cluster_groups.remove(sc);
 
+    size_t numBridgedConflicts = bridgedFieldsWithAlignmentConflicts.size();
     AllocationStrategy *strategy =
-        new BruteForceAllocationStrategy(core_alloc_i, report,
-                                         critical_path_clusters_i, field_interference_i, clot_i);
+        new BruteForceAllocationStrategy(core_alloc_i, report, critical_path_clusters_i,
+                field_interference_i, clot_i, bridgedFieldsWithAlignmentConflicts);
     auto result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
 
     // Later we can try different strategies,
@@ -1273,10 +1255,38 @@ void AllocatePHV::end_apply() {
         LOG2(alloc);
         LOG2(alloc.getSummary(uses_i));
     } else if (result.status == AllocResultCode::FAIL_UNSAT) {
+        throwBacktrackException(numBridgedConflicts, result.remaining_clusters);
         formatAndThrowUnsat(result.remaining_clusters);
     } else {
+        throwBacktrackException(numBridgedConflicts, result.remaining_clusters);
         formatAndThrowError(alloc, result.remaining_clusters);
     }
+    return Inspector::init_apply(root);
+}
+
+void AllocatePHV::throwBacktrackException(
+        const size_t numBridgedConflicts,
+        const std::list<PHV::SuperCluster*>& unallocated) const {
+    // If numBridgedConflicts and the current size of bridgedFieldsWithAlignmentConflicts is the
+    // same, then it means no field was added to this set during this round of PHV allocation.
+    // Therefore, there are no changes required to bridged metadata packing.
+    if (numBridgedConflicts == bridgedFieldsWithAlignmentConflicts.size())
+        return;
+    ordered_set<cstring> noPackBridgedFields;
+    for (auto* sc : unallocated) {
+        sc->forall_fieldslices([&](const PHV::FieldSlice& s) {
+            if (!s.field()->bridged) return;
+            if (!bridgedFieldsWithAlignmentConflicts.count(s.field()->name)) return;
+            noPackBridgedFields.insert(s.field()->name);
+        }); }
+    if (LOGGING(2)) {
+        if (noPackBridgedFields.size() != 0)
+            LOG2("\tThe following bridged fields must be marked no-pack with other bridged "
+                 "fields:");
+        for (auto s : noPackBridgedFields)
+            LOG2("\t  " << s); }
+    if (noPackBridgedFields.size() == 0) return;
+    throw BridgedPackingTrigger::failure(noPackBridgedFields);
 }
 
 bool AllocatePHV::onlyPrivatizedFieldsUnallocated(
@@ -2181,7 +2191,8 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                 for (PHV::ContainerGroup* container_group : container_groups) {
                     LOG4(container_group);
                     if (auto partial_alloc =
-                            core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc)) {
+                            core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc,
+                                bridgedFieldsWithAlignmentConflicts)) {
                         AllocScore score = AllocScore(*partial_alloc, clot_i, core_alloc_i.uses());
                         LOG4("    ...SUPERCLUSTER score: " << score);
                         if (!best_slice_alloc || score > best_slice_score) {

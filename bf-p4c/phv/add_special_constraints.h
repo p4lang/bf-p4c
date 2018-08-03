@@ -26,6 +26,14 @@ class AddSpecialConstraints : public Inspector {
     /// ActionPhvConstraints reference, used to extract destinations of meter color.
     const ActionPhvConstraints&   actions_i;
 
+    /// Checksum related fields can go either in an 8-bit container or a 16-bit container.
+    /// Currently, we do not have the infrastructure to specify multiple options for
+    /// pa_container_size pragmas. Therefore, we are just allocating these fields to 16-bit
+    /// containers.
+    bool preorder(const IR::BFN::ChecksumVerify* verify) override;
+    bool preorder(const IR::BFN::ChecksumUpdate* update) override;
+    bool preorder(const IR::BFN::ChecksumGet* get) override;
+
     void end_apply() override;
 
  public:

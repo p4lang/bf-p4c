@@ -112,6 +112,8 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
     const ordered_set<const PHV::Field*>& deparserParams;
     /// Set of all fields with alignment constraints induced by the parser.
     const ordered_map<const PHV::Field*, const PHV::Field*>& parserAlignedFields;
+    /// No pack constraints reported by MAU backtracker.
+    const MauBacktracker& alloc;
 
     /// Map of original egress field name to the field name in the egress bridged metadata header.
     /// E.g. egress::ingress_metadata.ingress_port is the original backend name for a field, and
@@ -122,7 +124,6 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
 
     /// Map of original field to a related field from which this field will derive its alignment
     /// constraints from.
-    /// XXX(Deep): Use this for more efficient bridged field packing.
     ordered_map<const PHV::Field*, const PHV::Field*> fieldAlignmentMap;
 
     /// Ingress bridged metadata header created by this pass.
@@ -198,9 +199,10 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
             SymBitMatrix& s,
             const ordered_set<const PHV::Field*>& z,
             const ordered_set<const PHV::Field*>& d,
-            const ordered_map<const PHV::Field*, const PHV::Field*>& pa)
+            const ordered_map<const PHV::Field*, const PHV::Field*>& pa,
+            const MauBacktracker& b)
         : phv(p), fields(f), actionConstraints(a), doNotPack(s), phase0Fields(z), deparserParams(d),
-          parserAlignedFields(pa) { }
+          parserAlignedFields(pa), alloc(b) { }
 
     /// @returns the backend name of the field, given the @header and the the @field.
     /// This performs a simple string concatenation.
