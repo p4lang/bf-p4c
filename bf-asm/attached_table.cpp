@@ -232,7 +232,7 @@ void AttachedTables::pass1(MatchTable *self) {
             error(s.lineno, "Must pass same args to all stateful tables in a single table");
         if (s->stage != self->stage)
             error(s.lineno, "Stateful %s not in same stage as %s", s->name(), self->name());
-        else if (s->gress != self->gress)
+        else if (timing_thread(s->gress) != timing_thread(self->gress))
             error(s.lineno, "Stateful %s not in same thread as %s", s->name(), self->name()); }
 }
 

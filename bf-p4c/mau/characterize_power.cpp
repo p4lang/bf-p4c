@@ -72,6 +72,7 @@ bool CharacterizePower::preorder(const IR::BFN::Pipe *) {
   egress_root_ = nullptr;
   gress_to_graph_.emplace(INGRESS, new SimpleTableGraph("ingress"));
   gress_to_graph_.emplace(EGRESS, new SimpleTableGraph("egress"));
+  gress_to_graph_.emplace(GHOST, new SimpleTableGraph("ghost"));
   return true;
 }
 

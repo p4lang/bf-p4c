@@ -389,7 +389,7 @@ void GatewayTable::write_regs(REGS &regs) {
         setup_muxctl(vh_xbar_ctl, input_xbar->match_group());
         /* vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; */ }
     gw_reg.gateway_table_ctl.gateway_table_logical_table = logical_id;
-    gw_reg.gateway_table_ctl.gateway_table_thread = gress;
+    gw_reg.gateway_table_ctl.gateway_table_thread = timing_thread(gress);
     for (auto &r : xor_match)
         gw_reg.gateway_table_matchdata_xor_en |= ((1ULL << r.val->size()) - 1) << r.offset;
     int lineno = 3;
@@ -439,8 +439,9 @@ void GatewayTable::write_regs(REGS &regs) {
             xbar_ctl.tind_logical_select = logical_id;
             xbar_ctl.tind_inhibit_enable = 1; }
     } else {
-        merge.predication_ctl[gress].table_thread |= 1 << logical_id;
-        if (gress == INGRESS) {
+        if (gress != GHOST)
+            merge.predication_ctl[gress].table_thread |= 1 << logical_id;
+        if (gress == INGRESS || gress == GHOST) {
             merge.logical_table_thread[0].logical_table_thread_ingress |= 1 << logical_id;
             merge.logical_table_thread[1].logical_table_thread_ingress |= 1 << logical_id;
             merge.logical_table_thread[2].logical_table_thread_ingress |= 1 << logical_id;
@@ -450,8 +451,8 @@ void GatewayTable::write_regs(REGS &regs) {
             merge.logical_table_thread[1].logical_table_thread_egress |= 1 << logical_id;
             merge.logical_table_thread[2].logical_table_thread_egress |= 1 << logical_id; }
         auto &adrdist = regs.rams.match.adrdist;
-        adrdist.adr_dist_table_thread[gress][0] |= 1 << logical_id;
-        adrdist.adr_dist_table_thread[gress][1] |= 1 << logical_id;
+        adrdist.adr_dist_table_thread[timing_thread(gress)][0] |= 1 << logical_id;
+        adrdist.adr_dist_table_thread[timing_thread(gress)][1] |= 1 << logical_id;
         if (layout.size() > 1)
             payload_write_regs(regs, layout[1].row, layout[1].bus >> 1, layout[1].bus & 1);
         // FIXME -- allow table_counter on standalone gateay?  What can it count?

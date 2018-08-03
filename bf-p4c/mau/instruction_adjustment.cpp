@@ -708,25 +708,9 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
  *  than the hash bus, as the input xbar algorithm can only put it on the search bus.  When
  *  we add hash matrix support for stateful ALUs, we will add that as well. 
  */
-const IR::Node *AdjustStatefulInstructions::preorder(IR::Node *node) {
-    visitOnce();
-    return node;
-}
-
 const IR::Annotations *AdjustStatefulInstructions::preorder(IR::Annotations *annot) {
     prune();
     return annot;
-}
-
-const IR::MAU::Instruction *AdjustStatefulInstructions::preorder(IR::MAU::Instruction *instr) {
-    if (!findContext<IR::MAU::SaluAction>())
-        prune();
-    return instr;
-}
-
-const IR::MAU::AttachedOutput *AdjustStatefulInstructions::preorder(IR::MAU::AttachedOutput *ao) {
-    prune();
-    return ao;
 }
 
 /** Guarantees that all bits of a particular field are aligned correctly given a size of a
@@ -852,7 +836,6 @@ bool AdjustStatefulInstructions::verify_on_hash_bus(const IR::MAU::StatefulAlu *
  */
 const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr) {
     if (!findContext<IR::MAU::SaluAction>()) {
-        prune();
         return expr;
     }
 

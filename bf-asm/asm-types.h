@@ -15,9 +15,9 @@ enum gress_t { INGRESS, EGRESS, GHOST, NONE };
 
 /* All timing related uses combine the INGRESS and GHOST threads (they run in lockstep), so
  * we remap GHOST->INGRESS when dealing with timing */
-inline gress_t timing_thread(gress_t gress) {
-    return gress == GHOST ? INGRESS : gress;
-}
+inline gress_t timing_thread(gress_t gress) { return gress == GHOST ? INGRESS : gress; }
+/* imem similarly shares color between INGRESS and GHOST */
+inline gress_t imem_thread(gress_t gress) { return gress == GHOST ? INGRESS : gress; }
 
 struct match_t {
     unsigned long       word0, word1;

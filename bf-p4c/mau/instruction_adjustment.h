@@ -181,10 +181,7 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
 class AdjustStatefulInstructions : public MauTransform {
  private:
     const PhvInfo &phv;
-    const IR::MAU::AttachedOutput *preorder(IR::MAU::AttachedOutput *) override;
-    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
     const IR::Expression *preorder(IR::Expression *expr) override;
-    const IR::Node *preorder(IR::Node *) override;
     const IR::Annotations *preorder(IR::Annotations *) override;
     bool check_bit_positions(std::map<int, le_bitrange> &salu_inputs, int field_size,
         int starting_bit);
@@ -195,7 +192,7 @@ class AdjustStatefulInstructions : public MauTransform {
          bool &is_hi);
 
  public:
-    explicit AdjustStatefulInstructions(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
+    explicit AdjustStatefulInstructions(const PhvInfo &p) : phv(p) { }
 };
 
 class InstructionAdjustment : public PassManager {

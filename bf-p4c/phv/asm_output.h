@@ -9,6 +9,7 @@ class FieldDefUse;
 class PhvAsmOutput {
     const PhvInfo     &phv;
     const FieldDefUse &defuse;
+    bool have_ghost;
 
     struct LiveRange {
         const IR::BFN::Unit* first;
@@ -25,10 +26,11 @@ class PhvAsmOutput {
     void getLiveRanges();
 
     void emit_phv_field_info(std::ostream& out, PHV::Field& f) const;
+    void emit_gress(std::ostream& out, gress_t gress) const;
     friend std::ostream &operator<<(std::ostream &, const PhvAsmOutput &);
 
  public:
-    explicit PhvAsmOutput(const PhvInfo &p, const FieldDefUse& defuse);
+    explicit PhvAsmOutput(const PhvInfo &p, const FieldDefUse& defuse, bool have_ghost = false);
 };
 
 #endif /* BF_P4C_PHV_ASM_OUTPUT_H_ */

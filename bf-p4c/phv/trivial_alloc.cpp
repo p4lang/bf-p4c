@@ -72,6 +72,7 @@ void TrivialAlloc::do_alloc(const FieldGroup& group, Regs *use, Regs *skip) {
         { &PHV::TrivialAlloc::Regs::B, 8 },
     };
 
+    if (group.fields.empty()) return;
     PHV::Field *i = group.fields[0];
     unsigned group_index = 0;
     int merge_follow = group.fields.size() - 1;
@@ -162,7 +163,8 @@ bool TrivialAlloc::preorder(const IR::BFN::Pipe *pipe) {
                     if (use_mau) {
                         do_alloc(group, &normal, skip);
                     } else if (use_parde) {
-                        if (tagalong_full(field.size, &tagalong))
+                        if (Device::currentDevice() != "Tofino" ||
+                            tagalong_full(field.size, &tagalong))
                             do_alloc(group, &normal, skip);
                         else
                             do_alloc(group, &tagalong, nullptr);

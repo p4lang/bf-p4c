@@ -49,6 +49,9 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Deparser *d) {
 }
 
 bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableSeq *) {
+    // FIXME -- treat GHOST thread as ingress for PHV allocation
+    if ((thread = VisitingThread(this)) == GHOST)
+        thread = INGRESS;
     in_mau = true;
     in_dep = false;
     revisit_visited();

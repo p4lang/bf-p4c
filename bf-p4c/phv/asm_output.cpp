@@ -4,7 +4,8 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/stringref.h"
 
-PhvAsmOutput::PhvAsmOutput(const PhvInfo &p, const FieldDefUse& defuse) : phv(p), defuse(defuse) {
+PhvAsmOutput::PhvAsmOutput(const PhvInfo &p, const FieldDefUse& defuse, bool have_ghost)
+: phv(p), defuse(defuse), have_ghost(have_ghost) {
     liveRanges.clear();
     getLiveRanges();
 }
@@ -77,30 +78,25 @@ void PhvAsmOutput::emit_phv_field_info(std::ostream& out, PHV::Field& f) const {
     out << " ]" << std::endl;
 }
 
+void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
+    out << "phv " << gress << ":\n";
+    // FIXME -- for now, all ghost PHV are allocated as ingress, so we just
+    // FIXME -- duplicate the ingress phv
+    if (gress == GHOST) gress = INGRESS;
+    for (auto &f : phv) {
+        if (f.gress == gress) {
+            emit_phv_field(out, f); } }
+    if (BFNContext::get().options().debugInfo) {
+        out << "  " << "context_json:\n";
+        for (auto &f : phv) {
+            if (f.gress == gress && !f.is_unallocated()) {
+                emit_phv_field_info(out, f); } } }
+}
+
 std::ostream &operator<<(std::ostream &out, const PhvAsmOutput& phvasm) {
-    bool dumpCtxt = BFNContext::get().options().debugInfo;
-
-    out << "phv ingress:\n";
-    for (auto &f : phvasm.phv) {
-        if (f.gress == INGRESS) {
-            emit_phv_field(out, f); } }
-
-    if (dumpCtxt) {
-        out << "  " << "context_json:\n";
-        for (auto &f : phvasm.phv) {
-            if (f.gress == INGRESS && !f.is_unallocated()) {
-                phvasm.emit_phv_field_info(out, f); } } }
-
-    out << "phv egress:\n";
-    for (auto &f : phvasm.phv) {
-        if (f.gress == EGRESS) {
-            emit_phv_field(out, f); } }
-
-    if (dumpCtxt) {
-        out << "  " << "context_json:\n";
-        for (auto &f : phvasm.phv) {
-            if (f.gress == EGRESS && !f.is_unallocated()) {
-                phvasm.emit_phv_field_info(out, f); } } }
-
+    phvasm.emit_gress(out, INGRESS);
+    phvasm.emit_gress(out, EGRESS);
+    if (phvasm.have_ghost)
+        phvasm.emit_gress(out, GHOST);
     return out;
 }

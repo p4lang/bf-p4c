@@ -677,7 +677,9 @@ class CollectPhvFields : public Inspector {
     /// @returns the input gress (at construction) if provided, or
     /// VisitingThread(this) if not.
     gress_t getGress() const {
-        return gress ? *gress : VisitingThread(this);
+        auto rv = gress ? *gress : VisitingThread(this);
+        // FIXME: for now treat GHOST thread as INGRESS for phv allocation
+        return rv == GHOST ? INGRESS : rv;
     }
 
     Visitor::profile_t init_apply(const IR::Node* root) override {

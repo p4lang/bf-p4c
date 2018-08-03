@@ -263,12 +263,13 @@ p4c_add_xfail_reason("jbay"
 
 # work in progress -- hardware learning dleft.
 p4c_add_xfail_reason("jbay"
-  "error: action instruction addr .* in use elsewhere"
+  #"error: action instruction addr .* in use elsewhere"
+  "error: invalid operand '.*' for 'output' instruction"
   extensions/p4_tests/p4_16/jbay/hwlearn1.p4
 )
 
 # work in progress -- ghost thread
 p4c_add_xfail_reason("jbay"
-  "error: Tables .* and .* are not mutually exclusive"
+  "PHV allocation was not successful"
   extensions/p4_tests/p4_16/jbay/ghost1.p4
 )

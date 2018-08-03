@@ -133,6 +133,7 @@ class HashExpr::Xor : HashExpr {
 
 class HashExpr::Stripe : HashExpr {
     std::vector<HashExpr *>     what;
+    bool supress_error_cascade = false;
     Stripe(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) override {
@@ -330,7 +331,10 @@ void HashExpr::Stripe::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
                 e->gen_data(data, bit - total_size, ix, grp);
                 return; }
             total_size += sz; }
-        if (total_size == 0)
-            error(lineno, "Can't stripe unsized data");
+        if (total_size == 0) {
+            if (!supress_error_cascade) {
+                error(lineno, "Can't stripe unsized data");
+                supress_error_cascade = true; }
+            break; }
         bit %= total_size; }
 }

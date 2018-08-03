@@ -1,6 +1,7 @@
 #include "backend.h"
 #include <fstream>
 #include <set>
+#include "bf-p4c/check_duplicate.h"
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/common/check_for_unimplemented_features.h"
@@ -248,6 +249,16 @@ Backend::Backend(const BFN_Options& options) :
                               options.disable_power_check)
     });
     setName("Barefoot backend");
+
+#if 0
+    // check for passes that incorrectly duplicate shared attached tables
+    // FIXME -- table placement currently breaks this because it does not rename attached
+    // tables when it splits them across stages.
+    auto *check = new CheckDuplicateAttached;
+    addDebugHook([check](const char *, unsigned, const char *pass, const IR::Node *root) {
+        check->pass = pass;
+        root->apply(*check); }, true);
+#endif
 
     if (LOGGING(4))
         addDebugHook(debug_hook);

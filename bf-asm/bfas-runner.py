@@ -75,7 +75,7 @@ def run_assembler(known_args):
             bfa_filename = p4_filename + ".bfa"
             cmd.append(os.path.join(dirname, bfa_filename))
             unique_table_offset = unique_table_offset + 1
-            print cmd
+            #print cmd
             subprocess.check_call(cmd)
 
 def main():

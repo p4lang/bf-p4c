@@ -62,7 +62,7 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
 }
 
 void TablesMutuallyExclusive::postorder(const IR::BFN::Pipe *pipe) {
-    /* ingress and egress are mutually exclusive */
+    /* ingress, ghost and egress are assumed mutually exclusive */
     safe_vector<bitvec> sets;
     for (auto th : pipe->thread)
         if (th.mau) {
@@ -70,6 +70,11 @@ void TablesMutuallyExclusive::postorder(const IR::BFN::Pipe *pipe) {
             for (auto t : th.mau->tables)
                 set |= table_succ[t];
             sets.push_back(set); }
+    if (pipe->ghost_thread) {
+        bitvec set;
+        for (auto t : pipe->ghost_thread->tables)
+            set |= table_succ[t];
+        sets.push_back(set); }
     for (auto &set : sets)
         for (auto t : set)
             for (auto &other : sets)

@@ -8,7 +8,7 @@ set python print-stack full
 if $_isvoid($bpnum)
     break ErrorReporter::emit_message
     disable
-    break Util::CompilerBug::CompilerBug<>
+    break Util::P4CExceptionBase::P4CExceptionBase<>
     break BaseCompileContext::getDefaultErrorDiagnosticAction
 end
 

@@ -533,6 +533,7 @@ void InputXbar::pass2() {
 template<class REGS>
 void InputXbar::write_regs(REGS &regs) {
     auto &xbar = regs.dp.xbar_hash.xbar;
+    auto gress = timing_thread(table->gress);
     for (auto &group : groups) {
         if (group.second.empty()) continue;
         LOG1("  # Input xbar group " << group.first);
@@ -546,7 +547,7 @@ void InputXbar::write_regs(REGS &regs) {
         case Group::TERNARY:
             group_base = 128 + (group.first.index*11 + 1)/2U;
             half_byte = 133 + 11*(group.first.index/2U);
-            xbar.mau_match_input_xbar_ternary_match_enable[table->gress]
+            xbar.mau_match_input_xbar_ternary_match_enable[gress]
                 |= 1 << (group.first.index)/2U;
             break;
         case Group::BYTE:
@@ -620,8 +621,8 @@ void InputXbar::write_regs(REGS &regs) {
             if (bytes_used & 0xff) enable |= 1;
             if (bytes_used & 0xff00) enable |= 2;
             enable <<= group.first.index * 2;
-            regs.dp.mau_match_input_xbar_exact_match_enable[table->gress].rewrite();
-            regs.dp.mau_match_input_xbar_exact_match_enable[table->gress] |= enable; } }
+            regs.dp.mau_match_input_xbar_exact_match_enable[gress].rewrite();
+            regs.dp.mau_match_input_xbar_exact_match_enable[gress] |= enable; } }
     auto &hash = regs.dp.xbar_hash.hash;
     for (auto &ht : hash_tables) {
         if (ht.second.empty()) continue;
@@ -633,13 +634,13 @@ void InputXbar::write_regs(REGS &regs) {
         if (hg.second.tables) {
             hash.parity_group_mask[grp][0] = hg.second.tables & 0xff;
             hash.parity_group_mask[grp][1] = (hg.second.tables >> 8) & 0xff;
-            regs.dp.mau_match_input_xbar_exact_match_enable[table->gress].rewrite();
-            regs.dp.mau_match_input_xbar_exact_match_enable[table->gress] |= hg.second.tables; }
+            regs.dp.mau_match_input_xbar_exact_match_enable[gress].rewrite();
+            regs.dp.mau_match_input_xbar_exact_match_enable[gress] |= hg.second.tables; }
         if (hg.second.seed) {
             for (int bit = 0; bit < 52; ++bit)
                 if ((hg.second.seed >> bit) & 1) 
                     hash.hash_seed[bit] |= 1U << grp; }
-        if (table->gress == INGRESS)
+        if (gress == INGRESS)
             regs.dp.hashout_ctl.hash_group_ingress_enable |= 1 << grp;
         else
             regs.dp.hashout_ctl.hash_group_egress_enable |= 1 << grp;

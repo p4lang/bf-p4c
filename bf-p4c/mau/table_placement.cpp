@@ -1088,7 +1088,8 @@ std::ostream &operator<<(std::ostream &out, const DumpSeqTables &s) {
 IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
     LOG1("table placement starting");
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
-         TableTree("egress", pipe->thread[EGRESS].mau));
+         TableTree("egress", pipe->thread[EGRESS].mau) <<
+         TableTree("ghost", pipe->ghost_thread) );
     tblInfo.clear();
     seqInfo.clear();
     ordered_set<const GroupPlace *>     work;
@@ -1101,6 +1102,9 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
         if (th.mau && th.mau->tables.size() > 0) {
             th.mau->apply(SetupInfo(*this));
             new GroupPlace(*this, work, {}, th.mau); }
+    if (pipe->ghost_thread && pipe->ghost_thread->tables.size() > 0) {
+        pipe->ghost_thread->apply(SetupInfo(*this));
+        new GroupPlace(*this, work, {}, pipe->ghost_thread); }
     ordered_set<const IR::MAU::Table *> partly_placed;
     while (!work.empty()) {
         LOG3("stage " << (placed ? placed->stage : 0) << ", work: " << work <<
@@ -1249,7 +1253,8 @@ IR::Node *TablePlacement::postorder(IR::BFN::Pipe *pipe) {
     table_placed.clear();
     LOG3("table placement completed");
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
-         TableTree("egress", pipe->thread[EGRESS].mau));
+         TableTree("egress", pipe->thread[EGRESS].mau) <<
+         TableTree("ghost", pipe->ghost_thread));
     return pipe;
 }
 

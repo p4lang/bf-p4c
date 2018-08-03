@@ -71,7 +71,7 @@ class AsmOutput : public Inspector {
                  << "  version: " << BFASM::Version::getVersion() << std::endl
                  << "  run_id: \"" << RunId::getId() << "\"" << std::endl;
             if (::errorCount() == 0) {
-                *out << PhvAsmOutput(phv, defuse)
+                *out << PhvAsmOutput(phv, defuse, pipe->ghost_thread != nullptr)
                      << ParserAsmOutput(pipe, INGRESS)
                      << DeparserAsmOutput(pipe, phv, clot, INGRESS)
                      << ParserAsmOutput(pipe, EGRESS)

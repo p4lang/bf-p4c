@@ -453,10 +453,10 @@ void MeterTable::write_regs(REGS &regs) {
         adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;
     for (auto &hd : hash_dist)
         hd.write_regs(regs, this, 1, false);
-    if (gress == INGRESS) {
+    if (gress == INGRESS || gress == GHOST) {
         merge.meter_alu_thread[0].meter_alu_thread_ingress |= 1U << home->row/4U;
         merge.meter_alu_thread[1].meter_alu_thread_ingress |= 1U << home->row/4U;
-    } else {
+    } else if (gress == EGRESS) {
         merge.meter_alu_thread[0].meter_alu_thread_egress |= 1U << home->row/4U;
         merge.meter_alu_thread[1].meter_alu_thread_egress |= 1U << home->row/4U; }
 }

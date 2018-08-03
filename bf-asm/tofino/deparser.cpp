@@ -355,7 +355,7 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
 
     if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
         warning(lineno[INGRESS], "Registers used in both ingress and egress in pipeline: %s",
-                Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str());
+                Phv::db_regset(Phv::use(INGRESS) & Phv::use(EGRESS)).c_str());
         /* FIXME -- this only (sort-of) works because 'deparser' comes first in the alphabet,
          * FIXME -- so is the first section to have its 'output' method run.  Its a hack
          * FIXME -- anyways to attempt to correct broken asm that should be an error */

@@ -31,6 +31,7 @@ void Target::JBay::Phv::init_regs(::Phv &phv) {
                         byte += reg->size/8U; }
                     phv.names[INGRESS].emplace(reg->name, ::Phv::Slice(*reg, 0, reg->size - 1));
                     phv.names[EGRESS].emplace(reg->name, ::Phv::Slice(*reg, 0, reg->size - 1)); 
+                    phv.names[GHOST].emplace(reg->name, ::Phv::Slice(*reg, 0, reg->size - 1)); 
                 }
             }
         }

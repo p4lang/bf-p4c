@@ -13,8 +13,9 @@ enum gress_t {
   GHOST = 2,
 };
 
-/// @return, given a thread @gress, the _other_ thread.
-inline gress_t operator~(const gress_t& gress) { return gress_t(gress ^ 1); }
+/// @return, given a thread @gress, the _other_ thread.  Ingress and Ghost are considered the
+/// same, so they both return egress.
+inline gress_t operator~(const gress_t& gress) { return gress_t((gress & 1) ^ 1); }
 
 cstring toString(gress_t gress);
 cstring createThreadName(gress_t gress, cstring name);

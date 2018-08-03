@@ -434,10 +434,10 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
     write_logging_regs(regs);
     //for (auto &hd : hash_dist)
     //    hd.write_regs(regs, this, 0, non_linear_hash);
-    if (gress == INGRESS) {
+    if (gress == INGRESS || gress == GHOST) {
         merge.meter_alu_thread[0].meter_alu_thread_ingress |= 1U << meter_group;
         merge.meter_alu_thread[1].meter_alu_thread_ingress |= 1U << meter_group;
-    } else {
+    } else if (gress == EGRESS) {
         merge.meter_alu_thread[0].meter_alu_thread_egress |= 1U << meter_group;
         merge.meter_alu_thread[1].meter_alu_thread_egress |= 1U << meter_group; }
     auto &salu = regs.rams.map_alu.meter_group[meter_group].stateful;

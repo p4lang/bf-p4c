@@ -1044,13 +1044,13 @@ void Table::Actions::Action::pass1(Table *tbl) {
                       inst->slot, name.c_str());
             slot_use[inst->slot] = 1; } }
     if (addr >= 0) {
-        if (auto old = tbl->stage->imem_addr_use[tbl->gress][addr]) {
+        if (auto old = tbl->stage->imem_addr_use[imem_thread(tbl->gress)][addr]) {
             if (equivVLIW(old)) {
                 shared_VLIW = true;
             } else {
                 error(lineno, "action instruction addr %d in use elsewhere", addr);
                 warning(old->lineno, "also defined here"); } }
-        tbl->stage->imem_addr_use[tbl->gress][addr] = this;
+        tbl->stage->imem_addr_use[imem_thread(tbl->gress)][addr] = this;
         iaddr = addr/ACTION_IMEM_COLORS; }
     if (!shared_VLIW) {
         for (auto &inst : instr) {
@@ -1167,7 +1167,7 @@ void Table::Actions::pass2(Table *tbl) {
             inst->pass2(tbl, &act);
         if (act.addr < 0) {
             for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
-                if (auto old = tbl->stage->imem_addr_use[tbl->gress][i]) {
+                if (auto old = tbl->stage->imem_addr_use[imem_thread(tbl->gress)][i]) {
                     if (act.equivVLIW(old)) {
                         act.addr = i;
                         break; }
@@ -1176,7 +1176,7 @@ void Table::Actions::pass2(Table *tbl) {
                     continue;
                 act.addr = i;
                 tbl->stage->imem_use[i/ACTION_IMEM_COLORS] |= act.slot_use;
-                tbl->stage->imem_addr_use[tbl->gress][i] = &act;
+                tbl->stage->imem_addr_use[imem_thread(tbl->gress)][i] = &act;
                 break; } }
         if (act.addr < 0)
             error(act.lineno, "Can't find an available instruction address");
