@@ -661,8 +661,8 @@ class AnalyzeProgram : public Inspector {
     void analyzeArchBlock(const IR::ToplevelBlock *blk, cstring name, cstring type) {
         auto main = blk->getMain();
         auto ctrl = main->findParameterValue(name);
-        BUG_CHECK(ctrl != nullptr, "%1%: could not find parameter %2%", main, name);
-        BUG_CHECK(ctrl->is<BlockType>(), "%1%: main package match the expected model", main);
+        ERROR_CHECK(ctrl != nullptr, "%1%: could not find parameter %2%", main, name);
+        ERROR_CHECK(ctrl->is<BlockType>(), "%1%: main package match the expected model", main);
         auto block = ctrl->to<BlockType>()->container;
         BUG_CHECK(block != nullptr, "Unable to find %1% block in V1Switch", name);
         structure->blockNames.emplace(type, block->name);
@@ -936,8 +936,8 @@ class ConstructSymbolTable : public Inspector {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "malformed IR in digest() function");
         auto control = findContext<IR::P4Control>();
-        BUG_CHECK(control != nullptr, "digest() must be used in a control block");
-        BUG_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
+        ERROR_CHECK(control != nullptr, "digest() must be used in a control block");
+        ERROR_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
                   "digest() can only be used in %1%",
                   structure->getBlockName(ProgramStructure::INGRESS));
         IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
@@ -953,15 +953,15 @@ class ConstructSymbolTable : public Inspector {
         auto stmt = new IR::AssignmentStatement(mem, idx);
         structure->_map.emplace(node, stmt);
 
-        BUG_CHECK(mce->typeArguments->size() == 1, "Expected 1 type parameter for %1%",
+        ERROR_CHECK(mce->typeArguments->size() == 1, "Expected 1 type parameter for %1%",
                   mce->method);
         auto *typeArg = mce->typeArguments->at(0);
         auto *typeName = typeArg->to<IR::Type_Name>();
-        BUG_CHECK(typeName != nullptr, "Expected type T in digest to be a typeName %1%", typeArg);
+        ERROR_CHECK(typeName != nullptr, "Expected type T in digest to be a typeName %1%", typeArg);
         auto fieldList = refMap->getDeclaration(typeName->path);
         auto declAnno = fieldList->getAnnotation("name");
 
-        BUG_CHECK(typeName != nullptr, "Wrong argument type for %1%", typeArg);
+        ERROR_CHECK(typeName != nullptr, "Wrong argument type for %1%", typeArg);
         /*
          * In the ingress deparser, add the following code
          * Digest<T>() learn_1;
@@ -1005,8 +1005,8 @@ class ConstructSymbolTable : public Inspector {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "malformed IR in digest() function");
         auto control = findContext<IR::P4Control>();
-        BUG_CHECK(control != nullptr, "digest() must be used in a control block");
-        BUG_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
+        ERROR_CHECK(control != nullptr, "digest() must be used in a control block");
+        ERROR_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
                   "digest() can only be used in %1%",
                   structure->getBlockName(ProgramStructure::INGRESS));
         IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
@@ -1021,7 +1021,7 @@ class ConstructSymbolTable : public Inspector {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "malformed IR in clone() function");
         auto control = findContext<IR::P4Control>();
-        BUG_CHECK(control != nullptr, "clone() must be used in a control block");
+        ERROR_CHECK(control != nullptr, "clone() must be used in a control block");
 
         const bool isIngress =
                 (control->name == structure->getBlockName(ProgramStructure::INGRESS));
@@ -1084,7 +1084,7 @@ class ConstructSymbolTable : public Inspector {
 
             // Set `mirror_id`, which configures the mirror session id that the
             // hardware uses to route mirrored packets in the TM.
-            BUG_CHECK(mce->arguments->size() >= 2,
+            ERROR_CHECK(mce->arguments->size() >= 2,
                       "No mirror session id specified: %1%", mce);
             auto *mirrorId = new IR::Member(compilerMetadataPath, "mirror_id");
             auto *mirrorIdValue = mce->arguments->at(1)->expression;
@@ -1196,7 +1196,7 @@ class ConstructSymbolTable : public Inspector {
     /// execute_meter_with_color is converted to a meter extern
     void cvtExecuteMeterFunctiion(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
-        BUG_CHECK(control != nullptr,
+        ERROR_CHECK(control != nullptr,
                   "execute_meter_with_color() must be used in a control block");
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
 
@@ -1229,7 +1229,7 @@ class ConstructSymbolTable : public Inspector {
 
     void convertHashPrimitive(const IR::MethodCallStatement *node, cstring hashName) {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
-        BUG_CHECK(mce->arguments->size() > 4, "insufficient arguments to hash() function");
+        ERROR_CHECK(mce->arguments->size() > 4, "insufficient arguments to hash() function");
         auto pDest = mce->arguments->at(0)->expression;
         auto pBase = mce->arguments->at(2)->expression;
         auto pMax = mce->arguments->at(4)->expression;
@@ -1250,7 +1250,7 @@ class ConstructSymbolTable : public Inspector {
                 pMax = new IR::Cast(IR::Type::Bits::get(w), pMax);
             args->push_back(new IR::Argument(pMax));
         } else {
-            BUG_CHECK(pBase->to<IR::Constant>()->asInt() == 0,
+            ERROR_CHECK(pBase->to<IR::Constant>()->asInt() == 0,
                       "The base offset for a hash calculation must be zero");
         }
 
@@ -1265,14 +1265,14 @@ class ConstructSymbolTable : public Inspector {
     /// hash function is converted to an instance of hash extern in the enclosed control block
     void cvtHashFunction(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
-        BUG_CHECK(control != nullptr, "hash() must be used in a control block");
+        ERROR_CHECK(control != nullptr, "hash() must be used in a control block");
         const bool isIngress =
                 (control->name == structure->getBlockName(ProgramStructure::INGRESS));
 
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "Malformed IR: method call expression cannot be nullptr");
 
-        BUG_CHECK(mce->arguments->size() > 3, "hash extern must have at least 4 arguments");
+        ERROR_CHECK(mce->arguments->size() > 3, "hash extern must have at least 4 arguments");
         auto typeArgs = new IR::Vector<IR::Type>({mce->typeArguments->at(0)});
 
         auto hashType = new IR::Type_Specialized(new IR::Type_Name("Hash"), typeArgs);
@@ -1306,8 +1306,8 @@ class ConstructSymbolTable : public Inspector {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "malformed IR in resubmit() function");
         auto control = findContext<IR::P4Control>();
-        BUG_CHECK(control != nullptr, "resubmit() must be used in a control block");
-        BUG_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
+        ERROR_CHECK(control != nullptr, "resubmit() must be used in a control block");
+        ERROR_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
                   "resubmit() can only be used in ingress control");
         IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
         auto mem = new IR::Member(path, "resubmit_type");
@@ -1389,7 +1389,7 @@ class ConstructSymbolTable : public Inspector {
 
     void cvtRandomFunction(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
-        BUG_CHECK(control != nullptr, "random() must be used in a control block");
+        ERROR_CHECK(control != nullptr, "random() must be used in a control block");
         const bool isIngress =
                 (control->name == structure->getBlockName(ProgramStructure::INGRESS));
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
@@ -1562,7 +1562,7 @@ class ConstructSymbolTable : public Inspector {
 
     void cvtActionProfile(const IR::Declaration_Instance* node) {
         auto type = node->type->to<IR::Type_Name>();
-        BUG_CHECK(type->path->name == "action_profile",
+        ERROR_CHECK(type->path->name == "action_profile",
                   "action_profile converter cannot be applied to %1%", type->path->name);
 
         type = new IR::Type_Name("ActionProfile");
@@ -1573,8 +1573,8 @@ class ConstructSymbolTable : public Inspector {
 
     void cvtRegister(const IR::Declaration_Instance* node) {
         auto type = node->type->to<IR::Type_Specialized>();
-        BUG_CHECK(type != nullptr, "Invalid type for register converter");
-        BUG_CHECK(type->baseType->path->name == "register",
+        ERROR_CHECK(type != nullptr, "Invalid type for register converter");
+        ERROR_CHECK(type->baseType->path->name == "register",
                   "register converter cannot be applied to %1%", type->baseType->path->name);
 
         auto args = new IR::Vector<IR::Argument>({node->arguments->at(0)});
@@ -1589,7 +1589,7 @@ class ConstructSymbolTable : public Inspector {
 
     void cvtActionSelector(const IR::Declaration_Instance* node) {
         auto type = node->type->to<IR::Type_Name>();
-        BUG_CHECK(type->path->name == "action_selector",
+        ERROR_CHECK(type->path->name == "action_selector",
                   "action_selector converter cannot be applied to %1%", type->path->name);
         auto declarations = new IR::IndexedVector<IR::Declaration>();
 
