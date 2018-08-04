@@ -76,6 +76,8 @@ class BFN::Pipe {
                 v.visit(thread[th->thread].mau, "mau");
                 v.visit(thread[th->thread].deparser, "deparser"); }
         } else {
+            // FIXME -- doesn't do flow_clone/merge properly, but fixing will
+            // break ParserGraph (at least) as it doesn't do merge properly
             for (auto &th : thread) {
                 v.visit(th.parser, "parser");
                 v.visit(th.mau, "mau");
@@ -100,8 +102,11 @@ class InstanceRef : HeaderRef {
     NullOK HeaderOrMetadata     obj;
     inline NameMap<InstanceRef> nested;
 #noconstructor
-    InstanceRef(cstring prefix, ID n, Type t, bool forceMeta = false);
-    InstanceRef(ID n, Type t, bool forceMeta = false) : InstanceRef(cstring(), n, t, forceMeta) {}
+    InstanceRef(cstring prefix, ID n, Type t, Annotations ann = nullptr, bool forceMeta = false);
+    InstanceRef(cstring prefix, ID n, Type t, bool forceMeta)
+    : InstanceRef(prefix, n, t, nullptr, forceMeta) {}
+    InstanceRef(ID n, Type t, Annotations ann = nullptr, bool forceMeta = false)
+    : InstanceRef(cstring(), n, t, ann, forceMeta) {}
     InstanceRef(Type t) : HeaderRef(t) { }
     HeaderOrMetadata baseRef() const override { return obj; }
     toString { return obj ? obj->name : name; }
@@ -126,8 +131,11 @@ class InstanceRef : HeaderRef {
  */
 class V1InstanceRef : InstanceRef {
 #noconstructor
-    V1InstanceRef(cstring prefix, ID n, Type t, bool forceMeta = false);
-    V1InstanceRef(ID n, Type t, bool forceMeta = false) : V1InstanceRef(cstring(), n, t, forceMeta) {}
+    V1InstanceRef(cstring prefix, ID n, Type t, Annotations ann = nullptr, bool forceMeta = false);
+    V1InstanceRef(cstring prefix, ID n, Type t, bool forceMeta)
+    : V1InstanceRef(prefix, n, t, nullptr, forceMeta) {}
+    V1InstanceRef(ID n, Type t, Annotations ann = nullptr, bool forceMeta = false)
+    : V1InstanceRef(cstring(), n, t, ann, forceMeta) {}
     toString { return obj ? obj->name : name; }
     dbprint { out << toString(); }
 }

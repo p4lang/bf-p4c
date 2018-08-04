@@ -271,9 +271,9 @@ void IR::BFN::Deparser::dbprint(std::ostream &out) const {
     for (auto* emit : emits)
         out << endl << *emit;
     for (auto* param : params)
-        out << *param;
+        out << endl << *param;
     for (auto digest : Values(digests))
-        out << *digest;
+        out << endl << *digest;
     out << unindent;
 }
 
@@ -338,9 +338,9 @@ void IR::BFN::LoweredDeparser::dbprint(std::ostream &out) const {
     for (auto* emit : emits)
         out << endl << *emit;
     for (auto* param : params)
-        out << *param;
+        out << endl << *param;
     for (auto digest : digests)
-        out << *digest;
+        out << endl << *digest;
     for (auto* checksumFieldList : checksums)
         out << *checksumFieldList;
     out << unindent;

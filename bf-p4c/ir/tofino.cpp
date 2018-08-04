@@ -3,11 +3,16 @@
 /* static */ size_t IR::BFN::UnresolvedStackRef::nextId = 0;
 /* static */ size_t IR::BFN::ContainerRef::nextId = 0;
 
-IR::InstanceRef::InstanceRef(cstring prefix, IR::ID n, const IR::Type *t, bool forceMeta)
+// FIXME -- should refactor or simplify the below two constructors.  It seems for V1InstanceRef,
+// forceMeta is always false, so prefix is always ignored, so it prehaps doesn't need them.
+
+IR::InstanceRef::InstanceRef(cstring prefix, IR::ID n, const IR::Type *t,
+                             const IR::Annotations *ann, bool forceMeta)
 : HeaderRef(t), name(n) {
     if (n.srcInfo.isValid()) srcInfo = n.srcInfo;
     if (prefix)
         name.name = prefix + "." + n.name;
+    IR::HeaderOrMetadata *obj = nullptr;
     if (auto *hdr = t->to<IR::Type_Header>()) {
         if (forceMeta)
             obj = new IR::Metadata(name, hdr);
@@ -27,14 +32,19 @@ IR::InstanceRef::InstanceRef(cstring prefix, IR::ID n, const IR::Type *t, bool f
         obj = nullptr;
     } else {
         P4C_UNIMPLEMENTED("Unhandled InstanceRef type %1%", t); }
+    if (obj && ann)
+        obj->annotations = ann;
+    this->obj = obj;
 }
 
-IR::V1InstanceRef::V1InstanceRef(cstring prefix, IR::ID n, const IR::Type *t, bool forceMeta)
+IR::V1InstanceRef::V1InstanceRef(cstring prefix, IR::ID n, const IR::Type *t,
+                                 const IR::Annotations *ann, bool forceMeta)
 : InstanceRef(t) {
     name = n;
     if (n.srcInfo.isValid()) srcInfo = n.srcInfo;
     if (prefix && forceMeta)
         name.name = prefix + "." + n.name;
+    IR::HeaderOrMetadata *obj = nullptr;
     if (auto *hdr = t->to<IR::Type_Header>()) {
         if (forceMeta)
             obj = new IR::Metadata(n, hdr);
@@ -53,6 +63,9 @@ IR::V1InstanceRef::V1InstanceRef(cstring prefix, IR::ID n, const IR::Type *t, bo
         obj = nullptr;
     } else {
         P4C_UNIMPLEMENTED("Unhandled V1InstanceRef type %1%", t); }
+    if (obj && ann)
+        obj->annotations = ann;
+    this->obj = obj;
 }
 
 int IR::TempVar::uid = 0;

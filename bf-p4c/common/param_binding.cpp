@@ -9,9 +9,9 @@ void ParamBinding::bind(const IR::Parameter *param) {
     if (!by_type.count(type)) {
         LOG1("adding param binding for " << param->name << ": " << type->toString());
         if (isV1)
-            by_type.emplace(type, new IR::V1InstanceRef(param->name, type));
+            by_type.emplace(type, new IR::V1InstanceRef(param->name, type, param->annotations));
         else
-            by_type.emplace(type, new IR::InstanceRef(param->name, type)); }
+            by_type.emplace(type, new IR::InstanceRef(param->name, type, param->annotations)); }
     LOG2("adding param binding for node " << param->id << ": " <<
          type->toString() << ' ' << param->name);
     by_param[param] = by_type.at(type);
@@ -20,7 +20,7 @@ void ParamBinding::bind(const IR::Parameter *param) {
 void ParamBinding::bind(const IR::Declaration_Variable *var) {
     if (by_declvar[var]) return;
     LOG2("creating instance for var " << var->name);
-    by_declvar[var] = new IR::InstanceRef(var->name, typeMap->getType(var), true);
+    by_declvar[var] = new IR::InstanceRef(var->name, typeMap->getType(var), var->annotations, true);
 }
 
 void ParamBinding::postorder(const IR::Parameter *param) {

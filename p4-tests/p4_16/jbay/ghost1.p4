@@ -14,16 +14,23 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md,
                 in ghost_intrinsic_metadata_t gh_intr_md) {
 
+    action noop() {}
+    table skip_packet {
+        key = { hdr.data.f2 : exact; }
+        actions = { noop; } }
+
     RegisterAction<bit<32>, bit<32>>(ping_table) ping_read = {
         void apply(inout bit<32> value, out bit<32> rv) { rv = value; } };
     RegisterAction<bit<32>, bit<32>>(pong_table) pong_read = {
         void apply(inout bit<32> value, out bit<32> rv) { rv = value; } };
 
     apply {
-        if (gh_intr_md.ping_pong == 0) {
-            hdr.data.f2 = ping_read.execute(hdr.data.h1[10:0]);
-        } else {
-            hdr.data.f2 = pong_read.execute(hdr.data.h1[10:0]);
+        if (!skip_packet.apply().hit) {
+            if (gh_intr_md.ping_pong == 0) {
+                hdr.data.f2 = ping_read.execute(hdr.data.h1[10:0]);
+            } else {
+                hdr.data.f2 = pong_read.execute(hdr.data.h1[10:0]);
+            }
         }
         ig_intr_tm_md.ucast_egress_port = 3;
     }
