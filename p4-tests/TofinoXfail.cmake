@@ -1285,3 +1285,17 @@ p4c_add_xfail_reason("tofino"
   switch_ent_fin_postcard
   switch_8.2_ent_fin_postcard
 )
+
+p4c_add_xfail_reason("tofino"
+  "Cannot operate on values with different types bit.* and bit.*"
+  extensions/p4_tests/p4_14/brig-540-2.p4
+  switch_ent_fin_postcard
+  switch_msdc_leaf_int
+  switch_l3_heavy_int_leaf
+  switch_8.2_ent_fin_postcard
+  switch_8.2_msdc_leaf_int
+  switch_8.2_l3_heavy_int_leaf
+  switch_8.2_generic_int_leaf
+  switch_generic_int_leaf
+)
+

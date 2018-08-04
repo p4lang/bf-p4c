@@ -780,3 +780,4 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
 
     return false;
 }
+

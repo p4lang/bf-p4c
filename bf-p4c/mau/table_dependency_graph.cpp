@@ -94,12 +94,19 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
                     addDeps(self.access[field->name].ixbar_read, table, DependencyGraph::ANTI);
                     addDeps(self.access[field->name].action_read, table, DependencyGraph::ANTI);
                     // Write-after-write dependence.
-                    addDeps(self.access[field->name].write, table, DependencyGraph::OUTPUT);
+                    if (isReductionOr()) {
+                        addDeps(self.access[field->name].reduction_or_write, table,
+                                DependencyGraph::REDUCTION_OR_OUTPUT);
+                    } else {
+                        addDeps(self.access[field->name].write, table, DependencyGraph::OUTPUT);
+                    }
                 } else {
                     // Read-after-write dependence.
                     if (isIxbarRead()) {
-                        addDeps(self.access[field->name].write,
-                                table, DependencyGraph::IXBAR_READ);
+                        addDeps(self.access[field->name].write, table, DependencyGraph::IXBAR_READ);
+                    } else if (isReductionOr()) {
+                        addDeps(self.access[field->name].reduction_or_read, table,
+                                DependencyGraph::REDUCTION_OR_READ);
                     } else {
                         addDeps(self.access[field->name].write, table,
                                 DependencyGraph::ACTION_READ);
@@ -172,12 +179,20 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
                 auto &a = self.access[field->name];
                 a.ixbar_read.clear();
                 a.action_read.clear();
+                a.reduction_or_write.clear();
+                a.reduction_or_read.clear();
                 a.write.clear();
-                a.write.insert(table);
+                if (isReductionOr()) {
+                    self.access[field->name].reduction_or_write.insert(table);
+                } else {
+                    a.write.insert(table);
+                }
             } else {
                 LOG3("update_access read " << field->name);
                 if (isIxbarRead()) {
                     self.access[field->name].ixbar_read.insert(table);
+                } else if (isReductionOr()) {
+                    self.access[field->name].reduction_or_read.insert(table);
                 } else {
                     self.access[field->name].action_read.insert(table);
                 }
@@ -198,47 +213,6 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
             cw.emplace(table, entry.second);
         }
     }
-};
-
-class FindDependencyGraph::UpdateAttached : public Inspector {
-    FindDependencyGraph         &self;
-    const IR::MAU::Table        *table;
-
- public:
-    UpdateAttached(FindDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) { }
-    void postorder(const IR::MAU::Meter *meter) override {
-        if (meter->direct && meter->result) {
-            auto *field = self.phv.field(meter->result);
-            BUG_CHECK(field, "meter writing to %s", meter->result);
-            auto &a = self.access[field->name];
-            a.ixbar_read.clear();
-            a.action_read.clear();
-            a.write.clear();
-            a.write.insert(table);
-        }
-        /*
-        if (meter->indirect_index) {
-            auto *field = self.phv.field(meter->indirect_index);
-            if (field != nullptr) {
-                auto &a = self.access[field->name];
-                a.read.insert(table);
-            }
-        }
-        */
-    }
-
-    /*
-    void postorder(const IR::MAU::MAUCounter *counter) override {
-        if (counter->indirect_index) {
-            auto *field = self.phv.field(counter->indirect_index);
-            BUG_CHECK(field, "counter reading from %s", counter->indirect_index);
-            if (field != nullptr) {
-                auto &a = self.access[field->name];
-                a.read.insert(table);
-            }
-        }
-    }
-    */
 };
 
 bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *seq) {
@@ -342,6 +316,8 @@ void FindDependencyGraph::flow_merge(Visitor &v) {
         access[a.first].ixbar_read |= a.second.ixbar_read;
         access[a.first].action_read |= a.second.action_read;
         access[a.first].write |= a.second.write;
+        access[a.first].reduction_or_write |= a.second.reduction_or_write;
+        access[a.first].reduction_or_read |= a.second.reduction_or_read;
     }
 
     for (auto &cw : dynamic_cast<FindDependencyGraph &>(v).cont_write) {
@@ -385,7 +361,9 @@ FindDependencyGraph::calc_topological_stage(bool include_control) {
          out != out_end;
          ++out) {
         if (dep_graph[*out] != DependencyGraph::ANTI
-            && (include_control || dep_graph[*out] != DependencyGraph::CONTROL)) {
+            && (include_control || dep_graph[*out] != DependencyGraph::CONTROL)
+            && dep_graph[*out] != DependencyGraph::REDUCTION_OR_OUTPUT
+            && dep_graph[*out] != DependencyGraph::REDUCTION_OR_READ) {
             auto dst = boost::target(*out, dep_graph);
             n_depending_on[dst]++; } }
 
@@ -411,7 +389,9 @@ FindDependencyGraph::calc_topological_stage(bool include_control) {
             const auto* table = dep_graph[v];
             for (; out != out_end; ++out) {
                 if (dep_graph[*out] != DependencyGraph::ANTI
-                    && (include_control || dep_graph[*out] != DependencyGraph::CONTROL)) {
+                    && (include_control || dep_graph[*out] != DependencyGraph::CONTROL)
+                    && dep_graph[*out] != DependencyGraph::REDUCTION_OR_OUTPUT
+                    && dep_graph[*out] != DependencyGraph::REDUCTION_OR_READ) {
                     auto vertex_later = boost::target(*out, dep_graph);
                     auto table_later = dep_graph[vertex_later];
                     happens_after_map[table_later].insert(table);

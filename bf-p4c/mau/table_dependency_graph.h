@@ -32,10 +32,17 @@
 struct DependencyGraph {
     typedef enum {
         CONTROL,     // Control dependence.
-        IXBAR_READ,        // Read-after-write (data) dependence.
-        ACTION_READ,
+        IXBAR_READ,  // Read-after-write (data) dependence.
+        ACTION_READ,  // Read-after-write dependence.
+                      // Different from IXBAR_READ for power analysis.
         ANTI,        // Write-after-read (anti) dependence.
         OUTPUT,      // Write-after-write (output) dependence. (ACTION?)
+        REDUCTION_OR_READ,  // Read-after-write dependence,
+                            // Not a true dependency as hardware supports OR'n on
+                            // action data bus.
+        REDUCTION_OR_OUTPUT,  // Write-after-write dependece,
+                              // Not a true dependency as hardware supports OR'n on
+                              // action data bus.
         CONCURRENT   // No dependency.
     } dependencies_t;
     typedef boost::adjacency_list<
@@ -104,6 +111,8 @@ struct DependencyGraph {
     // e.g.  <tbl1, tbl2> = MATCH means that tbl1 has a match dependency on tbl2
     std::map<std::pair<const IR::MAU::Table*, const IR::MAU::Table*>,
              DependencyGraph::dependencies_t> dependency_map;
+
+
 
     struct StageInfo {
         int min_stage,      // Minimum stage at which a table can be placed.
@@ -259,7 +268,13 @@ struct DependencyGraph {
 class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
  public:
     typedef ordered_map<const IR::MAU::Table*, bitvec> cont_write_t;
-    typedef struct { ordered_set<const IR::MAU::Table*> ixbar_read, action_read, write; } access_t;
+    typedef struct {
+        ordered_set<const IR::MAU::Table*> ixbar_read;
+        ordered_set<const IR::MAU::Table*> action_read;
+        ordered_set<const IR::MAU::Table*> write;
+        ordered_set<const IR::MAU::Table*> reduction_or_write;
+        ordered_set<const IR::MAU::Table*> reduction_or_read;
+    } access_t;
 
  private:
     const PhvInfo&                                        phv;

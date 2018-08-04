@@ -515,8 +515,14 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
     auto mc = new IR::MethodCallExpression(prim->srcInfo, rtype, method, args);
     if (auto prop = ext->properties.get<IR::Property>("output_dst")) {
         if (auto ev = prop->value->to<IR::ExpressionValue>()) {
-            rv = structure->assign(prim->srcInfo, conv.convert(ev->expression), mc,
-                                     ev->expression->type);
+            if (auto reduction_or = ext->properties.get<IR::Property>("reduction_or_group")) {
+                auto expr = new IR::BOr(conv.convert(ev->expression), mc);
+                rv = structure->assign(prim->srcInfo, conv.convert(ev->expression), expr,
+                                       ev->expression->type);
+            } else {
+                rv = structure->assign(prim->srcInfo, conv.convert(ev->expression), mc,
+                                       ev->expression->type);
+            }
         } else {
             error("%s: output_dst property is not an expression", prop->value->srcInfo);
             return nullptr; }

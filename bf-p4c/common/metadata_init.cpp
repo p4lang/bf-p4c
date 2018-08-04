@@ -553,6 +553,8 @@ class ComputeMetadataInit : public Inspector {
 
             BUG_CHECK(dg.g[*e] == DependencyGraph::IXBAR_READ ||
                       dg.g[*e] == DependencyGraph::ACTION_READ ||
+                      dg.g[*e] == DependencyGraph::REDUCTION_OR_OUTPUT ||
+                      dg.g[*e] == DependencyGraph::REDUCTION_OR_READ ||
                       dg.g[*e] == DependencyGraph::OUTPUT,
                      "Unknown dependency table label");
 
@@ -759,6 +761,10 @@ class TableGraphGen : public Inspector {
                 label = "action_read";
             } else if (edge_type == DependencyGraph::OUTPUT) {
                 label = "output";
+            } else if (edge_type == DependencyGraph::REDUCTION_OR_OUTPUT) {
+                label = "output*";
+            } else if (edge_type == DependencyGraph::REDUCTION_OR_READ) {
+                label = "action_read*";
             }
 
             *output << purify(source->name) << " -> " << purify(target->name) <<

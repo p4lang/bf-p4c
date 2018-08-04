@@ -169,3 +169,29 @@ bool TofinoWriteContext::isIxbarRead(bool root_value) {
     }
     return false;
 }
+
+bool TofinoWriteContext::isReductionOr(bool root_value) {
+    // infer the following as a reduction or.
+    // f = f | salu.execute();
+    if (auto inst = findContext<IR::MAU::Instruction>()) {
+        if (inst->name == "or") {
+            if (inst->operands.size() != 3)
+                return false;
+            if (auto attached = inst->operands.at(2)->to<IR::MAU::AttachedOutput>()) {
+                if (!inst->operands.at(0)->equiv(*inst->operands.at(1)))
+                    return false;
+                if (!attached->attached->is<IR::MAU::StatefulAlu>())
+                    return false;
+            }
+            if (auto attached = inst->operands.at(1)->to<IR::MAU::AttachedOutput>()) {
+                if (!inst->operands.at(0)->equiv(*inst->operands.at(2)))
+                    return false;
+                if (!attached->attached->is<IR::MAU::StatefulAlu>())
+                    return false;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
