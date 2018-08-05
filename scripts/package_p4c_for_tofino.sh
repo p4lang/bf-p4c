@@ -8,9 +8,9 @@ parallel_make=4
 $topdir/bootstrap_bfn_compilers.sh --no-ptf  --build-dir $builddir \
                                    -DCMAKE_BUILD_TYPE=RELEASE \
                                    -DCMAKE_INSTALL_PREFIX=/usr/local \
-                                   -DENABLE_JBAY=OFF -DENABLE_BMV2=ON \
+                                   -DENABLE_JBAY=OFF -DENABLE_BMV2=OFF \
                                    -DENABLE_EBPF=OFF -DENABLE_P4TEST=OFF \
-                                   -DENABLE_P4C_GRAPHS=ON \
+                                   -DENABLE_P4C_GRAPHS=OFF \
                                    -DENABLE_BAREFOOT_INTERNAL=OFF
 cd $builddir
 # make tofino the default target for p4c
