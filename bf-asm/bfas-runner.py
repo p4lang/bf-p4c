@@ -57,15 +57,19 @@ def run_assembler(known_args):
             if (p4_version == "p4-16"):
                 pipe_name = ctxt['pipe']
             cmd = [bfas]
-            # forward unparsed arguments to bfas
-            for a in unparsed_args:
-                cmd.append(a)
             # remove either .p4 or .p4i suffix
             p4_filename = strip_right(program_name, ".p4")
             p4_filename = strip_right(p4_filename, ".p4i")
             dirname = os.path.dirname(os.path.realpath(manifest_filename))
+            dirname_prefix = os.path.join(os.path.dirname(manifest_filename), '')
             if (p4_version == "p4-16"):
                 dirname = os.path.join(dirname, pipe_name)
+            # forward unparsed arguments to bfas, rewriting paths that refer to the output
+            # directory to instead refer to the pipe output directory
+            for a in unparsed_args:
+                if (len(dirname_prefix) > 1 and a[:len(dirname_prefix)] == dirname_prefix):
+                    a = os.path.join(dirname, a[len(dirname_prefix):])
+                cmd.append(a)
             # prepend unique offset to table handle
             cmd.append("--table-handle-offset{0}".format(unique_table_offset))
             # output dir
