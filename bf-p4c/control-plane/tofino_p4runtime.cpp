@@ -211,9 +211,8 @@ struct Register {
     static boost::optional<Register>
     fromDirect(const P4::ExternInstance& instance,
                const IR::P4Table* table,
-               // Instantiation::resolve does not declare parameters as const
-               /* const */ ReferenceMap* refMap,
-               /* const */ TypeMap* typeMap,
+               const ReferenceMap* refMap,
+               const TypeMap* typeMap,
                p4configv1::P4TypeInfo* p4RtTypeInfo) {
         CHECK_NULL(table);
         BUG_CHECK(instance.name != boost::none,
@@ -234,12 +233,15 @@ struct Register {
         }
         auto path = instance.expression->to<IR::PathExpression>()->path;
         auto decl = refMap->getDeclaration(path, true);
-        auto instantiation = P4::Instantiation::resolve(
-            decl->to<IR::Declaration_Instance>(), refMap, typeMap);
-
-        BUG_CHECK(instantiation->typeArguments->size() == 1,
-                  "%1%: expected one type argument", instance.expression);
-        auto typeArg = instantiation->typeArguments->at(0);
+        BUG_CHECK(decl->is<IR::Declaration_Instance>(),
+                   "%1%: expected Declaration_Instance", decl);
+        auto declaration = decl->to<IR::Declaration_Instance>();
+        BUG_CHECK(declaration->type->is<IR::Type_Specialized>(),
+                  "%1%: expected Type_Specialized", declaration->type);
+        auto type = declaration->type->to<IR::Type_Specialized>();
+        BUG_CHECK(type->arguments->size() == 1,
+                  "%1%: expected one type argument", declaration);
+        auto typeArg = type->arguments->at(0);
         auto typeSpec = TypeSpecConverter::convert(typeMap, refMap, typeArg, p4RtTypeInfo);
         CHECK_NULL(typeSpec);
 
