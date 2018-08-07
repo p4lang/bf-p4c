@@ -549,7 +549,7 @@ void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
         { "and", "nand" }, { "nand", "and" }, { "nor", "or" }, { "nota", "alu_a" },
         { "notb", "alu_b" }, { "orca", "andcb" }, { "orcb", "andca" }, { "or", "nor" },
         { "sethi", "setz" }, { "setz", "sethi" }, { "xnor", "xor" }, { "xor", "xnor" } };
-    if (etype == OUTPUT && e->type->width_bits() == 1) {
+    if (etype == OUTPUT && regtype->width_bits() == 1) {
         onebit_cmpl = true;
         return; }
     if (complement.count(opcode))
@@ -608,7 +608,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
         break;
     case VALUE:
     case MATCH:
-        if (operands.at(0)->type->width_bits() == 1) {
+        if (regtype->width_bits() == 1) {
             BUG_CHECK(!predicate, "can't have predicate on 1-bit instruction");
             auto k = operands.at(1)->to<IR::Constant>();
             BUG_CHECK(k, "non-const writeback in 1-bit instruction?");
@@ -622,7 +622,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
         LOG3("  add " << *action->action.back());
         break;
     case OUTPUT:
-        if (operands.at(0)->type->width_bits() == 1) {
+        if (regtype->width_bits() == 1) {
             BUG_CHECK(!predicate, "can't have predicate on 1-bit instruction");
             opcode = onebit_cmpl ? "read_bitc" : "read_bit";
             rv = onebit = new IR::MAU::Instruction(opcode);
