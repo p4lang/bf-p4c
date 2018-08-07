@@ -33,14 +33,18 @@ bool IdentifyDeparserZeroCandidates::preorder(const IR::MAU::Action* act) {
                          act->name);
                     continue;
                 }
-                int constant = sourceExpr->to<IR::Constant>()->asLong();
-                if (constant == 0) {
+                const IR::Constant* const_mem = sourceExpr->to<IR::Constant>();
+                if (!const_mem->fitsLong()) {
+                    mauWrittenToNonZeroFields[write->id] = true;
+                    LOG4("\t\tField " << write->name << " set using a constant " << const_mem <<
+                         " in " << act->name);
+                } else if (const_mem->asLong() == 0) {
                     mauWrittenToZeroFields[write->id] = true;
                     LOG4("\t\tField " << write->name << " set to 0 in " << act->name);
                 } else {
                     mauWrittenToNonZeroFields[write->id] = true;
-                    LOG4("\t\tField " << write->name << " set to non-zero constant " << constant <<
-                         " in " << act->name);
+                    LOG4("\t\tField " << write->name << " set to non-zero constant " <<
+                         const_mem->asLong() << " in " << act->name);
                 }
             } else if (readSrc.type == ActionAnalysis::ActionParam::PHV) {
                 PHV::Field* read = phv.field(readSrc.expr);
