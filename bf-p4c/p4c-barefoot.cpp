@@ -180,8 +180,9 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
     }
 
     // output the .bfa file
-    OutputAsm as(backend, options, maupipe->name);
-    maupipe->apply(as);
+    if (maupipe) {
+        OutputAsm as(backend, options, maupipe->name);
+        maupipe->apply(as); }
 }
 
 int main(int ac, char **av) {
