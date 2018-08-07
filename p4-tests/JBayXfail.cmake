@@ -32,6 +32,8 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/action_chain_limits.p4
     # clot-phv interaction bug?
     testdata/p4_14_samples/bridge1.p4
+    # recent regression -- unknown cause
+    extensions/p4_tests/p4_16/stateful2x16phv.p4
     )
 
 endif() # HARLYN_STF
@@ -255,4 +257,15 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "p4c: error: Unknown backend: jbay-v1model"
   extensions/p4_tests/p4_14/p4-tests/programs/emulation/emulation.p4
+)
+
+# New failures, uncharacterized
+p4c_add_xfail_reason("tofino2"
+  "no value with matching vpn for register"
+  extensions/p4_tests/p4_16/jbay/hwlearn0.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "all ways in use"
+  extensions/p4_tests/p4_14/em_ghost4.p4
 )

@@ -47,13 +47,13 @@ set (JBAY_V1_TEST_SUITES
   ${PTF_P4_TESTS}
   )
 
-p4c_add_bf_backend_tests("tofino2" "v1model" "base" "${JBAY_V1_TEST_SUITES}")
+p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "base" "${JBAY_V1_TEST_SUITES}")
 
 set (JBAY_JNA_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4
   ${p16_jna_tests}
   )
-p4c_add_bf_backend_tests("tofino2" "t2na" "base" "${JBAY_JNA_TEST_SUITES}")
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${JBAY_JNA_TEST_SUITES}")
 
 set (testExtraArgs "${testExtraArgs} -tofino2")
 

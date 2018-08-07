@@ -35,17 +35,17 @@ set (TOFINO_V1_TEST_SUITES
   # p4smith regression tests
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4smith_regression/*.p4
   )
-p4c_add_bf_backend_tests("tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES}")
+p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES}")
 
 set (TOFINO_TNA_TEST_SUITES
   ${p16_tna_tests}
   )
-p4c_add_bf_backend_tests("tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}")
 
 set (TOFINO_PSA_TEST_SUITES
   ${p16_psa_tests}
   )
-p4c_add_bf_backend_tests("tofino" "psa" "base" "${TOFINO_PSA_TEST_SUITES}")
+p4c_add_bf_backend_tests("tofino" "tofino" "psa" "base" "${TOFINO_PSA_TEST_SUITES}")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
@@ -208,7 +208,7 @@ foreach (t IN LISTS ALL_BFN_TESTS)
     list (APPEND P4F_COMPILE_ONLY ${t})
   endif()
 endforeach()
-p4c_add_bf_backend_tests("tofino" "v1model" "smoketest_programs" "${P4F_COMPILE_ONLY}")
+p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "smoketest_programs" "${P4F_COMPILE_ONLY}")
 
 # Other PD tests
 
@@ -339,7 +339,7 @@ include(Switch.cmake)
 include(Customer.cmake)
 # Set a small timeout since these are running into an infinite loop in slicing
 # -to 60 should be removed when Deep merges the fix.
-p4c_add_bf_backend_tests("tofino" "v1model" "arista" "${ARISTA_P4_14_TESTS}"
+p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${ARISTA_P4_14_TESTS}"
   "--backward-compatible -to 60")
 
 include(TofinoMustPass.cmake)

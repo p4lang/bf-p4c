@@ -192,16 +192,16 @@ macro(packet_test_setup_check device)
 endmacro(packet_test_setup_check)
 
 # extra test args can be passed as unamed arguments
-macro(p4c_add_bf_backend_tests device arch label tests)
+macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
   set (testExtraArgs "${ARGN}")
   # do not add the device directly to testExtraArgs
   # this is used later to add other tests for multiple configurations.
   # set (testExtraArgs "${testExtraArgs} -${device}")
 
-  simple_test_setup_check(${device})
+  simple_test_setup_check(${toolsdevice})
 
   # if STF is not found, disable all stf tests
-  if (NOT HARLYN_STF_${device})
+  if (NOT HARLYN_STF_${toolsdevice})
     set (testExtraArgs "${testExtraArgs} -norun")
   endif()
 
@@ -254,7 +254,7 @@ macro(p4c_add_bf_backend_tests device arch label tests)
     MESSAGE(STATUS "Added ${__ptfCounter} PTF tests")
   endif() # PTF_REQUIREMENTS_MET
 
-  if (HARLYN_STF_${device})
+  if (HARLYN_STF_${toolsdevice})
     foreach (ts "${tests}")
       file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
       foreach (__p4file ${__testfiles})
@@ -264,5 +264,5 @@ macro(p4c_add_bf_backend_tests device arch label tests)
         endif()
       endforeach() # __p4file
     endforeach()   # ts
-  endif(HARLYN_STF_${device})
+  endif(HARLYN_STF_${toolsdevice})
 endmacro(p4c_add_bf_backend_tests)

@@ -388,8 +388,8 @@ remove_old_files() {
         fi
         rm -f $testdir/$name${out_ext}.bfa
         rm -f $testdir/$output_dir/$name${out_ext}.bfa
-        rm -f $testdir/$output_dir/${device}.bin
-        rm -f $testdir/$output_dir/${device}.bin.gz
+        rm -f $testdir/$output_dir/*.bin
+        rm -f $testdir/$output_dir/*.bin.gz
         rm -f $testdir/$output_dir/*.cfg.json
         rm -f $testdir/$output_dir/*.cfg.json.gz
     done
@@ -409,9 +409,17 @@ compress_cfg_json() {
         if [ -r $testdir/$output_dir/${device}.bin ]; then
             if $run_ptf || $run_pd ; then
                 true # ptf requires uncompressed binary
+                if [ ${device} = "tofino2" ]; then
+                    # backwards compatibility with old model/driver
+                    ln -s tofino2.bin $testdir/$output_dir/jbay.bin
+                fi
             elif $run_stf; then
                 # stf can run compressed binaries with recent updates
                 gzip -f $testdir/$output_dir/${device}.bin
+                if [ ${device} = "tofino2" ]; then
+                    # backwards compatibility with old model/driver
+                    ln -s tofino2.bin.gz $testdir/$output_dir/jbay.bin.gz
+                fi
             else
                 #binary not needed
                 rm $testdir/$output_dir/${device}.bin
