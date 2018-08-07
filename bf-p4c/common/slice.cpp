@@ -15,9 +15,9 @@ const IR::Expression *MakeSliceDestination(const IR::Expression *e, int lo, int 
     if (e->is<IR::MAU::MultiOperand>())
         return new IR::Slice(e, hi, lo);
     if (auto k = e->to<IR::Constant>()) {
-        LOG6("\tReturning a constant");
-        auto rv = ((*k >> lo) & IR::Constant((1U << (hi-lo+1)) - 1)).clone();
+        auto rv = ((*k >> lo) & IR::Constant((UINT64_C(1) << (hi-lo+1)) - 1)).clone();
         rv->type = IR::Type::Bits::get(hi-lo+1);
+        LOG6("\tReturning a constant: " << rv);
         return rv;
     }
     std::pair<int, int> slLoHi = getSliceLoHi(e);
@@ -49,9 +49,9 @@ const IR::Expression *MakeSliceSource(const IR::Expression *read, int lo, int hi
     if (read->is<IR::MAU::MultiOperand>())
         return new IR::Slice(read, hi, lo);
     if (auto k = read->to<IR::Constant>()) {
-        LOG6("\tReturning a constant");
-        auto rv = ((*k >> lo) & IR::Constant((1U << (hi-lo+1)) - 1)).clone();
+        auto rv = ((*k >> lo) & IR::Constant((UINT64_C(1) << (hi-lo+1)) - 1)).clone();
         rv->type = IR::Type::Bits::get(hi-lo+1);
+        LOG6("\tReturning a constant" << rv);
         return rv;
     }
 
@@ -87,7 +87,7 @@ const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi) {
     if (e->is<IR::MAU::MultiOperand>())
         return new IR::Slice(e, hi, lo);
     if (auto k = e->to<IR::Constant>()) {
-        auto rv = ((*k >> lo) & IR::Constant((1U << (hi-lo+1)) - 1)).clone();
+        auto rv = ((*k >> lo) & IR::Constant((UINT64_C(1) << (hi-lo+1)) - 1)).clone();
         rv->type = IR::Type::Bits::get(hi-lo+1);
         return rv;
     }

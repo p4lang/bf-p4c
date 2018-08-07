@@ -270,6 +270,10 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_2"
 p4c_add_ptf_test_with_ptfdir ("tofino" "miss_clause" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/PD/miss_clause.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/PD/miss_clause.ptf")
 
+p4c_add_ptf_test_with_ptfdir ("tofino" "brig_569"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/PD/BRIG-569/brig_569.p4
+    "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/PD/BRIG-569/brig_569.ptf")
+
 p4c_add_ptf_test_with_ptfdir ("tofino" "case6684" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/PD/BRIG-847/case6684.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/PD/BRIG-847/case6684.ptf")
 

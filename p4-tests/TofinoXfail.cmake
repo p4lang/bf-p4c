@@ -1299,3 +1299,8 @@ p4c_add_xfail_reason("tofino"
   switch_generic_int_leaf
 )
 
+# BRIG-879
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expected packet was not received on device"
+  brig_569
+)
