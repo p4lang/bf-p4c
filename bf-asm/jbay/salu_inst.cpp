@@ -2,6 +2,34 @@
  * WARNING -- this is included in an anonymous namespace, as these SaluInstruction
  * subclasses are all defined in that anonymous namespace */
 
+struct DivMod : public AluOP {
+    struct Decode : public AluOP::Decode {
+        Decode(const char *name, target_t targ, int opc) : AluOP::Decode(name, targ, opc) {}
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                      const VECTOR(value_t) &op) const override {
+            auto *rv = new DivMod(this, op[0].lineno);
+            if (op.size != 3) error(op[0].lineno, "divmod must have exactly 2 operands");
+            if (op.size > 1) rv->srca = operand(tbl, act, op[1]);
+            if (op.size > 2) rv->srcb = operand(tbl, act, op[2]);
+            rv->dest = AluOP::HI;
+            rv->slot = ALU2HI;
+            return rv; } };
+    DivMod(const Decode *op, int l) : AluOP(op, l) {}
+
+    Instruction *pass1(Table *tbl, Table::Actions::Action *act) override {
+        tbl->stage->table_use[timing_thread(tbl->gress)] |= Stage::USE_STATEFUL_DIVIDE;
+        return AluOP::pass1(tbl, act); }
+    void write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act)
+    override {
+        AluOP::write_regs(regs, tbl, act);
+        int logical_home_row = tbl->layout[0].row;
+        auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
+        auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
+        salu_instr_common.salu_divide_enable |= 1; }
+};
+
+DivMod::Decode opDIVMOD("divmod", JBAY, 0x00); // setz op, so can OR with alu1hi to get that result
+
 template<>
 void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
     LOG2(this);

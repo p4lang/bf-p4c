@@ -11,6 +11,7 @@ struct Device::StatefulAluSpec {
     std::vector<cstring>        CmpUnits;
     int                         MaxSize;
     int                         OutputWords;
+    bool                        DivModUnit;
 
     cstring cmpUnit(unsigned idx) const { return idx < CmpUnits.size() ? CmpUnits.at(idx) : "??"; }
 };
@@ -72,9 +73,10 @@ class CreateSaluInstruction : public Inspector {
     bool                        negate = false;
     bool                        alu_write[2] = { false, false };
     cstring                     opcode;
-    std::vector<const IR::Expression *>         operands, pred_operands;
+    IR::Vector<IR::Expression>                  operands, pred_operands;
     int                                         output_index;
     std::vector<const IR::MAU::Instruction *>   cmp_instr;
+    const IR::MAU::Instruction                  *divmod_instr = nullptr;
     const IR::Expression                        *predicate = nullptr;
     const IR::MAU::Instruction                  *onebit = nullptr;  // the single 1-bit alu op
     bool                                        onebit_cmpl = false;  // 1-bit op needs cmpl
@@ -131,6 +133,9 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::BXor *) override;
     bool preorder(const IR::Concat *) override;
     void postorder(const IR::Concat *) override;
+    bool divmod(const IR::Operation::Binary *, cstring op);
+    bool preorder(const IR::Div *e) override { return divmod(e, "div"); }
+    bool preorder(const IR::Mod *e) override { return divmod(e, "mod"); }
     bool preorder(const IR::Expression *e) override {
         error("%s: expression too complex for register action", e->srcInfo);
         return false; }

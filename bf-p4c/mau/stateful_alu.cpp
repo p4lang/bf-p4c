@@ -7,6 +7,7 @@ const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
         /* .CmpUnits = */ { "lo", "hi" },
         /* .MaxSize = */ 32,
         /* .OutputWords = */ 1,
+        /* .DivModUnit = */ false,
     };
     return spec;
 }
@@ -18,6 +19,7 @@ const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
         /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
         /* .MaxSize = */ 64,
         /* .OutputWords = */ 4,
+        /* .DivModUnit = */ true,
     };
     return spec;
 }
@@ -575,9 +577,30 @@ void CreateSaluInstruction::postorder(const IR::Concat *e) {
     error("%s: expression too complex for stateful alu", e->srcInfo);
 }
 
+bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
+    if (etype == OUTPUT && operands.empty() && Device::statefulAluSpec().DivModUnit) {
+        auto *saved_predicate = predicate;
+        etype = VALUE;
+        predicate = nullptr;
+        opcode = "divmod";
+        visit(e->left, "left");
+        visit(e->right, "right");
+        if (divmod_instr) {
+            if (!operands.equiv(divmod_instr->operands))
+                error("%s: only one div/mod operation possible in a stateful alu");
+        } else {
+            divmod_instr = createInstruction(); }
+        operands.clear();
+        predicate = saved_predicate;
+        etype = OUTPUT;
+        operands.push_back(new IR::MAU::SaluReg(e->type, op, false));
+    } else {
+        error("%s: expression too complex for stateful alu", e->srcInfo); }
+    return false;
+}
+
 static void setup_output(std::vector<const IR::MAU::Instruction *> &output, int index,
-                         const IR::Expression *predicate,
-                         std::vector<const IR::Expression *> operands) {
+                         const IR::Expression *predicate, IR::Vector<IR::Expression> operands) {
     if (output.size() <= size_t(index)) output.resize(index+1);
     if (Device::statefulAluSpec().OutputWords > 1)
         operands.insert(operands.begin(), new IR::MAU::SaluReg(operands.at(0)->type,
@@ -596,14 +619,14 @@ static void setup_output(std::vector<const IR::MAU::Instruction *> &output, int 
                 return;
         } else if (predicate) {
             return; } }
-    output[index] = new IR::MAU::Instruction("output", operands);
+    output[index] = new IR::MAU::Instruction("output", &operands);
 }
 
 const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
     const IR::MAU::Instruction *rv = nullptr;
     switch (etype) {
     case IF:
-        action->action.push_back(rv = new IR::MAU::Instruction(opcode, operands));
+        action->action.push_back(rv = new IR::MAU::Instruction(opcode, &operands));
         LOG3("  add " << *action->action.back());
         break;
     case VALUE:
@@ -618,7 +641,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             break; }
         if (predicate)
             operands.insert(operands.begin(), predicate);
-        action->action.push_back(rv = new IR::MAU::Instruction(opcode, operands));
+        action->action.push_back(rv = new IR::MAU::Instruction(opcode, &operands));
         LOG3("  add " << *action->action.back());
         break;
     case OUTPUT:

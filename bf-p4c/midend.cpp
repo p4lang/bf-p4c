@@ -165,6 +165,22 @@ bool skipRegisterActionOutput(const Visitor::Context *ctxt, const IR::Expression
     return true;
 }
 
+// FIXME -- perhaps just remove this pass altogether and check for unsupported
+// div/mod in instruction selection.
+class CompileTimeOperations : public P4::CompileTimeOperations {
+    bool preorder(const IR::Declaration_Instance *di) {
+#ifdef HAVE_JBAY
+        // JBay supports (limited) div/mod in RegisterAction
+        if (Device::currentDevice() == Device::JBAY) {
+            if (auto st = di->type->to<IR::Type_Specialized>()) {
+                if (st->baseType->path->name == "RegisterAction" ||
+                    st->baseType->path->name == "LearnAction")
+                    return false; } }
+#endif
+        return true;
+    }
+};
+
 class MidEndLast : public PassManager {
  public:
     MidEndLast() { setName("MidEndLast"); }
@@ -228,7 +244,7 @@ MidEnd::MidEnd(BFN_Options& options) {
                                                "filters", "idle_timeout", "registers"})
             : nullptr,
         new P4::SimplifyControlFlow(&refMap, &typeMap),
-        new P4::CompileTimeOperations(),
+        new BFN::CompileTimeOperations(),
         new P4::TableHit(&refMap, &typeMap),
         evaluator,
         new VisitFunctor([=](const IR::Node *root) -> const IR::Node * {

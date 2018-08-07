@@ -177,6 +177,9 @@ struct operand {
             unsigned bytes = bits/8U;
             if (lo < 0) lo = 0;
             if (hi < 0) hi = lo + bits - 1;
+            if (hi > lo + bits - 1) {
+                warning(lineno, "%s(%d..%d) larger than %d bit access", name.c_str(), lo, hi, bits);
+                hi = lo + bits - 1; }
             if (field && table->find_on_actionbus(field, lo, hi, bytes) < 0) {
                 int immed_offset = 0;
                 if (table->format && table->format->immed)

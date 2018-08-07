@@ -278,6 +278,8 @@ struct AluOP : public SaluInstruction {
         Decode(const char *n, int opc, Decode *sw, operands_t use)
         : Instruction::Decode(n, STATEFUL_ALU), name(n), opcode(opc), operands(use), swap_args(sw) {
             if (sw && !sw->swap_args) sw->swap_args = this; }
+        Decode(const char *n, target_t targ, int opc)
+        : Instruction::Decode(n, targ, STATEFUL_ALU), name(n), opcode(opc), swap_args(0) { }
 
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;

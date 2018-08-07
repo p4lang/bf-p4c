@@ -1,3 +1,4 @@
+#ifndef DATA_T_OVERRIDE
 header data_t {
     bit<32> f1;
     bit<32> f2;
@@ -5,6 +6,7 @@ header data_t {
     bit<8>  b1;
     bit<8>  b2;
 }
+#endif
 
 struct headers {
     data_t data;
