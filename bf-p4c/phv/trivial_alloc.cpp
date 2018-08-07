@@ -163,7 +163,7 @@ bool TrivialAlloc::preorder(const IR::BFN::Pipe *pipe) {
                     if (use_mau) {
                         do_alloc(group, &normal, skip);
                     } else if (use_parde) {
-                        if (Device::currentDevice() != "Tofino" ||
+                        if (Device::currentDevice() != Device::TOFINO ||
                             tagalong_full(field.size, &tagalong))
                             do_alloc(group, &normal, skip);
                         else

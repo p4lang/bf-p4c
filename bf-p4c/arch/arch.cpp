@@ -1,8 +1,9 @@
 #include "bf-p4c/arch/arch.h"
-#include "bf-p4c/arch/jna.h"
 #include "bf-p4c/arch/psa.h"
 #include "bf-p4c/arch/tna.h"
+#include "bf-p4c/arch/t2na.h"
 #include "bf-p4c/arch/v1model.h"
+#include "bf-p4c/device.h"
 
 namespace BFN {
 
@@ -11,23 +12,23 @@ ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
     if (options.arch == "v1model") {
         passes.push_back(new BFN::SimpleSwitchTranslation(refMap, typeMap, options /*map*/));
 #if HAVE_JBAY
-        if (options.target == "jbay") {
+        if (Device::currentDevice() == Device::JBAY) {
             passes.push_back(new BFN::PortTNAToJBay(refMap, typeMap, options));
         }
 #endif  // HAVE_JBAY
     } else if (options.arch == "tna") {
-        if (options.target == "tofino") {
+        if (Device::currentDevice() == Device::TOFINO) {
             passes.push_back(new BFN::LowerTofinoToStratum(refMap, typeMap, options));
         }
 #if HAVE_JBAY
-        if (options.target == "jbay") {
-            WARNING("TNA architecture is not supported on JBay device."
+        if (Device::currentDevice() == Device::JBAY) {
+            WARNING("TNA architecture is not supported on a Tofino2 device."
                     "The compilation may produce wrong binary."
-                    "Consider invoking the compiler with --arch jna.");
+                    "Consider invoking the compiler with --arch t2na.");
             passes.push_back(new BFN::LowerTofinoToStratum(refMap, typeMap, options));
         }
-    } else if (options.arch == "jna") {
-        if (options.target == "jbay") {
+    } else if (options.arch == "t2na") {
+        if (Device::currentDevice() == Device::JBAY) {
             passes.push_back(new BFN::LowerTofinoToStratum(refMap, typeMap, options));
         }
 #endif  // HAVE_JBAY

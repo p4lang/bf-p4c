@@ -1304,7 +1304,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.privatized()) out << " TPHV-priv";
     if (field.privatizable()) out << " PHV-priv";
 #if HAVE_JBAY
-    if (Device::currentDevice() == "JBay") {
+    if (Device::currentDevice() == Device::JBAY) {
         if (field.is_mocha_candidate()) out << " mocha";
         if (field.is_dark_candidate()) out << " dark";
     }

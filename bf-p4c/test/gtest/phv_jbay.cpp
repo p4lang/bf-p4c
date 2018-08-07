@@ -170,17 +170,17 @@ void CheckPhvContainerJSON() {
 class JBayPhvContainer : public JBayBackendTest {};
 
 TEST_F(JBayPhvContainer, Types) {
-    EXPECT_EQ(cstring("JBay"), Device::currentDevice());
+    EXPECT_EQ(Device::JBAY, Device::currentDevice());
     CheckPhvContainerTypes();
 }
 
 TEST_F(JBayPhvContainer, Resources) {
-    EXPECT_EQ(cstring("JBay"), Device::currentDevice());
+    EXPECT_EQ(Device::JBAY, Device::currentDevice());
     CheckJBayPhvContainerResources();
 }
 
 TEST_F(JBayPhvContainer, JSON) {
-    EXPECT_EQ(cstring("JBay"), Device::currentDevice());
+    EXPECT_EQ(Device::JBAY, Device::currentDevice());
     CheckPhvContainerJSON();
 }
 

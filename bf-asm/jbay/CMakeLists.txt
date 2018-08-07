@@ -12,8 +12,6 @@ set (GEN_JBAY
   regs.prsr_reg_main_rspec
   )
 
-set (ARCH "JBay")
-
 foreach(f IN LISTS GEN_JBAY)
   list (APPEND GEN_JBAY_SRCS ${BFASM_BINARY_DIR}/gen/jbay/${f}.cpp)
   list (APPEND GEN_JBAY_HDRS ${BFASM_BINARY_DIR}/gen/jbay/${f}.h)
@@ -31,4 +29,3 @@ set_source_files_properties(
 
 include_directories (${BFASM_BINARY_DIR}/gen/jbay)
 add_library (regs_jbay ${GEN_JBAY_SRCS} ${GEN_JBAY_HDRS})
-

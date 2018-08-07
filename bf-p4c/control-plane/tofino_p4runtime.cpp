@@ -1073,7 +1073,7 @@ void generateP4Runtime(const IR::P4Program* program,
     // By design we can use the same architecture handler implementation for
     // both TNA and JNA.
     p4RuntimeSerializer->registerArch("tna", new TofinoArchHandlerBuilder());
-    p4RuntimeSerializer->registerArch("jna", new TofinoArchHandlerBuilder());
+    p4RuntimeSerializer->registerArch("t2na", new TofinoArchHandlerBuilder());
 
     auto p4Runtime = p4RuntimeSerializer->generateP4Runtime(program, arch);
 

@@ -18,7 +18,8 @@ void AttachedTable::pass1() {
 
 #ifdef HAVE_JBAY
     if (options.target == JBAY && stage->overflow_bus_use[7])
-        error(layout[0].lineno, "table %s, JBay has no overflow bus between logical row 7 and 8", name());
+        error(layout[0].lineno,
+              "table %s, Tofino2 has no overflow bus between logical row 7 and 8", name());
 #endif /* HAVE_JBAY */
 }
 
@@ -286,4 +287,3 @@ void AttachedTables::write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus
 }
 FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
                 void AttachedTables::write_tcam_merge_regs, mau_regs &, MatchTable *, int, int)
-

@@ -52,7 +52,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "p4c test runner options"
         echo >&2 "   -v             verbose -- print commands before running them"
         echo >&2 "   -tofino        target tofino"
-        echo >&2 "   -jbay          target jbay"
+        echo >&2 "   -tofino2       target jbay"
         echo >&2 "other arguments passed to p4c-barefoot:"
         $P4C --help
         exit 0
@@ -61,7 +61,7 @@ while [ $# -gt 1 ]; do
         device="tofino"
         ;;
     -jbay)
-        device="jbay"
+        device="tofino2"
         ;;
     -v) if $verbose || $debug; then
             P4C_ARGS="$P4C_ARGS $1"

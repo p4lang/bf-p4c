@@ -1715,7 +1715,7 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
     if (cluster_groups.size() > N_CLUSTER_LIMITATION) {
         return { }; }
 #if HAVE_JBAY
-    if (Device::currentDevice() == "JBay") {
+    if (Device::currentDevice() == Device::JBAY) {
         return { }; }
 #endif  // HAVE_JBAY
 
@@ -1963,7 +1963,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
 
 #if HAVE_JBAY
     // calc whether the cluster has container type pragma. Only for JBay.
-    if (Device::currentDevice() == "JBay") {
+    if (Device::currentDevice() == Device::JBAY) {
         const ordered_map<const PHV::Field*, cstring> container_type_pragmas =
             core_alloc_i.pragmas().pa_container_type().getFields();
         for (auto* cluster : cluster_groups) {
@@ -2072,7 +2072,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
 
     auto ClusterGroupComparator = [&] (PHV::SuperCluster* l, PHV::SuperCluster* r) {
 #if HAVE_JBAY
-        if (Device::currentDevice() == "JBay") {
+        if (Device::currentDevice() == Device::JBAY) {
             if (has_container_type_pragma.count(l) != has_container_type_pragma.count(r)) {
                 return has_container_type_pragma.count(l) > has_container_type_pragma.count(r); } }
 #endif

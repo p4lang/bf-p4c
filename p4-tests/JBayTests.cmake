@@ -1,4 +1,4 @@
-set (jbay_timeout 600)
+set (tofino2_timeout 600)
 
 # check for PTF requirements
 packet_test_setup_check("jbay")
@@ -13,7 +13,7 @@ set (P16_V1_EXCLUDE_PATTERNS "tofino.h")
 set (P16_V1_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
 p4c_find_tests("${P16_V1_FOR_JBAY}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
-set (P16_JNA_INCLUDE_PATTERNS "include.*(jna).p4" "main")
+set (P16_JNA_INCLUDE_PATTERNS "include.*(t2na).p4" "main")
 set (P16_JNA_EXCLUDE_PATTERNS "tofino.h")
 set (P16_JNA_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
 p4c_find_tests("${P16_JNA_FOR_JBAY}" p16_jna_tests INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
@@ -47,22 +47,22 @@ set (JBAY_V1_TEST_SUITES
   ${PTF_P4_TESTS}
   )
 
-p4c_add_bf_backend_tests("jbay" "v1model" "base" "${JBAY_V1_TEST_SUITES}")
+p4c_add_bf_backend_tests("tofino2" "v1model" "base" "${JBAY_V1_TEST_SUITES}")
 
 set (JBAY_JNA_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4
   ${p16_jna_tests}
   )
-p4c_add_bf_backend_tests("jbay" "jna" "base" "${JBAY_JNA_TEST_SUITES}")
+p4c_add_bf_backend_tests("tofino2" "t2na" "base" "${JBAY_JNA_TEST_SUITES}")
 
-set (testExtraArgs "${testExtraArgs} -jbay")
+set (testExtraArgs "${testExtraArgs} -tofino2")
 
 p4c_add_ptf_test_with_ptfdir (
-    "jbay" fabric.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4
+    "tofino2" fabric.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4
     "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf)
 
 p4c_add_ptf_test_with_ptfdir (
-    "jbay" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
+    "tofino2" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
     "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
 
 # p4-tests has all the includes at the same level with the programs.
@@ -70,7 +70,7 @@ p4c_add_ptf_test_with_ptfdir (
 set (BFN_EXCLUDE_PATTERNS "tofino.p4")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/emulation/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
-bfn_add_p4factory_tests("jbay" "smoketest_programs" BFN_TESTS_LIST)
+bfn_add_p4factory_tests("tofino2" "smoketest_programs" BFN_TESTS_LIST)
 
 include(SwitchJBay.cmake)
 include(JBayXfail.cmake)

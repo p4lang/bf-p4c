@@ -1,5 +1,5 @@
-#include "bf-p4c/arch/jna.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
+#include "bf-p4c/arch/t2na.h"
 
 namespace BFN {
 

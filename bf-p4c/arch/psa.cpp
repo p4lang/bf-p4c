@@ -645,11 +645,11 @@ class LoadTargetArchitecture : public Inspector {
         char tempPath[PATH_MAX];
         snprintf(tempPath, PATH_MAX-1, "/tmp/arch_XXXXXX.p4");
         std::vector<const char *>filenames;
-        if (Device::currentDevice() == "Tofino")
+        if (Device::currentDevice() == Device::TOFINO)
             filenames.push_back("tofino.p4");
 #if HAVE_JBAY
         else
-            filenames.push_back("jbay.p4");
+            filenames.push_back("tofino2.p4");
 #endif  // HAVE_JBAY
         filenames.push_back("tofino/stratum.p4");
         filenames.push_back("tofino/p4_14_prim.p4");

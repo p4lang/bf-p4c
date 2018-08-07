@@ -28,7 +28,7 @@ class AsmStage : public Section {
     static AsmStage     singleton_object;
 public:
     static int numstages() { return singleton_object.stage.size(); }
-    static std::vector<Stage> &stages() { return singleton_object.stage; } 
+    static std::vector<Stage> &stages() { return singleton_object.stage; }
 } AsmStage::singleton_object;
 
 AsmStage::AsmStage() : Section("stage") {
@@ -88,7 +88,7 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                     error(kv.value.lineno, "stage %d must be match dependent", stageno);
 #ifdef HAVE_JBAY
                 else if (options.target == JBAY)
-                    error(kv.value.lineno, "no concurrent execution on jbay");
+                    error(kv.value.lineno, "no concurrent execution on Tofino2");
 #endif /* HAVE_JBAY */
             } else if (kv.value == "action") {
                 stage[stageno].stage_dep[gress] = Stage::ACTION_DEP;
@@ -528,4 +528,3 @@ void Stage::gen_configuration_cache(REGS &regs, json::vector &cfg_cache) {
         reg_name = "stage_" + std::to_string(stageno) + "_parity_group_mask";
         add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
 }
-

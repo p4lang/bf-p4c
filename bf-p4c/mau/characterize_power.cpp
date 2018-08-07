@@ -557,7 +557,7 @@ double CharacterizePower::compute_table_weight(double table_power_all_pipes) {
 void CharacterizePower::compute_stage_dependencies(uint16_t pipe) {
     // MAU stage 0 is match dependent
     stage_dependency_to_previous_[Device::numStages()*pipe] = DEP_MATCH;
-    if (Device::currentDevice() == "Tofino") {
+    if (Device::currentDevice() == Device::TOFINO) {
       // Forced match dependency between stages 5 and 6 for Tofino.
       stage_dependency_to_previous_[Device::numStages()*pipe + Device::numStages() / 2] = DEP_MATCH;
     }
@@ -582,7 +582,7 @@ void CharacterizePower::compute_stage_dependencies(uint16_t pipe) {
 
         int prev_st = st - 1;
         dep_t the_dep = DEP_ACTION;  // JBay has no concurrent dependency
-        if (Device::currentDevice() == "Tofino") {
+        if (Device::currentDevice() == Device::TOFINO) {
             the_dep = DEP_CONCURRENT;
         }
 

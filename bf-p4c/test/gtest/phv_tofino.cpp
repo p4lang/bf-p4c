@@ -208,35 +208,35 @@ void enable_virtual_phv() {
 }  // namespace
 
 TEST_F(TofinoPhvContainer, Types) {
-    EXPECT_EQ(cstring("Tofino"), Device::currentDevice());
+    EXPECT_EQ(Device::TOFINO, Device::currentDevice());
     CheckPhvContainerTypes();
 }
 
 TEST_F(TofinoPhvContainer, TypesWithVirtualPhv) {
     enable_virtual_phv();
-    EXPECT_EQ(cstring("Tofino"), Device::currentDevice());
+    EXPECT_EQ(Device::TOFINO, Device::currentDevice());
     CheckPhvContainerTypes();
 }
 
 TEST_F(TofinoPhvContainer, Resources) {
-    EXPECT_EQ(cstring("Tofino"), Device::currentDevice());
+    EXPECT_EQ(Device::TOFINO, Device::currentDevice());
     CheckTofinoPhvContainerResources();
 }
 
 TEST_F(TofinoPhvContainer, ResourcesWithVirtualPhv) {
     enable_virtual_phv();
-    EXPECT_EQ(cstring("Tofino"), Device::currentDevice());
+    EXPECT_EQ(Device::TOFINO, Device::currentDevice());
     CheckTofinoPhvContainerResources(2);
 }
 
 TEST_F(TofinoPhvContainer, JSON) {
-    EXPECT_EQ(cstring("Tofino"), Device::currentDevice());
+    EXPECT_EQ(Device::TOFINO, Device::currentDevice());
     CheckPhvContainerJSON();
 }
 
 TEST_F(TofinoPhvContainer, JSONWithVirtualPhv) {
     enable_virtual_phv();
-    EXPECT_EQ(cstring("Tofino"), Device::currentDevice());
+    EXPECT_EQ(Device::TOFINO, Device::currentDevice());
     CheckPhvContainerJSON();
 }
 

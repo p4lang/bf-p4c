@@ -54,7 +54,7 @@ while expr "$1" : - >/dev/null; do
         target=tofino
         ;;
     --jbay)
-        target=jbay
+        target=tofino2
         ;;
     --sort)
         do_sort="sort"
@@ -81,7 +81,7 @@ function test_bfa() {
         targ=tofino
     fi
     if expr $name : '.*\.jba' >/dev/null; then
-        targ=jbay
+        targ=tofino2
     fi
     echo -n $1
     echo $1: >&2
@@ -93,8 +93,8 @@ function test_bfa() {
         pushd tmp-$name.out >/dev/null
         if [ -r tofino.bin ]; then
             $BFDUMPBIN -H -L tofino.bin | $filter_zero | $do_sort >bfas.dump
-        elif [ -r jbay.bin ]; then
-            $BFDUMPBIN -H -L jbay.bin | $filter_zero | $do_sort >bfas.dump
+        elif [ -r tofino2.bin ]; then
+            $BFDUMPBIN -H -L tofino2.bin | $filter_zero | $do_sort >bfas.dump
         else
             echo " no binary?"
             rv=1

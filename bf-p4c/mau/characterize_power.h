@@ -378,7 +378,7 @@ class CharacterizePower: public MauInspector {
 #endif
      display_power_budget_(display_power_budget),
      disable_power_check_(disable_power_check) {
-    if (Device::currentDevice() == "Tofino") {
+    if (Device::currentDevice() == Device::TOFINO) {
        double ram_scaling_factor = 1.88574;
        double tcam_scaling_factor = 0.62736;
 

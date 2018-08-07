@@ -706,7 +706,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
  *
  *  This assumes that the stateful alu is accessing its data through the search bus rather
  *  than the hash bus, as the input xbar algorithm can only put it on the search bus.  When
- *  we add hash matrix support for stateful ALUs, we will add that as well. 
+ *  we add hash matrix support for stateful ALUs, we will add that as well.
  */
 const IR::Annotations *AdjustStatefulInstructions::preorder(IR::Annotations *annot) {
     prune();
@@ -779,7 +779,7 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu
     std::set<int> valid_start_positions;
 
     int initial_offset = 0;
-    if (Device::currentDevice() == "Tofino")
+    if (Device::currentDevice() == Device::TOFINO)
         initial_offset = IXBar::TOFINO_METER_ALU_BYTE_OFFSET;
 
 

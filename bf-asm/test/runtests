@@ -668,7 +668,7 @@ for file in "$@"; do
         test_bfa $file tofino &
     elif [ "${file##*.}" == "jba" ]; then
         let running++
-        test_bfa $file jbay &
+        test_bfa $file tofino2 &
     elif [ "${file##*.}" == "stf" ]; then
         let running++
         test_stf $file &

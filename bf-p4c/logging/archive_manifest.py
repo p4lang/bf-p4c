@@ -23,7 +23,7 @@ class BFNCompilerArchive(jsl.Document):
     target = jsl.StringField(required=True, description="Target device",
                              enum=['tofino', 'tofino2', 'tofino3'])
     architecture = jsl.StringField(required=True, description="P4_16 architecture (PISA for P4_14)",
-                                   enum=['TNA', 'JNA', 'PSA', 'PISA', 'v1model'])
+                                   enum=['TNA', 'T2NA', 'PSA', 'PISA', 'v1model'])
     build_date = jsl.StringField(required=True, description="Timestamp of when the archive was built.")
     compiler_version = jsl.StringField(required=True, description="Compiler version used in compilation.")
     programs = jsl.ArrayField(required=True, description="Array of compiled programs",

@@ -85,7 +85,7 @@ def get_parser():
                         'tests are run',
                         type=str, action='store', required=False)
     parser.add_argument('--device', help='Target device',
-                         choices=['tofino', 'jbay'], default='tofino',
+                         choices=['tofino', 'tofino2'], default='tofino',
                          type=str, action='store', required=False)
     parser.add_argument('--xml-output', action='store_true', required=False,
                         help='Generate output in JUnit XML format')
@@ -216,7 +216,11 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     # for switchapi
     os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg)
     # for pdfixed
-    os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device+'pd')
+    if device == 'tofino2':
+        # until we fix p4-build
+        os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, 'jbaypd')
+    else:
+        os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device+'pd')
     # res_pd_rpc -- bf-drivers still uses tofino to install res_pd_rpc: 'tofino' should be device
     if installdir == "/usr/local":
         res_pd_rpc = os.path.join(installdir, 'lib', 'python2.7', 'dist-packages', 'tofino')
@@ -259,7 +263,7 @@ def start_model(model, out=None, context_json=None, port_map_path=None, device=N
         cmd.extend(['-l', context_json])
     if port_map_path is not None:
         cmd.extend(['-f', port_map_path])
-    if device is not None and 'jbay' in device:
+    if device is not None and 'tofino2' in device:
         cmd.extend(['--chip-type=4']) # default CHIPTYPE=4 for Jbay
     debug("Starting model: {}".format(' '.join(cmd)))
     return subprocess.Popen(cmd, stdout=out, stderr=out)
@@ -269,7 +273,7 @@ def start_switchd(switchd, status_port, conf_path, with_pd = None,
     cmd = [switchd]
     cmd.extend(['--install-dir', installdir])
     cmd.extend(['--conf-file', conf_path])
-    if device is not None and 'jbay' in device:
+    if device is not None and 'tofino2' in device:
         cmd.extend(['--skip-hld', 'krt'])
     cmd.extend(['--status-port', str(status_port)])
     if with_pd is None:
@@ -371,8 +375,11 @@ def main():
     if args.xml_output:
         extra_ptf_args.extend(['--xunit', '--xunit-dir', args.testdir])
 
+    device = args.device
+    if args.device == 'tofino2':
+        device = 'jbay'  # temporarily until we update p4-build
     if args.pdtest is not None:
-        compiler_out_dir = os.path.join(args.testdir, 'share', args.device+'pd', args.name)
+        compiler_out_dir = os.path.join(args.testdir, 'share', device+'pd', args.name)
     else:
         compiler_out_dir = args.testdir
 
@@ -393,7 +400,6 @@ def main():
         error("Config file {} not found".format(conf_path))
         sys.exit(1)
 
-    device = args.device
     # some p4-16 tests uses the bfrt conf syntax, but only has PI test.
     if args.run_bfrt_as_pi is not None:
         if len(args.run_bfrt_as_pi) != 1:
@@ -401,7 +407,7 @@ def main():
             sys.exit(1)
         compiler_out_dir = os.path.join(compiler_out_dir, args.run_bfrt_as_pi[0])
 
-    bin_path = os.path.join(compiler_out_dir, device + '.bin')
+    bin_path = os.path.join(compiler_out_dir, args.device + '.bin')
     if args.bfrt_test is None and not os.path.exists(bin_path):
         error("Binary config file {} not found".format(bin_path))
         sys.exit(1)
@@ -539,7 +545,7 @@ def main():
             model_p = start_model(HARLYN_MODEL, out=model_out,
                                   context_json=cxt_json_path,
                                   port_map_path=port_map_path,
-                                  device=device)
+                                  device=args.device)
             processes["model"] = model_p
 
             if args.pdtest is not None:
@@ -554,7 +560,7 @@ def main():
             switchd_p = start_switchd(BF_SWITCHD, switchd_status_port,
                                       conf_path, args.pdtest,
                                       out=switchd_out,
-                                      device=device,
+                                      device=args.device,
                                       installdir=BFD_INSTALLDIR)
             processes["switchd"] = switchd_p
 

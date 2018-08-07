@@ -130,7 +130,7 @@ void undeclare_registers(const Target::Tofino::deparser_regs *regs);
 
 class Target::JBay : public Target {
  public:
-    static constexpr const char * const name = "jbay";
+    static constexpr const char * const name = "tofino2";
     static constexpr target_t tag = JBAY;
     class Phv;
     struct                                          top_level_regs {

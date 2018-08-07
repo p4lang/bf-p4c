@@ -172,7 +172,7 @@ struct FindPhase0Annotation : public Inspector {
                           "Phase 0 type is %1%b, but its size must be exactly "
                           "%2%b on %3%", packing->totalWidth,
                           Device::pardeSpec().bitPhase0Size(),
-                          Device::currentDevice());
+                          Device::name());
             return false;
         }
 
@@ -197,7 +197,7 @@ struct FindPhase0Annotation : public Inspector {
                       "by marking them with the @hidden annotation.");
         DIAGNOSE_WARN("phase0_annotation",
                       "On %1%, Phase0Type's total size must be %2%b.",
-                      Device::currentDevice(),
+                      Device::name(),
                       Device::pardeSpec().bitPhase0Size());
     }
 

@@ -2013,7 +2013,7 @@ bool Memories::action_table_best_candidate(SRAM_group *next_synth, swbox_fill &s
     bool must_check = false;
 
 #ifdef HAVE_JBAY
-    if (Device::currentDevice() == "JBay")
+    if (Device::currentDevice() == Device::JBAY)
         must_check = true;
 #endif /* HAVE_JBAY */
 
@@ -2045,7 +2045,7 @@ bool Memories::action_table_in_half(SRAM_group *action_table, SRAM_group *next_s
     bool must_check = false;
 
 #ifdef HAVE_JBAY
-     if (Device::currentDevice() == "JBay")
+     if (Device::currentDevice() == Device::JBAY)
          must_check = true;
 #endif /* HAVE_JBAY */
 
@@ -2067,7 +2067,7 @@ bool Memories::action_table_in_half(SRAM_group *action_table, SRAM_group *next_s
 bool Memories::synth_in_half(SRAM_group *synth_table, int row) {
     bool must_check = false;
 #ifdef HAVE_JBAY
-    if (Device::currentDevice() == "JBay")
+    if (Device::currentDevice() == Device::JBAY)
          must_check = true;
 #endif /* HAVE_JBAY */
 
@@ -2200,7 +2200,7 @@ void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFL
 #ifdef HAVE_JBAY
     // The algorithm, in order to place the action tables within the same half, must guarantee
     // that there is enough room for that particular table
-    if (Device::currentDevice() == "Tofino")
+    if (Device::currentDevice() == Device::TOFINO)
         return;
 
     if (curr_oflow && must_be_placed_in_half.count(curr_oflow.group) == 0
@@ -2249,7 +2249,7 @@ void Memories::fill_out_masks(swbox_fill candidates[SWBOX_TYPES], switchbox_t or
  *  table currently used in overflow.
  *
  *  The function determine_candidates_order selects the potential candidates for this row.
- *  The function set_up_RAM_counts then determine the number of RAMs each of these candidates get. 
+ *  The function set_up_RAM_counts then determine the number of RAMs each of these candidates get.
  *  Finally, fill_out_masks and color_mapram_candidates determine which RAMs/maprams go to
  *  which candidate.
  *
@@ -2490,7 +2490,7 @@ void Memories::remove_placed_group(swbox_fill &candidate, RAM_side_t side) {
     }
 
 #ifdef HAVE_JBAY
-    if (Device::currentDevice() == "JBay") {
+    if (Device::currentDevice() == Device::JBAY) {
         if (removed) {
             if (must_be_placed_in_half.count(candidate.group))
                 must_be_placed_in_half.erase(candidate.group);
@@ -2886,7 +2886,7 @@ bool Memories::allocate_all_swbox_users() {
 
 #ifdef HAVE_JBAY
         // JBay has no overflow bus between logical row 7 and 8
-        if ((Device::currentDevice() == "JBay") && i == LOGICAL_ROW_MISSING_OFLOW / 2) {
+        if ((Device::currentDevice() == Device::JBAY) && i == LOGICAL_ROW_MISSING_OFLOW / 2) {
             curr_oflow.clear();
         }
 #endif /* HAVE_JBAY */

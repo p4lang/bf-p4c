@@ -1100,8 +1100,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         // its own checksum units. On JBay they're shared, and their ids are
         // global, so on that device we don't reset the next checksum unit for
         // each deparser.
-
-        if (Device::currentDevice() == "Tofino")
+        if (Device::currentDevice() == Device::TOFINO)
             nextChecksumUnit = 0;
 
         struct LastSimpleEmitInfo {
@@ -1197,10 +1196,11 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 std::tie(phvSources, clotSources) =
                     lowerFields(phv, clotInfo, emitChecksum->sources);
                 auto* loweredPovBit = lowerPovBit(phv, emitChecksum->povBit);
+
                 for (auto* source : phvSources) {
                     auto* input = new IR::BFN::ChecksumPhvInput(source);
 #if HAVE_JBAY
-                    if (Device::currentDevice() == "JBay")
+                    if (Device::currentDevice() == Device::JBAY)
                         input->povBit = loweredPovBit;
 #endif
                     unitConfig->phvs.push_back(input);
@@ -1578,7 +1578,7 @@ class ExtractorAllocator {
                 BUG_CHECK(extractor_size != 32,
                   "Checksum verification cannot write to 32-bit container");
 #if HAVE_JBAY
-                if (Device::currentDevice() == "JBay")
+                if (Device::currentDevice() == Device::JBAY)
                     extractor_size = 16;  // JBay has one size, 16-bit extractors
 #endif  // HAVE_JBAY
                 allocatedExtractorsBySize[extractor_size]++;
@@ -1609,7 +1609,7 @@ class ExtractorAllocator {
             }
 
 #if HAVE_JBAY
-            if (Device::currentDevice() == "JBay") {
+            if (Device::currentDevice() == Device::JBAY) {
                 if (extractor_size == 32)
                     n_extractor_used++;
                 extractor_size = 16;  // JBay has one size, 16-bit extractors
@@ -1635,7 +1635,7 @@ class ExtractorAllocator {
         }
 
 #if HAVE_JBAY
-        if (Device::currentDevice() == "JBay") {
+        if (Device::currentDevice() == Device::JBAY) {
             for (auto* extract : extractClots) {
                 const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
                     ? extract->source->to<IR::BFN::LoweredPacketRVal>()->byteInterval()

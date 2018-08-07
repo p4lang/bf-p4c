@@ -325,11 +325,11 @@ class LoadTargetArchitecture : public Inspector {
         char tempPath[PATH_MAX];
         snprintf(tempPath, PATH_MAX-1, "/tmp/arch_XXXXXX.p4");
         std::vector<const char *>filenames;
-        if (Device::currentDevice() == "Tofino")
+        if (Device::currentDevice() == Device::TOFINO)
             filenames.push_back("tofino.p4");
 #if HAVE_JBAY
         else
-            filenames.push_back("jbay.p4");
+            filenames.push_back("tofino2.p4");
 #endif  // HAVE_JBAY
         filenames.push_back("tofino/stratum.p4");
         filenames.push_back("tofino/p4_14_prim.p4");
@@ -1040,7 +1040,7 @@ class ConstructSymbolTable : public Inspector {
         // COMPILER-914: In Tofino, Disable clone id - 0 which is reserved in
         // i2e due to a hardware bug. Hence, valid clone ids are 1 - 7.  All
         // clone id's 0 - 7 are valid for e2e
-        if ((Device::currentDevice() == "Tofino") && (gress == INGRESS)) {
+        if ((Device::currentDevice() == Device::TOFINO) && (gress == INGRESS)) {
                 cloneId++;
         }
         if (cloneId > Device::maxCloneId(gress)) {

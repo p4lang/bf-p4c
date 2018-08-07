@@ -1,4 +1,4 @@
-#include <jna.p4>
+#include <t2na.p4>
 
 typedef bit<32> b32;
 struct metadata {

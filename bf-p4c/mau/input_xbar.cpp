@@ -2040,7 +2040,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
         });
         // Byte mask for a meter is 4 bytes
         byte_mask = ((1U << LPF_INPUT_BYTES) - 1);
-        if (Device::currentDevice() == "Tofino")
+        if (Device::currentDevice() == Device::TOFINO)
             byte_mask <<= TOFINO_METER_ALU_BYTE_OFFSET;
     } else {
         hm_reqs.index_groups = HASH_INDEX_GROUPS;
@@ -2101,7 +2101,7 @@ bool IXBar::setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &all
        unsigned &byte_mask) {
     int width = salu->source_width()/8U;
     int ixbar_initial_position = 0;
-    if (Device::currentDevice() == "Tofino")
+    if (Device::currentDevice() == Device::TOFINO)
         ixbar_initial_position = TOFINO_METER_ALU_BYTE_OFFSET;
 
     bool phv_src_reserved[2] = { false, false };

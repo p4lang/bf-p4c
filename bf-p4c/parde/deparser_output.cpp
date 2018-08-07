@@ -182,7 +182,7 @@ struct OutputParameters : public Inspector {
             return false;
         }
 #if HAVE_JBAY
-        if (Device::currentDevice() == "JBay" &&
+        if (Device::currentDevice() == Device::JBAY &&
               (param->name == "xid" || param->name == "yid")) {
             exclusionId.push_back(param);
             return false;

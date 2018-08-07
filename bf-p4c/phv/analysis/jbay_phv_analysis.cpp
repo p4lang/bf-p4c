@@ -1,3 +1,4 @@
+#include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "jbay_phv_analysis.h"
@@ -9,9 +10,9 @@ Visitor::profile_t JbayPhvAnalysis::init_apply(const IR::Node *root) {
     listOfTables.clear();
     tableDepStage.clear();
     tableStack.clear();
-    LOG4("--------------------------");
-    LOG4("Starting JBay PHV Analysis");
-    LOG4("--------------------------");
+    LOG4("-----------------------------");
+    LOG4("Starting Tofino2 PHV Analysis");
+    LOG4("-----------------------------");
     LOG4("\t" << totalBits() << "\tTotal bits in program");
     LOG4("\t" << totalAllocatedBits() << "\tTotal bits to be allocated");
 
@@ -119,9 +120,9 @@ void JbayPhvAnalysis::end_apply() {
     printStagewiseStats(dep);
 
     LOG4("");
-    LOG4("-------------------------");
-    LOG4("Exiting JBay PHV Analysis");
-    LOG4("-------------------------");
+    LOG4("----------------------------");
+    LOG4("Exiting Tofino2 PHV Analysis");
+    LOG4("----------------------------");
 }
 
 size_t JbayPhvAnalysis::totalBits() const {

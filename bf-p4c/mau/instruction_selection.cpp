@@ -890,8 +890,8 @@ bool MeterSetup::Update::preorder(IR::MAU::Action *act) {
 
 void DLeftSetup::postorder(IR::MAU::Table *tbl) {
     if (tbl->for_dleft()) {
-        ERROR_CHECK(Device::currentDevice() != "Tofino", "Tofino does not support dleft hash "
-                    "tables");
+        ERROR_CHECK(Device::currentDevice() != Device::TOFINO,
+                    "Tofino does not support dleft hash tables");
     }
 }
 

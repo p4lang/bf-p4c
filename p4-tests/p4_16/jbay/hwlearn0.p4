@@ -1,4 +1,4 @@
-#include <jna.p4>
+#include <t2na.p4>
 
 struct metadata {
     bit<16> src_port;

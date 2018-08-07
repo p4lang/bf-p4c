@@ -137,7 +137,7 @@ Backend::Backend(const BFN_Options& options) :
         new CollectPhvInfo(phv),
         &defuse,
 #if HAVE_JBAY
-        options.target == "jbay" ? new AddJBayMetadataPOV(phv) : nullptr,
+        Device::currentDevice() == Device::JBAY ? new AddJBayMetadataPOV(phv) : nullptr,
 #endif  // HAVE_JBAY
         new CollectPhvInfo(phv),
         &defuse,
@@ -187,7 +187,7 @@ Backend::Backend(const BFN_Options& options) :
         new MergeParserStates,
         &defuse,
 #if HAVE_JBAY
-        Device::currentDevice() == "JBay" ? new DarkPrivatization(phv) : nullptr,
+        Device::currentDevice() == Device::JBAY ? new DarkPrivatization(phv) : nullptr,
                                     // Allow allocation into dark PHVs for testing purposes
 #endif
         new CollectPhvInfo(phv),
@@ -200,7 +200,8 @@ Backend::Backend(const BFN_Options& options) :
 
         new CheckForHeaders(),
 #if HAVE_JBAY
-        options.target == "jbay" && options.use_clot ? new AllocateClot(clot, phv, uses) : nullptr,
+        Device::currentDevice() == Device::JBAY && options.use_clot ?
+            new AllocateClot(clot, phv, uses) : nullptr,
 #endif  // HAVE_JBAY
         &defuse,
         new FindDependencyGraph(phv, deps),

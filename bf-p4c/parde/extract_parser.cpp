@@ -432,7 +432,7 @@ struct RewriteParserStatements : public Transform {
         if (currentBit % 8 != 0) {
             ::warning("Can't extract header %1% from non-byte-aligned input "
                       "buffer position on %2%; adding padding.", hdr,
-                      Device::currentDevice());
+                      Device::name());
             currentBit += 8 - currentBit % 8;
         }
 
@@ -474,14 +474,14 @@ struct RewriteParserStatements : public Transform {
 
         if (!bits->is<IR::Constant>()) {
             ::error("Advancing by a non-constant distance is not supported on "
-                    "%1%: %2%", Device::currentDevice(), bits);
+                    "%1%: %2%", Device::name(), bits);
             return nullptr;
         }
 
         auto bitOffset = bits->to<IR::Constant>()->asInt();
         if (bitOffset < 0) {
             ::error("Advancing by a negative distance is not supported on "
-                    "%1%: %2%", Device::currentDevice(), bits);
+                    "%1%: %2%", Device::name(), bits);
             return nullptr;
         }
 
@@ -873,7 +873,7 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
      * in parde_spec.cpp since that completely negates the aspect of including these
      * files
      */
-    if ((Device::currentDevice() == "JBay") && (name == "$egress_metadata")) {
+    if ((Device::currentDevice() == Device::JBAY) && (name == "$egress_metadata")) {
         shift = ((shift+3)/4)*4;
     }
 #endif

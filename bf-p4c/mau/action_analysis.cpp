@@ -1088,7 +1088,7 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
     // For Tofino it is -8..7 but for JBay it is -4..7
     int const_src_min = CONST_SRC_MAX;
 #ifdef HAVE_JBAY
-    if (Device::currentDevice() == "JBay")
+    if (Device::currentDevice() == Device::JBAY)
         const_src_min = JBAY_CONST_SRC_MIN;
 #endif /* HAVE_JBAY */
 

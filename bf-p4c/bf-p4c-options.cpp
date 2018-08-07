@@ -67,12 +67,12 @@ BFN_Options::BFN_Options() {
         [this](const char *) {
             use_clot = false;
             return true;
-        }, "Do not use clots in JBay");
-    registerOption("--jbay-phv-analysis", nullptr,
+        }, "Do not use clots in Tofino2");
+    registerOption("--tofino2-phv-analysis", nullptr,
         [this](const char *) {
             jbay_analysis = true;
             return true;
-        }, "Perform JBay mocha and dark analysis");
+        }, "Perform Tofino2 mocha and dark analysis");
 #endif
     registerOption("--phv_scale_factor", "arg",
         [this](const char* arg) {
@@ -108,9 +108,9 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino", "tna"},
         {"tofino", "psa"},
 #if HAVE_JBAY
-        {"jbay", "v1model"},
-        {"jbay", "tna"},
-        {"jbay", "jna"},
+        {"tofino2", "v1model"},
+        {"tofino2", "tna"},
+        {"tofino2", "t2na"},
 #endif /* HAVE_JBAY */
     };
 
@@ -126,10 +126,10 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         }
 
         if (target == "tofino")
-            preprocessor_options += " -D__TARGET_TOFINO__";
+            preprocessor_options += " -D__TARGET_TOFINO__=1";
 #if HAVE_JBAY
-        else if (target == "jbay")
-            preprocessor_options += " -D__TARGET_JBAY__";
+        else if (target == "tofino2")
+            preprocessor_options += " -D__TARGET_TOFINO__=2";
 #endif
         processed = true;
     }

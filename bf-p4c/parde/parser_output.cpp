@@ -26,7 +26,7 @@ struct ParserAsmSerializer : public ParserInspector {
             out << indent << "start: " << canon_name(parser->start->name)
                 << std::endl;
 
-        if (Device::currentDevice() == "Tofino") {
+        if (Device::currentDevice() == Device::TOFINO) {
             if (!parser->initZeroContainers.empty()) {
                 out << indent << "init_zero: ";
                 const char *sep = "[ ";

@@ -24,18 +24,18 @@ All PTF tests are tagged with the 'ptf' label. Therefore, to run all PTF tests:
 
     cd build/p4c
     - For tofino
-    ctest -V -L ptf -R "^tofino"
+    ctest -L ptf -R "^tofino/"
     - For jbay
-    ctest -V -L ptf -R "^jbay"
+    ctest -L ptf -R "^tofino2/"
 
 To run the PTF tests for a specific P4 program, use the '-R' option, with the
 name of your P4 program. For example:
 
     cd build/p4c
     - For tofino
-    ctest -V -L ptf -R "^tofino.*easy_ternary"
+    ctest -L ptf -R "^tofino/.*easy_ternary"
     - For jbay
-    ctest -V -L ptf -R "^jbay.*easy_ternary"
+    ctest -L ptf -R "^tofino2/.*easy_ternary"
 
 Running STF tests:
 ==================
@@ -119,7 +119,7 @@ general, `$PTF_DIR` corresponds to `p4-tests/p4_<version>/<prog_name>.ptf`.
     Where `<prog_config_file>` is the .conf file generated for this run.
     It can be manually generated using:
     ```bash
-    ./p4-tests/gen_pd_conf.py --name <prog_name> --testdir $P4C_OUTPUT --device <tofino|jbay>
+    ./p4-tests/gen_pd_conf.py --name <prog_name> --testdir $P4C_OUTPUT --device <tofino|tofino2>
     ```
 
 Any extra argument that you pass to ptf_runner.py will be forwarded to PTF. In

@@ -61,7 +61,7 @@ class TofinoBackendTest : public ::testing::Test {
 class JBayBackendTest : public ::testing::Test {
  public:
     JBayBackendTest() : autoBFNContext(new BFNContext()) {
-        Device::reinitialize("JBay"); }
+        Device::reinitialize("Tofino2"); }
 
  private:
     AutoCompileContext autoBFNContext;

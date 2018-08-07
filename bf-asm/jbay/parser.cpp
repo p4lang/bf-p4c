@@ -141,7 +141,7 @@ template <> int Parser::State::Match::Save::write_output_config(Target::JBay::pa
         if (where->reg.index & 1) {
             mask <<= 1;
             --lo; } }
-    if (flags & ROTATE) error(where.lineno, "no rotate support in jbay");
+    if (flags & ROTATE) error(where.lineno, "no rotate support in Tofino2");
 
     int bytemask = (mask >> 2) & 3;
     if (bytemask) {
@@ -185,7 +185,7 @@ static void setup_jbay_ownership(bitvec phv_use[2],
     for (int i : phv_use[EGRESS]) {
         if (Phv::reg(i)->size == 8) {
             if (phv_use[INGRESS][i^1])
-                error(0, "Can't use %s in ingress and %s in egress in jbay parser",
+                error(0, "Can't use %s in ingress and %s in egress in Tofino2 parser",
                     Phv::reg(i^1)->name, Phv::reg(i)->name); } }
 
     std::set<unsigned> left_egress_owner_ids, right_egress_owner_ids;
@@ -431,4 +431,3 @@ void Parser::State::Match::write_config(Target::JBay::parser_regs &regs, json::v
         vec.push_back(container_cjson.clone());
     }
 }
-

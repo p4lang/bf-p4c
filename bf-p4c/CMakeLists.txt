@@ -404,7 +404,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_ARCH_SRCS
-  arch/jna.cpp)
+  arch/t2na.cpp)
 endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
 build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -429,7 +429,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_ARCH_HDRS
-  arch/jna.h)
+  arch/t2na.h)
 endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")
 
@@ -494,8 +494,8 @@ set (p4include_HEADERS
 if (ENABLE_JBAY)
 set (p4include_HEADERS
   ${p4include_HEADERS}
-  p4include/jbay.p4
-  p4include/jna.p4
+  p4include/tofino2.p4
+  p4include/t2na.p4
   )
 endif (ENABLE_JBAY)
 
@@ -514,7 +514,7 @@ set (p4_14include_HEADERS
 # used by mirror_test.p4 which should be rewritten to p4-16.
 if (ENABLE_JBAY)
 set (hack_p4_14include_HEADERS
-  p4_14include/jbay/intrinsic_metadata.p4
+  p4_14include/tofino2/intrinsic_metadata.p4
   )
 endif (ENABLE_JBAY)
 
@@ -547,10 +547,10 @@ install (TARGETS p4c-barefoot
 if (NOT ENABLE_JBAY)
   install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4include
     DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}
-    REGEX "jbay|jna" EXCLUDE)
+    REGEX "tofino2|t2na" EXCLUDE)
   install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4_14include
     DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}
-    REGEX "jbay|jna" EXCLUDE)
+    REGEX "tofino2|t2na" EXCLUDE)
 else()
   install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4include
     DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY})
@@ -584,7 +584,7 @@ set (DRIVER_FILES
   )
 if (ENABLE_JBAY)
 set (DRIVER_FILES ${DRIVER_FILES}
-  ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.jbay.cfg)
+  ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg)
 endif (ENABLE_JBAY)
 
 install (FILES ${DRIVER_FILES} ${P4C_DRIVER_MACROS}
@@ -617,7 +617,7 @@ add_dependencies(p4c_driver linkp4cbarefoot)
 # significant with P4-14, it is only used to support existing programs.
 if (ENABLE_JBAY)
 add_custom_target(jbay_hack
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/jbay
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/tofino2
   COMMAND for h in ${hack_p4_14include_HEADERS} \; do
      ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${P4C_BINARY_DIR}/\$$h \;
   done

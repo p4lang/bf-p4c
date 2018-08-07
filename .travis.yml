@@ -23,24 +23,21 @@ env:
     - secure: "jE3hbAEwkQZCH/3BsGBHCTPi4r72Lhum1cEw3sC/87BHLCz3C6txsZuFUKopj+/cAS/HPITSjFagkb0L3cYhXNwt5jT8Imu+TMdmClX4w9uOxbk98ecEHl0Gou9sEm0DDk6yHuzneLaLfaQDZayIA/48LvkYxSVbBMDSkEyQfD5UjAYCRxN8r+rucazeG5m7875p7sXAd1QkeFg8svL0KdQJBjn82e6oFxPNQvG9aXu5YaIvJ8vB2jrwa1a8IKg4KKJbI/Mj3+5qdbe+U8+4Jm36IpMROAe9Fyt2eiGFgPe+Cvp6ZNkh/vYFt7V+EW0rpuK5N6K5sEYL34/sMLLHbaSjFawpskR337PUACdP5NgWLNb/wmZC1V7gRYBbtOEZVJlQFCTTeN1ik7ziCdLC5kEUPHIWHN3U5EhQQ/RkAaM4+MXohx3top1pP8HIcD0r434F90alICYGPBRstkgmWKO9/9qR0JJ5KAzRgbS3Xp6fWifodlYGjnCIpZd7/L5hJPENu5y3vAJgsiqn3yLIvPER9QXY858Io0GhJ3/Q0oIr4qF+sOWvUUWRrLHFO7TDL6q/BiZ45vdEBQoukqzXN4me/E/CbP4Vv3fpcmu3COe/R/v44zkh1d8ZzbgABgbi1v9HjW5PadwNP8HDABjerL0pwLCxOGWqlYgvWTotU2g="
   matrix:
     # Run all tofino tests excluding smoketests
-    - TEST_SUITE="^tofino"
+    - TEST_SUITE="^tofino/"
       TEST_EXTRA_OPTS="-E"
       TEST_EXTRA_OPTS2="smoketest|programs|p4testgen|switch_8.2_dc_basic|switch_8.2_ent_dc_general|switch_8.2_msdc_l3"
-      TARGET=tofino
       IMAGE_TAG="bf-p4c-compilers_tofino"
       DOCKERFILE=Dockerfile.tofino
     # Run all tofino smoke tests
-    - TEST_SUITE="^tofino.*programs"
+    - TEST_SUITE="^tofino/.*programs"
       TEST_EXTRA_OPTS=""
       TEST_EXTRA_OPTS2=""
-      TARGET=tofino
       IMAGE_TAG="bf-p4c-compilers_smoke_programs"
       DOCKERFILE=Dockerfile.tofino
     # Run all jbay tests (including cpplint and gtest)
-    - TEST_SUITE="^jbay|cpplint|gtest"
+    - TEST_SUITE="^tofino2|cpplint|gtest"
       TEST_EXTRA_OPTS="-E"
       TEST_EXTRA_OPTS2="smoketest"
-      TARGET=jbay
       IMAGE_TAG="bf-p4c-compilers_jbay"
       DOCKERFILE="Dockerfile.jbay"
 

@@ -98,7 +98,7 @@ void addDeparserParam(IR::BFN::Deparser* deparser,
     // validity bit, which can cause the program to misbehave. Other devices use
     // explicit POV bits for the same purpose, so they don't have this problem,
     // and we can ignore the restriction.
-    if (Device::currentDevice() == "Tofino")
+    if (Device::currentDevice() == Device::TOFINO)
         param->canPack = canPack;
 
     deparser->params.push_back(param);
@@ -117,10 +117,10 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     addDeparserParam(d, tmMeta, "icos_for_copy_to_cpu", "copy_to_cpu_cos");
     addDeparserParam(d, tmMeta, "copy_to_cpu", "copy_to_cpu");
 
-    if (Device::currentDevice() == "Tofino")
+    if (Device::currentDevice() == Device::TOFINO)
         addDeparserParam(d, tmMeta, "packet_color", "meter_color");
 #if HAVE_JBAY
-    else if (Device::currentDevice() == "JBay")
+    else if (Device::currentDevice() == Device::JBAY)
         addDeparserParam(d, tmMeta, "packet_color", "pkt_color");
 #endif
 
@@ -137,7 +137,7 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
     addDeparserParam(d, dpMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
 #if HAVE_JBAY
-    if (Device::currentDevice() == "JBay") {
+    if (Device::currentDevice() == Device::JBAY) {
         addDeparserParam(d, dpMeta, "mirror_hash", "mirr_hash", true);
         addDeparserParam(d, dpMeta, "mirror_io_select", "mirr_io_sel", true);
         addDeparserParam(d, dpMeta, "mirror_egress_port", "mirr_egress_port", true);
@@ -160,7 +160,7 @@ void AddDeparserMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
     auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser");
     addDeparserParam(d, dpMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
 #if HAVE_JBAY
-    if (Device::currentDevice() == "JBay") {
+    if (Device::currentDevice() == Device::JBAY) {
         addDeparserParam(d, dpMeta, "mirror_hash", "mirr_hash", true);
         addDeparserParam(d, dpMeta, "mirror_io_select", "mirr_io_sel", true);
         addDeparserParam(d, dpMeta, "mirror_egress_port", "mirr_egress_port", true);

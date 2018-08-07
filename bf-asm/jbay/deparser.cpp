@@ -5,7 +5,7 @@
 
 #define JBAY_POV(GRESS, VAL, REG)                                                               \
     if (VAL.pov) REG.pov = deparser.pov[GRESS].at(&VAL.pov->reg) + VAL.pov->lo;                 \
-    else error(VAL.val.lineno, "POV bit required for jbay");
+    else error(VAL.val.lineno, "POV bit required for Tofino2");
 
 #define JBAY_SIMPLE_INTRINSIC(GRESS, VAL, REG, IFSHIFT)                                         \
     REG.phv = VAL.val->reg.deparser_id();                                                       \
@@ -392,7 +392,7 @@ static short jbay_phv2cksum[224][2] = {
     { 64, 65}, { 66, 67}, { 68, 69}, { 70, 71}, { 72, 73}, { 74, 75}, { 76, 77}, { 78, 79},
     { 80, 81}, { 82, 83}, { 84, 85}, { 86, 87}, { 88, 89}, { 90, 91}, { 92, 93}, { 94, 95},
     { 96, 97}, { 98, 99}, {100,101}, {102,103}, {104,105}, {106,107}, {108,109}, {110,111},
-    {112,113}, {114,115}, {116,117}, {118,119}, {120,121}, {122,123}, {124,125}, {126,127}, 
+    {112,113}, {114,115}, {116,117}, {118,119}, {120,121}, {122,123}, {124,125}, {126,127},
     {128, -1}, {129, -1}, {130, -1}, {131, -1}, {132, -1}, {133, -1}, {134, -1}, {135, -1},
     {136, -1}, {137, -1}, {138, -1}, {139, -1}, {140, -1}, {141, -1}, {142, -1}, {143, -1},
     {144, -1}, {145, -1}, {146, -1}, {147, -1}, {148, -1}, {149, -1}, {150, -1}, {151, -1},
@@ -429,7 +429,7 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
     unsigned byte = 0, mapped[4];
     for (auto &val : data) {
         if (!val.pov) {
-            error(val.val.lineno, "POV bit required for jbay");
+            error(val.val.lineno, "POV bit required for Tofino2");
             continue; }
         unsigned bit = pov.at(&val.pov->reg) + val.pov->lo;
         if (pov_map.count(bit)) continue;
@@ -452,7 +452,7 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
             if (tag_idx == 16)
                 error(-1, "Ran out of clot entries in deparser checksum unit %d", unit);
             csum.clot_entry[tag_idx].pov = povbit;
-            csum.clot_entry[tag_idx].vld = 1; 
+            csum.clot_entry[tag_idx].vld = 1;
             csum.tags[tag_idx].tag = val.tag;
             tag_idx++;
         } else {

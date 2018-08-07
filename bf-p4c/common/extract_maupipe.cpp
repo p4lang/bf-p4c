@@ -1141,31 +1141,31 @@ void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Option
 
 void BackendConverter::convert(const IR::P4Program *program, BFN_Options& options) {
     if (options.arch == "v1model") {
-        if (options.target == "tofino") {
+        if (Device::currentDevice() == Device::TOFINO) {
             convertV1Program(program, options);
         }
 #ifdef HAVE_JBAY
-        if (options.target == "jbay") {
+        if (Device::currentDevice() == Device::JBAY) {
             convertV1Program(program, options);
         }
 #endif
     } else if (options.arch == "psa" &&
              options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
-        if (options.target == "tofino") {
+        if (Device::currentDevice() == Device::TOFINO) {
             convertTnaProgram(program, options);
         }
 #ifdef HAVE_JBAY
-        if (options.target == "jbay") {
+        if (Device::currentDevice() == Device::JBAY) {
             convertTnaProgram(program, options);
         }
 #endif
-    } else if ((options.arch == "tna" || options.arch == "jna") &&
+    } else if ((options.arch == "tna" || options.arch == "t2na") &&
              options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
-        if (options.target == "tofino") {
+        if (Device::currentDevice() == Device::TOFINO) {
             convertTnaProgram(program, options);
         }
 #ifdef HAVE_JBAY
-        if (options.target == "jbay") {
+        if (Device::currentDevice() == Device::JBAY) {
             convertTnaProgram(program, options);
         }
 #endif
@@ -1178,4 +1178,3 @@ void BackendConverter::convert(const IR::P4Program *program, BFN_Options& option
 }
 
 }  // namespace BFN
-

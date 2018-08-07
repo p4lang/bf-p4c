@@ -42,7 +42,7 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     for (auto &stage : mauasm.by_stage) {
         out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
 #if HAVE_JBAY
-        if (Device::currentDevice() == "JBay" && stage.first.second > 0)
+        if (Device::currentDevice() == Device::JBAY && stage.first.second > 0)
             out << indent << "dependency: match" << std::endl;
 #endif
         for (auto &tbl : stage.second) {

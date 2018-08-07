@@ -46,7 +46,7 @@ def get_parser():
     parser.add_argument('--name', help='Name of P4 program under test',
                         type=str, action='store', required=True)
     parser.add_argument('--device', help='Target device',
-                        choices=['tofino', 'jbay'], default='tofino',
+                        choices=['tofino', 'tofino2'], default='tofino',
                         type=str, action='store', required=True)
     parser.add_argument('--switch-api', help='API to use for switch',
                         choices=['switchapi', 'switchsai'], default=None,
@@ -60,7 +60,10 @@ def main():
     base_conf["id"] = args.name + ".csv"
     # assume one chip
     chip = base_conf["chip_list"][0]
-    chip["chip_family"] = args.device
+    if args.device == 'tofino2':
+        chip["chip_family"] = 'JBay'
+    else:
+        chip["chip_family"] = 'Tofino'
     p4_info = base_conf["p4_program_list"][0]
     p4_info["program-name"] = args.name
     libpath = os.path.join(args.testdir, 'lib', args.device+'pd', args.name)

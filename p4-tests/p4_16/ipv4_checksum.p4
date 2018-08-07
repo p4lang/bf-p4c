@@ -22,9 +22,9 @@
  ******************************************************************************/
 
 #include <core.p4>
-#ifdef __TARGET_JBAY__
-#include <jna.p4>
-#elif __TARGET_TOFINO__
+#if __TARGET_TOFINO__ == 2
+#include <t2na.p4>
+#elif __TARGET_TOFINO__ == 1
 #include <tna.p4>
 #endif
 #include "util.h"
@@ -66,10 +66,10 @@ parser SwitchIngressParser(
     }
 
     state parse_port_metadata {
-#ifdef __TARGET_TOFINO__
+#if __TARGET_TOFINO__ == 1
         pkt.advance(64);
 #endif
-#ifdef __TARGET_JBAY__
+#if __TARGET_TOFINO__ == 2
         pkt.advance(196);
 #endif
         transition parse_ethernet;

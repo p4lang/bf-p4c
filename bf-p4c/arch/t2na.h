@@ -1,5 +1,5 @@
-#ifndef BF_P4C_ARCH_JNA_H_
-#define BF_P4C_ARCH_JNA_H_
+#ifndef BF_P4C_ARCH_T2NA_H_
+#define BF_P4C_ARCH_T2NA_H_
 
 #include "ir/ir.h"
 
@@ -19,4 +19,4 @@ struct PortTNAToJBay : public PassManager {
 
 }  // namespace BFN
 
-#endif /* BF_P4C_ARCH_JNA_H_ */
+#endif /* BF_P4C_ARCH_T2NA_H_ */

@@ -9,6 +9,7 @@
 
 class Device {
  public:
+    enum Device_t { TOFINO, JBAY };
     /**
      * Initialize the global device context for the provided target - e.g.
      * "Tofino" or "JBay".
@@ -37,7 +38,9 @@ class Device {
        return *instance_;
     }
 
-    static cstring currentDevice() { return Device::get().name(); }
+    static Device_t currentDevice() { return Device::get().device_type(); }
+    static cstring name() { return Device::get().get_name(); }
+
 
     static const PhvSpec& phvSpec() { return Device::get().getPhvSpec(); }
     static const PardeSpec& pardeSpec() { return Device::get().getPardeSpec(); }
@@ -51,7 +54,8 @@ class Device {
  protected:
     explicit Device(cstring name) : name_(name) {}
 
-    cstring name() const { return name_; }
+    virtual Device_t device_type() const = 0;
+    virtual cstring get_name() const = 0;
 
     virtual const PhvSpec& getPhvSpec() const = 0;
     virtual const PardeSpec& getPardeSpec() const = 0;
@@ -61,10 +65,9 @@ class Device {
     virtual unsigned getMaxResubmitId() const = 0;
     virtual unsigned getMaxDigestId() const = 0;
 
-    cstring name_;
-
  private:
     static Device* instance_;
+    cstring name_;
 };
 
 
@@ -74,6 +77,8 @@ class TofinoDevice : public Device {
 
  public:
     TofinoDevice() : Device("Tofino"), parde_() {}
+    Device::Device_t device_type() const override { return Device::TOFINO; }
+    cstring get_name() const override { return "Tofino"; }
     int getNumStages() const override { return 12; }
     unsigned getMaxCloneId(gress_t gress) const override {
         switch (gress) {
@@ -101,7 +106,9 @@ class JBayDevice : public Device {
 #endif
 
  public:
-    JBayDevice() : Device("JBay"), parde_() {}
+    JBayDevice() : Device("Tofino2"), parde_() {}
+    Device::Device_t device_type() const override { return Device::JBAY; }
+    cstring get_name() const override { return "Tofino2"; }
     int getNumStages() const override { return NUM_MAU_STAGES; }
     unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
     unsigned getMaxResubmitId() const override { return 8; }

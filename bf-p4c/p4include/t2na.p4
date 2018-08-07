@@ -20,7 +20,7 @@
 #define _JBAY_NATIVE_ARCHITECTURE_P4_
 
 #include "core.p4"
-#include "jbay.p4"
+#include "tofino2.p4"
 
 // The following declarations provide a template for the programmable blocks in
 // JBay.
