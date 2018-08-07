@@ -1083,6 +1083,8 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
 
         pipe.push_back(rv->apply(processBackendPipe));
         npipe++;
+        // clear DeclarationConversions map after each pipe.
+        converted.clear();
     }
 }
 
