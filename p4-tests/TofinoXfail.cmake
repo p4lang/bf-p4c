@@ -1141,12 +1141,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/utes_0.p4
 )
 
-# BRIG-691
-p4c_add_xfail_reason("tofino"
-  "TTransportException: TSocket read 0 bytes"
-  p4testgen_signets_0
-)
-
 # BRIG-584
 p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*: Cannot extract to a field slice in the parser"

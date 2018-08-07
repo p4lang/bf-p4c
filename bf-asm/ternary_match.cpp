@@ -483,7 +483,7 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
     // split the field in bytes. For normal match entire slice can be used
     // directly.
     auto *p = find_p4_param(name, "range");
-    unsigned field_bytes = p ? field_width/8 : 1;
+    unsigned field_bytes = p ? (field_width + 7)/8 : 1;
     for (int i = 0; i < field_bytes; i++) {
         json::map entry;
         entry["field_name"] = fix_name;
