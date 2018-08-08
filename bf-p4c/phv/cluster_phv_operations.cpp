@@ -41,7 +41,7 @@ void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
     //  - SALUs have a byte mask, not a bit mask, so nothing can be packed in
     //    the same byte as an SALU operand.
     //
-    //    XXX(cole): This last constarint is not implemented!
+    //    XXX(cole): This last constraint is not implemented!
 
     auto* statefulAlu = findContext<IR::MAU::StatefulAlu>();
     BUG_CHECK(statefulAlu, "Found an SALU instruction not in a Stateful ALU IR node: %1%", inst);
@@ -49,6 +49,20 @@ void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
 
     bool is_bitwise_op = BITWISE_OPS.count(inst->name);
     if (!inst->operands.empty()) {
+        size_t max_total_operand_size = 0;
+        for (int idx = 0; idx < int(inst->operands.size()); ++idx) {
+            le_bitrange field_bits;
+            PHV::Field* field = phv.field(inst->operands[idx], &field_bits);
+            if (!field) continue;
+            if (field_bits.size() % 8 <= 1)
+                // If the field is byte aligned or 1 bit larger than a byte aligned size, then round
+                // it up to the next byte-aligned bit size.
+                max_total_operand_size += (8 * ROUNDUP(field_bits.size(), 8));
+            else
+                // If the field is more than 1 bit larger than a byte aligned size, then it may take
+                // up one byte more than the next byte-aligned size in the worst case.
+                max_total_operand_size += (8 * (ROUNDUP(field_bits.size(), 8) + 1));
+        }
         for (int idx = 0; idx < int(inst->operands.size()); ++idx) {
             le_bitrange field_bits;
             PHV::Field* field = phv.field(inst->operands[idx], &field_bits);
@@ -98,10 +112,7 @@ void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
             // allocated in reverse.  We don't handle that kind of conditional
             // constraint (choice of two possibilities) yet.
             //
-            // XXX(cole): In the future, this can also be treated as a soft
-            // constraint: If not satisfiable, SALU operands can be sourced
-            // through a hash table, as long as the sum of the sizes of the
-            // operands is less than 51 bits.
+            if (max_total_operand_size <= SALU_HASH_SOURCE_LIMIT) continue;
             for (auto size : Device::phvSpec().containerSizes()) {
                 if (sourceWidth <= int(size))
                     field->setStartBits(size, bitvec(0, 1));

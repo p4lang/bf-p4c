@@ -27,6 +27,8 @@ class PhvInfo;
  * @post The operations field of all Field objects in @phv_f will be populated.
  */
 class PHV_Field_Operations : public Inspector {
+    static constexpr int SALU_HASH_SOURCE_LIMIT = 51;
+
  public:
     /** "Bitwise" operations are ALU instructions that operate independently on
      * each bit of the source(s) and destination.  For example, a logical AND
