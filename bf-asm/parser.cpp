@@ -1066,12 +1066,16 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
         if (!s.where.check()) continue;
         if (s.where->reg.parser_id() < 0)
             error(s.where.lineno, "%s is not accessable in the parser", s.where->reg.name);
+        if (s.lo >= 32 && s.lo < 54)
+            error(s.where.lineno, "byte 32-53 of input buffer cannot be used for output");
         pa->phv_use[state->gress][s.where->reg.uid] = 1;
         int size = s.where->reg.size;
         if (s.second) {
             if (!s.second.check()) continue;
             if (s.second->reg.parser_id() < 0)
                 error(s.second.lineno, "%s is not accessable in the parser", s.second->reg.name);
+            else if (s.second->lo >= 32 && s.second->lo < 54)
+                error(s.where.lineno, "byte 32-53 of input buffer cannot be used for output");
             else if (s.second->reg.parser_id() != s.where->reg.parser_id() + 1 ||
                 (s.where->reg.parser_id() & 1))
                 error(s.second.lineno, "Can only write into even/odd register pair");
