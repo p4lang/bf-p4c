@@ -72,6 +72,7 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_MAX_GROUP_SIZE,
 
         BF_RT_DATA_ENTRY_TTL,
+        BF_RT_DATA_ENTRY_HIT_STATE,
 
         BF_RT_DATA_METER_SPEC_TYPE,
 
@@ -1378,21 +1379,27 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
 
         if (table.is_const_table()) attributesJson->append("ConstTable");
 
-        // TODO(antonin): this will probably change when idle-timeout support is
-        // finalized in TNA
         if (table.idle_timeout_behavior() ==
             p4configv1::Table::NOTIFY_CONTROL) {
+            operationsJson->append("UpdateHitState");
             attributesJson->append("IdleTimeout");
-            auto* f = makeCommonDataField(
-                BF_RT_DATA_ENTRY_TTL, "$ENTRY_TTL",
-                makeTypeInt("uint32", 0 /* default TTL -> ageing disabled */),
-                false /* repeated */);
-            addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_ENTRY_TTL, "$ENTRY_TTL",
+                    makeTypeInt("uint32", 0 /* default TTL -> ageing disabled */),
+                    false /* repeated */);
+                addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_ENTRY_HIT_STATE, "$ENTRY_HIT_STATE",
+                    makeTypeEnum({"ENTRY_IDLE", "ENTRY_ACTIVE"}),
+                    false /* repeated */);
+                addSingleton(dataJson, f, false /* mandatory */, true /* read-only */);
+            }
         }
 
         tableJson->emplace("data", dataJson);
-        // TODO(antonin): add 'UpdateHitState' to supported operations when
-        // enabled in TNA & P4Info
         tableJson->emplace("supported_operations", operationsJson);
         tableJson->emplace("attributes", attributesJson);
 

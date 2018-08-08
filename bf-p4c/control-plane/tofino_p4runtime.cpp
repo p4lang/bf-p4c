@@ -548,8 +548,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             addWred(symbols, p4info, *directWred);
         }
 
-        // TODO(antonin): idle timeout will change for TNA in the future and we
-        // will need to rely on P4Info table specific extensions.
+        // TODO(antonin): idle timeout may change for TNA in the future and we
+        // may need to rely on P4Info table specific extensions.
         if (supportsTimeout) {
             table->set_idle_timeout_behavior(p4configv1::Table::NOTIFY_CONTROL);
         } else {
