@@ -2,6 +2,38 @@
 /* mau stage template specializations for jbay -- #included directly in top-level stage.cpp */
 
 
+template<>
+void Stage::gen_configuration_cache(Target::JBay::mau_regs &regs, json::vector &cfg_cache) {
+    static int i_pdddelay;
+    static int e_pdddelay;
+    unsigned reg_width = 8;
+    std::string i_reg_value_str;
+    std::string e_reg_value_str;
+
+    if (stageno == 0) {
+        i_pdddelay = regs.cfg_regs.amod_pre_drain_delay[INGRESS];
+        e_pdddelay = regs.cfg_regs.amod_pre_drain_delay[EGRESS];
+        return;
+    }
+
+    if (i_pdddelay > regs.cfg_regs.amod_pre_drain_delay[INGRESS])
+        i_pdddelay = regs.cfg_regs.amod_pre_drain_delay[INGRESS];
+    if (e_pdddelay > regs.cfg_regs.amod_pre_drain_delay[EGRESS])
+        e_pdddelay = regs.cfg_regs.amod_pre_drain_delay[EGRESS];
+
+    if (stageno == AsmStage::numstages()-1) {
+        // 64 is due to number of CSR's
+        i_pdddelay += (7 + 64);
+        i_reg_value_str = int_to_hex_string(i_pdddelay, reg_width);
+        e_pdddelay += (7 + 64);
+        e_reg_value_str = int_to_hex_string(e_pdddelay, reg_width);
+
+        add_cfg_reg(cfg_cache, "pardereg.pgstnreg.parbreg.left.i_wb_ctrl",
+            "left_i_wb_ctrl", i_reg_value_str);
+        add_cfg_reg(cfg_cache, "pardereg.pgstnreg.parbreg.right.e_wb_ctrl",
+            "right_e_wb_ctrl", e_reg_value_str);
+    }
+}
 
 /* disable power gating configuration for specific MAU regs to weedout delay programming
  * issues. We dont expect to call this function in the normal usage of JBay - this is
