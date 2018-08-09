@@ -1930,22 +1930,21 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             continue;
         if (p4_param_index != ixbar_read->p4_param_order) continue;
         auto *expr = ixbar_read->expr;
-        if (ixbar_read->from_mask)
-            expr = expr->to<IR::Slice>()->e0;
+        if (ixbar_read->from_mask && expr->to<IR::Slice>())
+                expr = expr->to<IR::Slice>()->e0;
         // Replace any alias nodes with their original sources, in order to
         // ensure the original names are emitted.
         auto size = expr->type->width_bits();
+        auto full_size = phv.field(expr)->size;
 
         // Check for @name annotation.
         cstring name = phv.field(expr)->externalName();
 
-        out << indent << canon_name(name) << ": ";
-        out << "{ type: " << ixbar_read->match_type.name << ", ";
-        out << "size: " << size << ", ";
-        out << "full_size: " << phv.field(expr)->size;
-
+        int start_bit = 0;
+        cstring annName = "";
+        std::map<int, int> slices;
         if (auto ann = ixbar_read->getAnnotation(IR::Annotation::nameAnnotation)) {
-            auto annName = IR::Annotation::getName(ann);
+            annName = IR::Annotation::getName(ann);
 
             // P4_14-->P4_16 translation names valid matches with a
             // "$valid$" suffix (note the trailing "$").  However, Brig
@@ -1957,14 +1956,18 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             // eg. "foo.bar[3:0]" becomes "foo.bar".
             std::string s(annName.c_str());
             std::smatch sm;
-            std::regex sliceRegex(R"(\[[0-9]+:[0-9]+\])");
+            std::regex sliceRegex(R"(\[([0-9]+):([0-9]+)\])");
             std::regex_search(s, sm, sliceRegex);
-            if (sm.size()) {
-                auto newAnnName = s.substr(0, sm.position(sm.size() - 1));
+            if (sm.size() == 3) {
+                auto newAnnName = s.substr(0, sm.position(0));
                 // XXX(cole): It would be nice to report srcInfo here.
                 ::warning("Table key name not supported.  "
                           "Replacing \"%1%\" with \"%2%\".", annName, newAnnName);
-                annName = newAnnName; }
+                annName = newAnnName;
+                auto start = std::stol(sm[2]);
+                auto end = std::stol(sm[1]);
+                slices[start] = end - start + 1;
+            }
 
             // XXX(cole): This is a hack to remove mask syntax from key names.
             // This is specifically a problem because
@@ -1981,20 +1984,51 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             // Hence, we remove the trailing " & val".  However, this mean
             // P4_16 programmers can't use that syntax either.
             s = annName.c_str();
-            sliceRegex = std::regex(R"( & .*$)");
+            sliceRegex = std::regex(R"( & (.*$))");
             std::regex_search(s, sm, sliceRegex);
-            if (sm.size()) {
-                auto newAnnName = s.substr(0, sm.position(sm.size() - 1));
+            if (sm.size() == 2) {
+                auto newAnnName = s.substr(0, sm.position(0));
+                auto mask = std::stol(sm[1]);
+                if (mask == 0)
+                    ::error("Field mask cannot be zero - "
+                            "Field: \"%1%\" - Table: \"%2%\"",
+                            s, tbl->name);
                 // XXX(cole): It would be nice to report srcInfo here.
                 ::warning("Table key name syntax not supported.  "
                           "Replacing \"%1%\" with \"%2%\".", annName, newAnnName);
-                annName = newAnnName; }
-
-            out << ", key_name: \"" << canon_name(annName) << "\"";
+                annName = newAnnName;
+                // Get slice(s) out of the mask value. Each slice is a separate
+                // entry in p4_param_order
+                bitvec m(mask);
+                auto start = 0;
+                while (start >= 0) {
+                    start = m.ffs(start);
+                    if (start >= 0) {
+                        auto end = m.ffz(start) - 1;
+                        slices[start] = end - start + 1;
+                        start = end + 1;
+                    }
+                }
+            }
             LOG3(ann << ": setting external annName of key " << ixbar_read
-                 << " to " << annName); }
+                 << " to " << annName);
+        }
 
-        out << " }" << std::endl;
+        // If fields dont have slices we add the entire field starting at bit 0
+        if (slices.empty())
+            slices[0] = full_size;
+
+        for (auto sl : slices) {
+            out << indent << canon_name(name) << ": ";
+            out << "{ type: " << ixbar_read->match_type.name << ", ";
+            out << "size: " << sl.second << ", ";
+            out << "full_size: " << full_size;
+            if (!annName.isNullOrEmpty())out << ", key_name: \"" << canon_name(annName) << "\"";
+            // Output start bit only for slices
+            if (sl.second != full_size) out << ", start_bit: " << sl.first;
+            out << " }" << std::endl;
+        }
+
         p4_param_index++;
     }
 }

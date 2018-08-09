@@ -414,7 +414,14 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
             unsigned position = 0;
             for (auto &v : kv.value.map) {
                 if ((CHECKTYPE(v.key, tSTR)) && (CHECKTYPE(v.value, tMAP))) {
-                    p4_param p(v.key.s, position++);
+                    bool ppFound = false;
+                    for (auto &pp : p4_params_list) {
+                        if (pp.name == v.key.s) {
+                            ppFound = true;
+                            position = pp.position;
+                            break; } }
+                    if (!ppFound) position = p4_params_list.size();
+                    p4_param p(v.key.s, position);
                     for (auto &w : v.value.map) {
                         if (CHECKTYPE(w.key, tSTR) && CHECKTYPE2(w.value, tSTR, tINT)) {
                             if (w.key == "type") p.type = w.value.s;
@@ -422,6 +429,7 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                             else if (w.key == "full_size") p.bit_width_full = w.value.i;
                             else if (w.key == "alias") p.alias = w.value.s;
                             else if (w.key == "key_name") p.key_name = w.value.s;
+                            else if (w.key == "start_bit") p.start_bit = w.value.i;
                             else error(lineno, "Incorrect param type %s in p4_param_order", w.key.s); } }
                     p4_params_list.emplace_back(p); } } }
     } else if (kv.key == "context_json") {
@@ -2058,13 +2066,12 @@ void Table::common_tbl_cfg(json::map &tbl) {
     if ((!p4_params_list.empty()) &&
             (this->to<MatchTable>() || this->to<Phase0MatchTable>())) {
         for (auto &p : p4_params_list) {
-            unsigned start_bit = 0;
             json::map param;
             std::string name = p.key_name.empty() ? p.name : p.key_name;
             param["name"] = name;
             param["position"] = p.position;
             param["match_type"] = p.type;
-            param["start_bit"] = start_bit;
+            param["start_bit"] = p.start_bit;
             param["bit_width"] = p.bit_width;
             param["bit_width_full"] = p.bit_width_full;
             param["is_valid"] = p.is_valid;
@@ -2077,8 +2084,7 @@ void Table::common_tbl_cfg(json::map &tbl) {
                 param["alias"] = p.alias;
             params.push_back(std::move(param));
             if (p.type == "range")
-                tbl["uses_range"] = true;
-            start_bit += p.bit_width_full; } }
+                tbl["uses_range"] = true; } }
 }
 
 void Table::add_result_physical_buses(json::map &stage_tbl) {

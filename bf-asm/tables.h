@@ -320,6 +320,7 @@ public:
         std::string name;
         std::string alias;
         std::string key_name;
+        unsigned start_bit;
         unsigned position;
         unsigned bit_width;
         unsigned bit_width_full;
@@ -327,8 +328,8 @@ public:
         bool defaulted;
         bool is_valid;
         std::string type;
-        p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "",unsigned v = 0, bool d = false, bool i = false) :
-            name(n), position(p), bit_width(bw), bit_width_full(bwf), type(t) , default_value(v), defaulted(d), is_valid(i) {}
+        p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "",unsigned v = 0, bool d = false, bool i = false, unsigned s = 0) :
+            name(n), position(p), bit_width(bw), bit_width_full(bwf), type(t) , default_value(v), defaulted(d), is_valid(i), start_bit(s) {}
     };
     friend std::ostream &operator<<(std::ostream &, const p4_param &);
     typedef std::vector<p4_param>  p4_params;
