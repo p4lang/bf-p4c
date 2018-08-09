@@ -1253,9 +1253,11 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: visitor returned invalid type .* for Vector<Primitive>"
+)
+
+p4c_add_xfail_reason("tofino"
+  "direct attached objects must be enabled in all hit actions"
   testdata/p4_16_samples/psa-meter6.p4
-  testdata/p4_16_samples/issue430-bmv2.p4
-  extensions/p4_tests/p4_16/indirect_filters.p4
 )
 
 p4c_add_xfail_reason("tofino"

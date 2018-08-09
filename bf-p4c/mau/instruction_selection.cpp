@@ -94,7 +94,8 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
         BUG_CHECK(mtr != nullptr, "%s: Cannot find associated meter for the method call %s",
                   prim->srcInfo, *prim);
         stateful.push_back(prim);
-        rv = new IR::MAU::AttachedOutput(prim->type, mtr);
+        rv = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
+                                      new IR::MAU::AttachedOutput(prim->type, mtr));
     } else if (prim->name == "DirectCounter.count") {
         glob = prim->operands.at(0)->to<IR::GlobalRef>();
         stateful.push_back(prim);
@@ -103,7 +104,8 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
         glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto mtr = glob->obj->to<IR::MAU::Meter>();
         stateful.push_back(prim);
-        rv = new IR::MAU::AttachedOutput(IR::Type::Bits::get(8), mtr);
+        rv = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
+                                      new IR::MAU::AttachedOutput(IR::Type::Bits::get(8), mtr));
     }
 
     if (glob != nullptr) {
@@ -392,9 +394,13 @@ const IR::Slice *DoInstructionSelection::postorder(IR::Slice *sl) {
 
 
 static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
-                                                const IR::Expression *dest) {
+                                                const IR::Expression *dest, int lo = -1,
+                                                int hi = -1) {
     if (auto *c = in->to<IR::Cast>())
         return fillInstDest(c->expr, dest);
+    if (auto *sl = in->to<IR::Slice>()) {
+        return fillInstDest(sl->e0, dest, sl->getL(), sl->getH());
+    }
     auto *inst = in ? in->to<IR::MAU::Instruction>() : nullptr;
     auto *tv = inst ? inst->operands[0]->to<IR::TempVar>() : nullptr;
     if (tv) {
@@ -402,6 +408,11 @@ static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
         if (sscanf(tv->name, "$tmp%d", &id) > 0 && id == tv->uid) --tv->uid;
         auto *rv = inst->clone();
         rv->operands[0] = dest;
+        for (size_t i = 1; i < rv->operands.size(); i++) {
+            if (lo == -1)
+                break;
+            rv->operands[i] = MakeSlice(rv->operands[i], lo, hi);
+        }
         return rv; }
     return nullptr;
 }
@@ -487,7 +498,9 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size),
                                          prim->operands[1], algorithm, prim);
         hd->bit_width = size;
-        return new IR::Cast(IR::Type::Bits::get(size), hd);
+        auto next_type = IR::Type::Bits::get(size);
+        return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type),
+                                        new IR::Cast(next_type, hd));
     } else if (prim->name == "Random.get") {
         auto max_value = prim->operands[1]->to<IR::Constant>()->value;
         max_value += mpz_class(1);
@@ -496,7 +509,9 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
             error("%s: The random declaration %s max size must be a power of two",
                   prim->srcInfo, prim);
         auto rn = new IR::MAU::RandomNumber(prim->srcInfo, IR::Type::Bits::get(one_pos));
-        return new IR::Cast(IR::Type::Bits::get(one_pos), rn);
+        auto next_type = IR::Type::Bits::get(one_pos);
+        return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type),
+                                        new IR::Cast(next_type, rn));
     } else if (prim->name == "invalidate") {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate", prim->operands[0]);
     } else {
