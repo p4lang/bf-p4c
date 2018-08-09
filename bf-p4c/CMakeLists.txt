@@ -414,6 +414,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/intrinsic_metadata.h
   arch/bridge_metadata.h
   arch/internal/collect_bridged_fields.h
+  arch/parser_graph.h
   arch/phase0.h
   arch/program_structure.h
   arch/psa.h
@@ -690,6 +691,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/metadata_init.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mocha_dark.cpp
+  ${BF_P4C_GRAPHS_SRCS}
   )
 
 set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)

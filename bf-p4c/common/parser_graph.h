@@ -107,13 +107,11 @@ class ParserGraph : public DirectedGraph {
 
     const std::set<const IR::BFN::ParserState*>& states() const { return _states; }
 
-    const ParserStateMap& successors() const {
-        return _succs;
-    }
+    const ParserStateMap& successors() const { return _succs; }
 
-    const ParserStateMap& predecessors() const {
-        return _preds;
-    }
+    const ParserStateMap& predecessors() const { return _preds; }
+
+    const std::set<const IR::BFN::ParserState*>& to_pipe() const { return _to_pipe; }
 
     /// Is "src" an ancestor of "dst"?
     bool is_ancestor(const IR::BFN::ParserState* src, const IR::BFN::ParserState* dst) const {
@@ -154,11 +152,17 @@ class ParserGraph : public DirectedGraph {
         _preds[dst].insert(src);
     }
 
+    void add_transition_to_pipe(const IR::BFN::ParserState* src) {
+       add_state(src);
+       _to_pipe.insert(src);
+    }
+
     void merge_with(const ParserGraph& other) {
         _states.insert(other.states().begin(), other.states().end());
 
         merge(_succs, other.successors());
         merge(_preds, other.predecessors());
+        merge(_to_pipe, other.to_pipe());
     }
 
     void map_to_boost_graph() {
@@ -187,6 +191,7 @@ class ParserGraph : public DirectedGraph {
     std::set<const IR::BFN::ParserState*> _states;
     ParserStateMap _succs;
     ParserStateMap _preds;
+    std::set<const IR::BFN::ParserState*> _to_pipe;
 
     std::map<const IR::BFN::ParserState*, int> _state_to_id;
     std::map<int, const IR::BFN::ParserState*> _id_to_state;
@@ -254,6 +259,8 @@ class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector 
         for (auto t : state->transitions)
             if (t->next)
                 g->add_transition(state, t->next);
+            else
+                g->add_transition_to_pipe(state);
 
         auto& mutex = _mutex.at(parser);
         add_mutex(mutex, state);

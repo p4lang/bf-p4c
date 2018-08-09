@@ -591,7 +591,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
     }
 
     IR::Vector<IR::BFN::LoweredParserChecksum>
-    lowerParserChecksums(const IR::BFN::ParserState* state,
+    lowerParserChecksums(const IR::BFN::Parser* parser,
+                         const IR::BFN::ParserState* state,
                          const std::vector<const IR::BFN::ParserChecksumPrimitive*>& checksums) {
         IR::Vector<IR::BFN::LoweredParserChecksum> loweredChecksums;
 
@@ -599,24 +600,30 @@ struct ComputeLoweredParserIR : public ParserInspector {
                  std::vector<const IR::BFN::ParserChecksumPrimitive*>> csum_id_to_prims;
 
         for (auto prim : checksums) {
-            unsigned id = checksumAlloc.declToChecksumId.at(prim->declName);
+            unsigned id = checksumAlloc.declToChecksumId.at(parser).at(prim->declName);
             csum_id_to_prims[id].push_back(prim);
         }
 
         for (auto& kv : csum_id_to_prims)
-           loweredChecksums.push_back(lowerParserChecksum(state, kv.first, kv.second));
+           loweredChecksums.push_back(lowerParserChecksum(parser, state, kv.first, kv.second));
 
         return loweredChecksums;
     }
 
+    /// Create lowered HW checksum primitives that can be consumed by the assembler.
+    /// Get the checksum unit allocation from checksumAlloc and destination container
+    /// from PHV allocation.
     IR::BFN::LoweredParserChecksum*
-    lowerParserChecksum(const IR::BFN::ParserState* state,
+    lowerParserChecksum(const IR::BFN::Parser* parser,
+                        const IR::BFN::ParserState* state,
                         unsigned id,
                         std::vector<const IR::BFN::ParserChecksumPrimitive*>& checksums) {
         auto last = checksums.back();
         cstring declName = last->declName;
-        bool start = state == checksumAlloc.declToStartState.at(declName);
-        bool end = state == checksumAlloc.declToEndState.at(declName);
+        bool start = state == checksumAlloc.declToStartState.at(parser).at(declName);
+        bool end = false;
+        if (checksumAlloc.declToEndStates.at(parser).at(declName).count(state))
+            end = true;
 
         auto type = IR::BFN::ChecksumMode::VERIFY;
         if (last->is<IR::BFN::ChecksumSubtract>() || last->is<IR::BFN::ChecksumGet>())
@@ -639,34 +646,30 @@ struct ComputeLoweredParserIR : public ParserInspector {
             }
         }
 
-        if (!masked_ranges.empty()) {
-            auto csum = new IR::BFN::LoweredParserChecksum(
-                id, masked_ranges, 0x0, start, end, type);
+        auto csum = new IR::BFN::LoweredParserChecksum(
+            id, masked_ranges, 0x0, start, end, type);
 
-            std::vector<alloc_slice> slices;
-            if (dest) {
-                slices = phv.get_alloc(dest->field);
-                BUG_CHECK(slices.size() == 1, "checksum error %1% is somehow allocated to "
-                   "multiple containers?", dest->field);
-            }
-
-            if (type == IR::BFN::ChecksumMode::VERIFY && dest) {
-                if (auto sl = dest->field->to<IR::Slice>()) {
-                    BUG_CHECK(sl->getL() == sl->getH(), "checksum error must write to single bit");
-                    csum->csum_err = new IR::BFN::ContainerBitRef(
-                                         new IR::BFN::ContainerRef(slices.back().container),
-                                         (unsigned)sl->getL());
-                } else {
-                    csum->csum_err = lowerPovBit(phv, dest);
-                }
-            } else if (type == IR::BFN::ChecksumMode::RESIDUAL && dest) {
-                csum->phv_dest = new IR::BFN::ContainerRef(slices.back().container);
-            }
-
-            return csum;
+        std::vector<alloc_slice> slices;
+        if (dest) {
+            slices = phv.get_alloc(dest->field);
+            BUG_CHECK(slices.size() == 1, "checksum error %1% is somehow allocated to "
+               "multiple containers?", dest->field);
         }
 
-        return nullptr;
+        if (type == IR::BFN::ChecksumMode::VERIFY && dest) {
+            if (auto sl = dest->field->to<IR::Slice>()) {
+                BUG_CHECK(sl->getL() == sl->getH(), "checksum error must write to single bit");
+                csum->csum_err = new IR::BFN::ContainerBitRef(
+                                     new IR::BFN::ContainerRef(slices.back().container),
+                                     (unsigned)sl->getL());
+            } else {
+                csum->csum_err = lowerPovBit(phv, dest);
+            }
+        } else if (type == IR::BFN::ChecksumMode::RESIDUAL && dest) {
+            csum->phv_dest = new IR::BFN::ContainerRef(slices.back().container);
+        }
+
+        return csum;
     }
 
     void postorder(const IR::BFN::ParserState* state) override {
@@ -707,7 +710,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         auto loweredStatements = simplifier.lowerExtracts();
 
-        auto loweredChecksums = lowerParserChecksums(state, checksums);
+        auto parser = findContext<IR::BFN::Parser>();
+        auto loweredChecksums = lowerParserChecksums(parser, state, checksums);
 
         // populate container range in clot info
 

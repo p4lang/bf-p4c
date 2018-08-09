@@ -44,6 +44,12 @@ struct DumpParser : public Visitor {
             for (auto dst : succ.second)
                 out << escape_name((succ.first)->name)
                     << " -> " << escape_name(dst->name) << std::endl;
+
+        static cstring gress = "";  // TODO(zma) get this from graph
+        gress += "_";
+        for (auto src : graph.to_pipe())
+            out << escape_name(src->name) << " -> " << gress << "_pipe" << std::endl;
+
         // out << "}" << std::endl;
     }
 

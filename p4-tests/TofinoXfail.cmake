@@ -559,6 +559,11 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "Ran out of phv output extractor slots"
+  extensions/p4_tests/p4_14/ipv4_options.p4
+  )
+
+p4c_add_xfail_reason("tofino"
   "Tofino does not allow stats to use different address schemes on one table"
   testdata/p4_14_samples/counter.p4
   )
@@ -1092,18 +1097,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/corroding_0.p4
 )
 
-# BRIG-810
-# Compiler Bug: No fields have been added before verify?
-p4c_add_xfail_reason("tofino"
-  "No fields have been added before verify"
-  extensions/p4_tests/p4_14/p4smith_regression/quotas_0.p4
-)
-
 # BRIG-811
 # error: Output of checksum calculation can only be stored in a 16-bit field:
 p4c_add_xfail_reason("tofino"
   "Output of checksum calculation can only be stored in a 16-bit field"
   extensions/p4_tests/p4_14/p4smith_regression/gradations_0.p4
+  extensions/p4_tests/p4_14/p4smith_regression/quotas_0.p4
 )
 
 # BRIG-816

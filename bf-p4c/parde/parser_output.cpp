@@ -226,10 +226,12 @@ struct ParserAsmSerializer : public ParserInspector {
         out << indent << "type: " << csum->type << std::endl;
 
         out << indent << "mask: ";
-        const char *sep = "[ ";
-        for (auto r : csum->masked_ranges) {
-            out << sep << Range(r.lo, r.hi);
-            sep = ", ";
+        out << "[ ";
+        for (unsigned i = 0; i < csum->masked_ranges.size(); i++) {
+            auto r = csum->masked_ranges[i];
+            out << Range(r.lo, r.hi);
+            if (i != csum->masked_ranges.size() - 1)
+                out << ", ";
         }
         out << " ]" << std::endl;
 
