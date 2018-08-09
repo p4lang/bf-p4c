@@ -660,6 +660,10 @@ extern RegisterAction<T, U> {
      * to assign to a return value, but generally no operations can be applied */
     U address(); /* return the match address */
     U predicate(); /* return the predicate value */
+    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 
 extern LearnAction<T, D, U> {
@@ -673,6 +677,10 @@ extern LearnAction<T, D, U> {
      * to assign to a return value, but generally no operations can be applied */
     U address(); /* return the match address */
     U predicate(); /* return the predicate value */
+    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 
 extern ActionSelector {

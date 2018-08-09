@@ -153,7 +153,7 @@ void StatefulTable::pass1() {
         switch (idx++) {
         case 0:
             if ((size = fld.second.size) != 1 && size != 8 && size != 16 && size != 32 &&
-                (size != 64 || options.target == TOFINO))
+                ((size != 64 && size != 128) || options.target == TOFINO))
                 error(format->lineno, "invalid size %d for stateful format field %s",
                       size, fld.first.c_str()); break;
             break;

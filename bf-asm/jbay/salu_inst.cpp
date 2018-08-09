@@ -6,7 +6,7 @@ struct DivMod : public AluOP {
     struct Decode : public AluOP::Decode {
         Decode(const char *name, target_t targ, int opc) : AluOP::Decode(name, targ, opc) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
-                      const VECTOR(value_t) &op) const override {
+                            const VECTOR(value_t) &op) const override {
             auto *rv = new DivMod(this, op[0].lineno);
             if (op.size != 3) error(op[0].lineno, "divmod must have exactly 2 operands");
             if (op.size > 1) rv->srca = operand(tbl, act, op[1]);
@@ -29,6 +29,95 @@ struct DivMod : public AluOP {
 };
 
 DivMod::Decode opDIVMOD("divmod", JBAY, 0x00); // setz op, so can OR with alu1hi to get that result
+
+struct MinMax : public SaluInstruction {
+    const struct Decode : public Instruction::Decode {
+        std::string name;
+        unsigned opcode;
+        Decode(const char *name, target_t targ, int op)
+        : Instruction::Decode(name, targ, STATEFUL_ALU), name(name), opcode(op) {}
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op) const override;
+    } *opc;
+    operand     mask;
+    bool        inc = false, dec = false, phv = false;
+    MinMax(const Decode *op, int l) : SaluInstruction(l), opc(op) {}
+    std::string name() override { return opc->name; };
+    void gen_prim_cfg(json::map& out) override {
+        out["name"] = opc->name; }
+    Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
+    void pass2(Table *tbl, Table::Actions::Action *) override;
+    bool equiv(Instruction *a_) override {
+        if (auto *a = dynamic_cast<MinMax *>(a_))
+            return opc == a->opc && mask == a->mask && inc == a->inc &&
+                   dec == a->dec && phv == a->phv;
+        return false; }
+    void dbprint(std::ostream &out) const override {
+        out << "INSTR: " << opc->name << " " << mask;
+        if (inc) out << " ++";
+        if (dec) out << " --";
+        if (phv) out << " phv"; }
+    FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
+};
+
+MinMax::Decode opMIN8("min8", JBAY, 0), opMAX8("max8", JBAY, 1),
+               opMIN16("min16", JBAY, 2), opMAX16("max16", JBAY, 3);
+
+Instruction *MinMax::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                    const VECTOR(value_t) &op) const {
+    auto *rv = new MinMax(this, op[0].lineno);
+    if (op.size > 1) {
+        rv->mask = operand(tbl, act, op[1]);
+        if (!rv->mask.to<operand::Phv>() && !rv->mask.to<operand::Const>())
+            error(op[1].lineno, "%s mask must be constant or from phv or hash_dist", op[0].s);
+    } else
+        error(op[0].lineno, "%s must have a single mask operand", op[0].s);
+    for (int i = 2; i < op.size; ++i) {
+        if (op[i] == "dec" || op[i] == "--") rv->dec = true;
+        else if (op[i] == "inc" || op[i] == "++") rv->inc = true;
+        else if (op[i] == "phv") rv->phv = true;
+        else error(op[2].lineno, "unknown %s modifier %s", op[0].s, value_desc(op[i])); }
+    rv->slot = MINMAX;
+    return rv;
+}
+Instruction *MinMax::pass1(Table *tbl_, Table::Actions::Action *) {
+    auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    mask->pass1(tbl);
+    if (auto k = mask.to<operand::Const>()) {
+        tbl->get_const(k->value);
+    } else if (auto p = mask.to<operand::Phv>()) {
+        if (p->phv_index(tbl))
+            error(lineno, "%s phv mask must come from the lower half input", name().c_str()); }
+    return this;
+}
+void MinMax::pass2(Table *tbl, Table::Actions::Action *act) {
+    if (act->slot_use.intersects(bitvec(ALU2LO, 4)))
+        error(lineno, "min/max requires all 4 stateful alu slots be unused");
+}
+void MinMax::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
+    auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    int logical_home_row = tbl->layout[0].row;
+    auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
+    auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
+    if (auto k = mask.to<operand::Const>()) {
+        auto &salu_instr_cmp = meter_group.stateful.salu_instr_cmp_alu[act->code][3];
+        salu_instr_cmp.salu_cmp_regfile_adr = tbl->get_const(k->value);
+        salu_instr_common.salu_minmax_mask_ctl = 1;
+    } else {
+        salu_instr_common.salu_minmax_mask_ctl = 0; }
+    salu_instr_common.salu_minmax_ctl = opc->opcode;
+    salu_instr_common.salu_minmax_enable = 1;
+    salu_instr_common.salu_minmax_postinc_enable = inc;
+    salu_instr_common.salu_minmax_postdec_enable = dec;
+    // salu_instr_common.salu_minmax_postmod_value_ctl = ???; -- FIXME
+    salu_instr_common.salu_minmax_src_sel = phv;
+    for (auto &salu : meter_group.stateful.salu_instr_state_alu[act->code]) {
+        salu.salu_op = 0xd;
+        salu.salu_arith = 1;
+        salu.salu_pred = 0xffff; }
+}
+void MinMax::write_regs(Target::Tofino::mau_regs &, Table *, Table::Actions::Action *) {assert(0);}
+
 
 template<>
 void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
@@ -187,9 +276,9 @@ void OutOP::decode_output_mux(Target::JBay, value_t &op) {
         { "memory_hi", 1 }, { "memory_lo", 0 },
         { "phv_hi", 3 }, { "phv_lo", 2 },
         { "alu_hi", 5 }, { "alu_lo", 4 },
-        { "alu_hi_out", 5 }, { "alu_lo_out", 4 },
+        { "minmax_index", 5 }, { "minmax_post", 4 },
         { "predicate", 6 }, { "address", 7 },
-        { "div", 8 }, { "mod", 9 } };
+        { "div", 8 }, { "mod", 9 }, { "minmax", 10 } };
     if (op.type == tCMD && ops_mux_lookup.count(op[0].s))
         output_mux = ops_mux_lookup.at(op[0].s);
     else if (op.type == tSTR && ops_mux_lookup.count(op.s))

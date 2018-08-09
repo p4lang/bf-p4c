@@ -1,0 +1,7 @@
+add test b1:01 doload(idx:5)
+add test b1:02 domax(idx:5)
+
+expect 1 01020304 05060708 0000 01 00
+packet 0 01020304 05060708 0000 01 00
+expect 2 ffffffff ffffffff 0000 02 04
+packet 0 ffffffff ffffffff 0000 02 00

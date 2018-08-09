@@ -206,6 +206,7 @@ enum salu_slot_use {
     CMP0, CMP1, CMP2, CMP3,
     ALU2LO, ALU1LO, ALU2HI, ALU1HI,
     ALUOUT0, ALUOUT1, ALUOUT2, ALUOUT3,
+    MINMAX,
     // aliases
     CMPLO=CMP0, CMPHI=CMP1,
     ALUOUT=ALUOUT0,

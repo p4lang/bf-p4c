@@ -76,7 +76,7 @@ class CreateSaluInstruction : public Inspector {
     IR::Vector<IR::Expression>                  operands, pred_operands;
     int                                         output_index;
     std::vector<const IR::MAU::Instruction *>   cmp_instr;
-    const IR::MAU::Instruction                  *divmod_instr = nullptr;
+    const IR::MAU::Instruction                  *divmod_instr = nullptr, *minmax_instr = nullptr;
     const IR::Expression                        *predicate = nullptr;
     const IR::MAU::Instruction                  *onebit = nullptr;  // the single 1-bit alu op
     bool                                        onebit_cmpl = false;  // 1-bit op needs cmpl

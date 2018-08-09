@@ -17,7 +17,7 @@ const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
     static const Device::StatefulAluSpec spec = {
         /* .CmpMask = */ true,
         /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
-        /* .MaxSize = */ 64,
+        /* .MaxSize = */ 128,
         /* .OutputWords = */ 4,
         /* .DivModUnit = */ true,
     };
@@ -307,6 +307,9 @@ bool CreateSaluInstruction::preorder(const IR::Slice *sl) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
+    cstring method;
+    if (auto p = prim->name.find('.'))
+        method = p + 1;
     if (prim->name == "math_unit.execute") {
         BUG_CHECK(prim->operands.size() == 2, "typechecking failure");
         operands.push_back(new IR::MAU::SaluMathFunction(prim->srcInfo, prim->operands.at(1)));
@@ -332,10 +335,37 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
                     math.table[i++] = k->asInt(); }
         } else {
             error("initializer %s is not a list expression", mu->arguments->at(3)->expression); }
-    } else if (prim->name.endsWith(".address")) {
+    } else if (method == "address") {
         operands.push_back(new IR::MAU::SaluReg(prim->type, "address", false));
-    } else if (prim->name.endsWith(".predicate")) {
+    } else if (method == "predicate") {
         operands.push_back(new IR::MAU::SaluReg(prim->type, "predicate", false));
+    } else if (method.startsWith("min") || method.startsWith("max")) {
+        if (etype != OUTPUT) {
+            error("%s can only write to an ouput", prim);
+            return false; }
+        auto *saved_predicate = predicate;
+        etype = VALUE;
+        predicate = nullptr;
+        opcode = method;
+        BUG_CHECK(prim->operands.size() >= 3, "typechecking failure");
+        visit(prim->operands[2], "mask");
+        if (minmax_instr) {
+            if (!operands.equiv(minmax_instr->operands))
+                error("%s: only one min/max operation possible in a stateful alu");
+        } else {
+            minmax_instr = createInstruction(); }
+        operands.clear();
+        if (prim->operands.size() == 4) {
+            etype = NONE;
+            dest = nullptr;
+            opcode = cstring();
+            visit(prim->operands[3], "index");
+            BUG_CHECK(operands.size() == 0 || ::errorCount() > 0, "recursion failure");
+            operands.push_back(new IR::MAU::SaluReg(prim->type, "minmax_index", false));
+            createInstruction(); }
+        predicate = saved_predicate;
+        etype = OUTPUT;
+        operands.push_back(new IR::MAU::SaluReg(prim->type, "minmax", false));
     } else {
         error("%s: expression too complex for register action", prim->srcInfo); }
     return false;
@@ -751,15 +781,16 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
     if (bits) {
         if (bits->size == 1 && !salu->dual) {
             // ok
-        } else if (bits->size == 64 && !salu->dual) {
-            // Some (broken?) test programs use width 1x64 when they really mean 2x32
-            salu->dual = true;
         } else if (bits->size < 8) {
             // too small
             bits = nullptr;
         } else if (bits->size > Device::statefulAluSpec().MaxSize) {
-            // too big
-            bits = nullptr;
+            if (bits->size == Device::statefulAluSpec().MaxSize * 2 && !salu->dual) {
+                // we can support 1x1x  double the max width by using dual mode.
+                salu->dual = true;
+            } else {
+                // too big
+                bits = nullptr; }
         } else if (bits->size & (bits->size - 1)) {
             // not a power of two
             bits = nullptr; } }
