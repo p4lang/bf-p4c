@@ -117,7 +117,6 @@ if (PTF_REQUIREMENTS_MET)
     "AssertionError: Expected packet was not received on device"
     05-simple_l3_arping
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
-    smoketest_switch_8.2_l3_msdc_WredIpv4Test
     )
 
 # BRIG-686
@@ -307,9 +306,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_generic_int_leaf
   switch_msdc_leaf_int
-  switch_8.2_msdc_leaf_int
   switch_l3_heavy_int_leaf
-  switch_8.2_l3_heavy_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
@@ -320,15 +317,21 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "can't find per_flow_enable param meter_pfe in format"
   switch_msdc_spine_int
+  switch_8.3_msdc_spine_int
   )
 
 # BRIG-113
 p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
-  switch_8.2_msdc_leaf_int
   switch_msdc_leaf_int
-  switch_8.2_msdc_spine_int
+  )
+
+# BRIG-883
+p4c_add_xfail_reason("tofino"
+  "Expected packet was not received on device"
+  smoketest_switch_8.3_l3_msdc_HostIfV6Test
+  smoketest_switch_8.3_l3_msdc_ExceptionPacketsTest_IPV6
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1001,13 +1004,13 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   smoketest_programs_netcache
-  switch_8.2_generic_int_leaf
   switch_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: Can't find a table to place"
   switch_msdc_ipv4
+  switch_8.3_msdc_ipv4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1276,7 +1279,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Can't allocate space on 8-bit part of action bus for.*"
   switch_ent_fin_postcard
-  switch_8.2_ent_fin_postcard
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1285,11 +1287,10 @@ p4c_add_xfail_reason("tofino"
   switch_ent_fin_postcard
   switch_msdc_leaf_int
   switch_l3_heavy_int_leaf
-  switch_8.2_ent_fin_postcard
-  switch_8.2_msdc_leaf_int
-  switch_8.2_l3_heavy_int_leaf
-  switch_8.2_generic_int_leaf
   switch_generic_int_leaf
+  switch_8.3_msdc_leaf_int
+  switch_8.3_l3_heavy_int_leaf
+  switch_8.3_generic_int_leaf
 )
 
 # BRIG-879

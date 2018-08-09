@@ -151,7 +151,7 @@ bfn_set_pd_build_flag("tofino" "${P4FACTORY_PROGRAMS_PATH}/perf_test_alpm/perf_t
 
 # Pick a single test for the tests that are timing out:
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_indirect_1/exm_indirect_1.p4"
-  "test.TestActSelIterators
+  "^test.TestActSelIterators
    test.TestDirectStats
    test.TestDirectStatsPkts28Bytes36
    test.TestDirectStatsPkts32bits

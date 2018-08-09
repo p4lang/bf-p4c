@@ -380,10 +380,15 @@ static void flow_selector_addr(REGS &regs, int from, int to) {
     //    /* L down */
     //    regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
     //        .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_l_i = 1;
-    for (int row = from/4 - 1; row > to/4; row--)
-        /* top to bottom */
-        regs.rams.map_alu.selector_adr_switchbox.row[row].ctl
-            .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_oflo_adr_t_i = 1;
+
+    /* Include all selection address switchboxes needed when the action RAMs 
+     * reside on overflow rows */
+    for (int row = from/4 - 1; row >= to/4; row--)
+	if (row != to/4 || (to % 4) < 2)
+            /* top to bottom */
+            regs.rams.map_alu.selector_adr_switchbox.row[row].ctl
+                .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_oflo_adr_t_i = 1;
+
     switch (to & 3) {
     case 3:
         /* flow down to R */

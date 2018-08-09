@@ -38,27 +38,27 @@ node {
         }
         stage ('Tests') {
             parallel (
-                switch_8_2_msdc_l3_tests: {
+                switch_8_3_msdc_l3_tests: {
                     ansiColor('xterm') {
                         timestamps {
                             sh "echo 'Running switch PD tests for MSDC_PROFILE_BRIG'"
-                            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.2_l3_msdc'"
+                            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.3_l3_msdc'"
                         }
                     }
                 },
-                switch_8_2_dc_basic_tests: {
+                switch_8_3_dc_basic_tests: {
                     ansiColor('xterm') {
                         timestamps {
                             sh "echo 'Running switch PD tests for DC_BASIC_PROFILE_BRIG'"
-                            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.2_dc_basic'"
+                            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.3_dc_basic'"
                         }
                     }
                 },
-                switch_8_2_ent_dc_general_tests: {
+                switch_8_3_ent_dc_general_tests: {
                     ansiColor('xterm') {
                         timestamps {
                             sh "echo 'Running switch PD tests for ENT_DC_GENERAL_PROFILE_BRIG'"
-                            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.2_ent_dc_general'"
+                            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.3_ent_dc_general'"
                         }
                     }
                 }
