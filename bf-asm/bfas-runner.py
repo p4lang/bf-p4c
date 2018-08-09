@@ -83,7 +83,12 @@ def run_assembler(known_args):
             subprocess.check_call(cmd)
 
 def main():
-    sys.exit(run_assembler(known_args))
+    try:
+        run_assembler(known_args)
+    except:
+        sys.stderr.write("ERROR: configuration generation failed.")
+        sys.exit(1) 
+    sys.exit(0) 
 
 if __name__ == "__main__":
     # add the parent directory
