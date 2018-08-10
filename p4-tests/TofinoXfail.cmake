@@ -748,6 +748,12 @@ p4c_add_xfail_reason("tofino"
   "Could not find declaration for standard_metadata"
   testdata/p4_14_samples/issue1058.p4
   )
+# Because of copy-in / copy-out, we generate a "standard_metadata_1" variable
+# that is not translated properly (same as BRIG-633?)
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for standard_metadata"
+  testdata/p4_14_samples/issue-1426.p4
+)
 # invalid tests, eg_intr_md.egress_port is read-only
 p4c_add_xfail_reason("tofino"
   "Expression .* cannot be the target of an assignment"

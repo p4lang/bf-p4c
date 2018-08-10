@@ -140,6 +140,11 @@ class LoadTargetArchitecture : public Inspector {
 
         structure->addMetadata(
                 EGRESS,
+                MetadataField{"standard_metadata", "enq_timestamp", 32},
+                MetadataField{"eg_intr_md", "enq_tstamp", 18});
+
+        structure->addMetadata(
+                EGRESS,
                 MetadataField{"standard_metadata", "deq_qdepth", 19},
                 MetadataField{"eg_intr_md", "deq_qdepth", 19});
 

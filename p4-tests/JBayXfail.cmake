@@ -102,6 +102,7 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/packet_redirect.p4
   testdata/p4_14_samples/resubmit.p4
   testdata/p4_14_samples/simple_nat.p4
+  testdata/p4_14_samples/issue-1426.p4
   )
 
 p4c_add_xfail_reason("tofino2"

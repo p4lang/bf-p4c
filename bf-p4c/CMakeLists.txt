@@ -666,6 +666,8 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/metadata_init.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mocha_dark.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_atomic.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_mutually_exclusive_pragma.cpp
@@ -682,15 +684,14 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/resolve_computed.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/trivial_alloc.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/type_categories.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/v1model_translate.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/vertex_weighted_coloring.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/metadata_init.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mocha_dark.cpp
   ${BF_P4C_GRAPHS_SRCS}
   )
 

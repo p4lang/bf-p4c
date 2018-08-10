@@ -592,11 +592,13 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
 
             LOG3("Translating " << node << " to " << result);
             return result;
-        }
-        if (otherMap.count(MetadataField{pathname, membername, type->size})) {
+        } else if (otherMap.count(MetadataField{pathname, membername, type->size})) {
             auto wasReported = reportedErrors.insert(PathAndMember(pathname, membername));
             if (wasReported.second)
-                error("%s is not accessible in the %s pipe", node, toString(thread));
+                ::error("%1% is not accessible in the %2% pipe", node, toString(thread));
+        } else if (pathname == "standard_metadata") {
+            ::error("standard_metadata field %1% cannot be translated, you "
+                    "cannot use it in your program", node);
         }
     }
     LOG4("No translation found for " << node);
