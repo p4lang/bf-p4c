@@ -1666,6 +1666,7 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
             //       1   93
             //  E.g. VPN 0 has Ram 90 with word 0 and Ram 91 with word 1
             mem_units[vpn_ctr][word] = memunit(row.row, col); } }
+    if (mem_units.size() == 0) return nullptr;
     int vpn = 0;
     for (auto &mem_unit : mem_units) {
         json::vector mem;

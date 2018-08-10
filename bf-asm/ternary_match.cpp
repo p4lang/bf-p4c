@@ -427,7 +427,9 @@ void TernaryMatchTable::write_regs(REGS &regs) {
     //     merge.mau_action_instruction_adr_tcam_actionbit_map_en |= 1 << logical_id;
 }
 
-std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(const char *type, std::vector<Layout> &, bool skip_spare_bank) {
+std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(
+        const char *type, std::vector<Layout> & layout, bool skip_spare_bank) {
+    if (layout.size() == 0) return nullptr;
     assert(!skip_spare_bank); // never spares in tcam
     json::map mra { { "memory_type", json::string(type) } };
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"];
@@ -547,10 +549,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         base_alpm_pre_classifier_tbl_cfg(alpm_pre_classifier, "match_entry", number_entries);
         tbl_ptr = &alpm_pre_classifier;
     } else {
-        if (!number_entries)
-            number_entries = 512; // Set a default size of 512, driver will fail assert for any other size
-        tbl_ptr = base_tbl_cfg(out, "match_entry", number_entries);
-    }
+        tbl_ptr = base_tbl_cfg(out, "match_entry", number_entries); }
     json::map &tbl = *tbl_ptr;
     bool uses_versioning = false;
     unsigned version_word_group = -1;
@@ -693,8 +692,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         //json::map tind;
         tind["stage_number"] = stage->stageno;
         tind["stage_table_type"] = "ternary_indirection";
-        int tind_size = indirect->layout_size()*128/fmt_width * 1024;
-        tind["size"] = tind_size ? tind_size : 512;
+        tind["size"] = indirect->layout_size()*128/fmt_width * 1024;
         indirect->add_pack_format(tind, indirect->format);
         tind["memory_resource_allocation"] =
             indirect->gen_memory_resource_allocation_tbl_cfg("sram", indirect->layout, true);
