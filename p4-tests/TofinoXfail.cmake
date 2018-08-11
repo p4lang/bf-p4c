@@ -1129,13 +1129,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/shillings_0.p4
 )
 
-# BRIG-747
-# Compiler Bug: complicated save not supported: save packet bytes N[49..50)B(1B) to byte0 in parse_tiaras
-p4c_add_xfail_reason("tofino"
-  "complicated save not supported"
-  extensions/p4_tests/p4_14/p4smith_regression/blatz_0.p4
-)
-
 # BRIG-590
 # Compiler Bug: Match register not allocated
 p4c_add_xfail_reason("tofino"

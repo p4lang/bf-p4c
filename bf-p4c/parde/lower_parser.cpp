@@ -1958,7 +1958,11 @@ class SplitBigStates : public ParserModifier {
                 auto rst = allocator.allocateOneState();
                 // should be in the tail state.
                 if (!allocator.hasMore() || shifted + rst.shift > until) {
-                    tailStatePrimitives.push_back(rst);
+                    if (shifted) {
+                        tailStatePrimitives.push_back(rst);
+                    } else {
+                        shifted += rst.shift;
+                    }
                 } else {
                     // because allocateOneState will try to allocate saves as long as
                     // it is possible to be reached in the input buffer, saves might be
@@ -2033,7 +2037,36 @@ class SplitBigStates : public ParserModifier {
             auto rst = allocator.allocateOneState();
             // The tail primitives
             if (!allocator.hasMore() || rst.shift + shifted > until) {
-                break; }
+                // if we break the while loop when 'shifted' is still zero, the input buffer
+                // will not be shifted, and as a result, we ends up with an infinite loop
+                // when splitting the big state to smaller state. This corner case happens
+                // when compiling brig-747.p4
+                if (!shifted) {
+                    // Add primitives to common
+                    for (auto* prim : rst.extracts) {
+                        if (auto* extractPhv = prim->to<IR::BFN::LoweredExtractPhv>()) {
+                            common->statements.push_back(
+                                    leftShiftExtract(extractPhv, -shifted));
+                        } else if (auto* extractClot = prim->to<IR::BFN::LoweredExtractClot>()) {
+                            common->statements.push_back(
+                                    leftShiftExtract(extractClot, -shifted));
+                        } else {
+                            BUG("unknown primitive when create common state: %1%", prim);
+                        }
+                    }
+                    for (auto* save : rst.saves) {
+                        // as long as this save is part of common part, and the dest
+                        // of this save will not override match register that will be
+                        // used in the tail select state.
+                        if (save->source->range.hiByte() + shifted < until
+                            && !used_reg.count(save->dest)) {
+                            common->saves.push_back(leftShiftSave(save, -shifted));
+                        }
+                    }
+                    shifted += rst.shift;
+                }
+                break;
+            }
 
             // Add primitives to common
             for (auto* prim : rst.extracts) {
@@ -2128,10 +2161,6 @@ class SplitBigStates : public ParserModifier {
                 return state->clone();
             }
         }
-
-        for (const auto* save : extra_saves) {
-            BUG_CHECK(save->source->range.hiByte() < common_until,
-                      "complicated save not supported: %1% in %2%", save, state->name); }
 
         // Spliting state will not work efficiently if the the pre-sliced common state has
         // too many extracts that some of them can be done in the last branching state,
