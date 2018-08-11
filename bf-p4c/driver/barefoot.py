@@ -118,8 +118,9 @@ class BarefootBackend(BackendDriver):
         self.add_command_option('compiler', "{}".format(output_dir))
         self.add_command_option('compiler', "{}.p4i".format(basepath))
         # cleanup after compiler
-        self._postCmds['compiler'] = []
-        self._postCmds['compiler'].append(["rm -f {}.p4i".format(basepath)])
+        if not opts.debug_info:
+            self._postCmds['compiler'] = []
+            self._postCmds['compiler'].append(["rm -f {}.p4i".format(basepath)])
 
         self.add_command_option('assembler', "--manifest {}/manifest.json".format(output_dir))
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
