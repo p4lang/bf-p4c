@@ -265,7 +265,3 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/jbay/hwlearn0.p4
 )
 
-p4c_add_xfail_reason("tofino2"
-  "all ways in use"
-  extensions/p4_tests/p4_14/em_ghost4.p4
-)

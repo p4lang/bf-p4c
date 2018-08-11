@@ -61,7 +61,7 @@ def main():
     # assume one chip
     chip = base_conf["chip_list"][0]
     if args.device == 'tofino2':
-        chip["chip_family"] = 'JBay'
+        chip["chip_family"] = 'Tofino2'
     else:
         chip["chip_family"] = 'Tofino'
     p4_info = base_conf["p4_program_list"][0]
