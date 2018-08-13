@@ -1180,7 +1180,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 }
             }
             if (done) {
-                BUG("Can't find a table to place");
+                BUG_CHECK(!placed->is_fully_placed(grp->seq), "Can't find a table to place");
                 it = work.erase(it);
             } else {
                 it++; } }

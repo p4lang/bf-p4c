@@ -719,14 +719,6 @@ Memories::SRAM_group *Memories::find_best_candidate(SRAM_group *placed_wa, int r
 
     loc = 0;
     for (auto emw : exact_match_ways) {
-        if (placed_wa->ta == emw->ta) {
-            return emw;
-        }
-        loc++;
-    }
-
-    loc = 0;
-    for (auto emw : exact_match_ways) {
         auto group_bus = emw->build_search_bus(placed_wa->width - 1);
         if ((!bus[0].free() && bus[0] == group_bus) || (!bus[1].free() && bus[1] == group_bus))
             return emw;

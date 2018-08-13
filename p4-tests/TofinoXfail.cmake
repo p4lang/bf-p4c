@@ -1008,9 +1008,9 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: Can't find a table to place"
-  switch_msdc_ipv4
+  "action instruction slot .* in use elsewhere"
   switch_8.3_msdc_ipv4
+  switch_msdc_ipv4
 )
 
 p4c_add_xfail_reason("tofino"
