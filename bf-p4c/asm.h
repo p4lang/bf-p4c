@@ -33,6 +33,11 @@ class AsmOutput : public Inspector {
     const cstring pipeName;
     /// Tell this pass whether it is called after a succesful compilation
     bool               _successfulCompile = true;
+    PHV::Container ghostPhvContainer() const {
+        // FIXME -- need a better way of finding the ghost metadata allocation
+        if (auto *field = phv.field("ghost::gh_intr_md.ping_pong"))
+            return field->for_bit(0).container;
+        BUG("No allocation for ghost metadata?"); }
 
  public:
     AsmOutput(const PhvInfo &phv,
@@ -73,8 +78,10 @@ class AsmOutput : public Inspector {
             if (::errorCount() == 0) {
                 *out << PhvAsmOutput(phv, defuse, pipe->ghost_thread != nullptr)
                      << ParserAsmOutput(pipe, INGRESS)
-                     << DeparserAsmOutput(pipe, phv, clot, INGRESS)
-                     << ParserAsmOutput(pipe, EGRESS)
+                     << DeparserAsmOutput(pipe, phv, clot, INGRESS);
+                if (pipe->ghost_thread != nullptr)
+                    *out << "parser ghost: " << ghostPhvContainer() << std::endl;
+                *out << ParserAsmOutput(pipe, EGRESS)
                      << DeparserAsmOutput(pipe, phv, clot, EGRESS)
                      << mauasm;
             }

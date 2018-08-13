@@ -12,7 +12,7 @@ control ingress(inout headers hdr, inout metadata meta,
                 in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md,
-                in ghost_intrinsic_metadata_t gh_intr_md) {
+                in ghost_intrinsic_metadata_t gmd) {
 
     action noop() {}
     table skip_packet {
@@ -26,7 +26,7 @@ control ingress(inout headers hdr, inout metadata meta,
 
     apply {
         if (!skip_packet.apply().hit) {
-            if (gh_intr_md.ping_pong == 0) {
+            if (gmd.ping_pong == 0) {
                 hdr.data.f2 = ping_read.execute(hdr.data.h1[10:0]);
             } else {
                 hdr.data.f2 = pong_read.execute(hdr.data.h1[10:0]);

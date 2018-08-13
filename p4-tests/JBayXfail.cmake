@@ -260,9 +260,16 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_14/p4-tests/programs/emulation/emulation.p4
 )
 
+# requires jbay_test_harness update
+p4c_add_xfail_reason("tofino2"
+  "Unknown command ghost"
+  extensions/p4_tests/p4_16/jbay/ghost1.p4
+)
+
 # New failures, uncharacterized
 p4c_add_xfail_reason("tofino2"
   "no value with matching vpn for register"
   extensions/p4_tests/p4_16/jbay/hwlearn0.p4
 )
+
 
