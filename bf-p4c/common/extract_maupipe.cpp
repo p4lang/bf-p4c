@@ -1028,22 +1028,27 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
     auto arch = new ParseTna(&threads);
     toplevel->getMain()->apply(*arch);
 
+    auto bindings = new ParamBinding(typeMap,
+            options.langVersion == CompilerOptions::FrontendVersion::P4_14);
+    /// SimplifyReferences passes are fixup passes that modifies the visited IR tree.
+    /// Unfortunately, the modifications by simplifyReferences will transform IR tree towards
+    /// the backend IR, which means we can no longer run typeCheck pass after applying
+    /// simplifyReferences to the frontend IR.
+    auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
+    // ParamBinding pass must be applied to IR::P4Program* node,
+    // see comments in param_binding.h for the reason.
+    program->apply(*bindings);
+
+    // collect and set global_pragmas
+    CollectGlobalPragma collect_pragma;
+    program->apply(collect_pragma);
+
     auto npipe = 0;
     for (auto pkg : main->constantValue) {
         if (!pkg.second) continue;
         if (!pkg.second->is<IR::PackageBlock>()) continue;
         auto name = getPipelineName(program, npipe);
-        auto rv = new IR::BFN::Pipe(name);
-        auto bindings = new ParamBinding(typeMap,
-            options.langVersion == CompilerOptions::FrontendVersion::P4_14);
-        /// SimplifyReferences passes are fixup passes that modifies the visited IR tree.
-        /// Unfortunately, the modifications by simplifyReferences will transform IR tree towards
-        /// the backend IR, which means we can no longer run typeCheck pass after applying
-        /// simplifyReferences to the frontend IR.
-        auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
-        // ParamBinding pass must be applied to IR::P4Program* node,
-        // see comments in param_binding.h for the reason.
-        program->apply(*bindings);
+        auto rv = new IR::BFN::Pipe(name, npipe);
         std::list<gress_t> gresses = {INGRESS, EGRESS};
         for (auto gress : gresses) {
             if (!threads.count(std::make_pair(npipe, gress))) {
@@ -1073,9 +1078,6 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
             }
         }
 
-        // collect and set global_pragmas
-        CollectGlobalPragma collect_pragma;
-        program->apply(collect_pragma);
         rv->global_pragmas = collect_pragma.global_pragmas();
 
         ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted, bindings);
@@ -1083,7 +1085,8 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
 
         pipe.push_back(rv->apply(processBackendPipe));
         npipe++;
-        // clear DeclarationConversions map after each pipe.
+
+        // clear DeclarationConversions map after the conversion of each pipeline.
         converted.clear();
     }
 }

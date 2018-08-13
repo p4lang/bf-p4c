@@ -24,13 +24,15 @@ struct NoContainerConflictTrigger {
 
 class TableSummary: public MauInspector {
     static constexpr int NUM_LOGICAL_TABLES_PER_STAGE = 16;
-    static int numInvoked;
+    static int numInvoked[4];
 
     /// The total number of stages allocated by Table Placement
     int maxStage;
     /// Booleans indicating whether traversal over ingress and egress pipes has happened
     bool ingressDone;
     bool egressDone;
+
+    int pipe_id;
 
     /// Map of table name to stage: sent with the backtracking exception to communicate table
     /// placement constraints to PHV allocation
@@ -57,6 +59,7 @@ class TableSummary: public MauInspector {
     void throwBacktrackException();
 
  public:
+    explicit TableSummary(int pipe_id) : pipe_id(pipe_id) {}
     /// @returns the P4 name for tables with an external name (non-gateways). @returns the
     /// compiler-generated name otherwise.
     static cstring getTableName(const IR::MAU::Table* tbl);

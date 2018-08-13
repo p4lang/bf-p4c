@@ -1330,8 +1330,8 @@ struct AdjustMatchValue : public ParserModifier {
         auto* old_value = transition->value->to<IR::BFN::ParserPvsMatchValue>();
         auto* adjusted = new IR::BFN::ParserPvsMatchValue(old_value->name, old_value->size);
         for (const auto* select : state->selects) {
-            LOG1("PVS SELECT P4source = " << select->p4Source->toString());
-            LOG1("PVS Mask = " << select->mask);
+            LOG3("PVS SELECT P4source = " << select->p4Source->toString());
+            LOG3("PVS Mask = " << select->mask);
             cstring fieldname = select->p4Source->toString();
             nw_bitrange mask = select->mask;
             int field_start = 0;
@@ -1349,7 +1349,7 @@ struct AdjustMatchValue : public ParserModifier {
                 reg_start += n_regbits;
 
                 adjusted->mapping[{fieldname, field_slice}] = {reg, matcher_slice};
-                LOG1("PVS add mapping: " << fieldname << field_slice << " -> "
+                LOG3("PVS add mapping: " << fieldname << field_slice << " -> "
                      << reg << matcher_slice);
             }
         }

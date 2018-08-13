@@ -156,7 +156,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
     if (Log::verbose())
         std::cout << "Compiling " << maupipe->name << std::endl;
 
-    BFN::Backend backend(options);
+    BFN::Backend backend(options, maupipe->id);
     try {
         maupipe = maupipe->apply(backend);
     } catch (Util::P4CExceptionBase &ex) {

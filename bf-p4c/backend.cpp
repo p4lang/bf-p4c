@@ -119,7 +119,7 @@ class TableAllocPass : public PassManager {
             }
 };
 
-Backend::Backend(const BFN_Options& options) :
+Backend::Backend(const BFN_Options& options, int pipe_id) :
     clot(uses),
     phv(mutually_exclusive_field_ids),
     uses(phv),
@@ -223,7 +223,7 @@ Backend::Backend(const BFN_Options& options) :
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         options.privatization ? &defuse : nullptr,
         new TableAllocPass(options, phv, deps),
-        new TableSummary,
+        new TableSummary(pipe_id),
         new IXBarVerify(phv),
         new InstructionAdjustment(phv),
         new DumpPipe("Final table graph"),

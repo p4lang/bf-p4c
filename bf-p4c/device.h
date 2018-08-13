@@ -60,6 +60,7 @@ class Device {
     virtual const PhvSpec& getPhvSpec() const = 0;
     virtual const PardeSpec& getPardeSpec() const = 0;
     virtual const StatefulAluSpec& getStatefulAluSpec() const = 0;
+    virtual int getNumPipes() const = 0;
     virtual int getNumStages() const = 0;
     virtual unsigned getMaxCloneId(gress_t) const = 0;
     virtual unsigned getMaxResubmitId() const = 0;
@@ -79,6 +80,7 @@ class TofinoDevice : public Device {
     TofinoDevice() : Device("Tofino"), parde_() {}
     Device::Device_t device_type() const override { return Device::TOFINO; }
     cstring get_name() const override { return "Tofino"; }
+    int getNumPipes() const override { return 4; }
     int getNumStages() const override { return 12; }
     unsigned getMaxCloneId(gress_t gress) const override {
         switch (gress) {
@@ -109,6 +111,7 @@ class JBayDevice : public Device {
     JBayDevice() : Device("Tofino2"), parde_() {}
     Device::Device_t device_type() const override { return Device::JBAY; }
     cstring get_name() const override { return "Tofino2"; }
+    int getNumPipes() const override { return 4; }
     int getNumStages() const override { return NUM_MAU_STAGES; }
     unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
     unsigned getMaxResubmitId() const override { return 8; }

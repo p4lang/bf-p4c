@@ -5,7 +5,7 @@
 #include "lib/map.h"
 #include "lib/safe_vector.h"
 
-int TableSummary::numInvoked = 0;
+int TableSummary::numInvoked[] = {0};
 
 Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     auto rv = MauInspector::init_apply(root);
@@ -20,8 +20,8 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     maxStage = 0;
     ingressDone = false;
     egressDone = false;
-    ++numInvoked;
-    LOG1("Table allocation done " << numInvoked << " time(s)");
+    ++numInvoked[pipe_id];
+    LOG1("Table allocation done " << numInvoked[pipe_id] << " time(s)");
     return rv;
 }
 
@@ -90,7 +90,7 @@ void TableSummary::throwBacktrackException() {
     // invoked If first round of table placement places tables in more than device stages, then
     // a NoContainerConflictTrigger() is thrown which redoes table placement, ignoring container
     // conflicts (second round of table placement)
-    if ((numInvoked == 1 || numInvoked == 3) && maxStage > Device::numStages()) {
+    if ((numInvoked[pipe_id] == 1 || numInvoked[pipe_id] == 3) && maxStage > Device::numStages()) {
         LOG1("Invoking table placement without container conflicts");
         throw NoContainerConflictTrigger::failure(true); }
 
@@ -98,7 +98,7 @@ void TableSummary::throwBacktrackException() {
     // If second round of table placement fits in less than device stages, then trigger a
     // PHVTrigger::failure to initiate a second round of PHV allocation with additional no pack
     // constraints between fields written in the same stage.
-    if ((numInvoked == 2 || numInvoked == 4) && maxStage <= Device::numStages()) {
+    if ((numInvoked[pipe_id] == 2 || numInvoked[pipe_id] == 4) && maxStage <= Device::numStages()) {
         LOG1("Invoking reallocation of PHVs");
         throw PHVTrigger::failure(tableAlloc); }
 }

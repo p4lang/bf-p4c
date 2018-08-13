@@ -31,9 +31,10 @@ class Backend : public PassManager {
     /// used by Privatization (when invoked due to backtracking) or UndoPrivatization to prevent
     /// privatization.
     ordered_set<cstring> doNotPrivatize;
+    int pipe_id;
 
  public:
-    explicit Backend(const BFN_Options& options);
+    explicit Backend(const BFN_Options& options, int pipe_id);
 
     const PhvInfo       &get_phv()    const { return phv; }
     const ClotInfo      &get_clot()   const { return clot; }
