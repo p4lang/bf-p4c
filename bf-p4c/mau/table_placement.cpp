@@ -1009,6 +1009,20 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
 
 
 bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choice) {
+    const IR::MAU::Table *a_table_to_use = a->gw ? a->gw : a->table;
+    const IR::MAU::Table *b_table_to_use = b->gw ? b->gw : b->table;
+
+    LOG4("        Stage A is " << a->name << " with deps tail control " <<
+        deps->dependence_tail_size_control(a_table_to_use) <<
+        ", deps tail " << deps->dependence_tail_size(a_table_to_use) << ", total deps " <<
+        deps->happens_before_dependences(a_table_to_use).size() << ", calculated stage " <<
+        a->stage << ", and provided stage " << a->table->get_provided_stage());
+    LOG4("        Stage B is " << b->name << " with deps tail control " <<
+        deps->dependence_tail_size_control(b_table_to_use) <<
+        ", deps tail " << deps->dependence_tail_size(b_table_to_use) << ", total deps " <<
+        deps->happens_before_dependences(b_table_to_use).size() << ", calculated stage " <<
+        b->stage << ", and provided stage " << b->table->get_provided_stage());
+
     choice = CALC_STAGE;
     if (a->stage < b->stage) return true;
     if (a->stage > b->stage) return false;
@@ -1034,18 +1048,10 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     int a_extra_stages = 0;  // a->need_more ? a->extra_use.stages_required() : 0;
     int b_extra_stages = 0;  // b->need_more ? b->extra_use.stages_required() : 0;
 
-    const IR::MAU::Table *a_table_to_use = a->gw ? a->gw : a->table;
-    const IR::MAU::Table *b_table_to_use = b->gw ? b->gw : b->table;
-
     int a_deps_stages_control = deps->dependence_tail_size_control(a_table_to_use) + a_extra_stages;
     int b_deps_stages_control = deps->dependence_tail_size_control(b_table_to_use) + b_extra_stages;
 
-    LOG4("        Stage A is " << a->name << " with deps tail control " << a_deps_stages_control <<
-        ", deps tail " << deps->dependence_tail_size(a_table_to_use) << ", and total deps " <<
-        deps->happens_before_dependences(a_table_to_use).size());
-    LOG4("        Stage B is " << b->name << " with deps tail control " << b_deps_stages_control <<
-        ", deps tail " << deps->dependence_tail_size(b_table_to_use) << ", and total deps " <<
-        deps->happens_before_dependences(b_table_to_use).size());
+
 
     choice = DEP_TAIL_SIZE_CONTROL;
     if (a_deps_stages_control > b_deps_stages_control) return true;
@@ -1058,6 +1064,7 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     if (a_deps_stages > b_deps_stages) return true;
     if (a_deps_stages < b_deps_stages) return false;
 
+    choice = TOTAL_DEPS;
     int a_total_deps = deps->happens_before_dependences(a_table_to_use).size() + a_extra_stages;
     int b_total_deps = deps->happens_before_dependences(b_table_to_use).size() + b_extra_stages;
     if (a_total_deps < b_total_deps) return true;
