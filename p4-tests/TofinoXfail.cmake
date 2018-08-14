@@ -880,12 +880,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "warning: .* may be uninitialized"
-  # extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/parser_intr_md/parser_intr_md.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "invalid key expression"
   # This test attempts to match on a field of `error` type.
   testdata/p4_16_samples/issue1062-bmv2.p4
