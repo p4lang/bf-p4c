@@ -32,8 +32,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/action_chain_limits.p4
     # clot-phv interaction bug?
     testdata/p4_14_samples/bridge1.p4
-    # recent regression -- unknown cause
-    extensions/p4_tests/p4_16/stateful2x16phv.p4
     )
 
 endif() # HARLYN_STF
@@ -264,16 +262,15 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_14/p4-tests/programs/emulation/emulation.p4
 )
 
+# BRIG-899
+p4c_add_xfail_reason("tofino2"
+  "mismatch from expected .* at byte"
+  extensions/p4_tests/p4_16/jbay/ghost1.p4
+)
+
 # requires jbay_test_harness update
 p4c_add_xfail_reason("tofino2"
   "Unknown command ghost"
   extensions/p4_tests/p4_16/jbay/ghost1.p4
 )
-
-# New failures, uncharacterized
-p4c_add_xfail_reason("tofino2"
-  "no value with matching vpn for register"
-  extensions/p4_tests/p4_16/jbay/hwlearn0.p4
-)
-
 

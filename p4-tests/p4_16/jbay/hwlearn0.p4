@@ -20,6 +20,7 @@ struct metadata {
     @pa_container_type("ingress", "meta.digest", "normal")
     bit<16> tmp16;
     bit<64> digest;
+    @pa_container_size("ingress", "meta.learn", 32)
     bit<16> learn;
 }
 #define METADATA_INIT(M) \
