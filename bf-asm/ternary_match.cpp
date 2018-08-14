@@ -506,14 +506,32 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
             entry["start_bit"] =
                 i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4 + slice_offset;
             entry["field_width"] = 4;
-            entry["lsb_mem_word_offset"] = lsb_offset + i*8;
+            entry["lsb_mem_word_offset"] = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_HI);
             json::map &entry_range = entry["range"];
             entry_range["type"] = 4;
-            // Glass generates the unused nibble entry and marks its
-            // 'is_duplicate' as true. Driver ignores these entries. We dont
-            // generate the unused entries, so all are marked as 'false'
-            entry_range["is_duplicate"] = false; }
+            entry_range["is_duplicate"] = false;
+
+            // Add the duplicate entry as well. It is unclear why this entry is
+            // needed by the driver, as most of the information is duplicated
+            // and driver should only need to know where to place the actual
+            // nibble. But currently we see driver crash in the absence of this
+            // field in some situations, hence we add it here.
+            json::map entry_dup;
+            entry_dup["field_name"] = fix_name;
+            entry_dup["lsb_mem_word_offset"] = lsb_offset;
+            entry_dup["lsb_mem_word_idx"] = lsb_idx;
+            entry_dup["msb_mem_word_idx"] = msb_idx;
+            entry_dup["source"] = "range";
+            entry_dup["start_bit"] = i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4 + slice_offset;
+            entry_dup["field_width"] = 4;
+            entry_dup["lsb_mem_word_offset"] = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_LO);
+            json::map &entry_dup_range = entry_dup["range"];
+            entry_dup_range["type"] = 4;
+            entry_dup_range["is_duplicate"] = true;
+            out.push_back(std::move(entry_dup));
+        }
         out.push_back(std::move(entry)); }
+
 }
 
 void TernaryMatchTable::gen_alpm_cfg(json::vector &out) {
