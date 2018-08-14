@@ -1042,12 +1042,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/grab_0.p4
 )
 
-# BRIG-650
-p4c_add_xfail_reason("tofino"
-  "error: constant value .* out of range for immediate"
-  extensions/p4_tests/p4_14/p4smith_regression/surnames_0.p4
-)
-
 # BRIG-651
 p4c_add_xfail_reason("tofino"
   "PHV read has no allocation"

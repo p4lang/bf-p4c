@@ -1036,7 +1036,7 @@ bool ActionAnalysis::valid_instruction_constant(unsigned value, int max_shift, i
     unsigned min_value = (1U << min_shift);
     unsigned complement = (0xffffffffU) >> (sizeof(unsigned) * 8 - complement_size);
 
-    if ((value < max_value) || (value >= complement - min_value && value <= complement))
+    if ((value < max_value) || (value > complement - min_value))
         return true;
     return false;
 }
