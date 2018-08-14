@@ -48,7 +48,7 @@ struct DependencyGraph {
     typedef boost::adjacency_list<
         boost::vecS,
         boost::vecS,
-        boost::directedS,   // Directed edges.
+        boost::bidirectionalS,   // Directed edges.
         const IR::MAU::Table*,   // Vertex labels.
         dependencies_t     // Edge labels.
         > Graph;
