@@ -905,8 +905,22 @@ BfRtSchemaGenerator::addRegisterDataFields(Util::JsonArray* dataJson,
     transformTypeSpecToDataFields(
         fieldsJson, register_.typeSpec, "Register", register_.name, register_.name + ".");
     for (auto* f : *fieldsJson) {
-        addSingleton(dataJson, f->to<Util::JsonObject>(),
-                     true /* mandatory */, false /* read-only */);
+        auto* fObj = f->to<Util::JsonObject>();
+        CHECK_NULL(fObj);
+        auto* fAnnotations = fObj->get("annotations")->to<Util::JsonArray>();
+        CHECK_NULL(fAnnotations);
+        // Add BF-RT "native" annotation to indicate to the BF-RT implementation
+        // - and potentially applications - that this data field is stateful
+        // data. The specific string for this annotation may be changed in the
+        // future if we start introducing more BF-RT annotations, in order to
+        // keep the syntax consistent.
+        {
+            auto* classAnnotation = new Util::JsonObject();
+            classAnnotation->emplace("name", "$bfrt_field_class");
+            classAnnotation->emplace("value", "register_data");
+            fAnnotations->append(classAnnotation);
+        }
+        addSingleton(dataJson, fObj, true /* mandatory */, false /* read-only */);
     }
 }
 
