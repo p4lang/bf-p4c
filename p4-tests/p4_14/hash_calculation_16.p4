@@ -1,4 +1,3 @@
-
 header_type packet_t {
     fields {
         packet_read : 32;

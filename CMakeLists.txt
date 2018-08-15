@@ -11,9 +11,25 @@ project (BFN_P4C)
 
 OPTION(ENABLE_JBAY "Enable JBay" OFF)
 OPTION(ENABLE_BAREFOOT_INTERNAL "Enable Barefoot Internal" ON)
+OPTION(FIXED_LIBDYNHASH "Use future version of the Dynamic hash library" OFF)
 
-SET(BOOST_MIN_VERSION "1.58.0")
-FIND_PACKAGE(Boost ${BOOST_MIN_VERSION} REQUIRED)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+set(BOOST_MIN_VERSION "1.58.0")
+find_package(Boost ${BOOST_MIN_VERSION} REQUIRED)
+# Look for the dynamic hash library
+if (${FIXED_LIBDYNHASH})
+  # In the p4factory env, the library will be generated later, so we
+  # predefine the location
+  set(LIBDYNHASH_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include/bfutils"
+    CACHE STRING "Dynamic hash library include dirs" FORCE)
+  set(LIBDYNHASH_LIBRARY "${CMAKE_INSTALL_PREFIX}/lib/libdynhash.a"
+    CACHE STRING "Dynamic hash library" FORCE)
+  set(HAVE_LIBDYNHASH 1)
+else()
+  find_package(LibDynHash REQUIRED)
+endif()
+include_directories(${LIBDYNHASH_INCLUDE_DIR})
 
 # Additional P4C_CPP_FLAGS may be passed (via bootstrap_bfn_compilers.sh script)
 # from p4factory when configuring bf-p4c-compilers to specify certain predefined

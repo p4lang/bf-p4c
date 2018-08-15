@@ -40,4 +40,7 @@ extern void sample4<T>(in CloneType type, in bit<32> session, in bit<32> length,
 
 extern void execute_meter_with_color<M, I, T>(M m, I index, out T dst, in T pre_color);
 
-extern HashAlgorithm_t crc_poly<T>(T coeff, bool rev, bool msb, @optional T init, @optional T xor);
+extern HashAlgorithm_t random_hash(bool msb, bool extend);
+extern HashAlgorithm_t identity_hash(bool msb, bool extend);
+// extern HashAlgorithm_t crc_poly<T>(T coeff, bool rev, bool msb, @optional T init, @optional T xor);
+extern HashAlgorithm_t crc_poly<T>(bool msb, bool extend, T coeff, T init, T xor, bool rev);

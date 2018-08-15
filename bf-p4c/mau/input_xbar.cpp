@@ -5,6 +5,7 @@
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "dynamic_hash/dynamic_hash.h"
 #include "lib/algorithm.h"
 #include "lib/bitvec.h"
 #include "lib/bitops.h"
@@ -2656,8 +2657,38 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_typ
     alloc.hash_dist_hash.bit_mask = bit_mask;
     alloc.hash_dist_hash.bit_starts = bit_starts;
     alloc.hash_dist_hash.group = used_hash_group;
+    alloc.hash_seed[used_hash_group] |= determine_final_xor(&hd->algorithm, bit_starts);
 
     return rv;
+}
+
+/**
+ * Using the bfn_hash_function, this algorithm determines the necessary final_xor positions
+ * and writes them into the seed output.
+ */
+bitvec IXBar::determine_final_xor(const IR::MAU::hash_function *hf,
+        std::map<int, le_bitrange> &bit_starts) {
+    safe_vector<hash_matrix_output_t> hash_outputs;
+    for (auto &entry : bit_starts) {
+        hash_matrix_output_t hash_output;
+        hash_output.galois_start_bit = entry.first;
+        hash_output.hash_output_bit = entry.second.lo;
+        hash_output.bit_size = entry.second.size();
+        hash_outputs.push_back(hash_output);
+    }
+    bfn_hash_algorithm_t hash_alg;
+    hf->build_algorithm_t(&hash_alg);
+    hash_seed_t hash_seed;
+    hash_seed.hash_seed_value = 0ULL;
+    hash_seed.hash_seed_used = 0ULL;
+    determine_seed(hash_outputs.data(), hash_outputs.size(), &hash_alg, &hash_seed);
+
+    unsigned lo_unsigned = hash_seed.hash_seed_value & ((1ULL << 32) - 1);
+    unsigned hi_unsigned = (hash_seed.hash_seed_value >> 32) & ((1ULL << 32) - 1);
+    bitvec lo_bv(lo_unsigned);
+    bitvec hi_bv(hi_unsigned);
+
+    return lo_bv | hi_bv << 32;
 }
 
 /** Configuring the match central configuration of a hash distribution unit.  Unfortunately

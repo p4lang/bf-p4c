@@ -86,6 +86,7 @@ class InputXbar {
         GroupSet(std::map<Group, std::vector<InputXbar *>> &u, Group g) : group(g), use(u[g]) {}
         void dbprint(std::ostream &) const;
         Input *find(Phv::Slice sl) const;
+        std::vector<Input *> find_all(Phv::Slice sl) const;
     };
 public:
     const int   lineno;
@@ -182,6 +183,11 @@ public:
 
     Input *find(Phv::Slice sl, Group grp);
     Input *find_exact(Phv::Slice sl, int group) { return find(sl, Group(Group::EXACT, group)); }
+
+    std::vector<Input *> find_all(Phv::Slice sl, Group grp);
+    std::vector<Input *> find_all_exact(Phv::Slice sl, int group) {
+        return find_all(sl, Group(Group::EXACT, group));
+    }
 };
 
 inline std::ostream &operator<<(std::ostream &out, InputXbar::Group gr) {

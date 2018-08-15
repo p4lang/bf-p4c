@@ -693,6 +693,8 @@ struct IXBar {
     bool allocHashDistPreColor(const bitvec used_hash_dist_slices,
         const bitvec used_hash_dist_bits, const unsigned &hash_table_input, bitvec &slice,
         bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name);
+    bitvec determine_final_xor(const IR::MAU::hash_function *hf,
+        std::map<int, le_bitrange> &bit_starts);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {

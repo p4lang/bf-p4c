@@ -21,12 +21,13 @@ if (ENABLE_BAREFOOT_INTERNAL)
 endif()
 include_directories(${BFN_P4C_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}
-  ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
+  ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${LIBDYNHASH_INCLUDE_DIR} )
 # The generated code for protobuf has an excessive number of warnings so we
 # include the build directory as a system directory
 include_directories(SYSTEM ${P4C_BINARY_DIR}/control-plane)
 set (HAVE_LIBBOOST_GRAPH 1)
-set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY};${OPENSSL_LIBRARIES}")
+set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY};${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY}")
+set (P4C_LIB_DEPS ${P4C_LIB_DEPS} PARENT_SCOPE)
 
 add_subdirectory(logging)
 
@@ -47,6 +48,8 @@ set (BF_P4C_IR_SRCS
   phv/phv.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_SRCS}")
+set_source_files_properties(${BF_P4C_IR_SRCS} PROPERTIES
+  COMPILE_FLAGS "-I${LIBDYNHASH_INCLUDE_DIR}")
 
 set (BF_P4C_IR_HDRS
   ir/bitrange.h
@@ -90,6 +93,7 @@ set(EXTENSION_FRONTEND_SOURCES ${EXTENSION_FRONTEND_SOURCES} ${QUAL_BF_P4C_IR_SR
 
 # sources that need to be linked directly in p4test to properly handle
 # p4 14 to 16 conversion
+
 set(QUAL_BF_P4C_P4_14_CONV_SRCS)
 foreach(src IN LISTS BF_P4C_BACKEND_CONV_SRCS)
   set(QUAL_BF_P4C_P4_14_CONV_SRCS ${QUAL_BF_P4C_P4_14_CONV_SRCS} ${CMAKE_CURRENT_SOURCE_DIR}/${src})
@@ -696,4 +700,4 @@ set (GTEST_BF_P4C_SOURCES
   )
 
 set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)
-set (GTEST_LDADD ${GTEST_LDADD} "tofinobackend;${OPENSSL_LIBRARIES}" PARENT_SCOPE)
+set (GTEST_LDADD ${GTEST_LDADD} "tofinobackend;${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY}" PARENT_SCOPE)

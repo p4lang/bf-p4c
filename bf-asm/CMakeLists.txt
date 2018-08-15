@@ -24,7 +24,8 @@ OPTION(ASAN_ENABLED "Enable ASAN checks" OFF)
 set(BF_ASM_UNIFIED_SOURCE_CHUNK_SIZE "5" CACHE STRING
     "Target unified compilation chunk size for bf-asm (an integer or ALL)")
 
-set (BFASM_LIB_DEPS)
+set (BFASM_LIB_DEPS "${LIBDYNHASH_LIBRARY}")
+include_directories("${LIBDYNHASH_INCLUDE_DIR}")
 
 find_package (BISON REQUIRED)
 find_package (FLEX REQUIRED)

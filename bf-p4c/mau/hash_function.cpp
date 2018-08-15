@@ -1,118 +1,405 @@
+#include <exception>
 #include "ir/ir.h"
 #include "ir/json_loader.h"
+#include "dynamic_hash/dynamic_hash.h"
 #include "lib/hex.h"
+#include "lib/bitops.h"
 
-bool IR::MAU::hash_function::setup(const IR::Expression *e) {
-    memset(this, 0, sizeof *this);
-    srcInfo = e->srcInfo;
-    size = 0;
-    if (auto m = e->to<IR::Member>()) {
-        if (m->member == "identity" || m->member == "IDENTITY") {
-            type = IDENTITY;
-        } else if (m->member == "csum16" || m->member == "CSUM16") {
-            type = CSUM;
-            size = 16;
-        } else if (m->member == "xor16" || m->member == "XOR16") {
-            type = XOR;
-            size = 16;
-        } else if (m->member == "random" || m->member == "RANDOM") {
-            type = RANDOM;
-        } else if (m->member == "crc16" || m->member == "crc16_custom" || m->member == "CRC16") {
-            type = CRC;
-            size = 16;
-            poly = 0x8fdb;
-            ordered = true;
-        } else if (m->member == "crc32" || m->member == "crc32_custom" || m->member == "CRC32") {
-            type = CRC;
-            size = 32;
-            poly = 0xe89061db;
-            ordered = true;
+/**
+ * The list of currently supported crc strings, and their corresponding conversion to the
+ * dynamic_hash algorithms.  The strings need to be matched exactly from the P4 program
+ *
+ * FIXME: This whitelist approach is suboptimal.  This list needs to provided directly
+ * to the programmer if a simple spelling mistake is found.
+ */
+static std::map<cstring, bfn_crc_alg_t> standard_crcs_t = {
+    { "crc_8", CRC_8 },
+    { "crc_8_darc", CRC_8_DARC },
+    { "crc_8_i_code", CRC_8_I_CODE },
+    { "crc_8_itu", CRC_8_ITU },
+    { "crc_8_maxim", CRC_8_MAXIM },
+    { "crc_8_rohc", CRC_8_ROHC },
+    { "crc_8_wcdma", CRC_8_WCDMA },
+    { "crc_16", CRC_16 },
+    { "crc16", CRC_16 },  // Note multiple entries
+    { "crc_16_custom", CRC_16 },
+    { "crc_16_bypass", CRC_16_BYPASS },
+    { "crc_16_dds_110", CRC_16_DDS_110 },
+    { "crc_16_dect", CRC_16_DECT },
+    { "crc_16_dnp", CRC_16_DNP },
+    { "crc_16_en_13757", CRC_16_EN_13757 },
+    { "crc_16_genibus", CRC_16_GENIBUS },
+    { "crc_16_maxim", CRC_16_MAXIM },
+    { "crc_16_mcrf4xx", CRC_16_MCRF4XX },
+    { "crc_16_riello", CRC_16_RIELLO },
+    { "crc_16_t10_dif", CRC_16_T10_DIF },
+    { "crc_16_teledisk", CRC_16_TELEDISK },
+    { "crc_16_usb", CRC_16_USB },
+    { "x_25", X_25 },
+    { "xmodem", XMODEM },
+    { "modbus", MODBUS },
+    { "kermit", KERMIT },
+    { "crc_ccitt_false", CRC_CCITT_FALSE },
+    { "crc_aug_ccitt", CRC_AUG_CCITT },
+    { "crc_32", CRC_32 },
+    { "crc32", CRC_32 },  // Repeated value
+    { "crc_32_custom", CRC_32 },
+    { "crc_32_bzip2", CRC_32_BZIP2 },
+    { "crc_32c", CRC_32C },
+    { "crc_32d", CRC_32D },
+    { "crc_32_mpeg", CRC_32_MPEG },
+    { "posix", POSIX },
+    { "crc_32q", CRC_32Q },
+    { "jamcrc", JAMCRC },
+    { "xfer", XFER },
+    { "crc_64", CRC_64 },
+    { "crc_64_we", CRC_64_WE },
+    { "crc_64_jones", CRC_64_JONES }
+};
+
+/**
+ * The purpose of this function is to directly convert a p4_14 algorithm string to a crc
+ * polynomial if possible.  It uses predefined keywords such as poly_, not_rev_,
+ * init_, and final_xor_ to determine whether the allocation was valid.
+ *
+ * Again, string manipulation can be rigid, but the best placed to handle this would
+ * be to move towards an extern in p4-16 so that this becomes unnecessary
+ *
+ * FIXME: In order to handle polynomials of 64 bit hashes, a potential poly_koopman_
+ * node is needed.  64 bit hashes have 65 bit polynomials, and thus cannot be parsed
+ * by stoll.  Any polynomial over 64 bits is currently unsupported by the bf-utils library
+ */
+static bool direct_crc_string_conversion(bfn_hash_algorithm_ *hash_alg,
+        cstring alg_name_c, Util::SourceInfo srcInfo) {
+    std::string alg_name = alg_name_c + "";
+    size_t pos = 0;
+    if ((pos = alg_name.find("poly_")) != std::string::npos) {
+        try {
+            hash_alg->poly = stoll(alg_name.substr(pos + 5), nullptr, 0);
+        } catch (std::exception &e) {
+            ::error("%s: String after poly_ cannot fit within a long long", srcInfo);
+            return false;
+        }
+    } else {
+        return false;
+    }
+    hash_alg->size = ceil_log2(hash_alg->poly) - 1;
+
+    if ((pos = alg_name.find("not_rev_")) != std::string::npos) {
+        hash_alg->reverse = false;
+    } else {
+        hash_alg->reverse = true;
+    }
+
+    if ((pos = alg_name.find("init_")) != std::string::npos) {
+        try {
+            hash_alg->init = stoll(alg_name.substr(pos + 5), nullptr, 0);
+        } catch (std::exception &e) {
+            ::error("%s: String after init_ cannot fit within a long long", srcInfo);
+            return false;
+        }
+    } else {
+        hash_alg->init = 0ULL;
+    }
+
+    if ((pos = alg_name.find("final_xor_")) != std::string::npos) {
+        try {
+            hash_alg->final_xor = stoll(alg_name.substr(pos + 10), nullptr, 0);
+        } catch (std::exception &e) {
+            ::error("%s: String after init_ cannot fit within a long long", srcInfo);
+            return false;
+        }
+    } else {
+        hash_alg->final_xor = 0ULL;
+    }
+    return true;
+}
+/**
+ * The purpose of this function is to convert a known ID into an expression that can
+ * be intepreted as a polynomial.  The functions for identity, random, and crc have
+ * specific method calls in order to pass all of their corresponding arguments to the
+ * backend.
+ *
+ * The compiler can take a pre recognized string from the static map, or even convert
+ * a crc polynomial directly, through the 3rd party library.
+ *
+ * FIXME: The conversion for this is currently fairly rigid, as the names have to
+ * match directly with the static list above
+ *
+ * Order of arguments:
+ *     msb
+ *     extend
+ *     ( The remaining are only for crc )
+ *     poly
+ *     init
+ *     final_xor
+ *     reverse
+ */
+
+const IR::Expression *IR::MAU::hash_function::convertHashAlgorithmBFN(Util::SourceInfo srcInfo,
+         IR::ID algorithm, bool *on_hash_matrix) {
+    bool msb = false;
+    bool endianness_set = false;
+    bool extend = false;
+    bool extension_set = false;
+
+    std::string alg_name = algorithm.name + "";
+    std::transform(alg_name.begin(), alg_name.end(), alg_name.begin(), ::tolower);
+
+    LOG1("Alg name " << alg_name);
+    // Setting the msb or extend flags, and removing them from the name
+    while (true) {
+        size_t pos = 0;
+        if ((pos = alg_name.find("_lsb")) != std::string::npos) {
+            ERROR_CHECK(!endianness_set, "%s: Endianness set multiple times in algorithm %s",
+                    srcInfo, algorithm.name);
+            msb = false;
+            endianness_set = true;
+            alg_name = alg_name.substr(0, pos) + alg_name.substr(pos + 4);
+        } else if ((pos = alg_name.find("_msb")) != std::string::npos) {
+            ERROR_CHECK(!endianness_set, "%s: Endianness set multiple times in algorithm %s",
+                    srcInfo, algorithm.name);
+            msb = true;
+            endianness_set = true;
+            alg_name = alg_name.substr(0, pos) + alg_name.substr(pos + 4);
+        } else if ((pos = alg_name.find("_extend")) != std::string::npos) {
+            ERROR_CHECK(!extension_set, "%s: Extension set multiple times in algorithm %s",
+                    srcInfo, algorithm.name);
+            extend = true;
+            extension_set = false;
+            alg_name = alg_name.substr(0, pos) + alg_name.substr(pos + 7);
         } else {
-            return false; }
-        return true; }
-    if (auto k = e->to<IR::Constant>()) {
+            break;
+        }
+    }
+
+
+    auto args = new IR::Vector<IR::Argument>({
+        new IR::Argument(new IR::BoolLiteral(msb)),
+        new IR::Argument(new IR::BoolLiteral(extend))
+    });
+
+    if (alg_name == "xor16" || alg_name == "csum16") {
+        if (on_hash_matrix)
+            *on_hash_matrix = false;
+        return new IR::Member(new IR::TypeNameExpression("HashAlgorithm"), algorithm);
+    }
+    cstring mc_name = "unknown";
+    bool crc_algorithm_set = false;
+    bfn_hash_algorithm_t hash_alg;
+    hash_alg.size = 0;
+    bool hash_error = false;
+
+    // Determines the crc functions through the 3rd party library
+    if (standard_crcs_t.find(alg_name) != standard_crcs_t.end()) {
+        initialize_algorithm(&hash_alg, CRC_DYN, msb, extend, standard_crcs_t.at(alg_name));
+        crc_algorithm_set = true;
+    } else if (alg_name == "identity" || alg_name == "random") {
+        mc_name = alg_name + "_hash";
+    } else if (direct_crc_string_conversion(&hash_alg, alg_name, srcInfo)) {
+        char *error_message;
+        if (!verify_algorithm(&hash_alg, &error_message)) {
+            ::error("%s: Crc algorithm %s incorrect for the following reason : %s",
+                   srcInfo, algorithm.name, error_message);
+            hash_error = true;
+        } else {
+            crc_algorithm_set = true;
+        }
+    } else {
+        ::error("%s: Unrecognized algorithm for a hash expression: %s", srcInfo, algorithm.name);
+        hash_error = true;
+    }
+
+    if (hash_error) {
+        if (on_hash_matrix)
+            *on_hash_matrix = false;
+        return nullptr;
+    }
+
+    if (crc_algorithm_set) {
+        mpz_class poly, init, final_xor;
+        poly = hash_alg.poly;
+        poly |= (1 << hash_alg.size);
+        init = hash_alg.init;
+        final_xor = hash_alg.final_xor;
+        auto typeT = IR::Type::Bits::get(hash_alg.size + 1);
+        args->push_back(new IR::Argument(new IR::Constant(typeT, poly)));
+        args->push_back(new IR::Argument(new IR::Constant(typeT, init)));
+        args->push_back(new IR::Argument(new IR::Constant(typeT, final_xor)));
+        args->push_back(new IR::Argument(new IR::BoolLiteral(hash_alg.reverse)));
+        mc_name = "crc_poly";
+    }
+
+    if (on_hash_matrix)
+        *on_hash_matrix = true;
+
+    return new IR::MethodCallExpression(srcInfo, new IR::PathExpression(mc_name), args);
+}
+
+/**
+ * This function will convert an Expression to a MethodCallExpression, in the same way
+ * P4_14 converter.  This is necessary for any possible p4_16 hash expressions.  With this
+ * conversion, the hash function setup can be identical, and just need to handle one type of
+ * expression.
+ */
+const IR::MethodCallExpression *IR::MAU::hash_function::hash_to_mce(const IR::Expression *e,
+        bool *on_hash_matrix) {
+    auto srcInfo = e->srcInfo;
+    const IR::Expression *conv_e = nullptr;
+
+    cstring error_alg_name;
+    if (auto m = e->to<IR::Member>()) {
+        conv_e = convertHashAlgorithmBFN(srcInfo, m->member, on_hash_matrix);
+        error_alg_name = m->member.name;
+    } else if (auto k = e->to<IR::Constant>()) {
         // Hash contructor calls will have the enum converted to an int const by
         // ConvertEnums in the midend.  Would be better if they didn't.
         // DANGER -- these values need to match up with the order of the hash tags
         // in the arch.p4 header file.
         switch (k->asInt()) {
         case 0:
-            type = IDENTITY;
-            return true;
+            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("identity"), on_hash_matrix);
+            error_alg_name = "identity";
+            break;
         case 1:
-            type = RANDOM;
-            return true;
+            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("random"), on_hash_matrix);
+            error_alg_name = "random";
+            break;
         case 2:
-            type = CRC;
-            size = 16;
-            poly = 0x8fdb;
-            ordered = true;
-            return true;
+            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_16"), on_hash_matrix);
+            error_alg_name = "crc_16";
+            break;
         case 3:
-            type = CRC;
-            size = 32;
-            poly = 0xe89061db;
-            ordered = true;
-            return true;
+            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_32"), on_hash_matrix);
+            error_alg_name = "crc_32";
+            break;
         case 4:
-            type = CSUM;
-            return true;
+            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("csum16"), on_hash_matrix);
+            error_alg_name = "csum16";
+            break;
         default:
-            return false; } }
-    const IR::Vector<IR::Argument> *crcargs = nullptr;
-    if (auto mc = e->to<IR::MethodCallExpression>()) {
-        if (auto meth = mc->method->to<IR::PathExpression>())
-            if (meth->path->name == "crc_poly")
-                crcargs = mc->arguments;
-    } else if (auto prim = e->to<IR::Primitive>()) {
-        if (prim->name == "crc_poly") {
-            auto ops = new IR::Vector<IR::Argument>();
-            for (auto op : prim->operands) {
-                ops->push_back(new IR::Argument(op));
-            }
-            crcargs = ops;
+            conv_e = nullptr;
+            if (on_hash_matrix)
+                *on_hash_matrix = true;
+            error_alg_name = "unknown";
         }
+    // According to the current setup, if something was converted to a MethodCallExpression
+    // or TypedPrimitive from the conversion, then it is an identity/random/crc function,
+    // which can be saved on the matrix.
+    // If other hash functions are converted to MethodCallExpressions, then this will have
+    // to change
+    } else if (auto mc = e->to<IR::MethodCallExpression>()) {
+        conv_e = mc;
+        if (on_hash_matrix)
+            *on_hash_matrix = true;
+    } else if (auto tp = e->to<IR::MAU::TypedPrimitive>()) {
+        auto ops = new IR::Vector<IR::Argument>();
+        for (auto op : tp->operands) {
+            ops->push_back(new IR::Argument(op));
+        }
+        conv_e = new IR::MethodCallExpression(srcInfo, new IR::PathExpression(tp->name), ops);
+        if (on_hash_matrix)
+            *on_hash_matrix = true;
     }
-    if (crcargs) {
+
+    const IR::MethodCallExpression *mce = nullptr;
+    if (conv_e == nullptr || (mce = conv_e->to<IR::MethodCallExpression>()) == nullptr) {
+        ::error("%s: Cannot properly set up the hash function on the hash matrix : %s",
+                e->srcInfo, error_alg_name);
+        return nullptr;
+    }
+
+    return mce;
+}
+
+/**
+ * Responsible for converting a frontend Expression to a IR::MAU::hash_function structure.
+ * This conversion using the global hash function conversion from the bf-utils function.
+ *
+ * The conversion is only done for hash functions set up through the galois matrix, and
+ * therefore verifies that the hash function can be allocated on the galois matrix.
+ * Currently unhandled is the possibility or XORing multiple functions together, which
+ * would be a recursive hash function.
+ */
+bool IR::MAU::hash_function::setup(const Expression *e) {
+    memset(this, 0, sizeof *this);
+    srcInfo = e->srcInfo;
+    size = 0;
+    bool on_hash_matrix = false;
+    const IR::MethodCallExpression *mce = hash_to_mce(e, &on_hash_matrix);
+    if (mce == nullptr || !on_hash_matrix)
+        return false;
+
+    cstring alg_name;
+    if (auto meth = mce->method->to<IR::PathExpression>()) {
+        alg_name = meth->path->name.name;
+    } else {
+        BUG("%s: Cannot properly set up the hash function", mce->srcInfo);
+    }
+
+    // Supported Algorithms on the galois matrix
+    const IR::Vector<IR::Argument> *args = mce->arguments;
+    if (alg_name == "identity_hash")
+        type = IDENTITY;
+    else if (alg_name == "random_hash")
+        type = RANDOM;
+    else if (alg_name == "crc_poly")
         type = CRC;
+    else
+        return false;
+
+    if (type == CRC)
         ordered = true;
-        switch (crcargs->size()) {
+
+    BUG_CHECK(((type == IDENTITY || type == RANDOM) && args->size() == 2) ||
+              (type == CRC && args->size() == 6), "Hash function method call misconfigured");
+
+    // This for loop is from the predefined crc_poly set up by the convertHashAlgorithmBFN
+    for (size_t i = 0; i < args->size(); i++) {
+        switch (i) {
         case 5:
-            if (auto k = crcargs->at(4)->expression->to<IR::Constant>())
-                final_xor = k->value.get_ui();
-            else
-                return false;
-            // fall through
-        case 4:
-            if (auto k = crcargs->at(3)->expression->to<IR::Constant>())
-                init = k->value.get_ui();
-            else
-                return false;
-            // fall through
-        case 3:
-            if (auto k = crcargs->at(2)->expression->to<IR::BoolLiteral>())
-                msb = k->value;
-            else
-                return false;
-            // fall through
-        case 2:
-            if (auto k = crcargs->at(1)->expression->to<IR::BoolLiteral>())
+            if (auto k = args->at(5)->expression->to<IR::BoolLiteral>())
                 reverse = k->value;
             else
-                return false;
-            // fall through
-        case 1:
-            if (auto k = crcargs->at(0)->expression->to<IR::Constant>()) {
+                BUG("Hash function method call misconfigured");
+            break;
+        case 4:
+            if (auto k = args->at(4)->expression->to<IR::Constant>())
+                final_xor = k->value.get_ui();
+            else
+                BUG("Hash function method call misconfigured");
+            break;
+        case 3:
+            if (auto k = args->at(3)->expression->to<IR::Constant>())
+                init = k->value.get_ui();
+            else
+                BUG("Hash function method call misconfigured");
+            break;
+        case 2:
+            if (auto k = args->at(2)->expression->to<IR::Constant>()) {
                 poly = mpz_class(k->value / 2).get_ui();
                 size = k->type->width_bits() - 1;
             } else {
                 return false;
             }
             break;
-        default:
-            return false; }
-        return true; }
-    return false;
+        case 1:
+            if (auto k = args->at(1)->expression->to<IR::BoolLiteral>())
+                extend = k->value;
+            else
+                return false;
+            break;
+        case 0:
+            if (auto k = args->at(0)->expression->to<IR::BoolLiteral>())
+                msb = k->value;
+            else
+                return false;
+            break;
+            // fall through
+        }
+    }
+
+    return true;
 }
 
 std::ostream &operator<<(std::ostream &out, const IR::MAU::hash_function &h) {
@@ -151,6 +438,26 @@ void IR::MAU::hash_function::toJSON(JSONGenerator &json) const {
          << json.indent << "\"poly\": " << poly << ",\n"
          << json.indent << "\"init\": " << init << ",\n"
          << json.indent << "\"xor\": " << final_xor << ",\n";
+}
+
+void IR::MAU::hash_function::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
+    switch (type) {
+        case RANDOM:
+            alg->hash_alg = RANDOM_DYN; break;
+        case IDENTITY:
+            alg->hash_alg = IDENTITY_DYN; break;
+        case CRC:
+            alg->hash_alg = CRC_DYN; break;
+        default:
+            alg->hash_alg = IDENTITY_DYN;
+    }
+
+    alg->size = size;
+    alg->msb = msb;
+    alg->reverse = reverse;
+    alg->poly = poly;
+    alg->init = init;
+    alg->final_xor = final_xor;
 }
 
 IR::MAU::hash_function *IR::MAU::hash_function::fromJSON(JSONLoader &json) {

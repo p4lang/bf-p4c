@@ -347,7 +347,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         auto decl = refMap->getDeclaration(path)->to<IR::Declaration_Instance>();
 
         if (!sel->algorithm.setup(decl->arguments->at(0)->expression))
-            BUG("invalid alorithm %s", args->at(0)->expression);
+            BUG("invalid algorithm %s", decl->arguments->at(0)->expression);
 
         auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
         ap->direct = false;

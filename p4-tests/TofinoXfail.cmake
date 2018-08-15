@@ -356,7 +356,6 @@ p4c_add_xfail_reason("tofino"
   "error: : condition too complex"
   extensions/p4_tests/p4_14/07-MacAddrCheck.p4
   extensions/p4_tests/p4_14/08-MacAddrCheck1.p4
-  testdata/p4_14_samples/issue894.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -919,12 +918,16 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "Cannot properly set up the hash function on the hash matrix"
+  testdata/p4_14_samples/issue894.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "the packing is too complicated .* speciality action data combined with other action data"
   extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
   extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
-  testdata/p4_14_samples/issue894.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
   )

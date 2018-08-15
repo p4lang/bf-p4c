@@ -7,7 +7,8 @@
 namespace P4V1 {
 
 class TNA_ProgramStructure : public ProgramStructure {
-    const IR::Expression* convertHashAlgorithm(Util::SourceInfo srcInfo, IR::ID algorithm) override;
+    const IR::Expression* convertHashAlgorithm(Util::SourceInfo srcInfo,
+        IR::ID algorithm) override;
 
  public:
     static ProgramStructure *create() { return new TNA_ProgramStructure(); }

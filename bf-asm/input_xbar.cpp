@@ -25,6 +25,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
             return; } }
     HashExpr *fn = HashExpr::create(gress, what);
     if (!fn) return;
+    fn->build_algorithm();
     int width = fn->width();
     if (width && width != abs(hi - lo) + 1)
         error(what.lineno, "hash expression width mismatch (%d != %d)", width, abs(hi-lo)+1);
@@ -417,8 +418,12 @@ void InputXbar::pass1() {
         for (auto &col : hash.second) {
             if (col.second.fn && col.second.fn != prev)
                 ok = (prev = col.second.fn)->check_ixbar(this, hash.first/2U);
-            if (ok && col.second.fn && !copy_existing_hash(hash.first, col))
-                col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first/2U); }
+            if (ok && col.second.fn && !copy_existing_hash(hash.first, col)) {
+                LOG1("Gen data called");
+                col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first);
+                LOG1("Gen data for hash bit " << col.second.bit << " 0x" <<  col.second.data);
+            }
+        }
         bool add_to_use = true;
         for (InputXbar *other : table->stage->hash_table_use[hash.first]) {
             if (other == this) {
@@ -465,6 +470,16 @@ InputXbar::Input *InputXbar::GroupSet::find(Phv::Slice sl) const {
             return rv;
     return 0;
 }
+
+std::vector<InputXbar::Input *> InputXbar::GroupSet::find_all(Phv::Slice sl) const {
+    std::vector<Input *> rv; 
+    for (InputXbar *i : use) {
+         auto vec = i->find_all(sl, group);
+         rv.insert(rv.end(), vec.begin(), vec.end());
+    }
+    return rv;
+}
+
 
 void InputXbar::GroupSet::dbprint(std::ostream &out) const {
     std::map<unsigned, InputXbar::Input *> byte_use;
@@ -522,7 +537,7 @@ void InputXbar::pass2() {
     for (auto &hash : hash_tables)
         for (auto &col : hash.second)
             if (!col.second.data && col.second.fn)
-                col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first/2U);
+                col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first);
 }
 
 #include <tofino/input_xbar.cpp>        // tofino template specializations
@@ -659,6 +674,20 @@ InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp) {
             if (in.what->lo > sl.lo) continue;
             if (in.what->hi < sl.hi) continue;
             return &in; }
+    return rv;
+}
+
+std::vector<InputXbar::Input *> InputXbar::find_all(Phv::Slice sl, Group grp) {
+    std::vector<InputXbar::Input *> rv;
+    if (groups.count(grp)) {
+        for (auto &in : groups[grp]) {
+            if (in.lo < 0) continue;
+            if (in.what->reg.uid != sl.reg.uid) continue;
+            if (in.what->lo/8U > sl.lo/8U) continue;
+            if (in.what->hi/8U < sl.hi/8U) continue;
+            rv.push_back(&in);
+        }
+    }
     return rv;
 }
 

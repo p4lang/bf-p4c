@@ -1,6 +1,8 @@
 #ifndef BF_P4C_MAU_HASH_FUNCTION_H_
 #define BF_P4C_MAU_HASH_FUNCTION_H_
 
+struct bfn_hash_algorithm_;
+
 namespace IR {
 namespace MAU {
 
@@ -8,9 +10,10 @@ struct hash_function {
     Util::SourceInfo    srcInfo;
     enum { IDENTITY, CSUM, XOR, CRC, RANDOM }
                         type = IDENTITY;
-    int                 size = 0;
     bool                msb = false;      // pull msbs for slice
+    bool                extend = false;
     bool                reverse = false;  // crc reverse bits
+    int                 size = 0;
     uint64_t            poly = 0;         // crc polynoimal in koopman form (poly-1)/2
     uint64_t            init = 0;
     uint64_t            final_xor = 0;
@@ -35,6 +38,14 @@ struct hash_function {
             return true;
         return false;
     }
+
+ private:
+    const IR::MethodCallExpression *hash_to_mce(const IR::Expression *, bool *on_hash_matrix);
+
+ public:
+    void build_algorithm_t(bfn_hash_algorithm_ *) const;
+    static const IR::Expression *convertHashAlgorithmBFN(Util::SourceInfo srcInfo,
+        IR::ID algorithm, bool *on_hash_matrix);
 };
 
 }  // end namespace MAU

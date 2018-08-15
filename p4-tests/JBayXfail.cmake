@@ -150,7 +150,7 @@ p4c_add_xfail_reason("tofino2"
   )
 
 p4c_add_xfail_reason("tofino2"
-  "condition too complex"
+  "Cannot properly set up the hash function on the hash matrix"
   testdata/p4_14_samples/issue894.p4
   )
 
