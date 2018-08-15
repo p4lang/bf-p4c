@@ -68,6 +68,12 @@ class Field {
     /// Whether the Field is ingress or egress.
     gress_t         gress;
 
+    /// returns @true if the Field is a ghost field.
+    /// XXX(Deep): Right now, ghost fields are marked as ingress fields, so we use string comparison
+    /// for this method. Ideally, we should use the gress member directly and not have a separate
+    /// ghost field.
+    bool isGhostField() const { return name.startsWith("ghost::"); }
+
     /// Total size of Field in bits.
     int             size;
 

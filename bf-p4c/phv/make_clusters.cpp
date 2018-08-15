@@ -374,7 +374,19 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         // include unreferenced fields as the first fields in slice lists.  The
         // longer-term solution is to replace slice lists with
         // finer-granularity constraints.
-        if (accumulator_bits == 0 && !self.uses_i.is_referenced(field)) {
+
+        // XXX(Deep): From BRIG-899
+        // The hardware writes ghost metadata to a single 32-bit phv container in a very
+        // constrained form. The fields are written to certain bits in a fixed way:
+        //   pipe to [1:0]
+        //   qid to [12:2]
+        //   qlength to [30:13]
+        //   pingpong to [31:31]
+        // So, phv allocation must match the header. If a particular field is unused (pipe is rarely
+        // used), the hardware will still write those bits, so it may not be possible to reuse it
+        // for something else (need to add an explicit write in the mau pipe). The fields may not
+        // also be relocated within the container.
+        if (accumulator_bits == 0 && !self.uses_i.is_referenced(field) && !field->isGhostField()) {
             LOG5("    ...skipping unreferenced field at the beginning of a slice list: " << field);
             continue; }
 
@@ -446,7 +458,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
 */
 
         } else if (accumulator_bits % int(PHV::Size::b8) == 0
-                   && !self.uses_i.is_referenced(field)) {
+                   && !self.uses_i.is_referenced(field) && !field->isGhostField()) {
             LOG5("    ...breaking slice list before unreferenced field: " << field);
             // Break off, on unreferenced/referenced boundary.
             // Break at bottom as well.

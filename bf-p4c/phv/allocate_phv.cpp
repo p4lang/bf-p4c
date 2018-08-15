@@ -725,7 +725,7 @@ CoreAllocation::tryAllocSliceList(
         // Check that there's space.
         bool can_place = true;
         for (auto& slice : candidate_slices) {
-            if (!uses_i.is_referenced(slice.field()))
+            if (!uses_i.is_referenced(slice.field()) && !slice.field()->isGhostField())
                 continue;
             // Skip slices that have already been allocated.
             if (previous_allocations.find(PHV::FieldSlice(slice.field(), slice.field_slice()))
@@ -867,9 +867,9 @@ CoreAllocation::tryAllocSliceList(
             bool is_allocated =
                 previous_allocations.find(PHV::FieldSlice(slice.field(), slice.field_slice()))
                     != previous_allocations.end();
-            if (is_referenced && !is_allocated) {
+            if ((is_referenced || slice.field()->isGhostField()) && !is_allocated) {
                 this_alloc.allocate(slice);
-            } else if (!is_referenced) {
+            } else if (!is_referenced && !slice.field()->isGhostField()) {
                 LOG5("NOT ALLOCATING unreferenced field: " << slice); } }
 
         // Recursively try to allocate slices according to conditional
@@ -1584,7 +1584,8 @@ BruteForceAllocationStrategy::remove_unreferenced_clusters(
             bool has_referenced = false;
             bool has_unreferenced = false;
             for (const auto& slice : *slice_list) {
-                if (core_alloc_i.uses().is_referenced(slice.field())) {
+                if (core_alloc_i.uses().is_referenced(slice.field()) &&
+                    !slice.field()->isGhostField()) {
                     has_referenced = true;
                 } else {
                     has_unreferenced = true; } }
@@ -1599,7 +1600,8 @@ BruteForceAllocationStrategy::remove_unreferenced_clusters(
         for (const auto* rot : super_cluster->clusters()) {
             for (const auto* ali : rot->clusters()) {
                 for (const auto& slice : ali->slices()) {
-                    if (!core_alloc_i.uses().is_referenced(slice.field())) {
+                    if (!core_alloc_i.uses().is_referenced(slice.field()) &&
+                        !slice.field()->isGhostField()) {
                         un_ref_singleton.insert(super_cluster);
                         break; } } } }
     }
