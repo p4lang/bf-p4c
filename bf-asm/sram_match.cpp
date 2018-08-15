@@ -836,10 +836,10 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
 
 void SRamMatchTable::add_action_cfgs(json::map &tbl, json::map &stage_tbl) {
    if (actions) {
-       actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+       actions->gen_tbl_cfg(tbl["actions"]);
        actions->add_action_format(this, stage_tbl);
    } else if (action && action->actions) {
-       action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+       action->actions->gen_tbl_cfg(tbl["actions"]);
        action->actions->add_action_format(this, stage_tbl); }
 }
 

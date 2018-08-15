@@ -1,6 +1,10 @@
+#include <boost/optional.hpp>
 #include "bf-p4c/mau/instruction_adjustment.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/common/asm_output.h"
+
+#define cstr(name) cstring::to_cstring(canon_name(name))
 
 /** SplitInstructions */
 
@@ -881,9 +885,257 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
     return rv;
 }
 
+void GeneratePrimitiveInfo::add_op_json(Util::JsonObject *prim,
+        const std::string op, const std::string type, cstring name) {
+    auto op_json = new Util::JsonObject();
+    op_json->emplace("type", type);
+    op_json->emplace("name", name);
+    prim->emplace(op, op_json);
+}
+
+void GeneratePrimitiveInfo::add_stful_op_json(Util::JsonObject *prim,
+        const std::string op, const std::string op_pfx, const std::string type, cstring name) {
+    auto op_json = new Util::JsonObject();
+    op_json->emplace(op_pfx + "_type", type);
+    op_json->emplace(op_pfx + "_value", name);
+    prim->emplace(op, op_json);
+}
+
+void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
+        Util::JsonObject *_action) {
+    LOG1("GeneratePrimitiveInfo Act: " << canon_name(act->name));
+    auto _primitives = new Util::JsonArray();
+    for (auto prim : act->stateful) {
+        auto _primitive = new Util::JsonObject();
+        auto *at = prim->operands.at(0)->to<IR::GlobalRef>()
+                       ->obj->to<IR::MAU::AttachedMemory>();
+        auto *salu = at->to<IR::MAU::StatefulAlu>();
+        if (salu) {
+            _primitive->emplace("name", "ExecuteStatefulPrimitive");
+            add_op_json(_primitive, "dst", "stateful", cstr(at->name));
+            for (size_t i = 1; i < prim->operands.size(); ++i) {
+                if (auto *k = prim->operands.at(i)->to<IR::Constant>()) {
+                    add_op_json(_primitive, "idx", "immediate", k->toString());
+                } else if (auto *a = prim->operands.at(i)->to<IR::MAU::ActionArg>()) {
+                    add_op_json(_primitive, "idx", "action_param", a->name.toString());
+                } else if (auto *c = prim->operands.at(i)->to<IR::Cast>()) {
+                    if (auto *a = c->expr->to<IR::MAU::ActionArg>()) {
+                        add_op_json(_primitive, "idx", "action_param", a->name.toString());
+                    }
+                }
+            }
+            auto *salu_details = new Util::JsonObject();
+            salu_details->emplace("single_bit_mode", "false");
+            if (salu->instruction.size() > 0) {
+                auto *sact = salu->instruction.begin()->second;
+                salu_details->emplace("name", sact->name);
+                for (auto &sact_inst : sact->action) {
+                    std::string inst_name = sact_inst->name.c_str();
+                    auto *sact_update = new Util::JsonObject();
+                    if (inst_name == "alu_a" || inst_name == "alu_b"
+                            || inst_name == "add" || inst_name == "sub") {
+                        if (sact_inst->operands.size() == 2) {
+                            auto src = sact_inst->operands[1];
+                            if (auto *k = src->to<IR::Constant>()) {
+                                sact_update->emplace("operand_1_type", "immediate");
+                                sact_update->emplace("operand_1_value", k->toString());
+                            }
+                        } else if (sact_inst->operands.size() == 3) {
+                            auto src1 = sact_inst->operands[1];
+                            auto src2 = sact_inst->operands[2];
+                            std::string op = "";
+                            if (inst_name == "add") op = "+";
+                            if (inst_name == "sub") op = "-";
+                            sact_update->emplace("operation", op);
+                            if (auto *s = src1->to<IR::MAU::SaluReg>()) {
+                                sact_update->emplace("operand_1_type", "register");
+                                sact_update->emplace("operand_1_value", s->name);
+                            }
+                            if (auto *k = src2->to<IR::Constant>()) {
+                                sact_update->emplace("operand_2_type", "immediate");
+                                sact_update->emplace("operand_2_value", k->toString());
+                            }
+                        }
+                        if (sact_inst->operands.size() > 1) {
+                            if (auto *dst = sact_inst->operands[0]->to<IR::MAU::SaluReg>()) {
+                                if (dst->name == "lo") {
+                                    salu_details->emplace("update_lo_1_value", sact_update);
+                                } else if (dst->name == "hi") {
+                                    salu_details->emplace("update_hi_1_value", sact_update);
+                                }
+                            }
+                        }
+                    } else if (inst_name == "output") {
+                        if (sact_inst->operands.size() == 1) {
+                            if (auto dst = sact_inst->operands[0]->to<IR::MAU::SaluReg>()) {
+                                sact_update->emplace("operand_1_type", "result");
+                                sact_update->emplace("operand_1_value", cstr(dst->name));
+                                salu_details->emplace("output_value", sact_update);
+                            }
+                        }
+                    }
+                }
+            }
+            _primitive->emplace("stateful_alu_details", salu_details);
+            _primitives->append(_primitive);
+        }
+        auto *meter = at->to<IR::MAU::Meter>();
+        if (meter) {
+            _primitive->emplace("name", "ExecuteMeterPrimitive");
+            add_op_json(_primitive, "dst", "Meter", cstr(meter->name));
+            if (auto pc = meter->pre_color) {
+                if (auto hd = pc->to<IR::MAU::HashDist>()) {
+                    if (auto fl = hd->field_list) {
+                        if (auto sl = fl->to<IR::Slice>()) {
+                            if (auto e0 = sl->e0) {
+                                add_op_json(_primitive, "idx", "action_param",
+                                        cstr(e0->toString()));
+                            }
+                        }
+                    }
+                }
+            }
+            _primitives->append(_primitive);
+        }
+    }
+
+
+    std::vector<std::string> modifyPrimVec = { "set" };
+    std::vector<std::string> shiftPrimVec = { "shru", "shl", "shrs" };
+    std::vector<std::string> directAluPrimVec = {
+        "add", "addc", "saddu", "sadds",
+        "sub", "subc", "ssubu", "ssubs" };
+    std::map<std::string, std::vector<std::string>* > prims = {
+        { "ModifyFieldPrimitive", &modifyPrimVec },
+        { "ShiftPrimitive", &shiftPrimVec },
+        { "DirectAluPrimitive", &directAluPrimVec }
+    };
+    for (auto inst : act->action) {
+        auto _primitive = new Util::JsonObject();
+        std::string inst_name = inst->name.c_str();
+        bool skip_prim_check = false;
+        if ((inst_name == "set")
+                && (inst->operands.size() == 2)) {
+            cstring dst = inst->operands[0]->toString();
+            auto src = inst->operands[1];
+            if (dst.endsWith("$valid")) {
+                if (auto val = src->to<IR::Constant>()) {
+                    if (val->value == 1) {
+                        _primitive->emplace("name", "AddHeaderPrimitive");
+                        skip_prim_check = true;
+                    } else if (val->value == 0) {
+                        _primitive->emplace("name", "RemoveHeaderPrimitive");
+                        skip_prim_check = true;
+                    }
+                    add_op_json(_primitive, "dst", "header", dst);
+                }
+            } else if (dst.endsWith("drop_ctl")) {
+                if (auto val = src->to<IR::Constant>()) {
+                    if (val->value == 1) {
+                        _primitive->emplace("name", "DropPrimitive");
+                        skip_prim_check = true;
+                    }
+                }
+            }
+        }
+        bool is_stful_dest = false;
+        if (!skip_prim_check) {
+            for (auto &p : prims) {
+                auto pv = *p.second;
+                if (std::any_of(pv.begin(), pv.end(),
+                        [&inst_name](std::string const& elem) {
+                        return inst_name == elem; })) {
+                    if (inst->operands.size() == 2) {
+                        auto src = inst->operands[1];
+                        if (auto *ao = src->to<IR::MAU::AttachedOutput>()) {
+                            if (ao->attached->to<IR::MAU::StatefulAlu>()) {
+                                cstring dst = inst->operands[0]->toString();
+                                _primitive->emplace("output_dest", cstr(dst));
+                                is_stful_dest = true;
+                                break;
+                            }
+                        }
+                    }
+                    _primitive->emplace("name", p.first);
+                    _primitive->emplace("operation", inst_name);
+                }
+            }
+            // Don't output operand json if instruction is a stateful destination,
+            // this info goes within the stateful primitive evaluated above.
+            if ((inst->operands.size() >= 2) && (!is_stful_dest)) {
+                // Add dst operands
+                auto dst = inst->operands[0]->to<IR::Expression>();
+                le_bitrange bits = {0, 0};
+                if (auto phv_field = phv.field(dst, &bits)) {
+                    add_op_json(_primitive, "dst", "phv", cstr(phv_field->externalName()));
+                    add_op_json(_primitive, "dst_mask", "immediate",
+                            std::to_string((1U << bits.size()) - 1));
+                }
+                // Add src operands
+                auto idx = 0;
+                for (auto src : inst->operands) {
+                    if (idx++ == 0) continue;  // skip 1st op which is dst
+                    validate_add_op_json(_primitive, "src" + std::to_string(idx - 1), src);
+                }
+            }
+        }
+        _primitives->append(_primitive);
+    }
+    _action->emplace("primitives", _primitives);
+}
+
+void GeneratePrimitiveInfo::validate_add_op_json(Util::JsonObject *_primitive,
+        const std::string op_name, const IR::Expression *exp) {
+    if (auto phv_field = phv.field(exp)) {
+         add_op_json(_primitive, op_name, "phv", cstr(phv_field->externalName()));
+    } else  if (auto cnst = exp->to<IR::Constant>()) {
+         add_op_json(_primitive, op_name, "immediate", cnst->toString());
+     } else if (auto aarg = exp->to<IR::MAU::ActionArg>()) {
+         add_op_json(_primitive, op_name, "action_param", cstr(aarg->name));
+     } else if (auto *sl = exp->to<IR::Slice>()) {
+         if (auto e0 = sl->e0) {
+            if (auto *ao = e0->to<IR::MAU::AttachedOutput>()) {
+                if (auto stful = ao->attached->to<IR::MAU::StatefulAlu>()) {
+                   add_op_json(_primitive, op_name, "stateful", cstr(stful->name));
+                } else if (auto meter = ao->attached->to<IR::MAU::Meter>()) {
+                   add_op_json(_primitive, op_name, "meter", cstr(meter->name));
+                }
+            }
+        }
+    }
+}
+
+bool GeneratePrimitiveInfo::preorder(const IR::MAU::Table *tbl) {
+    auto tname = tbl->match_table ? tbl->match_table->externalName() : tbl->name;
+    LOG1("Table: " << canon_name(tname));
+    if (tbl->actions.empty()) return true;
+
+    auto _table = new Util::JsonObject();
+    auto _actions = new Util::JsonArray();
+    for (auto act : Values(tbl->actions)) {
+        if (act->miss_action_only) continue;
+        auto _action = new Util::JsonObject();
+        _action->emplace("name", cstr(act->name));
+        gen_action_json(act, _action);
+        _actions->append(_action);
+    }
+    _table->emplace("name", cstr(tname));
+    _table->emplace("actions", _actions);
+    _tables->append(_table);
+    return true;
+}
+
+void GeneratePrimitiveInfo::end_apply() {
+    // Write to primitive json file
+    auto _pNode = new Util::JsonObject();
+    _pNode->emplace("tables", _tables);
+    _primNode = *_pNode;
+}
+
 /** Instruction Adjustment */
-InstructionAdjustment::InstructionAdjustment(const PhvInfo &phv) {
+InstructionAdjustment::InstructionAdjustment(const PhvInfo &phv, Util::JsonObject &primNode) {
     addPasses({
+        new GeneratePrimitiveInfo(phv, primNode),
         new SplitInstructions(phv),
         new ConstantsToActionData(phv),
         new MergeInstructions(phv),

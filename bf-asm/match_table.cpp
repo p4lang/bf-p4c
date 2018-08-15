@@ -370,10 +370,7 @@ void MatchTable::gen_name_lookup(json::map &out) {
     if (auto acts = get_actions()) {
         for (auto &a : *acts) {
             json::map &action_map = actions_map[a.name] = json::map();
-            action_map["direction"] = logical_id;
-            json::vector &prims = action_map["primitives"] = json::vector();
-        }
-    }
+            action_map["direction"] = logical_id; } }
 }
 
 int MatchTable::get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable) {

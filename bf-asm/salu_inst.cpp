@@ -290,18 +290,6 @@ struct AluOP : public SaluInstruction {
     operand             srca, srcb;
     AluOP(const Decode *op, int l) : SaluInstruction(l), opc(op) {}
     std::string name() override { return opc->name; };
-    void gen_prim_cfg(json::map& out) override {
-        out["name"] = opc->name;
-        /* TODO:
-        dest.gen_prim_cfg((out["dst"] = json::map()));
-        json::vector &srcv = out["src"] = json::vector();
-        json::map oneoper;
-        srca.gen_prim_cfg(oneoper);
-        srcv.push_back(std::move(oneoper));
-        srcb.gen_prim_cfg(oneoper);
-        srcv.push_back(std::move(oneoper));
-        */
-    }
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *)  override { }
     bool equiv(Instruction *a_) override;
@@ -434,9 +422,6 @@ struct BitOP : public SaluInstruction {
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
     BitOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
     std::string name() override { return opc->name; };
-    void gen_prim_cfg(json::map& out) override {
-        out["name"] = opc->name;
-    }
     Instruction *pass1(Table *, Table::Actions::Action *) override { slot = ALU1LO; return this; }
     void pass2(Table *, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
@@ -485,18 +470,6 @@ struct CmpOP : public SaluInstruction {
     bool                learn = false, learn_not = false;
     CmpOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
     std::string name() override { return opc->name; };
-    void gen_prim_cfg(json::map& out) override {
-        out["name"] = opc->name;
-        /* TODO: What are srca, srcb and srcc here?
-        srca->gen_prim_cfg((out["dst"] = json::map()));
-        json::vector &srcv = out["src"] = json::vector();
-        json::map oneoper;
-        srcb->gen_prim_cfg(oneoper);
-        srcv.push_back(std::move(oneoper));
-        srcc->gen_prim_cfg(oneoper);
-        srcv.push_back(std::move(oneoper));
-        */
-    }
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
@@ -605,18 +578,6 @@ struct TMatchOP : public SaluInstruction {
     bool                learn = false, learn_not = false;
     TMatchOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
     std::string name() override { return opc->name; };
-    void gen_prim_cfg(json::map& out) override {
-        out["name"] = opc->name;
-        /* TODO: What are srca, srcb and srcc here?
-        srca->gen_prim_cfg((out["dst"] = json::map()));
-        json::vector &srcv = out["src"] = json::vector();
-        json::map oneoper;
-        srcb->gen_prim_cfg(oneoper);
-        srcv.push_back(std::move(oneoper));
-        srcc->gen_prim_cfg(oneoper);
-        srcv.push_back(std::move(oneoper));
-        */
-    }
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
@@ -717,7 +678,6 @@ struct OutOP : public SaluInstruction {
     FOR_ALL_TARGETS(TARGET_OVERLOAD, void decode_output_mux, value_t &op)
     OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
     std::string name() override { return "output"; };
-    void gen_prim_cfg(json::map& out) override { out["name"] = "output"; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override { return this; }
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;

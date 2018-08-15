@@ -415,7 +415,6 @@ public:
         void stateful_pass2(Table *);
         template<class REGS> void write_regs(REGS &, Table *);
         void add_p4_params(const Action&, json::vector &);
-        void gen_prim_cfg(const Action&, json::vector &);
         void gen_tbl_cfg(json::vector &);
         void add_immediate_mapping(json::map &);
         void add_next_table_mapping(Table *, json::map &);

@@ -225,7 +225,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new TableAllocPass(options, phv, deps),
         new TableSummary(pipe_id),
         new IXBarVerify(phv),
-        new InstructionAdjustment(phv),
+        new InstructionAdjustment(phv, primNode),
         new DumpPipe("Final table graph"),
         new CheckForUnallocatedTemps(phv, uses, clot),
 

@@ -1,6 +1,8 @@
 #ifndef BF_P4C_MAU_INSTRUCTION_ADJUSTMENT_H_
 #define BF_P4C_MAU_INSTRUCTION_ADJUSTMENT_H_
 
+#include <fstream>
+
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/mau/mau_visitor.h"
@@ -19,7 +21,7 @@ class Field;
  *
  *  The adjustment specificially is from a field to field instruction into a container by
  *  container instruction for the more complex requirements.  This either can break an field
- *  by field instruction into multiple container instructions, performed by SplitInstructions, 
+ *  by field instruction into multiple container instructions, performed by SplitInstructions,
  *  or combine them into a single one, performed by MergeInstructions.
  *
  *
@@ -42,7 +44,7 @@ class Field;
  *      -set header.field5.32-47 action_data_param.32-47
  *
  *  In particular, some constants have to be converted to action data, based on how they are
- *  use in an instruction within a container.  These constraints are fully detailed by 
+ *  use in an instruction within a container.  These constraints are fully detailed by
  *  comments in action_analysis, but are summarized by the restrictions from load const and one
  *  of the sources of an action
  */
@@ -195,9 +197,45 @@ class AdjustStatefulInstructions : public MauTransform {
     explicit AdjustStatefulInstructions(const PhvInfo &p) : phv(p) { }
 };
 
+// Generate Primitive Info for actions before instruction adjustment. Once
+// instruction adjustment is applied it merges/splits instructions and we loose
+// the initial p4 info on the operands. This info is passed off to the assembler
+// to plug into respective actions which is then picked up by the model for
+// logging
+// Following Primitives are supported:
+// - ModifyFieldPrimitive
+// - DirectAluPrimitive
+// - ExecuteStatefulAluPrimitive
+// - DropPrimitive
+// - AddHeaderPrimitive
+// - RemoveHeaderPrimitive
+// - ShiftPrimitive
+// - ExecuteMeterPrimitive
+class GeneratePrimitiveInfo : public MauInspector {
+ private:
+    const PhvInfo &phv;
+    Util::JsonObject &_primNode;
+    Util::JsonArray *_tables = nullptr;
+    bool preorder(const IR::MAU::Table *tbl) override;
+    void gen_action_json(const IR::MAU::Action *act, Util::JsonObject *_action);
+    void add_op_json(Util::JsonObject *prim, const std::string op,
+            const std::string type, cstring name);
+    void validate_add_op_json(Util::JsonObject *_primitive,
+            const std::string op_name, const IR::Expression *exp);
+    void add_stful_op_json(Util::JsonObject *prim, const std::string op,
+            const std::string op_pfx, const std::string type, cstring name);
+    void end_apply() override;
+ public:
+    explicit GeneratePrimitiveInfo(const PhvInfo &p, Util::JsonObject &primNode)
+        : phv(p), _primNode(primNode) {
+        visitDagOnce = false;
+        _tables = new Util::JsonArray();
+    }
+};
+
 class InstructionAdjustment : public PassManager {
  public:
-    explicit InstructionAdjustment(const PhvInfo &p);
+    explicit InstructionAdjustment(const PhvInfo &p, Util::JsonObject &n);
 };
 
 #endif /* BF_P4C_MAU_INSTRUCTION_ADJUSTMENT_H_ */

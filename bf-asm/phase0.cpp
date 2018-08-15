@@ -66,7 +66,7 @@ void Phase0MatchTable::gen_tbl_cfg(json::vector &out) {
     (mra["memory_units_and_vpns"] = json::vector()).push_back(std::move(tmp));
     add_pack_format(stage_tbl, format, false, true); // is this used by driver?
     if (actions)
-        actions->gen_tbl_cfg(tbl["actions"] = json::vector());
+        actions->gen_tbl_cfg(tbl["actions"]);
     if (context_json)
         stage_tbl.merge(*context_json);
 }

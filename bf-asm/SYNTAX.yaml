@@ -722,6 +722,11 @@ deparser <thread>:
 resources: <filename>
     # Defines the name of the json file that has a description of the resources used by
     # the program. This is directly placed in context.json for other tools (e.g., p4i).
+primitives: <filename>
+    # Defines the name of the json file that has information on primitives used
+    # within table actions. These are placed in the respective actions as
+    # primitives node. This node is mainly used by model for logging
+    # instructions as specified in original p4 program
 # version 1.0.0
 version: <number>
     # semantic versioning number

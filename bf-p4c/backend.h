@@ -32,6 +32,9 @@ class Backend : public PassManager {
     /// privatization.
     ordered_set<cstring> doNotPrivatize;
     int pipe_id;
+    // Primitives Json Node, is populated before instruction adjustment and
+    // passed to AsmOutput to output primitive json file
+    Util::JsonObject primNode;
 
  public:
     explicit Backend(const BFN_Options& options, int pipe_id);
@@ -39,6 +42,7 @@ class Backend : public PassManager {
     const PhvInfo       &get_phv()    const { return phv; }
     const ClotInfo      &get_clot()   const { return clot; }
     const FieldDefUse   &get_defuse() const { return defuse; }
+    const Util::JsonObject &get_prim_json() const { return primNode; }
 };
 
 }  // namespace BFN

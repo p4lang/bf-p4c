@@ -64,6 +64,7 @@ class OutputAsm : public PassManager {
     cstring pipeName;
 
     BFN::Visualization _visualization;
+    const Util::JsonObject &_primitives;
 
     void end_apply() override {
         if (!_options.debugInfo)  // generate resources info only if invoked with -g
@@ -80,14 +81,25 @@ class OutputAsm : public PassManager {
             }
             LOG2("Generating outputs under " << outputDir);
             std::string dir(outputDir);
+
+            // Output resources json file
             cstring resourcesFile = dir + "/" + _options.programName + ".res.json";
             cstring outputFile = dir + "/" + _options.programName + ".bfa";
+            cstring primitivesFile = dir + "/" + _options.programName + ".prim.json";
 
             LOG2("ASM generation for resources: " << resourcesFile);
             std::ofstream ctxt_stream(outputFile, std::ios_base::app);
             ctxt_stream << "resources: \"" << resourcesFile << "\"" << std::endl << std::flush;
             std::ofstream res(resourcesFile);
             res << _visualization << std::endl << std::flush;
+
+            // Output primitives json file (info used by model for logging
+            // actions)
+            LOG2("ASM generation for primitives: " << primitivesFile);
+            ctxt_stream << "primitives: \"" << primitivesFile << "\"" << std::endl << std::flush;
+            std::ofstream prim(primitivesFile);
+            _primitives.serialize(prim);
+            prim << std::endl << std::flush;
         } else {
             // The compilation was unsuccessful, but we still need to put out debug info
             // into context.json. However, the assembler is not going to be invoked, so
@@ -134,9 +146,10 @@ class OutputAsm : public PassManager {
     }
 
  public:
-    explicit OutputAsm(const BFN::Backend &b, const BFN_Options& o, cstring pipeName,
+    explicit OutputAsm(const BFN::Backend &b, const BFN_Options& o,
+                        cstring pipeName, const Util::JsonObject& p,
                        bool success = true) :
-        _options(o), _success(success), pipeName(pipeName) {
+        _options(o), _success(success), pipeName(pipeName), _primitives(p) {
         setStopOnError(false);
         addPasses({ new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(), o,
                                        pipeName, success),
@@ -166,7 +179,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
 
         // produce resource nodes in context.json regardless of failures
         std::cerr << "compilation failed: producing ctxt.json" << std::endl;
-        OutputAsm as(backend, options, maupipe->name, false);
+        OutputAsm as(backend, options, maupipe->name, backend.get_prim_json(), false);
         maupipe->apply(as);
 
         if (Log::verbose())
@@ -181,7 +194,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
 
     // output the .bfa file
     if (maupipe) {
-        OutputAsm as(backend, options, maupipe->name);
+        OutputAsm as(backend, options, maupipe->name, backend.get_prim_json());
         maupipe->apply(as); }
 }
 

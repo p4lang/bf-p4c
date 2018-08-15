@@ -569,7 +569,7 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
     stage_tbl["memory_resource_allocation"] =
         gen_memory_resource_allocation_tbl_cfg("sram", layout);
     if (actions)
-        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        actions->gen_tbl_cfg(tbl["actions"]);
     tbl["how_referenced"] = indirect ? "indirect" : "direct";
     if (context_json)
         stage_tbl.merge(*context_json);

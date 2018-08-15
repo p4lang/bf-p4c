@@ -154,8 +154,9 @@ map &map::merge(const map &a) {
                 exist->to<map>().merge(el.second->to<map>());
             } else if (exist->is<vector>() && el.second->is<vector>()) {
                 auto &vec = exist->to<vector>();
-                for (auto &vel : el.second->to<vector>())
+                for (auto &vel : el.second->to<vector>()) {
                     vec.push_back(vel->clone());
+                }
             } else {
                 exist = el.second->clone(); }
         } else {

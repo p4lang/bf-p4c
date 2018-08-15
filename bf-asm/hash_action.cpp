@@ -148,10 +148,10 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
     add_pack_format(stage_tbl, 0, 0, hash_dist.empty() ? 1 : 0);
     add_result_physical_buses(stage_tbl);
     if (actions) {
-        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        actions->gen_tbl_cfg(tbl["actions"]);
         actions->add_action_format(this, stage_tbl);
     } else if (action && action->actions) {
-        action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        action->actions->gen_tbl_cfg(tbl["actions"]);
         action->actions->add_action_format(this, stage_tbl); }
     common_tbl_cfg(tbl);
     if (idletime)

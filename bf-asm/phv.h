@@ -157,10 +157,6 @@ public:
                 error(lineno, "No phv record %s", name_.c_str());
             return false; }
         const char *name() const { return name_.c_str(); }
-        void gen_prim_cfg(json::map& out) {
-            out["type"] = "phv";
-            out["name"] = name_;
-        }
         std::string desc() const;
         int lobit() const { return lo < 0 ? 0 : lo; }
         unsigned size() const {

@@ -108,8 +108,18 @@ void P4Table::check(Table *tbl) {
 
 json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
     if (!config) {
-        out.emplace_back(json::mkuniq<json::map>());
-        json::map &tbl = dynamic_cast<json::map &>(*out.back());
+        json::map *tbl_ptr = nullptr;
+        for (auto &_table_o : out) {
+            auto &_table = _table_o->to<json::map>();
+            if (_table["name"] == name) {
+                if (_table["handle"]
+                        && _table["handle"] != handle) continue; 
+                tbl_ptr = &_table;
+                break; } }
+        if (!tbl_ptr) {
+            tbl_ptr = new json::map();
+            out.emplace_back(tbl_ptr); }
+        json::map &tbl = *tbl_ptr;
         config = &tbl;
         tbl["direction"] = table->gress ? "egress" : "ingress";
         if (handle) tbl["handle"] = handle;

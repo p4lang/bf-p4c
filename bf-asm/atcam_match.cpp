@@ -295,9 +295,9 @@ void AlgTcamMatchTable::gen_tbl_cfg(json::vector &out) {
         // already present in the atcam table. These should probably be cleaned
         // up from the context json and driver parsing.
         if (actions) {
-            actions->gen_tbl_cfg((alpm_tbl["actions"] = json::vector()));
+            actions->gen_tbl_cfg(alpm_tbl["actions"]);
         } else if (action && action->actions) {
-            action->actions->gen_tbl_cfg((alpm_tbl["actions"] = json::vector())); }
+            action->actions->gen_tbl_cfg(alpm_tbl["actions"]); }
         add_all_reference_tables(alpm_tbl);
         json::map &alpm_match_attributes = alpm_tbl["match_attributes"];
         alpm_match_attributes["max_subtrees_per_partition"] = max_subtrees_per_partition;
@@ -318,9 +318,9 @@ void AlgTcamMatchTable::gen_tbl_cfg(json::vector &out) {
     json::map &match_attributes = tbl["match_attributes"];
     match_attributes["match_type"] = "algorithmic_tcam";
     if (actions) {
-        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        actions->gen_tbl_cfg(tbl["actions"]);
     } else if (action && action->actions) {
-        action->actions->gen_tbl_cfg((tbl["actions"] = json::vector())); }
+        action->actions->gen_tbl_cfg(tbl["actions"]); }
     json::vector &units = match_attributes["units"];
     gen_unit_cfg(units, number_entries);
     match_attributes["number_partitions"] = number_partitions;

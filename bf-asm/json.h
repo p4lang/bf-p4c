@@ -42,6 +42,8 @@ public:
     virtual bool operator ==(const obj &a) const = 0;
     bool operator !=(const obj &a) const { return !(*this == a); }
     virtual bool operator ==(const char *str) const { return false; }
+    virtual bool operator ==(const std::string &str) const { return false; }
+    virtual bool operator ==(const string &str) const { return false; }
     bool operator !=(const char *str) const { return !(*this == str); }
     virtual bool operator ==(long long val) const { return false; }
     bool operator !=(long long val) const { return !(*this == val); }
@@ -138,6 +140,8 @@ public:
                    static_cast<const std::string &>(*b);
         return false; }
     bool operator ==(const char *str) const override {
+        return static_cast<const std::string &>(*this) == str; }
+    bool operator ==(const std::string &str) const override {
         return static_cast<const std::string &>(*this) == str; }
     void print_on(std::ostream &out, int indent=0,
                   int width=80, const char *pfx="") const override {
@@ -322,6 +326,24 @@ private:
             else { assert(iter != self.end());
                 iter->second.reset(t ? (obj*)new True() : (obj*)new False()); }
             return t; }
+        bool operator==(string &str) {
+            if (key) return false;
+            assert(iter != self.end());
+            return *iter->second == str; }
+        bool operator!=(string &str) {
+            return !(*this == str); }
+        bool operator==(std::string &str) {
+            if (key) return false;
+            assert(iter != self.end());
+            return *iter->second == str; }
+        bool operator!=(std::string &str) {
+            return !(*this == str); }
+        bool operator==(long long v) {
+            if (key) return false;
+            assert(iter != self.end());
+            return *iter->second == v; }
+        bool operator!=(long long v) {
+            return !(*this == v); }
         const char *operator=(const char *v) {
             if (key)
                 iter = self.emplace(key.release(), std::unique_ptr<obj>(new string(v))).first;

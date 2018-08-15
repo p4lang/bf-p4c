@@ -724,10 +724,10 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         //for (auto act: *acts) acts->add_p4_params(act, p4_params); } }
         add_all_reference_tables(tbl, indirect);
         if (indirect->actions) {
-            indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+            indirect->actions->gen_tbl_cfg(tbl["actions"]);
             indirect->actions->add_next_table_mapping(indirect, stage_tbl);
         } else if (indirect->action && indirect->action->actions) {
-            indirect->action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+            indirect->action->actions->gen_tbl_cfg(tbl["actions"]);
             indirect->action->actions->add_next_table_mapping(indirect, stage_tbl); }
         indirect->common_tbl_cfg(tbl);
     } else {
@@ -757,9 +757,9 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     }
     common_tbl_cfg(tbl);
     if (actions)
-        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        actions->gen_tbl_cfg(tbl["actions"]);
     else if (action && action->actions)
-        action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        action->actions->gen_tbl_cfg(tbl["actions"]);
     gen_idletime_tbl_cfg(stage_tbl);
     if (context_json)
         stage_tbl.merge(*context_json);

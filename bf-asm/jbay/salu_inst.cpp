@@ -43,8 +43,6 @@ struct MinMax : public SaluInstruction {
     bool        inc = false, dec = false, phv = false;
     MinMax(const Decode *op, int l) : SaluInstruction(l), opc(op) {}
     std::string name() override { return opc->name; };
-    void gen_prim_cfg(json::map& out) override {
-        out["name"] = opc->name; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override;
     bool equiv(Instruction *a_) override {

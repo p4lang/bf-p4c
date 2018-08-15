@@ -1322,9 +1322,21 @@ void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resou
             indirect_resources.push_back(std::move(indirect_resource)); } }
 }
 
-void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
+void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) {
     for (auto &act : *this) {
-        json::map action_cfg;
+        // Use action node if it already exists in json
+        bool act_json_present = false;
+        json::map *action_ptr = nullptr;
+        for (auto &_action_o : actions_cfg) {
+            auto &_action = _action_o->to<json::map>();
+            if (_action["name"] == act.name) {
+                action_ptr = &_action;
+                act_json_present = true;
+                break; } }
+        if (!act_json_present)
+            action_ptr = new json::map();
+        json::map &action_cfg = *action_ptr;
+
         action_cfg["name"] = act.name;
         action_cfg["handle"] = act.handle; //FIXME-JSON
         act.add_indirect_resources(action_cfg["indirect_resources"]);
@@ -1368,9 +1380,9 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
             gen_override(action_cfg, att);
         if (!this->table->to<ActionTable>())
             action_cfg["is_action_meter_color_aware"] = false;
-        json::vector &prim_cfg = action_cfg["primitives"] = json::vector();
-        gen_prim_cfg(act, prim_cfg);
-        cfg.push_back(std::move(action_cfg)); }
+        if (!act_json_present)
+            actions_cfg.push_back(std::move(action_cfg));
+    }
 }
 
 void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) {
@@ -1532,16 +1544,6 @@ void Table::Actions::add_next_table_mapping(Table *table, json::map &tbl) {
         map["next_table_full_address"] = next ? next->table_id() : Target::END_OF_PIPE();
         if (next)
             map["next_table_name"] = next->name(); }
-}
-
-void Table::Actions::gen_prim_cfg(const Action& act, json::vector &out) {
-    auto instrs = act.instr;
-    for (unsigned i = 0; i < instrs.size(); i++) {
-        auto oneinstr = instrs[i];
-        json::map oneprim;
-        oneinstr->gen_prim_cfg(oneprim);
-        out.push_back(std::move(oneprim));
-    }
 }
 
 template<class REGS>
