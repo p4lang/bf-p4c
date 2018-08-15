@@ -1,5 +1,6 @@
-#include "action_phv_constraints.h"
 #include <boost/optional/optional_io.hpp>
+#include "bf-p4c/phv/action_phv_constraints.h"
+#include "bf-p4c/phv/cluster_phv_operations.h"
 
 int ActionPhvConstraints::ConstraintTracker::current_action = 0;
 
@@ -42,10 +43,14 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
         PHV::FieldSlice write(write_field, write_range);
         field_writes_to_actions[write_field][write_range].insert(act);
         OperandInfo fw(write, current_action);
-        if (field_action.name == "set")
+        fw.operation = field_action.name;
+        if (field_action.name == "set") {
             fw.flags |= OperandInfo::MOVE;
-        else
-            fw.flags |= OperandInfo::WHOLE_CONTAINER;
+        } else if (PHV_Field_Operations::BITWISE_OPS.count(field_action.name)) {
+            fw.flags |= OperandInfo::BITWISE;
+        } else {
+            fw.flags |= OperandInfo::WHOLE_CONTAINER; }
+
         fw.action_name = field_action.name;
         LOG5("    ...write: " << fw);
         action_to_writes[act].insert(fw);
@@ -77,14 +82,18 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
             if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL)
                 self.special_no_pack[write.field()].insert(act);
 
-            if (field_action.reads.size() > 1)
+            if (field_action.reads.size() > 1) {
                 fr.flags |= OperandInfo::ANOTHER_OPERAND;
-            if (field_action.name == "set")
+            }
+            fr.operation = field_action.name;
+            if (field_action.name == "set") {
                 fr.flags |= OperandInfo::MOVE;
-            else
-                fr.flags |= OperandInfo::WHOLE_CONTAINER;
+            } else if (PHV_Field_Operations::BITWISE_OPS.count(field_action.name)) {
+                fr.flags |= OperandInfo::BITWISE;
+            } else {
+                fr.flags |= OperandInfo::WHOLE_CONTAINER; }
             fr.action_name = field_action.name;
-            LOG5("    ...read: " << fw);
+            LOG5("    ...read: " << fr);
             write_to_reads_per_action[write_field][act][write_range].push_back(fr); } }
 
     current_action++;
@@ -405,9 +414,32 @@ bool ActionPhvConstraints::has_ad_or_constant_sources(
     for (auto slice : slices) {
         for (auto operand : constraint_tracker.sources(slice, action)) {
             if (operand.ad || operand.constant) {
-                LOG5("\t\t\t\tField " << slice.field()->name <<
+                LOG5("\t\t\t\t  Field " << slice.field()->name <<
                      " written using action data/constant in action " << action->name);
                 return true; } } }
+    return false;
+}
+
+bool ActionPhvConstraints::all_or_none_constant_sources(
+        const PHV::Allocation::MutuallyLiveSlices& slices,
+        const IR::MAU::Action* action) const {
+    unsigned num_slices_written_by_ad = 0;
+    for (auto slice : slices) {
+        bool written_by_ad = false;
+        for (auto operand : constraint_tracker.sources(slice, action))
+            if (operand.ad || operand.constant)
+                written_by_ad = true;
+        num_slices_written_by_ad += (written_by_ad ? 1 : 0); }
+    if (num_slices_written_by_ad == 0) {
+        LOG5("\t\t\t\t  No slice in proposed packing written by action data/constant in action "
+             << action->name);
+        return true; }
+    if (num_slices_written_by_ad == slices.size()) {
+        LOG5("\t\t\t\t  All slices in proposed packing written by action data/constant in action "
+             << action->name);
+        return true; }
+    LOG5("\t\t\t\t  Only " << num_slices_written_by_ad << " out of " << slices.size() << " slices "
+         " in proposed packing are written by action data/constant in action " << action->name);
     return false;
 }
 
@@ -422,51 +454,85 @@ int ActionPhvConstraints::unallocated_bits(PHV::Allocation::MutuallyLiveSlices s
 }
 
 unsigned ActionPhvConstraints::container_operation_type(
-        const ordered_set<const IR::MAU::Action*>& actions,
-        const PHV::Allocation::MutuallyLiveSlices& slices) {
-    for (auto *action : actions) {
-        LOG5("\t\t\tChecking container operation type for action: " << action->name);
-        unsigned type_of_operation = 0;
-        size_t num_fields_not_written = 0;
-        ordered_set<const PHV::Field*> observed_fields;
+        const IR::MAU::Action* action,
+        const PHV::Allocation::MutuallyLiveSlices& slices) const {
+    LOG5("\t\t\tChecking container operation type for action: " << action->name);
+    unsigned type_of_operation = 0;
+    size_t num_fields_not_written = 0;
+    ordered_set<const PHV::Field*> observed_fields;
+    cstring operation;
 
-        for (auto slice : slices) {
-            auto field_slice = PHV::FieldSlice(slice.field(), slice.field_slice());
-            boost::optional<OperandInfo> fw = constraint_tracker.is_written(field_slice, action);
-            if (!fw) {
-                num_fields_not_written++;
-            } else if (fw->flags & OperandInfo::MOVE) {
-                type_of_operation |= OperandInfo::MOVE;
-            } else if (fw->flags & OperandInfo::WHOLE_CONTAINER) {
-                type_of_operation |= OperandInfo::WHOLE_CONTAINER;
-                // Check if it a whole container operation on adjacent slices of the same field
-                observed_fields.insert(slice.field());
+    for (auto slice : slices) {
+        auto field_slice = PHV::FieldSlice(slice.field(), slice.field_slice());
+        boost::optional<OperandInfo> fw = constraint_tracker.is_written(field_slice, action);
+        if (!fw) {
+            num_fields_not_written++;
+        } else if (fw->flags & OperandInfo::MOVE) {
+            type_of_operation |= OperandInfo::MOVE;
+        } else if (fw->flags & OperandInfo::BITWISE) {
+            type_of_operation |= OperandInfo::BITWISE;
+            if (operation == cstring()) {
+                LOG5("\t\t\t\t  First bitwise operation found: " << fw->operation);
+                operation = fw->operation;
+            } else if (operation == fw->operation) {
+                LOG5("\t\t\t\t  Subsequent bitwise operation found: " << fw->operation);
             } else {
-                ::warning("Detected a write that is neither move nor whole container "
-                          "operation."); } }
-
-        // If there is a WHOLE_CONTAINER operation present, do not pack.
-        // TODO: In the long run, we need to distinguish between bitwise operations and carry-based
-        // operations. For the latter, we cannot pack. For the former, we should ensure that:
-        // 1. There is no unwritten field in any action for the proposed packing
-        // 2. There is no MOVE operation on any field in the proposed packing in the same action.
-        if (type_of_operation & OperandInfo::WHOLE_CONTAINER) {
-            if (num_fields_not_written) {
-                LOG5("\t\t\t\tAction " << action->name << " uses a whole container operation but "
-                        << num_fields_not_written << " slices are not written in this action.");
-                return OperandInfo::WHOLE_CONTAINER; }
-
-            if (type_of_operation & OperandInfo::MOVE) {
-                LOG5("\t\t\t\tAction " << action->name << " uses both whole container and move "
+                LOG5("\t\t\t\t  Action " << action->name << " uses multiple different bitwise "
                         "operations for slices in the proposed packing.");
-                return OperandInfo::MIXED; }
+                return OperandInfo::MIXED;
+            }
+        } else if (fw->flags & OperandInfo::WHOLE_CONTAINER) {
+            type_of_operation |= OperandInfo::WHOLE_CONTAINER;
+            // Check if it a whole container operation on adjacent slices of the same field
+            observed_fields.insert(slice.field());
+        } else {
+            ::warning("Detected a write that is neither move nor whole container "
+                    "operation.");
+        }
+    }
 
-            LOG5("\t\t\t\tNumber of slices written to by this whole container operation: " <<
-                    observed_fields.size());
-            if (observed_fields.size() == 1)
-                return OperandInfo::WHOLE_CONTAINER_SAME_FIELD;
+    // If there is a WHOLE_CONTAINER operation present, check if the slices written by the whole
+    // container operations belong to the same field. If yes, then return
+    // OperandInfo::WHOLE_CONTAINER_SAME_FIELD. If not, then return
+    // OperandInfo::WHOLE_CONTAINER, which means that the proposed packing is not valid.
+    // For debugging purposes, we distinguish cases where we have a mixture between bitwise/move
+    // and whole container operations. Additionally, if a whole container operation is detected
+    // in the action and we find that there is a slice not written in the same action
+    // (num_fields_not_written > 0), then the proposed packing is not valid, which is indicated
+    // by returning OperandInfo::MIXED (mix of not written and whole container write).
+    if (type_of_operation & OperandInfo::WHOLE_CONTAINER) {
+        if (num_fields_not_written) {
+            LOG5("\t\t\t\tAction " << action->name << " uses a whole container operation but "
+                    << num_fields_not_written << " slices are not written in this action.");
+            return OperandInfo::MIXED; }
 
-            return OperandInfo::WHOLE_CONTAINER; } }
+        if (type_of_operation & OperandInfo::MOVE) {
+            LOG5("\t\t\t\tAction " << action->name << " uses both whole container and move "
+                    "operations for slices in the proposed packing.");
+            return OperandInfo::MIXED; }
+
+        LOG5("\t\t\t\tNumber of slices written to by this whole container operation: " <<
+                observed_fields.size());
+        if (observed_fields.size() == 1)
+            return OperandInfo::WHOLE_CONTAINER_SAME_FIELD;
+
+        return OperandInfo::WHOLE_CONTAINER; }
+
+    // For BITWISE operations, we have already checked above that the bitwise operation used per
+    // action is the same for all slices in the proposed packing. We also must make sure that no
+    // field slice in the proposed packing is unwritten when the bitwise operation is used.
+    // Finally, for debug purposes, we explicitly flag cases where there is a mixture of MOVE
+    // and BITWISE operations.
+    if (type_of_operation & OperandInfo::BITWISE) {
+        if (num_fields_not_written) {
+            LOG5("\t\t\t\tAction " << action->name << " uses a bitwise operation but " <<
+                    num_fields_not_written << " slices are not written in this action.");
+            return OperandInfo::MIXED; }
+        if (type_of_operation & OperandInfo::MOVE) {
+            LOG5("\t\t\t\tAction " << action->name << " uses both bitwise and move operations "
+                    "for slices in the proposed packing.");
+            return OperandInfo::MIXED; }
+        return OperandInfo::BITWISE; }
 
     return OperandInfo::MOVE;
 }
@@ -518,7 +584,7 @@ unsigned ActionPhvConstraints::count_container_holes(const PHV::Allocation::Mutu
 
 void ActionPhvConstraints::pack_slices_together(
         const PHV::Allocation &alloc,
-        PHV::Allocation::MutuallyLiveSlices& container_state,
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
         UnionFind<PHV::FieldSlice>& packing_constraints,
         const IR::MAU::Action* action,
         bool pack_unallocated_only  /*If true, only unallocated slices will be packed together*/) {
@@ -636,6 +702,176 @@ bool ActionPhvConstraints::pack_conflicts_present(
     return false;
 }
 
+bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unallocated_sources(
+        const PHV::Allocation& alloc,
+        const IR::MAU::Action* action,
+        const PHV::Container& c,
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const NumContainers& sources,
+        bool has_ad_constant_sources,
+        ordered_map<const IR::MAU::Action*, bool>& phvMustBeAligned,
+        ordered_map<const IR::MAU::Action*, size_t>& numSourceContainers,
+        UnionFind<PHV::FieldSlice>& copacking_constraints) {
+    // Special packing constraints are introduced when number of source containers > 2 and
+    // number of allocated containers is less than or equal to 2.
+    // At this point of the loop, sources.num_allocated <= 2, sources.num_unallocated may be any
+    // value.
+    bool mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
+    size_t num_source_containers = sources.num_allocated + sources.num_unallocated;
+    size_t num_fields_not_written_to = 0;
+    for (auto slice : container_state)
+        if (!constraint_tracker.is_written(slice, action))
+            num_fields_not_written_to++;
+    bool has_bits_not_written_to = num_fields_not_written_to > 0;
+
+    if (has_ad_constant_sources) {
+        // At this point, at least one PHV container is present, so we have both action
+        // data/constant source as well as a PHV source.
+        // Therefore, no fields can be unwritten in any given action.
+        if (num_fields_not_written_to) {
+            LOG5("\t\t\t\tSome bits not written in action " << action->name << " will get "
+                    "clobbered because there is at least one PHV source and another action"
+                    " data/ constant source");
+            return false; }
+        // Any unallocated PHV slices must all be packed within the same container, as there can
+        // only be a maximum of one PHV source when an action data/constant source is present.
+        // Generate these conditional constraints for this particular case.
+        if (sources.num_unallocated > 0) {
+            if (!masks_valid(container_state, action)) {
+                LOG5("\t\t\t\tThe action data used for this packing is not contiguous");
+                return false; }
+            pack_slices_together(alloc, container_state, copacking_constraints, action, false);
+        }
+        // At this point, analysis determines there is at least 1 PHV source. So
+        // phvMustBeAligned for this action is true.
+        LOG6("\t\t\t\t\tSetting phvMustBeAligned for action " << action->name << " to TRUE");
+        phvMustBeAligned[action] = true;
+    } else {
+        // No Action data or constant sources and only 1 PHV container as source. So, the
+        // packing is valid without any other induced constraints.
+        if (num_source_containers == 1) return true; }
+
+    // If some field is not written to, then one of the sources for the move has to be the
+    // container itself.
+    // If sources.num_allocated == 2, this packing is not possible (TOO_MANY_SOURCES)
+    if (num_fields_not_written_to && sources.num_allocated == 2) {
+        LOG5("\t\t\t\t" << num_fields_not_written_to << " fields not written in action "
+                << action->name << " will get clobbered.");
+        return false; }
+
+    // If some bits in the container are not written to, then one of the sources of the move has
+    // to be the container itself.
+    // If sources.num_allocated == 2, this packing is not possible (TOO_MANY_SOURCES)
+    if (has_bits_not_written_to && sources.num_allocated == 2) {
+        LOG5("\t\t\t\tSome unallocated bits in the container will get clobbered by writes in "
+                "action" << action->name);
+        return false; }
+
+    // One of the PHV must be aligned for the case with 2 sources
+    LOG6("\t\t\t\t\tSetting phvMustBeAligned for action " << action->name << " to TRUE");
+    phvMustBeAligned[action] = true;
+
+    // If sources.num_allocated == 2 and sources.num_unallocated == 0, then packing is valid and
+    // no other packing constraints are induced
+    if (sources.num_allocated == 2 && sources.num_unallocated == 0)
+        return true;
+
+    // If sources.num_allocated == 2 and sources.num_unallocated > 0, then all unallocated
+    // fields have to be packed together with one of the allocated fields
+    // XXX(deep): What's the best way to choose which allocated slice to pack with
+    if (sources.num_allocated == 2 && sources.num_unallocated > 0)
+        pack_slices_together(alloc, container_state, copacking_constraints, action, false);
+
+    // For mocha and dark containers, partial container sets are impossible.
+    if (mocha_or_dark && sources.num_unallocated > 0) {
+        BUG_CHECK(sources.num_allocated <= 1, "Cannot have 2 or more sources for container %1%",
+                c);
+        // Pack all slices together.
+        pack_slices_together(alloc, container_state, copacking_constraints, action, false); }
+
+    // If sources.num_allocated == 1 and sources.num_unallocated > 0, then
+    if (sources.num_allocated <= 1 && sources.num_unallocated > 0) {
+        if (num_fields_not_written_to || has_bits_not_written_to) {
+            // Pack all slices together (both allocated and unallocated)
+            // Can only have src2 as src1 is always the destination container itself
+            pack_slices_together(alloc, container_state, copacking_constraints, action, false);
+            LOG6("\t\t\t\t\tMust pack unallocated fields with allocated fields."
+                    " Setting source containers to 1.");
+            numSourceContainers[action] = 1;
+        } else {
+            // For this case, sources need not be packed together as we may have (at most) 2
+            // source containers
+            if (num_source_containers == 2) return true;
+            // Only pack unallocated slices together
+            pack_slices_together(alloc, container_state, copacking_constraints, action, true);
+        }
+    }
+    return true;
+}
+
+bool ActionPhvConstraints::generate_conditional_constraints_for_bitwise_op(
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const ordered_set<PHV::FieldSlice>& sources,
+        UnionFind<PHV::FieldSlice>& copacking_constraints) const {
+    if (sources.size() == 0) return true;
+    boost::optional<bool> destSameAsSource;
+    for (auto& slice : container_state) {
+        PHV::FieldSlice sl(slice.field(), slice.field_slice());
+        bool sameAsSource = sources.count(sl);
+        if (!destSameAsSource) {
+            destSameAsSource = sameAsSource;
+        } else {
+            if (sameAsSource != *destSameAsSource) {
+                LOG6("\t\t\t\tCannot generate conditional constraints for bitwise operations.");
+                return false; } } }
+    if (destSameAsSource && *destSameAsSource) {
+        LOG6("\t\t\t\tDo not need to generate conditional constraints for bitwise operations, "
+             "as the sources are the same as destination.");
+        return true; }
+    LOG6("\t\t\t\t\tPrinting source set for bitwise operation");
+    for (auto& slice : sources) {
+        LOG6("\t\t\t\t\t  " << slice);
+        for (auto& slice1 : sources) {
+            if (slice == slice1) continue;
+            LOG6("\t\t\t\t\t\tInserting " << slice1 << " into copacking_constraints for " <<
+                    slice);
+            copacking_constraints.makeUnion(slice, slice1); } }
+    return true;
+}
+
+bool ActionPhvConstraints::check_and_generate_constraints_for_bitwise_op_with_unallocated_sources(
+        const IR::MAU::Action* action,
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const NumContainers& sources,
+        UnionFind<PHV::FieldSlice>& copacking_constraints) const {
+    // No unallocated sources, so no need to generate any conditional constraints.
+    bool rv = true;
+    if (sources.num_unallocated == 0) return rv;
+    ordered_set<PHV::FieldSlice> source1;
+    ordered_set<PHV::FieldSlice> source2;
+    for (auto& slice : container_state) {
+        // Get all the sources for a given slice in this action.
+        auto sourceSlices = constraint_tracker.sources(slice, action);
+        unsigned operandNumber = 0;
+        for (auto operand : sourceSlices) {
+            // Depending on whether this is the first set or the second set, choose the appropriate
+            // set.
+            ordered_set<PHV::FieldSlice>* copacking_set = (operandNumber == 0) ? &source1 :
+                &source2;
+            ++operandNumber;
+            if (operand.ad || operand.constant) continue;
+            const PHV::Field* fieldRead = operand.phv_used->field();
+            le_bitrange rangeRead = operand.phv_used->range();
+            copacking_set->insert(PHV::FieldSlice(fieldRead, rangeRead));
+        }
+    }
+    rv &= generate_conditional_constraints_for_bitwise_op(container_state, source1,
+            copacking_constraints);
+    rv &= generate_conditional_constraints_for_bitwise_op(container_state, source2,
+            copacking_constraints);
+    return rv;
+}
+
 boost::optional<PHV::Allocation::ConditionalConstraints>
 ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, const PHV::AllocSlice& slice) {
     std::vector<PHV::AllocSlice> slices;
@@ -651,6 +887,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     if (slices.size() == 0)
         return rv;
 
+    ordered_map<const IR::MAU::Action*, unsigned> operationType;
     ordered_map<const IR::MAU::Action*, bool> usesActionDataConstant;
     ordered_map<const IR::MAU::Action*, bool> phvMustBeAligned;
     ordered_map<const IR::MAU::Action*, size_t> numSourceContainers;
@@ -695,23 +932,6 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
             ss << act->name << " ";
         LOG5(ss.str()); }
 
-    // Check if actions on the packing candidates involve WHOLE_CONTAINER operations or a mix of
-    // WHOLE_CONTAINER and MOVE operations (OperandInfo::MIXED)
-    unsigned cont_operation = container_operation_type(set_of_actions, container_state);
-    if (cont_operation == OperandInfo::WHOLE_CONTAINER) {
-        LOG5("\t\t\tCannot pack because of a whole container operation.");
-        return boost::none; }
-
-    if (cont_operation == OperandInfo::WHOLE_CONTAINER_SAME_FIELD) {
-        if (!are_adjacent_field_slices(container_state)) {
-            return boost::none;
-        } else {
-            LOG5("\t\t\t\tMultiple slices involved in whole container operation are adjacent"); } }
-
-    if (cont_operation == OperandInfo::MIXED) {
-        LOG5("\t\t\tCannot pack because of a mixture of whole container and move operations.");
-        return boost::none; }
-
     // xxx(Deep): This function checks if any field that gets its value from METER_ALU, HASH_DIST,
     // RANDOM, or METER_COLOR is being packed with other fields written in the same action.
     ordered_set<const PHV::Field*> uniqueFields;
@@ -720,7 +940,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     if (!checkSpecialityPacking(uniqueFields))
         return boost::none;
 
-    // Perform analysis related to number of sources for every action. Only MOVE
+    // Perform analysis related to number of sources for every action. Only MOVE and BITWISE
     // operations get here. Store all the packing constraints induced by this
     // possible packing in this UnionFind structure.
 
@@ -745,11 +965,48 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
      * then the UnionFind structure will return {{m2.a}, {m.c, m.d}}.
      */
     UnionFind<PHV::FieldSlice> copacking_constraints;
-    for (auto &action : set_of_actions) {
+    for (const auto* action : set_of_actions) {
         LOG5("\t\t\tNeed to check container sources now for action " << action->name);
+        operationType[action] = container_operation_type(action, container_state);
+
+        if (operationType[action] == OperandInfo::WHOLE_CONTAINER || operationType[action] ==
+                OperandInfo::MIXED)
+            return boost::none;
+
+        if (operationType[action] == OperandInfo::WHOLE_CONTAINER_SAME_FIELD) {
+            if (!are_adjacent_field_slices(container_state)) {
+                return boost::none;
+            } else {
+                LOG5("\t\t\t\tMultiple slices involved in whole container operation are adjacent");
+            }
+        }
+
+        if (operationType[action] == OperandInfo::BITWISE)
+            LOG5("\t\t\t\tDetected bitwise operations");
+
+        // Is there any action data or constant source for the proposed packing in this action?
+        bool has_ad_constant_sources = has_ad_or_constant_sources(container_state, action);
+        // If there is an action data or constant source, are all slices in the proposed packing
+        // written using action data or constant sources.
+        bool all_or_none_ad_constant_sources = has_ad_constant_sources ?
+            all_or_none_constant_sources(container_state, action) : true;
+
+        // If the action involves a bitwise operation for the proposed packing in container c, and
+        // only some of the field slices are written using action data or constant sources, then
+        // this packing is not valid.
+        if (operationType[action] == OperandInfo::BITWISE && !all_or_none_ad_constant_sources)
+            return boost::none;
+
+        // Is the container either a mocha or dark container.
+        bool mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
+        if (mocha_or_dark && operationType[action] == OperandInfo::BITWISE) {
+            // Mocha or dark containers can only be used in whole container move operations.
+            LOG5("\t\t\t\tAction " << action->name << " has a bitwise operation writing to a "
+                 " dark or mocha container.");
+            return boost::none; }
+
         NumContainers sources =
             num_container_sources(alloc, container_state, action, copacking_constraints);
-        bool has_ad_constant_sources = has_ad_or_constant_sources(container_state, action);
         usesActionDataConstant[action] = has_ad_constant_sources;
         size_t num_source_containers = sources.num_allocated + sources.num_unallocated;
         numSourceContainers[action] = num_source_containers;
@@ -761,7 +1018,6 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         // Dark and mocha containers require the entire container to be written all at once. For
         // dark and mocha containers, ensure that all the field slices in the container are written
         // in every action that writes one of those fields.
-        bool mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
         if (mocha_or_dark) {
             // Only one container source for dark/mocha.
             if (sources.num_allocated > 1) return boost::none;
@@ -783,102 +1039,27 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                     "two PHV sources");
             return boost::none; }
 
-        // Special packing constraints are introduced when number of source containers > 2 and
-        // number of allocated containers is less than or equal to 2.
-        // At this point of the loop, sources.num_allocated <= 2, sources.num_unallocated may be any
-        // value.
-        size_t num_fields_not_written_to = 0;
-        for (auto slice : container_state)
-            if (!constraint_tracker.is_written(slice, action))
-                num_fields_not_written_to++;
-        bool has_bits_not_written_to = num_fields_not_written_to > 0;
+        // Check the validity of packing for move operations, and generate intermediate structures
+        // that will be used to create conditional constraints.
+        if (operationType[action] == OperandInfo::MOVE) {
+            if (!check_and_generate_constraints_for_move_with_unallocated_sources(alloc, action, c,
+                    container_state, sources, has_ad_constant_sources, phvMustBeAligned,
+                    numSourceContainers, copacking_constraints))
+                return boost::none;
+        } else if (operationType[action] == OperandInfo::BITWISE) {
+            // Check the validity of bitwise operations and generate intermediate structures that
+            // will be used to create conditional constraints.
+            // At this point, we have already checked (in container_type_operation) that every
+            // single slice in the proposed packing has already been written by the same bitwise
+            // operation (for this action).
+            if (!check_and_generate_constraints_for_bitwise_op_with_unallocated_sources(action,
+                    container_state, sources, copacking_constraints))
+                return boost::none;
+        } else if (operationType[action] != OperandInfo::WHOLE_CONTAINER_SAME_FIELD) {
+            BUG("Operation type other than BITWISE and MOVE encountered."); } }
 
-        if (has_ad_constant_sources) {
-            // At this point, at least one PHV container is present, so we have both action
-            // data/constant source as well as a PHV source.
-            // Therefore, no fields can be unwritten in any given action.
-            if (num_fields_not_written_to) {
-                LOG5("\t\t\t\tSome bits not written in action " << action->name << " will get "
-                        "clobbered because there is at least one PHV source and another action"
-                        " data/ constant source");
-                return boost::none; }
-            // Any unallocated PHV slices must all be packed within the same container, as there can
-            // only be a maximum of one PHV source when an action data/constant source is present.
-            // Generate these conditional constraints for this particular case.
-            if (sources.num_unallocated > 0) {
-                if (!masks_valid(container_state, action)) {
-                    LOG5("\t\t\t\tThe action data used for this packing is not contiguous");
-                    return boost::none; }
-                pack_slices_together(alloc, container_state, copacking_constraints, action, false);
-            }
-            // At this point, analysis determines there is at least 1 PHV source. So
-            // phvMustBeAligned for this action is true.
-            LOG6("\t\t\t\t\tSetting phvMustBeAligned for action " << action->name << " to TRUE");
-            phvMustBeAligned[action] = true;
-        } else {
-            // No Action data or constant sources and only 1 PHV container as source. So, the
-            // packing is valid without any other induced constraints.
-            if (num_source_containers == 1) continue; }
 
-        // If some field is not written to, then one of the sources for the move has to be the
-        // container itself.
-        // If sources.num_allocated == 2, this packing is not possible (TOO_MANY_SOURCES)
-        if (num_fields_not_written_to && sources.num_allocated == 2) {
-            LOG5("\t\t\t\t" << num_fields_not_written_to << " fields not written in action "
-                 << action->name << " will get clobbered.");
-            return boost::none; }
-
-        // If some bits in the container are not written to, then one of the sources of the move has
-        // to be the container itself.
-        // If sources.num_allocated == 2, this packing is not possible (TOO_MANY_SOURCES)
-        if (has_bits_not_written_to && sources.num_allocated == 2) {
-            LOG5("\t\t\t\tSome unallocated bits in the container will get clobbered by writes in "
-                    "action" << action->name);
-            return boost::none; }
-
-        // One of the PHV must be aligned for the case with 2 sources
-        LOG6("\t\t\t\t\tSetting phvMustBeAligned for action " << action->name << " to TRUE");
-        phvMustBeAligned[action] = true;
-
-        // If sources.num_allocated == 2 and sources.num_unallocated == 0, then packing is valid and
-        // no other packing constraints are induced
-        if (sources.num_allocated == 2 && sources.num_unallocated == 0)
-            continue;
-
-        // If sources.num_allocated == 2 and sources.num_unallocated > 0, then all unallocated
-        // fields have to be packed together with one of the allocated fields
-        // XXX(deep): What's the best way to choose which allocated slice to pack with
-        if (sources.num_allocated == 2 && sources.num_unallocated > 0)
-            pack_slices_together(alloc, container_state, copacking_constraints, action, false);
-
-        // For mocha and dark containers, partial container sets are impossible.
-        if (mocha_or_dark && sources.num_unallocated > 0) {
-            BUG_CHECK(sources.num_allocated <= 1, "Cannot have 2 or more sources for container %1%",
-                      c);
-            // Pack all slices together.
-            pack_slices_together(alloc, container_state, copacking_constraints, action, false); }
-
-        // If sources.num_allocated == 1 and sources.num_unallocated > 0, then
-        if (sources.num_allocated <= 1 && sources.num_unallocated > 0) {
-            if (num_fields_not_written_to || has_bits_not_written_to) {
-                // Pack all slices together (both allocated and unallocated)
-                // Can only have src2 as src1 is always the destination container itself
-                pack_slices_together(alloc, container_state, copacking_constraints, action, false);
-                LOG6("\t\t\t\t\tMust pack unallocated fields with allocated fields."
-                     " Setting source containers to 1.");
-                numSourceContainers[action] = 1;
-            } else {
-                // For this case, sources need not be packed together as we may have (at most) 2
-                // source containers
-                if (num_source_containers == 2) continue;
-                // Only pack unallocated slices together
-                pack_slices_together(alloc,
-                                     container_state,
-                                     copacking_constraints,
-                                     action,
-                                     true); } } }
-
-    LOG5("\t\t\tChecking rotational alignment corresponding to deposit-field instructions");
+    LOG5("\t\t\tChecking rotational alignment");
     bool hasSingleUnallocatedPHVSource = false;
     bool hasTwoUnallocatedPHVSources = false;
     for (auto &action : set_of_actions) {
@@ -987,7 +1168,11 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                  "constraints.");
         // If some sources in the same set in copacking_constraints are already allocated, set the
         // container requirement for the unallocated sources in that set.
-        assign_containers_to_unallocated_sources(alloc, copacking_constraints, req_container);
+        if (!assign_containers_to_unallocated_sources(alloc, copacking_constraints,
+                    req_container)) {
+            LOG5("\t\t\t\tMultiple slices that must go into the same container are allocated "
+                    "to different containers");
+            return boost::none; }
         ordered_set<PHV::FieldSlice> setFieldSlices;
         setFieldSlices.insert(set->begin(), set->end());
         copacking_set[setIndex++] = setFieldSlices; }
@@ -1463,8 +1648,10 @@ ActionPhvConstraints::ConstraintTracker::is_written(
 
         ActionPhvConstraints::OperandInfo rv = op;
         rv.phv_used = slice;
+        cstring operation = rv.flags & OperandInfo::WHOLE_CONTAINER ? "WHOLE_CONTAINER" :
+                            rv.flags & OperandInfo::BITWISE ? "BITWISE" : "MOVE";
         LOG5("\t\t\t\tSlice " << slice << " is written in action " << act->name << " by a " <<
-             (rv.flags & OperandInfo::MOVE ? "MOVE" : "WHOLE_CONTAINER") << " operation.");
+             operation << " operation.");
         return rv; }
 
     LOG5("\t\t\t\tSlice " << slice << " is not written in action " << act->name);
@@ -1637,6 +1824,20 @@ std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::OperandI
         out << *info.phv_used << " ";
     if (!info.ad && !info.constant && !info.phv_used)
         out << "INVALID OPERAND INFO ";
+    out << "]";
+    out << "[ ";
+    if (info.flags & ActionPhvConstraints::OperandInfo::MOVE)
+        out << " MOVE ";
+    if (info.flags & ActionPhvConstraints::OperandInfo::BITWISE)
+        out << " BITWISE ";
+    if (info.flags & ActionPhvConstraints::OperandInfo::WHOLE_CONTAINER)
+        out << " WHOLE ";
+    if (info.flags & ActionPhvConstraints::OperandInfo::ANOTHER_OPERAND)
+        out << " ANOTHER ";
+    if (info.flags & ActionPhvConstraints::OperandInfo::MIXED)
+        out << " MIXED ";
+    if (info.flags & ActionPhvConstraints::OperandInfo::WHOLE_CONTAINER_SAME_FIELD)
+        out << " SAME ";
     out << "]";
     return out;
 }

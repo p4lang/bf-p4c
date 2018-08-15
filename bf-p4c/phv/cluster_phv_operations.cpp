@@ -15,9 +15,7 @@ const ordered_set<cstring> PHV_Field_Operations::BITWISE_OPS = {
     "orca",
     "orcb",
     "xnor"
-    // XXX(cole): "xor" should be on this list, but adding it causes PHV
-    // allocation to fail for some switch profiles.
-    // "xor"
+    "xor"
 };
 
 const ordered_set<cstring> PHV_Field_Operations::SHIFT_OPS = {

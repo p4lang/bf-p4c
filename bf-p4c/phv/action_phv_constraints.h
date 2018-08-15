@@ -38,10 +38,11 @@ class ActionPhvConstraints : public Inspector {
     struct OperandInfo {
         int unique_action_id;
         enum field_read_flags_t { MOVE = 1,
-                                  WHOLE_CONTAINER = (1 << 1),
-                                  ANOTHER_OPERAND = (1 << 2),
-                                  MIXED = (1 << 3),
-                                  WHOLE_CONTAINER_SAME_FIELD = (1 << 4) };
+                                  BITWISE = (1 << 1),
+                                  WHOLE_CONTAINER = (1 << 2),
+                                  ANOTHER_OPERAND = (1 << 3),
+                                  MIXED = (1 << 4),
+                                  WHOLE_CONTAINER_SAME_FIELD = (1 << 5) };
         uint8_t flags = 0;
 
         // An operand is either action data (ad), a constant (constant), or
@@ -51,6 +52,7 @@ class ActionPhvConstraints : public Inspector {
         int64_t const_value = 0;
         boost::optional<PHV::FieldSlice> phv_used = boost::none;
         cstring action_name;
+        cstring operation;
 
         bool operator < (OperandInfo other) const {
             // XXX(cole): What if ad == other.ad?
@@ -278,7 +280,15 @@ class ActionPhvConstraints : public Inspector {
      */
     bool has_ad_or_constant_sources(
         const PHV::Allocation::MutuallyLiveSlices& slices,
-        const IR::MAU::Action *act) const;
+        const IR::MAU::Action* action) const;
+
+    /** @returns true if all @slices packed in the same container are all read from action data or
+      * from constant in action @act, or are never read from action data or from constant in action
+      * @act.
+      */
+    bool all_or_none_constant_sources(
+        const PHV::Allocation::MutuallyLiveSlices& slices,
+        const IR::MAU::Action* act) const;
 
     /** Check if two fields share the same container
       */
@@ -298,16 +308,15 @@ class ActionPhvConstraints : public Inspector {
       */
     unsigned count_container_holes(const PHV::Allocation::MutuallyLiveSlices& state) const;
 
-    /** @returns the type of operation (OperandInfo::MOVE or OperandInfo::WHOLE_CONTAINER)  
-      * if for every action in @actions, the fields in @fields are all written using
-      * either MOVE or WHOLE_CONTAINER operations (in case of WHOLE_CONTAINER, no field is @fields
-      * may be left unwritten by an action).
-      * @returns OperandInfo::MIXED if there is a mix of WHOLE_CONTAINER and MOVE operations in
-      * the same action.
+    /** @returns the type of operation (OperandInfo::MOVE or OperandInfo::WHOLE_CONTAINER or
+      * OperandInfo::BITWISE) if for @action, the field slices in @fields are all written using
+      * either MOVE or BITWISE or WHOLE_CONTAINER operations (in case of WHOLE_CONTAINER, no field
+      * is @fields may be left unwritten by an action). @returns OperandInfo::MIXED if there is a
+      * mix of WHOLE_CONTAINER, BITWISE, and MOVE operations in the same action.
       */
     unsigned container_operation_type(
-        const ordered_set<const IR::MAU::Action*>&,
-        const PHV::Allocation::MutuallyLiveSlices&);
+        const IR::MAU::Action*,
+        const PHV::Allocation::MutuallyLiveSlices&) const;
 
     /** Given a set of MutuallyLiveSlices @container_state and the state of allocation @alloc, this
       * function generates packing constraints induced by instructions in the action @action. These
@@ -319,7 +328,7 @@ class ActionPhvConstraints : public Inspector {
       */
     void pack_slices_together(
         const PHV::Allocation& alloc,
-        PHV::Allocation::MutuallyLiveSlices& container_state,
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
         UnionFind<PHV::FieldSlice> &packing_constraints,
         const IR::MAU::Action* action,
         bool pack_unallocated_only);
@@ -393,6 +402,44 @@ class ActionPhvConstraints : public Inspector {
     /// written by METER_ALU, HASH_DIST, RANDOM, or METER_COLOR, and another field in
     /// @container_state is written by the same action
     bool checkSpecialityPacking(ordered_set<const PHV::Field*>& fields) const;
+
+    /// Generates copacking and alignment requirements due to @action for the packing
+    /// @container_state in container @c, where the number of PHV-backed sources are represented by
+    /// @sources and @has_ad_constant_sources indicates if any slices in @container_state is written
+    /// using an action data or constant value. The copacking constraints are generated in
+    /// @copacking_constraints and the alignment requirements are generated and stored in
+    /// @phvMustBeAligned. @returns false if the packing cannot be realized and @true if the packing
+    /// is possible, with the conditional constraints generated.
+    bool check_and_generate_constraints_for_move_with_unallocated_sources(
+            const PHV::Allocation& alloc,
+            const IR::MAU::Action* action,
+            const PHV::Container& c,
+            const PHV::Allocation::MutuallyLiveSlices& container_state,
+            const NumContainers& sources,
+            bool has_ad_constant_sources,
+            ordered_map<const IR::MAU::Action*, bool>& phvMustBeAligned,
+            ordered_map<const IR::MAU::Action*, size_t>& numSourceContainers,
+            UnionFind<PHV::FieldSlice>& copacking_constraints);
+
+    /// Generates conditional constraints for bitwise operations. Client for
+    /// check_and_generate_constraints_for_bitwise_op_with_unallocated_sources.
+    bool generate_conditional_constraints_for_bitwise_op(
+            const PHV::Allocation::MutuallyLiveSlices& container_state,
+            const ordered_set<PHV::FieldSlice>& sources,
+            UnionFind<PHV::FieldSlice>& copacking_constraints) const;
+
+    /// Generates copacking and alignment requirements due to @action for the packing
+    /// @container_state in container @c, where the number of PHV-backed sources are represented by
+    /// @sources and @has_ad_constant_sources indicates if any slices in @container_state is written
+    /// using an action data or constant value. The copacking constraints are generated in
+    /// @copacking_constraints and the alignment requirements are generated and stored in
+    /// @phvMustBeAligned. @returns false if the packing cannot be realized and @true if the packing
+    /// is possible, with the conditional constraints generated.
+    bool check_and_generate_constraints_for_bitwise_op_with_unallocated_sources(
+            const IR::MAU::Action* action,
+            const PHV::Allocation::MutuallyLiveSlices& container_state,
+            const NumContainers& sources,
+            UnionFind<PHV::FieldSlice>& copacking_constraints) const;
 
  public:
     explicit ActionPhvConstraints(const PhvInfo &p, const PackConflicts& c)
