@@ -183,7 +183,7 @@ p4c_add_xfail_reason("tofino2"
   )
 
 p4c_add_xfail_reason("tofino2"
-  "PHV allocation was not successful"
+  "Can only output full phv registers, not slices, in deparser"
   extensions/p4_tests/p4_16/int_transit.p4
   )
 

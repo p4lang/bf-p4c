@@ -112,6 +112,7 @@ struct int_metadata_t {
     bit<8> int_hdr_word_len;
     bit<32> switch_id;
     bit<5> ins_cnt_tmp;
+    bit<5> ins_cnt_tmp2;
 }
 
 struct metadata_t {
@@ -167,6 +168,7 @@ parser ParserImpl(packet_in packet, out headers_t hdr, inout metadata_t meta,
         // meta.int_metadata.int_hdr_word_len cannot be assigned from the same
         // source in int_egress.int_transit
         meta.int_metadata.ins_cnt_tmp = hdr.int_header.ins_cnt;
+        meta.int_metadata.ins_cnt_tmp2 = hdr.int_header.ins_cnt;
         transition accept;
     }
 
@@ -476,7 +478,7 @@ control int_egress(inout headers_t hdr, inout metadata_t meta,
                    inout standard_metadata_t standard_metadata) {
     action int_transit(bit<32> switch_id) {
         meta.int_metadata.switch_id = switch_id;
-        meta.int_metadata.insert_byte_cnt = (bit<16>) (hdr.int_header.ins_cnt << 2);
+        meta.int_metadata.insert_byte_cnt = (bit<16>) (meta.int_metadata.ins_cnt_tmp2 << 2);
         meta.int_metadata.int_hdr_word_len = (bit<8>) meta.int_metadata.ins_cnt_tmp;
     }
     table int_prep {
