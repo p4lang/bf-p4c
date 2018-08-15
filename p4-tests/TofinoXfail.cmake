@@ -107,10 +107,16 @@ if (PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "AttributeError: Client instance has no attribute .*"
-    smoketest_programs_alpm_test_TestIdleTime
     extensions/p4_tests/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4
     extensions/p4_tests/p4_14/p4-tests/programs/exm_smoke_test/exm_smoke_test.p4
     extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
+    )
+
+  # DRV-1877
+  # error: [Errno 32] Broken pipe
+  p4c_add_xfail_reason("tofino"
+    "Broken pipe"
+    smoketest_programs_alpm_test_TestIdleTime
     )
 
   p4c_add_xfail_reason("tofino"
@@ -307,6 +313,7 @@ p4c_add_xfail_reason("tofino"
   switch_generic_int_leaf
   switch_msdc_leaf_int
   switch_l3_heavy_int_leaf
+  smoketest_programs_netcache
   )
 
 p4c_add_xfail_reason("tofino"
@@ -469,11 +476,6 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/c1/COMPILER-276/case1844.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-282/case1864.p4
   )
-
-p4c_add_xfail_reason("tofino"
-  "No size count in action"
-  extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
-)
 
 # p4c_add_xfail_reason("tofino"
 #   "Action for .* has some unbound arguments"
@@ -1003,7 +1005,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
-  smoketest_programs_netcache
   switch_generic_int_leaf
 )
 

@@ -216,11 +216,7 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     # for switchapi
     os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg)
     # for pdfixed
-    if device == 'tofino2':
-        # until we fix p4-build
-        os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, 'jbaypd')
-    else:
-        os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device+'pd')
+    os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device+'pd')
     # res_pd_rpc -- bf-drivers still uses tofino to install res_pd_rpc: 'tofino' should be device
     if installdir == "/usr/local":
         res_pd_rpc = os.path.join(installdir, 'lib', 'python2.7', 'dist-packages', 'tofino')
@@ -375,11 +371,11 @@ def main():
     if args.xml_output:
         extra_ptf_args.extend(['--xunit', '--xunit-dir', args.testdir])
 
-    device = args.device
+    toolsdevice = args.device
     if args.device == 'tofino2':
-        device = 'jbay'  # temporarily until we update p4-build
+        toolsdevice = 'jbay'
     if args.pdtest is not None:
-        compiler_out_dir = os.path.join(args.testdir, 'share', device+'pd', args.name)
+        compiler_out_dir = os.path.join(args.testdir, 'share', args.device+'pd', args.name)
     else:
         compiler_out_dir = args.testdir
 
@@ -477,8 +473,8 @@ def main():
             sys.exit(1)
 
     PTF = findbin(top_builddir, 'PTF')
-    BF_SWITCHD = findbin(top_builddir, 'BF_SWITCHD_' + device)
-    HARLYN_MODEL = findbin(top_builddir, 'HARLYN_MODEL_' + device)
+    BF_SWITCHD = findbin(top_builddir, 'BF_SWITCHD_' + toolsdevice)
+    HARLYN_MODEL = findbin(top_builddir, 'HARLYN_MODEL_' + toolsdevice)
 
     # Extract the tools install directory based on the install path of bf_switchd
     BFD_INSTALLDIR = os.path.dirname(os.path.dirname(BF_SWITCHD))
@@ -552,7 +548,7 @@ def main():
                 conf_path = args.pdtest
             else:
                 conf_path = os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)), device + '.conf')
+                    os.path.dirname(os.path.realpath(__file__)), args.device + '.conf')
             info("conf at {}".format(conf_path))
             assert(os.path.exists(conf_path))
 

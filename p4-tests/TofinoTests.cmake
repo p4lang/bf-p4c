@@ -126,7 +126,7 @@ set (P4FACTORY_REGRESSION_TESTS
 set (BFN_EXCLUDE_PATTERNS "tofino.p4" "fifo_pair.p4" "defines.p4"
                           "fast_update.p4" "headers.p4" "heavy_hitter.p4"
                           "ipv4.p4" "meter.p4" "netcache.p4" "parser.p4"
-                          "slow_update.p4" "ipv4_checksum.p4")
+                          "slow_update.p4" "ipv4_checksum.p4" "lookup.p4")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/*/*.p4")
 bfn_find_tests ("${BFN_TESTS}" ALL_BFN_TESTS EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 # make a list of all the tests that we want to run PTF on
@@ -151,7 +151,7 @@ bfn_set_pd_build_flag("tofino" "${P4FACTORY_PROGRAMS_PATH}/perf_test_alpm/perf_t
 
 # Pick a single test for the tests that are timing out:
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_indirect_1/exm_indirect_1.p4"
-  "^test.TestActSelIterators
+  "test.TestActSelIterators
    test.TestDirectStats
    test.TestDirectStatsPkts28Bytes36
    test.TestDirectStatsPkts32bits

@@ -390,15 +390,23 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_9"
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_10" ${SWITCH_P4}
         "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_10"
-        "switch_tests.MalformedPacketsTest
-        switch_tests.MalformedPacketsTest_ipv6
-        switch_tests.MalformedPacketsTest_tunnel
-        switch_tunnel.L3VxlanUnicastMultiTunnelSMTest
+        "switch_tunnel.L3VxlanUnicastMultiTunnelSMTest
         switch_tunnel.L3VxlanUnicastTunnelECMPLagReflectionSMTest
         switch_tunnel.L3VxlanUnicastTunnelECMPSMTest
         switch_tunnel.L3VxlanUnicastTunnelSMSVITest
         switch_tunnel.L3VxlanUnicastTunnelSMTest")
-
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest" ${SWITCH_P4}
+        "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest"
+        "switch_tests.MalformedPacketsTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest_ipv6" ${SWITCH_P4}
+        "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest_ipv6"
+	"switch_tests.MalformedPacketsTest_ipv6")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest_tunnel" ${SWITCH_P4}
+        "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest_tunnel"
+        "switch_tests.MalformedPacketsTest_tunnel")
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_dc_basic" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_dc_basic_set_1" PROPERTIES TIMEOUT 12000)
@@ -957,14 +965,23 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_dc_basic_set_11"
         switch_tests.L3VIIPv6HostTest
         switch_tests.L3VINhopGleanBGPTest
         switch_tests.L3VINhopGleanTest
-        switch_tests.MalformedPacketsTest
-        switch_tests.MalformedPacketsTest_ipv6
-        switch_tests.MalformedPacketsTest_tunnel
         switch_tunnel.L3VxlanUnicastMultiTunnelSMTest
         switch_tunnel.L3VxlanUnicastTunnelECMPLagReflectionSMTest
         switch_tunnel.L3VxlanUnicastTunnelECMPSMTest
         switch_tunnel.L3VxlanUnicastTunnelSMSVITest
         switch_tunnel.L3VxlanUnicastTunnelSMTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.3_dc_basic_MalformedPacketsTest" ${SWITCH_8.3_P4}
+    "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_8.3_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_dc_basic_MalformedPacketsTest"
+        "switch_tests.MalformedPacketsTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.3_dc_basic_MalformedPacketsTest_ipv6" ${SWITCH_8.3_P4}
+    "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_8.3_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_dc_basic_MalformedPacketsTest_ipv6"
+	"switch_tests.MalformedPacketsTest_ipv6")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.3_dc_basic_MalformedPacketsTest_tunnel" ${SWITCH_8.3_P4}
+    "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 12000" "${SWITCH_8.3_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_dc_basic_MalformedPacketsTest_tunnel"
+        "switch_tests.MalformedPacketsTest_tunnel")
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_8.3_dc_basic" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.3_dc_basic_set_1" PROPERTIES TIMEOUT 12000)

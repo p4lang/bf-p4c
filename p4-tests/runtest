@@ -549,7 +549,7 @@ configure_p4_build() {
         run ./autogen.sh > /dev/null || die
         popd > /dev/null
     fi
-    run $p4builddir/configure --with-${toolsdevice} --with-p4c=$P4C --enable-thrift \
+    run $p4builddir/configure --with-${device} --with-p4c=$P4C --enable-thrift \
         --prefix=$testout LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
         --bindir=${tools_dir}/bin P4_VERSION=$p4_version P4_NAME=$name P4_PATH=$file \
         P4FLAGS=$P4FLAGS \
@@ -579,8 +579,8 @@ if $run_pd ; then
        if [ $device == tofino2 ]; then
           switchdir="$(dirname $0)/p4_14/switch-jbay"
        else
-	  if [[ "$file" == *8.2* ]]; then
-            switchdir="$(dirname $0)/p4_14/switch-8.2"
+	  if [[ "$file" == *8.3* ]]; then
+            switchdir="$(dirname $0)/p4_14/switch-8.3"
 	  else
             switchdir="$(dirname $0)/p4_14/switch"
 	  fi
@@ -592,7 +592,7 @@ if $run_pd ; then
           popd > /dev/null
        fi
        export P4CV6=yes
-       run $switchdir/configure --enable-thrift --disable-static --with-${toolsdevice} \
+       run $switchdir/configure --enable-thrift --disable-static --with-${device} \
 	                --with-switchsai --with-cpu-veth --prefix $testout --with-p4c \
 	                P4_PREFIX=dc P4_NAME=$name P4_PATH=$file P4PPFLAGS="$P4PPFLAGS" \
 	                > $testout/$name-conf.log || die
@@ -605,7 +605,7 @@ if $run_pd ; then
           run ./autogen.sh > /dev/null || die
           popd > /dev/null
        fi
-       run $p4builddir/configure --with-${toolsdevice} --with-p4c=$P4C --enable-thrift \
+       run $p4builddir/configure --with-${device} --with-p4c=$P4C --enable-thrift \
                     --prefix=$testout LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
                     --bindir=${tools_dir}/bin P4_NAME=$name P4_PATH=$file PDFLAGS='$PDFLAGS' \
                     > ${testout}/p4-build-conf.log || die
@@ -616,7 +616,7 @@ if $run_pd ; then
     fi
     popd > /dev/null  # $testout
     # generate the conf file. FIXME: This should really be part of p4-build!!
-    conf_args="--name $name --device $toolsdevice --testdir $testout"
+    conf_args="--name $name --device $device --testdir $testout"
     if [ $name == switch ]; then
         conf_args="$conf_args --switch-api switchapi"
     fi

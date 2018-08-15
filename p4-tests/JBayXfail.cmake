@@ -256,12 +256,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/jbay/hwlearn1.p4
 )
 
-# requires updating the p4-build. PR in progress
-p4c_add_xfail_reason("tofino2"
-  "p4c: error: Unknown backend: jbay-v1model"
-  extensions/p4_tests/p4_14/p4-tests/programs/emulation/emulation.p4
-)
-
 # BRIG-899
 p4c_add_xfail_reason("tofino2"
   "mismatch from expected .* at byte"
