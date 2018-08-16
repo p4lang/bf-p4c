@@ -425,18 +425,25 @@ class csr_composite_object (csr_object):
                 #outfile.write("%sif (!%s.disabled()) {\n" % (indent, field_name(a)))
                 #indent += '  '
                 if single.msb >= 64:
-                    for w in range(single.msb//32 + 1, -1, -1):
+                    for w in (range(single.msb//32, -1, -1) 
+                              if args.reverse_write else
+                              range(0, single.msb//32 + 1)):
                         outfile.write("%sout << binout::tag('R') << binout::byte4" % indent +
                                       "(%s + 0x%x) << binout::byte4(%s.value.getrange(%d, 32));\n" %
                                       (addr_var, a.offset//address_unit + 4, field_name(a), w*32))
                 else:
+                    if not args.reverse_write:
+                        outfile.write("%sout << binout::tag('R') << binout::byte4" % indent +
+                                      "(%s + 0x%x) << binout::byte4(%s);\n" %
+                                      (addr_var, a.offset//address_unit, field_name(a)))
                     if single.msb >= 32:
                         outfile.write("%sout << binout::tag('R') << binout::byte4" % indent +
                                       "(%s + 0x%x) << binout::byte4(%s >> 32);\n" %
                                       (addr_var, a.offset//address_unit + 4, field_name(a)))
-                    outfile.write("%sout << binout::tag('R') << binout::byte4" % indent +
-                                  "(%s + 0x%x) << binout::byte4(%s);\n" %
-                                  (addr_var, a.offset//address_unit, field_name(a)))
+                    if args.reverse_write:
+                        outfile.write("%sout << binout::tag('R') << binout::byte4" % indent +
+                                      "(%s + 0x%x) << binout::byte4(%s);\n" %
+                                      (addr_var, a.offset//address_unit, field_name(a)))
                 #indent = indent[2:]
                 #outfile.write("%s}\n" % indent)
             else:

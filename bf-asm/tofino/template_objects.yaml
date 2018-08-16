@@ -4,6 +4,7 @@ global:
   - emit_fieldname
   - emit_json
   - enable_disable
+  - reverse_write
   - write_dma=mapram_config
   - write_dma=imem_subword8
   - write_dma=imem_subword16
