@@ -94,7 +94,7 @@ general, `$PTF_DIR` corresponds to `p4-tests/p4_<version>/<prog_name>.ptf`.
 1. **Push P4 config to model / driver**
 
     ```bash
-    ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> --update-config-only
+    ./p4-tests/ptf_runner.py [--run-bfrt-as-pi pipe] --testdir $P4C_OUTPUT/ --name <prog_name> --update-config-only
     ```
 
 1. *(Optional) Turn on model debug output*
@@ -109,7 +109,7 @@ general, `$PTF_DIR` corresponds to `p4-tests/p4_<version>/<prog_name>.ptf`.
 1.  **Run PTF tests**
 
     ```bash
-    sudo ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> --ptfdir $PTF_DIR --test-only
+    sudo ./p4-tests/ptf_runner.py [--run-bfrt-as-pi pipe] --testdir $P4C_OUTPUT/ --name <prog_name> --ptfdir $PTF_DIR --test-only
     ```
 
 1. **Run PD tests**
@@ -138,7 +138,7 @@ with `--stftest`:
       --ptfdir p4-tests/tools/stf/ --test-only --stftest <path to .stf file>
 
 Often you may need to run bf_switchd in GDB. Because of the P4Runtime gRPC
-server, you will need to ignore `SIG36` by typing `handle SIG36 noprint nostop`
+server, you will need to ignore `SIG40` by typing `handle SIG40 noprint nostop`
 at the GDB prompt.
 
 

@@ -390,6 +390,8 @@ def main():
     if args.pdtest is None and not os.path.exists(p4info_path):
         error("P4Info file {} not found".format(p4info_path))
         sys.exit(1)
+    else:
+        info("Using P4Info file {}".format(p4info_path))
 
     conf_path = os.path.join(compiler_out_dir, args.name + '.conf')
     if args.bfrt_test and not os.path.exists(conf_path):
