@@ -42,9 +42,10 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
             auto t = IR::Type::Bits::get(32);
             return new IR::Member(prim->srcInfo, t,
                                   new IR::MAU::AttachedOutput(t, salu), "address"); }
-        BUG_CHECK(salu->action_map.count(act->internal_name), "%s: Stateful Alu %s does not have "
-                  "an action in it's action map", prim->srcInfo, salu->name);
-        auto pos = salu->action_map.find(act->internal_name);
+        BUG_CHECK(salu->action_map.count(act->name.originalName),
+                  "%s: Stateful Alu %s does not have an action in it's action map",
+                  prim->srcInfo, salu->name);
+        auto pos = salu->action_map.find(act->name.originalName);
         int salu_index = std::distance(salu->action_map.begin(), pos);
         switch (salu_index) {
             case 0:

@@ -223,10 +223,8 @@ class ActionBodySetup : public Inspector {
 
 static const IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
     const IR::P4Action *ac, const IR::Vector<IR::Argument> *args) {
-    auto rv = new IR::MAU::Action();
-    rv->srcInfo = ac->srcInfo;
-    rv->name = ac->externalName();
-    rv->internal_name = ac->name;
+    auto rv = new IR::MAU::Action(ac->srcInfo, ac->name, ac->annotations);
+    rv->name.name = ac->externalName();
     ActionArgSetup aas;
     size_t arg_idx = 0;
     for (auto param : *ac->parameters->getEnumerator()) {
@@ -571,7 +569,7 @@ void AttachTables::InitializeStatefulAlus
         salu->chain_vpn = true;
         return; }
     auto act = findContext<IR::MAU::Action>();
-    if (!salu->action_map.emplace(act->internal_name, ext->name).second)
+    if (!salu->action_map.emplace(act->name.originalName, ext->name).second)
         error("%s: multiple calls to execute in action %s", gref->srcInfo, act->name);
 }
 
@@ -785,8 +783,8 @@ class GetBackendTables : public MauInspector {
             auto newaction = createActionFunction(refMap, typeMap, decl, mce->arguments);
             DefaultActionInit dai(table, act, refMap);
             auto newaction_defact = newaction->apply(dai)->to<IR::MAU::Action>();
-            if (!tt->actions.count(newaction_defact->internal_name))
-                tt->actions.emplace(newaction_defact->internal_name, newaction_defact);
+            if (!tt->actions.count(newaction_defact->name.originalName))
+                tt->actions.emplace(newaction_defact->name.originalName, newaction_defact);
             else
                 error("%s: action %s appears multiple times in table %s", decl->name.srcInfo,
                           decl->name, tt->name);
@@ -839,7 +837,7 @@ class GetBackendTables : public MauInspector {
                 label = "$default";
             else
                 label = refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
-                              ->getName();
+                              ->getName().originalName;
             if (c->statement) {
                 auto n = getseq(c->statement);
                 tt->next.emplace(label, n);

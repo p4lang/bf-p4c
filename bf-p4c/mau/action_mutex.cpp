@@ -5,7 +5,7 @@ void ActionMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     std::map<cstring, const IR::MAU::Action*> name_to_actions;
     // actions inside a same table are mutex with each other.
     for (const auto* act1 : Values(tbl->actions)) {
-        name_to_actions[act1->internal_name] = act1;
+        name_to_actions[act1->name.originalName] = act1;
         for (const auto* act2 : Values(tbl->actions)) {
             if (act1 != act2) {
                 mutex(action_ids[act1], action_ids[act2]) = true;

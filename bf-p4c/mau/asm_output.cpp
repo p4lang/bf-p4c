@@ -1399,7 +1399,7 @@ class MauAsmOutput::EmitAction : public Inspector {
             out << indent << "- " << self.find_attached_name(table, at) << '(';
             const char *sep = "";
             if (salu) {
-                out << salu->action_map.at(act->internal_name);
+                out << salu->action_map.at(act->name.originalName);
                 sep = ", "; }
             for (size_t i = 1; i < prim->operands.size(); ++i) {
                 // FIXME -- some execute primitives for attached tables have additional
@@ -2082,7 +2082,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
         out << "]" << std::endl;
 
         for (auto action : Values(tbl->actions)) {
-            if (action->internal_name == path->name) {
+            if (action->name.originalName == path->name) {
                 out << indent << "action: " << canon_name(action->name) << std::endl;
                 break;
             }
@@ -2206,7 +2206,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         }
         for (auto act : Values(tbl->actions)) {
             if (act->miss_action_only) continue;
-            out << sep << next_for(tbl, act->internal_name, default_next);
+            out << sep << next_for(tbl, act->name.originalName, default_next);
             sep = ", ";
         }
         out << " ]" << std::endl;

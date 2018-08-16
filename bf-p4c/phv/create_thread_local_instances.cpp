@@ -22,7 +22,7 @@ class FindSharedStateful : public MauInspector {
         gress_t thread = VisitingThread(this);
         all_salus[salu].threads.insert(thread);
         if (auto *act = findContext<IR::MAU::Action>())
-            all_salus.at(salu).action_thread[salu->action_map.at(act->internal_name)] = thread;
+            all_salus.at(salu).action_thread[salu->action_map.at(act->name.originalName)] = thread;
         return false; }
     bool preorder(const IR::GlobalRef *) { visitAgain(); return true; }
 

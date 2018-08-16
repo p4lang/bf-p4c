@@ -120,7 +120,7 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, con
             hit_action_index++;
         }
         alloc.all_instrs.emplace(action->name, single_instr);
-        use[row][color] = tbl->name + "$" + action->internal_name;
+        use[row][color] = tbl->name + "$" + action->name.originalName;
         slot_in_use[row][color] = current_bv;
     }
     return true;

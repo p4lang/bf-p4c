@@ -243,7 +243,11 @@ class Table : BFN::Unit {
                 }
             }
         }
-     }
+        for (auto &act : actions)
+            BUG_CHECK(act.first == act.second->name.originalName,
+                      "name mismatch '%s' != '%s' for action %s",
+                      act.first, act.second->name.originalName, act.second->name.name);
+    }
     visit_children {
         for (auto &gw : gateway_rows)
             v.visit(gw.first, "gateway_row");
@@ -260,11 +264,11 @@ class Table : BFN::Unit {
             if (!next.count("$hit") && !next.count("$miss")) {
                 auto &default_action(clone.flow_clone());
                 default_action.flow_dead();
-                for (auto &action : Values(actions)) {
+                for (auto &action : actions) {
                     auto &clone2(clone.flow_clone());
-                    clone2.visit(action);
-                    if (next.count(action->internal_name)) {
-                        clone2.visit(next.at(action->internal_name), action->internal_name);
+                    clone2.visit(action.second);
+                    if (next.count(action.first)) {
+                        clone2.visit(next.at(action.first), action.first);
                         v.flow_merge(clone2);
                     } else {
                         default_action.flow_merge(clone2);
@@ -570,7 +574,6 @@ class Action : VLIWInstruction {
     // could be different than being table_only, and thus it is left out of the
     // visit_children of the table.
     bool hit_path_imp_only = false;
-    cstring internal_name = "";
     cstring disallowed_reason = "none";
     inline Vector<Argument> default_params = {};
 

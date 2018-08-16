@@ -334,6 +334,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool preorder(const IR::MAU::Action *) override { visitOnce(); return true; }
     bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
     bool preorder(const IR::MAU::TableSeq *) override { visitOnce(); return true; }
+    bool preorder(const IR::Annotation *) override { return false; }
 
     bool preorder(const IR::Slice *) override;
     bool preorder(const IR::MAU::ActionArg *) override;
