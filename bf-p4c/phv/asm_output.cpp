@@ -31,9 +31,12 @@ void PhvAsmOutput::getLiveRanges() {
                 liveRanges[&f] |= { .first = def.first, .last = use.first };
 }
 
-void emit_alloc(std::ostream& out, const PHV::Field::alloc_slice& alloc, PHV::Field& f) {
-    out << "  " << canon_name(f.externalName());
-    if (alloc.field_bit > 0 || alloc.width < f.size)
+void emit_alloc(
+        std::ostream& out,
+        const PHV::Field::alloc_slice& alloc,
+        PHV::Field* f) {
+    out << "  " << canon_name(f->externalName());
+    if (alloc.field_bit > 0 || alloc.width < f->size)
         out << '.' << alloc.field_bit << '-' << alloc.field_hi();
     out << ": " << alloc.container;
     if (alloc.container_bit > 0 || alloc.container.size() != static_cast<size_t>(alloc.width)) {
@@ -44,13 +47,18 @@ void emit_alloc(std::ostream& out, const PHV::Field::alloc_slice& alloc, PHV::Fi
     out << std::endl;
 }
 
-void emit_phv_field(std::ostream& out, PHV::Field& field) {
-    field.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
+void emit_phv_field(
+        std::ostream& out,
+        PHV::Field* field) {
+    field->foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
         emit_alloc(out, slice, field); });
 }
 
-void PhvAsmOutput::emit_phv_field_info(std::ostream& out, PHV::Field& f) const {
-    out << "    " << canon_name(f.externalName()) << ":" << std::endl;
+void PhvAsmOutput::emit_phv_field_info(
+        std::ostream& out,
+        const PHV::Field* f,
+        const ordered_set<const PHV::Field*>& fieldsInContainer) const {
+    out << "      " << canon_name(f->externalName()) << ":" << std::endl;
 
     // Print live range info.
     auto PrintStage = [](const IR::BFN::Unit* u) {
@@ -63,17 +71,17 @@ void PhvAsmOutput::emit_phv_field_info(std::ostream& out, PHV::Field& f) const {
         BUG("Unit is not parser, table, or deparser: %1%", cstring::to_cstring(u));
     };
 
-    if (liveRanges.count(&f)) {
-        auto& range = liveRanges.at(&f);
-        out << "      " << "live_start: " << PrintStage(range.first) << std::endl;
-        out << "      " << "live_end: " << PrintStage(range.last) << std::endl; }
+    if (liveRanges.count(f)) {
+        auto& range = liveRanges.at(f);
+        out << "          " << "live_start: " << PrintStage(range.first) << std::endl;
+        out << "          " << "live_end: " << PrintStage(range.last) << std::endl; }
 
     // Print mutual exclusion information.
-    out << "      " << "mutually_exclusive_with: [ ";
+    out << "          " << "mutually_exclusive_with: [ ";
     std::string sep = "";
-    for (auto& f2 : phv) {
-        if (phv.mutex()(f.id, f2.id)) {
-            out << sep << canon_name(f2.externalName());
+    for (const auto* f2 : fieldsInContainer) {
+        if (phv.mutex()(f->id, f2->id)) {
+            out << sep << canon_name(f2->externalName());
             if (sep == "") sep = ", "; } }
     out << " ]" << std::endl;
 }
@@ -85,12 +93,23 @@ void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
     if (gress == GHOST) gress = INGRESS;
     for (auto &f : phv) {
         if (f.gress == gress) {
-            emit_phv_field(out, f); } }
+            emit_phv_field(out, &f); } }
     if (BFNContext::get().options().debugInfo) {
         out << "  " << "context_json:\n";
-        for (auto &f : phv) {
-            if (f.gress == gress && !f.is_unallocated()) {
-                emit_phv_field_info(out, f); } } }
+        // Collect set of all containers that are allocated to a particular gress.
+        std::set<PHV::Container> allocatedContainers;
+        for (const auto& f : phv) {
+            if (f.gress != gress) continue;
+            f.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
+                allocatedContainers.insert(slice.container);
+            });
+        }
+        for (const auto& c : allocatedContainers) {
+            out << "    " << c << ":\n";
+            const auto& fieldsInContainer = phv.fields_in_container(c);
+            for (const auto* f : fieldsInContainer) {
+                if (f->gress == gress && !f->is_unallocated()) {
+                    emit_phv_field_info(out, f, fieldsInContainer); } } } }
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvAsmOutput& phvasm) {

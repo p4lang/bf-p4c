@@ -269,8 +269,11 @@ void Phv::output(json::map &ctxt_json) {
                 phv_record["field_msb"] = field_lo + field_size - 1;
                 phv_record["field_lsb"] = field_lo;
                 // Pass through per-field context_json information from the compiler.
-                if (field_context_json.count(field_name))
-                    phv_record.merge(field_context_json.at(field_name));
+                if (field_context_json.count(slot.first->name)) {
+                    auto &container_json = field_context_json.at(slot.first->name);
+                    if (container_json.count(field_name)) 
+                        phv_record.merge(container_json[field_name]);
+                }
                 auto field_width_bytes = (field_width + 7)/8U;
                 phv_record["field_width"] = field_width_bytes;
                 phv_record["phv_msb"] = phv_msb;

@@ -271,6 +271,9 @@ public:
     map_base::size_type count(const char *str) const {
         string tmp(str);
         return count(&tmp); }
+    map_base::size_type count(std::string &str) const {
+        string tmp(str);
+        return count(&tmp); }
     map_base::size_type count(long long n) const {
         number tmp(n);
         return count(&tmp); }
