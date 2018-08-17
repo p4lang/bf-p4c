@@ -237,6 +237,7 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     test_params += ';num_pipes=4'
     test_params += ';thrift_server=\'localhost\''
     test_params += ';use_pi=\'False\''
+    test_params += ';test_seed=\'None\''
     if platform is not None:
         test_params += ';pltfm=\'{}\''.format(platform)
     cmd.append('--test-params={}'.format(test_params))

@@ -2054,10 +2054,6 @@ void Table::common_tbl_cfg(json::map &tbl) {
     tbl["default_action_handle"] = get_default_action_handle();
     tbl["action_profile"] = action_profile();
     tbl["default_next_table_mask"] = default_next_table_mask;
-    //FIXME-JSON: No brig support yet, uncomment when driver support is
-    //added to validate json
-    //tbl["uses_dynamic_key_masks"] = false;
-    //tbl["static_entries"] = json::vector();
     //FIXME-JSON: PD related pragma
     tbl["ap_bind_indirect_res_to_match"] = json::vector();
     //FIXME-JSON: PD related, check glass examples for false (ALPM)

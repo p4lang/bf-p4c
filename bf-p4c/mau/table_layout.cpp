@@ -395,6 +395,24 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_i
             }
         }
     }
+    if (auto s = annot->getSingle("dynamic_table_key_masks")) {
+        ERROR_CHECK(s->expr.size() > 0,
+                "%s: dynamic_table_key_masks pragma has no value for table %s",
+                    tbl->srcInfo, tbl->name);
+        auto pragma_val = s->expr.at(0)->to<IR::Constant>();
+        ERROR_CHECK(pragma_val != nullptr, "%s: pack pragma value for table %s must be a "
+                    "constant", tbl->srcInfo, tbl->name);
+        if (pragma_val) {
+            auto dkm = pragma_val->asInt();
+            if (dkm == 1) {
+                tbl->dynamic_key_masks = true;
+            } else {
+                ::warning("%s: The dynammic_table_key_masks pragma value for table %s is %d"
+                        ", when the compiler only supports value of 1", tbl->srcInfo,
+                          tbl->name, dkm);
+            }
+        }
+    }
 
     for (int entry_count = MIN_PACK; entry_count <= MAX_PACK; entry_count++) {
         if (pack_val > 0 && entry_count != pack_val)

@@ -91,7 +91,7 @@ set (P4FACTORY_REGRESSION_TESTS
   basic_switching
   # # # bf-diags
   # # clpm
-  # # dkm
+  dkm
   emulation
   # exm_direct -- timeout on a single test!!
   exm_direct_1

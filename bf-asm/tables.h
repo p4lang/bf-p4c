@@ -824,6 +824,7 @@ public:
 
 DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
     std::map<unsigned, unsigned> hash_fn_ids;
+    bool dynamic_key_masks = false;
     void setup_ways() override;
 public:
     SelectionTable *get_selector() const override { return attached.get_selector(); }

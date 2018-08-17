@@ -13,6 +13,10 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::MatchEntry);
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
+        // Dynamic key masks are only on exact match tables
+        } else if (kv.key == "dynamic_key_masks") {
+            if (CHECKTYPE(kv.value, tSTR))
+                dynamic_key_masks = (strncmp(kv.value.s, "true", 4) == 0);
         } else common_sram_setup(kv, data); }
     common_sram_checks();
 }
@@ -111,7 +115,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     add_pack_format(stage_tbl, format, true, false);
     stage_tbl["memory_resource_allocation"] = nullptr;
     json::map &match_attributes = tbl["match_attributes"];
-    match_attributes["uses_dynamic_key_masks"] = false; //FIXME-JSON
+    match_attributes["uses_dynamic_key_masks"] = dynamic_key_masks;
     if (ways.size() > 0) {
         json::vector &way_stage_tables = stage_tbl["ways"] = json::vector();
         unsigned way_number = 0;
@@ -157,7 +161,7 @@ void ExactMatchTable::add_hash_functions(json::map &stage_tbl) {
                 // Process only hash tables used per hash group
                 for (unsigned hash_table_id: bitvec(hash_group->tables)) {
                     auto hash_table = input_xbar->get_hash_table(hash_table_id);
-                    hash_function["hash_function_number"] = hash_table_id;
+                    hash_function["hash_function_number"] = hash_group_no;
                     gen_hash_bits(hash_table, hash_table_id, hash_bits, hash_group_no); }
             hash_functions.push_back(std::move(hash_function));
             // Mark hash group as visited

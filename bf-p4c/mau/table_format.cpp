@@ -27,7 +27,9 @@ bool TableFormat::analyze_layout_option() {
     int min_way_size = *std::min_element(layout_option.way_sizes.begin(),
                                          layout_option.way_sizes.end());
 
-    if (!tbl->layout.atcam) {
+    // If table has @dynamic_table_key_masks pragma, the driver expects all bits
+    // to be available in the table pack format, so we disable ghosting
+    if (!tbl->layout.atcam && !tbl->dynamic_key_masks) {
         ghost_bits_count = RAM_GHOST_BITS + floor_log2(min_way_size);
     }
 
@@ -638,7 +640,7 @@ void TableFormat::find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &
  *  The algorithm first tries to put the version with bytes already allocated for that
  *  group.  Then if the algorithm is not try to save space, then the allocation tries
  *  to find places that version could overlap with overhead.  Finally, if that does not
- *  succeed, then try to place in the upper two bytes at nibble alignment 
+ *  succeed, then try to place in the upper two bytes at nibble alignment
  */
 bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &alloced,
                                    bitvec &version_loc, bitvec &byte_attempt,
@@ -1242,7 +1244,7 @@ bool TableFormat::allocate_match_with_algorithm() {
  *
  *  0 - tcam_normal
  *  1 - dirtcam_2b
- *  2 - dirtcam_4b_lo 
+ *  2 - dirtcam_4b_lo
  *  3 - dirtcam_4b_hi
  *
  *  TCAM values have two search words and two match words.  These two words give the ability to
@@ -1271,7 +1273,7 @@ bool TableFormat::allocate_match_with_algorithm() {
  *       1000        |  word1[0] = 1
  *       ....        |  ............
  *       1111        |  word1[7] = 1
- * 
+ *
  *  One can surmise that ranges are now possible, as each individual number translates to a
  *  particular byte in either word0 or word1.  Notice also that it takes a full byte to match
  *  on the range of a nibble.  Thus the reason for 4b_lo and 4b_hi, as the encoding will match
@@ -1281,7 +1283,7 @@ bool TableFormat::allocate_match_with_algorithm() {
  *     - TCAM normal for version/valid matching
  *     - 2b encoding for standard match data, as this apparently saves power when compared to
  *       TCAM normal encoding
- *     - Each full byte of range match will need a 4b_lo and a 4b_hi 
+ *     - Each full byte of range match will need a 4b_lo and a 4b_hi
  */
 void TableFormat::initialize_dirtcam_value(bitvec &dirtcam, const IXBar::Use::Byte &byte) {
     if (byte.is_spec(IXBar::RANGE_LO)) {

@@ -63,6 +63,7 @@ class Table : BFN::Unit {
     inline std::map<cstring, TableSeq>          next;
     inline Vector<InputXBarRead>                match_key;
     int                                         random_seed = -1;
+    bool                                        dynamic_key_masks = false;
 
     class Layout {
         /* POD type */
@@ -143,6 +144,7 @@ class Table : BFN::Unit {
         bool no_match_miss_path() const {
             return no_match_data() && !no_match_hit_path();
         }
+
 #emit
         Layout &operator+=(const Layout &a);
 #end
