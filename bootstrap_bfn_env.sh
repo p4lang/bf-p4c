@@ -236,7 +236,7 @@ install_bf_repo () {
         gitclone git@github.com:barefootnetworks/$bf_repo.git $bf_repo $branch
     elif $pull_before_rebuild; then
         pushd $bf_repo >/dev/null
-        git pull $rebase_option origin master
+        git pull $rebase_option origin $branch
         popd >/dev/null
     fi
     pushd $bf_repo >/dev/null
