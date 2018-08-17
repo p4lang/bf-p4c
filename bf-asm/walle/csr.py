@@ -1603,7 +1603,7 @@ class reg(csr_composite_object):
                 else:
                     emit_ubits_field(None)
         pairs = enumerate(context.words)
-        if not indirect:
+        if not indirect and args.reverse_write:
             # DANGER -- certain registers must be written in reverse order (higher
             # address then lower), so we reverse the order of register writes here.
             # block writes must be in order (lowest to highest) as they are a block
