@@ -166,8 +166,20 @@ void TernaryMatchTable::pass1() {
     /* FIXME -- unconditionally setting piped mode -- only need it for wide
      * match across a 4-row boundary */
     stage->table_use[timing_thread(gress)] |= Stage::USE_TCAM_PIPED;
-    alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
+    // Dont allocate id (mark them as used) for empty ternary tables (keyless
+    // tables). Keyless tables are marked ternary with a tind. They are setup by
+    // the driver to always miss (since there is no match) and run the miss
+    // action. The miss action is associated with the logical table space and
+    // does not need a tcam id association. This saves tcams ids to be assigned
+    // to actual ternary tables. This way we can have 8 real ternary match
+    // tables within a stage and not count the keyless among them.
+    // NOTE: The tcam_id is never assigned for these tables and will be set to
+    // default (-1). We also disable registers associated with tcam_id for this
+    // table.
+    if (layout_size() != 0) {
+        alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
+    }
     // alloc_busses(stage->tcam_match_bus_use); -- now hardwired
     input_xbar->pass1();
     if (match.empty() && input_xbar->tcam_width()) {
@@ -359,22 +371,28 @@ void TernaryMatchTable::write_regs(REGS &regs) {
             if (match[word].byte_group >= 0)
                 setup_muxctl(tcam_vh_xbar.tcam_extra_byte_ctl[col][row.row/2],
                              match[word].byte_group);
-            if (!((chain_rows[col] >> row.row) & 1))
-                regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row; }
+            if (tcam_id >= 0) {
+                if (!((chain_rows[col] >> row.row) & 1))
+                    regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row; } }
         if (++word == match.size()) word = 0; }
-    setup_muxctl(merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id], logical_id);
+    if (tcam_id >= 0)
+        setup_muxctl(merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id], logical_id);
     /* FIXME -- setting piped mode if any table in the stage is piped -- perhaps
      * FIXME -- tables can be different? */
-    if (stage->table_use[timing_thread(gress)] & Stage::USE_TCAM_PIPED)
-        merge.tcam_table_prop[tcam_id].tcam_piped = 1;
-    merge.tcam_table_prop[tcam_id].thread = gress;
-    merge.tcam_table_prop[tcam_id].enabled = 1;
-    regs.tcams.tcam_output_table_thread[tcam_id] = 1 << gress;
+    if (tcam_id >= 0) {
+        if (stage->table_use[timing_thread(gress)] & Stage::USE_TCAM_PIPED)
+            merge.tcam_table_prop[tcam_id].tcam_piped = 1;
+        merge.tcam_table_prop[tcam_id].thread = gress;
+        merge.tcam_table_prop[tcam_id].enabled = 1;
+        regs.tcams.tcam_output_table_thread[tcam_id] = 1 << gress;
+    }
     if (indirect_bus >= 0) {
         /* FIXME -- factor into corresponding code in MatchTable::write_regs */
         setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[1][indirect_bus], logical_id);
         setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[3][indirect_bus], logical_id);
-        setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[indirect_bus], tcam_id);
+        if (tcam_id >= 0) {
+            setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[indirect_bus], tcam_id);
+        }
         merge.mau_action_instruction_adr_default[1][indirect_bus] = ACTION_INSTRUCTION_ADR_ENABLE;
         auto &shift_en = merge.mau_payload_shifter_enable[1][indirect_bus];
         if (1 || options.match_compiler) {
@@ -880,7 +898,8 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
     LOG1("### Ternary indirect table " << name() << " write_regs");
     int tcam_id = match_table->tcam_id;
     int tcam_shift = format->log2size-2;
-    regs.tcams.tcam_match_adr_shift[tcam_id] = tcam_shift;
+    if (tcam_id >= 0)
+        regs.tcams.tcam_match_adr_shift[tcam_id] = tcam_shift;
     auto &merge = regs.rams.match.merge;
     for (Layout &row : layout) {
         auto vpn = row.vpns.begin();
@@ -905,13 +924,15 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
             unitram_config.unitram_enable = 1;
             auto &xbar_ctl = regs.rams.map_alu.row[row.row].vh_xbars
                     .adr_dist_tind_adr_xbar_ctl[row.bus];
-            setup_muxctl(xbar_ctl, tcam_id);
+            if (tcam_id >= 0)
+                setup_muxctl(xbar_ctl, tcam_id);
             if (gress)
                 regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row);
             ram_row.tind_ecc_error_uram_ctl[gress] |= 1 << (col - 2); }
         int bus = row.row*2 + row.bus;
         merge.tind_ram_data_size[bus] = format->log2size - 1;
-        setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[bus], tcam_id);
+        if (tcam_id >= 0)
+            setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[bus], tcam_id);
         merge.tind_bus_prop[bus].tcam_piped = 1;
         merge.tind_bus_prop[bus].thread = gress;
         merge.tind_bus_prop[bus].enabled = 1;
