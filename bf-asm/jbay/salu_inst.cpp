@@ -286,8 +286,9 @@ void OutOP::decode_output_mux(Target::JBay, value_t &op) {
 }
 
 template<>
-void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
+void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
     LOG2(this);
+    auto tbl = dynamic_cast<StatefulTable *>(tbl_);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_output_alu[act->code][slot - ALUOUT0];
@@ -295,7 +296,7 @@ void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions:
         salu.salu_output_cmpfn = predication_encode;
     } else {
         salu.salu_output_cmpfn = STATEFUL_PREDICATION_ENCODE_UNCOND; }
-    salu.salu_output_asrc = output_mux;
+    salu.salu_output_asrc = output_operand ? 2 + output_operand->phv_index(tbl) : output_mux;
 }
 void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::JBay::mau_regs>(regs, tbl, act); }

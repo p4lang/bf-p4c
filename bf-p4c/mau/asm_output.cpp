@@ -1372,7 +1372,7 @@ class MauAsmOutput::EmitAction : public Inspector {
             if (auto aa = prim->operands.at(1)->to<IR::MAU::ActionArg>()) {
                 alias[aa->name] = self.find_indirect_index(at, true, nullptr, table); } }
         auto &instr_mem = table->resources->instr_mem;
-        out << indent << canon_name(act->name);
+        out << indent << canon_name(act->externalName());
         auto &vliw_instr = instr_mem.all_instrs.at(act->name.name);
         out << "(" << vliw_instr.mem_code << ", " << vliw_instr.gen_addr() << "):" << std::endl;
         action_context_json(act);
@@ -2085,7 +2085,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
 
         for (auto action : Values(tbl->actions)) {
             if (action->name.originalName == path->name) {
-                out << indent << "action: " << canon_name(action->name) << std::endl;
+                out << indent << "action: " << canon_name(action->externalName()) << std::endl;
                 break;
             }
         }
@@ -2401,7 +2401,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             if (!act->init_default) continue;
             found_def_act = true;
             out << indent << "default_" << (act->miss_action_only ? "only_" : "") << "action: "
-                << canon_name(act->name) << std::endl;
+                << canon_name(act->externalName()) << std::endl;
             if (act->default_params.size() == 0)
                 break;
             BUG_CHECK(act->default_params.size() == act->args.size(), "Wrong number of params "

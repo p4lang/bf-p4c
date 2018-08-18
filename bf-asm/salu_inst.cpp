@@ -675,10 +675,11 @@ struct OutOP : public SaluInstruction {
     };
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
     int output_mux;
+    operand::Phv *output_operand = 0;
     FOR_ALL_TARGETS(TARGET_OVERLOAD, void decode_output_mux, value_t &op)
     OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
     std::string name() override { return "output"; };
-    Instruction *pass1(Table *tbl, Table::Actions::Action *) override { return this; }
+    Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
     void dbprint(std::ostream &out) const override {
@@ -738,9 +739,13 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     // Check mux operand
     if (idx < op.size) {
         SWITCH_FOREACH_TARGET(options.target, rv->decode_output_mux(TARGET(), op[idx]); );
-        if (rv->output_mux < 0)
-            error(op[idx].lineno, "invalid operand '%s' for '%s' instruction",
-                  value_desc(op[idx]), op[0].s);
+        if (rv->output_mux < 0) {
+            operand src(tbl, act, op[idx], true);
+            if ((rv->output_operand = src.to<operand::Phv>()))
+                src.op = nullptr;
+            else
+                error(op[idx].lineno, "invalid operand '%s' for '%s' instruction",
+                      value_desc(op[idx]), op[0].s); }
         idx++;
     } else
         error(rv->lineno, "too few operands for %s instruction", op[0].s);
@@ -749,6 +754,12 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 
     return rv;
 }
+
+Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
+    if (output_operand) {
+        auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+        output_operand->pass1(tbl); }
+    return this; }
 
 #include "tofino/salu_inst.cpp"
 #if HAVE_JBAY

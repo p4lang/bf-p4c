@@ -190,3 +190,9 @@ bool IR::MAU::Table::for_dleft() const {
         return false;
     return match_table->getAnnotations()->getSingle("dleft_learn_cache") != nullptr;
 }
+
+cstring IR::MAU::Action::externalName() const {
+    if (auto *name_annot = annotations->getSingle("name"))
+        return IR::Annotation::getName(name_annot);
+    return name.originalName;
+}

@@ -587,6 +587,7 @@ class Action : VLIWInstruction {
 
     inline Vector<Primitive>    stateful = {};
 
+    cstring externalName() const;
     bool hit_only() const { return default_allowed == false; }
     bool miss_only() const { return miss_action_only == true; }
 

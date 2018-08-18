@@ -251,8 +251,7 @@ p4c_add_xfail_reason("tofino2"
 
 # work in progress -- hardware learning dleft.
 p4c_add_xfail_reason("tofino2"
-  #"error: action instruction addr .* in use elsewhere"
-  "error: invalid operand '.*' for 'output' instruction"
+  "error: action instruction addr .* in use elsewhere"
   extensions/p4_tests/p4_16/jbay/hwlearn1.p4
 )
 
