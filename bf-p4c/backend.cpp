@@ -224,6 +224,9 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         options.privatization ? &defuse : nullptr,
         new TableAllocPass(options, phv, deps),
         new TableSummary(pipe_id),
+        // Rerun defuse analysis here so that table placements are used to correctly calculate live
+        // ranges output in the assembly.
+        &defuse,
         new IXBarVerify(phv),
         new InstructionAdjustment(phv, primNode),
         new DumpPipe("Final table graph"),
