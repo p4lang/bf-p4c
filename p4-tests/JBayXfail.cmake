@@ -254,16 +254,3 @@ p4c_add_xfail_reason("tofino2"
   "error: action instruction addr .* in use elsewhere"
   extensions/p4_tests/p4_16/jbay/hwlearn1.p4
 )
-
-# BRIG-899
-p4c_add_xfail_reason("tofino2"
-  "mismatch from expected .* at byte"
-  extensions/p4_tests/p4_16/jbay/ghost1.p4
-)
-
-# requires jbay_test_harness update
-p4c_add_xfail_reason("tofino2"
-  "Unknown command ghost"
-  extensions/p4_tests/p4_16/jbay/ghost1.p4
-)
-
