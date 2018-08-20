@@ -241,13 +241,17 @@ install_bf_repo () {
     fi
     pushd $bf_repo >/dev/null
     builddir="."
+    topdir="."
     if $reuse_asis && [ -x "$x_path_check" ]; then
         echo "Reusing $bf_repo as is"
     else
-        cd $builddir
-        if $rerun_autoconf || [ ! -r Makefile ]; then
+        git submodule update --init --recursive
+        if $rerun_autoconf || [ ! -r $builddir/Makefile ]; then
             ./autogen.sh
-            ./configure $configure_flags --prefix=$tofino_installdir
+            cd $builddir
+            $topdir/configure $configure_flags --prefix=$tofino_installdir
+        else
+            cd $builddir
         fi
         if $clean_before_rebuild; then
             make clean
