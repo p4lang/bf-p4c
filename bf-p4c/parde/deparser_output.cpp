@@ -245,9 +245,8 @@ struct OutputDigests : public Inspector {
 
         outputDebugInfo(out, indent, digest->selector) << std::endl;
 
-        int idx = 0;
         for (auto* entry : digest->entries) {
-            out << indent << idx++ << ":" << std::endl;
+            out << indent << entry->idx << ":" << std::endl;
 
             /* learning digest is a bit special here - the driver looks at the first
              * field of the digest to resolve the digest-ID and hence must be appended
@@ -281,9 +280,8 @@ struct OutputDigests : public Inspector {
         out << indent << "context_json" << ":" << std::endl;
         AutoIndent contextJsonIndent(indent);
 
-        int idx = 0;
         for (auto* digestEntry : digest->entries) {
-            out << indent << idx++ << ":" << std::endl;
+            out << indent << digestEntry->idx << ":" << std::endl;
 
             auto* entry = digestEntry->to<IR::BFN::LearningTableEntry>();
             BUG_CHECK(entry, "Digest table entry isn't a learning table "

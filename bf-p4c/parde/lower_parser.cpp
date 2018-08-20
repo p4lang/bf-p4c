@@ -1281,7 +1281,9 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             // Learning field lists are used to generate the format for learn
             // quanta, which are exposed to the control plane, so they have a
             // bit more metadata than other kinds of digests.
+            int idx = 0;
             for (auto* fieldList : digest->fieldLists) {
+                if (!fieldList) { idx++; continue; }
                 IR::Vector<IR::BFN::ContainerRef> fieldListSources;
                 std::tie(fieldListSources, std::ignore) =
                     lowerFields(phv, clotInfo, fieldList->sources);
@@ -1291,11 +1293,12 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                       computeControlPlaneFormat(phv, fieldList->sources);
                     entry = new IR::BFN::LearningTableEntry(fieldListSources,
                                                             fieldList->controlPlaneName,
-                                                            controlPlaneFormat);
+                                                            controlPlaneFormat, idx);
                 } else {
-                    entry = new IR::BFN::DigestTableEntry(fieldListSources);
+                    entry = new IR::BFN::DigestTableEntry(fieldListSources, idx);
                 }
                 lowered->entries.push_back(entry);
+                idx++;
             }
 
             loweredDeparser->digests.push_back(lowered);

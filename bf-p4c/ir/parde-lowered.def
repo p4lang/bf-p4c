@@ -395,6 +395,8 @@ class LoweredDeparserParameter {
 class DigestTableEntry {
     /// The PHV containers in the entry.
     inline Vector<BFN::ContainerRef> sources;
+    /// The index for the entry
+    int idx;
 }
 
 /// An entry in the learning digest table.
@@ -403,8 +405,8 @@ class LearningTableEntry : DigestTableEntry {
 #emit
     LearningTableEntry(const IR::Vector<IR::BFN::ContainerRef>& sources,
                        cstring controlPlaneName,
-                       const ::BFN::FieldPacking* controlPlaneFormat)
-      : DigestTableEntry(sources), controlPlaneName(controlPlaneName),
+                       const ::BFN::FieldPacking* controlPlaneFormat, int idx)
+      : DigestTableEntry(sources, idx), controlPlaneName(controlPlaneName),
         controlPlaneFormat(controlPlaneFormat) { }
 #end
 

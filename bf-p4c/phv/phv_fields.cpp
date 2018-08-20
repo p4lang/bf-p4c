@@ -1036,6 +1036,7 @@ class CollectPardeConstraints : public Inspector {
         f->set_is_digest(true);
 
         for (auto* flist : digest->fieldLists) {
+            if (!flist) continue;
             for (auto* flval : flist->sources) {
                 f = phv.field(flval->field);
                 f->set_is_digest(true);
@@ -1093,6 +1094,7 @@ class CollectPardeConstraints : public Inspector {
         LOG3(".....mirror fields in field list " << f->id << ":" << f->name);
         int fieldListIndex = 0;
         for (auto* fieldList : digest->fieldLists) {
+            if (!fieldList) continue;
             LOG3("\t.....mirror metadata field list....." << fieldList);
 
             // The first two entries in the field list are both special and may

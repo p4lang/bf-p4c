@@ -934,7 +934,6 @@ class ConstructSymbolTable : public Inspector {
     std::map<unsigned long, unsigned> digestIndexHashes;
 
     std::set<cstring> globals;
-    bool i2eCloneIdxZeroAdded = false;
 
  public:
     ConstructSymbolTable(ProgramStructure *structure,
@@ -1177,29 +1176,6 @@ class ConstructSymbolTable : public Inspector {
             structure->ingressDeparserStatements.push_back(cond);
         else
             structure->egressDeparserStatements.push_back(cond);
-
-        // Due to COMPILER-914 (see above), add a statement to ingress deparser
-        // to prepend mirror metadata for clone id (mirror_type) == 0 which is
-        // reserved. The actual indexing for i2e starts at 1 but we cannot keep
-        // index 0 empty as compiler later complains on having an empty field
-        // list
-        // phv_fields.cpp: CollectPardeConstraints - postorder - digest
-        if (gress == INGRESS && cloneId == 1 && !i2eCloneIdxZeroAdded) {
-            auto args = new IR::Vector<IR::Argument>();
-            args->push_back(new IR::Argument(new IR::Member(compilerMetadataPath, "mirror_id")));
-            args->push_back(new IR::Argument(newFieldList));
-
-            auto pathExpr = new IR::PathExpression(new IR::Path("mirror"));
-            auto member = new IR::Member(pathExpr, "emit");
-            auto typeArgs = new IR::Vector<IR::Type>();
-            auto mcs = new IR::MethodCallStatement(
-                    new IR::MethodCallExpression(member, typeArgs, args));
-            auto condExprPath = new IR::Member(deparserMetadataPath, "mirror_type");
-            auto zero_idx = new IR::Constant(IR::Type::Bits::get(bits), 0);
-            auto condExpr = new IR::Equ(condExprPath, zero_idx);
-            auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
-            structure->ingressDeparserStatements.push_back(cond);
-        }
     }
 
     void cvtDropFunction(const IR::MethodCallStatement *node) {
