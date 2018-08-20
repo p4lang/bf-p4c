@@ -11,7 +11,8 @@
 #include "ir/ir.h"
 #include "lib/log.h"
 
-static const char *dep_types[] = {"CONTROL", "IXBAR_READ", "ACTION_READ", "ANTI", "OUTPUT"};
+static const char *dep_types[] = {"CONTROL", "IXBAR_READ", "ACTION_READ", "ANTI", "OUTPUT",
+                                  "REDUCTION_OR_READ", "REDUCTION_OR_OUTPUT"};
 
 std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     out << "GRAPH" << std::endl;
@@ -445,7 +446,9 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         const IR::MAU::Table* src = dg.g[boost::source(*edges, dg.g)];
         const IR::MAU::Table* dst = dg.g[boost::target(*edges, dg.g)];
         if ((dg.dep_type_map.count(src) == 0) || (dg.dep_type_map.at(src).count(dst) == 0)
-            || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::CONTROL)) {
+            || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::CONTROL)
+            || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::REDUCTION_OR_READ)
+            || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::REDUCTION_OR_OUTPUT)) {
             if (dg.g[*edges] != DependencyGraph::ANTI) {
                 dg.dep_type_map[src][dst] = dg.g[*edges];
             }
@@ -463,7 +466,11 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
                 happens_later.end(), 0, [this, table] (int sz, const IR::MAU::Table* later) {
                     int stage_addition = 0;
                     if (dg.dep_type_map.count(table) && dg.dep_type_map.at(table).count(later)
-                        && dg.dep_type_map.at(table).at(later) != DependencyGraph::CONTROL) {
+                        && dg.dep_type_map.at(table).at(later) != DependencyGraph::CONTROL
+                        && dg.dep_type_map.at(table).at(later) !=
+                           DependencyGraph::REDUCTION_OR_READ
+                        && dg.dep_type_map.at(table).at(later) !=
+                           DependencyGraph::REDUCTION_OR_OUTPUT) {
                             if (dg.dep_type_map.at(table).at(later) == DependencyGraph::ANTI) {
                                 LOG3("Adding stage from anti");
                             }
@@ -504,7 +511,9 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
                     dg.g[*edge] == DependencyGraph::IXBAR_READ ||
                     dg.g[*edge] == DependencyGraph::OUTPUT) {
                     true_min_stage = std::max(true_min_stage, src_vertex_stage + 1);
-                } else if (dg.g[*edge] == DependencyGraph::CONTROL) {
+                } else if (dg.g[*edge] == DependencyGraph::CONTROL ||
+                           dg.g[*edge] == DependencyGraph::REDUCTION_OR_READ ||
+                           dg.g[*edge] == DependencyGraph::REDUCTION_OR_OUTPUT) {
                     true_min_stage = std::max(true_min_stage, src_vertex_stage);
                 }
                 BUG_CHECK(true_min_stage <= orig_stage, "stage should only decrease");
