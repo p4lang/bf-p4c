@@ -24,33 +24,27 @@ struct DumpPipe : public Inspector {
 };
 
 struct DumpParser : public Visitor {
-    explicit DumpParser(cstring filename) {
-        out = &std::cout;
-        if (filename)
-            out = new std::ofstream(filename);
-    }
+    cstring filename;
+
+    explicit DumpParser(cstring filename) : filename(filename) {}
 
     static cstring escape_name(cstring name) {
         std::string es(name.c_str());
-        boost::replace_all(es, "::", "_");
+        boost::replace_all(es, "ingress::", "");
+        boost::replace_all(es, "egress::", "");
         boost::replace_all(es, "$", "");
         boost::replace_all(es, ".", "_");
         return es.c_str();
     }
 
-    static void write_cluster(std::ostream &out, const ParserGraph& graph/*, cstring gress*/) {
-        // out << "subgraph cluster_" << gress << "{" << std::endl;
+    static void write_cluster(std::ostream &out, const ParserGraph& graph, gress_t gress) {
         for (auto succ : graph.successors())
             for (auto dst : succ.second)
                 out << escape_name((succ.first)->name)
                     << " -> " << escape_name(dst->name) << std::endl;
 
-        static cstring gress = "";  // TODO(zma) get this from graph
-        gress += "_";
         for (auto src : graph.to_pipe())
-            out << escape_name(src->name) << " -> " << gress << "_pipe" << std::endl;
-
-        // out << "}" << std::endl;
+            out << escape_name(src->name) << " -> " << ::toString(gress) << "_pipe" << std::endl;
     }
 
     const IR::Node *apply_visitor(const IR::Node *n, const char*) override { return n; }
@@ -61,18 +55,19 @@ struct DumpParser : public Visitor {
         CollectParserInfo cg;
         root->apply(cg);
 
-        *out << "digraph parser {" << std::endl;
-        *out << "size=\"8,5\"" << std::endl;
+        for (auto g : cg.graphs()) {
+            std::ofstream out(filename + "_" + ::toString(g.first->gress) + ".dot");
 
-        for (auto g : cg.graphs())
-            write_cluster(*out, *(g.second));
+            out << "digraph parser {" << std::endl;
+            out << "size=\"8,5\"" << std::endl;
 
-        *out << "}" << std::endl;
+            write_cluster(out, *(g.second), g.first->gress);
+
+            out << "}" << std::endl;
+        }
 
         return rv;
     }
-
-    std::ostream* out = nullptr;
 };
 
 #endif /* EXTENSIONS_BF_P4C_COMMON_UTILS_H_ */

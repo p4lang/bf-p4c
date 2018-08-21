@@ -274,8 +274,7 @@ field_list_calculation tcp_checksum_v6 {
 
 calculated_field tcp.checksum  {
     update tcp_checksum_v4 if (csum_ctrl.v4_tcp_enable == 1);
-    // ERROR - too many checksum engines
-    //update tcp_checksum_v6 if (csum_ctrl.v6_enable == 1);
+    update tcp_checksum_v6 if (csum_ctrl.v6_tcp_enable == 1);
 }
 
 header_type vlan_tag_t {
@@ -437,7 +436,8 @@ field_list_calculation inner_ipv4_csum {
 }
 
 calculated_field inner_ipv4.hdrChecksum  {
-    verify inner_ipv4_csum;
+    // ERROR - too many checksum engines
+    // verify inner_ipv4_csum;
     update inner_ipv4_csum;
 }
 

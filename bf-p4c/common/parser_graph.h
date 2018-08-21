@@ -132,6 +132,17 @@ class ParserGraph : public DirectedGraph {
         return false;
     }
 
+    bool is_descendant(const IR::BFN::ParserState* src, const IR::BFN::ParserState* dst) const {
+        return is_ancestor(dst, src);
+    }
+
+    std::set<const IR::BFN::ParserState*>
+    get_all_descendants(const IR::BFN::ParserState* src) const {
+        std::set<const IR::BFN::ParserState*> rv;
+        get_all_descendants_impl(src, rv);
+        return rv;
+    }
+
     std::vector<const IR::BFN::ParserState*> topological_sort() const {
         std::vector<int> result = DirectedGraph::topological_sort();
         std::vector<const IR::BFN::ParserState*> mapped_result;
@@ -141,6 +152,17 @@ class ParserGraph : public DirectedGraph {
     }
 
  private:
+    void get_all_descendants_impl(const IR::BFN::ParserState* src,
+                                  std::set<const IR::BFN::ParserState*>& rv) const {
+        if (!successors().count(src))
+            return;
+
+        for (auto succ : successors().at(src)) {
+            rv.insert(succ);
+            get_all_descendants_impl(succ, rv);
+        }
+    }
+
     void add_state(const IR::BFN::ParserState* s) {
         _states.insert(s);
     }

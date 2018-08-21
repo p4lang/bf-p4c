@@ -438,7 +438,7 @@ AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses)
     addPasses({
         &uses,
         &parserInfo,
-        LOGGING(3) ? new DumpParser("before_clot_allocation.dot") : nullptr,
+        LOGGING(3) ? new DumpParser("before_clot_allocation") : nullptr,
         new CollectClotInfo(phv, clotInfo),
         new NaiveClotAlloc(clotInfo, parserInfo)
     });

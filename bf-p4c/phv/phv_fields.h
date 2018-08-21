@@ -799,6 +799,7 @@ class PhvInfo {
     const StructInfo struct_info(cstring name) const;
     const StructInfo struct_info(const IR::HeaderRef *hr) const {
         return struct_info(hr->toString()); }
+    const std::map<cstring, PHV::Field>& get_all_fields() const { return all_fields; }
     size_t num_fields() const { return all_fields.size(); }
 
     PHV::Field* create_dummy_padding(size_t sz, gress_t gress) {

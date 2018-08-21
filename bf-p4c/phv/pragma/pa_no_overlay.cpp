@@ -52,6 +52,17 @@ bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
         add_constraint(field_name);
     }
 
+    // XXX(zma) tmp workaround to disable bridged residual checksum fields from being
+    // overlaid. Proper bridged metadata overlay requires mutex analysis on ingress and
+    // coordination of ingress deparser and egress parser (TODO).
+    for (auto& nf : phv_i.get_all_fields()) {
+        std::string f_name(nf.first.c_str());
+        if (f_name.find("compiler_generated_meta") != std::string::npos
+         && f_name.find("residual_checksum_") != std::string::npos) {
+            fields.insert(&nf.second);
+        }
+    }
+
     return true;
 }
 

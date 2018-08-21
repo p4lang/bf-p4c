@@ -234,10 +234,12 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
     unsigned ch = 0, clots_in_group[CHUNK_GROUPS + 1] = { 0 };
     byte = 0;
     Phv::Slice prev_pov;
+    int prev = -1;
     for (auto &ent : dict) {
         if (ch >= TOTAL_CHUNKS) {
             error(lineno, "Ran out of chunks in field dictionary (%d)", TOTAL_CHUNKS);
             break; }
+        auto *phv = dynamic_cast<Deparser::FDEntry::Phv *>(ent.what);
         auto *clot = dynamic_cast<Deparser::FDEntry::Clot *>(ent.what);
         // FIXME -- why does the following give an error from gcc?
         // auto *clot = ent.what->to<Deparser::FDEntry::Clot>();
@@ -274,7 +276,11 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
 
         } else {
             byte += size; }
-        prev_pov = *ent.pov; }
+        if (phv && prev_pov == *ent.pov &&
+            ent.what->encode() == prev && ent.what->size() & 6)		
+            error(ent.lineno, "16 and 32-bit container cannot be repeatedly deparsed");		
+        prev_pov = *ent.pov;
+        prev = ent.what->encode(); }
     if (byte > 0) {
         regs.chunk_info[ch].chunk_vld = 1;
         regs.chunk_info[ch].pov = pov.at(&prev_pov.reg) + prev_pov.lo;
@@ -293,8 +299,10 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
     const unsigned TOTAL_CHUNKS = Target::JBay::DEPARSER_TOTAL_CHUNKS;
     unsigned ch = 0, byte = 0, clots_in_group[CHUNK_GROUPS + 1] = { 0 };
     Phv::Slice prev_pov;
+    int prev = -1;
     for (auto &ent : dict) {
         if (ch >= TOTAL_CHUNKS) break;
+        auto *phv = dynamic_cast<Deparser::FDEntry::Phv *>(ent.what);
         auto *clot = dynamic_cast<Deparser::FDEntry::Clot *>(ent.what);
         unsigned size = ent.what->size();
         if (byte && (clot || byte + size > CHUNK_SIZE ||
@@ -338,7 +346,11 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
             while (size--) {
                 chunk[ch].is_phv |= 1 << byte;
                 chunk[ch].byte_off.phv_offset[byte++] = ent.what->encode(); } }
-        prev_pov = *ent.pov; }
+        if (phv && prev_pov == *ent.pov &&
+            ent.what->encode() == prev && ent.what->size() & 6) 
+            error(ent.lineno, "16 and 32-bit container cannot be repeatedly deparsed"); 
+        prev_pov = *ent.pov;
+        prev = ent.what->encode(); }
     if (byte > 0) {
         chunk[ch].cfg.seg_vld = 0;  // no CLOTs yet
         chunk[ch].cfg.seg_slice = byte & 7;

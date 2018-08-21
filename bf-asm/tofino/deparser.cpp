@@ -114,7 +114,7 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
     while (pov_byte < Target::Tofino::DEPARSER_MAX_POV_BYTES)
         pov_layout[pov_byte++] = 0xff;
 
-    int row = -1, prev_pov = -1;
+    int row = -1, prev = -1, prev_pov = -1;
     bool prev_is_checksum = false;
     unsigned pos = 0;
     for (auto &ent : dict) {
@@ -128,6 +128,11 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
             } else {
                 if (prev_is_checksum) prev_pov = -1;
                 prev_is_checksum = false; } }
+
+        if (ent.what->is<Deparser::FDEntry::Phv>() && prev_pov == pov_bit &&
+            ent.what->encode() == prev && ent.what->size() & 6)
+            error(ent.lineno, "16 and 32-bit container cannot be repeatedly deparsed");
+
         while (size--) {
             if (pov_bit != prev_pov || pos >= 4 /*|| (pos & (size-1)) != 0*/) {
                 if (row >= 0) {
@@ -141,7 +146,11 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
                 fde_control[row].valid = 1;
                 pos = 0; }
             fde_data[row].phv[pos++] = ent.what->encode();
-            prev_pov = pov_bit; } }
+            prev_pov = pov_bit;
+        }
+
+        prev = ent.what->encode();
+    }
     if (pos) {
         fde_control[row].num_bytes = pos & 3;
         fde_data[row].num_bytes = pos & 3; }

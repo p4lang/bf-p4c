@@ -441,13 +441,13 @@ struct RewriteParserStatements : public Transform {
         for (auto field : hdr_type->fields) {
             if (field->type->is<IR::Type::Varbits>())
                 P4C_UNIMPLEMENTED("Parser writes to varbits values are not yet supported.");
-            IR::Expression* fref = new IR::Member(field->type, hdr, field->name);
+            auto* fref = new IR::Member(field->type, hdr, field->name);
             auto width = field->type->width_bits();
             auto* rval = new IR::BFN::PacketRVal(StartLen(currentBit, width));
             auto* extract = new IR::BFN::Extract(srcInfo, fref, rval);
             currentBit += width;
             rv->push_back(extract);
-            extractedFields[field->name] = rval;
+            extractedFields[fref] = rval;
         }
 
         // On Tofino we can only extract and deparse headers with byte
@@ -499,6 +499,7 @@ struct RewriteParserStatements : public Transform {
         bool isAdd = method->member == "add";
 
         auto rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+
         IR::Vector<IR::Expression> list;
         if (auto member = src->to<IR::Member>()) {
             list.push_back(member);
@@ -507,8 +508,7 @@ struct RewriteParserStatements : public Transform {
         } else if (auto headerRef = src->to<IR::ConcreteHeaderRef>()) {
             auto header = headerRef->baseRef();
             for (auto field : header->type->fields) {
-                auto member = new IR::Member(
-                    src->srcInfo, headerRef, field->name);
+                auto* member = new IR::Member(src->srcInfo, headerRef, field->name);
                 list.push_back(member);
             }
         }
@@ -526,7 +526,17 @@ struct RewriteParserStatements : public Transform {
             BUG_CHECK(hdr_type != nullptr,
                       "Header type isn't a structlike: %1%", hdr_type);
 
-            auto rval = extractedFields.at(member->member);
+            const IR::BFN::PacketRVal* rval = nullptr;
+            for (auto kv : extractedFields) {
+                auto* extracted = kv.first;
+                if (member->member == extracted->member &&
+                    member->expr->equiv(*(extracted->expr))) {
+                    rval = kv.second;
+                    break;
+                }
+            }
+            BUG_CHECK(rval, "Checksum field not extracted?");
+
             if (isAdd) {
                 auto* add = new IR::BFN::ChecksumAdd(declName, rval);
                 rv->push_back(add);
@@ -534,6 +544,8 @@ struct RewriteParserStatements : public Transform {
                 auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval);
                 rv->push_back(subtract);
             }
+
+            // TODO(zma) checksum field can metadata
         }
         return rv;
     }
@@ -709,7 +721,7 @@ struct RewriteParserStatements : public Transform {
     const cstring stateName;
     const gress_t gress;
     unsigned currentBit = 0;
-    std::map<cstring, const IR::BFN::PacketRVal*> extractedFields;
+    std::map<const IR::Member*, const IR::BFN::PacketRVal*> extractedFields;
 };
 
 static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
@@ -942,7 +954,7 @@ void ExtractParser::postorder(const IR::BFN::TranslatedP4Parser* parser) {
 
 void ExtractParser::end_apply() {
     if (LOGGING(3)) {
-        DumpParser dp("extract_parser.dot");
+        DumpParser dp("extract_parser");
         rv->apply(dp);
     }
 }

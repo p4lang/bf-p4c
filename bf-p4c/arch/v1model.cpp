@@ -2224,18 +2224,11 @@ class InsertChecksumError : public PassManager {
 
         void printStates(const std::set<const IR::ParserState*>& states) {
             for (auto s : states)
-                std::cout << s->name << std::endl;
-        }
-
-        void printStates(const std::set<cstring>& states) {
-            for (auto s : states)
-                std::cout << s << std::endl;
+                std::cout << "   " << s->name << std::endl;
         }
 
         std::set<cstring>
         computeChecksumEndStates(const std::set<const IR::ParserState*>& calcStates) {
-            // find all states that are one state reachable from calcStates
-
             auto& parserGraphs = self->translate->parserGraphs;
 
             if (LOGGING(3)) {
@@ -2243,7 +2236,11 @@ class InsertChecksumError : public PassManager {
                 printStates(calcStates);
             }
 
-            std::set<cstring> endStates;
+            std::set<const IR::ParserState*> endStates;
+
+            // A calculation state is a verification end state if no other state of the
+            // same calculation is its descendant. Otherwise, include all of the state's
+            // children states that are not a calculation state.
 
             for (auto* a : calcStates) {
                 bool isEndState = true;
@@ -2254,7 +2251,7 @@ class InsertChecksumError : public PassManager {
                     }
                 }
                 if (isEndState) {
-                    endStates.insert(a->name);
+                    endStates.insert(a);
                 } else {
                     if (parserGraphs.succs.count(a)) {
                         for (auto* succ : parserGraphs.succs.at(a)) {
@@ -2263,7 +2260,7 @@ class InsertChecksumError : public PassManager {
 
                             for (auto* s : calcStates) {
                                 if (!parserGraphs.is_ancestor(succ, s)) {
-                                    endStates.insert(succ->name);
+                                    endStates.insert(succ);
                                 }
                             }
                         }
@@ -2278,7 +2275,11 @@ class InsertChecksumError : public PassManager {
                 printStates(endStates);
             }
 
-            return endStates;
+            std::set<cstring> rv;
+            for (auto s : endStates)
+                rv.insert(s->name);
+
+            return rv;
         }
 
         bool preorder(const IR::BFN::TranslatedP4Parser* parser) override {
@@ -2320,6 +2321,17 @@ class InsertChecksumError : public PassManager {
             auto select = findContext<IR::SelectCase>();
 
             if (parser && state && select) {
+                bool isCalcState = false;
+
+                for (auto kv : self->translate->ingressVerifyDeclToStates) {
+                    for (auto s : kv.second) {
+                        if (s->name == state->name) {
+                            isCalcState = true;
+                            break; } } }
+
+                if (!isCalcState)
+                    return path;
+
                 for (auto& kv : self->endStates[parser->name]) {
                     if (path->path->name == "accept" && kv.second.count("__before_accept")) {
                         path = new IR::PathExpression("__before_accept");

@@ -562,11 +562,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Ran out of phv output extractor slots"
-  extensions/p4_tests/p4_14/ipv4_options.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Tofino does not allow stats to use different address schemes on one table"
   testdata/p4_14_samples/counter.p4
   )
@@ -1276,4 +1271,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "AssertionError: Expected packet was not received on device"
   brig_569
+)
+
+# need bridged metadata overlay
+p4c_add_xfail_reason("tofino"
+  "invalid parser checksum unit"
+  extensions/p4_tests/p4_14/test_checksum.p4
 )

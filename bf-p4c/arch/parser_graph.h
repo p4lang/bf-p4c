@@ -28,7 +28,10 @@ class P4ParserGraphs: public graphs::ParserGraphs {
             return false;
 
         auto inserted = visited.insert(b);
-        if (inserted.second)
+        if (inserted.second == false)  // visited
+            return false;
+
+        if (!succs.count(b))
             return false;
 
         if (succs.at(b).count(a))
