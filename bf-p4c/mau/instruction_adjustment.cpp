@@ -1108,6 +1108,8 @@ void GeneratePrimitiveInfo::validate_add_op_json(Util::JsonObject *_primitive,
 bool GeneratePrimitiveInfo::preorder(const IR::MAU::Table *tbl) {
     auto tname = tbl->match_table ? tbl->match_table->externalName() : tbl->name;
     LOG1("Table: " << canon_name(tname));
+    bool alpm_preclassifier = tbl->name.endsWith("preclassifier");
+
     if (tbl->actions.empty()) return true;
 
     auto _table = new Util::JsonObject();
@@ -1119,8 +1121,18 @@ bool GeneratePrimitiveInfo::preorder(const IR::MAU::Table *tbl) {
         gen_action_json(act, _action);
         _actions->append(_action);
     }
+
     _table->emplace("name", cstr(tname));
-    _table->emplace("actions", _actions);
+    if (alpm_preclassifier) {
+        auto _match_attr = new Util::JsonObject();
+        auto _pre_classifier = new Util::JsonObject();
+        _pre_classifier->emplace("actions", _actions);
+        _match_attr->emplace("pre_classifier", _pre_classifier);
+        _table->emplace("match_attributes", _match_attr);
+    } else {
+        _table->emplace("actions", _actions);
+    }
+
     _tables->append(_table);
     return true;
 }

@@ -67,81 +67,75 @@ class OutputAsm : public PassManager {
     const Util::JsonObject &_primitives;
 
     void end_apply() override {
-        if (!_options.debugInfo)  // generate resources info only if invoked with -g
+        // Set output dir
+        std::string outputDir(_options.outputDir.c_str());
+        if (_options.langVersion == BFN_Options::FrontendVersion::P4_16) {
+            outputDir = outputDir + "/" + pipeName;
+        }
+        int rc = mkdir(outputDir.c_str(), 0755);
+        if (rc != 0 && errno != EEXIST) {
+            std::cerr << "Failed to create directory: " << outputDir << std::endl;
             return;
+        }
+        LOG2("Generating outputs under " << outputDir);
+        std::string dir(outputDir);
+        cstring outputFile = dir + "/" + _options.programName + ".bfa";
+        std::ofstream ctxt_stream(outputFile, std::ios_base::app);
+
         if (_success) {
-            std::string outputDir(_options.outputDir.c_str());
-            if (_options.langVersion == BFN_Options::FrontendVersion::P4_16) {
-                outputDir = outputDir + "/" + pipeName;
-            }
-            int rc = mkdir(outputDir.c_str(), 0755);
-            if (rc != 0 && errno != EEXIST) {
-                std::cerr << "Failed to create directory: " << outputDir << std::endl;
-                return;
-            }
-            LOG2("Generating outputs under " << outputDir);
-            std::string dir(outputDir);
-
-            // Output resources json file
-            cstring resourcesFile = dir + "/" + _options.programName + ".res.json";
-            cstring outputFile = dir + "/" + _options.programName + ".bfa";
+            // Always output primitives json file (info used by model for
+            // logging actions)
             cstring primitivesFile = dir + "/" + _options.programName + ".prim.json";
-
-            LOG2("ASM generation for resources: " << resourcesFile);
-            std::ofstream ctxt_stream(outputFile, std::ios_base::app);
-            ctxt_stream << "resources: \"" << resourcesFile << "\"" << std::endl << std::flush;
-            std::ofstream res(resourcesFile);
-            res << _visualization << std::endl << std::flush;
-
-            // Output primitives json file (info used by model for logging
-            // actions)
             LOG2("ASM generation for primitives: " << primitivesFile);
-            ctxt_stream << "primitives: \"" << primitivesFile << "\"" << std::endl << std::flush;
+            ctxt_stream << "primitives: \"" <<
+                primitivesFile << "\"" << std::endl << std::flush;
             std::ofstream prim(primitivesFile);
             _primitives.serialize(prim);
             prim << std::endl << std::flush;
-        } else {
-            // The compilation was unsuccessful, but we still need to put out debug info
-            // into context.json. However, the assembler is not going to be invoked, so
-            // we need to output all the necessary .json here.
-            // Also, we should not throw any exceptions from this code, as we should already
-            // know what failed, so we catch all exceptions and ignore them.
-            try {
-                Util::JsonObject ctxtJson;
-                const time_t now = time(NULL);
-                char build_date[1024];
-                strftime(build_date, 1024, "%c", localtime(&now));
+        }
+        if (_options.debugInfo) {  // generate resources info only if invoked with -g
+            if (_success) {
+                // Output resources json file
+                cstring resourcesFile = dir + "/" + _options.programName + ".res.json";
+                LOG2("ASM generation for resources: " << resourcesFile);
+                ctxt_stream << "resources: \"" <<
+                    resourcesFile << "\"" << std::endl << std::flush;
+                std::ofstream res(resourcesFile);
+                res << _visualization << std::endl << std::flush;
 
-                std::string outputDir(_options.outputDir.c_str());
-                if (_options.langVersion == BFN_Options::FrontendVersion::P4_16) {
-                    outputDir = outputDir + "/" + pipeName;
-                }
-                int rc = mkdir(outputDir.c_str(), 0755);
-                if (rc != 0 && errno != EEXIST) {
-                    std::cerr << "Failed to create directory: " << outputDir << std::endl;
-                    return;
-                }
-                LOG2("Generating outputs under " << outputDir);
-                std::string dir(outputDir);
+            } else {
+                // The compilation was unsuccessful, but we still need to put
+                // out debug info into context.json. However, the assembler is
+                // not going to be invoked, so we need to output all the
+                // necessary .json here.  Also, we should not throw any
+                // exceptions from this code, as we should already know what
+                // failed, so we catch all exceptions and ignore them.
+                try {
+                    Util::JsonObject ctxtJson;
+                    const time_t now = time(NULL);
+                    char build_date[1024];
+                    strftime(build_date, 1024, "%c", localtime(&now));
 
-                LOG2("ASM: context.json generation for failed compile: " << dir << "context.json");
-                ctxtJson.emplace("build_date", new Util::JsonValue(build_date));
-                ctxtJson.emplace("schema_version", new Util::JsonValue("1.3.9"));
-                ctxtJson.emplace("compiler_version", new Util::JsonValue(BF_P4C_VERSION));
-                ctxtJson.emplace("program_name", new Util::JsonValue(_options.programName));
-                ctxtJson.emplace("run_id", new Util::JsonValue(RunId::getId()));
-                ctxtJson.emplace("learn_quanta", new Util::JsonArray());
-                ctxtJson.emplace("dynamic_hash_calculations", new Util::JsonArray());
-                ctxtJson.emplace("parser", new Util::JsonObject());
-                ctxtJson.emplace("phv_allocation", new Util::JsonArray());
-                ctxtJson.emplace("tables", new Util::JsonArray());
-                ctxtJson.emplace("configuration_cache", new Util::JsonArray());
-                ctxtJson.emplace("resources", _visualization.getResourcesNode());
+                    LOG2("ASM: context.json generation for failed compile: "
+                            << dir << "context.json");
+                    ctxtJson.emplace("build_date", new Util::JsonValue(build_date));
+                    ctxtJson.emplace("schema_version", new Util::JsonValue("1.3.9"));
+                    ctxtJson.emplace("compiler_version", new Util::JsonValue(BF_P4C_VERSION));
+                    ctxtJson.emplace("program_name", new Util::JsonValue(_options.programName));
+                    ctxtJson.emplace("run_id", new Util::JsonValue(RunId::getId()));
+                    ctxtJson.emplace("learn_quanta", new Util::JsonArray());
+                    ctxtJson.emplace("dynamic_hash_calculations", new Util::JsonArray());
+                    ctxtJson.emplace("parser", new Util::JsonObject());
+                    ctxtJson.emplace("phv_allocation", new Util::JsonArray());
+                    ctxtJson.emplace("tables", new Util::JsonArray());
+                    ctxtJson.emplace("configuration_cache", new Util::JsonArray());
+                    ctxtJson.emplace("resources", _visualization.getResourcesNode());
 
-                std::ofstream res(dir + "context.json");
-                ctxtJson.serialize(res);
-                res << std::endl << std::flush;
-            } catch (...) {}  // Do nothing. If we failed to produce context.json, too bad!
+                    std::ofstream res(dir + "context.json");
+                    ctxtJson.serialize(res);
+                    res << std::endl << std::flush;
+                } catch (...) {}  // Do nothing. If we failed to produce context.json, too bad!
+            }
         }
     }
 
