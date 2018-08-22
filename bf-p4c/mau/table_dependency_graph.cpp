@@ -11,8 +11,18 @@
 #include "ir/ir.h"
 #include "lib/log.h"
 
-static const char *dep_types[] = {"CONTROL", "IXBAR_READ", "ACTION_READ", "ANTI", "OUTPUT",
-                                  "REDUCTION_OR_READ", "REDUCTION_OR_OUTPUT"};
+static const char* dep_types(DependencyGraph::dependencies_t dep) {
+    switch (dep) {
+        case DependencyGraph::CONTROL: return "CONTROL";
+        case DependencyGraph::IXBAR_READ: return "IXBAR_READ";
+        case DependencyGraph::ACTION_READ: return "ACTION_READ";
+        case DependencyGraph::ANTI: return "ANTI";
+        case DependencyGraph::OUTPUT: return "OUTPUT";
+        case DependencyGraph::REDUCTION_OR_READ: return "REDUCTION_OR_READ";
+        case DependencyGraph::REDUCTION_OR_OUTPUT: return "REDUCTION_OR_OUTPUT";
+        default: return "UNKNOWN";
+    }
+}
 
 std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     out << "GRAPH" << std::endl;
@@ -21,7 +31,7 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
          edges != edges_end;
          ++edges) {
         out << "    " << dg.g[boost::source(*edges, dg.g)]->name << " -- "
-            << dep_types[dg.g[*edges]] << " --> "
+            << dep_types(dg.g[*edges]) << " --> "
             << dg.g[boost::target(*edges, dg.g)]->name << std::endl; }
 
     out << "MIN STAGE, DEPENDENCE CHAIN" << std::endl;
@@ -51,31 +61,30 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
         return Inspector::init_apply(root);
     }
 
-    void addDeps(ordered_set<const IR::MAU::Table *> tables, const IR::MAU::Table* tbl,
-            DependencyGraph::dependencies_t dep) {
+    void addDeps(ordered_set<const IR::MAU::Table *> tables, DependencyGraph::dependencies_t dep) {
         for (auto upstream_t : tables) {
             if (upstream_t->match_table
                 && ignoreDep.count(upstream_t->match_table->externalName())) {
-                LOG3("Ignoring dependency from " << upstream_t->name << " to " << tbl->name);
+                LOG3("Ignoring dependency from " << upstream_t->name << " to " << table->name);
                 continue; }
             self.dg.add_edge(upstream_t, table, dep); }
     }
 
-    void addContDeps(ordered_map<const IR::MAU::Table *, bitvec> tables,
-                     const IR::MAU::Table *t, bitvec range, PHV::Container container) {
+    void addContDeps(ordered_map<const IR::MAU::Table *, bitvec> tables, bitvec range,
+            PHV::Container container) {
         for (auto upstream_t : tables) {
             if (upstream_t.first->match_table &&
                     ignoreDep.count(upstream_t.first->match_table->externalName())) {
                 WARN_CHECK(upstream_t.second == range, "Table %s's pragma ignore_table_dependency "
                            "of %s is also ignoring PHV added action dependencies over container "
-                           "%s, which may not have been the desired outcome", t->name,
+                           "%s, which may not have been the desired outcome", table->name,
                             upstream_t.first->name, container.toString());
                 continue;
             }
             LOG3("Adding container conflict between table " << upstream_t.first->name << " and "
-                 << "table " << t->name << " because of container " << container);
-            self.dg.container_conflicts[upstream_t.first].insert(t);
-            self.dg.container_conflicts[t].insert(upstream_t.first);
+                 << "table " << table->name << " because of container " << container);
+            self.dg.container_conflicts[upstream_t.first].insert(table);
+            self.dg.container_conflicts[table].insert(upstream_t.first);
         }
     }
 
@@ -92,25 +101,24 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
                 LOG3("add_dependency(" << field_name << ")");
                 if (isWrite()) {
                     // Write-after-read dependence.
-                    addDeps(self.access[field->name].ixbar_read, table, DependencyGraph::ANTI);
-                    addDeps(self.access[field->name].action_read, table, DependencyGraph::ANTI);
+                    addDeps(self.access[field->name].ixbar_read, DependencyGraph::ANTI);
+                    addDeps(self.access[field->name].action_read, DependencyGraph::ANTI);
                     // Write-after-write dependence.
                     if (isReductionOr()) {
-                        addDeps(self.access[field->name].reduction_or_write, table,
+                        addDeps(self.access[field->name].reduction_or_write,
                                 DependencyGraph::REDUCTION_OR_OUTPUT);
                     } else {
-                        addDeps(self.access[field->name].write, table, DependencyGraph::OUTPUT);
+                        addDeps(self.access[field->name].write, DependencyGraph::OUTPUT);
                     }
                 } else {
                     // Read-after-write dependence.
                     if (isIxbarRead()) {
-                        addDeps(self.access[field->name].write, table, DependencyGraph::IXBAR_READ);
+                        addDeps(self.access[field->name].write, DependencyGraph::IXBAR_READ);
                     } else if (isReductionOr()) {
-                        addDeps(self.access[field->name].reduction_or_read, table,
+                        addDeps(self.access[field->name].reduction_or_read,
                                 DependencyGraph::REDUCTION_OR_READ);
                     } else {
-                        addDeps(self.access[field->name].write, table,
-                                DependencyGraph::ACTION_READ);
+                        addDeps(self.access[field->name].write, DependencyGraph::ACTION_READ);
                     }
                 }
             }
@@ -136,7 +144,7 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
 
     void end_apply() override {
         for (auto entry : cont_writes) {
-            addContDeps(self.cont_write[entry.first], table, entry.second, entry.first);
+            addContDeps(self.cont_write[entry.first], entry.second, entry.first);
         }
     }
 };
@@ -339,9 +347,12 @@ void FindDependencyGraph::flow_merge(Visitor &v) {
  *  means that A, B could be in stage#0 and C, B could be in at least state#1.
  */
 std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
-FindDependencyGraph::calc_topological_stage(bool include_control) {
+FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
     typename DependencyGraph::Graph::vertex_iterator v, v_end;
     typename DependencyGraph::Graph::edge_iterator out, out_end;
+
+    bool include_control = dep_flags & DependencyGraph::CONTROL;
+    bool include_anti = dep_flags & DependencyGraph::ANTI;
 
     // Current in-degree of vertices
     std::map<DependencyGraph::Graph::vertex_descriptor, int> n_depending_on;
@@ -361,7 +372,7 @@ FindDependencyGraph::calc_topological_stage(bool include_control) {
     for (boost::tie(out, out_end) = boost::edges(dep_graph);
          out != out_end;
          ++out) {
-        if (dep_graph[*out] != DependencyGraph::ANTI
+        if ((include_anti || dep_graph[*out] != DependencyGraph::ANTI)
             && (include_control || dep_graph[*out] != DependencyGraph::CONTROL)
             && dep_graph[*out] != DependencyGraph::REDUCTION_OR_OUTPUT
             && dep_graph[*out] != DependencyGraph::REDUCTION_OR_READ) {
@@ -389,7 +400,7 @@ FindDependencyGraph::calc_topological_stage(bool include_control) {
             auto& out_end = out_edge_itr_pair.second;
             const auto* table = dep_graph[v];
             for (; out != out_end; ++out) {
-                if (dep_graph[*out] != DependencyGraph::ANTI
+                if ((include_anti || dep_graph[*out] != DependencyGraph::ANTI)
                     && (include_control || dep_graph[*out] != DependencyGraph::CONTROL)
                     && dep_graph[*out] != DependencyGraph::REDUCTION_OR_OUTPUT
                     && dep_graph[*out] != DependencyGraph::REDUCTION_OR_READ) {
@@ -457,7 +468,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
 
     // Build dep_stages_control
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
-        topo_rst_control = calc_topological_stage(true);
+        topo_rst_control = calc_topological_stage(DependencyGraph::CONTROL);
     for (int i = int(topo_rst_control.size()) - 1; i >= 0; --i) {
         for (const auto& vertex : topo_rst_control[i]) {
             const IR::MAU::Table* table = dg.g[vertex];
@@ -529,16 +540,16 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         auto* table = kv.first;
         for (const auto* prev : kv.second) {
             dg.happens_before_control_map[prev].insert(table); } }
-    std::stringstream ss;
-    for (auto& kv : dg.happens_before_control_map) {
-        ss << "Table " << kv.first->name << " has priors of ";
-        for (auto& tbl : kv.second) {
-            ss << tbl->name << ", ";
-        }
-        ss << "\n";
-        LOG1(ss.str());
-    }
     if (LOGGING(3)) {
+        std::stringstream ss;
+        for (auto& kv : dg.happens_before_control_map) {
+            ss << "Table " << kv.first->name << " has priors of ";
+            for (auto& tbl : kv.second) {
+                ss << tbl->name << ", ";
+            }
+            ss << "\n";
+            LOG3(ss.str());
+        }
         for (auto& kv_outer : dg.dep_type_map) {
             for (auto& kv_inner : kv_outer.second) {
                 auto* initial_table = kv_outer.first;
@@ -547,6 +558,32 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
                 LOG3("Initial table " << initial_table->name << " with later table "
                     << later_table->name << " and value " << value);
             }
+        }
+    }
+
+    // Calculate dg.happens_before_control_anti_map
+    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>> topo_rst_control_anti =
+        calc_topological_stage(DependencyGraph::CONTROL | DependencyGraph::ANTI);
+    if (LOGGING(3)) {
+        LOG3("Printing results of topological sorting with control and anti dependences included");
+        for (size_t i = 0; i < topo_rst_control_anti.size(); ++i) {
+            LOG3(">>> Stage#" << i << ":");
+            for (const auto& vertex : topo_rst_control_anti[i]) {
+                LOG3("Table: " << vertex << ", " << dg.g[vertex]->name);
+            }
+        }
+    }
+    for (const auto& kv : dg.happens_before_map)
+        dg.happens_before_control_anti_map[kv.first].insert(kv.second.begin(), kv.second.end());
+
+    if (LOGGING(3)) {
+        std::stringstream ss;
+        for (auto& kv : dg.happens_before_control_anti_map) {
+            ss << "Table " << kv.first->name << " has priors of ";
+            for (auto& tbl : kv.second)
+                ss << tbl->name << ", ";
+            ss << std::endl;
+            LOG3(ss.str());
         }
     }
 

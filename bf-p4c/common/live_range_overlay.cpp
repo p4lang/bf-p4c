@@ -49,7 +49,7 @@ void LiveRangeOverlay::end_apply() {
     for (const PHV::Field &f : phv) {
         // Only consider for live range overlay if the field is non-bridged metadata or a bridged
         // metadata padding field or is a privatizable field (PHV copy of a privatized field).
-        if (!f.metadata && !f.alwaysPackable && !f.privatizable())
+        if (!f.metadata && !f.alwaysPackable && !f.privatizable() && !f.bridged)
             continue;
         LOG4("checking liveness of " << f.name);
         livemap[f.id] = { };
@@ -84,15 +84,15 @@ void LiveRangeOverlay::end_apply() {
     LOG4("mutually exclusive metadata:");
     // Fields marked as no overlay by pa_no_overlay
     for (auto f1 : phv) {
-        if ((!f1.metadata && !f1.alwaysPackable && !f1.privatizable()) || f1.pov ||
-                f1.deparsed_to_tm())
+        if ((!f1.metadata && !f1.alwaysPackable && !f1.privatizable() && !f1.bridged)
+                || f1.pov || f1.deparsed_to_tm())
             continue;
         if (noOverlay.count(&f1))
             continue;
         for (auto f2 : phv) {
             if (f1.id == f2.id) continue;  // field should never be mutex to it self.
-            if ((!f2.metadata && !f2.alwaysPackable && !f2.privatizable()) || f2.pov ||
-                 f1.gress != f2.gress || f2.deparsed_to_tm())
+            if ((!f2.metadata && !f2.alwaysPackable && !f2.privatizable() && !f2.bridged)
+                    || f2.pov || f1.gress != f2.gress || f2.deparsed_to_tm())
                 continue;
             if (noOverlay.count(&f2))
                 continue;
@@ -135,7 +135,7 @@ bool LiveRangeOverlay::happens_before(
             return false;
         if (auto t2 = u2->to<IR::MAU::Table>()) {
             if (t1->logical_id == -1 && t2->logical_id == -1) {
-                return dg.happens_before(t1, t2);
+                return dg.happens_before_control_anti(t1, t2);
             } else if (t1 ->logical_id == -1 || t2->logical_id == -1) {
                 BUG("Partial table allocation");
             } else {

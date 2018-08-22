@@ -31,19 +31,19 @@
 
 struct DependencyGraph {
     typedef enum {
-        CONTROL,     // Control dependence.
-        IXBAR_READ,  // Read-after-write (data) dependence.
-        ACTION_READ,  // Read-after-write dependence.
+        CONTROL = 1,     // Control dependence.
+        IXBAR_READ = (1 << 1),  // Read-after-write (data) dependence.
+        ACTION_READ = (1 << 2),  // Read-after-write dependence.
                       // Different from IXBAR_READ for power analysis.
-        ANTI,        // Write-after-read (anti) dependence.
-        OUTPUT,      // Write-after-write (output) dependence. (ACTION?)
-        REDUCTION_OR_READ,  // Read-after-write dependence,
+        ANTI = (1 << 3),        // Write-after-read (anti) dependence.
+        OUTPUT = (1 << 4),      // Write-after-write (output) dependence. (ACTION?)
+        REDUCTION_OR_READ = (1 << 5),  // Read-after-write dependence,
                             // Not a true dependency as hardware supports OR'n on
                             // action data bus.
-        REDUCTION_OR_OUTPUT,  // Write-after-write dependece,
+        REDUCTION_OR_OUTPUT = (1 << 6),  // Write-after-write dependece,
                               // Not a true dependency as hardware supports OR'n on
                               // action data bus.
-        CONCURRENT   // No dependency.
+        CONCURRENT = 0   // No dependency.
     } dependencies_t;
     typedef boost::adjacency_list<
         boost::vecS,
@@ -100,8 +100,17 @@ struct DependencyGraph {
 
     // happens_before[t1] = {t2, t3} means that t1 happens strictly before t2
     // and t3: t1 MUST be placed in an earlier stage.
-    std::map<const IR::MAU::Table*,
-             std::set<const IR::MAU::Table*>> happens_before_map, happens_before_control_map;
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_before_map;
+
+    // Same as happens_before_map, with the additional inclusion of control dependences when
+    // calculating the happens_before relationship.
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_before_control_map;
+
+    // Same as happens_before_map, with the additional inclusion of control and anti dependences
+    // when calculating the happens_before relationship.
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>>
+        happens_before_control_anti_map;
+
     std::map<const IR::MAU::Table*, std::map<const IR::MAU::Table*, dependencies_t>> dep_type_map;
 
     std::map<const IR::MAU::Table*,
@@ -130,6 +139,7 @@ struct DependencyGraph {
         finalized = false;
         happens_before_map.clear();
         happens_before_control_map.clear();
+        happens_before_control_anti_map.clear();
         dependency_map.clear();
         labelToVertex.clear();
         stage_info.clear();
@@ -201,6 +211,15 @@ struct DependencyGraph {
             return happens_before_control_map.at(t1).count(t2);
         } else {
             return false; }
+    }
+
+    bool happens_before_control_anti(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+        if (!finalized)
+            BUG("Dependence graph used before being fully constructed");
+        if (happens_before_control_anti_map.count(t1))
+            return happens_before_control_anti_map.at(t1).count(t2);
+        else
+            return false;
     }
 
     /**
@@ -283,7 +302,7 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     std::map<PHV::Container, cont_write_t>                cont_write;
 
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
-    calc_topological_stage(bool include_control = false);
+    calc_topological_stage(unsigned deps_flag = 0);
 
 
     /** Check that no ingress table ever depends on an egress table happening
