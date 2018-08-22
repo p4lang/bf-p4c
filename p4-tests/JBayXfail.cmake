@@ -80,7 +80,7 @@ p4c_add_xfail_reason("tofino2"
   )
 
 p4c_add_xfail_reason("tofino2"
-  "error: Ran out of space in POV"
+  "PHV allocation was not successful"
   switch_ent_dc_general
 )
 

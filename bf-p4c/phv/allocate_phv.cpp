@@ -313,6 +313,18 @@ AllocScore::AllocScore(
             for (const auto slice : slices) {
                 if (slice.container_slice().contains(i)) {
                     score[kind].n_overlay_bits++; } } }
+        // If overlay is between multiple fields in the same transaction, then that value needs to
+        // be calculated separately.
+        int overlay_bits = 0;
+        for (const auto slice1 : slices) {
+            for (const auto slice2 : slices) {
+                if (slice1 == slice2) continue;
+                for (int i = 0; i < container.size(); i++) {
+                    if (slice1.container_slice().contains(i) &&
+                            slice2.container_slice().contains(i))
+                        overlay_bits++; } } }
+        // Slices are counted twice in the above loop, so divide by 2.
+        score[kind].n_overlay_bits += (overlay_bits / 2);
 
         // gress
         if (!parent->gress(container) && gress) {
