@@ -322,7 +322,7 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
 
                 if (what.vec.size > 3) {
                     if (what[3].type == tINT) {
-                        rv->total_input_bits == what[3].i;
+                        rv->total_input_bits = what[3].i;
                         i++;
                     }
                 }

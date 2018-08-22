@@ -218,10 +218,11 @@ const IR::Expression *IR::MAU::hash_function::convertHashAlgorithmBFN(Util::Sour
 
     if (crc_algorithm_set) {
         mpz_class poly, init, final_xor;
-        poly = hash_alg.poly;
+        mpz_import(poly.get_mpz_t(), 1, 0, sizeof(hash_alg.poly), 0, 0, &hash_alg.poly);
         poly |= (1 << hash_alg.size);
-        init = hash_alg.init;
-        final_xor = hash_alg.final_xor;
+        mpz_import(init.get_mpz_t(), 1, 0, sizeof(hash_alg.init), 0, 0, &hash_alg.init);
+        mpz_import(final_xor.get_mpz_t(), 1, 0, sizeof(hash_alg.final_xor), 0, 0,
+                   &hash_alg.final_xor);
         auto typeT = IR::Type::Bits::get(hash_alg.size + 1);
         args->push_back(new IR::Argument(new IR::Constant(typeT, poly)));
         args->push_back(new IR::Argument(new IR::Constant(typeT, init)));
