@@ -718,10 +718,15 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
     // value.
     bool mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
     size_t num_source_containers = sources.num_allocated + sources.num_unallocated;
-    size_t num_fields_not_written_to = 0;
-    for (auto slice : container_state)
+    PHV::Allocation::MutuallyLiveSlices state_written_to;
+    PHV::Allocation::MutuallyLiveSlices state_not_written_to;
+    for (auto slice : container_state) {
         if (!constraint_tracker.is_written(slice, action))
-            num_fields_not_written_to++;
+            state_not_written_to.insert(slice);
+        else
+            state_written_to.insert(slice);
+    }
+    size_t num_fields_not_written_to = state_not_written_to.size();
     bool has_bits_not_written_to = num_fields_not_written_to > 0;
 
     if (has_ad_constant_sources) {
@@ -737,7 +742,7 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
         // only be a maximum of one PHV source when an action data/constant source is present.
         // Generate these conditional constraints for this particular case.
         if (sources.num_unallocated > 0) {
-            if (!masks_valid(container_state, action)) {
+            if (!masks_valid(container_state, action, true /*action data only*/)) {
                 LOG5("\t\t\t\tThe action data used for this packing is not contiguous");
                 return false; }
             pack_slices_together(alloc, container_state, copacking_constraints, action, false);
@@ -747,9 +752,21 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
         LOG6("\t\t\t\t\tSetting phvMustBeAligned for action " << action->name << " to TRUE");
         phvMustBeAligned[action] = true;
     } else {
-        // No Action data or constant sources and only 1 PHV container as source. So, the
-        // packing is valid without any other induced constraints.
-        if (num_source_containers == 1) return true; }
+        if (num_source_containers == 1) {
+            // If both the fields not written to and the fields written to are not contiguous, then
+            // there are too many holes in the deposit field operation and so, this packing is not
+            // valid. Therefore, always check masks if the number of source containers is 1, and
+            // there are fields not written to in this candidate packing. Note that if one of the
+            // field sets is contiguous, then a valid deposit-field is possible.
+            if (has_bits_not_written_to) {
+                if (!masks_valid(state_written_to, action, false /*non action data only*/) &&
+                    !masks_valid(state_not_written_to, action, false /*non action data only*/)) {
+                    LOG5("\t\t\t\tMasks found to not be valid for packing");
+                    return false; } }
+            // No Action data or constant sources and only 1 PHV container as source plus masks for
+            // deposit-field found to be valid. So, the packing is valid without any other induced
+            // constraints.
+            return true; } }
 
     // If some field is not written to, then one of the sources for the move has to be the
     // container itself.
@@ -1304,12 +1321,22 @@ bool ActionPhvConstraints::masks_valid(ordered_map<size_t, ordered_set<PHV::Allo
 
 bool ActionPhvConstraints::masks_valid(
         const PHV::Allocation::MutuallyLiveSlices& container_state,
-        const IR::MAU::Action* action) const {
+        const IR::MAU::Action* action,
+        bool actionDataOnly) const {
     bitvec actionDataConstantMask;
-    for (auto slice : container_state)
-        if (has_ad_or_constant_sources({ slice }, action))
+    for (auto slice : container_state) {
+        if (actionDataOnly && has_ad_or_constant_sources({ slice }, action)) {
+            LOG7("\t\t\t\t  Action data constant mask for " << slice << " : " <<
+                    slice.container_slice().lo << ", " << slice.width());
             actionDataConstantMask |= bitvec(slice.container_slice().lo, slice.width());
-    LOG5("\t\t\t\tRequired action data constant mask : " << actionDataConstantMask);
+        }
+        if (!actionDataOnly) {
+            LOG7("\t\t\t\t  Mask for " << slice << " : " << slice.container_slice().lo
+                    << ", " << slice.width());
+            actionDataConstantMask |= bitvec(slice.container_slice().lo, slice.width());
+        }
+    }
+    LOG5("\t\t\t\tRequired mask : " << actionDataConstantMask);
     if (actionDataConstantMask.is_contiguous())
         return true;
     return false;

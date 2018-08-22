@@ -355,11 +355,14 @@ class ActionPhvConstraints : public Inspector {
             const PHV::Container c) const;
 
     /** @returns true if a packing with one PHV source and one action data constant can be realized
-      * such that the action data mask is contiguous
+      * such that the action data mask is contiguous. Generates and checks masks for only slices
+      * with action data/constant sources, if actionDataOnly is true. Otherwise, generates and
+      * checks masks for all slices.
       */
     bool masks_valid(
             const PHV::Allocation::MutuallyLiveSlices& container_state,
-            const IR::MAU::Action* action) const;
+            const IR::MAU::Action* action,
+            bool actionDataOnly) const;
 
     /** For each set generated in @copacking_constraints, populate map @req_container with the
       * unallocated field slice and the container to which it should be allocated (same as the
