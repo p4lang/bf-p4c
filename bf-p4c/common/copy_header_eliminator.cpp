@@ -28,9 +28,7 @@ CopyHeaderEliminator::preorder(IR::Primitive *primitive) {
                 src = new IR::Member(src_hdr_ref->srcInfo, validtype, src_hdr_ref, "$valid");
             else
                 src = new IR::Constant(validtype, 1);
-            rv->push_back(new IR::Primitive(primitive->srcInfo, "modify_field", dst, src));
-        } else {
-            BUG("non-header in %s: %s", primitive, dst_hdr_ref->baseRef()); }
+            rv->push_back(new IR::Primitive(primitive->srcInfo, "modify_field", dst, src)); }
         return rv; }
     if (primitive->name == "add_header" || primitive->name == "setValid" ||
         primitive->name == "remove_header" || primitive->name == "setInvalid") {

@@ -1134,6 +1134,7 @@ void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Option
     program->apply(collect_pragma);
     rv->global_pragmas = collect_pragma.global_pragmas();
 
+    LOG2("initial extracted program \n" << *rv);
     ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted,
                                           &resubmitPackings, &mirrorPackings, bindings);
     processBackendPipe.addDebugHook(options.getDebugHook());

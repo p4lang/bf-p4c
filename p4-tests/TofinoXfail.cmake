@@ -955,12 +955,6 @@ p4c_add_xfail_reason("tofino"
 #   extensions/p4_tests/p4_14/c1/BRIG-372/case4346.p4
 #   )
 
-# BRIG-400
-p4c_add_xfail_reason("tofino"
-  "non-header in *"
-  testdata/p4_16_samples/issue1127-bmv2.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
   extensions/p4_tests/p4_14/test_config_324_tcam_range_11.p4
