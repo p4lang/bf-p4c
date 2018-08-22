@@ -809,6 +809,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: : No size count in action"
   extensions/p4_tests/p4_14/p4-tests/programs/ecc/ecc.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
   )
 
 # XXX(cole): Temporarily override previous XFAILs with new failures related to
@@ -1115,6 +1116,20 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/utes_0.p4
 )
 
+# BRIG-924
+# Compiler Bug: unable to reference global instance from non-control block
+p4c_add_xfail_reason("tofino"
+  "unable to reference global instance from non-control block"
+  extensions/p4_tests/p4_14/p4smith_regression/popularity_0.p4
+)
+
+# BRIG-925
+# Compiler Bug: Select on field from different parent branches is not supported.
+p4c_add_xfail_reason("tofino"
+  "Select on field from different parent branches is not supported"
+  extensions/p4_tests/p4_14/p4smith_regression/traditionalists_0.p4
+)
+
 # BRIG-584
 p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*: Cannot extract to a field slice in the parser"
@@ -1249,9 +1264,11 @@ p4c_add_xfail_reason("tofino"
   #switch_ent_fin_postcard
 )
 
+# BRIG-923
 p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
   switch_8.3_msdc_leaf_int
+  extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
 )
 
 # BRIG-927

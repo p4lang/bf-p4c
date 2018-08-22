@@ -50,31 +50,6 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_generic_int_leaf" ${switchtest} "${testExtraArgs} -DGENERIC_INT_LEAF_PROFILE")
 p4c_add_test_label("tofino" "18Q2Goal" "switch_generic_int_leaf")
 
-# Switch On Release 8.2 (refpoint must be periodically updated)
-set  (SWITCH_8.2_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.2/p4src/switch.p4)
-set  (isXFail TRUE)
-file (RELATIVE_PATH switch_8.2_test ${P4C_SOURCE_DIR} ${SWITCH_8.2_P4})
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.2_dc_basic" ${switch_8.2_test} "${testExtraArgs} -DDC_BASIC_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_8.2_dc_basic")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.2_ent_dc_general" ${switch_8.2_test} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_8.2_ent_dc_general")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.2_msdc" ${switch_8.2_test} "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_8.2_msdc")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.2_msdc_ipv4" ${switch_8.2_test} "${testExtraArgs} -DMSDC_IPV4_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_8.2_msdc_ipv4")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.2_msdc_l3" ${switch_8.2_test} "${testExtraArgs} -DMSDC_L3_PROFILE")
-p4c_add_test_label("tofino" "18Q2Goal" "switch_8.2_msdc_l3")
-
 # Switch On Release 8.3 (refpoint must be periodically updated)
 set  (SWITCH_8.3_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.3/p4src/switch.p4)
 set  (SWITCH_8.3_PTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.3/ptf-tests/base/api-tests)
