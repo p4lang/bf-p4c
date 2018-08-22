@@ -111,6 +111,7 @@ void OutOP::decode_output_mux(Target::Tofino, value_t &op) {
     else
         output_mux = -1;
 }
+int OutOP::decode_output_option(Target::Tofino, value_t &op) { return -1; }
 
 template<>
 void OutOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {

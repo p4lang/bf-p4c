@@ -610,6 +610,10 @@ stage <constant> <thread>:
           scale: <int>
         log_vpn: <int> | <range>
           # vpns to use in stateful logging mode
+        pred_shift: <int>
+        pred_comb_shift: <int>
+          # set the salu_output_pred_shift and _comb_shift csr regs explicitly
+          # FIXME -- should have a better way of doing this?
         actions:
             <action name> :
                 - <instruction>

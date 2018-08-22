@@ -1,0 +1,63 @@
+
+# dleft updating
+add learn_match_2 1 learn:1 do_learn_match_2()
+
+# setup the translation of predicate to learning action
+add process_dleft_result 94 learn:0b1*************** retire_stage:0 old_flow()
+add process_dleft_result 93 learn:0b**1************* retire_stage:0 old_flow()
+add process_dleft_result 92 learn:0b****1*********** retire_stage:0 old_flow()
+add process_dleft_result 91 learn:0b******1********* retire_stage:0 old_flow()
+add process_dleft_result 90 learn:0b********1******* retire_stage:0 old_flow()
+add process_dleft_result 89 learn:0b**********1***** retire_stage:0 old_flow()
+add process_dleft_result 88 learn:0b************1*** retire_stage:0 old_flow()
+add process_dleft_result 87 learn:0b**************1* retire_stage:0 old_flow()
+add process_dleft_result 86 learn:0b*1************** retire_stage:0 old_flow()
+add process_dleft_result 85 learn:0b*****1********** retire_stage:0 old_flow()
+add process_dleft_result 84 learn:0b*********1****** retire_stage:0 old_flow()
+add process_dleft_result 83 learn:0b*************1** retire_stage:0 old_flow()
+add process_dleft_result 82 learn:0b***1************ retire_stage:0 new_flow()
+add process_dleft_result 81 learn:0b***********1**** retire_stage:0 new_flow()
+add process_dleft_result 80 learn:0b*******1******** retire_stage:0 new_flow()
+
+add process_dleft_result 72 learn:0b***1************ retire_stage:0x* move_flow()
+add process_dleft_result 71 learn:0b***********1**** retire_stage:0x* move_flow()
+add process_dleft_result 70 learn:0b*******1******** retire_stage:0x* move_flow()
+
+add process_dleft_result  1 learn:0b***************1 retire_stage:0x* failed_overflow()
+
+add map_table_2 9 new_flow:1 learn_stage:2 retire_stage:0x* new_flow_2()
+add map_table_2 8 new_flow:0 learn_stage:2 retire_stage:0x* old_flow_2()
+add map_table_2 7 new_flow:0 learn_stage:0x* retire_stage:2 old_flow_2()
+add map_table_1 9 new_flow:1 learn_stage:1 retire_stage:0x* new_flow_1()
+add map_table_1 8 new_flow:0 learn_stage:1 retire_stage:0x* old_flow_1()
+add map_table_1 7 new_flow:0 learn_stage:0x* retire_stage:1 old_flow_1()
+
+#prime the fid fifo with some fids.
+packet 4 00000000000a 000000000000 ffff 000000000000
+packet 4 00000000000b 000000000000 ffff 000000000000
+packet 4 00000000000c 000000000000 ffff 000000000000
+packet 4 00000000000d 000000000000 ffff 000000000000
+
+expect 3  # packets come out port 3
+
+#        | ethernet header            | | IPv4 header                                  | | UDP header      | | payload ...
+#        dstAddr      srcAddr      type VL   len  id       ttl    csum                 |  sp   dp  len     | |
+packet 1 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 01020304 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(10) lo = 1
+packet 1 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 01020304 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(10) lo = 2
+packet 1 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 01020304 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(10) lo = 3
+
+packet 1 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 02030401 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(11) lo = 1
+packet 1 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 02030401 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(11) lo = 2
+packet 1 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 02030401 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(11) lo = 3

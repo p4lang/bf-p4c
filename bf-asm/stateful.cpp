@@ -85,6 +85,17 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                 else {
                     logvpn_min = kv.value.lo;
                     logvpn_max = kv.value.hi; } }
+        } else if (kv.key == "pred_shift") {
+            if (CHECKTYPE(kv.value, tINT))
+                if ((pred_shift = kv.value.i) < 0 || pred_shift >= 32 || (pred_shift & 3) != 0)
+                    error(kv.value.lineno, "Invalid pred_shift value %d: %s", pred_shift,
+                          pred_shift < 0 ? "negative" : pred_shift >= 32 ? "too large" :
+                          "must be a mulitple of 4");
+        } else if (kv.key == "pred_comb_shift") {
+            if (CHECKTYPE(kv.value, tINT))
+                if ((pred_comb_shift = kv.value.i) < 0 || pred_comb_shift >= 32)
+                    error(kv.value.lineno, "Invalid pred_comb_shift value %d: %s", pred_comb_shift,
+                          pred_comb_shift < 0 ? "negative" : "too large");
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
@@ -442,6 +453,8 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
         merge.meter_alu_thread[1].meter_alu_thread_egress |= 1U << meter_group; }
     auto &salu = regs.rams.map_alu.meter_group[meter_group].stateful;
     salu.stateful_ctl.salu_enable = 1;
+    salu.stateful_ctl.salu_output_pred_shift = pred_shift / 4;
+    salu.stateful_ctl.salu_output_pred_comb_shift = pred_comb_shift;
     if (gress == EGRESS) {
         regs.rams.map_alu.meter_group[meter_group].meter.meter_ctl.meter_alu_egress = 1;
     }

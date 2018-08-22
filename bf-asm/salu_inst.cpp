@@ -675,8 +675,12 @@ struct OutOP : public SaluInstruction {
     };
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
     int output_mux;
+#if HAVE_JBAY
+    bool lmatch = false, pred_disable = false;
+#endif
     operand::Phv *output_operand = 0;
     FOR_ALL_TARGETS(TARGET_OVERLOAD, void decode_output_mux, value_t &op)
+    FOR_ALL_TARGETS(TARGET_OVERLOAD, int decode_output_option, value_t &op)
     OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
     std::string name() override { return "output"; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
@@ -749,6 +753,11 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
         idx++;
     } else
         error(rv->lineno, "too few operands for %s instruction", op[0].s);
+    while (idx < op.size) {
+        int err;
+        SWITCH_FOREACH_TARGET(options.target, err = rv->decode_output_option(TARGET(), op[idx]); );
+        if (err < 0) break;
+        ++idx; }
     if (idx < op.size)
         error(rv->lineno, "too many operands for %s instruction", op[0].s);
 

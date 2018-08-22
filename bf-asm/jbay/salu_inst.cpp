@@ -284,6 +284,12 @@ void OutOP::decode_output_mux(Target::JBay, value_t &op) {
     else
         output_mux = -1;
 }
+int OutOP::decode_output_option(Target::JBay, value_t &op) {
+    if (op == "lmatch") lmatch = true;
+    else if (op == "pred_disable") pred_disable = true;
+    else return -1;
+    return 0;
+}
 
 template<>
 void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
@@ -297,6 +303,8 @@ void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
     } else {
         salu.salu_output_cmpfn = STATEFUL_PREDICATION_ENCODE_UNCOND; }
     salu.salu_output_asrc = output_operand ? 2 + output_operand->phv_index(tbl) : output_mux;
+    salu.salu_lmatch_adr_bit_enable = lmatch;
+    salu.salu_pred_disable = pred_disable;
 }
 void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::JBay::mau_regs>(regs, tbl, act); }

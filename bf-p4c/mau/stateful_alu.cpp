@@ -193,7 +193,7 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
             salu->math = math; }
     if (math_function && !math_function->expr)
         error("%s: math unit requires math_input", reg_action->srcInfo);
-    int alu_hi_use = salu->dual ? 1 : 0;
+    int alu_hi_use = salu->dual || salu->width > 64 ? 1 : 0;
     for (auto &local : Values(locals))
         if (local.use == LocalVar::ALUHI)
             alu_hi_use++;
