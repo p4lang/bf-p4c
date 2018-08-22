@@ -34,6 +34,8 @@ bool PragmaContainerType::add_constraint(cstring field_name, cstring kind) {
 }
 
 bool PragmaContainerType::preorder(const IR::BFN::Pipe* pipe) {
+    if (disable_pragmas.count(PHV::pragma::CONTAINER_TYPE))
+        return false;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             // We only have stringLiteral in IR, no IntLiteral.

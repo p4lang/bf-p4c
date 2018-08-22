@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_COMMON_ALIAS_H_
 
 #include "ir/ir.h"
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/pa_alias.h"
 
@@ -71,7 +72,8 @@ class Alias : public PassManager {
      PragmaAlias pragmaAlias;
 
  public:
-    explicit Alias(PhvInfo& phv) : pragmaAlias(phv) {
+    explicit Alias(PhvInfo& phv, const BFN_Options &options)
+        : pragmaAlias(phv, options.disabled_pragmas) {
         addPasses({
             &pragmaAlias,
             new FindExpressionsForFields(phv, pragmaAlias, fieldExpressions),

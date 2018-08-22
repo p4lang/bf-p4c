@@ -10,6 +10,7 @@
 #include "ir/visitor.h"
 #include "lib/cstring.h"
 #include "version.h"
+#include "bf-p4c/common/collect_global_pragma.h"
 
 BFN_Options::BFN_Options() {
     target = "tofino";
@@ -84,6 +85,18 @@ BFN_Options::BFN_Options() {
             phv_scale_factor = temp;
             return true; },
          "Scale number of phvs by a factor");
+    registerOption("--disable-pragma", "arg",
+        [this](const char* arg) {
+            if (std::find(CollectGlobalPragma::g_global_pragma_names->begin(),
+                          CollectGlobalPragma::g_global_pragma_names->end(),
+                          arg)
+                    == CollectGlobalPragma::g_global_pragma_names->end()) {
+                ::error("Unsupported pragma specified with disable-pragma: %1%", arg);
+                return false;
+            }
+            disabled_pragmas.insert(cstring(arg));
+            return true; },
+        "Disable specified pragmas");
     registerOption("--use-pa-solitary", nullptr,
         [this](const char *) { use_pa_solitary = true; return true; },
         "Use phv solitary pragma");

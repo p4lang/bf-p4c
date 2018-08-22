@@ -11,6 +11,7 @@
  */
 class PragmaContainerType : public Inspector {
     PhvInfo& phv_i;
+    const std::set<cstring> disable_pragmas;
 
     /// Map of fields for which the pragma pa_container_type has been specified to the kind of
     /// suggested container.
@@ -30,6 +31,9 @@ class PragmaContainerType : public Inspector {
 
  public:
     explicit PragmaContainerType(PhvInfo& phv) : phv_i(phv) { }
+
+    explicit PragmaContainerType(PhvInfo& phv, const std::set<cstring> disable)
+        : phv_i(phv), disable_pragmas(disable) { }
 
     /// @returns the map of fields and suggested container type for which the pragma
     /// pa_container_type has been specified in the program.

@@ -5,9 +5,6 @@
 #include "ir/ir.h"
 
 class CollectGlobalPragma : public Inspector {
-    /// Vector of all PHV pragmas recognized by the backend.
-    static const std::vector<cstring> *g_global_pragma_names;
-
     /// Vector of all global pragmas that need to communicated to the backend.
     std::vector<const IR::Annotation*> global_pragmas_;
 
@@ -30,6 +27,9 @@ class CollectGlobalPragma : public Inspector {
 
  public:
     const std::vector<const IR::Annotation*>& global_pragmas() const { return global_pragmas_; }
+
+    /// Vector of all PHV pragmas recognized by the backend.
+    static const std::vector<cstring> *g_global_pragma_names;
 };
 
 #endif /* EXTENSIONS_BF_P4C_COMMON_COLLECT_GLOBAL_PRAGMA_H_ */

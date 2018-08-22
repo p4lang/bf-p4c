@@ -9,6 +9,7 @@
   */
 class PragmaNoOverlay : public Inspector {
     PhvInfo& phv_i;
+    std::set<cstring> disable_pragmas;
 
     /// List of fields for which the pragma pa_no_overlay has been specified. Used to print
     /// logging messages.
@@ -25,8 +26,10 @@ class PragmaNoOverlay : public Inspector {
     bool preorder(const IR::BFN::Pipe* pipe) override;
 
  public:
-    explicit PragmaNoOverlay(PhvInfo& phv)
-        : phv_i(phv) { }
+    explicit PragmaNoOverlay(PhvInfo& phv) : phv_i(phv) { }
+
+    explicit PragmaNoOverlay(PhvInfo& phv, const std::set<cstring> disable)
+        : phv_i(phv), disable_pragmas(disable) { }
 
     /// @returns the set of fields fo which the pragma pa_no_overlay has been specified in the
     /// program.

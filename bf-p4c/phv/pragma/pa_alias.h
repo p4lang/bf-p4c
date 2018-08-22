@@ -29,6 +29,7 @@ class PragmaAlias : public Inspector {
 
  private:
     const PhvInfo& phv_i;
+    const std::set<cstring> disable_pragmas;
     AliasMap aliasMap;
 
     /// All PHV::Field objects that have expressions associated with them.
@@ -45,6 +46,8 @@ class PragmaAlias : public Inspector {
 
  public:
     explicit PragmaAlias(PhvInfo& phv) : phv_i(phv) { }
+    explicit PragmaAlias(PhvInfo& phv, const std::set<cstring> disable)
+        : phv_i(phv), disable_pragmas(disable) { }
     const AliasMap& getAliasMap() const { return aliasMap; }
 };
 

@@ -5,6 +5,8 @@
 #include "lib/log.h"
 
 bool PragmaSolitary::preorder(const IR::BFN::Pipe* pipe) {
+    if (disable_pragmas.count(PHV::pragma::SOLITARY))
+        return false;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             // We only have stringLiteral in IR, no IntLiteral.

@@ -150,7 +150,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CollectPhvInfo(phv),
         new InstructionSelection(phv),
         new DumpPipe("After InstructionSelection"),
-        new Alias(phv),             // Add aliasing from the pa_alias pragmas
+        new Alias(phv, options),             // Add aliasing from the pa_alias pragmas
         new CollectPhvInfo(phv),
         &defuse,
         new FindDependencyGraph(phv, deps),

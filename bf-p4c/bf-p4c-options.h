@@ -26,6 +26,7 @@ class BFN_Options : public CompilerOptions {
     bool backward_compatible = false;
     bool display_power_budget = false;
     bool disable_power_check = false;
+    std::set<cstring> disabled_pragmas;
 #if BAREFOOT_INTERNAL
     bool no_power_check = false;
 #endif

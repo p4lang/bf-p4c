@@ -29,8 +29,12 @@ bool PragmaDeparserZero::preorder(const IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         cstring pragma_name = annotation->name.name;
+
         if (std::find(supported_pragmas->begin(), supported_pragmas->end(), pragma_name) ==
                 supported_pragmas->end())
+            continue;
+
+        if (disable_pragmas.count(pragma_name))
             continue;
 
         auto& exprs = annotation->expr;

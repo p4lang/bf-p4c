@@ -76,14 +76,14 @@ class Pragmas : public PassManager {
     PragmaDeparserZero& pa_deparser_zero()                { return pa_deparser_zero_i; }
 
     explicit Pragmas(PhvInfo& phv, const BFN_Options &options)
-        : pa_container_sizes_i(phv),
-          pa_mutually_exclusive_i(phv),
-          pa_solitary_i(phv),
-          pa_atomic_i(phv),
-          pa_no_overlay_i(phv),
-          pa_container_type_i(phv),
-          pa_no_init_i(phv),
-          pa_deparser_zero_i(phv) {
+        : pa_container_sizes_i(phv, options.disabled_pragmas),
+          pa_mutually_exclusive_i(phv, options.disabled_pragmas),
+          pa_solitary_i(phv, options.disabled_pragmas),
+          pa_atomic_i(phv, options.disabled_pragmas),
+          pa_no_overlay_i(phv, options.disabled_pragmas),
+          pa_container_type_i(phv, options.disabled_pragmas),
+          pa_no_init_i(phv, options.disabled_pragmas),
+          pa_deparser_zero_i(phv, options.disabled_pragmas) {
         addPasses({
             &pa_container_sizes_i,
             &pa_mutually_exclusive_i,

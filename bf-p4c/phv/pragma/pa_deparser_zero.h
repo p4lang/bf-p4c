@@ -10,6 +10,7 @@
 class PragmaDeparserZero : public Inspector {
  private:
     PhvInfo&    phv_i;
+    const std::set<cstring> disable_pragmas;
 
     /// Vector of all PHV pragmas handled by this class.
     static const std::vector<cstring> *supported_pragmas;
@@ -29,6 +30,9 @@ class PragmaDeparserZero : public Inspector {
 
  public:
     explicit PragmaDeparserZero(PhvInfo& p) : phv_i(p) { }
+
+    explicit PragmaDeparserZero(PhvInfo& p, const std::set<cstring> disable)
+        : phv_i(p), disable_pragmas(disable) { }
 
     /// @returns the set of fields for whose headers the not_parsed pragma has been specified.
     const ordered_set<const PHV::Field*>& getNotParsedFields() const {

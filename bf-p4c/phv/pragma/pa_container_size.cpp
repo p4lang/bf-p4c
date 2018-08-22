@@ -15,6 +15,8 @@ PragmaContainerSize::convert_to_phv_size(const IR::Constant* ir) {
 }
 
 bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
+    if (disabled_pragmas.count(PHV::pragma::CONTAINER_SIZE))
+        return false;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             // We only have stringLiteral in IR, no IntLiteral.

@@ -18,6 +18,8 @@ bool PragmaAlias::preorder(const IR::Expression* expr) {
 }
 
 void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
+    if (disable_pragmas.count(PHV::pragma::ALIAS))
+        return;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             ::warning("%1%", "@pragma pa_alias's arguments must be strings, skipped");

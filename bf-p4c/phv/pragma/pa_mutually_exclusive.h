@@ -15,6 +15,7 @@
  */
 class PragmaMutuallyExclusive : public Inspector {
     const PhvInfo& phv_i;
+    const std::set<cstring> disable_pragmas;
 
     ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> pa_mutually_exclusive_i;
 
@@ -30,6 +31,9 @@ class PragmaMutuallyExclusive : public Inspector {
 
  public:
     explicit PragmaMutuallyExclusive(const PhvInfo& phv) : phv_i(phv) { }
+
+    explicit PragmaMutuallyExclusive(const PhvInfo& phv, const std::set<cstring> disable)
+        : phv_i(phv), disable_pragmas(disable) { }
 
     const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& mutex_fields() const {
         return pa_mutually_exclusive_i;

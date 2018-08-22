@@ -5,6 +5,8 @@
 #include "lib/log.h"
 
 bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
+    if (disable_pragmas.count(PHV::pragma::MUTUALLY_EXCLUSIVE))
+        return false;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             ::warning("%1%", "@pragma pa_mutually_exclusive's arguments must be strings, skipped");
