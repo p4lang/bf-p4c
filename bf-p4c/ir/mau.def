@@ -671,11 +671,31 @@ class SaluMathFunction : Operation_Unary {
 }
 
 class MultiOperand : ListExpression {
-#nodbprint
+     dbprint { out << name; }
      cstring name;
      bool is_phv;
      MultiOperand(ListExpression &le, cstring n, bool ip)
         : ListExpression(le), name(n), is_phv(ip) {}
+}
+
+class WrappedSlice : Operation_Ternary {
+    precedence = DBPrint::Prec_Postfix;
+    stringOp = "[:]";
+    validate {
+        if (e1 && e2 && e1->is<IR::Constant>() && e2->is<IR::Constant>()) {
+            BUG_CHECK(e1->is<IR::Constant>() && e2->is<IR::Constant>(),
+                      "Wrapped Slices must have constants as slice portion");
+            BUG_CHECK(e1->to<IR::Constant>()->asUnsigned() < e2->to<IR::Constant>()->asUnsigned(),
+                      "Wrapped Slices must have a higher lo than hi");
+            BUG_CHECK(e0->is<IR::MAU::MultiOperand>(), "Wrapped Slices only make sense on "
+                      "wrapped values");
+        }
+    }
+    WrappedSlice(Expression a, int hi, int lo, int wrap_size)
+    : Operation_Ternary(IR::Type::Bits::get(wrap_size - (lo - hi) + 1), a, new Constant(hi),
+                       new Constant(lo)) {}
+    int getL() const { return e2->to<IR::Constant>()->asInt(); }
+    dbprint { out << e0 << "(" << e1 << ".." << e2 << ")"; }
 }
 
 class InputXBarRead : Expression, IAnnotated {

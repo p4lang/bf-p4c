@@ -41,4 +41,11 @@ const IR::Expression *MakeSliceSource(const IR::Expression *read, int lo, int hi
  */
 safe_vector<const IR::Expression *> convertMaskToSlices(const IR::Mask *m);
 
+/**
+ * MakeWrappedSlice - slice an expression around a boundary
+ * This is necessary if a source goes around the boundary in a deposit-field.  Currently
+ * the only allowed Expression to be used in this expression is a MultiOperand
+ */
+const IR::Expression *MakeWrappedSlice(const IR::Expression *e, int lo, int hi, int wrap_size);
+
 #endif /* BF_P4C_COMMON_SLICE_H_ */

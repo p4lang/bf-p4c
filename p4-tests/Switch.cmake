@@ -742,7 +742,9 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.3_l3_msdc_set_2" ${SW
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_l3_msdc_set_2"
         "switch_tests.CpuTxTest
         switch_tests.ExceptionPacketsTest
+        switch_tests.ExceptionPacketsTest_IPV6
         switch_tests.HostIfTest
+        switch_tests.HostIfV6Test
         switch_tests.L2AccessToAccessVlanTest
         switch_tests.L2AccessToTrunkPriorityTaggingTest
         switch_tests.L2AccessToTrunkVlanJumboTest
@@ -800,14 +802,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_l3_msdc_set_6"
         switch_tests.L3VINhopGleanTest
         switch_tests.MalformedPacketsTest
         switch_tests.MalformedPacketsTest_ipv6")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.3_l3_msdc_ExceptionPacketsTest_IPV6" ${SWITCH_8.3_P4}
-    "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_8.3_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_l3_msdc_ExceptionPacketsTest_IPV6"
-        "switch_tests.ExceptionPacketsTest_IPV6")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.3_l3_msdc_HostIfV6Test" ${SWITCH_8.3_P4}
-    "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_8.3_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_l3_msdc_HostIfV6Test"
-        "switch_tests.HostIfV6Test")
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_8.3_l3_msdc" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.3_l3_msdc_set_1" PROPERTIES TIMEOUT 12000)

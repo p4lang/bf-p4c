@@ -333,13 +333,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
   )
 
-# BRIG-883
-p4c_add_xfail_reason("tofino"
-  "Expected packet was not received on device"
-  smoketest_switch_8.3_l3_msdc_HostIfV6Test
-  smoketest_switch_8.3_l3_msdc_ExceptionPacketsTest_IPV6
-  )
-
 p4c_add_xfail_reason("tofino"
 # Fail on purpose due to indirect tables not being mutually exclusive
   "Tables .* and .* are not mutually exclusive"
@@ -1265,6 +1258,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
   switch_8.3_msdc_leaf_int
+)
+
+# BRIG-927
+p4c_add_xfail_reason("tofino"
+  "the alignment of fields within the container renders the action impossible"
+  fabric-new-DWITH_SPGW
 )
 
 # BRIG-879

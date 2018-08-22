@@ -1570,6 +1570,15 @@ class MauAsmOutput::EmitAction : public Inspector {
         }
         return false;
     }
+
+    bool preorder(const IR::MAU::WrappedSlice *sl) override {
+        assert(sep);
+        auto mo = sl->e0->to<IR::MAU::MultiOperand>();
+        visit(mo);
+        out << "(" << sl->getL() << ")";
+        return false;
+    }
+
     bool preorder(const IR::Constant *c) override {
         assert(sep);
         out << sep << c->value;

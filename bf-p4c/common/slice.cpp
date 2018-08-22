@@ -124,3 +124,13 @@ safe_vector<const IR::Expression *> convertMaskToSlices(const IR::Mask *mask) {
     }
     return slice_vector;
 }
+
+const IR::Expression *MakeWrappedSlice(const IR::Expression *e, int lo, int hi, int wrap_size) {
+    BUG_CHECK(wrap_size > lo && lo > hi, "The creation of this wrap slice is incorrect");
+    if (e->is<IR::MAU::MultiOperand>()) {
+        return new IR::MAU::WrappedSlice(e, hi, lo, wrap_size);
+    } else {
+        BUG("Cannot create wrapped slice on anything that is not a MultiOperand");
+    }
+    return nullptr;
+}

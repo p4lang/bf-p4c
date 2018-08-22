@@ -758,42 +758,6 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
     return true;
 }
 
-/** Is the bitvec rotationally contiguous, and thus can it perform as a read in a PHV set.
-    Unused but useful, so kept
- */
-/*
-bool ActionAnalysis::ContainerAction::is_contig_rotate(bitvec check, int &shift, int size) {
-    shift = 0;
-    int start = check.ffs();
-    int end = check.ffz(start);
-
-    if (end == check.max().index())
-        return true;
-
-    int second_start = check.ffs(end);
-    int second_end = check.ffz(second_start);
-
-    if (start == 0 && second_end == size) {
-        shift = end - start;
-        return true;
-    }
-    return false;
-}
-*/
-
-/** Rotate a bitvec so that it is now contiguous, rather than rotationally contiguous.  Not used
- *  yet as it is too difficult within the IR::Slice process.
- */
-/*
-bitvec ActionAnalysis::ContainerAction::rotate_contig(bitvec orig, int shift, int size) {
-    bitvec subtract(0, shift);
-    bitvec rv = (orig - subtract) << shift;
-
-    rv |= (subtract >> (size - shift));
-    return rv;
-}
-*/
-
 
 bitvec ActionAnalysis::ContainerAction::total_write() const {
     bitvec total_write_;
@@ -805,104 +769,189 @@ bitvec ActionAnalysis::ContainerAction::total_write() const {
     return total_write_;
 }
 
-/** Guarantees that a single alignment is aligned correctly.  The checks are:
- *    - The number of bits in the write and read are the same
- *    - The write and reads are contiguous, unless the operation is a bitmasked set
- *
- *  It also checks if the fields are unaligned
+/** Determines if after the right shift, the bits to be affected are contiguous
  */
-bool ActionAnalysis::ContainerAction::verify_one_alignment(TotalAlignment &tot_alignment,
-        int size, int &unaligned_count, int &non_contiguous_count) {
-    (void) size;
-
-
-    if (tot_alignment.write_bits.popcount() != tot_alignment.read_bits.popcount()) {
-        return false;
-    }
-
-    bool contiguous = true;
-    bool aligned = true;
-
-    if (!tot_alignment.write_bits.is_contiguous() || !tot_alignment.read_bits.is_contiguous()) {
-        contiguous = false;
-    }
-
-    if ((tot_alignment.write_bits - tot_alignment.read_bits).popcount() != 0) {
-        aligned = false;
-    }
-
-    // FIXME: Eventually can support rotational shifts, but not yet with IR::Slice setup
-    // || !is_contig_rotate(tot_alignment.read_bits, read_rot_shift, size)) {
-    if (!aligned && !contiguous)
-        return false;
-
-    if (!aligned)
-        unaligned_count++;
-    if (!contiguous)
-        non_contiguous_count++;
-    return true;
-    /*
-    // FIXME: Verify on an individual field by field basis on the instruction on alignment
-    bitvec write_rotate = rotate_contig(tot_alignment.write_bits, write_rot_shift, size);
-    bitvec read_rotate = rotate_contig(tot_alignment.read_bits, read_rot_shift, size);
-    */
+bool ActionAnalysis::TotalAlignment::wrapped_contiguous(PHV::Container container) const {
+    bitvec cont_mask = bitvec(0, container.size());
+    bitvec rotated_read_bits = (read_bits >> right_shift);
+    rotated_read_bits |= ((read_bits << container.size()) >> right_shift) & cont_mask;
+    return rotated_read_bits.is_contiguous();
 }
 
-/** Verifies all stored alignments, i.e. PHV and action data.  The following constraints must
- *  be checked:
- *    - If the instruction is anything but a deposit field, (a set that isn't a bitmasked-set)
- *      then all sources must be directly aligned with the write
- *    - If the operation is a deposit-field, then at most one source can be misaligned.  If the
- *      operation has action data, then the PHV has to be aligned.  Otherwise, one of the two
- *      PHV fields can be misaligned
- *
- *  Only in deposit-field can a portion of a source (PHV container or action data bus), can be
- *  shifted.
- *
- *  This function also saves which parameters get classified as a src1.  An instruction at most
- *  can have two sources.  Src2 is always a PHV container.  Src1 can be much more loosely defined
- *  Src1 can be from action data, a small constant, or a PHV alu.  Specifically in deposit-field
- *  instruction, src1 is the only source that doesn't have to bit-aligned either.  This
- *  information is used when creating instructions in InstructionAdjustment, specifically right
- *  now MergeInstructions
+/**
+ * Determines if the source is to be wrapped around the container.  If the thing is wrapped,
+ * the low position of the source is required to determine the location
  */
-bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
-        int max_ad_unaligned, int max_non_contiguous, PHV::Container container) {
-    int unaligned_count = 0;
-    int non_contiguous_count = 0;
+bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, int *lo,
+        int *hi) const {
+    if (read_bits.popcount() == static_cast<int>(container.size())) {
+        if (right_shift == 0) {
+            return false;
+        } else {
+            if (lo)
+                *lo = right_shift;
+            if (hi)
+                *hi = right_shift - 1;
+            return true;
+        }
+    } else if (!read_bits.is_contiguous()) {
+        bitvec reverse = bitvec(0, container.size()) - read_bits;
+        BUG_CHECK(reverse.is_contiguous(), "Cannot calculate wrapped shift on non-contiguous "
+                  "field");
+        if (lo)
+            *lo = reverse.max().index() + 1;
+        if (hi)
+            *hi = reverse.min().index() - 1;
+        return true;
+    }
+    return false;
+}
 
-    for (auto &tot_align_info : phv_alignment) {
-        auto &tot_alignment = tot_align_info.second;
+/**
+ * Guarantees that a single alignment is aligned correctly.  The checks are:
+ *    - Each individual field write by write are aligned at the same offset on their read
+ *    - Sources are not both non-contiguous and non-aligned
+ */
+bool ActionAnalysis::TotalAlignment::verify_individual_alignments(PHV::Container &container) {
+    bool right_shift_set = false;
+    for (auto indiv_align : indiv_alignments) {
+        int possible_right_shift = indiv_align.read_bits.lo - indiv_align.write_bits.lo;
+        if (possible_right_shift < 0)
+            possible_right_shift += container.size();
+        if (right_shift_set && possible_right_shift != right_shift)
+            return false;
+        right_shift = possible_right_shift;
+    }
+    // Can either be non-contiguous or non-aligned, not both
+    if (!contiguous() && !aligned())
+        return false;
+    return true;
+}
 
-        // Verify on an individual field by field basis on the instruction on alignment
-        bool verify = verify_one_alignment(tot_alignment, container.size(),
-                                           unaligned_count, non_contiguous_count);
-        if (!verify)
+/**
+ * Src1 of a deposit-field does not have to be aligned, but must be contiguous after it
+ * has been rotated
+ */
+bool ActionAnalysis::TotalAlignment::deposit_field_src1(PHV::Container container) const {
+    return wrapped_contiguous(container);
+}
+
+/**
+ * Src2 of a deposit-field has to be be aligned, but not contiguous, as long as there is
+ * only one hole within the deposit-field
+ */
+bool ActionAnalysis::TotalAlignment::deposit_field_src2(PHV::Container container) const {
+    if (!aligned())
+        return false;
+    if (!contiguous()) {
+        bitvec reverse = bitvec(0, container.size()) - write_bits;
+        return reverse.is_contiguous();
+    }
+    return true;
+}
+
+/**
+ * Verifies that the set ContainerActions are possible to be translated to an instruction.
+ * The following instruction are validated:
+ *
+ * deposit-field:
+ *     dest = ((src1 & mask) << shift) | (src2 & ~mask)
+ *
+ * where the mask has to be a contiguous range wrapped around the container, i.e.
+ * 2..7 or if the container size 13..1 (this goes around the container boundary).  The shift
+ * has to guarantee that the range is contiguous on the destination
+ *
+ * bitmasked-set
+ *     dest = (src1 & mask) | (src2 & ~mask)
+ *
+ * where the src1 must come from action data, and everything must be aligned.
+ *
+ * there are other instructions that are simpler versions of deposit-field, such as alu-a,
+ * but the assembler can resolve many of these instructions from a set output in assembly
+ *
+ * The purpose of this function is to verify that a ContainerAction can be translated
+ * to a deposit-field or bitmasked-set, and will return false if the action is impossible
+ * in the ALU.  This also determines if the action cannot be output as a set.  With
+ * a set operation, src2 (background) = destination, but in the case when this isn't true,
+ * the full field must be translated in the compiler:
+ *     deposit-field C0(lo..hi), C1(lo..hi), C2
+ */
+bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container &container,
+        TotalAlignment &ad_alignment) {
+    TotalAlignment *single_src_alignment = nullptr;
+    if (ad_sources() && !ad_alignment.contiguous()) {
+        single_src_alignment = &ad_alignment;
+    } else if (phv_alignment.size() == 1) {
+        for (auto phv_ta : Values(phv_alignment))
+            single_src_alignment = &phv_ta;
+    }
+
+    bool max_ad_unaligned = ad_sources() ? 1 : 0;
+    bool max_phv_unaligned = ad_sources() ? 0 : 1;
+    bool max_ad_non_contiguous = 0;
+    bool max_phv_non_contiguous = counts[ActionParam::PHV] - max_phv_unaligned;
+
+    if (ad_sources() && !ad_alignment.contiguous()) {
+        to_bitmasked_set = true;
+        max_ad_non_contiguous = 1;
+        max_ad_unaligned = 0;
+    } else if (read_sources() == 2) {
+        to_deposit_field = true;
+    // If the single PHV field in a deposit-field cannot be src1 due to non-contiguity,
+    // but can be src2 because it is aligned
+    } else if (read_sources() == 1 && single_src_alignment
+               && !single_src_alignment->deposit_field_src1(container)) {
+        if (single_src_alignment->deposit_field_src2(container)) {
+            to_deposit_field = true;
+            implicit_src1 = true;
+            max_phv_unaligned = 0;
+            max_phv_non_contiguous = 1;
+        }
+    // Generally in a single source set, this is translated to set C0(lo..hi), C1(lo..hi),
+    // but when the source is wrapped, the only way for the assembler to understand is
+    // an explicit deposit-field instruction.
+    //
+    // The deposit field for a single sourced wrapped source will be the following:
+    //
+    //    deposit-field C0(lo..hi), C1(lo), C0
+    //
+    // The assembler will not understand the C1 slice if lo > hi, but the deposit-field instruction
+    // technically only requires the lo bit to determine the right shift
+    } else if (read_sources() == 1 && single_src_alignment
+               && single_src_alignment->is_wrapped_shift(container)) {
+        to_deposit_field = true;
+        implicit_src2 = true;
+    }
+
+    if (ad_sources()) {
+        if (!ad_alignment.aligned() && max_ad_unaligned == 0)
+            return false;
+        if (!ad_alignment.contiguous() && max_ad_non_contiguous == 0)
             return false;
     }
 
-    if (unaligned_count > max_phv_unaligned)
-        return false;
+    int phv_unaligned = 0;
+    int phv_non_contiguous = 0;
+    for (auto ta : Values(phv_alignment)) {
+        if (!ta.aligned()) {
+            if (!ta.wrapped_contiguous(container))
+                return false;
+            phv_unaligned++;
+        }
 
-    // Only one PHV field can be non-contiguous within a deposit-field right now
-
-    unaligned_count = 0;
-    if (counts[ActionParam::ACTIONDATA] > 0) {
-        bool verify = verify_one_alignment(adi.alignment, container.size(), unaligned_count,
-                                           non_contiguous_count);
-        if (!verify)
-            return false;
-
-        if (unaligned_count > max_ad_unaligned)
-            return false;
+        if (!ta.contiguous())
+            phv_non_contiguous++;
     }
-
-    if (non_contiguous_count > max_non_contiguous)
+    if (phv_unaligned > max_phv_unaligned)
         return false;
+    if (phv_non_contiguous > max_phv_non_contiguous)
+        return false;
+    return true;
+}
 
-    // If no src1 has been assigned, then PHV is the src1 information.  If a PHV write and read
-    // bits are unaligned, then that PHV field is src1, else either PHV source could be
-    // considered src1.
+void ActionAnalysis::ContainerAction::determine_src1() {
+    if (implicit_src1)
+        return;
     bool src1_assigned = false;
     if (counts[ActionParam::CONSTANT] > 0) {
         ci.alignment.is_src1 = true;
@@ -913,6 +962,9 @@ bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
         src1_assigned = true;
     }
 
+    // If no src1 has been assigned, then PHV is the src1 information.  If a PHV write and read
+    // bits are unaligned, then that PHV field is src1, else either PHV source could be
+    // considered src1.
     if (!src1_assigned) {
         for (auto &tot_align_info : phv_alignment) {
             auto &tot_alignment = tot_align_info.second;
@@ -931,7 +983,31 @@ bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
             break;
         }
     }
+}
 
+bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container) {
+    TotalAlignment ad_alignment = adi.alignment | ci.alignment;
+    if (ad_sources())
+        if (!ad_alignment.verify_individual_alignments(container))
+            return false;
+    for (auto &ta : Values(phv_alignment))
+        if (!ta.verify_individual_alignments(container))
+            return false;
+
+    if (name == "set") {
+        if (container.is(PHV::Kind::normal)) {
+            if (!verify_set_alignment(container, ad_alignment))
+                return false;
+        }
+    } else {
+        if (!ad_alignment.aligned())
+            return false;
+        for (auto &ta : Values(phv_alignment)) {
+            if (!ta.aligned())
+                return false;
+        }
+    }
+    determine_src1();
     return true;
 }
 
@@ -1137,6 +1213,7 @@ void ActionAnalysis::ContainerAction::move_source_to_bit(safe_vector<int> &bit_u
     }
 }
 
+
 /** This checks to make sure that all bits are operated correctly, i.e. if the operation is
  *  a set, every bit in the write is either set once or not at all or e.g. add, subtract, or,
  *  each write bit has  either two read bits, or no read bits affecting it (overwrite
@@ -1295,40 +1372,15 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         return false;
     }
 
-    bitvec ad_bitmask = adi.alignment.write_bits | ci.alignment.write_bits;
-
     // Bitmasked-set and deposit-field instructions must only be generated for normal PHVs, not dark
     // or mocha PHVs.
-    if (container.is(PHV::Kind::normal)) {
-        if (sources_needed == 2 && name == "set") {
-            to_deposit_field = true;
-        }
-        if (name == "set" && ad_bitmask.popcount() > 0 && !ad_bitmask.is_contiguous()) {
-            to_bitmasked_set = true;
-        }
-    } else if (container.is(PHV::Kind::mocha) || container.is(PHV::Kind::dark)) {
-        bool total_overwrite_possible = verify_overwritten(container, phv);
-        if (total_overwrite_possible) {
-            error_code |= PARTIAL_OVERWRITE;
-        } else {
-            error_code |= ILLEGAL_OVERWRITE;
-            error_message += "fields bits in container " + cstring::to_cstring(container) + " will "
-                             "be overwritten by action " + action_name;
-            return false;
+    if (container.is(PHV::Kind::mocha) || container.is(PHV::Kind::dark)) {
+        if (!(name == "set" && sources_needed == 1)) {
+            error_message += "mocha and dark PHV can only be used in simple set operations";
         }
     }
 
-    bool can_phv_be_unaligned = (name == "set" && (actual_ad == 0));
-    int phv_unaligned = can_phv_be_unaligned ? 1 : 0;
-
-    bool can_ad_be_unaligned = name == "set" && actual_ad > 0 && ad_bitmask.is_contiguous();
-    int ad_unaligned = can_ad_be_unaligned ? 1 : 0;
-
-    int single_non_contiguous = name == "set" && !to_bitmasked_set;
-    int max_non_contiguous = single_non_contiguous ? 1 : 2;
-
-    bool aligned = verify_alignment(phv_unaligned, ad_unaligned, max_non_contiguous, container);
-
+    bool aligned = verify_alignment(container);
     if (!aligned) {
         error_code |= IMPOSSIBLE_ALIGNMENT;
         error_message += "the alignment of fields within the container renders the action "
@@ -1336,8 +1388,9 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         return false;
     }
 
+    bool check_overwrite = !(name == "set" && container.is(PHV::Kind::normal));
 
-    if (name != "set" || to_deposit_field) {
+    if (check_overwrite) {
         bool total_overwrite_possible = verify_overwritten(container, phv);
         if (!total_overwrite_possible) {
             error_code |= ILLEGAL_OVERWRITE;

@@ -114,6 +114,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         safe_vector<Alignment> indiv_alignments;
         bitvec write_bits;
         bitvec read_bits;
+
+        int right_shift = 0;
         bool is_src1 = false;
 
         void add_alignment(le_bitrange wb, le_bitrange rb) {
@@ -123,16 +125,40 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
 
         bool equiv_bit_totals() const { return write_bits.popcount() == read_bits.popcount(); }
+
         bool aligned() const {
-            return (write_bits - read_bits).empty() && (read_bits - write_bits).empty();
+            return right_shift == 0;
         }
+
+        bool contiguous() const {
+            return write_bits.is_contiguous();
+        }
+
+        bool wrapped_contiguous(PHV::Container container) const;
+        bool deposit_field_src1(PHV::Container container) const;
+        bool deposit_field_src2(PHV::Container container) const;
+        bool verify_individual_alignments(PHV::Container &container);
+        bool is_wrapped_shift(PHV::Container container, int *lo = nullptr, int *hi = nullptr) const;
 
         int bitrange_size() const {
             BUG_CHECK(write_bits.is_contiguous(), "Converting a bitvec to a bitrange requires "
                       "the bitrange to be continuous");
             return write_bits.max().index() - write_bits.min().index() + 1;
         }
+
+        TotalAlignment operator |(const TotalAlignment &ta) {
+            TotalAlignment rv;
+            rv.indiv_alignments.insert(rv.indiv_alignments.end(), indiv_alignments.begin(),
+                                       indiv_alignments.end());
+            rv.indiv_alignments.insert(rv.indiv_alignments.begin(), ta.indiv_alignments.begin(),
+                                       ta.indiv_alignments.end());
+
+            rv.write_bits = write_bits | ta.write_bits;
+            rv.read_bits = read_bits | ta.read_bits;
+            return rv;
+        }
     };
+
     /** Information on the action data field contained within the instruction.  The action data
      *  could be affected by multiple individual fields.  Assumes that only one action data field
      *  appears in each instruction, as the ALU can only use one action data field.
@@ -188,6 +214,12 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool verbose = false;
         bool to_deposit_field = false;  ///> determined by tofino_compliance check
         bool to_bitmasked_set = false;  ///> determined by tofino_compliance_check
+        // If the src1 = dest, but isn't directly specified by the parameters.  Only necessary
+        // when to_deposit_field = true
+        bool implicit_src1 = false;  ///> determined by tofino_compliance_check
+        // If the src2 = dest, but isn't directly specified by the parameters.  Only necessary
+        // when to_deposit_field == true
+        bool implicit_src2 = false;  ///> determined by tofino_compliance_check
         bool impossible = false;
         bool unhandled_action = false;
         bool constant_to_ad = false;
@@ -238,6 +270,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
         int ad_sources() const {
             return std::min(1, counts[ActionParam::ACTIONDATA] + counts[ActionParam::CONSTANT]);
+        }
+
+        int read_sources() const {
+            return ad_sources() + counts[ActionParam::PHV];
         }
 
         bool is_shift() const {
@@ -298,8 +334,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool verify_only_read(const PhvInfo &phv);
         bool verify_possible(cstring &error_message, PHV::Container container,
                              cstring action_name, const PhvInfo &phv);
-        bool verify_alignment(int max_phv_unaligned, int max_ad_unaligned, int max_non_contiguous,
-                              PHV::Container container);
+
+        bool verify_set_alignment(PHV::Container &container, TotalAlignment &ad_alignment);
+        void determine_src1();
+        bool verify_alignment(PHV::Container &container);
 
         bitvec total_write() const;
         bool convert_constant_to_actiondata() const {

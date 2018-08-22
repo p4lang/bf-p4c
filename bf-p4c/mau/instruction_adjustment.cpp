@@ -604,6 +604,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     const IR::Expression *src1 = nullptr;
     const IR::Expression *src2 = nullptr;
     bitvec src1_writebits;
+    bitvec src2_writebits;
     IR::Vector<IR::Expression> components;
 
     BUG_CHECK(cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] <= 1, "At most "
@@ -652,6 +653,9 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         src1_writebits = cont_action.ci.alignment.write_bits;
     }
 
+
+    // Go through all PHV sources and create src1/src2 if a source is contained within these
+    // PHV fields
     for (auto &phv_ta : cont_action.phv_alignment) {
         auto read_container = phv_ta.first;
         auto read_alignment = phv_ta.second;
@@ -662,15 +666,37 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
             src1 = mo;
             src1_writebits = read_alignment.write_bits;
             bitvec src1_read_bits = read_alignment.read_bits;
-            if (src1_read_bits.popcount() != static_cast<int>(read_container.size())) {
-                src1 = MakeSlice(src1, src1_read_bits.min().index(), src1_read_bits.max().index());
+            int wrapped_lo = 0;  int wrapped_hi = 0;
+            if (read_alignment.is_wrapped_shift(container, &wrapped_lo, &wrapped_hi)) {
+                src1 = MakeWrappedSlice(src1, wrapped_lo, wrapped_hi, container.size());
+            } else if (src1_read_bits.popcount() != static_cast<int>(read_container.size())) {
+                if (src1_read_bits.is_contiguous()) {
+                    src1 = MakeSlice(src1, src1_read_bits.min().index(),
+                                     src1_read_bits.max().index());
+                }
             }
         } else {
             auto mo = new IR::MAU::MultiOperand(components, read_container.toString(), true);
             fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
                                         read_container.toString(), mo);
             src2 = mo;
+            src2_writebits = read_alignment.write_bits;
         }
+    }
+
+    // Src1 is not sources from parameters, but instead is equal to the destination: BRIG-914
+    if (cont_action.implicit_src1) {
+        BUG_CHECK(src1 == nullptr, "Src1 found in an implicit_src1 calculation");
+        src1 = new IR::MAU::MultiOperand(components, container.toString(), true);
+        bitvec reverse = bitvec(0, container.size()) - src2_writebits;
+        src1 = MakeSlice(src1, reverse.min().index(), reverse.max().index());
+        src1_writebits = reverse;
+    }
+
+    // Src2 is not sources from parameters, but instead is equal to the destination: BRIG-883
+    if (cont_action.implicit_src2) {
+        BUG_CHECK(src2 == nullptr, "Src2 found in an implicit_src2 calculation");
+        src2 = new IR::MAU::MultiOperand(components, container.toString(), true);
     }
 
     auto *dst_mo = new IR::MAU::MultiOperand(components, container.toString(), true);
