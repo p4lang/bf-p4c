@@ -1339,6 +1339,8 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) {
 
         action_cfg["name"] = act.name;
         action_cfg["handle"] = act.handle; //FIXME-JSON
+        if (act.instr.empty())
+            action_cfg["primitives"] = json::vector();
         act.add_indirect_resources(action_cfg["indirect_resources"]);
         // XXX(amresh): allowed_as_default_action info is directly passed through assembly
         // This will be 'false' for following conditions:

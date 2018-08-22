@@ -2036,7 +2036,8 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             out << "{ type: " << ixbar_read->match_type.name << ", ";
             out << "size: " << sl.second << ", ";
             out << "full_size: " << full_size;
-            if (!annName.isNullOrEmpty())out << ", key_name: \"" << canon_name(annName) << "\"";
+            if (!annName.isNullOrEmpty() && annName.find('.'))
+                out << ", key_name: \"" << canon_name(annName) << "\"";
             // Output start bit only for slices
             if (sl.second != full_size) out << ", start_bit: " << sl.first;
             out << " }" << std::endl;
