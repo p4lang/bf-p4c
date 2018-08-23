@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -o pipefail
+shopt -s nullglob
 
 # On macOS, 'timeout' is not installed by default, and 'brew install coreutils'
 # prefixes all of the standard GNU utilities with 'g', so 'timeout' is
@@ -74,7 +75,7 @@ die() {
 
 run() {
     if $verbose; then
-        echo "$TIME_COMMAND $TIMEOUT_COMMAND $TIMEOUT $@"
+        echo >&2 "$TIME_COMMAND $TIMEOUT_COMMAND $TIMEOUT $@"
     fi
 
     # `timeout` can't be killed by ctrl^c when run inside a bash script, so we
@@ -291,6 +292,12 @@ else
     p4_version="p4-14"
 fi
 
+has_stf=false
+if $run_stf && [ -r ${file%.p4}.stf ]; then
+    has_stf=true
+fi
+
+
 if [ "$ptftestdir" != "" ] && [ ! -d ${ptftestdir} ]; then
     die "Invalid -ptfdir: $ptftestdir does not exist"
 fi
@@ -299,12 +306,20 @@ if [ "$ptftestdir" = "" ]; then
     if [ ! -d ${ptftestdir} ] && ! $run_stf2ptf; then
         # no ptf to run
         run_ptf=false
+    elif [ -d ${ptftestdir} ] && ! $has_stf; then
+        # has ptf and no stf, so run the ptf
+        run_ptf=true
     fi
 fi
 
-has_stf=false
-if $run_stf && [ -r ${file%.p4}.stf ]; then
-    has_stf=true
+if $run_ptf && ! $run_pd && [ -d ${ptftestdir} ]; then
+    for test_script in ${ptftestdir}/*.py; do
+        if grep -q pd_base ${test_script}; then
+            # test requires pd
+            run_pd=true
+            break
+        fi
+    done
 fi
 
 if $p4info; then
@@ -405,7 +420,7 @@ compress_cfg_json() {
         if [ $1 == "p4-16" ]; then
             output_dir=$output_dir/$p
         fi
-        gzip -f $testdir/$output_dir/*.cfg.json &>/dev/null
+        for f in $testdir/$output_dir/*.cfg.json; do gzip -f $f; done
         if [ -r $testdir/$output_dir/${device}.bin ]; then
             if $run_ptf || $run_pd ; then
                 true # ptf requires uncompressed binary
@@ -425,11 +440,7 @@ compress_cfg_json() {
                 rm $testdir/$output_dir/${device}.bin
             fi
         fi
-        for f in $testdir/$output_dir/*.log; do
-            if [ -r $f ]; then
-                gzip -f $f
-            fi
-        done
+        for f in $testdir/$output_dir/*.log; do gzip -f $f; done
     done
 }
 
@@ -574,6 +585,7 @@ if $run_pd ; then
     export MAKEFLAGS="-j $nproc"
     export P4C=$p4c
     pushd $testout > /dev/null
+    name=$(echo $name | tr -d '.-')  # strip out illegal C identifier chars
     echo "Configuring $name in $testout"
     if [ $name == switch ]; then
        if [ $device == tofino2 ]; then
@@ -607,7 +619,7 @@ if $run_pd ; then
        fi
        run $p4builddir/configure --with-${device} --with-p4c=$P4C --enable-thrift \
                     --prefix=$testout LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
-                    --bindir=${tools_dir}/bin P4_NAME=$name P4_PATH=$file PDFLAGS='$PDFLAGS' \
+                    --bindir=$(dirname $P4C):${tools_dir}/bin P4_NAME=$name P4_PATH=$file PDFLAGS='$PDFLAGS' \
                     > ${testout}/p4-build-conf.log || die
        if $verbose ; then
           tail -n 10 ${testout}/p4-build-conf.log
