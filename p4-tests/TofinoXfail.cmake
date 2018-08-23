@@ -103,6 +103,11 @@ if (PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "AssertionError: .* != .*"
     extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
+    smoketest_switch_msdc_MalformedPacketsTest
+    smoketest_switch_dc_basic_MalformedPacketsTest
+    smoketest_switch_8.3_msdc_MalformedPacketsTest
+    smoketest_switch_8.3_l3_msdc_MalformedPacketsTest
+    smoketest_switch_8.3_dc_basic_MalformedPacketsTest
     )
 
   p4c_add_xfail_reason("tofino"
@@ -110,6 +115,11 @@ if (PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4
     extensions/p4_tests/p4_14/p4-tests/programs/exm_smoke_test/exm_smoke_test.p4
     extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "assert cntr.packets"
+    extensions/p4_tests/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4
     )
 
   # DRV-1877

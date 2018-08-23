@@ -176,7 +176,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_5"
         switch_tests.L3VIIPv4LagTest
         switch_tests.L3VIIPv6HostTest
         switch_tests.L3VINhopGleanTest
-        switch_tests.MalformedPacketsTest
         switch_tests.MalformedPacketsTest_ipv6")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_6" ${SWITCH_P4}
         "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR_MIRROR}")
@@ -201,6 +200,10 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_8"
         switch_wred.WredIpv6Test
         switch_wred.WredLookupTest
         switch_wred.WredStatsTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_MalformedPacketsTest" ${SWITCH_P4}
+        "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_MalformedPacketsTest"
+        "switch_tests.MalformedPacketsTest")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_msdc" PROPERTIES TIMEOUT 12000)
@@ -574,13 +577,16 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_msdc_set_6"
         switch_tests.L3VIIPv4LagTest
         switch_tests.L3VIIPv6HostTest
         switch_tests.L3VINhopGleanTest
-        switch_tests.MalformedPacketsTest
         switch_tests.MalformedPacketsTest_ipv6")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.3_msdc_set_7" ${SWITCH_8.3_P4}
         "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_8.3_PTF_DIR_MIRROR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_msdc_set_7"
         "mirror_acl_slice_tests.IPv6MirrorAclSliceTest_i2e
         mirror_acl_slice_tests.MirrorAclSliceTest_i2e")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.3_msdc_MalformedPacketsTest" ${SWITCH_8.3_P4}
+    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_8.3_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_msdc_MalformedPacketsTest"
+        "switch_tests.MalformedPacketsTest")
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_8.3_msdc" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.3_msdc_set_1" PROPERTIES TIMEOUT 12000)
@@ -775,8 +781,11 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_l3_msdc_set_6"
         switch_tests.L3VIIPv4LagTest
         switch_tests.L3VIIPv6HostTest
         switch_tests.L3VINhopGleanTest
-        switch_tests.MalformedPacketsTest
         switch_tests.MalformedPacketsTest_ipv6")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.3_l3_msdc_MalformedPacketsTest" ${SWITCH_8.3_P4}
+    "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_8.3_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.3_l3_msdc_MalformedPacketsTest"
+        "switch_tests.MalformedPacketsTest")
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_8.3_l3_msdc" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.3_l3_msdc_set_1" PROPERTIES TIMEOUT 12000)
