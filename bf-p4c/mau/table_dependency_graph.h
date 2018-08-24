@@ -9,6 +9,11 @@
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+namespace boost {
+    enum vertex_table_t { vertex_table };
+    BOOST_INSTALL_PROPERTY(vertex, table);
+}
+
 /* The DependencyGraph data structure is a directed graph in which tables are
  * vertices and edges are dependencies.  An edge from t1 to t2 means that t2
  * depends on t1.
@@ -49,7 +54,7 @@ struct DependencyGraph {
         boost::vecS,
         boost::vecS,
         boost::bidirectionalS,   // Directed edges.
-        const IR::MAU::Table*,   // Vertex labels.
+        boost::property<boost::vertex_table_t, const IR::MAU::Table*>,  // Vertex labels
         dependencies_t     // Edge labels.
         > Graph;
 
@@ -121,8 +126,6 @@ struct DependencyGraph {
     std::map<std::pair<const IR::MAU::Table*, const IR::MAU::Table*>,
              DependencyGraph::dependencies_t> dependency_map;
 
-
-
     struct StageInfo {
         int min_stage,      // Minimum stage at which a table can be placed.
         dep_stages,         // Number of tables that depend on this table and
@@ -145,14 +148,19 @@ struct DependencyGraph {
         stage_info.clear();
     }
 
+    /* @returns the table pointer corresponding to a vertex in the dependency graph
+     */
+    const IR::MAU::Table* get_vertex(typename Graph::vertex_descriptor v) const {
+        return boost::get(boost::vertex_table, g)[v];
+    }
+
     /* If a vertex with this label already exists, return it.  Otherwise,
      * create a new vertex with this label. */
     typename Graph::vertex_descriptor add_vertex(const IR::MAU::Table* label) {
         if (labelToVertex.count(label)) {
             return labelToVertex.at(label);
         } else {
-            auto v = boost::add_vertex(g);
-            g[v] = label;
+            auto v = boost::add_vertex(label, g);
             labelToVertex[label] = v;
             stage_info[label] = {0, 0, 0};
             return v; }

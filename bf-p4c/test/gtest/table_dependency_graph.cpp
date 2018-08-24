@@ -208,8 +208,8 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
     for (boost::tie(edges, edges_end) = boost::edges(dg.g);
          edges != edges_end;
          ++edges) {
-        const IR::MAU::Table *src = dg.g[boost::source(*edges, dg.g)];
-        const IR::MAU::Table *dst = dg.g[boost::target(*edges, dg.g)];
+        const IR::MAU::Table *src = dg.get_vertex(boost::source(*edges, dg.g));
+        const IR::MAU::Table *dst = dg.get_vertex(boost::target(*edges, dg.g));
         DependencyGraph::dependencies_t edge_type = dg.g[*edges];
         if (src == t2 && dst == t3) {
             num_checks++;

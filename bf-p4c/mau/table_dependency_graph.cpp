@@ -30,9 +30,12 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     for (boost::tie(edges, edges_end) = boost::edges(dg.g);
          edges != edges_end;
          ++edges) {
-        out << "    " << dg.g[boost::source(*edges, dg.g)]->name << " -- "
-            << dep_types(dg.g[*edges]) << " --> "
-            << dg.g[boost::target(*edges, dg.g)]->name << std::endl; }
+        auto src = boost::source(*edges, dg.g);
+        const IR::MAU::Table* source = dg.get_vertex(src);
+        auto dst = boost::target(*edges, dg.g);
+        const IR::MAU::Table* target = dg.get_vertex(dst);
+        out << "    " << source->name << " -- " << dep_types(dg.g[*edges]) << " --> " <<
+            target->name << std::endl; }
 
     out << "MIN STAGE, DEPENDENCE CHAIN" << std::endl;
     for (auto &kv : dg.stage_info) {
@@ -366,8 +369,9 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
          v != v_end;
          ++v) {
         n_depending_on[*v] = 0;
-        happens_after_map[dep_graph[*v]] = {};
-        happens_before_map[dep_graph[*v]] = {}; }
+        const IR::MAU::Table* label_table = dg.get_vertex(*v);
+        happens_after_map[label_table] = {};
+        happens_before_map[label_table] = {}; }
 
     for (boost::tie(out, out_end) = boost::edges(dep_graph);
          out != out_end;
@@ -398,14 +402,14 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
             auto out_edge_itr_pair = out_edges(v, dep_graph);
             auto& out = out_edge_itr_pair.first;
             auto& out_end = out_edge_itr_pair.second;
-            const auto* table = dep_graph[v];
+            const auto* table = dg.get_vertex(v);
             for (; out != out_end; ++out) {
                 if ((include_anti || dep_graph[*out] != DependencyGraph::ANTI)
                     && (include_control || dep_graph[*out] != DependencyGraph::CONTROL)
                     && dep_graph[*out] != DependencyGraph::REDUCTION_OR_OUTPUT
                     && dep_graph[*out] != DependencyGraph::REDUCTION_OR_READ) {
                     auto vertex_later = boost::target(*out, dep_graph);
-                    auto table_later = dep_graph[vertex_later];
+                    const auto* table_later = dg.get_vertex(vertex_later);
                     happens_after_map[table_later].insert(table);
                     happens_after_map[table_later].insert(happens_after_map[table].begin(),
                                                           happens_after_map[table].end());
@@ -432,9 +436,8 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     if (LOGGING(3)) {
         for (size_t i = 0; i < topo_rst.size(); ++i) {
             LOG3(">>> Stage#" << i << ":");
-            for (const auto& vertex : topo_rst[i]) {
-                LOG3("Table:  " << vertex << ", " << dg.g[vertex]->name);
-            }
+            for (const auto& vertex : topo_rst[i])
+                LOG3("Table:  " << vertex << ", " << dg.get_vertex(vertex)->name);
         }
     }
 
@@ -442,7 +445,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     // Build dep_stages
     for (int i = int(topo_rst.size()) - 1; i >= 0; --i) {
         for (const auto& vertex : topo_rst[i]) {
-            const IR::MAU::Table* table = dg.g[vertex];
+            const IR::MAU::Table* table = dg.get_vertex(vertex);
             auto& happens_later = dg.happens_before_map[table];
             dg.stage_info[table].dep_stages =
                 std::accumulate(happens_later.begin(), happens_later.end(), 0,
@@ -454,8 +457,8 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     typename DependencyGraph::Graph::edge_iterator edges, edges_end;
     dg.dep_type_map.clear();
     for (boost::tie(edges, edges_end) = boost::edges(dg.g); edges != edges_end; ++edges) {
-        const IR::MAU::Table* src = dg.g[boost::source(*edges, dg.g)];
-        const IR::MAU::Table* dst = dg.g[boost::target(*edges, dg.g)];
+        const IR::MAU::Table* src = dg.get_vertex(boost::source(*edges, dg.g));
+        const IR::MAU::Table* dst = dg.get_vertex(boost::target(*edges, dg.g));
         if ((dg.dep_type_map.count(src) == 0) || (dg.dep_type_map.at(src).count(dst) == 0)
             || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::CONTROL)
             || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::REDUCTION_OR_READ)
@@ -471,7 +474,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         topo_rst_control = calc_topological_stage(DependencyGraph::CONTROL);
     for (int i = int(topo_rst_control.size()) - 1; i >= 0; --i) {
         for (const auto& vertex : topo_rst_control[i]) {
-            const IR::MAU::Table* table = dg.g[vertex];
+            const IR::MAU::Table* table = dg.get_vertex(vertex);
             auto& happens_later = dg.happens_before_map[table];
             dg.stage_info[table].dep_stages_control = std::accumulate(happens_later.begin(),
                 happens_later.end(), 0, [this, table] (int sz, const IR::MAU::Table* later) {
@@ -504,7 +507,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     // min_stage of 4.
     for (size_t i = 0; i < topo_rst_control.size(); ++i) {
         for (const auto& vertex : topo_rst_control[i]) {
-            const IR::MAU::Table* table = dg.g[vertex];
+            const IR::MAU::Table* table = dg.get_vertex(vertex);
             dg.stage_info[table].min_stage = i;
         }
     }
@@ -512,12 +515,14 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     // Compress the stages to take out the addition caused by control edges
     for (size_t i = 1; i < topo_rst_control.size(); i++) {
         for (const auto& vertex : topo_rst_control[i]) {
-            int orig_stage = dg.stage_info[dg.g[vertex]].min_stage;
+            const auto* tbl = dg.get_vertex(vertex);
+            int orig_stage = dg.stage_info[tbl].min_stage;
             int true_min_stage = 0;
             auto in_edges = boost::in_edges(vertex, dg.g);
             for (auto edge = in_edges.first; edge != in_edges.second; edge++) {
                 auto src_vertex = boost::source(*edge, dg.g);
-                int src_vertex_stage = dg.stage_info[dg.g[src_vertex]].min_stage;
+                const auto* src_table = dg.get_vertex(src_vertex);
+                int src_vertex_stage = dg.stage_info[src_table].min_stage;
                 if (dg.g[*edge] == DependencyGraph::ACTION_READ ||
                     dg.g[*edge] == DependencyGraph::IXBAR_READ ||
                     dg.g[*edge] == DependencyGraph::OUTPUT) {
@@ -531,7 +536,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
                 // There shouldn't be any edges within a layer,
                 // so starting from the lowest stage and moving out should be fine
             }
-            dg.stage_info[dg.g[vertex]].min_stage = true_min_stage;
+            dg.stage_info[tbl].min_stage = true_min_stage;
         }
     }
 
@@ -569,7 +574,8 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         for (size_t i = 0; i < topo_rst_control_anti.size(); ++i) {
             LOG3(">>> Stage#" << i << ":");
             for (const auto& vertex : topo_rst_control_anti[i]) {
-                LOG3("Table: " << vertex << ", " << dg.g[vertex]->name);
+                const auto* t = dg.get_vertex(vertex);
+                LOG3("Table: " << vertex << ", " << t->name);
             }
         }
     }
@@ -598,8 +604,8 @@ void FindDependencyGraph::verify_dependence_graph() {
     for (boost::tie(out, out_end) = boost::edges(dg.g);
          out != out_end;
          ++out) {
-        const IR::MAU::Table *t1 = dg.g[boost::source(*out, dg.g)];
-        const IR::MAU::Table *t2 = dg.g[boost::target(*out, dg.g)];
+        const IR::MAU::Table *t1 = dg.get_vertex(boost::source(*out, dg.g));
+        const IR::MAU::Table *t2 = dg.get_vertex(boost::target(*out, dg.g));
         if ((t1->gress == EGRESS && t2->gress == INGRESS)
             || (t1->gress == INGRESS && t2->gress == EGRESS))
             BUG("Ingress table '%s' depends on egress table '%s'.", t1->name, t2->name); }

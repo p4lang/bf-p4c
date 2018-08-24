@@ -560,8 +560,8 @@ class ComputeMetadataInit : public Inspector {
 
             auto src = boost::source(*e, dg.g);
             auto dest = boost::target(*e, dg.g);
-            auto src_table = dg.g[src];
-            auto dest_table = dg.g[dest];
+            const IR::MAU::Table* src_table = dg.get_vertex(src);
+            const IR::MAU::Table* dest_table = dg.get_vertex(dest);
             graph.addEdge(src_table, dest_table);
         }
     }
@@ -729,9 +729,10 @@ class TableGraphGen : public Inspector {
         for (boost::tie(v, v_end) = boost::vertices(dep_graph);
              v != v_end;
              ++v) {
-            cstring label = dep_graph[*v]->name;
+            const IR::MAU::Table* label_table = dg.get_vertex(*v);
+            cstring label = label_table->name;
             cstring shape = "rectangle";
-            if (starts.count(dep_graph[*v])) {
+            if (starts.count(label_table)) {
                 shape = "doublecircle";
             }
             (*output) << purify(label) << " [shape=" << shape << ",label=\"" <<
@@ -743,8 +744,8 @@ class TableGraphGen : public Inspector {
              ++out) {
             cstring label;
             auto edge_type = dep_graph[*out];
-            auto source = dg.g[boost::source(*out, dep_graph)];
-            auto target = dg.g[boost::target(*out, dep_graph)];
+            auto source = dg.get_vertex(boost::source(*out, dep_graph));
+            auto target = dg.get_vertex(boost::target(*out, dep_graph));
 
             if (printed.count(std::make_pair(source, target))) continue;
             printed.insert(std::make_pair(source, target));
