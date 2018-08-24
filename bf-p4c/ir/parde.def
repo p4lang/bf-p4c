@@ -394,14 +394,6 @@ class Parser : AbstractParser {
     toString { return gress ? "egress parser" : "ingress parser"; }
 
     ParserState start;
-
-    // To support p4_14 mirrored start state.
-    optional NullOK ParserState mirror_i2e_start;  // not visited.
-    optional NullOK ParserState mirror_e2e_start;  // not visited.
-
-    visit_children {
-        v.visit(start);
-    }
 }
 
 /// A list of fields which will be written into a buffer as part of a deparser

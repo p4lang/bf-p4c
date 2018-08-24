@@ -10,6 +10,7 @@ namespace BFN {
 class AddIntrinsicMetadata : public Transform {
     const IR::ParserState* start_i2e_mirrored = nullptr;
     const IR::ParserState* start_e2e_mirrored = nullptr;
+    const IR::ParserState* start_coalesced = nullptr;
     const IR::ParserState* start_egress = nullptr;
     // map the name of 'start_i2e_mirrored' ... to the IR::SelectCase
     // that is used to transit to these state. Used to support extra
@@ -216,6 +217,7 @@ class AddIntrinsicMetadata : public Transform {
     static void addEgressMetadata(IR::BFN::TranslatedP4Parser *parser,
                                   const IR::ParserState *start_i2e_mirrored,
                                   const IR::ParserState *start_e2e_mirrored,
+                                  const IR::ParserState *start_coalesced,
                                   const IR::ParserState *start_egress,
                                   std::map<cstring, const IR::SelectCase*> selMap) {
         auto *p4EntryPointState =
@@ -231,7 +233,7 @@ class AddIntrinsicMetadata : public Transform {
         // parser for mirrored data.
         IR::Vector<IR::Expression> selectOn;
         IR::Vector<IR::SelectCase> branchTo;
-        if (start_i2e_mirrored || start_e2e_mirrored)
+        if (start_i2e_mirrored || start_e2e_mirrored || start_coalesced)
             selectOn.push_back(new IR::Member(
                 new IR::PathExpression(new IR::Path("compiler_generated_meta")), "instance_type"));
         if (start_i2e_mirrored) {
@@ -243,6 +245,11 @@ class AddIntrinsicMetadata : public Transform {
             BUG_CHECK(selMap.count("start_e2e_mirrored") != 0,
                       "Couldn't find the start_e2e_mirrored state?");
             branchTo.push_back(selMap.at("start_e2e_mirrored"));
+        }
+        if (start_coalesced) {
+            BUG_CHECK(selMap.count("start_coalesced") != 0,
+                      "Couldn't find the start_coalesced state?");
+            branchTo.push_back(selMap.at("start_coalesced"));
         }
 
         IR::ParserState* mirroredState = nullptr;
@@ -296,6 +303,8 @@ class AddIntrinsicMetadata : public Transform {
             start_i2e_mirrored = state;
         } else if (name->value == ".start_e2e_mirrored") {
             start_e2e_mirrored = state;
+        } else if (name->value == ".start_coalesced") {
+            start_coalesced = state;
         } else if (name->value == ".start_egress") {
             start_egress = state;
         }
@@ -327,6 +336,8 @@ class AddIntrinsicMetadata : public Transform {
                     selectCaseMap.emplace("start_i2e_mirrored", c);
                 } else if (c->state->path->name == "start_e2e_mirrored") {
                     selectCaseMap.emplace("start_e2e_mirrored", c);
+                } else if (c->state->path->name == "start_coalesced") {
+                    selectCaseMap.emplace("start_coalesced", c);
                 } else if (c->state->path->name == "start_egress") {
                     selectCaseMap.emplace("start_egress", c);
                 }
@@ -340,7 +351,11 @@ class AddIntrinsicMetadata : public Transform {
         if (parser->thread == INGRESS)
             addIngressMetadata(parser);
         else
-            addEgressMetadata(parser, start_i2e_mirrored, start_e2e_mirrored, start_egress,
+            addEgressMetadata(parser,
+                              start_i2e_mirrored,
+                              start_e2e_mirrored,
+                              start_coalesced,
+                              start_egress,
                               selectCaseMap);
         return parser;
     }

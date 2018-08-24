@@ -219,24 +219,16 @@ struct AddMirroredFieldListParser : public Transform {
 
       // This is the '$mirrored' placeholder state. Generate code to extract
       // mirrored field lists.
-      return addMirroredFieldListParser(parser, state->transitions[0]->next);
+      return addMirroredFieldListParser(state->transitions[0]->next);
   }
 
   const IR::BFN::ParserState*
-  addMirroredFieldListParser(const IR::BFN::Parser* parser,
-                             const IR::BFN::ParserState* default_start_state) {
+  addMirroredFieldListParser(const IR::BFN::ParserState* finalState) {
       IR::Vector<IR::BFN::Transition> transitions;
       for (auto& fieldList : *fieldLists) {
           const gress_t gress = fieldList.first.first;
           const auto digestId = fieldList.first.second;
           const FieldPacking* packing = fieldList.second;
-
-          auto* next_state = default_start_state;
-          if (gress == INGRESS && parser->mirror_i2e_start) {
-              next_state = parser->mirror_i2e_start;
-          } else if (gress == EGRESS && parser->mirror_e2e_start) {
-              next_state = parser->mirror_e2e_start;
-          }
 
           // Construct a `clone_src` value. The first bit indicates that the
           // packet is mirrored; the second bit indicates whether it originates
@@ -251,7 +243,7 @@ struct AddMirroredFieldListParser : public Transform {
                                        cstring::to_cstring(gress) + "_" +
                                        cstring::to_cstring(digestId);
           auto* fieldListState =
-            packing->createExtractionState(EGRESS, fieldListStateName, next_state);
+            packing->createExtractionState(EGRESS, fieldListStateName, finalState);
           fieldListState->statements.push_back(
             new IR::BFN::Extract(cloneDigestId, new IR::BFN::ConstantRVal(digestId)));
           fieldListState->statements.push_back(
@@ -273,7 +265,7 @@ struct AddMirroredFieldListParser : public Transform {
       // Add a default match for the case where there are no field lists in
       // this mirrored packet.
       transitions.push_back(
-          new IR::BFN::Transition(match_t(), 1, default_start_state));
+          new IR::BFN::Transition(match_t(), 1, finalState));
 
       auto *select = new IR::BFN::Select(new IR::BFN::BufferRVal(StartLen(0, 8)));
       return new IR::BFN::ParserState(createThreadName(EGRESS, "$mirrored"), EGRESS, {},
@@ -322,6 +314,7 @@ PopulateMirrorStateWithFieldPackings::PopulateMirrorStateWithFieldPackings(
     auto addMirrorParserState = new AddMirroredFieldListParser(pipe, fieldPackings);
     addPasses({
         addMirrorParserState,
+        LOGGING(4) ? new DumpParser("add_mirror_states") : nullptr,
     });
 }
 
