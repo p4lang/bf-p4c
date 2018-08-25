@@ -23,16 +23,19 @@ try:
         print "manifest-config only supports one program"
         sys.exit(1)
 
-    pipelines = programs[0]['contexts']
+    schema_version = manifest_json['schema_version']
+    pipe_name_label = 'pipe_name'
+    if schema_version == "1.0.0": pipe_name_label = 'pipe'
 
-    pipe_name = []
+    pipelines = programs[0]['contexts']
+    pipe_names = []
 
     for pipeline in pipelines:
         if opts.pipe is not None:
-            pipe_name.append(pipeline['pipe'])
+            pipe_names.append(pipeline[pipe_name_label])
 
     if opts.pipe is not None:
-        print ' '.join(pipe_name)
+        print ' '.join(pipe_names)
         sys.exit(0)
 
 except Exception as e:

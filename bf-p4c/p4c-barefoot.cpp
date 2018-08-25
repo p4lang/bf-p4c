@@ -274,7 +274,7 @@ int main(int ac, char **av) {
 
     for (auto& pipe : conv.pipe) {
         execute_backend(pipe, options);
-        manifest.addContext(pipe->name, "context.json");
+        manifest.addContext(pipe->id, pipe->name, pipe->name + "/context.json");
     }
     // generate the archive manifest
     manifest.serialize();

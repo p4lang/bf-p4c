@@ -7,6 +7,7 @@
 #include <fstream>
 #include <map>
 #include <string>
+#include <utility>
 
 #include "bf-p4c-options.h"
 #include "common/run_id.h"
@@ -24,7 +25,8 @@ namespace Logging {
 /// that code with BFN internals.
 class Manifest : public Inspector {
  private:
-    std::map<cstring, cstring> _contexts;
+    /// map pipe-id to <pipe name, context path>
+    std::map<int, std::pair<cstring, cstring> > _contexts;
     std::map<cstring, cstring> _graphs;
     std::map<cstring, cstring> _logs;
     const BFN_Options &        _options;
@@ -52,11 +54,13 @@ class Manifest : public Inspector {
     void postorder(const IR::PackageBlock *block) override {
         for (auto it : block->constantValue) {
             if (!it.second) continue;
-            if (!it.second->is<IR::ControlBlock>())
-                continue;
-            auto name = it.second->to<IR::ControlBlock>()->container->name;
-            auto path = Util::PathName("graphs").join(name + ".dot");
-            addGraph("control", path.toString());
+            if (it.second->is<IR::ControlBlock>()) {
+                auto name = it.second->to<IR::ControlBlock>()->container->name;
+                auto path = Util::PathName("graphs").join(name + ".dot");
+                addGraph("control", path.toString());
+            } else if (it.second->is<IR::PackageBlock>()) {
+                visit(it.second->getNode());
+            }
         }
     }
 
@@ -67,7 +71,7 @@ class Manifest : public Inspector {
 
         writer.StartObject();  // start BFNCompilerArchive
         writer.Key("schema_version");
-        writer.String("1.0.0");
+        writer.String("1.1.0");
         writer.Key("target");
         if (_options.target)
             writer.String(_options.target.c_str());
@@ -105,9 +109,11 @@ class Manifest : public Inspector {
         for (auto c : _contexts) {
             writer.StartObject();
             writer.Key("pipe");
-            writer.String(c.first.c_str());
+            writer.Int(c.first);
+            writer.Key("pipe_name");
+            writer.String(c.second.first.c_str());
             writer.Key("path");
-            writer.String(c.second.c_str());
+            writer.String(c.second.second.c_str());
             writer.EndObject();
         }
         writer.EndArray();
@@ -152,8 +158,8 @@ class Manifest : public Inspector {
     }
 
     // add context
-    void addContext(cstring pipe_name, cstring path) {
-        _contexts.emplace(pipe_name, path);
+    void addContext(int pipe, cstring pipe_name, cstring path) {
+        _contexts.emplace(pipe, std::make_pair(pipe_name, path));
     }
     void addGraph(cstring graph_type, cstring path) {
         _graphs.emplace(path, graph_type);
