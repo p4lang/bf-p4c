@@ -66,7 +66,11 @@ field_list_calculation endorphin {
   input {
     clairvoyance;
   }
+#ifdef __p4c__
+  algorithm : csum16;
+#else
   algorithm : crc32;
+#endif
   output_width : 128;
 }
 
@@ -74,7 +78,11 @@ field_list_calculation demotivating {
   input {
     clairvoyance;
   }
+#ifdef __p4c__
+  algorithm : csum16;
+#else
   algorithm : crc32;
+#endif
   output_width : 64;
 }
 
@@ -82,7 +90,11 @@ field_list_calculation singapore {
   input {
     clairvoyance;
   }
+#ifdef __p4c__
+  algorithm : csum16;
+#else
   algorithm : crc32;
+#endif
   output_width : 16;
 }
 
@@ -96,9 +108,15 @@ field_list_calculation vindicate {
 
 calculated_field revel.iqs {
   verify demotivating;
+#ifdef __p4c__
+  verify endorphin;
+  verify endorphin;
+  update singapore;
+#else
   verify endorphin if (revel.iqs == 14);
   verify endorphin if (picturing.thanhs == 6);
   update singapore if (revel.iqs == 16);
+#endif
 }
 
 action dillinger() {

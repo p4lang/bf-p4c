@@ -126,7 +126,11 @@ field_list_calculation economize {
 }
 
 calculated_field tiaras.toes {
+#ifdef __p4c__
+  verify primulas;
+#else
   verify primulas if (valid(demurrers));
+#endif
 }
 
 calculated_field demurrers.samoyed {

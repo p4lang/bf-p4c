@@ -24,8 +24,15 @@ string (REGEX REPLACE "\\.stf;" ".p4;" STF_P4_TESTS "${STF_TESTS};")
 file (GLOB PTF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.ptf")
 string (REGEX REPLACE "\\.ptf;" ".p4;" PTF_P4_TESTS "${PTF_TESTS};")
 
+# Exclude some p4s with conditional checksum updates that are added separately
+set (P4_14_EXCLUDE_FILES "parser_dc_full.p4" "sai_p4.p4"
+                            "checksum_pragma.p4" "port_vlan_mapping.p4"
+                            "checksum.p4")
+set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
+bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
+
 set (JBAY_V1_TEST_SUITES
-  ${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4
+  ${p4_14_samples}
 #  ${P4TESTDATA}/p4_14_samples/switch_*/switch.p4
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
@@ -45,6 +52,8 @@ set (JBAY_V1_TEST_SUITES
   ${p16_v1tests}
   ${STF_P4_TESTS}
   ${PTF_P4_TESTS}
+# p4_14_samples
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/bf_p4c_samples/*.p4
   )
 
 p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "base" "${JBAY_V1_TEST_SUITES}")

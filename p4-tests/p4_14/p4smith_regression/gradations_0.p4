@@ -103,7 +103,11 @@ field_list_calculation unprepared {
   input {
     mortising;
   }
+#ifdef __p4c__
+  algorithm : csum16;
+#else
   algorithm : xor16;
+#endif
   output_width : 16;
 }
 
@@ -119,27 +123,50 @@ field_list_calculation farrakhan {
   input {
     honorific;
   }
+#ifdef __p4c__
+  algorithm : csum16;
+#else
   algorithm : xor16;
+#endif
   output_width : 16;
 }
 
 calculated_field clamours.bunkhouses {
+#ifdef __p4c__
+  update unprepared;
+  verify farrakhan;
+  update farrakhan;
+  verify farrakhan;
+#else
   update unprepared if (clamours.bunkhouses == 60);
   verify farrakhan if (paterfamiliass.gamma == 14);
   update farrakhan;
   verify farrakhan if (valid(clamours));
+#endif
 }
 
 calculated_field clamours.rachmaninoff {
+#ifdef __p4c__
+  verify trustworthiest;
+  update unprepared;
+#else
   verify trustworthiest if (marinaras.stepping == 15);
   update unprepared if (valid(showering));
+#endif
 }
 
 calculated_field paterfamiliass.gamma {
+#ifdef __p4c__
+  verify drawings;
+  update unprepared;
+  update drawings;
+  update drawings;
+#else
   verify drawings if (clamours.bunkhouses == 112);
   update unprepared if (valid(marinaras));
   update drawings if (valid(clamours));
   update drawings;
+#endif
 }
 
 action orientals() {

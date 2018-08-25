@@ -126,12 +126,20 @@ field_list_calculation bentley {
 }
 
 calculated_field overenthusiastic.plutocracies {
+#ifdef __p4c__
+  verify bentley;
+#else
   verify bentley if (overenthusiastic.tarkington == 12);
+#endif
   update bentley;
 }
 
 calculated_field gristle.tiebreakers {
+#ifdef __p4c__
+  verify bentley;
+#else
   verify bentley if (overenthusiastic.sew == 14);
+#endif
 }
 
 action squiggly() {

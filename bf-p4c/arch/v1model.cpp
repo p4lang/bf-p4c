@@ -833,8 +833,27 @@ analyzeChecksumCall(const IR::MethodCallStatement *statement, cstring which) {
         ::warning("Expected 4 arguments for %1% statement: %2%", statement, which);
         return boost::none;
     }
+
     auto destField = (*methodCall->arguments)[2]->expression->to<IR::Member>();
     CHECK_NULL(destField);
+
+    auto condition = (*methodCall->arguments)[0]->expression;
+    CHECK_NULL(condition);
+
+    bool nominalCondition = false;
+    if (auto mc = condition->to<IR::MethodCallExpression>()) {
+        if (auto m = mc->method->to<IR::Member>()) {
+            if (m->member == "isValid") {
+                if (m->expr->equiv(*(destField->expr))) {
+                    nominalCondition = true; } } } }
+
+    auto bl = condition->to<IR::BoolLiteral>();
+    if (which == "verify_checksum" && !nominalCondition && (!bl || bl->value != true))
+        ::error("Tofino does not support conditional checksum verification: %1%", destField);
+
+    auto algorithm = (*methodCall->arguments)[3]->expression->to<IR::Member>();
+    if (!algorithm || algorithm->member != "csum16")
+        ::error("Tofino only supports \"csum16\" for checksum calculation: %1%", destField);
 
     return ChecksumSourceMap::value_type(destField, methodCall);
 }

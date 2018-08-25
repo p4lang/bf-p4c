@@ -169,20 +169,34 @@ field_list_calculation negation {
   input {
     reembarking;
   }
+#ifdef __p4c__
+  algorithm : csum16;
+#else
   algorithm : xor16;
+#endif
   output_width : 48;
 }
 
 calculated_field castaway.clattered {
+#ifndef __p4c__
   verify negation if (castaway.clattered == 60);
+#endif
   verify negation;
+#ifdef __p4c__
+  update negation;
+#else
   update negation if (valid(oatcake));
+#endif
 }
 
 calculated_field oatcake.fistulouss {
+#ifdef __p4c__
+  verify negation;
+#else
   verify negation if (reecho.squelchy == 4);
   verify negation if (valid(kinked));
   verify negation if (valid(subeditor));
+#endif
 }
 
 action church() {

@@ -110,14 +110,23 @@ field_list_calculation waveband {
   input {
     syllabus;
   }
+#ifdef __p4c__
+  algorithm : csum16;
+#else
   algorithm : xor16;
+#endif
   output_width : 32;
 }
 
 calculated_field regrow.articles {
+#ifdef __p4c__
+  verify waveband;
+  update waveband;
+#else
   verify waveband if (valid(regrow));
   update waveband if (arpeggios.godmothers == 27);
   update waveband if (valid(arpeggios));
+#endif
 }
 
 action mongol() {

@@ -113,12 +113,20 @@ field_list_calculation litanies {
   input {
     boxes;
   }
+#ifdef __p4c__
+  algorithm : csum16;
+#else
   algorithm : crc16;
+#endif
   output_width : 64;
 }
 
 calculated_field profits.vegans {
+#ifdef __p4c__
+  update litanies;
+#else
   update litanies if (valid(profits));
+#endif
   verify litanies;
   verify litanies;
   verify litanies;
@@ -126,19 +134,31 @@ calculated_field profits.vegans {
 
 calculated_field masterminds.termites {
   verify litanies;
+#ifndef __p4c__
   verify litanies if (masterminds.underlie == 1);
+#endif
 }
 
 calculated_field masterminds.ragamuffin {
+#ifdef __p4c__
+  verify litanies;
+  update litanies;
+  verify litanies;
+#else
   verify litanies if (valid(masterminds));
   update litanies;
   verify litanies if (masterminds.termites == 2);
+#endif
 }
 
 calculated_field masterminds.payments {
+#ifdef __p4c__
+  update litanies;
+#else
   update litanies if (masterminds.underlie == 3);
   update litanies if (masterminds.ragamuffin == 10);
   update litanies if (profits.vegans == 16);
+#endif
 }
 
 action edicts() {

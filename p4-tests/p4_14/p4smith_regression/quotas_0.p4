@@ -93,7 +93,11 @@ calculated_field silesia.stevie {
 }
 
 calculated_field communisms.dewclaws {
+#ifdef __p4c__
+  verify riposted;
+#else
   verify riposted if (valid(silesia));
+#endif
 }
 
 action josefs() {

@@ -124,13 +124,13 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "Structure header ingress_intrinsic_metadata_t does not have a field ucast_egress_port"
-  testdata/p4_14_samples/sai_p4.p4
+  extensions/p4_tests/p4_14/bf_p4c_samples/sai_p4.p4
   )
 
 p4c_add_xfail_reason("tofino2"
   "error: No format in action table"
   testdata/p4_14_samples/selector0.p4
-  testdata/p4_14_samples/port_vlan_mapping.p4
+  extensions/p4_tests/p4_14/bf_p4c_samples/port_vlan_mapping.p4
   )
 
 p4c_add_xfail_reason("tofino2"

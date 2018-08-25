@@ -7,9 +7,12 @@ packet_test_setup_check("tofino")
 
 set (V1_SEARCH_PATTERNS "include.*v1model.p4" "main|common_v1_test")
 set (V1_EXCLUDE_PATTERNS "package" "extern")
+# Exclude some bmv2 p4s with conditional checksum updates that are not needed for backend
+set (V1_EXCLUDE_FILES "issue461-bmv2.p4" "issue1079-bmv2.p4")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
-p4c_find_tests("${P4TESTS_FOR_TOFINO}" v1tests INCLUDE "${V1_SEARCH_PATTERNS}" EXCLUDE "${V1_EXCLUDE_PATTERNS}")
+p4c_find_tests("${P4TESTS_FOR_TOFINO}" P4_16_V1_TESTS INCLUDE "${V1_SEARCH_PATTERNS}" EXCLUDE "${V1_EXCLUDE_PATTERNS}")
+bfn_find_tests("${P4_16_V1_TESTS}" v1tests EXCLUDE "${V1_EXCLUDE_FILES}")
 
 set (P16_V1_INCLUDE_PATTERNS "include.*v1model.p4" "main|common_v1_test")
 set (P16_V1_EXCLUDE_PATTERNS "tofino.h")
@@ -27,13 +30,22 @@ set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P16_PSA_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
 p4c_find_tests("${P16_PSA_FOR_TOFINO}" p16_psa_tests INCLUDE "${PSA_SEARCH_PATTERNS}" EXCLUDE "${PSA_EXCLUDE_PATTERNS}")
 
+# Exclude some p4s with conditional checksum updates that are added separately
+set (P4_14_EXCLUDE_FILES "parser_dc_full.p4" "sai_p4.p4"
+                            "checksum_pragma.p4" "port_vlan_mapping.p4"
+                            "checksum.p4")
+set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
+bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
+
 set (TOFINO_V1_TEST_SUITES
-  ${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4
+  ${p4_14_samples}
   ${p16_v1tests}
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
   ${v1tests}
   # p4smith regression tests
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4smith_regression/*.p4
+  # p4_14_samples
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/bf_p4c_samples/*.p4
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES}")
 

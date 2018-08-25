@@ -80,7 +80,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "stf2ptf.STF2ptf ... ERROR"
     # Detailed: "KeyError: (0, 10)"
-    testdata/p4_14_samples/parser_dc_full.p4
     # Detailed: "Error when adding match entry to target"
     testdata/p4_14_samples/exact_match3.p4
     )
@@ -213,11 +212,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "more than can fit in the 32 byte input buffer"
-  testdata/p4_14_samples/port_vlan_mapping.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "metadata arrays not handled in InstanceRef::InstanceRef"
   testdata/p4_16_samples/equality-bmv2.p4
 )
@@ -240,7 +234,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/selector0.p4
   #testdata/p4_16_samples/action_profile-bmv2.p4
   #testdata/p4_16_samples/issue297-bmv2.p4
-  testdata/p4_14_samples/port_vlan_mapping.p4
+  extensions/p4_tests/p4_14/bf_p4c_samples/port_vlan_mapping.p4
   )
 
 # Too big a select key (96 bits) for tofino to match in one parser state.  Could be split into
@@ -766,7 +760,7 @@ p4c_add_xfail_reason("tofino"
 # are we going to retire these switch profiles?
 p4c_add_xfail_reason("tofino"
   "Structure header .* does not have a field"
-  testdata/p4_14_samples/sai_p4.p4
+  extensions/p4_tests/p4_14/bf_p4c_samples/sai_p4.p4
   )
 
 # # BRIG-109
@@ -942,12 +936,6 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
-#-------- New tests, new failures
-p4c_add_xfail_reason("tofino"
-  "error: Expression .* cannot be the target of an assignment"
-  testdata/p4_16_samples/issue1079-bmv2.p4
-  )
-
 # dynamic hash
 p4c_add_xfail_reason("tofino"
   "Unknown method execute_from_hash in wred"
@@ -1095,7 +1083,13 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Output of checksum calculation can only be stored in a 16-bit field"
   extensions/p4_tests/p4_14/p4smith_regression/gradations_0.p4
+)
+
+# error: Tofino only supports "csum16" for checksum calculation
+p4c_add_xfail_reason("tofino"
+  "Tofino only supports \"csum16\" for checksum calculation"
   extensions/p4_tests/p4_14/p4smith_regression/quotas_0.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/exm_direct/exm_direct.p4
 )
 
 # BRIG-816

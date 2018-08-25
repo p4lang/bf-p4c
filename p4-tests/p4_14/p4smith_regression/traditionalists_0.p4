@@ -123,7 +123,11 @@ field_list_calculation enlivenments {
   input {
     catnap;
   }
+#ifdef __p4c__
+  algorithm : csum16;
+#else
   algorithm : xor16;
+#endif
   output_width : 8;
 }
 
@@ -144,8 +148,13 @@ field_list_calculation spiniest {
 }
 
 calculated_field numskulls.guam {
+#ifdef __p4c__
+  verify spiniest;
+  verify enlivenments;
+#else
   verify spiniest if (valid(numerology));
   verify enlivenments if (melissa.workroom == 0);
+#endif
 }
 
 action antimicrobial() {
