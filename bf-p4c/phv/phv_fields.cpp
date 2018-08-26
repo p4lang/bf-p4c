@@ -967,6 +967,17 @@ class CollectPardeConstraints : public Inspector {
         src_field->set_deparsed(true);
         src_field->set_exact_containers(true);
 
+        // In the case of conditional checksum update, we have two emits in the deparser
+        // one for the header checksum and the other for the updated value from the deparser
+        // checksum engine. This however breaks the header contiguity in the deparser.
+        // Therefore, we cannot pack the header checksum with its adjacent fields.
+        auto* pov_field = phv.field(emit->povBit->field);
+        BUG_CHECK(pov_field, "Deparser Emit %1% without POV bit?",
+                  cstring::to_cstring(emit));
+
+        if (pov_field->name.endsWith("$deparse_original_csum"))
+            src_field->set_no_pack(true);
+
         if (!src_field->privatized()) return;
 
         // The original PHV copy of privatized fields must be explicitly identified as privatizable

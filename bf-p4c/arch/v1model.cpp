@@ -817,21 +817,20 @@ class AnalyzeProgram : public Inspector {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-static boost::optional<ChecksumSourceMap::value_type>
-analyzeChecksumCall(const IR::MethodCallStatement *statement, cstring which) {
+bool analyzeChecksumCall(const IR::MethodCallStatement *statement, cstring which) {
     auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
     if (!methodCall) {
         ::warning("Expected a non-empty method call expression: %1%", statement);
-        return boost::none;
+        return false;
     }
     auto method = methodCall->method->to<IR::PathExpression>();
     if (!method || (method->path->name != which)) {
         ::warning("Expected an %1% statement in %2%", statement, which);
-        return boost::none;
+        return false;
     }
     if (methodCall->arguments->size() != 4) {
         ::warning("Expected 4 arguments for %1% statement: %2%", statement, which);
-        return boost::none;
+        return false;
     }
 
     auto destField = (*methodCall->arguments)[2]->expression->to<IR::Member>();
@@ -855,14 +854,16 @@ analyzeChecksumCall(const IR::MethodCallStatement *statement, cstring which) {
     if (!algorithm || algorithm->member != "csum16")
         ::error("Tofino only supports \"csum16\" for checksum calculation: %1%", destField);
 
-    return ChecksumSourceMap::value_type(destField, methodCall);
+    return true;
 }
 
 static IR::Declaration_Instance*
 createChecksumDeclaration(ProgramStructure *structure,
-                          ChecksumSourceMap::value_type csum) {
+                          const IR::MethodCallStatement* csum) {
+    auto mc = csum->methodCall->to<IR::MethodCallExpression>();
+
     auto typeArgs = new IR::Vector<IR::Type>();
-    typeArgs->push_back(csum.second->arguments->at(2)->expression->type);
+    typeArgs->push_back(mc->arguments->at(2)->expression->type);
     auto inst = new IR::Type_Specialized(new IR::Type_Name("Checksum"), typeArgs);
 
     auto csum_name = cstring::make_unique(structure->unique_names, "checksum", '_');
@@ -1433,13 +1434,17 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
-    void implementUpdateChecksum(ChecksumSourceMap::value_type csum, cstring which,
+    void implementUpdateChecksum(const IR::MethodCallStatement* uc,
+                                 cstring which,
                                  std::vector<gress_t> deparserUpdateLocations) {
-        auto fieldlist = csum.second->arguments->at(1)->expression;
-        auto destfield = csum.second->arguments->at(2)->expression;
+        auto mc = uc->methodCall->to<IR::MethodCallExpression>();
+
+        auto condition = mc->arguments->at(0)->expression;
+        auto fieldlist = mc->arguments->at(1)->expression;
+        auto destfield = mc->arguments->at(2)->expression;
 
         for (auto location : deparserUpdateLocations) {
-            IR::Declaration_Instance* decl = createChecksumDeclaration(structure, csum);
+            IR::Declaration_Instance* decl = createChecksumDeclaration(structure, uc);
 
             if (location == INGRESS)
                  structure->ingressDeparserDeclarations.push_back(decl);
@@ -1461,20 +1466,18 @@ class ConstructSymbolTable : public Inspector {
 
             IR::ListExpression* list = new IR::ListExpression(exprs);
             auto* updateCall = new IR::MethodCallExpression(
-                    csum.second->srcInfo,
+                    mc->srcInfo,
                     new IR::Member(new IR::PathExpression(decl->name), "update"),
                     { new IR::Argument(list) });
 
             IR::Statement* stmt = new IR::AssignmentStatement(destfield, updateCall);
-            if (auto boolLiteral =
-                csum.second->arguments->at(0)->expression->to<IR::BoolLiteral>()) {
+            if (auto boolLiteral = condition->to<IR::BoolLiteral>()) {
                 if (!boolLiteral->value) {
                     // Do not add the if-statement if the condition is always true.
                     stmt = nullptr;
                 }
             } else {
-                stmt = new IR::IfStatement(csum.second->arguments->at(0)->expression,
-                                                stmt, nullptr);
+                stmt = new IR::IfStatement(condition, stmt, nullptr);
             }
 
             if (stmt) {
@@ -1486,14 +1489,13 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
-    void cvtUpdateChecksum(const IR::MethodCallStatement *method, cstring which) {
+    void cvtUpdateChecksum(const IR::MethodCallStatement *call, cstring which) {
         auto block = findContext<IR::BlockStatement>();
         std::vector<gress_t> deparserUpdateLocations =
             getChecksumUpdateLocations(block, "calculated_field_update_location");
 
-        auto checksum = analyzeChecksumCall(method, which);
-        if (checksum)
-            implementUpdateChecksum(*checksum, which, deparserUpdateLocations);
+        if (analyzeChecksumCall(call, which))
+            implementUpdateChecksum(call, which, deparserUpdateLocations);
     }
 
     /// build up a table for all metadata member that need to be translated.
@@ -1939,9 +1941,11 @@ class CollectParserChecksums : public Inspector {
         CHECK_NULL(mce);
         auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
         if (auto ef = mi->to<P4::ExternFunction>()) {
-            if (ef->method->name == "verify_checksum") {
+            if (ef->method->name == "verify_checksum" &&
+                analyzeChecksumCall(node, "verify_checksum")) {
                 verifyChecksums.push_back(node);
-            } else if (ef->method->name == "update_checksum_with_payload") {
+            } else if (ef->method->name == "update_checksum_with_payload" &&
+                analyzeChecksumCall(node, "update_checksum_with_payload")) {
                 residualChecksums.push_back(node);
 
                 auto block = findContext<IR::BlockStatement>();
@@ -1971,7 +1975,7 @@ class InsertParserChecksums : public Inspector {
     const P4ParserGraphs* parserGraphs;
     ProgramStructure *structure;
 
-    std::map<ChecksumSourceMap::value_type, const IR::Declaration*> verifyDeclarationMap;
+    std::map<const IR::MethodCallStatement*, const IR::Declaration*> verifyDeclarationMap;
 
     std::map<const IR::MethodCallStatement*, IR::Declaration_Instance*>
         ingressParserResidualChecksumDecls, egressParserResidualChecksumDecls;
@@ -2040,30 +2044,33 @@ class InsertParserChecksums : public Inspector {
         return false;
     }
 
-    void implementVerifyChecksum(ChecksumSourceMap::value_type csum, const IR::ParserState* state) {
+    void implementVerifyChecksum(const IR::MethodCallStatement* vc,
+                                 const IR::ParserState* state) {
         cstring stateName = state->name;
         auto& extracts = stateToExtracts[state];
 
-        auto fieldlist = csum.second->arguments->at(1)->expression;
-        auto destfield = csum.second->arguments->at(2)->expression;
+        auto mc = vc->methodCall->to<IR::MethodCallExpression>();
+
+        auto fieldlist = mc->arguments->at(1)->expression;
+        auto destfield = mc->arguments->at(2)->expression;
 
         // check if any of the fields or dest belong to extracts
         // TODO(zma) verify on ingress only?
 
         const IR::Declaration* decl = nullptr;
 
-        if (verifyDeclarationMap.count(csum)) {
-            decl = verifyDeclarationMap.at(csum);
+        if (verifyDeclarationMap.count(vc)) {
+            decl = verifyDeclarationMap.at(vc);
         } else {
-            decl = createChecksumDeclaration(structure, csum);
-            verifyDeclarationMap[csum] = decl;
+            decl = createChecksumDeclaration(structure, vc);
+            verifyDeclarationMap[vc] = decl;
             structure->ingressParserDeclarations.push_back(decl);
         }
 
         for (auto f : fieldlist->to<IR::ListExpression>()->components) {
             for (auto extract : extracts) {
                 if (belongsTo(f->to<IR::Member>(), extract)) {
-                    auto addCall = new IR::MethodCallStatement(csum.second->srcInfo,
+                    auto addCall = new IR::MethodCallStatement(mc->srcInfo,
                         new IR::Member(new IR::PathExpression(decl->name), "add"),
                                                               { new IR::Argument(f) });
 
@@ -2077,7 +2084,7 @@ class InsertParserChecksums : public Inspector {
             if (belongsTo(destfield->to<IR::Member>(), extract)) {
                 BUG_CHECK(decl, "No fields have been added before verify?");
 
-                auto addCall = new IR::MethodCallStatement(csum.second->srcInfo,
+                auto addCall = new IR::MethodCallStatement(mc->srcInfo,
                         new IR::Member(new IR::PathExpression(decl->name), "add"),
                                                               { new IR::Argument(destfield) });
 
@@ -2087,18 +2094,18 @@ class InsertParserChecksums : public Inspector {
         }
     }
 
-    void implementParserResidualChecksum(const IR::MethodCallStatement *statement,
+    void implementParserResidualChecksum(const IR::MethodCallStatement *rc,
                                          const IR::ParserState* state,
                                          const std::vector<gress_t>& parserUpdateLocations,
                                          const std::vector<gress_t>& deparserUpdateLocations) {
-        auto csum = analyzeChecksumCall(statement, "update_checksum_with_payload");
-        if (!csum) return;
-
         cstring stateName = state->name;
         auto& extracts = stateToExtracts[state];
 
-        auto fieldlist = csum->second->arguments->at(1)->expression;
-        auto destfield = csum->second->arguments->at(2)->expression;
+        auto mc = rc->methodCall->to<IR::MethodCallExpression>();
+
+        auto condition = mc->arguments->at(0)->expression;
+        auto fieldlist = mc->arguments->at(1)->expression;
+        auto destfield = mc->arguments->at(2)->expression;
 
         bool needBridging = parserUpdateLocations.size() == 1 &&
                             parserUpdateLocations[0] == INGRESS &&
@@ -2145,19 +2152,19 @@ class InsertParserChecksums : public Inspector {
             }
 
             IR::Declaration_Instance* decl = nullptr;
-            auto it = parserResidualChecksumDecls->find(statement);
+            auto it = parserResidualChecksumDecls->find(rc);
             if (it == parserResidualChecksumDecls->end()) {
-                decl = createChecksumDeclaration(structure, *csum);
+                decl = createChecksumDeclaration(structure, rc);
                 parserDeclarations->push_back(decl);
-                (*parserResidualChecksumDecls)[statement] = decl;
+                (*parserResidualChecksumDecls)[rc] = decl;
             } else {
-                decl = parserResidualChecksumDecls->at(statement);
+                decl = parserResidualChecksumDecls->at(rc);
             }
 
             for (auto extract : extracts) {
                 for (auto f : fieldlist->to<IR::ListExpression>()->components) {
                     if (belongsTo(f->to<IR::Member>(), extract)) {
-                        auto subtractCall = new IR::MethodCallStatement(csum->second->srcInfo,
+                        auto subtractCall = new IR::MethodCallStatement(mc->srcInfo,
                             new IR::Member(new IR::PathExpression(decl->name), "subtract"),
                                                                   { new IR::Argument(f) });
 
@@ -2166,14 +2173,14 @@ class InsertParserChecksums : public Inspector {
                 }
 
                 if (belongsTo(destfield->to<IR::Member>(), extract)) {
-                    auto subtractCall = new IR::MethodCallStatement(csum->second->srcInfo,
+                    auto subtractCall = new IR::MethodCallStatement(mc->srcInfo,
                         new IR::Member(new IR::PathExpression(decl->name), "subtract"),
                                                               { new IR::Argument(destfield) });
 
                     parserStatements->push_back(subtractCall);
 
                     auto* getCall = new IR::MethodCallExpression(
-                            csum->second->srcInfo,
+                            mc->srcInfo,
                             new IR::Member(new IR::PathExpression(decl->name), "get"),
                             { });
 
@@ -2182,8 +2189,7 @@ class InsertParserChecksums : public Inspector {
                                              destfield;
 
                     IR::Statement* stmt = new IR::AssignmentStatement(residualChecksum, getCall);
-                    if (auto boolLiteral = csum->second->arguments->at(0)
-                                                      ->expression->to<IR::BoolLiteral>()) {
+                    if (auto boolLiteral = condition->to<IR::BoolLiteral>()) {
                         if (!boolLiteral->value) {
                             // Do not add the if-statement if the condition is always true.
                             stmt = nullptr;
@@ -2201,13 +2207,10 @@ class InsertParserChecksums : public Inspector {
         // see if any of the "verify_checksum" or "update_checksum_with_payload" statement
         // is relavent to this state. If so, convert to TNA function calls.
         for (auto* vc : collect->verifyChecksums) {
-            auto checksum = analyzeChecksumCall(vc, "verify_checksum");
-            if (checksum)
-                implementVerifyChecksum(*checksum, state);
+            implementVerifyChecksum(vc, state);
         }
 
         for (auto* rc : collect->residualChecksums) {
-            auto checksum = analyzeChecksumCall(rc, "update_checksum_with_payload");
             implementParserResidualChecksum(rc, state,
                                             collect->parserUpdateLocations.at(rc),
                                             collect->deparserUpdateLocations.at(rc));

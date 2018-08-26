@@ -956,7 +956,8 @@ class ExtractPhase0 : public Inspector {
 };
 
 struct ExtractChecksum : public Inspector {
-    explicit ExtractChecksum(IR::BFN::Pipe* rv) : rv(rv) { setName("ExtractChecksumNative"); }
+    explicit ExtractChecksum(IR::BFN::Pipe* rv) :
+        rv(rv) { setName("ExtractChecksumNative"); }
 
     void postorder(const IR::BFN::TranslatedP4Deparser* deparser) override {
         extractChecksumFromDeparser(deparser, rv);

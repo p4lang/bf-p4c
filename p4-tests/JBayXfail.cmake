@@ -32,6 +32,7 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/action_chain_limits.p4
     # clot-phv interaction bug?
     testdata/p4_14_samples/bridge1.p4
+    extensions/p4_tests/p4_14/cond_checksum_update.p4
     )
 
 endif() # HARLYN_STF
@@ -259,4 +260,9 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received on device 0"
   extensions/p4_tests/p4_14/brig-906.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "failed command assembler"
+  extensions/p4_tests/p4_14/cond_checksum_update_2.p4
 )

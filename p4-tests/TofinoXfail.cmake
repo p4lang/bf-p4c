@@ -184,6 +184,7 @@ p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   extensions/p4_tests/p4_14/overlay_add_header.p4
+  basic_switching  # BRIG-915
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1281,8 +1282,17 @@ p4c_add_xfail_reason("tofino"
   brig_569
 )
 
-# need bridged metadata overlay
+# BRIG-920 need bridged metadata overlay
 p4c_add_xfail_reason("tofino"
   "invalid parser checksum unit"
   extensions/p4_tests/p4_14/test_checksum.p4
 )
+
+# BRIG-909
+p4c_add_xfail_reason("tofino"
+   "Containers are in the same deparser group but assigned fields of both INGRESS and EGRESS"
+   extensions/p4_tests/p4_14/cond_checksum_update.p4 
+   extensions/p4_tests/p4_14/cond_checksum_update_2.p4 
+   extensions/p4_tests/p4_14/test_checksum.p4 
+   simple_l3_checksum
+ )

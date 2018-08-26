@@ -2,7 +2,6 @@
 #define BF_P4C_ARCH_V1MODEL_H_
 
 #include <boost/algorithm/string.hpp>
-#include <boost/optional.hpp>
 #include "ir/ir.h"
 #include "ir/namemap.h"
 #include "lib/path.h"
