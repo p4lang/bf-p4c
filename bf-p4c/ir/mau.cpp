@@ -37,12 +37,21 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
 
     overhead_bits += a.overhead_bits;
     immediate_bits += a.immediate_bits;
-    meter_addr_bits += a.meter_addr_bits;
-    counter_addr_bits += a.counter_addr_bits;
+    meter_addr += a.meter_addr;
+    stats_addr += a.stats_addr;
     action_addr_bits += a.action_addr_bits;
     ghost_bytes += a.ghost_bytes;
     partition_bits += partition_bits;
     partition_count += partition_count;
+    return *this;
+}
+
+IR::MAU::Table::IndirectAddress
+    &IR::MAU::Table::IndirectAddress::operator +=(const IR::MAU::Table::IndirectAddress &a) {
+    shifter_enabled |= a.shifter_enabled;
+    address_bits += a.address_bits;
+    per_flow_enable |= a.per_flow_enable;
+    meter_type_bits += a.meter_type_bits;
     return *this;
 }
 

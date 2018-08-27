@@ -74,7 +74,7 @@ bool operator>>(cstring s, IR::MAU::StatefulUse &u) {
 
 
 static const char *addr_location_to_str[] = {
-    "DIRECT", "OVERHEAD", "HASH", "NOT_SET"
+    "DIRECT", "OVERHEAD", "HASH", "STFUL_COUNTER", "NOT_SET"
 };
 
 std::ostream &operator<<(std::ostream &out, const IR::MAU::AddrLocation &a) {

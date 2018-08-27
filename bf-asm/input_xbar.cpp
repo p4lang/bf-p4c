@@ -419,9 +419,7 @@ void InputXbar::pass1() {
             if (col.second.fn && col.second.fn != prev)
                 ok = (prev = col.second.fn)->check_ixbar(this, hash.first/2U);
             if (ok && col.second.fn && !copy_existing_hash(hash.first, col)) {
-                LOG1("Gen data called");
                 col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first);
-                LOG1("Gen data for hash bit " << col.second.bit << " 0x" <<  col.second.data);
             }
         }
         bool add_to_use = true;

@@ -98,10 +98,11 @@ void IR::MAU::Action::dbprint(std::ostream &out) const {
     for (auto &p : action)
         out << endl << p;
     out << unindent << " }";
-    if (!stateful.empty()) {
+    if (!stateful_calls.empty()) {
         out << " + {" << indent;
-        for (auto &p : stateful)
-            out << endl << p;
+        for (auto &call : stateful_calls) {
+            out << endl << call->prim;
+        }
         out << unindent << " }"; }
 }
 

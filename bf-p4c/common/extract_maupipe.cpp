@@ -339,6 +339,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
 
         sel->num_groups = 4;
         sel->group_size = 120;
+        sel->size = (sel->group_size + 119) / 120 * sel->num_groups;
         BUG_CHECK(args->size() == 3, "%s Selector does not have the correct number of arguments",
                   sel->srcInfo);
         auto path = args->at(1)->expression->to<IR::PathExpression>()->path;

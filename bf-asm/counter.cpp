@@ -126,45 +126,49 @@ int CounterTable::address_shift() const {
     return counter_shifts[format->groups()];
 }
 
+unsigned CounterTable::determine_shiftcount(Table::Call &call, int group, int word,
+        int tcam_shift) const {
+    if (call.args[0].name() && strcmp(call.args[0].name(), "$DIRECT") == 0) {
+        return direct_shiftcount() + tcam_shift;
+    } else if (call.args[0].field()) {
+        assert(call.args[0].field()->by_group[group]->bit(0)/128U == word);
+        return call.args[0].field()->by_group[group]->bit(0)%128U + indirect_shiftcount();
+    } else if (call.args[1].field()) {
+        return call.args[1].field()->bit(0) + STAT_ADDRESS_ZERO_PAD;
+    }
+    return 0;
+}
+
 template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge =  regs.rams.match.merge;
-    //per_flow_enable_bit = 19;
-    ///* FIXME -- This should be cleaner -- rather than checking the match table type, have
-    // * the pfe bit stored in the CounterTable and hve the match table set it in some pass?
-    // * Should be using the top bit from the counter index field in the match foramt?
-    // * Or add a second arg to the stats/counter call in the match table specifying which bit?  */
-    //if (per_flow_enable && dynamic_cast<HashActionTable *>(match)) {
-    //    per_flow_enable_bit = 7; }
-    //if (options.match_compiler && dynamic_cast<HashActionTable *>(match)) {
-    //    /* FIXME -- for some reason the compiler does not set the stats_adr_mask
-    //     * for hash_action tables.  Is it not needed? */
-    //} else
-    //    merge.mau_stats_adr_mask[type][bus] = 0xfffff & ~counter_masks[format->groups()];
-    //merge.mau_stats_adr_hole_swizzle_mode[type][bus] = counter_hole_swizzle[format->groups()];
-    //merge.mau_stats_adr_default[type][bus] = per_flow_enable ? 0 : (1U << per_flow_enable_bit);
-    //if (per_flow_enable)
-    //    merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit;
+    unsigned adr_mask = 0;
+    unsigned per_entry_en_mux_ctl = 0;
+    unsigned adr_default = 0;
 
-    unsigned stats_adr_default = 0;
-    unsigned stats_adr_mask = ((1U <<  STAT_ADDRESS_BITS) - 1) & ~counter_masks[format->groups()];
-    unsigned pfe = per_flow_enable_bit();
-    if (per_flow_enable) {
-        auto addr = match->find_address_field(this);
-        auto address_bits = addr ? addr->size : 0;
-        stats_adr_mask = ((1U <<  address_bits) - 1) << (counter_shifts[format->groups()]);
-        pfe += counter_shifts[format->groups()];
-    } else {
-        //pfe = STATISTICS_PER_FLOW_ENABLE_START_BIT;
-        pfe = 0; // Does pfe value get picked up in default case?
-        stats_adr_default = 1U << (STAT_ADDRESS_BITS - 1); }
-    // FIXME: Should be cleaner, separate function to indicate addressing
-    if (match->to<HashActionTable>()) {
-        merge.mau_stats_adr_mask[type][bus] = 0;
-    } else
-        merge.mau_stats_adr_mask[type][bus] = stats_adr_mask;
-    merge.mau_stats_adr_default[type][bus] = stats_adr_default;
-    merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = pfe;
+    if (args[0].type == Table::Call::Arg::Name && strcmp(args[0].name(), "$DIRECT") == 0) {
+        adr_mask |= ((1U << STAT_ADDRESS_BITS) - 1) & ~counter_masks[format->groups()];
+    } else if (args[0].type == Table::Call::Arg::Field) {
+        auto addr = args[0].field();
+        auto address_bits = addr->size;
+        adr_mask |= ((1U << address_bits) - 1) << (counter_shifts[format->groups()]); 
+    }
+
+    
+    if (args[1].type == Table::Call::Arg::Name && strcmp(args[1].name(), "$DEFAULT") == 0) {
+        adr_default = (1U << STATISTICS_PER_FLOW_ENABLE_START_BIT); 
+    } else if (args[1].type == Table::Call::Arg::Field) {
+        if (args[0].type == Table::Call::Arg::Field) {
+            per_entry_en_mux_ctl = args[1].field()->bit(0) - args[0].field()->bit(0) ;
+            per_entry_en_mux_ctl += counter_shifts[format->groups()];
+        } else if (args[0].type == Table::Call::Arg::HashDist) {
+            per_entry_en_mux_ctl = 0;
+        }
+    }
+
+    merge.mau_stats_adr_mask[type][bus] = adr_mask;
+    merge.mau_stats_adr_default[type][bus] = adr_default;
+    merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = per_entry_en_mux_ctl;
     merge.mau_stats_adr_hole_swizzle_mode[type][bus] = counter_hole_swizzle[format->groups()];
 }
 
@@ -283,6 +287,7 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
     json::map &tbl = *base_tbl_cfg(out, "statistics", size);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
     add_alu_index(stage_tbl, "stats_alu_index");
+    // FIXME: Eliminated by DRV-1856
     tbl["enable_pfe"] = per_flow_enable;
     tbl["pfe_bit_position"] = per_flow_enable_bit();
     if (auto *f = lookup_field("bytes"))

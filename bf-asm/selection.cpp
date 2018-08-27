@@ -122,6 +122,10 @@ void SelectionTable::pass3() {
     LOG1("### Selection table " << name() << " pass3");
 }
 
+int SelectionTable::indirect_shiftcount() const {
+    return METER_ADDRESS_ZERO_PAD - 7;  // selectors always start at bit 7 address 
+}
+
 unsigned SelectionTable::per_flow_enable_bit(MatchTable *match) const {
     if (!per_flow_enable)
         return SELECTOR_PER_FLOW_ENABLE_START_BIT;
@@ -129,28 +133,27 @@ unsigned SelectionTable::per_flow_enable_bit(MatchTable *match) const {
         return AttachedTable::per_flow_enable_bit(match);
 }
 
+unsigned SelectionTable::determine_shiftcount(Table::Call &call, int group, int word,
+        int tcam_shift) const {
+    return determine_meter_shiftcount(call, group, word, tcam_shift);
+}
+
 template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
     setup_physical_alu_map(regs, type, bus, meter_group());
-    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit(match);
-    //if (match->action_call())
-    //    /*merge.mau_selector_action_entry_size[type][bus] = match->action_call()->format->log2size - 3*/;
-    //else if (options.match_compiler)
-    //    return; // compiler skips the rest if no action table
     merge.mau_payload_shifter_enable[type][bus].meter_adr_payload_shifter_en = 1;
-    //if (args.size() > 1)
-    //    merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
-    //        1 << BusHashGroup::SELECTOR_MOD, 5 * (bus%4), 5);
-    merge.mau_meter_adr_type_position[type][bus] = SELECTOR_METER_TYPE_START_BIT;
-    if (match->action_call().args.size() > 1) {
-        /* FIXME -- regs need to stabilize */
-        merge.mau_meter_adr_mask[type][bus] = ((1U << per_flow_enable_bit(match)) - 1) << 7; }
-    merge.mau_meter_adr_default[type][bus] = (METER_SELECTOR << SELECTOR_METER_TYPE_START_BIT)
-        | (per_flow_enable ? 0 : (1U << SELECTOR_PER_FLOW_ENABLE_START_BIT));
-    //if (!hash_dist.empty()) {
-    //    /* from HashDistributionResourceAllocation.write_config: */
-    //    merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist[0].id | 8, 4*(bus%8), 4); }
+
+    unsigned adr_mask = 0U;
+    unsigned per_entry_en_mux_ctl = 0U;
+    unsigned adr_default = 0U;
+    unsigned meter_type_position = 0U;
+    AttachedTable::determine_meter_merge_regs(match, type, bus, args, METER_SELECTOR,
+            adr_mask, per_entry_en_mux_ctl, adr_default, meter_type_position);
+    merge.mau_meter_adr_default[type][bus] = adr_default;
+    merge.mau_meter_adr_mask[type][bus] = adr_mask;
+    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_entry_en_mux_ctl;
+    merge.mau_meter_adr_type_position[type][bus] = meter_type_position;
 }
 template<> void SelectionTable::setup_physical_alu_map(Target::Tofino::mau_regs &regs,
                                                        int type, int bus, int alu) {

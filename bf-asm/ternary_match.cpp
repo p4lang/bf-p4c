@@ -957,15 +957,20 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
                     action.args[1].field()->bit(0) + 5 - lo_huffman_bits; } }
         if (attached.selector) {
-            if (attached.selector.args.size() == 1)
-                merge.mau_selectorlength_default[1][bus] = 1;
+            merge.mau_selectorlength_default[1][bus] = 1;
+            // if (attached.selector.args.size() == 1)
+            /*
+            Selector length not yet handled by the compiler
             else {
                 int width = attached.selector.args[1].size();
                 if (attached.selector.args.size() == 3)
                     width += attached.selector.args[2].size();
-                merge.mau_selectorlength_mask[1][bus] = (1 << width) - 1; }
+                merge.mau_selectorlength_mask[1][bus] = (1 << width) - 1;
+            }
+            */
             merge.mau_meter_adr_tcam_shiftcount[bus] =
-                attached.selector.args[0].field()->bit(0)%128 + 23 - get_selector()->address_shift(); }
+                get_selector()->determine_shiftcount(attached.selector, 0, 0, format->log2size - 2);
+        }
         if (match_table->idletime)
             merge.mau_idletime_adr_tcam_shiftcount[bus] =
                     66 + format->log2size - match_table->idletime->precision_shift();

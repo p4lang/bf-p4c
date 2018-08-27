@@ -931,7 +931,8 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
         Util::JsonObject *_action) {
     LOG1("GeneratePrimitiveInfo Act: " << canon_name(act->name));
     auto _primitives = new Util::JsonArray();
-    for (auto prim : act->stateful) {
+    for (auto call : act->stateful_calls) {
+        auto prim = call->prim;
         auto _primitive = new Util::JsonObject();
         auto *at = prim->operands.at(0)->to<IR::GlobalRef>()
                        ->obj->to<IR::MAU::AttachedMemory>();

@@ -432,23 +432,63 @@ bool TableFormat::allocate_indirect_ptr(int total, type_t type, int group, int R
 /* Algorithm to find the space for any indirect pointers.  Allocated back to back, as they are
    easiest to pack.  No gaps are possible at all within the indirect pointers */
 bool TableFormat::allocate_all_indirect_ptrs() {
+     const IR::MAU::AttachedMemory *meter_addr_user = nullptr;
+     const IR::MAU::AttachedMemory *stats_addr_user = nullptr;
+     for (auto *ba : tbl->attached) {
+         if (ba->attached->is<IR::MAU::Selector>() || ba->attached->is<IR::MAU::Meter>()
+             || ba->attached->is<IR::MAU::StatefulAlu>()) {
+             meter_addr_user = ba->attached;
+         } else if (ba->attached->is<IR::MAU::Counter>()) {
+             stats_addr_user = ba->attached;
+         }
+     }
+
      int group = 0;
      for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
          for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
              int total;
-             if ((total = layout_option.layout.counter_addr_bits) != 0) {
-                 if (!allocate_indirect_ptr(total, COUNTER, group, i))
-                     return false;
+
+             if (layout_option.layout.stats_addr.shifter_enabled > 0) {
+                 if ((total = layout_option.layout.stats_addr.address_bits) != 0) {
+                     if (!allocate_indirect_ptr(total, COUNTER, group, i))
+                         return false;
+                 }
+                 bool move_to_overhead = gw_linked && !stats_addr_user->direct;
+
+                 if (layout_option.layout.stats_addr.per_flow_enable || move_to_overhead) {
+                     if (!allocate_indirect_ptr(1, COUNTER_PFE, group, i))
+                         return false;
+                     use->stats_pfe_loc = IR::MAU::PfeLocation::OVERHEAD;
+                 }
              }
 
-             if ((total = layout_option.layout.meter_addr_bits) != 0) {
-                 if (!allocate_indirect_ptr(total, METER, group, i))
-                     return false;
-             }
+             if (layout_option.layout.meter_addr.shifter_enabled > 0) {
+                 if ((total = layout_option.layout.meter_addr.address_bits) != 0) {
+                     if (!allocate_indirect_ptr(total, METER, group, i))
+                         return false;
+                 }
 
-             if ((total = layout_option.layout.meter_type_bits) != 0) {
-                 if (!allocate_indirect_ptr(total, METER_TYPE, group, i))
-                     return false;
+                 // FIXME: In general, this is currently used for both the per flow enable portion
+                 // and the meter type portion.  The meter type could be reduced if there is only
+                 // one meter type for the meter address user (1 stateful instruction or 1 type
+                 // of color aware metering, or if the meter type of this logical table is possible
+                 // to OR into the others, i.e. STFUL_INSTRUCTION_0
+                 bool move_to_overhead = gw_linked &&
+                                         !(meter_addr_user->direct ||
+                                           meter_addr_user->is<IR::MAU::Selector>());
+
+                 if (layout_option.layout.meter_addr.per_flow_enable || move_to_overhead) {
+                     if (!allocate_indirect_ptr(1, METER_PFE, group, i))
+                         return false;
+                     use->meter_pfe_loc = IR::MAU::PfeLocation::OVERHEAD;
+                 }
+
+                 if (layout_option.layout.meter_addr.meter_type_bits > 0 || move_to_overhead) {
+                     total = 3;
+                     if (!allocate_indirect_ptr(total, METER_TYPE, group, i))
+                         return false;
+                     use->meter_type_loc = IR::MAU::TypeLocation::OVERHEAD;
+                 }
              }
 
              if ((total = layout_option.layout.action_addr_bits) != 0) {

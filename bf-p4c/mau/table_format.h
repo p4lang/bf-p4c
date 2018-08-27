@@ -45,8 +45,8 @@ struct TableFormat {
     static constexpr int NEXT_MAP_TABLE_ENTRIES = 8;
     static constexpr int IMEM_MAP_TABLE_ENTRIES = 8;
 
-    enum type_t { MATCH, NEXT, ACTION, IMMEDIATE, VERS, COUNTER, METER, METER_TYPE,
-                  INDIRECT_ACTION, ENTRY_TYPES };
+    enum type_t { MATCH, NEXT, ACTION, IMMEDIATE, VERS, COUNTER, COUNTER_PFE, METER, METER_PFE,
+                  METER_TYPE, INDIRECT_ACTION, ENTRY_TYPES };
 
 
     struct Use {
@@ -104,7 +104,12 @@ struct TableFormat {
             result_bus_needed.clear();
             avail_sb_bytes.clear();
         }
+
         bitvec immed_mask;
+
+        IR::MAU::PfeLocation stats_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
+        IR::MAU::PfeLocation meter_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
+        IR::MAU::TypeLocation meter_type_loc = IR::MAU::TypeLocation::NOT_SET;
     };
 
  private:

@@ -19,9 +19,9 @@ template<> void StatefulTable::write_logging_regs(Target::Tofino::mau_regs &regs
     auto &salu = regs.rams.map_alu.meter_group[meter_group].stateful;
     for (MatchTable *m : match_tables) {
         auto *call = m->get_call(this);
-        if (!call || call->args.size() < 2 || call->args.at(1).type != Call::Arg::Counter)
+        if (!call || call->args.at(0).type != Call::Arg::Counter)
             continue;
-        if (auto mode = call->args.at(1).count_mode()) {
+        if (auto mode = call->args.at(0).count_mode()) {
             merge.mau_stateful_log_counter_ctl[m->logical_id/8U].set_subfield(
                 mode, 3*(m->logical_id % 8U), 3);
             for (auto &rep : merge.mau_stateful_log_ctl_ixbar_map[m->logical_id/8U])

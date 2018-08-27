@@ -151,8 +151,8 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
     for (MatchTable *m : match_tables) {
         int mode = stateful_counter_mode;
         if (auto *call = m->get_call(this))
-            if (call->args.size() >= 2 && call->args.at(1).type == Call::Arg::Counter)
-                mode = call->args.at(1).count_mode();
+            if (call->args.at(0).type == Call::Arg::Counter)
+                mode = call->args.at(0).count_mode();
         if (address_used) {
             auto &slog_map = adrdist.mau_stateful_log_counter_logical_map[m->logical_id];
             slog_map.stateful_log_counter_logical_map_ctl = meter_group();

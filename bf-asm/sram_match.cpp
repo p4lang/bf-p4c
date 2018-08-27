@@ -261,60 +261,41 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
     int group = word_info[word][word_group];
     auto &merge = regs.rams.match.merge;
     for (auto &st : attached.stats) {
-        if (st.args.empty())
-            merge.mau_stats_adr_exact_shiftcount[bus][word_group] = st->direct_shiftcount();
-        else if (group_info[group].overhead_word == (int)word) {
-            if (st.args[0].type == Call::Arg::Field) {
-                assert(st.args[0].field()->by_group[group]->bit(0)/128U == word);
-                merge.mau_stats_adr_exact_shiftcount[bus][word_group] =
-                    st.args[0].field()->by_group[group]->bit(0)%128U + st->indirect_shiftcount();
-            } else if (auto f = st->get_per_flow_enable_param(this)) {
-                merge.mau_stats_adr_exact_shiftcount[bus][word_group] =
-                    f->bit(0) + STAT_ADDRESS_ZERO_PAD; }
+        if (group_info[group].overhead_word == (int)word
+            // FIXME: If no match overhead, no overhead word assigned?
+            || group_info[group].overhead_word == -1) {
+            merge.mau_stats_adr_exact_shiftcount[bus][word_group]
+                = st->to<CounterTable>()->determine_shiftcount(st, group, word, 0);
         } else if (options.match_compiler) {
             /* unused, so should not be set... */
-            merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 7; }
+            merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 7;
+        }
         break; /* all must be the same, only config once */ }
     for (auto &m : attached.meters) {
-        if (m.args.empty()) {
-            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = m->direct_shiftcount();
+        if (group_info[group].overhead_word == (int)word
+            || group_info[group].overhead_word == -1) {
+            int shiftcount = m->to<MeterTable>()->determine_shiftcount(m, group, word, 0);
+            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = shiftcount;
             if (m->uses_colormaprams()) {
-                merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = 64;
-                merge.mau_payload_shifter_enable[0][bus].idletime_adr_payload_shifter_en = 1; }
-        } else if (group_info[group].overhead_word == (int)word) {
-            if (m.args[0].type == Call::Arg::Field) {
-                assert(m.args[0].field()->by_group[group]->bit(0)/128U == word);
-                auto bit = m.args[0].field()->by_group[group]->bit(0)%128U;
-                merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
-                    bit + m->indirect_shiftcount();
-                if (m->uses_colormaprams()) {
-                    merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = bit;
-                    merge.mau_payload_shifter_enable[0][bus].idletime_adr_payload_shifter_en = 1; }
-            } else if (auto f = m->get_per_flow_enable_param(this)) {
-                merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
-                    f->bit(0) + METER_ADDRESS_ZERO_PAD;
-            } else {
-                assert(m.args[0].type == Call::Arg::HashDist);
-                merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 0; }
+                int huffman_bits_out = 0;
+                if (m.args[0].field()
+                    || m.args[0].name() && strcmp(m.args[0].name(), "$DIRECT") == 0) {
+                    huffman_bits_out = METER_LOWER_HUFFMAN_BITS;
+                }
+                merge.mau_idletime_adr_exact_shiftcount[bus][word_group]
+                    = std::max(shiftcount - METER_ADDRESS_ZERO_PAD + huffman_bits_out, 0);
+                merge.mau_payload_shifter_enable[0][bus].idletime_adr_payload_shifter_en = 1;
+            }
         } else if (options.match_compiler) {
             /* unused, so should not be set... */
-            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 16; }
+            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 16;
+        }
         break; /* all must be the same, only config once */ }
     for (auto &s : attached.statefuls) {
-        if (s.args.size() <= 1) {
-            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = s->direct_shiftcount();
-        } else if (group_info[group].overhead_word == (int)word) {
-            if (s.args[1].type == Call::Arg::Field) {
-                assert(s.args[1].field()->by_group[group]->bit(0)/128U == word);
-                merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
-                    s.args[1].field()->by_group[group]->bit(0)%128U + s->indirect_shiftcount();
-            } else if (auto f = s->get_per_flow_enable_param(this)) {
-                merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
-                    f->bit(0) + METER_ADDRESS_ZERO_PAD;
-            } else {
-                assert(s.args[1].type == Call::Arg::HashDist ||
-                       s.args[1].type == Call::Arg::Counter);
-                merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 0; }
+        if (group_info[group].overhead_word == (int)word
+            || group_info[group].overhead_word == -1) {
+            merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
+                s->to<StatefulTable>()->determine_shiftcount(s, group, word, 0);
         } else if (options.match_compiler) {
             /* unused, so should not be set... */
             merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 16; }
@@ -694,13 +675,16 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                 merge.mau_actiondata_adr_mask[0][bus] =
                     ((1U << action.args[1].size()) - 1) << lo_huffman_bits; } }
         if (attached.selector) {
+            merge.mau_selectorlength_default[0][bus] = 1;
+            /* FIXME: The compiler currently doesn't handle selector length
             if (attached.selector.args.size() == 1)
-                merge.mau_selectorlength_default[0][bus] = 1;
             else {
                 int width = attached.selector.args[1].size();
                 if (attached.selector.args.size() == 3)
                     width += attached.selector.args[2].size();
                 merge.mau_selectorlength_mask[0][bus] = (1 << width) - 1; } }
+            */
+        }
         for (unsigned word_group = 0; format && word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
             if (group_info[group].overhead_word == (int)word) {
@@ -728,8 +712,9 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             if (attached.selector) {
                 if (group_info[group].overhead_word == (int)word) {
                     merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
-                        attached.selector.args[0].field()->by_group[group]->bit(0)%128 + 23 -
-                            get_selector()->address_shift(); } }
+                        get_selector()->determine_shiftcount(attached.selector, group, word, 0);
+                }
+            }
             if (idletime)
                 merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
                     idletime->direct_shiftcount();
@@ -792,7 +777,8 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
             std::string immediate_name = "";
             std::string mw_name = mw->second.name();
             int start_bit = 0;
-            get_cjson_source(mw_name, act, source, immediate_name, start_bit);
+            // get_cjson_source(mw_name, act, source, immediate_name, start_bit);
+            get_cjson_source(mw_name, source, start_bit);
             if (source == "")
                 error(lineno, "Cannot determine proper source for field %s", name.c_str());
             int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);

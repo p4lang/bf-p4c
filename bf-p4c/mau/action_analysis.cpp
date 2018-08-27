@@ -224,7 +224,7 @@ bool ActionAnalysis::preorder(const IR::MAU::StatefulAlu *) {
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::Primitive *) {
+bool ActionAnalysis::preorder(const IR::MAU::StatefulCall *) {
     return false;
 }
 
@@ -243,6 +243,12 @@ bool ActionAnalysis::preorder(const IR::Slice *sl) {
 
 bool ActionAnalysis::preorder(const IR::Cast *) {
     BUG("No casts should ever reach this point in the Tofino backend");
+}
+
+bool ActionAnalysis::preorder(const IR::Primitive *prim) {
+    BUG("%s: Primitive %s was not correctly converted in Instruction Selection", prim->srcInfo,
+        prim);
+    return false;
 }
 
 bool ActionAnalysis::preorder(const IR::Expression *expr) {

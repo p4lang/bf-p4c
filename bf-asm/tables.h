@@ -314,6 +314,13 @@ public:
         Call(const value_t &v, Table *tbl) { setup(v, tbl); }
         bool operator==(const Call &a) const { return Ref::operator==(a) && args == a.args; }
         bool operator!=(const Call &a) const { return !(*this == a); }
+        bool is_direct_call() const {
+            if (args.size() == 0)
+                return false;
+            if (args[0] == "$DIRECT")
+                return true;
+            return false;
+        }
     };
 
     struct p4_param {
@@ -420,6 +427,7 @@ public:
         void add_next_table_mapping(Table *, json::map &);
         void add_action_format(Table *, json::map &);
         bool has_hash_dist() { return ( table->table_type() == HASH_ACTION ); }
+        size_t size() { return actions.size(); }
     };
 
     struct static_entry {
@@ -506,6 +514,8 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual bool adr_mux_select_stats() { return false; }
     virtual bool run_at_eop() { return false; }
     virtual Format* get_format() { return format; }
+    virtual unsigned determine_shiftcount(Table::Call &call, int group, int word,
+           int tcam_shift) const { assert(0); return -1; }
     template<class REGS> void write_mapram_regs(REGS &regs, int row, int col, int vpn, int type);
     template<class T> T *to() { return dynamic_cast<T *>(this); }
     template<class T> const T *to() const { return dynamic_cast<const T *>(this); }
@@ -616,9 +626,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     void add_zero_padding_fields(Table::Format *format,
                                  Table::Actions::Action *act = nullptr,
                                  unsigned format_width = 64);
-    void get_cjson_source(const std::string &field_name,
-			     const Table::Actions::Action *act,
-		             std::string &source, std::string &imm_name, int &start_bit);
+    void get_cjson_source(const std::string &field_name, std::string &source, int &start_bit);
     // Result physical buses should be setup for
     // Exact/Hash/MatchwithNoKey/ATCAM/Ternary tables
     virtual void add_result_physical_buses(json::map &stage_tbl);
@@ -680,6 +688,10 @@ struct AttachedTables {
     template<class REGS> void write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus,
                                                     int tcam_shift);
     bool run_at_eop();
+    bool validate_call(Table::Call &call, MatchTable *self, size_t required_args,
+                       int hash_dist_type, Table::Call &first_call);
+
+ public:
 };
 
 #define DECLARE_ABSTRACT_TABLE_TYPE(TYPE, PARENT, ...)                  \
@@ -729,6 +741,7 @@ public:
     virtual void add_hash_functions(json::map &stage_tbl);
     void add_all_reference_tables(json::map &tbl, Table *math_table=nullptr);
     void add_static_entries(json::map &tbl);
+    METER_ACCESS_TYPE default_meter_access_type(bool for_stateful);
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
@@ -1088,6 +1101,12 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         if(layout.size() > 0) return layout[0].row/4U;
         error(lineno, "Cannot determine ALU Index for table %s", name());
         return 0; }
+    unsigned determine_meter_shiftcount(Table::Call &call, int group, int word,
+        int tcam_shift) const;
+    void determine_meter_merge_regs(MatchTable *match, int type,
+        int bus, const std::vector<Call::Arg> &arg, METER_ACCESS_TYPE default_type,
+        unsigned &adr_mask, unsigned &per_entry_mux_ctl, unsigned &adr_default,
+        unsigned &meter_type_position);
 protected:
     // Accessed by Meter/Selection/Stateful Tables as "meter_alu_index"
     // Accessed by Statistics (Counter) Tables as "stats_alu_index"
@@ -1241,8 +1260,11 @@ public:
     int home_row() const override { return layout.at(0).row | 3; }
     int unitram_type() override { return UnitRam::SELECTOR; }
     StatefulTable *get_stateful() const override { return bound_stateful; }
+    unsigned determine_shiftcount(Table::Call &call, int group, int word,
+        int tcam_shift) const override;
     void set_stateful(StatefulTable *s) override { bound_stateful = s; }
     unsigned per_flow_enable_bit(MatchTable *m = nullptr) const override;
+    int indirect_shiftcount() const override;
 )
 
 class IdletimeTable : public Table {
@@ -1317,6 +1339,8 @@ public:
     int home_row() const override { return layout.at(0).row; }
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;
+    unsigned determine_shiftcount(Table::Call &call, int group, int word,
+        int tcam_shift) const override;
     int address_shift() const override;
     bool run_at_eop() override { return (type&BYTES) != 0; }
     bool adr_mux_select_stats() override { return true; }
@@ -1349,6 +1373,8 @@ public:
     int home_row() const override { return layout.at(0).row | 3; }
     unsigned meter_group() const { return layout.at(0).row/4U; }
     bool uses_colormaprams() const override { return !color_maprams.empty(); }
+    unsigned determine_shiftcount(Table::Call &call, int group, int word,
+            int tcam_shift) const override;
     void add_cfg_reg(json::vector &cfg_cache, std::string full_name, std::string name, unsigned val, unsigned width);
     int default_pfe_adjust() const override { return color_aware ? -METER_TYPE_BITS : 0; }
     void set_color_used() override { color_used = true; }
@@ -1409,6 +1435,8 @@ public:
     bool is_dual_mode() { return dual_mode; }
     int home_row() const override { return layout.at(0).row | 3; }
     unsigned meter_group() const { return layout.at(0).row/4U; }
+    unsigned determine_shiftcount(Table::Call &call, int group, int word,
+            int tcam_shift) const override;
     unsigned per_flow_enable_bit(MatchTable *m = nullptr) const override;
     void set_address_used() override { address_used = true; }
     void set_output_used() override { output_used = true; }

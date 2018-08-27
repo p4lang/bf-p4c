@@ -74,6 +74,38 @@ bool MatchTable::is_attached(const Table *tbl) const {
     return tbl && (tbl == gateway || tbl == idletime || get_attached()->is_attached(tbl));
 }
 
+/**
+ * Return the first default found meter type of a stateful/meter call.  If the meter type
+ * is considered to be default, then all of the meter types would be identical
+ */
+METER_ACCESS_TYPE MatchTable::default_meter_access_type(bool for_stateful) {
+    METER_ACCESS_TYPE rv = NOP;
+    auto actions = get_actions();
+    if (actions == nullptr)
+        return rv;
+    for (auto it = actions->begin(); it != actions->end(); it++) {
+        if (it->default_only)
+            continue;
+        for (auto &call : it->attached) {
+            auto type = call->table_type();
+            if (!(type == Table::METER && !for_stateful ||
+                  type == Table::STATEFUL && for_stateful))
+                continue;
+            // Currently the first argument is the meter type
+            if (call.args[0].type == Table::Call::Arg::Const) {
+                return static_cast<METER_ACCESS_TYPE>(call.args[0].value());
+            } else if (auto n = call.args[0].name()) {
+                if (auto *st = call->to<StatefulTable>()) {
+                    if (auto *act = st->actions->action(call.args[0].name())) {
+                        return static_cast<METER_ACCESS_TYPE>((act->code << 1) | 1);
+                    }
+                }
+            }
+        }
+    }
+    return rv;
+}
+
 void MatchTable::pass0() {
     LOG1("### match table " << name() << " pass0");
     alloc_id("logical", logical_id, stage->pass1_logical_id,

@@ -97,12 +97,19 @@ class StatefulAttachmentSetup : public PassManager {
     const IR::TempVar *saved_tempvar;
     const IR::MAU::HashDist *saved_hashdist;
     typedef std::pair<const IR::MAU::AttachedMemory *, const IR::MAU::Table *> HashDistKey;
+    typedef std::pair<const IR::MAU::StatefulCall *, const IR::MAU::Table*> StatefulCallKey;
     ordered_set<cstring> remove_tempvars;
     ordered_set<const IR::Node *> remove_instr;
     ordered_map<cstring, const IR::MAU::HashDist *> stateful_alu_from_hash_dists;
     ordered_map<HashDistKey, const IR::MAU::HashDist *> update_hd;
+    ordered_map<StatefulCallKey, const IR::Expression *> update_calls;
     typedef IR::MAU::StatefulUse use_t;
-    ordered_map<const IR::MAU::Action *, ordered_map<const IR::Attached *, use_t>>   action_use;
+    ordered_map<const IR::MAU::Action *, ordered_map<const IR::MAU::AttachedMemory *, use_t>>
+        action_use;
+    typedef std::pair<const IR::MAU::Synth2Port *, const IR::MAU::Table *> IndexCheck;
+
+    ordered_set<IndexCheck> addressed_by_hash;
+    ordered_set<IndexCheck> addressed_by_index;
 
     profile_t init_apply(const IR::Node *root) override {
         remove_tempvars.clear();
@@ -119,12 +126,16 @@ class StatefulAttachmentSetup : public PassManager {
         void postorder(const IR::MAU::Instruction *) override;
         void postorder(const IR::Primitive *) override;
         void postorder(const IR::MAU::Table *) override;
+        void setup_index_operand(const IR::Expression *index_expr,
+            const IR::MAU::Synth2Port *synth2port, const IR::MAU::Table *tbl,
+            const IR::MAU::StatefulCall *call);
+
      public:
         explicit Scan(StatefulAttachmentSetup &self) : self(self) {}
     };
     class Update : public MauTransform {
         StatefulAttachmentSetup &self;
-        const IR::MAU::Table *postorder(IR::MAU::Table *) override;
+        const IR::MAU::StatefulCall *preorder(IR::MAU::StatefulCall *) override;
         const IR::MAU::BackendAttached *preorder(IR::MAU::BackendAttached *ba) override;
         const IR::MAU::Instruction *preorder(IR::MAU::Instruction *sp) override;
      public:

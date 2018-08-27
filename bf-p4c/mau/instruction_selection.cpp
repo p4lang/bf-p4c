@@ -42,11 +42,11 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
             auto t = IR::Type::Bits::get(32);
             return new IR::Member(prim->srcInfo, t,
                                   new IR::MAU::AttachedOutput(t, salu), "address"); }
-        BUG_CHECK(salu->action_map.count(act->name.originalName),
-                  "%s: Stateful Alu %s does not have an action in it's action map",
-                  prim->srcInfo, salu->name);
-        auto pos = salu->action_map.find(act->name.originalName);
-        int salu_index = std::distance(salu->action_map.begin(), pos);
+        BUG_CHECK(salu->action_map.count(act->name.originalName), "%s: Stateful Alu %s does not "
+                  "have an action in it's action map", prim->srcInfo, salu->name);
+        auto salu_action_name = salu->action_map.at(act->name.originalName);
+        auto pos = salu->instruction.find(salu_action_name);
+        int salu_index = std::distance(salu->instruction.begin(), pos);
         switch (salu_index) {
             case 0:
                 meter_type = IR::MAU::MeterType::STFUL_INST0; break;
@@ -137,7 +137,11 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
 }
 
 const IR::MAU::Action *Synth2PortSetup::postorder(IR::MAU::Action *act) {
-    act->stateful.append(stateful);
+    for (auto stateful_prim : stateful) {
+        act->stateful_calls.emplace_back(stateful_prim->srcInfo, stateful_prim);
+    }
+
+    // act->stateful.append(stateful);
     act->per_flow_enables.insert(per_flow_enables.begin(), per_flow_enables.end());
     act->meter_types.insert(meter_types.begin(), meter_types.end());
     return act;
@@ -565,10 +569,11 @@ size_t precolor_operand(const IR::Primitive *prim) {
 
 bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::Action *act) {
     self.remove_tempvars.clear();
-    if (act->stateful.empty())
+    if (act->stateful_calls.empty())
         return false;
 
-    for (auto prim : act->stateful) {
+    for (auto call : act->stateful_calls) {
+        auto prim = call->prim;
         BUG_CHECK(prim->operands.size() >= 1, "Invalid primitive %s", prim);
         auto gref = prim->operands[0]->to<IR::GlobalRef>();
         BUG_CHECK(gref, "No object named %s", prim->operands[0]);
@@ -609,7 +614,7 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Instruction *instr)
 }
 
 void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
-    const IR::Attached *obj = nullptr;
+    const IR::MAU::AttachedMemory *obj = nullptr;
     use_t use = IR::MAU::StatefulUse::NO_USE;
     auto dot = prim->name.find('.');
     auto objType = dot ? prim->name.before(dot) : cstring();
@@ -671,8 +676,6 @@ IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const IR::Expressio
  */
 const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expression *expr,
                                                                const IR::Primitive *prim) {
-    while (auto *c = expr->to<IR::Cast>())
-        expr = c->expr;
     const IR::MAU::HashDist *hd = expr->to<IR::MAU::HashDist>();
     if (!hd) {
         auto tv = expr->to<IR::TempVar>();
@@ -683,6 +686,51 @@ const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expre
     return hd;
 }
 
+/**
+ * Determine the index operand for a particular action.  This is to determine the address
+ * for the stateful call, which is required for the context JSON.
+ *
+ * Also currently validates that the address is able to be understood, i.e. if it
+ * can be part of a HashDist, Constant, etc.
+ *
+ * FIXME: a hash.get is not yet translated to a HashDist before this.  The only way to
+ * do this is to initialize a temporary variable as this, and use this as an address
+ */
+void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *index_expr,
+        const IR::MAU::Synth2Port *synth2port, const IR::MAU::Table *tbl,
+        const IR::MAU::StatefulCall *call) {
+    while (auto *c = index_expr->to<IR::Cast>()) {
+        index_expr = c->expr;
+    }
+
+    bool both_hash_and_index = false;
+    auto index_check = std::make_pair(synth2port, tbl);
+
+    if (auto hd = self.find_hash_dist(index_expr, call->prim)) {
+        HashDistKey hdk = std::make_pair(synth2port, tbl);
+        self.update_hd[hdk] = hd;
+        index_expr = hd;
+        if (self.addressed_by_index.count(index_check))
+            both_hash_and_index = true;
+        self.addressed_by_hash.insert(index_check);
+    } else if (!index_expr->is<IR::Constant>() && !index_expr->is<IR::MAU::ActionArg>()) {
+        ::error("%s: The index is too complex for the primitive to be handled.",
+             call->prim->srcInfo);
+    } else {
+        if (self.addressed_by_hash.count(index_check))
+            both_hash_and_index = true;
+        self.addressed_by_index.insert(index_check);
+    }
+
+    if (both_hash_and_index) {
+        ::error("%s: The attached table %s is addressed by both hash and index in table %s, "
+                "which cannot be supported.", call->prim->srcInfo, synth2port->name, tbl->name);
+    }
+
+    StatefulCallKey sck = std::make_pair(call, tbl);
+    self.update_calls[sck] = index_expr;
+}
+
 /** This pass was specifically created to deal with adding the HashDist object to different
  *  stateful objects.  On one particular case, execute_stateful_alu_from_hash was creating
  *  two separate instructions, a TempVar = hash function call, and an execute stateful call
@@ -691,38 +739,15 @@ const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expre
  */
 void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Table *tbl) {
     for (auto act : Values(tbl->actions)) {
-        for (auto prim : act->stateful) {
+        for (auto call : act->stateful_calls) {
+            auto prim = call->prim;
             // typechecking should have verified
             BUG_CHECK(prim->operands.size() >= 1, "Invalid primitive %s", prim);
             auto gref = prim->operands[0]->to<IR::GlobalRef>();
             // typechecking should catch this too
             BUG_CHECK(gref, "No object named %s", prim->operands[0]);
             auto synth2port = gref->obj->to<IR::MAU::Synth2Port>();
-            auto type = stateful_type_for_primitive(prim);
-            if (!synth2port || synth2port->getType() != type) {
-                // typechecking is unable to check this without a good bit more work
-                error("%s: %s is not a %s", prim->operands[0]->srcInfo, gref->obj, type);
-            }
 
-            auto index_op = index_operand(prim);
-            if (index_op < 0)
-                continue;
-
-            if (prim->operands.size() >= size_t(index_op) + 1) {
-                if (auto hd = self.find_hash_dist(prim->operands[index_operand(prim)], prim)) {
-                    HashDistKey hdk = std::make_pair(synth2port, tbl);
-                    self.update_hd[hdk] = hd;
-                }
-            }
-        }
-    }
-}
-
-const IR::MAU::Table *StatefulAttachmentSetup::Update::postorder(IR::MAU::Table *tbl) {
-    for (auto act : Values(tbl->actions)) {
-        for (auto prim : act->stateful) {
-            auto gref = prim->operands[0]->to<IR::GlobalRef>();
-            auto synth2port = gref->obj->to<IR::MAU::Synth2Port>();
             bool already_attached = false;
             for (auto back_at : tbl->attached) {
                 if (synth2port == back_at->attached) {
@@ -733,13 +758,66 @@ const IR::MAU::Table *StatefulAttachmentSetup::Update::postorder(IR::MAU::Table 
 
             if (!already_attached) {
                 BUG("%s not attached to %s", synth2port->name, tbl->name);
-                // tbl->attached.push_back(synth2port);
             }
+
+            auto type = stateful_type_for_primitive(prim);
+            if (!synth2port || synth2port->getType() != type) {
+                // typechecking is unable to check this without a good bit more work
+                error("%s: %s is not a %s", prim->operands[0]->srcInfo, gref->obj, type);
+            }
+
+            auto index_op = index_operand(prim);
+            if (index_op < 0) {
+                continue;
+            }
+
+            // Because there is no term for DirectRegisterAction
+            if (synth2port->direct && synth2port->is<IR::MAU::StatefulAlu>())
+                continue;
+
+            if (static_cast<int>(prim->operands.size()) > index_op)
+                setup_index_operand(prim->operands[index_op], synth2port, tbl, call);
+            else
+                ::error("%s: Indirect attached object %s requires an index to address, as it "
+                        "isn't directly addressed from the match entry", prim->srcInfo,
+                         synth2port->name);
         }
     }
-    return tbl;
 }
 
+/**
+ * Save the index operand into the StatefulCall IR Node
+ */
+const IR::MAU::StatefulCall *
+    StatefulAttachmentSetup::Update::preorder(IR::MAU::StatefulCall *call) {
+    auto *tbl = findOrigCtxt<IR::MAU::Table>();
+    auto *orig_call = getOriginal()->to<IR::MAU::StatefulCall>();
+
+    StatefulCallKey sck = std::make_pair(orig_call, tbl);
+    if (auto expr = ::get(self.update_calls, sck))
+        call->index = expr;
+
+    auto prim = call->prim;
+    BUG_CHECK(prim->operands.size() >= 1, "Invalid primitive %s", prim);
+    auto gref = prim->operands[0]->to<IR::GlobalRef>();
+    auto synth2port = gref->obj->to<IR::MAU::Synth2Port>();
+    auto act = findOrigCtxt<IR::MAU::Action>();
+    use_t use = self.action_use[act][synth2port];
+    if (!(use == IR::MAU::StatefulUse::NO_USE ||
+          use == IR::MAU::StatefulUse::DIRECT ||
+          use == IR::MAU::StatefulUse::INDIRECT)) {
+        BUG_CHECK(call->index == nullptr, "%s: Primitive cannot both have index and use "
+                  "counter index: %s", prim->srcInfo, prim);
+        call->index = new IR::MAU::StatefulCounter(prim->srcInfo, prim->type);
+    }
+
+    prune();
+    return call;
+}
+
+/**
+ * Save the Hash Distribution unit and the type of the stateful ALU counter
+ */
 const IR::MAU::BackendAttached *
         StatefulAttachmentSetup::Update::preorder(IR::MAU::BackendAttached *ba) {
     auto *tbl = findOrigCtxt<IR::MAU::Table>();
@@ -1164,20 +1242,16 @@ bool SetupAttachedAddressing::InitializeAttachedInfo::preorder(const IR::MAU::Ba
 
 bool SetupAttachedAddressing::ScanActions::preorder(const IR::MAU::Action *act) {
     auto tbl = findContext<IR::MAU::Table>();
-    LOG1("Table " << tbl->name << " " << act->name);
     if (act->miss_only())
         return false;
 
-    LOG1("Not miss only");
     auto &attached_info = self.all_attached_info[tbl];
     for (auto &kv : attached_info) {
         auto &uid = kv.first;
         auto &aac = kv.second;
 
-
         if (act->per_flow_enables.count(uid) == 0) {
             aac.all_per_flow_enabled = false;
-            LOG1("pfe not enabled " << uid);
         }
         if (uid.has_meter_type()) {
             if (act->meter_types.count(uid) == 0)
@@ -1228,7 +1302,7 @@ bool SetupAttachedAddressing::VerifyAttached::preorder(const IR::MAU::BackendAtt
     bool singular_functionality = (direct || (from_hash && keyless));
 
     auto &aac = self.all_attached_info.at(tbl).at(at_mem->unique_id());
-    if (!aac.all_per_flow_enabled && singular_functionality) {
+    if (singular_functionality) {
         std::string problem = direct ? "direct attached objects"
                                      : "objects attached to a hash action";
 
@@ -1256,9 +1330,12 @@ void SetupAttachedAddressing::UpdateAttached::simple_attached(IR::MAU::BackendAt
         ba->addr_location = IR::MAU::AddrLocation::DIRECT;
     else
         ba->addr_location = IR::MAU::AddrLocation::OVERHEAD;
-    ba->pfe_location = IR::MAU::PfeLocation::DEFAULT;
-    if (at_mem->is<IR::MAU::Selector>())
+    if (at_mem->is<IR::MAU::Selector>()) {
+        ba->pfe_location = IR::MAU::PfeLocation::OVERHEAD;
         ba->type_location = IR::MAU::TypeLocation::DEFAULT;
+    } else {
+        ba->pfe_location = IR::MAU::PfeLocation::DEFAULT;
+    }
 }
 
 bool SetupAttachedAddressing::UpdateAttached::preorder(IR::MAU::BackendAttached *ba) {
@@ -1284,6 +1361,10 @@ bool SetupAttachedAddressing::UpdateAttached::preorder(IR::MAU::BackendAttached 
         ba->addr_location = IR::MAU::AddrLocation::DIRECT;
     } else if (ba->hash_dist != nullptr) {
         ba->addr_location = IR::MAU::AddrLocation::HASH;
+    } else if (!(ba->use == IR::MAU::StatefulUse::NO_USE ||
+                 ba->use == IR::MAU::StatefulUse::DIRECT ||
+                 ba->use == IR::MAU::StatefulUse::INDIRECT)) {
+        ba->addr_location = IR::MAU::AddrLocation::STFUL_COUNTER;
     } else {
         ba->addr_location = IR::MAU::AddrLocation::OVERHEAD;
     }

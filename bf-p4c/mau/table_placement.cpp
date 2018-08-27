@@ -1583,6 +1583,23 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     return rv;
 }
 
+IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
+    auto tbl = findContext<IR::MAU::Table>();
+    auto format = tbl->resources->table_format;
+
+    if (ba->attached->is<IR::MAU::Counter>()) {
+        if (format.stats_pfe_loc == IR::MAU::PfeLocation::OVERHEAD)
+            ba->pfe_location = format.stats_pfe_loc;
+    } else if (ba->attached->is<IR::MAU::Meter>() || ba->attached->is<IR::MAU::StatefulAlu>() ||
+            ba->attached->is<IR::MAU::Selector>()) {
+        if (format.meter_pfe_loc == IR::MAU::PfeLocation::OVERHEAD)
+            ba->pfe_location = format.meter_pfe_loc;
+        if (format.meter_type_loc == IR::MAU::TypeLocation::OVERHEAD)
+            ba->type_location = format.meter_type_loc;
+    }
+    return ba;
+}
+
 IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
     if (seq->tables.size() > 1) {
         std::sort(seq->tables.begin(), seq->tables.end(),

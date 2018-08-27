@@ -37,6 +37,24 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/issue1000-bmv2.p4
     )
 
+  # Temporary failures until STF is updated
+  p4c_add_xfail_reason("tofino"
+    "no value with matching vpn for counter .*"
+    testdata/p4_14_samples/counter4.p4
+  )
+
+  p4c_add_xfail_reason("tofino"
+    "mismatch from expected(.*) at byte .*"
+    extensions/p4_tests/p4_16/stateful3.p4
+    extensions/p4_tests/p4_16/stateful_log1.p4
+    extensions/p4_tests/p4_14/sful_1bit.p4
+  )
+
+  p4c_add_xfail_reason("tofino"
+    "can't find STFUL_PTR field for table"
+    extensions/p4_tests/p4_14/stateful3.p4
+  )
+
 endif() # HARLYN_STF_tofino
 
 # Tests that run packets:
@@ -102,11 +120,6 @@ if (PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "AssertionError: .* != .*"
     extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
-    smoketest_switch_msdc_MalformedPacketsTest
-    smoketest_switch_dc_basic_MalformedPacketsTest
-    smoketest_switch_8.3_msdc_MalformedPacketsTest
-    smoketest_switch_8.3_l3_msdc_MalformedPacketsTest
-    smoketest_switch_8.3_dc_basic_MalformedPacketsTest
     )
 
   p4c_add_xfail_reason("tofino"
@@ -114,11 +127,6 @@ if (PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4
     extensions/p4_tests/p4_14/p4-tests/programs/exm_smoke_test/exm_smoke_test.p4
     extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "assert cntr.packets"
-    extensions/p4_tests/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -317,12 +325,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "can't find per_flow_enable param meter_pfe in format"
-  switch_msdc_spine_int
-  switch_8.3_msdc_spine_int
   )
 
 # BRIG-113
@@ -553,9 +555,10 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Tofino does not allow stats to use different address schemes on one table"
+  "Both .* require the .* address hardware, and cannot be on the same table"
   testdata/p4_14_samples/counter.p4
-  )
+  testdata/p4_16_samples/psa-counter2.p4
+)
 
 p4c_add_xfail_reason("tofino"
   "Expected type T in digest to be a typeName"
@@ -659,9 +662,6 @@ p4c_add_xfail_reason("tofino"
   #extensions/p4_tests/p4_14/switch_l2_profile.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  testdata/p4_16_samples/issue907-bmv2.p4
-  )
 
 # BEGIN: XFAILS that match glass XFAILS
 
@@ -980,6 +980,16 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "Primitive .* was not correctly converted in Instruction Selection"
+  testdata/p4_14_samples/register.p4
+  testdata/p4_16_samples/issue298-bmv2.p4
+  testdata/p4_16_samples/issue1097-bmv2.p4
+  testdata/p4_16_samples/issue907-bmv2.p4
+  extensions/p4_tests/p4_14/p4smith_regression/utes_0.p4
+  extensions/p4_tests/p4_14/p4smith_regression/shillings_0.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_generic_int_leaf
   switch_8.3_generic_int_leaf
@@ -989,6 +999,11 @@ p4c_add_xfail_reason("tofino"
   "action instruction slot .* in use elsewhere"
   switch_8.3_msdc_ipv4
   switch_msdc_ipv4
+)
+
+p4c_add_xfail_reason("tofino"
+  "The attached table .* is addressed by both hash and index in table"
+  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1100,20 +1115,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/chauncey_0.p4
 )
 
-# BRIG-819
-# Compiler Bug: Invalid context for constant in BuildGatewayMatch
-p4c_add_xfail_reason("tofino"
-  "Invalid context for constant in BuildGatewayMatch"
-  extensions/p4_tests/p4_14/p4smith_regression/shillings_0.p4
-)
-
-# BRIG-590
-# Compiler Bug: Match register not allocated
-p4c_add_xfail_reason("tofino"
-  "Match register not allocated"
-  extensions/p4_tests/p4_14/p4smith_regression/utes_0.p4
-)
-
 # BRIG-924
 # Compiler Bug: unable to reference global instance from non-control block
 p4c_add_xfail_reason("tofino"
@@ -1150,11 +1151,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/truncate.p4
 )
 
-# backend does not support this example
-p4c_add_xfail_reason("tofino"
-  "Tofino does not allow stats to use different address schemes on one table"
-  testdata/p4_16_samples/psa-counter2.p4
-)
 
 # frontend does not support {} on psa_direct_counter table property
 p4c_add_xfail_reason("tofino"
@@ -1167,6 +1163,17 @@ p4c_add_xfail_reason("tofino"
   "Attached object .* in table .* is executed in some actions and not executed in others"
   testdata/p4_16_samples/psa-counter6.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "Attached object .* requires multiple different types of meter addressing"
+  extensions/p4_tests/p4_14/test_config_142_stateful_bfd.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Indirect attached object .* requires an index to address, as it isn't directly addressed"
+  extensions/p4_tests/p4_14/test_config_170_stateful_selection_table_update.p4
+)
+
 
 # psa translation bug
 p4c_add_xfail_reason("tofino"
@@ -1218,11 +1225,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/ghosted_0.p4
 )
 
-# Uncharacterized crash failures preivously missed
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: Header present in IR not under Member:"
-  testdata/p4_16_samples/issue907-bmv2.p4
-)
 
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: visitor returned invalid type .* for Vector<Primitive>"
@@ -1237,11 +1239,6 @@ p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: No object named <TypeNameExpression>.*CloneType.E2E"
   extensions/p4_tests/p4_14/test_config_183_sample_e2e.p4
 )
-
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: An stateful instruction alu1_0 is outside the bounds of the stateful memory"
-  extensions/p4_tests/p4_14/p4-tests/programs/pgrs/pgrs.p4
-  )
 
 p4c_add_xfail_reason("tofino"
   "./p4c TIMEOUT"

@@ -81,9 +81,10 @@ control ingress(inout headers hdr, inout metadata meta,
     };
     action do_learn_match() {
         bit<32> tmp2;
-        bit<32> tmp = learn_act.execute(lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
-                                                          hdr.ipv4.protocol, meta.src_port,
-                                                          meta.dst_port }), tmp2);
+        bit<12> addr = lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
+                                         hdr.ipv4.protocol, meta.src_port,
+                                         meta.dst_port });
+        bit<32> tmp = learn_act.execute(addr, tmp2);
         meta.cache_id = tmp[18:7];
         meta.learn = tmp2[19:4];
     }

@@ -1094,7 +1094,7 @@ struct fmt_state {
             out << " ]"; } }
 };
 
-cstring format_name(int type, bool pfe_bit = false) {
+cstring format_name(int type) {
     if (type == TableFormat::MATCH)
         return "match";
     if (type == TableFormat::NEXT)
@@ -1105,18 +1105,14 @@ cstring format_name(int type, bool pfe_bit = false) {
         return "immediate";
     if (type == TableFormat::VERS)
         return "version";
-    if (type == TableFormat::COUNTER) {
-        if (pfe_bit)
-            return "counter_pfe";
-        else
-            return "counter_addr";
-    }
-    if (type == TableFormat::METER) {
-        if (pfe_bit)
-            return "meter_pfe";
-        else
-            return "meter_addr";
-    }
+    if (type == TableFormat::COUNTER)
+        return "counter_addr";
+    if (type == TableFormat::COUNTER_PFE)
+        return "counter_pfe";
+    if (type == TableFormat::METER)
+        return "meter_addr";
+    if (type == TableFormat::METER_PFE)
+        return "meter_pfe";
     if (type == TableFormat::METER_TYPE)
         return "meter_type";
     if (type == TableFormat::INDIRECT_ACTION)
@@ -1231,23 +1227,16 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
     for (auto match_group : use.match_groups) {
         int type;
         safe_vector<std::pair<int, int>> bits;
-        safe_vector<std::pair<int, int>> pfe_bits;
         // For table objects that are not match
         for (type = TableFormat::NEXT; type <= TableFormat::INDIRECT_ACTION; type++) {
             if (match_group.mask[type].popcount() == 0) continue;
             bits.clear();
-            pfe_bits.clear();
             int start = match_group.mask[type].ffs();
             while (start >= 0) {
                 int end = match_group.mask[type].ffz(start);
                 if (end == -1)
                     end = match_group.mask[type].max().index();
-                if (type == TableFormat::COUNTER || type == TableFormat::METER) {
-                    bits.emplace_back(start, end - 2);
-                    pfe_bits.emplace_back(end - 1, end - 1);
-                } else {
-                    bits.emplace_back(start, end - 1);
-                }
+                bits.emplace_back(start, end - 1);
                 start = match_group.mask[type].ffs(end);
             }
             // Specifically, the immediate information may have to be broken up into mutliple
@@ -1261,9 +1250,6 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
                 }
             } else {
                 fmt.emit(out, format_name(type), group, bits);
-                if (type == TableFormat::COUNTER || type == TableFormat::METER) {
-                    fmt.emit(out, format_name(type, true), group, pfe_bits);
-                }
             }
         }
 
@@ -1365,12 +1351,15 @@ class MauAsmOutput::EmitAction : public Inspector {
             out << " }" << std::endl; }
     }
     bool preorder(const IR::MAU::Action *act) override {
-        for (auto prim : act->stateful) {
+        for (auto call : act->stateful_calls) {
+            auto prim = call->prim;
             auto *at = prim->operands.at(0)->to<IR::GlobalRef>()->obj
                        ->to<IR::MAU::AttachedMemory>();
-            if (prim->operands.size() < 2) continue;
-            if (auto aa = prim->operands.at(1)->to<IR::MAU::ActionArg>()) {
-                alias[aa->name] = self.find_indirect_index(at, true, nullptr, table); } }
+            if (call->index == nullptr) continue;
+            if (auto aa = call->index->to<IR::MAU::ActionArg>()) {
+                alias[aa->name] = self.indirect_address(at);
+            }
+        }
         auto &instr_mem = table->resources->instr_mem;
         out << indent << canon_name(act->externalName());
         auto &vliw_instr = instr_mem.all_instrs.at(act->name.name);
@@ -1391,33 +1380,46 @@ class MauAsmOutput::EmitAction : public Inspector {
             is_empty = false;
             alias.clear(); }
         act->action.visit_children(*this);
-        for (auto prim : act->stateful) {
+        // Dumping the information on stateful calls.  For anything that has a meter type,
+        // the meter type is dumped first, followed by the address location.  This is
+        // required to generate override_full_.*_addr information
+        for (auto call : act->stateful_calls) {
+            auto prim = call->prim;
             auto *at = prim->operands.at(0)->to<IR::GlobalRef>()
                            ->obj->to<IR::MAU::AttachedMemory>();
-            auto *salu = at->to<IR::MAU::StatefulAlu>();
-            if (at->direct && (!salu || salu->instruction.size() <= 1)) continue;
             out << indent << "- " << self.find_attached_name(table, at) << '(';
-            const char *sep = "";
-            if (salu) {
-                out << salu->action_map.at(act->name.originalName);
+            sep = "";
+            // Currently dumps meter type as number, because the color aware stuff does not
+            // have a name
+            if (act->meter_types.count(at->unique_id()) > 0) {
+                IR::MAU::MeterType type = act->meter_types.at(at->unique_id());
+                out << static_cast<int>(type);
                 sep = ", "; }
-            for (size_t i = 1; i < prim->operands.size(); ++i) {
-                // FIXME -- some execute primitives for attached tables have additional
-                // FIXME -- arguments that we generally want to ignore here.  Should have removed
-                // FIXME -- them earlier when we did whatever we needed to do for them, but for
-                // FIXME -- now we just ignore ones that make no sense
-                if (auto *k = prim->operands.at(i)->to<IR::Constant>()) {
+            BUG_CHECK((call->index == nullptr) == at->direct, "%s Indexing scheme doesn't match up "
+                      "for %s", at->srcInfo, at->name);
+            if (call->index != nullptr) {
+                if (auto *k = call->index->to<IR::Constant>()) {
                     out << sep << k->value;
                     sep = ", ";
-                } else if (auto *a = prim->operands.at(i)->to<IR::MAU::ActionArg>()) {
+                } else if (auto *a = call->index->to<IR::MAU::ActionArg>()) {
                     out << sep << a->name;
                     sep = ", ";
-                } else if (auto *c = prim->operands.at(i)->to<IR::Cast>()) {
-                    if (auto *a = c->expr->to<IR::MAU::ActionArg>()) {
-                        out << sep << a->name;
-                        sep = ", "; } } }
+                } else if (call->index->is<IR::MAU::HashDist>()) {
+                    out << sep << "$hash_dist";
+                    sep = ", ";
+                } else if (call->index->is<IR::MAU::StatefulCounter>()) {
+                    out << sep << "$stful_counter";
+                    sep = ", ";
+                } else {
+                    BUG("%s: Index for %s is not supported", at->srcInfo, at->name);
+                }
+            } else {
+                out << sep << "$DIRECT";
+                sep = ", ";
+            }
             out << ')' << std::endl;
-            is_empty = false; }
+            is_empty = false;
+        }
         return false; }
     bool preorder(const IR::MAU::SaluAction *act) override {
         out << indent << canon_name(act->name) << ":" << std::endl;
@@ -2274,49 +2276,71 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         back_at->apply(EmitAttached(*this, out, tbl, stage, gress));
 }
 
-/*
-class MauAsmOutput::UnattachedName : public MauInspector {
-    const IR::MAU::Table *comp_table;
-    cstring comparison_name;
-    cstring return_name;
-    const IR::MAU::AttachedMemory *unattached;
-    bool setting = false;
+/**
+ * Indirect address type.  Will eventually have to pull in action data
+ */
+std::string MauAsmOutput::indirect_address(const IR::MAU::AttachedMemory *am) const {
+    if (am->is<IR::MAU::Counter>())
+        return "counter_addr";
+    if (am->is<IR::MAU::Selector>() || am->is<IR::MAU::Meter>() || am->is<IR::MAU::StatefulAlu>())
+        return "meter_addr";
+    BUG("Should not reach this point in indirect address");
+    return "";
+}
 
+std::string MauAsmOutput::indirect_pfe(const IR::MAU::AttachedMemory *am) const {
+    if (am->is<IR::MAU::Counter>())
+        return "counter_pfe";
+    if (am->is<IR::MAU::Selector>() || am->is<IR::MAU::Meter>() || am->is<IR::MAU::StatefulAlu>())
+        return "meter_pfe";
+    BUG("Should not reach this point in indirect pfe");
+    return "";
+}
 
-    bool preorder(const IR::MAU::Table *tbl) {
-        auto p = tbl->name.findlast('.');
-        if (tbl->name == comparison_name ||
-            (p != nullptr && tbl->name.before(p) == comparison_name)) {
-             if (tbl->logical_id/16U != comp_table->logical_id/16U)
-                 return true;
-             return_name = tbl->get_use_name(unattached);
-             if (setting)
-                 BUG("Multiple tables claim to be attached table");
-             setting = true;
-        }
-        return true;
+std::string MauAsmOutput::stateful_counter_addr(IR::MAU::StatefulUse use) const {
+    switch (use) {
+        case IR::MAU::StatefulUse::LOG: return "counter";
+        case IR::MAU::StatefulUse::FIFO_PUSH: return "fifo push";
+        case IR::MAU::StatefulUse::FIFO_POP: return "fifo pop";
+        case IR::MAU::StatefulUse::STACK_PUSH: return "stack push";
+        case IR::MAU::StatefulUse::STACK_POP: return "stack pop";
+        default: return "";
     }
+}
 
-    void end_apply() {
-        if (setting == false)
-            BUG("Unable to find unattached table");
-    }
-
- public:
-    explicit UnattachedName(const IR::MAU::Table* ct, cstring cn,
-                            const IR::MAU::AttachedMemory *at)
-        : comp_table(ct), comparison_name(cn), unattached(at) {}
-    cstring name() { return return_name; }
-};
-*/
 
 /** Figure out which overhead field in the table is being used to index an attached
  *  indirect table (counter, meter, stateful, action data) and return its asm name.  Contained
- *  now within the actual IR for Hash Distribution
+ *  now within the actual IR for Hash Distribution.
+ *
+ *  Addressed are built up of up to 3 arguments:
+ *      - address position - the location of the address bits
+ *      - pfe position - the location of the per flow enable bit
+ *      - type position - the location of the meter type
+ *
+ *  With this come some keywords:
+ *      1. $DIRECT - The table is directly addressed
+ *      2. $DEFAULT - the parameter is defaulted on through the default register
  */
-std::string MauAsmOutput::find_indirect_index(const IR::MAU::AttachedMemory *at_mem,
-        bool index_only, const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const {
-    if (ba && ba->hash_dist) {
+std::string MauAsmOutput::build_call(const IR::MAU::AttachedMemory *at_mem,
+       const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const {
+    if (at_mem->is<IR::MAU::ActionData>()) {
+        if (!at_mem->direct)
+            return "(action, action_addr)";
+        else
+            return "";
+    } else if (at_mem->is<IR::MAU::IdleTime>()) {
+        return "";
+    }
+
+    std::string rv = "(";
+
+    if (ba->addr_location == IR::MAU::AddrLocation::DIRECT) {
+        rv += "$DIRECT";
+    } else if (ba->addr_location == IR::MAU::AddrLocation::OVERHEAD) {
+        rv += indirect_address(at_mem);
+    } else if (ba->addr_location == IR::MAU::AddrLocation::HASH) {
+        BUG_CHECK(ba->hash_dist, "Hash Dist not allocated correctly");
         auto hash_dist_uses = tbl->resources->hash_dists;
         const IXBar::HashDistUse *hd_use = nullptr;
         for (auto &hash_dist_use : hash_dist_uses) {
@@ -2326,46 +2350,29 @@ std::string MauAsmOutput::find_indirect_index(const IR::MAU::AttachedMemory *at_
             }
         }
         BUG_CHECK(hd_use != nullptr, "No associated hash distribution group for an address");
-        std::string rv = "";
-        if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
-            if (salu->instruction.size() > 1 && !index_only) {
-                cstring salu_act;
-                for (auto &act : tbl->actions) {
-                    if (!salu->action_map.count(act.first))
-                        continue;
-                    if (salu_act && salu_act != salu->action_map.at(act.first))
-                        salu_act = "meter_type";
-                    else
-                        salu_act = salu->action_map.at(act.first); }
-                if (salu_act)
-                    rv = salu_act + ", "; } }
         rv += "hash_dist " + std::to_string(hd_use->slices[0]);
-        return rv;
+    } else if (ba->addr_location == IR::MAU::AddrLocation::STFUL_COUNTER) {
+        rv += stateful_counter_addr(ba->use);
     }
 
-    if (at_mem->is<IR::MAU::Counter>()) {
-        return "counter_addr";
-    } else if (at_mem->is<IR::MAU::Meter>() || at_mem->is<IR::MAU::Selector>()) {
-        return "meter_addr";
-    } else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
-        cstring rv = "";
-        if (salu->instruction.size() > 1 && !index_only)
-            rv = "meter_type, ";
-        if (ba) {
-            if (ba->use == IR::MAU::StatefulUse::LOG) return rv + "counter";
-            if (ba->use == IR::MAU::StatefulUse::FIFO_PUSH) return rv + "fifo push";
-            if (ba->use == IR::MAU::StatefulUse::FIFO_POP) return rv + "fifo pop";
-            if (ba->use == IR::MAU::StatefulUse::STACK_PUSH) return rv + "stack push";
-            if (ba->use == IR::MAU::StatefulUse::STACK_POP) return rv + "stack pop"; }
-        return rv + "meter_addr";
-    } else if (at_mem->is<IR::MAU::ActionData>()) {
-        return index_only ? "action_addr" : "action, action_addr";
-    } else {
-        BUG("unsupported attached table type in find_indirect_index: %s", at_mem);
+    rv += ", ";
+    if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD) {
+        rv += indirect_pfe(at_mem);
+    } else if (ba->pfe_location == IR::MAU::PfeLocation::DEFAULT) {
+        rv += "$DEFAULT";
     }
-    return "";
+
+    if (!at_mem->unique_id().has_meter_type())
+        return rv + ")";
+
+    rv += ", ";
+    if (ba->type_location == IR::MAU::TypeLocation::OVERHEAD) {
+        rv += "meter_type";
+    } else if (ba->type_location == IR::MAU::TypeLocation::DEFAULT) {
+        rv += "$DEFAULT";
+    }
+    return rv + ")";
 }
-
 
 cstring MauAsmOutput::find_attached_name(const IR::MAU::Table *tbl,
         const IR::MAU::AttachedMemory *at) const {
@@ -2392,8 +2399,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         }
         out << indent << at_mem->kind() << ": ";
         out << find_attached_name(tbl, at_mem);
-        if (at_mem->indexed())
-            out << '(' << find_indirect_index(at_mem, false, back_at, tbl) << ')';
+        out << build_call(at_mem, back_at, tbl);
         out << std::endl;
     }
 
@@ -2509,7 +2515,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
     int per_row = CounterPerWord(counter);
     counter_format(out, counter->type, per_row);
     out << "}" << std::endl;
-    if (counter->indexed() && !tbl->layout.hash_action)
+    // FIXME: Eventually should not be necessary due to DRV-1856
+    auto *ba = findContext<IR::MAU::BackendAttached>();
+    if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD)
         out << indent << "per_flow_enable: " << "counter_pfe" << std::endl;
     if (counter->threshold != -1) {
         out << indent << "lrt: { threshold: " << counter->threshold <<
@@ -2560,6 +2568,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
         int lo = hd_use->use.hash_dist_hash.bit_mask.min().index() % IXBar::HASH_DIST_BITS;
         int hi = lo + IXBar::METER_PRECOLOR_SIZE - 1;
         out << hd_use->slices[0] << ", " << lo << ".." << hi << ")" << std::endl;
+        // FIXME: Eventually should not be necessary due to DRV-1856
         out << indent << "color_aware: true" << std::endl;
     }
 
@@ -2577,7 +2586,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     }
     if (count_type != "")
         out << indent << "count: " << count_type << std::endl;
-    if (meter->indexed() && !tbl->layout.hash_action)
+    auto *ba = findContext<IR::MAU::BackendAttached>();
+    // FIXME: Eventually should not be necessary due to DRV-1856
+    if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD)
         out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     return false;
 }
@@ -2598,7 +2609,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar,
                     nullptr, nullptr, nullptr, false);
     out << indent << "mode: " << (as->mode ? as->mode.name : "fair") << " 0" << std::endl;
-    out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
+    // out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     // FIXME: Currently outputting default values for now, these must be brought through
     // either the tofino native definitions or pragmas
     out << indent << "non_linear: true" << std::endl;
@@ -2714,8 +2725,6 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         for (auto act : Values(salu->instruction))
             act->apply(EmitAction(self, out, tbl, indent));
         --indent; }
-    if (salu->indexed() && !tbl->layout.hash_action)
-        out << indent << "per_flow_enable: meter_pfe" << std::endl;
 
     auto &memuse = tbl->resources->memuse.at(unique_id);
     if (!memuse.dleft_learn.empty() || !memuse.dleft_match.empty()) {

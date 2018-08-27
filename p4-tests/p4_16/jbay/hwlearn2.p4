@@ -86,9 +86,11 @@ control ingress(inout headers hdr, inout metadata meta,
     // we leave src_port out of the lookup hash so we can easily generate collisions
     action do_learn_match_1() {
         bit<32> tmp2;
-        bit<32> tmp = learn_act_1.execute(lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
-                                                            hdr.ipv4.protocol, // meta.src_port,
-                                                            meta.dst_port }), tmp2);
+        bit<12> addr = lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
+                                         hdr.ipv4.protocol, // meta.src_port,
+                                         meta.dst_port });
+        bit<32> tmp = learn_act_1.execute(addr, tmp2);
+        meta.cache_id = tmp[18:7];
         meta.cache_id = tmp[18:7];
         meta.learn = tmp2[19:4];
         meta.learn_stage = 1;
@@ -138,18 +140,20 @@ control ingress(inout headers hdr, inout metadata meta,
     // we leave src_port out of the lookup hash so we can easily generate collisions
     action retire_match_2() {
         bit<32> tmp2;
-        bit<32> tmp = retire_act_2.execute(lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
-                                                             hdr.ipv4.protocol, // meta.src_port,
-                                                             meta.dst_port }), tmp2);
+        bit<12> addr = lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
+                                         hdr.ipv4.protocol, // meta.src_port,
+                                         meta.dst_port });
+        bit<32> tmp = retire_act_2.execute(addr, tmp2);
         meta.old_cache_id = tmp[18:7];
         meta.retire_stage[1:1] = tmp2[0:0];
     }
     // we leave src_port out of the lookup hash so we can easily generate collisions
     action do_learn_match_2() {
         bit<32> tmp2;
-        bit<32> tmp = learn_act_2.execute(lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
-                                                            hdr.ipv4.protocol, // meta.src_port,
-                                                            meta.dst_port }), tmp2);
+        bit<12> addr = lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
+                                         hdr.ipv4.protocol, // meta.src_port,
+                                         meta.dst_port });
+        bit<32> tmp = learn_act_2.execute(addr, tmp2);
         meta.cache_id = tmp[18:7];
         meta.learn = tmp2[19:4];
         meta.learn_stage = 2;
@@ -157,7 +161,7 @@ control ingress(inout headers hdr, inout metadata meta,
     table learn_match_2 {
         key = { meta.learn : ternary; }
         actions = { retire_match_2; do_learn_match_2; }
-        default_action = retire_match_2;
+        // default_action = retire_match_2;
     }
 
 

@@ -528,14 +528,76 @@ void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
 namespace {
 class VisitAttached : public Inspector {
     IR::MAU::Table::Layout &layout;
-    int immediate_bytes_needed;
-    int counter_addr_bits_needed = 0;
-    int meter_addr_bits_needed = 0;
-    bool counter_set = false;
-    bool meter_set = false;
-    bool register_set = false;
-    cstring counter_addr_name;
-    cstring meter_addr_name;
+    enum addr_type_t { STATS, METER, TYPES };
+    const IR::MAU::AttachedMemory *users[TYPES] = { 0 };
+
+    cstring addr_type_name(addr_type_t type) {
+        switch (type) {
+            case STATS: return "stats";
+            case METER: return "meter";
+            default: return "";
+        }
+    }
+
+    bool free_address(const IR::MAU::AttachedMemory *am, IR::MAU::Table::IndirectAddress &ia,
+            addr_type_t type) {
+        auto ba = findContext<IR::MAU::BackendAttached>();
+        if (users[type] != nullptr) {
+            ::error("%s: Both %s and %s require the %s address hardware, and cannot be on "
+                "the same table %s", am->srcInfo, am->name, users[type]->name,
+                addr_type_name(type), tbl->name);
+            return false;
+        }
+        users[type] = am;
+
+        if (!am->direct) {
+            if (am->size <= 0) {
+                ::error("%s Indirect attached table %s does not have a size", am->srcInfo,
+                    am->name);
+                return false;
+            }
+        }
+
+        BUG_CHECK(am->direct == (IR::MAU::AddrLocation::DIRECT == ba->addr_location), "%s: "
+            "Instruction Selection did not correctly set up the addressing scheme for %s",
+            am->srcInfo, am->name);
+
+        ia.shifter_enabled = true;
+        bool from_hash = false;
+        if (ba->addr_location == IR::MAU::AddrLocation::OVERHEAD) {
+            ia.address_bits += std::max(ceil_log2(am->size), 10);
+        } else if (ba->addr_location == IR::MAU::AddrLocation::HASH) {
+            from_hash = true;
+        }
+
+        if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD) {
+            if (from_hash) {
+                if (layout.no_match_data()) {
+                    ::error("%s: When an attached memory %s is addressed by hash and requires "
+                            "per action enabling, then the table %s must have match data",
+                             am->srcInfo, am->name, tbl->name);
+                    return false;
+                }
+            }
+            ia.per_flow_enable = true;
+        }
+
+        if (type == METER && ba->type_location == IR::MAU::TypeLocation::OVERHEAD) {
+            LOG1("Type is meter and overhead");
+            if (from_hash) {
+                if (layout.no_match_data()) {
+                    ::error("%s: When an attached memory %s is addressed by hash and requires "
+                            "multiple meter_type, then the table %s must have match data",
+                            am->srcInfo, am->name, tbl->name);
+                    return false;
+                }
+            }
+            ia.meter_type_bits = 3;
+        }
+        layout.overhead_bits += ia.total_bits();
+        return true;
+    }
+
 
     /** The purpose of this function is to determine whether or not the tables using stateful
      *  tables are allowed within Tofino.  Essentially the constraints are the following:
@@ -545,73 +607,24 @@ class VisitAttached : public Inspector {
      *    the same address in match central
      *  - Indirect addresses for twoport tables require a per flow enable bit as well
      */
-    void interpret_stateful(const IR::MAU::Synth2Port *sp, cstring &sp_addr_name, bool &sp_set,
-                            int &sp_addr_bits_needed, int *layout_addr_bits) {
-        if (sp->direct) {
-            if (sp_set && sp_addr_bits_needed > 0)
-               error("Tofino does not allow %s to use different address schemes on one "
-                    "table.  %s and %s have different address schemes",
-                     sp->kind(), sp_addr_name, sp->name);
-        } else {
-            if (sp->size <= 0)
-                error("%s: No instance count in indirect %s %s", sp->srcInfo, sp->kind(),
-                      sp->name);
-            if (sp_set && sp_addr_bits_needed == 0)
-                error("Tofino does not allow %s to use different address schemes on one "
-                    "table.  %s and %s have different address schemes",
-                     sp->kind(), sp_addr_name, sp->name);
-            int addr_bits_needed = std::max(10, ceil_log2(sp->size)) + 1;
-            int addition_to_overhead = addr_bits_needed;
-            int diff;
-            if ((diff = addr_bits_needed - sp_addr_bits_needed) > 0) {
-                addition_to_overhead = diff;
-                *(layout_addr_bits) = addr_bits_needed;
-            }
-            layout.overhead_bits += addition_to_overhead;
-        }
-        sp_set = true;
-        sp_addr_name = sp->name;
-    }
-
     bool preorder(const IR::MAU::Counter *cnt) override {
-        interpret_stateful(cnt, counter_addr_name, counter_set, counter_addr_bits_needed,
-                           &(layout.counter_addr_bits));
+        free_address(cnt, layout.stats_addr, STATS);
         return false;
     }
 
     bool preorder(const IR::MAU::Meter *mtr) override {
-        ERROR_CHECK(!meter_set, "Currently the compiler is not supporting multiple meters "
-                    "on a single table, as the color will overwrite each other");
-        if ((!meter_set && meter_addr_bits_needed > 0) || register_set) {
-            BUG("Table cannot have both attached tables %s and %s as they use the same "
-                "address hardware", meter_addr_name, mtr->name);
-        }
-        interpret_stateful(mtr, meter_addr_name, meter_set, meter_addr_bits_needed,
-                           &(layout.meter_addr_bits));
+        free_address(mtr, layout.meter_addr, METER);
         return false;
     }
 
     bool preorder(const IR::MAU::StatefulAlu *salu) override {
-        if ((!register_set && meter_addr_bits_needed > 0) || meter_set) {
-            BUG("Table cannot have both attached tables %s and %s as they use the same "
-                "address hardware", meter_addr_name, salu->name);
-        }
-        interpret_stateful(salu, meter_addr_name, register_set, meter_addr_bits_needed,
-                           &(layout.meter_addr_bits));
-        if (salu->instruction.size() > 1) {
-            layout.meter_type_bits = salu->instruction.size() > 2 ? 2 : 1;
-            layout.overhead_bits += layout.meter_type_bits; }
+        free_address(salu, layout.meter_addr, METER);
         return false;
     }
     bool preorder(const IR::MAU::Selector *as) override {
-        int vpn_bits_needed =  11;  // FIXME: Eventually based off of pool sizes
-        if (meter_addr_bits_needed > 0 || meter_set || register_set)
-            BUG("Table cannot have both attached tables %s and %s as they use the same "
-                "address hardware", meter_addr_name, as->name);
-        meter_addr_name = as->name;
-        layout.overhead_bits += vpn_bits_needed;
-        layout.meter_addr_bits = vpn_bits_needed;
-        return false; }
+        free_address(as, layout.meter_addr, METER);
+        return false;
+    }
     bool preorder(const IR::MAU::TernaryIndirect *) override {
         BUG("No ternary indirect should exist before table placement");
         return false; }
@@ -630,11 +643,11 @@ class VisitAttached : public Inspector {
     bool preorder(const IR::Attached *att) override {
         BUG("Unknown attached table type %s", typeid(*att).name()); }
 
+    const IR::MAU::Table *tbl;
+
  public:
-    explicit VisitAttached(IR::MAU::Table::Layout *l) : layout(*l),
-        immediate_bytes_needed(0) {}
-    bool have_ternary_indirect = false;
-    int immediate_reserved() { return immediate_bytes_needed; }
+    explicit VisitAttached(IR::MAU::Table::Layout *l, const IR::MAU::Table *t)
+        : layout(*l), tbl(t) {}
 };
 }  // namespace
 
@@ -669,7 +682,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
         setup_match_layout(tbl->layout, tbl);
     if ((tbl->layout.gateway = tbl->uses_gateway()))
         setup_gateway_layout(tbl->layout, tbl);
-    VisitAttached visit_attached(&tbl->layout);
+    VisitAttached visit_attached(&tbl->layout, tbl);
     tbl->attached.apply(visit_attached);
     setup_action_layout(tbl);
     tbl->random_seed = tbl->get_random_seed();

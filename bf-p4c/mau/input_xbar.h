@@ -556,7 +556,7 @@ struct IXBar {
         // Because the hash distribution units are already saved on the BackendAttached objects,
         // we don't want to visit them in within the action in order to not double count
         bool preorder(const IR::MAU::HashDist *hd) override;
-        bool preorder(const IR::Primitive *) override { return false; }
+        bool preorder(const IR::MAU::StatefulCall *) override { return false; }
         bool preorder(const IR::MAU::Instruction *) override { return true; }
         void end_apply() override;
         bool preorder(const IR::MAU::AttachedOutput *) override { return false; }

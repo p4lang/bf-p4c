@@ -35,6 +35,32 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/cond_checksum_update.p4
     )
 
+  # Errors until the stf commit goes in
+  p4c_add_xfail_reason("tofino2"
+    "no value with matching vpn for counter"
+    testdata/p4_14_samples/counter4.p4
+  )
+
+  p4c_add_xfail_reason("tofino2"
+    "mismatch from expected(.*) at byte"
+    extensions/p4_tests/p4_16/stateful3.p4
+    extensions/p4_tests/p4_16/stateful_log1.p4
+    extensions/p4_tests/p4_14/sful_1bit.p4
+    extensions/p4_tests/p4_16/jbay/minmax1.p4
+    extensions/p4_tests/p4_16/jbay/stateful_stack1.p4
+  )
+
+  p4c_add_xfail_reason("tofino2"
+    "can't find STFUL_PTR field for table"
+    extensions/p4_tests/p4_16/jbay/stateful_fifo1.p4
+    extensions/p4_tests/p4_16/jbay/stateful_stack2.p4
+  )
+   
+  p4c_add_xfail_reason("tofino2"
+    "register .* value is .*, expected"
+    extensions/p4_tests/p4_16/jbay/hwlearn2.p4
+  )
+
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -109,7 +135,7 @@ p4c_add_xfail_reason("tofino2"
   )
 
 p4c_add_xfail_reason("tofino2"
-  "Tofino does not allow stats to use different address schemes on one table."
+  "Both .* and .* require the .* address hardware, and cannot be on the same table"
   testdata/p4_14_samples/counter.p4
   )
 
@@ -186,6 +212,11 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Can only output full phv registers, not slices, in deparser"
   extensions/p4_tests/p4_16/int_transit.p4
+  )
+
+p4c_add_xfail_reason("tofino2"
+  "Primitive .* was not correctly converted in Instruction Selection"
+  testdata/p4_14_samples/register.p4
   )
 
 # These tests fail at runtime with the driver

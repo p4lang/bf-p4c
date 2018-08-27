@@ -1259,8 +1259,34 @@ template<class REGS> void Table::Actions::write_regs(REGS &regs, Table *tbl) {
 }
 FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void Table::Actions::write_regs, mau_regs &, Table *)
 
+/**
+ * Indirect Counters, Meters, and Stateful Alus can be addressed in many different ways, e.g.
+ * Hash Distribution, Overhead Index, Stateful Counter, Constant, etc.
+ *
+ * The indexing can be different per individual action.  Say one action always uses an indirect
+ * address, while another one uses a constant.  The driver has to know where to put that
+ * constant into the RAM line.
+ *
+ * Also, say an address is from hash, but can have multiple meter types.  By using the override
+ * address of an action, when that action is programmed, the meter type written in overhead will
+ * be determined by the overhead address.
+ *
+ * override_addr - a boolean of whether to use the override value for these parameters.
+ *     This is enabled if the address does not come from overhead.
+ *
+ * Override_addr_pfe - Not actually useful, given the override_full_addr contains the per flow
+ *     enable bit
+ *
+ * Override_full_addr - the constant value to be written directly into the corresponding bit
+ *     positions in the RAM line
+ */
 static void gen_override(json::map &cfg, Table::Call &att) {
     auto type = att->table_type();
+    // Direct tables currently don't require overrides
+    // FIXME: Corner cases where miss actions do not use the stateful object should have
+    // an override of all 0
+    if (att->to<AttachedTable>()->is_direct())
+        return;
     std::string base;
     bool override_addr = false;
     bool override_addr_pfe = false;
@@ -1271,29 +1297,33 @@ static void gen_override(json::map &cfg, Table::Call &att) {
     case Table::STATEFUL: base = "override_stateful"; break;
     default:
         error(att.lineno, "unsupported table type in action call"); }
-    if (att->to<AttachedTable>()->has_per_flow_enable()) {
-        override_addr_pfe = true;
-        override_full_addr |= 1U << (type == Table::COUNTER ?
-                STATISTICS_PER_FLOW_ENABLE_START_BIT : METER_PER_FLOW_ENABLE_START_BIT); }
+    // Always true if the call is provided
+    override_addr_pfe = true;
+    override_full_addr |= 1U << (type == Table::COUNTER ?
+        STATISTICS_PER_FLOW_ENABLE_START_BIT : METER_PER_FLOW_ENABLE_START_BIT);
     int idx = -1;
     for (auto &arg : att.args) {
         ++idx;
         if (arg.type == Table::Call::Arg::Name) {
-            if (auto *st = att->to<StatefulTable>()) {
+            if (strcmp(arg.name(), "$hash_dist") == 0 || strcmp(arg.name(), "$stful_counter") == 0) {
+                override_addr = true;
+            } else if (auto *st = att->to<StatefulTable>()) {
                 if (auto *act = st->actions->action(arg.name())) {
                     override_full_addr |= 1 << METER_TYPE_START_BIT;
                     override_full_addr |= act->code << (METER_TYPE_START_BIT + 1);
-                    override_addr = true; } }
+                }
+            }
             // FIXME -- else assume its a reference to a format field, so doesn't need to
             // FIXME -- be in the override.  Should check that somewhere, but need access
             // FIXME -- to the match_table to do it here.
         } else if (arg.type == Table::Call::Arg::Const) {
             if (idx == 0 && att.args.size() > 1) {
-                override_full_addr |= 1 << METER_TYPE_START_BIT;
-                override_full_addr |= arg.value() << (METER_TYPE_START_BIT + 1);
+                // The first argument for meters/stateful is the meter type
+                override_full_addr |= arg.value() << METER_TYPE_START_BIT;
             } else {
-                override_full_addr |= arg.value();
-            override_addr = true; }
+                override_full_addr |= arg.value() << att->address_shift();
+                override_addr = true;
+            }
         } else if (arg.type == Table::Call::Arg::Counter) {
             // does not affect context json
         } else {
@@ -1305,21 +1335,22 @@ static void gen_override(json::map &cfg, Table::Call &att) {
 
 void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resources) {
     for (auto &att : attached) {
-        for (auto &arg : att.args) {
-            json::map indirect_resource;
-            if (arg.type == Table::Call::Arg::Name) {
-                auto *p = has_param(arg.name());
-                if (p) {
-                    indirect_resource["access_mode"] = "index";
-                    indirect_resource["parameter_name"] = p->name;
-                    indirect_resource["parameter_index"] = p->position;
-                } else continue;
-            } else if (arg.type == Table::Call::Arg::Const) {
-                indirect_resource["access_mode"] = "constant";
-                indirect_resource["value"] = arg.value();
-            } else continue;
-            indirect_resource["resource_name"] = att->p4_name();
-            indirect_resources.push_back(std::move(indirect_resource)); } }
+        auto addr_arg = att.args.back();
+        json::map indirect_resource;
+        if (addr_arg.type == Table::Call::Arg::Name) {
+            auto *p = has_param(addr_arg.name());
+            if (p) {
+                indirect_resource["access_mode"] = "index";
+                indirect_resource["parameter_name"] = p->name;
+                indirect_resource["parameter_index"] = p->position;
+            } else { continue; }
+        } else if (addr_arg.type == Table::Call::Arg::Const) {
+            indirect_resource["access_mode"] = "constant";
+            indirect_resource["value"] = addr_arg.value();
+        } else { continue; }
+        indirect_resource["resource_name"] = att->p4_name();
+        indirect_resources.push_back(std::move(indirect_resource));
+    }
 }
 
 void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) {
@@ -1766,51 +1797,72 @@ void Table::canon_field_list(json::vector &field_list) {
             field["start_bit"]->to<json::number>().val += lo; }
 }
 
-void Table::get_cjson_source(const std::string &field_name,
-			     const Table::Actions::Action *act,
-		             std::string &source, std::string &imm_name,
-                             int &start_bit) {
-    // FIXME -- these should be based on the USES of the field in the table (as indexes
-    // FIXME -- to attached tables), and not on the name of the field.
-
-    source = act ? "" : "spec";
-    start_bit = 0;
-    if (field_name == "version")
+/**
+ * Determines both the start bit and the source name in the context JSON node for a particular
+ * field.  Do not like string matching, and this should potentially be determined by looking
+ * through a list of fields, but this will work in the short term
+ */
+void Table::get_cjson_source(const std::string &field_name, std::string &source, int &start_bit) {
+    source = "spec";
+    if (field_name == "version") {
         source = "version";
-    else if (field_name == "immediate") {
+    } else if (field_name == "immediate") {
         source = "immediate";
-        imm_name = field_name;
-    } else if (field_name == "action")
+    } else if (field_name == "action") {
         source = "instr";
-    else if (field_name == "next")
+    } else if (field_name == "next") {
         source = "next_table";
-    else if (field_name == "action_addr")
+    } else if (field_name == "action_addr") {
         source = "adt_ptr";
-    else if (field_name == "counter_addr")
+        if (auto adt = action->to<ActionTable>())
+            start_bit = std::min(5U, adt->get_log2size() - 2);
+    } else if (field_name == "counter_addr") {
         source = "stats_ptr";
-    else if (field_name == "counter_pfe") {
+        auto a = get_attached(); 
+        if (a && a->stats.size() > 0) {
+            auto s = a->stats[0];
+            start_bit = s->address_shift();
+        }
+    } else if (field_name == "counter_pfe") {
         source = "stats_ptr";
         start_bit = STATISTICS_PER_FLOW_ENABLE_START_BIT;
-    } else if ((field_name == "meter_addr") && get_meter())
-        source = "meter_ptr";
-    else if ((field_name == "meter_pfe") && get_meter()) {
-        source = "meter_ptr";
+    } else if (field_name == "meter_addr") {
+        if (auto m = get_meter()) {
+            source = "meter_ptr";
+            start_bit = m->address_shift(); 
+        } else if (auto s = get_selector()) {
+            source = "sel_ptr";
+            start_bit = s->address_shift();
+        } else if (auto s = get_stateful()) {
+            source = "stful_ptr";
+            start_bit = s->address_shift();
+        }
+    } else if (field_name == "meter_pfe") {
+        if (get_meter()) {
+            source = "meter_ptr";
+        } else if (get_selector()) {
+            source = "sel_ptr";
+        } else if (get_stateful()) {
+            source = "stful_ptr";
+        }
         start_bit = METER_PER_FLOW_ENABLE_START_BIT;
-    } else if ((field_name == "meter_addr") && get_selector())
-        source = "sel_ptr";
-    else if ((field_name == "meter_addr") && get_stateful())
-        source = "stful_ptr";
-    else if ((field_name == "meter_pfe") && get_selector())
-        source = "sel_ptr";
-        // FIXME start_bit = ??
-    else if ((field_name == "meter_pfe") && get_stateful()) {
-        source = "stful_ptr";
-        start_bit = METER_PER_FLOW_ENABLE_START_BIT;
-    } else if ((field_name == "meter_type") && get_stateful()) {
-        source = "stful_ptr";
-        start_bit = METER_TYPE_START_BIT; }
+    } else if (field_name == "meter_type") {
+        if (get_meter())
+            source = "meter_ptr";
+        else if (get_selector())
+            source = "sel_ptr";
+        else if (get_stateful())
+            source = "stful_ptr";
+        start_bit = METER_TYPE_START_BIT;
+    }
 }
 
+/**
+ * Adds a field into the format of either a match or action table.  Honestly, this is used
+ * for both action data tables and match tables, and this should be split up into two
+ * separate functions, as the corner casing for these different cases can be quite different
+ * and lead to some significant confusion
+ */
 void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                      const Table::Format::Field &field,
                                      const Table::Actions::Action *act)
@@ -1844,13 +1896,15 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
 
     // Determine the source of the field. If called recursively for an alias,
     // act will be a nullptr
-    std::string source = "", immediate_name = "";
-    int start_bit;
-    get_cjson_source(name, act, source, immediate_name, start_bit);
+    std::string source = "";
+    int start_bit = 0;
+    if (!act) 
+        get_cjson_source(name, source, start_bit);
 
     if (field.flags == Format::Field::ZERO)
         source = "zero";
 
+    
     if (source != "")
         output_field_to_pack_format(field_list, basebit, name, source, start_bit, field);
 
@@ -1871,68 +1925,24 @@ void Table::output_field_to_pack_format(json::vector &field_list,
     unsigned add_width = 0;
     bool pfe_enable = false;
     unsigned indirect_addr_start_bit = 0;
-    bool indirect_addr = false;
-    auto a = this->get_attached();
-    if (a) {
-        // If field is an attached table address specified by a pfe
-        // param, set source to "stats_ptr" and pfe_enable to true
-        // Discard pfe bit fields
-        Synth2Port *s = nullptr;
-        std::string s_source = source;
-        if (a->stats.size() > 0 && source == "stats_ptr") {
-            s = a->stats[0]->to<Synth2Port>();
-            s_source = "stats_ptr"; }
-        if (a->meters.size() > 0 && source == "meter_ptr") {
-            s = a->meters[0]->to<Synth2Port>();
-            s_source = "meter_ptr"; }
-        if (s) {
-            std::string pfe_param = s->get_per_flow_enable_param();
-            std::string pfe_name = pfe_param.substr(0, pfe_param.find("_pfe"));
-            if (name == (pfe_name + "_pfe"))
-                return; //Do not output per flow enable parameter
-            if (name == (pfe_name + "_addr")) {
-                source = s_source;
-                // FIXME-DRIVER: Currently driver assumes pfe bit is at the MSB of
-                // address. Hence the fields <field>_addr and
-                // <field>_pfe should be merged in the context json
-                // i.e. field_width should be incremented by 1
-                // Once driver supports a new "source" type for a
-                // separate pfe bit this hack will go away and pfe
-                // fields wont be dropped from the entry format
-                add_width = 1;
-                pfe_enable = true;
-                indirect_addr = true;
-                indirect_addr_start_bit = s->address_shift(); } } }
     int lobit = 0;
     for (auto &bits : field.bits) {
         json::map field_entry;
-        if (indirect_addr) {
-            field_entry["enable_pfe"] = pfe_enable;
-            field_entry["start_bit"] = indirect_addr_start_bit;
-        } else {
-            field_entry["start_bit"] = lobit + start_bit;
-            if (this->to<TernaryIndirectTable>() || this->to<SRamMatchTable>()) {
-                auto selector = get_selector();
-                if (selector && selector->get_per_flow_enable_param() == name)
-                    return; // Do not output per flow enable parameter
-                field_entry["enable_pfe"] = pfe_enable;
-                if ((name == "meter_addr") && selector) {
-                    field_entry["start_bit"] = SELECTOR_LOWER_HUFFMAN_BITS;
-                    field_entry["enable_pfe"] = selector->get_per_flow_enable();
-                }
-                if (name == "action_addr")
-                    if (auto adt = action->to<ActionTable>())
-                        field_entry["start_bit"] = std::min(5U, adt->get_log2size() - 2); } }
+        field_entry["start_bit"] = lobit + start_bit;
         field_entry["field_width"] = bits.size() + add_width;
         field_entry["lsb_mem_word_idx"] = bits.lo / MEM_WORD_WIDTH;
         field_entry["msb_mem_word_idx"] = bits.hi / MEM_WORD_WIDTH;
         field_entry["source"] = json::string(source);
+        field_entry["enable_pfe"] = false;
         if (source == "constant") {
             field_entry["const_tuples"] = json::vector {
                 json::map {
                     { "dest_start",  json::number(0) },
                     { "value", json::number(value) },
-                    { "dest_width", json::number(bits.size()) } } }; }
+                    { "dest_width", json::number(bits.size()) }
+                }
+            };
+        }
         field_entry["lsb_mem_word_offset"] = basebit + (bits.lo % MEM_WORD_WIDTH);
         field_entry["field_name"] = json::string(name);
         //field_entry["immediate_name"] = json::string(immediate_name);
@@ -1944,9 +1954,11 @@ void Table::output_field_to_pack_format(json::vector &field_list,
             // For version bits field match mode is set to "s1q0" (to match
             // glass)
             if (name == "version") match_mode = "s1q0";
-            field_entry["match_mode"] = match_mode; }
+            field_entry["match_mode"] = match_mode;
+        }
         field_list.push_back(std::move(field_entry));
-        lobit += bits.size(); }
+        lobit += bits.size();
+    }
 }
 
 

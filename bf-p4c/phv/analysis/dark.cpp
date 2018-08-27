@@ -8,7 +8,8 @@ Visitor::profile_t CollectNonDarkUses::init_apply(const IR::Node* root) {
 }
 
 bool CollectNonDarkUses::preorder(const IR::MAU::Action* act) {
-    for (auto* prim : act->stateful) {
+    for (auto* call : act->stateful_calls) {
+        auto prim = call->prim;
         for (auto* operand : prim->operands) {
             const PHV::Field* f = phv.field(operand);
             if (!f) continue;

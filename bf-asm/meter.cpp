@@ -132,82 +132,41 @@ int MeterTable::address_shift() const {
     return 7;  // meters are always 128 bits wide
 }
 
+unsigned MeterTable::determine_shiftcount(Table::Call &call, int group, int word,
+        int tcam_shift) const {
+    return determine_meter_shiftcount(call, group, word, tcam_shift);
+}
+
 template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
-    assert(args.size() <= 1);
-    // color_aware_per_flow_enable implies color_aware
-    assert(!color_aware_per_flow_enable || color_aware);
+    unsigned adr_mask = 0U;
+    unsigned per_entry_en_mux_ctl = 0U;
+    unsigned adr_default = 0U;
+    unsigned meter_type_position = 0U;
+    METER_ACCESS_TYPE default_type = match->default_meter_access_type(true);
+    AttachedTable::determine_meter_merge_regs(match, type, bus, args, default_type,
+            adr_mask, per_entry_en_mux_ctl, adr_default, meter_type_position);
+    merge.mau_meter_adr_default[type][bus] = adr_default;
+    merge.mau_meter_adr_mask[type][bus] = adr_mask;
+    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_entry_en_mux_ctl;
+    merge.mau_meter_adr_type_position[type][bus] = meter_type_position;
 
-    // FIXME - Sets up the meter default regs, need to factor in index
-    // constants. Check glass code :
-    // (target/tofino/device/pipeline/mau/address_and_data_structures.py)
-    unsigned meter_adr = 0x0;
-    if (!color_aware)
-        meter_adr |= (METER_LPF_COLOR_BLIND << METER_TYPE_START_BIT);
-    else if (!color_aware_per_flow_enable)
-        meter_adr |= (METER_COLOR_AWARE << METER_TYPE_START_BIT);
-    if (!per_flow_enable)
-        meter_adr |= (1U << METER_PER_FLOW_ENABLE_START_BIT);
-    merge.mau_meter_adr_default[type][bus] |= meter_adr;
 
-    unsigned meter_adr_mask = 0x0;
-    unsigned ptr_bits = 0;
-    unsigned base_width = 0;
-    unsigned base_mask = 0x0;
-    unsigned type_mask = (1U << METER_TYPE_BITS) - 1;
-    unsigned full_mask = (1U << METER_ADDRESS_BITS) - 1;
-    ptr_bits = METER_ADDRESS_BITS - METER_LOWER_HUFFMAN_BITS;
-    if (!per_flow_enable)
-        ptr_bits -=1;
-    if (!color_aware)
-        ptr_bits -= METER_TYPE_BITS;
-    if (args.empty()) { // direct access
-        assert(!per_flow_enable);  // can't have pfe on direct meter
-        if (type)
-            ptr_bits -= 1; // Ternary tables have one less address bit to consider for meters
-        if (color_aware)
-            ptr_bits -= METER_TYPE_BITS;
-            // FIXME -- these don't come from the direct pointer?  Where do they come from?
-            // FIXME -- the default?
-    } else if (args[0].type == Call::Arg::Field) {
-        if (args[0].size() < ptr_bits)
-            ptr_bits = args[0].size();
-    } else if (args[0].type == Call::Arg::HashDist) {
-        // nothing else to do here?
-    } else {
-        assert(0); }
-    base_width = ptr_bits;
-    if (color_aware_per_flow_enable)
-        base_width -= METER_TYPE_BITS;
-    if (per_flow_enable)
-        base_width -= 1;
-    base_mask = (1U << base_width) - 1;
-    meter_adr_mask = base_mask << METER_LOWER_HUFFMAN_BITS;
-    if (color_aware_per_flow_enable && options.match_compiler) {
-        // FIXME -- glass sets this but it seems wrong -- type is extracted before
-        // the mask, and should be off in the mask so it does not pollute the vpn
-        // probably irrelevant as these bits are above the vpn bits and are probably
-        // ignored by the hardware.
-        meter_adr_mask |= (type_mask << METER_TYPE_START_BIT); }
-    meter_adr_mask &= full_mask;
-    if (match->to<HashActionTable>()) {
-        merge.mau_stats_adr_mask[type][bus] = 0;
-    } else
-        merge.mau_meter_adr_mask[type][bus] |= meter_adr_mask;
-    if (per_flow_enable) {
-        merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] =
-            per_flow_enable_bit(match) + address_shift();
-        if (uses_colormaprams())
-            merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus] =
-                per_flow_enable_bit(match) + IDLETIME_HUFFMAN_BITS; }
-    unsigned meter_adr_type = METER_ADDRESS_BITS - METER_TYPE_BITS;
-    if (color_aware_per_flow_enable)
-        meter_adr_type = ptr_bits - METER_TYPE_BITS + METER_LOWER_HUFFMAN_BITS;
-    merge.mau_meter_adr_type_position[type][bus] = meter_adr_type;
-    if (!color_maprams.empty()) {
-        merge.mau_idletime_adr_mask[type][bus] = base_mask << IDLETIME_HUFFMAN_BITS;
-        merge.mau_idletime_adr_default[type][bus] = per_flow_enable ? 0 : 0x100000; }
+    if (uses_colormaprams()) {
+        unsigned idle_mask = (1U << IDLETIME_ADDRESS_BITS) - 1;
+        unsigned full_idle_mask = (1U << IDLETIME_FULL_ADDRESS_BITS) - 1;
+        unsigned shift_diff = METER_LOWER_HUFFMAN_BITS - IDLETIME_HUFFMAN_BITS;
+        merge.mau_idletime_adr_mask[type][bus] =
+            (adr_mask >> shift_diff) & idle_mask;
+        merge.mau_idletime_adr_default[type][bus] =
+            (adr_default >> shift_diff) & full_idle_mask;
+        if (per_entry_en_mux_ctl > shift_diff)
+            merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus] = 0;
+        else
+            merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus]
+                = per_entry_en_mux_ctl - shift_diff;
+    }
 }
 
 template<class REGS>

@@ -65,6 +65,38 @@ class Table : BFN::Unit {
     int                                         random_seed = -1;
     bool                                        dynamic_key_masks = false;
 
+    class IndirectAddress {
+        bool shifter_enabled = false;
+        int address_bits = 0;
+        bool per_flow_enable = false;
+        int meter_type_bits = 0;
+        IndirectAddress() { memset(this, 0, sizeof(*this)); }
+        operator== { return memcmp(this, &a, sizeof(IndirectAddress)) == 0; }
+        toJSON {
+            json << json.indent << "\"shifter_enabled\" : " << shifter_enabled << ",\n"
+                 << json.indent << "\"address_bits\" : " << address_bits << ",\n"
+                 << json.indent << "\"per_flow_enble\" : " << per_flow_enable << ",\n"
+                 << json.indent << "\"meter_type_bits\" : " << meter_type_bits;
+        }
+        fromJSON {
+            if (!json.json) return nullptr;
+            IndirectAddress *rv = new IndirectAddress();
+            json.load("shifter_enabled", rv->shifter_enabled);
+            json.load("address_bits", rv->address_bits);
+            json.load("per_flow_enable", rv->per_flow_enable);
+            json.load("meter_type_bits", rv->meter_type_bits);
+            return rv;
+        }
+#emit
+        IndirectAddress &operator+=(const IndirectAddress &a);
+#end
+        int total_bits() const {
+           int rv = address_bits + meter_type_bits;
+           rv = per_flow_enable ? rv + 1 : rv;
+           return rv;
+        }
+    }
+
     class Layout {
         /* POD type */
         int             entries = 0;
@@ -84,9 +116,13 @@ class Table : BFN::Unit {
         int             action_data_bytes = 0;
         int             action_data_bytes_in_table = 0;
         int             overhead_bits = 0;
+        inline IndirectAddress meter_addr;
+        inline IndirectAddress stats_addr;
+        /*
         int             meter_addr_bits = 0;
         int             meter_type_bits = 0;
         int             counter_addr_bits = 0;
+        */
         int             action_addr_bits = 0;
         int             immediate_bits = 0;
         int             partition_bits = 0;
@@ -557,6 +593,16 @@ class ActionArg : Expression {
     toString{ return name.name; }
 }
 
+class StatefulCounter : Expression {
+    dbprint { out << "stful_cnt(" << type << ")"; }
+}
+
+class StatefulCall {
+#nodbprint
+    Primitive prim;
+    NullOK Expression index = nullptr;
+}
+
 /// The base class for MAU::Action and MAU::SaluAction, both represent a wide VLIW action.
 abstract VLIWInstruction {
 }
@@ -585,7 +631,7 @@ class Action : VLIWInstruction {
     std::set<UniqueAttachedId> per_flow_enables = {};
     std::map<UniqueAttachedId, MeterType> meter_types = {};
 
-    inline Vector<Primitive>    stateful = {};
+    inline Vector<StatefulCall>    stateful_calls = {};
 
     cstring externalName() const;
     bool hit_only() const { return default_allowed == false; }

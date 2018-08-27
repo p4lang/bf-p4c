@@ -24,6 +24,7 @@ bool TofinoWriteContext::isWrite(bool root_value) {
     if (salu && current == salu->output_dst) {
         return true; }
 
+
     // Parser primitives write to l-values - for example, an Extract writes to
     // its destination.
     if (ctxt->node->is<IR::BFN::ParserLVal>() &&

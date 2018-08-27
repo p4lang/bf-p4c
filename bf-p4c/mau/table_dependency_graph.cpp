@@ -137,7 +137,7 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
 
     bool preorder(const IR::Annotation *) override { return false; }
 
-    bool preorder(const IR::Primitive *) override {
+    bool preorder(const IR::MAU::StatefulCall *) override {
         return false;
     }
 
@@ -169,7 +169,7 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
     // attached tables left as primitives by exploring
     // via the primitive. Instead track them by exploring
     // the attached tables directly.
-    bool preorder(const IR::Primitive *) override {
+    bool preorder(const IR::MAU::StatefulCall *) override {
         return false;
     }
 
