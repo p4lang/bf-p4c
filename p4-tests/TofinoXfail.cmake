@@ -121,13 +121,6 @@ if (PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4
     )
 
-  # DRV-1877
-  # error: [Errno 32] Broken pipe
-  p4c_add_xfail_reason("tofino"
-    "Broken pipe"
-    smoketest_programs_alpm_test_TestIdleTime
-    )
-
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
     05-simple_l3_arping

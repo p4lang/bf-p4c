@@ -1012,7 +1012,10 @@ void Memories::break_atcams_into_partitions() {
         int max_partition_rams = (total_depth + ta->layout_option->way.match_groups - 1) /
                                   ta->layout_option->way.match_groups;
         int search_bus_per_lt = (ta->table->layout.partition_count + SRAM_DEPTH - 1) / SRAM_DEPTH;
-        ta->calculated_entries = search_bus_per_lt * max_partition_rams * SRAM_DEPTH;
+        /* we cannot use total_depth since the real number of allocations is max_partition_rams
+         * times the number of ways the match happens */
+        ta->calculated_entries = search_bus_per_lt * max_partition_rams *
+                                    ta->layout_option->way.match_groups * SRAM_DEPTH;
 
 
         int logical_table = 0;
