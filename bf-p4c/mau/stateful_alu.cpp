@@ -46,6 +46,28 @@ std::ostream &operator<<(std::ostream &out, CreateSaluInstruction::etype_t e) {
     else
         return out << "<invalid " << e << ">"; }
 
+static bool is_address_output(const IR::Expression *e) {
+    if (auto *r = e->to<IR::MAU::SaluReg>())
+        return r->name == "address";
+    return false;
+}
+
+static bool is_learn(const IR::Expression *e) {
+    if (auto *r = e->to<IR::MAU::SaluReg>())
+        return r->name == "learn";
+    return false;
+}
+
+static bool is_predicate(const IR::Expression *e) {
+    if (auto *r = e->to<IR::MAU::SaluReg>())
+        for (auto cmp : Device::statefulAluSpec().CmpUnits)
+            if (r->name == cmp)
+                return true;
+    if (e->is<IR::LOr>() || e->is<IR::LAnd>() || e->is<IR::LNot>())
+        return true;
+    return false;
+}
+
 /// Check a name to see if it is a reference to an argument of register_action::apply,
 /// or a reference to the local var we put in alu_hi.
 /// or a reference to a copy of an in argument
@@ -182,6 +204,18 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
     if (onebit) {
         action->action.push_back(onebit);
         LOG3("  add " << *action->action.back()); }
+    for (auto &kv : output_address_subword_predicate) {
+        // Weird encoding of the address subword control -- see 6.2.12.6.3 in uArch doc
+        // bascially, to set the subword bit, we use the predicate field, and then override
+        // the predicate field to be ignored for normal predication with pred_disable option
+        auto &output = outputs[kv.first];
+        BUG_CHECK(is_address_output(output->operands.back()), "not address output?");
+        if (is_predicate(output->operands.front()))
+            output->operands.erase(output->operands.begin());
+        if (kv.second)
+            output->operands.insert(output->operands.begin(), kv.second);
+        output->operands.push_back(new IR::MAU::SaluReg("lmatch", false));
+        output->operands.push_back(new IR::MAU::SaluReg("pred_disable", false)); }
     for (auto *instr : outputs) {
         if (instr) {
             action->action.push_back(instr);
@@ -337,6 +371,13 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
             error("initializer %s is not a list expression", mu->arguments->at(3)->expression); }
     } else if (method == "address") {
         operands.push_back(new IR::MAU::SaluReg(prim->type, "address", false));
+        address_subword = 0;
+        if (prim->operands.size() == 2) {
+            auto k = prim->operands.at(1)->to<IR::Constant>();
+            if (!k || (k->value != 0 && k->value != 1))
+                error("%s argument must be 0 or 1", prim);
+            else
+                address_subword = k->asInt(); }
     } else if (method == "predicate") {
         operands.push_back(new IR::MAU::SaluReg(prim->type, "predicate", false));
     } else if (method.startsWith("min") || method.startsWith("max")) {
@@ -454,6 +495,9 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
 
 void CreateSaluInstruction::postorder(const IR::LNot *e) {
     if (etype == IF) {
+        if (operands.size() == 1 && is_learn(operands.back())) {
+            operands.back() = new IR::LNot(e->srcInfo, operands.back());
+            return; }
         BUG_CHECK(pred_operands.size() == 1 || ::errorCount() > 0, "recursion failure");
         if (pred_operands.size() < 1) return;  // can only happen if there has been an error
         pred_operands.back() = new IR::LNot(e->srcInfo, pred_operands.back());
@@ -629,27 +673,34 @@ bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
     return false;
 }
 
-static void setup_output(std::vector<const IR::MAU::Instruction *> &output, int index,
-                         const IR::Expression *predicate, IR::Vector<IR::Expression> operands) {
-    if (output.size() <= size_t(index)) output.resize(index+1);
+const IR::MAU::Instruction *CreateSaluInstruction::setup_output() {
+    if (outputs.size() <= size_t(output_index)) outputs.resize(output_index+1);
+    auto &output = outputs[output_index];
     if (Device::statefulAluSpec().OutputWords > 1)
         operands.insert(operands.begin(), new IR::MAU::SaluReg(operands.at(0)->type,
-                                "word" + std::to_string(index), false));
+                                "word" + std::to_string(output_index), false));
     if (predicate)
         operands.insert(operands.begin(), predicate);
-    if (output[index]) {
-        if (!equiv(operands.back(), output[index]->operands.back())) {
+    if (is_address_output(operands.back()) && address_subword) {
+        if (predicate && output_address_subword_predicate.count(output_index)) {
+            auto &subword_predicate = output_address_subword_predicate[output_index];
+            if (subword_predicate)
+                subword_predicate = new IR::LOr(subword_predicate, predicate);
+        } else {
+            output_address_subword_predicate[output_index] = predicate; } }
+    if (output) {
+        if (!equiv(operands.back(), output->operands.back())) {
             error("Incompatible outputs in RegisterAction: %s and %s\n",
-                  output[index]->operands.back(), operands.back());
-            return; }
-        if (output[index]->operands.size() == operands.size()) {
+                  output->operands.back(), operands.back());
+            return nullptr; }
+        if (output->operands.size() == operands.size()) {
             if (predicate)
-                operands[0] = new IR::LOr(output[index]->operands[0], operands[0]);
+                operands[0] = new IR::LOr(output->operands[0], operands[0]);
             else
-                return;
+                return output;
         } else if (predicate) {
-            return; } }
-    output[index] = new IR::MAU::Instruction("output", &operands);
+            return output; } }
+    return output = new IR::MAU::Instruction("output", &operands);
 }
 
 const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
@@ -679,9 +730,8 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             BUG_CHECK(!predicate, "can't have predicate on 1-bit instruction");
             opcode = onebit_cmpl ? "read_bitc" : "read_bit";
             rv = onebit = new IR::MAU::Instruction(opcode);
-            setup_output(outputs, 0, nullptr, {
-                new IR::MAU::SaluReg(IR::Type::Bits::get(1), "alu_lo", false) });
-            break;
+            operands.clear();
+            operands.push_back(new IR::MAU::SaluReg(IR::Type::Bits::get(1), "alu_lo", false));
         } else if (auto k = operands.at(0)->to<IR::Constant>()) {
             if (k->value == 0) {
                 // 0 will be output if we don't drive it at all
@@ -709,8 +759,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             } else {
                 error("%s: can't output a constant from a register action",
                       operands.at(0)->srcInfo); } }
-        setup_output(outputs, output_index, predicate, operands);
-        rv = outputs[output_index];
+        rv = setup_output();
         break;
     default:
         BUG("Invalid etype");

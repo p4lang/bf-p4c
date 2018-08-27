@@ -225,13 +225,16 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
         salu.salu_cmp_const_src = srcc ? srcc->value & 0x2f : 0;
         salu.salu_cmp_regfile_const = 0; }
     salu.salu_cmp_opcode = opc->opcode | (type << 2);
-    if (auto lmask = sbus_mask(logical_home_row/4U, tbl->sbus_learn))
-        salu_instr_common.salu_lmatch_sbus_listen = lmask;
-    if (auto mmask = sbus_mask(logical_home_row/4U, tbl->sbus_match))
-        salu_instr_common.salu_match_sbus_listen = mmask;
-    salu.salu_cmp_sbus_or = 0;
-    salu.salu_cmp_sbus_and = learn ? 1 : 0;
-    salu.salu_cmp_sbus_invert = learn_not ? 1 : 0;
+    auto lmask = sbus_mask(logical_home_row/4U, tbl->sbus_learn);
+    auto mmask = sbus_mask(logical_home_row/4U, tbl->sbus_match);
+    salu_instr_common.salu_lmatch_sbus_listen = lmask;
+    salu_instr_common.salu_match_sbus_listen = mmask;
+    if (lmask || mmask) {
+        // if lmask and mmask are both zero, these registers don't matter, but the model
+        // will assert if they are non-zero)
+        salu.salu_cmp_sbus_or = 0;
+        salu.salu_cmp_sbus_and = learn ? 1 : 0;
+        salu.salu_cmp_sbus_invert = learn_not ? 1 : 0; }
 }
 void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
@@ -305,6 +308,8 @@ void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
     salu.salu_output_asrc = output_operand ? 2 + output_operand->phv_index(tbl) : output_mux;
     salu.salu_lmatch_adr_bit_enable = lmatch;
     salu.salu_pred_disable = pred_disable;
+    if (output_mux == STATEFUL_PREDICATION_OUTPUT)
+        meter_group.stateful.stateful_ctl.salu_output_pred_sel = slot - ALUOUT0;
 }
 void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::JBay::mau_regs>(regs, tbl, act); }

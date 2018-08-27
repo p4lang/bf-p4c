@@ -281,12 +281,6 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/truncate.p4
 )
 
-# work in progress -- hardware learning dleft.
-p4c_add_xfail_reason("tofino2"
-  "error: action instruction addr .* in use elsewhere"
-  extensions/p4_tests/p4_16/jbay/hwlearn1.p4
-)
-
 # BRIG-906 test case fails on jbay for some reason
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received on device 0"

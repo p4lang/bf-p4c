@@ -67,16 +67,16 @@ control ingress(inout headers hdr, inout metadata meta,
         void apply(inout pair value, out bit<32> cid, out bit<32> pred) {
             if (value.first & ~64w30 == meta.digest) {
                 value.first = meta.digest | 31;
-                cid = this.address();
+                cid = this.address(0);
             } else if (value.second & ~64w30 == meta.digest) {
                 value.second = meta.digest | 31;
-                cid = this.address();
+                cid = this.address(1);
             } else if (value.first & 1 == 0) {
                 value.first = meta.digest | 31;
-                cid = this.address();
+                cid = this.address(0);
             } else if (value.second & 1 == 0) {
                 value.second = meta.digest | 31;
-                cid = this.address();
+                cid = this.address(1);
             } else {
                 cid = 0;
             }
@@ -90,8 +90,7 @@ control ingress(inout headers hdr, inout metadata meta,
                                          hdr.ipv4.protocol, // meta.src_port,
                                          meta.dst_port });
         bit<32> tmp = learn_act_1.execute(addr, tmp2);
-        meta.cache_id = tmp[18:7];
-        meta.cache_id = tmp[18:7];
+        meta.cache_id = tmp[17:6];
         meta.learn = tmp2[19:4];
         meta.learn_stage = 1;
     }
@@ -106,11 +105,11 @@ control ingress(inout headers hdr, inout metadata meta,
         void apply(inout pair value, out bit<32> cid, out bit<32> retire_stage) {
             if (value.first & ~64w30 == meta.digest) {
                 value.first = 0;
-                cid = this.address();
+                cid = this.address(0);
                 retire_stage = 1;
             } else if (value.second & ~64w30 == meta.digest) {
                 value.second = 0;
-                cid = this.address();
+                cid = this.address(1);
                 retire_stage = 1;
             } else {
                 cid = 0;
@@ -121,16 +120,16 @@ control ingress(inout headers hdr, inout metadata meta,
         void apply(inout pair value, out bit<32> cid, out bit<32> pred) {
             if (value.first & ~64w30 == meta.digest) {
                 value.first = meta.digest | 31;
-                cid = this.address();
+                cid = this.address(0);
             } else if (value.second & ~64w30 == meta.digest) {
                 value.second = meta.digest | 31;
-                cid = this.address();
+                cid = this.address(1);
             } else if (value.first & 1 == 0) {
                 value.first = meta.digest | 31;
-                cid = this.address();
+                cid = this.address(0);
             } else if (value.second & 1 == 0) {
                 value.second = meta.digest | 31;
-                cid = this.address();
+                cid = this.address(1);
             } else {
                 cid = 0;
             }
@@ -144,7 +143,7 @@ control ingress(inout headers hdr, inout metadata meta,
                                          hdr.ipv4.protocol, // meta.src_port,
                                          meta.dst_port });
         bit<32> tmp = retire_act_2.execute(addr, tmp2);
-        meta.old_cache_id = tmp[18:7];
+        meta.old_cache_id = tmp[17:6];
         meta.retire_stage[1:1] = tmp2[0:0];
     }
     // we leave src_port out of the lookup hash so we can easily generate collisions
@@ -154,7 +153,6 @@ control ingress(inout headers hdr, inout metadata meta,
                                          hdr.ipv4.protocol, // meta.src_port,
                                          meta.dst_port });
         bit<32> tmp = learn_act_2.execute(addr, tmp2);
-        meta.cache_id = tmp[18:7];
         meta.learn = tmp2[19:4];
         meta.learn_stage = 2;
     }

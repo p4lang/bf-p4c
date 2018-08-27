@@ -765,9 +765,13 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 }
 
 Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
-    if (output_operand) {
-        auto tbl = dynamic_cast<StatefulTable *>(tbl_);
-        output_operand->pass1(tbl); }
+    auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    if (output_operand)
+        output_operand->pass1(tbl);
+    if (output_mux == STATEFUL_PREDICATION_OUTPUT) {
+        if (tbl->pred_comb_sel >= 0 && tbl->pred_comb_sel != slot - ALUOUT0)
+            error(lineno, "Only one output of predication allowed");
+        tbl->pred_comb_sel = slot - ALUOUT0; }
     return this; }
 
 #include "tofino/salu_inst.cpp"

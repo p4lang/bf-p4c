@@ -67,7 +67,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
         if (objType == "RegisterAction" && salu->direct != direct_access)
             error("%s: %sdirect access to %sdirect register", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");
-        unsigned idx = method == "execute" ? 2 : 1;
+        unsigned idx = (method == "execute" && objType != "LearnAction") ? 2 : 1;
         int output = 1;
         int output_offsets[] = { 0, 64, 32, 96 };
 

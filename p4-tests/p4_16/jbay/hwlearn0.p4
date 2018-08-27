@@ -63,16 +63,16 @@ control ingress(inout headers hdr, inout metadata meta,
         void apply(inout pair value, out bit<32> cid, out bit<32> pred) {
             if (value.first & -31 == meta.digest) {
                 value.first = meta.digest | 31;
-                cid = this.address();
+                cid = this.address(0);
             } else if (value.second & -31 == meta.digest) {
                 value.second = meta.digest | 31;
-                cid = this.address();
+                cid = this.address(1);
             } else if (value.first & 1 == 0) {
                 value.first = meta.digest | 31;
-                cid = this.address();
+                cid = this.address(0);
             } else if (value.second & 1 == 0) {
                 value.second = meta.digest | 31;
-                cid = this.address();
+                cid = this.address(1);
             } else {
                 cid = 0;
             }
@@ -85,7 +85,7 @@ control ingress(inout headers hdr, inout metadata meta,
                                          hdr.ipv4.protocol, meta.src_port,
                                          meta.dst_port });
         bit<32> tmp = learn_act.execute(addr, tmp2);
-        meta.cache_id = tmp[18:7];
+        meta.cache_id = tmp[17:6];
         meta.learn = tmp2[19:4];
     }
     table learn_match {

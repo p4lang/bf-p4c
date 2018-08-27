@@ -80,7 +80,9 @@ class CreateSaluInstruction : public Inspector {
     const IR::Expression                        *predicate = nullptr;
     const IR::MAU::Instruction                  *onebit = nullptr;  // the single 1-bit alu op
     bool                                        onebit_cmpl = false;  // 1-bit op needs cmpl
-    std::vector<const IR::MAU::Instruction  *>  outputs;  // add to end of action body
+    int                                         address_subword = 0;
+    std::vector<IR::MAU::Instruction  *>        outputs;  // add to end of action body
+    std::map<int, const IR::Expression  *>      output_address_subword_predicate;
     IR::MAU::StatefulAlu::MathUnit      math;
     IR::MAU::SaluMathFunction   *math_function = nullptr;
     const IR::Expression        *math_input = nullptr;
@@ -88,6 +90,7 @@ class CreateSaluInstruction : public Inspector {
     const IR::MAU::Instruction *createInstruction();
     bool applyArg(const IR::PathExpression *, cstring);
     const IR::Expression *reuseCmp(const IR::MAU::Instruction *cmp, int idx);
+    const IR::MAU::Instruction *setup_output();
 
     bool preorder(const IR::Declaration_Instance *di) override;
     bool preorder(const IR::Declaration_Variable *v) override;

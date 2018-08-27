@@ -49,22 +49,24 @@ control ingress(inout headers hdr, inout metadata meta,
         }
     }
 
-    Register<pair>(16384) learn_cache;
+    // single ram size to force it to be a single way (multiway dleft tables broken
+    // due to missing action_bus alloc in compiler.)
+    Register<pair>(1024) learn_cache;
     LearnAction<pair, bit<64>, bit<32>>(learn_cache) learn_act = {
-        void apply(inout pair value, in bit<64> digest, in bool learn,
+        void apply(inout pair value, in bit<64> digest, in bool lmatch,
                    out bit<32> cid, out bit<32> pred) {
             if (value.first & ~64w0x1e == digest) {
                 value.first = digest | 31;
-                cid = this.address();
+                cid = this.address(0);
             } else if (value.second & ~64w0x1e == digest) {
                 value.second = digest | 31;
-                cid = this.address();
-            } else if (learn && value.first & 1 == 0) {
+                cid = this.address(1);
+            } else if (!lmatch && value.first & 1 == 0) {
                 value.first = digest | 31;
-                cid = this.address();
-            } else if (learn && value.second & 1 == 0) {
+                cid = this.address(0);
+            } else if (!lmatch && value.second & 1 == 0) {
                 value.second = digest | 31;
-                cid = this.address();
+                cid = this.address(1);
             } else {
                 cid = 0;
             }
@@ -74,7 +76,7 @@ control ingress(inout headers hdr, inout metadata meta,
     action do_learn_match() {
         bit<32> tmp2;
         bit<32> tmp = learn_act.execute(tmp2);
-        meta.cache_id = tmp[21:7];
+        meta.cache_id = tmp[20:6];
         meta.learn_pred = tmp2[19:4];
     }
     @dleft_learn_cache
