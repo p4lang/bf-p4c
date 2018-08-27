@@ -44,7 +44,7 @@ class CollectNonDarkUses : public MauInspector {
   * 1. Dark fields cannot be used in the parser/deparser.
   * 2. Dark fields cannot be used on the input crossbar.
   *
-  * This pass must be run after the CollectMochaCandidates pass as we use the fields marked with 
+  * This pass must be run after the CollectMochaCandidates pass as we use the fields marked with
   * is_mocha_candidate() as the starting point for this pass.
   */
 class MarkDarkCandidates : public Inspector {
@@ -208,7 +208,6 @@ class CollectDarkCandidates : public PassManager {
   */
 class DarkPrivatization : public PassManager {
  private:
-    PhvInfo&            phv;
     PhvUse              uses;
     CollectNonDarkUses  nonDarkUses;
     PragmaContainerType pragma;
@@ -218,7 +217,7 @@ class DarkPrivatization : public PassManager {
 
  public:
     explicit DarkPrivatization(PhvInfo& p)
-        : phv(p), uses(p), nonDarkUses(p), pragma(p) {
+        : uses(p), nonDarkUses(p), pragma(p) {
         addPasses({
             &uses,
             new CollectMochaCandidates(p, uses),

@@ -408,7 +408,8 @@ void TernaryMatchTable::write_regs(REGS &regs) {
         merge.tind_bus_prop[indirect_bus].thread = gress;
         merge.tind_bus_prop[indirect_bus].enabled = 1;
         //if (action_bus)
-        //     merge.mau_immediate_data_mask[1][indirect_bus] = (1UL << action_bus->size()) - 1;
+        //  merge.mau_immediate_data_mask[1][indirect_bus] =
+        //     (UINT64_C(1) << action_bus->size()) - 1;
         attached.write_merge_regs(regs, this, 1, indirect_bus);
         if (idletime)
             idletime->write_merge_regs(regs, 1, indirect_bus);

@@ -319,7 +319,7 @@ AllocScore::AllocScore(
         for (const auto slice1 : slices) {
             for (const auto slice2 : slices) {
                 if (slice1 == slice2) continue;
-                for (int i = 0; i < container.size(); i++) {
+                for (unsigned int i = 0; i < container.size(); i++) {
                     if (slice1.container_slice().contains(i) &&
                             slice2.container_slice().contains(i))
                         overlay_bits++; } } }

@@ -777,7 +777,7 @@ class CollectPhvFields : public Inspector {
             "this will produce invalid results.");
     }
 
-    void end_apply() {
+    void end_apply() override {
         for (auto& f : phv) {
             std::string f_name(f.name.c_str());
             if (f_name.find("compiler_generated_meta") != std::string::npos

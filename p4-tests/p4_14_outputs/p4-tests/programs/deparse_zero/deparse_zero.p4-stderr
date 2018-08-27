@@ -1,0 +1,6 @@
+deparse_zero.p4(77): warning: SelectCase: unreachable
+ 0x123 : parse_pay; // dummy, will be added
+ ^^^^^
+deparse_zero.p4(75): warning: ListExpression: transition does not depend on select argument
+    return select(udp.srcPort){
+                  ^^^^^^^^^^^

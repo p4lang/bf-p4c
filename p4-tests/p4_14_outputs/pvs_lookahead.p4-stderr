@@ -1,0 +1,3 @@
+pvs_lookahead.p4(33): [--Wwarn=uninitialized_use] warning: hdr.ig_intr_md.ingress_port may be uninitialized
+   return select(ig_intr_md.ingress_port){
+                 ^^^^^^^^^^^^^^^^^^^^^^^

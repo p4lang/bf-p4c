@@ -1,0 +1,9 @@
+case2895.p4(2503): warning: -1: negative value with unsigned type
+   add_to_field(Kasilof.Beatrice, -1);
+                                   ^
+case2895.p4(2509): warning: -1: negative value with unsigned type
+   add_to_field(Holliday.Henderson, -1);
+                                     ^
+case2895.p4(2040): warning: Could not infer type for Occoquan, using bit<8>
+action Tontogany(Occoquan) {
+                 ^^^^^^^^

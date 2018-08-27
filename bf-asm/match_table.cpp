@@ -335,7 +335,8 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
     if (result->format) {
         for (auto &row : result->layout) {
             int bus = row.row*2 | (row.bus & 1);
-            merge.mau_immediate_data_mask[type][bus] = (1UL << result->format->immed_size)-1;
+            merge.mau_immediate_data_mask[type][bus] =
+                (UINT64_C(1) << result->format->immed_size)-1;
             if (result->format->immed_size > 0)
                 merge.mau_payload_shifter_enable[type][bus]
                     .immediate_data_payload_shifter_en = 1; } }

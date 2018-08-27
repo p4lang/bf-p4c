@@ -154,7 +154,7 @@ int parse_num(YYSTYPE *val, const char *s, int base) {
     s--;
     while (*++s) {
         if (*s == '_') continue;
-        if (rv == INT && val->i > LONG_MAX/base) {
+        if (rv == INT && val->i > INT64_MAX/base) {
             int v = val->i;
             VECTOR_init1(val->bigi, v);
             rv = BIGINT; }
@@ -203,7 +203,7 @@ int parse_match(YYSTYPE *val, const char *s, int bits_per_digit) {
         if (*s == '_') continue;
         val->match.word0 <<= bits_per_digit;
         val->match.word1 <<= bits_per_digit;
-        if ((val->match.word0 | val->match.word1) > LONG_MAX)
+        if ((val->match.word0 | val->match.word1) > INT64_MAX)
             error(lineno, "integer overflow in match constant");
         switch (*s) {
         case '0': case '1': case '2': case '3': case '4':

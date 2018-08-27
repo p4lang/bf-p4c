@@ -37,7 +37,7 @@ std::unique_ptr<json::obj> toJson(value_t &v) {
     case tINT:
         return json::mkuniq<json::number>(v.i);
     case tBIGINT:
-        if (v.bigi.size == 1 && v.bigi.data[0] < LONG_MAX)
+        if (v.bigi.size == 1 && v.bigi.data[0] < INT64_MAX)
             return json::mkuniq<json::number>(v.bigi.data[0]);
         // fall through
     case tRANGE:

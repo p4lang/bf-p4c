@@ -241,7 +241,7 @@ bool DoInstructionSelection::checkSrc1(const IR::Expression *e) {
 
 bool DoInstructionSelection::checkConst(const IR::Expression *ex, long &value) {
     if (auto *k = ex->to<IR::Constant>()) {
-        value = k->asLong();
+        value = k->asLong();  // \TODO: long or 64-bit value?
         return true;
     } else {
         return false;
@@ -491,9 +491,10 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                           "calculation function has to be zero %s",
                           prim->srcInfo, *prim); }
             if (auto *constant = prim->operands[3]->to<IR::Constant>()) {
-                if (constant->asLong() != 0) {
-                    size = bitcount(constant->asLong() - 1);
-                    if ((1LL << size) != constant->asLong())
+                auto value = constant->asUint64();
+                if (value != 0) {
+                    size = bitcount(value - 1);
+                    if ((1LL << size) != value)
                         error("%s: The hash offset must be a power of 2 in a hash calculation %s",
                               prim->srcInfo, *prim); } } }
 

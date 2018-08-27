@@ -987,7 +987,6 @@ class ConstructSymbolTable : public Inspector {
                   structure->getBlockName(ProgramStructure::INGRESS));
         IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
         auto mem = new IR::Member(path, "digest_type");
-        auto action = findContext<IR::P4Action>();
         unsigned digestId = getIndex(node, digestIndexHashes);
         if (digestId > Device::maxDigestId()) {
             ::error("Too many digest() calls in %1%", control->name);
@@ -1263,7 +1262,7 @@ class ConstructSymbolTable : public Inspector {
         if (pMax->to<IR::Constant>() == nullptr || pBase->to<IR::Constant>() == nullptr)
             BUG("Only compile-time constants are supported for hash base offset and max value");
 
-        if (pMax->to<IR::Constant>()->asLong() < (1LL << w))  {
+        if (pMax->to<IR::Constant>()->asUint64() < (1LL << w))  {
             if (pBase->type->width_bits() != w)
                 pBase = new IR::Cast(IR::Type::Bits::get(w), pBase);
             args->push_back(new IR::Argument(pBase));
@@ -1333,7 +1332,6 @@ class ConstructSymbolTable : public Inspector {
                   "resubmit() can only be used in ingress control");
         IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
         auto mem = new IR::Member(path, "resubmit_type");
-        auto action = findContext<IR::P4Action>();
         unsigned resubmitId = getIndex(node, resubmitIndexHashes);
         if (resubmitId > Device::maxResubmitId()) {
             ::error("Too many resubmit() calls in %1%", control->name);

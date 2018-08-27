@@ -125,13 +125,13 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 continue;
             } else if (kv.value == "meter") {
                 src = Source(MeterBus);
-                if (kv.value.type == tCMD)
+                if (kv.value.type == tCMD) {
                     if (kv.value[1] == "color") {
                         src.type = Source::ColorRef;
                         // FIXME -- meter color could be ORed into any byte of the immediate?
                         if (!sz) off = 24, sz = 8;
                     } else if (kv.value[1] == "address") {
-                        src.type = Source::AddressRef; }
+                        src.type = Source::AddressRef; }}
             } else if (kv.value.type == tCMD && kv.value == "hash_dist") {
                 if (auto hd = tbl->find_hash_dist(kv.value[1].i))
                     src = Source(hd);
@@ -964,7 +964,9 @@ std::string ActionBus::Source::toString(Table *tbl) const {
 std::ostream &operator<<(std::ostream &out, TableOutputModifier mod) {
     switch (mod) {
     case TableOutputModifier::Color: out << " color"; break;
-    case TableOutputModifier::Address: out << " address"; break; }
+    case TableOutputModifier::Address: out << " address"; break;
+    default: break;
+    }
     return out;
 }
 

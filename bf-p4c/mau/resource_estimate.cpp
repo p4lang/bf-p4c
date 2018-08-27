@@ -105,7 +105,7 @@ int ActionDataVPNStartPosition(const IR::MAU::Table::Layout *layout) {
 
 int ActionDataVPNIncrement(const IR::MAU::Table::Layout *layout) {
     int width = 1;
-    int per_word = ActionDataPerWord(layout, &width);
+    ActionDataPerWord(layout, &width);
     if (width == 1)
         return 1;
     return (1 << ceil_log2(width));
@@ -316,7 +316,7 @@ void StageUseEstimate::options_to_ternary_entries(const IR::MAU::Table *tbl, int
 
 /** Calculates an estimate for the total number of logical tables, given the number of RAMs
  *  dedicated to an ATCAM table.  The goal is, calculate the minimum logical tables that I
- *  need, and then balance the size of those logical tables. 
+ *  need, and then balance the size of those logical tables.
  */
 void StageUseEstimate::calculate_partition_sizes(LayoutOption *lo, int ram_depth) {
     int logical_tables_needed = (ram_depth + Memories::MAX_PARTITION_RAMS_PER_ROW - 1)
@@ -1032,7 +1032,7 @@ void StageUseEstimate::tcams_left_best_option() {
  *
  *  _____small_range_____|__nib_11_8__|__nib_7_4__|__nib_3_0__
  *      2 <= x <= 15     |      0     |     0     |  [2:15]
- *     16 <= x <= 255    |      0     |   [1:15]  |    X  
+ *     16 <= x <= 255    |      0     |   [1:15]  |    X
  *    256 <= x <= 511    |      1     |     X     |    X
  *    512 <= x <= 591    |      2     |   [1:4]   |    X
  *    592 <= x <= 600    |      2     |     5     |  [1:8]

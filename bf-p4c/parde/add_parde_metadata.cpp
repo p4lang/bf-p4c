@@ -28,6 +28,7 @@ bool AddParserMetadataShims::preorder(IR::BFN::Parser *parser) {
     switch (parser->gress) {
         case INGRESS: addIngressMetadata(parser); break;
         case EGRESS:  addEgressMetadata(parser);  break;
+        default: break;  // Nothing for Ghost
     }
 
     return true;
@@ -77,6 +78,7 @@ bool AddDeparserMetadataShims::preorder(IR::BFN::Deparser *d) {
     switch (d->gress) {
         case INGRESS: addIngressMetadata(d); break;
         case EGRESS:  addEgressMetadata(d);  break;
+        default: break;  // Nothing for Ghost
     }
 
     return false;

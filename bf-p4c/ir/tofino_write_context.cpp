@@ -141,7 +141,7 @@ bool TofinoWriteContext::isRead(bool root_value) {
     return rv;
 }
 
-bool TofinoWriteContext::isIxbarRead(bool root_value) {
+bool TofinoWriteContext::isIxbarRead(bool /* root_value */) {
     bool rv = isRead();
     const IR::Node *current = getCurrentNode();
     const Context *ctxt = getContext();
@@ -171,7 +171,7 @@ bool TofinoWriteContext::isIxbarRead(bool root_value) {
     return false;
 }
 
-bool TofinoWriteContext::isReductionOr(bool root_value) {
+bool TofinoWriteContext::isReductionOr(bool /* root_value */) {
     // infer the following as a reduction or.
     // f = f | salu.execute();
     if (auto inst = findContext<IR::MAU::Instruction>()) {
@@ -195,4 +195,3 @@ bool TofinoWriteContext::isReductionOr(bool root_value) {
     }
     return false;
 }
-

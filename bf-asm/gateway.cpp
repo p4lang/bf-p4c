@@ -228,15 +228,15 @@ void GatewayTable::pass1() {
      * generate matches just covering the bits it names in the match and other times it wants
      * to create the whole tcam value.  Need to fix the asm syntax to be sensible and fix the
      * compiler's output */
-    unsigned long ignore = ~0UL;
+    uint64_t ignore = UINT64_MAX;
     int shift = -1;
     for (auto &r : match) {
         if (range_match && r.offset >= 32) {
-            if ((r.offset-32) & ((1U<<range_match) - 1))
+            if ((r.offset-32) & ((UINT32_C(1)<<range_match) - 1))
                 error(r.val.lineno, "Upper word match of %s for range gateway not a multiple"
                       " of %d bits", r.val.name(), 1U<<range_match);
             continue; }
-        ignore ^= ((1UL << r.val->size()) - 1) << r.offset;
+        ignore ^= ((UINT64_C(1) << r.val->size()) - 1) << r.offset;
         if (shift < 0 || shift > r.offset) shift = r.offset; }
     if (shift < 0) shift = 0;
     LOG3("shift=" << shift << " ignore=0x" << hex(ignore));
@@ -286,10 +286,10 @@ static unsigned match_input_use(const std::vector<GatewayTable::MatchKey> &match
         unsigned lo = r.offset;
         unsigned hi = lo + r.val->size() - 1;
         if (lo < 32) {
-            rv |= (((1U << (hi/8 - lo/8 + 1)) - 1) << lo/8) & 0xf;
+            rv |= (((UINT32_C(1) << (hi/8 - lo/8 + 1)) - 1) << lo/8) & 0xf;
             lo = 32; }
         if (lo <= hi)
-            rv |= ((1U << (hi - lo + 1)) - 1) << (lo-24); }
+            rv |= ((UINT32_C(1) << (hi - lo + 1)) - 1) << (lo-24); }
     return rv;
 }
 
@@ -391,7 +391,7 @@ void GatewayTable::write_regs(REGS &regs) {
     gw_reg.gateway_table_ctl.gateway_table_logical_table = logical_id;
     gw_reg.gateway_table_ctl.gateway_table_thread = timing_thread(gress);
     for (auto &r : xor_match)
-        gw_reg.gateway_table_matchdata_xor_en |= ((1ULL << r.val->size()) - 1) << r.offset;
+        gw_reg.gateway_table_matchdata_xor_en |= ((UINT64_C(1) << r.val->size()) - 1) << r.offset;
     int lineno = 3;
     gw_reg.gateway_table_ctl.gateway_table_mode = range_match;
     for (auto &line : table) {

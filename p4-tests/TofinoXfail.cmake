@@ -263,12 +263,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-5-bmv2.p4
   )
 
-# # BRIG-112
-# p4c_add_xfail_reason("tofino"
-#   "ALU ops cannot operate on slices"
-#   extensions/p4_tests/p4_14/c1/COMPILER-228/case1644.p4
-#   )
-
 p4c_add_xfail_reason("tofino"
   "Too much data for parse matcher"
   testdata/p4_14_samples/source_routing.p4
@@ -425,6 +419,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_219_modify_field_conditionally.p4
   testdata/p4_16_samples/issue420.p4
   testdata/p4_16_samples/issue512.p4
+  testdata/p4_16_samples/issue1412-bmv2.p4
   extensions/p4_tests/p4_14/p4-tests/programs/mod_field_conditionally/mod_field_conditionally.p4
   )
 
@@ -1075,17 +1070,17 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-779
 # error: SelectExpression: Cannot unify bit<8> to int<8>
-p4c_add_xfail_reason("tofino"
-  "SelectExpression: Cannot unify bit<.*> to int<.*>"
-  extensions/p4_tests/p4_14/p4smith_regression/globule_0.p4
-)
+# p4c_add_xfail_reason("tofino"
+#   "SelectExpression: Cannot unify bit<.*> to int<.*>"
+# )
 
 # BRIG-809
 # Compiler Bug: /bfn/bf-p4c-compilers/p4c/ir/vector.h:148: Null e
 p4c_add_xfail_reason("tofino"
   "p4c/ir/vector.h:148: Null e"
+  extensions/p4_tests/p4_14/p4smith_regression/chauncey_0.p4
   extensions/p4_tests/p4_14/p4smith_regression/corroding_0.p4
-)
+  )
 
 # BRIG-811
 # error: Output of checksum calculation can only be stored in a 16-bit field:
@@ -1097,6 +1092,7 @@ p4c_add_xfail_reason("tofino"
 # error: Tofino only supports "csum16" for checksum calculation
 p4c_add_xfail_reason("tofino"
   "Tofino only supports \"csum16\" for checksum calculation"
+  extensions/p4_tests/p4_14/p4smith_regression/globule_0.p4
   extensions/p4_tests/p4_14/p4smith_regression/quotas_0.p4
   extensions/p4_tests/p4_14/p4-tests/programs/exm_direct/exm_direct.p4
 )
@@ -1106,13 +1102,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Duplicates declaration header pipe"
   extensions/p4_tests/p4_14/p4smith_regression/jenningss_0.p4
-)
-
-# BRIG-817
-# error: : not a compile-time constant when binding to algo
-p4c_add_xfail_reason("tofino"
-  "not a compile-time constant when binding to algo"
-  extensions/p4_tests/p4_14/p4smith_regression/chauncey_0.p4
 )
 
 # BRIG-924
@@ -1227,10 +1216,6 @@ p4c_add_xfail_reason("tofino"
 
 
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: visitor returned invalid type .* for Vector<Primitive>"
-)
-
-p4c_add_xfail_reason("tofino"
   "direct attached objects must be enabled in all hit actions"
   testdata/p4_16_samples/psa-meter6.p4
 )
@@ -1281,8 +1266,25 @@ p4c_add_xfail_reason("tofino"
 # BRIG-909
 p4c_add_xfail_reason("tofino"
    "Containers are in the same deparser group but assigned fields of both INGRESS and EGRESS"
-   extensions/p4_tests/p4_14/cond_checksum_update.p4 
-   extensions/p4_tests/p4_14/cond_checksum_update_2.p4 
-   extensions/p4_tests/p4_14/test_checksum.p4 
+   extensions/p4_tests/p4_14/cond_checksum_update.p4
+   extensions/p4_tests/p4_14/cond_checksum_update_2.p4
+   extensions/p4_tests/p4_14/test_checksum.p4
    simple_l3_checksum
  )
+
+# BRIG-933
+# This is expected to fail, however, we need to improve the error message.
+# Here is the message issued by Glass:
+# ERROR: statistics resource 'c2' cannot be addressed in multiple ways by match table 'e2'.
+# Too many addressing modes required: idx, param
+p4c_add_xfail_reason("tofino"
+  "error: : multiple calls to execute in action.*"
+  extensions/p4_tests/p4_14/p4-tests/programs/pgrs/pgrs.p4
+  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
+  )
+
+# BRIG-934
+p4c_add_xfail_reason("tofino"
+  "error: Field .* has allocated slices out of order."
+  testdata/p4_16_samples/issue1325-bmv2.p4
+  )

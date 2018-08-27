@@ -23,17 +23,23 @@ class ActionBus {
         Source(Table *t, TableOutputModifier m = TableOutputModifier::NONE) : type(TableOutput) {
             switch (m) {
             case TableOutputModifier::Color: type = TableColor; break;
-            case TableOutputModifier::Address: type = TableAddress; break; }
+            case TableOutputModifier::Address: type = TableAddress; break;
+            default: break;
+            }
             table = t; }
         Source(Table::Ref *t, TableOutputModifier m = TableOutputModifier::NONE) : type(NameRef) {
             switch (m) {
             case TableOutputModifier::Color: type = ColorRef; break;
-            case TableOutputModifier::Address: type = AddressRef; break; }
+            case TableOutputModifier::Address: type = AddressRef; break;
+            default: break;
+            }
             name_ref = t; }
         Source(MeterBus_t, TableOutputModifier m = TableOutputModifier::NONE) : type(NameRef) {
             switch (m) {
             case TableOutputModifier::Color: type = ColorRef; break;
-            case TableOutputModifier::Address: type = AddressRef; break; }
+            case TableOutputModifier::Address: type = AddressRef; break;
+            default: break;
+            }
             name_ref = nullptr; }
         Source(RandomNumberGen r) : type(RandomGen) { field = nullptr; rng = r; }
         bool operator==(const Source &a) const {

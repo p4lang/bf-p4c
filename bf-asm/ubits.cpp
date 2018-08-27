@@ -46,7 +46,7 @@ void print_regname(std::ostream &out, const void *addr, const void *end) {
         out << "???";
 }
 
-void ubits_base::log(const char *op, unsigned long v) const {
+void ubits_base::log(const char *op, uint64_t v) const {
     if (LOGGING(1)) {
         std::ostringstream tmp;
         if (!find_regrange(this))

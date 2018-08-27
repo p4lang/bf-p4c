@@ -14,14 +14,14 @@ void print_regname(std::ostream &out, const void *addr, const void *end);
 struct ubits_base;
 
 struct ubits_base {
-    unsigned long       value, reset_value;
-    mutable bool        read, write;
-    mutable bool        disabled_;
+    uint64_t      value, reset_value;
+    mutable bool  read, write;
+    mutable bool  disabled_;
 
     ubits_base() : value(0), reset_value(0), read(false), write(false), disabled_(false) {}
-    ubits_base(unsigned long v) : value(v), reset_value(v), read(false), write(false),
+    ubits_base(uint64_t v) : value(v), reset_value(v), read(false), write(false),
                                   disabled_(false) {}
-    operator unsigned long() const { read = true; return value; }
+    operator uint64_t() const { read = true; return value; }
     bool modified() const { return write; }
     void set_modified(bool v = true) { write = v; }
     bool disabled() const { return disabled_; }
@@ -36,10 +36,10 @@ struct ubits_base {
         return disabled_; }
     void enable() const { disabled_ = false; };
     void rewrite() { write = false; }
-    virtual unsigned long operator=(unsigned long v) = 0;
-    virtual const ubits_base &operator|=(unsigned long v) = 0;
+    virtual uint64_t operator=(uint64_t v) = 0;
+    virtual const ubits_base &operator|=(uint64_t v) = 0;
     virtual unsigned size() = 0;
-    void log(const char *op, unsigned long v) const;
+    void log(const char *op, uint64_t v) const;
 };
 
 inline std::ostream &operator<<(std::ostream &out, const ubits_base *u) {
@@ -49,17 +49,17 @@ inline std::ostream &operator<<(std::ostream &out, const ubits_base *u) {
 template<int N> struct ubits : ubits_base {
     ubits() : ubits_base() {}
     const ubits &check(std::true_type) {
-        if (value >= (1UL << N)) {
+        if (value >= (uint64_t(1) << N)) {
             ERROR(value << " out of range for " << N << " bits in " << this);
-            value &= (1UL << N) - 1; }
+            value &= (uint64_t(1) << N) - 1; }
         return *this; }
     const ubits &check(std::false_type) { return *this; }
     const ubits &check() {
-        return check(std::integral_constant<bool, (N != sizeof(unsigned long) * CHAR_BIT)>{}); }
-    ubits(unsigned long v) : ubits_base(v) { check(); }
+        return check(std::integral_constant<bool, (N != sizeof(uint64_t) * CHAR_BIT)>{}); }
+    ubits(uint64_t v) : ubits_base(v) { check(); }
     ubits(const ubits &) = delete;
     ubits(ubits &&) = default;
-    unsigned long operator=(unsigned long v) override {
+    uint64_t operator=(uint64_t v) override {
         if (disabled_)
             ERROR("Writing disabled register value in " << this);
         if (write)
@@ -72,7 +72,7 @@ template<int N> struct ubits : ubits_base {
     const ubits &operator=(const ubits &v) { *this = v.value; v.read = true; return v; }
     const ubits_base &operator=(const ubits_base &v) { *this = v.value; v.read = true; return v; }
     unsigned size() override { return N; }
-    const ubits &operator|=(unsigned long v) override {
+    const ubits &operator|=(uint64_t v) override {
         if (disabled_)
             ERROR("Writing disabled register value in " << this);
         if (write && (value & v))
@@ -82,14 +82,14 @@ template<int N> struct ubits : ubits_base {
         write = true;
         log("|=", v);
         return check(); }
-    const ubits &operator+=(unsigned long v) {
+    const ubits &operator+=(uint64_t v) {
         if (disabled_)
             ERROR("Overwriting disabled register value in " << this);
         value += v;
         write = true;
         log("+=", v);
         return check(); }
-    const ubits &set_subfield(unsigned long v, unsigned bit, unsigned size) {
+    const ubits &set_subfield(uint64_t v, unsigned bit, unsigned size) {
         if (disabled_)
             ERROR("Overwriting disabled register value in " << this);
         if (bit + size > N)

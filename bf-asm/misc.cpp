@@ -18,7 +18,7 @@ int remove_name_tail_range(std::string &name, int *size) {
 
 std::string int_to_hex_string(unsigned val, unsigned width) {
     std::stringstream sval;
-    sval << std::setfill('0') << std::setw(width) << std::hex << val;
+    sval << std::setfill('0') << std::setw(width) << std::hex << val << std::setfill(' ');
     return sval.str();
 }
 

@@ -37,7 +37,7 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     // representation that the assembler uses.
     const nw_bitrange phase0Range =
       StartLen(0, Device::pardeSpec().bitPhase0Size());
-    BUG_CHECK(info->packing->totalWidth == phase0Range.size(),
+    BUG_CHECK(int(info->packing->totalWidth) == phase0Range.size(),
               "Expected phase 0 field packing to allocate exactly %1% bits",
               phase0Range.size());
     bool wroteAtLeastOneField = false;

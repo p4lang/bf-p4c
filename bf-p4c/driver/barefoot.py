@@ -19,6 +19,7 @@ import os
 import os.path
 import sys
 import json
+import re
 import p4c_src.bfn_version as p4c_version
 from p4c_src.util import find_file, find_bin
 from p4c_src.driver import BackendDriver
@@ -42,14 +43,24 @@ class BarefootBackend(BackendDriver):
         self.add_command('bf-rt-verifier', bfrt_gen)
 
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
-            self.add_command(
-                'verifier',
-                os.path.join(os.environ['P4C_BIN_DIR'],
-                             '../../scripts/validate_context_json'))
-            self.add_command(
-                'manifest-verifier',
-                os.path.join(os.environ['P4C_BIN_DIR'],
-                             '../../scripts/validate_manifest'))
+            bin_dir = os.path.join(os.environ['P4C_BIN_DIR'], '../../scripts')
+            if not os.path.isdir(bin_dir):
+                # we are building out of the source directory, so we need to get the source dir
+                # from the cmake cache
+                src_dir_pattern = re.compile(r'BFN_P4C_SOURCE_DIR:STATIC=(.*)$')
+                with open(os.path.join(os.environ['P4C_BIN_DIR'], '../CMakeCache.txt')) as cmake_cache:
+                    for line in cmake_cache:
+                        res = src_dir_pattern.match(line)
+                        if res:
+                            src_dir = res.group(1)
+                            bin_dir = os.path.join(src_dir, 'scripts')
+                            break
+                if not os.path.isdir(bin_dir):
+                    print >> sys.stderr, "Can not find scripts directory"
+                    sys.exit(1)
+
+            self.add_command('verifier', os.path.join(bin_dir, 'validate_context_json'))
+            self.add_command('manifest-verifier', os.path.join(bin_dir, 'validate_manifest'))
 
         # order of commands
         self.enable_commands(['preprocessor', 'compiler', 'assembler'])

@@ -20,11 +20,11 @@ inline gress_t timing_thread(gress_t gress) { return gress == GHOST ? INGRESS : 
 inline gress_t imem_thread(gress_t gress) { return gress == GHOST ? INGRESS : gress; }
 
 struct match_t {
-    unsigned long       word0, word1;
+    uint64_t       word0, word1;
 #ifdef __cplusplus
     operator bool() const { return (word0 | word1) != 0; }
     bool operator==(const match_t &a) const { return word0 == a.word0 && word1 == a.word1; }
-    bool matches(unsigned long v) const {
+    bool matches(uint64_t v) const {
         return (v | word1) == word1 && ((~v & word1) | word0) == word0; }
     bool matches(const match_t &v) const { assert(0); return false; }
 #endif /* __cplusplus */
@@ -58,7 +58,7 @@ struct value_t {
     enum value_type             type;
     int                         lineno;
     union {
-        long                     i;
+        long                    i;
         VECTOR(uintptr_t)       bigi;
         struct {
             int                 lo;

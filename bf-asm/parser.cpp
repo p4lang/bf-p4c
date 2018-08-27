@@ -1117,7 +1117,7 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
                 error(s.where.lineno, "Can't fit value %d in a %d bit phv slice",
                         s.what, (s.where->hi - s.where->lo + 1)); } }
     if (value_set_size == 0) {
-        uint64_t match_mask = (1ULL << state->key.width) - 1;
+        uint64_t match_mask = (UINT64_C(1) << state->key.width) - 1;
         uint64_t not_covered = match_mask & ~(match.word0 | match.word1);
         if (not_covered != 0) {
             warning(lineno, "Match pattern does not cover all bits of match key, "

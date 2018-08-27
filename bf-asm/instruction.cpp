@@ -70,10 +70,10 @@ struct operand {
                 return value == a->value;
             } else return false; }
         Const *clone() override { return new Const(*this); }
-        int bits(int group) override {
-            int val = value;
+        int32_t bits(int group) override {
+            int32_t val = value;
             if (val > 0 && ((val >> (group_size[group] - 1)) & 1))
-                val |= ~0UL << group_size[group];
+                val |= UINT64_MAX << group_size[group];
             int minconst = (options.target == JBAY) ? -4 : -8;
             if (val >= minconst && val < 8)
                 return val+24;

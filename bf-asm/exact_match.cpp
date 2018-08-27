@@ -64,7 +64,7 @@ template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
             auto &way = way_map[std::make_pair(row.row, col)];
             auto &ram = rams_row.ram[col];
             ram.match_nibble_s0q1_enable = version_nibble_mask.getrange(way.word*32U, 32);
-            ram.match_nibble_s1q0_enable = 0xffffffffUL; } }
+            ram.match_nibble_s1q0_enable = UINT64_C(0xffffffff); } }
 }
 
 std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_cfg(Way &way) {

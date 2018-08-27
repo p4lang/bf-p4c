@@ -68,7 +68,7 @@ Container::Container(const char *name) {
     char *end = nullptr;
     auto v = strtol(n, &end, 10);
     index_ = v;
-    if (end == n || *end || index_ != v)
+    if (end == n || *end || index_ != static_cast<unsigned long>(v))
         BUG("Invalid register '%s'", name);
 }
 

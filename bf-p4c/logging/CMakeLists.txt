@@ -27,4 +27,4 @@ add_executable(test_phv_logging test_phv.cpp)
 target_link_libraries(test_phv_logging ${OPENSSL_LIBRARIES})
 add_dependencies(test_phv_logging genLogging)
 
-add_test(test_phv_logging COMMAND ${CMAKE_CURRENT_BINARY_DIR}/test_phv_logging)
+add_test(NAME test_phv_logging COMMAND ${CMAKE_CURRENT_BINARY_DIR}/test_phv_logging)

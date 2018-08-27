@@ -246,7 +246,7 @@ uint64_t InputXbar::hash_columns_used(unsigned hash) {
     uint64_t rv = 0;
     if (hash_tables.count(hash))
         for (auto &col : hash_tables[hash])
-            rv |= 1UL << col.first;
+            rv |= UINT64_C(1) << col.first;
     return rv;
 }
 
@@ -651,7 +651,7 @@ void InputXbar::write_regs(REGS &regs) {
             regs.dp.mau_match_input_xbar_exact_match_enable[gress] |= hg.second.tables; }
         if (hg.second.seed) {
             for (int bit = 0; bit < 52; ++bit)
-                if ((hg.second.seed >> bit) & 1) 
+                if ((hg.second.seed >> bit) & 1)
                     hash.hash_seed[bit] |= 1U << grp; }
         if (gress == INGRESS)
             regs.dp.hashout_ctl.hash_group_ingress_enable |= 1 << grp;

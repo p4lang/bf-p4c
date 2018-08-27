@@ -183,7 +183,7 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
     if (v->type == tINT) {
         op = new Const(v->lineno, v->i);
     } else if (v->type == tBIGINT) {
-        if (v->bigi.size > 1 || v->bigi.data[0] > LONG_MAX)
+        if (v->bigi.size > 1 || v->bigi.data[0] > INT64_MAX)
             error(v->lineno, "Integer too large");
         op = new Const(v->lineno, v->bigi.data[0]);
     } else if (v->type == tSTR) {

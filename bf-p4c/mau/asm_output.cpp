@@ -854,17 +854,17 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
             bool last_bit_found = false;
             for (int j = i * IXBar::HASH_DIST_BITS; j < (i + 1) * IXBar::HASH_DIST_BITS; j++) {
                 if (!first_bit_found) {
-                    if (((1ULL << j) & hdh.bit_mask)) {
+                    if (((UINT64_C(1) << j) & hdh.bit_mask)) {
                         first_bit_found = true;
                         first_bit = j;
                     }
                     continue;
                 }
-                if (((1ULL << j) & hdh.bit_mask) == 0 && !last_bit_found) {
+                if (((UINT64_C(1) << j) & hdh.bit_mask) == 0 && !last_bit_found) {
                     last_bit_found = true;
                     last_bit = j - 1;
                 }
-                if (((1ULL << j) & hdh.bit_mask) != 0 && last_bit_found) {
+                if (((UINT64_C(1) << j) & hdh.bit_mask) != 0 && last_bit_found) {
                     BUG("Split in address bits for hash distribution");
                 }
             }
@@ -1958,13 +1958,11 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
                 expr = expr->to<IR::Slice>()->e0;
         // Replace any alias nodes with their original sources, in order to
         // ensure the original names are emitted.
-        auto size = expr->type->width_bits();
-        auto full_size = phv.field(expr)->size;
+                auto full_size = phv.field(expr)->size;
 
         // Check for @name annotation.
         cstring name = phv.field(expr)->externalName();
 
-        int start_bit = 0;
         cstring annName = "";
         std::map<int, int> slices;
         if (auto ann = ixbar_read->getAnnotation(IR::Annotation::nameAnnotation)) {

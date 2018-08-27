@@ -694,14 +694,15 @@ static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
         rv.word1 <<= width;
         uintmax_t mask = -1, v;
         mask = ~(mask << width);
+        LOG3("el: " << el);
         if (auto k = el->to<IR::Constant>()) {
-            v = k->asLong();
+            v = k->asUnsigned();
         } else if (auto mval = el->to<IR::Mask>()) {
-            v = mval->right->to<IR::Constant>()->asLong();
+            v = mval->right->to<IR::Constant>()->asUnsigned();
             rv.word0 |= mask & ~v;
             rv.word1 |= mask & ~v;
             mask &= v;
-            v = mval->left->to<IR::Constant>()->asLong();
+            v = mval->left->to<IR::Constant>()->asUnsigned();
         } else if (el->is<IR::DefaultExpression>()) {
             mask = v = 0;
         } else {
@@ -715,13 +716,14 @@ static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
 
 static match_t buildMatch(int match_size, const IR::Expression *key,
                           const IR::Vector<IR::Expression> &selectExprs) {
+    LOG3("key: " << key);
     if (key->is<IR::DefaultExpression>())
         return match_t();
     else if (auto k = key->to<IR::Constant>())
-        return match_t(match_size, k->asLong(), ~((~uintmax_t(0)) << match_size));
+        return match_t(match_size, k->asUnsigned(), ~((~uintmax_t(0)) << match_size));
     else if (auto mask = key->to<IR::Mask>())
-        return match_t(match_size, mask->left->to<IR::Constant>()->asLong(),
-                                   mask->right->to<IR::Constant>()->asLong());
+        return match_t(match_size, mask->left->to<IR::Constant>()->asUnsigned(),
+                                   mask->right->to<IR::Constant>()->asUnsigned());
     else if (auto list = key->to<IR::ListExpression>())
         return buildListMatch(&list->components, selectExprs);
     else

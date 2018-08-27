@@ -95,7 +95,7 @@ bool ActionFormat::ActionDataForSingleALU::operator==(
     return true;
 }
 
-/** If all the arguments are contained within another ALU op, all at the same shift position 
+/** If all the arguments are contained within another ALU op, all at the same shift position
  */
 bool ActionFormat::ActionDataForSingleALU::contained_within(
         const ActionFormat::ActionDataForSingleALU &a) const {
@@ -276,7 +276,7 @@ bool ActionFormat::Use::in_layouts(int byte_offset, const bitvec layouts[CONTAIN
     return false;
 }
 
-/** Will determine which hash distribution unit is on the action bus at a particular 
+/** Will determine which hash distribution unit is on the action bus at a particular
  *  byte offset.
  */
 bool ActionFormat::Use::is_hash_dist(int byte_offset, const IR::MAU::HashDist **hd,
@@ -361,7 +361,7 @@ bool ActionFormat::Use::is_meter_color(int start_byte, bool immediate) const {
  *  Let's say that the hash_dist field appears in bits 8..15 of the immediate data bits.
  *  The field_range would be 0..7, and the hash_dist_range that will be returned will be
  *  the position in the immeidate data bits, 0..7
- * 
+ *
  *  The hash distribution units are in 16 bit sections of 6 sections.  The sections are defined
  *  in the input xbar allocation of the hash distribution unit.  The unit indexes returned are
  *  the index of 16 bit sections stored in the input xbar allocation
@@ -574,8 +574,8 @@ void ActionFormat::create_from_constant(ActionDataForSingleALU &adp,
     adp.phv_bits |= data_location;
     constant_to_ad_count++;
 
-    long constant_value = read.expr->to<IR::Constant>()->asLong();
-    BUG_CHECK(constant_value >= INT_MIN && constant_value <= UINT_MAX,
+    auto constant_value = read.expr->to<IR::Constant>()->asUint64();
+    BUG_CHECK(constant_value <= UINT_MAX,
               "constant out of range for 32 bits: %ld", constant_value);
     adp.arg_locs.back().set_as_constant(constant_value);
 }
@@ -701,7 +701,7 @@ bool ActionFormat::analyze_all_actions() {
  *  ALU operation, as well as set at what bit position each Action Argument is going to be
  *
  *  Action Arguments come with 3 levels of constraints:
- * 
+ *
  *  ISOLATED - the action argument is headed to a non-set operation, and thus cannot be packed
  *      with any other argument.  The argument must be aligned with it's PHV operation
  *  BITMASKED_SET - the action arguments must be placed at the location of their PHV, as the
@@ -932,7 +932,7 @@ void ActionFormat::initialize_action_counts() {
  *  data from hash distribution, the random number generator, and meter color (not actually sure)
  *  are not enabled per action, but will OR into the immediate 32 bits no matter if the
  *  ALUs use that particular piece of action data.
- */ 
+ */
 bool ActionFormat::initialize_global_params_counts() {
     for (auto &hd_vec_pair : init_hd_alu_placement) {
         for (auto &alu_hd : hd_vec_pair.second) {
@@ -1219,7 +1219,7 @@ void ActionFormat::space_containers() {
  *  locations on the action data bus, fit the 32 bit containers at the most optimal place for
  *  each individual action.  Thus if the max requirements for a table are 4 8 bit and 2 16 bit
  *  actions, the layout will look like:
- *  
+ *
  *  lsb: 8 8 8 8 16 16 msb
 
  *  The major issue with this algorithm can be described by the following scenario.  Say we have two
@@ -1411,7 +1411,7 @@ void ActionFormat::space_all_table_containers() {
  *  also makes this algorithm simple.
  *
  *  The only difficult action data is actions that contain 16 bit and 8 bit action data.  The
- *  algorithm must decide which action data comes first within the immediate format. 
+ *  algorithm must decide which action data comes first within the immediate format.
  *
  *  This algorithm could be improved by taking a more global view of the containers.  However,
  *  because the immediate data is small and doesn't require that many action data bus slots,

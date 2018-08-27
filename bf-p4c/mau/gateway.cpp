@@ -489,7 +489,7 @@ class GatewayRangeMatch::SetupRanges : public Transform {
         bool forceRange = !(rel->is<IR::Equ>() || rel->is<IR::Neq>());
         bool reverse = (rel->is<IR::Geq>() || rel->is<IR::Neq>());
         auto info = fields.info.at(f);
-        long val = rel->right->to<IR::Constant>()->asLong();
+        long val = rel->right->to<IR::Constant>()->asUint64();
         BUG_CHECK(!forceRange || (val & 1), "Non-canonicalized range value");
         int base = 0;
         int orig_lo = bits.lo;
@@ -599,7 +599,7 @@ Visitor::profile_t BuildGatewayMatch::init_apply(const IR::Node *root) {
         match.setwidth(32 + fields.bits - shift); }
     range_match.clear();
     match_field = nullptr;
-    andmask = ~0ULL;
+    andmask = UINT64_MAX;
     ormask = 0;
     return Inspector::init_apply(root);
 }
@@ -618,13 +618,13 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
             LOG4("  match_info = " << match_info);
             for (auto &off : match_info.offsets) {
                 if (getParent<IR::LNot>())
-                    match.word1 &= ~(1ULL << off.first >> shift);
+                    match.word1 &= ~(UINT64_C(1) << off.first >> shift);
                 else
-                    match.word0 &= ~(1ULL << off.first >> shift); } }
+                    match.word0 &= ~(UINT64_C(1) << off.first >> shift); } }
     } else {
         LOG4("  xor_field = " << field->name << ' ' << bits);
         size_t size = std::max(bits.size(), match_field_bits.size());
-        uint64_t mask = (1ULL << size) - 1, donemask = 0;
+        uint64_t mask = (UINT64_C(1) << size) - 1, donemask = 0;
         mask &= andmask & ~ormask;
         mask <<= match_field_bits.lo;
         auto &field_info = fields.info.at(field);
@@ -640,7 +640,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
             if (it->first != off.first || it->second.size() != off.second.size() ||
                 it->second.lo - field_info.bits.lo != off.second.lo - match_info.bits.lo) {
                 BUG("field equality comparison misaligned in gateway"); }
-            uint64_t elmask = ((1ULL << off.second.size()) - 1) << off.second.lo;
+            uint64_t elmask = ((UINT64_C(1) << off.second.size()) - 1) << off.second.lo;
             if ((elmask &= mask) == 0) continue;
             int shft = off.first - off.second.lo - shift;
             LOG6("    elmask=0x" << hex(elmask) << " shft=" << shft);
@@ -664,14 +664,14 @@ bool BuildGatewayMatch::preorder(const IR::Primitive *) {
 bool BuildGatewayMatch::preorder(const IR::Constant *c) {
     auto ctxt = getContext();
     if (ctxt->node->is<IR::BAnd>()) {
-        andmask = c->asLong();
+        andmask = c->asUint64();
         LOG4("  andmask = 0x" << hex(andmask));
     } else if (ctxt->node->is<IR::BOr>()) {
-        ormask = c->asLong();
+        ormask = c->asUint64();
         LOG4("  ormask = 0x" << hex(ormask));
     } else if (match_field) {
-        uint64_t mask = (1ULL << match_field_bits.size()) - 1;
-        uint64_t val = c->asLong() & mask;
+        uint64_t mask = (UINT64_C(1) << match_field_bits.size()) - 1;
+        uint64_t val = c->asUint64() & mask;
         if ((val & mask & ~andmask) || (~val & mask & ormask))
             BUG("masked comparison in gateway can never match");
         mask &= andmask & ~ormask;
@@ -681,7 +681,7 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
         LOG4("  match_info = " << match_info << ", val=" << val << " mask=0x" << hex(mask) <<
              " shift=" << shift);
         for (auto &off : match_info.offsets) {
-            uint64_t elmask = ((1ULL << off.second.size()) - 1) << off.second.lo;
+            uint64_t elmask = ((UINT64_C(1) << off.second.size()) - 1) << off.second.lo;
             if ((elmask &= mask) == 0) continue;
             int shft = off.first - off.second.lo - shift;
             LOG6("    elmask=0x" << hex(elmask) << " shft=" << shft);
