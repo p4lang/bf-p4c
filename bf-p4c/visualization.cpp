@@ -188,7 +188,7 @@ void Visualization::add_xbar_bytes_usage(unsigned int stage, const IXBar::Use &a
     // Used for the upper 12 bits of gateways
     for (auto &bits : alloc.bit_use) {
         for (int b = 0; b < bits.width; b++) {
-            int bit = bits.bit + b;
+            int bit = bits.bit + b + IXBar::HASH_INDEX_GROUPS * TableFormat::RAM_GHOST_BITS;
             auto key = std::make_pair(bit, bits.group);
 
             HashBitResource hbr;
@@ -196,10 +196,9 @@ void Visualization::add_xbar_bytes_usage(unsigned int stage, const IXBar::Use &a
             hbr.add(USED_FOR, alloc.used_for());
             hbr.add(DETAILS, bits.field + std::to_string(bits.lo + b));
 
-           _stageResources[stage]._hashBitsUsage[key].append(&hbr);
-
             LOG3("\tadding resource hash_bits from bit_use(" << bit << ", " << bits.group
                   << "): {" << hbr << "}");
+           _stageResources[stage]._hashBitsUsage[key].append(&hbr);
         }
     }
 
@@ -213,10 +212,10 @@ void Visualization::add_xbar_bytes_usage(unsigned int stage, const IXBar::Use &a
             hbr.add(DETAILS, "Hash Way " + std::to_string(way_index));
 
             auto key = std::make_pair(bit, way.group);
-            _stageResources[stage]._hashBitsUsage[key].append(&hbr);
 
             LOG3("\tadding resource hash_bits from way_use(" << bit << ", " << way.group
                  << "): {" << hbr << "}");
+            _stageResources[stage]._hashBitsUsage[key].append(&hbr);
         }
         way_index++;
     }
@@ -230,10 +229,9 @@ void Visualization::add_xbar_bytes_usage(unsigned int stage, const IXBar::Use &a
             hbr.add(USED_FOR, alloc.used_for());
             hbr.add(DETAILS, "Selection Hash Bit " + std::to_string(bit));
             auto key = std::make_pair(bit, mah.group);
-            _stageResources[stage]._hashBitsUsage[key].append(&hbr);
-
             LOG3("\tadding resource hash_bits from select_use(" << bit << ", " << mah.group
                  << "): {" << hbr << "}");
+            _stageResources[stage]._hashBitsUsage[key].append(&hbr);
         }
     }
     // Used for the bits for hash distribution
@@ -253,6 +251,9 @@ void Visualization::add_xbar_bytes_usage(unsigned int stage, const IXBar::Use &a
             hbr.add(USED_BY, alloc.used_by);
             hbr.add(USED_FOR, alloc.used_for());
             hbr.add(DETAILS, "Hash Dist Bit " + std::to_string(position));
+            LOG3("\tadding resource hash_bits from hash_dist(" << bit << ", " << hdh.group
+                 << "): {" << hbr << "}");
+            _stageResources[stage]._hashBitsUsage[key].append(&hbr);
 
             _stageResources[stage]._hashBitsUsage[key].append(&hbr);
         }

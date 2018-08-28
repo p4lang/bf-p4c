@@ -312,11 +312,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Only one value allowed for a node"
-  switch_msdc_leaf_int
-  )
-
-p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   )
@@ -1242,6 +1237,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
   switch_8.3_msdc_leaf_int
+  switch_msdc_leaf_int
   extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
 )
 
