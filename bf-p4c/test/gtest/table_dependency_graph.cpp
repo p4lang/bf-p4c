@@ -227,6 +227,205 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
     EXPECT_EQ(num_checks, NUM_CHECKS_EXPECTED);
 }
 
+TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action setb1(bit<32> val, bit<8> port) {
+        headers.h2.b1 = val;
+    }
+
+    action setb2(bit<32> val) {
+        headers.h2.b2 = val;
+    }
+
+    action setf1(bit<32> val) {
+        headers.h2.f1 = val;
+    }
+
+    action altsetf1(bit<32> val) {
+        headers.h2.f1 = val;
+    }
+
+    action setf2(bit<32> val) {
+        headers.h2.f2 = val;
+    }
+    action setf7(bit<32> val) {
+        headers.h2.f7 = val;
+    }
+    action setf8(bit<32> val) {
+        headers.h2.f8 = val;
+    }
+    action setf9(bit<32> val) {
+        headers.h2.f9 = val;
+    }
+    action setf10(bit<32> val) {
+        headers.h2.f10 =  val;
+    }
+    action noop() {
+
+    }
+    action setf12(bit<32> val) {
+        headers.h2.f12 = val;
+    }
+
+    action usef12() {
+        headers.h2.f10 = headers.h2.f12;
+    }
+
+    table t1 {
+        key = {
+            headers.h2.f2 : exact;
+        }
+        actions = {
+            noop;
+        }
+        size = 8192;
+    }
+
+    table t2 {
+        key = {
+            headers.h2.b1 : exact;
+        }
+        actions = {
+            setb1;
+            noop;
+        }
+        size = 8192;
+    }
+
+    table t11 {
+        key = {
+            headers.h2.f11 : exact;
+        }
+        actions = {
+            noop;
+            setf12;
+            setf1;
+            altsetf1;
+        }
+    }
+
+    table t12 {
+        key = {
+            headers.h2.f12 : exact;
+        }
+        actions = {
+            noop;
+            setf12;
+            usef12;
+            setf1;
+            altsetf1;
+        }
+    }
+
+    apply {
+        if(t11.apply().hit) {
+            t12.apply();
+            if(t1.apply().hit) {
+                t2.apply();
+            }
+        }
+    }
+
+            )"));
+    ASSERT_TRUE(test);
+
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    DependencyGraph dg;
+    FieldDefUse defuse(phv);
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+    test->pipe->apply(*find_dg);
+
+    const IR::MAU::Table *t1, *t2, *t11, *t12;
+    t1 = t2 = t11 = t12 = nullptr;
+    for (const auto& kv : dg.stage_info) {
+        if (kv.first->name == "t1_0") {
+            t1 = kv.first;
+        } else if (kv.first->name == "t2_0") {
+            t2 = kv.first;
+        } else if (kv.first->name == "t11_0") {
+            t11 = kv.first;
+        } else if (kv.first->name == "t12_0") {
+            t12 = kv.first;
+        }
+    }
+
+    EXPECT_NE(t1, nullptr);
+    EXPECT_NE(t2, nullptr);
+    EXPECT_NE(t11, nullptr);
+    EXPECT_NE(t12, nullptr);
+
+    auto not_found = dg.get_data_dependency_info(t1, t2);
+    ASSERT_FALSE(not_found.is_initialized());
+
+    auto dep_info_opt = dg.get_data_dependency_info(t11, t12);
+    ASSERT_TRUE(dep_info_opt.is_initialized());
+    auto dep_info = dep_info_opt.get();
+    ordered_set<cstring> field_names;
+    ordered_set<DependencyGraph::dependencies_t> dep_types;
+    for (const auto& kv: dep_info) {
+        field_names.insert(kv.first.first->name);
+        if (kv.first.first->name == "ingress::headers.h2.f12") {
+            dep_types.insert(kv.first.second);
+        }
+    }
+
+    EXPECT_NE(field_names.count("ingress::headers.h2.f12"), 0);
+    EXPECT_NE(field_names.count("ingress::headers.h2.f1"), 0);
+    EXPECT_NE(dep_types.count(DependencyGraph::IXBAR_READ), 0);
+    EXPECT_NE(dep_types.count(DependencyGraph::ACTION_READ), 0);
+    EXPECT_NE(dep_types.count(DependencyGraph::OUTPUT), 0);
+    EXPECT_EQ(dep_types.count(DependencyGraph::CONTROL), 0);
+    EXPECT_EQ(field_names.size(), 2);
+    EXPECT_EQ(dep_info.size(), 4);
+    for (const auto& kv : dep_info) {
+        auto field = kv.first.first;
+        auto dep_type = kv.first.second;
+        auto upstream_actions = kv.second.first;
+        auto downstream_actions = kv.second.second;
+        ordered_set<cstring> up_names, down_names;
+        for (auto action : upstream_actions)
+            up_names.insert(action->externalName());
+        for (auto action : downstream_actions)
+            down_names.insert(action->externalName());
+        if (field->name == "ingress::headers.h2.f12") {
+            if (dep_type == DependencyGraph::IXBAR_READ) {
+                EXPECT_NE(up_names.count("mau.setf12"), 0);
+                EXPECT_EQ(down_names.size(), 0);
+                EXPECT_EQ(up_names.size(), 1);
+            } else if (dep_type == DependencyGraph::ACTION_READ) {
+                EXPECT_NE(up_names.count("mau.setf12"), 0);
+                EXPECT_NE(down_names.count("mau.usef12"), 0);
+                EXPECT_EQ(up_names.size(), 1);
+                EXPECT_EQ(down_names.size(), 1);
+            } else if (dep_type == DependencyGraph::OUTPUT) {
+                EXPECT_NE(up_names.count("mau.setf12"), 0);
+                EXPECT_NE(down_names.count("mau.setf12"), 0);
+                EXPECT_EQ(up_names.size(), 1);
+                EXPECT_EQ(down_names.size(), 1);
+            } else {
+                EXPECT_EQ(true, false);
+            }
+        } else if (field->name == "ingress::headers.h2.f1") {
+            if (dep_type == DependencyGraph::OUTPUT) {
+                EXPECT_NE(up_names.count("mau.setf1"), 0);
+                EXPECT_NE(down_names.count("mau.setf1"), 0);
+                EXPECT_NE(up_names.count("mau.altsetf1"), 0);
+                EXPECT_NE(down_names.count("mau.altsetf1"), 0);
+                EXPECT_EQ(up_names.size(), 2);
+                EXPECT_EQ(down_names.size(), 2);
+            } else {
+                EXPECT_EQ(true, false);
+            }
+        } else {
+            EXPECT_EQ(true, false);
+        }
+    }
+}
+
 
 TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
     auto test = createTableDependencyGraphTestCase(

@@ -64,13 +64,20 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
         return Inspector::init_apply(root);
     }
 
-    void addDeps(ordered_set<const IR::MAU::Table *> tables, DependencyGraph::dependencies_t dep) {
-        for (auto upstream_t : tables) {
+    void addDeps(ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> tables,
+                 DependencyGraph::dependencies_t dep, const PHV::Field *field) {
+        for (auto upstream_t_pair : tables) {
+            auto upstream_t = upstream_t_pair.first;
             if (upstream_t->match_table
                 && ignoreDep.count(upstream_t->match_table->externalName())) {
                 LOG3("Ignoring dependency from " << upstream_t->name << " to " << table->name);
-                continue; }
-            self.dg.add_edge(upstream_t, table, dep); }
+                continue;
+            }
+            auto edge_pair = self.dg.add_edge(upstream_t, table, dep);
+            const IR::MAU::Action *action_use_context = findContext<IR::MAU::Action>();
+            self.dg.data_annotations[edge_pair.first][field].first.insert(upstream_t_pair.second);
+            self.dg.data_annotations[edge_pair.first][field].second.insert(action_use_context);
+        }
     }
 
     void addContDeps(ordered_map<const IR::MAU::Table *, bitvec> tables, bitvec range,
@@ -104,24 +111,26 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
                 LOG3("add_dependency(" << field_name << ")");
                 if (isWrite()) {
                     // Write-after-read dependence.
-                    addDeps(self.access[field->name].ixbar_read, DependencyGraph::ANTI);
-                    addDeps(self.access[field->name].action_read, DependencyGraph::ANTI);
+                    addDeps(self.access[field->name].ixbar_read, DependencyGraph::ANTI, field);
+                    addDeps(self.access[field->name].action_read, DependencyGraph::ANTI, field);
                     // Write-after-write dependence.
                     if (isReductionOr()) {
                         addDeps(self.access[field->name].reduction_or_write,
-                                DependencyGraph::REDUCTION_OR_OUTPUT);
+                                DependencyGraph::REDUCTION_OR_OUTPUT, field);
                     } else {
-                        addDeps(self.access[field->name].write, DependencyGraph::OUTPUT);
+                        addDeps(self.access[field->name].write, DependencyGraph::OUTPUT, field);
                     }
                 } else {
                     // Read-after-write dependence.
                     if (isIxbarRead()) {
-                        addDeps(self.access[field->name].write, DependencyGraph::IXBAR_READ);
+                        addDeps(self.access[field->name].write,
+                                DependencyGraph::IXBAR_READ, field);
                     } else if (isReductionOr()) {
                         addDeps(self.access[field->name].reduction_or_read,
-                                DependencyGraph::REDUCTION_OR_READ);
+                                DependencyGraph::REDUCTION_OR_READ, field);
                     } else {
-                        addDeps(self.access[field->name].write, DependencyGraph::ACTION_READ);
+                        addDeps(self.access[field->name].write,
+                                DependencyGraph::ACTION_READ, field);
                     }
                 }
             }
@@ -148,6 +157,12 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
     void end_apply() override {
         for (auto entry : cont_writes) {
             addContDeps(self.cont_write[entry.first], entry.second, entry.first);
+        }
+        for (auto& edge_map_pair : self.dg.data_annotations) {
+            for (auto& kv : edge_map_pair.second) {
+                kv.second.first.erase(nullptr);
+                kv.second.second.erase(nullptr);
+            }
         }
     }
 };
@@ -185,6 +200,10 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
         candidateFields.insert(originalField);
         if (self.phv.getAliasMap().count(originalField))
             candidateFields.insert(self.phv.getAliasMap().at(originalField));
+
+        // This will often be null for expressions that don't appear within actions
+        const IR::MAU::Action *action_context = findContext<IR::MAU::Action>();
+
         for (const PHV::Field* field : candidateFields) {
             if (isWrite()) {
                 LOG3("update_access write " << field->name);
@@ -195,18 +214,22 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
                 a.reduction_or_read.clear();
                 a.write.clear();
                 if (isReductionOr()) {
-                    self.access[field->name].reduction_or_write.insert(table);
+                    self.access[field->name].reduction_or_write.insert(
+                        std::make_pair(table, action_context));
                 } else {
-                    a.write.insert(table);
+                    a.write.insert(std::make_pair(table, action_context));
                 }
             } else {
                 LOG3("update_access read " << field->name);
                 if (isIxbarRead()) {
-                    self.access[field->name].ixbar_read.insert(table);
+                    self.access[field->name].ixbar_read.insert(
+                        std::make_pair(table, action_context));
                 } else if (isReductionOr()) {
-                    self.access[field->name].reduction_or_read.insert(table);
+                    self.access[field->name].reduction_or_read.insert(
+                        std::make_pair(table, action_context));
                 } else {
-                    self.access[field->name].action_read.insert(table);
+                    self.access[field->name].action_read.insert(
+                        std::make_pair(table, action_context));
                 }
             }
             if (isWrite() && self.phv.alloc_done()) {
@@ -236,7 +259,9 @@ bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *seq) {
         const IR::MAU::Table* parent;
         parent = dynamic_cast<const IR::MAU::Table *>(ctxt->node);
         for (auto child : seq->tables) {
-            dg.add_edge(parent, child, DependencyGraph::CONTROL); } }
+            dg.add_edge(parent, child, DependencyGraph::CONTROL);
+        }
+    }
 
     return true;
 }

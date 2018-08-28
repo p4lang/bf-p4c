@@ -3,6 +3,7 @@
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/transitive_closure.hpp>
+#include <boost/optional.hpp>
 #include <map>
 #include <set>
 #include "bf-p4c/ir/control_flow_visitor.h"
@@ -126,6 +127,11 @@ struct DependencyGraph {
     std::map<std::pair<const IR::MAU::Table*, const IR::MAU::Table*>,
              DependencyGraph::dependencies_t> dependency_map;
 
+    std::map<typename Graph::edge_descriptor, std::map<const PHV::Field*,
+             std::pair<ordered_set<const IR::MAU::Action*>,
+             ordered_set<const IR::MAU::Action*>>>> data_annotations;
+
+
     struct StageInfo {
         int min_stage,      // Minimum stage at which a table can be placed.
         dep_stages,         // Number of tables that depend on this table and
@@ -230,6 +236,68 @@ struct DependencyGraph {
             return false;
     }
 
+    boost::optional<std::map<const PHV::Field*, std::pair<ordered_set<const IR::MAU::Action*>,
+             ordered_set<const IR::MAU::Action*>>>>
+             get_data_dependency_info(typename Graph::edge_descriptor edge) {
+        if (!data_annotations.count(edge)) {
+            LOG1("Data dependency edge not found");
+            return boost::none;
+        }
+        return data_annotations.at(edge);
+    }
+
+    /* Gets table dependency annotations for data dependency edges (IXBAR_READ, ACTION_READ,
+       OUTPUT, REDUCTION_OR_READ, REDUCTION_OR_OUTPUT, ANTI).
+       Parameters: Upstream table, downstream table connected by data dependency edge.
+       Returns: Data annotations map structured as follows:
+                Key -- {PHV field causing dependence, Dependence type}
+                Value -- {UpstreamActionSet, DownstreamActionSet}, where each ActionSet
+                contains all actions in which the relevant PHV field is accessed in either
+                the upstream or the downstream table involved in the dependence. If the
+                element is not accessed in any actions (i.e. an input crossbar read),
+                that particular ActionSet will be empty.
+    */
+    boost::optional<std::map<std::pair<const PHV::Field*, DependencyGraph::dependencies_t>,
+             std::pair<ordered_set<const IR::MAU::Action*>,
+             ordered_set<const IR::MAU::Action*>>>>
+             get_data_dependency_info(const IR::MAU::Table* upstream,
+                                      const IR::MAU::Table* downstream) {
+        if (!labelToVertex.count(upstream)) {
+            LOG1("Upstream vertex not found in graph");
+            return boost::none;
+        }
+        if (!labelToVertex.count(downstream)) {
+            LOG1("Downstream vertex not found in graph");
+            return boost::none;
+        }
+        auto upstream_v = labelToVertex.at(upstream);
+        typename Graph::out_edge_iterator out, end;
+        std::map<std::pair<const PHV::Field*, DependencyGraph::dependencies_t>,
+                 std::pair<ordered_set<const IR::MAU::Action*>,
+                 ordered_set<const IR::MAU::Action*>>> gathered_data;
+        bool found_downstream = false;
+        for (boost::tie(out, end) = boost::out_edges(upstream_v, g); out != end; ++out) {
+            const IR::MAU::Table* test_v = get_vertex(boost::target(*out, g));
+            if (test_v == downstream && g[*out] != DependencyGraph::CONTROL) {
+                found_downstream = true;
+                auto edge_type = g[*out];
+                auto local_data_opt = get_data_dependency_info(*out);
+                if (!local_data_opt.is_initialized())
+                    return boost::none;
+                auto local_data = local_data_opt.get();
+                for (const auto& kv : local_data) {
+                    gathered_data[{kv.first, edge_type}].first |= local_data[kv.first].first;
+                    gathered_data[{kv.first, edge_type}].second |= local_data[kv.first].second;
+                }
+            }
+        }
+        if (!found_downstream) {
+            LOG1("Edge not found between provided tables");
+            return boost::none;
+        }
+        return gathered_data;
+    }
+
     /**
       * Returns the dependency type from t1 to t2.
       *
@@ -296,11 +364,11 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
  public:
     typedef ordered_map<const IR::MAU::Table*, bitvec> cont_write_t;
     typedef struct {
-        ordered_set<const IR::MAU::Table*> ixbar_read;
-        ordered_set<const IR::MAU::Table*> action_read;
-        ordered_set<const IR::MAU::Table*> write;
-        ordered_set<const IR::MAU::Table*> reduction_or_write;
-        ordered_set<const IR::MAU::Table*> reduction_or_read;
+        ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> ixbar_read;
+        ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> action_read;
+        ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> write;
+        ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> reduction_or_write;
+        ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> reduction_or_read;
     } access_t;
 
  private:
