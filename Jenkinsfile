@@ -38,10 +38,32 @@ node {
         }
         stage ('Tests') {
             parallel (
+                switch_compile_only: {
+                    try {
+                        stage ('switch_master_profiles') {
+                            ansiColor('xterm') {
+                                timestamps {
+                                    sh "echo 'Running switch profiles compilation for master'"
+                                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.3|p4_14'"
+                                }
+                            }
+                        }
+                        stage ('switch_8.3_profiles') {
+                            ansiColor('xterm') {
+                                timestamps {
+                                    sh "echo 'Running switch profiles compilation for rel_8_3'"
+                                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*switch_8.3_' -E 'smoketest'"
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        sh "echo 'Swith profiles compile_only failed'"
+                    }
+                },
                 switch_8_3_msdc_l3_tests: {
                     ansiColor('xterm') {
                         timestamps {
-                            sh "echo 'Running switch PD tests for MSDC_PROFILE_BRIG'"
+                            sh "echo 'Running switch PD tests for MSDC_L3_PROFILE_BRIG'"
                             sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.3_l3_msdc'"
                         }
                     }

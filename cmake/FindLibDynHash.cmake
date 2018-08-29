@@ -13,8 +13,7 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
 
 find_path(LIBDYNHASH_INCLUDE_DIR NAMES dynamic_hash/dynamic_hash.h
   PATHS
-  ${BFN_P4C_SOURCE_DIR}/../tofino_install/include/bfutils
-  ${BFN_P4C_SOURCE_DIR}/../jbay_install/include/bfutils
+  ${BFN_P4C_SOURCE_DIR}/../install/include/bfutils
   ${CMAKE_INSTALL_PREFIX}/include/bfutils
   /usr/local/include/bfutils
   /usr/include/bfutils
@@ -22,8 +21,7 @@ find_path(LIBDYNHASH_INCLUDE_DIR NAMES dynamic_hash/dynamic_hash.h
 
 find_library(LIBDYNHASH_LIBRARY NAMES dynhash
   HINTS
-  ${BFN_P4C_SOURCE_DIR}/../tofino_install/lib
-  ${BFN_P4C_SOURCE_DIR}/../jbay_install/lib
+  ${BFN_P4C_SOURCE_DIR}/../install/lib
   ${CMAKE_INSTALL_PREFIX}/lib
   /usr/local/lib
   /usr/lib

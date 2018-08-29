@@ -128,7 +128,7 @@ macro(simple_test_setup_check device)
   if (NOT ENABLE_STF2PTF)
     # We run STF tests on the STF framework
     set(STF_SEARCH_PATHS
-      ${BFN_P4C_SOURCE_DIR}/../${device}_install/bin
+      ${BFN_P4C_SOURCE_DIR}/../install/bin
       ${CMAKE_INSTALL_PREFIX}/bin)
 
     find_program(HARLYN_STF_${device} ${device}_test_harness PATHS ${STF_SEARCH_PATHS})
@@ -147,32 +147,32 @@ macro(packet_test_setup_check device)
   find_program(PTF ptf PATHS ${CMAKE_INSTALL_PREFIX}/bin)
 
   set(BF_SWITCHD_SEARCH_PATHS
-    ${BFN_P4C_SOURCE_DIR}/../${device}_install/bin
+    ${BFN_P4C_SOURCE_DIR}/../install/bin
     ${CMAKE_INSTALL_PREFIX}/bin)
 
   # check for bf_switchd
-  find_program(BF_SWITCHD_${device} bf_switchd PATHS ${BF_SWITCHD_SEARCH_PATHS} NO_DEFAULT_PATH)
+  find_program(BF_SWITCHD bf_switchd PATHS ${BF_SWITCHD_SEARCH_PATHS} NO_DEFAULT_PATH)
 
-  if (BF_SWITCHD_${device})
-    MESSAGE (STATUS "bf-switchd for ${device} found at ${BF_SWITCHD_${device}}.")
+  if (BF_SWITCHD)
+    MESSAGE (STATUS "bf-switchd for ${device} found at ${BF_SWITCHD}.")
   else()
     MESSAGE (WARNING "PTF tests need bf-switchd for ${device}.\nLooked in ${BF_SWITCHD_SEARCH_PATHS}.")
   endif()
 
   # check for tofino-model
   set(HARLYN_MODEL_SEARCH_PATHS
-    ${BFN_P4C_SOURCE_DIR}/../${device}_install/bin
+    ${BFN_P4C_SOURCE_DIR}/../install/bin
     ${CMAKE_INSTALL_PREFIX}/bin)
     
-  find_program(HARLYN_MODEL_${device} tofino-model PATHS ${HARLYN_MODEL_SEARCH_PATHS} NO_DEFAULT_PATH)
+  find_program(HARLYN_MODEL tofino-model PATHS ${HARLYN_MODEL_SEARCH_PATHS} NO_DEFAULT_PATH)
 
-  if (HARLYN_MODEL_${device})
-    MESSAGE (STATUS "tofino-model for ${device} found at ${HARLYN_MODEL_${device}}.")
+  if (HARLYN_MODEL)
+    MESSAGE (STATUS "tofino-model for ${device} found at ${HARLYN_MODEL}.")
   else()
     MESSAGE (WARNING "PTF tests need tofino-model for ${device}.\nLooked in ${HARLYN_MODEL_SEARCH_PATHS}.")
   endif()
 
-  if (PTF AND BF_SWITCHD_${device} AND HARLYN_MODEL_${device})  
+  if (PTF AND BF_SWITCHD AND HARLYN_MODEL)  
     set (PTF_REQUIREMENTS_MET TRUE)
     MESSAGE (STATUS "All PTF dependencies were found.")
   else()
@@ -181,10 +181,10 @@ macro(packet_test_setup_check device)
     if (NOT PTF)
       set (__err_str "${__err_str} the ptf binary")
     endif()
-    if (NOT BF_SWITCHD_${device})
+    if (NOT BF_SWITCHD)
       set (__err_str "${__err_str} and the bf_switchd binary")
     endif()
-    if (NOT HARLYN_MODEL_${device})
+    if (NOT HARLYN_MODEL)
       set (__err_str "${__err_str} and the tofino-model binary")
     endif()
     MESSAGE (WARNING "${__err_str}")

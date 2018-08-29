@@ -37,24 +37,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/issue1000-bmv2.p4
     )
 
-  # Temporary failures until STF is updated
-  p4c_add_xfail_reason("tofino"
-    "no value with matching vpn for counter .*"
-    testdata/p4_14_samples/counter4.p4
-  )
-
-  p4c_add_xfail_reason("tofino"
-    "mismatch from expected(.*) at byte .*"
-    extensions/p4_tests/p4_16/stateful3.p4
-    extensions/p4_tests/p4_16/stateful_log1.p4
-    extensions/p4_tests/p4_14/sful_1bit.p4
-  )
-
-  p4c_add_xfail_reason("tofino"
-    "can't find STFUL_PTR field for table"
-    extensions/p4_tests/p4_14/stateful3.p4
-  )
-
 endif() # HARLYN_STF_tofino
 
 # Tests that run packets:
@@ -294,7 +276,6 @@ p4c_add_xfail_reason("tofino"
   "In table .*, the number of bytes required to go through the immediate pathway"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
   switch_ent_fin_postcard
-  switch_l3_heavy_int_leaf
   switch_8.3_l3_heavy_int_leaf
   )
 
@@ -981,7 +962,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
-  switch_generic_int_leaf
   switch_8.3_generic_int_leaf
 )
 
@@ -990,6 +970,18 @@ p4c_add_xfail_reason("tofino"
   switch_8.3_msdc_ipv4
   switch_msdc_ipv4
 )
+
+p4c_add_xfail_reason("tofino"
+  "More than one starting state for ingress"
+  switch_msdc_spine_int
+)
+
+p4c_add_xfail_reason("tofino"
+  "Too much data for parse matcher"
+  switch_msdc_leaf_int
+  switch_l3_heavy_int_leaf
+  switch_generic_int_leaf
+)  
 
 p4c_add_xfail_reason("tofino"
   "The attached table .* is addressed by both hash and index in table"
@@ -1089,7 +1081,6 @@ p4c_add_xfail_reason("tofino"
   "Tofino only supports \"csum16\" for checksum calculation"
   extensions/p4_tests/p4_14/p4smith_regression/globule_0.p4
   extensions/p4_tests/p4_14/p4smith_regression/quotas_0.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/exm_direct/exm_direct.p4
 )
 
 # BRIG-816
@@ -1237,7 +1228,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
   switch_8.3_msdc_leaf_int
-  switch_msdc_leaf_int
   extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
 )
 

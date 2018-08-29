@@ -35,30 +35,10 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/cond_checksum_update.p4
     )
 
-  # Errors until the stf commit goes in
+  # stf test fails without any error
   p4c_add_xfail_reason("tofino2"
-    "no value with matching vpn for counter"
-    testdata/p4_14_samples/counter4.p4
-  )
-
-  p4c_add_xfail_reason("tofino2"
-    "mismatch from expected(.*) at byte"
-    extensions/p4_tests/p4_16/stateful3.p4
-    extensions/p4_tests/p4_16/stateful_log1.p4
-    extensions/p4_tests/p4_14/sful_1bit.p4
+    "jbay_test_harness FAILED"
     extensions/p4_tests/p4_16/jbay/minmax1.p4
-    extensions/p4_tests/p4_16/jbay/stateful_stack1.p4
-  )
-
-  p4c_add_xfail_reason("tofino2"
-    "can't find STFUL_PTR field for table"
-    extensions/p4_tests/p4_16/jbay/stateful_fifo1.p4
-    extensions/p4_tests/p4_16/jbay/stateful_stack2.p4
-  )
-   
-  p4c_add_xfail_reason("tofino2"
-    "register .* value is .*, expected"
-    extensions/p4_tests/p4_16/jbay/hwlearn2.p4
   )
 
 endif() # HARLYN_STF

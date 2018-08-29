@@ -25,7 +25,7 @@ env:
     # Run all tofino tests excluding smoketests
     - TEST_SUITE="^tofino/"
       TEST_EXTRA_OPTS="-E"
-      TEST_EXTRA_OPTS2="smoketest|programs|p4testgen|switch_8.3_dc_basic|switch_8.3_ent_dc_general|switch_8.3_msdc_l3"
+      TEST_EXTRA_OPTS2="smoketest|programs|p4testgen|tofino/switch_"
       IMAGE_TAG="bf-p4c-compilers_tofino"
       DOCKERFILE=Dockerfile.tofino
     # Run all tofino smoke tests
@@ -39,7 +39,7 @@ env:
       TEST_EXTRA_OPTS="-E"
       TEST_EXTRA_OPTS2="smoketest"
       IMAGE_TAG="bf-p4c-compilers_jbay"
-      DOCKERFILE="Dockerfile.jbay"
+      DOCKERFILE="Dockerfile.tofino"
 
 before_install:
   - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"

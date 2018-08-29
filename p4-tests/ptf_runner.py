@@ -262,6 +262,8 @@ def start_model(model, out=None, context_json=None, port_map_path=None, device=N
         cmd.extend(['-f', port_map_path])
     if device is not None and 'tofino2' in device:
         cmd.extend(['--chip-type=4']) # default CHIPTYPE=4 for Jbay
+    else:
+        cmd.extend(['--chip-type=2']) # default CHIPTYPE=2 for TofinoB0
     debug("Starting model: {}".format(' '.join(cmd)))
     return subprocess.Popen(cmd, stdout=out, stderr=out)
 
@@ -476,8 +478,8 @@ def main():
             sys.exit(1)
 
     PTF = findbin(top_builddir, 'PTF')
-    BF_SWITCHD = findbin(top_builddir, 'BF_SWITCHD_' + toolsdevice)
-    HARLYN_MODEL = findbin(top_builddir, 'HARLYN_MODEL_' + toolsdevice)
+    BF_SWITCHD = findbin(top_builddir, 'BF_SWITCHD')
+    HARLYN_MODEL = findbin(top_builddir, 'HARLYN_MODEL')
 
     # Extract the tools install directory based on the install path of bf_switchd
     BFD_INSTALLDIR = os.path.dirname(os.path.dirname(BF_SWITCHD))
