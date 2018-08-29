@@ -114,8 +114,11 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
         else
             regs.cfg_regs.amod_wide_bubble_rsp_delay[gress] = 0;
     }
-    regs.cfg_regs.amod_req_interval = 0x3FF;
-    regs.cfg_regs.amod_req_limit = 1;
+    /* Max re-request limit with a long interval.  Parb is going to have a large
+     * gap configured to minimize traffic hits during configuration this means
+     * that individual stages may not get their bubbles and will need to retry. */
+    regs.cfg_regs.amod_req_interval = 6732;
+    regs.cfg_regs.amod_req_limit = 15;
 
 
 
