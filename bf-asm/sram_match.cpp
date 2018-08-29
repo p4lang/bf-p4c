@@ -7,7 +7,7 @@
 #include "stage.h"
 #include "tables.h"
 
-Table::Format::Field *SRamMatchTable::lookup_field(const std::string &n, const std::string &) {
+Table::Format::Field *SRamMatchTable::lookup_field(const std::string &n, const std::string &) const {
     if (format) return format->field(n);
     if (n == "immediate" && !::Phv::get(gress, n)) {
         static Format::Field default_immediate(nullptr, 32, Format::Field::USED_IMMED);
@@ -754,14 +754,14 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
 }
 
 
-std::string SRamMatchTable::get_match_mode(Phv::Ref &pref, int offset) {
+std::string SRamMatchTable::get_match_mode(const Phv::Ref &pref, int offset) const {
     return "unused";
 }
 
 void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int basebit,
                                                std::string name,
                                                const Table::Format::Field &field,
-                                               const Table::Actions::Action *act) {
+                                               const Table::Actions::Action *act) const {
     if (name != "match") {
         Table::add_field_to_pack_format(field_list, basebit, name, field, act);
         return; }
@@ -795,7 +795,7 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
             // Look up this field in the param list to get a custom key
             // name, if present.
             std::string key_name = field_name;
-            p4_param* p = find_p4_param(field_name);
+            auto p = find_p4_param(field_name);
             if (!p && !p4_params_list.empty()) {
                 warning(lineno, "Cannot find field name %s in p4_param_order "
                         "for table %s", field_name.c_str(), this->name());
@@ -820,7 +820,7 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
         bit += piece.size(); }
 }
 
-void SRamMatchTable::add_action_cfgs(json::map &tbl, json::map &stage_tbl) {
+void SRamMatchTable::add_action_cfgs(json::map &tbl, json::map &stage_tbl) const {
    if (actions) {
        actions->gen_tbl_cfg(tbl["actions"]);
        actions->add_action_format(this, stage_tbl);
@@ -829,11 +829,11 @@ void SRamMatchTable::add_action_cfgs(json::map &tbl, json::map &stage_tbl) {
        action->actions->add_action_format(this, stage_tbl); }
 }
 
-unsigned SRamMatchTable::get_format_width() {
+unsigned SRamMatchTable::get_format_width() const {
     return format ? (format->size + 127)/128 : 0;
 }
 
-unsigned SRamMatchTable::get_number_entries() {
+unsigned SRamMatchTable::get_number_entries() const {
     unsigned fmt_width = get_format_width();
     unsigned number_entries = 0;
     if (format)
@@ -842,7 +842,7 @@ unsigned SRamMatchTable::get_number_entries() {
 }
 
 json::map* SRamMatchTable::add_common_sram_tbl_cfgs(json::map &tbl,
-        std::string match_type, std::string stage_table_type) {
+        std::string match_type, std::string stage_table_type) const {
     common_tbl_cfg(tbl);
     json::map &match_attributes = tbl["match_attributes"];
     json::vector &stage_tables = match_attributes["stage_tables"];

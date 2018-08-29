@@ -67,12 +67,12 @@ template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
             ram.match_nibble_s1q0_enable = UINT64_C(0xffffffff); } }
 }
 
-std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_cfg(Way &way) {
+std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_cfg(const Way &way) const {
     json::map mra;
     unsigned vpn_ctr = 0;
     unsigned fmt_width = format ? (format->size + 127)/128 : 0;
     if (hash_fn_ids.count(way.group) > 0)
-        mra["hash_function_id"] = hash_fn_ids[way.group];
+        mra["hash_function_id"] = hash_fn_ids.at(way.group); 
     mra["hash_entry_bit_lo"] = way.subgroup*10;
     mra["hash_entry_bit_hi"] = way.subgroup*10 + 9;
     mra["number_entry_bits"] = 10;
@@ -107,7 +107,7 @@ std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_c
     return json::mkuniq<json::map>(std::move(mra));
 }
 
-void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
+void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
     unsigned size = get_number_entries();
     json::map &tbl = *base_tbl_cfg(out, "match", size);
     add_all_reference_tables(tbl);
@@ -142,7 +142,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
 // fields bit position and field's (p4) name. Check that the name appears in the
 // match key fields (p4_params_list) as this is verified by the driver.  Do not
 // repeat a hash group if already visited.
-void ExactMatchTable::add_hash_functions(json::map &stage_tbl) {
+void ExactMatchTable::add_hash_functions(json::map &stage_tbl) const {
     bitvec visited_groups(EXACT_HASH_GROUPS,0);
     auto &ht = input_xbar->get_hash_tables();
     // Output cjson node only if hash tables present

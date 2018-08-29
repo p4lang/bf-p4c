@@ -123,7 +123,7 @@ void HashActionTable::write_regs(REGS &regs) {
     }
 }
 
-void HashActionTable::gen_tbl_cfg(json::vector &out) {
+void HashActionTable::gen_tbl_cfg(json::vector &out) const {
     //FIXME: Support multiple hash_dist's
     int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
     json::map &tbl = *base_tbl_cfg(out, "match_entry", size);

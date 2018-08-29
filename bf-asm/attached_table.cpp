@@ -66,7 +66,7 @@ unsigned AttachedTable::per_flow_enable_bit(MatchTable *m) const {
 // 2         | 5
 // 3         | 7
 // ---------------
-void AttachedTable::add_alu_index(json::map &stage_tbl, std::string alu_index) {
+void AttachedTable::add_alu_index(json::map &stage_tbl, std::string alu_index) const {
     if (layout.size() <= 0)
         error(lineno, "Invalid meter alu setup. A meter ALU should be allocated for table %s", name());
     stage_tbl[alu_index] = get_alu_index();

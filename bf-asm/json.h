@@ -335,11 +335,11 @@ private:
             return *iter->second == str; }
         bool operator!=(string &str) {
             return !(*this == str); }
-        bool operator==(std::string &str) {
+        bool operator==(const std::string &str) {
             if (key) return false;
             assert(iter != self.end());
             return *iter->second == str; }
-        bool operator!=(std::string &str) {
+        bool operator!=(const std::string &str) {
             return !(*this == str); }
         bool operator==(long long v) {
             if (key) return false;

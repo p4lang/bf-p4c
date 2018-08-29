@@ -3,6 +3,7 @@
 #include "split_gateways.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/mau/asm_output.h"
 
 class CanonGatewayExpr::NeedNegate : public Inspector {
     bool        rv = false;
@@ -31,6 +32,22 @@ static mpz_class SliceReduce(IR::Operation::Relation *rel, mpz_class val) {
         rel->right = new IR::Constant(val);
         LOG4("Now have " << rel); }
     return val;
+}
+
+IR::Node *CanonGatewayExpr::preorder(IR::MAU::Table *tbl) {
+    auto &rows = tbl->gateway_rows;
+    if (rows.empty() || !rows[0].first)
+        return tbl;
+    if (!tbl->gateway_cond.isNullOrEmpty()) return tbl;
+    // Store original condition string as specified in p4 program
+    cstring gateway_cond = cstring::to_cstring(rows[0].first).c_str();
+    // Remove local gress references
+    gateway_cond = gateway_cond.replace("ingress::", "");
+    gateway_cond = gateway_cond.replace("egress::", "");
+    gateway_cond = gateway_cond.replace(";", "");
+    tbl->gateway_cond = gateway_cond;
+    LOG3("Table: " << tbl->name << " Condition: " << tbl->gateway_cond);
+    return tbl;
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
@@ -289,6 +306,7 @@ const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
     if (rows.empty() || !rows[0].first)
         return tbl;
     LOG2("CanonGateway on table " << tbl->name);
+    LOG1("Postorder gateway cond: " << tbl->gateway_cond);
     // Remove rows that can never match because they're after a row that always matches,
     // or because their condition is 'false'.  While doing that, track the next tags
     // that we remove and keep.

@@ -79,7 +79,7 @@ protected:
     void setup_actions(value_t &);
     void setup_maprams(value_t &);
     void setup_vpns(std::vector<Layout> &, VECTOR(value_t) *, bool allow_holes = false);
-    virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name)
+    virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name) const
     { assert(0); }
     virtual int get_start_vpn() { return 0; }
     void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use = 0);
@@ -391,7 +391,7 @@ public:
                     if (e.name == param) return &e;
                 return nullptr; }
             void pass1(Table *tbl);
-            void add_indirect_resources(json::vector &indirect_resources);
+            void add_indirect_resources(json::vector &indirect_resources) const;
             friend std::ostream &operator<<(std::ostream &, const alias_t &);
             friend std::ostream &operator<<(std::ostream &, const Action &);
         };
@@ -421,11 +421,11 @@ public:
         void pass2(Table *);
         void stateful_pass2(Table *);
         template<class REGS> void write_regs(REGS &, Table *);
-        void add_p4_params(const Action&, json::vector &);
-        void gen_tbl_cfg(json::vector &);
+        void add_p4_params(const Action&, json::vector &) const;
+        void gen_tbl_cfg(json::vector &) const ;
         void add_immediate_mapping(json::map &);
         void add_next_table_mapping(Table *, json::map &);
-        void add_action_format(Table *, json::map &);
+        void add_action_format(const Table *, json::map &) const;
         bool has_hash_dist() { return ( table->table_type() == HASH_ACTION ); }
         size_t size() { return actions.size(); }
     };
@@ -474,22 +474,23 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     void write_merge_regs(Target::TARGET::mau_regs &regs, MatchTable *match, int type,     \
                           int bus, const std::vector<Call::Arg> &args) override = 0;
 
-    virtual void gen_tbl_cfg(json::vector &out) = 0;
+    virtual void gen_tbl_cfg(json::vector &out) const = 0;
     virtual void gen_name_lookup(json::map &out) {}
-    virtual json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
-    virtual json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size);
+    virtual json::map *base_tbl_cfg(json::vector &out, const char *type, int size) const;
+    virtual json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const;
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
-            const char *type, std::vector<Layout> &layout, bool skip_spare_bank = false);
-    virtual void common_tbl_cfg(json::map &tbl);
+            const char *type, const std::vector<Layout> &layout, bool skip_spare_bank = false) const;
+    virtual void common_tbl_cfg(json::map &tbl) const;
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
                         METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY, PHASE0, ATCAM };
     virtual table_type_t table_type() const { return OTHER; }
     virtual int instruction_set() { return 0; /* VLIW_ALU */ }
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); return OTHER; }
-    virtual MatchTable *get_match_table() { assert(0); return nullptr; }
+    virtual const MatchTable *get_match_table() const { assert(0); return nullptr; }
     virtual std::set<MatchTable *> get_match_tables() { assert(0); return std::set<MatchTable *>(); }
     virtual const AttachedTables *get_attached() const { return 0; }
     virtual const GatewayTable *get_gateway() const { return 0; }
+    virtual GatewayTable *get_table_gateway() { return 0; }
     virtual SelectionTable *get_selector() const { return 0; }
     virtual MeterTable* get_meter() const { return 0; }
     virtual void set_stateful (StatefulTable *s) { assert(0); }
@@ -508,7 +509,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual int address_shift() const { assert(0); return -1; }
     virtual int home_row() const { assert(0); return -1; }
     /* row,col -> mem unitno mapping -- unitnumbers used in context json */
-    virtual int memunit(int r, int c) { return r*12 + c; }
+    virtual int memunit(const int r, const int c) const { return r*12 + c; }
     virtual int unitram_type() { assert(0); return -1; }
     virtual bool uses_colormaprams() const { return false; }
     virtual bool adr_mux_select_stats() { return false; }
@@ -557,14 +558,14 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 
     static std::map<std::string, Table *>       all;
 
-    unsigned layout_size() {
+    unsigned layout_size() const {
         unsigned rv = 0;
         for (auto &row : layout) rv += row.cols.size();
         return rv; }
-    unsigned layout_get_vpn(int r, int c) {
+    unsigned layout_get_vpn(const int r, const int c) const {
         for (auto &row : layout) {
             if (row.row != r) continue;
-            auto col = find(row.cols, c);
+            auto col = find(row.cols.begin(), row.cols.end(), c);
             if (col == row.cols.end()) continue;
             return row.vpns.at(col - row.cols.begin()); }
         assert(0);
@@ -577,7 +578,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
                 if (v > max) max = v; }
         if (spare && max > min) --max; }
     virtual Format::Field *lookup_field(const std::string &n,
-                                        const std::string &act = "")
+                                        const std::string &act = "") const
         { return format ? format->field(n) : 0; }
     virtual std::string find_field(Format::Field *field) {
         return format ? format->find_field(field) : "<unknown>"; }
@@ -607,14 +608,14 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual void need_on_actionbus(RandomNumberGen rng, int lo, int hi, int size);
     static bool allow_bus_sharing(Table *t1, Table *t2);
     virtual Call &action_call() { return action; }
-    virtual Actions *get_actions() { return actions; }
-    void add_reference_table(json::vector &table_refs, const Table::Call& c);
-    json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
+    virtual Actions *get_actions() const { return actions; }
+    void add_reference_table(json::vector &table_refs, const Table::Call& c) const;
+    json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1) const;
     json::map &add_pack_format(json::map &stage_tbl, Table::Format *format, bool pad_zeros = true,
-                               bool print_fields = true, Table::Actions::Action *act = nullptr);
+                               bool print_fields = true, Table::Actions::Action *act = nullptr) const;
     virtual void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                           const Table::Format::Field &field,
-                                          const Table::Actions::Action *act);
+                                          const Table::Actions::Action *act) const;
                                           // const std::vector<Actions::Action::alias_value_t *> &);
     // Generate the context json for a field into field list.
     // Use the bits specified in field, offset by the base bit.
@@ -622,31 +623,31 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     void output_field_to_pack_format(json::vector &field_list, int basebit,
                                      std::string name, std::string source, int start_bit,
                                      const Table::Format::Field &field,
-                                     unsigned value = 0);
+                                     unsigned value = 0) const;
     void add_zero_padding_fields(Table::Format *format,
                                  Table::Actions::Action *act = nullptr,
-                                 unsigned format_width = 64);
-    void get_cjson_source(const std::string &field_name, std::string &source, int &start_bit);
+                                 unsigned format_width = 64) const;
+    void get_cjson_source(const std::string &field_name, std::string &source, int &start_bit) const;
     // Result physical buses should be setup for
     // Exact/Hash/MatchwithNoKey/ATCAM/Ternary tables
-    virtual void add_result_physical_buses(json::map &stage_tbl);
-    void canon_field_list(json::vector &field_list);
+    virtual void add_result_physical_buses(json::map &stage_tbl) const;
+    void canon_field_list(json::vector &field_list) const;
     void check_next();
     void check_next(Ref &next, Actions::Action *act = nullptr);
     bool choose_logical_id(const slist<Table *> *work = nullptr);
     virtual int hit_next_size() const { return hit_next.size(); }
-    p4_param *find_p4_param(std::string s) {
+    const p4_param *find_p4_param(std::string s) const {
         remove_name_tail_range(s);
         for (auto &p : p4_params_list)
             if ((p.name == s) || (p.alias == s)) return &p;
         return nullptr; }
-    p4_param *find_p4_param(std::string s, std::string t) {
+    const p4_param *find_p4_param(std::string s, std::string t) const {
         remove_name_tail_range(s);
         for (auto &p : p4_params_list)
             if (((p.name == s) || (p.alias == s))
                     && (p.type == t)) return &p;
         return nullptr; }
-    p4_param *find_p4_param_type(std::string &s) {
+    const p4_param *find_p4_param_type(std::string &s) const {
         for (auto &p : p4_params_list)
             if (p.type == s) return &p;
         return nullptr; }
@@ -654,9 +655,9 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
         return (!default_action.empty()) ? default_action : action ? action->default_action : ""; }
     virtual default_action_params* get_default_action_parameters() {
         return (!default_action_parameters.empty()) ? &default_action_parameters : action ? &action->default_action_parameters : nullptr; }
-    virtual unsigned get_default_action_handle() {
+    virtual unsigned get_default_action_handle() const {
         return default_action_handle > 0 ? default_action_handle : action ? action->default_action_handle : 0; }
-    int get_format_field_size(std::string s) {
+    int get_format_field_size(std::string s) const {
         if (auto field = lookup_field(s)) return field->size;
         return 0; }
 };
@@ -670,7 +671,7 @@ public:
     void pass3() override { assert(0); }
     template<class REGS> void write_regs(REGS &) { assert(0); }
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_REGS)
-    void gen_tbl_cfg(json::vector &out) override { assert(0); }
+    void gen_tbl_cfg(json::vector &out) const override { assert(0); }
 };
 
 struct AttachedTables {
@@ -721,26 +722,29 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable);
 public:
     void pass0() override;
-    bool is_alpm() {
+    bool is_alpm() const {
         if (p4_table) return p4_table->is_alpm(); return false; }
     bool is_attached(const Table *tbl) const override;
     const Table::Call *get_call(const Table *tbl) const { return get_attached()->get_call(tbl); }
     const AttachedTables *get_attached() const override { return &attached; }
     const GatewayTable *get_gateway() const override { return gateway; }
-    MatchTable *get_match_table() override { return this; }
-    std::set<MatchTable *> get_match_tables() override { return std::set<MatchTable *>{this}; }
+    const MatchTable *get_match_table() const override { return this; }
+    std::set<MatchTable *> get_match_tables() override {
+        std::set<MatchTable *> rv;
+        rv.insert(this);
+        return rv; }
     Format::Field *find_address_field(const AttachedTable *tbl) const override {
         return attached.find_address_field(tbl); }
     void gen_name_lookup(json::map &out) override;
     bool run_at_eop() override { return attached.run_at_eop(); }
     virtual bool is_ternary() { return false; }
-    void gen_idletime_tbl_cfg(json::map &stage_tbl);
+    void gen_idletime_tbl_cfg(json::map &stage_tbl) const;
     int direct_shiftcount() const override { return 64; }
     void gen_hash_bits(const std::map<int, HashCol> &hash_table,
-            unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no);
-    virtual void add_hash_functions(json::map &stage_tbl);
-    void add_all_reference_tables(json::map &tbl, Table *math_table=nullptr);
-    void add_static_entries(json::map &tbl);
+        unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no) const;
+    virtual void add_hash_functions(json::map &stage_tbl) const;
+    void add_all_reference_tables(json::map &tbl, Table *math_table=nullptr) const;
+    void add_static_entries(json::map &tbl) const;
     METER_ACCESS_TYPE default_meter_access_type(bool for_stateful);
 )
 
@@ -761,7 +765,7 @@ public:                                                                 \
     void pass3() override;                                              \
     template<class REGS> void write_regs(REGS &regs);                   \
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_REGS)                   \
-    void gen_tbl_cfg(json::vector &out) override;                       \
+    void gen_tbl_cfg(json::vector &out) const override;                       \
 private:                                                                \
     __VA_ARGS__                                                         \
 };
@@ -811,21 +815,21 @@ protected:
     void pass1() override;
     template<class REGS> void write_regs(REGS &regs);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_REGS)
-    virtual std::string get_match_mode(Phv::Ref &pref, int offset);
+    virtual std::string get_match_mode(const Phv::Ref &pref, int offset) const;
     json::map* add_common_sram_tbl_cfgs(json::map &tbl,
-        std::string match_type, std::string stage_table_type);
-    void add_action_cfgs(json::map &tbl, json::map &stage_tbl);
-    unsigned get_number_entries();
-    unsigned get_format_width();
+        std::string match_type, std::string stage_table_type) const;
+    void add_action_cfgs(json::map &tbl, json::map &stage_tbl) const;
+    unsigned get_number_entries() const;
+    unsigned get_format_width() const;
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                   const Table::Format::Field &field,
-                                  const Table::Actions::Action *act) override;
-    Actions *get_actions() override { return actions ? actions : (action ? action->actions : nullptr); }
+                                  const Table::Actions::Action *act) const override;
+    Actions *get_actions() const override { return actions ? actions : (action ? action->actions : nullptr); }
 public:
-    Format::Field *lookup_field(const std::string &n, const std::string &act = "") override;
+    Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
     void setup_word_ixbar_group();
     void verify_format();
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override {
         width = (format->size-1)/128 + 1;
         period = format->groups();
         depth = period * layout_size() / width;
@@ -844,14 +848,14 @@ public:
     StatefulTable *get_stateful() const override { return attached.get_stateful(); }
     MeterTable* get_meter() const override { return attached.get_meter(); }
     using Table::gen_memory_resource_allocation_tbl_cfg;
-    std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
+    std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const Way &) const;
     int unitram_type() override { return UnitRam::MATCH; }
     table_type_t table_type() const override { return EXACT; }
     bool has_group(int grp) {
         for (auto &way: ways)
             if (way.group == grp) return true;
         return false; }
-    void add_hash_functions(json::map &stage_tbl) override;
+    void add_hash_functions(json::map &stage_tbl) const override;
 )
 
 DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
@@ -870,16 +874,15 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     table_type_t table_type() const override { return ATCAM; }
     void setup_column_priority();
     void find_tcam_match();
-    void gen_unit_cfg(json::vector &units, int size);
-    std::unique_ptr<json::vector> gen_memory_resource_allocation_tbl_cfg();
+    void gen_unit_cfg(json::vector &units, int size) const;
+    std::unique_ptr<json::vector> gen_memory_resource_allocation_tbl_cfg() const;
     void setup_nibble_mask(Table::Format::Field *match, int group,
                               std::map<int, match_element> &elems, bitvec &mask);
-    std::string get_match_mode(Phv::Ref &pref, int offset) override;
-    void gen_alpm_cfg(json::vector &out);
-    void base_alpm_atcam_tbl_cfg(json::map &atcam_tbl, const char *type, int size) {
+    std::string get_match_mode(const Phv::Ref &pref, int offset) const override;
+    void base_alpm_atcam_tbl_cfg(json::map &atcam_tbl, const char *type, int size) const {
         if (p4_table) p4_table->base_alpm_tbl_cfg(atcam_tbl, size, this, P4Table::Atcam); }
 
-    std::string get_lpm_field_name() {
+    std::string get_lpm_field_name() const {
         std::string lpm = "lpm";
         if(auto *p = find_p4_param_type(lpm))
             return p->key_name.empty() ? p->name : p->key_name;
@@ -887,10 +890,10 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
             "'lpm' type field not found in alpm atcam '%s-%s' p4 param order",
                 name(), p4_name());
         return ""; }
-    unsigned get_partition_action_handle() {
+    unsigned get_partition_action_handle() const {
         if (p4_table) return p4_table->get_partition_action_handle();
         return 0; }
-    std::string get_partition_field_name() {
+    std::string get_partition_field_name() const {
         if (!p4_table) return "";
         auto name = p4_table->get_partition_field_name();
         if (auto* p = find_p4_param(name))
@@ -901,7 +904,7 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override;
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override;
     struct Match {
         int lineno=-1, word_group=-1, byte_group=-1, byte_config=0, dirtcam=0;
         Match() {}
@@ -910,7 +913,7 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     enum range_match_t { TCAM_NORMAL=0, DIRTCAM_2B=1, DIRTCAM_4B_LO=2, DIRTCAM_4B_HI=3, NONE=4 };
     enum byte_config_t { MIDBYTE_NIBBLE_LO=0, MIDBYTE_NIBBLE_HI=1 };
     std::vector<Match>  match;
-    int match_word(int word_group) {
+    int match_word(int word_group) const {
         for (unsigned i = 0; i < match.size(); i++)
             if (match[i].word_group == word_group)
                 return i;
@@ -924,7 +927,7 @@ public:
     Table::Ref indirect;
     int indirect_bus;   /* indirect bus to use if there's no indirect table */
     void alloc_vpns() override;
-    range_match_t get_dirtcam_mode(int group, int byte) {
+    range_match_t get_dirtcam_mode(int group, int byte) const {
         assert(group >= 0);
         assert(byte >= 0);
         range_match_t dirtcam_mode = NONE;
@@ -932,7 +935,7 @@ public:
             if (m.word_group == group) {
                 dirtcam_mode = (range_match_t) ((m.dirtcam >> 2*byte) & 0x3); } }
         return dirtcam_mode; }
-    Format::Field *lookup_field(const std::string &name, const std::string &action) override {
+    Format::Field *lookup_field(const std::string &name, const std::string &action) const override {
         assert(!format);
         return indirect ? indirect->lookup_field(name, action) : 0; }
     HashDistribution *find_hash_dist(int unit) override {
@@ -963,7 +966,7 @@ public:
         return indirect ? indirect->find_on_actionbus(n, mod, lo, hi, size, len)
                         : Table::find_on_actionbus(n, mod, lo, hi, size, len); }
     const Call &get_action() const override { return indirect ? indirect->get_action() : action; }
-    Actions *get_actions() override { return actions ? actions :
+    Actions *get_actions() const override { return actions ? actions :
         (action ? action->actions : indirect ? indirect->actions ? indirect->actions :
          indirect->action ? indirect->action->actions : 0 : 0); }
     const AttachedTables *get_attached() const override {
@@ -979,9 +982,9 @@ public:
     Format::Field *find_address_field(const AttachedTable *tbl) const override {
         return indirect ? indirect->find_address_field(tbl) : attached.find_address_field(tbl); }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
-            const char *type, std::vector<Layout> &layout, bool skip_spare_bank=false) override;
+            const char *type, const std::vector<Layout> &layout, bool skip_spare_bank=false) const override;
     Call &action_call() override { return indirect ? indirect->action : action; }
-    int memunit(int r, int c) override { return r + c*12; }
+    int memunit(const int r, const int c) const override { return r + c*12; }
     bool is_ternary() override { return true; }
     int hit_next_size() const override {
         if (indirect && indirect->hit_next.size() > 0)
@@ -991,18 +994,17 @@ public:
     void gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
         std::string source, unsigned start_bit, unsigned field_width,
-        unsigned index);
-    void gen_alpm_cfg(json::vector &out);
+        unsigned index) const;
     void set_partition_action_handle(unsigned handle) {
         if (p4_table) p4_table->set_partition_action_handle(handle); }
     void set_partition_field_name(std::string name) {
         if (p4_table) p4_table->set_partition_field_name(name); }
-    void base_alpm_pre_classifier_tbl_cfg(json::map &pre_classifier_tbl, const char *type, int size){
+    void base_alpm_pre_classifier_tbl_cfg(json::map &pre_classifier_tbl, const char *type, int size) const {
         if (p4_table)
             p4_table->base_alpm_tbl_cfg(pre_classifier_tbl, size, this, P4Table::PreClassifier); }
     void gen_match_fields_pvp(json::vector &match_field_list, int word,
-        bool uses_versioning, unsigned version_word_group);
-    unsigned get_default_action_handle() override {
+        bool uses_versioning, unsigned version_word_group) const;
+    unsigned get_default_action_handle() const override {
         unsigned def_act_handle = Table::get_default_action_handle();
         return def_act_handle > 0 ? def_act_handle : indirect ? indirect->get_default_action_handle() ?
             indirect->get_default_action_handle() : action ? action->default_action_handle : 0 : 0; }
@@ -1010,7 +1012,7 @@ public:
         std::string def_act = Table::get_default_action();
         return !def_act.empty() ? def_act : indirect ? indirect->default_action : ""; }
     Format* get_format() override { return indirect ? indirect->format : format; }
-    void add_result_physical_buses(json::map &stage_tbl) override;
+    void add_result_physical_buses(json::map &stage_tbl) const override;
     default_action_params* get_default_action_parameters() override {
         if (!default_action_parameters.empty()) return &default_action_parameters;
         auto def_action_params = indirect ? indirect->get_default_action_parameters() : nullptr;
@@ -1040,15 +1042,15 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     AttachedTables              attached;
     table_type_t table_type() const override { return TERNARY_INDIRECT; }
     table_type_t set_match_table(MatchTable *m, bool indirect) override;
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override {
         width = (format->size-1)/128 + 1;
         depth = layout_size() / width;
         period = 1;
         period_name = 0; }
-    Actions *get_actions() override { return actions ? actions : (match_table ? match_table->actions : nullptr); }
+    Actions *get_actions() const override { return actions ? actions : (match_table ? match_table->actions : nullptr); }
     const AttachedTables *get_attached() const override { return &attached; }
     const GatewayTable *get_gateway() const override { return match_table->get_gateway(); }
-    MatchTable *get_match_table() override { return match_table; }
+    const MatchTable *get_match_table() const override { return match_table; }
     std::set<MatchTable *> get_match_tables() override {
         std::set<MatchTable *> rv;
         if (match_table) rv.insert(match_table);
@@ -1065,7 +1067,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
 public:
     int address_shift() const override { return std::min(5U, format->log2size - 2); }
-    unsigned get_default_action_handle() override {
+    unsigned get_default_action_handle() const override {
         unsigned def_act_handle = Table::get_default_action_handle();
         return def_act_handle ? def_act_handle : action ? action->default_action_handle : 0; }
 )
@@ -1095,9 +1097,9 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return match_tables.size() == 1 ? (*match_tables.begin())->get_meter() : 0; }
     Call &action_call() override {
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
-    int memunit(int r, int c) override { return r*6 + c; }
+    int memunit(const int r, const int c) const override { return r*6 + c; }
     void pass1() override;
-    unsigned get_alu_index() {
+    unsigned get_alu_index() const {
         if(layout.size() > 0) return layout[0].row/4U;
         error(lineno, "Cannot determine ALU Index for table %s", name());
         return 0; }
@@ -1110,9 +1112,9 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
 protected:
     // Accessed by Meter/Selection/Stateful Tables as "meter_alu_index"
     // Accessed by Statistics (Counter) Tables as "stats_alu_index"
-    void add_alu_index(json::map &stage_tbl, std::string alu_index);
+    void add_alu_index(json::map &stage_tbl, std::string alu_index) const;
 public:
-    MatchTable *get_match_table() override {
+    const MatchTable *get_match_table() const override {
         return match_tables.size() == 1 ? *match_tables.begin() : 0; }
     std::set<MatchTable *> get_match_tables() override { return match_tables; }
     bool has_per_flow_enable() const { return per_flow_enable; }
@@ -1148,11 +1150,11 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     int                                 home_lineno = -1;
     std::map<std::string, Format *>     action_formats;
     static const std::map<unsigned, std::vector<std::string>> action_data_address_huffman_encoding;
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override;
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override;
     int get_start_vpn() override;
     std::string find_field(Format::Field *field) override;
     int find_field_lineno(Format::Field *field) override;
-    Format::Field *lookup_field(const std::string &name, const std::string &action) override;
+    Format::Field *lookup_field(const std::string &name, const std::string &action) const override;
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn) override;
     int find_on_actionbus(Format::Field *f, int lo, int hi, int size) override;
     int find_on_actionbus(const char *n, TableOutputModifier mod, int lo, int hi,
@@ -1169,19 +1171,22 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     unsigned get_do_care_count(std::string bstring);
     unsigned get_lower_huffman_encoding_bits (unsigned width);
 public:
-    std::map<std::string, Format *>& get_action_formats() { return action_formats; }
-    unsigned get_size() {
+    const std::map<std::string, Format *>& get_action_formats() const { return action_formats; }
+    unsigned get_size() const {
         unsigned size = 0;
         if (format) size = format->size;
         for (auto f: get_action_formats()) {
             unsigned fsize = f.second->size;
             if (fsize > size) size = fsize; }
         return size; }
-    unsigned get_log2size() {
+    unsigned get_log2size() const {
         unsigned size = get_size();
         return ceil_log2(size); }
 )
 
+// Dummy value used to start gateway handles. For future use by driver,
+// Incremented from inside the gateway table
+static uint gateway_handle = 0x70000000;
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     MatchTable                  *match_table = 0;
     uint64_t                    payload;
@@ -1190,6 +1195,8 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     int                         gw_unit = -1;
     enum range_match_t { NONE, DC_2BIT, DC_4BIT }
                                 range_match = NONE;
+    std::string                 gateway_name;
+    std::string                 gateway_cond;
 public:
     struct MatchKey {
         int                     offset;
@@ -1208,13 +1215,19 @@ private:
         Ref                     next;
         Match() {}
         Match(value_t *v, value_t &data, range_match_t range_match);
-    }                           miss;
+        int next_logical_id() const {
+            if (next.name == "END") return Target::END_OF_PIPE();
+            return next->logical_id; }
+        std::string next_table_name() const {
+            if (next.name == "END") return next.name;
+            return next->p4_name(); }
+    }                           miss, cond_true, cond_false;
     std::vector<Match>          table;
     template<class REGS> void payload_write_regs(REGS &, int row, int type, int bus);
     template<class REGS> void standalone_write_regs(REGS &regs);
 public:
     table_type_t table_type() const override { return GATEWAY; }
-    MatchTable *get_match_table() override { return match_table; }
+    const MatchTable *get_match_table() const override { return match_table; }
     std::set<MatchTable *> get_match_tables() override {
         std::set<MatchTable *> rv;
         if (match_table) rv.insert(match_table);
@@ -1247,7 +1260,7 @@ DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
 public:
     StatefulTable*           bound_stateful = nullptr;
     table_type_t table_type() const override { return SELECTION; }
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override {
         width = period = 1; depth = layout_size(); period_name = 0; }
 
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
@@ -1283,9 +1296,9 @@ public:
         match_table = m;
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
         return IDLETIME; }
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override {
         width = period = 1; depth = layout_size(); period_name = 0; }
-    int memunit(int r, int c) override { return r*6 + c; }
+    int memunit(const int r, const int c) const override { return r*6 + c; }
     int precision_shift() const;
     int direct_shiftcount() const override;
     void pass1() override;
@@ -1295,8 +1308,8 @@ public:
     template<class REGS> void write_regs(REGS &regs);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_REGS)
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS)
-    void gen_tbl_cfg(json::vector &out) override { /* nothing at top level */ }
-    void gen_stage_tbl_cfg(json::map &out);
+    void gen_tbl_cfg(json::vector &out) const override { /* nothing at top level */ }
+    void gen_stage_tbl_cfg(json::map &out) const;
     static IdletimeTable *create(int lineno, const std::string &name, gress_t gress,
                                  Stage *stage, int lid, VECTOR(pair_t) &data) {
         IdletimeTable *rv = new IdletimeTable(lineno, name.c_str(), gress, stage, lid);
@@ -1305,11 +1318,11 @@ public:
 };
 
 DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override {
         width = period = 1; depth = layout_size(); period_name = 0; }
     bool                global_binding = false;
     bool                output_used = false;
-    json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) override;
+    json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const override;
 public:
     template<class REGS> void write_regs(REGS &regs);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_REGS)
@@ -1449,7 +1462,7 @@ public:
     FOR_ALL_TARGETS(TARGET_OVERLOAD, void set_counter_mode, int)
     void set_counter_mode(int mode) {
         SWITCH_FOREACH_TARGET(options.target, set_counter_mode(TARGET(), mode);); }
-    FOR_ALL_TARGETS(TARGET_OVERLOAD, void gen_tbl_cfg, json::map &, json::map &)
+    FOR_ALL_TARGETS(CONST_TARGET_OVERLOAD, void gen_tbl_cfg, json::map &, json::map &)
 #if HAVE_JBAY
     Alloc1D<StatefulAlu::TMatchInfo, Target::JBay::STATEFUL_TMATCH_UNITS>       tmatch_use;
 #endif

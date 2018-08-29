@@ -1,9 +1,12 @@
 #include "p4_table.h"
 #include "tables.h"
 
+
+static std::map<const P4Table *, alpm_t>                        alpms;
+
 std::map<unsigned, P4Table *>                                   P4Table::by_handle;
 std::map<P4Table::type, std::map<std::string, P4Table *>>       P4Table::by_name;
-unsigned                                P4Table::max_handle[7];
+unsigned                                                        P4Table::max_handle[7];
 
 // handle[29:24] is used as type field.
 const char *P4Table::type_name[] = { 0,
@@ -106,54 +109,77 @@ void P4Table::check(Table *tbl) {
     }
 }
 
-json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
-    if (!config) {
-        json::map *tbl_ptr = nullptr;
-        for (auto &_table_o : out) {
-            auto &_table = _table_o->to<json::map>();
-            if (_table["name"] == name) {
-                if (_table["handle"]
-                        && _table["handle"] != handle) continue; 
-                tbl_ptr = &_table;
-                break; } }
-        if (!tbl_ptr) {
-            tbl_ptr = new json::map();
-            out.emplace_back(tbl_ptr); }
-        json::map &tbl = *tbl_ptr;
-        config = &tbl;
-        tbl["direction"] = table->gress ? "egress" : "ingress";
-        if (handle) tbl["handle"] = handle;
-        auto table_type = (handle >> 24) & 0x3f;
-        tbl["name"] = p4_name();
-        tbl["table_type"] = type_name[table_type];
-        tbl["size"] = explicit_size ? this->size : size; }
-    return config;
+json::map *P4Table::base_tbl_cfg(json::vector &out, int size, const Table *table) const {
+    json::map *tbl_ptr = nullptr;
+    for (auto &_table_o : out) {
+        auto &_table = _table_o->to<json::map>();
+        if (_table["name"] == name) {
+            if (_table["handle"]
+                    && _table["handle"] != handle) continue;
+            tbl_ptr = &_table;
+            break; } }
+    if (!tbl_ptr) {
+        tbl_ptr = new json::map();
+        out.emplace_back(tbl_ptr); }
+    json::map &tbl = *tbl_ptr;
+    tbl["direction"] = table->gress ? "egress" : "ingress";
+    if (handle) tbl["handle"] = handle;
+    auto table_type = (handle >> 24) & 0x3f;
+    tbl["name"] = p4_name();
+    tbl["table_type"] = type_name[table_type];
+    tbl["size"] = explicit_size ? this->size : size;
+    return &tbl;
 }
 
-void P4Table::base_alpm_tbl_cfg(json::map &out, int size, Table *table, P4Table::alpm_type atype) {
+void P4Table::base_alpm_tbl_cfg(json::map &out, int size, const Table *table, P4Table::alpm_type atype) const {
     if (is_alpm()) {
-        bool cfg_present = false;
         json::map **alpm_cfg;
         unsigned *alpm_table_handle;
-        if (atype == P4Table::PreClassifier) {
-            cfg_present = (alpm.alpm_pre_classifier_table_cfg) ? true : false;
-            alpm_cfg = &alpm.alpm_pre_classifier_table_cfg;
-            alpm_table_handle = &alpm.alpm_pre_classifier_table_handle;
-        } else if (atype == P4Table::Atcam) {
-            cfg_present = (alpm.alpm_atcam_table_cfg) ? true : false;
-            alpm_cfg = &alpm.alpm_atcam_table_cfg;
-            alpm_table_handle = &alpm.alpm_atcam_table_handle; }
-        *alpm_cfg = &out;
-        json::map &tbl = out;
-        tbl["direction"] = table->gress ? "egress" : "ingress";
-        auto table_type = (handle >> 24) & 0x3f;
-        if (!(*alpm_table_handle & 0xffffff))
-            *alpm_table_handle = apply_handle_offset((P4Table::MatchEntry << 24) + (++max_handle[table_type]),
-                                                     unique_table_offset);
-        if (*alpm_table_handle)
-            tbl["handle"] = *alpm_table_handle;
-        tbl["name"] = p4_name();
-        tbl["table_type"] = type_name[table_type];
-        tbl["size"] = explicit_size ? this->size : size;
-        tbl["stage_tables"] = json::mkuniq<json::vector>(); }
+        auto *alpm = &alpms[this];
+        if (alpm) {
+            if (atype == P4Table::PreClassifier) {
+                alpm_cfg = &alpm->alpm_pre_classifier_table_cfg;
+                alpm_table_handle = &alpm->alpm_pre_classifier_table_handle;
+            } else if (atype == P4Table::Atcam) {
+                alpm_cfg = &alpm->alpm_atcam_table_cfg;
+                alpm_table_handle = &alpm->alpm_atcam_table_handle; }
+            *alpm_cfg = &out;
+            json::map &tbl = out;
+            tbl["direction"] = table->gress ? "egress" : "ingress";
+            auto table_type = (handle >> 24) & 0x3f;
+            if (!(*alpm_table_handle & 0xffffff))
+                *alpm_table_handle = apply_handle_offset((P4Table::MatchEntry << 24) + (++max_handle[table_type]),
+                                                         unique_table_offset);
+            if (*alpm_table_handle)
+                tbl["handle"] = *alpm_table_handle;
+            tbl["name"] = p4_name();
+            tbl["table_type"] = type_name[table_type];
+            tbl["size"] = explicit_size ? this->size : size;
+            tbl["stage_tables"] = json::mkuniq<json::vector>(); } }
+}
+
+void P4Table::set_partition_action_handle(unsigned handle) {
+    alpms[this].set_partition_action_handle = handle;
+}
+
+void P4Table::set_partition_field_name(std::string name) {
+    alpms[this].partition_field_name = name;
+}
+
+std::string P4Table::get_partition_field_name() const {
+    if (alpms.count(this))
+        return alpms[this].partition_field_name;
+    return "";
+}
+
+unsigned P4Table::get_partition_action_handle() const {
+    if (alpms.count(this))
+        return alpms[this].set_partition_action_handle;
+    return 0;
+}
+
+unsigned P4Table::get_alpm_atcam_table_handle() const {
+    if (alpms.count(this))
+        return alpms[this].alpm_atcam_table_handle;
+    return 0;
 }

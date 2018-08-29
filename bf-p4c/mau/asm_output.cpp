@@ -1790,7 +1790,7 @@ static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNe
  *  row.  Lastly all gateways have a miss row, which will automatically match if the none of the
  *  programmed gateway rows match
  *
- *  Gateways rows have the following strucure:
+ *  Gateways rows have the following structure:
  *  - A match to compare the search bus/hash bus
  *  - An inhibit bit
  *  - A next table lookup
@@ -1880,6 +1880,7 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
         if (collect.need_range)
             out << gw_indent << "range: 4" << std::endl;
         BuildGatewayMatch match(phv, collect);
+        std::map<cstring, cstring> cond_tables;
         for (auto &line : tbl->gateway_rows) {
             out << gw_indent;
             if (line.first) {
@@ -1888,24 +1889,41 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             } else {
                 out << "miss: ";
             }
+            cstring nxt_tbl;
             if (line.second) {
                 if (no_match) {
                     out << "run_table";
-                    gw_miss = next_for(tbl, line.second, default_next);
+                    gw_miss = nxt_tbl = next_for(tbl, line.second, default_next);
                 } else {
+                    nxt_tbl = next_for(tbl, line.second, default_next);
                     out << next_for(tbl, line.second, default_next);
                 }
             } else {
-                if (no_match)
+                if (no_match) {
                     out << next_hit;
-                else
+                    nxt_tbl = next_hit;
+                } else {
                     out << "run_table";
+                    nxt_tbl = tbl->unique_id().build_name();
+                }
             }
             out << std::endl;
+            bool split_gateway = (line.second == "$gwcont");
+            auto cond = (line.second.isNullOrEmpty() || split_gateway) ?
+                "$torf" : line.second;
+            cond_tables[cond] = nxt_tbl;
         }
         if (tbl->gateway_rows.back().first) {
             out << gw_indent << "miss: run_table" << std::endl;
         }
+        out << gw_indent++ << "condition: " << std::endl;
+        out << gw_indent << "expression: \"(" << tbl->gateway_cond << ")\"" << std::endl;
+        out << gw_indent << "true: "
+            << (cond_tables.count("$true") ? cond_tables["$true"] : cond_tables["$torf"])
+            << std::endl;
+        out << gw_indent << "false: "
+            << (cond_tables.count("$false") ? cond_tables["$false"] : cond_tables["$torf"])
+            << std::endl;
     } else {
         WARNING("Failed to fit gateway expression for " << tbl->name);
     }
@@ -1916,8 +1934,13 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
  */
 void MauAsmOutput::emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
         const IR::MAU::Table *tbl) const {
-    out << gw_indent << "0x0: " << next_for(tbl, "", default_next) << std::endl;
-    out << gw_indent << "miss: " << next_for(tbl, "", default_next) << std::endl;
+    auto nxt_tbl = next_for(tbl, "", default_next);
+    out << gw_indent << "0x0: " << nxt_tbl << std::endl;
+    out << gw_indent << "miss: " << nxt_tbl << std::endl;
+    out << gw_indent++ << "condition: " << std::endl;
+    out << gw_indent << "expression: \"true(always hit)\"" << std::endl;
+    out << gw_indent << "true: " << nxt_tbl << std::endl;
+    out << gw_indent << "false: " << nxt_tbl << std::endl;
 }
 
 void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
@@ -2187,6 +2210,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         indent_t gw_indent = indent;
         if (!tbl->gateway_only())
             out << gw_indent++ << "gateway:" << std::endl;
+        auto gateway_name = tbl->gateway_name.isNullOrEmpty() ? tbl->name : tbl->gateway_name;
+        out << gw_indent << "name: " <<  gateway_name << std::endl;
         emit_ixbar(out, gw_indent, &tbl->resources->gateway_ixbar, nullptr, nullptr, &fmt, false);
         for (auto &use : Values(tbl->resources->memuse)) {
             if (use.type == Memories::Use::GATEWAY) {

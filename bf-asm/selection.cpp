@@ -285,7 +285,7 @@ template<> void SelectionTable::setup_logical_alu_map(Target::JBay::mau_regs &re
 }
 #endif // HAVE_JBAY
 
-void SelectionTable::gen_tbl_cfg(json::vector &out) {
+void SelectionTable::gen_tbl_cfg(json::vector &out) const {
     json::map &tbl = *base_tbl_cfg(out, "selection", 1024);
     tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
     tbl["how_referenced"] = indirect ? "indirect" : "direct";

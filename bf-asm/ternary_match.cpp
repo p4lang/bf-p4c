@@ -10,7 +10,7 @@
 DEFINE_TABLE_TYPE(TernaryMatchTable)
 DEFINE_TABLE_TYPE(TernaryIndirectTable)
 
-void TernaryMatchTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) {
+void TernaryMatchTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) const {
     if ((width = match.size()) == 0)
         width = input_xbar->tcam_width();
     depth = width ? layout_size() / width : 0;
@@ -446,8 +446,8 @@ void TernaryMatchTable::write_regs(REGS &regs) {
     //     merge.mau_action_instruction_adr_tcam_actionbit_map_en |= 1 << logical_id;
 }
 
-std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(
-        const char *type, std::vector<Layout> & layout, bool skip_spare_bank) {
+std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg (
+        const char *type, const std::vector<Layout> & layout, bool skip_spare_bank) const {
     if (layout.size() == 0) return nullptr;
     assert(!skip_spare_bank); // never spares in tcam
     json::map mra { { "memory_type", json::string(type) } };
@@ -484,7 +484,7 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
 void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
         std::string source, unsigned start_bit, unsigned field_width, \
-        unsigned index) {
+        unsigned index) const {
     remove_aug_names(name);
     std::string fix_name(name);
 
@@ -553,11 +553,8 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
 
 }
 
-void TernaryMatchTable::gen_alpm_cfg(json::vector &out) {
-}
-
 void TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list, int word,
-        bool uses_versioning, unsigned version_word_group) {
+        bool uses_versioning, unsigned version_word_group) const {
    // Insert payload (bit 0), parity (bit 45, 46) and
    // version bits(bits 43, 44 if specified) for new word
    gen_entry_cfg(match_field_list, "--tcam_payload_" +
@@ -569,7 +566,7 @@ void TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list, int
                  std::to_string(word) + "--", 45, word, word, "parity", 0, 2, 0);
 }
 
-void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
+void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
     unsigned number_entries = match.size() ? layout_size()/match.size() * 512 : 0;
     json::map *tbl_ptr;
     // For ALPM tables, this sets up the top level ALPM table and this ternary
@@ -982,10 +979,10 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
         hd.write_regs(regs, this, 1, false);
 }
 
-void TernaryIndirectTable::gen_tbl_cfg(json::vector &out) {
+void TernaryIndirectTable::gen_tbl_cfg(json::vector &out) const {
 }
 
-void TernaryMatchTable::add_result_physical_buses(json::map &stage_tbl) {
+void TernaryMatchTable::add_result_physical_buses(json::map &stage_tbl) const {
     json::vector &result_physical_buses = stage_tbl["result_physical_buses"] = json::vector();
     if (indirect) {
         for (auto l : indirect->layout) {

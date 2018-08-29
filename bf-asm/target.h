@@ -19,6 +19,7 @@
 #define DECLARE_TARGET_CLASS(TARGET, ...)    class TARGET __VA_ARGS__;
 #define FRIEND_TARGET_CLASS(TARGET, ...)    friend class Target::TARGET __VA_ARGS__;
 #define TARGET_OVERLOAD(TARGET, FN, ...)    FN(Target::TARGET, ##__VA_ARGS__);
+#define CONST_TARGET_OVERLOAD(TARGET, FN, ...)    FN(Target::TARGET, ##__VA_ARGS__) const;
 
 #define PER_TARGET_CONSTANTS(M) \
     M(const char *, name) \

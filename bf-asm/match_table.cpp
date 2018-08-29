@@ -136,7 +136,7 @@ void MatchTable::pass1(int type) {
                 p.is_valid = true; } }
 }
 
-void MatchTable::gen_idletime_tbl_cfg(json::map &stage_tbl) {
+void MatchTable::gen_idletime_tbl_cfg(json::map &stage_tbl) const {
    if (idletime)
        idletime->gen_stage_tbl_cfg(stage_tbl);
 }
@@ -418,7 +418,7 @@ int MatchTable::get_address_mau_actiondata_adr_default(unsigned log2size, bool p
 
 // Create json node for all hash bits
 void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
-        unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no) {
+        unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no) const {
     for (auto &col: hash_table) {
         json::map hash_bit;
         bool hash_bit_added = false;
@@ -443,7 +443,7 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                 // Look up this field in the param list to get a custom key
                 // name, if present.
                 std::string key_name = field_name;
-                p4_param* p = find_p4_param(field_name);
+                auto p = find_p4_param(field_name);
                 if (!p && !p4_params_list.empty()) {
                     warning(col.second.lineno, "Cannot find field name %s in p4_param_order "
                             "for table %s", field_name.c_str(), name());
@@ -464,7 +464,7 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
             hash_bits.push_back(std::move(hash_bit)); }
 }
 
-void MatchTable::add_hash_functions(json::map &stage_tbl) {
+void MatchTable::add_hash_functions(json::map &stage_tbl) const {
     json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
     // XXX(amresh): Hash functions are not generated for ALPM atcams as the
     // partition index bits used in hash which is a compiler generated field and
@@ -490,15 +490,15 @@ void MatchTable::add_hash_functions(json::map &stage_tbl) {
             hash_functions.push_back(std::move(hash_function)); } } }
 }
 
-void MatchTable::add_all_reference_tables(json::map &tbl, Table *match_table) {
-    if (!match_table) match_table = this;
+void MatchTable::add_all_reference_tables(json::map &tbl, Table *match_table) const {
+    auto mt = (!match_table) ? this : match_table;
     json::vector &action_data_table_refs = tbl["action_data_table_refs"];
     json::vector &selection_table_refs = tbl["selection_table_refs"];
     json::vector &meter_table_refs = tbl["meter_table_refs"];
     json::vector &statistics_table_refs = tbl["statistics_table_refs"];
     json::vector &stateful_table_refs = tbl["stateful_table_refs"];
-    add_reference_table(action_data_table_refs, match_table->action);
-    if (auto a = match_table->get_attached()) {
+    add_reference_table(action_data_table_refs, mt->action);
+    if (auto a = mt->get_attached()) {
         if (a->selector) {
             tbl["default_selector_mask"] = 0; //FIXME-JSON
             tbl["default_selector_value"] = 0; //FIXME-JSON
@@ -508,7 +508,7 @@ void MatchTable::add_all_reference_tables(json::map &tbl, Table *match_table) {
         for (auto &s : a->statefuls) { add_reference_table(stateful_table_refs, s); } }
 }
 
-void MatchTable::add_static_entries(json::map &tbl) {
+void MatchTable::add_static_entries(json::map &tbl) const {
     if (static_entries_list.size() > 0) {
         json::vector &static_entries = tbl["static_entries"];
         for (auto &s : static_entries_list) {

@@ -210,7 +210,7 @@ template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {
             ram.match_nibble_s1q0_enable = 0xffffffffUL &~ s0q1_nibbles.getrange(way.word*32U, 32); } }
 }
 
-std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_tbl_cfg() {
+std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_tbl_cfg() const {
     if (col_priority_way.size() == 0)
         error(lineno, "No column priority determined for table %s", name());
     int col_priority = 0;
@@ -247,7 +247,7 @@ std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_
     return json::mkuniq<json::vector>(std::move(mras));
 }
 
-std::string AlgTcamMatchTable::get_match_mode(Phv::Ref &pref, int offset) {
+std::string AlgTcamMatchTable::get_match_mode(const Phv::Ref &pref, int offset) const {
     for (auto &p : s0q1) {
         if ((p.first == offset) && (*p.second.field == pref))
             return "s0q1";
@@ -259,7 +259,7 @@ std::string AlgTcamMatchTable::get_match_mode(Phv::Ref &pref, int offset) {
     return "unused";
 }
 
-void AlgTcamMatchTable::gen_unit_cfg(json::vector &units, int size) {
+void AlgTcamMatchTable::gen_unit_cfg(json::vector &units, int size) const {
     json::map tbl;
     tbl["direction"] = gress ? "egress" : "ingress";
     tbl["handle"] = p4_table ? is_alpm() ? p4_table->get_alpm_atcam_table_handle(): p4_table->get_handle() : 0;
@@ -275,10 +275,7 @@ void AlgTcamMatchTable::gen_unit_cfg(json::vector &units, int size) {
     units.push_back(std::move(tbl));
 }
 
-void AlgTcamMatchTable::gen_alpm_cfg(json::vector &out) {
-}
-
-void AlgTcamMatchTable::gen_tbl_cfg(json::vector &out) {
+void AlgTcamMatchTable::gen_tbl_cfg(json::vector &out) const {
     json::map *atcam_tbl_ptr;
     unsigned number_entries = layout_size()/match.size() * 512;
     if (is_alpm()) {

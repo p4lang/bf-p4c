@@ -29,6 +29,8 @@ extern struct option_t {
     bool                werror;
     bool                disable_power_gating;
     bool                singlewrite;
+    bool                hash_parity_enabled;
+    bool                high_availability_enabled;
     std::string         stage_dependency_pattern;
 } options;
 

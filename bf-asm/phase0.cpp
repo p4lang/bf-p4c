@@ -42,7 +42,7 @@ void Phase0MatchTable::write_regs(REGS &) {
     LOG1("### Phase 0 match table " << name() << " write_regs");
 }
 
-void Phase0MatchTable::gen_tbl_cfg(json::vector &out) {
+void Phase0MatchTable::gen_tbl_cfg(json::vector &out) const {
     json::map &tbl = *base_tbl_cfg(out, "match_entry", p4_table ? p4_table->size : size);
     common_tbl_cfg(tbl);
     tbl["statistics_table_refs"] = json::vector();

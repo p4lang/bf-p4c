@@ -28,6 +28,8 @@ option_t options = {
     .werror = false,
     .disable_power_gating = false,
     .singlewrite = false,
+    .hash_parity_enabled = true,
+    .high_availability_enabled = true
 };
 
 
@@ -77,8 +79,9 @@ void output_all() {
     char build_date[1024];
     strftime(build_date, 1024, "%c", localtime(&now));
     ctxtJson["build_date"] = build_date;
-    ctxtJson["schema_version"] = "1.3.11";
+    ctxtJson["schema_version"] = "1.5.3";
     ctxtJson["compiler_version"] = BF_P4C_VERSION;
+    ctxtJson["compile_command"] = "xxx"; // TODO
     ctxtJson["program_name"] = asmfile_name;
     ctxtJson["learn_quanta"] = json::vector();
     ctxtJson["dynamic_hash_calculations"] = json::vector();
@@ -87,8 +90,15 @@ void output_all() {
     ctxtJson["tables"] = json::vector();
     ctxtJson["stage_dependency"] = json::vector();
     ctxtJson["configuration_cache"] = json::vector();
+
     Section::output_all(ctxtJson);
     TopLevel::output_all(ctxtJson);
+
+    json::map driver_options;
+    driver_options["hash_parity_enabled"] = options.hash_parity_enabled;
+    driver_options["high_availability_enabled"] = options.high_availability_enabled;
+    ctxtJson["driver_options"] = std::move(driver_options);
+
     auto json_out = open_output("context.json");
     *json_out << &ctxtJson;
 
@@ -134,6 +144,10 @@ int main(int ac, char **av) {
             options.binary = ONE_PIPE;
         } else if (!strcmp(av[i], "--singlewrite")) {
             options.singlewrite = true;
+        } else if (!strcmp(av[i], "--hash_parity_disabled")) {
+            options.hash_parity_enabled = false;
+        } else if (!strcmp(av[i], "--high_availability_disabled")) {
+            options.high_availability_enabled = false;
         } else if (!strcmp(av[i], "--stage_dependency_pattern")) {
           ++i;
           if (!av[i]) {

@@ -26,7 +26,7 @@ int ActionTable::find_field_lineno(Table::Format::Field *field) {
     return Table::find_field_lineno(field);
 }
 
-Table::Format::Field *ActionTable::lookup_field(const std::string &name, const std::string &action)
+Table::Format::Field *ActionTable::lookup_field(const std::string &name, const std::string &action) const
 {
     if (action == "*" || action == "") {
         if (auto *rv = format ? format->field(name) : 0)
@@ -171,7 +171,7 @@ int ActionTable::get_start_vpn() {
     return 0;
 }
 
-void ActionTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) {
+void ActionTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) const {
     width = 1;
     depth = layout_size();
     period = format ? 1 << std::max((int)format->log2size - 7, 0) : 0;
@@ -558,7 +558,7 @@ void ActionTable::write_regs(REGS &regs) {
 //    { 512,    {"x01", "11111"} },
 //    { 1024,   {"011", "11111"} };
 
-void ActionTable::gen_tbl_cfg(json::vector &out) {
+void ActionTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME -- this is wrong if actions have different format sizes
     unsigned number_entries = (layout_size() * 128 * 1024) / (1 << format->log2size);
     json::map &tbl = *base_tbl_cfg(out, "action_data", number_entries);

@@ -493,6 +493,9 @@ stage <constant> <thread>:
     gateway <name> [<logical_id>]:
         # 'bare' Gateway table -- no corresponding match table, so must
         # always specify next table
+        name: <gateway-name>
+            # Only output when gateway associated with a match table i.e. not
+            # 'bare'
         row: <constant>
             # physical match row to use
         bus: 0 | 1
@@ -527,6 +530,14 @@ stage <constant> <thread>:
             # for units (last int is bottom 2 or 4 bits of upper 12 bits)
         miss:
             # behavior if no row matches (same options as match row above)
+        condition:
+            # condition output used for model logging
+          expression : <string>
+            # condition string as specified in p4
+          true : <string>
+            # next table name when condition is true
+          false : <string>
+            # next table name when condition is false 
         payload: <constant>
             # payload data to use if gateway is not disabled (run_table is false)
         match_address: <constant>

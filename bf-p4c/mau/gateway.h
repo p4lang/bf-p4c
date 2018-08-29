@@ -20,6 +20,7 @@ class CanonGatewayExpr : public MauTransform {
     IR::MAU::Action *preorder(IR::MAU::Action *af) override { prune(); return af; }
     IR::P4Table *preorder(IR::P4Table *t) override { prune(); return t; }
     IR::Attached *preorder(IR::Attached *a) override { prune(); return a; }
+    IR::Node *preorder(IR::MAU::Table *) override;
 
     /// Use preorder visitors to simplify all the expressions that have reduntant terms
     /// before going into other more complicated rules (deMorgan, distributions, etc.)

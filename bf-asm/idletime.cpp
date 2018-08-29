@@ -140,7 +140,7 @@ void IdletimeTable::write_regs(REGS &regs) {
     adrdist.idle_bubble_req[gress].bubble_req_1x_class_en |=  1 << logical_id;
 }
 
-void IdletimeTable::gen_stage_tbl_cfg(json::map &out) {
+void IdletimeTable::gen_stage_tbl_cfg(json::map &out) const {
     unsigned number_entries = layout_size() * (8U/precision) * 1024;
     json::map &tbl = out["idletime_stage_table"] = json::map();
     tbl["stage_number"] = stage->stageno;

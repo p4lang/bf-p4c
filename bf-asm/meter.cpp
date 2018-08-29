@@ -452,7 +452,7 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::JBay::mau_regs &
 }
 #endif // HAVE_JBAY
 
-void MeterTable::gen_tbl_cfg(json::vector &out) {
+void MeterTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME -- factor common Synth2Port stuff
     int size = (layout_size() - 1)*1024;
     json::map &tbl = *base_tbl_cfg(out, "meter", size);

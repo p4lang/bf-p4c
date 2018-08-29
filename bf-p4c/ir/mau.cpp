@@ -5,6 +5,7 @@ bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
     return name == a.name &&
            gress == a.gress &&
            logical_id == a.logical_id &&
+           gateway_cond == a.gateway_cond &&
            gateway_rows == a.gateway_rows &&
            gateway_payload == a.gateway_payload &&
            match_table == a.match_table &&

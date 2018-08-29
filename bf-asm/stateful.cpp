@@ -416,7 +416,7 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
         salu.salu_mathunit_ctl.salu_mathunit_exponent_shift = math_table.shift & 0x2U; }
 }
 
-void StatefulTable::gen_tbl_cfg(json::vector &out) {
+void StatefulTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME -- factor common Synth2Port stuff
     int size = (layout_size() - 1) * 1024 * (128U/format->size);
     json::map &tbl = *base_tbl_cfg(out, "stateful", size);
@@ -436,7 +436,7 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) {
                 if (i->name() == "clr_bit")
                     tbl["clr_instr"] = a.code; } } }
     // Add action handle and instr slot for action which references stateful
-    for (auto *m : get_match_tables()) {
+    for (auto *m : match_tables) {
         if (auto *acts = m->get_actions()) {
             for (auto &a : *acts) {
                 // Check for action args to determine which stateful action is

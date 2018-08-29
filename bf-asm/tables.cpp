@@ -1280,7 +1280,7 @@ FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void Table::Actions::write_regs, ma
  * Override_full_addr - the constant value to be written directly into the corresponding bit
  *     positions in the RAM line
  */
-static void gen_override(json::map &cfg, Table::Call &att) {
+static void gen_override(json::map &cfg, const Table::Call &att) {
     auto type = att->table_type();
     // Direct tables currently don't require overrides
     // FIXME: Corner cases where miss actions do not use the stateful object should have
@@ -1333,7 +1333,7 @@ static void gen_override(json::map &cfg, Table::Call &att) {
     cfg[base + "_full_addr"] = override_addr ? override_full_addr : 0;
 }
 
-void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resources) {
+void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resources) const {
     for (auto &att : attached) {
         auto addr_arg = att.args.back();
         json::map indirect_resource;
@@ -1353,7 +1353,7 @@ void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resou
     }
 }
 
-void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) {
+void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
     for (auto &act : *this) {
         // Use action node if it already exists in json
         bool act_json_present = false;
@@ -1386,6 +1386,8 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) {
         // to the compiler this must reflect "has_rng" or similar string.
         if (!act.default_allowed)
             action_cfg["disallowed_as_default_action_reason"] = act.default_disallowed_reason;
+        // TODO: Need to be set through assembly
+        action_cfg["is_compiler_added_action"] = false;
 
         // \TODO(cc): constant_default_action is used by the driver in schema version 1.3.1
         // to indicate which action is constant. This will need to be updated based on
@@ -1418,7 +1420,7 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) {
     }
 }
 
-void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) {
+void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) const {
     int index = 0;
     unsigned start_bit = 0;
     // Add p4 params if present. This will add params even if the action is
@@ -1436,7 +1438,7 @@ void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) {
         start_bit += a.bit_width; }
 }
 
-void Table::Actions::add_action_format(Table *table, json::map &tbl) {
+void Table::Actions::add_action_format(const Table *table, json::map &tbl) const {
     /* FIXME -- this is mostly a hack, since the actions need not map 1-to-1 to the
      * hit_next entries.  Need a way of speicfying next table in the actual action */
     //if (table->hit_next.size() <= 1) return;
@@ -1670,7 +1672,8 @@ int Table::find_on_ixbar(Phv::Slice sl, int group) {
     return -1;
 }
 
-std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const char *type, std::vector<Layout> &layout, bool skip_spare_bank) {
+std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
+        const char *type, const std::vector<Layout> &layout, bool skip_spare_bank) const {
     int width, depth, period;
     const char *period_name;
     // FIXME -- calling vpn_params here is only valid when layout == this->layout, but we also
@@ -1685,7 +1688,7 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
     bool no_vpns = false;
     for (auto &row : layout) {
         int word = row.word >= 0 ? row.word : 0;
-        std::vector<int>::iterator vpn_itr = row.vpns.begin();
+        auto vpn_itr = row.vpns.begin();
         for (auto col: row.cols) {
             if (vpn_itr == row.vpns.end())
                 no_vpns = true;
@@ -1738,11 +1741,11 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
     return json::mkuniq<json::map>(std::move(mra));
 }
 
-json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
+json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) const {
     return p4_table->base_tbl_cfg(out, size, this);
 }
 
-json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) {
+json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const {
     json::vector &stage_tables = tbl["stage_tables"];
     json::map stage_tbl;
     stage_tbl["stage_number"] = stage->stageno;
@@ -1761,7 +1764,7 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     return &(stage_tables.back()->to<json::map>());
 }
 
-void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) {
+void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) const {
     if (c) {
         auto t_name = c->name();
         if (c->p4_table)
@@ -1777,7 +1780,7 @@ void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) 
         table_refs.push_back(std::move(table_ref)); }
 }
 
-json::map &Table::add_pack_format(json::map &stage_tbl, int memword, int words, int entries) {
+json::map &Table::add_pack_format(json::map &stage_tbl, int memword, int words, int entries) const {
     json::map pack_fmt;
     pack_fmt["table_word_width"] = memword * words;
     pack_fmt["memory_word_width"] = memword;
@@ -1789,7 +1792,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, int memword, int words, 
     return pack_format.back()->to<json::map>();
 }
 
-void Table::canon_field_list(json::vector &field_list) {
+void Table::canon_field_list(json::vector &field_list) const {
     for (auto &field_ : field_list) {
         auto &field = field_->to<json::map>();
         auto &name = field["field_name"]->to<json::string>();
@@ -1802,7 +1805,7 @@ void Table::canon_field_list(json::vector &field_list) {
  * field.  Do not like string matching, and this should potentially be determined by looking
  * through a list of fields, but this will work in the short term
  */
-void Table::get_cjson_source(const std::string &field_name, std::string &source, int &start_bit) {
+void Table::get_cjson_source(const std::string &field_name, std::string &source, int &start_bit) const {
     source = "spec";
     if (field_name == "version") {
         source = "version";
@@ -1865,7 +1868,7 @@ void Table::get_cjson_source(const std::string &field_name, std::string &source,
  */
 void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                      const Table::Format::Field &field,
-                                     const Table::Actions::Action *act)
+                                     const Table::Actions::Action *act) const
 {
     decltype(act->reverse_alias()) aliases;
     if (act) aliases = act->reverse_alias();
@@ -1920,7 +1923,7 @@ void Table::output_field_to_pack_format(json::vector &field_list,
                                         std::string source,
                                         int start_bit,
                                         const Table::Format::Field &field,
-                                        unsigned value)
+                                        unsigned value) const
 {
     unsigned add_width = 0;
     bool pfe_enable = false;
@@ -1963,7 +1966,7 @@ void Table::output_field_to_pack_format(json::vector &field_list,
 
 
 void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Action *act,
-                                    unsigned format_width) {
+                                    unsigned format_width) const {
     if (!format) return;
     // For an action with no format pad zeros for action table size
     unsigned pad_count = 0;
@@ -2025,7 +2028,7 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
 }
 
 json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
-        bool pad_zeros, bool print_fields, Table::Actions::Action *act) {
+        bool pad_zeros, bool print_fields, Table::Actions::Action *act) const {
     // Add zero padding fields to format
     // FIXME: Can this be moved to a format pass?
     if (pad_zeros)
@@ -2064,7 +2067,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
 }
 
 
-void Table::common_tbl_cfg(json::map &tbl) {
+void Table::common_tbl_cfg(json::map &tbl) const {
     tbl["default_action_handle"] = get_default_action_handle();
     tbl["action_profile"] = action_profile();
     tbl["default_next_table_mask"] = default_next_table_mask;
@@ -2100,7 +2103,7 @@ void Table::common_tbl_cfg(json::map &tbl) {
                 tbl["uses_range"] = true; } }
 }
 
-void Table::add_result_physical_buses(json::map &stage_tbl) {
+void Table::add_result_physical_buses(json::map &stage_tbl) const {
     json::vector &result_physical_buses = stage_tbl["result_physical_buses"] = json::vector();
     for (auto l : layout) {
         result_physical_buses.push_back(l.row * 2 + l.bus); }

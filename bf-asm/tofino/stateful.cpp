@@ -38,5 +38,5 @@ template<> void StatefulTable::write_logging_regs(Target::Tofino::mau_regs &regs
         salu.salu_const_regfile[i] = const_vals[i] & 0xffffffffU;
 }
 
-void StatefulTable::gen_tbl_cfg(Target::Tofino, json::map &tbl, json::map &stage_tbl) {
+void StatefulTable::gen_tbl_cfg(Target::Tofino, json::map &tbl, json::map &stage_tbl) const {
 }

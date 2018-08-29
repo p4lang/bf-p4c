@@ -30,6 +30,7 @@ class Table : BFN::Unit {
     cstring                                     name;
     gress_t                                     gress;
     cstring                                     gateway_name;
+    cstring                                     gateway_cond;
     /** Each stage has 16 slots for tables.  Logical IDs are numbered from 0
      * (Stage 0, Slot 0) to N * 16 + 15 (Stage N, Slot 15).  The @logical_id is
      * where this table has been assigned, or -1 if it has not yet been

@@ -413,9 +413,12 @@ void Stage::output(json::map &ctxt_json) {
     json::map &names = TopLevel::all->name_lookup["stages"][std::to_string(stageno)];
     Phv::output_names(names["containers"]);
     json::map &table_names = names["logical_tables"];
+    json::vector &ctxt_tables = ctxt_json["tables"];
     for (auto table : tables) {
         table->write_regs(*regs);
-        table->gen_tbl_cfg(ctxt_json["tables"]);
+        table->gen_tbl_cfg(ctxt_tables);
+        if (auto gw = table->get_gateway())
+            gw->gen_tbl_cfg(ctxt_tables);
         if (table->logical_id >= 0)
             table->gen_name_lookup(table_names[std::to_string(table->logical_id)]); }
     write_regs(*regs);

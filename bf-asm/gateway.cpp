@@ -69,7 +69,10 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
             if (v->i == 4) range_match = DC_4BIT;
             else error(v->lineno, "Unknown range match size %ld bits", v->i); } }
     for (auto &kv : MapIterChecked(data, true)) {
-        if (kv.key == "row") {
+        if (kv.key == "name") {
+            if (CHECKTYPE(kv.value, tSTR))
+                gateway_name = kv.value.s;
+        } else if (kv.key == "row") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 7)
                 error(kv.value.lineno, "row %ld out of range", kv.value.i);
@@ -109,6 +112,15 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                 input_xbar = new InputXbar(this, false, kv.value.map);
         } else if (kv.key == "miss") {
             miss = Match(0, kv.value, range_match);
+        } else if (kv.key == "condition") {
+            if (CHECKTYPE(kv.value, tMAP)) {
+                for (auto &v : kv.value.map) {
+                    if ((v.key == "expression") && CHECKTYPE(v.value, tSTR))
+                        gateway_cond = v.value.s; 
+                    else if ((v.key == "true") && CHECKTYPE(v.value, tSTR))
+                        cond_true = Match(0, v.value, range_match);
+                    else if ((v.key == "false") && CHECKTYPE(v.value, tSTR))
+                        cond_false = Match(0, v.value, range_match); } }
         } else if (kv.key == "payload") {
             if (kv.value.type == tBIGINT && kv.value.bigi.size == 1)
                 payload = kv.value.bigi.data[0];
@@ -463,5 +475,49 @@ void GatewayTable::write_regs(REGS &regs) {
         merge.exact_match_logical_result_delay |= 1 << logical_id;
 }
 
-void GatewayTable::gen_tbl_cfg(json::vector &out) {
+void GatewayTable::gen_tbl_cfg(json::vector &out) const {
+    json::map gTable;
+    gTable["direction"] = gress ? "egress" : "ingress";
+    gTable["attached_to"] = match_table ? match_table->name() : "-" ;
+    gTable["handle"] = gateway_handle++;
+    gTable["name"] = gateway_name.empty() ? name() : gateway_name;
+    gTable["table_type"] = "condition";
+
+    json::vector gStageTables;
+    json::map gStageTable;
+    json::map next_tables;
+    next_tables["false"] = cond_false.next_logical_id();
+    next_tables["true"] = cond_true.next_logical_id();
+    gStageTable["next_tables"] = std::move(next_tables);
+    json::map mra;
+    mra["memory_unit"] = layout[0].row * 2 + gw_unit; 
+    mra["memory_type"] = "gateway";
+    mra["payload_buses"] = json::vector();
+    gStageTable["memory_resource_allocation"] = std::move(mra);
+    json::vector pack_format; // For future use
+    gStageTable["pack_format"] = std::move(pack_format);
+    json::map next_table_names;
+    next_table_names["false"] = cond_false.next_table_name();
+    next_table_names["true"] = cond_true.next_table_name();
+    gStageTable["next_table_names"] = std::move(next_table_names);
+    gStageTable["logical_table_id"] = logical_id;
+    gStageTable["stage_number"] = stage->stageno; 
+    gStageTable["stage_table_type"] = "gateway"; 
+    gStageTable["size"] = 0;
+    gStageTables.push_back(std::move(gStageTable));
+
+    json::vector condition_fields;
+    for (auto m : match) {
+        json::map condition_field;
+        condition_field["name"] = m.val.name(); 
+        condition_field["start_bit"] = m.offset; 
+        condition_field["bit_width"] = m.val.size(); 
+        condition_fields.push_back(std::move(condition_field));
+    }
+
+    gTable["stage_tables"] = std::move(gStageTables);
+    gTable["condition_fields"] = std::move(condition_fields);
+    gTable["condition"] = gateway_cond;
+    gTable["size"] = 0;
+    out.push_back(std::move(gTable));
 }

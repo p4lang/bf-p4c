@@ -281,7 +281,7 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
         adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::STATISTICS; }
 }
 
-void CounterTable::gen_tbl_cfg(json::vector &out) {
+void CounterTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME -- factor common Synth2Port stuff
     int size = (layout_size() - 1)*1024*format->groups();
     json::map &tbl = *base_tbl_cfg(out, "statistics", size);
