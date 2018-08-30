@@ -22,7 +22,7 @@ inline std::ostream &operator<<(std::ostream &out, const prefix *p) {
 
 /* Class to link register trees together into a larger dag that will expand into a tree
  * when dumped as binary (so trees that appear in mulitple places will be duplicated)
- * 'name' is the json file name to use when dumping as cfg.json, and the name for logging       
+ * 'name' is the json file name to use when dumping as cfg.json, and the name for logging
  * 'tree' is the subtree to dump as binary at the appropriate offset
  */
 template<class REG>
@@ -42,7 +42,7 @@ public:
         if (disabled_)
             ERROR("Writing disabled register value in " << this);
         if (write)
-            ERRWARN(name != a || r != tree, "Overwriting \"" << name << "\" with \"" << a <<
+            WARNING("Overwriting \"" << name << "\" with \"" << a <<
                     "\" in " << this);
         name = a;
         tree = r;

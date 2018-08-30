@@ -63,7 +63,7 @@ template<int N> struct ubits : ubits_base {
         if (disabled_)
             ERROR("Writing disabled register value in " << this);
         if (write)
-            ERRWARN(value != v, "Overwriting " << value << " with " << v << " in " << this);
+            WARNING("Overwriting " << value << " with " << v << " in " << this);
         value = v;
         write = true;
         log("=", v);
@@ -75,8 +75,8 @@ template<int N> struct ubits : ubits_base {
     const ubits &operator|=(uint64_t v) override {
         if (disabled_)
             ERROR("Writing disabled register value in " << this);
-        if (write && (value & v))
-            ERRWARN(value != (v|value), "Overwriting " << value << " with " << (v|value) <<
+        if (write)
+            WARNING("Overwriting " << value << " with " << (v|value) <<
                     " in " << this);
         value |= v;
         write = true;
@@ -96,8 +96,7 @@ template<int N> struct ubits : ubits_base {
             ERROR("subfield " << bit << ".." << (bit+size-1) <<
                   " out of range in " << this);
         else if (write && ((value >> bit) & ((1U << size)-1)))
-            ERRWARN(((value >> bit) & ((1U << size)-1)) != v,
-                    "Overwriting subfield(" << bit << ".." << (bit+size-1) <<
+            WARNING("Overwriting subfield(" << bit << ".." << (bit+size-1) <<
                     ") value " << ((value >> bit) & ((1U << size)-1)) <<
                     " with " << v << " in " << this);
         if (v >= (1U << size))
