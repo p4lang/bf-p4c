@@ -140,7 +140,11 @@ struct DependencyGraph {
     };
     std::map<const IR::MAU::Table*, StageInfo> stage_info;
 
-    DependencyGraph(void) { finalized = false; }
+    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>> vertex_rst;
+
+    DependencyGraph(void) {
+        finalized = false;
+    }
 
     void clear() {
         container_conflicts.clear();
@@ -423,7 +427,9 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
 
  public:
     explicit FindDependencyGraph(const PhvInfo &phv, DependencyGraph& out)
-    : phv(phv), dg(out) { joinFlows = true; }
+    : phv(phv), dg(out) {
+        joinFlows = true;
+    }
 };
 
 #endif /* BF_P4C_MAU_TABLE_DEPENDENCY_GRAPH_H_ */

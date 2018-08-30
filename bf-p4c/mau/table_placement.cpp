@@ -45,6 +45,7 @@ bool TablePlacement::backtrack(trigger &trig) {
 Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
     LOG1("Table Placement ignores container conflicts? " << ignoreContainerConflicts);
+    upward_downward_prop = new UpwardDownwardPropagation(*deps);
     return MauTransform::init_apply(root);
 }
 
@@ -958,6 +959,8 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                   pl->table->get_provided_stage(), pl->stage);
 
     if (!pl->need_more) {
+        placed_tables.insert(pl->table);
+        if (pl->gw) placed_tables.insert(pl->gw);
         pl->group->finish_if_placed(work, pl);
         GroupPlace *gw_match_grp = nullptr;
         if (pl->gw)  {
@@ -1012,16 +1015,24 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     const IR::MAU::Table *a_table_to_use = a->gw ? a->gw : a->table;
     const IR::MAU::Table *b_table_to_use = b->gw ? b->gw : b->table;
 
-    LOG4("        Stage A is " << a->name << " with deps tail control " <<
-        deps->dependence_tail_size_control(a_table_to_use) <<
-        ", deps tail " << deps->dependence_tail_size(a_table_to_use) << ", total deps " <<
-        deps->happens_before_dependences(a_table_to_use).size() << ", calculated stage " <<
-        a->stage << ", and provided stage " << a->table->get_provided_stage());
-    LOG4("        Stage B is " << b->name << " with deps tail control " <<
-        deps->dependence_tail_size_control(b_table_to_use) <<
-        ", deps tail " << deps->dependence_tail_size(b_table_to_use) << ", total deps " <<
-        deps->happens_before_dependences(b_table_to_use).size() << ", calculated stage " <<
-        b->stage << ", and provided stage " << b->table->get_provided_stage());
+    upward_downward_prop->update_placed_tables(placed_tables);
+    const auto& downward_prop_score = upward_downward_prop->get_downward_prop_unplaced_score(
+        a_table_to_use, b_table_to_use);
+    const auto& upward_prop_score = upward_downward_prop->get_upward_prop_unplaced_score(
+        a_table_to_use, b_table_to_use);
+    const auto& local_score = upward_downward_prop->get_local_score(
+        a_table_to_use, b_table_to_use);
+
+
+    LOG4("        Stage A is " << a->name << " with calculated stage " << a->stage <<
+         ", provided stage " << a->table->get_provided_stage() << ", downward prop score " <<
+         downward_prop_score.first << ", upward prop score " <<
+         upward_prop_score.first << ", and local score " << local_score.first);
+
+    LOG4("        Stage B is " << b->name << " with calculated stage " << b->stage <<
+         ", provided stage " << b->table->get_provided_stage() << ", downward prop score " <<
+         downward_prop_score.second << ", upward prop score " <<
+         upward_prop_score.second << ", and local score " << local_score.second);
 
     choice = CALC_STAGE;
     if (a->stage < b->stage) return true;
@@ -1043,30 +1054,39 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     choice = NEED_MORE;
     if (b->need_more && !a->need_more) return true;
     if (a->need_more && !b->need_more) return false;
-    // FIXME: This feels like it shouldn't work but is does, keeping the old code around
-    // as documentation
-    int a_extra_stages = 0;  // a->need_more ? a->extra_use.stages_required() : 0;
-    int b_extra_stages = 0;  // b->need_more ? b->extra_use.stages_required() : 0;
-
-    int a_deps_stages_control = deps->dependence_tail_size_control(a_table_to_use) + a_extra_stages;
-    int b_deps_stages_control = deps->dependence_tail_size_control(b_table_to_use) + b_extra_stages;
 
 
+    int a_deps_stages_control = downward_prop_score.first.deps_stages_control;
+    int b_deps_stages_control = downward_prop_score.second.deps_stages_control;
 
-    choice = DEP_TAIL_SIZE_CONTROL;
+    choice = DOWNWARD_PROP_DSC;
     if (a_deps_stages_control > b_deps_stages_control) return true;
     if (a_deps_stages_control < b_deps_stages_control) return false;
 
-    int a_deps_stages = deps->dependence_tail_size(a_table_to_use) + a_extra_stages;
-    int b_deps_stages = deps->dependence_tail_size(b_table_to_use) + b_extra_stages;
+    int a_stages_upward_prop = upward_prop_score.first.deps_stages_control;
+    int b_stages_upward_prop = upward_prop_score.second.deps_stages_control;
 
-    choice = DEP_TAIL_SIZE;
+    choice = UPWARD_PROP_DSC;
+    if (a_stages_upward_prop > b_stages_upward_prop) return true;
+    if (a_stages_upward_prop < b_stages_upward_prop) return false;
+
+    int a_local = local_score.first.deps_stages_control;
+    int b_local = local_score.second.deps_stages_control;
+
+    choice = LOCAL_DSC;
+    if (a_local > b_local) return true;
+    if (a_local < b_local) return false;
+
+    int a_deps_stages = local_score.first.deps_stages;
+    int b_deps_stages = local_score.second.deps_stages;
+
+    choice = LOCAL_DS;
     if (a_deps_stages > b_deps_stages) return true;
     if (a_deps_stages < b_deps_stages) return false;
 
-    choice = TOTAL_DEPS;
-    int a_total_deps = deps->happens_before_dependences(a_table_to_use).size() + a_extra_stages;
-    int b_total_deps = deps->happens_before_dependences(b_table_to_use).size() + b_extra_stages;
+    choice = LOCAL_TD;
+    int a_total_deps = local_score.first.total_deps;
+    int b_total_deps = local_score.second.total_deps;
     if (a_total_deps < b_total_deps) return true;
     if (a_total_deps > b_total_deps) return false;
 
@@ -1230,8 +1250,11 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
  */
 std::ostream &operator<<(std::ostream &out, TablePlacement::choice_t choice) {
     static const char* choice_names[] = { "earlier stage calculated", "earlier stage provided",
-                                    "more stages needed", "longer control-included"
-                                    " dependence tail chain", "longer control-excluded dependence"
+                                    "more stages needed", "longer downward prop"
+                                    " control-included dependence tail chain",
+                                    "longer upward prop control-included dependence tail chain",
+                                    "longer local control-included dependence tail chain",
+                                    "longer control-excluded dependence"
                                     " tail chain", "fewer total dependencies", "default choice" };
     if (choice < sizeof(choice_names) / sizeof(choice_names[0])) {
         out << choice_names[choice];

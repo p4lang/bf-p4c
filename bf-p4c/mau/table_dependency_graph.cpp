@@ -617,8 +617,10 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
             LOG3(ss.str());
         }
     }
+    dg.vertex_rst = topo_rst_control;
 
     calc_topological_stage();
+
 
     verify_dependence_graph();
     dg.finalized = true;

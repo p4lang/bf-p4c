@@ -6,6 +6,7 @@
 #include "lib/ordered_set.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
+#include "bf-p4c/mau/upward_downward_prop.h"
 
 struct DependencyGraph;
 class TablesMutuallyExclusive;
@@ -25,14 +26,18 @@ class TablePlacement : public MauTransform, public Backtrack {
         CALC_STAGE,
         PROV_STAGE,
         NEED_MORE,
-        DEP_TAIL_SIZE_CONTROL,
-        DEP_TAIL_SIZE,
-        TOTAL_DEPS,
+        DOWNWARD_PROP_DSC,
+        UPWARD_PROP_DSC,
+        LOCAL_DSC,
+        LOCAL_DS,
+        LOCAL_TD,
         DEFAULT
     } choice_t;
 
  private:
+    ordered_set<const IR::MAU::Table *> placed_tables;
     struct TableInfo;
+    UpwardDownwardPropagation *upward_downward_prop;
     void log_choice(const Placed *t, const Placed *best, choice_t choice);
     friend std::ostream &operator<<(std::ostream &out, choice_t choice);
     std::map<const IR::MAU::Table *, struct TableInfo> tblInfo;

@@ -212,6 +212,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/table_seqdeps.cpp
   mau/table_summary.cpp
   mau/table_injected_deps.cpp
+  mau/upward_downward_prop.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_SRCS}")
 build_unified(BF_P4C_BACKEND_MAU_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -246,6 +247,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/table_seqdeps.h
   mau/table_summary.h
   mau/table_injected_deps.h
+  mau/upward_downward_prop.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_HDRS}")
 
