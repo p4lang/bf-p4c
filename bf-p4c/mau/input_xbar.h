@@ -672,6 +672,7 @@ struct IXBar {
     void layout_option_calculation(const LayoutOption *layout_option,
                                    size_t &start, size_t &last);
     void create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc);
+    int max_bit_to_byte(bitvec bit_mask);
     int max_index_group(int max_bit);
     int max_index_single_bit(int max_bit);
     bool hash_use_free(int max_group, int max_single_bit, unsigned hash_table_input);

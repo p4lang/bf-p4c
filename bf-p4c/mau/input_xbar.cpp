@@ -1797,6 +1797,17 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     return true;
 }
 
+/**
+ * For a meter alu input through hash, the hash output goes through a byte mask.  Thus
+ * the hash matrix must reserve up to the byte position of the upper most bit
+ */
+int IXBar::max_bit_to_byte(bitvec bit_mask) {
+    int max_bit = bit_mask.max().index();
+    int rv = ((max_bit + 8) / 8) * 8 - 1;
+    rv = std::min(rv, METER_ALU_HASH_BITS);
+    return rv;
+}
+
 int IXBar::max_index_group(int max_bit) {
     int total_max = (max_bit + TableFormat::RAM_GHOST_BITS - 1) / TableFormat::RAM_GHOST_BITS;
     return std::min(total_max, HASH_INDEX_GROUPS);
@@ -1947,8 +1958,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     }
     mah.bit_mask.setrange(0, mode_width_bits);
     alloc.hash_table_inputs[hash_group] = hash_table_input;
-    int max_bit = ((mah.bit_mask.max().index() + 7) / 8) * 8;
-    max_bit = std::min(max_bit, METER_ALU_HASH_BITS);
+    int max_bit = max_bit_to_byte(mah.bit_mask);
     int max_group = max_index_group(max_bit);
     int max_single_bit = max_index_single_bit(max_bit);
     BUG_CHECK(hash_use_free(max_group, max_single_bit, hash_table_input), "The calculation for "
@@ -2075,8 +2085,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
         mah.bit_mask.setrange(0, bits.size());
         mah.algorithm = IR::MAU::hash_function::identity();
         mah.identity_positions[finfo].emplace_back(0, bits);
-        int max_bit = ((mah.bit_mask.max().index() + 7) / 8) * 8;
-        max_bit = std::min(max_bit, METER_ALU_HASH_BITS);
+        int max_bit = max_bit_to_byte(mah.bit_mask);
         int max_group = max_index_group(max_bit);
         int max_single_bit = max_index_single_bit(max_bit);
         BUG_CHECK(hash_use_free(max_group, max_single_bit, hash_table_input), "The calculation "
@@ -2239,8 +2248,7 @@ bool IXBar::setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc
     }
 
     // Because of a byte mask, must reserve the full byte on the hash bus
-    int max_bit = ((mah.bit_mask.max().index() + 7) / 8) * 8;
-    max_bit = std::min(max_bit, METER_ALU_HASH_BITS);
+    int max_bit = max_bit_to_byte(mah.bit_mask);
     int max_group = max_index_group(max_bit);
     int max_single_bit = max_index_single_bit(max_bit);
     BUG_CHECK(hash_use_free(max_group, max_single_bit, hash_table_input), "The calculation "
@@ -2997,8 +3005,7 @@ void IXBar::update(cstring name, const Use &alloc) {
     if (alloc.meter_alu_hash.allocated) {
         auto &mah = alloc.meter_alu_hash;
         // The mask is a byte mask, so must reserve the entire byte
-        int max_bit = ((mah.bit_mask.max().index() + 7) / 8) * 8;
-        max_bit = std::min(max_bit, METER_ALU_HASH_BITS);
+    int max_bit = max_bit_to_byte(mah.bit_mask);
         int max_group = max_index_group(max_bit);
         int max_index_bit = max_index_single_bit(max_bit);
         unsigned hash_table_input = alloc.hash_table_inputs[mah.group];
