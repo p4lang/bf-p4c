@@ -117,6 +117,8 @@ class BarefootBackend(BackendDriver):
     def process_command_line_options(self, opts):
         BackendDriver.process_command_line_options(self, opts)
 
+        self.checkVersionTargetArch(opts.language)
+
         # process the options related to source file
         output_dir = self._output_directory
         basepath = "{}/{}".format(output_dir, self._source_basename)
@@ -274,6 +276,10 @@ class BarefootBackend(BackendDriver):
             print >> sys.stderr, "failed command {}".format(command)
             sys.exit(rc)
 
+    def checkVersionTargetArch(self, language):
+        if language == "p4-14" and self._arch != "v1model":
+                print >> sys.stderr, "Architecture {} is not supported in p4-14, use v1model".format(self._arch)
+                sys.exit(1)
 
     def run(self):
         """
