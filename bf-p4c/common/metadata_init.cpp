@@ -507,6 +507,8 @@ class ComputeMetadataInit : public Inspector {
     const AfterWriteTables               &after_write_tables;
     const ordered_set<const PHV::Field*> &pragma_no_init;
 
+    static const ordered_set<cstring>    no_init_intrinsic_metadata;
+
     std::vector<const PHV::Field*> to_be_inited;
     DataDependencyGraph graph;
 
@@ -526,6 +528,7 @@ class ComputeMetadataInit : public Inspector {
                 LOG1("\tIgnoring metadata initialization because of pa_no_init: " << f);
                 continue;
             }
+            if (no_init_intrinsic_metadata.count(f.name)) continue;
             if (!defuse.hasUninitializedRead(f.id)) continue;
 
             auto& defs = defuse.getAllDefs(f.id);
@@ -601,6 +604,14 @@ class ComputeMetadataInit : public Inspector {
 
     const DataDependencyGraph& getDataDepGraph() {
         return graph; }
+};
+
+const ordered_set<cstring> ComputeMetadataInit::no_init_intrinsic_metadata =
+{"ingress::ig_intr_md_for_dprsr.digest_type",
+    "ingress::ig_intr_md_for_dprsr.resubmit_type",
+    "egress::ig_intr_md_for_dprsr.mirror_type",
+    "egress::ig_intr_md_for_dprsr.digest_type",
+    "egress::ig_intr_md_for_dprsr.resubmit_type"
 };
 
 /** Insert initialization to actions.
