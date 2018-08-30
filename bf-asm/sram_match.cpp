@@ -278,8 +278,8 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
             merge.mau_meter_adr_exact_shiftcount[bus][word_group] = shiftcount;
             if (m->uses_colormaprams()) {
                 int huffman_bits_out = 0;
-                if (m.args[0].field()
-                    || m.args[0].name() && strcmp(m.args[0].name(), "$DIRECT") == 0) {
+                if (m.args[0].field() ||
+                    (m.args[0].name() && strcmp(m.args[0].name(), "$DIRECT") == 0)) {
                     huffman_bits_out = METER_LOWER_HUFFMAN_BITS;
                 }
                 merge.mau_idletime_adr_exact_shiftcount[bus][word_group]

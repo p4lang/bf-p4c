@@ -177,7 +177,7 @@ unsigned AttachedTable::determine_meter_shiftcount(Table::Call &call, int group,
  *
  *    6. _type_position - only relevant for meter address users.  This is the lsb of the
  *       meter type position if the meter position is in overhead.  Note that if this register
- *       is used, then the meter type must be included in the mask. 
+ *       is used, then the meter type must be included in the mask.
  *
  * The purpose of the function of the determine_merge_regs is to look at the arguments of the
  * call for an attached table, and use those to determine the values of these registers.
@@ -264,7 +264,7 @@ bool AttachedTables::validate_call(Table::Call &call, MatchTable *self, size_t r
         error(call.lineno, "%s not in same stage as %s", call->name(), self->name());
         return false;
     } else if (call->gress != self->gress) {
-        if (!(call->to<StatefulTable>() && 
+        if (!(call->to<StatefulTable>() &&
               timing_thread(call->gress) == timing_thread(self->gress))) {
             error(call.lineno, "%s not in same thread as %s", call->name(), self->name());
             return false;
@@ -312,7 +312,7 @@ bool AttachedTables::validate_call(Table::Call &call, MatchTable *self, size_t r
             return false;
         }
     } else if (!call.args[1].field()) {
-        error(call.lineno, "Per flow enable for %s cannot be understood", call->name());   
+        error(call.lineno, "Per flow enable for %s cannot be understood", call->name());
         return false;
     }
 
@@ -336,7 +336,7 @@ void AttachedTables::pass0(MatchTable *self) {
     if (selector.check() && selector->set_match_table(self, true) != Table::SELECTION)
             error(selector.lineno, "%s is not a selection table", selector->name());
     for (auto &s : stats) {
-        bool direct = false; 
+        bool direct = false;
         if (s.check() && s->set_match_table(self, !s.is_direct_call()) != Table::COUNTER)
             error(s.lineno, "%s is not a counter table", s->name());
     }
@@ -368,7 +368,7 @@ void AttachedTables::pass1(MatchTable *self) {
     for (auto &s : statefuls) {
         if (s) {
             validate_call(s, self, 3, HashDistribution::METER_ADDRESS, statefuls[0]);
-        } 
+        }
     }
 }
 
@@ -396,8 +396,8 @@ void AttachedTables::write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus
         merge.mau_meter_adr_tcam_shiftcount[bus] = shiftcount;
         if (m->uses_colormaprams()) {
             int huffman_bits_out = 0;
-            if (m.args[0].field()
-                || m.args[0].name() && strcmp(m.args[0].name(), "$DIRECT") == 0) {
+            if (m.args[0].field() ||
+                (m.args[0].name() && strcmp(m.args[0].name(), "$DIRECT") == 0)) {
                 huffman_bits_out = METER_LOWER_HUFFMAN_BITS;
             }
             merge.mau_idletime_adr_tcam_shiftcount[bus]
