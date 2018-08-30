@@ -42,25 +42,26 @@ class BarefootBackend(BackendDriver):
         self.add_command('assembler', bfas)
         self.add_command('bf-rt-verifier', bfrt_gen)
 
+        self.runVerifiers = False
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             bin_dir = os.path.join(os.environ['P4C_BIN_DIR'], '../../scripts')
             if not os.path.isdir(bin_dir):
                 # we are building out of the source directory, so we need to get the source dir
                 # from the cmake cache
-                src_dir_pattern = re.compile(r'BFN_P4C_SOURCE_DIR:STATIC=(.*)$')
-                with open(os.path.join(os.environ['P4C_BIN_DIR'], '../CMakeCache.txt')) as cmake_cache:
-                    for line in cmake_cache:
-                        res = src_dir_pattern.match(line)
-                        if res:
-                            src_dir = res.group(1)
-                            bin_dir = os.path.join(src_dir, 'scripts')
-                            break
-                if not os.path.isdir(bin_dir):
-                    print >> sys.stderr, "Can not find scripts directory"
-                    sys.exit(1)
-
-            self.add_command('verifier', os.path.join(bin_dir, 'validate_context_json'))
-            self.add_command('manifest-verifier', os.path.join(bin_dir, 'validate_manifest'))
+                cache_file = os.path.join(os.environ['P4C_BIN_DIR'], '../CMakeCache.txt')
+                if os.path.isfile(cache_file):
+                    with open(cache_file) as cmake_cache:
+                        src_dir_pattern = re.compile(r'BFN_P4C_SOURCE_DIR:STATIC=(.*)$')
+                        for line in cmake_cache:
+                            res = src_dir_pattern.match(line)
+                            if res:
+                                src_dir = res.group(1)
+                                bin_dir = os.path.join(src_dir, 'scripts')
+                                break
+            if os.path.isdir(bin_dir):
+                self.add_command('verifier', os.path.join(bin_dir, 'validate_context_json'))
+                self.add_command('manifest-verifier', os.path.join(bin_dir, 'validate_manifest'))
+                self.runVerifiers = True
 
         # order of commands
         self.enable_commands(['preprocessor', 'compiler', 'assembler'])
@@ -167,9 +168,10 @@ class BarefootBackend(BackendDriver):
             if opts.validate_output:
                 self.add_command_option('verifier', "{}/context.json".format(output_dir))
                 self._commandsEnabled.append('verifier')
-            # always validate the manifest if opts.validate_manifest:
-            self.add_command_option('manifest-verifier', "{}/manifest.json".format(output_dir))
-            self._commandsEnabled.append('manifest-verifier')
+            # always validate the manifest if opts.validate_manifest or self.runVerifiers:
+            if self.runVerifiers:
+                self.add_command_option('manifest-verifier', "{}/manifest.json".format(output_dir))
+                self._commandsEnabled.append('manifest-verifier')
 
         # if we need to generate an archive, should be the last command
         if opts.archive:
