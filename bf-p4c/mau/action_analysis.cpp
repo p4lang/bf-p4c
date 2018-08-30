@@ -33,7 +33,7 @@ unsigned ActionAnalysis::ConstantInfo::build_shiftable_constant() {
     if (rv_bv.empty())
         return rv;
 
-    return rv_bv.getrange(alignment.write_bits.min().index(), alignment.bitrange_size());
+    return rv_bv.getrange(alignment.write_bits().min().index(), alignment.bitrange_size());
 }
 
 /** Because the assembly only recognizes constants between -8..7 or their corresponding
@@ -666,11 +666,38 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
     le_bitrange read_bits = write_bits;
     if (read.type == ActionParam::ACTIONDATA) {
         cont_action.adi.alignment.add_alignment(write_bits, read_bits);
+        cont_action.adi.initialized = true;
     } else if (read.type == ActionParam::CONSTANT) {
         initialize_constant(read, cont_action, write_bits, read_bits);
     }
     cont_action.counts[read.type]++;
     return true;
+}
+
+void ActionAnalysis::determine_unused_bits(PHV::Container container, ContainerAction &cont_action) {
+    ordered_set<const PHV::Field*> fieldsWritten;
+    for (auto& field_action : cont_action.field_actions) {
+        const PHV::Field* write_field = phv.field(field_action.write.expr);
+        if (write_field == nullptr)
+            BUG("Verify Overwritten: Action does not have a write?");
+        fieldsWritten.insert(write_field); }
+
+    bitvec container_occupancy = phv.bits_allocated(container, fieldsWritten);
+    bitvec unused_bits = bitvec(0, container.size()) - container_occupancy;
+
+    if (cont_action.adi.initialized) {
+        cont_action.adi.alignment.unused_container_bits = unused_bits;
+        cont_action.adi.alignment.verbose = cont_action.verbose;
+    }
+
+    if (cont_action.ci.initialized) {
+        cont_action.ci.alignment.unused_container_bits = unused_bits;
+        cont_action.ci.alignment.verbose = verbose;
+    }
+    for (auto &ta : Values(cont_action.phv_alignment)) {
+         ta.unused_container_bits = unused_bits;
+         ta.verbose = verbose;
+    }
 }
 
 /** After the container_actions_map structure is built, this analyzes each of the individual actions
@@ -734,6 +761,7 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
                 total_init &= init;
             }
         }
+        determine_unused_bits(container, cont_action);
 
 
         cstring error_message;
@@ -768,21 +796,85 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
 bitvec ActionAnalysis::ContainerAction::total_write() const {
     bitvec total_write_;
     for (auto tot_align_info : phv_alignment)
-        total_write_ |= tot_align_info.second.write_bits;
-    total_write_ |= adi.alignment.write_bits;
-    total_write_ |= ci.alignment.write_bits;
+        total_write_ |= tot_align_info.second.direct_write_bits;
+    total_write_ |= adi.alignment.direct_write_bits;
+    total_write_ |= ci.alignment.direct_write_bits;
 
     return total_write_;
 }
 
-/** Determines if after the right shift, the bits to be affected are contiguous
+/**
+ * The following functions are used during verify_alignment in order to determine which
+ * source each parameter is as well as determine which bits are written by src1/src2
+ *
+ * The unused_container_bits are bits that are not live at the same time of any bits of
+ * fields in the same container, and thus can be written to.
+ * 
+ * For the deposit-field src1, the written bits must be a lo to hi that is contiguous
+ * on the write bits.  For deposit-field src2, the opposite is true, as the write must
+ * contain a single contiguous hole.
+ *
+ * For src1, this contiguous range can either container directly written bits, or unused
+ * container bits that can be read
  */
-bool ActionAnalysis::TotalAlignment::wrapped_contiguous(PHV::Container container) const {
-    bitvec cont_mask = bitvec(0, container.size());
-    bitvec rotated_read_bits = (read_bits >> right_shift);
-    rotated_read_bits |= ((read_bits << container.size()) >> right_shift) & cont_mask;
-    return rotated_read_bits.is_contiguous();
+bitvec ActionAnalysis::TotalAlignment::df_src1_mask() const {
+    int sz = direct_write_bits.max().index() - direct_write_bits.min().index() + 1;
+    bitvec write_mask(direct_write_bits.min().index(), sz);
+    return (write_mask & unused_container_bits) | direct_write_bits;
 }
+
+/**
+ * See comments above df_src1_mask for context.
+ *
+ * The goal of this function is to find what bits are to be written by the src2 of the deposit
+ * field.  This looks for a single contiguous hole in the bits written, and returns
+ * the reverse of this hole
+ *
+ * The algorithm looks for holes in the direct_write_bits.  These may actually not be the hole
+ * for the deposit-field if those bits are entirely unused_container_bits.  Thus if the hole
+ * is not all unused_container_bits, this is assumed to be the hole.
+ *
+ * If there are multiple holes, then the deposit-field mask is returned empty
+ */
+bitvec ActionAnalysis::TotalAlignment::df_src2_mask(PHV::Container container) const {
+    bitvec all_write_bits = direct_write_bits | unused_container_bits;
+    bitvec empty;
+
+    if (all_write_bits == bitvec(0, container.size()))
+        return direct_write_bits;
+    int df_hole_start = 0;
+    int df_hole_end = 0;
+
+    int hole_start = direct_write_bits.ffz();
+    bool hole_found = false;
+
+    while (hole_start < static_cast<int>(container.size())) {
+        int hole_end = direct_write_bits.ffs(hole_start);
+        if (hole_end < 0)
+            hole_end = container.size();
+        bitvec hole_bv(hole_start, hole_end - hole_start);
+        if ((hole_bv & unused_container_bits) != hole_bv) {
+            if (hole_found)
+                return empty;
+            hole_found = true;
+            df_hole_start = hole_start;
+            df_hole_end = hole_end;
+        }
+        hole_start = direct_write_bits.ffz(hole_end);
+    }
+
+    bitvec reverse = bitvec(df_hole_start, df_hole_end - df_hole_start);
+    return bitvec(0, container.size()) - reverse;
+}
+
+bool ActionAnalysis::TotalAlignment::contiguous() const {
+    if (direct_write_bits.is_contiguous())
+        return true;
+    if (direct_write_bits.empty())
+        return false;
+    return df_src1_mask().is_contiguous();
+}
+
 
 /**
  * Determines if the source is to be wrapped around the container.  If the thing is wrapped,
@@ -790,7 +882,8 @@ bool ActionAnalysis::TotalAlignment::wrapped_contiguous(PHV::Container container
  */
 bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, int *lo,
         int *hi) const {
-    if (read_bits.popcount() == static_cast<int>(container.size())) {
+    BUG_CHECK(contiguous(), "Wrapped Shift instruction can only be src1 operations");
+    if (direct_read_bits.popcount() == static_cast<int>(container.size())) {
         if (right_shift == 0) {
             return false;
         } else {
@@ -800,17 +893,21 @@ bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, 
                 *hi = right_shift - 1;
             return true;
         }
-    } else if (!read_bits.is_contiguous()) {
-        bitvec reverse = bitvec(0, container.size()) - read_bits;
-        BUG_CHECK(reverse.is_contiguous(), "Cannot calculate wrapped shift on non-contiguous "
-                  "field");
+    } else {
+        bitvec right_shifted_bv = direct_read_bits >> right_shift;
+        bitvec rotated_shifted_bv = direct_read_bits << (container.size() - right_shift);
+        rotated_shifted_bv &= bitvec(0, container.size());
+
+        if (rotated_shifted_bv.popcount() == direct_read_bits.popcount() ||
+            right_shifted_bv.popcount() == direct_read_bits.popcount())
+            return false;
+
         if (lo)
-            *lo = reverse.max().index() + 1;
+            *lo = direct_read_bits.max().index();
         if (hi)
-            *hi = reverse.min().index() - 1;
+            *hi = direct_read_bits.min().index();
         return true;
     }
-    return false;
 }
 
 /**
@@ -838,9 +935,11 @@ bool ActionAnalysis::TotalAlignment::verify_individual_alignments(PHV::Container
  * Src1 of a deposit-field does not have to be aligned, but must be contiguous after it
  * has been rotated
  */
-bool ActionAnalysis::TotalAlignment::deposit_field_src1(PHV::Container container) const {
-    return wrapped_contiguous(container);
+bool ActionAnalysis::TotalAlignment::deposit_field_src1() const {
+    return contiguous();
 }
+
+
 
 /**
  * Src2 of a deposit-field has to be be aligned, but not contiguous, as long as there is
@@ -849,11 +948,7 @@ bool ActionAnalysis::TotalAlignment::deposit_field_src1(PHV::Container container
 bool ActionAnalysis::TotalAlignment::deposit_field_src2(PHV::Container container) const {
     if (!aligned())
         return false;
-    if (!contiguous()) {
-        bitvec reverse = bitvec(0, container.size()) - write_bits;
-        return reverse.is_contiguous();
-    }
-    return true;
+    return !df_src2_mask(container).empty();
 }
 
 /**
@@ -898,20 +993,24 @@ bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container &conta
     bool max_phv_non_contiguous = counts[ActionParam::PHV] - max_phv_unaligned;
 
     if (ad_sources() && !ad_alignment.contiguous()) {
-        to_bitmasked_set = true;
+        convert_instr_to_bitmasked_set = true;
         max_ad_non_contiguous = 1;
         max_ad_unaligned = 0;
     } else if (read_sources() == 2) {
-        to_deposit_field = true;
+        convert_instr_to_deposit_field = true;
+        is_deposit_field_variant = true;
     // If the single PHV field in a deposit-field cannot be src1 due to non-contiguity,
     // but can be src2 because it is aligned
     } else if (read_sources() == 1 && single_src_alignment
-               && !single_src_alignment->deposit_field_src1(container)) {
+               && !single_src_alignment->deposit_field_src1()) {
         if (single_src_alignment->deposit_field_src2(container)) {
-            to_deposit_field = true;
+            convert_instr_to_deposit_field = true;
+            is_deposit_field_variant = true;
             implicit_src1 = true;
             max_phv_unaligned = 0;
             max_phv_non_contiguous = 1;
+        } else {
+            return false;
         }
     // Generally in a single source set, this is translated to set C0(lo..hi), C1(lo..hi),
     // but when the source is wrapped, the only way for the assembler to understand is
@@ -925,8 +1024,11 @@ bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container &conta
     // technically only requires the lo bit to determine the right shift
     } else if (read_sources() == 1 && single_src_alignment
                && single_src_alignment->is_wrapped_shift(container)) {
-        to_deposit_field = true;
+        convert_instr_to_deposit_field = true;
         implicit_src2 = true;
+        is_deposit_field_variant = true;
+    } else {
+        is_deposit_field_variant = true;
     }
 
     if (ad_sources()) {
@@ -940,8 +1042,6 @@ bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container &conta
     int phv_non_contiguous = 0;
     for (auto ta : Values(phv_alignment)) {
         if (!ta.aligned()) {
-            if (!ta.wrapped_contiguous(container))
-                return false;
             phv_unaligned++;
         }
 
@@ -991,6 +1091,15 @@ void ActionAnalysis::ContainerAction::determine_src1() {
     }
 }
 
+void ActionAnalysis::TotalAlignment::determine_implicit_bits(PHV::Container container) {
+    bitvec cont_mask(0, container.size());
+    bitvec mask = is_src1 ? df_src1_mask() : df_src2_mask(container);
+
+    implicit_write_bits |= (mask & unused_container_bits);
+    implicit_read_bits = (implicit_write_bits >> right_shift);
+    implicit_read_bits |= (implicit_write_bits << (container.size() - right_shift)) & cont_mask;
+}
+
 bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container) {
     TotalAlignment ad_alignment = adi.alignment | ci.alignment;
     if (ad_sources())
@@ -1014,6 +1123,28 @@ bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container
         }
     }
     determine_src1();
+    ad_alignment.is_src1 = ci.alignment.is_src1 | adi.alignment.is_src1;
+
+    if (is_deposit_field_variant) {
+        for (auto &ta : Values(phv_alignment)) {
+            ta.determine_implicit_bits(container);
+        }
+        // The source can either only be action data or a constant at the moment, so currently,
+        // this behavior is safe.  This is only used by determining constants to action data,
+        // which will only be necessary if the action is constant only, and during
+        // MergeInstructions, which at that point, everything will either be action data or
+        // constants
+        if (adi.initialized) {
+            ad_alignment.determine_implicit_bits(container);
+            adi.alignment.implicit_write_bits = ad_alignment.implicit_write_bits;
+            adi.alignment.implicit_read_bits = ad_alignment.implicit_read_bits;
+        }
+        if (ci.initialized) {
+            ad_alignment.determine_implicit_bits(container);
+            ci.alignment.implicit_write_bits = ad_alignment.implicit_write_bits;
+            ci.alignment.implicit_write_bits = ad_alignment.implicit_read_bits;
+        }
+    }
     return true;
 }
 
@@ -1034,11 +1165,11 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(
     bitvec container_occupancy = phv.bits_allocated(container, fieldsWritten);
     bitvec total_write_bits;
     for (auto &tot_align_info : phv_alignment) {
-        total_write_bits |= tot_align_info.second.write_bits;
+        total_write_bits |= tot_align_info.second.direct_write_bits;
     }
 
-    total_write_bits |= adi.alignment.write_bits;
-    total_write_bits |= ci.alignment.write_bits;
+    total_write_bits |= adi.alignment.direct_write_bits;
+    total_write_bits |= ci.alignment.direct_write_bits;
     if (name == "invalidate")
         total_write_bits |= invalidate_write_bits;
 
@@ -1072,7 +1203,7 @@ bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv) {
         auto container = tot_align_info.first;
         auto &total_alignment = tot_align_info.second;
         bitvec container_occupancy = phv.bits_allocated(container, fieldsRead);
-        if (total_alignment.read_bits != container_occupancy)
+        if (total_alignment.direct_read_bits != container_occupancy)
             return false;
     }
     return true;
@@ -1174,7 +1305,7 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
         const_src_min = JBAY_CONST_SRC_MIN;
 #endif /* HAVE_JBAY */
 
-    if (cont_action.name == "set" && cont_action.ci.alignment.write_bits.popcount()
+    if (cont_action.name == "set" && cont_action.ci.alignment.direct_write_bits.popcount()
                                      == static_cast<int>(container.size())) {
         // Converting to load_const instruction
         constant_value = cont_action.ci.build_constant();
@@ -1191,7 +1322,7 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
             cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
             return;
         }
-    } else if (cont_action.to_bitmasked_set) {
+    } else if (cont_action.convert_instr_to_bitmasked_set) {
         // Bitmasked-set must be converted to action data
         cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
         return;
@@ -1404,7 +1535,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
                              "over the entire container";
             return false;
         }
-    } else if (to_bitmasked_set) {
+    } else if (convert_instr_to_bitmasked_set) {
         error_code |= PARTIAL_OVERWRITE;
     }
 

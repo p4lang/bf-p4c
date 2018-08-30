@@ -115,6 +115,7 @@ if (PTF_REQUIREMENTS_MET)
     "AssertionError: Expected packet was not received on device"
     05-simple_l3_arping
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
+    basic_switching
     )
 
 # BRIG-686
@@ -167,7 +168,6 @@ p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   extensions/p4_tests/p4_14/overlay_add_header.p4
-  basic_switching  # BRIG-915
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1234,7 +1234,6 @@ p4c_add_xfail_reason("tofino"
 # BRIG-927
 p4c_add_xfail_reason("tofino"
   "the alignment of fields within the container renders the action impossible"
-  fabric-new-DWITH_SPGW
 )
 
 # BRIG-879

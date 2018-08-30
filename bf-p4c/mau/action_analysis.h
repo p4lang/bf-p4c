@@ -111,39 +111,51 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
      *  are possible/necessary
      */
     struct TotalAlignment {
+        bool verbose = false;
         safe_vector<Alignment> indiv_alignments;
-        bitvec write_bits;
-        bitvec read_bits;
+        bitvec direct_write_bits;
+        bitvec direct_read_bits;
+        bitvec unused_container_bits;
+
+        // Determined during verify_alignment.  Only used for deposit-field instructions
+        bitvec implicit_write_bits;
+        bitvec implicit_read_bits;
+
+
+        bitvec write_bits() const { return direct_write_bits | implicit_write_bits; }
+        bitvec read_bits() const { return direct_read_bits | implicit_read_bits; }
 
         int right_shift = 0;
         bool is_src1 = false;
 
         void add_alignment(le_bitrange wb, le_bitrange rb) {
             indiv_alignments.emplace_back(wb, rb);
-            write_bits.setrange(wb.lo, wb.size());
-            read_bits.setrange(rb.lo, rb.size());
+            direct_write_bits.setrange(wb.lo, wb.size());
+            direct_read_bits.setrange(rb.lo, rb.size());
         }
 
-        bool equiv_bit_totals() const { return write_bits.popcount() == read_bits.popcount(); }
+        bool equiv_bit_totals() const {
+            return direct_write_bits.popcount() == direct_read_bits.popcount();
+        }
 
         bool aligned() const {
             return right_shift == 0;
         }
 
-        bool contiguous() const {
-            return write_bits.is_contiguous();
-        }
+        bitvec df_src1_mask() const;
+        bitvec df_src2_mask(PHV::Container container) const;
+        bool contiguous() const;
 
-        bool wrapped_contiguous(PHV::Container container) const;
-        bool deposit_field_src1(PHV::Container container) const;
+        bool deposit_field_src1() const;
         bool deposit_field_src2(PHV::Container container) const;
         bool verify_individual_alignments(PHV::Container &container);
         bool is_wrapped_shift(PHV::Container container, int *lo = nullptr, int *hi = nullptr) const;
+        void determine_implicit_bits(PHV::Container container);
 
         int bitrange_size() const {
-            BUG_CHECK(write_bits.is_contiguous(), "Converting a bitvec to a bitrange requires "
+            BUG_CHECK(write_bits().is_contiguous(), "Converting a bitvec to a bitrange requires "
                       "the bitrange to be continuous");
-            return write_bits.max().index() - write_bits.min().index() + 1;
+            return write_bits().max().index() - write_bits().min().index() + 1;
         }
 
         TotalAlignment operator |(const TotalAlignment &ta) {
@@ -153,8 +165,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             rv.indiv_alignments.insert(rv.indiv_alignments.begin(), ta.indiv_alignments.begin(),
                                        ta.indiv_alignments.end());
 
-            rv.write_bits = write_bits | ta.write_bits;
-            rv.read_bits = read_bits | ta.read_bits;
+            rv.direct_write_bits = direct_write_bits | ta.direct_write_bits;
+            rv.direct_read_bits = direct_read_bits | ta.direct_read_bits;
+            rv.unused_container_bits = unused_container_bits | ta.unused_container_bits;
+            rv.verbose = verbose | ta.verbose;
             return rv;
         }
     };
@@ -212,8 +226,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
      */
     struct ContainerAction {
         bool verbose = false;
-        bool to_deposit_field = false;  ///> determined by tofino_compliance check
-        bool to_bitmasked_set = false;  ///> determined by tofino_compliance_check
+        bool convert_instr_to_deposit_field = false;  ///> determined by tofino_compliance check
+        bool convert_instr_to_bitmasked_set = false;  ///> determined by tofino_compliance_check
+
+        bool is_deposit_field_variant = false;
         // If the src1 = dest, but isn't directly specified by the parameters.  Only necessary
         // when to_deposit_field = true
         bool implicit_src1 = false;  ///> determined by tofino_compliance_check
@@ -285,7 +301,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
 
         bool partial_overwrite() const {
-            return ((error_code & PARTIAL_OVERWRITE) != 0 && !to_deposit_field) || to_bitmasked_set;
+            return ((error_code & PARTIAL_OVERWRITE) != 0 && !convert_instr_to_deposit_field)
+                    || convert_instr_to_bitmasked_set;
         }
 
         bool unresolved_ad() const {
@@ -405,6 +422,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         le_bitrange write_bits);
     void initialize_constant(const ActionParam &read, ContainerAction &cont_action,
         le_bitrange write_bits, le_bitrange read_bits);
+    void determine_unused_bits(PHV::Container container, ContainerAction &cont_action);
 
     bool valid_instruction_constant(unsigned value, int max_shift, int min_shift,
                                     int complement_size);

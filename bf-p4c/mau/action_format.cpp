@@ -605,7 +605,7 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
         const IR::MAU::RandomNumber *rn = nullptr;
         if (cont_action.action_data_isolated())
             adp.set_constraint(ISOLATED);
-        if (cont_action.to_bitmasked_set)
+        if (cont_action.convert_instr_to_bitmasked_set)
             adp.set_constraint(BITMASKED_SET);
 
         for (auto &field_action : cont_action.field_actions) {
@@ -650,17 +650,17 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
         adp.alu_size = container.size();
 
         if (hd) {
-           if (cont_action.to_bitmasked_set)
+           if (cont_action.convert_instr_to_bitmasked_set)
                P4C_UNIMPLEMENTED("Can't yet handle a hash distribution unit in a bitmasked-set");
            auto &hash_dist_vec = init_hd_alu_placement[hd];
            hash_dist_vec.push_back(adp);
         } else if (rn) {
-           if (cont_action.to_bitmasked_set)
+           if (cont_action.convert_instr_to_bitmasked_set)
                P4C_UNIMPLEMENTED("Can't yet handle a random number in a bitmasked-set");
            auto &rand_num_vec = init_rn_alu_placement[rn];
            rand_num_vec.push_back(adp);
         } else if (initialized) {
-            if (cont_action.to_bitmasked_set)
+            if (cont_action.convert_instr_to_bitmasked_set)
                 adp.bitmasked_set = true;
             adp_vector.push_back(adp);
         }

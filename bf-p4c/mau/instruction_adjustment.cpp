@@ -353,7 +353,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
         auto &cont_action = container_action.second;
         if ((cont_action.error_code & error_mask) != 0) continue;
         if (cont_action.field_actions.size() == 1)
-            if (!cont_action.to_deposit_field
+            if (!cont_action.convert_instr_to_deposit_field
                 && (cont_action.error_code & ~error_mask) == 0)
                 continue;
         // Currently skip unresolved ActionAnalysis issues
@@ -621,8 +621,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
             fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::ACTIONDATA,
                                         adi.action_data_name, mo);
             src1 = mo;
-            src1_writebits = adi.alignment.write_bits;
-            bitvec src1_read_bits = adi.alignment.read_bits;
+            src1_writebits = adi.alignment.write_bits();
+            bitvec src1_read_bits = adi.alignment.read_bits();
             if (src1_read_bits.popcount() != static_cast<int>(container.size())) {
                 src1 = MakeSlice(src1, src1_read_bits.min().index(), src1_read_bits.max().index());
             }
@@ -636,7 +636,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
                     BUG_CHECK(single_action_data, "Action data that shouldn't require an alias "
                               "does require an alias");
                     src1 = read.expr;
-                    src1_writebits = adi.alignment.write_bits;
+                    src1_writebits = adi.alignment.write_bits();
                     single_action_data = false;
                 }
             }
@@ -650,7 +650,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         else
             width_bits = container.size();
         src1 = new IR::Constant(IR::Type::Bits::get(width_bits), constant_value);
-        src1_writebits = cont_action.ci.alignment.write_bits;
+        src1_writebits = cont_action.ci.alignment.write_bits();
     }
 
 
@@ -664,8 +664,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
             fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
                                         read_container.toString(), mo);
             src1 = mo;
-            src1_writebits = read_alignment.write_bits;
-            bitvec src1_read_bits = read_alignment.read_bits;
+            src1_writebits = read_alignment.write_bits();
+            bitvec src1_read_bits = read_alignment.read_bits();
             int wrapped_lo = 0;  int wrapped_hi = 0;
             if (read_alignment.is_wrapped_shift(container, &wrapped_lo, &wrapped_hi)) {
                 src1 = MakeWrappedSlice(src1, wrapped_lo, wrapped_hi, container.size());
@@ -680,7 +680,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
             fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
                                         read_container.toString(), mo);
             src2 = mo;
-            src2_writebits = read_alignment.write_bits;
+            src2_writebits = read_alignment.write_bits();
         }
     }
 
@@ -708,9 +708,9 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     }
 
     cstring instr_name = cont_action.name;
-    if (cont_action.to_bitmasked_set)
+    if (cont_action.convert_instr_to_bitmasked_set)
         instr_name = "bitmasked-set";
-    else if (cont_action.to_deposit_field)
+    else if (cont_action.convert_instr_to_deposit_field)
         instr_name = "deposit-field";
 
     IR::MAU::Instruction *merged_instr = new IR::MAU::Instruction(instr_name);
@@ -722,7 +722,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     if (src2)
         merged_instr->operands.push_back(src2);
     // Currently bitmasked-set requires at least 2 source operands, or it crashes
-    if (cont_action.to_bitmasked_set && !src2)
+    if (cont_action.convert_instr_to_bitmasked_set && !src2)
         merged_instr->operands.push_back(dst);
     return merged_instr;
 }
