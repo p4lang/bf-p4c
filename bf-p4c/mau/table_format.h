@@ -167,6 +167,7 @@ struct TableFormat {
     bool allocate_all_instr_selection();
     bool allocate_match();
     bool allocate_match_with_algorithm();
+    bool is_match_entry_wide() const;
 
     bool allocate_all_ternary_match();
     void initialize_dirtcam_value(bitvec &dirtcam, const IXBar::Use::Byte &byte);

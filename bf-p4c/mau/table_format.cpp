@@ -604,6 +604,17 @@ bool TableFormat::allocate_all_instr_selection() {
     return true;
 }
 
+/**
+ * This function determines whether the table will require multiple search buses to be
+ * matched against.  Wide does not mean that the the RAM match is wide, rather that each
+ * individual match entry requires multiple RAMs.
+ *
+ * This match_entry_wide leads to different strategies during allocation 
+ */
+bool TableFormat::is_match_entry_wide() const {
+    return !(match_ixbar.search_buses_single() == 1 || layout_option.way.width == 1);
+}
+
 /** Save information on a byte by byte basis so that fill out use can correctly be used.
  *  Note that each individual byte from PHV requires an individual byte in the match format,
  *  and cannot be reused by a separate entry.
@@ -859,6 +870,7 @@ void TableFormat::choose_ghost_bits() {
 
 
     for (auto info : ghost_bytes) {
+        LOG4("Ghost " << info.byte);
         use->ghost_bits[info.byte] = info.bit_use;
     }
 }
@@ -964,8 +976,7 @@ void TableFormat::allocate_full_fits(int width_sect) {
             break;
 
         bitvec version_loc;
-        bool wide = match_ixbar.search_buses_single() > 1;
-        if (wide) {
+        if (is_match_entry_wide()) {
             if (!version_allocated[group])
                 allocate_version(width_sect, alloced, version_loc, byte_attempt, bit_attempt);
         } else {
@@ -1149,6 +1160,8 @@ bool TableFormat::allocate_shares() {
     return true;
 }
 
+
+
 /** This is a further optimization on allocating shares.  Because version is placed relatively
  *  early, occasionally this leads to a packing issue as versions in separate RAMs could be
  *  combined into an early upper nibble, and save an extra necessary byte.  This actually
@@ -1270,7 +1283,7 @@ bool TableFormat::allocate_match_with_algorithm() {
         // Will not split up wide matches
         if (pa != PACK_TIGHT)
             return false;
-        if (match_ixbar.search_buses_single() > 1) {
+        if (is_match_entry_wide()) {
             return false;
         } else {
             return attempt_allocate_shares();
@@ -1474,12 +1487,16 @@ void TableFormat::verify() {
 
     for (int i = 0; i < layout_option.way.match_groups; i++) {
         for (int j = NEXT; j <= INDIRECT_ACTION; j++) {
-            if (!use->match_groups[i].mask[j].empty())
-            if ((verify_mask & use->match_groups[i].mask[j]).popcount() != 0)
-                BUG("Overlap of multiple things in the format");
-            verify_mask |= use->match_groups[i].mask[j];
-            if (j == VERS)
-                on_search_bus_mask |= use->match_groups[i].mask[j];
+            if (!use->match_groups[i].mask[j].empty()) {
+                if ((verify_mask & use->match_groups[i].mask[j]).popcount() != 0) {
+                    BUG("Overlap of multiple things in the format");
+                    verify_mask |= use->match_groups[i].mask[j];
+                }
+                if (j == VERS)
+                    on_search_bus_mask |= use->match_groups[i].mask[j];
+            } else if (j == VERS) {
+                BUG("A group has been allocated without version bits");
+            }
         }
     }
 
