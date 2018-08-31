@@ -7,10 +7,18 @@
 
 class CanonGatewayExpr::NeedNegate : public Inspector {
     bool        rv = false;
-    bool preorder(const IR::Neq *) override { rv = true; return false; }
-
+    bool preorder(const IR::Expression *) override { return !rv; }
+    bool preorder(const IR::Neq *neq) override {
+        if (neq->left->type->width_bits() == 1) {
+            /* 1-bit != can be done directly; no need to negate it into == */
+            return true; }
+        rv = true; return false; }
  public:
     explicit NeedNegate(const IR::Expression *e) { e->apply(*this); }
+    explicit NeedNegate(safe_vector<std::pair<const IR::Expression *, cstring>> &rows) {
+        for (auto &row : rows) {
+            row.first->apply(*this);
+            if (rv) break; } }
     explicit operator bool() const { return rv; }
 };
 
@@ -51,8 +59,6 @@ IR::Node *CanonGatewayExpr::preorder(IR::MAU::Table *tbl) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
-    if (isVisited(e)) return e;
-    addVisited(e);
     LOG5(_debugIndent << "IR::Rel " << e);
     // only called for Equ and Neq
     if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
@@ -68,8 +74,6 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Leq *e) {
-    if (isVisited(e)) return e;
-    addVisited(e);
     LOG5(_debugIndent << "IR::Leq " << e);
     if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
         return new IR::BoolLiteral(true);
@@ -81,8 +85,6 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Leq *e) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Lss *e) {
-    if (isVisited(e)) return e;
-    addVisited(e);
     LOG5(_debugIndent << "IR::Lss " << e);
     if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
         return new IR::BoolLiteral(false);
@@ -102,8 +104,6 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Lss *e) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Geq *e) {
-    if (isVisited(e)) return e;
-    addVisited(e);
     LOG5(_debugIndent << "IR::Geq " << e);
     if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
         return new IR::BoolLiteral(true);
@@ -123,8 +123,6 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Geq *e) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::Grt *e) {
-    if (isVisited(e)) return e;
-    addVisited(e);
     LOG5(_debugIndent << "IR::Grt " << e);
     if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
         return new IR::BoolLiteral(false);
@@ -174,10 +172,7 @@ const IR::Expression *CanonGatewayExpr::preorder(IR::LNot *e) {
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::LAnd *e) {
-    if (isVisited(e)) return e;
-    LOG5(_debugIndent << "IR::LAnd " << e);
-    _debugIndent++;
-    addVisited(e);
+    LOG5(_debugIndent++ << "IR::LAnd " << e);
     const IR::Expression *rv = e;
     if (e->left->equiv(*e->right))
         return e->left;
@@ -190,39 +185,35 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LAnd *e) {
     if (auto k = e->right->to<IR::BoolLiteral>())
         return k->value ? e->left : k;
     while (auto r = e->right->to<IR::LAnd>()) {
-        e->left = postorder(new IR::LAnd(e->left, r->left));
+        e->left = new IR::LAnd(e->left, r->left);
         e->right = r->right; }
     if (auto l = e->left->to<IR::LOr>()) {
         if (auto r = e->right->to<IR::LOr>()) {
-            auto c1 = postorder(new IR::LAnd(l->left, r->left));
-            auto c2 = postorder(new IR::LAnd(l->left, r->right));
-            auto c3 = postorder(new IR::LAnd(l->right, r->left));
-            auto c4 = postorder(new IR::LAnd(l->right, r->right));
+            auto c1 = new IR::LAnd(l->left, r->left);
+            auto c2 = new IR::LAnd(l->left, r->right);
+            auto c3 = new IR::LAnd(l->right, r->left);
+            auto c4 = new IR::LAnd(l->right, r->right);
             rv = new IR::LOr(new IR::LOr(new IR::LOr(c1, c2), c3), c4);
             LOG5(_debugIndent << "? IR::LAnd " << rv);
         } else {
-            auto c1 = postorder(new IR::LAnd(l->left, e->right));
-            auto c2 = postorder(new IR::LAnd(l->right, e->right));
+            auto c1 = new IR::LAnd(l->left, e->right);
+            auto c2 = new IR::LAnd(l->right, e->right);
             rv = new IR::LOr(c1, c2); }
         LOG5(_debugIndent << "/ IR::LAnd " << rv);
     } else if (auto r = e->right->to<IR::LOr>()) {
-        auto c1 = postorder(new IR::LAnd(e->left, r->left));
-        auto c2 = postorder(new IR::LAnd(e->left, r->right));
+        auto c1 = new IR::LAnd(e->left, r->left);
+        auto c2 = new IR::LAnd(e->left, r->right);
         rv = new IR::LOr(c1, c2);
         LOG5(_debugIndent << "* IR::LAnd " << rv);
     }
     if (rv != e)
         visit(rv);
-    _debugIndent--;
-    LOG5(_debugIndent << "- IR::LAnd " << rv);
+    LOG5(--_debugIndent << "- IR::LAnd " << rv);
     return rv;
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::LOr *e) {
-    if (isVisited(e)) return e;
-    addVisited(e);
-    LOG5(_debugIndent << "IR::LOr " << e);
-    _debugIndent++;
+    LOG5(_debugIndent++ << "IR::LOr " << e);
     if (e->left->equiv(*e->right))
         return e->left;
     if (auto k = e->left->to<IR::Constant>())
@@ -236,29 +227,24 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LOr *e) {
     while (auto r = e->right->to<IR::LOr>()) {
         e->left = postorder(new IR::LOr(e->left, r->left));
         e->right = r->right; }
-    _debugIndent--;
-    LOG5(_debugIndent << "-IR::LOr " << e);
+    LOG5(--_debugIndent << "-IR::LOr " << e);
     return e;
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::LNot *e) {
-    if (isVisited(e)) return e;
-    addVisited(e);
-    LOG5(_debugIndent << "IR::LNot " << e);
-    _debugIndent++;
+    LOG5(++_debugIndent << "IR::LNot " << e);
     const IR::Expression *rv = e;
     if (auto a = e->expr->to<IR::LNot>()) {
-        LOG5(_debugIndent << "r IR::LNot " << e);
-        _debugIndent--;
+        LOG5(--_debugIndent << "r IR::LNot " << e);
         return a->expr; }
     if (auto k = e->expr->to<IR::Constant>()) {
         return new IR::Constant(k->value == 0);
     } else if (auto k = e->expr->to<IR::BoolLiteral>()) {
         return new IR::BoolLiteral(!k->value); }
     if (auto a = e->expr->to<IR::LAnd>()) {
-        rv = new IR::LOr(postorder(new IR::LNot(a->left)), postorder(new IR::LNot(a->right)));
+        rv = new IR::LOr(new IR::LNot(a->left), new IR::LNot(a->right));
     } else if (auto a = e->expr->to<IR::LOr>()) {
-        rv = new IR::LAnd(postorder(new IR::LNot(a->left)), postorder(new IR::LNot(a->right)));
+        rv = new IR::LAnd(new IR::LNot(a->left), new IR::LNot(a->right));
     } else if (auto a = e->expr->to<IR::Equ>()) {
         rv = new IR::Neq(a->left, a->right);
     } else if (auto a = e->expr->to<IR::Neq>()) {
@@ -273,14 +259,11 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LNot *e) {
         rv = new IR::Grt(a->left, a->right); }
     if (rv != e)
         visit(rv);
-    _debugIndent--;
-    LOG5(_debugIndent << "-IR::LNot " << rv);
+    LOG5(--_debugIndent << "-IR::LNot " << rv);
     return rv;
 }
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::BAnd *e) {
-    if (isVisited(e)) return e;
-    addVisited(e);
     if (e->left->is<IR::Constant>()) {
         auto *t = e->left;
         e->left = e->right;
@@ -288,8 +271,6 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::BAnd *e) {
     return e;
 }
 const IR::Expression *CanonGatewayExpr::postorder(IR::BOr *e) {
-    if (isVisited(e)) return e;
-    addVisited(e);
     if (e->left->is<IR::Constant>()) {
         auto *t = e->left;
         e->left = e->right;
@@ -297,21 +278,50 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::BOr *e) {
     return e;
 }
 
-const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
-    // reset the visited expressions for every new condition.
-    // Each condition is associated with a Gateway table.
-    resetVisited();
+/* break apart the terms of a conjunction into a set of conjuncts */
+static std::set<const IR::Expression *> rowConjuncts(const IR::Expression *e) {
+    std::set<const IR::Expression *> rv;
+    while (auto *conj = e->to<IR::LAnd>()) {
+        rv.insert(conj->right);
+        e = conj->left; }
+    rv.insert(e);
+    return rv;
+}
 
+/* remove a conjunct from a set of conjuncts if present.  FIXME This would be much more
+ * efficient if the IR generator supported autogen hash and/or operator< for IR nodes
+ * to allow efficient set tracking */
+static void removeConjunct(std::set<const IR::Expression *> &s, const IR::Expression *e) {
+    for (auto it = s.begin(); it != s.end();) {
+        if (e->equiv(**it))
+            it = s.erase(it);
+        else
+            ++it; }
+}
+
+/** Test a row conjunction to see if it contains every term in a previous row.  If it
+ * does it can be safely reomved as it will never match (the previous row will also
+ * match, and at a higher priority, dominating it).   We need a copy of the 'prev'
+ * set here so we can modify to see if all elements are present */
+static bool rowDominates(std::set<const IR::Expression *> prev, const IR::Expression *e) {
+    while (auto *conj = e->to<IR::LAnd>()) {
+        removeConjunct(prev, conj->right);
+        if (prev.empty()) return true;
+        e = conj->left; }
+    removeConjunct(prev, e);
+    return prev.empty();
+}
+
+void CanonGatewayExpr::removeUnusedRows(IR::MAU::Table *tbl, bool isCanon) {
     auto &rows = tbl->gateway_rows;
-    if (rows.empty() || !rows[0].first)
-        return tbl;
-    LOG2("CanonGateway on table " << tbl->name);
-    LOG1("Postorder gateway cond: " << tbl->gateway_cond);
-    // Remove rows that can never match because they're after a row that always matches,
-    // or because their condition is 'false'.  While doing that, track the next tags
-    // that we remove and keep.
+    // Remove rows that can never match because it is
+    // - after a row that always matches,
+    // - after a row that dominates their match (only if gateway is canonicalized)
+    // - condition is 'false'.
+    // While doing that, track the next tags that we remove and keep.
     bool erase_rest = false;
     std::set<cstring>   removed, present;  // next tags in the table from the gateway
+    std::vector<std::set<const IR::Expression *>> prevRowTerms;
     for (auto row = rows.begin(); row != rows.end();) {
         if (erase_rest) {
             removed.insert(row->second);
@@ -333,21 +343,30 @@ const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
             } else {
                 row->first = nullptr; }
         } else {
-            present.insert(row->second);
-            ++row; } }
+            bool remove_row = false;
+            for (auto &prev : prevRowTerms) {
+                if (rowDominates(prev, row->first)) {
+                    remove_row = true;
+                    break; } }
+            if (remove_row) {
+                removed.insert(row->second);
+                row = rows.erase(row);
+            } else {
+                if (isCanon)
+                    prevRowTerms.push_back(rowConjuncts(row->first));
+                present.insert(row->second);
+                ++row; } } }
     // If we removed ALL gateway rows that refer to a next tag, remove that tag from
     // next, as it's unreachable.  This relies on the fact that gateway next tags and
     // action next tags are always disjoint.
     for (auto next_tag : removed)
         if (!present.count(next_tag))
             tbl->next.erase(next_tag);
-    if (rows.empty() || !rows[0].first) {
-        if (tbl->gateway_only()) {
-            LOG3("eliminating completely dead gateway-only table " << tbl->name);
-            if (!rows.empty() && tbl->next.count(rows.front().second))
-                return &tbl->next.at(rows.front().second)->tables;
-            return nullptr; }
-        return tbl; }
+}
+
+void CanonGatewayExpr::splitGatewayRows(
+        safe_vector<std::pair<const IR::Expression *, cstring>> &rows
+) {
     /* split logical-OR operations across rows */
     for (auto it = rows.begin(); it != rows.end(); ++it) {
         LOG3("    " << it->first << " -> " << it->second);
@@ -358,6 +377,17 @@ const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
             --it; } }
     if (rows.back().first)
         rows.emplace_back(nullptr, cstring());
+}
+
+void CanonGatewayExpr::removeNotEquals(
+        safe_vector<std::pair<const IR::Expression *, cstring>> &rows
+) {
+    /* This function does not actuall remove != operations -- it just rearranges the rows
+     * and inserts ! operations such that recanonicalization should remove (or at least
+     * reduce) the number of != operations.
+     * @returns 'true' if it made some changes and the code needs to be recanonicalized
+     * @returns 'false' if there were no != that need to be removed
+     */
     std::deque<std::pair<const IR::Expression *, cstring>> need_negate;
     /* move things that need negation to the end and negate them */
     for (auto it = rows.begin(); it != rows.end()-1;) {
@@ -369,7 +399,6 @@ const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
                 if (n.second != it->second)
                     it->first = new IR::LAnd(it->first, new IR::LNot(n.first)); }
             ++it; } }
-    if (need_negate.empty()) return tbl;
     while (!need_negate.empty()) {
         auto &back = rows.back();
         for (auto &n : need_negate) {
@@ -381,10 +410,46 @@ const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
         if (back.first)
             rows.emplace_back(nullptr, need_negate.back().second);
         need_negate.pop_front(); }
-    /* reprocess this table in case it has revealed more stuff to be done. */
-    for (auto &row : rows)
-        visit(row.first);
-    return postorder(tbl);
+}
+
+const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
+    auto &rows = tbl->gateway_rows;
+    if (rows.empty() || !rows[0].first)
+        return tbl;
+    LOG2("CanonGateway on table " << tbl->name);
+    LOG1("Postorder gateway cond: " << tbl->gateway_cond);
+    removeUnusedRows(tbl, false);
+
+    if (rows.empty() || !rows[0].first) {
+        if (tbl->gateway_only()) {
+            LOG3("eliminating completely dead gateway-only table " << tbl->name);
+            if (!rows.empty() && tbl->next.count(rows.front().second))
+                return &tbl->next.at(rows.front().second)->tables;
+            return nullptr; }
+        return tbl; }
+
+    /* The process for removing != operations doesn't always work immediately -- it might
+     * require a second pass to get rid of more != operations.  More passes could be done,
+     * but its likely if 2 isn't enough, its in a state where repeating more just expands
+     * things repeatedly without actually making any progress */
+    for (int trial = 0;; ++trial) {
+        splitGatewayRows(rows);
+        removeUnusedRows(tbl, true);
+        if (LOGGING(4)) {
+            LOG4("gateway " << tbl->name << " after canonicalization trial=" << trial);
+            for (auto &r : rows) LOG4("  " << r.first << " -> " << r.second); }
+        if (!NeedNegate(rows))
+            return tbl;
+        if (trial >= 2) {
+            error("%sgateway condition too complex", rows.front().first->srcInfo);
+            return tbl; }
+        removeNotEquals(rows);
+        /* reprocess this gateway to re-canonicalize it. */
+        if (LOGGING(4)) {
+            LOG4("reprocess gateway " << tbl->name << " trial=" << trial);
+            for (auto &r : rows) LOG4("  " << r.first << " -> " << r.second); }
+        for (auto &row : rows)
+            visit(row.first); }
 }
 
 bool CollectGatewayFields::preorder(const IR::MAU::Table *tbl) {
@@ -643,6 +708,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         LOG4("  xor_field = " << field->name << ' ' << bits);
         size_t size = std::max(bits.size(), match_field_bits.size());
         uint64_t mask = (UINT64_C(1) << size) - 1, donemask = 0;
+        uint64_t val = cmplmask & mask;
         mask &= andmask & ~ormask;
         mask <<= match_field_bits.lo;
         auto &field_info = fields.info.at(field);
@@ -662,10 +728,12 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
             if ((elmask &= mask) == 0) continue;
             int shft = off.first - off.second.lo - shift;
             LOG6("    elmask=0x" << hex(elmask) << " shft=" << shft);
-            if (shft >= 0)
-                match.word1 &= ~(elmask << shft);
-            else
-                match.word1 &= ~(elmask >> -shft);
+            if (shft >= 0) {
+                match.word0 &= ~(val << shft) | ~(elmask << shft);
+                match.word1 &= (val << shft) | ~(elmask << shft);
+            } else {
+                match.word0 &= ~(val >> -shft) | ~(elmask >> -shft);
+                match.word1 &= (val >> -shft) | ~(elmask >> -shft); }
             LOG6("    match now " << match);
             donemask |= mask;
             if (++it == end) break; }
@@ -689,7 +757,7 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
         LOG4("  ormask = 0x" << hex(ormask));
     } else if (match_field) {
         uint64_t mask = (UINT64_C(1) << match_field_bits.size()) - 1;
-        uint64_t val = c->asUint64() & mask;
+        uint64_t val = (c->asUint64() ^ cmplmask) & mask;
         if ((val & mask & ~andmask) || (~val & mask & ormask))
             BUG("masked comparison in gateway can never match");
         mask &= andmask & ~ormask;
@@ -719,9 +787,20 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
 bool BuildGatewayMatch::preorder(const IR::Equ *) {
     match_field = nullptr;
     andmask = -1;
+    ormask = cmplmask = 0;
+    return true;
+}
+
+bool BuildGatewayMatch::preorder(const IR::Neq *neq) {
+    if (neq->left->type->width_bits() != 1)
+        return preorder(static_cast<const IR::Operation_Relation *>(neq));
+    /* we can only handle 1-bit neq here */
+    match_field = nullptr;
+    andmask = cmplmask = -1;
     ormask = 0;
     return true;
 }
+
 bool BuildGatewayMatch::preorder(const IR::RangeMatch *rm) {
     le_bitrange bits;
     auto field = phv.field(rm->expr, &bits);

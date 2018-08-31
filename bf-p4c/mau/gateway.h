@@ -39,28 +39,13 @@ class CanonGatewayExpr : public MauTransform {
     const IR::Expression *postorder(IR::BAnd *) override;
     const IR::Expression *postorder(IR::BOr *) override;
     const IR::Node *postorder(IR::MAU::Table *) override;
+    // helper functions
+    void removeUnusedRows(IR::MAU::Table *, bool isCanon);
+    void splitGatewayRows(safe_vector<std::pair<const IR::Expression *, cstring>> &gateway_rows);
+    void removeNotEquals(safe_vector<std::pair<const IR::Expression *, cstring>> &gateway_rows);
     class NeedNegate;
 
  private:
-    /// check whether e has been visited.
-    /// Rather than pointer comparison, use the equiv method to check for expression equality.
-    bool isVisited(const IR::Expression *e) const {
-        for (auto *other : _visited)
-            if (other->equiv(*e))
-                return true;
-        return false;
-    }
-
-    void resetVisited() { _visited.erase(_visited.begin(), _visited.end()); }
-
-    void addVisited(const IR::Expression *e) {
-        if (!isVisited(e)) _visited.insert(e);
-    }
-
-    /// keep track of visited expressions such that we avoid infinite permutations
-    /// of an expression.
-    std::set<const IR::Expression *>_visited;
-
     /// indentation for debugging nested invocations of postorder methods
     indent_t _debugIndent;
 };
@@ -148,11 +133,12 @@ class BuildGatewayMatch : public Inspector {
     bool preorder(const IR::BOr *) override { return true; }
     bool preorder(const IR::Constant *) override;
     bool preorder(const IR::Equ *) override;
+    bool preorder(const IR::Neq *) override;
     bool preorder(const IR::RangeMatch *) override;
     friend std::ostream &operator<<(std::ostream &, const BuildGatewayMatch &);
     const PHV::Field           *match_field;
     le_bitrange                 match_field_bits;
-    uint64_t                    andmask, ormask;
+    uint64_t                    andmask, ormask, cmplmask;
     int                         shift;
  public:
     BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f);
