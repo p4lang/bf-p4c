@@ -57,6 +57,7 @@ class EnumOn32Bits : public P4::ChooseEnumRepresentation {
             if (sourceFile.endsWith("v1model.p4") ||
                 sourceFile.endsWith("psa.p4") ||
                 sourceFile.endsWith("tofino.p4") ||
+                sourceFile.endsWith("tofino/meter.p4") ||
                 sourceFile.endsWith("tofino2.p4") ||
                 sourceFile.endsWith("stratum.p4"))
                 // Don't convert any of the standard enums

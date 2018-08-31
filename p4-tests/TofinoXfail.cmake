@@ -358,13 +358,6 @@ p4c_add_xfail_reason("tofino"
   #extensions/p4_tests/p4_14/c1/COMPILER-355/netchain_two.p4
   )
 
-# conflict between blackbox meter and builtin meter
-p4c_add_xfail_reason("tofino"
-  "P4_14 extern type not fully supported"
-  extensions/p4_tests/p4_14/test_config_185_first_lpf.p4
-  extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "" # TIMEOUT -- appears to hang in parser unrolling.
   # FIXME -- how to have an expected timeout?
