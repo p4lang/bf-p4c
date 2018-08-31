@@ -31,7 +31,10 @@ extern void bypass_egress();
 
 extern void recirculate_raw(in bit<9> port);
 
+/* used to translate p4-14 invalidate() in frontend */
+#if defined(_TRANSLATE_TO_V1MODEL)
 extern void invalidate<T>(in T field);
+#endif
 extern void invalidate_raw(in bit<9> field);
 extern void invalidate_digest();
 

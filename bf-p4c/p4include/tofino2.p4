@@ -541,6 +541,8 @@ extern T max<T>(T t1, T t2);
 
 extern T min<T>(T t1, T t2);
 
+extern void invalidate<T>(in T field);
+
 /// Counter
 extern Counter<W, I> {
     Counter(bit<32> size, CounterType_t type);

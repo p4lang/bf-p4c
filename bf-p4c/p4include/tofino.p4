@@ -501,6 +501,8 @@ extern T max<T>(T t1, T t2);
 
 extern T min<T>(T t1, T t2);
 
+extern void invalidate<T>(in T field);
+
 /// Counter
 /// Indexed counter with `size’ independent counter values.
 extern Counter<W, I> {
