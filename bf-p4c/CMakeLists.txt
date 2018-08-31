@@ -215,6 +215,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/table_summary.cpp
   mau/table_injected_deps.cpp
   mau/upward_downward_prop.cpp
+  mau/table_flow_graph.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_SRCS}")
 build_unified(BF_P4C_BACKEND_MAU_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -250,6 +251,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/table_summary.h
   mau/table_injected_deps.h
   mau/upward_downward_prop.h
+  mau/table_flow_graph.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_HDRS}")
 
@@ -701,6 +703,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/v1model_translate.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/vertex_weighted_coloring.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_flow_graph.cpp
   ${BF_P4C_GRAPHS_SRCS}
   )
 
