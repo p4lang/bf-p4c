@@ -78,6 +78,9 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gre
         offset += f->type->width_bits();
     for (auto f : type->fields) {
         int size = f->type->width_bits();
+        if (size == 0)
+            error("%s%s field of type %s not supported on tofino", f->srcInfo,
+                  meta ? "metadata" : "header", f->type->toString());
         // "Hidden" annotation indicates padding introduced with bridged metadata fields
         bool isPad = f->getAnnotations()->getSingle("hidden") != nullptr;
         add(name + '.' + f->name, gress, size, offset -= size, meta, false, bridged, isPad); }

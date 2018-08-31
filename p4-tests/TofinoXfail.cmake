@@ -495,7 +495,7 @@ p4c_add_xfail_reason("tofino"
 
 # This program tries to assign an error value to a metadata field.
 p4c_add_xfail_reason("tofino"
-  "Couldn't resolve computed value for extract"
+  "error: metadata field of type error not supported on tofino"
   testdata/p4_16_samples/issue510-bmv2.p4
   )
 
@@ -1270,6 +1270,6 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-934
 p4c_add_xfail_reason("tofino"
-  "error: Field .* has allocated slices out of order."
+  "error: metadata field of type error not supported on tofino"
   testdata/p4_16_samples/issue1325-bmv2.p4
   )
