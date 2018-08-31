@@ -33,7 +33,7 @@ class BFNCompilerArchive(jsl.Document):
                                  description="Timestamp of when the archive was built.")
     compiler_version = jsl.StringField(required=True,
                                        description="Compiler version used in compilation.")
-    compiler_flags = jsl.StringField(required=False, description="Compiler cmmand line flags")
+    compile_command = jsl.StringField(required=False, description="Compiler command line")
     programs = jsl.ArrayField(required=True, description="Array of compiled programs",
                               items=jsl.DocumentField("CompiledProgram", as_ref=True))
 

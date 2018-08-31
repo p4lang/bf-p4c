@@ -71,7 +71,7 @@ class Manifest : public Inspector {
 
         writer.StartObject();  // start BFNCompilerArchive
         writer.Key("schema_version");
-        writer.String("1.1.0");
+        writer.String("1.2.0");
         writer.Key("target");
         if (_options.target)
             writer.String(_options.target.c_str());

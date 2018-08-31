@@ -81,7 +81,6 @@ void output_all() {
     ctxtJson["build_date"] = build_date;
     ctxtJson["schema_version"] = "1.5.3";
     ctxtJson["compiler_version"] = BF_P4C_VERSION;
-    ctxtJson["compile_command"] = "xxx"; // TODO
     ctxtJson["program_name"] = asmfile_name;
     ctxtJson["learn_quanta"] = json::vector();
     ctxtJson["dynamic_hash_calculations"] = json::vector();

@@ -981,7 +981,7 @@ p4c_add_xfail_reason("tofino"
   switch_msdc_leaf_int
   switch_l3_heavy_int_leaf
   switch_generic_int_leaf
-)  
+)
 
 p4c_add_xfail_reason("tofino"
   "The attached table .* is addressed by both hash and index in table"

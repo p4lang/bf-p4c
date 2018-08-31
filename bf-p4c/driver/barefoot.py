@@ -239,6 +239,27 @@ class BarefootBackend(BackendDriver):
                     dirname = os.path.join(self._output_directory, pipe_name)
                 self._pipes[pipe_name] = dirname
 
+    def updateCompilerFlags(self, jsonFile):
+        """
+        Set the compile_command in the manifest or context.json
+        """
+        if self._dry_run:
+            return
+
+        jsonTree = None
+        with open(jsonFile, "r") as json_file:
+            try:
+                jsonTree = json.load(json_file)
+                jsonTree['compile_command'] = ' '.join(sys.argv)
+            except:
+                print >> sys.stderr, "ERROR: Input file '" + jsonTree + \
+                    "' could not be decoded as JSON.\n"
+                sys.exit(1)
+
+        if jsonTree is not None:
+            with open(jsonFile, "w") as new_file:
+                json.dump(jsonTree, new_file, indent=2, separators=(',', ': '))
+
     def runAssembler(self, dirname, unique_table_offset):
         """
         Run an instance of the assembler on the provided directory
@@ -294,6 +315,12 @@ class BarefootBackend(BackendDriver):
         self.disable_commands(['assembler', 'archiver'])
         BackendDriver.run(self)
 
+        # collect all the command line arguments that were passed to the driver
+        # the reason we implement this here, is because the backend will not know
+        # what arguments were added by the driver, and filtering them requires keeping
+        # both sources in sync.
+        self.updateCompilerFlags(os.path.join(self._output_directory, 'manifest.json'))
+
         # we ran the compiler, now we need to parse the manifest and run the assembler
         # for each P4-16 pipe
         if run_assembler:
@@ -304,6 +331,10 @@ class BarefootBackend(BackendDriver):
             unique_table_offset = 0
             for pipe_dir in self._pipes.values():
                 self.runAssembler(pipe_dir, unique_table_offset)
+                # Although we the context.json schema has an optional compile_command and
+                # we could add it here, it is a potential performance penalty to re-write
+                # a large context.json file. So we don't!
+                # self.updateCompilerFlags(os.path.join(pipe_dir, 'context.json'))
                 unique_table_offset += 1
 
         # run the archiver if one has been set
