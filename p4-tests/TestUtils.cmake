@@ -107,12 +107,12 @@ macro(p4c_add_ptf_test_with_ptfdir device alias ts args ptfdir)
   p4c_test_set_name(__testname ${device} ${alias})
   if (PTF_REQUIREMENTS_MET)
     p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
-      ${p4test} "${args} -ptfdir ${ptfdir}")
+      ${p4test} "" "${args} -ptfdir ${ptfdir}")
     set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
     p4c_add_test_label(${device} "ptf" ${alias})
   else()
     p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
-      ${p4test} "${args}")
+      ${p4test} "" "${args}")
   endif()
 endmacro(p4c_add_ptf_test_with_ptfdir)
 

@@ -7,15 +7,15 @@ set  (SWITCH_PTF_DIR_MIRROR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-jbay/ptf-te
 set  (isXFail TRUE)
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "switch_dc_basic" ${switchtest} "${testExtraArgs} -DDC_BASIC_PROFILE")
+  "switch_dc_basic" ${switchtest} "${testExtraArgs}" "-DDC_BASIC_PROFILE")
 p4c_add_test_label("tofino2" "18Q2Goal" "switch_dc_basic")
 
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "switch_ent_dc_general" ${switchtest} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
+  "switch_ent_dc_general" ${switchtest} "${testExtraArgs}" "-DENT_DC_GENERAL_PROFILE")
 p4c_add_test_label("tofino2" "18Q2Goal" "switch_ent_dc_general")
 
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "switch_msdc" ${switchtest} "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG")
+  "switch_msdc" ${switchtest} "${testExtraArgs}" "-DMSDC_PROFILE -DP4_WRED_DEBUG")
 p4c_add_test_label("tofino2" "18Q2Goal" "switch_msdc")
 
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_msdc" ${SWITCH_P4}

@@ -17,7 +17,7 @@ set(CODEGEN_RUNNER ${CMAKE_CURRENT_SOURCE_DIR}/codegen_runner.sh)
 set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
 p4c_add_test_with_args ("codegen" ${CODEGEN_RUNNER} FALSE
-  "switch_dc_basic_uses_phase0" ${switchtest} "${testExtraArgs} -Tphase0:5 -DDC_BASIC_PROFILE")
+  "switch_dc_basic_uses_phase0" ${switchtest} "${testExtraArgs} -Tphase0:5" "-DDC_BASIC_PROFILE")
 p4c_add_codegen_success_reason(
     "_ingress_port_mapping will be used as the phase 0 table"
     switch_dc_basic_uses_phase0

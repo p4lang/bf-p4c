@@ -1054,10 +1054,8 @@ p4c_add_xfail_reason("tofino"
 #   "SelectExpression: Cannot unify bit<.*> to int<.*>"
 # )
 
-# BRIG-809
-# Compiler Bug: /bfn/bf-p4c-compilers/p4c/ir/vector.h:148: Null e
 p4c_add_xfail_reason("tofino"
-  "p4c/ir/vector.h:148: Null e"
+  "error: verify_checksum: cannot infer type for type parameter T"
   extensions/p4_tests/p4_14/p4smith_regression/chauncey_0.p4
   extensions/p4_tests/p4_14/p4smith_regression/corroding_0.p4
   )

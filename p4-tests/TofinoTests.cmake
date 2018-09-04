@@ -310,7 +310,7 @@ foreach(t IN LISTS ba_tests)
     p4c_add_ptf_test_with_ptfdir ("tofino" ${testname} ${t} "${testExtraArgs} -pd" ${ptfdir})
   else()
     file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} ${t})
-    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ${testname} ${testfile} "${testExtraArgs}")
+    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ${testname} ${testfile} "${testExtraArgs}" "")
   endif()
   p4c_add_test_label("tofino" "BA-101" ${testname})
 endforeach()
@@ -344,12 +344,12 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_faecess_0" ${CMAKE_CURRENT_SOU
 # will run as part of cpplint
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE "easy-ternary-archive"
   extensions/p4_tests/p4_14/easy_ternary.p4
-  "-norun --create-graphs --archive --validate-manifest")
+  "-norun --create-graphs --archive --validate-manifest" "")
 p4c_add_test_label("tofino" "cpplint" "easy-ternary-archive")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE "tor-archive"
   extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
-  "-norun --create-graphs --archive --validate-manifest")
+  "-norun --create-graphs --archive --validate-manifest" "")
 p4c_add_test_label("tofino" "cpplint" "tor-archive")
 
 include(Switch.cmake)
@@ -367,38 +367,38 @@ include(TofinoXfail.cmake)
 # Commented out because we're not yet ready to run all these failed profiles
 # and save cycles on testing
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_acl_ip4v" ${switchtest} "${testExtraArgs} -DACL_IPV4_PROFILE")
+#   "switch_acl_ip4v" ${switchtest} "${testExtraArgs}" "-DACL_IPV4_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_bfd_offload" ${switchtest} "${testExtraArgs} -DBFD_OFFLOAD_PROFILE")
+#   "switch_bfd_offload" ${switchtest} "${testExtraArgs}" "-DBFD_OFFLOAD_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_dc_maxsizes" ${switchtest} "${testExtraArgs} -DDC_MAXSIZES_PROFILE")
+#   "switch_dc_maxsizes" ${switchtest} "${testExtraArgs}" "-DDC_MAXSIZES_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_egress_acl" ${switchtest} "${testExtraArgs} -DEGRESS_ACL_PROFILE")
+#   "switch_egress_acl" ${switchtest} "${testExtraArgs}" "-DEGRESS_ACL_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_fabric" ${switchtest} "${testExtraArgs} -DFABRIC_PROFILE")
+#   "switch_fabric" ${switchtest} "${testExtraArgs}" "-DFABRIC_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_fabric_maxsizes" ${switchtest} "${testExtraArgs} -DFABRIC_MAXSIZES_PROFILE")
+#   "switch_fabric_maxsizes" ${switchtest} "${testExtraArgs}" "-DFABRIC_MAXSIZES_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_ila" ${switchtest} "${testExtraArgs} -DILA_PROFILE")
+#   "switch_ila" ${switchtest} "${testExtraArgs}" "-DILA_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_ila_ipv6" ${switchtest} "${testExtraArgs} -DILA_IPV6_PROFILE")
+#   "switch_ila_ipv6" ${switchtest} "${testExtraArgs}" "-DILA_IPV6_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_ent_fin_spine" ${switchtest} "${testExtraArgs} -DENT_FIN_SPINE_PROFILE")
+#   "switch_ent_fin_spine" ${switchtest} "${testExtraArgs}" "-DENT_FIN_SPINE_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs} -DENT_FIN_POSTCARD_PROFILE")
+#   "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs}" "-DENT_FIN_POSTCARD_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_l3_ipv4_fib_clpm" ${switchtest} "${testExtraArgs} -DL3_IPV4_FIB_CLPM_PROFILE")
+#   "switch_l3_ipv4_fib_clpm" ${switchtest} "${testExtraArgs}" "-DL3_IPV4_FIB_CLPM_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_mpls_udp" ${switchtest} "${testExtraArgs} -DMPLS_UDP_PROFILE")
+#   "switch_mpls_udp" ${switchtest} "${testExtraArgs}" "-DMPLS_UDP_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_nat" ${switchtest} "${testExtraArgs} -DNAT_PROFILE")
+#   "switch_nat" ${switchtest} "${testExtraArgs}" "-DNAT_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_qos" ${switchtest} "${testExtraArgs} -DQOS_PROFILE")
+#   "switch_qos" ${switchtest} "${testExtraArgs}" "-DQOS_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_sflow" ${switchtest} "${testExtraArgs} -DSFLOW_PROFILE")
+#   "switch_sflow" ${switchtest} "${testExtraArgs}" "-DSFLOW_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_test_int_vxlan_ep" ${switchtest} "${testExtraArgs} -DTEST_INT_VXLAN_EP_PROFILE")
+#   "switch_test_int_vxlan_ep" ${switchtest} "${testExtraArgs}" "-DTEST_INT_VXLAN_EP_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_test_int_vxlan_transit" ${switchtest} "${testExtraArgs} -DTEST_INT_VXLAN_TRANSIT_PROFILE")
+#   "switch_test_int_vxlan_transit" ${switchtest} "${testExtraArgs}" "-DTEST_INT_VXLAN_TRANSIT_PROFILE")
 # p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-#   "switch_test_mirror_on_drop" ${switchtest} "${testExtraArgs} -DTEST_MIRROR_ON_DROP_PROFILE")
+#   "switch_test_mirror_on_drop" ${switchtest} "${testExtraArgs}" "-DTEST_MIRROR_ON_DROP_PROFILE")
