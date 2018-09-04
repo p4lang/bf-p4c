@@ -392,6 +392,7 @@ public:
                 return nullptr; }
             void pass1(Table *tbl);
             void add_indirect_resources(json::vector &indirect_resources) const;
+            bool is_color_aware() const;
             friend std::ostream &operator<<(std::ostream &, const alias_t &);
             friend std::ostream &operator<<(std::ostream &, const Action &);
         };

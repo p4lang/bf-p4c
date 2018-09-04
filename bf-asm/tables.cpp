@@ -1333,6 +1333,20 @@ static void gen_override(json::map &cfg, const Table::Call &att) {
     cfg[base + "_full_addr"] = override_addr ? override_full_addr : 0;
 }
 
+bool Table::Actions::Action::is_color_aware() const {
+    for (auto &att : attached) {
+        if (att->table_type() != Table::METER)
+            continue;
+        if (att.args.size() < 2)
+            continue;
+        auto type_arg = att.args[0];
+        if (type_arg.type == Table::Call::Arg::Const &&
+            type_arg.value() == METER_COLOR_AWARE)
+            return true;
+    }
+    return false;
+}
+
 void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resources) const {
     for (auto &att : attached) {
         auto addr_arg = att.args.back();
@@ -1414,7 +1428,7 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
         for (auto &att : act.attached)
             gen_override(action_cfg, att);
         if (!this->table->to<ActionTable>())
-            action_cfg["is_action_meter_color_aware"] = false;
+            action_cfg["is_action_meter_color_aware"] = act.is_color_aware();
         if (!act_json_present)
             actions_cfg.push_back(std::move(action_cfg));
     }
