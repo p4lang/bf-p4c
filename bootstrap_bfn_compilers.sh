@@ -42,6 +42,14 @@ if [ "$1" == "--p4c-cpp-flags" ]; then
     shift; shift;
 fi
 
+# git version check - 2.11.0 doesn't work
+installed_git_ver=$(git --version | cut -f 3 -d " ")
+if [[ $installed_git_ver == *"2.11.0"* ]]; then
+    echo "Installed git version is not suitable: $installed_git_ver"
+    echo "Upgrade to a different version of git and rerun script"
+    exit 1
+fi
+
 if [ ! -r p4c/CMakeLists.txt ]; then
     git submodule update --init --recursive
 fi
