@@ -124,8 +124,7 @@ void HashDistribution::write_regs(REGS &regs, Table *tbl, int type, bool non_lin
     if (tbl->gress == EGRESS)
         merge.mau_hash_group_config.hash_group_egress |= 1 << id;
     merge.mau_hash_group_config.hash_group_enable |= 1 << id;
-    merge.mau_hash_group_config.hash_group_sel.set_subfield(hash_group, 4 * (id/3), 3);
-    merge.mau_hash_group_config.hash_group_sel.set_subfield(1, 4 * (id/3) + 3, 1);
+    merge.mau_hash_group_config.hash_group_sel.set_subfield(hash_group | 8U, 4 * (id/3), 4);
     merge.mau_hash_group_config.hash_group_ctl.set_subfield(type, 2 * id, 2);
     merge.mau_hash_group_shiftcount.set_subfield(shift, 3 * id, 3);
     merge.mau_hash_group_mask[id] |= mask;
@@ -134,11 +133,13 @@ void HashDistribution::write_regs(REGS &regs, Table *tbl, int type, bool non_lin
         merge.mau_hash_group_expand[id/3].hash_slice_group0_expand = 1;
         merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand;
         merge.mau_hash_group_config.hash_group_enable |= 1 << (id + 2);
+        merge.mau_hash_group_config.hash_group_ctl.set_subfield(type, 2 * (id + 2), 2);
         break;
     case 1:
         merge.mau_hash_group_expand[id/3].hash_slice_group1_expand = 1;
         merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand - 7;
         merge.mau_hash_group_config.hash_group_enable |= 1 << (id + 1);
+        merge.mau_hash_group_config.hash_group_ctl.set_subfield(type, 2 * (id + 2), 2);
         break;
     default: assert(0); }
     for (int oxbar : Range(0, 4))
