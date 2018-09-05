@@ -325,8 +325,8 @@ class AllocateParserChecksumUnits : public PassManager {
             auto& calc_states_B = checksumInfo.decl_name_to_states.at(parser).at(declB);
 
             if (is_residual(parser, declA) || is_residual(parser, declB)) {
-                auto startA = get_start_state(parser, declA);
-                auto startB = get_start_state(parser, declB);
+                auto startA = get_start_states(parser, declA);
+                auto startB = get_start_states(parser, declB);
 
                 for (auto a : calc_states_A) {
                     for (auto b : calc_states_B) {
@@ -342,20 +342,27 @@ class AllocateParserChecksumUnits : public PassManager {
                     }
                 }
 
-                if (is_residual(parser, declA) &&
-                    parserInfo.graph(parser).is_ancestor(startA, startB)) {
-                    return false;
+                if (is_residual(parser, declA)) {
+                    for (auto a : startA)
+                        for (auto b : startB)
+                            if (parserInfo.graph(parser).is_ancestor(a, b))
+                                return false;
                 }
 
-                if (is_residual(parser, declB) &&
-                    parserInfo.graph(parser).is_ancestor(startB, startA)) {
-                    return false;
+                if (is_residual(parser, declB)) {
+                    for (auto b : startB)
+                        for (auto a : startA)
+                            if (parserInfo.graph(parser).is_ancestor(b, a))
+                                return false;
                 }
             } else {
-                for (auto a : calc_states_A)
-                    for (auto b : calc_states_B)
-                        if (a == b)
+                for (auto a : calc_states_A) {
+                    for (auto b : calc_states_B) {
+                        if (a == b) {
                             return false;
+                        }
+                    }
+                }
             }
 
             return true;
@@ -426,11 +433,27 @@ class AllocateParserChecksumUnits : public PassManager {
         }
 
         /// Returns the checksum calculation start state for declaration. A calculation
-        /// can only have single start state.
-        const IR::BFN::ParserState*
-        get_start_state(const IR::BFN::Parser* parser, cstring decl) {
+        /// may have mutiple start states, e.g. branches that extract same header. A state
+        /// is a start state is no other state is its ancestor.
+        std::set<const IR::BFN::ParserState*>
+        get_start_states(const IR::BFN::Parser* parser, cstring decl) {
+            std::set<const IR::BFN::ParserState*> start_states;
+
             auto& calc_states = checksumInfo.decl_name_to_states.at(parser).at(decl);
-            return *calc_states.begin();
+
+            for (auto a : calc_states) {
+                bool is_start = true;
+                for (auto b : calc_states) {
+                    if (parserInfo.graph(parser).is_ancestor(b, a)) {
+                        is_start = false;
+                        break;
+                    }
+                }
+                if (is_start)
+                    start_states.insert(a);
+            }
+
+            return start_states;
         }
 
         /// Returns the checksum calculation end states for declaration. A calculation
@@ -495,7 +518,7 @@ class AllocateParserChecksumUnits : public PassManager {
             for (auto& ds : disjoint_sets) {
                 for (auto s : ds) {
                     self.declToChecksumId[parser][s] = curr_id;
-                    self.declToStartState[parser][s] = get_start_state(parser, s);
+                    self.declToStartStates[parser][s] = get_start_states(parser, s);
                     self.declToEndStates[parser][s] = get_end_states(parser, s);
 
                     LOG4("allocated parser checksum unit " << curr_id << " to " << s);
@@ -519,7 +542,7 @@ class AllocateParserChecksumUnits : public PassManager {
         std::map<cstring, unsigned>>                              declToChecksumId;
 
     std::map<const IR::BFN::Parser*,
-        std::map<cstring, const IR::BFN::ParserState*>>           declToStartState;
+        std::map<cstring, std::set<const IR::BFN::ParserState*>>> declToStartStates;
 
     std::map<const IR::BFN::Parser*,
         std::map<cstring, std::set<const IR::BFN::ParserState*>>> declToEndStates;

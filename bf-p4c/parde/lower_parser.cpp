@@ -620,7 +620,11 @@ struct ComputeLoweredParserIR : public ParserInspector {
                         std::vector<const IR::BFN::ParserChecksumPrimitive*>& checksums) {
         auto last = checksums.back();
         cstring declName = last->declName;
-        bool start = state == checksumAlloc.declToStartState.at(parser).at(declName);
+
+        bool start = false;
+        if (checksumAlloc.declToStartStates.at(parser).at(declName).count(state))
+            start = true;
+
         bool end = false;
         if (checksumAlloc.declToEndStates.at(parser).at(declName).count(state))
             end = true;
