@@ -694,9 +694,11 @@ void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
                 continue;
             auto &pos_vec = mah.identity_positions.at(slice.get_field());
             for (auto &pos : pos_vec) {
-                le_bitrange slice_bits = { -1, -1 };
-                slice_bits.lo = std::max(slice.get_lo(), pos.field_range.lo);
-                slice_bits.hi = std::min(slice.get_hi(), pos.field_range.hi);
+                auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
+                                    (pos.field_range.intersectWith(slice.range()));
+                if (boost_sl == boost::none)
+                    continue;
+                le_bitrange slice_bits = *boost_sl;
                 safe_vector<Slice> single_match_vec;
                 int start_bit = pos.hash_start + (slice_bits.lo - pos.field_range.lo);
                 int end_bit = start_bit + slice_bits.size() - 1;
