@@ -65,6 +65,7 @@ class Table : BFN::Unit {
     inline Vector<InputXBarRead>                match_key;
     int                                         random_seed = -1;
     bool                                        dynamic_key_masks = false;
+    NullOK EntriesList                          entries_list;
 
     class IndirectAddress {
         bool shifter_enabled = false;

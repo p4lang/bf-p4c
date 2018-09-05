@@ -691,6 +691,30 @@ static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool 
     return nullptr;
 }
 
+class RewriteActionNames : public Modifier {
+    const IR::P4Action *p4_action;
+    IR::MAU::Table *mau_table;
+
+ public:
+    RewriteActionNames(const IR::P4Action *ac, IR::MAU::Table *tt)
+        : p4_action(ac), mau_table(tt) {}
+
+ private:
+    bool preorder(IR::Path *path) {
+        if (auto *mc = findOrigCtxt<IR::MethodCallExpression>()) {
+            for (auto action : Values(mau_table->actions)) {
+                if (action->name.name == p4_action->externalName()
+                        && p4_action->name.name == path->name.name) {
+                    path->name.name = p4_action->externalName();
+                    path->name.originalName = action->name.originalName;
+                    break;
+                }
+            }
+        }
+        return false;
+    }
+};
+
 class GetBackendTables : public MauInspector {
     P4::ReferenceMap                            *refMap;
     P4::TypeMap                                 *typeMap;
@@ -770,9 +794,19 @@ class GetBackendTables : public MauInspector {
         }
     }
 
+    // This function creates a copy of the static entry list within the match
+    // table into the backend MAU::Table. This is required to modify names
+    // present on actions which are updated in the backend.
+    void update_entries_list(IR::MAU::Table *tt, const IR::P4Action *ac) {
+        if (tt->entries_list == nullptr) return;
+        auto el = tt->entries_list->apply(RewriteActionNames(ac, tt));
+        tt->entries_list = el->to<IR::EntriesList>();
+    }
+
     // Convert from IR::P4Action to IR::MAU::Action
     void setup_actions(IR::MAU::Table *tt, const IR::P4Table *table) {
         auto actionList = table->getActionList();
+        tt->entries_list = tt->match_table->getEntries();
         for (auto act : actionList->actionList) {
             auto decl = refMap->getDeclaration(act->getPath())->to<IR::P4Action>();
             BUG_CHECK(decl != nullptr,
@@ -789,6 +823,7 @@ class GetBackendTables : public MauInspector {
             else
                 error("%s: action %s appears multiple times in table %s", decl->name.srcInfo,
                           decl->name, tt->name);
+            update_entries_list(tt, decl);
         }
     }
 

@@ -2085,8 +2085,7 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
 
 void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl) const {
-    auto entries_list = tbl->match_table->getEntries();
-    if (entries_list == nullptr)
+    if (tbl->entries_list == nullptr)
         return;
 
     for (auto k : tbl->match_key) {
@@ -2095,7 +2094,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
     }
 
     out << indent++ << "static_entries:" << std::endl;
-    for (auto entry : entries_list->entries) {
+    for (auto entry : tbl->entries_list->entries) {
         auto method_call = entry->action->to<IR::MethodCallExpression>();
         BUG_CHECK(method_call, "Action is not specified for a static entry");
 
@@ -2119,7 +2118,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
         out << "]" << std::endl;
 
         for (auto action : Values(tbl->actions)) {
-            if (action->name.originalName == path->name) {
+            if (action->name.name == path->name) {
                 out << indent << "action: " << canon_name(action->externalName()) << std::endl;
                 break;
             }
