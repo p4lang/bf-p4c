@@ -117,6 +117,19 @@ void InjectControlDependencies::postorder(const IR::MAU::TableSeq *seq) {
     }
 }
 
+bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
+    const Context *ctxt = getContext();
+    if (ctxt && dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
+        const IR::MAU::Table* parent;
+        parent = dynamic_cast<const IR::MAU::Table *>(ctxt->node);
+        for (auto child : seq->tables) {
+            dg.add_edge(parent, child, DependencyGraph::CONTROL);
+        }
+    }
+
+    return true;
+}
+
 void InjectControlDependencies::end_apply() {
     // LOG2(dg);
 }

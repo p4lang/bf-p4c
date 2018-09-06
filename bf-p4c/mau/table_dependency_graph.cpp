@@ -46,6 +46,84 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     return out;
 }
 
+static void dump_viz(std::ostream &out, DependencyGraph &dg) {
+    auto all_vertices = boost::vertices(dg.g);
+    if (++all_vertices.first == all_vertices.second) {
+        out << "digraph empty {\n}" << std::endl;
+        return;
+    }
+    ordered_map<std::pair<cstring, cstring>, ordered_set<cstring>> name_pairs;
+    out << "digraph table_deps {" << std::endl;
+    DependencyGraph::Graph::edge_iterator edges, edges_end;
+    for (boost::tie(edges, edges_end) = boost::edges(dg.g); edges != edges_end; ++edges) {
+        auto src = boost::source(*edges, dg.g);
+        const IR::MAU::Table* source = dg.get_vertex(src);
+        auto dst = boost::target(*edges, dg.g);
+        const IR::MAU::Table* target = dg.get_vertex(dst);
+        std::string src_name = std::string(source ? source->name : "SINK");
+        std::string dst_name = std::string(target ? target->name : "SINK");
+        std::replace(src_name.begin(), src_name.end(), '-', '_');
+        std::replace(dst_name.begin(), dst_name.end(), '-', '_');
+        std::replace(src_name.begin(), src_name.end(), '.', '_');
+        std::replace(dst_name.begin(), dst_name.end(), '.', '_');
+        cstring edge_name = dep_types(dg.g[*edges]);
+        auto p = std::make_pair(src_name.c_str(), dst_name.c_str());
+        name_pairs[p].insert(edge_name);
+        out << "    " << src_name.c_str() << " -> " <<
+            dst_name.c_str() << " [ label= \"" << edge_name << "\" ];" << std::endl;
+    }
+    out << "}" << std::endl;
+    out << "digraph table_deps_merged {" << std::endl;
+    for (auto& kv : name_pairs) {
+        auto table_pair = kv.first;
+        auto edges = kv.second;
+        out << "    " << table_pair.first << " -> " <<
+            table_pair.second << " [ label= \"";
+        const char* sep = "";
+        for (auto& edge : edges) {
+            out << sep << edge;
+            sep = ",\n";
+        }
+        out << "\" ];" << std::endl;
+    }
+    out << "}" << std::endl;
+    out << "digraph table_deps_simple {" << std::endl;
+    for (auto& kv : name_pairs) {
+        auto table_pair = kv.first;
+        auto edges = kv.second;
+        ordered_set<cstring> simple_edges;
+        for (auto& edge : edges) {
+            if (edge == "ANTI") {
+                continue;
+            } else if (edge == "IXBAR_READ" || edge == "ACTION_READ" || edge == "OUTPUT") {
+                simple_edges.insert("DATA");
+            } else if (edge == "REDUCTION_OR_OUTPUT" || edge == "REDUCTION_OR_READ") {
+                simple_edges.insert("REDUCTION_OR");
+            } else if (edge == "CONTROL") {
+                simple_edges.insert("CONTROL");
+            } else {
+                simple_edges.insert("UNKNOWN");
+            }
+        }
+        out << "    " << table_pair.first << " -> " <<
+            table_pair.second << " [ label= \"";
+        const char* sep = "";
+        for (auto& edge : simple_edges) {
+            out << sep << edge;
+            sep = ",\n";
+        }
+        cstring color = "black";
+        if (simple_edges.count("DATA") && simple_edges.count("CONTROL"))
+            color = "blue";
+        else if (simple_edges.count("DATA"))
+            color = "red";
+        else if (simple_edges.count("CONTROL"))
+            color = "green";
+        out << "\",color=" << color << " ];" << std::endl;
+    }
+    out << "}" << std::endl;
+}
+
 class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteContext {
     FindDependencyGraph                 &self;
     const IR::MAU::Table                *table;
@@ -255,12 +333,6 @@ bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *seq) {
     if (ctxt && ctxt->node->is<IR::BFN::Pipe>()) {
         access.clear();
         cont_write.clear();
-    } else if (ctxt && dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
-        const IR::MAU::Table* parent;
-        parent = dynamic_cast<const IR::MAU::Table *>(ctxt->node);
-        for (auto child : seq->tables) {
-            dg.add_edge(parent, child, DependencyGraph::CONTROL);
-        }
     }
 
     return true;
@@ -623,6 +695,8 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
 
 
     verify_dependence_graph();
+    if (LOGGING(4))
+        dump_viz(std::cout, dg);
     dg.finalized = true;
 }
 

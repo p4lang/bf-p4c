@@ -20,6 +20,7 @@ class TableFindInjectedDependencies : public PassManager {
 
 class InjectControlDependencies : public MauInspector {
     void postorder(const IR::MAU::TableSeq *seq) override;
+    bool preorder(const IR::MAU::TableSeq *seq) override;
     void end_apply() override;
  private:
     DependencyGraph& dg;
