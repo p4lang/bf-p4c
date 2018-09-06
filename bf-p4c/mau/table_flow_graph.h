@@ -9,6 +9,7 @@
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/default_next.h"
+#include "bf-p4c/mau/table_dependency_graph.h"
 
 struct FlowGraph {
     typedef enum {
@@ -25,12 +26,40 @@ struct FlowGraph {
 
     Graph g;
     typename Graph::vertex_descriptor v_sink, v_source;
+    boost::optional<gress_t> gress;
+    std::map<typename Graph::vertex_descriptor, bitvec> reachableNodes;
+    ordered_map<const IR::MAU::Table*, int> tableToVertexIndex;
 
     FlowGraph(void) {
-        v_sink = add_vertex(nullptr);
+        gress = boost::none;
     }
     std::map<const IR::MAU::Table*,
         typename Graph::vertex_descriptor> labelToVertex;
+
+    /** Clear the state for the FlowGraph.
+      */
+    void clear() {
+        g.clear();
+        gress = boost::none;
+        reachableNodes.clear();
+        tableToVertexIndex.clear();
+    }
+
+    void add_sink_vertex() {
+        v_sink = add_vertex(nullptr);
+    }
+
+    /** @returns true if there is an edge in the flow graph from @t1 to @t2. nullptr for @t1 or @t2
+      * represents the sink node (consider it the deparser).
+      */
+    bool can_reach(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+        if (t2 == nullptr) return true;
+        if (t1 == nullptr) return false;
+        if (t1 == t2) return true;
+        const auto v1 = tableToVertexIndex.at(t1);
+        const auto v2 = tableToVertexIndex.at(t2);
+        return reachableNodes.at(v1).getbit(v2);
+    }
 
     /* @returns the table pointer corresponding to a vertex in the flow graph
      */
@@ -41,6 +70,9 @@ struct FlowGraph {
     /* If a vertex with this label already exists, return it.  Otherwise,
      * create a new vertex with this label. */
     typename Graph::vertex_descriptor add_vertex(const IR::MAU::Table* label) {
+        // gress uninitialized
+        if (label != nullptr && gress == boost::none)
+            gress = label->gress;
         if (labelToVertex.count(label)) {
             return labelToVertex.at(label);
         } else {
@@ -77,6 +109,23 @@ struct FlowGraph {
     }
 
     friend std::ostream &operator<<(std::ostream &, const FlowGraph&);
+};
+
+/** Custom breadth-first visitor that determines the reachability of various nodes from a given node
+  * in the table flow graph.
+  */
+class BFSVisitor : public boost::default_bfs_visitor {
+ private:
+    bitvec& verticesVisited;
+
+ public:
+    explicit BFSVisitor(bitvec& b) : verticesVisited(b) { }
+
+    void examine_edge(
+            FlowGraph::Graph::edge_descriptor e,
+            const FlowGraph::Graph& g) {
+        verticesVisited.setbit(boost::target(e, g));
+    }
 };
 
 class FindFlowGraph : public MauInspector {

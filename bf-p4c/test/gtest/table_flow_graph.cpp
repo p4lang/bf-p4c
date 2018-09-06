@@ -292,11 +292,8 @@ apply {
 
     FlowGraph fg;
     auto *find_fg_ingress = new FindFlowGraph(fg);
-    auto *find_fg_egress = new FindFlowGraph(fg);
 
     test->pipe->thread[INGRESS].mau->apply(*find_fg_ingress);
-    test->pipe->thread[EGRESS].mau->apply(*find_fg_egress);
-
 
     const IR::MAU::Table *t1, *t2, *t3, *t4, *t5, *t6, *t7, *t8, *t9, *t10, *t11, *t12;
     t1 = t2 = t3 = t4 = t5 = t6 = t7 = t8 = t9 = t10 = t11 = t12 = nullptr;
@@ -359,48 +356,56 @@ apply {
         auto src = kv.first;
         auto dst_options = kv.second;
         if (src == t11) {
-            EXPECT_NE(dst_options.count(t12), 0);
-            EXPECT_NE(dst_options.count(t8), 0);
+            EXPECT_NE(dst_options.count(t12), UINT32_C(0));
+            EXPECT_NE(dst_options.count(t8), UINT32_C(0));
             num_checks++;
         } else if (src == t12) {
-            EXPECT_NE(dst_options.count(t1), 0);
+            EXPECT_NE(dst_options.count(t1), UINT32_C(0));
             num_checks++;
         } else if (src == t1) {
-            EXPECT_NE(dst_options.count(t2), 0);
-            EXPECT_NE(dst_options.count(t3), 0);
+            EXPECT_NE(dst_options.count(t2), UINT32_C(0));
+            EXPECT_NE(dst_options.count(t3), UINT32_C(0));
             num_checks++;
         } else if (src == t2) {
-            EXPECT_NE(dst_options.count(t3), 0);
+            EXPECT_NE(dst_options.count(t3), UINT32_C(0));
             num_checks++;
         } else if (src == t3) {
-            EXPECT_NE(dst_options.count(t4), 0);
+            EXPECT_NE(dst_options.count(t4), UINT32_C(0));
             num_checks++;
         } else if (src == t4) {
-            EXPECT_NE(dst_options.count(t5), 0);
-            EXPECT_NE(dst_options.count(t6), 0);
+            EXPECT_NE(dst_options.count(t5), UINT32_C(0));
+            EXPECT_NE(dst_options.count(t6), UINT32_C(0));
             num_checks++;
         } else if (src == t5) {
-            EXPECT_NE(dst_options.count(t7), 0);
+            EXPECT_NE(dst_options.count(t7), UINT32_C(0));
             num_checks++;
         } else if (src == t6) {
-            EXPECT_NE(dst_options.count(t7), 0);
+            EXPECT_NE(dst_options.count(t7), UINT32_C(0));
             num_checks++;
         } else if (src == t7) {
-            EXPECT_NE(dst_options.count(t8), 0);
+            EXPECT_NE(dst_options.count(t8), UINT32_C(0));
             num_checks++;
         } else if (src == t8) {
-            EXPECT_NE(dst_options.count(t9), 0);
+            EXPECT_NE(dst_options.count(t9), UINT32_C(0));
             num_checks++;
         } else if (src == t9) {
-            EXPECT_NE(dst_options.count(t10), 0);
+            EXPECT_NE(dst_options.count(t10), UINT32_C(0));
             num_checks++;
         } else if (src == t10) {
-            EXPECT_NE(dst_options.count(nullptr), 0);
+            EXPECT_NE(dst_options.count(nullptr), UINT32_C(0));
             num_checks++;
         } else if (src == nullptr) {
             num_checks++;
         }
     }
     EXPECT_EQ(num_checks, NUM_CHECKS_EXPECTED);
+
+    EXPECT_EQ(fg.can_reach(t10, t11), false);
+    EXPECT_EQ(fg.can_reach(t10, nullptr), true);
+    EXPECT_EQ(fg.can_reach(nullptr, t10), false);
+    EXPECT_EQ(fg.can_reach(t6, t5), false);
+    EXPECT_EQ(fg.can_reach(t5, t6), false);
+    EXPECT_EQ(fg.can_reach(t7, t7), true);
+    EXPECT_EQ(fg.can_reach(t3, t7), true);
 }
 }  // namespace Test

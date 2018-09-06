@@ -58,6 +58,8 @@ static void dump_viz(std::ostream &out, FlowGraph &fg) {
 
 Visitor::profile_t FindFlowGraph::init_apply(const IR::Node* node) {
     auto rv = Inspector::init_apply(node);
+    fg.clear();
+    fg.add_sink_vertex();
     def_next = new DefaultNext();
     node->apply(*def_next);
     return rv;
@@ -126,4 +128,13 @@ void FindFlowGraph::end_apply() {
     LOG1(fg);
     if (LOGGING(1))
         dump_viz(std::cout, fg);
+
+    for (boost::tie(v, v_end) = boost::vertices(fg.g); v != v_end; ++v) {
+        if (*v != fg.v_sink)
+            fg.tableToVertexIndex[fg.get_vertex(*v)] = *v;
+        bitvec visited_vertices;
+        BFSVisitor vis(visited_vertices);
+        boost::breadth_first_search(fg.g, *v, boost::visitor(vis));
+        fg.reachableNodes[*v] = visited_vertices;
+    }
 }
