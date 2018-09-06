@@ -274,7 +274,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::TypeChecking(&refMap, &typeMap, true),
         new FillFromBlockMap(&refMap, &typeMap),
         new FlattenEmitArgs(),
-        new UnrollParserCounter(&refMap, &typeMap),
+        new UnrollParserCounter(&refMap),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
         new MidEndLast,

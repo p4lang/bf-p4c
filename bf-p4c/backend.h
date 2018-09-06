@@ -31,7 +31,6 @@ class Backend : public PassManager {
     /// used by Privatization (when invoked due to backtracking) or UndoPrivatization to prevent
     /// privatization.
     ordered_set<cstring> doNotPrivatize;
-    int pipe_id;
     // Primitives Json Node, is populated before instruction adjustment and
     // passed to AsmOutput to output primitive json file
     Util::JsonObject primNode;

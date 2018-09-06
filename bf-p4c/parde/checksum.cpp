@@ -212,7 +212,7 @@ struct GetChecksumPovBits : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::BFN::Emit* emit) {
+    bool preorder(const IR::BFN::Emit* emit) override {
         auto source = emit->source->field->to<IR::Member>();
         if (checksums.count(source->toString())) {
             auto csum = checksums.at(source->toString());

@@ -9,7 +9,7 @@ endif()
 
 project (BFN_P4C)
 
-OPTION(ENABLE_JBAY "Enable JBay" OFF)
+OPTION(ENABLE_JBAY "Enable JBay" ON)
 OPTION(ENABLE_BAREFOOT_INTERNAL "Enable Barefoot Internal" ON)
 OPTION(FIXED_LIBDYNHASH "Use future version of the Dynamic hash library" OFF)
 

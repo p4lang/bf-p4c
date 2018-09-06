@@ -23,6 +23,7 @@ GEN_SCHEMA_PATH=os.path.join(MYPATH, "../glass/p4c_tofino/target/tofino")
 sys.path.append(GEN_SCHEMA_PATH)
 
 from ctx_json.gen_schema import ContextJSONSchema
+from ctx_json.schema_version import get_schema_version
 
 parser=argparse.ArgumentParser()
 
@@ -43,6 +44,7 @@ try:
         sys.exit(1)
 
     schema = ContextJSONSchema.get_schema()
+    schema_version = get_schema_version()
 
     if opts.dump_schema is not None:
         with open(opts.dump_schema, "wb") as schema_file:
@@ -53,6 +55,11 @@ try:
     if opts.debug:
         print "validating", opts.context_file
 
+    if context_json['schema_version'] != schema_version:
+        print >> sys.stderr, "Invalid context schema version", context_json['schema_version']
+        print >> sys.stderr, "Attempted validation against", schema_version
+        sys.exit(1)
+
     jsonschema.validate(context_json, schema)
 
     if opts.debug:
@@ -60,3 +67,4 @@ try:
 
 except Exception as e:
     print e
+    sys.exit(1)

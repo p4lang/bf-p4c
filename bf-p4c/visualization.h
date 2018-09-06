@@ -187,7 +187,8 @@ class Visualization : public Inspector {
         auto *usages = new Util::JsonArray();
         auto *use = new Util::JsonObject();
         if (!used_by.empty()) {
-            use->emplace("used_by", new Util::JsonValue(used_by));
+            // Strip the leading . as p4i shouldn't see it
+            use->emplace("used_by", new Util::JsonValue(used_by.substr(used_by[0] == '.'? 1 : 0)));
             if (!used_for.empty())
                 use->emplace("used_for", new Util::JsonValue(used_for));
             if (!detail.empty())

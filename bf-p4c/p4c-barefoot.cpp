@@ -274,7 +274,10 @@ int main(int ac, char **av) {
 
     for (auto& pipe : conv.pipe) {
         execute_backend(pipe, options);
-        manifest.addContext(pipe->id, pipe->name, pipe->name + "/context.json");
+        std::string prefix = "";
+        if (options.langVersion == BFN_Options::FrontendVersion::P4_16)
+            prefix = pipe->name + "/";
+        manifest.addContext(pipe->id, pipe->name, prefix + "context.json");
     }
     // generate the archive manifest
     manifest.serialize();

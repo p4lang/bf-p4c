@@ -35,7 +35,7 @@ env:
       IMAGE_TAG="bf-p4c-compilers_smoke_programs"
       DOCKERFILE=Dockerfile.tofino
     # Run all jbay tests (including cpplint and gtest)
-    - TEST_SUITE="^tofino2|cpplint|gtest"
+    - TEST_SUITE="^tofino2|cpplint|gtest|test_p4c_driver"
       TEST_EXTRA_OPTS="-E"
       TEST_EXTRA_OPTS2="smoketest"
       IMAGE_TAG="bf-p4c-compilers_jbay"

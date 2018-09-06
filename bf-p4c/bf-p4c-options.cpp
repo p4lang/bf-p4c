@@ -168,7 +168,7 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
     delete [] buffer;
 
     // same here, could have used dirname(const_char<char *>())
-    if (!outputDir.size())
+    if (!outputDir.size() || outputDir == ".")
         outputDir = cstring(programName + "." + target);
     int rc = mkdir(outputDir.c_str(), 0755);
     if (rc != 0 && errno != EEXIST) {

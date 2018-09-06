@@ -637,6 +637,21 @@ add_custom_target(jbay_hack
 add_dependencies(p4c_driver jbay_hack)
 endif (ENABLE_JBAY)
 
+
+# Set default target and architecture to tofino-tna
+add_custom_command(OUTPUT ${P4C_BINARY_DIR}/bf-p4c
+  # should cythonify bf-p4c
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${P4C_BINARY_DIR}/p4c ${P4C_BINARY_DIR}/bf-p4c
+  COMMAND sed -i'' -e 's/bmv2/tofino/g' ${P4C_BINARY_DIR}/p4c_src/main.py
+  COMMAND sed -i'' -e 's/v1model/tna/g' ${P4C_BINARY_DIR}/p4c_src/main.py
+  COMMENT "Set default target and architecture to tofino-tna"
+  WORKING_DIRECTORY ${P4C_BINARY_DIR}
+  DEPENDS p4c_driver ${P4C_BINARY_DIR}/p4c_src/main.py
+  )
+# force the generation of the bf-p4c package
+add_custom_target(bf-p4c ALL DEPENDS ${P4C_BINARY_DIR}/bf-p4c)
+install (PROGRAMS ${P4C_BINARY_DIR}/bf-p4c DESTINATION bin)
+
 ################ Proto
 set (BFN_P4RUNTIME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/control-plane/proto)
 set (BFN_P4RUNTIME_INFO_PROTO ${BFN_P4RUNTIME_DIR}/barefoot/p4info.proto)
@@ -709,3 +724,8 @@ set (GTEST_BF_P4C_SOURCES
 
 set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)
 set (GTEST_LDADD ${GTEST_LDADD} "tofinobackend;${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY}" PARENT_SCOPE)
+
+add_test(NAME test_p4c_driver
+  COMMAND ${BFN_P4C_SOURCE_DIR}/scripts/test_p4c_driver.py -j 4 --print-on-failure --compiler ${P4C_BINARY_DIR}/bf-p4c
+  WORKING_DIRECTORY ${P4C_BINARY_DIR})
+set_tests_properties(test_p4c_driver PROPERTIES LABELS lint)

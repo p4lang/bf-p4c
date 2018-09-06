@@ -51,7 +51,8 @@ std::string Visualization::JsonResource::total_value(node_t node) {
 void Visualization::JsonResource::add(node_t node, const std::string value) {
     if (value.empty())
         return;
-    json_vectors[node].push_back(value);
+    // Strip the leading . from all names, as it confuses p4i
+    json_vectors[node].push_back(value.substr(value[0] == '.' ? 1 : 0));
     check_sanity(node);
 }
 

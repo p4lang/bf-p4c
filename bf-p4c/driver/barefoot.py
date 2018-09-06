@@ -24,6 +24,34 @@ import p4c_src.bfn_version as p4c_version
 from p4c_src.util import find_file, find_bin
 from p4c_src.driver import BackendDriver
 
+def checkEnv():
+    """
+    return the top source directory, or None if can not determine it.
+    """
+    top_src_dir = None
+    if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
+        top_src_dir = os.path.join(os.path.dirname(__file__), '..', '..','..')
+        scripts_dir = os.path.join(top_src_dir, 'scripts')
+        if not os.path.isdir(scripts_dir):
+            # we are building out of the source directory, so we need to get the source dir
+            # from the cmake cache
+            cache_file = os.path.join(os.environ['P4C_BIN_DIR'], '..', 'CMakeCache.txt')
+            if not os.path.isfile(cache_file):
+                # This is a funny setup, where we can't find our configuration, so we should
+                # not run anything depending on scripts
+                return None
+            with open(cache_file) as cmake_cache:
+                src_dir_pattern = re.compile(r'BFN_P4C_SOURCE_DIR:STATIC=(.*)$')
+                for line in cmake_cache:
+                    res = src_dir_pattern.match(line)
+                    if res:
+                        top_src_dir = res.group(1)
+                        break
+        if os.path.isdir(top_src_dir):
+            return top_src_dir
+
+    return None
+
 # Search the environment for assets
 if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
     bfas = find_file('bf-asm', 'bfas')
@@ -43,24 +71,12 @@ class BarefootBackend(BackendDriver):
         self.add_command('bf-rt-verifier', bfrt_gen)
 
         self.runVerifiers = False
-        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
-            bin_dir = os.path.join(os.environ['P4C_BIN_DIR'], '../../scripts')
-            if not os.path.isdir(bin_dir):
-                # we are building out of the source directory, so we need to get the source dir
-                # from the cmake cache
-                cache_file = os.path.join(os.environ['P4C_BIN_DIR'], '../CMakeCache.txt')
-                if os.path.isfile(cache_file):
-                    with open(cache_file) as cmake_cache:
-                        src_dir_pattern = re.compile(r'BFN_P4C_SOURCE_DIR:STATIC=(.*)$')
-                        for line in cmake_cache:
-                            res = src_dir_pattern.match(line)
-                            if res:
-                                src_dir = res.group(1)
-                                bin_dir = os.path.join(src_dir, 'scripts')
-                                break
-            if os.path.isdir(bin_dir):
-                self.add_command('verifier', os.path.join(bin_dir, 'validate_context_json'))
-                self.add_command('manifest-verifier', os.path.join(bin_dir, 'validate_manifest'))
+        top_src_dir = checkEnv()
+        if top_src_dir:
+            scripts_dir = os.path.join(top_src_dir, 'scripts')
+            if os.path.isdir(scripts_dir):
+                self.add_command('verifier', os.path.join(scripts_dir, 'validate_context_json'))
+                self.add_command('manifest-verifier', os.path.join(scripts_dir, 'validate_manifest'))
                 self.runVerifiers = True
 
         # order of commands
@@ -121,20 +137,23 @@ class BarefootBackend(BackendDriver):
         self.checkVersionTargetArch(opts.language)
 
         # process the options related to source file
+        if self._output_directory == '.':
+            # if no output directory set, set it to <filename.target>
+            self._output_directory = "{}.{}".format(self._source_basename, self._target)
         output_dir = self._output_directory
         basepath = "{}/{}".format(output_dir, self._source_basename)
 
         self.add_command_option('preprocessor', "-o")
-        self.add_command_option('preprocessor', "{}.p4i".format(basepath))
+        self.add_command_option('preprocessor', "{}.p4pp".format(basepath))
         self.add_command_option('preprocessor', self._source_filename)
 
         self.add_command_option('compiler', "-o")
         self.add_command_option('compiler', "{}".format(output_dir))
-        self.add_command_option('compiler', "{}.p4i".format(basepath))
+        self.add_command_option('compiler', "{}.p4pp".format(basepath))
         # cleanup after compiler
         if not opts.debug_info:
             self._postCmds['compiler'] = []
-            self._postCmds['compiler'].append(["rm -f {}.p4i".format(basepath)])
+            self._postCmds['compiler'].append(["rm -f {}.p4pp".format(basepath)])
 
         # cleanup after assembler
         # self._postCmds['assembler'] = []
@@ -165,11 +184,10 @@ class BarefootBackend(BackendDriver):
 
         # Developer only options
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
-            if opts.validate_output:
-                self.add_command_option('verifier', "{}/context.json".format(output_dir))
-                self._commandsEnabled.append('verifier')
-            # always validate the manifest if opts.validate_manifest or self.runVerifiers:
             if self.runVerifiers:
+                if opts.validate_output:
+                    self._commandsEnabled.append('verifier')
+                # always validate the manifest if opts.validate_manifest or self.runVerifiers:
                 self.add_command_option('manifest-verifier', "{}/manifest.json".format(output_dir))
                 self._commandsEnabled.append('manifest-verifier')
 
@@ -200,27 +218,27 @@ class BarefootBackend(BackendDriver):
 
         if self._dry_run and not os.path.isfile(manifest_filename):
             print 'parse manifest:', manifest_filename
-            self._pipes = { 'pipe': '{}/pipe/context.json'.format(self._output_directory)}
+            self._pipes = { 'pipe': '{}/pipe'.format(self._output_directory)}
             return 0
 
         with open(manifest_filename, "rb") as json_file:
             try:
-                manifest = json.load(json_file)
+                self._manifest = json.load(json_file)
             except:
                 print >> sys.stderr, "ERROR: Input file '" + manifest_filename + \
                     "' could not be decoded as JSON.\n"
                 sys.exit(1)
-            if (type(manifest) is not dict or "programs" not in manifest):
+            if (type(self._manifest) is not dict or "programs" not in self._manifest):
                 print >> sys.stderr, "ERROR: Input file '" + manifest_filename + \
                     "' does not appear to be valid manifest JSON.\n"
                 sys.exit(1)
 
         self._pipes = {}
-        schema_version = manifest['schema_version']
+        schema_version = self._manifest['schema_version']
         pipe_name_label = 'pipe_name'
         if schema_version == "1.0.0": pipe_name_label = 'pipe'
 
-        programs = manifest['programs']
+        programs = self._manifest['programs']
         if len(programs) > 1:
             print >> sys.stderr, \
                 "{} currently supports a single program".format(self._targetName.title())
@@ -230,14 +248,9 @@ class BarefootBackend(BackendDriver):
                 sys.stderr.write("ERROR: Input file '" + manifest_filename + \
                                  "' does not contain valid program contexts.\n")
                 sys.exit(1)
-            p4_version=prog["p4_version"]
             for ctxt in prog["contexts"]:
-                pipe_name = 'pipe'
-                dirname = self._output_directory
-                if (p4_version == "p4-16"):
-                    pipe_name = ctxt[pipe_name_label]
-                    dirname = os.path.join(self._output_directory, pipe_name)
-                self._pipes[pipe_name] = dirname
+                dirname = os.path.join(self._output_directory, os.path.dirname(ctxt['path']))
+                self._pipes[ctxt['pipe_name']] = dirname
 
     def updateCompilerFlags(self, jsonFile):
         """
@@ -301,7 +314,8 @@ class BarefootBackend(BackendDriver):
 
     def checkVersionTargetArch(self, language):
         if language == "p4-14" and self._arch != "v1model":
-                print >> sys.stderr, "Architecture {} is not supported in p4-14, use v1model".format(self._arch)
+                print >> sys.stderr, \
+                    "Architecture {} is not supported in p4-14, use v1model".format(self._arch)
                 sys.exit(1)
 
     def run(self):
@@ -310,9 +324,10 @@ class BarefootBackend(BackendDriver):
         """
         run_assembler = 'assembler' in self._commandsEnabled
         run_archiver = 'archiver' in self._commandsEnabled
+        run_verifier = 'verifier' in self._commandsEnabled
 
         # run the preprocessor, compiler, and verifiers (manifest, context schema, and bf-rt)
-        self.disable_commands(['assembler', 'archiver'])
+        self.disable_commands(['assembler', 'archiver', 'verifier'])
         BackendDriver.run(self)
 
         # collect all the command line arguments that were passed to the driver
@@ -336,6 +351,10 @@ class BarefootBackend(BackendDriver):
                 # a large context.json file. So we don't!
                 # self.updateCompilerFlags(os.path.join(pipe_dir, 'context.json'))
                 unique_table_offset += 1
+                if run_verifier:
+                    self.add_command_option('verifier', "{}/context.json".format(pipe_dir))
+                    self.checkAndRunCmd('verifier')
+
 
         # run the archiver if one has been set
         if run_archiver:

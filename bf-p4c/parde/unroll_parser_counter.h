@@ -100,7 +100,6 @@ class UnrollParserCounter : public Modifier {
 
  private:
     P4::ReferenceMap *refMap;
-    P4::TypeMap *typeMap;
     std::set<cstring> stateNames;
 
  private:
@@ -160,9 +159,7 @@ class UnrollParserCounter : public Modifier {
     bool preorder(IR::P4Parser* parser) override;
 
  public:
-    UnrollParserCounter(P4::ReferenceMap *refMap,
-                        P4::TypeMap *typeMap)
-        : refMap(refMap), typeMap(typeMap) { }
+    explicit UnrollParserCounter(P4::ReferenceMap *refMap) : refMap(refMap) { }
 };
 
 #endif /* BF_P4C_PARDE_UNROLL_PARSER_COUNTER_H_ */
