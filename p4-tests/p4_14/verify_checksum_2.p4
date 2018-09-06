@@ -16,6 +16,12 @@ limitations under the License.
 
 #include <tofino/intrinsic_metadata.p4>
 
+header_type protocol_t {
+    fields {
+        what : 16;
+    }
+}
+
 header_type data_t {
     fields {
         f1 : 32;
@@ -26,7 +32,16 @@ header_type data_t {
         cksum : 16;
     }
 }
+
+header_type option_t {
+    fields {
+        blah : 32;
+    }
+}
+
+header protocol_t protocol;
 header data_t data;
+header option_t option;
 
 field_list my_checksum_list {
         data.f1;
@@ -46,7 +61,22 @@ calculated_field data.cksum  {
 }
 
 parser start {
+    extract(protocol);
+    return select(latest.what) {
+        0xbabe : parse_data;
+        0xbeef : parse_data2;
+        default : ingress;
+    }
+}
+
+parser parse_data {
     extract(data);
+    return ingress;
+}
+
+parser parse_data2 {
+    extract(data);
+    extract(option);
     return ingress;
 }
 
@@ -73,6 +103,7 @@ table test2 {
     actions {
         kaput;
     }
+    default_action: kaput;
 }
 
 control ingress {
