@@ -166,8 +166,9 @@ p4c_add_xfail_reason("tofino2"
   )
 
 p4c_add_xfail_reason("tofino2"
-  "Too much data for parse matcher"
+  "Ran out of parser match registers"
   testdata/p4_14_samples/source_routing.p4
+  testdata/p4_14_samples/parser_value_set2.p4
   )
 
 # Checksum16 is deprecated
@@ -179,12 +180,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "warning: Instruction selection creates an instruction that the rest of the compiler cannot correctly interpret"
   extensions/p4_tests/p4_16/brig-42.p4
-  )
-
-# backend support for pvs
-p4c_add_xfail_reason("tofino2"
-  "Too much data for parse matcher, not enough register"
-  testdata/p4_14_samples/parser_value_set2.p4
   )
 
 p4c_add_xfail_reason("tofino2"

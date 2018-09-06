@@ -221,11 +221,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/bf_p4c_samples/port_vlan_mapping.p4
   )
 
-# Too big a select key (96 bits) for tofino to match in one parser state.  Could be split into
-# mulitple states?
+# BRIG-956, parser wide match 
 p4c_add_xfail_reason("tofino"
-  "error: Too much data for parse matcher"
+  "Ran out of parser match registers"
   testdata/p4_16_samples/issue995-bmv2.p4
+  testdata/p4_14_samples/source_routing.p4
+  testdata/p4_14_samples/parser_value_set2.p4
   )
 
 # varbit extracts don't work in parser
@@ -243,11 +244,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unhandled InstanceRef type"
   testdata/p4_16_samples/issue447-5-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Too much data for parse matcher"
-  testdata/p4_14_samples/source_routing.p4
   )
 
 # Checksum16 is deprecated
@@ -277,6 +273,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
   switch_ent_fin_postcard
   switch_8.3_l3_heavy_int_leaf
+  switch_l3_heavy_int_leaf
   )
 
 # BRIG-102
@@ -297,6 +294,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   switch_msdc_l3
   switch_8.3_msdc_l3
+  switch_msdc_leaf_int
   )
 
 # BRIG-113
@@ -596,12 +594,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
   testdata/p4_16_samples/issue134-bmv2.p4
 )
-
-# error in resolve_computed.cpp
-p4c_add_xfail_reason("tofino"
-  "Too much data for parse matcher, not enough register"
-  testdata/p4_14_samples/parser_value_set2.p4
-  )
 
 # Incorrect P4_14->16 conversion for varbit extract
 p4c_add_xfail_reason("tofino"
@@ -958,24 +950,13 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_8.3_generic_int_leaf
+  switch_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
   "action instruction slot .* in use elsewhere"
   switch_8.3_msdc_ipv4
   switch_msdc_ipv4
-)
-
-p4c_add_xfail_reason("tofino"
-  "More than one starting state for ingress"
-  switch_msdc_spine_int
-)
-
-p4c_add_xfail_reason("tofino"
-  "Too much data for parse matcher"
-  switch_msdc_leaf_int
-  switch_l3_heavy_int_leaf
-  switch_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"

@@ -706,7 +706,7 @@ class CheckResolvedHeaderStackExpressions : public ParserInspector {
  * decision on which register to used for each select.
  *
  * TODO(yumin): Currently, we greedily allocate registers. so if there is a lot match on
- * fields extracted in earlier stage, it might not compile. However, the case is rare,
+ * fields extracted in an earlier state, it might not compile. However, the case is rare,
  * because it does not compile in previous implementation.
  *
 */
@@ -731,6 +731,10 @@ class ComputeSaveAndSelect: public ParserInspector {
         // In that case, it means that the source has multiple defs so we have to
         // trace it back to the state of each def and insert save at that state.
         boost::optional<ParserRValDef> preferred_source;
+
+        bool operator<(const UnresolvedSelect& other) const {
+            return source() < other.source();
+        }
 
         std::string to_string() const {
             std::stringstream ss;
@@ -772,10 +776,54 @@ class ComputeSaveAndSelect: public ParserInspector {
         }
     };
 
+    // group of UnresolvedSelect's that can be packed together (adjacent in input buffer)
+    class UnresolvedSelectGroup {
+        std::vector<UnresolvedSelect> _members;
+
+     public:
+        const std::vector<UnresolvedSelect>& members() const { return _members; }
+
+        nw_bitrange source() const {
+            nw_bitrange rv(INT_MAX, INT_MIN);
+
+            for (auto& unresolved : members()) {
+                auto source = unresolved.source();
+                rv = rv.unionWith(source);
+            }
+            return rv;
+        }
+
+        static bool can_join(const UnresolvedSelect& a, const UnresolvedSelect& b) {
+            nw_bitrange srca = a.source();
+            nw_bitrange srcb = b.source();
+            return (srca.hi + 1) == srcb.lo;
+        }
+
+        bool join(const UnresolvedSelect& unresolved) {
+            if (members().empty() || can_join(last(), unresolved)) {
+                _members.push_back(unresolved);
+                return true;
+            }
+
+            return false;
+        }
+
+        UnresolvedSelect& last() {
+            return _members.back();
+        }
+
+        void debug_print() const {
+            if (LOGGING(4))
+                for (auto& s : members())
+                    LOG4(s.to_string());
+        }
+    };
+
     profile_t init_apply(const IR::Node* root) override {
         state_unresolved_selects.clear();
         unprocessed_states.clear();
         transition_saves.clear();
+        select_groups.clear();
         select_registers.clear();
         select_masks.clear();
         additional_states.clear();
@@ -807,7 +855,7 @@ class ComputeSaveAndSelect: public ParserInspector {
     /// unresolved selects are sorted by whether has decided register, then the size of select.
     void calcUnresolvedSelects(
             std::vector<UnresolvedSelect>& unresolved_selects,
-            std::vector<UnresolvedSelect>& early_stage_extracted,
+            std::vector<UnresolvedSelect>& early_state_extracted,
             const std::map<const StateSelect*, nw_bitrange>& corrected_source,
             const State* state,
             const State* next_state,
@@ -818,18 +866,25 @@ class ComputeSaveAndSelect: public ParserInspector {
                 && unresolved.source() != corrected_source.at(unresolved.select)) {
                 continue; }
             if (unresolved.isExtractedEarlier(state)) {
-                early_stage_extracted.push_back(unresolved);
+                early_state_extracted.push_back(unresolved);
             } else {
                 unresolved_selects.push_back(unresolved);
             }
         }
         // Sorted by whether has decided register, the size of select.
-        sort(unresolved_selects.begin(), unresolved_selects.end(),
+        std::sort(unresolved_selects.begin(), unresolved_selects.end(),
              [&] (const UnresolvedSelect& l, const UnresolvedSelect& r) {
-                 if (select_registers.count(l.select) != select_registers.count(r.select)) {
-                     return select_registers.count(l.select) >
-                            select_registers.count(r.select);
+                 if (select_groups.count(l.select) && select_groups.count(r.select)) {
+                     auto* select_group_l = select_groups.at(l.select);
+                     auto* select_group_r = select_groups.at(r.select);
+
+                     auto count_l = select_registers.count(select_group_l);
+                     auto count_r = select_registers.count(select_group_r);
+
+                     if (count_l != count_r)
+                         return count_l > count_r;
                  }
+
                  return l.source().size() < r.source().size();
              });
     }
@@ -848,7 +903,7 @@ class ComputeSaveAndSelect: public ParserInspector {
     boost::optional<MatchRegister>
     findSavedRegForByte(
             int i,
-            const UnresolvedSelect& unresolved,
+            const UnresolvedSelectGroup* unresolved_group,
             const std::map<nw_byterange, MatchRegister>& saved_range,
             const std::map<const StateSelect*, std::set<MatchRegister>>& used_by_other_path) {
         for (int reg_size : {1, 2}) {
@@ -856,10 +911,17 @@ class ComputeSaveAndSelect: public ParserInspector {
             if (saved_range.count(reg_range)) {
                 auto& reg = saved_range.at(reg_range);
                 // If this reg is used by others, we can not reuse it's result.
-                if (used_by_other_path.count(unresolved.select)
-                    && used_by_other_path.at(unresolved.select).count(reg)) {
-                    continue;
+                bool used_by_others = false;
+                for (auto& unresolved : unresolved_group->members()) {
+                    if (used_by_other_path.count(unresolved.select)
+                        && used_by_other_path.at(unresolved.select).count(reg)) {
+                        used_by_others = true;
+                        break;
+                    }
                 }
+                if (used_by_others)
+                    continue;
+
                 return reg;
             }
         }
@@ -869,37 +931,48 @@ class ComputeSaveAndSelect: public ParserInspector {
     /// Return a vector of match registers that address the @p unresolved.
     boost::optional<std::vector<MatchRegister>>
     allocMatchRegisterForSelect(
-            const UnresolvedSelect& unresolved,
+            const UnresolvedSelectGroup* unresolved_group,
             const std::map<nw_byterange, MatchRegister>& saved_range,
             const std::set<MatchRegister>& used_registers,
             const std::map<const StateSelect*, std::set<MatchRegister>>& used_by_other_path) {
-        if (select_registers.count(unresolved.select)) {
-            // If the select has already be set by other branch,
-            // this branch need to follow it's decision.
-            // already saved in this state.
-            auto& regs = select_registers[unresolved.select];
-            bool has_conflit =
-                std::any_of(regs.begin(), regs.end(), [&] (const MatchRegister& r) -> bool {
-                    return unresolved.used_by_others.count(r); });
-            if (!has_conflit) {
-                return regs;
-            } else {
-                ::error("Due to the insufficiency of current algorithm, "
-                        "Match register allocation failed in %1%", unresolved.select); }
-            return boost::none;
+        for (auto& unresolved : unresolved_group->members()) {
+            auto select = unresolved.select;
+            auto select_group = select_groups.at(select);
+
+            if (select_registers.count(select_group)) {
+                // If the select has already be set by other branch,
+                // this branch need to follow it's decision.
+                // already saved in this state.
+                auto& regs = select_registers[select_group];
+                bool has_conflict =
+                    std::any_of(regs.begin(), regs.end(), [&] (const MatchRegister& r) -> bool {
+                        return unresolved.used_by_others.count(r); });
+                if (!has_conflict) {
+                    return regs;
+                } else {
+                    ::error("Cannot allocate parser match register for %1%.\n"
+                            "Consider shrinking the live range of select fields or reducing the"
+                            " number of select fields that are being matched in the same state"
+                            , select);
+                }
+                return boost::none;
+            }
         }
 
         // TODO(yumin):
         // We should have an algorithm that minimizes the use the
         // register, e.g. use half to cover two small field,
         // instead of this naive one.
-        nw_byterange source = unresolved.source().toUnit<RangeUnit::Byte>();
         std::vector<MatchRegister> accumulated_regs;
         std::set<MatchRegister> in_candidates;
+
         // calculate which regs to use for each byte.
+        nw_byterange source = unresolved_group->source().toUnit<RangeUnit::Byte>();
+
         for (int i = source.loByte(); i <= source.hiByte();) {
             auto already_save_in =
-                findSavedRegForByte(i, unresolved, saved_range, used_by_other_path);
+                findSavedRegForByte(i, unresolved_group, saved_range, used_by_other_path);
+
             if (already_save_in) {
                 LOG4("re-used " << *already_save_in << " because byte " << i << " are shared");
                 accumulated_regs.push_back(*already_save_in);
@@ -909,13 +982,27 @@ class ComputeSaveAndSelect: public ParserInspector {
 
             bool found_reg_for_this_byte = false;
             for (auto& reg : getMatchRegistersSortedBySize()) {
-                if (in_candidates.count(reg)) {
-                    continue; }
-                if (used_registers.count(reg) || unresolved.used_by_others.count(reg)) {
-                    continue; }
-                if (used_by_other_path.count(unresolved.select)
-                    && used_by_other_path.at(unresolved.select).count(reg)) {
-                    continue; }
+                if (in_candidates.count(reg))
+                    continue;
+
+                if (used_registers.count(reg))
+                    continue;
+
+                bool reg_already_used = false;
+                for (auto& unresolved : unresolved_group->members()) {
+                    if (unresolved.used_by_others.count(reg)) {
+                        reg_already_used = true;
+                        break;
+                    }
+                    if (used_by_other_path.count(unresolved.select)
+                        && used_by_other_path.at(unresolved.select).count(reg)) {
+                        reg_already_used = true;
+                        break;
+                    }
+                }
+                if (reg_already_used)
+                    continue;
+
                 accumulated_regs.push_back(reg);
                 i += reg.size;
                 found_reg_for_this_byte = true;
@@ -924,12 +1011,51 @@ class ComputeSaveAndSelect: public ParserInspector {
             }
 
             if (!found_reg_for_this_byte) {
-                LOG3("Can not find match register for byte " << i <<
-                     " for " << unresolved.to_string());
+                LOG3("Can not find match register for byte " << i << " for:");
+                unresolved_group->debug_print();
                 return boost::none;
             }
         }
         return accumulated_regs;
+    }
+
+    std::vector<UnresolvedSelectGroup*>
+    packUnresolvedSelects(const std::vector<UnresolvedSelect>& unresolved_selects) {
+        std::vector<UnresolvedSelectGroup*> packed_groups;
+
+        for (auto& unresolved : unresolved_selects) {
+            bool foundUnion = false;
+
+            for (auto& group : packed_groups) {
+                foundUnion = group->join(unresolved);
+
+                if (foundUnion) {
+                    select_groups[unresolved.select] = group;
+                    break;
+                }
+            }
+
+            if (!foundUnion) {
+                auto* new_group = new UnresolvedSelectGroup;
+                new_group->join(unresolved);
+                select_groups[unresolved.select] = new_group;
+                packed_groups.push_back(new_group);
+            }
+        }
+
+        auto sort_by_group_size = [&](UnresolvedSelectGroup* l, UnresolvedSelectGroup* r) {
+            return l->source().size() < r->source().size();
+        };
+
+        std::sort(packed_groups.begin(), packed_groups.end(), sort_by_group_size);
+
+        if (LOGGING(4)) {
+            LOG4("Created " << packed_groups.size() << " unresolved select groups");
+            for (auto group : packed_groups)
+                group->debug_print();
+        }
+
+        return packed_groups;
     }
 
     void calcSaves(const State* state) {
@@ -937,6 +1063,7 @@ class ComputeSaveAndSelect: public ParserInspector {
         // across different branches.
         std::map<const StateSelect*, nw_bitrange> corrected_source;
         std::map<const StateSelect*, std::set<MatchRegister>> used_by_other_path;
+
         calcCorrectSourceAndUsedReg(state, corrected_source, used_by_other_path);
 
         // For each transition branch, calculate the saves and corresponding select.
@@ -953,41 +1080,50 @@ class ComputeSaveAndSelect: public ParserInspector {
 
             // Get unresolved selects by merge all child state's unresolved selects.
             std::vector<UnresolvedSelect> unresolved_selects;
-            std::vector<UnresolvedSelect> early_stage_extracted;
-            calcUnresolvedSelects(unresolved_selects, early_stage_extracted, corrected_source,
-                                  state, next_state, *(transition->shift));
+            std::vector<UnresolvedSelect> early_state_extracted;
+
+            calcUnresolvedSelects(unresolved_selects,
+                                  early_state_extracted,
+                                  corrected_source,
+                                  state,
+                                  next_state,
+                                  *(transition->shift));
+
+            auto packed_unresolved_selects = packUnresolvedSelects(unresolved_selects);
 
             // Mapping input buffer to a register that save it.
             std::map<nw_byterange, MatchRegister> saved_range;
             std::set<MatchRegister> used_registers;
             std::set<const StateSelect*> resolved_in_this_transition;
-            for (const auto& unresolved : unresolved_selects) {
+
+            for (auto unresolved_group : packed_unresolved_selects) {
                 auto reg_choice = allocMatchRegisterForSelect(
-                        unresolved, saved_range, used_registers, used_by_other_path);
+                        unresolved_group, saved_range, used_registers, used_by_other_path);
                 // Cannot find a register or the found one has been used
                 // by downstream states because of brother's decision.
                 if (!reg_choice) {
                     // throw error message saying that it's impossible.
-                    ::error("Too much data for parse matcher, "
-                            "not enough register for %1% in %2%",
-                        unresolved.select->p4Source, state->name);
+                    ::error("Ran out of parser match registers for %1%", state->name);
+                    for (auto& unresolved : unresolved_group->members())
+                        ::error("%1%", unresolved.select->p4Source);
+
                     return;
                 }
 
                 if (LOGGING(4)) {
                     for (const auto& reg : *reg_choice) {
-                        LOG4("\t Assign " << reg << " to " << unresolved.select->p4Source);
-                        LOG4("\t In From:  " << state->name << " -->to--> "
-                             << next_state->name);
+                        LOG4("Assign: " << reg << " to");
+                        for (auto& unresolved : unresolved_group->members())
+                            LOG4("  " << unresolved.select->p4Source);
+
+                        LOG4("From: " << state->name << " to " << next_state->name);
                     }
                 }
 
                 // Assign registers and update match_saves
-                // TODO(yumin): if it's the last byte, we can't use half register on it.
-                // This case is rare because it only happens when you lookahead
-                // to the last byte and all byte registers are used.
-                nw_byterange source = unresolved.source().toUnit<RangeUnit::Byte>();
+                nw_byterange source = unresolved_group->source().toUnit<RangeUnit::Byte>();
                 nw_byterange save_range_itr = source;
+
                 for (const auto& r : *reg_choice) {
                     nw_byterange range_of_this_register = save_range_itr.resizedToBytes(r.size);
                     if (!saved_range.count(range_of_this_register)) {
@@ -997,9 +1133,13 @@ class ComputeSaveAndSelect: public ParserInspector {
                     }
                     save_range_itr = save_range_itr.shiftedByBytes(r.size);
                 }
-                resolved_in_this_transition.insert(unresolved.select);
-                select_registers[unresolved.select] = *reg_choice;
-                select_masks[unresolved.select]     = calcMask(unresolved.source(), source);
+
+                for (auto& unresolved : unresolved_group->members())
+                    resolved_in_this_transition.insert(unresolved.select);
+
+                select_registers[unresolved_group] = *reg_choice;
+                select_masks[unresolved_group] = calcMask(unresolved_group->source(), source);
+
                 used_registers.insert((*reg_choice).begin(), (*reg_choice).end());
             }
 
@@ -1008,7 +1148,7 @@ class ComputeSaveAndSelect: public ParserInspector {
             // Note that, though registers used in this state will 'start to live' in the next
             // state, it should be added because those remaining_unresolved selects 'start to live'
             // in next state as well.
-            for (const auto& remaining_unresolved : early_stage_extracted) {
+            for (const auto& remaining_unresolved : early_state_extracted) {
                 // If the select is resolved in this state, parent defs go over this state
                 // does not need to be saved, like the W => W => R situation.
                 if (resolved_in_this_transition.count(remaining_unresolved.select)) {
@@ -1027,7 +1167,7 @@ class ComputeSaveAndSelect: public ParserInspector {
         for (const auto* state : unprocessed_copy) {
             auto gress = state->thread();
             BUG_CHECK(additional_states.count(gress) == 0,
-                      "More than one starting state for %1%", gress);
+                      "More than one start states for %1%", gress);
             auto* transition = new IR::BFN::Transition(match_t(), 0, state);
             auto* init_state = new IR::BFN::ParserState(
                     createThreadName(gress, "$_save_init_state"), gress, { }, { }, { transition });
@@ -1055,6 +1195,9 @@ class ComputeSaveAndSelect: public ParserInspector {
             UnresolvedSelect for_this_state(s);
             for_this_state.byte_shifted += shift_bytes;
             rst.push_back(for_this_state); }
+
+        // sort selects based on position in input buffer
+        std::sort(rst.begin(), rst.end());
 
         return rst;
     }
@@ -1141,9 +1284,12 @@ class ComputeSaveAndSelect: public ParserInspector {
     // The saves need to be executed on this transition.
     std::map<const StateTransition*, std::vector<const IR::BFN::SaveToRegister*>> transition_saves;
 
+    // select to group it belongs to
+    std::map<const StateSelect*, const UnresolvedSelectGroup*> select_groups;
+
     // The register that this select should match against.
-    std::map<const StateSelect*, std::vector<MatchRegister>> select_registers;
-    std::map<const StateSelect*, nw_bitrange> select_masks;
+    std::map<const UnresolvedSelectGroup*, std::vector<MatchRegister>> select_registers;
+    std::map<const UnresolvedSelectGroup*, nw_bitrange> select_masks;
 
     // The additional state that should be prepended to the start state
     // to generate save for the select on the first state.
@@ -1171,9 +1317,13 @@ struct WriteBackSaveAndSelect : public ParserModifier {
 
     void postorder(IR::BFN::Select* select) override {
         auto* original_select = getOriginal<IR::BFN::Select>();
-        if (rst.select_registers.count(original_select)) {
-            select->reg = rst.select_registers.at(original_select);
-            select->mask = rst.select_masks.at(original_select); }
+        if (rst.select_groups.count(original_select)) {
+            auto* select_group = rst.select_groups.at(original_select);
+            if (rst.select_registers.count(select_group)) {
+                select->reg = rst.select_registers.at(select_group);
+                select->mask = rst.select_masks.at(select_group);
+            }
+        }
     }
 
     const ComputeSaveAndSelect& rst;
