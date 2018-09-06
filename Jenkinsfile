@@ -58,6 +58,8 @@ node {
                         }
                     } catch (err) {
                         sh "echo 'Swith profiles compile_only failed'"
+                        currentBuild.result = 'FAILED'
+                        throw err
                     }
                 },
                 switch_8_3_msdc_l3_tests: {

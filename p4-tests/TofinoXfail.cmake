@@ -295,6 +295,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
+  switch_msdc_l3
+  switch_8.3_msdc_l3
   )
 
 # BRIG-113

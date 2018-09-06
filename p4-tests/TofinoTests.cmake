@@ -238,23 +238,15 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test"
 p4c_add_ptf_test_with_ptfdir("tofino" "smoketest_programs_alpm_test_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/alpm_test/alpm_test.p4"
   "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/alpm_test")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test_2"
-   "test.TestStateRestore
+   "test.TestIdleTime
+   test.TestSnapshot
+   test.TestStateRestore
    test.TestTcamMove")
 
 p4c_add_ptf_test_with_ptfdir("tofino" "smoketest_programs_alpm_test_TestRealData" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/alpm_test/alpm_test.p4"
   "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/alpm_test")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test_TestRealData"
    "test.TestRealData")
-
-p4c_add_ptf_test_with_ptfdir("tofino" "smoketest_programs_alpm_test_TestIdleTime" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/alpm_test/alpm_test.p4"
-  "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/alpm_test")
-bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test_TestIdleTime"
-   "test.TestIdleTime")
-
-p4c_add_ptf_test_with_ptfdir("tofino" "smoketest_programs_alpm_test_TestSnapshot" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/alpm_test/alpm_test.p4"
-  "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/alpm_test")
-bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test_TestSnapshot"
-   "test.TestSnapshot")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/basic_ipv4/basic_ipv4.p4"
     "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/basic_ipv4")
