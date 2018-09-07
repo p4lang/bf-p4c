@@ -250,7 +250,6 @@ class ActionBus_Source_Printer:
                 rv = "None"
             elif self.val['type'] == 1:
                 rv = "Field"
-                rv += " %s" % str(self.val['field'])
             elif self.val['type'] == 2:
                 rv = "HashDist"
             elif self.val['type'] == 3:
@@ -270,7 +269,7 @@ class ActionBus_Source_Printer:
             else:
                 rv = '<bad type 0x%x>' % int(self.val['type'])
         except Exception as e:
-                    rv += "{crash: "+str(e)+"}"
+            rv += "{crash: "+str(e)+"}"
         return rv
     class _iter:
         def __init__(self, val, type):

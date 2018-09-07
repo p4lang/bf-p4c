@@ -118,6 +118,7 @@ public:
     int find(Source src, int lo, int hi, int size, int *len = 0);
     int find(Table *attached, TableOutputModifier mod, int lo, int hi, int size, int *len = 0) {
         return find(Source(attached, mod), lo, hi, size, len); }
+    static int find(Stage *stage, Source src, int lo, int hi, int size, int *len = 0);
     unsigned size() {
         unsigned rv = 0;
         for (auto &slot : by_byte) rv += slot.second.size;

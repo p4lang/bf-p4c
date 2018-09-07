@@ -527,8 +527,8 @@ void ActionBus::do_alloc(Table *tbl, Source src, unsigned use, int lobyte,
         auto slot_tbl = tbl->stage->action_bus_use[slot];
         // Atcam tables are mutually exclusive and should be allowed to share
         // bytes on action bus
-        if (!Table::allow_bus_sharing(tbl, slot_tbl))
-            assert(!slot_tbl || (slot_tbl == tbl));
+        if (slot_tbl && !Table::allow_bus_sharing(tbl, slot_tbl))
+            assert(slot_tbl == tbl || slot_tbl->action_bus->by_byte.at(use).data.count(src));
         tbl->stage->action_bus_use[slot] = tbl;
         Slot &sl = by_byte.emplace(use, Slot(src.name(tbl), use, bytes*8U)).first->second;
         if (sl.size < bytes*8U) sl.size = bytes*8U;
@@ -575,7 +575,8 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
             return; }
         unsigned start = (lo/8U) % step;
         int bytes_needed = (sizes_needed & 4) ? bytes : 1;
-        if ((can_merge && (use = find_merge(tbl, lo, bytes_needed, 1)) >= 0) ||
+        if ((use = find(tbl->stage, src, lo, hi, 1)) >= 0 ||
+            (can_merge && (use = find_merge(tbl, lo, bytes_needed, 1)) >= 0) ||
             (use = find_free(tbl, start, 31, step, lo/8U, bytes_needed)) >= 0)
             do_alloc(tbl, src, use, lo/8U, bytes_needed, offset);
         else
@@ -594,7 +595,8 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
                 return; } }
         if (!(sizes_needed & 4) && bytes > 2) bytes = 2;
         unsigned start = 32 + (lo/8U) % step;
-        if ((can_merge && (use = find_merge(tbl, lo, bytes, 2)) >= 0) ||
+        if ((use = find(tbl->stage, src, lo, hi, 2)) >= 0 ||
+            (can_merge && (use = find_merge(tbl, lo, bytes, 2)) >= 0) ||
             (use = find_free(tbl, start, 63, step, lo/8U, bytes)) >= 0 ||
             (use = find_free(tbl, start+32, 95, 8, lo/8U, bytes)) >= 0)
             do_alloc(tbl, src, use, lo/8U, bytes, offset);
@@ -609,7 +611,8 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
             if (can_merge && (use = find_merge(tbl, lo, bytes, 4)) >= 0) {
                 do_alloc(tbl, src, use, lo/8U, bytes, offset);
                 return; } }
-        if ((can_merge && (use = find_merge(tbl, lo, bytes, 4)) >= 0) ||
+        if ((use = find(tbl->stage, src, lo, hi, 4)) >= 0 ||
+            (can_merge && (use = find_merge(tbl, lo, bytes, 4)) >= 0) ||
             (use = find_free(tbl, 96+start+odd, 127, 8, lo/8U, bytes)) >= 0 ||
             (use = find_free(tbl, 64+start+odd, 95, 8, lo/8U, bytes)) >= 0 ||
             (use = find_free(tbl, 32+start, 63, step, lo/8U, bytes)) >= 0 ||
@@ -703,6 +706,14 @@ int ActionBus::find(Source src, int lo, int hi, int size, int *len) {
         if (len) *len = slot.second.size;
         return slot.first + (lo - offset)/8; }
     return -1;
+}
+
+int ActionBus::find(Stage *stage, Source src, int lo, int hi, int size, int *len) {
+    int rv = -1;
+    for (auto tbl : stage->tables)
+        if (tbl->action_bus && (rv = tbl->action_bus->find(src, lo, hi, size, len)) >= 0)
+            return rv;
+    return rv;
 }
 
 template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
