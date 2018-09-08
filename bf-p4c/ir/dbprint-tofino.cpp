@@ -53,6 +53,12 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
         for (auto &a : attached)
             if (auto salu = a->to<StatefulAlu>())
                 out << endl << *salu;
+    if (entries_list) {
+        out << endl << "static_entries " << endl;
+        for (auto e : entries_list->entries) {
+            out << e << endl;
+        }
+    }
 }
 
 void IR::MAU::BackendAttached::dbprint(std::ostream &out) const {

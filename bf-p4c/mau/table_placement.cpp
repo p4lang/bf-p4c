@@ -1500,6 +1500,8 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         tbl->match_key = match->match_key;
         tbl->actions = match->actions;
         tbl->attached = match->attached;
+        tbl->entries_list = match->entries_list;
+        // Use clone to copy all contents of match above?
 
         /* Generate the correct table layout from the options */
         gw_layout = tbl->layout;
