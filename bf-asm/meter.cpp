@@ -144,7 +144,7 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
     unsigned per_entry_en_mux_ctl = 0U;
     unsigned adr_default = 0U;
     unsigned meter_type_position = 0U;
-    METER_ACCESS_TYPE default_type = match->default_meter_access_type(true);
+    METER_ACCESS_TYPE default_type = match->default_meter_access_type(false);
     AttachedTable::determine_meter_merge_regs(match, type, bus, args, default_type,
             adr_mask, per_entry_en_mux_ctl, adr_default, meter_type_position);
     merge.mau_meter_adr_default[type][bus] = adr_default;
