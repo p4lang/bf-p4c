@@ -231,7 +231,7 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     cmd.extend(['--test-dir', ptfdir])
     cmd.extend(ifaces)
     cmd.extend(['--socket-recv-size', '10240'])
-    test_params = 'arch=\'{}\''.format(device.title())
+    test_params = 'arch=\'{}\''.format(device)
     test_params += ';target=\'asic-model\''
     test_params += ';config_file=\'{}\''.format(config_file)
     test_params += ';num_pipes=4'
