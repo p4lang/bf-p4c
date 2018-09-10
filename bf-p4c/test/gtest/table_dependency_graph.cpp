@@ -375,14 +375,14 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
         }
     }
 
-    EXPECT_NE(field_names.count("ingress::headers.h2.f12"), 0);
-    EXPECT_NE(field_names.count("ingress::headers.h2.f1"), 0);
-    EXPECT_NE(dep_types.count(DependencyGraph::IXBAR_READ), 0);
-    EXPECT_NE(dep_types.count(DependencyGraph::ACTION_READ), 0);
-    EXPECT_NE(dep_types.count(DependencyGraph::OUTPUT), 0);
-    EXPECT_EQ(dep_types.count(DependencyGraph::CONTROL), 0);
-    EXPECT_EQ(field_names.size(), 2);
-    EXPECT_EQ(dep_info.size(), 4);
+    EXPECT_NE(field_names.count("ingress::headers.h2.f12"), UINT32_C(0));
+    EXPECT_NE(field_names.count("ingress::headers.h2.f1"), UINT32_C(0));
+    EXPECT_NE(dep_types.count(DependencyGraph::IXBAR_READ), UINT32_C(0));
+    EXPECT_NE(dep_types.count(DependencyGraph::ACTION_READ), UINT32_C(0));
+    EXPECT_NE(dep_types.count(DependencyGraph::OUTPUT), UINT32_C(0));
+    EXPECT_EQ(dep_types.count(DependencyGraph::CONTROL), UINT32_C(0));
+    EXPECT_EQ(field_names.size(), UINT32_C(2));
+    EXPECT_EQ(dep_info.size(), UINT32_C(4));
     for (const auto& kv : dep_info) {
         auto field = kv.first.first;
         auto dep_type = kv.first.second;
@@ -395,30 +395,30 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
             down_names.insert(action->externalName());
         if (field->name == "ingress::headers.h2.f12") {
             if (dep_type == DependencyGraph::IXBAR_READ) {
-                EXPECT_NE(up_names.count("mau.setf12"), 0);
-                EXPECT_EQ(down_names.size(), 0);
-                EXPECT_EQ(up_names.size(), 1);
+                EXPECT_NE(up_names.count("mau.setf12"), UINT32_C(0));
+                EXPECT_EQ(down_names.size(), UINT32_C(0));
+                EXPECT_EQ(up_names.size(), UINT32_C(1));
             } else if (dep_type == DependencyGraph::ACTION_READ) {
-                EXPECT_NE(up_names.count("mau.setf12"), 0);
-                EXPECT_NE(down_names.count("mau.usef12"), 0);
-                EXPECT_EQ(up_names.size(), 1);
-                EXPECT_EQ(down_names.size(), 1);
+                EXPECT_NE(up_names.count("mau.setf12"), UINT32_C(0));
+                EXPECT_NE(down_names.count("mau.usef12"), UINT32_C(0));
+                EXPECT_EQ(up_names.size(), UINT32_C(1));
+                EXPECT_EQ(down_names.size(), UINT32_C(1));
             } else if (dep_type == DependencyGraph::OUTPUT) {
-                EXPECT_NE(up_names.count("mau.setf12"), 0);
-                EXPECT_NE(down_names.count("mau.setf12"), 0);
-                EXPECT_EQ(up_names.size(), 1);
-                EXPECT_EQ(down_names.size(), 1);
+                EXPECT_NE(up_names.count("mau.setf12"), UINT32_C(0));
+                EXPECT_NE(down_names.count("mau.setf12"), UINT32_C(0));
+                EXPECT_EQ(up_names.size(), UINT32_C(1));
+                EXPECT_EQ(down_names.size(), UINT32_C(1));
             } else {
                 EXPECT_EQ(true, false);
             }
         } else if (field->name == "ingress::headers.h2.f1") {
             if (dep_type == DependencyGraph::OUTPUT) {
-                EXPECT_NE(up_names.count("mau.setf1"), 0);
-                EXPECT_NE(down_names.count("mau.setf1"), 0);
-                EXPECT_NE(up_names.count("mau.altsetf1"), 0);
-                EXPECT_NE(down_names.count("mau.altsetf1"), 0);
-                EXPECT_EQ(up_names.size(), 2);
-                EXPECT_EQ(down_names.size(), 2);
+                EXPECT_NE(up_names.count("mau.setf1"), UINT32_C(0));
+                EXPECT_NE(down_names.count("mau.setf1"), UINT32_C(0));
+                EXPECT_NE(up_names.count("mau.altsetf1"), UINT32_C(0));
+                EXPECT_NE(down_names.count("mau.altsetf1"), UINT32_C(0));
+                EXPECT_EQ(up_names.size(), UINT32_C(2));
+                EXPECT_EQ(down_names.size(), UINT32_C(2));
             } else {
                 EXPECT_EQ(true, false);
             }

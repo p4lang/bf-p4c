@@ -328,6 +328,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/validate_allocation.cpp
   phv/analysis/critical_path_clusters.cpp
   phv/analysis/deparser_zero.cpp
+  phv/analysis/dominator_tree.cpp
   phv/analysis/field_interference.cpp
   phv/analysis/pack_conflicts.cpp
   phv/pragma/pa_alias.cpp
@@ -374,6 +375,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/validate_allocation.h
   phv/analysis/critical_path_clusters.h
   phv/analysis/deparser_zero.h
+  phv/analysis/dominator_tree.h
   phv/analysis/field_interference.h
   phv/analysis/pack_conflicts.h
   phv/pragma/pa_alias.h
@@ -690,6 +692,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dominator_tree.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/metadata_init.cpp
