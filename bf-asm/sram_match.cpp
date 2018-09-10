@@ -165,6 +165,35 @@ void SRamMatchTable::verify_format() {
                                     continue; } }
                             group_info[group].tofino_mask[word] |= 1 << (14 + nibble);
                             LOG1("      adding to group " << group); } } } } }
+
+    if (table_type() == ATCAM) {
+        int overhead_word = -1;
+        int overhead_word_set = false;
+        for (int i = 0; i < (int)group_info.size(); i++) {
+            if (!overhead_word_set) {
+                overhead_word = group_info[i].overhead_word;
+            } else if (overhead_word != group_info[i].overhead_word) {
+                error(format->lineno, "ATCAM tables can at most have only one overhead word");
+                return;
+            }
+        }
+
+        if (overhead_word < 0)
+            overhead_word == word_info.size() - 1; 
+
+        if (word_info[overhead_word].size() != group_info.size()) {
+            error(format->lineno, "ATCAM tables do not chain to the same overhead word");
+            return;
+        }
+
+        for (int i = 0; i < (int)word_info[overhead_word].size(); i++) {
+            if (i != word_info[overhead_word][i]) {
+                error(format->lineno, "ATCAM priority not correctly formatted in the compiler");
+                return;
+            }
+        } 
+    }
+
     for (auto &r : match) {
         r.check();
         if (r->reg.mau_id() < 0)

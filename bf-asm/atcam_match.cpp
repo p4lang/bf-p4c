@@ -236,8 +236,12 @@ std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_
                 tmp["memory_units"] = std::move(mem_units);
                 mem_units = json::vector();
                 json::vector vpns;
-                for (unsigned i = 0; i < format->groups(); i++)
-                    vpns.push_back(vpn_ctr++);
+                // Because the entries in the context JSON are reversed, the VPNs have to
+                // be reversed as well
+                for (unsigned i = 0; i < format->groups(); i++) {
+                    vpns.push_back(vpn_ctr + format->groups() - 1 - i);
+                }
+                vpn_ctr += format->groups();
                 tmp["vpns"] = std::move(vpns);
                 mem_units_and_vpns.push_back(std::move(tmp)); } }
         assert(mem_units.empty());

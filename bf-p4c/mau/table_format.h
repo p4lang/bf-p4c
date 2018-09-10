@@ -69,6 +69,21 @@ struct TableFormat {
                 mask[VERS].clear();
                 match_byte_mask.clear();
             }
+
+            bitvec match_bit_mask() const {
+                return mask[MATCH] | mask[VERS];
+            }
+
+            bitvec entry_info_bit_mask() const {
+                bitvec rv;
+                for (int i = 0; i < ENTRY_TYPES; i++)
+                    rv |= mask[i];
+                return rv;
+            }
+
+            bitvec overhead_mask() const {
+                return entry_info_bit_mask() - match_bit_mask();
+            }
         };
 
         struct TCAM_use {
@@ -200,6 +215,8 @@ struct TableFormat {
     bool attempt_allocate_shares();
     bool allocate_shares();
     void allocate_full_fits(int width_sect);
+    void redistribute_entry_priority();
+    void redistribute_next_table();
 
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IR::MAU::Table *t,

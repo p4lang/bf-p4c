@@ -294,6 +294,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   switch_msdc_l3
   switch_8.3_msdc_l3
+  switch_8.3_msdc_leaf_int
   switch_msdc_leaf_int
   )
 
@@ -1201,7 +1202,6 @@ p4c_add_xfail_reason("tofino"
 # BRIG-923
 p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
-  switch_8.3_msdc_leaf_int
   extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
 )
 

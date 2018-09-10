@@ -435,6 +435,12 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_i
                              / TableFormat::OVERHEAD_BITS;
         int pack_width = (entry_count + MAX_ENTRIES_PER_ROW - 1)
                           / MAX_ENTRIES_PER_ROW;
+
+        // ATCAM tables can only have one payload bus, as the priority ranking happens on
+        // a single bus
+        if ((overhead_width > 1 || entry_count > MAX_ENTRIES_PER_ROW) && tbl->layout.atcam)
+            break;
+
         int width = std::max({ bit_limit_width, byte_limit_width, overhead_width, pack_width });
 
         int mod_value;

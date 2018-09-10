@@ -2053,24 +2053,40 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
     pack_fmt["table_word_width"] = format ? format->get_table_word_width() : MEM_WORD_WIDTH;
     pack_fmt["entries_per_table_word"] = format ? format->get_entries_per_table_word() : 1;
     pack_fmt["number_memory_units_per_table_word"] = format ? format->get_mem_units_per_table_word() : 1;
+
+    /**
+     * Entry number has to be unique for all tables.  However, for ATCAM tables specifically,
+     * the entry with the highest priority starts at entry number 0.  The priority decreases
+     * as the entry number increases.
+     *
+     * This is actually reversed in the hardware.  The compiler format entries are in priority
+     * order in the hardware, and have been validated in validate_format.  Thus, the context
+     * JSON is reversed.
+     */
     if (print_fields) {
         int basebit = std::max(0, MEM_WORD_WIDTH - (1 << format->log2size));
         json::vector &entry_list = pack_fmt["entries"];
         if (format->is_wide_format()) {
             for (int i = format->groups()-1; i >= 0; --i) {
+                int entry_number = i;
+                if (table_type() == ATCAM)
+                    entry_number = format->groups() - 1 - i;
                 json::vector field_list;
                 for (auto it = format->begin(i); it != format->end(i); ++it)
                     add_field_to_pack_format(field_list, basebit, it->first, it->second, act);
                 entry_list.push_back( json::map {
-                        { "entry_number", json::number(i) },
+                        { "entry_number", json::number(entry_number) },
                         { "fields", std::move(field_list) }}); }
         } else {
             for (int i = format->get_entries_per_table_word()-1; i >= 0; --i) {
+                int entry_number = i;
+                if (table_type() == ATCAM)
+                    entry_number = format->get_entries_per_table_word() - 1 - i;
                 json::vector field_list;
                 for (auto &field : *format)
                     add_field_to_pack_format(field_list, basebit, field.first, field.second, act);
                 entry_list.push_back( json::map {
-                        { "entry_number", json::number(i) },
+                        { "entry_number", json::number(entry_number) },
                         { "fields", std::move(field_list) }});
                 basebit -= 1 << format->log2size; } } }
     if (act)

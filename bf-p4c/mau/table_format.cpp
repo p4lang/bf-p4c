@@ -119,19 +119,24 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM,
             return false;
     }
 
-    // Evenly assign overhead information per RAM.  In the case of single sized RAMs, one
-    // can later share match groups.
-    int total = 0;
-    for (int i = 0; i < layout_option.way.width; i++) {
-        overhead_groups_per_RAM[i] = per_RAM;
-        total += per_RAM;
-    }
+    if (tbl->layout.atcam) {
+        // ATCAM tables can only have one priority branch
+        overhead_groups_per_RAM[0] = layout_option.way.match_groups;
+    } else {
+        // Evenly assign overhead information per RAM.  In the case of single sized RAMs, one
+        // can later share match groups.
+        int total = 0;
+        for (int i = 0; i < layout_option.way.width; i++) {
+            overhead_groups_per_RAM[i] = per_RAM;
+            total += per_RAM;
+        }
 
-    int index = 0;
-    while (total < layout_option.way.match_groups) {
-        overhead_groups_per_RAM[index]++;
-        index++;
-        total++;
+        int index = 0;
+        while (total < layout_option.way.match_groups) {
+            overhead_groups_per_RAM[index]++;
+            index++;
+            total++;
+        }
     }
 
     // Every single RAM is assigned the same search bus, as there is only one
@@ -179,6 +184,9 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> 
         search_bus_on_overhead = false;
     }
     if (overhead_RAMs * MAX_SHARED_GROUPS < layout_option.way.match_groups)
+        return false;
+
+    if (overhead_RAMs > 1 && tbl->layout.atcam)
         return false;
 
     BUG_CHECK(overhead_RAMs <= layout_option.way.match_groups, "Allocation for %s has %d RAMs for "
@@ -312,6 +320,10 @@ bool TableFormat::find_format(Use *u) {
     if (!allocate_match())
         return false;
     LOG3("Match and Version");
+    if (tbl->layout.atcam) {
+        redistribute_entry_priority();
+    }
+    redistribute_next_table();
     verify();
     return true;
 }
@@ -1477,6 +1489,106 @@ bool TableFormat::allocate_all_ternary_match() {
         use->split_midbyte = use->tcam_use.back().byte_group;
     }
     return true;
+}
+
+/**
+ * As described by section 6.4.3.1 Exact Match Physical Row Result Generation, the 5 possible
+ * entries per RAM line are ranked through a priority.  For exact match, the priority does not
+ * matter, but for ATCAM, the lower the priority number, the higher the prioirty ranking.
+ *
+ * Only 2 entries can be in a different RAM than their match overhead, and those two entries
+ * are the two highest priority entries.  The order in which the entries are in the match_groups
+ * vector determine the ranking of these entries in the assembler.  Thus after the match bits
+ * have been determined for each entry, the compiler reorders them so that the split entries
+ * are the first entries in the vector.
+ */
+void TableFormat::redistribute_entry_priority() {
+    safe_vector<size_t> multi_ram_entries;
+    safe_vector<size_t> single_ram_entries;
+
+    for (size_t idx = 0; idx < use->match_groups.size(); idx++) {
+        bitvec entry_use = use->match_groups[idx].entry_info_bit_mask();
+        if ((entry_use.min().index() / SINGLE_RAM_BITS) ==
+            (entry_use.max().index() / SINGLE_RAM_BITS))
+            single_ram_entries.push_back(idx);
+        else
+            multi_ram_entries.push_back(idx);
+    }
+
+    safe_vector<Use::match_group_use> reordered_match_groups;
+    for (size_t entry : multi_ram_entries) {
+        reordered_match_groups.push_back(use->match_groups[entry]);
+    }
+
+    for (size_t entry : single_ram_entries) {
+        reordered_match_groups.push_back(use->match_groups[entry]);
+    }
+    use->match_groups = reordered_match_groups;
+}
+
+/**
+ * This is implementing a constraint detailed in section 6.4.1.3.2 Next Table Bits / 6.4.3.1
+ * Exact Match Physical Row Result Generation.  As described in that section, the next table
+ * bits per each entry must be organized so that lower entries have lower lsbs in their next
+ * table bits.
+ *
+ * On top of this constraint, any entry that is spread across multiple RAMs must be considered
+ * entry 0 or entry 1.  When the next table is allocated, the algorithm has not yet determined
+ * which entries are split across multiple RAMs.  Thus, this is to redistribute the next
+ * table mapping after this information is known so that multi-ram entries have less significant
+ * bit next tables.
+ */
+void TableFormat::redistribute_next_table() {
+    int next_index;
+    if (!tbl->action_chain())
+        return;
+    else if (hit_actions() <= NEXT_MAP_TABLE_ENTRIES)
+        next_index = ACTION;
+    else
+        next_index = NEXT;
+
+    safe_vector<safe_vector<size_t>> multi_ram_entries(layout_option.way.width);
+    safe_vector<safe_vector<size_t>> single_ram_entries(layout_option.way.width);
+
+    for (size_t idx = 0; idx < use->match_groups.size(); idx++) {
+        auto &match_group = use->match_groups[idx];
+        int overhead_position = match_group.overhead_mask().min().index() / SINGLE_RAM_BITS;
+        bitvec entry_use = use->match_groups[idx].entry_info_bit_mask();
+        if ((entry_use.min().index() / SINGLE_RAM_BITS) ==
+            (entry_use.max().index() / SINGLE_RAM_BITS)) {
+            single_ram_entries[overhead_position].push_back(idx);
+        } else {
+            multi_ram_entries[overhead_position].push_back(idx);
+        }
+    }
+
+
+    for (int idx = 0; idx < layout_option.way.width; idx++) {
+        safe_vector<bitvec> next_masks;
+
+        for (auto entry : multi_ram_entries[idx]) {
+            next_masks.push_back(use->match_groups[entry].mask[next_index]);
+        }
+
+        for (auto entry : single_ram_entries[idx]) {
+            next_masks.push_back(use->match_groups[entry].mask[next_index]);
+        }
+
+        std::sort(next_masks.begin(), next_masks.end(), [](const bitvec &a, const bitvec &b) {
+            return a.min().index() < b.min().index();
+        });
+
+        size_t next_mask_entry = 0;
+        for (auto entry : multi_ram_entries[idx]) {
+            use->match_groups[entry].mask[next_index] = next_masks[next_mask_entry];
+            next_mask_entry++;
+        }
+
+        for (auto entry : single_ram_entries[idx]) {
+            use->match_groups[entry].mask[next_index] = next_masks[next_mask_entry];
+            next_mask_entry++;
+        }
+    }
 }
 
 /* This is a verification pass that guarantees that we don't have overlap.  More constraints can
