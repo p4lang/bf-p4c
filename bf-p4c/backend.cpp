@@ -1,6 +1,7 @@
 #include "backend.h"
 #include <fstream>
 #include <set>
+
 #include "bf-p4c/check_duplicate.h"
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/bridged_metadata_replacement.h"
@@ -14,6 +15,7 @@
 #include "bf-p4c/common/metadata_init.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/common/parser_overlay.h"
+#include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/mau/characterize_power.h"
 #include "bf-p4c/mau/empty_controls.h"
 #include "bf-p4c/mau/gateway.h"
@@ -42,6 +44,12 @@
 #include "bf-p4c/phv/privatization.h"
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/phv/analysis/dark.h"
+
+// Set the default base directory for logging files
+// This will be overwritten by FileLog::setOutputDir in main, however, the
+// static member needs to be initialized here because it needs to be define in the backend library
+// so that gtest resolves all symbols.
+cstring Logging::FileLog::outputDir = "./";
 
 namespace BFN {
 
@@ -92,10 +100,12 @@ class TableAllocPass : public PassManager {
     TablesMutuallyExclusive mutex;
     SharedIndirectAttachedAnalysis siaa;
     LayoutChoices           lc;
+    const BFN_Options &_options;
+    Logging::FileLog *taLog;
 
  public:
     TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps)
-        : siaa(mutex) {
+        : siaa(mutex), _options(options) {
             addPasses({
                 new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
                 new TableLayout(phv, lc),
@@ -115,8 +125,25 @@ class TableAllocPass : public PassManager {
                 new CheckTableNameDuplicate
             });
 
-                setName("Table Alloc");
-            }
+        setName("Table Alloc");
+    }
+
+     profile_t init_apply(const IR::Node *root) override {
+        static unsigned int iteration = 0;
+        if (_options.verbose) {
+            cstring logName("table_placement_" + std::to_string(iteration++) + ".log");
+            taLog = new Logging::FileLog(logName);
+            std::clog << "TableAllocPass seqNo: " << seqNo << std::endl;
+        }
+        return PassManager::init_apply(root);
+    }
+    void end_apply() override {
+        if (taLog != nullptr) {
+            delete taLog;
+            taLog = nullptr;
+        }
+        PassManager::end_apply();
+    }
 };
 
 Backend::Backend(const BFN_Options& options, int pipe_id) :

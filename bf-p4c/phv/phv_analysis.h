@@ -5,6 +5,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/parser_critical_path.h"
+#include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
@@ -37,10 +38,29 @@ class PHV_AnalysisPass : public PassManager {
     PHV::Pragmas pragmas;
     ordered_set<const PHV::Field*> deparser_zero_fields;    // Fields that are going to be deparsed
                                                             // to zero
+    const BFN_Options &_options;
+    Logging::FileLog *paLog = nullptr;
 
  public:
     PHV_AnalysisPass(const BFN_Options &options, PhvInfo &phv, PhvUse &uses, const ClotInfo &clot,
                      FieldDefUse &defuse, DependencyGraph &deps, MauBacktracker& alloc);
+
+    profile_t init_apply(const IR::Node *root) override {
+        static unsigned int iteration = 0;
+        if (_options.verbose) {
+            cstring logName("phv_allocation_" + std::to_string(iteration++) + ".log");
+            paLog = new Logging::FileLog(logName);
+            std::clog << "PHV Allocation Pass seqNo: " << seqNo << std::endl;
+        }
+        return PassManager::init_apply(root);
+    }
+    void end_apply() override {
+        if (paLog != nullptr) {
+            delete paLog;
+            paLog = nullptr;
+        }
+        PassManager::end_apply();
+    }
 };
 
 #endif /* BF_P4C_PHV_PHV_ANALYSIS_H_ */

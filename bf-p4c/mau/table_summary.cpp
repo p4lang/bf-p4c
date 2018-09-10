@@ -8,6 +8,8 @@
 int TableSummary::numInvoked[] = {0};
 
 Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
+    tsLog = new Logging::FileLog("table_summary_" + std::to_string(pipe_id) + ".log");
+
     auto rv = MauInspector::init_apply(root);
     order.clear();
     ixbar.clear();
@@ -33,6 +35,10 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
 void TableSummary::end_apply() {
     printTablePlacement();
     LOG2(*this);
+    if (tsLog != nullptr) {
+        delete tsLog;
+        tsLog = nullptr;
+    }
 }
 
 bool TableSummary::preorder(const IR::MAU::Table *t) {

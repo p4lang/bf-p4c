@@ -328,7 +328,7 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
     }
 };
 
-bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *seq) {
+bool FindDependencyGraph::preorder(const IR::MAU::TableSeq * /* seq */) {
     const Context *ctxt = getContext();
     if (ctxt && ctxt->node->is<IR::BFN::Pipe>()) {
         access.clear();

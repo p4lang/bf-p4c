@@ -112,6 +112,9 @@ BFN_Options::BFN_Options() {
     registerOption("--backward-compatible", nullptr,
         [this](const char *) { backward_compatible = true; return true; },
         "Set compiler to be backward compatible with p4c-tofino");
+    registerOption("--verbose", nullptr,
+        [this](const char *) { verbose = true; return true; },
+        "Set compiler verbosity logging");
 }
 
 using Target = std::pair<cstring, cstring>;

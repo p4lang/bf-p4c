@@ -44,7 +44,7 @@ struct CreateLocalInstances : public Transform {
 
  private:
     const IR::HeaderOrMetadata *ghost_intrinsic_metadata = nullptr;
-    profile_t init_apply(const IR::Node *root) {
+    profile_t init_apply(const IR::Node *root) override {
         ghost_intrinsic_metadata = nullptr;
         return Transform::init_apply(root); }
     /// Prepend "thread-name::" to the names of headers and metadata structs.
@@ -87,13 +87,13 @@ struct CreateLocalInstances : public Transform {
         return var;
     }
 
-    const IR::Expression *preorder(IR::Expression *hr) {
+    const IR::Expression *preorder(IR::Expression *hr) override {
         // Need to ensure that any Expression that has a subexpression HeaderOrMetadata or
         // TempVar that got split based on thread is also split...
         // is different
         visitAgain();
         return hr; }
-    const IR::Expression *postorder(IR::Expression *hr) {
+    const IR::Expression *postorder(IR::Expression *hr) override {
         // but only if it is different from any previously created clone.
         auto *orig = getOriginal<IR::Expression>();
         for (auto *gen : memoizeExpr[orig])

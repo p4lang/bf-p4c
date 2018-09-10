@@ -30,6 +30,7 @@ class BFN_Options : public CompilerOptions {
 #if BAREFOOT_INTERNAL
     bool no_power_check = false;
 #endif
+    bool verbose = false;
 
     cstring bfRtSchema = "";
     cstring programName;

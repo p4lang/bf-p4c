@@ -20,7 +20,7 @@ class Decorator:
 
   def get_fix(self, branch):
 	l = branch.split('/')
-	m = re.match("(brig|compiler|drv)-(\d+)", l[-1], re.IGNORECASE)
+	m = re.match("(brig|p4c|compiler|drv)-(\d+)", l[-1], re.IGNORECASE)
 	if m is not None:
 	  return m.group(1), m.group(2)
 	return None, None

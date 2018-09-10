@@ -11,6 +11,7 @@
 #include "bf-p4c-options.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
 #include "bf-p4c/visualization.h"
+#include "bf-p4c/logging/filelog.h"
 #include "common/extract_maupipe.h"
 #include "common/run_id.h"
 #include "device.h"
@@ -203,6 +204,7 @@ int main(int ac, char **av) {
         return 1;
 
     options.setInputFile();
+    Logging::FileLog::setOutputDir(options.outputDir);
     Device::init(options.target);
 
     // FIXME -- should be based on the architecture option

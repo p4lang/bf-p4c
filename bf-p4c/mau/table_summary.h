@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <map>
+#include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/device.h"
@@ -25,6 +26,7 @@ struct NoContainerConflictTrigger {
 class TableSummary: public MauInspector {
     static constexpr int NUM_LOGICAL_TABLES_PER_STAGE = 16;
     static int numInvoked[4];
+    Logging::FileLog *tsLog = nullptr;
 
     /// The total number of stages allocated by Table Placement
     int maxStage;

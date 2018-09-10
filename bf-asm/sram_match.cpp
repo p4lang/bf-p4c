@@ -179,7 +179,7 @@ void SRamMatchTable::verify_format() {
         }
 
         if (overhead_word < 0)
-            overhead_word == word_info.size() - 1; 
+            overhead_word = word_info.size() - 1;
 
         if (word_info[overhead_word].size() != group_info.size()) {
             error(format->lineno, "ATCAM tables do not chain to the same overhead word");
@@ -191,7 +191,7 @@ void SRamMatchTable::verify_format() {
                 error(format->lineno, "ATCAM priority not correctly formatted in the compiler");
                 return;
             }
-        } 
+        }
     }
 
     for (auto &r : match) {

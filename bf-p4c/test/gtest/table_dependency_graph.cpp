@@ -115,9 +115,9 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
     action a1(bit<8> val) {
         headers.h1.f6 = val;
     }
-    
+
     action noop() { }
-    
+
     table t1 {
         key = {
             headers.h1.f1: exact;
@@ -756,7 +756,7 @@ void validate_scores(UpwardDownwardPropagation* upward_downward_prop,
 }
 
 /*
-Tests the following graph, where 
+Tests the following graph, where
 tables on bottom are dependent on those on top:
 Alpha beta gamma chain is independent from other chain
 
@@ -1053,7 +1053,7 @@ TEST_F(TableDependencyGraphTest, UpwardDownwardProp) {
 
 
 /*
-Tests the following graph, where 
+Tests the following graph, where
 tables on bottom are dependent on those on top:
 Alpha beta gamma chain is independent from other chain
 

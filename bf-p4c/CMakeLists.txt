@@ -447,6 +447,7 @@ endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")
 
 set (BF_P4C_BACKEND_LOGGING_HDRS
+  logging/filelog.h
   logging/logging.h
   logging/manifest.h
   )
