@@ -28,7 +28,7 @@ option_t options = {
     .werror = false,
     .disable_power_gating = false,
     .singlewrite = false,
-    .hash_parity_enabled = true,
+    .hash_parity_enabled = false,  //FIXME: flip to true when 51st bit is reserved
     .high_availability_enabled = true
 };
 
@@ -79,7 +79,7 @@ void output_all() {
     char build_date[1024];
     strftime(build_date, 1024, "%c", localtime(&now));
     ctxtJson["build_date"] = build_date;
-    ctxtJson["schema_version"] = "1.5.3";
+    ctxtJson["schema_version"] = "1.5.6";
     ctxtJson["compiler_version"] = BF_P4C_VERSION;
     ctxtJson["program_name"] = asmfile_name;
     ctxtJson["learn_quanta"] = json::vector();

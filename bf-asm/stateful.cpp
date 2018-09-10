@@ -423,6 +423,7 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
     unsigned alu_width = format->size/(dual_mode ? 2 : 1);
     tbl["alu_width"] = alu_width;
     tbl["dual_width_mode"] = dual_mode;
+    tbl["initial_value_lo"] = 0; // TODO
     json::vector &act_to_sful_instr_slot = tbl["action_to_stateful_instruction_slot"];
     if (actions) {
         for (auto &a : *actions) {

@@ -1384,7 +1384,7 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
 
         action_cfg["name"] = act.name;
         action_cfg["handle"] = act.handle; //FIXME-JSON
-        if (act.instr.empty())
+        if (act.instr.empty() || action_cfg.count("primitives") == 0)
             action_cfg["primitives"] = json::vector();
         act.add_indirect_resources(action_cfg["indirect_resources"]);
         // XXX(amresh): allowed_as_default_action info is directly passed through assembly
@@ -1427,8 +1427,7 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
         action_cfg["override_stateful_full_addr"] = 0;
         for (auto &att : act.attached)
             gen_override(action_cfg, att);
-        if (!this->table->to<ActionTable>())
-            action_cfg["is_action_meter_color_aware"] = act.is_color_aware();
+        action_cfg["is_action_meter_color_aware"] = act.is_color_aware();
         if (!act_json_present)
             actions_cfg.push_back(std::move(action_cfg));
     }
@@ -1766,7 +1765,6 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     stage_tbl["size"] = size;
     stage_tbl["stage_table_type"] = type;
     stage_tbl["logical_table_id"] = logical_id;
-    stage_tbl["default_next_table"] = default_next_table_id;
 
     if (this->to<MatchTable>()) {
         stage_tbl["has_attached_gateway"] = false;
@@ -1835,7 +1833,7 @@ void Table::get_cjson_source(const std::string &field_name, std::string &source,
             start_bit = std::min(5U, adt->get_log2size() - 2);
     } else if (field_name == "counter_addr") {
         source = "stats_ptr";
-        auto a = get_attached(); 
+        auto a = get_attached();
         if (a && a->stats.size() > 0) {
             auto s = a->stats[0];
             start_bit = s->address_shift();
@@ -1846,7 +1844,7 @@ void Table::get_cjson_source(const std::string &field_name, std::string &source,
     } else if (field_name == "meter_addr") {
         if (auto m = get_meter()) {
             source = "meter_ptr";
-            start_bit = m->address_shift(); 
+            start_bit = m->address_shift();
         } else if (auto s = get_selector()) {
             source = "sel_ptr";
             start_bit = s->address_shift();
@@ -1915,13 +1913,13 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
     // act will be a nullptr
     std::string source = "";
     int start_bit = 0;
-    if (!act) 
+    if (!act)
         get_cjson_source(name, source, start_bit);
 
     if (field.flags == Format::Field::ZERO)
         source = "zero";
 
-    
+
     if (source != "")
         output_field_to_pack_format(field_list, basebit, name, source, start_bit, field);
 

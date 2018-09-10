@@ -50,9 +50,16 @@ public:
             for (auto &it : *sections)
                 it.second->process(); }
     static void output_all(json::map &ctxtJson) {
-        if (sections)
-            for (auto &it : *sections)
+        if (sections) {
+            for (auto &it : *sections) {
+                // Skip primitives to be called last
+                if (it.first == "primitives") continue;
                 it.second->output(ctxtJson); }
+            auto &s = *sections;
+            if(s.count("primitives"))
+                s["primitives"]->output(ctxtJson);
+        }
+    }
 };
 
 #endif /* _sections_h_ */

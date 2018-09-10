@@ -3,7 +3,7 @@
 # Script to validate a context.json against the json schema
 #
 # The default behavior takes a context.json file as a mandatory argument
-# and it validates it agains the gen_schema file in the Glass repo.
+# and it validates it agains the context_schema file in the Glass repo.
 #
 # If used from the default location, the relative path to the Glass repo
 # is automatically configured. Otherwise, please add the corresponding
@@ -22,8 +22,8 @@ MYPATH = os.path.dirname(__file__)
 GEN_SCHEMA_PATH=os.path.join(MYPATH, "../glass/p4c_tofino/target/tofino")
 sys.path.append(GEN_SCHEMA_PATH)
 
-from ctx_json.gen_schema import ContextJSONSchema
-from ctx_json.schema_version import get_schema_version
+from ctx_json.context_schema import ContextJSONSchema
+from ctx_json.context_schema import get_schema_version
 
 parser=argparse.ArgumentParser()
 

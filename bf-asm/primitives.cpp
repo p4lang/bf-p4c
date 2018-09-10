@@ -30,20 +30,92 @@ class Primitives : public Section {
         }
     }
 
+    bool merge_actions(json::vector& _prim_actions, json::vector& ctxt_actions) {
+        bool merged = false;
+        for (auto &_prim_action : _prim_actions) {
+            for (auto &ctxt_action : ctxt_actions) {
+                if (*ctxt_action->to<json::map>()["name"] ==
+                        *_prim_action->to<json::map>()["name"]) {
+                    ctxt_action->to<json::map>().merge(_prim_action->to<json::map>());
+                    merged = true;
+                    auto aname = ctxt_action->to<json::map>()["name"]->to<json::string>();
+                    break;
+                }
+            }
+        }
+        return merged; 
+    }
+
+    // If primitives json is present this function will merge the primitives
+    // nodes in the correct table->actions->action node The 'primitives' section
+    // is run last so we have already populated the context json tables at this
+    // stage. We check for the following tree structures to merge the action
+    // nodes
+    // Structure 1 (Match Tables)
+    // tables
+    //  |
+    //  |--> table0
+    //        |--> name
+    //        |--> actions
+    //              |
+    //              |--> action0
+    //                      |
+    //                      |--> name
+    //                      |--> primitives (merge here)
+    // Structure 2 (ALPM Tables)
+    // tables
+    //  |
+    //  |--> table0
+    //        |--> name
+    //        |--> match_attributes
+    //              |
+    //              |--> pre_classifier
+    //                      |
+    //                      |--> actions
+    //                             |
+    //                             |--> action0
+    //                                   |
+    //                                   |--> name
+    //                                   |--> primitives (merge here)
+    // We can have multiple tables with the same name but one without
+    // and other with actions node e.g. stateful & its associated match table.
+    // In this case we want to merge with match table since it has the actions
+    // node
     void output(json::map &ctxtJson) {
         if (_primitives) {
-            json::vector &_tables = _primitives->to<json::map>()["tables"];
+            json::vector &prim_tables = _primitives->to<json::map>()["tables"];
             json::vector &ctxt_tables = ctxtJson["tables"];
-            for (auto &_table : _tables) {
+            for (auto &prim_table : prim_tables) {
+                json::string prim_table_name = prim_table->to<json::map>()["name"]->to<json::string>();
                 bool is_merged = false;
+                json::string ctxt_table_name;
                 for (auto &ctxt_table : ctxt_tables) {
-                    if (*ctxt_table->to<json::map>()["name"] ==
-                            *_table->to<json::map>()["name"]) {
-                        _table->to<json::map>().merge(ctxt_table->to<json::map>());
-                        is_merged = true;
-                        break; } }
-                if (!is_merged)
-                    ctxt_tables.emplace_back(_table->clone()); } }
+                    ctxt_table_name = ctxt_table->to<json::map>()["name"]->to<json::string>();
+                    if (prim_table_name == ctxt_table_name) {
+                        if ((ctxt_table->to<json::map>().count("actions") > 0) &&
+                           (prim_table->to<json::map>().count("actions") > 0)) {
+                            json::vector &prim_table_actions = prim_table->to<json::map>()["actions"];
+                            json::vector &ctxt_table_actions = ctxt_table->to<json::map>()["actions"];
+                            is_merged = merge_actions(prim_table_actions, ctxt_table_actions);
+                            break;
+                        } else if ((ctxt_table->to<json::map>().count("match_attributes") > 0) &&
+                           (prim_table->to<json::map>().count("match_attributes") > 0)) {
+                            json::map &prim_table_ma = prim_table->to<json::map>()["match_attributes"];
+                            json::map &ctxt_table_ma = ctxt_table->to<json::map>()["match_attributes"];
+                            if ((ctxt_table_ma.to<json::map>().count("pre_classifier") > 0) &&
+                               (prim_table_ma.to<json::map>().count("pre_classifier") > 0)) {
+                                json::map &prim_table_pc = prim_table_ma.to<json::map>()["pre_classifier"];
+                                json::map &ctxt_table_pc = ctxt_table_ma.to<json::map>()["pre_classifier"];
+                                        if ((ctxt_table_pc.to<json::map>().count("actions") > 0) &&
+                                            (prim_table_pc.to<json::map>().count("actions") > 0)) {
+                                                json::vector &prim_table_actions = prim_table_pc.to<json::map>()["actions"];
+                                                json::vector &ctxt_table_actions = ctxt_table_pc.to<json::map>()["actions"];
+                                                is_merged = merge_actions(prim_table_actions, ctxt_table_actions);
+                                                break; } } } } }
+                if (!is_merged) {
+                    warning(lineno, "No table named %s found to merge primitive info",
+                            prim_table_name.c_str()); } }
+        }
     }
 
     static Primitives singleton_primitives;

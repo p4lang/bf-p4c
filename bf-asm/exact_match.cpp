@@ -72,7 +72,7 @@ std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_c
     unsigned vpn_ctr = 0;
     unsigned fmt_width = format ? (format->size + 127)/128 : 0;
     if (hash_fn_ids.count(way.group) > 0)
-        mra["hash_function_id"] = hash_fn_ids.at(way.group); 
+        mra["hash_function_id"] = hash_fn_ids.at(way.group);
     mra["hash_entry_bit_lo"] = way.subgroup*10;
     mra["hash_entry_bit_hi"] = way.subgroup*10 + 9;
     mra["number_entry_bits"] = 10;
@@ -114,6 +114,8 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
     json::map &stage_tbl = *add_common_sram_tbl_cfgs(tbl, "exact", "hash_match");
     add_pack_format(stage_tbl, format, true, false);
     stage_tbl["memory_resource_allocation"] = nullptr;
+    //FIXME: stash_allocation being null is a placeholder until implemented.
+    stage_tbl["stash_allocation"] = nullptr;
     json::map &match_attributes = tbl["match_attributes"];
     match_attributes["uses_dynamic_key_masks"] = dynamic_key_masks;
     if (ways.size() > 0) {

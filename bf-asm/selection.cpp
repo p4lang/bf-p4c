@@ -123,7 +123,7 @@ void SelectionTable::pass3() {
 }
 
 int SelectionTable::indirect_shiftcount() const {
-    return METER_ADDRESS_ZERO_PAD - 7;  // selectors always start at bit 7 address 
+    return METER_ADDRESS_ZERO_PAD - 7;  // selectors always start at bit 7 address
 }
 
 unsigned SelectionTable::per_flow_enable_bit(MatchTable *match) const {
@@ -288,6 +288,8 @@ template<> void SelectionTable::setup_logical_alu_map(Target::JBay::mau_regs &re
 void SelectionTable::gen_tbl_cfg(json::vector &out) const {
     json::map &tbl = *base_tbl_cfg(out, "selection", 1024);
     tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
+    tbl["selector_name"] = p4_table ? p4_table->p4_name() : "undefined";
+    tbl["selection_key_name"] = "undefined"; /// FIXME!
     tbl["how_referenced"] = indirect ? "indirect" : "direct";
     if (pool_sizes.size() > 0)
         tbl["max_port_pool_size"] = *std::max_element(std::begin(pool_sizes), std::end(pool_sizes));

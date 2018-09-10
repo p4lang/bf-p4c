@@ -96,13 +96,16 @@ class OutputAsm : public PassManager {
         }
         if (_options.debugInfo) {  // generate resources info only if invoked with -g
             if (_success) {
+                // (amresh): Disabling resources node temporarily as Glass
+                // refpoint update does not have this in schema. Re-enable once
+                // we separate resources node out of schema.
                 // Output resources json file
-                cstring resourcesFile = dir + "/" + _options.programName + ".res.json";
-                LOG2("ASM generation for resources: " << resourcesFile);
-                ctxt_stream << "resources: \"" <<
-                    resourcesFile << "\"" << std::endl << std::flush;
-                std::ofstream res(resourcesFile);
-                res << _visualization << std::endl << std::flush;
+                // cstring resourcesFile = dir + "/" + _options.programName + ".res.json";
+                // LOG2("ASM generation for resources: " << resourcesFile);
+                // ctxt_stream << "resources: \"" <<
+                //     resourcesFile << "\"" << std::endl << std::flush;
+                // std::ofstream res(resourcesFile);
+                // res << _visualization << std::endl << std::flush;
 
             } else {
                 // The compilation was unsuccessful, but we still need to put

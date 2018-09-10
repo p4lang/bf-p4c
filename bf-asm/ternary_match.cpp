@@ -603,6 +603,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
     json::map &match_attributes = tbl["match_attributes"];
     json::vector &stage_tables = match_attributes["stage_tables"];
     json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "ternary_match", number_entries);
+    stage_tbl["default_next_table"] = default_next_table_id;
     json::map &pack_fmt = add_pack_format(stage_tbl, 47, match.size(), 1);
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
     // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped

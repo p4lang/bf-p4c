@@ -155,7 +155,7 @@ void P4Table::base_alpm_tbl_cfg(json::map &out, int size, const Table *table, P4
             tbl["name"] = p4_name();
             tbl["table_type"] = type_name[table_type];
             tbl["size"] = explicit_size ? this->size : size;
-            tbl["stage_tables"] = json::mkuniq<json::vector>(); } }
+        } }
 }
 
 void P4Table::set_partition_action_handle(unsigned handle) {

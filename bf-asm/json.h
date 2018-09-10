@@ -139,6 +139,9 @@ public:
             return static_cast<const std::string &>(*this) ==
                    static_cast<const std::string &>(*b);
         return false; }
+    bool operator ==(const string &a) const override {
+        return static_cast<const std::string &>(*this) ==
+                   static_cast<const std::string &>(a); }
     bool operator ==(const char *str) const override {
         return static_cast<const std::string &>(*this) == str; }
     bool operator ==(const std::string &str) const override {

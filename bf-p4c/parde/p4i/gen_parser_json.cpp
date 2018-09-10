@@ -72,7 +72,8 @@ int GenerateParserP4iJson::getStateId(const IR::BFN::LoweredParserState* state) 
 int GenerateParserP4iJson::getTcamId(const IR::BFN::LoweredParserMatch* match) {
     static const int MAX_TCAM_ID = 255;
     if (!tcam_ids.count(match)) {
-        int id = MAX_TCAM_ID - tcam_ids.size();
+        int id = MAX_TCAM_ID - (tcam_ids.size() - 1);
+        id = (id < 0) ? 0 : ((id > MAX_TCAM_ID) ? MAX_TCAM_ID : id);
         tcam_ids[match] = id; }
     return tcam_ids.at(match);
 }

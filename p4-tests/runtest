@@ -278,7 +278,7 @@ fi
 
 name=$(basename $file .p4)
 
-# turn on compiler debug info, regardless
+# turn on compiler debug info and context json validation, regardless
 P4C_ARGS="$P4C_ARGS -g"
 
 p4_version=""

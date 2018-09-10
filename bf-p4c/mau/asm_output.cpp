@@ -2211,8 +2211,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         indent_t gw_indent = indent;
         if (!tbl->gateway_only())
             out << gw_indent++ << "gateway:" << std::endl;
-        auto gateway_name = tbl->gateway_name.isNullOrEmpty() ? tbl->name : tbl->gateway_name;
-        out << gw_indent << "name: " <<  gateway_name << std::endl;
+        out << gw_indent << "name: " <<  tbl->build_gateway_name() << std::endl;
         emit_ixbar(out, gw_indent, &tbl->resources->gateway_ixbar, nullptr, nullptr, &fmt, false);
         for (auto &use : Values(tbl->resources->memuse)) {
             if (use.type == Memories::Use::GATEWAY) {

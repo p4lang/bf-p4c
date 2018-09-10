@@ -159,8 +159,8 @@ void ActionTable::need_on_actionbus(RandomNumberGen rng, int lo, int hi, int siz
 int ActionTable::get_start_vpn() {
     // Based on the format width, the starting vpn is determined as follows (See
     // Section 6.2.8.4.3 in MAU MicroArchitecture Doc)
-    //    WIDTH     LOG2SIZE START_VPN 
-    // <= 128 bits  -  7       - 0 
+    //    WIDTH     LOG2SIZE START_VPN
+    // <= 128 bits  -  7       - 0
     //  = 256 bits  -  8       - 0
     //  = 512 bits  -  9       - 1
     //  = 1024 bits - 10       - 3
@@ -381,7 +381,7 @@ static void flow_selector_addr(REGS &regs, int from, int to) {
     //    regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
     //        .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_l_i = 1;
 
-    /* Include all selection address switchboxes needed when the action RAMs 
+    /* Include all selection address switchboxes needed when the action RAMs
      * reside on overflow rows */
     for (int row = from/4 - 1; row >= to/4; row--)
 	if (row != to/4 || (to % 4) < 2)
@@ -570,6 +570,8 @@ void ActionTable::gen_tbl_cfg(json::vector &out) const {
         gen_memory_resource_allocation_tbl_cfg("sram", layout);
     if (actions)
         actions->gen_tbl_cfg(tbl["actions"]);
+    // FIXME: what is the check for static entries?
+    tbl["static_entries"] = json::vector();
     tbl["how_referenced"] = indirect ? "indirect" : "direct";
     if (context_json)
         stage_tbl.merge(*context_json);

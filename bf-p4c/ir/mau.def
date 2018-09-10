@@ -248,6 +248,11 @@ class Table : BFN::Unit {
 #end
     bool uses_gateway() const { return !gateway_rows.empty(); }
     bool gateway_only() const { return match_key.empty() && actions.empty(); }
+    cstring build_gateway_name() const {
+        auto gName = gateway_name.isNullOrEmpty() ? name : gateway_name;
+        // Add '-gateway' suffix to table name if gateway_name is not unique
+        if (!gName.startsWith("cond")) gName = gName + "-gateway";
+        return gName; }
     int stage() const override {
         return logical_id < 0 ? -1 : logical_id / StageUse::MAX_LOGICAL_IDS; }
     gress_t thread() const override { return gress; }

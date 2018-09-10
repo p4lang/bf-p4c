@@ -127,8 +127,6 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
     //FIXME: Support multiple hash_dist's
     int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
     json::map &tbl = *base_tbl_cfg(out, "match_entry", size);
-    if (!tbl.count("preferred_match_type"))
-        tbl["preferred_match_type"] = "exact";
     const char *stage_tbl_type = "match_with_no_key";
     size = 1;
     if (auto act = this->get_action()) {
@@ -141,7 +139,6 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
     json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, stage_tbl_type, size);
     stage_tbl["memory_resource_allocation"] = nullptr;
     match_attributes["match_type"] = stage_tbl_type;
-    match_attributes["uses_dynamic_key_masks"] = false; //FIXME-JSON
     // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
     // to. Otherwise, set it to the default next table for this stage.
     stage_tbl["default_next_table"] = Stage::end_of_pipe();
@@ -158,7 +155,6 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
         idletime->gen_stage_tbl_cfg(stage_tbl);
     else if (options.match_compiler)
         stage_tbl["stage_idletime_table"] = nullptr;
-    tbl["performs_hash_action"] = !hash_dist.empty();
     add_all_reference_tables(tbl);
     //json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
     //json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
@@ -169,7 +165,6 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
     //        add_reference_table(meter_table_refs, m);
     //    add_reference_table(selection_table_refs, a->selector); }
     //add_reference_table(action_data_table_refs, action);
-    add_hash_functions(stage_tbl);
     gen_idletime_tbl_cfg(stage_tbl);
     if (context_json)
         stage_tbl.merge(*context_json);

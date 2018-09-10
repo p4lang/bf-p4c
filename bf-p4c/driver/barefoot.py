@@ -194,8 +194,7 @@ class BarefootBackend(BackendDriver):
         # Developer only options
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             if self.runVerifiers:
-                if opts.validate_output:
-                    self._commandsEnabled.append('verifier')
+                self._commandsEnabled.append('verifier')
                 # always validate the manifest if opts.validate_manifest or self.runVerifiers:
                 self.add_command_option('manifest-verifier', "{}/manifest.json".format(output_dir))
                 self._commandsEnabled.append('manifest-verifier')
@@ -361,6 +360,8 @@ class BarefootBackend(BackendDriver):
                 # self.updateCompilerFlags(os.path.join(pipe_dir, 'context.json'))
                 unique_table_offset += 1
                 if run_verifier:
+                    # Clear verifier options
+                    del self._commands['verifier'] [1:]
                     self.add_command_option('verifier', "{}/context.json".format(pipe_dir))
                     self.checkAndRunCmd('verifier')
 

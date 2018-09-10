@@ -459,7 +459,6 @@ void MeterTable::gen_tbl_cfg(json::vector &out) const {
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "meter", size);
     stage_tbl["color_memory_resource_allocation"] =
             gen_memory_resource_allocation_tbl_cfg("map_ram", color_maprams);
-    stage_tbl["meter_sweep_interval"] = sweep_interval;
     switch (type) {
     case STANDARD: tbl["meter_type"] = "standard"; break;
     case LPF: tbl["meter_type"] = "lpf"; break;
@@ -469,11 +468,11 @@ void MeterTable::gen_tbl_cfg(json::vector &out) const {
     case PACKETS: tbl["meter_granularity"] = "packets"; break;
     case BYTES: tbl["meter_granularity"] = "bytes"; break;
     default: tbl["meter_granularity"] = "packets"; break; }
-    tbl["enable_color_aware"] = color_aware;
     tbl["enable_color_aware_pfe"] = color_aware_per_flow_enable;
     tbl["enable_pfe"] = per_flow_enable;
     tbl["pfe_bit_position"] = per_flow_enable_bit();
     tbl["color_aware_pfe_address_type_bit_position"] = 0; //FIXME
+    tbl["reference_dictionary"] = json::map(); // To be removed in future
     stage_tbl["default_lower_huffman_bits_included"] = METER_LOWER_HUFFMAN_BITS;
     add_alu_index(stage_tbl, "meter_alu_index");
     if (context_json)
