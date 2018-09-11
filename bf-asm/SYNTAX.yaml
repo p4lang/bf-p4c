@@ -77,7 +77,7 @@ parser [<thread>]:
                     # modification of the counter
                 checksum <int>:
                     # modification of checksum unit <int>
-                    type: VERIFY | RESIDUAL | CLOT 
+                    type: VERIFY | RESIDUAL | CLOT
                     mask: <vector> # vector of byte ranges of input buffer
                     swap: <vector>
                     dest: <phv-location> | clot <tag> # write destination
@@ -537,7 +537,7 @@ stage <constant> <thread>:
           true : <string>
             # next table name when condition is true
           false : <string>
-            # next table name when condition is false 
+            # next table name when condition is false
         payload: <constant>
             # payload data to use if gateway is not disabled (run_table is false)
         match_address: <constant>
@@ -673,7 +673,7 @@ deparser <thread>:
         # optional explicit use/ordering of phvs for POV.  All phvs used for POV bits
         # in the dictionary will be added to the end of this, if not already present
     checksum <int>:
-        <phv-location> | clot <tag> : { swap: <constant> [, pov: <phv-location> ] } 
+        <phv-location> | clot <tag> : { swap: <constant> [, pov: <phv-location> ] }
         # checksum unit programming -- pov bits for jbay only
     <name>: <phv-location> [ ':' <pov-bit ] | <digest-params>
         # more generally, any deparser param that comes from the phv is
@@ -734,9 +734,6 @@ deparser <thread>:
     capture_tx_ts: <phv-location> [ ':' <pov-bit> ]
     coal: <phv-location> [ ':' <pov-bit> ]
     ecos: <phv-location> [ ':' <pov-bit> ]
-resources: <filename>
-    # Defines the name of the json file that has a description of the resources used by
-    # the program. This is directly placed in context.json for other tools (e.g., p4i).
 primitives: <filename>
     # Defines the name of the json file that has information on primitives used
     # within table actions. These are placed in the respective actions as

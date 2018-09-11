@@ -75,7 +75,7 @@ class BarefootBackend(BackendDriver):
         if top_src_dir:
             scripts_dir = os.path.join(top_src_dir, 'scripts')
             if os.path.isdir(scripts_dir):
-                self.add_command('verifier', os.path.join(scripts_dir, 'validate_context_json'))
+                self.add_command('verifier', os.path.join(scripts_dir, 'validate_output.sh'))
                 self.add_command('manifest-verifier', os.path.join(scripts_dir, 'validate_manifest'))
                 self.runVerifiers = True
 
@@ -100,9 +100,11 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("-s", dest="run_post_compiler",
                                     help="Only run assembler",
                                     action="store_true", default=False)
-        self._argGroup.add_argument("--archive",
-                                    help="Archive all outputs into a single tar.bz2 file",
-                                    action="store_true", default=False)
+        self._argGroup.add_argument("--archive", nargs='?',
+                                    help="Archive all outputs into a single tar.bz2 file.\n" + \
+                                    "Note: it can not be the argument before source file" + \
+                                    " without specifying the archive name!",
+                                    const="__default__", default=None)
         self._argGroup.add_argument("--bf-rt-schema", action="store",
                                     help="Generate and write BF-RT JSON schema  to the specified file")
         self._argGroup.add_argument("--backward-compatible",
@@ -200,15 +202,18 @@ class BarefootBackend(BackendDriver):
                 self._commandsEnabled.append('manifest-verifier')
 
         # if we need to generate an archive, should be the last command
-        if opts.archive:
+        if opts.archive is not None:
             self.add_command('archiver', 'tar')
             root_dir = os.path.dirname(output_dir)
             if root_dir == "": root_dir = "."
-            program_name = os.path.basename(basepath)
+            if opts.archive == "__default__":
+                program_name = os.path.basename(basepath)
+            else:
+                program_name = opts.archive
             program_dir = os.path.basename(output_dir)
             if program_dir != ".":
                 self.add_command_option('archiver',
-                                        "-cf {}/{}.tar.bz2 -j -C {} {}".format(root_dir,
+                                        "-jcf {}/{}.tar.bz2 --exclude=\"*.bin\" -C {} {}".format(root_dir,
                                         program_name, root_dir, program_dir))
                 self._commandsEnabled.append('archiver')
             else:
@@ -226,7 +231,10 @@ class BarefootBackend(BackendDriver):
 
         if self._dry_run and not os.path.isfile(manifest_filename):
             print 'parse manifest:', manifest_filename
-            self._pipes = { 'pipe': '{}/pipe'.format(self._output_directory)}
+            self._pipes = [ { 'context': '{}/pipe/context.json'.format(self._output_directory),
+                              'resources': '{}/pipe/resources.json'.format(self._output_directory),
+                              'pipe_dir': '{}/pipe'.format(self._output_directory)
+            } ]
             return 0
 
         with open(manifest_filename, "rb") as json_file:
@@ -241,7 +249,7 @@ class BarefootBackend(BackendDriver):
                     "' does not appear to be valid manifest JSON.\n"
                 sys.exit(1)
 
-        self._pipes = {}
+        self._pipes = []
         schema_version = self._manifest['schema_version']
         pipe_name_label = 'pipe_name'
         if schema_version == "1.0.0": pipe_name_label = 'pipe'
@@ -252,13 +260,25 @@ class BarefootBackend(BackendDriver):
                 "{} currently supports a single program".format(self._targetName.title())
             sys.exit(1)
         for prog in programs:
+            p4_version = prog['p4_version']
             if (type(prog) is not dict or "contexts" not in prog):
                 sys.stderr.write("ERROR: Input file '" + manifest_filename + \
                                  "' does not contain valid program contexts.\n")
                 sys.exit(1)
             for ctxt in prog["contexts"]:
-                dirname = os.path.join(self._output_directory, os.path.dirname(ctxt['path']))
-                self._pipes[ctxt['pipe_name']] = dirname
+                self._pipes.append({})
+                pipe_id = ctxt['pipe']
+                self._pipes[pipe_id]['context'] = os.path.join(self._output_directory,
+                                                               ctxt['path'])
+                if p4_version == 'p4-14':
+                    self._pipes[pipe_id]['pipe_dir'] = self._output_directory
+                else:
+                    self._pipes[pipe_id]['pipe_dir'] = os.path.join(self._output_directory,
+                                                                    ctxt['pipe_name'])
+            for res in prog['p4i']:
+                pipe_id = res['pipe']
+                res_file = os.path.join(self._output_directory, res['path'])
+                self._pipes[pipe_id]['resources'] = res_file
 
     def updateCompilerFlags(self, jsonFile):
         """
@@ -352,18 +372,20 @@ class BarefootBackend(BackendDriver):
             # that were added on the command line (-Xassembler)
             self._saved_assembler_params = list(self._commands['assembler'])
             unique_table_offset = 0
-            for pipe_dir in self._pipes.values():
-                self.runAssembler(pipe_dir, unique_table_offset)
+            for pipe in self._pipes:
+                self.runAssembler(pipe['pipe_dir'], unique_table_offset)
                 # Although we the context.json schema has an optional compile_command and
                 # we could add it here, it is a potential performance penalty to re-write
                 # a large context.json file. So we don't!
                 # self.updateCompilerFlags(os.path.join(pipe_dir, 'context.json'))
-                unique_table_offset += 1
                 if run_verifier:
                     # Clear verifier options
                     del self._commands['verifier'] [1:]
-                    self.add_command_option('verifier', "{}/context.json".format(pipe_dir))
+                    self.add_command_option('verifier', "-c {}".format(pipe['context']))
+                    if pipe.get('resources', False):
+                        self.add_command_option('verifier', "-r {}".format(pipe['resources']))
                     self.checkAndRunCmd('verifier')
+                unique_table_offset += 1
 
 
         # run the archiver if one has been set

@@ -54,10 +54,8 @@ static void log_dump(const IR::Node *node, const char *head) {
 // file and a json file for resources. It is unlikely that the ASM output will generate
 // an exception, but if it does, it should be caught by main (in p4c-barefoot.cpp).  If
 // it is called with a failed pass, we should still apply the BFN::Visualization pass
-// to collect the table resource usages, but we only output the resources node of context.json.
+// to collect the table resource usages, but we only output the resources file.
 //
-// \TODO: The amount of context.json info should be revisited, as we may need additional
-// information for visualization (including the compiler logs).
 class OutputAsm : public PassManager {
  private:
     const BFN_Options &_options;
@@ -95,53 +93,17 @@ class OutputAsm : public PassManager {
             prim << std::endl << std::flush;
         }
         if (_options.debugInfo) {  // generate resources info only if invoked with -g
-            if (_success) {
-                // (amresh): Disabling resources node temporarily as Glass
-                // refpoint update does not have this in schema. Re-enable once
-                // we separate resources node out of schema.
-                // Output resources json file
-                // cstring resourcesFile = dir + "/" + _options.programName + ".res.json";
-                // LOG2("ASM generation for resources: " << resourcesFile);
-                // ctxt_stream << "resources: \"" <<
-                //     resourcesFile << "\"" << std::endl << std::flush;
-                // std::ofstream res(resourcesFile);
-                // res << _visualization << std::endl << std::flush;
+            // Output resources json file
+            cstring resourcesFile = dir + "/" + _options.programName + ".res.json";
+            LOG2("ASM generation for resources: " << resourcesFile);
+            std::ofstream res(resourcesFile);
+            res << _visualization << std::endl << std::flush;
 
-            } else {
-                // The compilation was unsuccessful, but we still need to put
-                // out debug info into context.json. However, the assembler is
-                // not going to be invoked, so we need to output all the
-                // necessary .json here.  Also, we should not throw any
-                // exceptions from this code, as we should already know what
-                // failed, so we catch all exceptions and ignore them.
-                try {
-                    Util::JsonObject ctxtJson;
-                    const time_t now = time(NULL);
-                    char build_date[1024];
-                    strftime(build_date, 1024, "%c", localtime(&now));
-
-                    LOG2("ASM: context.json generation for failed compile: "
-                            << dir << "context.json");
-                    ctxtJson.emplace("build_date", new Util::JsonValue(build_date));
-                    ctxtJson.emplace("schema_version", new Util::JsonValue("1.3.9"));
-                    ctxtJson.emplace("compiler_version", new Util::JsonValue(BF_P4C_VERSION));
-                    ctxtJson.emplace("program_name", new Util::JsonValue(_options.programName));
-                    ctxtJson.emplace("run_id", new Util::JsonValue(RunId::getId()));
-                    ctxtJson.emplace("learn_quanta", new Util::JsonArray());
-                    ctxtJson.emplace("dynamic_hash_calculations", new Util::JsonArray());
-                    ctxtJson.emplace("parser", new Util::JsonObject());
-                    ctxtJson.emplace("phv_allocation", new Util::JsonArray());
-                    ctxtJson.emplace("tables", new Util::JsonArray());
-                    ctxtJson.emplace("configuration_cache", new Util::JsonArray());
-                    ctxtJson.emplace("resources", _visualization.getResourcesNode());
-
-                    std::ofstream res(dir + "context.json");
-                    ctxtJson.serialize(res);
-                    res << std::endl << std::flush;
-                } catch (...) {}  // Do nothing. If we failed to produce context.json, too bad!
-            }
+            // \TODO: how much info do we need from context.json in
+            // the case of a failed compilation?
         }
     }
+
 
  public:
     explicit OutputAsm(const BFN::Backend &b, const BFN_Options& o,
@@ -245,7 +207,7 @@ int main(int ac, char **av) {
     log_dump(program, "After midend");
 
     // create the archive manifest
-    Logging::Manifest manifest(options);
+    Logging::Manifest &manifest = Logging::Manifest::getManifest();
 
     // generate graphs
     // In principle this should not fail, so we call it before the backend
@@ -283,6 +245,8 @@ int main(int ac, char **av) {
         if (options.langVersion == BFN_Options::FrontendVersion::P4_16)
             prefix = pipe->name + "/";
         manifest.addContext(pipe->id, pipe->name, prefix + "context.json");
+        if (options.debugInfo)
+            manifest.addResources(pipe->id, prefix + options.programName + ".res.json");
     }
     // generate the archive manifest
     manifest.serialize();

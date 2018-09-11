@@ -1,13 +1,17 @@
 #include <libgen.h>
+#include <time.h>
+
 #include <algorithm>
 #include <cstdio>
 #include <fstream>
 #include <set>
 #include <string>
 
+#include "common/run_id.h"
 #include "ir/gress.h"
 #include "mau/resource.h"
 #include "parde/p4i/gen_parser_json.h"
+#include "version.h"
 #include "visualization.h"
 
 namespace BFN {
@@ -681,8 +685,21 @@ void Visualization::gen_vliw(unsigned int stageNo, Util::JsonObject *stage) {
 }
 
 std::ostream &operator<<(std::ostream &out, const Visualization &vis) {
+    auto res_json = new Util::JsonObject();
+    res_json->emplace("schema_version", new Util::JsonValue("1.0.0"));
+    res_json->emplace("program_name",
+                      new Util::JsonValue(BFNContext::get().options().programName + ".p4"));
+    res_json->emplace("run_id", new Util::JsonValue(RunId::getId()));
+    const time_t now = time(NULL);
+    char build_date[1024];
+    strftime(build_date, 1024, "%c", localtime(&now));
+    res_json->emplace("build_date", new Util::JsonValue(build_date));
+    res_json->emplace("compiler_version", new Util::JsonValue(BF_P4C_VERSION));
     if (vis._resourcesNode)
-        vis._resourcesNode->serialize(out);
+        res_json->emplace("resources", vis._resourcesNode);
+    else
+        res_json->emplace("resources", new Util::JsonObject());
+    res_json->serialize(out);
     return out;
 }
 

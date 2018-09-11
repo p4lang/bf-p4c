@@ -7,6 +7,7 @@ Schema versions:
 1.0.0 - initial schema
 1.1.0 - add pipe_name to contexts node
 1.2.0 - add command line arguments
+1.3.0 - add resources files
 """
 
 import jsl
@@ -14,7 +15,7 @@ import json
 import inspect
 
 major_version = 1
-minor_version = 2
+minor_version = 3
 patch_version = 0
 
 def get_schema_version():
@@ -55,6 +56,13 @@ class CompiledProgram(jsl.Document):
                 "path": jsl.StringField(required=True, description="Path to the context.json file")
             })
     )
+    p4i = jsl.ArrayField(required=False, description="Array of per pipe resources.json files",
+                              items = jsl.DictField(required=True,
+            properties = {
+                "pipe": jsl.IntField(required=True, description="Logical id of the control flow"),
+                "path": jsl.StringField(required=True, description="Path to the resources.json file")
+            })
+    )
     # not needed for visualization, but needed if we go with a zip file
     binaries =  jsl.ArrayField(required=False,
                                description="Array of per pipe binary files (tofino.bin)",
@@ -64,7 +72,7 @@ class CompiledProgram(jsl.Document):
                 "path": jsl.StringField(required=True, description="Path to the binary file")
             })
     )
-    graphs =  jsl.ArrayField(required=True, description="List of graph files",
+    graphs =  jsl.ArrayField(required=False, description="List of graph files",
                              items = jsl.DictField(required=False,
             properties = {
                 "graph_type": jsl.StringField(required=True,
@@ -77,7 +85,7 @@ class CompiledProgram(jsl.Document):
                                         description="Path to the graph file")
             })
     )
-    logs =  jsl.ArrayField(required=True, description="List of log files",
+    logs =  jsl.ArrayField(required=False, description="List of log files",
                            items = jsl.DictField(required=False,
             properties = {
                 "log_type": jsl.StringField(required=True, description="Type of log",

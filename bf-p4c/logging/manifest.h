@@ -27,23 +27,33 @@ class Manifest : public Inspector {
  private:
     /// map pipe-id to <pipe name, context path>
     std::map<int, std::pair<cstring, cstring> > _contexts;
+    std::map<int, cstring>     _resources;
     std::map<cstring, cstring> _graphs;
     std::map<cstring, cstring> _logs;
     const BFN_Options &        _options;
     std::ofstream              _manifestStream;
 
  public:
-    explicit Manifest(const BFN_Options &o) : _options(o) {
-        auto path = Util::PathName(o.outputDir).join("manifest.json");
+    /// Return the singleton object
+    static Manifest &getManifest() {
+        static Manifest instance;
+        return instance;
+    }
+
+ private:
+    Manifest() : _options(BFNContext::get().options()) {
+        auto path = Util::PathName(_options.outputDir).join("manifest.json");
         _manifestStream.open(path.toString().c_str(), std::ofstream::out);
         if (!_manifestStream)
             std::cerr << "Failed to open manifest file " << path.toString() << std::endl;
     }
+
     ~Manifest() {
         _manifestStream.flush();
         _manifestStream.close();
     }
 
+ public:
     void postorder(const IR::P4Parser *parser) override {
         if (parser && parser->name) {
             auto path = Util::PathName("graphs").join(parser->name + ".dot");
@@ -71,7 +81,7 @@ class Manifest : public Inspector {
 
         writer.StartObject();  // start BFNCompilerArchive
         writer.Key("schema_version");
-        writer.String("1.2.0");
+        writer.String("1.3.0");
         writer.Key("target");
         if (_options.target)
             writer.String(_options.target.c_str());
@@ -122,6 +132,18 @@ class Manifest : public Inspector {
         writer.StartArray();
         writer.EndArray();  // Should be written by assembler or driver on successful compile
 
+        writer.Key("p4i");
+        writer.StartArray();
+        for (auto r : _resources) {
+            writer.StartObject();
+            writer.Key("pipe");
+            writer.Int(r.first);
+            writer.Key("path");
+            writer.String(r.second.c_str());
+            writer.EndObject();
+        }
+        writer.EndArray();
+
         writer.Key("graphs");
         writer.StartArray();
         for (auto c : _graphs) {
@@ -155,11 +177,15 @@ class Manifest : public Inspector {
         writer.EndObject();  // end BFNCompilerArchive
 
         _manifestStream << sb.GetString();
+        _manifestStream.flush();
+        _manifestStream.close();
     }
 
-    // add context
     void addContext(int pipe, cstring pipe_name, cstring path) {
         _contexts.emplace(pipe, std::make_pair(pipe_name, path));
+    }
+    void addResources(int pipe, cstring path) {
+        _resources.emplace(pipe, path);
     }
     void addGraph(cstring graph_type, cstring path) {
         _graphs.emplace(path, graph_type);
