@@ -250,6 +250,13 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
                                   (act.code%4) * TARGET::ACTION_INSTRUCTION_MAP_WIDTH,
                                   TARGET::ACTION_INSTRUCTION_MAP_WIDTH);
             } }
+
+    /**
+     * This register is now the responsiblity of the driver for all tables, as the driver
+     * will initialize this value from the initial default action.  If we ever want to
+     * move some of this responsibility back to the compiler, then this code can be used
+     * for this, but it is currently incorrect for tables that have been split across
+     * multiple stages for non noop default actions.
     if (this->to<HashActionTable>()) {
         merge.mau_action_instruction_adr_miss_value[logical_id] = 0;
     } else if (!default_action.empty()) {
@@ -260,6 +267,7 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
         auto *act = actions->action(result->default_action);
         merge.mau_action_instruction_adr_miss_value[logical_id] =
             ACTION_INSTRUCTION_ADR_ENABLE + act->addr; }
+    */
 
     /*------------------------
      * Next Table
