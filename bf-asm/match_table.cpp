@@ -287,6 +287,7 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
     Table *next = result->hit_next.size() > 0 ? result : this;
     int next_field_size = next->get_format_field_size("next");
     int action_field_size = next->get_format_field_size("action");
+    unsigned next_mask = 0;
     if (next->hit_next.empty()) {
         /* nothing to do... */
     } else if (next->hit_next.size() == 1) {
@@ -294,17 +295,24 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
         // Scenario 1 : Action bits present < 8 actions
         // Scenario 2 : Action bits present > 8 actions
         // Scenario 3 : Action bits absent = 1 action
+        // Scenario 4 : More than 8 possible next tables
         setup_next_table_map(regs, next);
+        next_mask = 0;
     } else if (((1U << next_field_size) <= NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
             && (next_field_size > 0)) {
         // Only setup next table map if there are < 8 next tables when 'next'
         // field is present in format.
         setup_next_table_map(regs, next);
+        next_mask = (1U << next_field_size) - 1;
     } else if ((1U << action_field_size) <= NEXT_TABLE_SUCCESSOR_TABLE_DEPTH) {
         // Only setup next table map if there are < 8 next tables when 'action'
         // field is present or absent in format. If no 'action' field is present
         // in format index 0 is used to setup the default next table
-        setup_next_table_map(regs, next); }
+        setup_next_table_map(regs, next);
+        next_mask = (1U << action_field_size) - 1;
+    } else {
+        next_mask = (1 << next_field_size) - 1;
+    }
 
     if (next->miss_next || next->miss_next == "END") {
         merge.next_table_format_data[logical_id].match_next_table_adr_miss_value =
@@ -320,18 +328,10 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
     // bits in the match overhead are being used to determine next table address
     // either directly or via indexing into the indirection table.  Sec 6.4.3.3
     // on Next Table Processing in MAU uArch.
-    if (next->hit_next.size() > 1) {
-        unsigned adr_mask = (1U << ceil_log2(next->hit_next.size())) - 1;
-        // Generate mask on no. of bits required to denote the next table bits
-        if (next_field_size > 0)
-            adr_mask = (1U << next_field_size) - 1;
-        default_next_table_mask = adr_mask;
-        merge.next_table_format_data[logical_id].match_next_table_adr_mask = adr_mask;
-    } else if (next->hit_next.size() == 1) {
-        merge.next_table_format_data[logical_id].match_next_table_adr_mask =
-            default_next_table_mask = 0;
-        merge.next_table_format_data[logical_id].match_next_table_adr_default =
-            next->hit_next[0] ? next->hit_next[0]->table_id() : Stage::end_of_pipe();
+    // The diagram is incorrect, as the default actually comes before the mask
+    if (next->hit_next.size() > 0) {
+        default_next_table_mask = next_mask;
+        merge.next_table_format_data[logical_id].match_next_table_adr_mask = next_mask;
     } else {
         merge.next_table_format_data[logical_id].match_next_table_adr_mask =
         merge.next_table_format_data[logical_id].match_next_table_adr_default = Stage::end_of_pipe(); }
