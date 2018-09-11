@@ -77,6 +77,11 @@ class TablePlacement::SetupInfo : public Inspector {
         info.tables[info.uid] = 1;
         for (auto &n : tbl->next)
             info.tables |= self.seqInfo.at(n.second).tables; }
+    bool preorder(const IR::MAU::BackendAttached *ba) override {
+        visitAgain();
+        BUG_CHECK(getParent<IR::MAU::Table>(), "parent of BackendAttached is not Table");
+        self.attached_to[ba->attached].insert(getParent<IR::MAU::Table>());
+        return false; }
     bool preorder(const IR::MAU::TableSeq *seq) override {
         BUG_CHECK(!self.seqInfo.count(seq), "TableSeq in both ingress and egress?");
         auto &info = self.seqInfo[seq];
@@ -1093,6 +1098,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
          TableTree("ghost", pipe->ghost_thread) );
     tblInfo.clear();
     seqInfo.clear();
+    attached_to.clear();
     ordered_set<const GroupPlace *>     work;
     const Placed *placed = nullptr;
     /* all the state for a partial table placement is stored in the work
@@ -1106,6 +1112,11 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
     if (pipe->ghost_thread && pipe->ghost_thread->tables.size() > 0) {
         pipe->ghost_thread->apply(SetupInfo(*this));
         new GroupPlace(*this, work, {}, pipe->ghost_thread); }
+    for (auto &att : attached_to) {
+        if (att.second.size() == 1) continue;
+        if (att.first->direct)
+            error("direct %s attached to multiple match tables", att.first); }
+
     ordered_set<const IR::MAU::Table *> partly_placed;
     while (!work.empty()) {
         LOG3("stage " << (placed ? placed->stage : 0) << ", work: " << work <<

@@ -44,6 +44,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     std::map<const IR::MAU::Table *, struct TableInfo> tblInfo;
     struct TableSeqInfo;
     std::map<const IR::MAU::TableSeq *, struct TableSeqInfo> seqInfo;
+    std::map<const IR::MAU::AttachedMemory *, std::set<const IR::MAU::Table *>> attached_to;
     class SetupInfo;
     const DependencyGraph* deps;
     const TablesMutuallyExclusive &mutex;
