@@ -27,7 +27,8 @@ class Manifest : public Inspector {
  private:
     /// map pipe-id to <pipe name, context path>
     std::map<int, std::pair<cstring, cstring> > _contexts;
-    std::map<int, cstring>     _resources;
+    // map path to <pipe_id, type_of_resource>
+    std::map<cstring, std::pair<int, cstring> > _resources;
     std::map<cstring, cstring> _graphs;
     std::map<cstring, cstring> _logs;
     const BFN_Options &        _options;
@@ -81,7 +82,7 @@ class Manifest : public Inspector {
 
         writer.StartObject();  // start BFNCompilerArchive
         writer.Key("schema_version");
-        writer.String("1.3.0");
+        writer.String("1.3.1");
         writer.Key("target");
         if (_options.target)
             writer.String(_options.target.c_str());
@@ -136,10 +137,12 @@ class Manifest : public Inspector {
         writer.StartArray();
         for (auto r : _resources) {
             writer.StartObject();
-            writer.Key("pipe");
-            writer.Int(r.first);
             writer.Key("path");
-            writer.String(r.second.c_str());
+            writer.String(r.first.c_str());
+            writer.Key("pipe");
+            writer.Int(r.second.first);
+            writer.Key("type");
+            writer.String(r.second.second.c_str());
             writer.EndObject();
         }
         writer.EndArray();
@@ -184,8 +187,8 @@ class Manifest : public Inspector {
     void addContext(int pipe, cstring pipe_name, cstring path) {
         _contexts.emplace(pipe, std::make_pair(pipe_name, path));
     }
-    void addResources(int pipe, cstring path) {
-        _resources.emplace(pipe, path);
+    void addResources(int pipe, cstring path, cstring type = "resources") {
+        _resources.emplace(path, std::make_pair(pipe, type));
     }
     void addGraph(cstring graph_type, cstring path) {
         _graphs.emplace(path, graph_type);

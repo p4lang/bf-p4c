@@ -8,6 +8,7 @@ Schema versions:
 1.1.0 - add pipe_name to contexts node
 1.2.0 - add command line arguments
 1.3.0 - add resources files
+1.3.1 - add type to resource files
 """
 
 import jsl
@@ -16,7 +17,7 @@ import inspect
 
 major_version = 1
 minor_version = 3
-patch_version = 0
+patch_version = 1
 
 def get_schema_version():
     return "%s.%s.%s" % (str(major_version), str(minor_version), str(patch_version))
@@ -60,7 +61,9 @@ class CompiledProgram(jsl.Document):
                               items = jsl.DictField(required=True,
             properties = {
                 "pipe": jsl.IntField(required=True, description="Logical id of the control flow"),
-                "path": jsl.StringField(required=True, description="Path to the resources.json file")
+                "path": jsl.StringField(required=True, description="Path to the resources.json file"),
+                "type": jsl.StringField(required=True, description="Type of resources",
+                                        enum=['resources','phv','table'])
             })
     )
     # not needed for visualization, but needed if we go with a zip file
