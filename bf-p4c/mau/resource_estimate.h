@@ -18,7 +18,7 @@ struct StageUseEstimate {
     static constexpr int MAX_POOL_RAMLINES = MAX_MOD << MAX_MOD_SHIFT;
     static constexpr int MOD_INPUT_BITS = 10;
 
-    typedef ordered_set<const IR::MAU::AttachedMemory *> StageAttached;
+    typedef std::map<const IR::MAU::AttachedMemory *, int> attached_entries_t;
     int logical_ids = 0;
     int srams = 0;
     int tcams = 0;
@@ -30,7 +30,6 @@ struct StageUseEstimate {
 
     safe_vector<LayoutOption> layout_options;
     safe_vector<ActionFormat::Use> action_formats;
-    StageAttached shared_attached;
     size_t preferred_index;
     StageUseEstimate() {}
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
@@ -41,8 +40,8 @@ struct StageUseEstimate {
         exact_ixbar_bytes += a.exact_ixbar_bytes;
         ternary_ixbar_groups += a.ternary_ixbar_groups;
         return *this; }
-    StageUseEstimate(const IR::MAU::Table *, int &, const LayoutChoices *lc, bool prev_placed,
-                     StageAttached sad = StageAttached(), bool table_placement = false);
+    StageUseEstimate(const IR::MAU::Table *, int &, attached_entries_t &, const LayoutChoices *lc,
+                     bool prev_placed, bool table_placement = false);
 
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }
@@ -63,16 +62,17 @@ struct StageUseEstimate {
     void clear() {
         logical_ids = 0; srams = 0; tcams = 0; maprams = 0;
         exact_ixbar_bytes = 0; ternary_ixbar_groups = 0;
-        shared_attached.clear();
     }
-    void options_to_ways(const IR::MAU::Table *tbl, int &entries);
-    void options_to_rams(const IR::MAU::Table *tbl, bool table_placement);
+    void options_to_ways(const IR::MAU::Table *tbl, int entries);
+    void options_to_rams(const IR::MAU::Table *tbl, const attached_entries_t &att_entries,
+                         bool table_placement);
     void select_best_option(const IR::MAU::Table *tbl);
-    void options_to_ternary_entries(const IR::MAU::Table *tbl, int &entries);
+    void options_to_ternary_entries(const IR::MAU::Table *tbl, int entries);
     void select_best_option_ternary();
-    void options_to_atcam_entries(const IR::MAU::Table *tbl, int &entries);
-    void options_to_dleft_entries(const IR::MAU::Table *tbl, int &entries);
-    void calculate_attached_rams(const IR::MAU::Table *tbl, LayoutOption *lo, bool table_placement);
+    void options_to_atcam_entries(const IR::MAU::Table *tbl, int entries);
+    void options_to_dleft_entries(const IR::MAU::Table *tbl, int entries);
+    void calculate_attached_rams(const IR::MAU::Table *tbl, const attached_entries_t &att_entries,
+                                 LayoutOption *lo, bool table_placement);
     void fill_estimate_from_option(int &entries);
     const LayoutOption *preferred() const {
     if (layout_options.empty())
@@ -88,14 +88,17 @@ struct StageUseEstimate {
     }
 
     void determine_initial_layout_option(const IR::MAU::Table *tbl, int &entries,
-                                         bool table_placement);
-    bool adjust_choices(const IR::MAU::Table *tbl, int &entries);
+                                         attached_entries_t &, bool table_placement);
+    bool adjust_choices(const IR::MAU::Table *tbl, int &entries, attached_entries_t &);
 
-    bool calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left, int &entries);
+    bool calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left,
+                                      int &entries, attached_entries_t &);
     void calculate_for_leftover_tcams(const IR::MAU::Table *tbl, int srams_left, int tcams_left,
-                                      int &entries);
-    void calculate_for_leftover_atcams(const IR::MAU::Table *tbl, int srams_left, int &entries);
-    void known_srams_needed(const IR::MAU::Table *tbl, LayoutOption *lo);
+                                      int &entries, attached_entries_t &);
+    void calculate_for_leftover_atcams(const IR::MAU::Table *tbl, int srams_left,
+                                       int &entries, attached_entries_t &);
+    void known_srams_needed(const IR::MAU::Table *tbl, const attached_entries_t &,
+                            LayoutOption *lo);
     void unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int srams_left);
     void unknown_tcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int tcams_left,
                               int srams_left);

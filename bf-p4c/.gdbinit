@@ -494,6 +494,34 @@ class SlicePrinter(object):
             name = str(field['name']['str'])
         return name + '(' + str(self.val['lo']) + ".." + str(self.val['hi']) + ')'
 
+class UniqueIdPrinter(object):
+    "Print a UniqueId object"
+    speciality = [ "", "$stcam", "$dleft" ]
+    a_id_type = [ "", "tind", "idletime", "stats", "meter", "selector", "salu", "action_data" ]
+    def __init__(self, val):
+        self.val = val
+    def to_string(self):
+        rv = self.val['name']['str'].string()
+        if self.val['speciality'] >= 0 and self.val['speciality'] < len(self.speciality):
+            rv += self.speciality[self.val['speciality']]
+        else:
+            rv += "$spec<" + str(self.val['speciality']) + ">";
+        if self.val['logical_table'] != -1:
+            rv += "$lt" + str(self.val['logical_table'])
+        if self.val['stage_table'] != -1:
+            rv += "$st" + str(self.val['stage_table'])
+        if self.val['is_gw'] != 0:
+            rv += "$gw"
+        a_id = self.val['a_id']
+        if a_id['type'] != 0:
+            if a_id['type'] > 0 and a_id['type'] < len(self.a_id_type):
+                rv += "$" + self.a_id_type[a_id['type']]
+            else:
+                rv += "$a<" + str(a_id['type']) + ">"
+            if a_id['name']['str']:
+                rv += "." + a_id['name']['str'].string()
+        return rv
+
 def find_pp(val):
     if str(val.type.tag).startswith('ordered_map<'):
         return ordered_map_Printer(val)
@@ -523,6 +551,8 @@ def find_pp(val):
         return PHVContainerPrinter(val)
     if val.type.tag == 'Slice':
         return SlicePrinter(val)
+    if val.type.tag == 'UniqueId':
+        return UniqueIdPrinter(val)
     return None
 
 try:

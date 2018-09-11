@@ -161,7 +161,10 @@ struct TablePlacement::Placed {
     const GroupPlace            *group = 0;  // work group chosen from
     cstring                     name;
     int                         entries = 0;
+    attached_entries_t          attached_entries;
     bitvec                      placed;  // fully placed tables after this placement
+    bitvec                      match_placed;  // tables where the match table is fully placed,
+                                               // but indirect attached tables may not be
 
     /// True if the table needs to be split across multiple stages, because it
     /// can't fit within a single stage (eg. not enough entries in the stage).
@@ -185,6 +188,8 @@ struct TablePlacement::Placed {
     // test if this table is placed
     bool is_placed(const IR::MAU::Table *tbl) const {
         return placed[self.tblInfo.at(tbl).uid]; }
+    bool is_match_placed(const IR::MAU::Table *tbl) const {
+        return match_placed[self.tblInfo.at(tbl).uid]; }
     // test if this table or seq and all its control dependent tables are placed
     bool is_fully_placed(const IR::MAU::Table *tbl) const {
         return placed.contains(self.tblInfo.at(tbl).tables); }
@@ -214,7 +219,8 @@ struct TablePlacement::Placed {
 
     Placed(const Placed &p)
         : self(p.self), id(uid_counter++), prev(p.prev), group(p.group), name(p.name),
-          entries(p.entries), placed(p.placed), need_more(p.need_more),
+          entries(p.entries), attached_entries(p.attached_entries), placed(p.placed),
+          match_placed(p.match_placed), need_more(p.need_more),
           gw_result_tag(p.gw_result_tag), table(p.table), gw(p.gw), stage(p.stage),
           logical_id(p.logical_id), initial_stage_split(p.initial_stage_split),
           stage_split(p.stage_split), use(p.use), resources(p.resources)
@@ -241,18 +247,11 @@ void TablePlacement::GroupPlace::finish_if_placed(
 }
 
 static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl) {
-    int                 stage;
     StageUseEstimate    rv;
     if (pl) {
-        stage = pl->stage;
-        for (; pl && pl->stage == stage; pl = pl->prev) {
-            rv += pl->use;
-            for (auto back_at : pl->table->attached) {
-                auto at = back_at->attached;
-                rv.shared_attached.insert(at);
-            }
-        }
-    }
+        int stage = pl->stage;
+        for (; pl && pl->stage == stage; pl = pl->prev)
+            rv += pl->use; }
     return rv;
 }
 
@@ -338,10 +337,9 @@ bool TablePlacement::Placed::gateway_merge(ordered_set<const IR::MAU::Table *> &
  * potential layouts if the allocation can not fit within the pack format.
  */
 bool TablePlacement::pick_layout_option(TablePlacement::Placed *next,
-        const TablePlacement::Placed *done, TableResourceAlloc *resources,
-        StageUseEstimate::StageAttached &shared_attached) {
+        const TablePlacement::Placed *done, TableResourceAlloc *resources) {
     bool table_format = true;
-    next->use = StageUseEstimate(next->table, next->entries, &lc, false, shared_attached);
+    next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc, false);
     // FIXME: This is not the appropriate way to check if a table is a single gateway
     do {
         bool ixbar_fit = try_alloc_ixbar(next, done, resources);
@@ -352,7 +350,8 @@ bool TablePlacement::pick_layout_option(TablePlacement::Placed *next,
         }
 
         if (!table_format) {
-            bool adjust_possible = next->use.adjust_choices(next->table, next->entries);
+            bool adjust_possible = next->use.adjust_choices(next->table, next->entries,
+                                                            next->attached_entries);
             if (!adjust_possible)
                 return false;
         }
@@ -369,15 +368,16 @@ bool TablePlacement::shrink_estimate(Placed *next, const Placed *done,
         return false;
     }
 
-
     if (t->layout.atcam) {
-        next->use.calculate_for_leftover_atcams(t, srams_left, next->entries);
+        next->use.calculate_for_leftover_atcams(t, srams_left, next->entries,
+                                                next->attached_entries);
     } else if (!t->layout.ternary) {
-        if (!next->use.calculate_for_leftover_srams(t, srams_left, next->entries))
+        if (!next->use.calculate_for_leftover_srams(t, srams_left, next->entries,
+                                                    next->attached_entries))
             return false;
     } else {
-        next->use.calculate_for_leftover_tcams(t, tcams_left, srams_left, next->entries);
-    }
+        next->use.calculate_for_leftover_tcams(t, tcams_left, srams_left, next->entries,
+                                               next->attached_entries); }
 
     if (next->entries < min_entries) {
         ERROR("Couldn't place mininum entries within a table");
@@ -613,6 +613,15 @@ static void coord_action_data_xbar(const TablePlacement::Placed *curr,
     }
 }
 
+/// Check an indirect attached table to see if it can be duplicated across stages, or if there
+/// must be only a single copy of (each element of) the table.  This does not consider
+/// whether it is a good idea to duplicate the table (not a good idea for large tables and
+/// pointless if it won't fit in a single stage anyways).
+bool TablePlacement::can_duplicate(const IR::MAU::AttachedMemory *att) {
+    BUG_CHECK(!att->direct, "Not an indirect attached table");
+    return att->is<IR::MAU::Counter>() || att->is<IR::MAU::ActionData>() ||
+           att->is<IR::MAU::Selector>();
+}
 
 bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
         int &set_entries, int &furthest_stage) {
@@ -651,6 +660,17 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
             }
         }
     }
+    for (auto *ba : rv->table->attached) {
+        if (ba->attached->direct) continue;
+        rv->attached_entries[ba->attached] = ba->attached->size;
+        if (can_duplicate(ba->attached)) continue;
+        for (auto *att_to : attached_to.at(ba->attached)) {
+            if (att_to == rv->table) continue;
+            // If shared with another table that is not placed yet, need to
+            // defer the placement of this attached table
+            if (!done || !done->is_match_placed(att_to)) {
+                rv->attached_entries[ba->attached] = 0;
+                break; } } }
 
     int prev_stage_tables = 0;
     for (auto *p = done; p; p = p->prev) {
@@ -659,6 +679,9 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
                 BUG(" - can't place %s as its already done");
                 return false; }
             set_entries -= p->entries;
+            for (auto &ate : p->attached_entries)
+                if (!ate.first->direct && !can_duplicate(ate.first))
+                    rv->attached_entries[ate.first] -= ate.second;
             prev_stage_tables++;
             if (p->stage == rv->stage) {
                 LOG2("  Cannot place multiple sections of an individual table in the same stage");
@@ -684,6 +707,8 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
             }
         }
     }
+    if (set_entries < 0)
+        set_entries = 0;
 
     auto stage_pragma = t->get_provided_stage();
     if (stage_pragma >= 0) {
@@ -698,6 +723,9 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
         rv->initial_stage_split = prev_stage_tables;
         rv->stage_split = prev_stage_tables;
     }
+    for (auto *ba : rv->table->attached)
+        if (ba->attached->direct)
+            rv->attached_entries[ba->attached] = set_entries;
 
     return true;
 }
@@ -745,7 +773,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     if (!initial_stage_and_entries(rv, done, set_entries, furthest_stage)) {
         return nullptr;
     }
-
+    attached_entries_t set_attached_entries = rv->attached_entries;
 
     LOG3("  Initial stage is " << rv->stage);
 
@@ -764,8 +792,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     min_placed->stage = rv->stage;
     min_placed->initial_stage_split = rv->initial_stage_split;
     min_placed->stage_split = rv->stage_split;
-    StageUseEstimate min_use(t, min_placed->entries, &lc, min_placed->stage_split > 0,
-                             stage_current.shared_attached);
+    StageUseEstimate min_use(t, min_placed->entries, min_placed->attached_entries,
+                             &lc, min_placed->stage_split > 0);
 
     if (done && rv->stage != done->stage)
         stage_current.clear();
@@ -774,11 +802,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     do {
         rv->need_more = false;
         rv->entries = set_entries;
+        rv->attached_entries = set_attached_entries;
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false;
-        rv->use = StageUseEstimate(t, rv->entries, &lc, rv->stage_split > 0,
-                                   stage_current.shared_attached);
+        rv->use = StageUseEstimate(t, rv->entries, rv->attached_entries, &lc, rv->stage_split > 0);
         if (t->for_dleft() && set_entries > rv->entries) {
             advance_to_next_stage = true;
             LOG3("    Cannot split a dleft hash table");
@@ -787,12 +815,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
 
         // FIXME: This is not the appropriate way to check if a table is a single gateway
 
-        if (!pick_layout_option(min_placed, done, min_resources, stage_current.shared_attached)) {
+        if (!pick_layout_option(min_placed, done, min_resources)) {
             advance_to_next_stage = true;
             LOG3("    Min Use ixbar allocation did not fit");
         }
 
-        if (!pick_layout_option(rv, done, resources, stage_current.shared_attached)) {
+        if (!pick_layout_option(rv, done, resources)) {
             advance_to_next_stage = true;
             LOG3("    Table Use ixbar allocation did not fit");
         }
@@ -849,6 +877,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
             }
 
             if (rv->entries < set_entries) {
+                for (auto *ba : rv->table->attached) {
+                    if (ba->attached->direct)
+                        rv->attached_entries[ba->attached] = rv->entries;
+                    else
+                        rv->attached_entries[ba->attached] = 0; }
                 rv->need_more = true;
                 // If the table is split for the first time, then the stage_split is set to 0
                 if (rv->initial_stage_split == -1)
@@ -914,8 +947,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     if (done) {
         if (done->stage == rv->stage)
             done = done->update_resources(rv->stage, 0, prev_resources);
-        rv->placed = done->placed; }
+        rv->placed = done->placed;
+        rv->match_placed = done->match_placed; }
     rv->prev = done;
+
+    if (rv->entries >= set_entries)
+        rv->match_placed[tblInfo.at(rv->table).uid] = true;
 
     if (!rv->need_more) {
         rv->placed[tblInfo.at(rv->table).uid] = true;

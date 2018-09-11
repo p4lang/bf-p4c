@@ -21,6 +21,7 @@ class TablePlacement : public MauTransform, public Backtrack {
                    const LayoutChoices &l, const SharedIndirectAttachedAnalysis &siaa, bool fp);
     struct GroupPlace;
     struct Placed;
+    typedef std::map<const IR::MAU::AttachedMemory *, int>      attached_entries_t;
 
  protected:
     typedef enum {
@@ -78,10 +79,10 @@ class TablePlacement : public MauTransform, public Backtrack {
         safe_vector<TableResourceAlloc *> &prev_resources);
     bool try_alloc_adb(Placed *next, const Placed *done, TableResourceAlloc *resources);
     bool try_alloc_imem(Placed *next, const Placed *done, TableResourceAlloc *resources);
-    bool pick_layout_option(Placed *next, const Placed *done, TableResourceAlloc *resources,
-                            StageUseEstimate::StageAttached &shared_attached);
+    bool pick_layout_option(Placed *next, const Placed *done, TableResourceAlloc *resources);
     bool shrink_estimate(Placed *next, const Placed *done, TableResourceAlloc *resources,
                          int &srams_left, int &tcams_left, int min_entries);
+    bool can_duplicate(const IR::MAU::AttachedMemory *);
     bool initial_stage_and_entries(Placed *rv, const Placed *done, int &set_entries,
         int &furthest_stage);
     const Placed *place_table(ordered_set<const GroupPlace *>&work, const Placed *pl);
