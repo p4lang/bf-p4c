@@ -22,7 +22,7 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                                 initial_value_lo = v.value.i; }
                     if (v.key == "hi") {
                         if (CHECKTYPE(v.value, tINT))
-                                initial_value_lo = v.value.i; } } }
+                                initial_value_hi = v.value.i; } } }
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
                 input_xbar = new InputXbar(this, false, kv.value.map);
@@ -421,6 +421,8 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
     int size = (layout_size() - 1) * 1024 * (128U/format->size);
     json::map &tbl = *base_tbl_cfg(out, "stateful", size);
     unsigned alu_width = format->size/(dual_mode ? 2 : 1);
+    tbl["initial_value_lo"] = initial_value_lo;
+    tbl["initial_value_hi"] = initial_value_hi;
     tbl["alu_width"] = alu_width;
     tbl["dual_width_mode"] = dual_mode;
     tbl["initial_value_lo"] = 0; // TODO
@@ -512,10 +514,6 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
         tbl["bound_to_selection_table_handle"] = bound_selector->handle();
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "stateful", size);
     add_alu_index(stage_tbl, "meter_alu_index");
-    if (initial_value_lo > 0)
-        tbl["initial_value_lo"] = initial_value_lo;
-    if (initial_value_hi > 0)
-        tbl["initial_value_hi"] = initial_value_hi;
     SWITCH_FOREACH_TARGET(options.target, gen_tbl_cfg(TARGET(), tbl, stage_tbl); )
     if (context_json)
         stage_tbl.merge(*context_json);

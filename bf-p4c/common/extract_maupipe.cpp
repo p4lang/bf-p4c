@@ -535,6 +535,17 @@ void AttachTables::InitializeStatefulAlus
         LOG3("Creating new StatefulAlu for " <<
              (regtype ? regtype->toString() : seltype->toString()) << " " << reg->name);
         salu = new IR::MAU::StatefulAlu(reg->srcInfo, reg->externalName(), reg->annotations, reg);
+        auto annots = ext->annotations ? ext->annotations : 0;
+        // Reg initialization values for lo/hi are passed as annotations. In
+        // p4_14 conversion they cannot be set directly on the register For
+        // p4_16 programs these are passed in as optional stateful params
+        for (auto annot : annots->annotations) {
+            if (annot->name == "initial_register_lo_value") {
+                salu->init_reg_lo = annot->expr.at(0)->to<IR::Constant>()->asInt();
+                LOG4("Reg initial lo value: " << salu->init_reg_lo); }
+            if (annot->name == "initial_register_hi_value") {
+                salu->init_reg_hi = annot->expr.at(0)->to<IR::Constant>()->asInt();
+                LOG4("Reg initial hi value: " << salu->init_reg_hi); } }
         if (seltype) {
             salu->direct = false;
             auto sel = self.converted.at(reg)->to<IR::MAU::Selector>();

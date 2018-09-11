@@ -215,8 +215,8 @@ void StatefulTable::gen_tbl_cfg(Target::JBay, json::map &tbl, json::map &stage_t
     bool has_pop = (stateful_counter_mode & (PUSHPOP_MASK << PUSHPOP_BITS)) != 0;
     for (MatchTable *m : match_tables) {
         if (auto *call = m->get_call(this)) {
-            if (call->args.size() >= 2 && call->args.at(1).type == Call::Arg::Counter) {
-                unsigned mode = call->args.at(1).count_mode();
+            if (call->args.at(0).type == Call::Arg::Counter) {
+                unsigned mode = call->args.at(0).count_mode();
                 has_push |= (mode & PUSHPOP_MASK) != 0;
                 has_pop |= (mode & (PUSHPOP_MASK << PUSHPOP_BITS)) != 0; } } }
     if (has_push) {

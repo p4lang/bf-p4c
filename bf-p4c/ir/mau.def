@@ -458,6 +458,8 @@ class StatefulAlu : Synth2Port {
     // the address?  Or perhaps put this in Synth2Port if other such tables can also chain
     bool                                                chain_vpn = false;
     int                                                 chain_total_size = size;
+    int                                                 init_reg_lo = 0;
+    int                                                 init_reg_hi = 0;
 
     class MathUnit {
         bool            valid = false;

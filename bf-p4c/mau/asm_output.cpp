@@ -2729,6 +2729,12 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         }
     }
 
+    if (salu->init_reg_lo || salu->init_reg_hi) {
+        out << indent << "initial_value : ";
+        out << "{ lo: " << salu->init_reg_lo;
+        out << " , hi: " << salu->init_reg_hi << " }" << std::endl;
+    }
+
     if (salu->math.valid) {
         out << indent++ << "math_table:" << std::endl;
         out << indent << "invert: " << salu->math.exp_invert << std::endl;

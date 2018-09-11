@@ -964,9 +964,13 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
                             || inst_name == "add" || inst_name == "sub") {
                         if (sact_inst->operands.size() == 2) {
                             auto src = sact_inst->operands[1];
+                            auto src_string = src->toString();
                             if (auto *k = src->to<IR::Constant>()) {
                                 sact_update->emplace("operand_1_type", "immediate");
                                 sact_update->emplace("operand_1_value", k->toString());
+                            } else if (auto phv_field = phv.field(src->toString())) {
+                                sact_update->emplace("operand_1_type", "phv");
+                                sact_update->emplace("operand_1_value", cstr(src->toString()));
                             }
                         } else if (sact_inst->operands.size() == 3) {
                             auto src1 = sact_inst->operands[1];
