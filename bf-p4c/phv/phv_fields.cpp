@@ -30,6 +30,7 @@ void PhvInfo::clear() {
     aliasMap.clear();
     dummyPaddingNames.clear();
     externalNameMap.clear();
+    metadata_overlay.clear();
     alloc_done_ = false;
     pov_alloc_done = false;
     zeroContainers.clear();

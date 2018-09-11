@@ -709,6 +709,10 @@ class PhvInfo {
     /// Stores the mutual exclusion relationships between different PHV fields
     SymBitMatrix&                            field_mutex;
 
+    /// Stores the potential overlayable relationships due to live ranges between different metadata
+    /// fields.
+    SymBitMatrix                             metadata_overlay;
+
     const SymBitMatrix& mutex() const { return field_mutex; }
 
  private:  // class PhvInfo

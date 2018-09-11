@@ -330,6 +330,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/analysis/deparser_zero.cpp
   phv/analysis/dominator_tree.cpp
   phv/analysis/field_interference.cpp
+  phv/analysis/meta_live_range.cpp
   phv/analysis/pack_conflicts.cpp
   phv/pragma/pa_alias.cpp
   phv/pragma/pa_atomic.cpp
@@ -377,6 +378,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/analysis/deparser_zero.h
   phv/analysis/dominator_tree.h
   phv/analysis/field_interference.h
+  phv/analysis/meta_live_range.h
   phv/analysis/pack_conflicts.h
   phv/pragma/pa_alias.h
   phv/pragma/pa_atomic.h
@@ -697,6 +699,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/metadata_init.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/meta_live_range.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mocha_dark.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_atomic.cpp

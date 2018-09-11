@@ -189,8 +189,10 @@ BuildDominatorTree::getNonGatewayGroupDominator(std::set<const IR::MAU::Table*>&
         pathsToSource[t] = getAllDominators(t, gress.get());
         LOG3("\t\t\tTable " << t->name << " is at depth " << pathsToSource[t].size() << " in the "
              "dominator tree.");
-        if (pathsToSource[t].size() < UINT_MAX || minDepth == boost::none)
+        if (minDepth == boost::none || pathsToSource[t].size() < *minDepth) {
             minDepth = pathsToSource[t].size();
+            LOG4("\t\t\t  Setting minDepth to " << *minDepth);
+        }
     }
     if (minDepth)
         LOG3("\t\t  Min depth: " << minDepth.get());

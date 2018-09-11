@@ -19,9 +19,13 @@
 class PhvInfo;
 
 PHV_AnalysisPass::PHV_AnalysisPass(
-    const BFN_Options &options,
-    PhvInfo &phv, PhvUse &uses, const ClotInfo& clot,
-    FieldDefUse &defuse, DependencyGraph &deps, MauBacktracker& alloc)
+        const BFN_Options &options,
+        PhvInfo &phv,
+        PhvUse &uses,
+        const ClotInfo& clot,
+        FieldDefUse &defuse,
+        DependencyGraph &deps,
+        MauBacktracker& alloc)
     : table_alloc(alloc),
       clustering(phv, uses, pack_conflicts),
       parser_critical_path(phv),
@@ -29,14 +33,13 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       pack_conflicts(phv, deps, table_mutex, table_alloc, action_mutex),
       action_constraints(phv, pack_conflicts),
       pragmas(phv, options),
+      meta_live_range(phv, deps, defuse, pragmas, uses),
       _options(options) {
     if (options.trivial_phvalloc) {
         addPasses({
             new PHV::TrivialAlloc(phv)});
     } else {
         addPasses({
-            // XXX(cole): TODO: insert a pass here that explicitly clears all
-            // PHV allocation state (in preparation for backtracking).
             &uses,                 // use of field in mau, parde
             new PhvInfo::DumpPhvFields(phv, uses),
 #if HAVE_JBAY
@@ -68,15 +71,20 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new TablePhvConstraints(phv),
             &critical_path_clusters,
             &action_constraints,
+
             // This has to be the last pass in the analysis phase as it adds artificial constraints
             // to fields and uses results of some of the above passes (specifically
             // action_constraints).
             new AddSpecialConstraints(phv, pragmas, action_constraints),
+
+            // Determine `ideal` live ranges for metadata fields in preparation for live range
+            // shrinking that will be effected during and post AllocatePHV.
+            &meta_live_range,
+
 #if HAVE_JBAY
             options.jbay_analysis ? new JbayPhvAnalysis(phv, uses, deps, defuse, action_constraints)
                 : nullptr,
-#endif      // HAVE_JBAY
-
+#endif
             // From this point on, we are starting to transform the PHV related data structures.
             // Before this is all analysis that collected constraints for PHV allocation to use.
             &clustering,           // cluster analysis
