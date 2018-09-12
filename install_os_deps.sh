@@ -18,6 +18,10 @@ case $os in
         SUDO=sudo
         LDCONFIG=ldconfig
         LDLIB_EXT=so
+        if [[ ! -e /etc/os-release ]]; then
+            echo "Missing /etc/os-release. Can't identify linux distribution."
+            exit 1
+        fi
         linux_distro=$(cat /etc/os-release | grep -e "^NAME" | cut -f 2 -d '=' | tr -d "\"")
         nprocs=$(cat /proc/cpuinfo | grep processor | wc -l)
         case $linux_distro in
@@ -41,6 +45,14 @@ case $os in
 		# since we install using make install, new packages go to /usr/local
 		export PATH=/usr/local/bin:$PATH
 		export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+                ;;
+            "CentOS Linux")
+                linux_version=$(cat /etc/os-release | grep -e "^VERSION_ID" | cut -f 2 -d '=' | tr -d "\"")
+                linux_codename=$(cat /etc/os-release | grep -e "^ID" | cut -f 2 -d '=' | tr -d "\"")
+		# since we install using make install, new packages go to /usr/local
+		export PATH=/usr/local/bin:$PATH
+		export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+                export LD_LIBRARY_PATH=/usr/local/lib
                 ;;
             *)
                 echo "Unsupported Linux distribution $linux_distro"
@@ -107,7 +119,7 @@ install_linux_packages() {
         install_rapidjson "1.1.0"
         install_boost "1.58.0"
     fi
-    if [[ $linux_distro == "Fedora" ]]; then
+    if [[ $linux_distro == "Fedora" || $linux_distro == "CentOS Linux" ]]; then
         # please keep this list in alphabetical order
         yum_packages="automake bison bzip2-devel cmake curl doxygen flex \
                  gcc-c++ git \
@@ -117,12 +129,24 @@ install_linux_packages() {
                  libtool pkg-config \
                  python2 python python-devel python-ipaddr python-pip python-yaml \
                  rapidjson-devel rpm texinfo unzip"
-
+        if [[ $linux_distro == "CentOS Linux" ]]; then
+            # python-pip and software collections for newer versions of gcc
+            # https://www.softwarecollections.org/en/scls/rhscl/devtoolset-3/
+            $SUDO yum install -y epel-release centos-release-scl-rh
+        fi
         echo "Need sudo privs to install yum packages"
-        $SUDO yum update || die "Failed to update apt"
+        $SUDO yum update -y || die "Failed to update apt"
         $SUDO yum install -y $yum_packages || \
             die "Failed to install needed packages"
 
+        if [[ $linux_distro == "CentOS Linux" ]]; then
+            gcc_version=$(gcc --version | head -1 | awk '{print $3;}')
+            if version_LT $gcc_version "4.9.1" ; then
+                $SUDO yum install -y devtoolset-3-gcc-c++
+                # use devetoolset gcc
+                export PATH=/opt/rh/devtoolset-3/root/usr/bin:/usr/local/bin:$PATH
+            fi
+        fi
         install_bison "3.0.4"
         install_gmp "6.1.2"
         install_cmake "3.5.2"
@@ -139,7 +163,7 @@ function install_bison() {
     local bison_ver=$1
 
     local installed_ver=$(yum info bison | grep Version | awk '{ print $3; }')
-    if versionLT $installed_ver $bison_ver ; then
+    if version_LT $installed_ver $bison_ver ; then
         # install a more recent version of bison
         $SUDO yum remove -y bison
         pushd /tmp
@@ -158,8 +182,8 @@ function install_bison() {
 function install_gmp() {
     local gmp_ver=$1
 
-    local installed_ver=$(yum info gmp-devel | grep Version | awk '{ print $3; }')
-    if versionLT $installed_ver $bison_ver ; then
+    local installed_ver=$(yum info gmp-devel | grep Version | head -1 | awk '{ print $3; }')
+    if version_LT $installed_ver $bison_ver ; then
         pushd /tmp
         wget https://gmplib.org/download/gmp/gmp-${gmp_ver}.tar.bz2
         tar jxf gmp-${gmp_ver}.tar.bz2
@@ -201,13 +225,13 @@ function install_cmake() {
     cmake_ver=$1
 
     if [[ ! ($linux_distro == "Ubuntu" || $linux_distro == "Debian") ]]; then
-	installed_ver=$(cmake --version | cut -f 3 -d " ")
+	installed_ver=$(cmake --version | head -1 | cut -f 3 -d " ")
 	if version_LT $installed_ver $cmake_ver ; then
 	    cd /tmp
 	    build_cmake_from_source $cmake_ver 1
             cd /tmp && rm -rf /tmp/cmake-${cmake_ver}*
 	else
-	    "Found cmake version $installed_ver"
+	    echo "Found cmake version $installed_ver"
 	fi
 	return
     fi
@@ -471,7 +495,7 @@ EOF
             git apply openssl-1.1.0.patch
         fi
         # gcc-7 gives errors
-        make -j $nprocs CFLAGS="-Wno-error" && \
+        make -j $nprocs CFLAGS="-Wno-error --std=c99" && \
         $SUDO make install && \
         $SUDO $LDCONFIG || \
                 die "Failed to install grpc"

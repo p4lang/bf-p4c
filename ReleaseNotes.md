@@ -1,5 +1,61 @@
 # Release Notes
 
+## Version 8.3.0-beta.2
+The **Quick shadow** release
+
+Bug fixes
+  - fix primitive node generation in context.json
+  - fix canonical gateway expression simplification
+
+
+## Version 8.3-aplha.1
+The **Shadow** release
+
+New features
+    - Compiler/Assembler/Infra support for 32Q
+    - support for Fedora 18
+
+BF-RT
+    - idle timeout
+    - port metadata (aka phase0)
+
+MAU
+    - stateful divmod support
+    - reduction or for stateful alu
+    - unspecified but used stateful_alu attributes
+    - table placement decision logging
+
+PHV
+    - allow slices on match key fields
+    - better allocation of SALU operands
+    - conditional constraints
+    - allocation for L3_HEAVY_INT_LEAF_PROFILE
+
+Parser/Deparser
+    - ipv4 checksum verification with options
+    - parser lookahead for pvs
+
+Primitives, Pragmas and Misc
+    - fixes to keyless tables cjson for driver
+    - correct field info for ranges with mask
+    - @calculated_field_update_location
+    - @residual_checksum_parser_update_location
+
+Bug Fixes
+    - deparser checksum entry byte mask/swap
+    - Allow looking up PHV Field objects by external name
+    - put log files in the right per-pipe subdirectory
+    - alignment for --ununsed-- fields in context.json
+    - gateway merge not respecting some control dependencies
+    - actionbus adjacent alignment check
+    - digest type fitting issues
+    - BF-RT generation for direct registers
+    - IXBar fixes for Stateful Tables
+
+Tofino2
+    - pmarb bubble width control regs
+    - ghost thread framework for JNA
+
 ## Version 8.2.1-alpha.1
 The **Hidden** release
 

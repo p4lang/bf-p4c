@@ -1,3 +1,7 @@
+
+find_package(PkgConfig QUIET)
+pkg_check_modules(LIBRAPIDJSON REQUIRED RapidJSON=1.1.0)
+
 set (LOGGING_SCHEMA_FILES
   phv_schema
   )
@@ -20,9 +24,8 @@ add_custom_command(OUTPUT ${GEN_LOGGING_HDRS}
 add_custom_target(genLogging
   DEPENDS ${GEN_LOGGING_HDRS})
 
-# need to find package rapidjson
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..
-  ${CMAKE_CURRENT_BINARY_DIR})
+  ${CMAKE_CURRENT_BINARY_DIR} ${LIBRAPIDJSON_INCLUDE_DIRS})
 add_executable(test_phv_logging test_phv.cpp)
 target_link_libraries(test_phv_logging ${OPENSSL_LIBRARIES})
 add_dependencies(test_phv_logging genLogging)

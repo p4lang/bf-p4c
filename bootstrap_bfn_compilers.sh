@@ -42,11 +42,11 @@ if [ "$1" == "--p4c-cpp-flags" ]; then
     shift; shift;
 fi
 
-# git version check - 2.11.0 doesn't work
-installed_git_ver=$(git --version | cut -f 3 -d " ")
-if [[ $installed_git_ver == *"2.11.0"* ]]; then
-    echo "Installed git version is not suitable: $installed_git_ver"
-    echo "Upgrade to a different version of git and rerun script"
+# Check for git version: 2.11.0 does not support virtual links
+git_version=`git --version | head -1 | awk '{ print $3; }'`
+if [[ $git_version == "2.11.0" ]]; then
+    echo "git version $git_version is broken."
+    echo "Please upgrade or downgrade your git version. Recommended versions: 1.8.x, 2.7.x, > 2.14.x"
     exit 1
 fi
 
