@@ -1331,7 +1331,10 @@ static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_
         cstring ad_name = tbl->name + "$action";
         auto *act_data = new IR::MAU::ActionData(IR::ID(ad_name));
         act_data->direct = true;
-        tbl->attached.push_back(new IR::MAU::BackendAttached(act_data->srcInfo, act_data));
+        auto *ba = new IR::MAU::BackendAttached(act_data->srcInfo, act_data);
+        ba->addr_location = IR::MAU::AddrLocation::DIRECT;
+        ba->pfe_location = IR::MAU::PfeLocation::DEFAULT;
+        tbl->attached.push_back(ba);
     }
 }
 

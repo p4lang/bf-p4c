@@ -278,6 +278,54 @@ void Table::setup_maprams(value_t &v) {
                     row.maprams.push_back(mapcol.i); } }
 }
 
+/**
+ * Guarantees that the instruction call provided to the table has valid entries, and that
+ * if multiple choices are required, the compiler can make that choices.
+ *
+ * The instruction address is a two piece address.  The first argument is the address bits
+ * location.  The second argument is a per flow enable bit location.  These are both required.
+ * Additionally, the keyword $DEFAULT means that that particular portion of the address comes
+ * from the default register.
+ */
+bool Table::validate_instruction(Table::Call &call) const {
+    if (call.args.size() != 2) {
+        error(call.lineno, "Instruction call has invalid number of arguments");
+        return false;
+    }
+
+    bool field_address = false;
+
+    if (call.args[0].name()) {
+        if (strcmp(call.args[0].name(), "$DEFAULT") != 0) {
+            error(call.lineno, "Index %s for %s cannot be found", call.args[0].name(),
+                  call->name());
+            return false;
+        }
+    } else if (!call.args[0].field()) {
+        error(call.lineno, "Index for %s cannot be understood", call->name());
+        return false;
+    } else {
+        field_address = true;
+    }
+
+    if (call.args[1].name()) {
+        if (strcmp(call.args[1].name(), "$DEFAULT") != 0) {
+            error(call.lineno, "Per flow enable %s for %s cannot be found", call.args[1].name(),
+                  call->name());
+            return false;
+        }
+    } else if (!call.args[1].field()) {
+        error(call.lineno, "Per flow enable for %s cannot be understood", call->name());
+        return false;
+    }
+
+    if ((actions->count() && !field_address && default_action.empty())
+        || (actions->count() > 2 && !field_address && !default_action.empty())) {
+        error(lineno, "No field to select between multiple action in table %s format", name());
+    }
+    return true;
+}
+
 void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool allow_holes) {
     int period, width, depth;
     const char *period_name;
@@ -354,6 +402,8 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
         /* done in Table::common_init_setup */
     } else if (kv.key == "action") {
         action.setup(kv.value, this);
+    } else if (kv.key == "instruction") {
+        instruction.setup(kv.value, this);
     } else if (kv.key == "action_enable") {
         if (CHECKTYPE(kv.value, tINT))
             action_enable = kv.value.i;
@@ -971,6 +1021,10 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                                     else if (p.key == "reason")
                                         default_disallowed_reason = p.value.s; } } }
                         default_only = a.key == "default_only_action";
+                    } else if (a.key == "handle") {
+                        if CHECKTYPE(a.value, tINT) {
+                            handle = a.value.i;
+                        }
                     } else if (CHECKTYPE3(a.value, tSTR, tCMD, tINT)) {
                         if (a.value.type == tINT) {
                             auto k = alias.find(a.key.s);
@@ -1016,6 +1070,9 @@ void Table::Actions::Action::set_action_handle(Table *tbl) {
     // For actions in tables shared across multiple stages, the action handles
     // must be same. p4_table stores a map of actions and their handles. If
     // action present store the same handle else assign a new one.
+    if (handle != 0)
+        return;
+
     auto p4_table = tbl->p4_table;
     if (auto adt = tbl->to<ActionTable>()) {
         auto mt = adt->get_match_table();
@@ -1140,13 +1197,19 @@ void Table::Actions::pass2(Table *tbl) {
     MatchTable *limit_match_table = nullptr;
     bool use_code_for_next = false;  // true iff a table uses the action code for next table
         // selection in addition to using it for the action instruction
+   
     for (auto match : tbl->get_match_tables()) {
-        auto &args = match->get_action().args;
-        if (args.size() > 0 && (1 << args[0].size()) < code_limit) {
-            code_limit = 1 << args[0].size();
-            limit_match_table = match; }
-        if (match->hit_next_size() > 1 && !match->lookup_field("next"))
-            use_code_for_next = true; }
+        // action is currently a default keyword for the instruction address
+        auto instruction = match->instruction_call();
+        auto fld = instruction.args[0].field();
+        if (fld) {
+            code_limit = 1 << fld->size;
+            if (match->hit_next_size() > 1 && !match->lookup_field("next"))
+                use_code_for_next = true;
+        }  else {
+            code_limit = code + 1;
+        }
+    }
 
     /* figure out if we need more codes than can fit in the action_instruction_adr_map.
      * use code = -1 to signal that condition. */
@@ -1415,7 +1478,7 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
             action_cfg["allowed_as_default_action"] = true;
             action_cfg["disallowed_as_default_action_reason"] = ""; }
         json::vector &p4_params = action_cfg["p4_parameters"] = json::vector();
-        add_p4_params(act, p4_params);
+        act.add_p4_params(p4_params);
         action_cfg["override_meter_addr"] = false;
         action_cfg["override_meter_addr_pfe"] = false;
         action_cfg["override_meter_full_addr"] = 0;
@@ -1432,6 +1495,41 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
             actions_cfg.push_back(std::move(action_cfg));
     }
 }
+
+/**
+ * For action data tables, the entirety of the action configuration is not necessary, as the
+ * information is per match table, not per action data table.  The only required parameters
+ * are the name, handle, and p4_parameters
+ *
+ * Even at some point, even actions that have the different p4_parameters could even share a
+ * member, if for example, one of the parameters is not stored in the action data table,
+ * but rather as an index for a counter/meter etc.  The compiler/driver do not have support for
+ * this yet.
+ */
+void Table::Actions::Action::gen_simple_tbl_cfg(json::vector &actions_cfg) const {
+    json::map action_cfg;
+    action_cfg["name"] = name;
+    action_cfg["handle"] = handle;
+    json::vector &p4_params = action_cfg["p4_parameters"] = json::vector();
+    add_p4_params(p4_params, false);
+    actions_cfg.push_back(std::move(action_cfg));
+}
+
+void Table::Actions::Action::add_p4_params(json::vector &cfg, bool include_default) const {
+    unsigned start_bit = 0;
+    for (auto &a : p4_params_list) {
+        json::map param;
+        param["name"] = a.name;
+        param["start_bit"] = start_bit;
+        param["position"] = a.position;
+        if (include_default && a.defaulted)
+            param["default_value"] = a.default_value;
+        param["bit_width"] = a.bit_width;
+        cfg.push_back(std::move(param));
+        start_bit += a.bit_width;
+    }
+}
+
 
 void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) const {
     int index = 0;

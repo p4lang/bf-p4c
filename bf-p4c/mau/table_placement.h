@@ -13,6 +13,7 @@ class TablesMutuallyExclusive;
 struct StageUseEstimate;
 class PhvInfo;
 class LayoutChoices;
+class SharedIndirectAttachedAnalysis;
 
 class TablePlacement : public MauTransform, public Backtrack {
  public:

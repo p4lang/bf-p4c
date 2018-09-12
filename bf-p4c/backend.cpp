@@ -19,6 +19,7 @@
 #include "bf-p4c/mau/characterize_power.h"
 #include "bf-p4c/mau/empty_controls.h"
 #include "bf-p4c/mau/gateway.h"
+#include "bf-p4c/mau/handle_assign.h"
 #include "bf-p4c/mau/instruction_adjustment.h"
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/mau/ixbar_realign.h"
@@ -109,6 +110,7 @@ class TableAllocPass : public PassManager {
             addPasses({
                 new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
                 new TableLayout(phv, lc),
+                new AssignActionHandle,
                 new TableFindSeqDependencies,
                 new FindDependencyGraph(phv, deps),
                 new SpreadGatewayAcrossSeq,

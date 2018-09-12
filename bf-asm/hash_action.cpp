@@ -31,17 +31,16 @@ void HashActionTable::pass1() {
     attached.pass1(this);
     if (action_bus) action_bus->pass1(this);
     if (actions) {
-        assert(action.args.size() == 0);
-        if (auto *sel = lookup_field("action"))
-            action.args.emplace_back(sel);
-        else if ((actions->count() > 1 && default_action.empty())
-               || (actions->count() > 2 && !default_action.empty()))
-            error(lineno, "No field 'action' to select between multiple actions in "
-                  "table %s format", name());
-        actions->pass1(this); }
-    if (action_enable >= 0)
-        if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
-            error(lineno, "Action enable bit %d out of range for action selector", action_enable);
+        if (instruction)
+            validate_instruction(instruction);
+        else
+            error(lineno, "No instruction call provided, but actions provided");
+        actions->pass1(this);
+    }
+    if (action) {
+        action->validate_call(action, this, 2, HashDistribution::ACTION_DATA_ADDRESS, action);     
+    }
+
     if (input_xbar)
         input_xbar->pass1();
     for (auto &hd : hash_dist) {

@@ -329,7 +329,7 @@ void TableLayout::setup_action_layout(IR::MAU::Table *tbl) {
     ActionFormat af(tbl, phv, alloc_done);
     bool immediate_allowed = true;
     // Action Profiles cannot have any immediate data
-    if (tbl->layout.action_addr_bits != 0)
+    if (tbl->layout.action_addr.address_bits != 0)
         immediate_allowed = false;
     // chained salus need the immediate path for the address, so can't use it for data
     for (auto att : tbl->attached)
@@ -589,7 +589,6 @@ class VisitAttached : public Inspector {
         }
 
         if (type == METER && ba->type_location == IR::MAU::TypeLocation::OVERHEAD) {
-            LOG1("Type is meter and overhead");
             if (from_hash) {
                 if (layout.no_match_data()) {
                     ::error("%s: When an attached memory %s is addressed by hash and requires "
@@ -640,7 +639,8 @@ class VisitAttached : public Inspector {
             error("%s: No size count in %s %s", ad->srcInfo, ad->kind(), ad->name);
         int vpn_bits_needed = std::max(10, ceil_log2(ad->size)) + 1;
         layout.overhead_bits += vpn_bits_needed;
-        layout.action_addr_bits = vpn_bits_needed;
+        layout.action_addr.address_bits = vpn_bits_needed;
+        layout.action_addr.shifter_enabled = true;
         return false;
     }
     bool preorder(const IR::MAU::IdleTime *) override {

@@ -125,6 +125,12 @@ struct TableFormat {
         IR::MAU::PfeLocation stats_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
         IR::MAU::PfeLocation meter_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
         IR::MAU::TypeLocation meter_type_loc = IR::MAU::TypeLocation::NOT_SET;
+
+        bool instr_in_overhead() const {
+            if (match_groups.empty())
+                return false;
+            return !match_groups[0].mask[ACTION].empty();
+        }
     };
 
  private:

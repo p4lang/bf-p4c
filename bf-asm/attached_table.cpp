@@ -258,7 +258,7 @@ const Table::Call *AttachedTables::get_call(const Table *tbl) const {
  * This function is responsible for validating this.  Perhaps, in the future, we can have arguments
  * both contain potential SHIFTs and ORs that can be interpreted by the registers
  */
-bool AttachedTables::validate_call(Table::Call &call, MatchTable *self, size_t required_args,
+bool AttachedTable::validate_call(Table::Call &call, MatchTable *self, size_t required_args,
         int hash_dist_type, Table::Call &first_call) {
     if (call->stage != self->stage) {
         error(call.lineno, "%s not in same stage as %s", call->name(), self->name());
@@ -352,22 +352,22 @@ void AttachedTables::pass0(MatchTable *self) {
 
 void AttachedTables::pass1(MatchTable *self) {
     if (selector) {
-        validate_call(selector, self, 3, HashDistribution::METER_ADDRESS, selector);
+        selector->validate_call(selector, self, 3, HashDistribution::METER_ADDRESS, selector);
     }
     for (auto &s : stats) {
         if (s) {
-            validate_call(s, self, 2, HashDistribution::STATISTICS_ADDRESS, stats[0]);
+            s->validate_call(s, self, 2, HashDistribution::STATISTICS_ADDRESS, stats[0]);
         }
     }
     for (auto &m : meters) {
         if (m) {
-            validate_call(m, self, 3, HashDistribution::METER_ADDRESS, meters[0]);
+            m->validate_call(m, self, 3, HashDistribution::METER_ADDRESS, meters[0]);
         }
     }
 
     for (auto &s : statefuls) {
         if (s) {
-            validate_call(s, self, 3, HashDistribution::METER_ADDRESS, statefuls[0]);
+            s->validate_call(s, self, 3, HashDistribution::METER_ADDRESS, statefuls[0]);
         }
     }
 }

@@ -110,7 +110,7 @@ void MatchTable::pass0() {
     LOG1("### match table " << name() << " pass0");
     alloc_id("logical", logical_id, stage->pass1_logical_id,
              LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
-    if (action.check() && action->set_match_table(this, action.args.size() > 1) != ACTION)
+    if (action.check() && action->set_match_table(this, !action.is_direct_call()) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());
     attached.pass0(this);
 }
@@ -175,9 +175,12 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
     adrdist.adr_dist_table_thread[timing_thread(gress)][0] |= 1 << logical_id;
     adrdist.adr_dist_table_thread[timing_thread(gress)][1] |= 1 << logical_id;
 
-    Actions *actions = action ? action->actions : this->actions;
+
+    Actions *actions = action && action->actions ? action->actions : this->actions;
+
     if (result) {
-        actions = result->action ? result->action->actions : result->actions;
+        actions = result->action && result->action->actions ? result->action->actions
+                                                            : result->actions;
         unsigned action_enable = 0;
         if (result->action_enable >= 0)
             action_enable = 1 << result->action_enable;
@@ -188,38 +191,60 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type+2][bus], logical_id);
 
             int default_action = 0;
-            if (result->action.args.size() >= 1 && result->action.args[0].field()) {
-                merge.mau_action_instruction_adr_mask[type][bus] =
-                    ((1U << result->action.args[0].size()) - 1) & ~action_enable;
-            } else {
-                if (this->to<HashActionTable>() && this->get_gateway())
-                    merge.mau_action_instruction_adr_mask[type][bus] = 1;
-                else
-                    merge.mau_action_instruction_adr_mask[type][bus] = 0;
-                if (actions->count() == 1)
-                    default_action = actions->begin()->code;
-            }
-            if (!result->enable_action_instruction_enable)
-                default_action |= ACTION_INSTRUCTION_ADR_ENABLE;
-            merge.mau_action_instruction_adr_default[type][bus] = default_action;
-            // must enable to get the default, even if the shifter itself is unneeded
-            shift_en.action_instruction_adr_payload_shifter_en = 1;
+            unsigned adr_mask = 0;
+            unsigned adr_default = 0;
+            unsigned adr_per_entry_en = 0;
 
-            if (action_enable) {
-                if (result->enable_action_instruction_enable)
-                    merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][bus] =
-                        result->action_enable;
-                if (enable_action_data_enable)
-                    merge.mau_actiondata_adr_per_entry_en_mux_ctl[type][bus] =
-                        result->action_enable + 5;
+            /**
+             * This section of code determines the registers required to determine the
+             * instruction code to run for this particular table.  This uses the information
+             * provided by the instruction code.
+             *
+             * The address is built of two parts, the instruction code and the per flow enable
+             * bit.  These can either come from overhead, or from the default register.
+             * The keyword $DEFAULT indicates that the value comes from the default
+             * register
+             */
+            auto instr_call = instruction_call();
+            // FIXME: Workaround until a format is provided on the gateway to find the
+            // action bit section.  This will be a quick add on.
+            if (this->to<HashActionTable>() && this->get_gateway()) {
+                adr_mask = 1;
+                adr_default |= ACTION_INSTRUCTION_ADR_ENABLE;
+            } else {
+                if (instr_call.args[0] == "$DEFAULT") {
+                    for (auto it = actions->begin(); it != actions->end(); it++) {
+                        if (it->code != -1) {
+                            adr_default |= it->addr;
+                            break;
+                        }
+                    }
+                } else if (auto field = instr_call.args[0].field()) {
+                    adr_mask |= (1U << field->size) - 1;
+                }
+ 
+                if (instr_call.args[1] == "$DEFAULT") {
+                    adr_default |= ACTION_INSTRUCTION_ADR_ENABLE;
+                } else if (auto field = instr_call.args[1].field()) {
+                    if (auto addr_field = instr_call.args[0].field()) {
+                        adr_per_entry_en = field->bit(0) - addr_field->bit(0);
+                    } else {
+                        adr_per_entry_en = 0;
+                    }
+                }
             }
+            shift_en.action_instruction_adr_payload_shifter_en = 1;
+            merge.mau_action_instruction_adr_mask[type][bus] = adr_mask;
+            merge.mau_action_instruction_adr_default[type][bus] = adr_default;
+            merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][bus] = adr_per_entry_en;
+
             if (idletime)
                 idletime->write_merge_regs(regs, type, bus);
             if (result->action) {
                 if (auto adt = result->action->to<ActionTable>()) {
-                    merge.mau_actiondata_adr_default[type][bus] =
-                        get_address_mau_actiondata_adr_default(adt->get_log2size(),
-                                                               result->enable_action_data_enable); }
+                    merge.mau_actiondata_adr_default[type][bus]
+                        = adt->determine_default(result->action);
+                }
                 if (enable_action_data_enable || !dynamic_cast<HashActionTable *>(this))
                     /* HACK -- HashAction tables with no action data don't need this? */
                     shift_en.actiondata_adr_payload_shifter_en = 1; }
@@ -241,7 +266,20 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
     if (options.match_compiler)
         if (auto *action_format = lookup_field("action"))
             max_code = (1 << (action_format->size - (gateway ? 1 : 0))) - 1;
-    if (max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
+    /**
+     * The action map can be used if the choices for the instruction are < 8.  The map data
+     * table will be used if the number of choices are between 2 and 8, and references
+     * the instruction call to determine whether the instruction comes from the map
+     * data table or the default register.
+     */
+    auto instr_call = instruction_call();
+    bool use_action_map = instr_call.args[0].field()
+                          && max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH;
+    // FIXME: Workaround until a format is provided on the gateway to find the
+    // action bit section.  This will be a quick add on.
+    use_action_map |= this->to<HashActionTable>() && this->get_gateway();
+
+    if (use_action_map) {
         merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
         for (auto &act : *actions)
             if ((act.name != result->default_action) || !result->default_only_action) {

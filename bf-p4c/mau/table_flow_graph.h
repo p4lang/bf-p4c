@@ -7,8 +7,8 @@
 #include <map>
 #include <set>
 #include "bf-p4c/ir/control_flow_visitor.h"
-#include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/default_next.h"
+#include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 
 struct FlowGraph {

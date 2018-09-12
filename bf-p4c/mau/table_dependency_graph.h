@@ -426,7 +426,7 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     class UpdateAttached;
 
  public:
-    explicit FindDependencyGraph(const PhvInfo &phv, DependencyGraph& out)
+    FindDependencyGraph(const PhvInfo &phv, DependencyGraph& out)
     : phv(phv), dg(out) {
         joinFlows = true;
     }

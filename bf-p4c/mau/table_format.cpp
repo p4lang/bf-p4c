@@ -503,7 +503,7 @@ bool TableFormat::allocate_all_indirect_ptrs() {
                  }
              }
 
-             if ((total = layout_option.layout.action_addr_bits) != 0) {
+             if (layout_option.layout.action_addr.shifter_enabled) {
                  // FIXME: unsure if the defaulting of the Huffman bits happens for indirect
                  // action data addresses, as potentially it shouldn't be if the compiler
                  // was to have different sized action data.  Right now the full bits are
@@ -521,6 +521,7 @@ bool TableFormat::allocate_all_indirect_ptrs() {
                   if (ad->size > Memories::SRAM_DEPTH)
                       total += ActionDataHuffmanVPNBits(&layout_option.layout);
 #endif
+                 total = layout_option.layout.action_addr.address_bits;
                  total += ActionDataHuffmanVPNBits(&layout_option.layout);
                  if (!allocate_indirect_ptr(total, INDIRECT_ACTION, group, i))
                      return false;

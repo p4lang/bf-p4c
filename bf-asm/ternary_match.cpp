@@ -10,6 +10,23 @@
 DEFINE_TABLE_TYPE(TernaryMatchTable)
 DEFINE_TABLE_TYPE(TernaryIndirectTable)
 
+Table::Format::Field *TernaryIndirectTable::lookup_field(const std::string &n,
+         const std::string &act) const {
+    if (format) {
+        auto rv = format->field(n);
+        if (rv)
+            return rv; 
+    }
+
+    auto call = get_action();
+    if (call && !act.empty()) {
+        auto rv = call->lookup_field(n, act);
+        if (rv)
+            return rv;
+    }
+    return nullptr;
+}
+
 void TernaryMatchTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) const {
     if ((width = match.size()) == 0)
         width = input_xbar->tcam_width();
@@ -134,21 +151,16 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     if (indirect_bus >= 0) {
         stage->tcam_indirect_bus_use[indirect_bus/2][indirect_bus&1] = this; }
     if (indirect.set()) {
-        if (action.set() || actions)
-            error(lineno, "Table %s has both ternary indirect and direct actions", name());
         if (indirect_bus >= 0)
             error(lineno, "Table %s has both ternary indirect table and explicit indirect bus",
                   name());
         if (!attached.stats.empty() || !attached.meters.empty() || !attached.statefuls.empty())
             error(lineno, "Table %s has ternary indirect table and directly attached stats/meters"
                   " -- move them to indirect table", name());
-    } else if (action.set() && actions)
-        error(lineno, "Table %s has both action table and immediate actions", name());
+    }
     else if (!action.set() && !actions)
         error(lineno, "Table %s has no indirect, action table or immediate actions", name());
-    if (action.args.size() > 0)
-        error(lineno, "Unexpected number of action table arguments %zu", action.args.size());
-    if (actions && !action_bus) action_bus = new ActionBus();
+    if (action && !action_bus) action_bus = new ActionBus();
 }
 
 void TernaryMatchTable::pass0() {
@@ -414,21 +426,16 @@ void TernaryMatchTable::write_regs(REGS &regs) {
         if (idletime)
             idletime->write_merge_regs(regs, 1, indirect_bus);
         if (action) {
-            merge.mau_actiondata_adr_default[1][indirect_bus] =
-                get_address_mau_actiondata_adr_default(action->format->log2size, false);
             /* FIXME -- factor with TernaryIndirect code below */
-            int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
-            if (action.args.size() <= 1) {
-                merge.mau_actiondata_adr_mask[1][indirect_bus] = 0x3fffff & (~0U<<lo_huffman_bits);
-                merge.mau_actiondata_adr_tcam_shiftcount[indirect_bus] = 69 - lo_huffman_bits;
-                merge.mau_actiondata_adr_vpn_shiftcount[1][indirect_bus] =
-                    std::max(0, (int)action->format->log2size - 7);
-            } else {
-                /* FIXME -- support for multiple sizes of action data? */
-                merge.mau_actiondata_adr_mask[1][indirect_bus] =
-                    ((1U << action.args[1].size()) - 1) << lo_huffman_bits;
-                merge.mau_actiondata_adr_tcam_shiftcount[indirect_bus] =
-                    action.args[1].field()->bit(0) + 5 - lo_huffman_bits; } }
+            if (auto adt = action->to<ActionTable>()) {
+                merge.mau_actiondata_adr_default[1][indirect_bus] = adt->determine_default(action);
+                merge.mau_actiondata_adr_mask[1][indirect_bus] = adt->determine_mask(action); 
+                merge.mau_actiondata_adr_vpn_shiftcount[1][indirect_bus]
+                    = adt->determine_vpn_shiftcount(action);
+                merge.mau_actiondata_adr_tcam_shiftcount[indirect_bus]
+                    = adt->determine_shiftcount(action, 0, 0, 0);
+            }
+        }
         attached.write_tcam_merge_regs(regs, this, indirect_bus, 0);
     }
     if (actions) actions->write_regs(regs, this);
@@ -733,12 +740,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
             indirect->gen_memory_resource_allocation_tbl_cfg("sram", indirect->layout, true);
         // Add action formats for actions present in table or attached action table
         auto *acts = indirect->get_actions();
-        if (auto a = indirect->get_action())
-            acts = a->get_actions();
-        acts->add_action_format(this, tind);
-        //if (acts->count() > 0) {
-        //    auto &p4_params = tind["p4_parameters"] = json::vector();
-        //for (auto act: *acts) acts->add_p4_params(act, p4_params); } }
+        if (acts)
+            acts->add_action_format(this, tind);
         add_all_reference_tables(tbl, indirect);
         if (indirect->actions) {
             indirect->actions->gen_tbl_cfg(tbl["actions"]);
@@ -751,9 +754,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
         // FIXME: Add a fake ternary indirect table (as otherwise driver complains)
         // if tind not present - to be removed with update on driver side
         auto *acts = get_actions();
-        if (auto a = get_action())
-            acts = a->get_actions();
-        acts->add_action_format(this, tind);
+        if (acts)
+            acts->add_action_format(this, tind);
         tind["memory_resource_allocation"] = nullptr;
         json::vector &pack_format = tind["pack_format"] = json::vector();
         json::map pack_format_entry;
@@ -823,12 +825,8 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
     alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use);
-    if (action.set() && actions)
-        error(lineno, "Table %s has both action table and immediate actions", name());
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
-    if (action.args.size() > 2)
-        error(lineno, "Unexpected number of action table arguments %zu", action.args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
 }
 
@@ -839,7 +837,7 @@ Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m, bool in
         error(lineno, "Trying to link ternary indirect table %s to non-ternary table %s",
               name(), m->name());
     else {
-        if (action.check() && action->set_match_table(m, action.args.size() > 1) != ACTION)
+        if (action.check() && action->set_match_table(m, !action.is_direct_call()) != ACTION)
             error(action.lineno, "%s is not an action table", action->name());
         attached.pass0(m);
         logical_id = m->logical_id;
@@ -854,24 +852,21 @@ void TernaryIndirectTable::pass1() {
     alloc_vpns();
     check_next();
     if (action_bus) action_bus->pass1(this);
+
     if (actions) {
-        assert(action.args.size() == 0);
-        if (auto *sel = lookup_field("action"))
-            action.args.push_back(sel);
-        else if ((actions->count() > 1 && default_action.empty())
-               || (actions->count() > 2 && !default_action.empty()))
-            error(lineno, "No field 'action' to select between multiple actions in "
-                  "table %s format", name());
+        if (instruction) {
+            validate_instruction(instruction);
+        } else {
+            error(lineno, "No instruction call provided, but actions provided");
+        }
         actions->pass1(this);
-    } else if (action.args.size() == 0) {
-        if (auto *sel = lookup_field("action"))
-            action.args.push_back(sel);
-    } else if (action.args[0].type == Call::Arg::Name) {
-        // FIXME -- should check to make sure its an action name
-    } else if (action.args[0].type == Call::Arg::Const && action.args[0].value() == 0) {
-        // ok
-    } else if (action.args[0].type != Call::Arg::Field) {
-        error(action.lineno, "first argument to 'action' must be a field or action name"); }
+    }
+
+    if (action) {
+        action->validate_call(action, match_table, 2, HashDistribution::ACTION_DATA_ADDRESS,
+                              action); 
+    }
+
     attached.pass1(match_table);
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
@@ -935,26 +930,26 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
         merge.tind_bus_prop[bus].tcam_piped = 1;
         merge.tind_bus_prop[bus].thread = gress;
         merge.tind_bus_prop[bus].enabled = 1;
-        if (action.args.size() > 0 && action.args[0].type == Call::Arg::Field)
-            merge.mau_action_instruction_adr_tcam_shiftcount[bus] = action.args[0].field()->bit(0);
+        if (instruction) {
+            int shiftcount = 0;
+            if (auto field = instruction.args[0].field())
+                shiftcount = field->bit(0);
+            else if (auto field = instruction.args[1].field())
+                shiftcount = field->immed_bit(0);
+            merge.mau_action_instruction_adr_tcam_shiftcount[bus] = shiftcount; 
+        }
         if (format->immed)
             merge.mau_immediate_data_tcam_shiftcount[bus] = format->immed->bit(0);
         if (action) {
-            unsigned action_log2size = 0;
-            if (auto adt = action->to<ActionTable>())
-                action_log2size = adt->get_log2size();
-            int lo_huffman_bits = std::min(action_log2size - 2, 5U);
-            if (action.args.size() <= 1) {
-                merge.mau_actiondata_adr_mask[1][bus] = 0x3fffff & (~0U << lo_huffman_bits);
-                merge.mau_actiondata_adr_tcam_shiftcount[bus] =
-                    69 + (format->log2size-2) - lo_huffman_bits;
-                merge.mau_actiondata_adr_vpn_shiftcount[1][bus] =
-                    std::max(0, (int)action_log2size - 7);
-            } else {
-                merge.mau_actiondata_adr_mask[1][bus] =
-                    ((1U << action.args[1].size()) - 1) << lo_huffman_bits;
-                merge.mau_actiondata_adr_tcam_shiftcount[bus] =
-                    action.args[1].field()->bit(0) + 5 - lo_huffman_bits; } }
+            if (auto adt = action->to<ActionTable>()) {
+                merge.mau_actiondata_adr_default[1][bus] = adt->determine_default(action);
+                merge.mau_actiondata_adr_mask[1][bus] = adt->determine_mask(action); 
+                merge.mau_actiondata_adr_vpn_shiftcount[1][bus]
+                    = adt->determine_vpn_shiftcount(action);
+                merge.mau_actiondata_adr_tcam_shiftcount[bus]
+                    = adt->determine_shiftcount(action, 0, 0, tcam_shift);
+            }
+        }
         if (attached.selector) {
             merge.mau_selectorlength_default[1][bus] = 1;
             // if (attached.selector.args.size() == 1)

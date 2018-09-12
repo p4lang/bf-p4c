@@ -1372,6 +1372,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         if (!act->default_allowed || act->hit_path_imp_only)
             out << ", reason: " << act->disallowed_reason;
         out << " }" << std::endl;
+        out << indent << "- handle: 0x" << hex(act->handle) << std::endl;
         is_empty = true;
         if (table->layout.action_data_bytes > 0) {
             self.emit_action_data_alias(out, indent, table, act);
@@ -2274,7 +2275,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             out << indent << at->kind() << ": " << unique_id << std::endl;
         } else if (auto ad = at->to<IR::MAU::ActionData>()) {
             bool ad_check = tbl->layout.action_data_bytes_in_table > 0;
-            ad_check |= tbl->layout.action_addr_bits > 0;
+            ad_check |= tbl->layout.action_addr.address_bits > 0;
             BUG_CHECK(ad_check, "Action Data Table %s misconfigured", ad->name);
             have_action = true; } }
     assert(have_indirect == (tbl->layout.ternary || tbl->layout.no_match_miss_path()));
@@ -2282,7 +2283,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
               "have action data with no action data table?");
 
     if (!have_indirect)
-        emit_table_indir(out, indent, tbl);
+        emit_table_indir(out, indent, tbl, nullptr);
 
     const IR::MAU::IdleTime* idletime = nullptr;
     for (auto back_at : tbl->attached) {
@@ -2300,9 +2301,11 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
 }
 
 /**
- * Indirect address type.  Will eventually have to pull in action data
+ * Indirect address type.
  */
 std::string MauAsmOutput::indirect_address(const IR::MAU::AttachedMemory *am) const {
+    if (am->is<IR::MAU::ActionData>())
+        return "action_addr";
     if (am->is<IR::MAU::Counter>())
         return "counter_addr";
     if (am->is<IR::MAU::Selector>() || am->is<IR::MAU::Meter>() || am->is<IR::MAU::StatefulAlu>())
@@ -2347,12 +2350,7 @@ std::string MauAsmOutput::stateful_counter_addr(IR::MAU::StatefulUse use) const 
  */
 std::string MauAsmOutput::build_call(const IR::MAU::AttachedMemory *at_mem,
        const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const {
-    if (at_mem->is<IR::MAU::ActionData>()) {
-        if (!at_mem->direct)
-            return "(action, action_addr)";
-        else
-            return "";
-    } else if (at_mem->is<IR::MAU::IdleTime>()) {
+    if (at_mem->is<IR::MAU::IdleTime>()) {
         return "";
     }
 
@@ -2411,7 +2409,7 @@ cstring MauAsmOutput::find_attached_name(const IR::MAU::Table *tbl,
 }
 
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
-                                    const IR::MAU::Table *tbl) const {
+        const IR::MAU::Table *tbl, const IR::MAU::TernaryIndirect *ti) const {
     bool have_action = false;
     for (auto back_at : tbl->attached) {
         auto at_mem = back_at->attached;
@@ -2426,7 +2424,15 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         out << std::endl;
     }
 
-    if (!have_action && !tbl->actions.empty()) {
+
+    if (!tbl->actions.empty()) {
+        out << indent << "instruction: " << tbl->unique_id(ti).build_name() << "(";
+        if (tbl->resources->table_format.instr_in_overhead())
+            out << "action";
+        else
+            out << "$DEFAULT";
+        out << ", " << "$DEFAULT)" << std::endl;
+
         out << indent++ << "actions:" << std::endl;
         for (auto act : Values(tbl->actions)) {
             act->apply(EmitAction(*this, out, tbl, indent));
@@ -2649,7 +2655,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
                     nullptr, nullptr, false);
     self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true);
     self.emit_action_data_bus(out, indent, tbl, true);
-    self.emit_table_indir(out, indent, tbl);
+    self.emit_table_indir(out, indent, tbl, ti);
     return false;
 }
 
@@ -2670,11 +2676,13 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
         self.emit_action_data_format(out, indent, tbl, act);
     }
     self.emit_action_data_bus(out, indent, tbl, false);
+    /*
     if (!tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : Values(tbl->actions))
             act->apply(EmitAction(self, out, tbl, indent));
         --indent; }
+    */
     return false;
 }
 

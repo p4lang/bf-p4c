@@ -7,13 +7,29 @@
 #include "stage.h"
 #include "tables.h"
 
-Table::Format::Field *SRamMatchTable::lookup_field(const std::string &n, const std::string &) const {
-    if (format) return format->field(n);
+Table::Format::Field *SRamMatchTable::lookup_field(const std::string &n,
+        const std::string &act) const {
+    
+    if (format) {
+        auto rv = format->field(n);
+        if (rv)
+            return rv; 
+    }
+
+    auto call = get_action();
+    if (call && !act.empty()) {
+        auto rv = call->lookup_field(n, act);
+        if (rv)
+            return rv;
+    }
+
     if (n == "immediate" && !::Phv::get(gress, n)) {
         static Format::Field default_immediate(nullptr, 32, Format::Field::USED_IMMED);
         return &default_immediate; }
     return nullptr;
 }
+
+
 
 /* calculate the 18-bit byte/nybble mask tofino uses for matching in a 128-bit word */
 static unsigned tofino_bytemask(int lo, int hi) {
@@ -379,12 +395,8 @@ void SRamMatchTable::common_sram_checks() {
     alloc_rams(false, stage->sram_use, &stage->sram_match_bus_use);
     if (layout_size() > 0 && !format)
         error(lineno, "No format specified in table %s", name());
-    if (action.set() && actions)
-        error(lineno, "Table %s has both action table and immediate actions", name());
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
-    if (action.args.size() > 2)
-        error(lineno, "Unexpected number of action table arguments %zu", action.args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
     if (!input_xbar)
         input_xbar = new InputXbar(this);
@@ -403,23 +415,17 @@ void SRamMatchTable::pass1() {
         setup_ways(); }
     if (action_bus) action_bus->pass1(this);
     if (actions) {
-        assert(action.args.size() == 0);
-        if (auto *sel = lookup_field("action"))
-            action.args.push_back(sel);
-        else if ((actions->count() > 1 && format && default_action.empty())
-               || (actions->count() > 2 && format && !default_action.empty()))
-            error(lineno, "No field 'action' to select between multiple actions in "
-                  "table %s format", name());
+        if (instruction)
+            validate_instruction(instruction);
+        else 
+            error(lineno, "No instruction call provided, but actions provided");
         actions->pass1(this);
-    } else if (action.args.size() == 0) {
-        if (auto *sel = lookup_field("action"))
-            action.args.push_back(sel);
-    } else if (action.args[0].type == Call::Arg::Name) {
-        // FIXME -- should check to make sure its an action name
-    } else if (action.args[0].type == Call::Arg::Const && action.args[0].value() == 0) {
-        // ok
-    } else if (action.args[0].type != Call::Arg::Field) {
-        error(action.lineno, "first argument to 'action' must be a field or action name"); }
+    }
+
+    if (action) {
+        action->validate_call(action, this, 2, HashDistribution::ACTION_DATA_ADDRESS, action);
+    }
+
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
@@ -691,18 +697,13 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
         unsigned bus = row.row*2 + row.bus;
         /* FIXME -- factor this where possible with ternary match code */
         if (action) {
-            unsigned action_log2size = 0;
-            if (auto adt = action->to<ActionTable>())
-                action_log2size = adt->get_log2size();
-            int lo_huffman_bits = std::min(action_log2size - 2, 5U);
-            if (action.args.size() <= 1) {
-                merge.mau_actiondata_adr_mask[0][bus] = 0x3fffff & (~0U << lo_huffman_bits);
-                merge.mau_actiondata_adr_vpn_shiftcount[0][bus] =
-                    std::max(0, (int)action_log2size - 7);
-            } else {
+            if (auto adt = action->to<ActionTable>()) {
                 /* FIXME -- support for multiple sizes of action data? */
-                merge.mau_actiondata_adr_mask[0][bus] =
-                    ((1U << action.args[1].size()) - 1) << lo_huffman_bits; } }
+                merge.mau_actiondata_adr_mask[0][bus] = adt->determine_mask(action);
+                merge.mau_actiondata_adr_vpn_shiftcount[0][bus]
+                    = adt->determine_vpn_shiftcount(action);
+            }
+        }
         if (attached.selector) {
             merge.mau_selectorlength_default[0][bus] = 1;
             /* FIXME: The compiler currently doesn't handle selector length
@@ -721,23 +722,23 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                     assert(format->immed->by_group[group]->bit(0)/128U == word);
                     merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
                         format->immed->by_group[group]->bit(0) % 128; }
-                if (!action.args.empty() && action.args[0].type == Call::Arg::Field) {
-                    assert(action.args[0].field()->by_group[group]->bit(0)/128U == word);
-                    merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
-                        action.args[0].field()->by_group[group]->bit(0) % 128; } }
+                if (instruction) {
+                    int shiftcount = 0;
+                    if (auto field = instruction.args[0].field())
+                        shiftcount = field->bit(0);
+                    else if (auto field = instruction.args[1].field())
+                        shiftcount = field->immed_bit(0);
+                    merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] = shiftcount; 
+                }
+            }
             /* FIXME -- factor this where possible with ternary match code */
             if (action) {
-                unsigned action_log2size = 0;
-                if (auto adt = action->to<ActionTable>())
-                    action_log2size = adt->get_log2size();
-                int lo_huffman_bits = std::min(action_log2size - 2, 5U);
-                if (action.args.size() <= 1) {
-                    merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
-                        69 - lo_huffman_bits;
-                } else if (group_info[group].overhead_word == (int)word) {
-                    assert(action.args[1].field()->by_group[group]->bit(0)/128U == word);
-                    merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
-                        action.args[1].field()->by_group[group]->bit(0)%128 + 5 - lo_huffman_bits; } }
+                if (group_info[group].overhead_word == (int)word ||
+                    group_info[group].overhead_word == -1) {
+                    merge.mau_actiondata_adr_exact_shiftcount[bus][word_group]
+                        = action->determine_shiftcount(action, group, word, 0);
+                }
+            }
             if (attached.selector) {
                 if (group_info[group].overhead_word == (int)word) {
                     merge.mau_meter_adr_exact_shiftcount[bus][word_group] =

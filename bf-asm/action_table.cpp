@@ -26,8 +26,8 @@ int ActionTable::find_field_lineno(Table::Format::Field *field) {
     return Table::find_field_lineno(field);
 }
 
-Table::Format::Field *ActionTable::lookup_field(const std::string &name, const std::string &action) const
-{
+Table::Format::Field
+        *ActionTable::lookup_field(const std::string &name, const std::string &action) const {
     if (action == "*" || action == "") {
         if (auto *rv = format ? format->field(name) : 0)
             return rv;
@@ -156,6 +156,73 @@ void ActionTable::need_on_actionbus(RandomNumberGen rng, int lo, int hi, int siz
     assert(attached_count == 1);
 }
 
+/**
+ * Necessary for determining the actiondata_adr_exact/tcam_shiftcount register value.
+ */
+unsigned ActionTable::determine_shiftcount(Table::Call &call, int group, int word,
+        int tcam_shift) const {
+    int lo_huffman_bits = std::min(get_log2size() - 2,
+                                   static_cast<unsigned>(ACTION_ADDRESS_ZERO_PAD));
+    int extra_shift = ACTION_ADDRESS_ZERO_PAD - lo_huffman_bits;
+    if (call.args[0] == "$DIRECT") {
+        return 64 + extra_shift + tcam_shift;
+    } else if (call.args[0].field()) {
+        assert(call.args[0].field()->by_group[group]->bit(0)/128U == word);
+        return call.args[0].field()->by_group[group]->bit(0)%128U + extra_shift; 
+    } else if (call.args[1].field()) {
+        return call.args[1].field()->bit(0) + ACTION_ADDRESS_ZERO_PAD;
+    }
+    return 0;
+}
+
+/**
+ * Calculates the actiondata_adr_default value.  Will default in the required huffman bits
+ * described in section 6.2.8.4.3 Action RAM Addressing of the uArch, as well as the
+ * per flow enable bit if indicated
+ */
+unsigned ActionTable::determine_default(Table::Call &call) const {
+    int huffman_ones = std::max(static_cast<int>(get_log2size()) - 3, 0);
+    assert(huffman_ones <= ACTION_DATA_HUFFMAN_BITS);
+    unsigned huffman_mask = (1 << huffman_ones) - 1;
+    // lower_huffman_mask == 0x1f, upper_huffman_mask = 0x60
+    unsigned lower_huffman_mask = (1U << ACTION_DATA_LOWER_HUFFMAN_BITS) - 1;
+    unsigned upper_huffman_mask = (1U << ACTION_DATA_HUFFMAN_BITS) - 1 & ~lower_huffman_mask;
+    unsigned rv = (huffman_mask & upper_huffman_mask) << ACTION_DATA_HUFFMAN_DIFFERENCE;
+    rv |= huffman_mask & lower_huffman_mask;
+    if (call.args[1].name() && call.args[1] == "$DEFAULT") {
+        rv |= 1 << ACTION_DATA_PER_FLOW_ENABLE_START_BIT;
+    }
+    return rv;
+}
+
+/**
+ * Calculates the actiondata_adr_mask value for a given table.
+ */
+unsigned ActionTable::determine_mask(Table::Call &call) const {
+    int lo_huffman_bits = std::min(get_log2size() - 2,
+                                   static_cast<unsigned>(ACTION_DATA_LOWER_HUFFMAN_BITS));
+    unsigned rv = 0;
+    if (call.args[0] == "$DIRECT") {
+        rv |= ((1U << ACTION_ADDRESS_BITS) - 1) & (~0U << lo_huffman_bits);
+    } else if (call.args[0].field()) {
+        rv = ((1U << call.args[0].size()) - 1) << lo_huffman_bits;
+    }
+    return rv;
+}
+
+/**
+ * Calculates the actiondata_adr_vpn_shiftcount register.  As described in section 6.2.8.4.3
+ * for action data tables sized at 256, 512 and 1024, the Huffman bits for these addresses are
+ * no longer at the bottom of the address, but rather near the top.  For direct action data
+ * addresses, a hole in the address needs to be created.
+ */
+unsigned ActionTable::determine_vpn_shiftcount(Table::Call &call) const {
+    if (call.args[0].name() && call.args[0] == "$DIRECT") {
+        return std::max(0, (int)(get_log2size()) - 2 - ACTION_DATA_LOWER_HUFFMAN_BITS); 
+    }
+    return 0;
+}
+
 int ActionTable::get_start_vpn() {
     // Based on the format width, the starting vpn is determined as follows (See
     // Section 6.2.8.4.3 in MAU MicroArchitecture Doc)
@@ -254,9 +321,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
     alloc_rams(true, stage->sram_use, 0);
-    if (!actions)
-        error(lineno, "No actions in action table %s", name());
-    if (actions && !action_bus) action_bus = new ActionBus();
+    if (!action_bus) action_bus = new ActionBus();
 }
 
 void ActionTable::pass1() {
@@ -270,9 +335,6 @@ void ActionTable::pass1() {
               return a.row > b.row; });
     unsigned width = format ? (format->size-1)/128 + 1 : 1;
     for (auto &fmt : action_formats) {
-        if (!actions->exists(fmt.first)) {
-            error(fmt.second->lineno, "Format for non-existant action %s", fmt.first.c_str());
-            continue; }
 #if 0
         for (auto &fld : *fmt.second) {
             if (auto *f = format ? format->field(fld.first) : 0) {
@@ -358,9 +420,51 @@ void ActionTable::pass2() {
     if (actions) actions->pass2(this);
 }
 
+/**
+ * FIXME: Due to get_match_tables function not being a const function (which itself should be
+ * a separate PR), in order to get all potentialy pack formats from all of the actions in all
+ * associated match tables, an initial pass is required to perform this lookup.
+ *
+ * Thus a map is saved in this pass containing a copy of an action, with a listing of all of
+ * the possible aliases.  This will only currently work if the aliases are identical across
+ * actions, which at the moment, they are.  We will need to change this functionality when
+ * actions could potentially be different across action profiles, either by gathering a union
+ * of the aliases across actions with the same action handle, or perhaps de-alias the pack
+ * formats before context JSON generation 
+ */
 void ActionTable::pass3() {
     LOG1("### Action table " << name() << " pass3");
     action_bus->pass3(this);
+
+    if (!actions) {
+        Actions *tbl_actions = nullptr;
+        for (auto mt : get_match_tables()) {
+            if (mt->actions) {
+                tbl_actions = mt->actions;
+            } else if (auto tern = mt->to<TernaryMatchTable>()) {
+                if (tern->indirect && tern->indirect->actions) {
+                    tbl_actions = tern->indirect->actions;
+                }
+            }
+            assert(tbl_actions);
+            for (auto &act : *tbl_actions) {
+                if (pack_actions.count(act.name) == 0)
+                    pack_actions[act.name] = &act;
+            }
+        }
+    } else {
+        for (auto &act : *actions) {
+            if (pack_actions.count(act.name) == 0)
+                pack_actions[act.name] = &act;
+        }
+    }
+
+    for (auto &fmt : action_formats) {
+        if (pack_actions.count(fmt.first) == 0) {
+            error(fmt.second->lineno, "Format for non-existant action %s", fmt.first.c_str());
+            continue;
+        }
+    }
 }
 
 template<class REGS>
@@ -563,13 +667,13 @@ void ActionTable::gen_tbl_cfg(json::vector &out) const {
     unsigned number_entries = (layout_size() * 128 * 1024) / (1 << format->log2size);
     json::map &tbl = *base_tbl_cfg(out, "action_data", number_entries);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "action_data", number_entries);
-    for (auto &act : *actions) {
-        auto *fmt = ::get(action_formats, act.name);
-        add_pack_format(stage_tbl, fmt ? fmt : format, true, true, &act); }
+    for (auto &act : pack_actions) {
+        auto *fmt = ::get(action_formats, act.first);
+        add_pack_format(stage_tbl, fmt ? fmt : format, true, true, act.second);
+        act.second->gen_simple_tbl_cfg(tbl["actions"]);
+    }
     stage_tbl["memory_resource_allocation"] =
         gen_memory_resource_allocation_tbl_cfg("sram", layout);
-    if (actions)
-        actions->gen_tbl_cfg(tbl["actions"]);
     // FIXME: what is the check for static entries?
     tbl["static_entries"] = json::vector();
     tbl["how_referenced"] = indirect ? "indirect" : "direct";

@@ -393,6 +393,8 @@ public:
             void pass1(Table *tbl);
             void add_indirect_resources(json::vector &indirect_resources) const;
             bool is_color_aware() const;
+            void gen_simple_tbl_cfg(json::vector &) const;
+            void add_p4_params(json::vector &, bool include_default = true) const;
             friend std::ostream &operator<<(std::ostream &, const alias_t &);
             friend std::ostream &operator<<(std::ostream &, const Action &);
         };
@@ -537,6 +539,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     bool                        enable_action_data_enable = false;
     bool                        enable_action_instruction_enable = false;
     Call                        action;
+    Call                        instruction;
     Actions                     *actions = 0;
     ActionBus                   *action_bus = 0;
     std::string                 default_action;
@@ -609,6 +612,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual void need_on_actionbus(RandomNumberGen rng, int lo, int hi, int size);
     static bool allow_bus_sharing(Table *t1, Table *t2);
     virtual Call &action_call() { return action; }
+    virtual Call &instruction_call() { return instruction; }
     virtual Actions *get_actions() const { return actions; }
     void add_reference_table(json::vector &table_refs, const Table::Call& c) const;
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1) const;
@@ -617,6 +621,9 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                           const Table::Format::Field &field,
                                           const Table::Actions::Action *act) const;
+    virtual bool validate_call(Table::Call &call, MatchTable *self, size_t required_args,
+            int hash_dist_type, Table::Call &first_call) { assert(0); return false; }
+    bool validate_instruction(Table::Call &call) const;
                                           // const std::vector<Actions::Action::alias_value_t *> &);
     // Generate the context json for a field into field list.
     // Use the bits specified in field, offset by the base bit.
@@ -690,8 +697,6 @@ struct AttachedTables {
     template<class REGS> void write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus,
                                                     int tcam_shift);
     bool run_at_eop();
-    bool validate_call(Table::Call &call, MatchTable *self, size_t required_args,
-                       int hash_dist_type, Table::Call &first_call);
 
  public:
 };
@@ -985,6 +990,7 @@ public:
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
             const char *type, const std::vector<Layout> &layout, bool skip_spare_bank=false) const override;
     Call &action_call() override { return indirect ? indirect->action : action; }
+    Call &instruction_call() override { return indirect ? indirect->instruction: instruction; }
     int memunit(const int r, const int c) const override { return r + c*12; }
     bool is_ternary() override { return true; }
     int hit_next_size() const override {
@@ -1018,6 +1024,7 @@ public:
         if (!default_action_parameters.empty()) return &default_action_parameters;
         auto def_action_params = indirect ? indirect->get_default_action_parameters() : nullptr;
         return def_action_params; }
+   
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",
@@ -1067,6 +1074,8 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS)
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
 public:
+    Format::Field *lookup_field(const std::string &n,
+                                        const std::string &act = "") const override;
     int address_shift() const override { return std::min(5U, format->log2size - 2); }
     unsigned get_default_action_handle() const override {
         unsigned def_act_handle = Table::get_default_action_handle();
@@ -1143,6 +1152,8 @@ public:
             if (auto def_action_params = m->get_default_action_parameters())
                 if (!def_action_params->empty()) return def_action_params; }
         return nullptr; }
+    bool validate_call(Table::Call &call, MatchTable *self, size_t required_args,
+                       int hash_dist_type, Table::Call &first_call) override;
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
@@ -1150,6 +1161,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     unsigned                            home_rows = 0;
     int                                 home_lineno = -1;
     std::map<std::string, Format *>     action_formats;
+    std::map<std::string, Actions::Action *>     pack_actions;
     static const std::map<unsigned, std::vector<std::string>> action_data_address_huffman_encoding;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override;
     int get_start_vpn() override;
@@ -1183,6 +1195,11 @@ public:
     unsigned get_log2size() const {
         unsigned size = get_size();
         return ceil_log2(size); }
+    unsigned determine_shiftcount(Table::Call &call, int group, int word,
+        int tcam_shift) const override;
+    unsigned determine_default(Table::Call &call) const;
+    unsigned determine_mask(Table::Call &call) const;
+    unsigned determine_vpn_shiftcount(Table::Call &call) const;
 )
 
 // Dummy value used to start gateway handles. For future use by driver,
