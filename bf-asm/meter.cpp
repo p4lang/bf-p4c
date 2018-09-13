@@ -162,10 +162,10 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
         merge.mau_idletime_adr_default[type][bus] =
             (adr_default >> shift_diff) & full_idle_mask;
         if (per_entry_en_mux_ctl > shift_diff)
-            merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus] = 0;
-        else
             merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus]
                 = per_entry_en_mux_ctl - shift_diff;
+        else
+            merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus] = 0;
     }
 }
 
@@ -469,6 +469,9 @@ void MeterTable::gen_tbl_cfg(json::vector &out) const {
     case BYTES: tbl["meter_granularity"] = "bytes"; break;
     default: tbl["meter_granularity"] = "packets"; break; }
     tbl["enable_color_aware_pfe"] = color_aware_per_flow_enable;
+    /* this is not needed. but the driver asserts on existence of 
+     * this or enable_color_aware which both seem to be redundant */
+    tbl["pre_color_field_name"] = "false";
     tbl["enable_pfe"] = per_flow_enable;
     tbl["pfe_bit_position"] = per_flow_enable_bit();
     tbl["color_aware_pfe_address_type_bit_position"] = 0; //FIXME
