@@ -7,6 +7,7 @@
 #include <initializer_list>
 #include <map>
 #include <set>
+#include "lib/bitops.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/strengthReduction.h"
 #include "frontends/p4/uselessCasts.h"
@@ -1262,7 +1263,7 @@ class ConstructSymbolTable : public Inspector {
         if (pMax->to<IR::Constant>() == nullptr || pBase->to<IR::Constant>() == nullptr)
             BUG("Only compile-time constants are supported for hash base offset and max value");
 
-        if (pMax->to<IR::Constant>()->asUint64() < (1LL << w))  {
+        if (pMax->to<IR::Constant>()->asUint64() < (1ULL << w))  {
             if (pBase->type->width_bits() != w)
                 pBase = new IR::Cast(IR::Type::Bits::get(w), pBase);
             args->push_back(new IR::Argument(pBase));
@@ -1598,9 +1599,19 @@ class ConstructSymbolTable : public Inspector {
         ERROR_CHECK(type != nullptr, "Invalid type for register converter");
         ERROR_CHECK(type->baseType->path->name == "register",
                   "register converter cannot be applied to %1%", type->baseType->path->name);
+        BUG_CHECK(node->arguments->size() == 1, "register must have exactly one argument");
+        BUG_CHECK(type->arguments->size() == 1, "register must have exactly one type argument");
 
         auto typeArgs = new IR::Vector<IR::Type>();
-        typeArgs->push_back(type->arguments->at(0));
+        auto eltype = type->arguments->at(0);
+        if (auto bits = eltype->to<IR::Type::Bits>()) {
+            auto width = 1 << ceil_log2(bits->size);  // round up to a power of 2
+            if (width > 1 && width < 8) width = 8;  // 2/4 are not usable on tofino
+            if (width != bits->size) {
+                // Not a valid tofino register width -- round up to the next valid width
+                eltype = IR::Type::Bits::get(width, bits->isSigned); } }
+        typeArgs->push_back(eltype);
+
         auto args = new IR::Vector<IR::Argument>();
 
         if (node->arguments->at(0)->expression->to<IR::Constant>()->asInt()) {

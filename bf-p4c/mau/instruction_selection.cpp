@@ -351,6 +351,11 @@ const IR::Expression *DoInstructionSelection::postorder(IR::Sub *e) {
                                         (-*k).clone(), e->left);
     return new IR::MAU::Instruction(e->srcInfo, "sub", new IR::TempVar(e->type), e->left, e->right);
 }
+const IR::Expression *DoInstructionSelection::postorder(IR::Neg *e) {
+    if (!af) return e;
+    return new IR::MAU::Instruction(e->srcInfo, "sub", new IR::TempVar(e->type),
+                                    new IR::Constant(0), e->expr);
+}
 
 const IR::Expression *DoInstructionSelection::postorder(IR::Shl *e) {
     if (!af) return e;
@@ -494,7 +499,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                 auto value = constant->asUint64();
                 if (value != 0) {
                     size = bitcount(value - 1);
-                    if ((1LL << size) != value)
+                    if ((1ULL << size) != value)
                         error("%s: The hash offset must be a power of 2 in a hash calculation %s",
                               prim->srcInfo, *prim); } } }
 

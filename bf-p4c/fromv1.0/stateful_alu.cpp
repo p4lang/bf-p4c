@@ -1,5 +1,6 @@
 #include "stateful_alu.h"
 #include "frontends/p4-14/typecheck.h"
+#include "lib/bitops.h"
 
 P4V1::StatefulAluConverter::StatefulAluConverter() {
     addConverter("stateful_alu", this);
@@ -384,10 +385,14 @@ P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
                 } else {
                     error("%s is not a struct type", rv.reg->layout);
                 }
-            } else if (rv.reg->width == 1 || rv.reg->width == 8 || rv.reg->width == 16 ||
-                       rv.reg->width == 32 || rv.reg->width == 64) {
-                if (rv.reg->width == 64 || (rv.reg->width > 8 && usesRegHi(ext))) {
-                    rv.utype = IR::Type::Bits::get(rv.reg->width/2, rv.reg->signed_);
+            } else if (rv.reg->width <= 64) {
+                int width = 1 << ceil_log2(rv.reg->width);
+                if (width > 1 && width < 8) width = 8;
+                if (width != rv.reg->width)
+                    warning("register %s width %d not supported for stateful_alu, rounding up "
+                            "to %d", rv.reg, rv.reg->width, width);
+                if (width > 32 || usesRegHi(ext)) {
+                    rv.utype = IR::Type::Bits::get(width/2, rv.reg->signed_);
                     cstring rtype_name = structure->makeUniqueName(ext->name + "_layout");
                     rv.rtype = new IR::Type_Struct(IR::ID(rtype_name), {
                         new IR::StructField("lo", rv.utype),
@@ -403,7 +408,7 @@ P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
                                 rv.reg, structure->registers.get(rv.reg), rv.rtype));
                     }
                 } else {
-                    rv.rtype = rv.utype = IR::Type::Bits::get(rv.reg->width, rv.reg->signed_); }
+                    rv.rtype = rv.utype = IR::Type::Bits::get(width, rv.reg->signed_); }
             } else {
                 error("register %s width %d not supported for stateful_alu", rv.reg, rv.reg->width);
             }
