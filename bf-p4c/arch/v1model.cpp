@@ -1608,8 +1608,13 @@ class ConstructSymbolTable : public Inspector {
             auto width = 1 << ceil_log2(bits->size);  // round up to a power of 2
             if (width > 1 && width < 8) width = 8;  // 2/4 are not usable on tofino
             if (width != bits->size) {
-                // Not a valid tofino register width -- round up to the next valid width
-                eltype = IR::Type::Bits::get(width, bits->isSigned); } }
+                // Not a valid tofino register width -- round up to the next valid width?
+                if (structure->backward_compatible && width <= 64) {
+                    eltype = IR::Type::Bits::get(width, bits->isSigned);
+                    warning("register %s width %d not supported, rounding up to %d",
+                            node, bits->size, width);
+                } else {
+                    error("register %s width %d not supported", node, bits->size); } } }
         typeArgs->push_back(eltype);
 
         auto args = new IR::Vector<IR::Argument>();

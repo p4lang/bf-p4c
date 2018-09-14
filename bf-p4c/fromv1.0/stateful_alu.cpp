@@ -388,9 +388,6 @@ P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
             } else if (rv.reg->width <= 64) {
                 int width = 1 << ceil_log2(rv.reg->width);
                 if (width > 1 && width < 8) width = 8;
-                if (width != rv.reg->width)
-                    warning("register %s width %d not supported for stateful_alu, rounding up "
-                            "to %d", rv.reg, rv.reg->width, width);
                 if (width > 32 || usesRegHi(ext)) {
                     rv.utype = IR::Type::Bits::get(width/2, rv.reg->signed_);
                     cstring rtype_name = structure->makeUniqueName(ext->name + "_layout");
