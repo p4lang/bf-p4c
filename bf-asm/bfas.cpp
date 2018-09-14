@@ -20,14 +20,18 @@
 option_t options = {
     .version = CONFIG_OLD,
     .target = TOFINO,
-    .binary = FOUR_PIPE,
+    .binary = PIPE0,
     .gen_json = false,
     .match_compiler = false,
     .condense_json = true,
     .debug_info = false,
     .werror = false,
     .disable_power_gating = false,
+#if HAVE_JBAY
+    .singlewrite = true,
+#else
     .singlewrite = false,
+#endif
     .hash_parity_enabled = false,  //FIXME: flip to true when 51st bit is reserved
     .high_availability_enabled = true
 };
